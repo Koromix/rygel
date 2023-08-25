@@ -1,0 +1,425 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../benchmarks.md:1
+msgid "Benchmarks"
+msgstr ""
+
+#: ../../benchmarks.md:3
+msgid "Overview"
+msgstr ""
+
+#: ../../benchmarks.md:5
+msgid ""
+"Here is a quick overview of the execution time of Koffi calls on three "
+"benchmarks, where it is compared to a theoretical ideal FFI "
+"implementation (approximated with pre-compiled static N-API glue code):"
+msgstr ""
+
+#: ../../benchmarks.md:7
+msgid "The first benchmark is based on `rand()` calls"
+msgstr ""
+
+#: ../../benchmarks.md:8
+msgid "The second benchmark is based on `atoi()` calls"
+msgstr ""
+
+#: ../../benchmarks.md:9
+msgid "The third benchmark is based on [Raylib](https://www.raylib.com/)"
+msgstr ""
+
+#: ../../benchmarks.md:18
+msgid ""
+"These results are detailed and explained below, and compared to node-ffi"
+"/node-ffi-napi."
+msgstr ""
+
+#: ../../benchmarks.md:20
+msgid "Linux x86_64"
+msgstr ""
+
+#: ../../benchmarks.md:22
+msgid ""
+"The results presented below were measured on my x86_64 Linux machine "
+"(Intel® Core™ i5-4460)."
+msgstr ""
+
+#: ../../benchmarks.md:24 ../../benchmarks.md:70
+msgid "rand results"
+msgstr ""
+
+#: ../../benchmarks.md:26 ../../benchmarks.md:72
+msgid ""
+"This test is based around repeated calls to a simple standard C function "
+"atoi, and has three implementations:"
+msgstr ""
+
+#: ../../benchmarks.md:28 ../../benchmarks.md:74
+msgid ""
+"the first one is the reference, it calls atoi through an N-API module, "
+"and is close to the theoretical limit of a perfect (no overhead) Node.js "
+"> C FFI implementation (pre-compiled static glue code)"
+msgstr ""
+
+#: ../../benchmarks.md:29 ../../benchmarks.md:75
+msgid "the second one calls atoi through Koffi"
+msgstr ""
+
+#: ../../benchmarks.md:30 ../../benchmarks.md:76
+msgid "the third one uses the official Node.js FFI implementation, node-ffi-napi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "Benchmark"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "Iteration time"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "Relative performance"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "Overhead"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "rand_napi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "842 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x1.00"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "(ref)"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "rand_koffi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "1114 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.76"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+32%"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "rand_node_ffi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "44845 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.02"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+5224%"
+msgstr ""
+
+#: ../../benchmarks.md:38 ../../benchmarks.md:84
+msgid ""
+"Because rand is a pretty small function, the FFI overhead is clearly "
+"visible."
+msgstr ""
+
+#: ../../benchmarks.md:40 ../../benchmarks.md:86
+msgid "atoi results"
+msgstr ""
+
+#: ../../benchmarks.md:42 ../../benchmarks.md:88
+msgid ""
+"This test is similar to the rand one, but it is based on atoi, which "
+"takes a string parameter. Javascript (V8) to C string conversion is "
+"relatively slow and heavy."
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "atoi_napi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "921 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "atoi_koffi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "1357 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.68"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+47%"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "atoi_node_ffi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "152550 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.006"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+16472%"
+msgstr ""
+
+#: ../../benchmarks.md:50 ../../benchmarks.md:98
+msgid ""
+"Because atoi is a pretty small function, the FFI overhead is clearly "
+"visible."
+msgstr ""
+
+#: ../../benchmarks.md:52 ../../benchmarks.md:100
+msgid "Raylib results"
+msgstr ""
+
+#: ../../benchmarks.md:54 ../../benchmarks.md:102
+msgid ""
+"This benchmark uses the CPU-based image drawing functions in Raylib. The "
+"calls are much heavier than in the atoi benchmark, thus the FFI overhead "
+"is reduced. In this implementation, Koffi is compared to:"
+msgstr ""
+
+#: ../../benchmarks.md:56
+msgid "Baseline: Full C++ version of the code (no JS)"
+msgstr ""
+
+#: ../../benchmarks.md:57
+msgid ""
+"[node-raylib](https://github.com/RobLoach/node-raylib): This is a native "
+"wrapper implemented with N-API"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "raylib_cc"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "215.7 µs"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x1.20"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "-17%"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "raylib_node_raylib"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "258.9 µs"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "raylib_koffi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "311.6 µs"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.83"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+20%"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "raylib_node_ffi"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "928.4 µs"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.28"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+259%"
+msgstr ""
+
+#: ../../benchmarks.md:66
+msgid "Windows x86_64"
+msgstr ""
+
+#: ../../benchmarks.md:68
+msgid ""
+"The results presented below were measured on my x86_64 Windows machine "
+"(Intel® Core™ i5-4460)."
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "964 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "1274 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "42300 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+4289%"
+msgstr ""
+
+#: ../../benchmarks.md:90
+msgid ""
+"The results below were measured on my x86_64 Windows machine (Intel® "
+"Core™ i5-4460):"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "1415 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "2193 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.65"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+55%"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "168300 ns"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.008"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+11792%"
+msgstr ""
+
+#: ../../benchmarks.md:104
+msgid ""
+"[node-raylib](https://github.com/RobLoach/node-raylib) (baseline): This "
+"is a native wrapper implemented with N-API"
+msgstr ""
+
+#: ../../benchmarks.md:105
+msgid "raylib_cc: C++ implementation of the benchmark, without any Javascript"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "211.8 µs"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x1.25"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "-20%"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "264.4 µs"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "318.9 µs"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+21%"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "1146.2 µs"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "x0.23"
+msgstr ""
+
+#: ../../benchmarks.md
+msgid "+334%"
+msgstr ""
+
+#: ../../benchmarks.md:114
+msgid ""
+"Please note that in order to get fair numbers for raylib_node_raylib, it "
+"was recompiled with clang-cl before running the benchmark with the "
+"following commands:"
+msgstr ""
+
+#: ../../benchmarks.md:122
+msgid "Running benchmarks"
+msgstr ""
+
+#: ../../benchmarks.md:124
+msgid ""
+"Open a console, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` "
+"(or `node ..\\..\\cnoke\\cnoke.js` on Windows) before doing anything "
+"else."
+msgstr ""
+
+#: ../../benchmarks.md:126
+msgid "Please note that all benchmark results are made with Clang-built binaries."
+msgstr ""
+
+#: ../../benchmarks.md:133
+msgid "Once everything is built and ready, run:"
+msgstr ""
+

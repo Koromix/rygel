@@ -1,0 +1,117 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../unions.md:1
+msgid "Union values"
+msgstr ""
+
+#: ../../unions.md:3
+msgid "*New in Koffi 2.5*"
+msgstr ""
+
+#: ../../unions.md:5
+msgid "Union definition"
+msgstr ""
+
+#: ../../unions.md:7
+msgid ""
+"You can declare unions with a syntax similar to structs, but with the "
+"`koffi.union()` function. This function takes two arguments: the first "
+"one is the name of the type, and the second one is an object containing "
+"the union member names and types. You can omit the first argument to "
+"declare an anonymous union."
+msgstr ""
+
+#: ../../unions.md:9
+msgid ""
+"The following example illustrates how to declare the same union in C and "
+"in JS with Koffi:"
+msgstr ""
+
+#: ../../unions.md:25
+msgid "Input unions"
+msgstr ""
+
+#: ../../unions.md:27
+msgid "Passing union values to C"
+msgstr ""
+
+#: ../../unions.md:29
+msgid ""
+"You can instantiate an union object with `koffi.Union(type)`. This will "
+"create a special object that contains at most one active member."
+msgstr ""
+
+#: ../../unions.md:31
+msgid ""
+"Once you have created an instance of your union, you can simply set the "
+"member with the dot operator as you would with a basic object. Then, "
+"simply pass your union value to the C function you wish."
+msgstr ""
+
+#: ../../unions.md:45
+msgid ""
+"For simplicity, Koffi also accepts object literals with one property (no "
+"more, no less) setting the corresponding union member. The example belows"
+" uses this to simplify the code shown above:"
+msgstr ""
+
+#: ../../unions.md:56
+msgid "Win32 example"
+msgstr ""
+
+#: ../../unions.md:58
+msgid ""
+"The following example uses the [SendInput](https://learn.microsoft.com"
+"/en-us/windows/win32/api/winuser/nf-winuser-sendinput) Win32 API to emit "
+"the Win+D shortcut and hide windows (show the desktop)."
+msgstr ""
+
+#: ../../unions.md:141
+msgid "Output unions"
+msgstr ""
+
+#: ../../unions.md:143
+msgid ""
+"Unlike structs, Koffi does not know which union member is valid, and it "
+"cannot decode it automatically. You can however use special `koffi.Union`"
+" objects for output parameters, and decode the memory after the call."
+msgstr ""
+
+#: ../../unions.md:145
+msgid ""
+"To decode an output union pointer parameter, create a placeholder object "
+"with `new koffi.Union(type)` and pass the resulting object to the "
+"function."
+msgstr ""
+
+#: ../../unions.md:147
+msgid ""
+"After the call, you can dereference the member value you want on this "
+"object and Koffi will decode it at this moment."
+msgstr ""
+
+#: ../../unions.md:149
+msgid ""
+"The following example illustrates the use of `koffi.Union()` to decode "
+"output unions after the call."
+msgstr ""
+

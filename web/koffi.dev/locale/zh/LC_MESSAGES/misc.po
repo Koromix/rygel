@@ -1,0 +1,292 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../misc.md:1
+msgid "Miscellaneous"
+msgstr ""
+
+#: ../../misc.md:3
+msgid "Types"
+msgstr ""
+
+#: ../../misc.md:5
+msgid "Introspection"
+msgstr ""
+
+#: ../../misc.md:7
+msgid ""
+"*New in Koffi 2.0: `koffi.resolve()`, new in Koffi 2.2: "
+"`koffi.offsetof()`*"
+msgstr ""
+
+#: ../../misc.md:10
+msgid ""
+"The value returned by `introspect()` has **changed in version 2.0 and in "
+"version 2.2**."
+msgstr ""
+
+#: ../../misc.md:12
+msgid ""
+"In Koffi 1.x, it could only be used with struct types and returned the "
+"object passed to koffi.struct() with the member names and types."
+msgstr ""
+
+#: ../../misc.md:14
+msgid ""
+"Starting in Koffi 2.2, each record member is exposed as an object "
+"containing the name, the type and the offset within the record."
+msgstr ""
+
+#: ../../misc.md:16
+msgid "Consult the [migration guide](migration.md) for more information."
+msgstr ""
+
+#: ../../misc.md:19
+msgid ""
+"Use `koffi.introspect(type)` to get detailed information about a type: "
+"name, primitive, size, alignment, members (record types), reference type "
+"(array, pointer) and length (array)."
+msgstr ""
+
+#: ../../misc.md:44
+msgid ""
+"Koffi also exposes a few more utility functions to get a subset of this "
+"information:"
+msgstr ""
+
+#: ../../misc.md:46
+msgid "`koffi.sizeof(type)` to get the size of a type"
+msgstr ""
+
+#: ../../misc.md:47
+msgid "`koffi.alignof(type)` to get the alignment of a type"
+msgstr ""
+
+#: ../../misc.md:48
+msgid "`koffi.offsetof(type, member_name)` to get the offset of a record member"
+msgstr ""
+
+#: ../../misc.md:49
+msgid "`koffi.resolve(type)` to get the resolved type object from a type string"
+msgstr ""
+
+#: ../../misc.md:51
+msgid ""
+"Just like before, you can refer to primitive types by their name or "
+"through `koffi.types`:"
+msgstr ""
+
+#: ../../misc.md:59
+msgid "Aliases"
+msgstr ""
+
+#: ../../misc.md:61
+msgid "*New in Koffi 2.0*"
+msgstr ""
+
+#: ../../misc.md:63
+msgid ""
+"You can alias a type with `koffi.alias(name, type)`. Aliased types are "
+"completely equivalent."
+msgstr ""
+
+#: ../../misc.md:65
+msgid "Settings"
+msgstr ""
+
+#: ../../misc.md:67
+msgid "Memory usage"
+msgstr ""
+
+#: ../../misc.md:69
+msgid "For synchronous/normal calls, Koffi uses two preallocated memory blocks:"
+msgstr ""
+
+#: ../../misc.md:71
+msgid ""
+"One to construct the C stack and assign registers, subsequently used by "
+"the platform-specific assembly code (1 MiB by default)"
+msgstr ""
+
+#: ../../misc.md:72
+msgid "One to allocate strings and big objects/structs (2 MiB by default)"
+msgstr ""
+
+#: ../../misc.md:74
+msgid ""
+"Unless very big strings or objects (at least more than one page of "
+"memory) are used, Koffi does not directly allocate any extra memory "
+"during calls or callbacks. However, please note that the JS engine (V8) "
+"might."
+msgstr ""
+
+#: ../../misc.md:76
+msgid ""
+"The size (in bytes) of these preallocated blocks can be changed. Use "
+"`koffi.config()` to get an object with the settings, and "
+"`koffi.config(obj)` to apply new settings."
+msgstr ""
+
+#: ../../misc.md:83
+msgid ""
+"The same is true for asynchronous calls. When an asynchronous call is "
+"made, Koffi will allocate new blocks unless there is an unused (resident)"
+" set of blocks still available. Once the asynchronous call is finished, "
+"these blocks are freed if there are more than `resident_async_pools` sets"
+" of blocks left around."
+msgstr ""
+
+#: ../../misc.md:85
+msgid "There cannot be more than `max_async_calls` running at the same time."
+msgstr ""
+
+#: ../../misc.md:87
+msgid "Default settings"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Setting"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Default"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Description"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "sync_stack_size"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "1 MiB"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Stack size for synchronous calls"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "sync_heap_size"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "2 MiB"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Heap size for synchronous calls"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "async_stack_size"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "256 kiB"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Stack size for asynchronous calls"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "async_heap_size"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "512 kiB"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Heap size for asynchronous calls"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "resident_async_pools"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "2"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Number of resident pools for asynchronous calls"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "max_async_calls"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "64"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Maximum number of ongoing asynchronous calls"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "max_type_size"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "64 MiB"
+msgstr ""
+
+#: ../../misc.md:9
+msgid "Maximum size of Koffi types (for arrays and structs)"
+msgstr ""
+
+#: ../../misc.md:99
+msgid "Usage statistics"
+msgstr ""
+
+#: ../../misc.md:101
+msgid "*New in Koffi 2.3.2*"
+msgstr ""
+
+#: ../../misc.md:103
+msgid "You can use `koffi.stats()` to get a few statistics related to Koffi."
+msgstr ""
+
+#: ../../misc.md:105
+msgid "POSIX error codes"
+msgstr ""
+
+#: ../../misc.md:107
+msgid "*New in Koffi 2.3.14*"
+msgstr ""
+
+#: ../../misc.md:109
+msgid ""
+"You can use `koffi.errno()` to the current errno value, and "
+"`koffi.errno(value)` to change it."
+msgstr ""
+
+#: ../../misc.md:111
+msgid ""
+"The standard POSIX error codes are available in `koffi.os.errno`, as in "
+"the example below:"
+msgstr ""
+

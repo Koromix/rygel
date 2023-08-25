@@ -1,0 +1,382 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../functions.md:1
+msgid "Function calls"
+msgstr ""
+
+#: ../../functions.md:3
+msgid "Loading libraries"
+msgstr ""
+
+#: ../../functions.md:5
+msgid ""
+"To declare functions, start by loading the shared library with "
+"`koffi.load(filename)`."
+msgstr ""
+
+#: ../../functions.md:14
+msgid ""
+"This library will be automatically unloaded once all references to it are"
+" gone (including all the functions that use it, as described below)."
+msgstr ""
+
+#: ../../functions.md:16
+msgid ""
+"Starting with *Koffi 2.3.20*, you can explicitly unload a library by "
+"calling `lib.unload()`. Any attempt to find or call a function from this "
+"library after unloading it will crash."
+msgstr ""
+
+#: ../../functions.md:19
+msgid ""
+"On some platforms (such as with the [musl C library on "
+"Linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html"
+"#Unloading-libraries)), shared libraries cannot be unloaded, so the "
+"library will remain loaded and memory mapped after the call to "
+"`lib.unload()`."
+msgstr ""
+
+#: ../../functions.md:22
+msgid "Function definitions"
+msgstr ""
+
+#: ../../functions.md:24
+msgid "Definition syntax"
+msgstr ""
+
+#: ../../functions.md:26
+msgid ""
+"Use the object returned by `koffi.load()` to load C functions from the "
+"library. To do so, you can use two syntaxes:"
+msgstr ""
+
+#: ../../functions.md:28
+msgid "The classic syntax, inspired by node-ffi"
+msgstr ""
+
+#: ../../functions.md:29 ../../functions.md:42
+msgid "C-like prototypes"
+msgstr ""
+
+#: ../../functions.md:31
+msgid "Classic syntax"
+msgstr ""
+
+#: ../../functions.md:33
+msgid ""
+"To declare a function, you need to specify its non-mangled name, its "
+"return type, and its parameters. Use an ellipsis as the last parameter "
+"for variadic functions."
+msgstr ""
+
+#: ../../functions.md:40
+msgid ""
+"Koffi automatically tries mangled names for non-standard x86 calling "
+"conventions. See the section on [calling conventions](#calling-"
+"conventions) for more information on this subject."
+msgstr ""
+
+#: ../../functions.md:44
+msgid ""
+"If you prefer, you can declare functions using simple C-like prototype "
+"strings, as shown below:"
+msgstr ""
+
+#: ../../functions.md:51
+msgid "You can use `()` or `(void)` for functions that take no argument."
+msgstr ""
+
+#: ../../functions.md:53
+msgid "Variadic functions"
+msgstr ""
+
+#: ../../functions.md:55
+msgid "Variadic functions are declared with an ellipsis as the last argument."
+msgstr ""
+
+#: ../../functions.md:57
+msgid ""
+"In order to call a variadic function, you must provide two Javascript "
+"arguments for each additional C parameter, the first one is the expected "
+"type and the second one is the value."
+msgstr ""
+
+#: ../../functions.md:66
+msgid ""
+"On x86 platforms, only the Cdecl convention can be used for variadic "
+"functions."
+msgstr ""
+
+#: ../../functions.md:68
+msgid "Calling conventions"
+msgstr ""
+
+#: ../../functions.md:70
+msgid "By default, calling a C function happens synchronously."
+msgstr ""
+
+#: ../../functions.md:72
+msgid ""
+"Most architectures only support one procedure call standard per process. "
+"The 32-bit x86 platform is an exception to this, and Koffi supports "
+"several x86 conventions:"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "Convention"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "Classic form"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "Prototype form"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "Description"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "**Cdecl**"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "`koffi.cdecl` or `koffi.func`"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "_(default)_"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "This is the default convention, and the only one on other platforms"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "**Stdcall**"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "`koffi.stdcall`"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "__stdcall"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "This convention is used extensively within the Win32 API"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "**Fastcall**"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "`koffi.fastcall`"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "__fastcall"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "Rarely used, uses ECX and EDX for first two parameters"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "**Thiscall**"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "`koffi.thiscall`"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "__thiscall"
+msgstr ""
+
+#: ../../functions.md:18
+msgid "Rarely used, uses ECX for first parameter"
+msgstr ""
+
+#: ../../functions.md:81
+msgid "You can safely use these on non-x86 platforms, they are simply ignored."
+msgstr ""
+
+#: ../../functions.md:83
+msgid ""
+"Below you can find a small example showing how to use a non-default "
+"calling convention, with the two syntaxes:"
+msgstr ""
+
+#: ../../functions.md:96
+msgid "Call types"
+msgstr ""
+
+#: ../../functions.md:98
+msgid "Synchronous calls"
+msgstr ""
+
+#: ../../functions.md:100
+msgid ""
+"Once a native function has been declared, you can simply call it as you "
+"would any other JS function."
+msgstr ""
+
+#: ../../functions.md:109
+msgid ""
+"For [variadic functions](functions.md#variadic-functions), you msut "
+"specificy the type and the value for each additional argument."
+msgstr ""
+
+#: ../../functions.md:118
+msgid "Asynchronous calls"
+msgstr ""
+
+#: ../../functions.md:120
+msgid ""
+"You can issue asynchronous calls by calling the function through its "
+"async member. In this case, you need to provide a callback function as "
+"the last argument, with `(err, res)` parameters."
+msgstr ""
+
+#: ../../functions.md:140
+msgid ""
+"These calls are executed by worker threads. It is **your responsibility "
+"to deal with data sharing issues** in the native code that may be caused "
+"by multi-threading."
+msgstr ""
+
+#: ../../functions.md:142
+msgid ""
+"You can easily convert this callback-style async function to a promise-"
+"based version with `util.promisify()` from the Node.js standard library."
+msgstr ""
+
+#: ../../functions.md:144
+msgid "Variadic functions cannot be called asynchronously."
+msgstr ""
+
+#: ../../functions.md:147
+msgid ""
+"Asynchronous functions run on worker threads. You need to deal with "
+"thread safety issues if you share data between threads."
+msgstr ""
+
+#: ../../functions.md:149
+msgid ""
+"Callbacks must be called from the main thread, or more precisely from the"
+" same thread as the V8 intepreter. Calling a callback from another thread"
+" is undefined behavior, and will likely lead to a crash or a big mess. "
+"You've been warned!"
+msgstr ""
+
+#: ../../functions.md:152
+msgid "Function pointers"
+msgstr ""
+
+#: ../../functions.md:154
+msgid "*New in Koffi 2.4*"
+msgstr ""
+
+#: ../../functions.md:156
+msgid "You can call a function pointer in two ways:"
+msgstr ""
+
+#: ../../functions.md:158
+msgid "Directly call the function pointer with `koffi.call(ptr, type, ...)`"
+msgstr ""
+
+#: ../../functions.md:159
+msgid ""
+"Decode the function pointer to an actual function with `koffi.decode(ptr,"
+" type)`"
+msgstr ""
+
+#: ../../functions.md:161
+msgid ""
+"The example below shows how to call an `int (*)(int, int)` C function "
+"pointer both ways, based on the following native C library:"
+msgstr ""
+
+#: ../../functions.md:181
+msgid "Call pointer directly"
+msgstr ""
+
+#: ../../functions.md:183
+msgid ""
+"Use `koffi.call(ptr, type, ...)` to call a function pointer. The first "
+"two arguments are the pointer itself and the type of the function you are"
+" trying to call (declared with `koffi.proto()` as shown below), and the "
+"remaining arguments are used for the call."
+msgstr ""
+
+#: ../../functions.md:200
+msgid "Decode pointer to function"
+msgstr ""
+
+#: ../../functions.md:202
+msgid ""
+"Use `koffi.decode(ptr, type)` to get back a JS function, which you can "
+"then use like any other Koffi function."
+msgstr ""
+
+#: ../../functions.md:204
+msgid ""
+"This method also allows you to perform an [asynchronous call"
+"](#asynchronous-calls) with the async member of the decoded function."
+msgstr ""
+
+#: ../../functions.md:221
+msgid "Conversion of parameters"
+msgstr ""
+
+#: ../../functions.md:223
+msgid ""
+"By default, Koffi will only forward and translate arguments from "
+"Javascript to C. However, many C functions use pointer arguments for "
+"output values, or input/output values."
+msgstr ""
+
+#: ../../functions.md:225
+msgid "Among other thing, in the the following pages you will learn more about:"
+msgstr ""
+
+#: ../../functions.md:227
+msgid "How Koffi translates [input parameters](input.md) to C"
+msgstr ""
+
+#: ../../functions.md:228
+msgid "How you can [define and use pointers](pointers.md)"
+msgstr ""
+
+#: ../../functions.md:229
+msgid "How to deal with [output parameters](output.md)"
+msgstr ""
+
+#: ../../functions.md:230
+msgid "How to handle [polymorphic API](polymorphism.md)"
+msgstr ""
+

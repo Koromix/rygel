@@ -1,0 +1,103 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../start.md:1
+msgid "Get started"
+msgstr "开始使用"
+
+#: ../../start.md:3
+msgid "Install Koffi"
+msgstr "安装Koffi"
+
+#: ../../start.md:5
+msgid "You can install Koffi with npm:"
+msgstr "你可以使用npm来安装Koffi:"
+
+#: ../../start.md:11
+msgid "Once you have installed Koffi, you can start by loading it:"
+msgstr "当你安装了Koffi之后, 你可以加载它来使用:"
+
+#: ../../start.md:21
+msgid "Simple examples"
+msgstr "简单的例子"
+
+#: ../../start.md:23
+msgid "Below you can find three examples:"
+msgstr "下面有三个例子:"
+
+#: ../../start.md:25
+msgid ""
+"The first one runs on Linux. The functions are declared with the C-like "
+"prototype language."
+msgstr ""
+"第一个运行在Linux上, 使用C风格的原型语言来定义函数."
+
+#: ../../start.md:26
+msgid ""
+"The second one runs on Windows, and uses the node-ffi like syntax to "
+"declare functions."
+msgstr ""
+"第二个运行在Windows上, 使用node-ffi风格的语法来定义函数."
+
+#: ../../start.md:28
+msgid "For Linux"
+msgstr ""
+
+#: ../../start.md:30
+msgid ""
+"This is a small example for Linux systems, which uses `gettimeofday()`, "
+"`localtime_r()` and `printf()` to print the current time."
+msgstr ""
+"这是一个在Linux系统下的小例子, 使用了`gettimeofday()`, `localtime_r()`和`printf()`来打印当前的时间."
+
+#: ../../start.md:32
+msgid "It illustrates the use of output parameters."
+msgstr "它展示了如何使用输出参数."
+
+#: ../../start.md:79
+msgid "For Windows"
+msgstr ""
+
+#: ../../start.md:81
+msgid ""
+"This is a small example targeting the Win32 API, using `MessageBox()` to "
+"show a *Hello World!* message to the user."
+msgstr ""
+"这是一个针对Win32 API的小例子, 使用了`MessageBox()`来向用户展示一个*Hello World!*消息."
+
+#: ../../start.md:83
+msgid ""
+"It illustrates the use of the x86 stdcall calling convention, and the use"
+" of UTF-8 and UTF-16 string arguments."
+msgstr ""
+"它展示了如何使用x86的stdcall调用协定, 以及如何使用UTF-8和UTF-16字符串作为参数."
+
+#: ../../start.md:110
+msgid "Bundling Koffi"
+msgstr "打包Koffi"
+
+#: ../../start.md:112
+msgid ""
+"Please read the [dedicated page](packaging.md) for information about "
+"bundling and packaging applications using Koffi."
+msgstr ""
+"请阅读[专门的页面]来了解如何打包使用了Koffi的程序."
+

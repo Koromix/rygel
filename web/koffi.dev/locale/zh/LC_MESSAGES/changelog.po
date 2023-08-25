@@ -1,0 +1,1255 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../../../src/koffi/CHANGELOG.md:2
+msgid "Changelog"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:4
+msgid "Version history"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:6
+msgid "Koffi 2.5"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:8
+msgid "Koffi 2.5.15 (2023-08-24)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:10
+msgid "Run Koffi tests through usual index.js entry point"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:12
+msgid "Koffi 2.5.14 (2023-08-23)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:14
+msgid "Fix DLL error when using Koffi from NW.js on Windows"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:15
+msgid "Simplify NW.js Koffi example"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:17
+msgid "Koffi 2.5.12 (2023-08-21)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:19
+msgid "Fix native module bundling for FreeBSD ARM64 and Linux RISC-V 64"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:20
+msgid "Increase maximum number of parameters to 64"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:22
+msgid "Koffi 2.5.11 (2023-08-03)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:24
+msgid ""
+"Support casting function pointers with [koffi.as()](polymorphism.md"
+"#input-polymorphism)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:25
+msgid "Build in C++20 mode"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:27
+msgid "Koffi 2.5.10 (2023-08-01)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:29
+msgid "Fix CMake regression when client has to build Koffi"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:31
+msgid "Koffi 2.5.9 (2023-07-28)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:33 ../../../../src/koffi/CHANGELOG.md:99
+#: ../../../../src/koffi/CHANGELOG.md:158
+#: ../../../../src/koffi/CHANGELOG.md:210
+#: ../../../../src/koffi/CHANGELOG.md:229
+#: ../../../../src/koffi/CHANGELOG.md:300
+#: ../../../../src/koffi/CHANGELOG.md:323
+#: ../../../../src/koffi/CHANGELOG.md:397
+#: ../../../../src/koffi/CHANGELOG.md:433
+msgid "**Main changes:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:35
+msgid "Use bundler-friendly static require calls in Koffi"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:36
+msgid "Add packaging examples to documentation"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:38 ../../../../src/koffi/CHANGELOG.md:105
+#: ../../../../src/koffi/CHANGELOG.md:162
+#: ../../../../src/koffi/CHANGELOG.md:195
+#: ../../../../src/koffi/CHANGELOG.md:216
+#: ../../../../src/koffi/CHANGELOG.md:235
+#: ../../../../src/koffi/CHANGELOG.md:305
+#: ../../../../src/koffi/CHANGELOG.md:331
+#: ../../../../src/koffi/CHANGELOG.md:387
+#: ../../../../src/koffi/CHANGELOG.md:402
+#: ../../../../src/koffi/CHANGELOG.md:413
+#: ../../../../src/koffi/CHANGELOG.md:425
+#: ../../../../src/koffi/CHANGELOG.md:438
+#: ../../../../src/koffi/CHANGELOG.md:453
+#: ../../../../src/koffi/CHANGELOG.md:475
+msgid "**Other changes:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:40
+msgid "Add missing unload() export to TS file"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:41
+msgid "Add export for koffi.types in TS file"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:43
+msgid "Koffi 2.5.8 (2023-07-26)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:45
+msgid "Add more search paths for native Koffi modules"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:46
+msgid "Add section [about bundling](start.md#bundling-koffi) to documentation"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:48
+msgid "Koffi 2.5.7 (2023-07-19)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:50
+msgid "Point package to new repository"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:52
+msgid "Koffi 2.5.6 (2023-07-19)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:54
+msgid "Increase limit of output parameters from 16 to 32"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:56
+msgid "Koffi 2.5.5 (2023-07-17)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:58
+msgid "Support decoding non-char null-terminated arrays"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:60
+msgid "Koffi 2.5.4 (2023-07-14)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:62
+msgid "Fix `koffi.pointer()` not accepting disposable types"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:63
+msgid "Fix potential issues when making pointers to anonymous types"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:65
+msgid "Koffi 2.5.3 (2023-07-05)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:67
+msgid "Add missing union exports in TS definition file"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:68
+msgid "Fix some parameter names in TS definition file"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:70
+msgid "Koffi 2.5.2 (2023-07-04)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:72
+msgid "Default initialize unset object/struct members"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:74
+msgid "Koffi 2.5.1 (2023-06-20)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:76
+msgid "Fix crash with some struct types in System V 64 ABI"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:77
+msgid "Always use direct passthrough for buffer arguments"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:79
+msgid "Koffi 2.5.0 (2023-06-20)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:81 ../../../../src/koffi/CHANGELOG.md:280
+#: ../../../../src/koffi/CHANGELOG.md:498
+msgid "**New features:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:83
+msgid "Support [union types](unions.md)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:85 ../../../../src/koffi/CHANGELOG.md:267
+#: ../../../../src/koffi/CHANGELOG.md:287
+msgid "**Other fixes:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:87
+msgid "Fix ABI for single-float aggregate return on i386 BSD systems"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:88
+msgid "Don't mess with Node.js signal handling on POSIX systems"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:90
+msgid "Koffi 2.4"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:92
+msgid "Koffi 2.4.2 (2023-06-04)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:94
+msgid "Support calling variadic function pointers"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:95
+msgid "Add documentation for function pointers"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:97
+msgid "Koffi 2.4.1 (2023-06-03)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:101
+msgid ""
+"Support [decoding function pointers](functions.md#decode-pointer-to-"
+"function) to callable functions"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:102
+msgid ""
+"Support calling function pointers with [koffi.call()](functions.md#call-"
+"pointer-directly)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:103
+msgid "Deprecate `koffi.callback` in favor of `koffi.proto`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:107
+msgid "Increase maximum number of callbacks to 8192"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:108
+msgid "Build Koffi with static CRT on Windows"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:109
+msgid "Reorganize Koffi data conversion documentation"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:110
+msgid "Add deprecated `koffi.handle` to TS file"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:112
+msgid "Koffi 2.3"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:114
+msgid "Koffi 2.3.20 (2023-05-15)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:116
+msgid "Support explicit library unloading with `lib.unload()`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:118
+msgid "Koffi 2.3.19 (2023-04-21)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:120
+msgid "Actually allow non-ambiguous [string] values for `void *` arguments"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:122
+msgid "Koffi 2.3.18 (2023-04-21)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:124
+msgid "Fix possible crash on exit caused by unregistered callbacks"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:126
+msgid "Koffi 2.3.17 (2023-04-20)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:128
+msgid ""
+"Allow strings for input `void *`, `int8_t *` and `int16_t *` pointer "
+"arguments"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:129
+msgid ""
+"Support using `[string]` (single-element string arrays) for polymorphic "
+"input/output arguments"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:131
+msgid "Koffi 2.3.16 (2023-04-11)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:133
+msgid "Fix Windows ARM64 build to work with official Node.js version"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:134
+msgid "Compile Windows builds with Visual Studio 2022 17.5.3"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:135
+msgid "Support null in `koffi.free()` and `koffi.address()`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:137
+msgid "Koffi 2.3.15 (2023-04-10)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:139
+msgid "Improve manual decoding of 0-terminated strings"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:140
+msgid "Add checks around array conversion hints"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:142
+msgid "Koffi 2.3.14 (2023-04-05)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:144
+msgid "Add `koffi.errno()` function to get and set current errno value"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:145
+msgid "Add `koffi.os.errno` object with valid errno codes"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:147
+msgid "Koffi 2.3.13 (2023-03-30)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:149
+msgid "Add `koffi.address()` to get the raw value of a wrapper pointer"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:151
+msgid "Koffi 2.3.12 (2023-03-30)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:153
+msgid "Fix broken syntax in TS definition file"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:154
+msgid "Add missing exported properties in TS file"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:156
+msgid "Koffi 2.3.11 (2023-03-30)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:160
+msgid "Allow numbers and BigInts to be used for pointer arguments"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:164
+msgid "Use SQLITE_TRANSIENT in SQLite test code"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:165
+msgid "Avoid using `statx()` to allow compilation with glibc < 2.28"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:166
+msgid "Reorganize NPM package files to be less convoluted"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:168
+msgid "Koffi 2.3.9 (2023-03-10)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:170
+msgid "Relicense under MIT license"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:172
+msgid "Koffi 2.3.8 (2023-02-28)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:174
+msgid "Disable non-ready union support"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:175
+msgid "Simplify Windows stack allocation and drop NOACCESS and GUARD pages"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:176
+msgid "Adjust Windows TEB SEH chain and GuaranteedStackBytes for Koffi calls"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:178
+msgid "Koffi 2.3.7 (2023-02-27)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:180
+msgid ""
+"Fix missing require in index.js "
+"([@gastonFrecceroNapse](https://github.com/gastonFrecceroNapse))"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:181
+msgid "Reduce NPM package bloat (from 65 MB to 20 MB) caused by changes in 2.3.6"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:183
+msgid "Koffi 2.3.6 (2023-02-26)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:185
+msgid "Fix broken TS definition file"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:186
+msgid "Keep all prebuilt binaries and load correct one at runtime"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:188
+msgid "Koffi 2.3.5 (2023-02-24)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:190
+#: ../../../../src/koffi/CHANGELOG.md:262
+#: ../../../../src/koffi/CHANGELOG.md:381
+#: ../../../../src/koffi/CHANGELOG.md:408
+#: ../../../../src/koffi/CHANGELOG.md:421
+#: ../../../../src/koffi/CHANGELOG.md:449
+#: ../../../../src/koffi/CHANGELOG.md:506
+msgid "**Main fixes:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:192
+msgid "Fix rare random crashes with async callbacks"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:193
+msgid "Fix some bugs with RISC-V 64 ABI"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:197
+msgid "Expose array type hint in `koffi.introspect()`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:198
+msgid "Add missing `koffi.array()` export in TS definition"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:199
+msgid ""
+"Make KoffiFunction more flexible in TS definition "
+"([@insraq](https://github.com/insraq))"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:200
+msgid ""
+"Add a KoffiFunc<T> helper type in TS typing "
+"([@insraq](https://github.com/insraq))"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:201
+msgid "Mark optional properties in TS TypeInfo class"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:202
+msgid "Minor performance improvements"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:204
+msgid "Koffi 2.3.4 (2023-01-31)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:206
+msgid "Fix error when installing Koffi on Windows (2.3.2)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:208
+msgid "Koffi 2.3.2 (2023-01-30)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:212
+msgid ""
+"Fix type parser issues (such as ignoring some [disposable "
+"qualifiers](pointers.md#disposable-types))"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:213
+msgid "Fix crash when using disposable types in output parameters"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:214
+msgid "Add basic [koffi.stats()](misc.md#usage-statistics) interface"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:218
+msgid "Avoid CNoke dependency"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:219
+msgid "Clear out development dependencies from package.json"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:221
+msgid "Koffi 2.3.1 (2023-01-3O)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:223
+msgid ""
+"Error out when trying to use ambiguous `void *` arguments (input and/or "
+"output)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:224
+msgid "Adjust TypeScript definitions ([@insraq](https://github.com/insraq))"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:225
+msgid "Fix possible crash when parsing invalid prototype"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:227
+msgid "Koffi 2.3.0 (2023-01-25)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:231
+msgid ""
+"Allow buffers (TypedArray or ArrayBuffer) values for input and/or output "
+"pointer arguments (for polymorphic arguments)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:232
+msgid ""
+"Support opaque buffers (TypedArray or ArrayBuffer) values in "
+"`koffi.decode()` to [decode output buffers](polymorphism.md#output-"
+"buffers)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:233
+msgid ""
+"Decode non-string types as arrays when an [explicit length is passed to "
+"koffi.decode()](callbacks.md#decoding-pointer-arguments)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:237
+msgid ""
+"Drop TypedArray type check for array and pointer values (only the size "
+"matters)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:238
+msgid "Allow ArrayBuffer everywhere TypedArray is supported"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:239
+msgid "Add TypeScript definition for Koffi ([@insraq](https://github.com/insraq))"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:240
+msgid "Improve documentation about opaque and polymorphic structs"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:241
+msgid "Improve documentation for `koffi.decode()`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:242
+msgid ""
+"Reduce NPM package size (from 100 MB to 25 MB) by removing test code and "
+"dependencies"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:244
+msgid "Koffi 2.2"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:246
+msgid "Koffi 2.2.5 (2023-01-23)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:248
+msgid "Relicense Koffi under LGPL 3.0"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:250
+msgid "Koffi 2.2.4 (2023-01-19)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:252
+msgid "Fix memory leak on Windows (in Koffi 2.2.3) when running many async calls"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:253
+msgid "Reorganize documentation pages"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:255
+msgid "Koffi 2.2.3 (2023-01-17)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:257
+msgid ""
+"Support native code that uses [Structured Exception Handling "
+"(SEH)](https://learn.microsoft.com/en-us/cpp/cpp/structured-exception-"
+"handling-c-cpp) on Windows (x86, x64 and ARM64)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:258
+msgid "Try to use ebp/rbp as frame pointer in x86/x64 ASM code"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:260
+msgid "Koffi 2.2.2 (2023-01-14)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:264
+msgid ""
+"Support transparent [asynchronous callbacks](callbacks.md#asynchronous-"
+"callbacks)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:265
+msgid "Expand from a maximum of 16+16 to 1024 callbacks running in parallel"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:269
+msgid "Fix bundler support by removing shebang from index.js"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:270
+msgid ""
+"Fix bugs when loading Koffi multiples times in same process (context "
+"aware module)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:271
+msgid "Check N-API version when module is loaded"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:272
+msgid "Optimize callback unregistration"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:274
+msgid "Koffi 2.2.1 (2022-12-21)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:276
+msgid ""
+"Fix crash when [calling callback again after FFI call inside previous "
+"callback](https://github.com/Koromix/rygel/issues/15)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:278
+msgid "Koffi 2.2.0 (2022-12-20)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:282
+msgid ""
+"Add [koffi.decode()](callbacks.md#decoding-pointer-arguments) for "
+"callback pointer arguments"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:283
+msgid ""
+"Support transparent [output string parameters](output.md#string-buffer-"
+"example)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:284
+msgid "Add `koffi.offsetof()` utility function"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:285
+msgid "Support optional *this* binding in `koffi.register()`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:289
+msgid "Correctly validate output parameter types"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:290
+msgid "Fix assertion with `void *` parameters"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:292
+msgid "Koffi 2.1"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:294
+msgid "Koffi 2.1.5 (2022-11-27)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:296
+msgid "Add missing README.md file to NPM package"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:298
+msgid "Koffi 2.1.4 (2022-11-25)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:302
+msgid "Increase maximum type size from 32 kiB to 64 MiB"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:303
+msgid "Add configurable option for maximum type size"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:307
+msgid "Moved Koffi to a new repository: https://github.com/Koromix/rygel/"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:309
+msgid "Koffi 2.1.3 (2022-10-31)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:311
+msgid "Support up to 16 output parameters (instead of 8)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:313
+msgid "Koffi 2.1.2 (2022-10-31)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:315
+msgid "Support up to 8 output parameters (instead of 4)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:317
+msgid "Koffi 2.1.1 (2022-08-16)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:319
+msgid "Fix potential memory allocation bugs"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:321
+msgid "Koffi 2.1.0 (2022-08-13)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:325
+msgid ""
+"Add [koffi.as()](polymorphism.md#input-polymorphism) to support "
+"polymorphic APIs based on `void *` parameters"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:326
+msgid ""
+"Add [endian-sensitive integer types](input.md#endian-sensitive-types): "
+"`intX_le_t`, `intX_be_t`, `uintX_le_t`, `uintX_be_t`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:327
+msgid "Accept typed arrays for `void *` parameters"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:328
+msgid ""
+"Introduce `koffi.opaque()` to replace `koffi.handle()` (which remains "
+"supported until Koffi 3.0)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:329
+msgid "Support JS Array and TypedArray to fill struct and array pointer members"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:333
+msgid "Improve global performance with inlining and unity builds"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:334
+msgid "Add `size_t` primitive type"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:335
+msgid "Support member-specific alignement values in structs"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:336
+msgid ""
+"Detect impossible parameter and return types (such as non-pointer opaque "
+"types)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:337
+#: ../../../../src/koffi/CHANGELOG.md:389
+#: ../../../../src/koffi/CHANGELOG.md:417
+msgid "Various documentation fixes and improvements"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:339
+msgid "Koffi 2.0"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:341
+msgid "Koffi 2.0.1 (2022-07-30)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:343
+msgid "Return `undefined` (instead of null) for `void` functions"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:345
+msgid "Koffi 2.0.0 (2022-07-29)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:347
+msgid "**Major new features:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:349
+msgid ""
+"Add [disposable types](pointers.md#disposable-types) for automatic "
+"disposal of C values (such as heap-allocated strings)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:350
+msgid ""
+"Add support for [registered callbacks](callbacks.md#registered-"
+"callbacks), that can be called after the initial FFI call"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:351
+msgid "Support named pointer types"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:352
+msgid "Support complex type specifications outside of prototype parser"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:354
+msgid "**Minor new features:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:356
+msgid "Support type aliases with `koffi.alias()`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:357
+msgid "Add `koffi.resolve()` to resolve type strings"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:358
+msgid "Expose all primitive type aliases in `koffi.types`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:359
+msgid "Correctly pass exceptions thrown in JS callbacks"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:361
+msgid "**Breaking API changes:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:363
+msgid "Change handling of callback types, which must be used through pointers"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:364
+msgid "Change handling of opaque handles, which must be used through pointers"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:365
+msgid "Support all types in `koffi.introspect(type)`"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:367
+msgid "Consult the [migration guide](migration.md) for more information."
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:369
+msgid "Koffi 1.3"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:371
+msgid "Koffi 1.3.12 (2022-07-27)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:373
+msgid "Fix support for Yarn package manager"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:375
+msgid "Koffi 1.3.11 (2022-07-26)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:377
+msgid "Fix broken parsing of `void *` when used for first parameter"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:379
+msgid "Koffi 1.3.10 (2022-07-25)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:383
+msgid "Fix support for callbacks with more than 4 parameters on Windows x64"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:384
+msgid ""
+"Fix support for callbacks with multiple floating-point arguments on ARM32"
+" platforms"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:385
+msgid "Fix possibly incorrect conversion for uint32_t callback parameters"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:391
+msgid "Koffi 1.3.9 (2022-07-15)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:393
+msgid "Fix prebuild compatibility with Electron on Windows x64"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:395
+msgid "Koffi 1.3.8 (2022-07-12)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:399
+msgid "Prevent callback reuse beyond FFI call"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:400
+msgid "Add BTI support for AAarch64 platforms (except Windows)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:404
+msgid "Fix and harmonize a few error messages"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:406
+msgid "Koffi 1.3.7 (2022-07-07)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:410
+msgid "Fix crash when using callbacks inside structs"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:411
+msgid "Support for null strings in record members"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:415
+msgid "Add intptr_t and uintptr_t primitive types"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:416
+msgid "Add str/str16 type aliases for string/string16"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:419
+msgid "Koffi 1.3.6 (2022-07-01)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:423
+msgid "Fix install error with Node < 15 on Windows (build system bug)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:427
+msgid "Detect incompatible Node.js versions when installing Koffi"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:428
+msgid "Prebuild with Clang for Windows x64 and Linux x64 binaries"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:429
+#: ../../../../src/koffi/CHANGELOG.md:441
+#: ../../../../src/koffi/CHANGELOG.md:457
+msgid "Various documentation improvements"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:431
+msgid "Koffi 1.3.5 (2022-06-25)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:435
+msgid "Fix memory leak when many async calls are running"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:436
+msgid "Add configurable limit for maximum number of async calls (max_async_calls)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:440
+msgid "Reduce default async memory stack and heap size"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:443
+msgid "Koffi 1.3.4 (2022-06-24)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:445
+msgid "Fix possible OpenBSD i386 crash with `(void)` functions"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:447
+msgid "Koffi 1.3.3 (2022-06-24)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:451
+msgid "Fix misconversion of signed integer return value as unsigned"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:455
+msgid "Support `(void)` (empty) function signatures"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:456
+msgid "Disable unsafe compiler optimizations"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:459
+msgid "Koffi 1.3.2 (2022-06-23)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:461
+msgid "Support compilation in C++14 mode (graceful degradation)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:462
+msgid "Support older toolchains on Linux (tested on Debian 9)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:464
+msgid "Koffi 1.3.1 (2022-06-22)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:466
+msgid ""
+"The prebuilt binary is tested when Koffi is installed, and a rebuild "
+"happens if it fails to load"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:468
+msgid "Koffi 1.3.0 (2022-06-22)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:470
+msgid "**Major changes:**"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:472
+msgid "Expand and move documentation to https://koffi.dev/"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:473
+msgid ""
+"Support JS arrays and TypedArrays for pointer arguments (input, output "
+"and mixed)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:477
+msgid ""
+"Convert NULL string pointers to null instead of crashing (return values, "
+"struct and array members, callbacks)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:478
+msgid "Default to 'string' array hint for char, char16 and char16_t arrays"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:479
+msgid "Fix definition of long types on Windows x64 (LLP64 model)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:480
+msgid "Restrict automatic string conversion to signed char types"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:481
+msgid "Detect floating-point ABI before using prebuilt binaries (ARM32, RISC-V)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:482
+msgid "Forbid duplicate member names in struct types"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:484
+msgid "Koffi 1.2"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:486
+msgid "Koffi 1.2.4 (2022-06-12)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:488
+msgid "Windows ARM64 is now supported"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:490
+msgid "Koffi 1.2.3 (2022-06-11)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:492
+msgid "A prebuilt binary for macOS ARM64 (M1) is now included"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:494
+msgid "Koffi 1.2.1 (2022-06-11)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:496
+msgid "This entry documents changes since version 1.1.0."
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:500
+msgid "JS functions can be used as C callbacks (cdecl, stdcall) on all platforms"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:501
+msgid "RISC-V 64 LP64D ABI is supported (LP64 is untested)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:502
+msgid "Expose settings for memory usage of synchronous and asynchronous calls"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:503
+msgid "Transparent conversion between C buffers and strings"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:504
+msgid "Tentative support for Windows ARM64 (untested)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:508
+msgid "Fix excessive stack alignment of structs on x86 platforms"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:509
+msgid "Fix potential problems with big int64_t/uint64_t values"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:510
+msgid "Fix possible struct layout errors in push/pop code"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:511
+msgid "Fix alignment issues in ARM32 push code"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:512
+msgid "Fix incomplete/buggy support for HFA structs on ARM32 and ARM64"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:513
+msgid "Fix crashes on OpenBSD caused by missing MAP_STACK flag"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:514
+msgid "Fix non-sense \"duplicate array type\" errors"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:515
+msgid "Fix value `koffi.internal` to false in module (normal) builds"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:516
+msgid "Make sure we have a redzone below the stack for all architectures"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:517
+msgid "Use slower allocation for big objects instead of failing"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:519
+msgid "Todo list"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:521
+msgid ""
+"The following features and improvements are planned, not necessarily in "
+"that order:"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:523
+msgid "Optimize passing of structs and arrays (with auto-generated JS)"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:524
+msgid ""
+"Automate Windows/AArch64 (qemu) and macOS/AArch64 (how? ... thanks Apple)"
+" tests"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:525
+msgid ""
+"Create a real-world example, using several libraries (Raylib, SQLite, "
+"libsodium) to illustrate various C API styles"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:526
+msgid "Add simple struct type parser"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:527
+msgid "Port Koffi to PowerPC (POWER9+) ABI"
+msgstr ""
+
+#: ../../../../src/koffi/CHANGELOG.md:528
+msgid "Fix assembly unwind and CFI directives for better debugging experience"
+msgstr ""
+

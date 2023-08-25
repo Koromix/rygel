@@ -116,3 +116,7 @@ rediraffe_redirects = {
     "bundling.md": "packaging.md",
     "parameters.md": "input.md"
 }
+
+# --- Localization -------------------------------------------------
+
+locale_dirs = ['locale/']

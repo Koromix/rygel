@@ -1,0 +1,287 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../callbacks.md:1
+msgid "Javascript callbacks"
+msgstr ""
+
+#: ../../callbacks.md:3
+msgid "*Changed in Koffi 2.4*"
+msgstr ""
+
+#: ../../callbacks.md:6
+msgid ""
+"The function `koffi.proto()` was introduced in Koffi 2.4, it was called "
+"`koffi.callback()` in earlier versions."
+msgstr ""
+
+#: ../../callbacks.md:9
+msgid "Callback types"
+msgstr ""
+
+#: ../../callbacks.md:11
+msgid ""
+"In order to pass a JS function to a C function expecting a callback, you "
+"must first create a callback type with the expected return type and "
+"parameters. The syntax is similar to the one used to load functions from "
+"a shared library."
+msgstr ""
+
+#: ../../callbacks.md:24
+msgid ""
+"Once your callback type is declared, you can use a pointer to it in "
+"struct definitions, as function parameters and/or return types, or to "
+"call/decode function pointers."
+msgstr ""
+
+#: ../../callbacks.md:27
+msgid "Callbacks **have changed in version 2.0**."
+msgstr ""
+
+#: ../../callbacks.md:29
+msgid ""
+"In Koffi 1.x, callbacks were defined in a way that made them usable "
+"directly as parameter and return types, obscuring the underlying pointer."
+msgstr ""
+
+#: ../../callbacks.md:31
+msgid ""
+"Now, you must use them through a pointer: `void CallIt(CallbackType "
+"func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version "
+"2.0 and newer."
+msgstr ""
+
+#: ../../callbacks.md:33
+msgid "Consult the [migration guide](migration.md) for more information."
+msgstr ""
+
+#: ../../callbacks.md:36
+msgid "Transient and registered callbacks"
+msgstr ""
+
+#: ../../callbacks.md:38
+msgid ""
+"Koffi only uses predefined static trampolines, and does not need to "
+"generate code at runtime, which makes it compatible with platforms with "
+"hardened W^X migitations (such as PaX mprotect). However, this imposes "
+"some restrictions on the maximum number of callbacks, and their duration."
+msgstr ""
+
+#: ../../callbacks.md:40
+msgid "Thus, Koffi distinguishes two callback modes:"
+msgstr ""
+
+#: ../../callbacks.md:42
+msgid ""
+"[Transient callbacks](#transient-callbacks) can only be called while the "
+"C function they are passed to is running, and are invalidated when it "
+"returns. If the C function calls the callback later, the behavior is "
+"undefined, though Koffi tries to detect such cases. If it does, an "
+"exception will be thrown, but this is no guaranteed. However, they are "
+"simple to use, and don't require any special handling."
+msgstr ""
+
+#: ../../callbacks.md:43
+msgid ""
+"[Registered callbacks](#registered-callbacks) can be called at any time, "
+"but they must be manually registered and unregistered. A limited number "
+"of registered callbacks can exist at the same time."
+msgstr ""
+
+#: ../../callbacks.md:45
+msgid ""
+"You need to specify the correct [calling convention](functions.md"
+"#calling-conventions) on x86 platforms, or the behavior is undefined "
+"(Node will probably crash). Only *cdecl* and *stdcall* callbacks are "
+"supported."
+msgstr ""
+
+#: ../../callbacks.md:47
+msgid "Transient callbacks"
+msgstr ""
+
+#: ../../callbacks.md:49
+msgid ""
+"Use transient callbacks when the native C function only needs to call "
+"them while it runs (e.g. qsort, progress callback, `sqlite3_exec`). Here "
+"is a small example with the C part and the JS part."
+msgstr ""
+
+#: ../../callbacks.md:85
+msgid "Registered callbacks"
+msgstr ""
+
+#: ../../callbacks.md:87
+msgid "*New in Koffi 2.0 (explicit this binding in Koffi 2.2)*"
+msgstr ""
+
+#: ../../callbacks.md:89
+msgid ""
+"Use registered callbacks when the function needs to be called at a later "
+"time (e.g. log handler, event handler, `fopencookie/funopen`). Call "
+"`koffi.register(func, type)` to register a callback function, with two "
+"arguments: the JS function, and the callback type."
+msgstr ""
+
+#: ../../callbacks.md:91
+msgid ""
+"When you are done, call `koffi.unregister()` (with the value returned by "
+"`koffi.register()`) to release the slot. A maximum of 1024 callbacks can "
+"exist at the same time. Failure to do so will leak the slot, and "
+"subsequent registrations may fail (with an exception) once all slots are "
+"used."
+msgstr ""
+
+#: ../../callbacks.md:93
+msgid "The example below shows how to register and unregister delayed callbacks."
+msgstr ""
+
+#: ../../callbacks.md:134
+msgid ""
+"Starting *with Koffi 2.2*, you can optionally specify the `this` value "
+"for the function as the first argument."
+msgstr ""
+
+#: ../../callbacks.md:148
+msgid "Special considerations"
+msgstr ""
+
+#: ../../callbacks.md:150
+msgid "Decoding pointer arguments"
+msgstr ""
+
+#: ../../callbacks.md:152
+msgid "*New in Koffi 2.2, changed in Koffi 2.3*"
+msgstr ""
+
+#: ../../callbacks.md:154
+msgid ""
+"Koffi does not have enough information to convert callback pointer "
+"arguments to an appropriate JS value. In this case, your JS function will"
+" receive an opaque *External* object."
+msgstr ""
+
+#: ../../callbacks.md:156
+msgid ""
+"You can pass this value through to another C function that expects a "
+"pointer of the same type, or you can use `koffi.decode()` to decode it "
+"into something you can use in Javascript."
+msgstr ""
+
+#: ../../callbacks.md:158
+msgid ""
+"Some arguments are optional and this function can be called in several "
+"ways:"
+msgstr ""
+
+#: ../../callbacks.md:160
+msgid "`koffi.decode(value, type)`: no offset, expect NUL-terminated strings"
+msgstr ""
+
+#: ../../callbacks.md:161
+msgid ""
+"`koffi.decode(value, offset, type)`: explicit offset to add to the "
+"pointer before decoding"
+msgstr ""
+
+#: ../../callbacks.md:163
+msgid "The following example sorts an array of strings (in-place) with `qsort()`:"
+msgstr ""
+
+#: ../../callbacks.md:186
+msgid ""
+"There is also an optional ending `length` argument that you can use in "
+"two cases:"
+msgstr ""
+
+#: ../../callbacks.md:188
+msgid ""
+"Use it to give the number of bytes to decode in non-NUL terminated "
+"strings: `koffi.decode(value, 'char *', 5)`"
+msgstr ""
+
+#: ../../callbacks.md:189
+msgid ""
+"Decode consecutive values into an array. For example, here is how you can"
+" decode an array with 3 float values: `koffi.decode(value, 'float', 3)`. "
+"This is equivalent to `koffi.decode(value, koffi.array('float', 3))`."
+msgstr ""
+
+#: ../../callbacks.md:192
+msgid ""
+"In Koffi 2.2 and earlier versions, the length argument is only used to "
+"decode strings and is ignored otherwise."
+msgstr ""
+
+#: ../../callbacks.md:195
+msgid "Asynchronous callbacks"
+msgstr ""
+
+#: ../../callbacks.md:197
+msgid "*New in Koffi 2.2.2*"
+msgstr ""
+
+#: ../../callbacks.md:199
+msgid ""
+"JS execution is inherently single-threaded, so JS callbacks must run on "
+"the main thread. There are two ways you may want to call a callback "
+"function from another thread:"
+msgstr ""
+
+#: ../../callbacks.md:201
+msgid "Call the callback from an asynchronous FFI call (e.g. `waitpid.async`)"
+msgstr ""
+
+#: ../../callbacks.md:202
+msgid "Inside a synchronous FFI call, pass the callback to another thread"
+msgstr ""
+
+#: ../../callbacks.md:204
+msgid ""
+"In both cases, Koffi will queue the call back to JS to run on the main "
+"thread, as soon as the JS event loop has a chance to run (for example "
+"when you await a promise)."
+msgstr ""
+
+#: ../../callbacks.md:207
+msgid ""
+"Be careful, you can easily get into a deadlock situation if you call a "
+"callback from a secondary thread and your main thread never lets the JS "
+"event loop run (for example, if the main thread waits for the secondary "
+"thread to finish something itself)."
+msgstr ""
+
+#: ../../callbacks.md:210
+msgid "Handling of exceptions"
+msgstr ""
+
+#: ../../callbacks.md:212
+msgid ""
+"If an exception happens inside the JS callback, the C API will receive 0 "
+"or NULL (depending on the return value type)."
+msgstr ""
+
+#: ../../callbacks.md:214
+msgid ""
+"Handle the exception yourself (with try/catch) if you need to handle "
+"exceptions differently."
+msgstr ""
+

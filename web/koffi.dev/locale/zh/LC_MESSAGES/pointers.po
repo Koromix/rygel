@@ -1,0 +1,250 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../pointers.md:1
+msgid "Data pointers"
+msgstr ""
+
+#: ../../pointers.md:3
+msgid "How pointers are used"
+msgstr ""
+
+#: ../../pointers.md:5
+msgid ""
+"In C, pointer arguments are used for differenty purposes. It is important"
+" to distinguish these use cases because Koffi provides different ways to "
+"deal with each of them:"
+msgstr ""
+
+#: ../../pointers.md:7
+msgid ""
+"**Struct pointers**: Use of struct pointers by C libraries fall in two "
+"cases: avoid (potentially) expensive copies, and to let the function "
+"change struct contents (output or input/output arguments)."
+msgstr ""
+
+#: ../../pointers.md:8
+msgid ""
+"**Opaque pointers**: the library does not expose the contents of the "
+"structs, and only provides you with a pointer to it (e.g. `FILE *`). Only"
+" the functions provided by the library can do something with this "
+"pointer, in Koffi we call this an opaque type. This is usually done for "
+"ABI-stability reason, and to prevent library users from messing directly "
+"with library internals."
+msgstr ""
+
+#: ../../pointers.md:9
+msgid ""
+"**Pointers to primitive types**: This is more rare, and generally used "
+"for output or input/output arguments. The Win32 API has a lot of these."
+msgstr ""
+
+#: ../../pointers.md:10
+msgid ""
+"**Arrays**: in C, you dynamically-sized arrays are usually passed to "
+"functions with pointers, either NULL-terminated (or any other sentinel "
+"value) or with an additional length argument."
+msgstr ""
+
+#: ../../pointers.md:12
+msgid "Pointer types"
+msgstr ""
+
+#: ../../pointers.md:14
+msgid "Struct pointers"
+msgstr ""
+
+#: ../../pointers.md:16
+msgid ""
+"The following Win32 example uses `GetCursorPos()` (with an output "
+"parameter) to retrieve and show the current cursor position."
+msgstr ""
+
+#: ../../pointers.md:40
+msgid "Opaque pointers"
+msgstr ""
+
+#: ../../pointers.md:42 ../../pointers.md:137
+msgid "*New in Koffi 2.0*"
+msgstr ""
+
+#: ../../pointers.md:44
+msgid ""
+"Some C libraries use handles, which behave as pointers to opaque structs."
+" An example of this is the HANDLE type in the Win32 API. If you want to "
+"reproduce this behavior, you can define a **named pointer type** to an "
+"opaque type, like so:"
+msgstr ""
+
+#: ../../pointers.md:54
+msgid "Pointer to primitive types"
+msgstr ""
+
+#: ../../pointers.md:56
+msgid ""
+"In javascript, it is not possible to pass a primitive value by reference "
+"to another function. This means that you cannot call a function and "
+"expect it to modify the value of one of its number or string parameter."
+msgstr ""
+
+#: ../../pointers.md:58
+msgid ""
+"However, arrays and objects (among others) are reference type values. "
+"Assigning an array or an object from one variable to another does not "
+"invole any copy. Instead, as the following example illustrates, the new "
+"variable references the same array as the first:"
+msgstr ""
+
+#: ../../pointers.md:69
+msgid ""
+"All of this means that C functions that are expected to modify their "
+"primitive output values (such as an `int *` parameter) cannot be used "
+"directly. However, thanks to Koffi's transparent array support, you can "
+"use Javascript arrays to approximate reference semantics with single-"
+"element arrays."
+msgstr ""
+
+#: ../../pointers.md:71
+msgid ""
+"Below, you can find an example of an addition function where the result "
+"is stored in an `int *` input/output parameter and how to use this "
+"function from Koffi."
+msgstr ""
+
+#: ../../pointers.md:80
+msgid "You can simply pass a single-element array as the first argument:"
+msgstr ""
+
+#: ../../pointers.md:91
+msgid "Array pointers (dynamic arrays)"
+msgstr ""
+
+#: ../../pointers.md:93
+msgid ""
+"In C, dynamically-sized arrays are usually passed around as pointers. The"
+" length is either passed as an additional argument, or inferred from the "
+"array content itself, for example with a terminating sentinel value (such"
+" as a NULL pointers in the case of an array of strings)."
+msgstr ""
+
+#: ../../pointers.md:95
+msgid ""
+"Koffi can translate JS arrays and TypedArrays to pointer arguments. "
+"However, because C does not have a proper notion of dynamically-sized "
+"arrays (fat pointers), you need to provide the length or the sentinel "
+"value yourself depending on the API."
+msgstr ""
+
+#: ../../pointers.md:97
+msgid ""
+"Here is a simple example of a C function taking a NULL-terminated list of"
+" strings as input, to calculate the total length of all strings."
+msgstr ""
+
+#: ../../pointers.md:133
+msgid ""
+"By default, just like for objects, array arguments are copied from JS to "
+"C but not vice-versa. You can however change the direction as documented "
+"in the section on [output parameters](output.md)."
+msgstr ""
+
+#: ../../pointers.md:135
+msgid "Disposable types"
+msgstr ""
+
+#: ../../pointers.md:139
+msgid ""
+"Disposable types allow you to register a function that will automatically"
+" called after each C to JS conversion performed by Koffi. This can be "
+"used to avoid leaking heap-allocated strings, for example."
+msgstr ""
+
+#: ../../pointers.md:141
+msgid ""
+"Some C functions return heap-allocated values directly or through output "
+"parameters. While Koffi automatically converts values from C to JS (to a "
+"string or an object), it does not know when something needs to be freed, "
+"or how."
+msgstr ""
+
+#: ../../pointers.md:143
+msgid ""
+"For opaque types, such as FILE, this does not matter because you will "
+"explicitly call `fclose()` on them. But some values (such as strings) get"
+" implicitly converted by Koffi, and you lose access to the original "
+"pointer. This creates a leak if the string is heap-allocated."
+msgstr ""
+
+#: ../../pointers.md:145
+msgid ""
+"To avoid this, you can instruct Koffi to call a function on the original "
+"pointer once the conversion is done, by creating a **disposable type** "
+"with `koffi.dispose(name, type, func)`. This creates a type derived from "
+"another type, the only difference being that *func* gets called with the "
+"original pointer once the value has been converted and is not needed "
+"anymore."
+msgstr ""
+
+#: ../../pointers.md:147
+msgid ""
+"The *name* can be omitted to create an anonymous disposable type. If "
+"*func* is omitted or is null, Koffi will use `koffi.free(ptr)` (which "
+"calls the standard C library *free* function under the hood)."
+msgstr ""
+
+#: ../../pointers.md:155
+msgid ""
+"The following example illustrates the use of a disposable type derived "
+"from *str*."
+msgstr ""
+
+#: ../../pointers.md:170
+msgid ""
+"When you declare functions with the [prototype-like syntax](functions.md"
+"#definition-syntax), you can either use named disposable types or use the"
+" '!' shortcut qualifier with compatibles types, as shown in the example "
+"below. This qualifier creates an anonymous disposable type that calls "
+"`koffi.free(ptr)`."
+msgstr ""
+
+#: ../../pointers.md:185
+msgid "Disposable types can only be created from pointer or string types."
+msgstr ""
+
+#: ../../pointers.md:188
+msgid ""
+"Be careful on Windows: if your shared library uses a different CRT (such "
+"as msvcrt), the memory could have been allocated by a different "
+"malloc/free implementation or heap, resulting in undefined behavior if "
+"you use `koffi.free()`."
+msgstr ""
+
+#: ../../pointers.md:191
+msgid "Unwrap pointers"
+msgstr ""
+
+#: ../../pointers.md:193
+msgid ""
+"You can use `koffi.address(ptr)` on a pointer to get the numeric value as"
+" a [BigInt object](https://developer.mozilla.org/en-"
+"US/docs/Web/JavaScript/Reference/Global_Objects/BigInt)."
+msgstr ""
+

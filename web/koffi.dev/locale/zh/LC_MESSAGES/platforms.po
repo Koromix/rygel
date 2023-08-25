@@ -1,0 +1,161 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../platforms.md:1
+msgid "Requirements"
+msgstr "依赖"
+
+#: ../../platforms.md:3
+msgid "Node.js"
+msgstr "Node.js"
+
+#: ../../platforms.md:5
+msgid ""
+"Koffi requires a recent [Node.js](https://nodejs.org/) version with "
+"[N-API](https://nodejs.org/api/n-api.html) version 8 support:"
+msgstr ""
+"Koffi需要较新版本的[Node.js](https://nodejs.org/)，支持[N-API](https://nodejs.org/api/n-api.html)版本8:"
+
+#: ../../platforms.md:7
+msgid "Node < 12.22.0 is not supported"
+msgstr "Node < 12.22.0不支持"
+
+#: ../../platforms.md:8
+msgid "_Node 12.x_: Node 12.22.0 or newer"
+msgstr "_Node 12.x_: Node 12.22.0及以后"
+
+#: ../../platforms.md:9
+msgid "_Node 14.x_: Node 14.17.0 or newer"
+msgstr "_Node 14.x_: Node 14.17.0及以后"
+
+#: ../../platforms.md:10
+msgid "_Node 15.x_: Node 15.12.0 or newer"
+msgstr "_Node 15.x_: Node 15.12.0及以后"
+
+#: ../../platforms.md:11
+msgid "Node 16.0.0 or later versions"
+msgstr "Node 16.0.0及之后的版本"
+
+#: ../../platforms.md:13
+msgid ""
+"Use [NVM](https://github.com/nvm-sh/nvm) to install more recent Node "
+"versions on older Linux distributions."
+msgstr ""
+"使用[NVM](https://github.com/nvm-sh/nvm)来在老的Linux发行版中安装更新的Node版本."
+
+#: ../../platforms.md:15
+msgid "Supported platforms"
+msgstr "支持的平台"
+
+#: ../../platforms.md:17
+msgid ""
+"The following combinations of OS and architectures __are officially "
+"supported and tested__ at the moment:"
+msgstr ""
+"下列系统和架构的组合当前__被官方支持并测试过__:"
+
+#: ../../platforms.md
+msgid "ISA / OS"
+msgstr "架构 \\ 系统"
+
+#: ../../platforms.md
+msgid "Windows"
+msgstr "Windows"
+
+#: ../../platforms.md
+msgid "Linux"
+msgstr "Linux"
+
+#: ../../platforms.md
+msgid "macOS"
+msgstr "macOS"
+
+#: ../../platforms.md
+msgid "FreeBSD"
+msgstr "FreeBSD"
+
+#: ../../platforms.md
+msgid "OpenBSD"
+msgstr "OpenBSD"
+
+#: ../../platforms.md
+msgid "x86 (IA32) [^1]"
+msgstr "x86 (IA32) [^1]"
+
+#: ../../platforms.md
+msgid "✅ Yes"
+msgstr "✅ Yes"
+
+#: ../../platforms.md
+msgid "⬜️ *N/A*"
+msgstr "⬜️ *N/A*"
+
+#: ../../platforms.md
+msgid "x86_64 (AMD64)"
+msgstr "x86_64 (AMD64)"
+
+#: ../../platforms.md
+msgid "ARM32 LE [^2]"
+msgstr "ARM32 LE [^2]"
+
+#: ../../platforms.md
+msgid "🟨 Probably"
+msgstr "🟨 Probably"
+
+#: ../../platforms.md
+msgid "ARM64 (AArch64) LE"
+msgstr "ARM64 (AArch64) LE"
+
+#: ../../platforms.md
+msgid "RISC-V 64 [^3]"
+msgstr "RISC-V 64 [^3]"
+
+#: ../../platforms.md:31
+msgid ""
+"For all fully supported platforms (green check marks), a prebuilt binary "
+"is included in the NPM package which means you can install Koffi without "
+"a C++ compiler."
+msgstr ""
+"对于所有完整支持的平台(绿色对勾标记), NPM包中包含了预编译的二进制, 因此你不需要一个C++编译器就能安装Koffi."
+
+#: ../../platforms.md:27
+msgid ""
+"The following call conventions are supported for forward calls: cdecl, "
+"stdcall, MS fastcall, thiscall. Only cdecl and stdcall can be used for C "
+"to JS callbacks."
+msgstr ""
+"正向调用支持的调用协定: cdecl, stdcall, MS fastcall, thiscall. 从C向JS的回调仅可使用cdecl和stdcall."
+
+#: ../../platforms.md:28
+msgid ""
+"The prebuilt binary uses the hard float ABI and expects a VFP "
+"coprocessor. Build from source to use Koffi with a different ABI (softfp,"
+" soft)."
+msgstr ""
+"预编译的二进制使用了hard float ABI, 需要VFP协处理器. 从代码构建来让Koffi使用一个其他ABI(softfp, soft)."
+
+#: ../../platforms.md:29
+msgid ""
+"The prebuilt binary uses the LP64D (double-precision float) ABI. The LP64"
+" ABI is supported in theory if you build Koffi from source (untested), "
+"the LP64F ABI is not supported."
+msgstr ""
+"预编译的二进制使用了LP64D(双精度浮点)ABI. 通过从源代码编译Koffi理论上支持LP64 ABI(未测试), 不支持LP64F ABI."

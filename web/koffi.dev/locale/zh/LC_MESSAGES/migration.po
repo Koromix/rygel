@@ -1,0 +1,133 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: zh\n"
+"Language-Team: zh <LL@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../migration.md:1
+msgid "Migration guide"
+msgstr ""
+
+#: ../../migration.md:3
+msgid "Koffi 1.x to 2.x"
+msgstr ""
+
+#: ../../migration.md:5
+msgid ""
+"The API was changed in 2.x in a few ways, in order to reduce some "
+"excessively \"magic\" behavior and reduce the syntax differences between "
+"C and the C-like prototypes."
+msgstr ""
+
+#: ../../migration.md:7
+msgid "You may need to change your code if you use:"
+msgstr ""
+
+#: ../../migration.md:9
+msgid "Callback functions"
+msgstr ""
+
+#: ../../migration.md:10
+msgid "Opaque types"
+msgstr ""
+
+#: ../../migration.md:11
+msgid "`koffi.introspect()`"
+msgstr ""
+
+#: ../../migration.md:13
+msgid "Callback type changes"
+msgstr ""
+
+#: ../../migration.md:15
+msgid ""
+"In Koffi 1.x, callbacks were defined in a way that made them usable "
+"directly as parameter and return types, obscuring the underlying pointer."
+" Now, you must use them through a pointer: `void CallIt(CallbackType "
+"func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version "
+"2.0 and newer."
+msgstr ""
+
+#: ../../migration.md:17
+msgid "Given the following C code:"
+msgstr ""
+
+#: ../../migration.md:30
+msgid ""
+"The two versions below illustrate the API difference between Koffi 1.x "
+"and Koffi 2.x:"
+msgstr ""
+
+#: ../../migration.md:64
+msgid ""
+"Koffi 1.x only supported [transient callbacks](callbacks.md#javascript-"
+"callbacks), you must use Koffi 2.x for registered callbacks."
+msgstr ""
+
+#: ../../migration.md:67
+msgid ""
+"The function `koffi.proto()` was introduced in Koffi 2.4, it was called "
+"`koffi.callback()` in earlier versions."
+msgstr ""
+
+#: ../../migration.md:70
+msgid "Opaque type changes"
+msgstr ""
+
+#: ../../migration.md:72
+msgid ""
+"In Koffi 1.x, opaque handles were defined in a way that made them usable "
+"directly as parameter and return types, obscuring the underlying pointer."
+" Now, in Koffi 2.0, you must use them through a pointer, and use an array"
+" for output parameters."
+msgstr ""
+
+#: ../../migration.md:74
+msgid ""
+"In addition to that, `koffi.handle()` has been deprecated in Koffi 2.1 "
+"and replaced with `koffi.opaque()`. They work the same but new code "
+"should use `koffi.opaque()`, the former one will eventually be removed in"
+" Koffi 3.0."
+msgstr ""
+
+#: ../../migration.md:76
+msgid "For functions that return opaque pointers or pass them by parameter:"
+msgstr ""
+
+#: ../../migration.md:105
+msgid ""
+"For functions that set opaque handles through output parameters (such as "
+"`sqlite3_open_v2`), you must now use a single element array as shown "
+"below:"
+msgstr ""
+
+#: ../../migration.md:148
+msgid "New koffi.introspect()"
+msgstr ""
+
+#: ../../migration.md:150
+msgid ""
+"In Koffi 1.x, `koffi.introspect()` would only work with struct types, and"
+" return the object passed to `koffi.struct()` to initialize the type. Now"
+" this function works with all types."
+msgstr ""
+
+#: ../../migration.md:152
+msgid "You can still get the list of struct members:"
+msgstr ""
+
