@@ -9,10 +9,10 @@ msgstr ""
 "Project-Id-Version: Koffi 2.5.15\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-08-25 15:00+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2023-08-25 19:10+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
 "Language: zh\n"
-"Language-Team: zh <LL@li.org>\n"
+"Language-Team: zh <zh@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -21,35 +21,37 @@ msgstr ""
 
 #: ../../index.rst:2
 msgid "Koffi"
-msgstr ""
+msgstr "Koffi"
 
 #: ../../index.rst:5
 msgid "Overview"
-msgstr ""
+msgstr "总览"
 
 #: ../../index.rst:7
 msgid "Koffi is a **fast and easy-to-use C FFI module for Node.js**, featuring:"
-msgstr ""
+msgstr "Koffi是一个**快速且易用的, Node.js下的C FFI模块**, 特点:"
 
 #: ../../index.rst:9
 msgid "Low-overhead and fast performance (see :ref:`benchmarks<Benchmarks>`)"
-msgstr ""
+msgstr "低开销且高性能(参见 :ref:`基准测试<Benchmarks>`)"
 
 #: ../../index.rst:10
 msgid ""
 "Support for primitive and aggregate data types (structs and fixed-size "
 "arrays), both by reference (pointer) and by value"
 msgstr ""
+"支持原始类型和聚合类型(结构体和定长数组), 通过引用(指针)或值"
 
 #: ../../index.rst:11
 msgid "Javascript functions can be used as C callbacks (since 1.2.0)"
-msgstr ""
+msgstr "Javascript函数可以用作C的回调(1.2.0引入)"
 
 #: ../../index.rst:12
 msgid ""
 "Well-tested code base for :ref:`popular OS/architecture "
 "combinations<Supported platforms>`"
 msgstr ""
+"对:ref:`常见的系统-架构组合<Supported platforms>`经过充分测试的代码库"
 
 #: ../../index.rst:14
 msgid ""
@@ -57,34 +59,39 @@ msgid ""
 "N-API version 8 support, see :ref:`this page<Node.js>` for more "
 "information."
 msgstr ""
+"Koffi需要较新版本的[Node.js](https://nodejs.org/)，支持[N-API](https://nodejs.org/api/n-api.html)版本8, "
+"参见:ref:`这里<Node.js>`获取更多信息."
 
 #: ../../index.rst:16
 msgid ""
 "The source code is available here: https://github.com/Koromix/rygel/ (in "
 "the *src/koffi* subdirectory)."
 msgstr ""
+"源代码可以在此获取: https://github.com/Koromix/rygel/ (*src/koffi*子目录中)"
 
 #: ../../index.rst:18
 msgid ""
 "New releases are frequent, look at the :ref:`changelog<changelog>` for "
 "more information."
 msgstr ""
+"版本更新频繁, 查看:ref:`更新日志<changelog>`获取更多信息."
 
 #: ../../index.rst:21
 msgid "Table of contents"
-msgstr ""
+msgstr "目录"
 
 #: ../../index.rst:43
 msgid "License"
-msgstr ""
+msgstr "License"
 
 #: ../../index.rst:45
 msgid ""
 "This program is free software: you can redistribute it and/or modify it "
 "under the terms of the **MIT License**."
 msgstr ""
+"本软件是免费软件: 你可以在MIT协议的框架下重新分发或修改它."
 
 #: ../../index.rst:47
 msgid "Find more information here: https://choosealicense.com/licenses/mit/"
-msgstr ""
+msgstr "在此获取更多信息: https://choosealicense.com/licenses/mit/"
 
