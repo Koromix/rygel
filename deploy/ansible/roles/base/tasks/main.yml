@@ -80,6 +80,12 @@
     logging: off
   become: yes
 
+- name: Reset ufw rules
+  ufw:
+    state: reset
+  when: 'not ansible_check_mode'
+  become: yes
+
 - name: Configure ufw rules
   ufw:
     rule: '{{ item.rule }}'
