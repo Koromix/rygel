@@ -476,7 +476,6 @@ async function prepare() {
             install: 'node src/cnoke/cnoke.js --prebuild -d src/koffi'
         };
         delete pkg.devDependencies;
-        pkg.cnoke.require = pkg.cnoke.require.replace('.dev.js', '.js');
 
         esbuild.buildSync({
             entryPoints: [dist_dir + '/src/koffi/src/index.js'],
