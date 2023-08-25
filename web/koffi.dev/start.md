@@ -20,7 +20,7 @@ import koffi from 'koffi';
 
 ## Simple examples
 
-Below you can find three examples:
+Below you can find two examples:
 
 * The first one runs on Linux. The functions are declared with the C-like prototype language.
 * The second one runs on Windows, and uses the node-ffi like syntax to declare functions.
