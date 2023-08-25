@@ -9,10 +9,10 @@ msgstr ""
 "Project-Id-Version: Koffi 2.5.15\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-08-25 15:00+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2023-08-25 19:10+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
 "Language: zh\n"
-"Language-Team: zh <LL@li.org>\n"
+"Language-Team: zh <zh@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -21,11 +21,11 @@ msgstr ""
 
 #: ../../pointers.md:1
 msgid "Data pointers"
-msgstr ""
+msgstr "数据指针"
 
 #: ../../pointers.md:3
 msgid "How pointers are used"
-msgstr ""
+msgstr "如何使用指针"
 
 #: ../../pointers.md:5
 msgid ""
@@ -33,6 +33,7 @@ msgid ""
 " to distinguish these use cases because Koffi provides different ways to "
 "deal with each of them:"
 msgstr ""
+"在C中, 指针参数有多种用途. 区分这些用例很重要, Koffi提供了不同的方法来处理它们:"
 
 #: ../../pointers.md:7
 msgid ""
@@ -40,6 +41,7 @@ msgid ""
 "cases: avoid (potentially) expensive copies, and to let the function "
 "change struct contents (output or input/output arguments)."
 msgstr ""
+"**结构体指针**: C库中使用结构体指针通常用于两种情况: (一定程度上)避免昂贵的复制成本, 以及允许函数修改结构体的内容(输出或输入/输出参数)."
 
 #: ../../pointers.md:8
 msgid ""
@@ -50,12 +52,15 @@ msgid ""
 "ABI-stability reason, and to prevent library users from messing directly "
 "with library internals."
 msgstr ""
+"**不透明指针**: 库并不暴露结构体中的成员, 且仅提供给你它的指针(例如`File *`). 只有库提供的函数可以操作这个指针, 这种情况下Koffi将其成为不透明类型. "
+"这通常处于ABI稳定方面的考虑, 且阻止库的使用者直接破坏库的内部组织."
 
 #: ../../pointers.md:9
 msgid ""
 "**Pointers to primitive types**: This is more rare, and generally used "
 "for output or input/output arguments. The Win32 API has a lot of these."
 msgstr ""
+"**原生类型指针**: 这更加罕见, 通常用于输出或输入/输出参数. Win32 API中大量使用了这种模式."
 
 #: ../../pointers.md:10
 msgid ""
@@ -63,28 +68,30 @@ msgid ""
 "functions with pointers, either NULL-terminated (or any other sentinel "
 "value) or with an additional length argument."
 msgstr ""
+"**数组**: 在C中, 你的变长数组通常以指针的形式传给函数, 要么是NULL结尾(或是其他特定值), 要么附带一个额外的长度参数."
 
 #: ../../pointers.md:12
 msgid "Pointer types"
-msgstr ""
+msgstr "指针类型"
 
 #: ../../pointers.md:14
 msgid "Struct pointers"
-msgstr ""
+msgstr "结构体指针"
 
 #: ../../pointers.md:16
 msgid ""
 "The following Win32 example uses `GetCursorPos()` (with an output "
 "parameter) to retrieve and show the current cursor position."
 msgstr ""
+"下面的Win32例子使用了`GetCursorPos()`(包含一个输出参数)来获取并显示当前的鼠标坐标."
 
 #: ../../pointers.md:40
 msgid "Opaque pointers"
-msgstr ""
+msgstr "不透明指针"
 
 #: ../../pointers.md:42 ../../pointers.md:137
 msgid "*New in Koffi 2.0*"
-msgstr ""
+msgstr "*Koffi 2.0引入*"
 
 #: ../../pointers.md:44
 msgid ""
@@ -93,10 +100,12 @@ msgid ""
 "reproduce this behavior, you can define a **named pointer type** to an "
 "opaque type, like so:"
 msgstr ""
+"某些C库使用句柄, 用法和指向不透明类型的指针相同. 一个例子是Win32 API中的HANDLE类型. "
+"如果需要复制这种行为, 你可以定义一个**具名指针类型**指向一个不透明类型, 例如:"
 
 #: ../../pointers.md:54
 msgid "Pointer to primitive types"
-msgstr ""
+msgstr "原始类型指针"
 
 #: ../../pointers.md:56
 msgid ""
@@ -104,6 +113,7 @@ msgid ""
 "to another function. This means that you cannot call a function and "
 "expect it to modify the value of one of its number or string parameter."
 msgstr ""
+"在Javascript中, 你是无法将一个原始值以引用的形式传递给其它函数的. 这意味着你不能调用一个函数并且希望它修改某一个数值或字符串参数的值."
 
 #: ../../pointers.md:58
 msgid ""
@@ -112,6 +122,7 @@ msgid ""
 "invole any copy. Instead, as the following example illustrates, the new "
 "variable references the same array as the first:"
 msgstr ""
+"然而, 数组和对象(以及一些其它类型)是引用类型值. 将一个数组或对象从一个变量赋值到另一个变量并不会导致任何复制. 相反, 正如下列例子所示, 新变量和前一个引用了相同的数组."
 
 #: ../../pointers.md:69
 msgid ""
@@ -121,6 +132,8 @@ msgid ""
 "use Javascript arrays to approximate reference semantics with single-"
 "element arrays."
 msgstr ""
+"上面这些意味着希望修改它们的原始输出值(例如一个`int *`参数)的C函数不能被直接使用. 然而, 由于Koffi无缝的数组支持, "
+"你可以使用单元素的Javascript数组来实现引用语义."
 
 #: ../../pointers.md:71
 msgid ""
@@ -128,14 +141,15 @@ msgid ""
 "is stored in an `int *` input/output parameter and how to use this "
 "function from Koffi."
 msgstr ""
+"在下面, 你可以看到一个将结果存储到一个`int *`输入/输出参数的加法函数以及如何通过Koffi中使用它."
 
 #: ../../pointers.md:80
 msgid "You can simply pass a single-element array as the first argument:"
-msgstr ""
+msgstr "你可以简单的传递一个单元素数组作为第一个参数:"
 
 #: ../../pointers.md:91
 msgid "Array pointers (dynamic arrays)"
-msgstr ""
+msgstr "数组指针(动态数组)"
 
 #: ../../pointers.md:93
 msgid ""
@@ -144,6 +158,7 @@ msgid ""
 "array content itself, for example with a terminating sentinel value (such"
 " as a NULL pointers in the case of an array of strings)."
 msgstr ""
+"在C中, 变长数组通常以指针形式传递. 长度要么通过一个额外的参数传入, 要么通过数组内容本身来判断, 例如一个标识结束的值(例如字符串数组中的NULL指针)."
 
 #: ../../pointers.md:95
 msgid ""
@@ -152,12 +167,14 @@ msgid ""
 "arrays (fat pointers), you need to provide the length or the sentinel "
 "value yourself depending on the API."
 msgstr ""
+"Koffi可以将JS Array和TypedArray翻译成指针参数. 然而, 由于C并没有一个标准的变长数组实现(胖指针), 你需要自己基于API提供长度或者标识结束的值."
 
 #: ../../pointers.md:97
 msgid ""
 "Here is a simple example of a C function taking a NULL-terminated list of"
 " strings as input, to calculate the total length of all strings."
 msgstr ""
+"这里有一个简单的例子, C函数接受一个以NULL结束的字符串列表作为输入, 计算所有字符串的总长."
 
 #: ../../pointers.md:133
 msgid ""
@@ -165,10 +182,11 @@ msgid ""
 "C but not vice-versa. You can however change the direction as documented "
 "in the section on [output parameters](output.md)."
 msgstr ""
+"默认情况下, 和对象一样, 数组参数只从JS复制到C但反过来不会. 然而你可以按照[输出参数](output.md)节中的文档改变方向."
 
 #: ../../pointers.md:135
 msgid "Disposable types"
-msgstr ""
+msgstr "可释放类型"
 
 #: ../../pointers.md:139
 msgid ""
@@ -176,6 +194,7 @@ msgid ""
 " called after each C to JS conversion performed by Koffi. This can be "
 "used to avoid leaking heap-allocated strings, for example."
 msgstr ""
+"可释放类型允许你注册一个函数, 它在每次Koffi将该类型从C转换为JS时被调用. 例如, 这可以用于避免泄露堆分配的内存."
 
 #: ../../pointers.md:141
 msgid ""
@@ -184,6 +203,7 @@ msgid ""
 "string or an object), it does not know when something needs to be freed, "
 "or how."
 msgstr ""
+"某些C函数将从堆分配的内存直接返回或通过输出参数输出. 当Koffi自动将值从C转换到JS(转换为一个字符串或对象)时, 它并不知道需要什么需要释放以及如何释放."
 
 #: ../../pointers.md:143
 msgid ""
@@ -192,6 +212,7 @@ msgid ""
 " implicitly converted by Koffi, and you lose access to the original "
 "pointer. This creates a leak if the string is heap-allocated."
 msgstr ""
+"对于不透明类型, 例如FILE, 这并不是问题, 因为你会对它显式调用`fclose()`. 但某些值(例如字符串)被Koffi隐式转换, 而且你无法获取原始指针. 如果字符串是堆分配的, 就会导致泄露."
 
 #: ../../pointers.md:145
 msgid ""
@@ -202,6 +223,8 @@ msgid ""
 "original pointer once the value has been converted and is not needed "
 "anymore."
 msgstr ""
+"要避免这种情况, 你可以通过`koffi.dispose(name, type, func)`来创建一个**可释放类型**指导Koffi在转换完成后对原始指针调用一个函数. "
+"这创建了另一个类型的一个衍生类型, 唯一区别就是*func*会在原始指针被转换且不再需要后被调用."
 
 #: ../../pointers.md:147
 msgid ""
@@ -209,12 +232,14 @@ msgid ""
 "*func* is omitted or is null, Koffi will use `koffi.free(ptr)` (which "
 "calls the standard C library *free* function under the hood)."
 msgstr ""
+"可以省略*name*来创建一个匿名可释放类型. 如果*func*被省略或是null, Koffi会使用`koffi.free(ptr)`(会在背后调用标准C库中的*free*)"
 
 #: ../../pointers.md:155
 msgid ""
 "The following example illustrates the use of a disposable type derived "
 "from *str*."
 msgstr ""
+"下面的例子展示了如何使用一个衍生自*str*的可释放类型."
 
 #: ../../pointers.md:170
 msgid ""
@@ -224,10 +249,12 @@ msgid ""
 "below. This qualifier creates an anonymous disposable type that calls "
 "`koffi.free(ptr)`."
 msgstr ""
+"当你使用[原型格式](functions.md#definition-syntax)声明函数时, 你既可以使用具名可释放类型也可以对兼容类型使用'!'快捷限定符, 如下面例子所示. "
+"限定符创建了一个调用`koffi.free(ptr)`的匿名可释放类型."
 
 #: ../../pointers.md:185
 msgid "Disposable types can only be created from pointer or string types."
-msgstr ""
+msgstr "可释放类型只能衍生自指针或字符串类型."
 
 #: ../../pointers.md:188
 msgid ""
@@ -236,10 +263,11 @@ msgid ""
 "malloc/free implementation or heap, resulting in undefined behavior if "
 "you use `koffi.free()`."
 msgstr ""
+"在Windows上要小心: 如果你的动态链接库使用了不同的CRT(例如msvcrt), 内存可能会由另一个malloc/free实现或堆分配而来, 如果你使用`koffi.free()`会导致未定义行为."
 
 #: ../../pointers.md:191
 msgid "Unwrap pointers"
-msgstr ""
+msgstr "解包指针"
 
 #: ../../pointers.md:193
 msgid ""
@@ -247,4 +275,6 @@ msgid ""
 " a [BigInt object](https://developer.mozilla.org/en-"
 "US/docs/Web/JavaScript/Reference/Global_Objects/BigInt)."
 msgstr ""
+"你可以对指针使用`koffi.address(ptr)`以[BigInt](https://developer.mozilla.org/en-"
+"US/docs/Web/JavaScript/Reference/Global_Objects/BigInt)形式来获取其数值."
 
