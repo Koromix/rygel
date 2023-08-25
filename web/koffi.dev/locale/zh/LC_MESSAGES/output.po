@@ -124,7 +124,7 @@ msgstr "字符串缓冲示例"
 
 #: ../../output.md:135
 msgid "*New in Koffi 2.2*"
-msgstr "`Koffi 2.2引入`"
+msgstr "*Koffi 2.2引入*"
 
 #: ../../output.md:137
 msgid ""
