@@ -18,8 +18,11 @@
     state: '{{ item.state }}'
   loop:
     - url: 'https://apt.grafana.com/gpg.key'
-      id: 9E439B102CF3C0C6
+      id: 963FA27710458545
       state: present
+    - url: 'https://apt.grafana.com/gpg.key'
+      id: 9E439B102CF3C0C6
+      state: absent
     - url: 'https://packages.grafana.com/gpg.key'
       id: 4E40DDF6D76E284A4A6780E48C8C34C524098CB6
       state: absent
