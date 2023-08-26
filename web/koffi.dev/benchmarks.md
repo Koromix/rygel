@@ -23,10 +23,10 @@ The results presented below were measured on my x86_64 Linux machine (Intel® Co
 
 ### rand results
 
-This test is based around repeated calls to a simple standard C function atoi, and has three implementations:
+This test is based around repeated calls to a simple standard C function `rand`, and has three implementations:
 
-- the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation (pre-compiled static glue code)
-- the second one calls atoi through Koffi
+- the first one is the reference, it calls rand through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation (pre-compiled static glue code)
+- the second one calls rand through Koffi
 - the third one uses the official Node.js FFI implementation, node-ffi-napi
 
 Benchmark     | Iteration time | Relative performance | Overhead
@@ -39,7 +39,7 @@ Because rand is a pretty small function, the FFI overhead is clearly visible.
 
 ### atoi results
 
-This test is similar to the rand one, but it is based on atoi, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
+This test is similar to the rand one, but it is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
@@ -51,7 +51,7 @@ Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
 ### Raylib results
 
-This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in the atoi benchmark, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:
+This benchmark uses the CPU-based image drawing functions in Raylib. The calls are much heavier than in previous benchmarks, thus the FFI overhead is reduced. In this implementation, Koffi is compared to:
 
 - Baseline: Full C++ version of the code (no JS)
 - [node-raylib](https://github.com/RobLoach/node-raylib): This is a native wrapper implemented with N-API
@@ -69,10 +69,10 @@ The results presented below were measured on my x86_64 Windows machine (Intel® 
 
 ### rand results
 
-This test is based around repeated calls to a simple standard C function atoi, and has three implementations:
+This test is based around repeated calls to a simple standard C function `rand`, and has three implementations:
 
-- the first one is the reference, it calls atoi through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation (pre-compiled static glue code)
-- the second one calls atoi through Koffi
+- the first one is the reference, it calls rand through an N-API module, and is close to the theoretical limit of a perfect (no overhead) Node.js > C FFI implementation (pre-compiled static glue code)
+- the second one calls rand through Koffi
 - the third one uses the official Node.js FFI implementation, node-ffi-napi
 
 Benchmark     | Iteration time | Relative performance | Overhead
@@ -85,7 +85,7 @@ Because rand is a pretty small function, the FFI overhead is clearly visible.
 
 ### atoi results
 
-This test is similar to the rand one, but it is based on atoi, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
+This test is similar to the rand one, but it is based on `atoi`, which takes a string parameter. Javascript (V8) to C string conversion is relatively slow and heavy.
 
 The results below were measured on my x86_64 Windows machine (Intel® Core™ i5-4460):
 
