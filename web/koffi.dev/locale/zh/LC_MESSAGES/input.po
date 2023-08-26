@@ -442,7 +442,7 @@ msgstr ""
 
 #: ../../input.md:148
 msgid "Opaque types **have changed in version 2.0, and again in version 2.1**."
-msgstr "不透明类型**在版本2.0中变化了, 在版本2.1又变化了**."
+msgstr "不透明类型**在版本2.0中更改了, 在版本2.1又更改了**."
 
 #: ../../input.md:150
 msgid ""

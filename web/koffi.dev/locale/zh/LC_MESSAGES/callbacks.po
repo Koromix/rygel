@@ -9,33 +9,35 @@ msgstr ""
 "Project-Id-Version: Koffi 2.5.15\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-08-25 15:00+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2023-08-26 14:16+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
 "Language: zh\n"
-"Language-Team: zh <LL@li.org>\n"
+"Language-Team: zh <zh@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.12.1\n"
 
+
 #: ../../callbacks.md:1
 msgid "Javascript callbacks"
-msgstr ""
+msgstr "Javascript回调"
 
 #: ../../callbacks.md:3
 msgid "*Changed in Koffi 2.4*"
-msgstr ""
+msgstr "*Koffi 2.4更新*"
 
 #: ../../callbacks.md:6
 msgid ""
 "The function `koffi.proto()` was introduced in Koffi 2.4, it was called "
 "`koffi.callback()` in earlier versions."
 msgstr ""
+"Koffi 2.4引入了函数`koffi.proto()`, 在此之前的版本叫做`koffi.callback()`."
 
 #: ../../callbacks.md:9
 msgid "Callback types"
-msgstr ""
+msgstr "回调类型"
 
 #: ../../callbacks.md:11
 msgid ""
@@ -44,6 +46,8 @@ msgid ""
 "parameters. The syntax is similar to the one used to load functions from "
 "a shared library."
 msgstr ""
+"要向接受回到的C函数入传入一个JS函数, 你需要先根据预期的返回类型和参数创建一个回调类型. "
+"语法和从动态链接库中加载函数相似."
 
 #: ../../callbacks.md:24
 msgid ""
@@ -51,16 +55,18 @@ msgid ""
 "struct definitions, as function parameters and/or return types, or to "
 "call/decode function pointers."
 msgstr ""
+"当你声明了你的回调类型, 你可以在结构体定义, 函数参数和/或返回类型, 以及调用/解码函数指针中以指针的形式使用."
 
 #: ../../callbacks.md:27
 msgid "Callbacks **have changed in version 2.0**."
-msgstr ""
+msgstr "回调**在版本2.0更改了**."
 
 #: ../../callbacks.md:29
 msgid ""
 "In Koffi 1.x, callbacks were defined in a way that made them usable "
 "directly as parameter and return types, obscuring the underlying pointer."
 msgstr ""
+"在Koffi 1.x中, 回调被声明为可以直接作为参数和返回类型中使用, 隐藏了底层的指针."
 
 #: ../../callbacks.md:31
 msgid ""
@@ -68,14 +74,15 @@ msgid ""
 "func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version "
 "2.0 and newer."
 msgstr ""
+"现在, 你必须通过指针来使用它: Koffi 1.x中的`void CallIt(CallbackType func)`在Koffi 2.0及之后变成了`void CallIt(CallbackType *func)`."
 
 #: ../../callbacks.md:33
 msgid "Consult the [migration guide](migration.md) for more information."
-msgstr ""
+msgstr "查看[迁移指南](migration.md)来获取更多信息."
 
 #: ../../callbacks.md:36
 msgid "Transient and registered callbacks"
-msgstr ""
+msgstr "临时的和注册的回调"
 
 #: ../../callbacks.md:38
 msgid ""
@@ -84,10 +91,12 @@ msgid ""
 "hardened W^X migitations (such as PaX mprotect). However, this imposes "
 "some restrictions on the maximum number of callbacks, and their duration."
 msgstr ""
+"Koffi只使用预定义的静态转发, 不需要运行时生成代码, 让它可以兼容强制W^X措施的平台(例如PaX mprotect). "
+"然而, 这限制了回调的最大数量以及它们的生命周期."
 
 #: ../../callbacks.md:40
 msgid "Thus, Koffi distinguishes two callback modes:"
-msgstr ""
+msgstr "因此, Koffi区分了两种回调模式:"
 
 #: ../../callbacks.md:42
 msgid ""
@@ -98,6 +107,9 @@ msgid ""
 "exception will be thrown, but this is no guaranteed. However, they are "
 "simple to use, and don't require any special handling."
 msgstr ""
+"[临时回调](#transient-callbacks)只能被传入的C函数执行中被调用, 返回后便不可用了. "
+"如果C函数在之后调用, 行为是未定义的, 即使Koffi会尝试检测这种情况. 如果检测到了, 会抛出一个异常, 但是并不保证. "
+"然而, 这种模式用法简单, 而且不需要特殊处理."
 
 #: ../../callbacks.md:43
 msgid ""
@@ -105,6 +117,7 @@ msgid ""
 "but they must be manually registered and unregistered. A limited number "
 "of registered callbacks can exist at the same time."
 msgstr ""
+"[注册回调](#registered-callbacks)可以在任何时候被调用, 但是必须手动注册和注销它们. 同时存在的注册回调有数量限制."
 
 #: ../../callbacks.md:45
 msgid ""
@@ -113,10 +126,11 @@ msgid ""
 "(Node will probably crash). Only *cdecl* and *stdcall* callbacks are "
 "supported."
 msgstr ""
+"在x86平台上, 你需要指定正确的[调用协定](functions.md#calling-conventions), 否则行为是未定义的(Node有可能会崩溃). 只支持*cdecl*和*stdcall*回调."
 
 #: ../../callbacks.md:47
 msgid "Transient callbacks"
-msgstr ""
+msgstr "临时回调"
 
 #: ../../callbacks.md:49
 msgid ""
@@ -124,14 +138,15 @@ msgid ""
 "them while it runs (e.g. qsort, progress callback, `sqlite3_exec`). Here "
 "is a small example with the C part and the JS part."
 msgstr ""
+"若原生C函数只需要在它们执行时调用(例如qsort, 进度回调, `sqlite3_exec`), 可以使用临时回调. 这是一个包含C部分和JS部分的简单例子."
 
 #: ../../callbacks.md:85
 msgid "Registered callbacks"
-msgstr ""
+msgstr "注册回调"
 
 #: ../../callbacks.md:87
 msgid "*New in Koffi 2.0 (explicit this binding in Koffi 2.2)*"
-msgstr ""
+msgstr "*Koffi 2.0引入(Koffi 2.2引入了显式this绑定)*"
 
 #: ../../callbacks.md:89
 msgid ""
@@ -140,6 +155,8 @@ msgid ""
 "`koffi.register(func, type)` to register a callback function, with two "
 "arguments: the JS function, and the callback type."
 msgstr ""
+"若回调需要在之后的时间被调用(例如日志处理, 事件处理, `fopencookie/funopen`), 可以使用注册回调. "
+"以JS函数和回调类型作为参数调用`koffi.register(func, type)`注册一个回调函数."
 
 #: ../../callbacks.md:91
 msgid ""
@@ -149,28 +166,31 @@ msgid ""
 "subsequent registrations may fail (with an exception) once all slots are "
 "used."
 msgstr ""
+"当你使用完成后, (对返回自`koffi.register()`的值)调用`koffi.unregister()`来释放槽位. 最多可以同时存在1024个回调. "
+"不这样做的话会泄露槽位, 一旦所有槽位都被使用, 后续的注册可能会失败(并抛出异常)."
 
 #: ../../callbacks.md:93
 msgid "The example below shows how to register and unregister delayed callbacks."
-msgstr ""
+msgstr "下面的例子展示了如何注册和注销延迟调用的回调."
 
 #: ../../callbacks.md:134
 msgid ""
 "Starting *with Koffi 2.2*, you can optionally specify the `this` value "
 "for the function as the first argument."
 msgstr ""
+"自*Koffi 2.2*起, 你可以通过第一个参数设置函数的this值."
 
 #: ../../callbacks.md:148
 msgid "Special considerations"
-msgstr ""
+msgstr "特别注意"
 
 #: ../../callbacks.md:150
 msgid "Decoding pointer arguments"
-msgstr ""
+msgstr "解码指针参数"
 
 #: ../../callbacks.md:152
 msgid "*New in Koffi 2.2, changed in Koffi 2.3*"
-msgstr ""
+msgstr "*引入自Koffi 2.2, 在Koffi 2.3更改了*"
 
 #: ../../callbacks.md:154
 msgid ""
@@ -178,6 +198,7 @@ msgid ""
 "arguments to an appropriate JS value. In this case, your JS function will"
 " receive an opaque *External* object."
 msgstr ""
+"Koffi没有足够的信息来把回调的指针参数转换为一个合适的JS值. 这种情况下, 你的JS函数会接收到一个不透明的*External*对象"
 
 #: ../../callbacks.md:156
 msgid ""
@@ -185,38 +206,43 @@ msgid ""
 "pointer of the same type, or you can use `koffi.decode()` to decode it "
 "into something you can use in Javascript."
 msgstr ""
+"你可以将这个值传给其它希望接受同类指针的C函数, 或者你可以使用`koffi.decode()`来将其解码成你可以在Javascript中使用的东西."
 
 #: ../../callbacks.md:158
 msgid ""
 "Some arguments are optional and this function can be called in several "
 "ways:"
 msgstr ""
+"某些参数是可选的, 这个函数可以以下面几种方式调用:"
 
 #: ../../callbacks.md:160
 msgid "`koffi.decode(value, type)`: no offset, expect NUL-terminated strings"
-msgstr ""
+msgstr "`koffi.decode(value, type)`: 无偏移, 接受NUL结尾的字符串"
 
 #: ../../callbacks.md:161
 msgid ""
 "`koffi.decode(value, offset, type)`: explicit offset to add to the "
 "pointer before decoding"
 msgstr ""
+"`koffi.decode(value, offset, type)`: 在解码前显式地偏移指针"
 
 #: ../../callbacks.md:163
 msgid "The following example sorts an array of strings (in-place) with `qsort()`:"
-msgstr ""
+msgstr "下面的例子使用`qsort()`对字符串数组(就地)排序:"
 
 #: ../../callbacks.md:186
 msgid ""
 "There is also an optional ending `length` argument that you can use in "
 "two cases:"
 msgstr ""
+"结尾也有一个可选的`length`参数, 你可以在下面两种情况下使用:"
 
 #: ../../callbacks.md:188
 msgid ""
 "Use it to give the number of bytes to decode in non-NUL terminated "
 "strings: `koffi.decode(value, 'char *', 5)`"
 msgstr ""
+"用于在解码非NUL结尾字符串时指定需要解码的字节数: `koffi.decode(value, 'char *', 5)`"
 
 #: ../../callbacks.md:189
 msgid ""
@@ -224,20 +250,23 @@ msgid ""
 " decode an array with 3 float values: `koffi.decode(value, 'float', 3)`. "
 "This is equivalent to `koffi.decode(value, koffi.array('float', 3))`."
 msgstr ""
+"将连续数据解码到数组. 例如, 你可以如此解码包含3个float的数组: `koffi.decode(value, 'float', 3)`. "
+"这和`koffi.decode(value, koffi.array('float', 3))`是相同的."
 
 #: ../../callbacks.md:192
 msgid ""
 "In Koffi 2.2 and earlier versions, the length argument is only used to "
 "decode strings and is ignored otherwise."
 msgstr ""
+"在Koffi 2.2及以前, length参数只被用于解码字符串, 其它情况下则被忽略."
 
 #: ../../callbacks.md:195
 msgid "Asynchronous callbacks"
-msgstr ""
+msgstr "异步回调"
 
 #: ../../callbacks.md:197
 msgid "*New in Koffi 2.2.2*"
-msgstr ""
+msgstr "*引入自Koffi 2.2.2*"
 
 #: ../../callbacks.md:199
 msgid ""
@@ -245,14 +274,15 @@ msgid ""
 "the main thread. There are two ways you may want to call a callback "
 "function from another thread:"
 msgstr ""
+"JS执行本质上是单线程的, 因此JS回调必须在主线程上执行. 有两种你可能希望从其它线程调用回调函数:"
 
 #: ../../callbacks.md:201
 msgid "Call the callback from an asynchronous FFI call (e.g. `waitpid.async`)"
-msgstr ""
+msgstr "从一个异步FFI调用中调用回调(例如`waitpid.async`)"
 
 #: ../../callbacks.md:202
 msgid "Inside a synchronous FFI call, pass the callback to another thread"
-msgstr ""
+msgstr "在一个同步FFI嗲用中, 将回调传递给其它线程"
 
 #: ../../callbacks.md:204
 msgid ""
@@ -260,6 +290,7 @@ msgid ""
 "thread, as soon as the JS event loop has a chance to run (for example "
 "when you await a promise)."
 msgstr ""
+"这两种情况下, 一旦JS的消息循环有空闲(例如当你await一个Promise), Koffi会将回调置入队列来让其在主线程执行."
 
 #: ../../callbacks.md:207
 msgid ""
@@ -268,20 +299,23 @@ msgid ""
 "event loop run (for example, if the main thread waits for the secondary "
 "thread to finish something itself)."
 msgstr ""
+"小心, 如果你从子线程调用回调但你的主线程一直不让JS消息队列执行(例如, 如果主线程等待子线程自己完成某些事情), 便很容易因此形成死锁."
 
 #: ../../callbacks.md:210
 msgid "Handling of exceptions"
-msgstr ""
+msgstr "处理异常"
 
 #: ../../callbacks.md:212
 msgid ""
 "If an exception happens inside the JS callback, the C API will receive 0 "
 "or NULL (depending on the return value type)."
 msgstr ""
+"如果JS回调中抛出了异常, C API会(基于返回值的类型)接收到0或NULL."
 
 #: ../../callbacks.md:214
 msgid ""
 "Handle the exception yourself (with try/catch) if you need to handle "
 "exceptions differently."
 msgstr ""
+"如果你需要以其它行为处理异常, 自己(通过try/catch)捕获它们."
 
