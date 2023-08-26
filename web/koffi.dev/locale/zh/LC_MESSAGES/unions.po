@@ -9,10 +9,10 @@ msgstr ""
 "Project-Id-Version: Koffi 2.5.15\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-08-25 15:00+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2023-08-26 01:38+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
 "Language: zh\n"
-"Language-Team: zh <LL@li.org>\n"
+"Language-Team: zh <zh@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -21,15 +21,15 @@ msgstr ""
 
 #: ../../unions.md:1
 msgid "Union values"
-msgstr ""
+msgstr "联合值"
 
 #: ../../unions.md:3
 msgid "*New in Koffi 2.5*"
-msgstr ""
+msgstr "*Koffi 2.5*引入"
 
 #: ../../unions.md:5
 msgid "Union definition"
-msgstr ""
+msgstr "定义联合"
 
 #: ../../unions.md:7
 msgid ""
@@ -39,26 +39,31 @@ msgid ""
 "the union member names and types. You can omit the first argument to "
 "declare an anonymous union."
 msgstr ""
+"你可以使用`koffi.union()`函数声明联合, 类似struct的语法. "
+"这个函数接受两个参数, 前者是类型的名称, 后者是一个含有联合成员名称和类型的对象. "
+"你可以省略第一个参数来声明一个匿名联合."
 
 #: ../../unions.md:9
 msgid ""
 "The following example illustrates how to declare the same union in C and "
 "in JS with Koffi:"
 msgstr ""
+"下面的例子展示了如何在C和用Koffi在JS中声明相同的联合."
 
 #: ../../unions.md:25
 msgid "Input unions"
-msgstr ""
+msgstr "输入联合"
 
 #: ../../unions.md:27
 msgid "Passing union values to C"
-msgstr ""
+msgstr "传递联合值到C"
 
 #: ../../unions.md:29
 msgid ""
 "You can instantiate an union object with `koffi.Union(type)`. This will "
 "create a special object that contains at most one active member."
 msgstr ""
+"你可以通过`Koffi.Union(type)`来实例化一个联合对象. 这会构造一个特殊的对象, 包含至多一个激活的成员."
 
 #: ../../unions.md:31
 msgid ""
@@ -66,6 +71,8 @@ msgid ""
 "member with the dot operator as you would with a basic object. Then, "
 "simply pass your union value to the C function you wish."
 msgstr ""
+"当你构造了一个你的联合的示例之后, 你可以简单的通过点运算符设置成员, 就像你对普通对象做的一样. "
+"然后, 简单的将你的联合值传递给你希望的C函数."
 
 #: ../../unions.md:45
 msgid ""
@@ -73,10 +80,11 @@ msgid ""
 "more, no less) setting the corresponding union member. The example belows"
 " uses this to simplify the code shown above:"
 msgstr ""
+"为了更加简便, Koffi也接受用含有单个属性(不多不少)的字面量对象来设置对应的联合成员(译注:联合参数). 下面的例子使用这个方法简化了上面的代码:"
 
 #: ../../unions.md:56
 msgid "Win32 example"
-msgstr ""
+msgstr "Win32示例"
 
 #: ../../unions.md:58
 msgid ""
@@ -84,10 +92,12 @@ msgid ""
 "/en-us/windows/win32/api/winuser/nf-winuser-sendinput) Win32 API to emit "
 "the Win+D shortcut and hide windows (show the desktop)."
 msgstr ""
+"下面的例子使用了[SendInput](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-sendinput)这一Win32 API"
+"生成Win+D快捷键来隐藏窗口(显示桌面)."
 
 #: ../../unions.md:141
 msgid "Output unions"
-msgstr ""
+msgstr "输出联合"
 
 #: ../../unions.md:143
 msgid ""
@@ -95,6 +105,8 @@ msgid ""
 "cannot decode it automatically. You can however use special `koffi.Union`"
 " objects for output parameters, and decode the memory after the call."
 msgstr ""
+"不同于结构体, Koffi不知道哪个联合成员是激活的, 因此它不能自动将其解码. 然而你可以使用特殊的`koffi.Union`对象作为输出参数, "
+"然后在调用结束后解码内存."
 
 #: ../../unions.md:145
 msgid ""
@@ -102,16 +114,19 @@ msgid ""
 "with `new koffi.Union(type)` and pass the resulting object to the "
 "function."
 msgstr ""
+"要解码一个输出联合指针参数, 使用`new koffi.Union(type)`构造一个占位对象然后将其传递给函数."
 
 #: ../../unions.md:147
 msgid ""
 "After the call, you can dereference the member value you want on this "
 "object and Koffi will decode it at this moment."
 msgstr ""
+"调用结束后, 你可以解引用这个对象中你想要的成员, Koffi会在此时解码它."
 
 #: ../../unions.md:149
 msgid ""
 "The following example illustrates the use of `koffi.Union()` to decode "
 "output unions after the call."
 msgstr ""
+"下面的例子展示了在函数调用后使用`koffi.Union()`解码输出联合."
 
