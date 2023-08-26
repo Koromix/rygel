@@ -9,10 +9,10 @@ msgstr ""
 "Project-Id-Version: Koffi 2.5.15\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2023-08-25 15:00+0800\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2023-08-26 17:24+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
 "Language: zh\n"
-"Language-Team: zh <LL@li.org>\n"
+"Language-Team: zh <zh@li.org>\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -21,17 +21,18 @@ msgstr ""
 
 #: ../../contribute.md:1
 msgid "Contributing"
-msgstr ""
+msgstr "贡献"
 
 #: ../../contribute.md:3
 msgid "Bugs and feature requests"
-msgstr ""
+msgstr "Bug和功能请求"
 
 #: ../../contribute.md:5
 msgid ""
 "Use the official repository for bugs, ideas and features requests: "
 "https://github.com/Koromix/koffi"
 msgstr ""
+"使用官方仓库提出bug, 想法和功能请求: https://github.com/Koromix/koffi"
 
 #: ../../contribute.md:7
 msgid ""
@@ -39,10 +40,11 @@ msgid ""
 "lives in a monorepo: https://github.com/Koromix/rygel/ (in the "
 "*src/koffi* subdirectory)."
 msgstr ""
+"请注意, 源代码不在这个仓库, 相反它在一个monorepo中: https://github.com/Koromix/rygel/(在*src/koffi*子目录下)"
 
 #: ../../contribute.md:9
 msgid "Build from source"
-msgstr ""
+msgstr "从代码构建"
 
 #: ../../contribute.md:11
 msgid ""
@@ -50,24 +52,27 @@ msgid ""
 "cases it should be as simple as `npm install koffi`. If you want to hack "
 "Koffi or use a specific platform, follow the instructions below."
 msgstr ""
+"我们提供了预编译二进制, 打包在了NPM的包中, 因此大部分情况下只需要简单的`npm install koffi`即可. "
+"如果你想要更改Koffi或使用一个特别的平台, 参考下列操作."
 
 #: ../../contribute.md:13
 msgid "Start by cloning the repository with [Git](https://git-scm.com/):"
-msgstr ""
+msgstr "首先用[Git](https://git-scm.com/)克隆仓库:"
 
 #: ../../contribute.md:20
 msgid ""
 "As said before, this is a monorepository containg multiple projects, "
 "hence the name."
 msgstr ""
+"正如前面所说, 这是一个monorepo仓库, 包含了多个项目, 因此得名."
 
 #: ../../contribute.md:22
 msgid "Windows"
-msgstr ""
+msgstr "Windows"
 
 #: ../../contribute.md:24
 msgid "First, make sure the following dependencies are met:"
-msgstr ""
+msgstr "首先, 确保以下依赖满足:"
 
 #: ../../contribute.md:26
 msgid ""
@@ -77,40 +82,44 @@ msgid ""
 "Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-"
 "visual-studio-2022), with the default optional components."
 msgstr ""
+"来自[Visual Studio 2022或2019](https://visualstudio.microsoft.com/downloads/)中的\"使用C++的桌面开发\"工作负荷"
+"以及默认的可选组件"
+#  "或是来自[Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)的\"C++构建工具\""
 
 #: ../../contribute.md:27 ../../contribute.md:43
 msgid "[CMake meta build system](https://cmake.org/)"
-msgstr ""
+msgstr "[CMake构建系统](https://cmake.org/)"
 
 #: ../../contribute.md:28 ../../contribute.md:44
 msgid "[Node.js](https://nodejs.org/) 12 or later"
-msgstr ""
+msgstr "[Node.js](https://nodejs.org/) 12及以后"
 
 #: ../../contribute.md:30 ../../contribute.md:46
 msgid ""
 "Once this is done, run this command _from the test or the benchmark "
 "directory_ (depending on what you want to build):"
 msgstr ""
+"一切完成后, _在测试或基准测试目录下_(基于你想要构建的内容)执行这个命令:"
 
 #: ../../contribute.md:37
 msgid "Other platforms"
-msgstr ""
+msgstr "其它平台"
 
 #: ../../contribute.md:39
 msgid "Make sure the following dependencies are met:"
-msgstr ""
+msgstr "确保以下依赖满足:"
 
 #: ../../contribute.md:41
 msgid "`gcc` and `g++` >= 8.3 or newer"
-msgstr ""
+msgstr "`gcc`和`g++` >= 8.3或更新"
 
 #: ../../contribute.md:42
 msgid "GNU Make 3.81 or newer"
-msgstr ""
+msgstr "GNU Make 3.81或更新"
 
 #: ../../contribute.md:53
 msgid "Running tests"
-msgstr ""
+msgstr "执行测试"
 
 #: ../../contribute.md:55
 msgid ""
@@ -118,6 +127,7 @@ msgid ""
 "when possible) QEMU machines. First, you need to install qemu packages, "
 "such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu."
 msgstr ""
+"Koffi使用QEMU虚拟机(以及可能的硬件加速)在多个架构下经过测试. 首先, 你需要安装qemu包, 例如Ubuntu上的`qemu-system`(亦或是`qemu-system-gui`)."
 
 #: ../../contribute.md:57
 msgid ""
@@ -125,12 +135,14 @@ msgid ""
 "and size reasons), but they are available here: "
 "https://koromix.dev/files/machines/"
 msgstr ""
+"这些虚拟机没有直接包含在仓库中(出于license和大小考虑), 但是它们可以在这里获取: https://koromix.dev/files/machines/"
 
 #: ../../contribute.md:59
 msgid ""
 "For example, if you want to run the tests on Debian ARM64, run the "
 "following commands:"
 msgstr ""
+"例如, 如果你想要子啊Debian ARM64上运行测试, 执行下面的命令:"
 
 #: ../../contribute.md:67
 msgid ""
@@ -138,10 +150,11 @@ msgid ""
 " so the checksum test will fail once a machine has been used at least "
 "once."
 msgstr ""
+"注意, 设备的磁盘内容在每次运行时可能会变更, 因此checksum测试在设备被多次使用时会失败."
 
 #: ../../contribute.md:69
 msgid "And now you can run the tests with:"
-msgstr ""
+msgstr "现在你可以通过下列命令执行测试:"
 
 #: ../../contribute.md:75
 msgid ""
@@ -149,6 +162,7 @@ msgid ""
 "machines have and use ccache to build Koffi, so subsequent build steps "
 "will get much more tolerable."
 msgstr ""
+"请耐心, 对于虚拟机这可能会相当慢. Linux设备有且使用了ccache来构建Koffi, 因此后续的构建步骤耗时已经可以接受了."
 
 #: ../../contribute.md:77
 msgid ""
@@ -156,16 +170,18 @@ msgid ""
 "start the machines ahead of time and run the tests multiple times "
 "instead:"
 msgstr ""
+"默认情况下, 每次测试虚拟机会被打开和关闭. 但是你可以提前打开设备并且直接多次执行测试:"
 
 #: ../../contribute.md:86
 msgid "You can also restrict the test to a subset of machines:"
-msgstr ""
+msgstr "你也可以限制只测试一部分设备:"
 
 #: ../../contribute.md:98
 msgid ""
 "Finally, you can join a running machine with SSH with the following "
 "shortcut, if you need to do some debugging or any other manual procedure:"
 msgstr ""
+"最后, 如果你需要做调试或其它手动操作, 可以使用下列快捷命令通过SSH登录一个执行中的设备."
 
 #: ../../contribute.md:104
 msgid ""
@@ -173,10 +189,11 @@ msgid ""
 "you can use to access the display, using KRDC or any other compatible "
 "viewer. Use the `info` command to get the VNC port."
 msgstr ""
+"每个设备都被配置了本地的VNC服务, 因此你可以使用KRDC或其它兼容的工具查看屏幕. 使用`info`命令来获得VNC端口."
 
 #: ../../contribute.md:110
 msgid "Code style"
-msgstr ""
+msgstr "代码风格"
 
 #: ../../contribute.md:112
 msgid ""
@@ -184,6 +201,8 @@ msgid ""
 "specific code). It uses [node-addon-api](https://github.com/nodejs/node-"
 "addon-api) (C++ N-API wrapper) to interact with Node.js."
 msgstr ""
+"Koffi时一个C++和汇编(针对特定架构的代码)混合的项目. 它使用[node-addon-api](https://github.com/nodejs/node-"
+"addon-api)(C++ N-API封装)来和Node.js交互."
 
 #: ../../contribute.md:114
 msgid ""
@@ -192,4 +211,6 @@ msgid ""
 "programming. I strongly prefer tagged unions and code locality over "
 "inheritance and virtual methods. Exceptions are disabled."
 msgstr ""
+"我(@Koromix)个人倾向于C风格的C++, 以及小心使用的模板(主要用于容器)和少量的面向对象开发. "
+"相比于继承和虚函数, 我(@Koromix)更愿意使用带标记的联合体以及局部代码. 禁用了异常."
 

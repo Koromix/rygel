@@ -21,11 +21,11 @@ msgstr ""
 
 #: ../../../../src/koffi/CHANGELOG.md:2
 msgid "Changelog"
-msgstr ""
+msgstr "更新日志"
 
 #: ../../../../src/koffi/CHANGELOG.md:4
 msgid "Version history"
-msgstr ""
+msgstr "版本历史"
 
 #: ../../../../src/koffi/CHANGELOG.md:6
 msgid "Koffi 2.5"
@@ -915,7 +915,7 @@ msgstr ""
 
 #: ../../../../src/koffi/CHANGELOG.md:367
 msgid "Consult the [migration guide](migration.md) for more information."
-msgstr ""
+msgstr "查看[迁移指南](migration.md)来获取更多信息."
 
 #: ../../../../src/koffi/CHANGELOG.md:369
 msgid "Koffi 1.3"
