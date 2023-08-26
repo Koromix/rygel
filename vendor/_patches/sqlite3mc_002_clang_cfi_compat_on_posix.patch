@@ -1,8 +1,8 @@
 diff --git a/vendor/sqlite3/sqlite3.c b/vendor/sqlite3/sqlite3.c
-index b47891c38..af3eeb7f5 100644
+index 310583f99..67db0e131 100644
 --- a/vendor/sqlite3/sqlite3.c
 +++ b/vendor/sqlite3/sqlite3.c
-@@ -37337,19 +37337,19 @@ static struct unix_syscall {
+@@ -38062,19 +38062,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
    { "open",         (sqlite3_syscall_ptr)posixOpen,  0  },
@@ -27,7 +27,7 @@ index b47891c38..af3eeb7f5 100644
  
  /*
  ** The DJGPP compiler environment looks mostly like Unix, but it
-@@ -37362,145 +37362,158 @@ static struct unix_syscall {
+@@ -38087,145 +38087,158 @@ static struct unix_syscall {
  #define osFstat(a,b,c)    0
  #else
    { "fstat",        (sqlite3_syscall_ptr)fstat,      0  },
@@ -214,10 +214,10 @@ index b47891c38..af3eeb7f5 100644
  
  }; /* End of the overrideable system calls */
 diff --git a/vendor/sqlite3/sqlite3mc.c b/vendor/sqlite3/sqlite3mc.c
-index d1a5f46b4..b5d8011db 100644
+index 71d0b72b4..a81bb35e9 100644
 --- a/vendor/sqlite3/sqlite3mc.c
 +++ b/vendor/sqlite3/sqlite3mc.c
-@@ -37437,19 +37437,19 @@ static struct unix_syscall {
+@@ -38166,19 +38166,19 @@ static struct unix_syscall {
    sqlite3_syscall_ptr pDefault; /* Default value */
  } aSyscall[] = {
    { "open",         (sqlite3_syscall_ptr)posixOpen,  0  },
@@ -242,7 +242,7 @@ index d1a5f46b4..b5d8011db 100644
  
  /*
  ** The DJGPP compiler environment looks mostly like Unix, but it
-@@ -37462,145 +37462,158 @@ static struct unix_syscall {
+@@ -38191,145 +38191,158 @@ static struct unix_syscall {
  #define osFstat(a,b,c)    0
  #else
    { "fstat",        (sqlite3_syscall_ptr)fstat,      0  },

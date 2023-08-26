@@ -86,10 +86,9 @@ globalThis.sqlite3Worker1Promiser = function callee(config = callee.defaultConfi
     if(1===arguments.length){
       msg = arguments[0];
     }else if(2===arguments.length){
-      msg = {
-        type: arguments[0],
-        args: arguments[1]
-      };
+      msg = Object.create(null);
+      msg.type = arguments[0];
+      msg.args = arguments[1];
     }else{
       toss("Invalid arugments for sqlite3Worker1Promiser()-created factory.");
     }
@@ -124,9 +123,20 @@ globalThis.sqlite3Worker1Promiser = function callee(config = callee.defaultConfi
 };
 globalThis.sqlite3Worker1Promiser.defaultConfig = {
   worker: function(){
-    return new Worker("sqlite3-worker1-bundler-friendly.mjs",{
-      type: 'module' 
-    });
+    let theJs = "sqlite3-worker1.js";
+    if(this.currentScript){
+      const src = this.currentScript.src.split('/');
+      src.pop();
+      theJs = src.join('/')+'/' + theJs;
+      
+    }else if(globalThis.location){
+      
+      const urlParams = new URL(globalThis.location.href).searchParams;
+      if(urlParams.has('sqlite3.dir')){
+        theJs = urlParams.get('sqlite3.dir') + '/' + theJs;
+      }
+    }
+    return new Worker(theJs + globalThis.location.search);
   }.bind({
     currentScript: globalThis?.document?.currentScript
   }),
