@@ -4,7 +4,7 @@
 
 ### Koffi 2.5
 
-#### Koffi 2.5.17 (2023-08-27)
+#### Koffi 2.5.18 (2023-08-27)
 
 - Fix compatibility with Electron
 
