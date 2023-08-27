@@ -16,6 +16,6 @@
     "esbuild": "^0.18.17"
   },
   "dependencies": {
-    "koffi": "2.5.17"
+    "koffi": "^2.5.18"
   }
 }

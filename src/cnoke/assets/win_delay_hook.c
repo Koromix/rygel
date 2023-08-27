@@ -29,22 +29,20 @@
 #include <windows.h>
 #include <delayimp.h>
 
+static HMODULE node_dll;
+
 static FARPROC WINAPI self_exe_hook(unsigned int event, DelayLoadInfo *info)
 {
-    static const wchar_t *const NodeLibraries[] = {
-        L"node.dll",
-        NULL
-    };
-
-    if (event == dliNotePreLoadLibrary && !stricmp(info->szDll, "node.exe")) {
-        for (int i = 0; i < sizeof(NodeLibraries) / sizeof(*NodeLibraries); i++) {
-            const wchar_t *name = NodeLibraries[i];
-            HMODULE h = GetModuleHandleW(name);
-
-            if (h)
-                return (FARPROC)h;
+    if (event == dliStartProcessing) {
+        node_dll = GetModuleHandleA("node.dll");
+        if (!node_dll) {
+            node_dll = GetModuleHandle(NULL);
         }
+        return NULL;
     }
+
+    if (event == dliNotePreLoadLibrary && !stricmp(info->szDll, "node.exe"))
+        return (FARPROC)node_dll;
 
     return NULL;
 }
