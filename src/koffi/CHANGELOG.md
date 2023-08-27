@@ -4,6 +4,10 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.17 (2023-08-27)
+
+- Fix compatibility with Electron
+
 #### Koffi 2.5.16 (2023-08-25)
 
 - Run Koffi tests through usual index.js entry point
