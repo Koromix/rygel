@@ -29,41 +29,24 @@
 #include <windows.h>
 #include <delayimp.h>
 
-static HMODULE node_dll;
-static HMODULE nw_dll;
-
 static FARPROC WINAPI self_exe_hook(unsigned int event, DelayLoadInfo *info)
 {
-    if (event == dliStartProcessing) {
-        node_dll = GetModuleHandleA("node.dll");
-        nw_dll = GetModuleHandleA("nw.dll");
+    static const wchar_t *const NodeLibraries[] = {
+        L"node.dll",
+        NULL
+    };
 
-        return NULL;
-    }
+    if (event == dliNotePreLoadLibrary && !stricmp(info->szDll, "node.exe")) {
+        for (int i = 0; i < sizeof(NodeLibraries) / sizeof(*NodeLibraries); i++) {
+            const wchar_t *name = NodeLibraries[i];
+            HMODULE h = GetModuleHandleW(name);
 
-    if (event == dliNotePreGetProcAddress) {
-        if (node_dll) {
-            FARPROC ret = GetProcAddress(node_dll, info->dlp.szProcName);
-            if (ret)
-                return ret;
+            if (h)
+                return (FARPROC)h;
         }
-
-        if (nw_dll) {
-            FARPROC ret = GetProcAddress(nw_dll, info->dlp.szProcName);
-            if (ret)
-                return ret;
-        }
-    }
-
-    if (event == dliNotePreLoadLibrary && _stricmp(info->szDll, "node.exe") != 0) {
-        if (!node_dll) {
-            node_dll = GetModuleHandleA(NULL);
-        }
-        return (FARPROC)node_dll;
     }
 
     return NULL;
 }
 
 const PfnDliHook __pfnDliNotifyHook2 = self_exe_hook;
-const PfnDliHook __pfnDliFailureHook2 = self_exe_hook;
