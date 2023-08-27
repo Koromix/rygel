@@ -11,6 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "esbuild": "^0.18.17",
-    "koffi": "^2.5.9"
+    "koffi": "^2.5.17"
   }
 }

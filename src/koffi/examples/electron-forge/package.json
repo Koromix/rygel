@@ -32,6 +32,6 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
-    "koffi": "^2.5.9"
+    "koffi": "^2.5.17"
   }
 }
