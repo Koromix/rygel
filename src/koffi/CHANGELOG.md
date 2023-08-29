@@ -4,6 +4,11 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.19 (2023-08-29)
+
+- Create thread-safe function broker lazily
+- Add [koffi.reset()](misc.md#reset-internal-state) for type names and async broker
+
 #### Koffi 2.5.18 (2023-08-27)
 
 - Fix compatibility with Electron
