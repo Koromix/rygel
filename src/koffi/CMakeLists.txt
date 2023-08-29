@@ -47,6 +47,10 @@ endif()
 
 # ---- Koffi ----
 
+# Recompute the version string after each commit
+if(EXISTS "${CMAKE_SOURCE_DIR}/../../.git/logs/HEAD")
+    configure_file("${CMAKE_SOURCE_DIR}/../../.git/logs/HEAD" git_logs_HEAD COPYONLY)
+endif()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/package.json)
     file(READ ${CMAKE_CURRENT_SOURCE_DIR}/package.json PKG)
 else()
