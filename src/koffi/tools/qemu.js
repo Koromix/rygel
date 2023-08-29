@@ -632,7 +632,7 @@ async function test(debug = false) {
     let success = true;
 
     success &= await start(false);
-    success &= await upload(snapshot_dir, machine => Object.values(machine.tests).map(test => test.directory));
+    success &= await upload(snapshot_dir, machine => Object.values(machine.builds).map(build => build.directory));
 
     console.log('>> Run build commands...');
     await build(debug);
