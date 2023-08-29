@@ -2068,6 +2068,25 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     return types;
 }
 
+static Napi::Value ResetKoffi(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (instance->broker) {
+        napi_release_threadsafe_function(instance->broker, napi_tsfn_abort);
+        instance->broker = nullptr;
+    }
+
+    instance->types.Clear();
+    instance->types_map.Clear();
+    instance->callbacks.Clear();
+
+    InitBaseTypes(env);
+
+    return env.Undefined();
+}
+
 static InstanceData *CreateInstance(Napi::Env env)
 {
     InstanceData *instance = new InstanceData();
@@ -2077,15 +2096,6 @@ static InstanceData *CreateInstance(Napi::Env env)
 
     instance->debug = GetDebugFlag("DUMP_CALLS");
     FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
-
-    if (napi_create_threadsafe_function(env, nullptr, nullptr,
-                                        Napi::String::New(env, "Koffi Async Callback Broker"),
-                                        0, 1, nullptr, nullptr, nullptr,
-                                        CallData::RelayAsync, &instance->broker) != napi_ok) {
-        LogError("Failed to create async callback broker");
-        return nullptr;
-    }
-    napi_unref_threadsafe_function(env, instance->broker);
 
 #ifdef _WIN32
     TEB *teb = GetTEB();
@@ -2140,6 +2150,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("decode", Napi::Function::New(env, DecodeValue));
     exports.Set("address", Napi::Function::New(env, GetPointerAddress));
     exports.Set("call", Napi::Function::New(env, CallPointerSync));
+
+    exports.Set("reset", Napi::Function::New(env, ResetKoffi));
 
     exports.Set("errno", Napi::Function::New(env, GetOrSetErrNo));
 

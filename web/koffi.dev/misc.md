@@ -125,3 +125,18 @@ assert.equal(koffi.errno(), koffi.os.errno.EBADF);
 
 console.log('close() with invalid FD is POSIX compliant!');
 ```
+
+## Reset internal state
+
+*New in Koffi 2.5.19*
+
+You can use `koffi.reset()` to clear some Koffi internal state such as:
+
+- Parser type names
+- Asynchronous function broker (useful to avoid false positive with `jest --detectOpenHandles`)
+
+This function is mainly intended for test code, when you execute the same code over and over and you need to reuse type names.
+
+```{warning}
+Trying to use a function or a type defined before the reset is undefined behavior and will likely lead to a crash!
+```

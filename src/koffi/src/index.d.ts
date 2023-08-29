@@ -145,6 +145,8 @@ declare module 'koffi' {
     export function errno(): number;
     export function errno(value: number): number;
 
+    export function reset(): void;
+
     export const internal: Boolean;
     export const extension: String;
 
