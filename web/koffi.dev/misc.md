@@ -106,7 +106,7 @@ You can use `koffi.stats()` to get a few statistics related to Koffi.
 
 *New in Koffi 2.3.14*
 
-You can use `koffi.errno()` to the current errno value, and `koffi.errno(value)` to change it.
+You can use `koffi.errno()` to get the current errno value, and `koffi.errno(value)` to change it.
 
 The standard POSIX error codes are available in `koffi.os.errno`, as in the example below:
 
