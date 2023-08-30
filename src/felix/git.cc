@@ -299,7 +299,7 @@ const char *GitVersioneer::Version(Span<const char> key)
         }
     }
 
-    const char *version = Fmt(&str_alloc, "0.0_%1", id).ptr;
+    const char *version = Fmt(&str_alloc, "dev_%1", id).ptr;
     return version;
 }
 
