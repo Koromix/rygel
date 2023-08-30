@@ -207,9 +207,9 @@ function parseSchedule(str) {
     return horaires;
 }
 
-module.exports = {
+export {
     cleanMail,
     cleanURL,
     cleanPhoneNumber,
     parseSchedule
-};
+}

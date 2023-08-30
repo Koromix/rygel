@@ -11,9 +11,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const session = require('express-session');
-const SqliteStore = require('better-sqlite3-session-store')(session);
-const pwhash = require('../lib/pwhash.js');
+import session from 'express-session';
+import sqlite3_session_store from 'better-sqlite3-session-store';
+import * as pwhash from '../lib/pwhash.js';
+
+const SqliteStore = sqlite3_session_store(session);
 
 function init(app, db, secret) {
     app.use(
@@ -84,9 +86,9 @@ function rowToProfile(row) {
     return profile;
 }
 
-module.exports = {
+export {
     init,
     login,
     logout,
     profile
-};
+}

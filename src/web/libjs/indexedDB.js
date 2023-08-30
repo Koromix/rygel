@@ -271,4 +271,4 @@ function logAndReject(reject, msg) {
     reject(new Error(msg));
 }
 
-export { open };
+export { open }

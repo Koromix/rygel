@@ -11,14 +11,14 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import { util, net, LruMap } from '../../../web/libjs/common.js';
+import { Util, Net, LruMap } from '../../../web/libjs/common.js';
 
 function TileMap(runner) {
     let self = this;
 
     // Shortcuts
     let canvas = runner.canvas;
-    let ctx = runner.ctx;
+    let ctx = canvas.getContext('2d');
     let mouse_state = runner.mouseState;
     let pressed_keys = runner.pressedKeys;
 
@@ -179,9 +179,9 @@ function TileMap(runner) {
             let size = mapSize(state.zoom);
 
             if (size >= canvas.width)
-                state.pos.x = util.clamp(state.pos.x, canvas.width / 2, size - canvas.width / 2);
+                state.pos.x = Util.clamp(state.pos.x, canvas.width / 2, size - canvas.width / 2);
             if (size >= canvas.height)
-                state.pos.y = util.clamp(state.pos.y, canvas.height / 2, size - canvas.height / 2);
+                state.pos.y = Util.clamp(state.pos.y, canvas.height / 2, size - canvas.height / 2);
         }
 
         // Fix rounding issues
@@ -374,7 +374,7 @@ function TileMap(runner) {
         active_fetchers++;
 
         while (fetch_queue.length) {
-            let idx = util.getRandomInt(0, fetch_queue.length);
+            let idx = Util.getRandomInt(0, fetch_queue.length);
             let [handle] = fetch_queue.splice(idx, 1);
 
             fetch_handles.set(handle.url, handle);
@@ -559,16 +559,16 @@ function TileMap(runner) {
         const MinLongitude = -180;
         const MaxLongitude = 180;
 
-        latitude = util.clamp(latitude, MinLatitude, MaxLatitude);
-        longitude = util.clamp(longitude, MinLongitude, MaxLongitude);
+        latitude = Util.clamp(latitude, MinLatitude, MaxLatitude);
+        longitude = Util.clamp(longitude, MinLongitude, MaxLongitude);
 
         let x = (longitude + 180) / 360;
         let sinLatitude = Math.sin(latitude * Math.PI / 180);
         let y = 0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI);
 
         let size = mapSize(zoom);
-        let px = util.clamp(x * size + 0.5, 0, ((size - 1) >>> 0));
-        let py = util.clamp(y * size + 0.5, 0, ((size - 1) >>> 0));
+        let px = Util.clamp(x * size + 0.5, 0, ((size - 1) >>> 0));
+        let py = Util.clamp(y * size + 0.5, 0, ((size - 1) >>> 0));
 
         return { x: px, y: py };
     }
@@ -585,11 +585,11 @@ function TileMap(runner) {
 
     this.screenToCoord = function(pos) {
         let size = mapSize(state.zoom);
-        let px = util.clamp(pos.x + state.pos.x - canvas.width / 2, 0, size);
-        let py = size - util.clamp(pos.y + state.pos.y - canvas.height / 2, 0, size);
+        let px = Util.clamp(pos.x + state.pos.x - canvas.width / 2, 0, size);
+        let py = size - Util.clamp(pos.y + state.pos.y - canvas.height / 2, 0, size);
 
-        let x = (util.clamp(px, 0, ((size - 1) >>> 0)) - 0.5) / size;
-        let y = (util.clamp(py, 0, ((size - 1) >>> 0)) - 0.5) / size;
+        let x = (Util.clamp(px, 0, ((size - 1) >>> 0)) - 0.5) / size;
+        let y = (Util.clamp(py, 0, ((size - 1) >>> 0)) - 0.5) / size;
 
         let longitude = (x * 360) - 180;
         let latitude = Math.atan(Math.sinh(2 * (y - 0.5) * Math.PI)) * (180 / Math.PI);
@@ -609,6 +609,4 @@ function TileMap(runner) {
     }
 }
 
-module.exports = {
-    TileMap
-};
+export { TileMap }

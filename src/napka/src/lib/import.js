@@ -11,9 +11,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const fetch = require('node-fetch');
-const querystring = require('querystring');
-const { util } = require('../../../web/libjs/common.js');
+import fetch from 'node-fetch';
+import querystring from 'querystring';
+import { Util } from '../../../web/libjs/common.js';
 
 function FileInfo(filename = null, buffer = null) {
     this.filename = filename;
@@ -55,7 +55,7 @@ async function geomapAddress(address, access_token) {
             break;
         }
 
-        await util.waitFor(i * 500);
+        await Util.waitFor(i * 500);
     }
     if (json == null) {
         console.error(`Failed to geocode address '${address}'`);
@@ -145,9 +145,9 @@ function updateEntries(db, map_name, layer_name, rows, links = {}) {
     }
 }
 
-module.exports = {
+export {
     FileInfo,
     geomapMissing,
     geomapAddress,
     updateEntries
-};
+}

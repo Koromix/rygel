@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 function pbkdf2(str) {
     let digest = 'sha256';
@@ -37,7 +37,7 @@ function verify(str, pwhash) {
     return match;
 }
 
-module.exports = {
+export {
     pbkdf2,
     verify
-};
+}

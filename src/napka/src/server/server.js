@@ -11,20 +11,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const path = require('path');
-const fs = require('fs');
-const crypto = require('crypto');
-const express = require('express');
-const compression = require('compression');
-const mime = require('mime');
-const esbuild = require('esbuild');
-const nunjucks = require('nunjucks');
-const fetch = require('node-fetch');
+import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
+import express from 'express';
+import compression from 'compression';
+import mime from 'mime';
+import esbuild from 'esbuild';
+import nunjucks from 'nunjucks';
+import fetch from 'node-fetch';
 
-const cache = require('../lib/cache.js');
-const database = require('../lib/database.js');
-const map = require('./map.js');
-const session = require('./session.js');
+import * as cache from '../lib/cache.js';
+import * as database from '../lib/database.js';
+import * as map from './map.js';
+import * as session from './session.js';
 
 const PORT = process.env.PORT || 9977;
 const SESSION_SECRET = process.env.SESSION_SECRET || '';
@@ -198,7 +198,7 @@ function buildFiles(map) {
     let timer = null;
 
     let uuid = crypto.randomUUID();
-    let prefix = __dirname + `/../client/${map.name}`;
+    let prefix = `src/client/${map.name}`;
 
     files['map.html'] = nunjucks.render(prefix + '/../map.html', {
         title: map.title,

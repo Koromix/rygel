@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const imp = require('../lib/import.js');
+import * as imp from '../lib/import.js';
 
 function fetchMap(db, layers) {
     let json = {};
@@ -142,10 +142,10 @@ async function deleteEntry(db, req, res) {
     res.json(null);
 }
 
-module.exports = {
+export {
     fetchMap,
     fetchLayer,
     geocode,
     updateEntry,
     deleteEntry
-};
+}

@@ -11,10 +11,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const path = require('path');
-const sqlite3 = require('better-sqlite3');
+import path from 'path';
+import sqlite3 from 'better-sqlite3';
 
-const DATABASE = path.resolve(__dirname + '/../..', process.env.DATABASE || 'data/napka.db');
+const DATABASE = path.resolve('.', process.env.DATABASE || 'data/napka.db');
 const SCHEMA = 15;
 
 function open(options = {}) {
@@ -582,6 +582,4 @@ function migrate(db, version) {
     })();
 }
 
-module.exports = {
-    open: open
-};
+export { open }

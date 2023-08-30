@@ -13,7 +13,7 @@
 
 import { render, html, noChange } from '../../node_modules/lit/html.js';
 import { directive, Directive } from '../../node_modules/lit/directive.js';
-import { util, log } from '../../../web/libjs/common.js';
+import { Util, Log } from '../../../web/libjs/common.js';
 
 let T = {};
 
@@ -25,7 +25,7 @@ Object.assign(T, {
     filter: 'Filter'
 });
 
-const ui = new (function() {
+const UI = new (function() {
     let self = this;
 
     let run_func = () => {};
@@ -69,7 +69,7 @@ const ui = new (function() {
             }
         }
 
-        log.defaultHandler(action, entry);
+        Log.defaultHandler(action, entry);
     };
 
     function renderLog() {
@@ -125,7 +125,7 @@ const ui = new (function() {
                 await func(e);
             } catch (err) {
                 if (err != null) {
-                    log.error(err);
+                    Log.error(err);
                     throw err;
                 }
             } finally {
@@ -162,7 +162,7 @@ const ui = new (function() {
                 <div class="title">${action}</div>
                 <div>${T.confirm_not_reversible}</div>
                 <div class="footer">
-                    <button type="button" class="secondary" @click=${ui.wrap(close)}>${T.cancel}</button>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>${T.cancel}</button>
                     <button type="submit" class="danger">${T.confirm}</button>
                 </div>
             `,
@@ -491,7 +491,4 @@ const ui = new (function() {
     }
 })();
 
-
-module.exports = {
-    ui
-};
+export { UI }

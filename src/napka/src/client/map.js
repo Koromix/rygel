@@ -14,9 +14,9 @@
 import { render, html } from '../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../node_modules/lit/directives/unsafe-html.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
-import { util, log, net } from '../../../web/libjs/common.js';
-import { ui } from '../lib/ui.js';
-import parse from '../lib/parse.js';
+import { Util, Log, Net } from '../../../web/libjs/common.js';
+import { UI } from '../lib/ui.js';
+import * as parse from '../lib/parse.js';
 import { AppRunner } from '../../../web/libjs/runner.js';
 import { TileMap } from '../lib/tilemap.js';
 
@@ -41,7 +41,7 @@ let edit_changes = new Set;
 let edit_key = null;
 
 export async function start(prov, options = {}) {
-    log.pushHandler(ui.notifyHandler);
+    Log.pushHandler(UI.notifyHandler);
 
     provider = prov;
     await provider.loadMap();
@@ -63,7 +63,7 @@ export async function start(prov, options = {}) {
     runner.idleTimeout = 1000;
     runner.start();
 
-    profile = await net.get('api/admin/profile') || {};
+    profile = await Net.get('api/admin/profile') || {};
 
     // Init MarkDown converter
     {
@@ -115,8 +115,8 @@ function updateMap() {
         flash_pos.y = pos.y;
 
         let t = (runner.updateCounter - flash_pos.start) / 240;
-        let t1 = util.clamp(t, 0, 1);
-        let t2 = util.clamp(t - 4, 0, 1);
+        let t1 = Util.clamp(t, 0, 1);
+        let t2 = Util.clamp(t - 4, 0, 1);
 
         flash_pos.speed = 0.5 + 4 * Math.max(0, 1 - t1);
         flash_pos.radius = 10 + 390 * (1 - easeInOutSine(t1));
@@ -179,21 +179,21 @@ function renderMenu() {
         ${provider.renderFilters()}
 
         <div id="admin">
-            ${!isConnected() ? html`<button @click=${ui.wrap(login)}>Se connecter</button>` : ''}
-            ${isConnected() ? html`<button @click=${ui.insist(logout)}>Se déconnecter</button>` : ''}
+            ${!isConnected() ? html`<button @click=${UI.wrap(login)}>Se connecter</button>` : ''}
+            ${isConnected() ? html`<button @click=${UI.insist(logout)}>Se déconnecter</button>` : ''}
         </div>
     `, menu_el);
 }
 
 async function login() {
-    await ui.dialog({
+    await UI.dialog({
         submit_on_return: false,
 
         run: (render, close) => html`
             <div class="title">
                 Se connecter
                 <div style="flex: 1;"></div>
-                <button type="button" class="secondary" @click=${ui.wrap(close)}>✖\uFE0E</button>
+                <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
             </div>
 
             <label>
@@ -208,7 +208,7 @@ async function login() {
         `,
 
         submit: async (elements) => {
-            profile = await net.post('api/admin/login', {
+            profile = await Net.post('api/admin/login', {
                 username: elements.username.value,
                 password: elements.password.value
             });
@@ -219,7 +219,7 @@ async function login() {
 }
 
 async function logout() {
-    profile = await net.post('api/admin/logout') || {};
+    profile = await Net.post('api/admin/logout') || {};
     renderMenu();
 }
 
@@ -243,7 +243,7 @@ function completeAddress(e) {
             complete_timer = null;
 
             try {
-                let results = await net.post('api/admin/geocode', { address: addr });
+                let results = await Net.post('api/admin/geocode', { address: addr });
 
                 if (complete_id == id) {
                     if (results.length) {
@@ -254,7 +254,7 @@ function completeAddress(e) {
                     }
                 }
             } catch (err) {
-                log.error(err);
+                Log.error(err);
                 closeSuggestions();
             } finally {
                 if (complete_id == id)
@@ -322,12 +322,12 @@ export function refreshMap() {
 
             edit_key = null;
 
-            ui.dialog({
+            UI.dialog({
                 run: (render, close) => html`
                     <div class="title">
                         ${makeField(etab, 'name', 'text')}
                         <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${ui.wrap(close)}>✖\uFE0E</button>
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                     </div>
 
                     <div @click=${handlePopupClick}>
@@ -337,10 +337,10 @@ export function refreshMap() {
                     ${isConnected() ? html`
                         <div class="footer">
                             <button type="button" class="danger"
-                                    @click=${ui.confirm('Supprimer cet établissement', e => deleteEntry(etab.id).then(close))}>Supprimer</button>
+                                    @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(etab.id).then(close))}>Supprimer</button>
                             <div style="flex: 1;"></div>
                             <button @click=${closeOrSubmit} type="submit">Modifier</button>
-                            <button type="button" class="secondary" @click=${ui.insist(close)}>Annuler</button>
+                            <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                         </div>
                     ` : ''}
                 `,
@@ -429,7 +429,7 @@ export function makeField(etab, key, type, view = null) {
                               @keypress=${e => handleTextShortcuts(e, etab, key, type)}>${value || ''}</textarea>`;
     } else {
         return html`<input type="text" .value=${value || ''}
-                           @change=${ui.wrap(e => editText(etab, key, type, e.target.value))}
+                           @change=${UI.wrap(e => editText(etab, key, type, e.target.value))}
                            @keypress=${e => handleTextShortcuts(e, etab, key, type)} />`;
     }
 }
@@ -454,7 +454,7 @@ function handleTextShortcuts(e, etab, key, type) {
 
 function toggleEdit(e, key) {
     edit_key = key;
-    ui.runDialog();
+    UI.runDialog();
 
     e.stopPropagation();
     e.preventDefault();
@@ -462,7 +462,7 @@ function toggleEdit(e, key) {
 
 async function editText(etab, key, type, value) {
     if (type == 'address') {
-        let results = await net.post('api/admin/geocode', { address: value });
+        let results = await Net.post('api/admin/geocode', { address: value });
 
         if (results != null) {
             let info = results[0];
@@ -488,7 +488,7 @@ async function editText(etab, key, type, value) {
     edit_key = null;
     edit_changes.add(key);
 
-    ui.runDialog();
+    UI.runDialog();
 }
 
 function editMulti(etab, key, idx, value, insert) {
@@ -508,7 +508,7 @@ async function editEnum(etab, key, value) {
     edit_changes.add(key);
 
     edit_key = null;
-    ui.runDialog();
+    UI.runDialog();
 }
 
 export async function updateEntry(etab) {
@@ -517,14 +517,14 @@ export async function updateEntry(etab) {
     for (let key of edit_changes.values())
         payload[key] = etab[key];
 
-    await net.post('api/admin/edit', payload);
+    await Net.post('api/admin/edit', payload);
 
     await provider.loadMap();
     refreshMap();
 }
 
 export async function deleteEntry(id) {
-    await net.post('api/admin/delete', {
+    await Net.post('api/admin/delete', {
         id: id
     });
 

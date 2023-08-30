@@ -24,5 +24,6 @@ package-lock.json
 
 /src/napka/data/*
 !/src/napka/data/.gitkeep
+/src/napka/tmp/server.*
 
 /deploy/docker/goupile/goupile
