@@ -289,7 +289,7 @@ Options:
     }
 
     const char *name = SplitStrReverseAny(binary_filename, RG_PATH_SEPARATORS).ptr;
-    const char *target_binary = Fmt(&temp_alloc, "%1%/Contents%/MacOS%/%2", output_bundle, name).ptr;
+    const char *target_binary = Fmt(&temp_alloc, "%1%/Contents%/MacOs%/%2", output_bundle, name).ptr;
     const char *plist_filename = Fmt(&temp_alloc, "%1%/Contents%/Info.plist", output_bundle).ptr;
 
     // Copy binary to bundle
