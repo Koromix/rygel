@@ -56,26 +56,26 @@ let struct1 = koffi.struct({ dummy: 'long' });
 let struct2 = koffi.struct({ dummy: koffi.types.long });
 ```
 
-### Endian-sensitive types
+### Endian-sensitive integers
 
 *New in Koffi 2.1*
 
 Koffi defines a bunch of endian-sensitive types, which can be used when dealing with binary data (network payloads, binary file formats, etc.).
 
-JS type          | C type                 | Bytes | Signedness | Endianness
----------------- | ---------------------- | ----- | ---------- | -------------
-Number (integer) | int16_le, int16_le_t   | 2     | Signed     | Little Endian
-Number (integer) | int16_be, int16_be_t   | 2     | Signed     | Big Endian
-Number (integer) | uint16_le, uint16_le_t | 2     | Unsigned   | Little Endian
-Number (integer) | uint16_be, uint16_be_t | 2     | Unsigned   | Big Endian
-Number (integer) | int32_le, int32_le_t   | 4     | Signed     | Little Endian
-Number (integer) | int32_be, int32_be_t   | 4     | Signed     | Big Endian
-Number (integer) | uint32_le, uint32_le_t | 4     | Unsigned   | Little Endian
-Number (integer) | uint32_be, uint32_be_t | 4     | Unsigned   | Big Endian
-Number (integer) | int64_le, int64_le_t   | 8     | Signed     | Little Endian
-Number (integer) | int64_be, int64_be_t   | 8     | Signed     | Big Endian
-Number (integer) | uint64_le, uint64_le_t | 8     | Unsigned   | Little Endian
-Number (integer) | uint64_be, uint64_be_t | 8     | Unsigned   | Big Endian
+C type                 | Bytes | Signedness | Endianness
+---------------------- | ----- | ---------- | -------------
+int16_le, int16_le_t   | 2     | Signed     | Little Endian
+int16_be, int16_be_t   | 2     | Signed     | Big Endian
+uint16_le, uint16_le_t | 2     | Unsigned   | Little Endian
+uint16_be, uint16_be_t | 2     | Unsigned   | Big Endian
+int32_le, int32_le_t   | 4     | Signed     | Little Endian
+int32_be, int32_be_t   | 4     | Signed     | Big Endian
+uint32_le, uint32_le_t | 4     | Unsigned   | Little Endian
+uint32_be, uint32_be_t | 4     | Unsigned   | Big Endian
+int64_le, int64_le_t   | 8     | Signed     | Little Endian
+int64_be, int64_be_t   | 8     | Signed     | Big Endian
+uint64_le, uint64_le_t | 8     | Unsigned   | Little Endian
+uint64_be, uint64_be_t | 8     | Unsigned   | Big Endian
 
 ## Struct types
 
