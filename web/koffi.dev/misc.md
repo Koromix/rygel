@@ -108,7 +108,7 @@ You can use `koffi.stats()` to get a few statistics related to Koffi.
 
 You can use `koffi.errno()` to get the current errno value, and `koffi.errno(value)` to change it.
 
-The standard POSIX error codes are available in `koffi.os.errno`, as in the example below:
+The standard POSIX error codes are available in `koffi.os.errno`, as shown below:
 
 ```js
 const assert = require('assert');
@@ -138,5 +138,5 @@ You can use `koffi.reset()` to clear some Koffi internal state such as:
 This function is mainly intended for test code, when you execute the same code over and over and you need to reuse type names.
 
 ```{warning}
-Trying to use a function or a type defined before the reset is undefined behavior and will likely lead to a crash!
+Trying to use a function or a type that was initially defined before the reset is undefined behavior and will likely lead to a crash!
 ```
