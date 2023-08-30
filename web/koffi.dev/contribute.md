@@ -14,7 +14,7 @@ Start by cloning the repository with [Git](https://git-scm.com/):
 
 ```sh
 git clone https://github.com/Koromix/rygel
-cd rygel/src/koffi
+cd rygel
 ```
 
 As said before, this is a monorepository containg multiple projects, hence the name.
@@ -30,8 +30,8 @@ First, make sure the following dependencies are met:
 Once this is done, run this command _from the test or the benchmark directory_ (depending on what you want to build):
 
 ```sh
-cd koffi/test # or cd koffi/benchmark
-node ../../cnoke/cnoke.js
+cd src/koffi
+node ../cnoke/cnoke.js
 ```
 
 ### Other platforms
@@ -46,11 +46,31 @@ Make sure the following dependencies are met:
 Once this is done, run this command _from the test or the benchmark directory_ (depending on what you want to build):
 
 ```sh
-cd koffi/test # or cd koffi/benchmark
-node ../../cnoke/cnoke.js
+cd src/koffi
+node ../cnoke/cnoke.js
 ```
 
-## Running tests
+## Run tests
+
+### On your machine
+
+Once Koffi is built, you can build the tests and run them with the following commands:
+
+```sh
+cd src/koffi/test
+node ../../cnoke/cnoke.js
+
+node sync.js # Run synchronous unit tests
+node async.js # Run asynchronous unit tests
+node callbacks.js # Run callback unit tests
+node union.js # Run union unit tests
+node win32.js # Run Windows-specific unit tests (only on Windows)
+
+node sqlite.js # Run SQLite integration tests
+node raylib.js # Run Raylib integration tests
+```
+
+### On virtual machines
 
 Koffi is tested on multiple architectures using emulated (accelerated when possible) QEMU machines. First, you need to install qemu packages, such as `qemu-system` (or even `qemu-system-gui`) on Ubuntu.
 
@@ -59,7 +79,7 @@ These machines are not included directly in this repository (for license and siz
 For example, if you want to run the tests on Debian ARM64, run the following commands:
 
 ```sh
-cd rygel/src/koffi/tools/
+cd src/koffi/tools/
 wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
 sha256sum -c --ignore-missing registry/sha256sum.txt
 ```
