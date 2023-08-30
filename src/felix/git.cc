@@ -133,9 +133,13 @@ bool GitVersioneer::Prepare(const char *root_directory)
             if (StartsWith(ref, "refs/tags/")) {
                 Span<const char> tag = DuplicateString(ref, &str_alloc);
 
+                // Only take annotated tags
                 GitHash hash = {};
-                if (!ReadAttribute(id, "object", &hash))
-                    return false;
+                switch (ReadAttribute(id, "object", &hash)) {
+                    case AttributeResult::Success: {} break;
+                    case AttributeResult::Missing: continue;
+                    case AttributeResult::Error: return false;
+                }
 
                 ref_map.Set(tag.ptr, hash);
                 hash_map.Set(hash, tag.ptr);
@@ -175,9 +179,13 @@ bool GitVersioneer::Prepare(const char *root_directory)
 
             Span<const char> id = TrimStr(buf.As());
 
+            // Only take annotated tags
             GitHash hash = {};
-            if (!ReadAttribute(id, "object", &hash))
-                return false;
+            switch (ReadAttribute(id, "object", &hash)) {
+                case AttributeResult::Success: {} break;
+                case AttributeResult::Missing: continue;
+                case AttributeResult::Error: return false;
+            }
 
 #ifdef _WIN32
             Span<char> tag = DuplicateString(filename + prefix_len, &str_alloc);
@@ -274,8 +282,16 @@ const char *GitVersioneer::Version(Span<const char> key)
 
             if (next == commits.len) {
                 GitHash parent = {};
-                if (!ReadAttribute(commits[idx], "parent", &parent))
-                    return nullptr;
+
+                switch (ReadAttribute(commits[idx], "parent", &parent)) {
+                    case AttributeResult::Success: {} break;
+                    case AttributeResult::Missing: {
+                        LogError("Missing 'parent' attribute");
+                        continue;
+                    } break;
+                    case AttributeResult::Error: return nullptr;
+                }
+
                 commits.Append(parent);
             }
 
@@ -287,36 +303,33 @@ const char *GitVersioneer::Version(Span<const char> key)
     return version;
 }
 
-bool GitVersioneer::ReadAttribute(Span<const char> id, const char *attr, GitHash *out_hash)
+GitVersioneer::AttributeResult GitVersioneer::ReadAttribute(Span<const char> id, const char *attr, GitHash *out_hash)
 {
     GitHash hash = {};
     if (!EncodeHash(id, &hash))
-        return false;
+        return AttributeResult::Error;
 
     return ReadAttribute(hash, attr, out_hash);
 }
 
-bool GitVersioneer::ReadAttribute(const GitHash &hash, const char *attr, GitHash *out_hash)
+GitVersioneer::AttributeResult GitVersioneer::ReadAttribute(const GitHash &hash, const char *attr, GitHash *out_hash)
 {
     DecodeHash(hash.raw[0], loose_filename.end() - 41);
     loose_filename[loose_filename.len - 39] = *RG_PATH_SEPARATORS;
     DecodeHash(MakeSpan(hash.raw + 1, 19), loose_filename.end() - 38);
 
     if (TestFile(loose_filename.ptr)) {
-        if (!ReadLooseAttribute(loose_filename.ptr, attr, out_hash))
-            return false;
+        return ReadLooseAttribute(loose_filename.ptr, attr, out_hash);
     } else {
         PackLocation location = {};
         if (!FindInIndexes(0, hash, &location))
-            return false;
-        if (!ReadPackAttribute(location.idx, location.offset, attr, out_hash))
-            return false;
-    }
+            return AttributeResult::Error;
 
-    return true;
+        return ReadPackAttribute(location.idx, location.offset, attr, out_hash);
+    }
 }
 
-bool GitVersioneer::ReadLooseAttribute(const char *filename, const char *attr, GitHash *out_hash)
+GitVersioneer::AttributeResult GitVersioneer::ReadLooseAttribute(const char *filename, const char *attr, GitHash *out_hash)
 {
     StreamReader st(filename, CompressionType::Zlib);
     LineReader reader(&st);
@@ -340,15 +353,14 @@ bool GitVersioneer::ReadLooseAttribute(const char *filename, const char *attr, G
         Span<const char> key = TrimStr(SplitStr(line, ' ', &value));
         value = TrimStr(value);
 
-        if (key == attr)
-            return EncodeHash(value, out_hash);
+        if (key == attr) {
+            if (!EncodeHash(value, out_hash))
+                return AttributeResult::Error;
+            return AttributeResult::Success;
+        }
     } while (reader.Next(&line));
 
-    if (reader.IsValid()) {
-        LogError("Missing '%1' attribute in loose object", attr);
-    }
-
-    return false;
+    return AttributeResult::Missing;
 }
 
 static bool SeekFile(FILE *fp, int64_t offset)
@@ -454,7 +466,6 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
     char id[41];
     DecodeHash(hash.raw, id);
 
-    LogError("Cannot find object '%1'", id);
     return false;
 }
 
@@ -497,22 +508,22 @@ static Span<const uint8_t> ParseOffset(Span<const uint8_t> buf, int64_t *out_off
     return buf.Take(used, buf.len - used);
 }
 
-bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, GitHash *out_hash)
+GitVersioneer::AttributeResult GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, GitHash *out_hash)
 {
     const char *pack_filename = pack_filenames[idx];
 
     FILE *fp = OpenFile(pack_filename, (int)OpenFlag::Read);
     if (!fp)
-        return false;
+        return AttributeResult::Error;
     RG_DEFER { fclose(fp); };
 
     // Check PACK header
     PackHeader header = {};
     if (!ReadSection(fp, 0, RG_SIZE(header), &header))
-        return false;
+        return AttributeResult::Error;
     if (BigEndian(header.magic) != 0x5041434B || BigEndian(header.version) != 2) {
         LogError("Invalid or unsupported PACK file");
-        return false;
+        return AttributeResult::Error;
     }
 
     int type = -1;
@@ -524,7 +535,7 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
         obj.RemoveFrom(0);
 
         if (!ReadPackObject(fp, offset, &type, &obj))
-            return false;
+            return AttributeResult::Error;
 
         if (type != 6 && type != 7)
             break;
@@ -540,10 +551,10 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
 
             PackLocation location = {};
             if (!FindInIndexes(idx, hash, &location))
-                return false;
+                return AttributeResult::Error;
             if (location.idx != idx) [[unlikely]] {
                 LogError("Cannot resolve delta with other file");
-                return false;
+                return AttributeResult::Error;
             }
             offset = location.offset;
 
@@ -556,7 +567,7 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
         remain = ParseLength(remain, &delta->final_len);
         if (!remain.len) [[unlikely]] {
             LogError("Corrupt object delta");
-            return false;
+            return AttributeResult::Error;
         }
         delta->code.Append(remain);
     }
@@ -570,7 +581,7 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
 
         if (delta.base_len != base.len) [[unlikely]] {
             LogError("Size mismatch in delta object %1 %2 %3", delta.base_len, delta.final_len, base.len);
-            return false;
+            return AttributeResult::Error;
         }
 
         for (Size j = 0; j < delta.code.len;) {
@@ -582,7 +593,7 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
 
                 if (delta.code.len - i < PopCount((uint32_t)(cmd & 0x7F))) [[unlikely]] {
                     LogError("Corrupt object delta");
-                    return false;
+                    return AttributeResult::Error;
                 }
 
                 offset |= (cmd & 0x01) ? (delta.code[j++] << 0) : 0;
@@ -596,27 +607,27 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
 
                 if (offset < 0 || offset + len > base.len) [[unlikely]] {
                     LogError("Corrupt object delta");
-                    return false;
+                    return AttributeResult::Error;
                 }
 
                 obj.Append(base.Take((Size)offset, len));
             } else if (cmd) {
                 if (cmd > delta.code.len - j) [[unlikely]] {
                     LogError("Corrupt object delta");
-                    return false;
+                    return AttributeResult::Error;
                 }
 
                 obj.Append(delta.code.Take(j, cmd));
                 j += cmd;
             } else {
                 LogError("Invalid delta command");
-                return false;
+                return AttributeResult::Error;
             }
         }
 
         if (delta.final_len != obj.len) [[unlikely]] {
             LogError("Size mismatch in delta object %1 %2 %3", delta.base_len, delta.final_len, base.len);
-            return false;
+            return AttributeResult::Error;
         }
     }
 
@@ -630,15 +641,17 @@ bool GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, G
             Span<const char> key = TrimStr(SplitStr(line, ' ', &value));
             value = TrimStr(value);
 
-            if (key == attr)
-                return EncodeHash(value, out_hash);
+            if (key == attr) {
+                if (!EncodeHash(value, out_hash))
+                    return AttributeResult::Error;
+                return AttributeResult::Success;
+            }
         }
 
-        LogError("Missing '%1' attribute in packed object", attr);
-        return false;
+        return AttributeResult::Missing;
     } else {
         LogError("Expect commit object, unexpected object 0x%1", FmtHex(type));
-        return false;
+        return AttributeResult::Error;
     }
 }
 

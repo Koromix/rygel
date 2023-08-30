@@ -34,6 +34,12 @@ class GitVersioneer {
         Size offset;
     };
 
+    enum class AttributeResult {
+        Success,
+        Missing,
+        Error
+    };
+
     const char *repo_directory = nullptr;
 
     // Prepared stuff
@@ -60,13 +66,13 @@ public:
     const char *Version(Span<const char> key);
 
 private:
-    bool ReadAttribute(Span<const char> id, const char *attr, GitHash *out_hash);
-    bool ReadAttribute(const GitHash &hash, const char *attr, GitHash *out_hash);
+    AttributeResult ReadAttribute(Span<const char> id, const char *attr, GitHash *out_hash);
+    AttributeResult ReadAttribute(const GitHash &hash, const char *attr, GitHash *out_hash);
 
-    bool ReadLooseAttribute(const char *filename, const char *attr, GitHash *out_hash);
+    AttributeResult ReadLooseAttribute(const char *filename, const char *attr, GitHash *out_hash);
 
     bool FindInIndexes(Size start_idx, const GitHash &hash, PackLocation *out_location);
-    bool ReadPackAttribute(Size idx, Size offset, const char *attr, GitHash *out_hash);
+    AttributeResult ReadPackAttribute(Size idx, Size offset, const char *attr, GitHash *out_hash);
     bool ReadPackObject(FILE *fp, Size offset, int *out_type, HeapArray<uint8_t> *out_obj);
 };
 
