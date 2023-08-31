@@ -355,34 +355,6 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
                     cmark_node_prepend_child(node, frag);
                 }
             }
-
-            // Format our own code blocks
-            /*if (event == CMARK_EVENT_ENTER && type == CMARK_NODE_CODE_BLOCK) {
-                Span<const char> remain = TrimStr(cmark_node_get_literal(node));
-
-                HeapArray<char> code;
-
-                Fmt(&code, "<pre><code class=\"language-%1\">\n", MakeSpan((const char *)node->as.code.info.data, node->as.code.info.len));
-                while (remain.len) {
-                    Span<const char> line = SplitStrLine(remain, &remain);
-
-                    // Fmt(&code, "<span class=\"line\">%1</span>\n", line);
-                    Fmt(&code, "%1\n", line);
-                }
-                Fmt(&code, "</code></pre>\n");
-
-                cmark_node *block = cmark_node_new(CMARK_NODE_CUSTOM_BLOCK);
-                cmark_node_set_on_enter(block, code.ptr);
-
-                if (cmark_node_replace(node, block)) {
-                    cmark_node_free(node);
-                } else {
-                    cmark_node_free(block);
-
-                    LogError("Failed to replace code block");
-                    return false;
-                }
-            }*/
         }
 
         if (has_main) {
