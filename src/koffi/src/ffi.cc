@@ -1656,6 +1656,9 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
+    if (!InitAsyncBroker(env, instance)) [[unlikely]]
+        return env.Null();
+
     bool has_recv = (info.Length() >= 3 && info[1].IsFunction());
 
     if (info.Length() < 2u + has_recv) {
@@ -1935,6 +1938,22 @@ InstanceMemory::~InstanceMemory()
         munmap(heap.ptr, heap.len);
     }
 #endif
+}
+
+bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
+{
+    if (!instance->broker) {
+        if (napi_create_threadsafe_function(env, nullptr, nullptr,
+                                            Napi::String::New(env, "Koffi Async Callback Broker"),
+                                            0, 1, nullptr, nullptr, nullptr,
+                                            CallData::RelayAsync, &instance->broker) != napi_ok) {
+            LogError("Failed to create async callback broker");
+            return false;
+        }
+        napi_unref_threadsafe_function(env, instance->broker);
+    }
+
+    return true;
 }
 
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,

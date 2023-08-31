@@ -1236,16 +1236,8 @@ void CallData::PopOutArguments()
 
 void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
 {
-    if (!instance->broker) {
-        if (napi_create_threadsafe_function(env, nullptr, nullptr,
-                                            Napi::String::New(env, "Koffi Async Callback Broker"),
-                                            0, 1, nullptr, nullptr, nullptr,
-                                            CallData::RelayAsync, &instance->broker) != napi_ok) {
-            LogError("Failed to create async callback broker");
-            return nullptr;
-        }
-        napi_unref_threadsafe_function(env, instance->broker);
-    }
+    if (!InitAsyncBroker(env, instance)) [[unlikely]]
+        return nullptr;
 
     int16_t idx;
     {
