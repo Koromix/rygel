@@ -89,6 +89,20 @@ async function test() {
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
 
+    // Start with test of callback inside async function to make sure the async broker is registered,
+    // and avoid regression (see issue #74).
+    {
+        let chars = [97, 98];
+
+        let cb = koffi.register((idx, c) => (idx + 1) * c, 'CharCallback *');
+        let ret = await util.promisify(CallMeChar.async)(cb);
+
+        assert.equal(ret, 97 + 2 * 98);
+
+        // Don't unregister to make lingering trampolines don't make node crash on exit
+        // koffi.unregister(cb);
+    }
+
     // Simple test similar to README example
     {
         let ret = CallJS('Niels', str => {
@@ -258,19 +272,6 @@ async function test() {
 
         let ret = CallMeChar(cb);
         assert.equal(ret, 97 + 98);
-
-        // Don't unregister to make lingering trampolines don't make node crash on exit
-        // koffi.unregister(cb);
-    }
-
-    // Test callback inside async function
-    {
-        let chars = [97, 98];
-
-        let cb = koffi.register((idx, c) => (idx + 1) * c, 'CharCallback *');
-        let ret = await util.promisify(CallMeChar.async)(cb);
-
-        assert.equal(ret, 97 + 2 * 98);
 
         // Don't unregister to make lingering trampolines don't make node crash on exit
         // koffi.unregister(cb);
