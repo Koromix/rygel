@@ -19,6 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
@@ -908,4 +909,29 @@ EXPORT const char *GetLatin1String()
 {
     // ®²
     return "Microsoft\xAE\xB2";
+}
+
+EXPORT int BoolToInt(bool a)
+{
+    return (int)a;
+}
+
+EXPORT unsigned int BoolToMask12(bool a, bool b, bool c, bool d, bool e, bool f,
+                                 bool g, bool h, bool i, bool j, bool k, bool l)
+{
+    unsigned int mask = ((unsigned int)a << 11) | ((unsigned int)b << 10) | ((unsigned int)c << 9) |
+                        ((unsigned int)d << 8) | ((unsigned int)e << 7) | ((unsigned int)f << 6) |
+                        ((unsigned int)g << 5) | ((unsigned int)h << 4) | ((unsigned int)i << 3) |
+                        ((unsigned int)j << 2) | ((unsigned int)k << 1) | ((unsigned int)l << 0);
+    return mask;
+}
+
+EXPORT int IfElseInt(bool cond, int a, int b)
+{
+    return cond ? a : b;
+}
+
+EXPORT const char *IfElseStr(const char *a, const char *b, bool cond)
+{
+    return cond ? a : b;
 }

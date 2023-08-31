@@ -263,6 +263,11 @@ async function test() {
     const FillBufferDirect = lib.func('void FillBufferDirect(BufferInfo info, int c)');
     const FillBufferIndirect = lib.func('void FillBufferIndirect(const BufferInfo *info, int c)');
     const GetLatin1String = lib.func('const uint8_t *GetLatin1String()');
+    const BoolToInt = lib.func('int BoolToInt(bool a)');
+    const BoolToMask12 = lib.func('unsigned int BoolToMask12(bool a, bool b, bool c, bool d, bool e, bool f,' +
+                                                            'bool g, bool h, bool i, bool j, bool k, bool l)');
+    const IfElseInt = lib.func('int IfElseInt(bool cond, int a, int b)');
+    const IfElseStr = lib.func('const char *IfElseStr(const char *a, const char *b, bool cond)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -765,6 +770,16 @@ async function test() {
 
         assert.equal(str, 'Microsoft®²');
     }
+
+    // Test boolean parameters
+    assert.equal(BoolToInt(true), 1);
+    assert.equal(BoolToInt(false), 0);
+    assert.equal(BoolToMask12(true, false, false, true, true, false, true, false, false, false, true, false), 0b100110100010);
+    assert.equal(BoolToMask12(false, true, true, false, false, false, false, true, false, false, true, true), 0b011000010011);
+    assert.equal(IfElseInt(true, 42, 24), 42);
+    assert.equal(IfElseInt(false, 42, 24), 24);
+    assert.equal(IfElseStr("foo", "bar", true), "foo");
+    assert.equal(IfElseStr("FIRST", "SECOND", false), "SECOND");
 
     lib.unload();
 }
