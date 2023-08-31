@@ -1,9 +1,3 @@
----
-title: Dépression
-menu: Pour les médecins / Dépression
-description: Fiche d'information sur la dépression
----
-
 # Épidémiologie
 
 La dépression en quelques chiffres :

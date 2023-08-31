@@ -1,8 +1,3 @@
----
-title: Koffi
-menu: Koffi
----
-
 # Overview
 
 Koffi is a **fast and easy-to-use C to JS FFI module** for [Node.js](https://nodejs.org/), featuring:

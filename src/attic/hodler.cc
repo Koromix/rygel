@@ -37,18 +37,19 @@ struct PageSection {
 };
 
 struct PageData {
-    const char *src_filename;
+    const char *name;
 
+    const char *src_filename;
+    const char *template_filename;
     const char *title;
     const char *menu;
     const char *description;
-    HeapArray<PageSection> sections;
 
+    const char *url;
+
+    HeapArray<PageSection> sections;
     std::shared_ptr<const char> html_buf;
     Span<const char> html;
-
-    const char *name;
-    const char *url;
 };
 
 static int32_t DecodeUtf8Unsafe(const char *str);
@@ -110,28 +111,13 @@ static int32_t DecodeUtf8Unsafe(const char *str)
     return uc;
 }
 
-static const char *FileNameToPageName(const char *filename, Allocator *alloc)
+static const char *SectionToPageName(Span<const char> section, Allocator *alloc)
 {
     // File name and extension
-    Span<const char> name = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
-    SplitStrReverse(name, '.', &name);
+    SplitStrReverse(section, '.', &section);
 
-    // Remove leading number and underscore if any
-    {
-        const char *after_number;
-        strtol(name.ptr, const_cast<char **>(&after_number), 10);
-        if (after_number && after_number[0] == '_') {
-            name = MakeSpan(after_number + 1, name.end());
-        }
-    }
-
-    // Filter out unwanted characters
-    char *name2 = DuplicateString(name, alloc).ptr;
-    for (Size i = 0; name2[i]; i++) {
-        name2[i] = IsAsciiAlphaOrDigit(name2[i]) ? name2[i] : '_';
-    }
-
-    return name2;
+    const char *name = DuplicateString(section, alloc).ptr;
+    return name;
 }
 
 static const char *TextToID(Span<const char> text, Allocator *alloc)
@@ -214,39 +200,12 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
 }
 
 // XXX: Resolve page links in content
-static bool RenderPageContent(PageData *page, const HashTable<const char *, const FileHash *> &assets, Allocator *alloc)
+static bool RenderMarkdown(PageData *page, const HashTable<const char *, const FileHash *> &assets, Allocator *alloc)
 {
-
     HeapArray<char> content;
     if (ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
         return false;
     Span<const char> remain = TrimStr(content.As());
-
-    // Parse pseudo-YAML intro
-    if (StartsWith(remain, "---\n") || StartsWith(remain, "---\r\n")) {
-        SplitStrLine(remain, &remain);
-
-        while (remain.len) {
-            Span<const char> line = SplitStrLine(remain, &remain);
-            if (line == "---")
-                break;
-            line = TrimStr(line);
-
-            Span<const char> value;
-            Span<const char> key = TrimStr(SplitStr(line, ':', &value));
-            value = TrimStr(value);
-
-            if (key == "title") {
-                page->title = DuplicateString(value, alloc).ptr;
-            } else if (key == "description") {
-                page->description = DuplicateString(value, alloc).ptr;
-            } else if (key == "menu") {
-                page->menu = DuplicateString(value, alloc).ptr;
-            } else {
-                LogError("%1: Unknown attribute '%2'", page->src_filename, key);
-            }
-        }
-    }
 
     cmark_gfm_core_extensions_ensure_registered();
 
@@ -371,15 +330,16 @@ static bool RenderPageContent(PageData *page, const HashTable<const char *, cons
     return true;
 }
 
-static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages, Size page_idx,
+static bool RenderTemplate(const char *template_filename, Span<const PageData> pages, Size page_idx,
                            const HashTable<const char *, const FileHash *> &assets,
                            const char *dest_filename)
 {
-    StreamWriter st(dest_filename, (int)StreamWriterFlag::Atomic);
+    StreamReader reader(template_filename);
+    StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
 
     const PageData &page = pages[page_idx];
 
-    bool success = PatchFile(html, &st, [&](Span<const char> expr, StreamWriter *writer) {
+    bool success = PatchFile(&reader, &writer, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
 
         if (key == "TITLE") {
@@ -457,115 +417,78 @@ static bool RenderFullPage(Span<const uint8_t> html, Span<const PageData> pages,
 
     if (!success)
         return false;
-    if (!st.Close())
+    if (!writer.Close())
         return false;
 
     return true;
 }
 
-static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat urls,
-                     const char *output_dir, bool gzip)
+static bool BuildAll(const char *config_filename, UrlFormat urls, const char *output_dir, bool gzip)
 {
     BlockAllocator temp_alloc;
 
     // Output directory
     if (!MakeDirectory(output_dir, false))
         return false;
-    LogInfo("Template: %!..+%1%!0", template_dir);
+    LogInfo("Configuration file: %!..+%1%!0", config_filename);
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
-    const char *static_directories[] = {
-        Fmt(&temp_alloc, "%1%/static", input_dir).ptr,
-        Fmt(&temp_alloc, "%1%/static", template_dir).ptr
-    };
-
-    // Copy template assets
-    BucketArray<FileHash> hashes;
-    HashTable<const char *, const FileHash *> hashes_map;
-    {
-        Async async;
-
-        for (const char *static_directory: static_directories) {
-            if (TestFile(static_directory, FileType::Directory)) {
-                HeapArray<const char *> static_filenames;
-                if (!EnumerateFiles(static_directory, nullptr, 3, 1024, &temp_alloc, &static_filenames))
-                    return false;
-
-                Size prefix_len = strlen(static_directory);
-
-                for (const char *src_filename: static_filenames) {
-                    const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
-
-                    const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
-                    const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
-
-                    FileHash *hash = hashes.AppendDefault();
-                    hash->path = basename;
-
-                    async.Run([=]() {
-                        if (!EnsureDirectoryExists(dest_filename))
-                            return false;
-
-                        // Open ahead of time because src_filename won't stay valid
-                        StreamReader reader(src_filename);
-
-                        // Copy raw file
-                        {
-                            StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
-
-                            if (!SpliceWithChecksum(&reader, &writer, hash->sha256))
-                                return false;
-                            if (!writer.Close())
-                                return false;
-                        }
-
-                        // Create gzipped version
-                        if (gzip && http_ShouldCompressFile(dest_filename)) {
-                            reader.Rewind();
-
-                            StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
-
-                            if (!SpliceStream(&reader, -1, &writer))
-                                return false;
-                            if (!writer.Close())
-                                return false;
-                        } else {
-                            UnlinkFile(gzip_filename);
-                        }
-
-                        return true;
-                    });
-                }
-            }
-        }
-
-        if (!async.Sync())
-            return false;
-
-        for (const FileHash &hash: hashes) {
-            hashes_map.Set(&hash);
-        }
-    }
-
-    // List input files
-    HeapArray<const char *> page_filenames;
-    if (!EnumerateFiles(input_dir, "*.md", 0, 1024, &temp_alloc, &page_filenames))
-        return false;
-    std::sort(page_filenames.begin(), page_filenames.end(),
-              [](const char *filename1, const char *filename2) { return CmpStr(filename1, filename2) < 0; });
+    Span<const char> config_dir = GetPathDirectory(config_filename);
+    const char *static_dir = Fmt(&temp_alloc, "%1%/static", config_dir).ptr;
 
     // List pages
     HeapArray<PageData> pages;
     {
-        HashMap<const char *, Size> pages_map;
+        StreamReader st(config_filename);
+        if (!st.IsValid())
+            return false;
 
-        for (const char *filename: page_filenames) {
+        IniParser ini(&st);
+        ini.PushLogFilter();
+        RG_DEFER { PopLogFilter(); };
+
+        bool valid = true;
+
+        IniProperty prop;
+        while (ini.Next(&prop)) {
+            if (!prop.section.len) {
+                LogError("Property is outside section");
+                return false;
+            }
+
             PageData page = {};
 
-            page.src_filename = filename;
-            if (!RenderPageContent(&page, hashes_map, &temp_alloc))
-                return false;
-            page.name = FileNameToPageName(filename, &temp_alloc);
+            page.name = SectionToPageName(prop.section, &temp_alloc);
+            page.src_filename = NormalizePath(prop.section, config_dir, &temp_alloc).ptr;
+            page.description = "";
+
+            do {
+                if (prop.key == "Title") {
+                    page.title = DuplicateString(prop.value, &temp_alloc).ptr;
+                } else if (prop.key == "Menu") {
+                    page.menu = DuplicateString(prop.value, &temp_alloc).ptr;
+                } else if (prop.key == "Description") {
+                    page.description = DuplicateString(prop.value, &temp_alloc).ptr;
+                } else if (prop.key == "Template") {
+                    page.template_filename = NormalizePath(prop.value, config_dir, &temp_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } while (ini.NextInSection(&prop));
+
+            if (!page.title) {
+                LogError("Missing title for page '%1'", SplitStrReverseAny(page.src_filename, RG_PATH_SEPARATORS));
+                valid = false;
+            }
+            if (!page.menu) {
+                LogError("Missing menu for page '%1'", SplitStrReverseAny(page.src_filename, RG_PATH_SEPARATORS));
+                valid = false;
+            }
+            if (!page.template_filename) {
+                LogError("Missing template for page '%1'", SplitStrReverseAny(page.src_filename, RG_PATH_SEPARATORS));
+                valid = false;
+            }
 
             if (TestStr(page.name, "index")) {
                 page.url = "/";
@@ -577,67 +500,104 @@ static bool BuildAll(const char *input_dir, const char *template_dir, UrlFormat 
                 }
             }
 
-            bool valid = true;
-            if (!page.name) {
-                LogError("%1: Page with empty name", page.src_filename);
-                valid = false;
-            }
-            if (!page.title) {
-                LogError("%1: Ignoring page without title", page.src_filename);
-                valid = false;
-            }
-            if (Size prev_idx = pages_map.FindValue(page.name, -1); prev_idx >= 0) {
-                LogError("%1: Ignoring duplicate of '%2'",
-                         page.src_filename, pages[prev_idx].src_filename);
-                valid = false;
-            }
-
-            if (valid) {
-                pages_map.Set(page.name, pages.len);
-                pages.Append(page);
-            }
+            pages.Append(page);
         }
-    }
-
-    // Load HTML templates
-    HeapArray<uint8_t> page_html;
-    HeapArray<uint8_t> index_html;
-    {
-        const char *page_filename = Fmt(&temp_alloc, "%1%/page.html", template_dir).ptr;
-        const char *index_filename = Fmt(&temp_alloc, "%1%/index.html", template_dir).ptr;
-
-        if (!ReadFile(page_filename, Mebibytes(1), &page_html))
+        if (!ini.IsValid() || !valid)
             return false;
-        if (TestFile(index_filename)) {
-            if (!ReadFile(index_filename, Mebibytes(1), &index_html))
-                return false;
-        } else {
-            index_html.Append(page_html);
+    }
+
+    // Copy static assets
+    BucketArray<FileHash> hashes;
+    HashTable<const char *, const FileHash *> hashes_map;
+    if (TestFile(static_dir, FileType::Directory)) {
+        Async async;
+
+        HeapArray<const char *> static_filenames;
+        if (!EnumerateFiles(static_dir, nullptr, 3, 1024, &temp_alloc, &static_filenames))
+            return false;
+
+        Size prefix_len = strlen(static_dir);
+
+        for (const char *src_filename: static_filenames) {
+            const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
+
+            const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
+            const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
+
+            FileHash *hash = hashes.AppendDefault();
+            hash->path = basename;
+
+            async.Run([=]() {
+                if (!EnsureDirectoryExists(dest_filename))
+                    return false;
+
+                // Open ahead of time because src_filename won't stay valid
+                StreamReader reader(src_filename);
+
+                // Copy raw file
+                {
+                    StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
+
+                    if (!SpliceWithChecksum(&reader, &writer, hash->sha256))
+                        return false;
+                    if (!writer.Close())
+                        return false;
+                }
+
+                // Create gzipped version
+                if (gzip && http_ShouldCompressFile(dest_filename)) {
+                    reader.Rewind();
+
+                    StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+
+                    if (!SpliceStream(&reader, -1, &writer))
+                        return false;
+                    if (!writer.Close())
+                        return false;
+                } else {
+                    UnlinkFile(gzip_filename);
+                }
+
+                return true;
+            });
+        }
+
+        if (!async.Sync())
+            return false;
+
+        for (const FileHash &hash: hashes) {
+            hashes_map.Set(&hash);
         }
     }
 
-    // Output fully-formed pages
+    // Render markdown
+    for (PageData &page: pages) {
+        if (!RenderMarkdown(&page, hashes_map, &temp_alloc))
+            return false;
+    }
+
+    // Render templates
     {
         Async async;
 
         for (Size i = 0; i < pages.len; i++) {
-            const PageData &page = pages[i];
-
             const char *dest_filename;
-            if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
-                dest_filename = Fmt(&temp_alloc, "%1%/%2%/index.html", output_dir, page.name).ptr;
-                if (!EnsureDirectoryExists(dest_filename))
-                    return false;
-            } else {
-                dest_filename = Fmt(&temp_alloc, "%1%/%2.html", output_dir, page.name).ptr;
+            {
+                Span<const char> ext = GetPathExtension(pages[i].template_filename);
+
+                if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
+                    dest_filename = Fmt(&temp_alloc, "%1%/%2%/index%3", output_dir, pages[i].name, ext).ptr;
+                    if (!EnsureDirectoryExists(dest_filename))
+                        return false;
+                } else {
+                    dest_filename = Fmt(&temp_alloc, "%1%/%2%3", output_dir, pages[i].name, ext).ptr;
+                }
             }
 
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
             async.Run([=, &pages]() {
-                Span<const uint8_t> html = TestStr(pages[i].name, "index") ? index_html : page_html;
-
-                if (!RenderFullPage(html, pages, i, hashes_map, dest_filename))
+                if (!RenderTemplate(pages[i].template_filename, pages, i, hashes_map, dest_filename))
                     return false;
 
                 if (gzip) {
@@ -670,24 +630,24 @@ int Main(int argc, char *argv[])
     BlockAllocator temp_alloc;
 
     // Options
-    const char *input_dir = nullptr;
-    const char *template_dir = {};
+    const char *config_filename = "HodlerSite.ini";
     const char *output_dir = nullptr;
     bool gzip = false;
     UrlFormat urls = UrlFormat::Pretty;
 
     const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 <input_dir> -O <output_dir>%!0
+        PrintLn(fp, R"(Usage: %!..+%1 [options] -O <output_dir>%!0
 
 Options:
-    %!..+-T, --template_dir <dir>%!0     Set template directory
+    %!..+-C, --config_file <file>%!0     Set configuration filename
+                                 %!D..(default: %2)%!0
 
     %!..+-O, --output_dir <dir>%!0       Set output directory
         %!..+--gzip%!0                   Create static gzip files
 
-    %!..+-u, --urls <FORMAT>%!0          Change URL format (%2)
-                                 %!D..(default: %3)%!0)",
-                FelixTarget, FmtSpan(UrlFormatNames), UrlFormatNames[(int)urls]);
+    %!..+-u, --urls <FORMAT>%!0          Change URL format (%3)
+                                 %!D..(default: %4)%!0)",
+                FelixTarget, config_filename, FmtSpan(UrlFormatNames), UrlFormatNames[(int)urls]);
     };
 
     // Handle version
@@ -705,8 +665,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-T", "--template_dir", OptionType::Value)) {
-                template_dir = opt.current_value;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
             } else if (opt.Test("--gzip")) {
@@ -721,39 +681,14 @@ Options:
                 return 1;
             }
         }
-
-        input_dir = opt.ConsumeNonOption();
     }
 
-    // Check arguments
-    {
-        bool valid = true;
-
-        if (!input_dir) {
-            LogError("Missing input directory");
-            valid = false;
-        }
-        if (!output_dir) {
-            LogError("Missing output directory");
-            valid = false;
-        }
-
-        if (!valid)
-            return 1;
+    if (!output_dir) {
+        LogError("Missing output directory");
+        return 1;
     }
 
-    if (!template_dir) {
-        const char *directory = Fmt(&temp_alloc, "%1%/template", input_dir).ptr;
-
-        if (!TestFile(directory, FileType::Directory)) {
-            LogError("Missing template directory");
-            return 1;
-        }
-
-        template_dir = directory;
-    }
-
-    if (!BuildAll(input_dir, template_dir, urls, output_dir, gzip))
+    if (!BuildAll(config_filename, urls, output_dir, gzip))
         return 1;
 
     LogInfo("Done!");

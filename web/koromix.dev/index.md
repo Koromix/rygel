@@ -1,8 +1,3 @@
----
-title: koromix.dev
-menu: Home
----
-
 # Introduction
 
 Hi visitor!

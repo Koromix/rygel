@@ -1,9 +1,3 @@
----
-title: Trouble bipolaire
-menu: Pour les médecins / Trouble bipolaire
-description: Fiche d'information sur le trouble bipolaire
----
-
 # Épidémiologie
 
 Le trouble bipolaire se caractérise par des changements pathologiques de l’humeur et de l’énergie qui peuvent **être augmentées (manie) ou diminuées (dépression)**.

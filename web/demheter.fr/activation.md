@@ -1,9 +1,3 @@
----
-title: Activation comportementale
-menu: Pour les psychologues / Activation comportementale
-description: Fiche sur l'activation comportementale
----
-
 # Activation comportementale
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET psycho/activation1.svg }}"></object>

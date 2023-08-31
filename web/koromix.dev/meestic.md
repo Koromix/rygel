@@ -1,8 +1,3 @@
----
-title: Meestic
-menu: Meestic
----
-
 # Overview
 
 Meestic is a small utility made to control **the lights of MSI Delta 15 laptop keyboards** on Windows and Linux. It provides both a CLI and a system-tray GUI, and can fully replace the official MSI tool (which is not even available for Linux).

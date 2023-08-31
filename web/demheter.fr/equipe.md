@@ -1,9 +1,3 @@
----
-title: Équipe DEMHETER
-menu: Qui sommes-nous ? / Notre équipe
-description: Membres de l'équipe DEMHETER
----
-
 # L'équipe DEMHETER
 
 <div class="team">

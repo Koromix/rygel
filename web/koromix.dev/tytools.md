@@ -1,8 +1,3 @@
----
-title: TyTools
-menu: TyTools
----
-
 # Overview
 
 TyTools is a collection of independent tools to manage, flash and communicate with **[Teensy](https://www.pjrc.com/teensy/) microcontrollers**.

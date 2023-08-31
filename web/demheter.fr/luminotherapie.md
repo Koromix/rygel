@@ -1,9 +1,3 @@
----
-title: Luminothérapie
-menu: Pour les médecins / Luminothérapie
-description: Fiche d'information sur la luminothérapie
----
-
 # Indications
 
 ## Indications principales

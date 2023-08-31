@@ -1,8 +1,3 @@
----
-title: Misc
-menu: Other
----
-
 # Rekord
 
 Rekord is a multi-platform **backup tool with deduplication and asymmetric encryption**, with support for multiple storage back-ends including:

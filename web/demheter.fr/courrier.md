@@ -1,9 +1,3 @@
----
-title: Orienter vers DEMHETER
-menu: Orienter un patient / Courrier d'adressage
-description: Courrier d'adressage pour prise en charge
----
-
 # Courrier d'adressage
 
 Pour une prise en charge optimale de votre patient, un courrier détaillé est nécessaire afin d’organiser une consultation avec l’équipe DEMHETER. Vous trouverez dans cette page, une aide à la rédaction du courrier, qui sera à envoyer à l’adresse [demheter@chu-lille.fr](mailto:demheter@chu-lille.fr).

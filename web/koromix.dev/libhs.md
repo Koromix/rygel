@@ -1,8 +1,3 @@
----
-title: libhs
-menu: libhs
----
-
 # Overview
 
 libhs is a **C library to enumerate HID and serial devices** and interact with them.

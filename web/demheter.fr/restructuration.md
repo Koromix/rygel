@@ -1,9 +1,3 @@
----
-title: Restructuration cognitive
-menu: Pour les psychologues / Restructuration cognitive
-description: Fiche sur la restructuration cognitive
----
-
 # Restructuration cognitive
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET psycho/restructuration.svg }}"></object>
