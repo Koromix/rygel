@@ -4,6 +4,11 @@
 
 ### Koffi 2.5
 
+#### Koffi 2.5.20 (2023-08-31)
+
+- Fix possible crash with async registered callbacks introduced in Koffi 2.5.19
+- Various documentation fixes and improvements
+
 #### Koffi 2.5.19 (2023-08-29)
 
 - Create thread-safe function broker lazily
