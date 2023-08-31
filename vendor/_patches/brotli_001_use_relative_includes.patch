@@ -1,29 +1,33 @@
 diff --git a/vendor/brotli/c/include/brotli/decode.h b/vendor/brotli/c/include/brotli/decode.h
-index cfec9b15b..0f5c8f9d1 100644
+index af1aa23f6..3fd646a3d 100644
 --- a/vendor/brotli/c/include/brotli/decode.h
 +++ b/vendor/brotli/c/include/brotli/decode.h
-@@ -12,8 +12,8 @@
+@@ -12,9 +12,9 @@
  #ifndef BROTLI_DEC_DECODE_H_
  #define BROTLI_DEC_DECODE_H_
  
 -#include <brotli/port.h>
+-#include <brotli/shared_dictionary.h>
 -#include <brotli/types.h>
 +#include "port.h"
++#include "shared_dictionary.h"
 +#include "types.h"
  
  #if defined(__cplusplus) || defined(c_plusplus)
  extern "C" {
 diff --git a/vendor/brotli/c/include/brotli/encode.h b/vendor/brotli/c/include/brotli/encode.h
-index 4b5c120ce..b2774cb63 100644
+index dea9931eb..a31bb328a 100644
 --- a/vendor/brotli/c/include/brotli/encode.h
 +++ b/vendor/brotli/c/include/brotli/encode.h
-@@ -12,8 +12,8 @@
+@@ -12,9 +12,9 @@
  #ifndef BROTLI_ENC_ENCODE_H_
  #define BROTLI_ENC_ENCODE_H_
  
 -#include <brotli/port.h>
+-#include <brotli/shared_dictionary.h>
 -#include <brotli/types.h>
 +#include "port.h"
++#include "shared_dictionary.h"
 +#include "types.h"
  
  #if defined(__cplusplus) || defined(c_plusplus)
