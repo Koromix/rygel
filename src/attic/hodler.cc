@@ -581,26 +581,25 @@ static bool BuildAll(const char *config_filename, UrlFormat urls, const char *ou
         Async async;
 
         for (Size i = 0; i < pages.len; i++) {
-            const char *dest_filename;
-            {
-                Span<const char> ext = GetPathExtension(pages[i].template_filename);
+            Span<const char> ext = GetPathExtension(pages[i].template_filename);
 
-                if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
-                    dest_filename = Fmt(&temp_alloc, "%1%/%2%/index%3", output_dir, pages[i].name, ext).ptr;
-                    if (!EnsureDirectoryExists(dest_filename))
-                        return false;
-                } else {
-                    dest_filename = Fmt(&temp_alloc, "%1%/%2%3", output_dir, pages[i].name, ext).ptr;
-                }
+            const char *dest_filename;
+            if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
+                dest_filename = Fmt(&temp_alloc, "%1%/%2%/index%3", output_dir, pages[i].name, ext).ptr;
+                if (!EnsureDirectoryExists(dest_filename))
+                    return false;
+            } else {
+                dest_filename = Fmt(&temp_alloc, "%1%/%2%3", output_dir, pages[i].name, ext).ptr;
             }
 
+            bool gzip_file = gzip && TestStr(ext, ".html");
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
             async.Run([=, &pages]() {
                 if (!RenderTemplate(pages[i].template_filename, pages, i, hashes_map, dest_filename))
                     return false;
 
-                if (gzip) {
+                if (gzip_file) {
                     StreamReader reader(dest_filename);
                     StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
 
