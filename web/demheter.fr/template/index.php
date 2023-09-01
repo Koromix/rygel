@@ -124,6 +124,54 @@
             </menu>
         </nav>
 
+        <div id="news">
+<?php
+
+require_once("vendor/parsedown/Parsedown.php");
+
+$db = new SQLite3("data/news.db", SQLITE3_OPEN_READONLY);
+
+$res = $db->query("SELECT image, title, content FROM news ORDER BY id");
+$news = fetch_all($res);
+
+if (count($news) > 1) {
+    echo '<img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />
+          <img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />';
+}
+
+foreach ($news as $i => $item) {
+    $cls = $i ? "" : "active";
+
+    $title = parse_markdown($item["title"]);
+    $content = parse_markdown($item["content"]);
+
+    echo <<<INFO
+        <div class="{$cls}">
+            <img src="{$item["image"]}" alt="" />
+            <div>
+                <p class="title">$title</p>
+                $content
+            </div>
+        </div>
+    INFO;
+}
+
+function fetch_all($res) {
+    $rows = [];
+    while ($row = $res->fetchArray(SQLITE3_ASSOC))
+        $rows[] = $row;
+    print_r($row);
+    return $rows;
+}
+
+function parse_markdown($text) {
+    $parser = new Parsedown();
+    return $parser->text($text);
+}
+
+?>
+        </div>
+
         {{ CONTENT }}
 
         <footer>

@@ -1,16 +1,3 @@
-<div id="news">
-    <!--<img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />
-    <img style="right: 16px;" src="/static/img/right.png" alt="" onclick="toggleNews(1, true)" />-->
-    <div class="active">
-        <img src="{{ ASSET misc/journee_f2rsmpsy_2023.webp }}" alt="" />
-        <div>
-            <p class="title">Journée scientifique de la F2RSM Psy</p>
-            <p>Rendez-vous le 19 octobre pour la prochaine journée scientifique de la F2RSM Psy. Une table ronde sera consacrée au projet DEMHETER.
-            <p>Découvrez le pré-programme et inscrivez-vous <a href="https://www.f2rsmpsy.fr/journee-scientifique-annuelle-f2rsm-psy-rendez-vous-octobre-2023.html" target="_blank">sur le site de la F2RSM Psy</a>.
-        </div>
-    </div>
-</div>
-
 # Dispositif DEMHETER
 
 <div class="columns">

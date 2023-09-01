@@ -20,6 +20,13 @@
       - python3
       - python3-venv
       - python3-cachecontrol
+      - php7.4-cli
+      - php7.4-mysql
+      - php7.4-curl
+      - php7.4-gd
+      - php7.4-intl
+      - php7.4-fpm
+      - php7.4-sqlite3
       - make
       - curl
     state: latest
@@ -87,6 +94,7 @@
     recursive: yes
     rsync_opts:
       - '--exclude=".*"'
+      - '--filter="P *.db*"'
   delegate_to: '{{ inventory_hostname }}'
   loop: '{{ static_deploys }}'
   when: 'item.repo is defined'
