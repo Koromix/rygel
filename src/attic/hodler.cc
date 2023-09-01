@@ -434,7 +434,7 @@ static bool BuildAll(const char *config_filename, UrlFormat urls, const char *ou
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
     Span<const char> config_dir = GetPathDirectory(config_filename);
-    const char *static_dir = Fmt(&temp_alloc, "%1%/static", config_dir).ptr;
+    const char *asset_dir = Fmt(&temp_alloc, "%1%/assets", config_dir).ptr;
 
     // List pages
     HeapArray<PageData> pages;
@@ -509,19 +509,19 @@ static bool BuildAll(const char *config_filename, UrlFormat urls, const char *ou
     // Copy static assets
     BucketArray<FileHash> hashes;
     HashTable<const char *, const FileHash *> hashes_map;
-    if (TestFile(static_dir, FileType::Directory)) {
+    if (TestFile(asset_dir, FileType::Directory)) {
         Async async;
 
-        HeapArray<const char *> static_filenames;
-        if (!EnumerateFiles(static_dir, nullptr, 3, 1024, &temp_alloc, &static_filenames))
+        HeapArray<const char *> asset_filenames;
+        if (!EnumerateFiles(asset_dir, nullptr, 3, 1024, &temp_alloc, &asset_filenames))
             return false;
 
-        Size prefix_len = strlen(static_dir);
+        Size prefix_len = strlen(asset_dir);
 
-        for (const char *src_filename: static_filenames) {
+        for (const char *src_filename: asset_filenames) {
             const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
 
-            const char *dest_filename = Fmt(&temp_alloc, "%1%/static%/%2", output_dir, basename).ptr;
+            const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_dir, basename).ptr;
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
             FileHash *hash = hashes.AppendDefault();
