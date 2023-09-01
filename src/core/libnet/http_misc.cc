@@ -249,6 +249,8 @@ bool http_ShouldCompressFile(const char *filename)
         return false;
     if (TestStrI(extension, ".woff") || TestStrI(extension, ".woff2"))
         return false;
+    if (TestStrI(extension, ".db") || TestStrI(extension, ".sqlite3"))
+        return false;
 
     const char *mime_type = http_GetMimeType(extension);
 
