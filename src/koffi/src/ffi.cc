@@ -1568,6 +1568,32 @@ static Napi::Value UnloadLibrary(const Napi::CallbackInfo &info)
     return env.Undefined();
 }
 
+#ifdef _WIN32
+static HANDLE LoadWindowsLibrary(Napi::Env env, const char16_t *filename)
+{
+    HANDLE module = LoadLibraryW((LPCWSTR)filename);
+
+    if (!module) {
+        if (GetLastError() == ERROR_BAD_EXE_FORMAT) {
+            int process = GetSelfMachine();
+            int dll = GetDllMachine(filename);
+
+            if (process >= 0 && dll >= 0 && dll != process) {
+                ThrowError<Napi::Error>(env, "Cannot load '%1' DLL in '%2' process",
+                                        WindowsMachineNames.FindValue(dll, "Unknown"),
+                                        WindowsMachineNames.FindValue(process, "Unknown"));
+                return nullptr;
+            }
+        }
+
+        ThrowError<Napi::Error>(env, "Failed to load shared library: %1", GetWin32ErrorString());
+        return nullptr;
+    }
+
+    return module;
+}
+#endif
+
 static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -1592,12 +1618,10 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 #ifdef _WIN32
     if (info[0].IsString()) {
         std::u16string filename = info[0].As<Napi::String>();
-        module = LoadLibraryW((LPCWSTR)filename.c_str());
+        module = LoadWindowsLibrary(env, filename.c_str());
 
-        if (!module) {
-            ThrowError<Napi::Error>(env, "Failed to load shared library: %1", GetWin32ErrorString());
+        if (!module)
             return env.Null();
-        }
     } else {
         module = GetModuleHandle(nullptr);
         RG_ASSERT(module);

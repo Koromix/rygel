@@ -66,6 +66,7 @@ set(KOFFI_SRC
     src/ffi.cc
     src/parser.cc
     src/util.cc
+    src/win32.cc
     ../../src/core/libcc/libcc.cc
 )
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
