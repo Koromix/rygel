@@ -127,6 +127,26 @@ Each machine is configured to run a VNC server available locally, which you can 
 node qemu.js info debian_x64
 ```
 
+## Making a release
+
+First, you must update the code in three steps:
+
+- Change the version numbers in `package.json` (version and stable for stable releases)
+- Add an entry to `CHANGELOG.md` to summarize the changes since last release
+- Commit theses changes with the message *Bump Koffi to X.Y.Z*
+
+Once this is done, you can publish a new release with the following commands:
+
+```sh
+node qemu.js test # If not done before
+node qemu.js dist
+
+cd build/dist
+npm publish
+```
+
+Some platforms are emulated so this can take a few minutes until the pre-built binaries are ready. Go grab a cup of coffee, come back and execute the `npm publish` command!
+
 ## Code style
 
 Koffi is programmed in a mix of C++ and assembly code (architecture-specific code). It uses [node-addon-api](https://github.com/nodejs/node-addon-api) (C++ N-API wrapper) to interact with Node.js.
