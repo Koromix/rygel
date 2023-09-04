@@ -71,11 +71,9 @@ async function main() {
             throw new Error(`Missing command, use --help`);
 
         switch (process.argv[2]) {
-            case 'pack': { command = pack; } break;
-            case 'publish': { command = publish; } break;
-            case 'prepare': { command = prepare; } break;
             case 'test': { command = test; } break;
             case 'debug': { command = debug; } break;
+            case 'dist': { command = dist; } break;
             case 'start': { command = start; } break;
             case 'stop': { command = stop; } break;
             case 'info': { command = info; } break;
@@ -221,9 +219,8 @@ function print_usage() {
 Commands:
     test                         Run the machines and perform the tests (default)
     debug                        Run the machines and perform the tests, with debug build
-    pack                         Create NPM package with prebuilt Koffi binaries
-    publish                      Publish NPM package with prebuilt Koffi binaries
-    prepare                      Prepare distribution-ready NPM package directory
+
+    dist                         Prepare distribution-ready NPM package directory
 
     start                        Start the machines but don't run anythingh
     stop                         Stop running machines
@@ -309,36 +306,7 @@ async function start(detach = true) {
     return success;
 }
 
-async function pack() {
-    let pack_dir = script_dir + '/../build';
-    let dist_dir = await prepare();
-
-    if (dist_dir == null)
-        return false;
-
-    let npm = (process.platform == 'win32') ? 'npm.cmd' : 'npm';
-
-    execFileSync(npm, ['pack', '--pack-destination', pack_dir], {
-        cwd: dist_dir,
-        stdio: 'inherit',
-    });
-}
-
-async function publish() {
-    let dist_dir = await prepare();
-
-    if (dist_dir == null)
-        return false;
-
-    let npm = (process.platform == 'win32') ? 'npm.cmd' : 'npm';
-
-    execFileSync(npm, ['publish'], {
-        cwd: dist_dir,
-        stdio: 'inherit'
-    });
-}
-
-async function prepare() {
+async function dist() {
     let dist_dir = script_dir + '/../build/dist';
     let snapshot_dir = snapshot();
 
