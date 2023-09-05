@@ -170,6 +170,9 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *r
 Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len = nullptr);
 Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, const Size *len = nullptr);
 
+bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
+bool Encode(Napi::Env env, uint8_t *ptr, Napi::Value value, const TypeInfo *type, const Size *len = nullptr);
+
 static inline Napi::Value NewBigInt(Napi::Env env, int64_t value)
 {
     if (value <= 9007199254740992ll && value >= -9007199254740992ll) {

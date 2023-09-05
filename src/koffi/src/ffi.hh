@@ -99,6 +99,7 @@ static const char *const PrimitiveKindNames[] = {
 struct TypeInfo;
 struct RecordMember;
 struct FunctionInfo;
+class CallData;
 
 typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
 
@@ -342,5 +343,6 @@ Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info);
 Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info);
 
 bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
+CallData *GetThreadCall();
 
 }

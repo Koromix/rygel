@@ -113,12 +113,6 @@ public:
 
     void DumpForward(const FunctionInfo *func) const;
 
-private:
-    template <typename T>
-    bool AllocStack(Size size, Size align, T **out_ptr);
-    template <typename T = uint8_t>
-    T *AllocHeap(Size size, Size align);
-
     bool PushString(Napi::Value value, int directions, const char **out_str);
     Size PushStringValue(Napi::Value value, const char **out_str);
     bool PushString16(Napi::Value value, int directions, const char16_t **out_str16);
@@ -130,9 +124,15 @@ private:
     bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr);
 
-    void PopOutArguments();
-
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
+
+private:
+    template <typename T>
+    bool AllocStack(Size size, Size align, T **out_ptr);
+    template <typename T = uint8_t>
+    T *AllocHeap(Size size, Size align);
+
+    void PopOutArguments();
 };
 
 template <typename T>

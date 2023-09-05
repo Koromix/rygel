@@ -1897,6 +1897,39 @@ static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
                            : TranslateNormalCall(proto, ptr, info);
 }
 
+static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
+    bool has_len = (info.Length() >= 4u + has_offset && info[2u + has_offset].IsNumber());
+
+    if (info.Length() < 3u + has_offset) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 to 5 arguments, got %2", 3 + has_offset, info.Length());
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[1u + has_offset]);
+    if (!type) [[unlikely]]
+        return env.Null();
+
+    Napi::Value ref = info[0];
+    int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
+    Napi::Value value = info[2u + has_offset + has_len];
+
+    if (has_len) {
+        Size len = info[2u + has_offset].As<Napi::Number>();
+
+        if (!Encode(ref, offset, value, type, &len))
+            return env.Null();
+    } else {
+        if (!Encode(ref, offset, value, type))
+            return env.Null();
+    }
+
+    return env.Undefined();
+}
+
 void LibraryHolder::Unload()
 {
 #ifdef _WIN32
@@ -1978,6 +2011,11 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
     }
 
     return true;
+}
+
+CallData *GetThreadCall()
+{
+    return exec_call;
 }
 
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
@@ -2193,6 +2231,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("decode", Napi::Function::New(env, DecodeValue));
     exports.Set("address", Napi::Function::New(env, GetPointerAddress));
     exports.Set("call", Napi::Function::New(env, CallPointerSync));
+    exports.Set("encode", Napi::Function::New(env, EncodeValue));
 
     exports.Set("reset", Napi::Function::New(env, ResetKoffi));
 

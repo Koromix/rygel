@@ -1165,6 +1165,61 @@ Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_
     }
 }
 
+void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
+{
+    if (!InitAsyncBroker(env, instance)) [[unlikely]]
+        return nullptr;
+
+    int16_t idx;
+    {
+        std::lock_guard<std::mutex> lock(shared.mutex);
+
+        if (!shared.available.len) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
+            return env.Null();
+        }
+        if (!used_trampolines.Available()) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "This call uses too many temporary callbacks (max = %1)", RG_LEN(used_trampolines.data));
+            return env.Null();
+        }
+
+        idx = shared.available.data[--shared.available.len];
+        used_trampolines.Append(idx);
+    }
+
+    TrampolineInfo *trampoline = &shared.trampolines[idx];
+
+    trampoline->instance = instance;
+    trampoline->proto = proto;
+    trampoline->func.Reset(func, 1);
+    trampoline->recv.Reset();
+    trampoline->generation = (int32_t)mem->generation;
+
+    void *ptr = GetTrampoline(idx, proto);
+
+    return ptr;
+}
+
+void CallData::DumpForward(const FunctionInfo *func) const
+{
+    PrintLn(stderr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
+
+    if (func->parameters.len) {
+        PrintLn(stderr, "Parameters:");
+        for (Size i = 0; i < func->parameters.len; i++) {
+            const ParameterInfo &param = func->parameters[i];
+            PrintLn(stderr, "  %1 = %2 (%3)", i, param.type->name, FmtMemSize(param.type->size));
+        }
+    }
+    PrintLn(stderr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
+
+    Span<const uint8_t> stack = MakeSpan(mem->stack.end(), old_stack_mem.end() - mem->stack.end());
+    Span<const uint8_t> heap = MakeSpan(old_heap_mem.ptr, mem->heap.ptr - old_heap_mem.ptr);
+
+    DumpMemory("Stack", stack);
+    DumpMemory("Heap", heap);
+}
+
 static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)
 {
     napi_value value;
@@ -1232,61 +1287,6 @@ void CallData::PopOutArguments()
             } break;
         }
     }
-}
-
-void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
-{
-    if (!InitAsyncBroker(env, instance)) [[unlikely]]
-        return nullptr;
-
-    int16_t idx;
-    {
-        std::lock_guard<std::mutex> lock(shared.mutex);
-
-        if (!shared.available.len) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Too many callbacks are in use (max = %1)", MaxTrampolines);
-            return env.Null();
-        }
-        if (!used_trampolines.Available()) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "This call uses too many temporary callbacks (max = %1)", RG_LEN(used_trampolines.data));
-            return env.Null();
-        }
-
-        idx = shared.available.data[--shared.available.len];
-        used_trampolines.Append(idx);
-    }
-
-    TrampolineInfo *trampoline = &shared.trampolines[idx];
-
-    trampoline->instance = instance;
-    trampoline->proto = proto;
-    trampoline->func.Reset(func, 1);
-    trampoline->recv.Reset();
-    trampoline->generation = (int32_t)mem->generation;
-
-    void *ptr = GetTrampoline(idx, proto);
-
-    return ptr;
-}
-
-void CallData::DumpForward(const FunctionInfo *func) const
-{
-    PrintLn(stderr, "%!..+---- %1 (%2) ----%!0", func->name, CallConventionNames[(int)func->convention]);
-
-    if (func->parameters.len) {
-        PrintLn(stderr, "Parameters:");
-        for (Size i = 0; i < func->parameters.len; i++) {
-            const ParameterInfo &param = func->parameters[i];
-            PrintLn(stderr, "  %1 = %2 (%3)", i, param.type->name, FmtMemSize(param.type->size));
-        }
-    }
-    PrintLn(stderr, "Return: %1 (%2)", func->ret.type->name, FmtMemSize(func->ret.type->size));
-
-    Span<const uint8_t> stack = MakeSpan(mem->stack.end(), old_stack_mem.end() - mem->stack.end());
-    Span<const uint8_t> heap = MakeSpan(old_heap_mem.ptr, mem->heap.ptr - old_heap_mem.ptr);
-
-    DumpMemory("Stack", stack);
-    DumpMemory("Heap", heap);
 }
 
 }

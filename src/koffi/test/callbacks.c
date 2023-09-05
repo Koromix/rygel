@@ -80,12 +80,12 @@ typedef int IntCallback(int x);
 typedef int VectorCallback(int len, Vec2 *vec);
 typedef int SortCallback(const void *ptr1, const void *ptr2);
 typedef int CharCallback(int idx, char c);
-
 typedef struct StructCallbacks {
     IntCallback *first;
     IntCallback *second;
     IntCallback *third;
 } StructCallbacks;
+typedef void RepeatCallback(int *repeat, const char **str);
 
 EXPORT int8_t GetMinusOne1(void)
 {
@@ -249,6 +249,13 @@ EXPORT int MakeVectors(int len, VectorCallback *func)
     return ret;
 }
 
+EXPORT void MakeVectorsIndirect(int len, VectorCallback *func, Vec2 *out)
+{
+    Vec2 buf[128];
+    func(len, buf);
+    memcpy(out, buf, len * sizeof(*out));
+}
+
 EXPORT void CallQSort(void *base, size_t nmemb, size_t size, SortCallback *cb)
 {
     qsort(base, nmemb, size, cb);
@@ -262,4 +269,23 @@ EXPORT int CallMeChar(CharCallback *func)
     ret += func(1, 'b');
 
     return ret;
+}
+
+EXPORT const char *FmtRepeat(RepeatCallback *cb)
+{
+    int repeat = 0;
+    const char *str = "X";
+
+    cb(&repeat, &str);
+
+    int len = strlen(str);
+    int total = len * repeat + 1;
+    char *copy = malloc(total); 
+
+    for (int i = 0, j = 0; i < repeat; i++, j += len) {
+        memcpy(copy + j, str, len);
+    }
+    copy[total - 1] = 0;
+
+    return copy;
 }

@@ -51,12 +51,12 @@ const IntCallback = koffi.proto('int IntCallback(int x)');
 const VectorCallback = koffi.proto('int VectorCallback(int len, Vec2 *vec)');
 const SortCallback = koffi.proto('int SortCallback(const void *ptr1, const void *ptr2)');
 const CharCallback = koffi.proto('int CharCallback(int idx, char c)');
-
 const StructCallbacks = koffi.struct('StructCallbacks', {
     first: koffi.pointer(IntCallback),
     second: 'IntCallback *',
     third: 'IntCallback *'
 });
+const RepeatCallback = koffi.proto('void RepeatCallback(int *repeat, const char **str)');
 
 main();
 
@@ -85,9 +85,11 @@ async function test() {
     const CallIndirect = lib.func('int CallIndirect(int x)');
     const CallThreaded = lib.func('int CallThreaded(IntCallback *func, int x)');
     const MakeVectors = lib.func('int MakeVectors(int len, VectorCallback *func)');
+    const MakeVectorsIndirect = lib.func('void MakeVectorsIndirect(int len, VectorCallback *func, _Out_ Vec2 *out)');
     const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, void *cb)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
+    const FmtRepeat = lib.func('const char *! FmtRepeat(RepeatCallback *cb)');
 
     // Start with test of callback inside async function to make sure the async broker is registered,
     // and avoid regression (see issue #74).
@@ -291,5 +293,31 @@ async function test() {
         assert.equal(results[1], -29);
 
         koffi.unregister(cb);
+    }
+
+    // Encode callback output parameters
+    {
+        let src = [];
+        for (let i = 0; i < 7; i++)
+            src.push({ x: i, y: i * 2 });
+        let vectors = [null, null, null, null, null, null, null];
+
+        MakeVectorsIndirect(src.length, (len, out) => {
+            koffi.encode(out, koffi.array('Vec2', len), src);
+            return 0;
+        }, vectors);
+
+        assert.deepEqual(vectors, [
+            { x: 0, y: 0 }, { x: 1, y: 2 }, { x: 2, y: 4 }, { x: 3, y: 6 },
+            { x: 4, y: 8 }, { x: 5, y: 10 }, { x: 6, y: 12 }
+        ]);
+    }
+
+    // Test callback encoding with a string
+    {
+        assert.equal(FmtRepeat((count, str) => {
+            koffi.encode(count, 'int', 3);
+            koffi.encode(str, 'const char *', 'Hello');
+        }), 'HelloHelloHello');
     }
 }

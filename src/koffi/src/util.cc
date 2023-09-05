@@ -1193,6 +1193,206 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
     return env.Null();
 }
 
+bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len)
+{
+    Napi::Env env = ref.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    uint8_t *ptr = nullptr;
+
+    if (ref.IsExternal()) {
+        Napi::External<void> external = ref.As<Napi::External<void>>();
+        ptr = (uint8_t *)external.Data();
+    } else if (IsRawBuffer(ref)) {
+        Span<uint8_t> buffer = GetRawBuffer(ref);
+
+        if (buffer.len - offset < type->size) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
+                                    type->name, type->size + offset);
+            return env.Null();
+        }
+
+        ptr = (uint8_t *)buffer.ptr;
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected external or TypedArray", GetValueType(instance, value));
+        return env.Null();
+    }
+
+    if (!ptr) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Cannot encode data in NULL pointer");
+        return env.Null();
+    }
+    ptr += offset;
+
+    return Encode(env, ptr, value, type, len);
+}
+
+bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *type, const Size *len)
+{
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    CallData *call = GetThreadCall();
+
+    if (len && type->primitive != PrimitiveKind::String &&
+               type->primitive != PrimitiveKind::String16 &&
+               type->primitive != PrimitiveKind::Prototype) {
+        if (*len < 0) [[unlikely]] {
+            ThrowError<Napi::TypeError>(env, "Automatic (negative) length is only supported when decoding");
+            return env.Null();
+        }
+
+        type = MakeArrayType(instance, type, *len);
+    }
+
+    if (!call) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "koffi.encode() can only be used inside callbacks");
+        return false;
+    }
+
+#define PUSH_INTEGER(CType) \
+        do { \
+            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                return false; \
+            } \
+             \
+            CType v = GetNumber<CType>(value); \
+            *(CType *)origin = v; \
+        } while (false)
+#define PUSH_INTEGER_SWAP(CType) \
+        do { \
+            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                return false; \
+            } \
+             \
+            CType v = GetNumber<CType>(value); \
+            *(CType *)origin = ReverseBytes(v); \
+        } while (false)
+
+    switch (type->primitive) {
+        case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
+
+        case PrimitiveKind::Bool: {
+            if (!value.IsBoolean()) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
+                return false;
+            }
+
+            bool b = value.As<Napi::Boolean>();
+            *(bool *)origin = b;
+        } break;
+        case PrimitiveKind::Int8: { PUSH_INTEGER(int8_t); } break;
+        case PrimitiveKind::UInt8: { PUSH_INTEGER(uint8_t); } break;
+        case PrimitiveKind::Int16: { PUSH_INTEGER(int16_t); } break;
+        case PrimitiveKind::Int16S: { PUSH_INTEGER_SWAP(int16_t); } break;
+        case PrimitiveKind::UInt16: { PUSH_INTEGER(uint16_t); } break;
+        case PrimitiveKind::UInt16S: { PUSH_INTEGER_SWAP(uint16_t); } break;
+        case PrimitiveKind::Int32: { PUSH_INTEGER(int32_t); } break;
+        case PrimitiveKind::Int32S: { PUSH_INTEGER_SWAP(int32_t); } break;
+        case PrimitiveKind::UInt32: { PUSH_INTEGER(uint32_t); } break;
+        case PrimitiveKind::UInt32S: { PUSH_INTEGER_SWAP(uint32_t); } break;
+        case PrimitiveKind::Int64: { PUSH_INTEGER(int64_t); } break;
+        case PrimitiveKind::Int64S: { PUSH_INTEGER_SWAP(int64_t); } break;
+        case PrimitiveKind::UInt64: { PUSH_INTEGER(uint64_t); } break;
+        case PrimitiveKind::UInt64S: { PUSH_INTEGER_SWAP(uint64_t); } break;
+        case PrimitiveKind::String: {
+            const char *str;
+            if (!call->PushString(value, 1, &str)) [[unlikely]]
+                return false;
+            *(const char **)origin = str;
+        } break;
+        case PrimitiveKind::String16: {
+            const char16_t *str16;
+            if (!call->PushString16(value, 1, &str16)) [[unlikely]]
+                return false;
+            *(const char16_t **)origin = str16;
+        } break;
+        case PrimitiveKind::Pointer: {
+            void *ptr;
+            if (!call->PushPointer(value, type, 1, &ptr)) [[unlikely]]
+                return false;
+            *(void **)origin = ptr;
+        } break;
+        case PrimitiveKind::Record:
+        case PrimitiveKind::Union: {
+            if (!IsObject(value)) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
+                return false;
+            }
+
+            Napi::Object obj = value.As<Napi::Object>();
+
+            if (!call->PushObject(obj, type, origin))
+                return false;
+        } break;
+        case PrimitiveKind::Array: {
+            if (value.IsArray()) {
+                Napi::Array array = value.As<Napi::Array>();
+                Size len = (Size)type->size / type->ref.type->size;
+
+                if (!call->PushNormalArray(array, len, type, origin))
+                    return false;
+            } else if (IsRawBuffer(value)) {
+                Span<const uint8_t> buffer = GetRawBuffer(value);
+
+                if (!call->PushBuffer(buffer, type->size, type, origin))
+                    return false;
+            } else if (value.IsString()) {
+                if (!call->PushStringArray(value, type, origin))
+                    return false;
+            } else {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(instance, value));
+                return false;
+            }
+        } break;
+        case PrimitiveKind::Float32: {
+            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                return false;
+            }
+
+            float f = GetNumber<float>(value);
+            *(float *)origin = f;
+        } break;
+        case PrimitiveKind::Float64: {
+            if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                return false;
+            }
+
+            double d = GetNumber<double>(value);
+            *(double *)origin = d;
+        } break;
+        case PrimitiveKind::Callback: {
+            void *ptr;
+
+            if (value.IsFunction()) {
+                Napi::Function func = value.As<Napi::Function>();
+
+                ptr = call->ReserveTrampoline(type->ref.proto, func);
+                if (!ptr) [[unlikely]]
+                    return false;
+            } else if (CheckValueTag(instance, value, type->ref.marker)) {
+                ptr = value.As<Napi::External<void>>().Data();
+            } else if (IsNullOrUndefined(value)) {
+                ptr = nullptr;
+            } else {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
+                return false;
+            }
+
+            *(void **)origin = ptr;
+        } break;
+
+        case PrimitiveKind::Prototype: { RG_UNREACHABLE(); } break;
+    }
+
+#undef PUSH_INTEGER_SWAP
+#undef PUSH_INTEGER
+
+    return true;
+}
+
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
