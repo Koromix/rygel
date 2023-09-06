@@ -11,12 +11,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const fetch = require('node-fetch');
-const sqlite3 = require('better-sqlite3');
-const database = require('../lib/database.js');
-const { util } = require('../../../web/libjs/common.js');
-const parse = require('../lib/parse.js');
-const imp = require('../lib/import.js');
+import fs from 'fs';
+import fetch from 'node-fetch';
+import sqlite3 from 'better-sqlite3';
+import * as database from '../lib/database.js';
+import { Util } from '../../../web/libjs/common.js';
+import * as parse from '../lib/parse.js';
+import * as imp from '../lib/import.js';
 
 const CN2R_DS_TOKEN = process.env.CN2R_DS_TOKEN || '';
 const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
@@ -133,7 +134,7 @@ async function run() {
 
     // Update missing statuses
     {
-        let finesses = sqlite3(__dirname + '/finess.db', { readonly: true, fileMustExist: true });
+        let finesses = sqlite3('src/importers/finess.db', { readonly: true, fileMustExist: true });
         let rows = db.prepare(`SELECT e.id, json_extract(e.main, '$.finess') AS finess FROM entries e
                                    INNER JOIN layers l ON (l.id = e.layer_id)
                                    INNER JOIN maps m ON (m.id = l.map_id)

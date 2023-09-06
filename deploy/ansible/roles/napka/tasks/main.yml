@@ -127,14 +127,6 @@
   become: yes
   become_user: napka
 
-- name: Build Napka server
-  command:
-    cmd: 'npm run build'
-    chdir: '{{ napka_root_path }}/builds/{{ napka_name }}/src/napka'
-  when: 'not ansible_check_mode'
-  become: yes
-  become_user: napka
-
 - name: Install Napka service file
   template:
     src: napka@.service.j2

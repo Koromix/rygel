@@ -7,7 +7,7 @@ User = napka
 Group = napka
 EnvironmentFile = {{ napka_root_path }}/secrets/%i.env
 WorkingDirectory = {{ napka_root_path }}/builds/%i/src/napka
-ExecStart = /usr/bin/node {{ napka_root_path }}/builds/%i/src/napka/tmp/server.js
+ExecStart = {{ napka_root_path }}/builds/%i/src/napka/run.sh src/server/server.js
 Restart = on-failure
 SuccessExitStatus = 143
 

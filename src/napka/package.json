@@ -3,9 +3,8 @@
     "version": "1.0.0",
     "description": "List and map of mental healthcare resources in France",
     "scripts": {
-        "build": "esbuild src/server/server.js --bundle --platform=node --external:esbuild --external:better-sqlite3 --outfile=tmp/server.js",
-        "start": "node tmp/server.js",
-        "dev": "node tmp/server.js --live"
+        "start": "./run.sh src/server/server.js",
+        "dev": "./run.sh src/server/server.js --live"
     },
     "repository": {
         "type": "git",

@@ -11,14 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const crypto = require('crypto');
-const fetch = require('node-fetch');
-const xlsx = require('node-xlsx');
-const sqlite3 = require('better-sqlite3');
-const database = require('../lib/database.js');
-const { util } = require('../../../web/libjs/common.js');
-const parse = require('../lib/parse.js');
-const imp = require('../lib/import.js');
+import crypto from 'crypto';
+import fs from 'fs';
+import fetch from 'node-fetch';
+import xlsx from 'node-xlsx';
+import sqlite3 from 'better-sqlite3';
+import * as database from '../lib/database.js';
+import { Util } from '../../../web/libjs/common.js';
+import * as parse from '../lib/parse.js';
+import * as imp from '../lib/import.js';
 
 const DEMHETER_XLSX_URL = process.env.DEMHETER_XLSX_URL || '';
 const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';

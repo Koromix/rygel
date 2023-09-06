@@ -11,12 +11,13 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-const fs = require('fs');
-const fetch = require('node-fetch');
-const sqlite3 = require('better-sqlite3');
-const database = require('../lib/database.js');
-const { util } = require('../../../web/libjs/common.js');
-const imp = require('../lib/import.js');
+import fs from 'fs';
+import fetch from 'node-fetch';
+import sqlite3 from 'better-sqlite3';
+import * as database from '../lib/database.js';
+import { Util } from '../../../web/libjs/common.js';
+import * as parse from '../lib/parse.js';
+import * as imp from '../lib/import.js';
 
 const F2RSM_EXPORT_KEY = process.env.F2RSM_EXPORT_KEY || '';
 const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
@@ -176,7 +177,7 @@ async function run() {
 
         let blob = await response.blob();
         let buffer = Buffer.from(await blob.arrayBuffer());
-        let filename = __dirname + '/../../tmp/3114.db';
+        let filename = './tmp/3114.db';
 
         fs.writeFileSync(filename, buffer);
 
@@ -217,7 +218,7 @@ async function run() {
 }
 
 function transformRow(row) {
-    let copy = util.assignDeep({
+    let copy = Util.assignDeep({
         import: row.__ROOT,
         version: row.__MTIME,
 
@@ -320,7 +321,7 @@ function transformValue(key, value) {
 
     if (dict != null && dict[value] != null) {
         return dict[value];
-    } else if (util.isNumeric(value)) {
+    } else if (Util.isNumeric(value)) {
         return parseFloat(value);
     } else {
         return value;
