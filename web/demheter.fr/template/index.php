@@ -142,7 +142,7 @@ if (count($news) > 1) {
 foreach ($news as $i => $item) {
     $cls = $i ? "" : "active";
 
-    $title = parse_markdown($item["title"]);
+    $title = htmlspecialchars($item["title"]);
     $content = parse_markdown($item["content"]);
 
     echo <<<INFO
