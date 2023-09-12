@@ -976,6 +976,8 @@ public:
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
     void Release(const void *ptr, Size size) override;
 
+    bool IsUsed() const { return list.next; }
+
 private:
     static Bucket *PointerToBucket(void *ptr);
 };
@@ -1001,6 +1003,12 @@ public:
     void *Allocate(Size size, unsigned int flags = 0) override;
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
     void Release(const void *ptr, Size size) override;
+
+    bool IsUsed() const
+    {
+        LinkedAllocator *alloc = ((BlockAllocatorBase *)this)->GetAllocator();
+        return alloc->IsUsed();
+    }
 
 protected:
     void CopyFrom(BlockAllocatorBase *other);

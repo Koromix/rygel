@@ -1230,7 +1230,6 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
 bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *type, const Size *len)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-    CallData *call = GetThreadCall();
 
     if (len && type->primitive != PrimitiveKind::String &&
                type->primitive != PrimitiveKind::String16 &&
@@ -1243,10 +1242,8 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         type = MakeArrayType(instance, type, *len);
     }
 
-    if (!call) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "koffi.encode() can only be used inside callbacks");
-        return false;
-    }
+    InstanceMemory mem = {};
+    CallData call(env, instance, &mem);
 
 #define PUSH_INTEGER(CType) \
         do { \
@@ -1297,19 +1294,19 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         case PrimitiveKind::UInt64S: { PUSH_INTEGER_SWAP(uint64_t); } break;
         case PrimitiveKind::String: {
             const char *str;
-            if (!call->PushString(value, 1, &str)) [[unlikely]]
+            if (!call.PushString(value, 1, &str)) [[unlikely]]
                 return false;
             *(const char **)origin = str;
         } break;
         case PrimitiveKind::String16: {
             const char16_t *str16;
-            if (!call->PushString16(value, 1, &str16)) [[unlikely]]
+            if (!call.PushString16(value, 1, &str16)) [[unlikely]]
                 return false;
             *(const char16_t **)origin = str16;
         } break;
         case PrimitiveKind::Pointer: {
             void *ptr;
-            if (!call->PushPointer(value, type, 1, &ptr)) [[unlikely]]
+            if (!call.PushPointer(value, type, 1, &ptr)) [[unlikely]]
                 return false;
             *(void **)origin = ptr;
         } break;
@@ -1322,7 +1319,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 
             Napi::Object obj = value.As<Napi::Object>();
 
-            if (!call->PushObject(obj, type, origin))
+            if (!call.PushObject(obj, type, origin))
                 return false;
         } break;
         case PrimitiveKind::Array: {
@@ -1330,15 +1327,15 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
                 Napi::Array array = value.As<Napi::Array>();
                 Size len = (Size)type->size / type->ref.type->size;
 
-                if (!call->PushNormalArray(array, len, type, origin))
+                if (!call.PushNormalArray(array, len, type, origin))
                     return false;
             } else if (IsRawBuffer(value)) {
                 Span<const uint8_t> buffer = GetRawBuffer(value);
 
-                if (!call->PushBuffer(buffer, type->size, type, origin))
+                if (!call.PushBuffer(buffer, type->size, type, origin))
                     return false;
             } else if (value.IsString()) {
-                if (!call->PushStringArray(value, type, origin))
+                if (!call.PushStringArray(value, type, origin))
                     return false;
             } else {
                 ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(instance, value));
@@ -1367,11 +1364,8 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
             void *ptr;
 
             if (value.IsFunction()) {
-                Napi::Function func = value.As<Napi::Function>();
-
-                ptr = call->ReserveTrampoline(type->ref.proto, func);
-                if (!ptr) [[unlikely]]
-                    return false;
+                ThrowError<Napi::Error>(env, "Cannot encode non-registered callback");
+                return false;
             } else if (CheckValueTag(instance, value, type->ref.marker)) {
                 ptr = value.As<Napi::External<void>>().Data();
             } else if (IsNullOrUndefined(value)) {
@@ -1389,6 +1383,22 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 
 #undef PUSH_INTEGER_SWAP
 #undef PUSH_INTEGER
+
+    // Keep memory around if any was allocated
+    {
+        BlockAllocator *alloc = call.GetAllocator();
+
+        if (alloc->IsUsed()) {
+            BlockAllocator *copy = instance->encode_map.FindValue(origin, nullptr);
+
+            if (!copy) {
+                copy = instance->encode_allocators.AppendDefault();
+                instance->encode_map.Set(origin, copy);
+            }
+
+            std::swap(*alloc, *copy);
+        }
+    }
 
     return true;
 }

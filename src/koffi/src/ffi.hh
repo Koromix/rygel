@@ -287,6 +287,9 @@ struct InstanceData {
     void *main_stack_min;
 #endif
 
+    BucketArray<BlockAllocator> encode_allocators;
+    HashMap<void *, BlockAllocator *> encode_map;
+
     HashMap<void *, int16_t> trampolines_map;
 
     BlockAllocator str_alloc;

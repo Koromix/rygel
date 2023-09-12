@@ -126,6 +126,8 @@ public:
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 
+    BlockAllocator *GetAllocator() { return &call_alloc; }
+
 private:
     template <typename T>
     bool AllocStack(Size size, Size align, T **out_ptr);

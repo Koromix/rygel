@@ -268,6 +268,10 @@ async function test() {
                                                             'bool g, bool h, bool i, bool j, bool k, bool l)');
     const IfElseInt = lib.func('int IfElseInt(bool cond, int a, int b)');
     const IfElseStr = lib.func('const char *IfElseStr(const char *a, const char *b, bool cond)');
+    const sym_int = lib.symbol('sym_int', 'int');
+    const sym_str = lib.symbol('sym_str', 'const char *');
+    const GetSymbolInt = lib.func('int GetSymbolInt()');
+    const GetSymbolStr = lib.func('const char *GetSymbolStr()');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -780,6 +784,13 @@ async function test() {
     assert.equal(IfElseInt(false, 42, 24), 24);
     assert.equal(IfElseStr("foo", "bar", true), "foo");
     assert.equal(IfElseStr("FIRST", "SECOND", false), "SECOND");
+
+    // Encode variables
+    koffi.encode(sym_int, 'int', 12);
+    koffi.encode(sym_str, 'const char *', 'I think...');
+    koffi.encode(sym_str, 'const char *', 'I can encode!');
+    assert.equal(GetSymbolInt(), 12);
+    assert.equal(GetSymbolStr(), 'I can encode!');
 
     lib.unload();
 }

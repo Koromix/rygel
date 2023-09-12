@@ -184,6 +184,9 @@ typedef struct BufferInfo {
     uint8_t *ptr;
 } BufferInfo;
 
+EXPORT int sym_int = 0;
+EXPORT const char *sym_str = NULL;
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
@@ -934,4 +937,14 @@ EXPORT int IfElseInt(bool cond, int a, int b)
 EXPORT const char *IfElseStr(const char *a, const char *b, bool cond)
 {
     return cond ? a : b;
+}
+
+EXPORT int GetSymbolInt()
+{
+    return sym_int;
+}
+
+EXPORT const char *GetSymbolStr()
+{
+    return sym_str;
 }
