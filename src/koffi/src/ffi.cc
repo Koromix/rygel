@@ -1644,6 +1644,18 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, info[0]));
         return env.Null();
     }
+    if (info.Length() >= 2 && !IsObject(info[1])) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for options, expected object", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+#ifndef _WIN32
+    bool lazy = false;
+    if (info.Length() >= 2) {
+        Napi::Object options = info[1].As<Napi::Object>();
+        lazy = options.Get("lazy").ToBoolean();
+    }
+#endif
 
     if (!instance->memories.len) {
         AllocateMemory(instance, instance->config.sync_stack_size, instance->config.sync_heap_size);
@@ -1665,8 +1677,10 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     }
 #else
     if (info[0].IsString()) {
+        int flags = lazy ? RTLD_LAZY : RTLD_NOW;
+
         std::string filename = info[0].As<Napi::String>();
-        module = dlopen(filename.c_str(), RTLD_NOW);
+        module = dlopen(filename.c_str(), flags);
 
         if (!module) {
             const char *msg = dlerror();

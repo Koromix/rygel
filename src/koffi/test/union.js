@@ -55,7 +55,7 @@ async function main() {
 
 async function test() {
     let lib_filename = __dirname + '/build/union' + koffi.extension;
-    let lib = koffi.load(lib_filename);
+    let lib = koffi.load(lib_filename, { lazy: true });
 
     const MakeSingleU = lib.func('SingleU MakeSingleU(float f)');
     const MakeSingleUIndirect = lib.func('void MakeSingleUIndirect(float f, _Out_ SingleU *out)');
