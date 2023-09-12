@@ -1558,6 +1558,43 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     return wrapper;
 }
 
+static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    LibraryHolder *lib = (LibraryHolder *)info.Data();
+
+    if (info.Length() < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2, got %1", info.Length());
+        return env.Null();
+    }
+     if (!info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+
+    std::string name = info[0].As<Napi::String>();
+
+    const TypeInfo *type = ResolveType(info[1]);
+    if (!type)
+        return env.Null();
+
+#ifdef _WIN32
+    void *ptr = (void *)GetProcAddress((HMODULE)lib->module, name.c_str());
+#else
+    void *ptr = (void *)dlsym(lib->module, name.c_str());
+#endif
+    if (!ptr) {
+        ThrowError<Napi::Error>(env, "Cannot find symbol '%1' in shared library", name.c_str());
+        return env.Null();
+    }
+
+    Napi::External<void> external = Napi::External<void>::New(env, ptr);
+    SetValueTag(instance, external, &type);
+
+    return external;
+}
+
 static Napi::Value UnloadLibrary(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -1654,13 +1691,14 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     Napi::Object obj = Napi::Object::New(env);
 
-#define ADD_CONVENTION(Name, Value) \
+#define ADD_METHOD(Name, Func, ...) \
         do { \
-            const auto wrapper = [](const Napi::CallbackInfo &info) { return FindLibraryFunction(info, (Value)); }; \
+            const auto wrapper = [](const Napi::CallbackInfo &info) { return Func(info __VA_OPT__(,) __VA_ARGS__); }; \
             Napi::Function func = Napi::Function::New(env, wrapper, (Name), (void *)lib->Ref()); \
             func.AddFinalizer([](Napi::Env, LibraryHolder *lib) { lib->Unref(); }, lib); \
             obj.Set((Name), func); \
         } while (false)
+#define ADD_CONVENTION(Name, Value) ADD_METHOD((Name), FindLibraryFunction, (Value))
 
     ADD_CONVENTION("func", CallConvention::Cdecl);
     ADD_CONVENTION("cdecl", CallConvention::Cdecl);
@@ -1668,9 +1706,13 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     ADD_CONVENTION("fastcall", CallConvention::Fastcall);
     ADD_CONVENTION("thiscall", CallConvention::Thiscall);
 
-#undef ADD_CONVENTION
+    ADD_METHOD("symbol", FindSymbol);
 
+    // We can't unref the library after unload, obviously
     obj.Set("unload", Napi::Function::New(env, UnloadLibrary, "unload", (void *)lib->Ref()));
+
+#undef ADD_CONVENTION
+#undef ADD_METHOD
 
     return obj;
 }

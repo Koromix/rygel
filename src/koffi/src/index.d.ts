@@ -80,6 +80,8 @@ declare module 'koffi' {
         thiscall(definition: string): KoffiFunction;
         thiscall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
+        symbol(name: string, type: TypeSpec): any;
+
         unload(): void;
     }
 
