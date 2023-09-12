@@ -131,6 +131,12 @@ declare module 'koffi' {
     export function decode(value: any, offset: number, type: TypeSpec): any;
     export function decode(value: any, offset: number, type: TypeSpec, len: number): any;
     export function address(value: any): bigint;
+    export function encode(ref: any, type: TypeSpec): void;
+    export function encode(ref: any, type: TypeSpec, value: any): void;
+    export function encode(ref: any, type: TypeSpec, value: any, len: number): void;
+    export function encode(ref: any, offset: number, type: TypeSpec): void;
+    export function encode(ref: any, offset: number, type: TypeSpec, value: any): void;
+    export function encode(ref: any, offset: number, type: TypeSpec, value: any, len: number): void;
 
     export function sizeof(type: TypeSpec): number;
     export function alignof(type: TypeSpec): number;
