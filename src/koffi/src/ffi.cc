@@ -1691,14 +1691,14 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     Napi::Object obj = Napi::Object::New(env);
 
-#define ADD_METHOD(Name, Func, ...) \
+#define ADD_METHOD(Name, Call) \
         do { \
-            const auto wrapper = [](const Napi::CallbackInfo &info) { return Func(info __VA_OPT__(,) __VA_ARGS__); }; \
+            const auto wrapper = [](const Napi::CallbackInfo &info) { return Call; }; \
             Napi::Function func = Napi::Function::New(env, wrapper, (Name), (void *)lib->Ref()); \
             func.AddFinalizer([](Napi::Env, LibraryHolder *lib) { lib->Unref(); }, lib); \
             obj.Set((Name), func); \
         } while (false)
-#define ADD_CONVENTION(Name, Value) ADD_METHOD((Name), FindLibraryFunction, (Value))
+#define ADD_CONVENTION(Name, Value) ADD_METHOD((Name), FindLibraryFunction(info, Value))
 
     ADD_CONVENTION("func", CallConvention::Cdecl);
     ADD_CONVENTION("cdecl", CallConvention::Cdecl);
@@ -1706,7 +1706,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     ADD_CONVENTION("fastcall", CallConvention::Fastcall);
     ADD_CONVENTION("thiscall", CallConvention::Thiscall);
 
-    ADD_METHOD("symbol", FindSymbol);
+    ADD_METHOD("symbol", FindSymbol(info));
 
     // We can't unref the library after unload, obviously
     obj.Set("unload", Napi::Function::New(env, UnloadLibrary, "unload", (void *)lib->Ref()));
