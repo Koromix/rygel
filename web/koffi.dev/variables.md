@@ -97,4 +97,4 @@ console.log(koffi.decode(my_int, 'int')) // Prints -1
 console.log(koffi.decode(my_string, 'const char *')) // Prints "Hello World!"
 ```
 
-When encoding strings (either directly or embedded in arrays or structs), the memory will be bound to the raw pointer value and managed by Koffi. You can assign to the same string again and again with any leak or risk of use-after-free.
+When encoding strings (either directly or embedded in arrays or structs), the memory will be bound to the raw pointer value and managed by Koffi. You can assign to the same string again and again without any leak or risk of use-after-free.
