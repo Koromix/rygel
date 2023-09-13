@@ -54,16 +54,17 @@ function AppRunner(canvas) {
         down: 0,
         left: 0,
         right: 0,
-        debug: 0,
-        editor: 0,
+
+        tab: 0,
+        space: 0,
         escape: 0,
         ctrl: 0,
         alt: 0,
         delete: 0,
 
-        a: 0,
-        y: 0,
-        z: 0
+        a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0, h: 0, i: 0,
+        j: 0, k: 0, l: 0, m: 0, n: 0, o: 0, p: 0, q: 0, r: 0,
+        s: 0, t: 0, u: 0, v: 0, w: 0, x: 0, y: 0, z: 0
     };
     let mouse_state = {
         x: 0,
@@ -176,34 +177,34 @@ function AppRunner(canvas) {
         if (e.repeat)
             return;
 
-        if (e.key == 'a') {
-            updateKey('a', e.type);
-        } else if (e.key == 'z') {
-            updateKey('up', e.type);
-            updateKey('z', e.type);
-        } else if (e.keyCode == 38) {
-            updateKey('up', e.type);
-        } else if (e.key == 's' || e.keyCode == 40) {
-            updateKey('down', e.type);
-        } else if (e.key == 'q' || e.keyCode == 37) {
-            updateKey('left', e.type);
-        } else if (e.key == 'd' || e.keyCode == 39) {
-            updateKey('right', e.type);
-        } else if (e.key == 'y') {
-            updateKey('y', e.type);
-        } else if (e.keyCode == 9) { // Tab
-            updateKey('debug', e.type);
+        let key = e.key.toLowerCase();
+        let code = e.keyCode;
+
+        if (key.match(/^[a-z]$/)) {
+            updateKey(key, e.type);
+        } else if (code == 9) { // Tab
+            updateKey('tab', e.type);
             e.preventDefault();
-        } else if (e.key == ' ') {
-            updateKey('editor', e.type);
-        } else if (e.keyCode == 27) {
+        } else if (key == ' ') {
+            updateKey('space', e.type);
+        } else if (code == 27) {
             updateKey('escape', e.type);
-        } else if (e.keyCode == 17) {
+        } else if (code == 17) {
             updateKey('ctrl', e.type);
-        } else if (e.keyCode == 18) {
+        } else if (code == 18) {
             updateKey('alt', e.type);
-        } else if (e.keyCode == 46) {
+        } else if (code == 46) {
             updateKey('delete', e.type);
+        }
+
+        if (key == 'z' || code == 38) {
+            updateKey('up', e.type);
+        } else if (key == 's' || code == 40) {
+            updateKey('down', e.type);
+        } else if (key == 'q' || code == 37) {
+            updateKey('left', e.type);
+        } else if (key == 'd' || code == 39) {
+            updateKey('right', e.type);
         }
     }
 
