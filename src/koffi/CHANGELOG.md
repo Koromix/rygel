@@ -2,6 +2,21 @@
 
 ## Version history
 
+### Koffi 2.6
+
+#### Koffi 2.6.0 (2023-09-13)
+
+**New features:**
+
+- Use [koffi.symbol()](variables.md#variable-definitions) to make pointers to exported variables (or other symbols)
+- Use [koffi.encode()](variables.md#encode-to-c-memory) to explictly encode data from JS to C memory
+- Use shared library [lazy-loading](functions.md#loading-options) (RTLD_LAZY) on POSIX platforms
+
+**Other changes:**
+
+- Print more helpful error for Win32/Win64 DLL mismatches
+- Add missing 'Union' primitive value in TS definition file
+
 ### Koffi 2.5
 
 #### Koffi 2.5.20 (2023-08-31)
