@@ -11,7 +11,7 @@
 AC_DEFUN([AX_CHECK_CATCHABLE_SEGV], [dnl
     AC_PREREQ(2.64)
     AS_VAR_PUSHDEF([CACHEVAR], [ax_cv_check_[]_AC_LANG_ABBREV[]CATCHABLE_SEGV])dnl
-    AC_CACHE_CHECK([whether segmentation violations can be caught when using the _AC_LANG compiler], CACHEVAR, [
+    AC_CACHE_CHECK([whether segmentation violations can be caught], CACHEVAR, [
         AC_RUN_IFELSE([
             AC_LANG_PROGRAM([[
 #include <signal.h>
@@ -21,9 +21,14 @@ static void sig(int _) { exit(0); }
 volatile unsigned char * volatile x = (volatile unsigned char *) malloc(8);
 size_t i;
 
+#ifdef SIGPROT
+signal(SIGPROT, sig);
+#endif
 signal(SIGSEGV, sig);
 signal(SIGBUS, sig);
 #if !defined(__SANITIZE_ADDRESS__) && !defined(__EMSCRIPTEN__)
+*((volatile unsigned char *) -1) = 0xd0;
+*((volatile unsigned char *) 1) = 0xd0;
 for (i = 0; i < 10000000; i += 1024) { x[-i] = x[i] = (unsigned char) i; }
 #endif
 free((void *) x);

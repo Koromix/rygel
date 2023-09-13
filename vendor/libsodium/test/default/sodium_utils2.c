@@ -3,7 +3,12 @@
 #include <sys/types.h>
 
 #include <limits.h>
-#include <signal.h>
+#ifdef HAVE_CATCHABLE_SEGV
+# include <signal.h>
+#endif
+#ifndef _WIN32
+# include <unistd.h>
+#endif
 
 #define TEST_NAME "sodium_utils2"
 #include "cmptest.h"
@@ -24,6 +29,9 @@ segv_handler(int sig)
     printf("Intentional segfault / bus error caught\n");
     printf("OK\n");
 #ifdef SIG_DFL
+# ifdef SIGPROT
+    signal(SIGPROT, SIG_DFL);
+# endif
 # ifdef SIGSEGV
     signal(SIGSEGV, SIG_DFL);
 # endif
@@ -34,15 +42,19 @@ segv_handler(int sig)
     signal(SIGABRT, SIG_DFL);
 # endif
 #endif
-    exit(0);
+    _exit(0);
 }
 
 int
 main(void)
 {
-    void *       buf;
-    size_t       size;
-    unsigned int i;
+    void         *buf;
+    size_t        size;
+    unsigned int  i;
+
+#ifdef BENCHMARKS
+    return 0;
+#endif
 
     if (sodium_malloc(SIZE_MAX - 1U) != NULL) {
         return 1;
@@ -73,6 +85,9 @@ main(void)
     }
     printf("OK\n");
 #ifdef SIG_DFL
+# ifdef SIGPROT
+    signal(SIGPROT, segv_handler);
+# endif
 # ifdef SIGSEGV
     signal(SIGSEGV, segv_handler);
 # endif

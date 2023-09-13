@@ -1,0 +1,13 @@
+diff --git a/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c b/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
+index 1176cd667..f6907e82a 100644
+--- a/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
++++ b/vendor/libsodium/src/libsodium/randombytes/internal/randombytes_internal_random.c
+@@ -98,7 +98,7 @@ BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
+ # define TLS _Thread_local
+ #endif
+ #ifndef TLS
+-# ifdef _WIN32
++# ifdef _MSC_VER
+ #  define TLS __declspec(thread)
+ # else
+ #  define TLS

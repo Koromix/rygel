@@ -45,6 +45,8 @@ sodium_init(void)
     _crypto_scalarmult_curve25519_pick_best_implementation();
     _crypto_stream_chacha20_pick_best_implementation();
     _crypto_stream_salsa20_pick_best_implementation();
+    _crypto_aead_aegis128l_pick_best_implementation();
+    _crypto_aead_aegis256_pick_best_implementation();
     initialized = 1;
     if (sodium_crit_leave() != 0) {
         return -1; /* LCOV_EXCL_LINE */
@@ -57,7 +59,7 @@ sodium_init(void)
 static CRITICAL_SECTION _sodium_lock;
 static volatile LONG    _sodium_lock_initialized;
 
-int
+static int
 _sodium_crit_init(void)
 {
     LONG status = 0L;

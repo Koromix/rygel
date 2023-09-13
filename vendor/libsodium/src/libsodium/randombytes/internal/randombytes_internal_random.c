@@ -44,6 +44,10 @@
 #ifdef BLOCK_ON_DEV_RANDOM
 # include <poll.h>
 #endif
+#ifdef HAVE_RDRAND
+# pragma GCC target("rdrnd")
+# include <immintrin.h>
+#endif
 
 #include "core.h"
 #include "crypto_core_hchacha20.h"
@@ -53,12 +57,6 @@
 #include "randombytes_internal_random.h"
 #include "runtime.h"
 #include "utils.h"
-
-
-#ifdef HAVE_RDRAND
-# pragma GCC target("rdrnd")
-# include <immintrin.h>
-#endif
 
 #ifdef _WIN32
 # include <windows.h>
@@ -95,6 +93,10 @@ BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
 # endif
 #endif
 
+#if !defined(TLS) && !defined(__STDC_NO_THREADS__) && \
+    defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+# define TLS _Thread_local
+#endif
 #ifndef TLS
 # ifdef _MSC_VER
 #  define TLS __declspec(thread)

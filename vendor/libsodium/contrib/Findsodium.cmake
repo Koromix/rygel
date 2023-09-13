@@ -213,7 +213,7 @@ if(sodium_INCLUDE_DIR)
     string(
       REGEX
       REPLACE
-        ".*#[ \t]*define[ \t]*sodium_VERSION_STRING_STRING[ \t]*\"([^\n]*)\".*"
+        ".*define[ \t]+SODIUM_VERSION_STRING[^\"]+\"([^\"]+)\".*"
         "\\1"
         sodium_VERSION_STRING
         "${_VERSION_HEADER_CONTENT}")
@@ -230,6 +230,10 @@ find_package_handle_standard_args(sodium
                                   sodium_INCLUDE_DIR
                                   VERSION_VAR
                                   sodium_VERSION_STRING)
+
+if (NOT sodium_FOUND)
+  return()
+endif()
 
 # mark file paths as advanced
 mark_as_advanced(sodium_INCLUDE_DIR)

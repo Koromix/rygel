@@ -101,9 +101,9 @@ crypto_secretbox_open_detached(unsigned char *m, const unsigned char *c,
     if (m == NULL) {
         return 0;
     }
-    if (((uintptr_t) c >= (uintptr_t) m &&
+    if (((uintptr_t) c > (uintptr_t) m &&
          (uintptr_t) c - (uintptr_t) m < clen) ||
-        ((uintptr_t) m >= (uintptr_t) c &&
+        ((uintptr_t) m > (uintptr_t) c &&
          (uintptr_t) m - (uintptr_t) c < clen)) { /* LCOV_EXCL_LINE */
         memmove(m, c, clen);
         c = m;
@@ -121,6 +121,7 @@ crypto_secretbox_open_detached(unsigned char *m, const unsigned char *c,
     for (i = 0U; i < mlen0; i++) {
         m[i] = block0[i + crypto_secretbox_ZEROBYTES];
     }
+    sodium_memzero(block0, sizeof block0);
     if (clen > mlen0) {
         crypto_stream_salsa20_xor_ic(m + mlen0, c + mlen0, clen - mlen0,
                                      n + 16, 1U, subkey);

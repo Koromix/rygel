@@ -74,7 +74,7 @@ crypto_scalarmult_curve25519_ref10(unsigned char *q,
                                    const unsigned char *n,
                                    const unsigned char *p)
 {
-    unsigned char *t = q;
+    unsigned char  t[32];
     unsigned int   i;
     fe25519        x1;
     fe25519        x2;
@@ -123,7 +123,7 @@ crypto_scalarmult_curve25519_ref10(unsigned char *q,
         fe25519_mul(x2, tmp1, tmp0);
         fe25519_sub(tmp1, tmp1, tmp0);
         fe25519_sq(z2, z2);
-        fe25519_scalar_product(z3, tmp1, 121666);
+        fe25519_mul32(z3, tmp1, 121666);
         fe25519_sq(x3, x3);
         fe25519_add(tmp0, tmp0, z3);
         fe25519_mul(z3, x1, z2);
@@ -135,6 +135,8 @@ crypto_scalarmult_curve25519_ref10(unsigned char *q,
     fe25519_invert(z2, z2);
     fe25519_mul(x2, x2, z2);
     fe25519_tobytes(q, x2);
+
+    sodium_memzero(t, sizeof t);
 
     return 0;
 }

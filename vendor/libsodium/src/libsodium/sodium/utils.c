@@ -4,14 +4,21 @@
 #include <assert.h>
 #include <errno.h>
 #include <limits.h>
-#include <signal.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(HAVE_RAISE) && !defined(__wasm__)
+# include <signal.h>
+#endif
+
 #ifdef HAVE_SYS_MMAN_H
 # include <sys/mman.h>
+#endif
+
+#ifdef HAVE_SYS_PARAM_H
+# include <sys/param.h>
 #endif
 
 #ifdef _WIN32
@@ -59,7 +66,11 @@ void *alloca (size_t);
 #define GARBAGE_VALUE 0xdb
 
 #ifndef MAP_NOCORE
-# define MAP_NOCORE 0
+# ifdef MAP_CONCEAL
+#  define MAP_NOCORE MAP_CONCEAL
+# else
+#  define MAP_NOCORE 0
+# endif
 #endif
 #if !defined(MAP_ANON) && defined(MAP_ANONYMOUS)
 # define MAP_ANON MAP_ANONYMOUS
@@ -68,6 +79,7 @@ void *alloca (size_t);
     defined(HAVE_POSIX_MEMALIGN)
 # define HAVE_ALIGNED_MALLOC
 #endif
+
 #if defined(HAVE_MPROTECT) && \
     !(defined(PROT_NONE) && defined(PROT_READ) && defined(PROT_WRITE))
 # undef HAVE_MPROTECT
@@ -81,7 +93,15 @@ void *alloca (size_t);
 # define MADV_DONTDUMP MADV_NOCORE
 #endif
 
-static size_t        page_size;
+#ifndef DEFAULT_PAGE_SIZE
+# ifdef PAGE_SIZE
+#  define DEFAULT_PAGE_SIZE PAGE_SIZE
+# else
+#  define DEFAULT_PAGE_SIZE 0x10000
+# endif
+#endif
+
+static size_t        page_size = DEFAULT_PAGE_SIZE;
 static unsigned char canary[CANARY_SIZE];
 
 /* LCOV_EXCL_START */
@@ -102,7 +122,7 @@ _sodium_dummy_symbol_to_prevent_memzero_lto(void *const  pnt,
 void
 sodium_memzero(void * const pnt, const size_t len)
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__CRT_INLINE)
     SecureZeroMemory(pnt, len);
 #elif defined(HAVE_MEMSET_S)
     if (len > 0U && memset_s(pnt, (rsize_t) len, 0, (rsize_t) len) != 0) {
@@ -110,6 +130,8 @@ sodium_memzero(void * const pnt, const size_t len)
     }
 #elif defined(HAVE_EXPLICIT_BZERO)
     explicit_bzero(pnt, len);
+#elif defined(HAVE_MEMSET_EXPLICIT)
+    memset_explicit(pnt, 0, len);
 #elif defined(HAVE_EXPLICIT_MEMSET)
     explicit_memset(pnt, 0, len);
 #elif HAVE_WEAK_SYMBOLS
@@ -223,8 +245,8 @@ sodium_compare(const unsigned char *b1_, const unsigned char *b2_, size_t len)
         i--;
         x1 = b1[i];
         x2 = b2[i];
-        gt |= ((x2 - x1) >> 8) & eq;
-        eq &= ((x2 ^ x1) - 1) >> 8;
+        gt |= (((unsigned int) x2 - (unsigned int) x1) >> 8) & eq;
+        eq &= (((unsigned int) (x2 ^ x1)) - 1) >> 8;
     }
     return (int) (gt + gt + eq) - 1;
 }
@@ -384,7 +406,7 @@ int
 _sodium_alloc_init(void)
 {
 #ifdef HAVE_ALIGNED_MALLOC
-# if defined(_SC_PAGESIZE)
+# if defined(_SC_PAGESIZE) && defined(HAVE_SYSCONF)
     long page_size_ = sysconf(_SC_PAGESIZE);
     if (page_size_ > 0L) {
         page_size = (size_t) page_size_;
@@ -393,6 +415,8 @@ _sodium_alloc_init(void)
     SYSTEM_INFO si;
     GetSystemInfo(&si);
     page_size = (size_t) si.dwPageSize;
+# elif !defined(PAGE_SIZE)
+#  warning Unknown page size
 # endif
     if (page_size < CANARY_SIZE || page_size < sizeof(size_t)) {
         sodium_misuse(); /* LCOV_EXCL_LINE */
@@ -483,8 +507,10 @@ _mprotect_readwrite(void *ptr, size_t size)
 __attribute__((noreturn)) static void
 _out_of_bounds(void)
 {
-# ifndef __wasm__
-#  ifdef SIGSEGV
+# if defined(HAVE_RAISE) && !defined(__wasm__)
+#  ifdef SIGPROT
+    raise(SIGPROT);
+#  elif defined(SIGSEGV)
     raise(SIGSEGV);
 #  elif defined(SIGKILL)
     raise(SIGKILL);
@@ -593,7 +619,7 @@ _sodium_malloc(const size_t size)
     memcpy(unprotected_ptr + unprotected_size, canary, sizeof canary);
 # endif
     _mprotect_noaccess(unprotected_ptr + unprotected_size, page_size);
-    sodium_mlock(unprotected_ptr, unprotected_size);
+    (void) sodium_mlock(unprotected_ptr, unprotected_size); /* not a hard error in the context of sodium_malloc() */
     canary_ptr =
         unprotected_ptr + _page_round(size_with_canary) - size_with_canary;
     user_ptr = canary_ptr + sizeof canary;
@@ -663,7 +689,7 @@ sodium_free(void *ptr)
         _out_of_bounds();
     }
 # endif
-    sodium_munlock(unprotected_ptr, unprotected_size);
+    (void) sodium_munlock(unprotected_ptr, unprotected_size);
     _free_aligned(base_ptr, total_size);
 }
 #endif /* HAVE_ALIGNED_MALLOC */
