@@ -19,6 +19,22 @@ Starting with *Koffi 2.3.20*, you can explicitly unload a library by calling `li
 On some platforms (such as with the [musl C library on Linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html#Unloading-libraries)), shared libraries cannot be unloaded, so the library will remain loaded and memory mapped after the call to `lib.unload()`.
 ```
 
+## Loading options
+
+*New in Koffi 2.6*
+
+The `load` function can take an optional object argument, with the following options:
+
+```js
+const options = {
+    lazy: true // Use RTLD_LAZY (lazy-binding) on POSIX platforms (by default, use RTLD_NOW)
+};
+
+const lib = koffi.load('/path/to/shared/library.so', options);
+```
+
+More options may be added if needed.
+
 ## Function definitions
 
 ### Definition syntax
