@@ -22,7 +22,7 @@ struct HttpHeader {
 };
 
 struct Config {
-    http_Config http { 80 };
+    http_Config http { 8000 };
 
     const char *root_directory = ".";
     bool auto_index = true;
