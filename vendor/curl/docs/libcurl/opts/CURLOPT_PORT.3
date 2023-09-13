@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_PORT 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLOPT_PORT 3 "17 Jun 2014" libcurl libcurl
 .SH NAME
 CURLOPT_PORT \- remote port number to connect to
 .SH SYNOPSIS
@@ -44,7 +43,7 @@ Usually, you just let the URL decide which port to use but this allows the
 application to override that.
 
 While this option accepts a 'long', a port number is an unsigned 16 bit number
-and therefore using a port number lower than zero or over 65535 will cause a
+and therefore using a port number lower than zero or over 65535 causes a
 \fBCURLE_BAD_FUNCTION_ARGUMENT\fP error.
 .SH DEFAULT
 By default this is 0 which makes it not used. This also makes port number zero

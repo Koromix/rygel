@@ -15,7 +15,7 @@ Multi: append
 ---
 Write output to <file> instead of stdout. If you are using {} or [] to fetch
 multiple documents, you should quote the URL and you can use '#' followed by a
-number in the <file> specifier. That variable will be replaced with the current
+number in the <file> specifier. That variable is replaced with the current
 string for the URL being fetched. Like in:
 
  curl "http://{one,two}.example.com" -o "file_#1.txt"
@@ -28,22 +28,22 @@ You may use this option as many times as the number of URLs you have. For
 example, if you specify two URLs on the same command line, you can use it like
 this:
 
-  curl -o aa example.com -o bb example.net
+ curl -o aa example.com -o bb example.net
 
 and the order of the -o options and the URLs does not matter, just that the
 first -o is for the first URL and so on, so the above command line can also be
 written as
 
-  curl example.com example.net -o aa -o bb
+ curl example.com example.net -o aa -o bb
 
 See also the --create-dirs option to create the local directories
-dynamically. Specifying the output as '-' (a single dash) will force the
-output to be done to stdout.
+dynamically. Specifying the output as '-' (a single dash) passes the output to
+stdout.
 
 To suppress response bodies, you can redirect output to /dev/null:
 
-  curl example.com -o /dev/null
+ curl example.com -o /dev/null
 
-Or for Windows use nul:
+Or for Windows:
 
-  curl example.com -o nul
+ curl example.com -o nul

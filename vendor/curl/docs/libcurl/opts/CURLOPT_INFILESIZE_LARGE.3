@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_INFILESIZE_LARGE 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLOPT_INFILESIZE_LARGE 3 "17 Jun 2014" libcurl libcurl
 .SH NAME
 CURLOPT_INFILESIZE_LARGE \- size of the input file to send off
 .SH SYNOPSIS
@@ -45,9 +44,9 @@ To unset this value again, set it to -1.
 When sending emails using SMTP, this command can be used to specify the
 optional SIZE parameter for the MAIL FROM command.
 
-This option does not limit how much data libcurl will actually send, as that
-is controlled entirely by what the read callback returns, but telling one
-value and sending a different amount may lead to errors.
+This option does not limit how much data libcurl actually sends, as that is
+controlled entirely by what the read callback returns, but telling one value
+and sending a different amount may lead to errors.
 .SH DEFAULT
 Unset
 .SH PROTOCOLS

@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_KRBLEVEL 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLOPT_KRBLEVEL 3 "17 Jun 2014" libcurl libcurl
 .SH NAME
 CURLOPT_KRBLEVEL \- FTP kerberos security level
 .SH SYNOPSIS
@@ -35,9 +34,9 @@ CURLcode curl_easy_setopt(CURL *handle, CURLOPT_KRBLEVEL, char *level);
 .SH DESCRIPTION
 Pass a char * as parameter. Set the kerberos security level for FTP; this also
 enables kerberos awareness.  This is a string that should match one of the
-following: \&'clear', \&'safe', \&'confidential' or \&'private'.  If the
-string is set but does not match one of these, 'private' will be used. Set the
-string to NULL to disable kerberos support for FTP.
+following: \&'clear', \&'safe', \&'confidential' or \&'private'. If the string
+is set but does not match one of these, 'private' is used. Set the string to
+NULL to disable kerberos support for FTP.
 
 The application does not have to keep the string around after setting this
 option.

@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_BUFFERSIZE 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLOPT_BUFFERSIZE 3 "17 Jun 2014" libcurl libcurl
 .SH NAME
 CURLOPT_BUFFERSIZE \- receive buffer size
 .SH SYNOPSIS
@@ -36,7 +35,7 @@ CURLcode curl_easy_setopt(CURL *handle, CURLOPT_BUFFERSIZE, long size);
 Pass a long specifying your preferred \fIsize\fP (in bytes) for the receive
 buffer in libcurl.  The main point of this would be that the write callback
 gets called more often and with smaller chunks. Secondly, for some protocols,
-there's a benefit of having a larger buffer for performance.
+there is a benefit of having a larger buffer for performance.
 
 This is just treated as a request, not an order. You cannot be guaranteed to
 actually get the given size.

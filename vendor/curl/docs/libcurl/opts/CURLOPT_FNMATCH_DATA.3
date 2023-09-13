@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_FNMATCH_DATA 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLOPT_FNMATCH_DATA 3 "19 Jun 2014" libcurl libcurl
 .SH NAME
 CURLOPT_FNMATCH_DATA \- pointer passed to the fnmatch callback
 .SH SYNOPSIS
@@ -33,8 +32,8 @@ CURLOPT_FNMATCH_DATA \- pointer passed to the fnmatch callback
 CURLcode curl_easy_setopt(CURL *handle, CURLOPT_FNMATCH_DATA,
                           void *pointer);
 .SH DESCRIPTION
-Pass a pointer that will be untouched by libcurl and passed as the ptr
-argument to the \fICURLOPT_FNMATCH_FUNCTION(3)\fP.
+Pass a pointer that is untouched by libcurl and passed as the ptr argument to
+the \fICURLOPT_FNMATCH_FUNCTION(3)\fP.
 .SH DEFAULT
 NULL
 .SH PROTOCOLS

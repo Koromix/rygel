@@ -21,8 +21,7 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH CURLSHOPT_LOCKFUNC 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLSHOPT_LOCKFUNC 3 "8 Aug 2003" libcurl libcurl
 .SH NAME
 CURLSHOPT_LOCKFUNC - mutex lock callback
 .SH SYNOPSIS
@@ -36,7 +35,7 @@ CURLSHcode curl_share_setopt(CURLSH *share, CURLSHOPT_LOCKFUNC, lockcb);
 .fi
 .SH DESCRIPTION
 Set a mutex lock callback for the share object, to allow it to get used by
-multiple threads concurrently. There's a corresponding
+multiple threads concurrently. There is a corresponding
 \fICURLSHOPT_UNLOCKFUNC(3)\fP callback called when the mutex is again released.
 
 The \fIlockcb\fP argument must be a pointer to a function matching the

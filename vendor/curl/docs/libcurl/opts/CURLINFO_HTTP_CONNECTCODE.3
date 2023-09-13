@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_HTTP_CONNECTCODE 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLINFO_HTTP_CONNECTCODE 3 "28 Aug 2015" libcurl libcurl
 .SH NAME
 CURLINFO_HTTP_CONNECTCODE \- get the CONNECT response code
 .SH SYNOPSIS
@@ -34,8 +33,8 @@ CURLcode curl_easy_getinfo(CURL *handle, CURLINFO_HTTP_CONNECTCODE, long *p);
 .fi
 .SH DESCRIPTION
 Pass a pointer to a long to receive the last received HTTP proxy response code
-to a CONNECT request. The returned value will be zero if no such response code
-was available.
+to a CONNECT request. The returned value is zero if no such response code was
+available.
 .SH PROTOCOLS
 HTTP
 .SH EXAMPLE

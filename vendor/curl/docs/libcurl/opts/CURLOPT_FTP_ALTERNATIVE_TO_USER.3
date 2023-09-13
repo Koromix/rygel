@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_FTP_ALTERNATIVE_TO_USER 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLOPT_FTP_ALTERNATIVE_TO_USER 3 "19 Jun 2014" libcurl libcurl
 .SH NAME
 CURLOPT_FTP_ALTERNATIVE_TO_USER \- command to use instead of USER with FTP
 .SH SYNOPSIS
@@ -33,11 +32,10 @@ CURLOPT_FTP_ALTERNATIVE_TO_USER \- command to use instead of USER with FTP
 CURLcode curl_easy_setopt(CURL *handle, CURLOPT_FTP_ALTERNATIVE_TO_USER,
                           char *cmd);
 .SH DESCRIPTION
-Pass a char * as parameter, pointing to a string which will be used to
-authenticate if the usual FTP "USER user" and "PASS password" negotiation
-fails. This is currently only known to be required when connecting to
-Tumbleweed's Secure Transport FTPS server using client certificates for
-authentication.
+Pass a char * as parameter, pointing to a string which is used to authenticate
+if the usual FTP "USER user" and "PASS password" negotiation fails. This is
+currently only known to be required when connecting to Tumbleweed's Secure
+Transport FTPS server using client certificates for authentication.
 
 The application does not have to keep the string around after setting this
 option.

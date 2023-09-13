@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_FTP_ENTRY_PATH 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLINFO_FTP_ENTRY_PATH 3 "12 Sep 2015" libcurl libcurl
 .SH NAME
 CURLINFO_FTP_ENTRY_PATH \- get entry path in FTP server
 .SH SYNOPSIS
@@ -38,9 +37,9 @@ path of the entry path. That is the initial path libcurl ended up in when
 logging on to the remote FTP server. This stores a NULL as pointer if
 something is wrong.
 
-The \fBpath\fP pointer will be NULL or pointing to private memory you MUST NOT
-free - it gets freed when you call \fIcurl_easy_cleanup(3)\fP on the
-corresponding CURL handle.
+The \fBpath\fP pointer is NULL or points to private memory. You MUST NOT free
+- it gets freed when you call \fIcurl_easy_cleanup(3)\fP on the corresponding
+CURL handle.
 .SH PROTOCOLS
 FTP(S) and SFTP
 .SH EXAMPLE

@@ -22,8 +22,7 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_SIZE_DOWNLOAD_T 3 "April 26, 2023" "ibcurl 8.2.1" libcurl
-
+.TH CURLINFO_SIZE_DOWNLOAD_T 3 "25 May 2017" libcurl libcurl
 .SH NAME
 CURLINFO_SIZE_DOWNLOAD_T \- get the number of downloaded bytes
 .SH SYNOPSIS
@@ -35,10 +34,9 @@ CURLcode curl_easy_getinfo(CURL *handle, CURLINFO_SIZE_DOWNLOAD_T,
 .fi
 .SH DESCRIPTION
 Pass a pointer to a \fIcurl_off_t\fP to receive the total amount of bytes that
-were downloaded.  The amount is only for the latest transfer and will be reset
+were downloaded. The amount is only for the latest transfer and gets reset
 again for each new transfer. This counts actual payload data, what's also
-commonly called body. All meta and header data are excluded and will not be
-counted in this number.
+commonly called body. All meta and header data is excluded from this amount.
 .SH PROTOCOLS
 All
 .SH EXAMPLE
