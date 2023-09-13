@@ -31,6 +31,7 @@ Table of contents
    output
    polymorphism
    unions
+   variables
    callbacks
    misc
    packaging
