@@ -245,12 +245,13 @@ function AppRunner(canvas) {
         }
 
         mouse_state.contact = true;
+        mouse_state.moving = (e.type == 'mousemove') && 
+                             (e.movementX * e.movementX + e.movementY * e.movementY >= 5);
 
-        if (e.type == 'mousemove') {
+        if (mouse_state.moving) {
             skip_clicks |= e.buttons;
-            mouse_state.moving = true;
         } else {
-            mouse_state.moving = false;
+            skip_clicks = 0;
         }
 
         if (e.deltaY) {
