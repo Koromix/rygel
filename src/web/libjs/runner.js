@@ -245,8 +245,9 @@ function AppRunner(canvas) {
         }
 
         mouse_state.contact = true;
-        mouse_state.moving = (e.type == 'mousemove') && 
-                             (e.movementX * e.movementX + e.movementY * e.movementY >= 5);
+
+        mouse_state.moving = (e.type == 'mousemove' && e.movementX * e.movementX + e.movementY * e.movementY >= 5) ||
+                             (mouse_state.moving && skip_clicks);
 
         if (mouse_state.moving) {
             skip_clicks |= e.buttons;
