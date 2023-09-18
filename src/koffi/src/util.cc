@@ -197,7 +197,7 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
         } else if (remain[0] == '!') {
             remain = remain.Take(1, remain.len - 1);
             disposables |= (1u << indirect);
-        } else if (remain.len >= 6 && StartsWith(remain, "const") && !IsIdentifierStart(remain[6])) {
+        } else if (remain.len >= 6 && StartsWith(remain, "const") && !IsIdentifierChar(remain[5])) {
             remain = remain.Take(6, remain.len - 6);
         } else {
             break;
