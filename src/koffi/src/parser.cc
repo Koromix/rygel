@@ -35,7 +35,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
 
     Tokenize(str);
 
-    out_func->ret.type = ParseType();
+    out_func->ret.type = ParseType(nullptr);
     if (!CanReturnType(out_func->ret.type)) {
         MarkError("You are not allowed to directly return %1 values (maybe try %1 *)", out_func->ret.type->name);
         return false;
@@ -62,17 +62,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
                 break;
             }
 
-            if (Match("_In_")) {
-                param.directions = 1;
-            } else if (Match("_Out_")) {
-                param.directions = 2;
-            } else if (Match("_Inout_")) {
-                param.directions = 3;
-            } else {
-                param.directions = 1;
-            }
-
-            param.type = ParseType();
+            param.type = ParseType(&param.directions);
 
             if (!CanPassType(param.type, param.directions)) {
                 MarkError("Type %1 cannot be used as a parameter", param.type->name);
@@ -145,7 +135,7 @@ void PrototypeParser::Tokenize(const char *str)
     }
 }
 
-const TypeInfo *PrototypeParser::ParseType()
+const TypeInfo *PrototypeParser::ParseType(int *out_directions)
 {
     Size start = offset;
 
@@ -166,7 +156,7 @@ const TypeInfo *PrototypeParser::ParseType()
 
     while (offset >= start) {
         Span<const char> str = MakeSpan(tokens[start].ptr, tokens[offset].end() - tokens[start].ptr);
-        const TypeInfo *type = ResolveType(env, str);
+        const TypeInfo *type = ResolveType(env, str, out_directions);
 
         if (type) {
             offset++;

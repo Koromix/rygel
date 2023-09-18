@@ -49,7 +49,7 @@ public:
 private:
     void Tokenize(const char *str);
 
-    const TypeInfo *ParseType();
+    const TypeInfo *ParseType(int *out_directions);
     const char *ParseIdentifier();
 
     bool Consume(const char *expect);

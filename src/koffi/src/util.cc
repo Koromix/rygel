@@ -153,6 +153,22 @@ static inline bool IsIdentifierChar(char c)
     return IsAsciiAlphaOrDigit(c) || c == '_';
 }
 
+static inline Span<const char> SplitIdentifier(Span<const char> str)
+{
+    Size offset = 0;
+
+    if (str.len && IsIdentifierStart(str[0])) {
+        offset++;
+
+        while (offset < str.len && IsIdentifierChar(str[offset])) {
+            offset++;
+        }
+    }
+
+    Span<const char> token = str.Take(0, offset);
+    return token;
+}
+
 const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_directions)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -160,8 +176,31 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
     int indirect = 0;
     uint8_t disposables = 0;
 
+    // Consume parameter direction qualifier
+    if (out_directions) {
+        if (str.len && str[0] == '_') {
+            Span<const char> qualifier = SplitIdentifier(str);
+
+            if (qualifier == "_In_") {
+                *out_directions = 1;
+                str = str.Take(5, str.len - 5);
+            } else if (qualifier == "_Out_") {
+                *out_directions = 2;
+                str = str.Take(6, str.len - 6);
+            } else if (qualifier == "_Inout_") {
+                *out_directions = 3;
+                str = str.Take(8, str.len - 8);
+            } else {
+                *out_directions = 1;
+            }
+        } else {
+            *out_directions = 1;
+        }
+    }
+
     // Skip initial const qualifiers
-    while (str.len >= 6 && StartsWith(str, "const") && IsAsciiWhite(str[5])) {
+    str = TrimStr(str);
+    while (SplitIdentifier(str) == "const") {
         str = str.Take(6, str.len - 6);
         str = TrimStr(str);
     }
@@ -173,13 +212,10 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
     for (;;) {
         remain = TrimStr(remain);
 
-        if (!remain.len || !IsIdentifierStart(remain[0]))
+        Span<const char> token = SplitIdentifier(remain);
+        if (!token.len)
             break;
-
-        do {
-            remain.ptr++;
-            remain.len--;
-        } while (remain.len && IsIdentifierChar(remain[0]));
+        remain = remain.Take(token.len, remain.len - token.len);
     }
 
     Span<const char> name = TrimStr(MakeSpan(str.ptr, remain.ptr - str.ptr));
@@ -197,7 +233,7 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
         } else if (remain[0] == '!') {
             remain = remain.Take(1, remain.len - 1);
             disposables |= (1u << indirect);
-        } else if (remain.len >= 6 && StartsWith(remain, "const") && !IsIdentifierChar(remain[5])) {
+        } else if (SplitIdentifier(remain) == "const") {
             remain = remain.Take(6, remain.len - 6);
         } else {
             break;
@@ -263,9 +299,6 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
         RG_ASSERT(type);
     }
 
-    if (out_directions) {
-        *out_directions = 1;
-    }
     return type;
 }
 
