@@ -4,6 +4,11 @@
 
 ### Koffi 2.6
 
+#### Koffi 2.6.1 (2023-09-18)
+
+- Support string direction qualifiers in classic function definitions
+- Fix possible off-by-one array access when parsing type name
+
 #### Koffi 2.6.0 (2023-09-13)
 
 **New features:**
