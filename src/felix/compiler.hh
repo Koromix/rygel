@@ -133,7 +133,8 @@ enum class CompileFeature {
     SSE42 = 1 << 19,
     AVX2 = 1 << 20,
     AVX512 = 1 << 21,
-    AESNI = 1 << 22
+    AESNI = 1 << 22,
+    SSSE3 = 1 << 23
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",            "Use precompiled headers for faster compilation"},
@@ -159,7 +160,8 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"SSE42",          "Enable SSE4.2 generation and instrinsics (x86_64)"},
     {"AVX2",           "Enable AVX2 generation and instrinsics (x86_64)"},
     {"AVX512",         "Enable AVX512 generation and instrinsics (x86_64)"},
-    {"AESNI",          "Enable AES-NI generation and instrinsics (x86_64)"}
+    {"AESNI",          "Enable AES-NI generation and instrinsics (x86_64)"},
+    {"SSSE3",          "Enable SSSE3 generation and instrinsics (x86_64)"}
 };
 
 enum class SourceType {
