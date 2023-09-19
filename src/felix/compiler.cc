@@ -401,20 +401,22 @@ public:
         if (features & (int)CompileFeature::HotAssets) {
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
-#if defined(__x86_64__)
-        Fmt(&buf, " -march=x86-64-v2");
-        if (features & (int)CompileFeature::AESNI) {
-            Fmt(&buf, " -maes -mpclmul");
+
+        if (architecture == HostArchitecture::x64) {
+            Fmt(&buf, " -march=x86-64-v2");
+
+            if (features & (int)CompileFeature::AESNI) {
+                Fmt(&buf, " -maes -mpclmul");
+            }
+            if (features & (int)CompileFeature::AVX2) {
+                Fmt(&buf, " -mavx2");
+            }
+            if (features & (int)CompileFeature::AVX512) {
+                Fmt(&buf, " -mavx512f -mavx512vl");
+            }
+        } else if (architecture == HostArchitecture::x86) {
+            Fmt(&buf, " -msse2");
         }
-        if (features & (int)CompileFeature::AVX2) {
-            Fmt(&buf, " -mavx2");
-        }
-        if (features & (int)CompileFeature::AVX512) {
-            Fmt(&buf, " -mavx512f -mavx512vl");
-        }
-#elif defined(__i386__)
-        Fmt(&buf, " -msse2");
-#endif
 
         // Platform flags
         switch (platform) {
@@ -910,20 +912,22 @@ public:
         if (features & (int)CompileFeature::HotAssets) {
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
-#if defined(__x86_64__)
-        Fmt(&buf, " -march=x86-64-v2");
-        if (features & (int)CompileFeature::AESNI) {
-            Fmt(&buf, " -maes -mpclmul");
+
+        if (architecture == HostArchitecture::x64) {
+            Fmt(&buf, " -march=x86-64-v2");
+
+            if (features & (int)CompileFeature::AESNI) {
+                Fmt(&buf, " -maes -mpclmul");
+            }
+            if (features & (int)CompileFeature::AVX2) {
+                Fmt(&buf, " -mavx2");
+            }
+            if (features & (int)CompileFeature::AVX512) {
+                Fmt(&buf, " -mavx512f -mavx512vl");
+            }
+        } else if (architecture == HostArchitecture::x86) {
+            Fmt(&buf, " -msse2");
         }
-        if (features & (int)CompileFeature::AVX2) {
-            Fmt(&buf, " -mavx2");
-        }
-        if (features & (int)CompileFeature::AVX512) {
-            Fmt(&buf, " -mavx512f -mavx512vl");
-        }
-#elif defined(__i386__)
-        Fmt(&buf, " -msse2");
-#endif
 
         // Platform flags
         switch (platform) {
@@ -1339,14 +1343,15 @@ public:
         if (features & (int)CompileFeature::CFI) {
             Fmt(&buf, " /guard:cf /guard:ehcont");
         }
-#ifdef __x86_64__
-        if (features & (int)CompileFeature::AVX2) {
-            Fmt(&buf, " /arch:AVX2");
+
+        if (architecture == HostArchitecture::x64) {
+            if (features & (int)CompileFeature::AVX2) {
+                Fmt(&buf, " /arch:AVX2");
+            }
+            if (features & (int)CompileFeature::AVX512) {
+                Fmt(&buf, " /arch:AVX512");
+            }
         }
-        if (features & (int)CompileFeature::AVX512) {
-            Fmt(&buf, " /arch:AVX512");
-        }
-#endif
 
         // Sources and definitions
         Fmt(&buf, " /DFELIX /c /utf-8 \"%1\"", src_filename);
