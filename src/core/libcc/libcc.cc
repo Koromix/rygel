@@ -5122,7 +5122,8 @@ static RG_THREAD_LOCAL Size rnd_offset;
 
 static void InitChaCha20(uint32_t state[16], uint32_t key[8], uint32_t iv[2])
 {
-    static const uint32_t *const magic = (const uint32_t *)"expand 32-byte k";
+    alignas(uint32_t) static char str[] = "expand 32-byte k";
+    const uint32_t *magic = (const uint32_t *)str;
 
     state[0] = LittleEndian(magic[0]);
     state[1] = LittleEndian(magic[1]);
