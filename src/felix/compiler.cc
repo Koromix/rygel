@@ -265,12 +265,9 @@ public:
             supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
         }
-        supported |= (int)CompileFeature::SSE41;
-        supported |= (int)CompileFeature::SSE42;
+        supported |= (int)CompileFeature::AESNI;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
-        supported |= (int)CompileFeature::AESNI;
-        supported |= (int)CompileFeature::SSSE3;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -405,23 +402,15 @@ public:
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
 #if defined(__x86_64__)
-        if (features & (int)CompileFeature::SSE41) {
-            Fmt(&buf, " -msse4.1");
-        }
-        if (features & (int)CompileFeature::SSE42) {
-            Fmt(&buf, " -msse4.2");
+        Fmt(&buf, " -march=x86-64-v2");
+        if (features & (int)CompileFeature::AESNI) {
+            Fmt(&buf, " -maes -mpclmul");
         }
         if (features & (int)CompileFeature::AVX2) {
             Fmt(&buf, " -mavx2");
         }
         if (features & (int)CompileFeature::AVX512) {
             Fmt(&buf, " -mavx512f -mavx512vl");
-        }
-        if (features & (int)CompileFeature::AESNI) {
-            Fmt(&buf, " -maes -mpclmul");
-        }
-        if (features & (int)CompileFeature::SSSE3) {
-            Fmt(&buf, " -mssse3");
         }
 #elif defined(__i386__)
         Fmt(&buf, " -msse2");
@@ -790,12 +779,9 @@ public:
             supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
         }
-        supported |= (int)CompileFeature::SSE41;
-        supported |= (int)CompileFeature::SSE42;
+        supported |= (int)CompileFeature::AESNI;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
-        supported |= (int)CompileFeature::AESNI;
-        supported |= (int)CompileFeature::SSSE3;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -925,23 +911,15 @@ public:
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
 #if defined(__x86_64__)
-        if (features & (int)CompileFeature::SSE41) {
-            Fmt(&buf, " -msse4.1");
-        }
-        if (features & (int)CompileFeature::SSE42) {
-            Fmt(&buf, " -msse4.2");
+        Fmt(&buf, " -march=x86-64-v2");
+        if (features & (int)CompileFeature::AESNI) {
+            Fmt(&buf, " -maes -mpclmul");
         }
         if (features & (int)CompileFeature::AVX2) {
             Fmt(&buf, " -mavx2");
         }
         if (features & (int)CompileFeature::AVX512) {
             Fmt(&buf, " -mavx512f -mavx512vl");
-        }
-        if (features & (int)CompileFeature::AESNI) {
-            Fmt(&buf, " -maes -mpclmul");
-        }
-        if (features & (int)CompileFeature::AESNI) {
-            Fmt(&buf, " -mssse3");
         }
 #elif defined(__i386__)
         Fmt(&buf, " -msse2");
@@ -1230,12 +1208,9 @@ public:
             supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
         }
-        supported |= (int)CompileFeature::SSE41;
-        supported |= (int)CompileFeature::SSE42;
+        supported |= (int)CompileFeature::AESNI;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
-        supported |= (int)CompileFeature::AESNI;
-        supported |= (int)CompileFeature::SSSE3;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {

@@ -129,12 +129,9 @@ enum class CompileFeature {
     DynamicRuntime = 1 << 16,
     NoConsole = 1 << 17,
 
-    SSE41 = 1 << 18,
-    SSE42 = 1 << 19,
-    AVX2 = 1 << 20,
-    AVX512 = 1 << 21,
-    AESNI = 1 << 22,
-    SSSE3 = 1 << 23
+    AESNI = 1 << 18,
+    AVX2 = 1 << 19,
+    AVX512 = 1 << 20
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",            "Use precompiled headers for faster compilation"},
@@ -156,12 +153,9 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"DynamicRuntime", "Use dynamic runtime DLLs on Windows"},
     {"NoConsole",      "Link with /subsystem:windows (only for Windows)"},
 
-    {"SSE41",          "Enable SSE4.1 generation and instrinsics (x86_64)"},
-    {"SSE42",          "Enable SSE4.2 generation and instrinsics (x86_64)"},
-    {"AVX2",           "Enable AVX2 generation and instrinsics (x86_64)"},
-    {"AVX512",         "Enable AVX512 generation and instrinsics (x86_64)"},
     {"AESNI",          "Enable AES-NI generation and instrinsics (x86_64)"},
-    {"SSSE3",          "Enable SSSE3 generation and instrinsics (x86_64)"}
+    {"AVX2",           "Enable AVX2 generation and instrinsics (x86_64)"},
+    {"AVX512",         "Enable AVX512 generation and instrinsics (x86_64)"}
 };
 
 enum class SourceType {
