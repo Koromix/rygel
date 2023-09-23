@@ -235,20 +235,43 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
         ssh_known_hosts_e state = ssh_session_is_known_server(ssh);
 
-        // XXX: Implement proper host verification
         switch (state) {
             case SSH_KNOWN_HOSTS_OK: { /* LogInfo("OK"); */ } break;
-            case SSH_KNOWN_HOSTS_CHANGED: { LogInfo("Host changed"); } break;
-            case SSH_KNOWN_HOSTS_OTHER: { LogInfo("Host verification failed"); } break;
-            case SSH_KNOWN_HOSTS_NOT_FOUND: { LogInfo("Host not Found"); } break;
+
+            case SSH_KNOWN_HOSTS_CHANGED:
+            case SSH_KNOWN_HOSTS_OTHER: {
+                LogError("Host key has changed, possible attack");
+                return nullptr;
+            } break;
+
+            case SSH_KNOWN_HOSTS_NOT_FOUND:
             case SSH_KNOWN_HOSTS_UNKNOWN: {
                 char hex[256];
                 Fmt(hex, "%1", FmtSpan(hash, FmtType::SmallHex, ":"));
 
                 LogInfo("The server is unknown. Do you trust the host key?");
-                LogInfo("Public key hash: %1", hex);
+
+                char prompt[512];
+                Fmt(prompt, "Do you trust the server (public key hash: %1)", hex);
+
+                bool trust = false;
+                if (!PromptYN(prompt, &trust))
+                    return nullptr;
+                if (!trust) {
+                    LogError("Cannot trust server, refusing to continue");
+                    return nullptr;
+                }
+
+                if (ssh_session_update_known_hosts(ssh) < 0) {
+                    LogError("Failed to update known_hosts file: %1", strerror(errno));
+                    return nullptr;
+                }
             } break;
-            case SSH_KNOWN_HOSTS_ERROR: { LogInfo("Host error: %1", ssh_get_error(ssh)); } break;
+
+            case SSH_KNOWN_HOSTS_ERROR: {
+                LogInfo("Host error: %1", ssh_get_error(ssh));
+                return nullptr;
+            } break;
         }
     }
 
