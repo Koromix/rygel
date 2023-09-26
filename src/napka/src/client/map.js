@@ -393,7 +393,7 @@ export function makeField(etab, key, type, view = null) {
             let rendered = markdown.render(etab[key] || '');
 
             return html`
-                <span class="sub">Text complémentaire :</span> <a @click=${e => toggleEdit(e, key)}>✎</a><br/>
+                <span class="sub">Texte complémentaire :</span> <a @click=${e => toggleEdit(e, key)}>✎</a><br/>
                 ${unsafeHTML(rendered)}
             `;
         } else {
