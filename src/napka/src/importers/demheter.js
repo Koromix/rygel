@@ -122,10 +122,11 @@ async function run() {
                 }
             }
 
-            if (row.ID == null || row.Structure == null || row.Adresse == null)
+            if (row.ID == null || row.Structure == null)
                 break;
 
-            table.push(row);
+            if (row.Adresse != null)
+                table.push(row);
         }
 
         tables[ws.name] = table;
