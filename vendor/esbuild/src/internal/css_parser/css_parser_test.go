@@ -60,14 +60,14 @@ func expectPrintedLowerUnsupported(t *testing.T, unsupportedCSSFeatures compat.C
 func expectPrintedWithAllPrefixes(t *testing.T, contents string, expected string, expectedLog string) {
 	t.Helper()
 	expectPrintedCommon(t, contents+" [prefixed]", contents, expected, expectedLog, config.LoaderCSS, config.Options{
-		CSSPrefixData: compat.CSSPrefixData(map[compat.Engine][]int{
-			compat.Chrome:  {0},
-			compat.Edge:    {0},
-			compat.Firefox: {0},
-			compat.IE:      {0},
-			compat.IOS:     {0},
-			compat.Opera:   {0},
-			compat.Safari:  {0},
+		CSSPrefixData: compat.CSSPrefixData(map[compat.Engine]compat.Semver{
+			compat.Chrome:  {Parts: []int{0}},
+			compat.Edge:    {Parts: []int{0}},
+			compat.Firefox: {Parts: []int{0}},
+			compat.IE:      {Parts: []int{0}},
+			compat.IOS:     {Parts: []int{0}},
+			compat.Opera:   {Parts: []int{0}},
+			compat.Safari:  {Parts: []int{0}},
 		}),
 	})
 }
@@ -600,16 +600,12 @@ func TestDeclaration(t *testing.T) {
 	expectPrinted(t, ".decl { a: b; }", ".decl {\n  a: b;\n}\n", "")
 	expectPrinted(t, ".decl { a: b; c: d }", ".decl {\n  a: b;\n  c: d;\n}\n", "")
 	expectPrinted(t, ".decl { a: b; c: d; }", ".decl {\n  a: b;\n  c: d;\n}\n", "")
-	expectPrinted(t, ".decl { a { b: c; } }", ".decl {\n  a { b: c; };\n}\n",
-		"<stdin>: WARNING: A nested style rule cannot start with \"a\" because it looks like the start of a declaration\n"+
-			"NOTE: To start a nested style rule with an identifier, you need to wrap the identifier in \":is(...)\" to prevent the rule from being parsed as a declaration.\n")
+	expectPrinted(t, ".decl { a { b: c; } }", ".decl {\n  a {\n    b: c;\n  }\n}\n", "")
 	expectPrinted(t, ".decl { & a { b: c; } }", ".decl {\n  & a {\n    b: c;\n  }\n}\n", "")
 
 	// See http://browserhacks.com/
-	expectPrinted(t, ".selector { (;property: value;); }", ".selector {\n  (;property: value;);\n}\n",
-		"<stdin>: WARNING: Expected identifier but found \"(\"\n")
-	expectPrinted(t, ".selector { [;property: value;]; }", ".selector {\n  [;property: value;];\n}\n",
-		"<stdin>: WARNING: Expected identifier but found \";\"\n") // Note: This now overlaps with CSS nesting syntax
+	expectPrinted(t, ".selector { (;property: value;); }", ".selector {\n  (;property: value;);\n}\n", "<stdin>: WARNING: Expected identifier but found \"(\"\n")
+	expectPrinted(t, ".selector { [;property: value;]; }", ".selector {\n  [;property: value;];\n}\n", "<stdin>: WARNING: Expected identifier but found \"[\"\n")
 	expectPrinted(t, ".selector, {}", ".selector, {\n}\n", "<stdin>: WARNING: Unexpected \"{\"\n")
 	expectPrinted(t, ".selector\\ {}", ".selector\\  {\n}\n", "")
 	expectPrinted(t, ".selector { property: value\\9; }", ".selector {\n  property: value\\\t;\n}\n", "")
@@ -791,10 +787,8 @@ func TestNestedSelector(t *testing.T) {
 	expectPrinted(t, "a { >b {} }", "a {\n  > b {\n  }\n}\n", "")
 	expectPrinted(t, "a { +b {} }", "a {\n  + b {\n  }\n}\n", "")
 	expectPrinted(t, "a { ~b {} }", "a {\n  ~ b {\n  }\n}\n", "")
-	expectPrinted(t, "a { b {} }", "a {\n  b {};\n}\n",
-		"<stdin>: WARNING: A nested style rule cannot start with \"b\" because it looks like the start of a declaration\n"+
-			"NOTE: To start a nested style rule with an identifier, you need to wrap the identifier in \":is(...)\" to prevent the rule from being parsed as a declaration.\n")
-	expectPrinted(t, "a { b() {} }", "a {\n  b() {};\n}\n", "<stdin>: WARNING: Expected identifier but found \"b(\"\n")
+	expectPrinted(t, "a { b {} }", "a {\n  b {\n  }\n}\n", "")
+	expectPrinted(t, "a { b() {} }", "a {\n  b() {\n  }\n}\n", "<stdin>: WARNING: Unexpected \"b(\"\n")
 
 	// Note: CSS nesting no longer requires each complex selector to contain "&"
 	expectPrinted(t, "a { & b, c {} }", "a {\n  & b,\n  c {\n  }\n}\n", "")
@@ -1033,20 +1027,23 @@ func TestNestedSelector(t *testing.T) {
 		"@supports (selector(&)) {\n  .card:hover {\n    color: red;\n  }\n}\n", "")
 	expectPrintedLower(t, "html { @layer base { color: blue; @layer support { & body { color: red } } } }",
 		"@layer base {\n  html {\n    color: blue;\n  }\n  @layer support {\n    html body {\n      color: red;\n    }\n  }\n}\n", "")
+
+	// https://github.com/w3c/csswg-drafts/issues/7961#issuecomment-1549874958
+	expectPrinted(t, "@media screen { a { x: y } x: y; b { x: y } }", "@media screen {\n  a {\n    x: y;\n  }\n  x: y;\n  b {\n    x: y;\n  }\n}\n", "")
+	expectPrinted(t, ":root { @media screen { a { x: y } x: y; b { x: y } } }", ":root {\n  @media screen {\n    a {\n      x: y;\n    }\n    x: y;\n    b {\n      x: y;\n    }\n  }\n}\n", "")
 }
 
 func TestBadQualifiedRules(t *testing.T) {
 	expectPrinted(t, "$bad: rule;", "$bad: rule; {\n}\n", "<stdin>: WARNING: Unexpected \"$\"\n")
 	expectPrinted(t, "$bad: rule; div { color: red }", "$bad: rule; div {\n  color: red;\n}\n", "<stdin>: WARNING: Unexpected \"$\"\n")
 	expectPrinted(t, "$bad { color: red }", "$bad {\n  color: red;\n}\n", "<stdin>: WARNING: Unexpected \"$\"\n")
-	expectPrinted(t, "a { div.major { color: blue } color: red }", "a {\n  div.major { color: blue } color: red;\n}\n",
-		"<stdin>: WARNING: A nested style rule cannot start with \"div\" because it looks like the start of a declaration\n"+
-			"NOTE: To start a nested style rule with an identifier, you need to wrap the identifier in \":is(...)\" to prevent the rule from being parsed as a declaration.\n")
-	expectPrinted(t, "a { div:hover { color: blue } color: red }", "a {\n  div: hover { color: blue } color: red;\n}\n", "")
-	expectPrinted(t, "a { div:hover { color: blue }; color: red }", "a {\n  div: hover { color: blue };\n  color: red;\n}\n", "")
-	expectPrinted(t, "a { div:hover { color: blue } ; color: red }", "a {\n  div: hover { color: blue };\n  color: red;\n}\n", "")
-	expectPrinted(t, "! { x: {} }", "! {\n  x: {};\n}\n", "<stdin>: WARNING: Unexpected \"!\"\n")
-	expectPrinted(t, "a { *width: 100%; height: 1px }", "a {\n  *width: 100%;\n  height: 1px;\n}\n", "<stdin>: WARNING: Unexpected \"width\"\n")
+	expectPrinted(t, "a { div.major { color: blue } color: red }", "a {\n  div.major {\n    color: blue;\n  }\n  color: red;\n}\n", "")
+	expectPrinted(t, "a { div:hover { color: blue } color: red }", "a {\n  div:hover {\n    color: blue;\n  }\n  color: red;\n}\n", "")
+	expectPrinted(t, "a { div:hover { color: blue }; color: red }", "a {\n  div:hover {\n    color: blue;\n  }\n  color: red;\n}\n", "")
+	expectPrinted(t, "a { div:hover { color: blue } ; color: red }", "a {\n  div:hover {\n    color: blue;\n  }\n  color: red;\n}\n", "")
+	expectPrinted(t, "! { x: y; }", "! {\n  x: y;\n}\n", "<stdin>: WARNING: Unexpected \"!\"\n")
+	expectPrinted(t, "! { x: {} }", "! {\n  x: {\n  }\n}\n", "<stdin>: WARNING: Unexpected \"!\"\n<stdin>: WARNING: Expected identifier but found whitespace\n")
+	expectPrinted(t, "a { *width: 100%; height: 1px }", "a {\n  *width: 100%;\n  height: 1px;\n}\n", "<stdin>: WARNING: Expected identifier but found \"*\"\n")
 	expectPrinted(t, "a { garbage; height: 1px }", "a {\n  garbage;\n  height: 1px;\n}\n", "<stdin>: WARNING: Expected \":\"\n")
 	expectPrinted(t, "a { !; height: 1px }", "a {\n  !;\n  height: 1px;\n}\n", "<stdin>: WARNING: Expected identifier but found \"!\"\n")
 }
@@ -2151,6 +2148,17 @@ func TestMangleDuplicateSelectorRules(t *testing.T) {
 	expectPrintedMangle(t, "c { color: green } a { color: red } /*!x*/ /*!y*/ a { color: red }", "c {\n  color: green;\n}\na {\n  color: red;\n}\n/*!x*/\n/*!y*/\n", "")
 }
 
+func TestMangleAtMedia(t *testing.T) {
+	expectPrinted(t, "@media screen { @media screen { a { color: red } } }", "@media screen {\n  @media screen {\n    a {\n      color: red;\n    }\n  }\n}\n", "")
+	expectPrintedMangle(t, "@media screen { @media screen { a { color: red } } }", "@media screen {\n  a {\n    color: red;\n  }\n}\n", "")
+	expectPrintedMangle(t, "@media screen { @media not print { a { color: red } } }", "@media screen {\n  @media not print {\n    a {\n      color: red;\n    }\n  }\n}\n", "")
+	expectPrintedMangle(t, "@media screen { @media not print { @media screen { a { color: red } } } }", "@media screen {\n  @media not print {\n    a {\n      color: red;\n    }\n  }\n}\n", "")
+	expectPrintedMangle(t, "@media screen { a { color: red } @media screen { a { color: red } } }", "@media screen {\n  a {\n    color: red;\n  }\n}\n", "")
+	expectPrintedMangle(t, "@media screen { a { color: red } @media screen { a { color: blue } } }", "@media screen {\n  a {\n    color: red;\n  }\n  a {\n    color: #00f;\n  }\n}\n", "")
+	expectPrintedMangle(t, "@media screen { .a { color: red; @media screen { .b { color: blue } } } }", "@media screen {\n  .a {\n    color: red;\n    .b {\n      color: #00f;\n    }\n  }\n}\n", "")
+	expectPrintedMangle(t, "@media screen { a { color: red } } @media screen { b { color: red } }", "@media screen {\n  a {\n    color: red;\n  }\n}\n@media screen {\n  b {\n    color: red;\n  }\n}\n", "")
+}
+
 func TestFontWeight(t *testing.T) {
 	expectPrintedMangle(t, "a { font-weight: normal }", "a {\n  font-weight: 400;\n}\n", "")
 	expectPrintedMangle(t, "a { font-weight: bold }", "a {\n  font-weight: 700;\n}\n", "")
@@ -2240,7 +2248,8 @@ func TestParseErrorRecovery(t *testing.T) {
 	expectPrinted(t, "x { y: z", "x {\n  y: z;\n}\n", "<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
 	expectPrinted(t, "x { y: (", "x {\n  y: ();\n}\n", "<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
 	expectPrinted(t, "x { y: [", "x {\n  y: [];\n}\n", "<stdin>: WARNING: Expected \"]\" to go with \"[\"\n<stdin>: NOTE: The unbalanced \"[\" is here:\n")
-	expectPrinted(t, "x { y: {", "x {\n  y: {};\n}\n", "<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
+	expectPrinted(t, "x { y: {", "x {\n  y: {\n  }\n}\n",
+		"<stdin>: WARNING: Expected identifier but found whitespace\n<stdin>: WARNING: Expected \"}\" to go with \"{\"\n<stdin>: NOTE: The unbalanced \"{\" is here:\n")
 	expectPrinted(t, "x { y: z(", "x {\n  y: z();\n}\n", "<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
 	expectPrinted(t, "x { y: z(abc", "x {\n  y: z(abc);\n}\n", "<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
 	expectPrinted(t, "x { y: url(", "x {\n  y: url();\n}\n",

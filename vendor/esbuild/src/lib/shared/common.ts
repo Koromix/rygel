@@ -592,12 +592,17 @@ export function createChannel(streamIn: StreamIn): StreamOut {
 
       if (typeof request.key === 'number') {
         const requestCallbacks = requestCallbacksByKey[request.key]
-        if (requestCallbacks) {
-          const callback = requestCallbacks[request.command]
-          if (callback) {
-            await callback(id, request)
-            return
-          }
+        if (!requestCallbacks) {
+          // Ignore invalid commands for old builds that no longer exist.
+          // This can happen when "context.cancel" and "context.dispose"
+          // is called while esbuild is processing many files in parallel.
+          // See https://github.com/evanw/esbuild/issues/3318 for details.
+          return
+        }
+        const callback = requestCallbacks[request.command]
+        if (callback) {
+          await callback(id, request)
+          return
         }
       }
 
@@ -1653,7 +1658,7 @@ function parseStackLinesV8(streamIn: StreamIn, lines: string[], ident: string): 
 
 function failureErrorWithLog(text: string, errors: types.Message[], warnings: types.Message[]): types.BuildFailure {
   let limit = 5
-  let summary = errors.length < 1 ? '' : ` with ${errors.length} error${errors.length < 2 ? '' : 's'}:` +
+  text += errors.length < 1 ? '' : ` with ${errors.length} error${errors.length < 2 ? '' : 's'}:` +
     errors.slice(0, limit + 1).map((e, i) => {
       if (i === limit) return '\n...'
       if (!e.location) return `\nerror: ${e.text}`
@@ -1661,9 +1666,26 @@ function failureErrorWithLog(text: string, errors: types.Message[], warnings: ty
       let pluginText = e.pluginName ? `[plugin: ${e.pluginName}] ` : ''
       return `\n${file}:${line}:${column}: ERROR: ${pluginText}${e.text}`
     }).join('')
-  let error: any = new Error(`${text}${summary}`)
-  error.errors = errors
-  error.warnings = warnings
+  let error: any = new Error(text)
+
+  // Use a getter instead of a plain property so that when the error is thrown
+  // without being caught and the node process exits, the error objects aren't
+  // printed. The error objects are pretty big and not helpful because a) esbuild
+  // already prints errors to stderr by default and b) the error summary already
+  // has a more helpful abbreviated form of the error messages.
+  for (const [key, value] of [['errors', errors], ['warnings', warnings]] as const) {
+    Object.defineProperty(error, key, {
+      configurable: true,
+      enumerable: true,
+      get: () => value,
+      set: value => Object.defineProperty(error, key, {
+        configurable: true,
+        enumerable: true,
+        value,
+      }),
+    })
+  }
+
   return error
 }
 

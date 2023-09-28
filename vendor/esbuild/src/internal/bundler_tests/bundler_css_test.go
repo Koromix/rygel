@@ -302,6 +302,36 @@ func TestImportLocalCSSFromJSMinifyIdentifiersAvoidGlobalNames(t *testing.T) {
 	})
 }
 
+// See: https://github.com/evanw/esbuild/issues/3295
+func TestImportLocalCSSFromJSMinifyIdentifiersMultipleEntryPoints(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/a.js": `
+				import { foo, bar } from "./a.module.css";
+				console.log(foo, bar);
+			`,
+			"/a.module.css": `
+				.foo { color: #001; }
+				.bar { color: #002; }
+			`,
+			"/b.js": `
+				import { foo, bar } from "./b.module.css";
+				console.log(foo, bar);
+			`,
+			"/b.module.css": `
+				.foo { color: #003; }
+				.bar { color: #004; }
+			`,
+		},
+		entryPaths: []string{"/a.js", "/b.js"},
+		options: config.Options{
+			Mode:              config.ModeBundle,
+			AbsOutputDir:      "/out",
+			MinifyIdentifiers: true,
+		},
+	})
+}
+
 func TestImportCSSFromJSLocalVsGlobal(t *testing.T) {
 	css := `
 		.top_level { color: #000 }
@@ -489,6 +519,7 @@ func TestImportCSSFromJSLocalAtCounterStyle(t *testing.T) {
 				div :local { list-style-type: local }
 
 				/* Must not accept invalid type values */
+				div :local { list-style-type: none }
 				div :local { list-style-type: INITIAL }
 				div :local { list-style-type: decimal }
 				div :local { list-style-type: disc }
@@ -496,6 +527,8 @@ func TestImportCSSFromJSLocalAtCounterStyle(t *testing.T) {
 				div :local { list-style-type: circle }
 				div :local { list-style-type: disclosure-OPEN }
 				div :local { list-style-type: DISCLOSURE-closed }
+				div :local { list-style-type: LAO }
+				div :local { list-style-type: "\1F44D" }
 			`,
 
 			"/list_style.css": `
@@ -534,6 +567,7 @@ func TestImportCSSFromJSLocalAtCounterStyle(t *testing.T) {
 				div :local { list-style: circle }
 				div :local { list-style: disclosure-OPEN }
 				div :local { list-style: DISCLOSURE-closed }
+				div :local { list-style: LAO }
 			`,
 		},
 		entryPaths: []string{"/entry.js"},
@@ -1771,6 +1805,226 @@ url-format/003/relative-url/style.css: NOTE: The unbalanced "(" is here:
 	})
 }
 
+func TestCSSAtImportConditionsAtLayerBundle(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/case1.css": `
+				@import url(case1-foo.css) layer(first.one);
+				@import url(case1-foo.css) layer(last.one);
+				@import url(case1-foo.css) layer(first.one);
+			`,
+			"/case1-foo.css": `body { color: red }`,
+
+			"/case2.css": `
+				@import url(case2-foo.css);
+				@import url(case2-bar.css);
+				@import url(case2-foo.css);
+			`,
+			"/case2-foo.css": `@layer first.one { body { color: red } }`,
+			"/case2-bar.css": `@layer last.one { body { color: green } }`,
+
+			"/case3.css": `
+				@import url(case3-foo.css);
+				@import url(case3-bar.css);
+				@import url(case3-foo.css);
+			`,
+			"/case3-foo.css": `@layer { body { color: red } }`,
+			"/case3-bar.css": `@layer only.one { body { color: green } }`,
+
+			"/case4.css": `
+				@import url(case4-foo.css) layer(first);
+				@import url(case4-foo.css) layer(last);
+				@import url(case4-foo.css) layer(first);
+			`,
+			"/case4-foo.css": `@layer one { @layer two, three.four; body { color: red } }`,
+
+			"/case5.css": `
+				@import url(case5-foo.css) layer;
+				@import url(case5-foo.css) layer(middle);
+				@import url(case5-foo.css) layer;
+			`,
+			"/case5-foo.css": `@layer one { @layer two, three.four; body { color: red } }`,
+
+			"/case6.css": `
+				@import url(case6-foo.css) layer(first);
+				@import url(case6-foo.css) layer(last);
+				@import url(case6-foo.css) layer(first);
+			`,
+			"/case6-foo.css": `@layer { @layer two, three.four; body { color: red } }`,
+		},
+		entryPaths: []string{
+			"/case1.css",
+			"/case2.css",
+			"/case3.css",
+			"/case4.css",
+			"/case5.css",
+			"/case6.css",
+		},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+		},
+	})
+}
+
+func TestCSSAtImportConditionsAtLayerBundleAlternatingLayerInFile(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/a.css": `@layer first { body { color: red } }`,
+			"/b.css": `@layer last { body { color: green } }`,
+
+			"/case1.css": `
+				@import url(a.css);
+				@import url(a.css);
+			`,
+
+			"/case2.css": `
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+			`,
+
+			"/case3.css": `
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+				@import url(b.css);
+			`,
+
+			"/case4.css": `
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+			`,
+
+			"/case5.css": `
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+				@import url(b.css);
+			`,
+
+			// Note: There was a bug that only showed up in this case. We need at least this many cases.
+			"/case6.css": `
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+				@import url(b.css);
+				@import url(a.css);
+			`,
+		},
+		entryPaths: []string{
+			"/case1.css",
+			"/case2.css",
+			"/case3.css",
+			"/case4.css",
+			"/case5.css",
+			"/case6.css",
+		},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+		},
+	})
+}
+
+func TestCSSAtImportConditionsAtLayerBundleAlternatingLayerOnImport(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/a.css": `body { color: red }`,
+			"/b.css": `body { color: green }`,
+
+			"/case1.css": `
+				@import url(a.css) layer(first);
+				@import url(a.css) layer(first);
+			`,
+
+			"/case2.css": `
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+			`,
+
+			"/case3.css": `
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+			`,
+
+			"/case4.css": `
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+			`,
+
+			"/case5.css": `
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+			`,
+
+			// Note: There was a bug that only showed up in this case. We need at least this many cases.
+			"/case6.css": `
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+				@import url(b.css) layer(last);
+				@import url(a.css) layer(first);
+			`,
+		},
+		entryPaths: []string{
+			"/case1.css",
+			"/case2.css",
+			"/case3.css",
+			"/case4.css",
+			"/case5.css",
+			"/case6.css",
+		},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+		},
+	})
+}
+
+func TestCSSAtImportConditionsChainExternal(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.css": `
+				@import "a.css" layer(a) not print;
+			`,
+			"/a.css": `
+				@import "http://example.com/external1.css";
+				@import "b.css" layer(b) not tv;
+				@import "http://example.com/external2.css" layer(a2);
+			`,
+			"/b.css": `
+				@import "http://example.com/external3.css";
+				@import "http://example.com/external4.css" layer(b2);
+			`,
+		},
+		entryPaths: []string{"/entry.css"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputFile: "/out.css",
+		},
+	})
+}
+
 // This test mainly just makes sure that this scenario doesn't crash
 func TestCSSAndJavaScriptCodeSplittingIssue1064(t *testing.T) {
 	css_suite.expectBundled(t, bundled{
@@ -1832,9 +2086,9 @@ func TestCSSExternalQueryAndHashNoMatchIssue1822(t *testing.T) {
 			},
 		},
 		expectedScanLog: `entry.css: ERROR: Could not resolve "foo/bar.png?baz"
-NOTE: You can mark the path "foo/bar.png?baz" as external to exclude it from the bundle, which will remove this error.
+NOTE: You can mark the path "foo/bar.png?baz" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
 entry.css: ERROR: Could not resolve "foo/bar.png#baz"
-NOTE: You can mark the path "foo/bar.png#baz" as external to exclude it from the bundle, which will remove this error.
+NOTE: You can mark the path "foo/bar.png#baz" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
 `,
 	})
 }
@@ -2239,5 +2493,127 @@ url-token-whitespace-eof.css: WARNING: Expected ")" to end URL token
 url-token-whitespace-eof.css: NOTE: The unbalanced "(" is here:
 url-token-whitespace-eof.css: WARNING: Expected ";" but found end of file
 `,
+	})
+}
+
+func TestCSSAtLayerBeforeImportNoBundle(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.css": `
+				@layer layer1, layer2.layer3;
+				@import "a.css";
+				@import "b.css";
+				@layer layer6.layer7, layer8;
+			`,
+		},
+		entryPaths: []string{"/entry.css"},
+		options: config.Options{
+			Mode:         config.ModePassThrough,
+			AbsOutputDir: "/out",
+		},
+	})
+}
+
+func TestCSSAtLayerBeforeImportBundle(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.css": `
+				@layer layer1, layer2.layer3;
+				@import "a.css";
+				@import "b.css";
+				@layer layer6.layer7, layer8;
+			`,
+			"/a.css": `
+				@layer layer4 {
+					a { color: red }
+				}
+			`,
+			"/b.css": `
+				@layer layer5 {
+					b { color: red }
+				}
+			`,
+		},
+		entryPaths: []string{"/entry.css"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+		},
+	})
+}
+
+func TestCSSAtLayerMergingWithImportConditions(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.css": `
+				@import "a.css" supports(color: first);
+
+				@import "a.css" supports(color: second);
+				@import "b.css" supports(color: second);
+
+				@import "a.css" supports(color: first);
+				@import "b.css" supports(color: first);
+
+				@import "a.css" supports(color: second);
+				@import "b.css" supports(color: second);
+
+				@import "b.css" supports(color: first);
+			`,
+			"/a.css": `
+				@layer a;
+				@import "http://example.com/a.css";
+			`,
+			"/b.css": `
+				@layer b;
+				@import "http://example.com/b.css";
+			`,
+		},
+		entryPaths: []string{"/entry.css"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+		},
+	})
+}
+
+func TestCSSCaseInsensitivity(t *testing.T) {
+	css_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.css": `
+				/* "@IMPORT" should be recognized as an import */
+				/* "LAYER(...)" should wrap with "@layer" */
+				/* "SUPPORTS(...)" should wrap with "@supports" */
+				@IMPORT Url("nested.css") LAYER(layer-name) SUPPORTS(supports-condition) list-of-media-queries;
+			`,
+			"/nested.css": `
+				/* "from" should be recognized and optimized to "0%" */
+				@KeyFrames Foo {
+					froM { OPAcity: 0 }
+					tO { opaCITY: 1 }
+				}
+
+				body {
+					/* "#FF0000" should be optimized to "red" because "BACKGROUND-color" should be recognized */
+					BACKGROUND-color: #FF0000;
+
+					/* This should be optimized to 50px */
+					width: CaLc(20Px + 30pX);
+
+					/* This URL token should be recognized and bundled */
+					background-IMAGE: Url(image.png);
+				}
+			`,
+			"/image.png": `...`,
+		},
+		entryPaths: []string{"/entry.css"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputFile: "/out.css",
+			MinifySyntax:  true,
+			ExtensionToLoader: map[string]config.Loader{
+				".css": config.LoaderCSS,
+				".png": config.LoaderCopy,
+			},
+		},
 	})
 }

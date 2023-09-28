@@ -87,13 +87,360 @@ TestCSSAtImport
 }
 
 ================================================================================
+TestCSSAtImportConditionsAtLayerBundle
+---------- /out/case1.css ----------
+@layer first.one;
+
+/* case1-foo.css */
+@layer last.one {
+  body {
+    color: red;
+  }
+}
+
+/* case1-foo.css */
+@layer first.one {
+  body {
+    color: red;
+  }
+}
+
+/* case1.css */
+
+---------- /out/case2.css ----------
+@layer first.one;
+
+/* case2-bar.css */
+@layer last.one {
+  body {
+    color: green;
+  }
+}
+
+/* case2-foo.css */
+@layer first.one {
+  body {
+    color: red;
+  }
+}
+
+/* case2.css */
+
+---------- /out/case3.css ----------
+/* case3-bar.css */
+@layer only.one {
+  body {
+    color: green;
+  }
+}
+
+/* case3-foo.css */
+@layer {
+  body {
+    color: red;
+  }
+}
+
+/* case3.css */
+
+---------- /out/case4.css ----------
+@layer first {
+  @layer one, one.two, one.three.four;
+}
+
+/* case4-foo.css */
+@layer last {
+  @layer one {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case4-foo.css */
+@layer first {
+  @layer one {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case4.css */
+
+---------- /out/case5.css ----------
+/* case5-foo.css */
+@layer middle {
+  @layer one {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case5-foo.css */
+@layer {
+  @layer one {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case5.css */
+
+---------- /out/case6.css ----------
+@layer first;
+
+/* case6-foo.css */
+@layer last {
+  @layer {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case6-foo.css */
+@layer first {
+  @layer {
+    @layer two, three.four;
+    body {
+      color: red;
+    }
+  }
+}
+
+/* case6.css */
+
+================================================================================
+TestCSSAtImportConditionsAtLayerBundleAlternatingLayerInFile
+---------- /out/case1.css ----------
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case1.css */
+
+---------- /out/case2.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case2.css */
+
+---------- /out/case3.css ----------
+@layer first, last;
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* case3.css */
+
+---------- /out/case4.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case4.css */
+
+---------- /out/case5.css ----------
+@layer first, last;
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* case5.css */
+
+---------- /out/case6.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case6.css */
+
+================================================================================
+TestCSSAtImportConditionsAtLayerBundleAlternatingLayerOnImport
+---------- /out/case1.css ----------
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case1.css */
+
+---------- /out/case2.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case2.css */
+
+---------- /out/case3.css ----------
+@layer first;
+@layer last;
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* case3.css */
+
+---------- /out/case4.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case4.css */
+
+---------- /out/case5.css ----------
+@layer first;
+@layer last;
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* case5.css */
+
+---------- /out/case6.css ----------
+@layer first;
+
+/* b.css */
+@layer last {
+  body {
+    color: green;
+  }
+}
+
+/* a.css */
+@layer first {
+  body {
+    color: red;
+  }
+}
+
+/* case6.css */
+
+================================================================================
 TestCSSAtImportConditionsBundle
 ---------- /out.css ----------
 @import "http://example.com/foo.css";
 @import "http://example.com/foo.css" layer;
 @import "http://example.com/foo.css" layer(layer-name);
 @import "http://example.com/foo.css" layer(layer-name) supports(supports-condition);
-@import "http://example.com/foo.css" layer(layer-name) supports(supports-condition) list-of-media-queries;
 @import "http://example.com/foo.css" layer(layer-name) list-of-media-queries;
 @import "http://example.com/foo.css" supports(supports-condition);
 @import "http://example.com/foo.css" list-of-media-queries;
@@ -128,17 +475,6 @@ body {
 
 /* foo.css */
 @media list-of-media-queries {
-  @supports (supports-condition) {
-    @layer layer-name {
-      body {
-        color: red;
-      }
-    }
-  }
-}
-
-/* foo.css */
-@media list-of-media-queries {
   @layer layer-name {
     body {
       color: red;
@@ -150,15 +486,6 @@ body {
 @supports (supports-condition) {
   body {
     color: red;
-  }
-}
-
-/* foo.css */
-@media list-of-media-queries {
-  @supports (supports-condition) {
-    body {
-      color: red;
-    }
   }
 }
 
@@ -295,6 +622,30 @@ TestCSSAtImportConditionsBundleExternalConditionWithURL
 /* entry.css */
 
 ================================================================================
+TestCSSAtImportConditionsChainExternal
+---------- /out.css ----------
+@import "http://example.com/external1.css" layer(a) not print;
+@import 'data:text/css,@import "http://example.com/external3.css" layer(b) not tv;' layer(a) not print;
+@import "data:text/css,@import 'data:text/css,@import \"http://example.com/external4.css\" layer(b2);' layer(b) not tv;" layer(a) not print;
+@import 'data:text/css,@import "http://example.com/external2.css" layer(a2);' layer(a) not print;
+
+/* b.css */
+@media not print {
+  @layer a {
+    @media not tv {
+      @layer b;
+    }
+  }
+}
+
+/* a.css */
+@media not print {
+  @layer a;
+}
+
+/* entry.css */
+
+================================================================================
 TestCSSAtImportConditionsFromExternalRepo
 ---------- /out/001/default/style.css ----------
 /* 001/default/a.css */
@@ -359,12 +710,7 @@ TestCSSAtImportConditionsFromExternalRepo
 /* at-keyframes/001/style.css */
 
 ---------- /out/at-layer/001/style.css ----------
-/* at-layer/001/a.css */
-@layer a {
-  .box {
-    background-color: red;
-  }
-}
+@layer a;
 
 /* at-layer/001/b.css */
 @layer b {
@@ -383,13 +729,8 @@ TestCSSAtImportConditionsFromExternalRepo
 /* at-layer/001/style.css */
 
 ---------- /out/at-layer/002/style.css ----------
-/* at-layer/002/a.css */
 @media print {
-  @layer a {
-    .box {
-      background-color: green;
-    }
-  }
+  @layer a;
 }
 
 /* at-layer/002/b.css */
@@ -409,6 +750,8 @@ TestCSSAtImportConditionsFromExternalRepo
 /* at-layer/002/style.css */
 
 ---------- /out/at-layer/003/style.css ----------
+@layer a;
+
 /* at-layer/003/b.css */
 @layer b {
   .box {
@@ -1235,6 +1578,91 @@ TestCSSAtImportExternal
 /* charset2.css */
 .after {
   color: blue;
+}
+
+/* entry.css */
+
+================================================================================
+TestCSSAtLayerBeforeImportBundle
+---------- /out/entry.css ----------
+@layer layer1, layer2.layer3;
+
+/* a.css */
+@layer layer4 {
+  a {
+    color: red;
+  }
+}
+
+/* b.css */
+@layer layer5 {
+  b {
+    color: red;
+  }
+}
+
+/* entry.css */
+@layer layer6.layer7, layer8;
+
+================================================================================
+TestCSSAtLayerBeforeImportNoBundle
+---------- /out/entry.css ----------
+@layer layer1, layer2.layer3;
+@import "a.css";
+@import "b.css";
+@layer layer6.layer7, layer8;
+
+================================================================================
+TestCSSAtLayerMergingWithImportConditions
+---------- /out/entry.css ----------
+@supports (color: first) {
+  @layer a;
+}
+@import "http://example.com/a.css" supports(color: first);
+@import "http://example.com/a.css" supports(color: second);
+@import "http://example.com/b.css" supports(color: second);
+@import "http://example.com/b.css" supports(color: first);
+@supports (color: second) {
+  @layer a, b;
+}
+
+/* a.css */
+@supports (color: first) {
+  @layer b;
+}
+
+/* a.css */
+
+/* b.css */
+
+/* b.css */
+
+/* entry.css */
+
+================================================================================
+TestCSSCaseInsensitivity
+---------- /image-AKINYSFH.png ----------
+...
+---------- /out.css ----------
+/* nested.css */
+@media list-of-media-queries {
+  @supports (supports-condition) {
+    @layer layer-name {
+      @KeyFrames Foo {
+        0% {
+          OPAcity: 0;
+        }
+        tO {
+          opaCITY: 1;
+        }
+      }
+      body {
+        BACKGROUND-color: red;
+        width: 50Px;
+        background-IMAGE: url(./image-AKINYSFH.png);
+      }
+    }
+  }
 }
 
 /* entry.css */
@@ -2082,14 +2510,7 @@ TestImportCSSFromJSLocalAtCounterStyle
 ---------- /out/entry.js ----------
 // list_style_type.css
 var list_style_type_default = {
-  local: "list_style_type_local",
-  INITIAL: "list_style_type_INITIAL",
-  decimal: "list_style_type_decimal",
-  disc: "list_style_type_disc",
-  SQUARE: "list_style_type_SQUARE",
-  circle: "list_style_type_circle",
-  "disclosure-OPEN": "list_style_type_disclosure-OPEN",
-  "DISCLOSURE-closed": "list_style_type_DISCLOSURE-closed"
+  local: "list_style_type_local"
 };
 
 // list_style.css
@@ -2114,25 +2535,34 @@ div {
   list-style-type: list_style_type_local;
 }
 div {
-  list-style-type: list_style_type_INITIAL;
+  list-style-type: none;
 }
 div {
-  list-style-type: list_style_type_decimal;
+  list-style-type: INITIAL;
 }
 div {
-  list-style-type: list_style_type_disc;
+  list-style-type: decimal;
 }
 div {
-  list-style-type: list_style_type_SQUARE;
+  list-style-type: disc;
 }
 div {
-  list-style-type: list_style_type_circle;
+  list-style-type: SQUARE;
 }
 div {
-  list-style-type: list_style_type_disclosure-OPEN;
+  list-style-type: circle;
 }
 div {
-  list-style-type: list_style_type_DISCLOSURE-closed;
+  list-style-type: disclosure-OPEN;
+}
+div {
+  list-style-type: DISCLOSURE-closed;
+}
+div {
+  list-style-type: LAO;
+}
+div {
+  list-style-type: "👍";
 }
 
 /* list_style.css */
@@ -2213,6 +2643,9 @@ div {
 }
 div {
   list-style: DISCLOSURE-closed;
+}
+div {
+  list-style: LAO;
 }
 
 ================================================================================
@@ -2843,6 +3276,42 @@ TestImportLocalCSSFromJSMinifyIdentifiersAvoidGlobalNames
 /* local.module.css */
 .oo {
   color: blue;
+}
+
+================================================================================
+TestImportLocalCSSFromJSMinifyIdentifiersMultipleEntryPoints
+---------- /out/a.js ----------
+// a.module.css
+var r = "o";
+var l = "c";
+
+// a.js
+console.log(r, l);
+
+---------- /out/a.css ----------
+/* a.module.css */
+.o {
+  color: #001;
+}
+.c {
+  color: #002;
+}
+
+---------- /out/b.js ----------
+// b.module.css
+var r = "l";
+var l = "r";
+
+// b.js
+console.log(r, l);
+
+---------- /out/b.css ----------
+/* b.module.css */
+.l {
+  color: #003;
+}
+.r {
+  color: #004;
 }
 
 ================================================================================

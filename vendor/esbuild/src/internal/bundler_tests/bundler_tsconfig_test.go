@@ -486,7 +486,7 @@ func TestTsconfigPathsMissingBaseURL(t *testing.T) {
 			AbsOutputFile: "/Users/user/project/out.js",
 		},
 		expectedScanLog: `Users/user/project/src/entry.ts: ERROR: Could not resolve "#/test"
-NOTE: You can mark the path "#/test" as external to exclude it from the bundle, which will remove this error.
+NOTE: You can mark the path "#/test" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
 `,
 	})
 }
@@ -1663,7 +1663,7 @@ func TestTsconfigNoBaseURLExtendsPaths(t *testing.T) {
 		},
 		expectedScanLog: `Users/user/project/base/defaults.json: WARNING: Non-relative path "lib/*" is not allowed when "baseUrl" is not set (did you forget a leading "./"?)
 Users/user/project/src/entry.ts: ERROR: Could not resolve "foo"
-NOTE: You can mark the path "foo" as external to exclude it from the bundle, which will remove this error.
+NOTE: You can mark the path "foo" as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.
 `,
 	})
 }
@@ -2485,6 +2485,56 @@ func TestTsconfigJsonPackagesExternal(t *testing.T) {
 			Mode:             config.ModeBundle,
 			AbsOutputFile:    "/Users/user/project/out.js",
 			ExternalPackages: true,
+		},
+	})
+}
+
+func TestTsconfigJsonTopLevelMistakeWarning(t *testing.T) {
+	tsconfig_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/Users/user/project/src/entry.ts": `
+				@foo
+				class Foo {}
+			`,
+			"/Users/user/project/src/tsconfig.json": `
+				{
+					"experimentalDecorators": true
+				}
+			`,
+		},
+		entryPaths: []string{"/Users/user/project/src/entry.ts"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputFile: "/Users/user/project/out.js",
+		},
+		expectedScanLog: `Users/user/project/src/tsconfig.json: WARNING: Expected the "experimentalDecorators" option to be nested inside a "compilerOptions" object
+`,
+	})
+}
+
+// https://github.com/evanw/esbuild/issues/3307
+func TestTsconfigJsonBaseUrlIssue3307(t *testing.T) {
+	tsconfig_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/Users/user/project/src/tsconfig.json": `
+				{
+					"compilerOptions": {
+						"baseUrl": "./subdir"
+					}
+				}
+			`,
+			"/Users/user/project/src/test.ts": `
+				export const foo = "well, this is correct...";
+			`,
+			"/Users/user/project/src/subdir/test.ts": `
+				export const foo = "WRONG";
+			`,
+		},
+		entryPaths:    []string{"test.ts"},
+		absWorkingDir: "/Users/user/project/src",
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputFile: "/Users/user/project/out.js",
 		},
 	})
 }

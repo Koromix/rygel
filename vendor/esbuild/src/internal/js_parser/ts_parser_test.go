@@ -44,8 +44,8 @@ func expectParseErrorTargetTS(t *testing.T, esVersion int, contents string, expe
 		TS: config.TSOptions{
 			Parse: true,
 		},
-		UnsupportedJSFeatures: compat.UnsupportedJSFeatures(map[compat.Engine][]int{
-			compat.ES: {esVersion},
+		UnsupportedJSFeatures: compat.UnsupportedJSFeatures(map[compat.Engine]compat.Semver{
+			compat.ES: {Parts: []int{esVersion}},
 		}),
 	})
 }
@@ -80,8 +80,8 @@ func expectPrintedAssignSemanticsTargetTS(t *testing.T, esVersion int, contents 
 				UseDefineForClassFields: config.False,
 			},
 		},
-		UnsupportedJSFeatures: compat.UnsupportedJSFeatures(map[compat.Engine][]int{
-			compat.ES: {esVersion},
+		UnsupportedJSFeatures: compat.UnsupportedJSFeatures(map[compat.Engine]compat.Semver{
+			compat.ES: {Parts: []int{esVersion}},
 		}),
 	})
 }
@@ -127,8 +127,8 @@ func expectPrintedTargetTS(t *testing.T, esVersion int, contents string, expecte
 		TS: config.TSOptions{
 			Parse: true,
 		},
-		UnsupportedJSFeatures: compat.UnsupportedJSFeatures(map[compat.Engine][]int{
-			compat.ES: {esVersion},
+		UnsupportedJSFeatures: compat.UnsupportedJSFeatures(map[compat.Engine]compat.Semver{
+			compat.ES: {Parts: []int{esVersion}},
 		}),
 	})
 }
@@ -142,8 +142,8 @@ func expectPrintedTargetExperimentalDecoratorTS(t *testing.T, esVersion int, con
 				ExperimentalDecorators: config.True,
 			},
 		},
-		UnsupportedJSFeatures: compat.UnsupportedJSFeatures(map[compat.Engine][]int{
-			compat.ES: {esVersion},
+		UnsupportedJSFeatures: compat.UnsupportedJSFeatures(map[compat.Engine]compat.Semver{
+			compat.ES: {Parts: []int{esVersion}},
 		}),
 	})
 }
@@ -1495,7 +1495,7 @@ func TestTSEnum(t *testing.T) {
   Foo[Foo["D"] = void 0] = "D";
   Foo[Foo["E"] = void 0] = "E";
   Foo["F"] = `+"`y`"+`;
-  Foo[Foo["G"] = `+"`${z}`"+`] = "G";
+  Foo["G"] = `+"`${z}`"+`;
   Foo[Foo["H"] = tag`+"``"+`] = "H";
   return Foo;
 })(Foo || {});
@@ -2036,6 +2036,16 @@ func TestTSDecorators(t *testing.T) {
 	expectParseErrorTS(t, "@x?.[y]() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
 	expectParseErrorTS(t, "@new Function() class Foo {}", "<stdin>: ERROR: Expected identifier but found \"new\"\n")
 	expectParseErrorTS(t, "@() => {} class Foo {}", "<stdin>: ERROR: Unexpected \")\"\n")
+
+	expectPrintedTS(t, "class Foo { @x<{}> y: any }", "class Foo {\n  @x\n  y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}>() y: any }", "class Foo {\n  @x()\n  y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}> @y<[], () => {}> z: any }", "class Foo {\n  @x\n  @y\n  z;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}>() @y<[], () => {}>() z: any }", "class Foo {\n  @x()\n  @y()\n  z;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}>.y<[], () => {}> z: any }", "class Foo {\n  @x.y\n  z;\n}\n")
+
+	// TypeScript 5.0+ allows this but Babel doesn't. I believe this is a bug
+	// with TypeScript: https://github.com/microsoft/TypeScript/issues/55336
+	expectParseErrorTS(t, "class Foo { @x<{}>().y<[], () => {}>() z: any }", "<stdin>: ERROR: Expected identifier but found \".\"\n")
 
 	errorText := "<stdin>: ERROR: Transforming JavaScript decorators to the configured target environment is not supported yet\n"
 	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "@dec class Foo {}", errorText)

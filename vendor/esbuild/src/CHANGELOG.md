@@ -1,5 +1,381 @@
 # Changelog
 
+## 0.19.4
+
+* Fix printing of JavaScript decorators in tricky cases ([#3396](https://github.com/evanw/esbuild/issues/3396))
+
+    This release fixes some bugs where esbuild's pretty-printing of JavaScript decorators could incorrectly produced code with a syntax error. The problem happened because esbuild sometimes substitutes identifiers for other expressions in the pretty-printer itself, but the decision about whether to wrap the expression or not didn't account for this. Here are some examples:
+
+    ```js
+    // Original code
+    import { constant } from './constants.js'
+    import { imported } from 'external'
+    import { undef } from './empty.js'
+    class Foo {
+      @constant()
+      @imported()
+      @undef()
+      foo
+    }
+
+    // Old output (with --bundle --format=cjs --packages=external --minify-syntax)
+    var import_external = require("external");
+    var Foo = class {
+      @123()
+      @(0, import_external.imported)()
+      @(void 0)()
+      foo;
+    };
+
+    // New output (with --bundle --format=cjs --packages=external --minify-syntax)
+    var import_external = require("external");
+    var Foo = class {
+      @(123())
+      @((0, import_external.imported)())
+      @((void 0)())
+      foo;
+    };
+    ```
+
+* Allow pre-release versions to be passed to `target` ([#3388](https://github.com/evanw/esbuild/issues/3388))
+
+    People want to be able to pass version numbers for unreleased versions of node (which have extra stuff after the version numbers) to esbuild's `target` setting and have esbuild do something reasonable with them. These version strings are of course not present in esbuild's internal feature compatibility table because an unreleased version has not been released yet (by definition). With this release, esbuild will now attempt to accept these version strings passed to `target` and do something reasonable with them.
+
+## 0.19.3
+
+* Fix `list-style-type` with the `local-css` loader ([#3325](https://github.com/evanw/esbuild/issues/3325))
+
+    The `local-css` loader incorrectly treated all identifiers provided to `list-style-type` as a custom local identifier. That included identifiers such as `none` which have special meaning in CSS, and which should not be treated as custom local identifiers. This release fixes this bug:
+
+    ```css
+    /* Original code */
+    ul { list-style-type: none }
+
+    /* Old output (with --loader=local-css) */
+    ul {
+      list-style-type: stdin_none;
+    }
+
+    /* New output (with --loader=local-css) */
+    ul {
+      list-style-type: none;
+    }
+    ```
+
+    Note that this bug only affected code using the `local-css` loader. It did not affect code using the `css` loader.
+
+* Avoid inserting temporary variables before `use strict` ([#3322](https://github.com/evanw/esbuild/issues/3322))
+
+    This release fixes a bug where esbuild could incorrectly insert automatically-generated temporary variables before `use strict` directives:
+
+    ```js
+    // Original code
+    function foo() {
+      'use strict'
+      a.b?.c()
+    }
+
+    // Old output (with --target=es6)
+    function foo() {
+      var _a;
+      "use strict";
+      (_a = a.b) == null ? void 0 : _a.c();
+    }
+
+    // New output (with --target=es6)
+    function foo() {
+      "use strict";
+      var _a;
+      (_a = a.b) == null ? void 0 : _a.c();
+    }
+    ```
+
+* Adjust TypeScript `enum` output to better approximate `tsc` ([#3329](https://github.com/evanw/esbuild/issues/3329))
+
+    TypeScript enum values can be either number literals or string literals. Numbers create a bidirectional mapping between the name and the value but strings only create a unidirectional mapping from the name to the value. When the enum value is neither a number literal nor a string literal, TypeScript and esbuild both default to treating it as a number:
+
+    ```ts
+    // Original TypeScript code
+    declare const foo: any
+    enum Foo {
+      NUMBER = 1,
+      STRING = 'a',
+      OTHER = foo,
+    }
+
+    // Compiled JavaScript code (from "tsc")
+    var Foo;
+    (function (Foo) {
+      Foo[Foo["NUMBER"] = 1] = "NUMBER";
+      Foo["STRING"] = "a";
+      Foo[Foo["OTHER"] = foo] = "OTHER";
+    })(Foo || (Foo = {}));
+    ```
+
+    However, TypeScript does constant folding slightly differently than esbuild. For example, it may consider template literals to be string literals in some cases:
+
+    ```ts
+    // Original TypeScript code
+    declare const foo = 'foo'
+    enum Foo {
+      PRESENT = `${foo}`,
+      MISSING = `${bar}`,
+    }
+
+    // Compiled JavaScript code (from "tsc")
+    var Foo;
+    (function (Foo) {
+      Foo["PRESENT"] = "foo";
+      Foo[Foo["MISSING"] = `${bar}`] = "MISSING";
+    })(Foo || (Foo = {}));
+    ```
+
+    The template literal initializer for `PRESENT` is treated as a string while the template literal initializer for `MISSING` is treated as a number. Previously esbuild treated both of these cases as a number but starting with this release, esbuild will now treat both of these cases as a string. This doesn't exactly match the behavior of `tsc` but in the case where the behavior diverges `tsc` reports a compile error, so this seems like acceptible behavior for esbuild. Note that handling these cases completely correctly would require esbuild to parse type declarations (see the `declare` keyword), which esbuild deliberately doesn't do.
+
+* Ignore case in CSS in more places ([#3316](https://github.com/evanw/esbuild/issues/3316))
+
+    This release makes esbuild's CSS support more case-agnostic, which better matches how browsers work. For example:
+
+    ```css
+    /* Original code */
+    @KeyFrames Foo { From { OpaCity: 0 } To { OpaCity: 1 } }
+    body { CoLoR: YeLLoW }
+
+    /* Old output (with --minify) */
+    @KeyFrames Foo{From {OpaCity: 0} To {OpaCity: 1}}body{CoLoR:YeLLoW}
+
+    /* New output (with --minify) */
+    @KeyFrames Foo{0%{OpaCity:0}To{OpaCity:1}}body{CoLoR:#ff0}
+    ```
+
+    Please never actually write code like this.
+
+* Improve the error message for `null` entries in `exports` ([#3377](https://github.com/evanw/esbuild/issues/3377))
+
+    Package authors can disable package export paths with the `exports` map in `package.json`. With this release, esbuild now has a clearer error message that points to the `null` token in `package.json` itself instead of to the surrounding context. Here is an example of the new error message:
+
+    ```
+    ✘ [ERROR] Could not resolve "msw/browser"
+
+        lib/msw-config.ts:2:28:
+          2 │ import { setupWorker } from 'msw/browser';
+            ╵                             ~~~~~~~~~~~~~
+
+      The path "./browser" cannot be imported from package "msw" because it was explicitly disabled by
+      the package author here:
+
+        node_modules/msw/package.json:17:14:
+          17 │       "node": null,
+             ╵               ~~~~
+
+      You can mark the path "msw/browser" as external to exclude it from the bundle, which will remove
+      this error and leave the unresolved path in the bundle.
+    ```
+
+* Parse and print the `with` keyword in `import` statements
+
+    JavaScript was going to have a feature called "import assertions" that adds an `assert` keyword to `import` statements. It looked like this:
+
+    ```js
+    import stuff from './stuff.json' assert { type: 'json' }
+    ```
+
+    The feature provided a way to assert that the imported file is of a certain type (but was not allowed to affect how the import is interpreted, even though that's how everyone expected it to behave). The feature was fully specified and then actually implemented and shipped in Chrome before the people behind the feature realized that they should allow it to affect how the import is interpreted after all. So import assertions are no longer going to be added to the language.
+
+    Instead, the [current proposal](https://github.com/tc39/proposal-import-attributes) is to add a feature called "import attributes" instead that adds a `with` keyword to import statements. It looks like this:
+
+    ```js
+    import stuff from './stuff.json' with { type: 'json' }
+    ```
+
+    This feature provides a way to affect how the import is interpreted. With this release, esbuild now has preliminary support for parsing and printing this new `with` keyword. The `with` keyword is not yet interpreted by esbuild, however, so bundling code with it will generate a build error. All this release does is allow you to use esbuild to process code containing it (such as removing types from TypeScript code). Note that this syntax is not yet a part of JavaScript and may be removed or altered in the future if the specification changes (which it already has once, as described above). If that happens, esbuild reserves the right to remove or alter its support for this syntax too.
+
+## 0.19.2
+
+* Update how CSS nesting is parsed again
+
+    CSS nesting syntax has been changed again, and esbuild has been updated to match. Type selectors may now be used with CSS nesting:
+
+    ```css
+    .foo {
+      div {
+        color: red;
+      }
+    }
+    ```
+
+    Previously this was disallowed in the CSS specification because it's ambiguous whether an identifier is a declaration or a nested rule starting with a type selector without requiring unbounded lookahead in the parser. It has now been allowed because the CSS working group has decided that requiring unbounded lookahead is acceptable after all.
+
+    Note that this change means esbuild no longer considers any existing browser to support CSS nesting since none of the existing browsers support this new syntax. CSS nesting will now always be transformed when targeting a browser. This situation will change in the future as browsers add support for this new syntax.
+
+* Fix a scope-related bug with `--drop-labels=` ([#3311](https://github.com/evanw/esbuild/issues/3311))
+
+    The recently-released `--drop-labels=` feature previously had a bug where esbuild's internal scope stack wasn't being restored properly when a statement with a label was dropped. This could manifest as a tree-shaking issue, although it's possible that this could have also been causing other subtle problems too. The bug has been fixed in this release.
+
+* Make renamed CSS names unique across entry points ([#3295](https://github.com/evanw/esbuild/issues/3295))
+
+    Previously esbuild's generated names for local names in CSS were only unique within a given entry point (or across all entry points when code splitting was enabled). That meant that building multiple entry points with esbuild could result in local names being renamed to the same identifier even when those entry points were built simultaneously within a single esbuild API call. This problem was especially likely to happen with minification enabled. With this release, esbuild will now avoid renaming local names from two separate entry points to the same name if those entry points were built with a single esbuild API call, even when code splitting is disabled.
+
+* Fix CSS ordering bug with `@layer` before `@import`
+
+    CSS lets you put `@layer` rules before `@import` rules to define the order of layers in a stylesheet. Previously esbuild's CSS bundler incorrectly ordered these after the imported files because before the introduction of cascade layers to CSS, imported files could be bundled by removing the `@import` rules and then joining files together in the right order. But with `@layer`, CSS files may now need to be split apart into multiple pieces in the bundle. For example:
+
+    ```
+    /* Original code */
+    @layer start;
+    @import "data:text/css,@layer inner.start;";
+    @import "data:text/css,@layer inner.end;";
+    @layer end;
+
+    /* Old output (with --bundle) */
+    @layer inner.start;
+    @layer inner.end;
+    @layer start;
+    @layer end;
+
+    /* New output (with --bundle) */
+    @layer start;
+    @layer inner.start;
+    @layer inner.end;
+    @layer end;
+    ```
+
+* Unwrap nested duplicate `@media` rules ([#3226](https://github.com/evanw/esbuild/issues/3226))
+
+    With this release, esbuild's CSS minifier will now automatically unwrap duplicate nested `@media` rules:
+
+    ```css
+    /* Original code */
+    @media (min-width: 1024px) {
+      .foo { color: red }
+      @media (min-width: 1024px) {
+        .bar { color: blue }
+      }
+    }
+
+    /* Old output (with --minify) */
+    @media (min-width: 1024px){.foo{color:red}@media (min-width: 1024px){.bar{color:#00f}}}
+
+    /* New output (with --minify) */
+    @media (min-width: 1024px){.foo{color:red}.bar{color:#00f}}
+    ```
+
+    These rules are unlikely to be authored manually but may result from using frameworks such as Tailwind to generate CSS.
+
+## 0.19.1
+
+* Fix a regression with `baseURL` in `tsconfig.json` ([#3307](https://github.com/evanw/esbuild/issues/3307))
+
+    The previous release moved `tsconfig.json` path resolution before `--packages=external` checks to allow the [`paths` field](https://www.typescriptlang.org/tsconfig#paths) in `tsconfig.json` to avoid a package being marked as external. However, that reordering accidentally broke the behavior of the `baseURL` field from `tsconfig.json`. This release moves these path resolution rules around again in an attempt to allow both of these cases to work.
+
+* Parse TypeScript type arguments for JavaScript decorators ([#3308](https://github.com/evanw/esbuild/issues/3308))
+
+    When parsing JavaScript decorators in TypeScript (i.e. with `experimentalDecorators` disabled), esbuild previously didn't parse type arguments. Type arguments will now be parsed starting with this release. For example:
+
+    ```ts
+    @foo<number>
+    @bar<number, string>()
+    class Foo {}
+    ```
+
+* Fix glob patterns matching extra stuff at the end ([#3306](https://github.com/evanw/esbuild/issues/3306))
+
+    Previously glob patterns such as `./*.js` would incorrectly behave like `./*.js*` during path matching (also matching `.js.map` files, for example). This was never intentional behavior, and has now been fixed.
+
+* Change the permissions of esbuild's generated output files ([#3285](https://github.com/evanw/esbuild/issues/3285))
+
+    This release changes the permissions of the output files that esbuild generates to align with the default behavior of node's [`fs.writeFileSync`](https://nodejs.org/api/fs.html#fswritefilesyncfile-data-options) function. Since most tools written in JavaScript use `fs.writeFileSync`, this should make esbuild more consistent with how other JavaScript build tools behave.
+
+    The full Unix-y details: Unix permissions use three-digit octal notation where the three digits mean "user, group, other" in that order. Within a digit, 4 means "read" and 2 means "write" and 1 means "execute". So 6 == 4 + 2 == read + write. Previously esbuild uses 0644 permissions (the leading 0 means octal notation) but the permissions for `fs.writeFileSync` defaults to 0666, so esbuild will now use 0666 permissions. This does not necessarily mean that the files esbuild generates will end up having 0666 permissions, however, as there is another Unix feature called "umask" where the operating system masks out some of these bits. If your umask is set to 0022 then the generated files will have 0644 permissions, and if your umask is set to 0002 then the generated files will have 0664 permissions.
+
+* Fix a subtle CSS ordering issue with `@import` and `@layer`
+
+    With this release, esbuild may now introduce additional `@layer` rules when bundling CSS to better preserve the layer ordering of the input code. Here's an example of an edge case where this matters:
+
+    ```css
+    /* entry.css */
+    @import "a.css";
+    @import "b.css";
+    @import "a.css";
+    ```
+
+    ```css
+    /* a.css */
+    @layer a {
+      body {
+        background: red;
+      }
+    }
+    ```
+
+    ```css
+    /* b.css */
+    @layer b {
+      body {
+        background: green;
+      }
+    }
+    ```
+
+    This CSS should set the body background to `green`, which is what happens in the browser. Previously esbuild generated the following output which incorrectly sets the body background to `red`:
+
+    ```css
+    /* b.css */
+    @layer b {
+      body {
+        background: green;
+      }
+    }
+
+    /* a.css */
+    @layer a {
+      body {
+        background: red;
+      }
+    }
+    ```
+
+    This difference in behavior is because the browser evaluates `a.css` + `b.css` + `a.css` (in CSS, each `@import` is replaced with a copy of the imported file) while esbuild was only writing out `b.css` + `a.css`. The first copy of `a.css` wasn't being written out by esbuild for two reasons: 1) bundlers care about code size and try to avoid emitting duplicate CSS and 2) when there are multiple copies of a CSS file, normally only the _last_ copy matters since the last declaration with equal specificity wins in CSS.
+
+    However, `@layer` was recently added to CSS and for `@layer` the _first_ copy matters because layers are ordered using their first location in source code order. This introduction of `@layer` means esbuild needs to change its bundling algorithm. An easy solution would be for esbuild to write out `a.css` twice, but that would be inefficient. So what I'm going to try to have esbuild do with this release is to write out an abbreviated form of the first copy of a CSS file that only includes the `@layer` information, and then still only write out the full CSS file once for the last copy. So esbuild's output for this edge case now looks like this:
+
+    ```css
+    /* a.css */
+    @layer a;
+
+    /* b.css */
+    @layer b {
+      body {
+        background: green;
+      }
+    }
+
+    /* a.css */
+    @layer a {
+      body {
+        background: red;
+      }
+    }
+    ```
+
+    The behavior of the bundled CSS now matches the behavior of the unbundled CSS. You may be wondering why esbuild doesn't just write out `a.css` first followed by `b.css`. That would work in this case but it doesn't work in general because for any rules outside of a `@layer` rule, the last copy should still win instead of the first copy.
+
+* Fix a bug with esbuild's TypeScript type definitions ([#3299](https://github.com/evanw/esbuild/pull/3299))
+
+    This release fixes a copy/paste error with the TypeScript type definitions for esbuild's JS API:
+
+    ```diff
+     export interface TsconfigRaw {
+       compilerOptions?: {
+    -    baseUrl?: boolean
+    +    baseUrl?: string
+         ...
+       }
+     }
+    ```
+
+    This fix was contributed by [@privatenumber](https://github.com/privatenumber).
+
 ## 0.19.0
 
 **This release deliberately contains backwards-incompatible changes.** To avoid automatically picking up releases like this, you should either be pinning the exact version of `esbuild` in your `package.json` file (recommended) or be using a version range syntax that only accepts patch upgrades such as `^0.18.0` or `~0.18.0`. See npm's documentation about [semver](https://docs.npmjs.com/cli/v6/using-npm/semver/) for more information.

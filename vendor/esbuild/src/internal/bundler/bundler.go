@@ -299,11 +299,7 @@ func parseFile(args parseArgs) {
 
 	case config.LoaderDataURL:
 		mimeType := guessMimeType(ext, source.Contents)
-		encoded := base64.StdEncoding.EncodeToString([]byte(source.Contents))
-		url := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
-		if percentURL, ok := helpers.EncodeStringAsPercentEscapedDataURL(mimeType, source.Contents); ok && len(percentURL) < len(url) {
-			url = percentURL
-		}
+		url := helpers.EncodeStringAsShortestDataURL(mimeType, source.Contents)
 		expr := js_ast.Expr{Data: &js_ast.EString{Value: helpers.StringToUTF16(url)}}
 		ast := js_parser.LazyExportAST(args.log, source, js_parser.OptionsFromConfig(&args.options), expr, "")
 		ast.URLForCSS = url
@@ -381,6 +377,13 @@ func parseFile(args parseArgs) {
 					// Don't try to resolve imports that are already resolved
 					record := &records[importRecordIndex]
 					if record.SourceIndex.IsValid() {
+						continue
+					}
+
+					// TODO: Implement bundling with import attributes
+					if record.AssertOrWith != nil && record.AssertOrWith.Keyword == ast.WithKeyword {
+						args.log.AddError(&tracker, js_lexer.RangeOfIdentifier(result.file.inputFile.Source, record.AssertOrWith.KeywordLoc),
+							"Bundling with import attributes is not currently supported")
 						continue
 					}
 
@@ -637,7 +640,7 @@ func ResolveFailureErrorTextSuggestionNotes(
 	hint := ""
 
 	if resolver.IsPackagePath(path) && !fs.IsAbs(path) {
-		hint = fmt.Sprintf("You can mark the path %q as external to exclude it from the bundle, which will remove this error.", path)
+		hint = fmt.Sprintf("You can mark the path %q as external to exclude it from the bundle, which will remove this error and leave the unresolved path in the bundle.", path)
 		if kind == ast.ImportRequire {
 			hint += " You can also surround this \"require\" call with a try/catch block to handle this failure at run-time instead of bundle-time."
 		} else if kind == ast.ImportDynamic {
@@ -1966,7 +1969,7 @@ func (s *scanner) scanAllDependencies() {
 						sourceIndex := s.allocateGlobSourceIndex(result.file.inputFile.Source.Index, uint32(importRecordIndex))
 						record.SourceIndex = ast.MakeIndex32(sourceIndex)
 						s.results[sourceIndex] = s.generateResultForGlobResolve(sourceIndex, globResults.absPath,
-							&result.file.inputFile.Source, record.Range, record.GlobPattern.Kind, globResults, record.Assertions)
+							&result.file.inputFile.Source, record.Range, record.GlobPattern.Kind, globResults, record.AssertOrWith)
 					}
 					continue
 				}
@@ -2014,7 +2017,7 @@ func (s *scanner) generateResultForGlobResolve(
 	importRange logger.Range,
 	kind ast.ImportKind,
 	result globResolveResult,
-	assertions *ast.ImportAssertions,
+	assertions *ast.ImportAssertOrWith,
 ) parseResult {
 	keys := make([]string, 0, len(result.resolveResults))
 	for key := range result.resolveResults {
@@ -2061,10 +2064,10 @@ func (s *scanner) generateResultForGlobResolve(
 
 		resolveResults = append(resolveResults, &resolveResult)
 		importRecords = append(importRecords, ast.ImportRecord{
-			Path:        path,
-			SourceIndex: sourceIndex,
-			Assertions:  assertions,
-			Kind:        kind,
+			Path:         path,
+			SourceIndex:  sourceIndex,
+			AssertOrWith: assertions,
+			Kind:         kind,
 		})
 
 		switch kind {
@@ -2207,7 +2210,7 @@ func (s *scanner) processScannedFiles(entryPointMeta []graph.EntryPoint) []scann
 					s.log.AddErrorWithNotes(&tracker, record.Range,
 						fmt.Sprintf("The file %q was loaded with the %q loader", otherFile.inputFile.Source.PrettyPath, config.LoaderToString[otherFile.inputFile.Loader]),
 						[]logger.MsgData{
-							tracker.MsgData(js_lexer.RangeOfImportAssertion(result.file.inputFile.Source, *ast.FindAssertion(record.Assertions.Entries, "type")),
+							tracker.MsgData(js_lexer.RangeOfImportAssertOrWith(result.file.inputFile.Source, *ast.FindAssertOrWithEntry(record.AssertOrWith.Entries, "type")),
 								"This import assertion requires the loader to be \"json\" instead:"),
 							{Text: "You need to either reconfigure esbuild to ensure that the loader for this file is \"json\" or you need to remove this import assertion."}})
 				}
@@ -2657,8 +2660,12 @@ func (b *Bundle) Compile(log logger.Log, timer *helpers.Timer, mangleCache map[s
 	options := b.options
 
 	// In most cases we don't need synchronized access to the mangle cache
-	options.ExclusiveMangleCacheUpdate = func(cb func(mangleCache map[string]interface{})) {
-		cb(mangleCache)
+	cssUsedLocalNames := make(map[string]bool)
+	options.ExclusiveMangleCacheUpdate = func(cb func(
+		mangleCache map[string]interface{},
+		cssUsedLocalNames map[string]bool,
+	)) {
+		cb(mangleCache, cssUsedLocalNames)
 	}
 
 	files := make([]graph.InputFile, len(b.files))
@@ -2692,11 +2699,14 @@ func (b *Bundle) Compile(log logger.Log, timer *helpers.Timer, mangleCache map[s
 
 				// Each goroutine needs a separate options object
 				optionsClone := options
-				optionsClone.ExclusiveMangleCacheUpdate = func(cb func(mangleCache map[string]interface{})) {
+				optionsClone.ExclusiveMangleCacheUpdate = func(cb func(
+					mangleCache map[string]interface{},
+					cssUsedLocalNames map[string]bool,
+				)) {
 					// Serialize all accesses to the mangle cache in entry point order for determinism
 					serializer.Enter(i)
 					defer serializer.Leave(i)
-					cb(mangleCache)
+					cb(mangleCache, cssUsedLocalNames)
 				}
 
 				resultGroups[i] = link(&optionsClone, forked, log, b.fs, b.res, files, entryPoints,
