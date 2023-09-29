@@ -80,28 +80,12 @@ a:hover { color: var(--color, #0d114a); }
     width: 300px;
     padding: 4px 6px;
 }
-#search.busy::after {
-    position: absolute;
-    right: 10px;
-    top: 8px;
-    content: ' ';
-    display: block;
-    width: 10px;
-    height: 10px;
-    margin: 8px;
-    border-radius: 50%;
-    border: 4px solid #444;
-    border-color: #444 transparent #444 transparent;
-    animation: busy2 0.8s ease-in-out infinite;
-}
-@keyframes busy2 {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
+
 #suggestions {
     position: absolute;
-    left: 0;
+    margin-top: 6px;
     z-index: 9999;
+    border: 1px solid #ddd;
 }
 #suggestions:not(:empty) {
     padding-top: 6px;

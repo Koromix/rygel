@@ -36,6 +36,7 @@ let markdown = null;
 
 let complete_timer = null;
 let complete_id = 0;
+let complete_div = null;
 
 let edit_changes = new Set;
 let edit_key = null;
@@ -93,7 +94,8 @@ export async function start(prov, options = {}) {
     // Add event handlers
     for (let input of document.querySelectorAll('#filters input'))
         input.addEventListener('change', refreshMap);
-    document.querySelector('#search input').addEventListener('input', completeAddress);
+    document.querySelector('#search input').addEventListener('input', e => completeAddress(e, showAddress));
+    document.body.addEventListener('click', closeAddress);
 
     refreshMap();
 
@@ -101,7 +103,6 @@ export async function start(prov, options = {}) {
 }
 
 export function zoom(delta) {
-    console.log(map);
     map.zoom(delta);
 }
 
@@ -171,7 +172,6 @@ function renderMenu() {
                          </a>` : ''}
                 <input type="search" autocomplete="off" placeholder="Entrez votre adresse..."/>
             </label>
-            <div id="suggestions"></div>
         </div>
 
         <div style="flex: 1;"></div>
@@ -230,14 +230,13 @@ function geolocalize() {
     });
 }
 
-function completeAddress(e) {
+function completeAddress(e, func) {
     let addr = e.target.value;
     let id = ++complete_id;
 
     if (addr.length > 3) {
         if (complete_timer != null)
             clearTimeout(complete_timer);
-        document.querySelector('#search').classList.add('busy');
 
         complete_timer = setTimeout(async () => {
             complete_timer = null;
@@ -247,52 +246,62 @@ function completeAddress(e) {
 
                 if (complete_id == id) {
                     if (results.length) {
-                        let list = document.querySelector('#suggestions');
-                        render(results.map(result => html`<a @click=${e => selectAddress(result)}>${result.address}</a>`), list);
+                        let target = e.target;
+                        let rect = e.target.getBoundingClientRect();
+
+                        if (complete_div == null) {
+                            complete_div = document.createElement('div');
+
+                            complete_div.id = 'suggestions';
+                            complete_div.addEventListener('click', e => { e.stopPropagation(); });
+
+                            document.body.appendChild(complete_div);
+                        }
+
+                        complete_div.style.left = rect.left + 'px';
+                        complete_div.style.top = rect.bottom + 'px';
+
+                        render(results.map(result => html`<a @click=${() => { func(e, result); closeAddress(); }}>${result.address}</a>`), complete_div);
                     } else {
                         throw new Error('Aucun correspondance trouvée');
                     }
                 }
             } catch (err) {
                 Log.error(err);
-                closeSuggestions();
-            } finally {
-                if (complete_id == id)
-                    document.querySelector('#search').classList.remove('busy');
+                closeAddress();
             }
         }, 200);
     } else {
-        closeSuggestions();
+        closeAddress();
     }
 }
 
-function closeSuggestions() {
-    let list = document.querySelector('#suggestions');
-    render('', list);
+function closeAddress() {
+    if (complete_div == null)
+        return;
+
+    document.body.removeChild(complete_div);
+    complete_div = null;
 }
 
-function selectAddress(result) {
-    if (result != null) {
-        document.querySelector('#search input').value = result.address || '';
+function showAddress(e, result) {
+    e.target.value = result.address || '';
 
-        flash_pos = {
-            start: runner.updateCounter,
+    flash_pos = {
+        start: runner.updateCounter,
 
-            latitude: result.latitude,
-            longitude: result.longitude,
+        latitude: result.latitude,
+        longitude: result.longitude,
 
-            x: null,
-            y: null,
+        x: null,
+        y: null,
 
-            speed: 1,
-            radius: 480,
-            opacity: 1
-        };
+        speed: 1,
+        radius: 480,
+        opacity: 1
+    };
 
-        map.move(result.latitude, result.longitude, 14);
-    }
-
-    closeSuggestions();
+    map.move(result.latitude, result.longitude, 14);
 }
 
 export function refreshMap() {
@@ -317,35 +326,40 @@ export function refreshMap() {
         if (marker.etab == null)
             continue;
 
-        marker.click = () => {
+        marker.click = async () => {
             let etab = isConnected() ? Object.assign({}, marker.etab) : marker.etab;
 
             edit_key = null;
 
-            UI.dialog({
-                run: (render, close) => html`
-                    <div class="title">
-                        ${makeField(etab, 'name', 'text')}
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-                    </div>
-
-                    <div @click=${handlePopupClick}>
-                        ${provider.renderPopup(etab, edit_key)}
-                    </div>
-
-                    ${isConnected() ? html`
-                        <div class="footer">
-                            <button type="button" class="danger"
-                                    @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(etab.id).then(close))}>Supprimer</button>
+            try {
+                await UI.dialog({
+                    run: (render, close) => html`
+                        <div class="title">
+                            ${makeField(etab, 'name', 'text')}
                             <div style="flex: 1;"></div>
-                            <button @click=${closeOrSubmit} type="submit">Modifier</button>
-                            <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                         </div>
-                    ` : ''}
-                `,
-                submit: (elements) => updateEntry(etab)
-            })
+
+                        <div @click=${handlePopupClick}>
+                            ${provider.renderPopup(etab, edit_key)}
+                        </div>
+
+                        ${isConnected() ? html`
+                            <div class="footer">
+                                <button type="button" class="danger"
+                                        @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(etab.id).then(close))}>Supprimer</button>
+                                <div style="flex: 1;"></div>
+                                <button @click=${closeOrSubmit} type="submit">Modifier</button>
+                                <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                            </div>
+                        ` : ''}
+                    `,
+
+                    submit: (elements) => updateEntry(etab)
+                });
+            } finally {
+                closeAddress();
+            }
         };
     }
 
@@ -362,6 +376,8 @@ function closeOrSubmit(e) {
 function handlePopupClick(e) {
     if (e.target.tagName == 'DIV')
         toggleEdit(e, null);
+
+    closeAddress();
 }
 
 export function makeField(etab, key, type, view = null) {
@@ -423,14 +439,24 @@ export function makeField(etab, key, type, view = null) {
                                        @change=${e => editMulti(etab, key, idx, opt, e.target.checked)}> ${opt}</label>`)}
             </span>
         `;
-    } else if (type == 'markdown' || type == 'schedule' || type == 'address') {
-        return html`<textarea rows="3" style="width: 100%;"
-                              @change=${e => editText(etab, key, type, e.target.value)}
-                              @keypress=${e => handleTextShortcuts(e, etab, key, type)}>${value || ''}</textarea>`;
+    } else if (type == 'markdown' || type == 'schedule') {
+        return html`
+            <textarea rows="3" style="width: 100%;"
+                      @change=${e => editText(etab, key, type, e.target.value)}
+                      @keypress=${e => handleTextShortcuts(e, etab, key, type)}>${value || ''}</textarea>
+        `;
+    } else if (type == 'address') {
+        return html`
+            <textarea rows="3" style="width: 100%;"
+                      @input=${e => completeAddress(e, (_, result) => editText(etab, key, type, result.address))}
+                      @keypress=${e => handleTextShortcuts(e, etab, key, type)}>${value || ''}</textarea>
+        `;
     } else {
-        return html`<input type="text" .value=${value || ''}
-                           @change=${UI.wrap(e => editText(etab, key, type, e.target.value))}
-                           @keypress=${e => handleTextShortcuts(e, etab, key, type)} />`;
+        return html`
+            <input type="text" .value=${value || ''}
+                   @change=${UI.wrap(e => editText(etab, key, type, e.target.value))}
+                   @keypress=${e => handleTextShortcuts(e, etab, key, type)} />
+        `;
     }
 }
 
@@ -465,7 +491,7 @@ async function editText(etab, key, type, value) {
         let results = await Net.post('api/admin/geocode', { address: value });
 
         if (results != null) {
-            let info = results[0];
+            let info = results.find(result => result.address == value) || results[0];
 
             if (!info.address)
                 info.address = value;
