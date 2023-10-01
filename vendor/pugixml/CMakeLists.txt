@@ -1,5 +1,11 @@
-cmake_minimum_required(VERSION 3.4)
-project(pugixml VERSION 1.13 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.5)
+
+# Policy configuration; this *MUST* be specified before project is defined
+if(POLICY CMP0091)
+    cmake_policy(SET CMP0091 NEW) # Enables use of MSVC_RUNTIME_LIBRARY
+endif()
+
+project(pugixml VERSION 1.14 LANGUAGES CXX)
 
 include(CMakePackageConfigHelpers)
 include(CMakeDependentOption)
@@ -43,11 +49,6 @@ option(PUGIXML_NO_XPATH "Disable XPath" OFF)
 option(PUGIXML_NO_STL "Disable STL" OFF)
 option(PUGIXML_NO_EXCEPTIONS "Disable Exceptions" OFF)
 mark_as_advanced(PUGIXML_NO_XPATH PUGIXML_NO_STL PUGIXML_NO_EXCEPTIONS)
-
-# Policy configuration
-if(POLICY CMP0091)
-    cmake_policy(SET CMP0091 NEW) # Enables use of MSVC_RUNTIME_LIBRARY
-endif()
 
 set(PUGIXML_PUBLIC_DEFINITIONS
   $<$<BOOL:${PUGIXML_WCHAR_MODE}>:PUGIXML_WCHAR_MODE>
