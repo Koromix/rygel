@@ -11,8 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-gitea_url: https://dl.gitea.com/gitea/1.20.4/gitea-1.20.4-linux-amd64
-gitea_checksum: 'sha256:fea25c6001b9ded08542f480bdaccea981a465fee07aa3ec9c7494ad95717aba'
+gitea_url: https://dl.gitea.com/gitea/1.20.5/gitea-1.20.5-linux-amd64
+gitea_checksum: 'sha256:ae8d21f36098a62272fcfa67ecbb567d0ba6cf5aecaaab29a6b98a407d435bdf'
 
 gitea_root_path: /opt/gitea
 
