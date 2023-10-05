@@ -4871,18 +4871,20 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
     const char *xdg = getenv("XDG_CONFIG_HOME");
     const char *home = getenv("HOME");
 
+    const char *path = nullptr;
+
     if (xdg) {
-        const char *path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
-        return path;
+        path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
     } else if (home) {
-        const char *path = Fmt(alloc, "%1%/.config/%2", home, name).ptr;
-        return path;
+        path = Fmt(alloc, "%1%/.config/%2", home, name).ptr;
     } else if (!getuid()) {
-        const char *path = Fmt(alloc, "/root/.config/%1", name).ptr;
-        return path;
-    } else {
-        return nullptr;
+        path = Fmt(alloc, "/root/.config/%1", name).ptr;
     }
+
+    if (path && !EnsureDirectoryExists(path))
+        return nullptr;
+
+    return path;
 }
 
 const char *GetUserCachePath(const char *name, Allocator *alloc)
@@ -4892,18 +4894,20 @@ const char *GetUserCachePath(const char *name, Allocator *alloc)
     const char *xdg = getenv("XDG_CACHE_HOME");
     const char *home = getenv("HOME");
 
+    const char *path = nullptr;
+
     if (xdg) {
-        const char *path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
-        return path;
+        path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
     } else if (home) {
-        const char *path = Fmt(alloc, "%1%/.cache/%2", home, name).ptr;
-        return path;
+        path = Fmt(alloc, "%1%/.cache/%2", home, name).ptr;
     } else if (!getuid()) {
-        const char *path = Fmt(alloc, "/root/.cache/%1", name).ptr;
-        return path;
-    } else {
-        return nullptr;
+        path = Fmt(alloc, "/root/.cache/%1", name).ptr;
     }
+
+    if (path && !EnsureDirectoryExists(path))
+        return nullptr;
+
+    return path;
 }
 
 const char *GetSystemConfigPath(const char *name, Allocator *alloc)
