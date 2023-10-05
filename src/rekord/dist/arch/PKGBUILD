@@ -1,0 +1,17 @@
+# Maintainer: Niels Martignène <niels.martignene@gmail.com>
+
+pkgname=rekord
+pkgver=VERSION
+pkgrel=1
+pkgdesc="Backup tool with deduplication and asymmetric encryption"
+arch=('x86_64' 'i686')
+url="http://koromix.dev/misc#rekord"
+license=('AGPL3')
+makedepends=('git')
+provides=('rekord')
+source=('rekord')
+sha256sums=('SKIP')
+
+package() {
+    install -D -m0755 meestic "${pkgdir}/usr/bin/meestic"
+}
