@@ -260,6 +260,21 @@ nginx_domains:
   - name: beta.demheter.fr
     ssl_certbot_email: niels.martignene@protonmail.com
     config: |
+      location /admin/ {
+          index index.php index.html index.htm;
+
+          root /opt/static/live/demheter.fr/beta;
+
+          location ~ \.php$ {
+              include fastcgi_params;
+              fastcgi_param SCRIPT_FILENAME $request_filename;
+              fastcgi_pass unix:/run/php/php7.4-fpm.sock;
+          }
+      }
+      location = /admin {
+          return 301 https://$host/admin/;
+      }
+
       location / {
           index index.php index.html index.htm;
 

@@ -160,7 +160,6 @@ function fetch_all($res) {
     $rows = [];
     while ($row = $res->fetchArray(SQLITE3_ASSOC))
         $rows[] = $row;
-    print_r($row);
     return $rows;
 }
 
