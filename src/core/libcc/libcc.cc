@@ -4877,6 +4877,9 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
     } else if (home) {
         const char *path = Fmt(alloc, "%1%/.config/%2", home, name).ptr;
         return path;
+    } else if (!getuid()) {
+        const char *path = Fmt(alloc, "/root/.config/%1", name).ptr;
+        return path;
     } else {
         return nullptr;
     }
@@ -4894,6 +4897,9 @@ const char *GetUserCachePath(const char *name, Allocator *alloc)
         return path;
     } else if (home) {
         const char *path = Fmt(alloc, "%1%/.cache/%2", home, name).ptr;
+        return path;
+    } else if (!getuid()) {
+        const char *path = Fmt(alloc, "/root/.cache/%1", name).ptr;
         return path;
     } else {
         return nullptr;
