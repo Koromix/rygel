@@ -51,7 +51,7 @@ $news = fetch_all($res);
                 let tr = document.createElement('tr');
 
                 tr.innerHTML = `
-                     <td><input class="image" type="text" value=""></td>
+                    <td><input class="image" type="text" value=""></td>
                     <td><input class="title" type="text" value=""></td>
                     <td><textarea class="content" style="width: 100%";" rows="5"></textarea></td>
                     <td class="right">
@@ -118,8 +118,8 @@ foreach ($news as $i => $item) {
 
     echo <<<ROW
                             <tr>
-                                <td><input class="image" type="text" value=$image></td>
-                                <td><input class="title" type="text" value=$title></td>
+                                <td><input class="image" type="text" value="$image"></td>
+                                <td><input class="title" type="text" value="$title"></td>
                                 <td><textarea class="content" style="width: 100%";" rows="5">$content</textarea></td>
                                 <td class="right">
                                     <button type="button" class="small"
