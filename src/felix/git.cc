@@ -282,14 +282,12 @@ const char *GitVersioneer::Version(Span<const char> key)
 
             if (next == commits.len) {
                 GitHash parent = {};
+                AttributeResult ret = ReadAttribute(commits[idx], "parent", &parent);
 
-                switch (ReadAttribute(commits[idx], "parent", &parent)) {
-                    case AttributeResult::Success: {} break;
-                    case AttributeResult::Missing: {
-                        LogError("Missing 'parent' attribute");
-                        continue;
-                    } break;
-                    case AttributeResult::Error: return nullptr;
+                if (ret == AttributeResult::Error) {
+                    return nullptr;
+                } else if (ret == AttributeResult::Missing) {
+                    break;
                 }
 
                 commits.Append(parent);
