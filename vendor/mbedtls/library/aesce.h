@@ -31,26 +31,43 @@
 #include "mbedtls/aes.h"
 
 
-#if defined(MBEDTLS_HAVE_ASM) && defined(__GNUC__) && \
-    defined(__aarch64__) && !defined(MBEDTLS_HAVE_ARM64)
-#define MBEDTLS_HAVE_ARM64
-#endif
+#if defined(MBEDTLS_AESCE_C) && defined(MBEDTLS_ARCH_IS_ARM64)
 
-#if defined(MBEDTLS_HAVE_ARM64)
+#define MBEDTLS_AESCE_HAVE_CODE
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#if defined(__linux__) && !defined(MBEDTLS_AES_USE_HARDWARE_ONLY)
+
+extern signed char mbedtls_aesce_has_support_result;
 
 /**
  * \brief          Internal function to detect the crypto extension in CPUs.
  *
  * \return         1 if CPU has support for the feature, 0 otherwise
  */
-int mbedtls_aesce_has_support(void);
+int mbedtls_aesce_has_support_impl(void);
+
+#define MBEDTLS_AESCE_HAS_SUPPORT() (mbedtls_aesce_has_support_result == -1 ? \
+                                     mbedtls_aesce_has_support_impl() : \
+                                     mbedtls_aesce_has_support_result)
+
+#else /* defined(__linux__) && !defined(MBEDTLS_AES_USE_HARDWARE_ONLY) */
+
+/* If we are not on Linux, we can't detect support so assume that it's supported.
+ * Similarly, assume support if MBEDTLS_AES_USE_HARDWARE_ONLY is set.
+ */
+#define MBEDTLS_AESCE_HAS_SUPPORT() 1
+
+#endif /* defined(__linux__) && !defined(MBEDTLS_AES_USE_HARDWARE_ONLY) */
 
 /**
  * \brief          Internal AES-ECB block encryption and decryption
+ *
+ * \warning        This assumes that the context specifies either 10, 12 or 14
+ *                 rounds and will behave incorrectly if this is not the case.
  *
  * \param ctx      AES context
  * \param mode     MBEDTLS_AES_ENCRYPT or MBEDTLS_AES_DECRYPT
@@ -111,6 +128,6 @@ int mbedtls_aesce_setkey_enc(unsigned char *rk,
 }
 #endif
 
-#endif /* MBEDTLS_HAVE_ARM64 */
+#endif /* MBEDTLS_AESCE_C && MBEDTLS_ARCH_IS_ARM64 */
 
 #endif /* MBEDTLS_AESCE_H */

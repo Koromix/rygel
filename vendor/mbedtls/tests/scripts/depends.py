@@ -161,6 +161,7 @@ derived."""
     log_command(['config.py', 'full'])
     conf.adapt(config.full_adapter)
     set_config_option_value(conf, 'MBEDTLS_TEST_HOOKS', colors, False)
+    set_config_option_value(conf, 'MBEDTLS_PSA_CRYPTO_CONFIG', colors, False)
     if options.unset_use_psa:
         set_config_option_value(conf, 'MBEDTLS_USE_PSA_CRYPTO', colors, False)
 
@@ -237,6 +238,8 @@ REVERSE_DEPENDENCIES = {
                       'MBEDTLS_ECDH_C',
                       'MBEDTLS_ECJPAKE_C',
                       'MBEDTLS_ECP_RESTARTABLE',
+                      'MBEDTLS_PK_PARSE_EC_EXTENDED',
+                      'MBEDTLS_PK_PARSE_EC_COMPRESSED',
                       'MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED',
                       'MBEDTLS_KEY_EXCHANGE_ECDH_RSA_ENABLED',
                       'MBEDTLS_KEY_EXCHANGE_ECDHE_PSK_ENABLED',
@@ -277,7 +280,7 @@ REVERSE_DEPENDENCIES = {
 # if a given define is the only one enabled from an exclusive group.
 EXCLUSIVE_GROUPS = {
     'MBEDTLS_SHA512_C': ['-MBEDTLS_SSL_COOKIE_C',
-                         '-MBEDTLS_SSL_PROTO_TLS1_3'],
+                         '-MBEDTLS_SSL_TLS_C'],
     'MBEDTLS_ECP_DP_CURVE448_ENABLED': ['-MBEDTLS_ECDSA_C',
                                         '-MBEDTLS_ECDSA_DETERMINISTIC',
                                         '-MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED',
@@ -426,7 +429,8 @@ class DomainData:
             'hashes': DualDomain(hash_symbols, build_and_test,
                                  exclude=r'MBEDTLS_(MD|RIPEMD|SHA1_)' \
                                           '|MBEDTLS_SHA224_' \
-                                          '|MBEDTLS_SHA384_'),
+                                          '|MBEDTLS_SHA384_' \
+                                          '|MBEDTLS_SHA3_'),
             # Key exchange types.
             'kex': ExclusiveDomain(key_exchange_symbols, build_and_test),
             'pkalgs': ComplementaryDomain(['MBEDTLS_ECDSA_C',

@@ -162,6 +162,10 @@
 #include "mbedtls/sha256.h"
 #endif
 
+#if defined(MBEDTLS_SHA3_C)
+#include "mbedtls/sha3.h"
+#endif
+
 #if defined(MBEDTLS_SHA512_C)
 #include "mbedtls/sha512.h"
 #endif
@@ -431,6 +435,8 @@ const char *mbedtls_high_level_strerr(int error_code)
             return( "SSL - Not possible to read early data" );
         case -(MBEDTLS_ERR_SSL_CANNOT_WRITE_EARLY_DATA):
             return( "SSL - Not possible to write early data" );
+        case -(MBEDTLS_ERR_SSL_CACHE_ENTRY_NOT_FOUND):
+            return( "SSL - Cache entry not found" );
         case -(MBEDTLS_ERR_SSL_ALLOC_FAILED):
             return( "SSL - Memory allocation failed" );
         case -(MBEDTLS_ERR_SSL_HW_ACCEL_FAILED):
@@ -765,6 +771,11 @@ const char *mbedtls_low_level_strerr(int error_code)
         case -(MBEDTLS_ERR_SHA256_BAD_INPUT_DATA):
             return( "SHA256 - SHA-256 input data was malformed" );
 #endif /* MBEDTLS_SHA256_C */
+
+#if defined(MBEDTLS_SHA3_C)
+        case -(MBEDTLS_ERR_SHA3_BAD_INPUT_DATA):
+            return( "SHA3 - SHA-3 input data was malformed" );
+#endif /* MBEDTLS_SHA3_C */
 
 #if defined(MBEDTLS_SHA512_C)
         case -(MBEDTLS_ERR_SHA512_BAD_INPUT_DATA):

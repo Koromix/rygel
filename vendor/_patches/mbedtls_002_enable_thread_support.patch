@@ -1,8 +1,8 @@
 diff --git a/vendor/mbedtls/include/mbedtls/check_config.h b/vendor/mbedtls/include/mbedtls/check_config.h
-index bd683ddd1..834e37216 100644
+index e18e9a5fc..12eca8a9f 100644
 --- a/vendor/mbedtls/include/mbedtls/check_config.h
 +++ b/vendor/mbedtls/include/mbedtls/check_config.h
-@@ -954,6 +954,13 @@
+@@ -1061,6 +1061,13 @@
  #define MBEDTLS_THREADING_IMPL
  #endif
  
@@ -17,10 +17,10 @@ index bd683ddd1..834e37216 100644
  #if !defined(MBEDTLS_THREADING_C) || defined(MBEDTLS_THREADING_IMPL)
  #error "MBEDTLS_THREADING_ALT defined, but not all prerequisites"
 diff --git a/vendor/mbedtls/include/mbedtls/mbedtls_config.h b/vendor/mbedtls/include/mbedtls/mbedtls_config.h
-index 4292b493b..f23d35aa7 100644
+index af0761395..3a85018c1 100644
 --- a/vendor/mbedtls/include/mbedtls/mbedtls_config.h
 +++ b/vendor/mbedtls/include/mbedtls/mbedtls_config.h
-@@ -1917,7 +1917,11 @@
+@@ -2085,7 +2085,11 @@
   *
   * Uncomment this to enable pthread mutexes.
   */
@@ -33,9 +33,9 @@ index 4292b493b..f23d35aa7 100644
  
  /**
   * \def MBEDTLS_USE_PSA_CRYPTO
-@@ -3312,7 +3316,7 @@
+@@ -3522,7 +3526,7 @@
   *
-  * Enable this layer to allow use of mutexes within mbed TLS
+  * Enable this layer to allow use of mutexes within Mbed TLS
   */
 -//#define MBEDTLS_THREADING_C
 +#define MBEDTLS_THREADING_C
@@ -43,7 +43,7 @@ index 4292b493b..f23d35aa7 100644
  /**
   * \def MBEDTLS_TIMING_C
 diff --git a/vendor/mbedtls/include/mbedtls/threading.h b/vendor/mbedtls/include/mbedtls/threading.h
-index 1b9c7ced2..efabcfaf0 100644
+index 6a336c3ed..0ceeaada2 100644
 --- a/vendor/mbedtls/include/mbedtls/threading.h
 +++ b/vendor/mbedtls/include/mbedtls/threading.h
 @@ -47,6 +47,21 @@ typedef struct mbedtls_threading_mutex_t {
