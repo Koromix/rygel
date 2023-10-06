@@ -28,7 +28,7 @@ enum class rk_DiskType {
 struct rk_Config {
     const char *repository = nullptr;
 
-    const char *username = nullptr;
+    const char *username = "default";
     const char *password = nullptr;
 
     rk_DiskType type = rk_DiskType::Local;
