@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-distrib = 'generic/debian10'
+distrib = 'generic/debian11'
 proxy_ip = '192.168.57.2'
 server_ip = '192.168.57.3'
 

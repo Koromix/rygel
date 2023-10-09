@@ -21,7 +21,7 @@ Vagrant.configure('2') do |config|
     config.hostmanager.manage_host = true
 
     config.vm.define 'host1' do |m|
-        m.vm.box = 'generic/debian10'
+        m.vm.box = 'generic/debian11'
         m.vm.hostname = 'pknet-host1.local'
         m.vm.network 'private_network', ip: host1_ip
 
@@ -38,7 +38,7 @@ Vagrant.configure('2') do |config|
     end
 
     config.vm.define 'monitor' do |m|
-        m.vm.box = 'generic/debian10'
+        m.vm.box = 'generic/debian11'
         m.vm.hostname = 'pknet-monitor.local'
         m.vm.network 'private_network', ip: monitor_ip
 
