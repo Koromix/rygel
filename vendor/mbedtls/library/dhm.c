@@ -617,7 +617,8 @@ static int load_file(const char *path, unsigned char **buf, size_t *n)
     if (fread(*buf, 1, *n, f) != *n) {
         fclose(f);
 
-        mbedtls_zeroize_and_free(*buf, *n + 1);
+        mbedtls_platform_zeroize(*buf, *n + 1);
+        mbedtls_free(*buf);
 
         return MBEDTLS_ERR_DHM_FILE_IO_ERROR;
     }
@@ -648,7 +649,8 @@ int mbedtls_dhm_parse_dhmfile(mbedtls_dhm_context *dhm, const char *path)
 
     ret = mbedtls_dhm_parse_dhm(dhm, buf, n);
 
-    mbedtls_zeroize_and_free(buf, n);
+    mbedtls_platform_zeroize(buf, n);
+    mbedtls_free(buf);
 
     return ret;
 }

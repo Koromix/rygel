@@ -644,7 +644,7 @@ void delay_packet(packet *delay)
     memcpy(&prev[prev_len++], delay, sizeof(packet));
 }
 
-int send_delayed(void)
+int send_delayed()
 {
     uint8_t offset;
     int ret;

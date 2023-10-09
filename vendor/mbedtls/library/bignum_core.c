@@ -35,18 +35,6 @@
 
 size_t mbedtls_mpi_core_clz(mbedtls_mpi_uint a)
 {
-#if defined(__has_builtin)
-#if (MBEDTLS_MPI_UINT_MAX == UINT_MAX) && __has_builtin(__builtin_clz)
-    #define core_clz __builtin_clz
-#elif (MBEDTLS_MPI_UINT_MAX == ULONG_MAX) && __has_builtin(__builtin_clzl)
-    #define core_clz __builtin_clzl
-#elif (MBEDTLS_MPI_UINT_MAX == ULLONG_MAX) && __has_builtin(__builtin_clzll)
-    #define core_clz __builtin_clzll
-#endif
-#endif
-#if defined(core_clz)
-    return (size_t) core_clz(a);
-#else
     size_t j;
     mbedtls_mpi_uint mask = (mbedtls_mpi_uint) 1 << (biL - 1);
 
@@ -59,22 +47,41 @@ size_t mbedtls_mpi_core_clz(mbedtls_mpi_uint a)
     }
 
     return j;
-#endif
 }
 
 size_t mbedtls_mpi_core_bitlen(const mbedtls_mpi_uint *A, size_t A_limbs)
 {
-    int i;
-    size_t j;
+    size_t i, j;
 
-    for (i = ((int) A_limbs) - 1; i >= 0; i--) {
+    if (A_limbs == 0) {
+        return 0;
+    }
+
+    for (i = A_limbs - 1; i > 0; i--) {
         if (A[i] != 0) {
-            j = biL - mbedtls_mpi_core_clz(A[i]);
-            return (i * biL) + j;
+            break;
         }
     }
 
-    return 0;
+    j = biL - mbedtls_mpi_core_clz(A[i]);
+
+    return (i * biL) + j;
+}
+
+/* Convert a big-endian byte array aligned to the size of mbedtls_mpi_uint
+ * into the storage form used by mbedtls_mpi. */
+static mbedtls_mpi_uint mpi_bigendian_to_host_c(mbedtls_mpi_uint a)
+{
+    uint8_t i;
+    unsigned char *a_ptr;
+    mbedtls_mpi_uint tmp = 0;
+
+    for (i = 0, a_ptr = (unsigned char *) &a; i < ciL; i++, a_ptr++) {
+        tmp <<= CHAR_BIT;
+        tmp |= (mbedtls_mpi_uint) *a_ptr;
+    }
+
+    return tmp;
 }
 
 static mbedtls_mpi_uint mpi_bigendian_to_host(mbedtls_mpi_uint a)
@@ -83,11 +90,16 @@ static mbedtls_mpi_uint mpi_bigendian_to_host(mbedtls_mpi_uint a)
         /* Nothing to do on bigendian systems. */
         return a;
     } else {
-#if defined(MBEDTLS_HAVE_INT32)
-        return (mbedtls_mpi_uint) MBEDTLS_BSWAP32(a);
-#elif defined(MBEDTLS_HAVE_INT64)
-        return (mbedtls_mpi_uint) MBEDTLS_BSWAP64(a);
-#endif
+        switch (sizeof(mbedtls_mpi_uint)) {
+            case 4:
+                return (mbedtls_mpi_uint) MBEDTLS_BSWAP32((uint32_t) a);
+            case 8:
+                return (mbedtls_mpi_uint) MBEDTLS_BSWAP64((uint64_t) a);
+        }
+
+        /* Fall back to C-based reordering if we don't know the byte order
+         * or we couldn't use a compiler-specific builtin. */
+        return mpi_bigendian_to_host_c(a);
     }
 }
 
@@ -123,92 +135,54 @@ void mbedtls_mpi_core_bigendian_to_host(mbedtls_mpi_uint *A,
 
 /* Whether min <= A, in constant time.
  * A_limbs must be at least 1. */
-mbedtls_ct_condition_t mbedtls_mpi_core_uint_le_mpi(mbedtls_mpi_uint min,
-                                                    const mbedtls_mpi_uint *A,
-                                                    size_t A_limbs)
+unsigned mbedtls_mpi_core_uint_le_mpi(mbedtls_mpi_uint min,
+                                      const mbedtls_mpi_uint *A,
+                                      size_t A_limbs)
 {
     /* min <= least significant limb? */
-    mbedtls_ct_condition_t min_le_lsl = mbedtls_ct_uint_ge(A[0], min);
+    unsigned min_le_lsl = 1 ^ mbedtls_ct_mpi_uint_lt(A[0], min);
 
     /* limbs other than the least significant one are all zero? */
-    mbedtls_ct_condition_t msll_mask = MBEDTLS_CT_FALSE;
+    mbedtls_mpi_uint msll_mask = 0;
     for (size_t i = 1; i < A_limbs; i++) {
-        msll_mask = mbedtls_ct_bool_or(msll_mask, mbedtls_ct_bool(A[i]));
+        msll_mask |= A[i];
     }
+    /* The most significant limbs of A are not all zero iff msll_mask != 0. */
+    unsigned msll_nonzero = mbedtls_ct_mpi_uint_mask(msll_mask) & 1;
 
     /* min <= A iff the lowest limb of A is >= min or the other limbs
      * are not all zero. */
-    return mbedtls_ct_bool_or(msll_mask, min_le_lsl);
-}
-
-mbedtls_ct_condition_t mbedtls_mpi_core_lt_ct(const mbedtls_mpi_uint *A,
-                                              const mbedtls_mpi_uint *B,
-                                              size_t limbs)
-{
-    mbedtls_ct_condition_t ret = MBEDTLS_CT_FALSE, cond = MBEDTLS_CT_FALSE, done = MBEDTLS_CT_FALSE;
-
-    for (size_t i = limbs; i > 0; i--) {
-        /*
-         * If B[i - 1] < A[i - 1] then A < B is false and the result must
-         * remain 0.
-         *
-         * Again even if we can make a decision, we just mark the result and
-         * the fact that we are done and continue looping.
-         */
-        cond = mbedtls_ct_uint_lt(B[i - 1], A[i - 1]);
-        done = mbedtls_ct_bool_or(done, cond);
-
-        /*
-         * If A[i - 1] < B[i - 1] then A < B is true.
-         *
-         * Again even if we can make a decision, we just mark the result and
-         * the fact that we are done and continue looping.
-         */
-        cond = mbedtls_ct_uint_lt(A[i - 1], B[i - 1]);
-        ret  = mbedtls_ct_bool_or(ret, mbedtls_ct_bool_and(cond, mbedtls_ct_bool_not(done)));
-        done = mbedtls_ct_bool_or(done, cond);
-    }
-
-    /*
-     * If all the limbs were equal, then the numbers are equal, A < B is false
-     * and leaving the result 0 is correct.
-     */
-
-    return ret;
+    return min_le_lsl | msll_nonzero;
 }
 
 void mbedtls_mpi_core_cond_assign(mbedtls_mpi_uint *X,
                                   const mbedtls_mpi_uint *A,
                                   size_t limbs,
-                                  mbedtls_ct_condition_t assign)
+                                  unsigned char assign)
 {
     if (X == A) {
         return;
     }
 
-    /* This function is very performance-sensitive for RSA. For this reason
-     * we have the loop below, instead of calling mbedtls_ct_memcpy_if
-     * (this is more optimal since here we don't have to handle the case where
-     * we copy awkwardly sized data).
-     */
-    for (size_t i = 0; i < limbs; i++) {
-        X[i] = mbedtls_ct_mpi_uint_if(assign, A[i], X[i]);
-    }
+    mbedtls_ct_mpi_uint_cond_assign(limbs, X, A, assign);
 }
 
 void mbedtls_mpi_core_cond_swap(mbedtls_mpi_uint *X,
                                 mbedtls_mpi_uint *Y,
                                 size_t limbs,
-                                mbedtls_ct_condition_t swap)
+                                unsigned char swap)
 {
     if (X == Y) {
         return;
     }
 
+    /* all-bits 1 if swap is 1, all-bits 0 if swap is 0 */
+    mbedtls_mpi_uint limb_mask = mbedtls_ct_mpi_uint_mask(swap);
+
     for (size_t i = 0; i < limbs; i++) {
         mbedtls_mpi_uint tmp = X[i];
-        X[i] = mbedtls_ct_mpi_uint_if(swap, Y[i], X[i]);
-        Y[i] = mbedtls_ct_mpi_uint_if(swap, tmp, Y[i]);
+        X[i] = (X[i] & ~limb_mask) | (Y[i] & limb_mask);
+        Y[i] = (Y[i] & ~limb_mask) | (tmp & limb_mask);
     }
 }
 
@@ -379,41 +353,6 @@ void mbedtls_mpi_core_shift_r(mbedtls_mpi_uint *X, size_t limbs,
     }
 }
 
-void mbedtls_mpi_core_shift_l(mbedtls_mpi_uint *X, size_t limbs,
-                              size_t count)
-{
-    size_t i, v0, v1;
-    mbedtls_mpi_uint r0 = 0, r1;
-
-    v0 = count / (biL);
-    v1 = count & (biL - 1);
-
-    /*
-     * shift by count / limb_size
-     */
-    if (v0 > 0) {
-        for (i = limbs; i > v0; i--) {
-            X[i - 1] = X[i - v0 - 1];
-        }
-
-        for (; i > 0; i--) {
-            X[i - 1] = 0;
-        }
-    }
-
-    /*
-     * shift by count % limb_size
-     */
-    if (v1 > 0) {
-        for (i = v0; i < limbs; i++) {
-            r1 = X[i] >> (biL - v1);
-            X[i] <<= v1;
-            X[i] |= r0;
-            r0 = r1;
-        }
-    }
-}
-
 mbedtls_mpi_uint mbedtls_mpi_core_add(mbedtls_mpi_uint *X,
                                       const mbedtls_mpi_uint *A,
                                       const mbedtls_mpi_uint *B,
@@ -439,10 +378,11 @@ mbedtls_mpi_uint mbedtls_mpi_core_add_if(mbedtls_mpi_uint *X,
 {
     mbedtls_mpi_uint c = 0;
 
-    mbedtls_ct_condition_t do_add = mbedtls_ct_bool(cond);
+    /* all-bits 0 if cond is 0, all-bits 1 if cond is non-0 */
+    const mbedtls_mpi_uint mask = mbedtls_ct_mpi_uint_mask(cond);
 
     for (size_t i = 0; i < limbs; i++) {
-        mbedtls_mpi_uint add = mbedtls_ct_mpi_uint_if_else_0(do_add, A[i]);
+        mbedtls_mpi_uint add = mask & A[i];
         mbedtls_mpi_uint t = c + X[i];
         c = (t < X[i]);
         t += add;
@@ -506,17 +446,6 @@ mbedtls_mpi_uint mbedtls_mpi_core_mla(mbedtls_mpi_uint *d, size_t d_len,
     }
 
     return c;
-}
-
-void mbedtls_mpi_core_mul(mbedtls_mpi_uint *X,
-                          const mbedtls_mpi_uint *A, size_t A_limbs,
-                          const mbedtls_mpi_uint *B, size_t B_limbs)
-{
-    memset(X, 0, (A_limbs + B_limbs) * ciL);
-
-    for (size_t i = 0; i < B_limbs; i++) {
-        (void) mbedtls_mpi_core_mla(X + i, A_limbs + 1, A, A_limbs, B[i]);
-    }
 }
 
 /*
@@ -584,11 +513,7 @@ void mbedtls_mpi_core_montmul(mbedtls_mpi_uint *X,
      * So the correct return value is already in X if (carry ^ borrow) = 0,
      * but is in (the lower AN_limbs limbs of) T if (carry ^ borrow) = 1.
      */
-    mbedtls_ct_memcpy_if(mbedtls_ct_bool(carry ^ borrow),
-                         (unsigned char *) X,
-                         (unsigned char *) T,
-                         NULL,
-                         AN_limbs * sizeof(mbedtls_mpi_uint));
+    mbedtls_ct_mpi_uint_cond_assign(AN_limbs, X, T, (unsigned char) (carry ^ borrow));
 }
 
 int mbedtls_mpi_core_get_mont_r2_unsafe(mbedtls_mpi *X,
@@ -613,7 +538,7 @@ void mbedtls_mpi_core_ct_uint_table_lookup(mbedtls_mpi_uint *dest,
                                            size_t index)
 {
     for (size_t i = 0; i < count; i++, table += limbs) {
-        mbedtls_ct_condition_t assign = mbedtls_ct_uint_eq(i, index);
+        unsigned char assign = mbedtls_ct_size_bool_eq(i, index);
         mbedtls_mpi_core_cond_assign(dest, table, limbs, assign);
     }
 }
@@ -653,7 +578,7 @@ int mbedtls_mpi_core_random(mbedtls_mpi_uint *X,
                             int (*f_rng)(void *, unsigned char *, size_t),
                             void *p_rng)
 {
-    mbedtls_ct_condition_t ge_lower = MBEDTLS_CT_TRUE, lt_upper = MBEDTLS_CT_FALSE;
+    unsigned ge_lower = 1, lt_upper = 0;
     size_t n_bits = mbedtls_mpi_core_bitlen(N, limbs);
     size_t n_bytes = (n_bits + 7) / 8;
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
@@ -698,24 +623,26 @@ int mbedtls_mpi_core_random(mbedtls_mpi_uint *X,
 
         ge_lower = mbedtls_mpi_core_uint_le_mpi(min, X, limbs);
         lt_upper = mbedtls_mpi_core_lt_ct(X, N, limbs);
-    } while (mbedtls_ct_bool_and(ge_lower, lt_upper) == MBEDTLS_CT_FALSE);
+    } while (ge_lower == 0 || lt_upper == 0);
 
 cleanup:
     return ret;
 }
 
+/* BEGIN MERGE SLOT 1 */
+
 static size_t exp_mod_get_window_size(size_t Ebits)
 {
-#if MBEDTLS_MPI_WINDOW_SIZE >= 6
-    return (Ebits > 671) ? 6 : (Ebits > 239) ? 5 : (Ebits >  79) ? 4 : 1;
-#elif MBEDTLS_MPI_WINDOW_SIZE == 5
-    return (Ebits > 239) ? 5 : (Ebits >  79) ? 4 : 1;
-#elif MBEDTLS_MPI_WINDOW_SIZE > 1
-    return (Ebits >  79) ? MBEDTLS_MPI_WINDOW_SIZE : 1;
-#else
-    (void) Ebits;
-    return 1;
+    size_t wsize = (Ebits > 671) ? 6 : (Ebits > 239) ? 5 :
+                   (Ebits >  79) ? 4 : 1;
+
+#if (MBEDTLS_MPI_WINDOW_SIZE < 6)
+    if (wsize > MBEDTLS_MPI_WINDOW_SIZE) {
+        wsize = MBEDTLS_MPI_WINDOW_SIZE;
+    }
 #endif
+
+    return wsize;
 }
 
 size_t mbedtls_mpi_core_exp_mod_working_limbs(size_t AN_limbs, size_t E_limbs)
@@ -853,6 +780,14 @@ void mbedtls_mpi_core_exp_mod(mbedtls_mpi_uint *X,
     } while (!(E_bit_index == 0 && E_limb_index == 0));
 }
 
+/* END MERGE SLOT 1 */
+
+/* BEGIN MERGE SLOT 2 */
+
+/* END MERGE SLOT 2 */
+
+/* BEGIN MERGE SLOT 3 */
+
 mbedtls_mpi_uint mbedtls_mpi_core_sub_int(mbedtls_mpi_uint *X,
                                           const mbedtls_mpi_uint *A,
                                           mbedtls_mpi_uint c,  /* doubles as carry */
@@ -902,5 +837,35 @@ void mbedtls_mpi_core_from_mont_rep(mbedtls_mpi_uint *X,
 
     mbedtls_mpi_core_montmul(X, A, &Rinv, 1, N, AN_limbs, mm, T);
 }
+
+/* END MERGE SLOT 3 */
+
+/* BEGIN MERGE SLOT 4 */
+
+/* END MERGE SLOT 4 */
+
+/* BEGIN MERGE SLOT 5 */
+
+/* END MERGE SLOT 5 */
+
+/* BEGIN MERGE SLOT 6 */
+
+/* END MERGE SLOT 6 */
+
+/* BEGIN MERGE SLOT 7 */
+
+/* END MERGE SLOT 7 */
+
+/* BEGIN MERGE SLOT 8 */
+
+/* END MERGE SLOT 8 */
+
+/* BEGIN MERGE SLOT 9 */
+
+/* END MERGE SLOT 9 */
+
+/* BEGIN MERGE SLOT 10 */
+
+/* END MERGE SLOT 10 */
 
 #endif /* MBEDTLS_BIGNUM_C */

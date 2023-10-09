@@ -27,7 +27,6 @@ from typing import Dict, List, Optional, Set, Union
 import unittest
 
 from . import c_build_helper
-from . import build_tree
 
 
 class Expr:
@@ -52,16 +51,13 @@ class Expr:
     def update_cache(self) -> None:
         """Update `value_cache` for expressions registered in `unknown_values`."""
         expressions = sorted(self.unknown_values)
-        includes = ['include']
-        if build_tree.looks_like_psa_crypto_root('.'):
-            includes.append('drivers/builtin/include')
         values = c_build_helper.get_c_expression_values(
             'unsigned long', '%lu',
             expressions,
             header="""
             #include <psa/crypto.h>
             """,
-            include_path=includes) #type: List[str]
+            include_path=['include']) #type: List[str]
         for e, v in zip(expressions, values):
             self.value_cache[e] = int(v, 0)
         self.unknown_values.clear()

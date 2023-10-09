@@ -31,7 +31,7 @@
 
 #include <string.h>
 
-#if defined(MBEDTLS_VIA_PADLOCK_HAVE_CODE)
+#if defined(MBEDTLS_HAVE_X86)
 
 /*
  * PadLock detection routine
@@ -162,6 +162,6 @@ int mbedtls_padlock_xcryptcbc(mbedtls_aes_context *ctx,
     return 0;
 }
 
-#endif /* MBEDTLS_VIA_PADLOCK_HAVE_CODE */
+#endif /* MBEDTLS_HAVE_X86 */
 
 #endif /* MBEDTLS_PADLOCK_C */

@@ -31,15 +31,9 @@
 #include <string.h>
 
 #if defined(MBEDTLS_USE_PSA_CRYPTO)
-/* Define a local translating function to save code size by not using too many
- * arguments in each translating place. */
-static int local_err_translation(psa_status_t status)
-{
-    return psa_status_to_mbedtls(status, psa_to_ssl_errors,
-                                 ARRAY_LENGTH(psa_to_ssl_errors),
-                                 psa_generic_status_to_mbedtls);
-}
-#define PSA_TO_MBEDTLS_ERR(status) local_err_translation(status)
+#define PSA_TO_MBEDTLS_ERR(status) PSA_TO_MBEDTLS_ERR_LIST(status,   \
+                                                           psa_to_ssl_errors,             \
+                                                           psa_generic_status_to_mbedtls)
 #endif
 
 /*

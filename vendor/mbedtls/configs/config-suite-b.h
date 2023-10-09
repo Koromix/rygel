@@ -37,13 +37,13 @@
 #define MBEDTLS_HAVE_ASM
 #define MBEDTLS_HAVE_TIME
 
-/* Mbed TLS feature support */
+/* mbed TLS feature support */
 #define MBEDTLS_ECP_DP_SECP256R1_ENABLED
 #define MBEDTLS_ECP_DP_SECP384R1_ENABLED
 #define MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
 #define MBEDTLS_SSL_PROTO_TLS1_2
 
-/* Mbed TLS modules */
+/* mbed TLS modules */
 #define MBEDTLS_AES_C
 #define MBEDTLS_ASN1_PARSE_C
 #define MBEDTLS_ASN1_WRITE_C

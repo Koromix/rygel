@@ -23,7 +23,6 @@
 #include "mbedtls/build_info.h"
 
 #include "mbedtls/platform.h"
-#include "mbedtls/md.h"
 
 #undef HAVE_RNG
 #if defined(MBEDTLS_PSA_CRYPTO_EXTERNAL_RNG) &&         \
@@ -33,7 +32,7 @@
 #elif defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_CTR_DRBG_C)
 #define HAVE_RNG
 #elif defined(MBEDTLS_ENTROPY_C) && defined(MBEDTLS_HMAC_DRBG_C) &&     \
-    (defined(MBEDTLS_MD_CAN_SHA256) || defined(MBEDTLS_MD_CAN_SHA512))
+    (defined(MBEDTLS_SHA256_C) || defined(MBEDTLS_SHA512_C))
 #define HAVE_RNG
 #endif
 
@@ -79,10 +78,6 @@
 #include <test/helpers.h>
 
 #include "../test/query_config.h"
-
-#define ALPN_LIST_SIZE    10
-#define GROUP_LIST_SIZE   25
-#define SIG_ALG_LIST_SIZE  5
 
 typedef struct eap_tls_keys {
     unsigned char master_secret[48];
@@ -310,9 +305,6 @@ int test_hooks_failure_detected(void);
 void test_hooks_free(void);
 
 #endif /* !MBEDTLS_TEST_HOOKS */
-
-/* Helper functions for FFDH groups. */
-int parse_groups(const char *groups, uint16_t *group_list, size_t group_list_len);
 
 #endif /* MBEDTLS_SSL_TEST_IMPOSSIBLE conditions: else */
 #endif /* MBEDTLS_PROGRAMS_SSL_SSL_TEST_LIB_H */

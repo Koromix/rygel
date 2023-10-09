@@ -43,11 +43,8 @@ record() {
     fi
 }
 
-# save current HEAD.
-# Note: this can optionally be updated to
-#   HEAD=$(git branch --show-current)
-# when using a Git version above 2.22
-HEAD=$(git rev-parse --abbrev-ref HEAD)
+# save current HEAD
+HEAD=$(git branch --show-current)
 
 # get the numbers before this PR for default and full
 cleanup

@@ -19,7 +19,7 @@
 /*
  *  The NIST SP 800-90 DRBGs are described in the following publication.
  *
- *  https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-90r.pdf
+ *  http://csrc.nist.gov/publications/nistpubs/800-90/SP800-90revised_March2007.pdf
  */
 
 #include "common.h"

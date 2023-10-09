@@ -29,7 +29,6 @@
 
 #include "mbedtls/ssl_cache.h"
 #include "ssl_misc.h"
-#include "mbedtls/error.h"
 
 #include <string.h>
 
@@ -51,7 +50,7 @@ static int ssl_cache_find_entry(mbedtls_ssl_cache_context *cache,
                                 size_t session_id_len,
                                 mbedtls_ssl_cache_entry **dst)
 {
-    int ret = MBEDTLS_ERR_SSL_CACHE_ENTRY_NOT_FOUND;
+    int ret = 1;
 #if defined(MBEDTLS_HAVE_TIME)
     mbedtls_time_t t = mbedtls_time(NULL);
 #endif
@@ -88,7 +87,7 @@ int mbedtls_ssl_cache_get(void *data,
                           size_t session_id_len,
                           mbedtls_ssl_session *session)
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret = 1;
     mbedtls_ssl_cache_context *cache = (mbedtls_ssl_cache_context *) data;
     mbedtls_ssl_cache_entry *entry;
 
@@ -131,7 +130,8 @@ static void ssl_cache_entry_zeroize(mbedtls_ssl_cache_entry *entry)
 
     /* zeroize and free session structure */
     if (entry->session != NULL) {
-        mbedtls_zeroize_and_free(entry->session, entry->session_len);
+        mbedtls_platform_zeroize(entry->session, entry->session_len);
+        mbedtls_free(entry->session);
     }
 
     /* zeroize the whole entry structure */
@@ -197,7 +197,7 @@ static int ssl_cache_pick_writing_slot(mbedtls_ssl_cache_context *cache,
         /* Create new entry */
         cur = mbedtls_calloc(1, sizeof(mbedtls_ssl_cache_entry));
         if (cur == NULL) {
-            return MBEDTLS_ERR_SSL_ALLOC_FAILED;
+            return 1;
         }
 
         /* Append to the end of the linked list. */
@@ -218,13 +218,12 @@ static int ssl_cache_pick_writing_slot(mbedtls_ssl_cache_context *cache,
     if (old == NULL) {
         /* This should only happen on an ill-configured cache
          * with max_entries == 0. */
-        return MBEDTLS_ERR_SSL_INTERNAL_ERROR;
+        return 1;
     }
 #else /* MBEDTLS_HAVE_TIME */
     /* Reuse first entry in chain, but move to last place. */
     if (cache->chain == NULL) {
-        /* This should never happen */
-        return MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+        return 1;
     }
 
     old = cache->chain;
@@ -260,11 +259,11 @@ int mbedtls_ssl_cache_set(void *data,
                           size_t session_id_len,
                           const mbedtls_ssl_session *session)
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret = 1;
     mbedtls_ssl_cache_context *cache = (mbedtls_ssl_cache_context *) data;
     mbedtls_ssl_cache_entry *cur;
 
-    size_t session_serialized_len = 0;
+    size_t session_serialized_len;
     unsigned char *session_serialized = NULL;
 
 #if defined(MBEDTLS_THREADING_C)
@@ -284,6 +283,7 @@ int mbedtls_ssl_cache_set(void *data,
      * and allocate a sufficiently large buffer. */
     ret = mbedtls_ssl_session_save(session, NULL, 0, &session_serialized_len);
     if (ret != MBEDTLS_ERR_SSL_BUFFER_TOO_SMALL) {
+        ret = 1;
         goto exit;
     }
 
@@ -303,7 +303,7 @@ int mbedtls_ssl_cache_set(void *data,
     }
 
     if (session_id_len > sizeof(cur->session_id)) {
-        ret = MBEDTLS_ERR_SSL_BAD_INPUT_DATA;
+        ret = 1;
         goto exit;
     }
     cur->session_id_len = session_id_len;
@@ -323,7 +323,8 @@ exit:
 #endif
 
     if (session_serialized != NULL) {
-        mbedtls_zeroize_and_free(session_serialized, session_serialized_len);
+        mbedtls_platform_zeroize(session_serialized, session_serialized_len);
+        mbedtls_free(session_serialized);
         session_serialized = NULL;
     }
 
@@ -334,7 +335,7 @@ int mbedtls_ssl_cache_remove(void *data,
                              unsigned char const *session_id,
                              size_t session_id_len)
 {
-    int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
+    int ret = 1;
     mbedtls_ssl_cache_context *cache = (mbedtls_ssl_cache_context *) data;
     mbedtls_ssl_cache_entry *entry;
     mbedtls_ssl_cache_entry *prev;

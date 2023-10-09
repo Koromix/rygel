@@ -7,10 +7,10 @@
  * \note This file may not be included directly. Applications must
  * include psa/crypto.h.
  *
- * \note This header and its content are not part of the Mbed TLS API and
+ * \note This header and its content is not part of the Mbed TLS API and
  * applications must not depend on it. Its main purpose is to define the
  * multi-part state objects of the Mbed TLS software-based PSA drivers. The
- * definitions of these objects are then used by crypto_struct.h to define the
+ * definition of these objects are then used by crypto_struct.h to define the
  * implementation-defined types of PSA multi-part state objects.
  */
 /*
@@ -34,12 +34,7 @@
 #define PSA_CRYPTO_BUILTIN_COMPOSITES_H
 #include "../mbedtls/private_access.h"
 
-#include "crypto_driver_common.h"
-
-#include "../mbedtls/cmac.h"
-#include "../mbedtls/gcm.h"
-#include "../mbedtls/ccm.h"
-#include "../mbedtls/chachapoly.h"
+#include <psa/crypto_driver_common.h>
 
 /*
  * MAC multi-part operation definitions.
@@ -61,6 +56,8 @@ typedef struct {
 
 #define MBEDTLS_PSA_HMAC_OPERATION_INIT { 0, PSA_HASH_OPERATION_INIT, { 0 } }
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_HMAC */
+
+#include "../mbedtls/cmac.h"
 
 typedef struct {
     psa_algorithm_t MBEDTLS_PRIVATE(alg);
@@ -202,7 +199,7 @@ typedef struct {
     uint8_t *MBEDTLS_PRIVATE(password);
     size_t MBEDTLS_PRIVATE(password_len);
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_JPAKE)
-    mbedtls_ecjpake_role MBEDTLS_PRIVATE(role);
+    uint8_t MBEDTLS_PRIVATE(role);
     uint8_t MBEDTLS_PRIVATE(buffer[MBEDTLS_PSA_JPAKE_BUFFER_SIZE]);
     size_t MBEDTLS_PRIVATE(buffer_length);
     size_t MBEDTLS_PRIVATE(buffer_offset);

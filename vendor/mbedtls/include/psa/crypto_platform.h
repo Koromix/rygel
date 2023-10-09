@@ -34,14 +34,13 @@
 #define PSA_CRYPTO_PLATFORM_H
 #include "../mbedtls/private_access.h"
 
-/*
- * Include the build-time configuration information file. Here, we do not
- * include `"mbedtls/build_info.h"` directly but `"psa/build_info.h"`, which
- * is basically just an alias to it. This is to ease the maintenance of the
- * PSA cryptography repository which has a different build system and
- * configuration.
- */
-#include "build_info.h"
+/* Include the Mbed TLS configuration file, the way Mbed TLS does it
+ * in each of its header files. */
+#include "../mbedtls/build_info.h"
+
+/* Translate between classic MBEDTLS_xxx feature symbols and PSA_xxx
+ * feature symbols. */
+#include "../mbedtls/config_psa.h"
 
 /* PSA requires several types which C99 provides in stdint.h. */
 #include <stdint.h>

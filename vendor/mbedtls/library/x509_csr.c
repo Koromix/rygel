@@ -460,7 +460,8 @@ int mbedtls_x509_csr_parse_file(mbedtls_x509_csr *csr, const char *path)
 
     ret = mbedtls_x509_csr_parse(csr, buf, n);
 
-    mbedtls_zeroize_and_free(buf, n);
+    mbedtls_platform_zeroize(buf, n);
+    mbedtls_free(buf);
 
     return ret;
 }
@@ -577,7 +578,8 @@ void mbedtls_x509_csr_free(mbedtls_x509_csr *csr)
     mbedtls_asn1_sequence_free(csr->subject_alt_names.next);
 
     if (csr->raw.p != NULL) {
-        mbedtls_zeroize_and_free(csr->raw.p, csr->raw.len);
+        mbedtls_platform_zeroize(csr->raw.p, csr->raw.len);
+        mbedtls_free(csr->raw.p);
     }
 
     mbedtls_platform_zeroize(csr, sizeof(mbedtls_x509_csr));

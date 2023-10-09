@@ -27,10 +27,6 @@
 
 #include "mbedtls/pk.h"
 
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#include "psa/crypto.h"
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
 /*
  * Max sizes of key per types. Shown as tag + len (+ content).
  */
@@ -77,20 +73,7 @@
 
 #endif /* MBEDTLS_RSA_C */
 
-#if defined(MBEDTLS_PK_HAVE_ECC_KEYS)
-
-/* Find the maximum number of bytes necessary to store an EC point. When USE_PSA
- * is defined this means looking for the maximum between PSA and built-in
- * supported curves. */
-#if defined(MBEDTLS_USE_PSA_CRYPTO)
-#define MBEDTLS_PK_MAX_ECC_BYTES   (PSA_BITS_TO_BYTES(PSA_VENDOR_ECC_MAX_CURVE_BITS) > \
-                                    MBEDTLS_ECP_MAX_BYTES ? \
-                                    PSA_BITS_TO_BYTES(PSA_VENDOR_ECC_MAX_CURVE_BITS) : \
-                                    MBEDTLS_ECP_MAX_BYTES)
-#else /* MBEDTLS_USE_PSA_CRYPTO */
-#define MBEDTLS_PK_MAX_ECC_BYTES   MBEDTLS_ECP_MAX_BYTES
-#endif /* MBEDTLS_USE_PSA_CRYPTO */
-
+#if defined(MBEDTLS_ECP_C)
 /*
  * EC public keys:
  *  SubjectPublicKeyInfo  ::=  SEQUENCE  {      1 + 2
@@ -102,7 +85,7 @@
  *                                            + 2 * ECP_MAX (coords)    [1]
  *  }
  */
-#define MBEDTLS_PK_ECP_PUB_DER_MAX_BYTES    (30 + 2 * MBEDTLS_PK_MAX_ECC_BYTES)
+#define MBEDTLS_PK_ECP_PUB_DER_MAX_BYTES    (30 + 2 * MBEDTLS_ECP_MAX_BYTES)
 
 /*
  * EC private keys:
@@ -113,12 +96,13 @@
  *      publicKey  [1] BIT STRING OPTIONAL      1 + 2 + [1] above
  *    }
  */
-#define MBEDTLS_PK_ECP_PRV_DER_MAX_BYTES    (29 + 3 * MBEDTLS_PK_MAX_ECC_BYTES)
+#define MBEDTLS_PK_ECP_PRV_DER_MAX_BYTES    (29 + 3 * MBEDTLS_ECP_MAX_BYTES)
 
-#else /* MBEDTLS_PK_HAVE_ECC_KEYS */
+#else /* MBEDTLS_ECP_C */
 
 #define MBEDTLS_PK_ECP_PUB_DER_MAX_BYTES   0
 #define MBEDTLS_PK_ECP_PRV_DER_MAX_BYTES   0
 
-#endif /* MBEDTLS_PK_HAVE_ECC_KEYS */
+#endif /* MBEDTLS_ECP_C */
+
 #endif /* MBEDTLS_PK_WRITE_H */

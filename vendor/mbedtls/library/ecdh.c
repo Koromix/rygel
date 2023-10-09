@@ -20,7 +20,7 @@
 /*
  * References:
  *
- * SEC1 https://www.secg.org/sec1-v2.pdf
+ * SEC1 http://www.secg.org/index.php?action=secg,docs_secg
  * RFC 4492
  */
 
