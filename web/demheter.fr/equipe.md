@@ -50,6 +50,13 @@
         <div class="mission">Participation aux RCP</div>
     </div>
     <div>
+        <div class="name">Dr Clémence NINEUIL</div>
+        <img src="{{ ASSET equipe/clemence_nineuil.jpg }}" alt="" />
+        <div class="title">Attachée de recherche clinique - Psychologue</div>
+        <div class="mission">Gestion des protocoles de recherche</div>
+        <div class="mission">Réalisation d’évaluations cliniques et neuropsychologiques</div>
+    </div>
+    <div>
         <div class="name">Dr Niels MARTIGNENE</div>
         <img src="{{ ASSET equipe/niels_martignene.jpg }}" alt="" />
         <div class="title">Médecin de santé publique</div>
