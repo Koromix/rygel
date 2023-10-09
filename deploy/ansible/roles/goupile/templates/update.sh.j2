@@ -23,7 +23,7 @@ sudo -u $USER git checkout 'origin/{{ goupile_commit }}'
 
 # Build Goupile
 sudo -u $USER ./bootstrap.sh
-sudo -u $USER ./felix -pParanoid --host=,clang-11,lld-11 goupile
+sudo -u $USER ./felix -pParanoid --host=,clang-13,lld-13 goupile
 
 # Install Goupile
 rsync -cp bin/Paranoid/goupile '{{ goupile_root_path }}/goupile'

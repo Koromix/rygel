@@ -11,13 +11,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-- name: Install Debian packages
-  include: pkg_debian.yml
-  when: 'ansible_os_family == "Debian"'
-
-- name: Install distribution packages
-  include: pkg_generic.yml
-  when: 'ansible_os_family != "Debian"'
+- name: Install packages
+  apt:
+    update_cache: yes
+    pkg:
+      - git
+      - clang-13
+      - lld-13
+      - gcc
+      - g++
+      - rsync
+    state: latest
+  become: yes
 
 - name: Create Goupile user
   user:
