@@ -150,7 +150,7 @@
           "step": 20
         }
       ],
-      "title": "Uptime",
+      "title": "Goupile uptime",
       "transformations": [
         {
           "id": "renameByRegex",
@@ -406,9 +406,6 @@
       },
       "fieldConfig": {
         "defaults": {
-          "color": {
-            "mode": "thresholds"
-          },
           "mappings": [
             {
               "options": {
@@ -436,7 +433,11 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "s"
         },
         "overrides": []
       },
@@ -444,40 +445,105 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 8
+        "y": 1
       },
       "id": 76,
       "options": {
-        "colorMode": "background",
-        "graphMode": "none",
-        "justifyMode": "center",
-        "orientation": "auto",
         "reduceOptions": {
+          "values": true,
           "calcs": [
             "lastNotNull"
           ],
-          "fields": "",
-          "values": false
+          "fields": ""
         },
-        "text": {},
-        "textMode": "value_and_name"
+        "orientation": "auto",
+        "textMode": "value_and_name",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "text": {}
       },
-      "pluginVersion": "9.4.3",
+      "pluginVersion": "10.1.4",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "exemplar": true,
-          "expr": "up { job = \"node_exporter\" }",
+          "exemplar": false,
+          "expr": "(up { job = \"node_exporter\" }) * 10000000000",
           "interval": "",
-          "legendFormat": "{{ instance }}",
-          "refId": "A"
+          "legendFormat": "__auto",
+          "refId": "Failure",
+          "editorMode": "code",
+          "range": false,
+          "format": "table",
+          "instant": true
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "refId": "Time",
+          "expr": "time() - node_boot_time_seconds { job = \"node_exporter\" }",
+          "range": false,
+          "instant": true,
+          "hide": false,
+          "editorMode": "code",
+          "legendFormat": "__auto",
+          "format": "table",
+          "exemplar": false
         }
       ],
-      "title": "Host status",
-      "transformations": [],
+      "title": "Server uptime",
+      "transformations": [
+        {
+          "id": "joinByField",
+          "options": {
+            "byField": "instance",
+            "mode": "outer"
+          }
+        },
+        {
+          "id": "calculateField",
+          "options": {
+            "mode": "reduceRow",
+            "reduce": {
+              "reducer": "min",
+              "include": [
+                "Value #Time",
+                "Value #Failure"
+              ]
+            },
+            "alias": "Value",
+            "replaceFields": false
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time 1": true,
+              "__name__ 1": true,
+              "job 1": true,
+              "Value #Failure": true,
+              "Time 2": true,
+              "__name__ 2": true,
+              "job 2": true,
+              "Value #Time": true,
+              "Value": false,
+              "__name__": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "Time": "",
+              "Value": "",
+              "Value #Time": ""
+            }
+          }
+        }
+      ],
       "type": "stat"
     },
     {
@@ -750,32 +816,6 @@
         }
       ],
       "type": "stat"
-    },
-    {
-      "collapsed": false,
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 15
-      },
-      "id": 52,
-      "panels": [],
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
-          },
-          "refId": "A"
-        }
-      ],
-      "title": "Hosts",
-      "type": "row"
     },
     {
       "collapsed": false,
