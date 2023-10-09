@@ -16,6 +16,7 @@
     update_cache: yes
     pkg:
       - ufw
+      - unattended-upgrades
     state: latest
   become: yes
 
@@ -124,12 +125,25 @@
     sysctl_set: yes
   become: yes
 
-- name: Set up weekly upgrade and reboot (Debian)
+- name: Drop old weekly upgrade and reboot task
   cron:
     name: weekly_upgrade
-    weekday: mon
-    hour: 5
-    minute: 0
-    state: '{{ "present" if weekly_upgrade else "absent" }}'
-    job: '/usr/bin/apt update -y && /usr/bin/apt upgrade -y && /usr/sbin/shutdown -r now'
+    state: absent
+
+- name: Enable and configure auto-reboot after upgrades
+  lineinfile:
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    regexp: '{{ item.regexp }}' 
+    line: '{{ item.line }}'
+    state: present
+  loop:
+    - regexp: 'Unattended-Upgrade::Automatic-Reboot '
+      line: 'Unattended-Upgrade::Automatic-Reboot "true";'
+    - regexp: 'Unattended-Upgrade::Automatic-Reboot-Time '
+      line: 'Unattended-Upgrade::Automatic-Reboot-Time "02:00";'
+  become: yes
+
+- name: Enable unattended upgrades
+  shell: dpkg-reconfigure -pmedium unattended-upgrades
+  when: 'not ansible_check_mode'
   become: yes
