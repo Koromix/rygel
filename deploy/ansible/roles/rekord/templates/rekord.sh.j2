@@ -1,0 +1,5 @@
+#!/bin/sh -e
+
+{% for dir in rekord_directories %}
+/usr/bin/rekord put -n "{{ dir.name }}" "{{ dir.src }}"
+{% endfor %}

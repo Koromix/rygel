@@ -11,16 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-[Unit]
-Description = Perform rclone backups
-Wants = network-online.target
-After = network-online.target
-
-[Service]
-Type = oneshot
-{% for dir in rclone_directories %}
-{% set outer = loop %}
-{% for remote in rclone_remotes %}
-ExecStart = rclone sync --config "{{ rclone_root_path }}/rclone.cfg" "{{ dir.src }}" "crypt_{{ loop.index }}_{{ outer.index }}:"
-{% endfor %}
-{% endfor %}
+rekord_directories:
+  - name: '{{ inventory_hostname }}/opt/nginx'
+    src: /opt/nginx
+  - name: '{{ inventory_hostname }}/opt/static/live'
+    src: /opt/static/live

@@ -47,10 +47,10 @@
       when: 'static_deploys is defined'
       tags:
         - static
-    - name: rclone
-      when: 'rclone_directories is defined'
+    - name: rekord
+      when: 'rekord_directories is defined'
       tags:
-        - rclone
+        - rekord
     - name: thop
       when: 'thop_tables is defined'
       tags:

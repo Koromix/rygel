@@ -11,14 +11,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
-[Unit]
-Description = Perform rclone backups
-
-[Timer]
-OnActiveSec = 0
-OnCalendar = {{ rclone_schedule }}
-Persistent = true
-RandomizedDelaySec = {{ rclone_randomize }}
-
-[Install]
-WantedBy = timers.target
+rekord_directories:
+  - name: '{{ inventory_hostname }}{{ mariadb_backup_path }}'
+    src: '{{ mariadb_backup_path }}'
+  - name: '{{ inventory_hostname }}{{ wordpress_root_path }}'
+    src: '{{ wordpress_root_path }}'
