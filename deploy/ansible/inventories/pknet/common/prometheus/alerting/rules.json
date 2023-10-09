@@ -488,7 +488,7 @@
                             "datasourceUid": "PBFA97CFB590B2093",
                             "model": {
                                 "editorMode": "code",
-                                "expr": "time() - systemd_timer_last_trigger_seconds { name=\"rclone.timer\" }",
+                                "expr": "time() - systemd_timer_last_trigger_seconds { name=\"rekord.timer\" }",
                                 "hide": false,
                                 "intervalMs": 1000,
                                 "legendFormat": "__auto",
@@ -605,7 +605,7 @@
                             "datasourceUid": "PBFA97CFB590B2093",
                             "model": {
                                 "editorMode": "code",
-                                "expr": "systemd_unit_state { name=\"rclone.service\", state=\"failed\" }",
+                                "expr": "systemd_unit_state { name=\"rekord.service\", state=\"failed\" }",
                                 "hide": false,
                                 "intervalMs": 1000,
                                 "legendFormat": "__auto",
