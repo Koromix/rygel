@@ -683,7 +683,7 @@ function runCreateUserDialog(e) {
                     confirm: d.values.confirm,
                     email: d.values.email,
                     phone: d.values.phone,
-                    root: d.values.root
+                    root: profile.root ? d.values.root : false
                 });
 
                 resolve();
@@ -824,7 +824,7 @@ function runEditUserDialog(e, user) {
                     reset_secret: d.values.reset_secret,
                     email: d.values.email,
                     phone: d.values.phone,
-                    root: d.values.root
+                    root: profile.root ? d.values.root : false
                 });
 
                 resolve();
