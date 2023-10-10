@@ -29,32 +29,48 @@
       - php7.4-sqlite3
       - make
       - curl
+      - acl
     state: latest
+  become: yes
+
+- name: Prepare static directories
+  file:
+    path: '{{ item.path }}'
+    state: directory
+    owner: '{{ item.owner }}'
+    group: '{{ item.group }}'
+    mode: '0755'
+  loop:
+    - path: '{{ static_root_path }}'
+      owner: root
+      group: root
+    - path: '{{ static_root_path }}/live'
+      owner: www-data
+      group: www-data
+    - path: '{{ static_root_path }}/poetry'
+      owner: www-data
+      group: www-data
+    - path: '{{ static_root_path }}/poetry/cache'
+      owner: www-data
+      group: www-data
   become: yes
 
 - name: Install Poetry
   shell:
     cmd: 'curl -sSL https://install.python-poetry.org | python3 -'
-    creates: '{{ lookup("env", "HOME") }}/.local/share/pypoetry/venv/bin/poetry'
+    creates: '{{ static_root_path }}/poetry/bin/poetry'
+  environment:
+    POETRY_HOME: '{{ static_root_path }}/poetry'
+    POETRY_CACHE_DIR: '{{ static_root_path }}/poetry/cache'
   become: yes
-
-- name: Prepare static directories
-  file:
-    path: '{{ item }}'
-    state: directory
-    owner: root
-    group: root
-    mode: '0755'
-  loop:
-    - '{{ static_root_path }}'
-    - '{{ static_root_path }}/live'
-  become: yes
+  become_user: www-data
 
 - name: Prepare static repository directory
   file:
     path: '{{ static_root_path }}/repo'
     state: directory
-    owner: '{{ ansible_user | default(lookup("env", "USER"), True) }}'
+    owner: www-data
+    group: www-data
     recurse: yes
   become: yes
 
@@ -67,14 +83,15 @@
     force: yes
   loop: '{{ static_deploys }}'
   when: 'item.repo is defined'
-  become: no
+  become: yes
+  become_user: www-data
 
 - name: Create live directories
   file:
     path: '{{ static_root_path }}/live/{{ item.name }}'
     state: directory
-    owner: root
-    group: root
+    owner: www-data
+    group: www-data
     recurse: yes
   loop: '{{ static_deploys }}'
   become: yes
@@ -83,8 +100,12 @@
   command:
     cmd: '{{ item.cmd }}'
     chdir: '{{ item.chdir | default(".") }}'
+  environment:
+    POETRY_HOME: '{{ static_root_path }}/poetry'
+    POETRY_CACHE_DIR: '{{ static_root_path }}/poetry/cache'
   loop: '{{ static_deploys | map(attribute="build", default=[]) | flatten }}'
   become: yes
+  become_user: www-data
 
 - name: Extract static subdirectories
   synchronize:
@@ -92,6 +113,7 @@
     dest: '{{ static_root_path }}/live/{{ item.name }}/'
     delete: yes
     recursive: yes
+    owner: yes
     rsync_opts:
       - '--exclude=".*"'
       - '--filter="P *.db*"'
