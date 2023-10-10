@@ -129,7 +129,20 @@
 
 require_once("vendor/parsedown/Parsedown.php");
 
-$db = new SQLite3("data/news.db", SQLITE3_OPEN_READONLY);
+$db = new SQLite3("data/news.db", SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+
+$db->query("
+    CREATE TABLE IF NOT EXISTS news (
+        id INTEGER,
+        image TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        date INTEGER,
+        duration INTEGER,
+
+        PRIMARY KEY('id')
+    );
+");
 
 $res = $db->query("SELECT image, title, content FROM news ORDER BY id");
 $news = fetch_all($res);
