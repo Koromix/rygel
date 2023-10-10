@@ -171,7 +171,9 @@ function parse_markdown($text) {
 ?>
         </div>
 
-        {{ CONTENT }}
+        <main>
+            {{ CONTENT }}
+        </main>
 
         <footer>
             <div>DEMHETER © 2022</div>

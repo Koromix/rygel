@@ -279,21 +279,10 @@ static bool RenderMarkdown(PageData *page, const HashTable<const char *, const F
         cmark_iter *iter = cmark_iter_new(root);
         RG_DEFER { cmark_iter_free(iter); };
 
-        bool has_main = false;
-
         cmark_event_type event;
         while ((event = cmark_iter_next(iter)) != CMARK_EVENT_DONE) {
             cmark_node *node = cmark_iter_get_node(iter);
             cmark_node_type type = cmark_node_get_type(node);
-
-            // We want everything before the first title to live outside main
-            if (!has_main && event == CMARK_EVENT_ENTER && cmark_node_get_type(node) == CMARK_NODE_HEADING) {
-                cmark_node *frag = cmark_node_new(CMARK_NODE_HTML_BLOCK);
-                cmark_node_set_literal(frag, "<main>");
-                cmark_node_insert_before(node, frag);
-
-                has_main = true;
-            }
 
             // List sections and add anchors
             if (event == CMARK_EVENT_EXIT && type == CMARK_NODE_HEADING) {
@@ -314,12 +303,6 @@ static bool RenderMarkdown(PageData *page, const HashTable<const char *, const F
                     cmark_node_prepend_child(node, frag);
                 }
             }
-        }
-
-        if (has_main) {
-            cmark_node *frag = cmark_node_new(CMARK_NODE_HTML_BLOCK);
-            cmark_node_set_literal(frag, "</main>");
-            cmark_node_append_child(root, frag);
         }
     }
 
