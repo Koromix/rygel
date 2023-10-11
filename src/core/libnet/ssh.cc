@@ -285,14 +285,14 @@ ssh_session ssh_Connect(const ssh_Config &config)
         RG_DEFER { ssh_key_free(private_key); };
 
         if (ssh_userauth_publickey(ssh, nullptr, private_key) != SSH_AUTH_SUCCESS) {
-            LogError("Failed to authenticate to '%1@%2': %3", config.host, config.username, ssh_get_error(ssh));
+            LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));
             return nullptr;
         }
     } else {
         RG_ASSERT(config.password);
 
         if (ssh_userauth_password(ssh, nullptr, config.password) != SSH_AUTH_SUCCESS) {
-            LogError("Failed to authenticate to '%1@%2': %3", config.host, config.username, ssh_get_error(ssh));
+            LogError("Failed to authenticate to '%1@%2': %3", config.username, config.host, ssh_get_error(ssh));
             return nullptr;
         }
     }
