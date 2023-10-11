@@ -3265,7 +3265,7 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
         case (int)OpenFlag::Append: {
             access = GENERIC_WRITE;
             share = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            creation = CREATE_ALWAYS;
+            creation = OPEN_ALWAYS;
             attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
         } break;
@@ -3293,7 +3293,15 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
     }
     share |= FILE_SHARE_DELETE;
 
-    HANDLE h;
+    HANDLE h = nullptr;
+    int fd = -1;
+    RG_DEFER_N(err_guard) {
+        close(fd);
+        if (h) {
+            CloseHandle(h);
+        }
+    };
+
     if (win32_utf8) {
         h = CreateFileA(filename, access, share, nullptr, creation, attributes, nullptr);
     } else {
@@ -3321,15 +3329,20 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
         return ret;
     }
 
-    int fd = _open_osfhandle((intptr_t)h, oflags);
+    fd = _open_osfhandle((intptr_t)h, oflags);
     if (fd < 0) {
         LogError("Cannot open '%1': %2", filename, strerror(errno));
-        CloseHandle(h);
-
         return OpenResult::OtherError;
     }
 
+    if ((flags & (int)OpenFlag::Append) && _lseeki64(fd, 0, SEEK_END) < 0) {
+        LogError("Cannot move file pointer: %1", strerror(errno));
+        return OpenResult::OtherError;
+    }
+
+    err_guard.disable();
     *out_fd = fd;
+
     return OpenResult::Success;
 }
 
