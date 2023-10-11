@@ -8562,9 +8562,9 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
 
   
   const __dbArgcMismatch = (pDb,f,n)=>{
-    return sqlite3.util.sqlite3_wasm_db_error(pDb, capi.SQLITE_MISUSE,
-                                              f+"() requires "+n+" argument"+
-                                              (1===n?"":'s')+".");
+    return util.sqlite3_wasm_db_error(pDb, capi.SQLITE_MISUSE,
+                                      f+"() requires "+n+" argument"+
+                                      (1===n?"":'s')+".");
   };
 
   
@@ -9230,7 +9230,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
 
 
 globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
-  sqlite3.version = {"libVersion": "3.43.0", "libVersionNumber": 3043000, "sourceId": "2023-08-24 12:36:59 0f80b798b3f4b81a7bb4233c58294edd0f1156f36b6ecf5ab8e83631d468778c","downloadVersion": 3430000};
+  sqlite3.version = {"libVersion": "3.43.2", "libVersionNumber": 3043002, "sourceId": "2023-10-10 12:14:04 4310099cce5a487035fa535dd3002c59ac7f1d1bec68d7cf317fd3e769484790","downloadVersion": 3430200};
 });
 
 
