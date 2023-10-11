@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_PROXY_ERROR 3 "3 Aug 2020" libcurl libcurl
+.TH CURLINFO_PROXY_ERROR 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLINFO_PROXY_ERROR \- get the detailed (SOCKS) proxy error
 .SH SYNOPSIS
@@ -100,5 +101,7 @@ Added in 7.73.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLINFO_RESPONSE_CODE "(3), " libcurl-errors "(3), "
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLINFO_RESPONSE_CODE (3),
+.BR libcurl-errors (3)

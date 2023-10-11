@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_SOCKOPTDATA 3 "16 Jun 2014" libcurl libcurl
+.TH CURLOPT_SOCKOPTDATA 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_SOCKOPTDATA \- pointer to pass to sockopt callback
 .SH SYNOPSIS
@@ -68,4 +69,5 @@ Added in 7.16.0
 .SH RETURN VALUE
 Returns \fICURLE_OK\fP if the option is supported, and \fICURLE_UNKNOWN_OPTION\fP if not.
 .SH "SEE ALSO"
-.BR CURLOPT_SOCKOPTFUNCTION "(3), " CURLOPT_OPENSOCKETFUNCTION "(3), "
+.BR CURLOPT_OPENSOCKETFUNCTION (3),
+.BR CURLOPT_SOCKOPTFUNCTION (3)

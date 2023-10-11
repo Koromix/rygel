@@ -21,7 +21,8 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH curl_multi_wait 3 "12 Jul 2012" "libcurl" "libcurl"
+.TH curl_multi_wait 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_multi_wait - polls on all easy handles in a multi handle
 .SH SYNOPSIS
@@ -123,4 +124,6 @@ This function was added in libcurl 7.28.0.
 CURLMcode type, general libcurl multi interface error code. See
 \fIlibcurl-errors(3)\fP
 .SH "SEE ALSO"
-.BR curl_multi_fdset "(3), " curl_multi_perform "(3), " curl_multi_poll "(3), "
+.BR curl_multi_fdset (3),
+.BR curl_multi_perform (3),
+.BR curl_multi_poll (3)

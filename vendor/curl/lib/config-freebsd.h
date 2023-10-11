@@ -215,6 +215,9 @@
 /* Define to 1 if you have the freeaddrinfo function. */
 #define HAVE_FREEADDRINFO 1
 
+/* Define to 1 if you have the fseeko function. */
+#define HAVE_FSEEKO 1
+
 /* Define to 1 if you have the fsetxattr function. */
 /* #undef HAVE_FSETXATTR */
 
@@ -585,6 +588,9 @@
 
 /* Define to 1 if you have the sigsetjmp function or macro. */
 #define HAVE_SIGSETJMP 1
+
+/* Define to 1 if you have the `snprintf' function. */
+#define HAVE_SNPRINTF 1
 
 /* Define to 1 if struct sockaddr_in6 has the sin6_scope_id member */
 #define HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID 1

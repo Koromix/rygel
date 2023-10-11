@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_CERTINFO 3 "12 Sep 2015" "libcurl" "libcurl"
+.TH CURLINFO_CERTINFO 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 CURLINFO_CERTINFO \- get the TLS certificate chain
 .SH SYNOPSIS
@@ -95,4 +96,6 @@ Added in 7.19.1
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLINFO_CAPATH (3)

@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_SSL_VERIFYSTATUS 3 "04 Dec 2014" libcurl libcurl
+.TH CURLOPT_SSL_VERIFYSTATUS 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_SSL_VERIFYSTATUS \- verify the certificate's status
 .SH SYNOPSIS
@@ -61,6 +62,6 @@ GnuTLS TLS backends.
 Returns CURLE_OK if OCSP stapling is supported by the SSL backend, otherwise
 returns CURLE_NOT_BUILT_IN.
 .SH "SEE ALSO"
-.BR CURLOPT_SSL_VERIFYHOST "(3), "
-.BR CURLOPT_SSL_VERIFYPEER "(3), "
-.BR CURLOPT_CAINFO "(3), "
+.BR CURLOPT_SSL_VERIFYHOST (3),
+.BR CURLOPT_SSL_VERIFYPEER (3),
+.BR CURLOPT_CAINFO (3)

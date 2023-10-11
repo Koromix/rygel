@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_CONNECT_ONLY 3 "19 Jun 2014" libcurl libcurl
+.TH CURLOPT_CONNECT_ONLY 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_CONNECT_ONLY \- stop when connected to target server
 .SH SYNOPSIS
@@ -76,5 +77,7 @@ Added in 7.15.2
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_VERBOSE "(3), " CURLOPT_HTTPPROXYTUNNEL  "(3), "
-.BR curl_easy_recv "(3), " curl_easy_send "(3) "
+.BR curl_easy_recv (3),
+.BR curl_easy_send (3),
+.BR CURLOPT_HTTPPROXYTUNNEL (3),
+.BR CURLOPT_VERBOSE (3)

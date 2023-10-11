@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH curl_easy_send 3 "29 April 2008" "libcurl" "libcurl"
+.TH curl_easy_send 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_easy_send - sends raw data over an "easy" connection
 .SH SYNOPSIS
@@ -86,5 +87,7 @@ system facilities to wait until the socket is writable, and retry.
 If there is no socket available to use from the previous transfer, this function
 returns \fBCURLE_UNSUPPORTED_PROTOCOL\fP.
 .SH "SEE ALSO"
-.BR curl_easy_setopt "(3), " curl_easy_perform "(3), " curl_easy_getinfo "(3), "
-.BR curl_easy_recv "(3) "
+.BR curl_easy_setopt (3),
+.BR curl_easy_perform (3),
+.BR curl_easy_getinfo (3),
+.BR curl_easy_recv (3)

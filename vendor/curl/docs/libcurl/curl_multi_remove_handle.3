@@ -21,7 +21,8 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH curl_multi_remove_handle 3 "6 March 2002" "libcurl" "libcurl"
+.TH curl_multi_remove_handle 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_multi_remove_handle - remove an easy handle from a multi session
 .SH SYNOPSIS
@@ -67,5 +68,6 @@ Added in 7.9.6
 .SH RETURN VALUE
 CURLMcode type, general libcurl multi interface error code.
 .SH "SEE ALSO"
-.BR curl_multi_cleanup "(3)," curl_multi_init "(3), "
-.BR curl_multi_add_handle "(3) "
+.BR curl_multi_add_handle (3),
+.BR curl_multi_cleanup (3),
+.BR curl_multi_init (3)

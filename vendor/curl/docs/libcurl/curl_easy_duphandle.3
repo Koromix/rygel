@@ -21,7 +21,8 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH curl_easy_duphandle 3 "19 Sep 2014" "libcurl" "libcurl"
+.TH curl_easy_duphandle 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_easy_duphandle - Clone a libcurl session handle
 .SH SYNOPSIS
@@ -65,6 +66,8 @@ Added in 7.9
 .SH RETURN VALUE
 If this function returns NULL, something went wrong and no valid handle was
 returned.
-.SH "SEE ALSO"
-.BR curl_easy_init "(3)," curl_easy_cleanup "(3)," curl_easy_reset "(3),"
-.BR curl_global_init "(3)"
+.SH SEE ALSO
+.BR curl_easy_cleanup (3),
+.BR curl_easy_init (3),
+.BR curl_easy_reset (3),
+.BR curl_global_init (3)

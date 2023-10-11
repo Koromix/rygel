@@ -21,7 +21,8 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH curl_multi_fdset 3 "2 Jan 2006" "libcurl" "libcurl"
+.TH curl_multi_fdset 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_multi_fdset - extracts file descriptor information from a multi handle
 .SH SYNOPSIS
@@ -97,6 +98,9 @@ Added in 7.9.6
 \fBCURLMcode\fP type, general libcurl multi interface error code. See
 \fIlibcurl-errors(3)\fP
 .SH "SEE ALSO"
-.BR curl_multi_cleanup "(3), " curl_multi_init "(3), "
-.BR curl_multi_wait "(3), "
-.BR curl_multi_timeout "(3), " curl_multi_perform "(3), " select "(2) "
+.BR curl_multi_cleanup (3),
+.BR curl_multi_init (3),
+.BR curl_multi_perform (3),
+.BR curl_multi_timeout (3),
+.BR curl_multi_wait (3),
+.BR select (2)

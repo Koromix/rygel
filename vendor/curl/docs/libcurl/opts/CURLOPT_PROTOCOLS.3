@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_PROTOCOLS 3 "19 Jun 2014" libcurl libcurl
+.TH CURLOPT_PROTOCOLS 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_PROTOCOLS \- allowed protocols
 .SH SYNOPSIS
@@ -98,4 +99,6 @@ Added in 7.19.4. Deprecated since 7.85.0.
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_REDIR_PROTOCOLS "(3), " CURLOPT_URL "(3), "
+.BR CURLOPT_DEFAULT_PROTOCOL (3),
+.BR CURLOPT_REDIR_PROTOCOLS (3),
+.BR CURLOPT_URL (3)

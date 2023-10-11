@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_CONTENT_TYPE 3 "1 Sep 2015" "libcurl" "libcurl"
+.TH CURLINFO_CONTENT_TYPE 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 CURLINFO_CONTENT_TYPE \- get Content-Type
 .SH SYNOPSIS
@@ -69,5 +70,7 @@ Added in 7.9.4
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
-.BR CURLOPT_HEADERFUNCTION "(3), " curl_easy_header "(3) "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_header (3),
+.BR curl_easy_setopt (3),
+.BR CURLOPT_HEADERFUNCTION (3)

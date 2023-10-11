@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_SSLCERT_BLOB 3 "24 Jun 2020" libcurl libcurl
+.TH CURLOPT_SSLCERT_BLOB 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_SSLCERT_BLOB \- SSL client certificate from memory blob
 .SH SYNOPSIS
@@ -72,4 +73,6 @@ Schannel and mbedTLS (since 7.78.0) backends.
 Returns CURLE_OK if TLS enabled, CURLE_UNKNOWN_OPTION if not, or
 CURLE_OUT_OF_MEMORY if there was insufficient heap space.
 .SH "SEE ALSO"
-.BR CURLOPT_SSLCERTTYPE "(3), " CURLOPT_SSLKEY "(3), "
+.BR CURLOPT_SSLCERTTYPE (3),
+.BR CURLOPT_SSLKEY (3),
+.BR CURLOPT_KEYPASSWD (3)

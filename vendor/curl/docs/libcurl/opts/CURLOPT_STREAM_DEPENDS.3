@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_STREAM_DEPENDS 3 "13 Sep 2015" libcurl libcurl
+.TH CURLOPT_STREAM_DEPENDS 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_STREAM_DEPENDS \- stream this transfer depends on
 .SH SYNOPSIS
@@ -70,4 +71,7 @@ Added in 7.46.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_STREAM_WEIGHT "(3), " CURLOPT_STREAM_DEPENDS_E "(3), "
+.BR CURLMOPT_PIPELINING (3),
+.BR CURLOPT_HTTP_VERSION (3),
+.BR CURLOPT_STREAM_DEPENDS_E (3),
+.BR CURLOPT_STREAM_WEIGHT (3)

@@ -21,7 +21,8 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH curl_getenv 3 "30 April 2004" "libcurl" "libcurl"
+.TH curl_getenv 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_getenv - return value for environment name
 .SH SYNOPSIS
@@ -54,4 +55,4 @@ Under unix operating systems, there is no point in returning an allocated
 memory, although other systems does not work properly if this is not done. The
 unix implementation thus suffers slightly from the drawbacks of other systems.
 .SH "SEE ALSO"
-.BR getenv "(3C), "
+.BR getenv (3C)

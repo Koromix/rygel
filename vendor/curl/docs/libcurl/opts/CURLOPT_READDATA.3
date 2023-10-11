@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_READDATA 3 "16 Jun 2014" libcurl libcurl
+.TH CURLOPT_READDATA 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_READDATA \- pointer passed to the read callback
 .SH SYNOPSIS
@@ -66,4 +67,7 @@ This option was once known by the older name CURLOPT_INFILE, the name
 .SH RETURN VALUE
 This returns CURLE_OK.
 .SH "SEE ALSO"
-.BR CURLOPT_READFUNCTION "(3), " CURLOPT_WRITEDATA "(3), "
+.BR CURLOPT_HEADERDATA (3),
+.BR CURLOPT_READFUNCTION (3),
+.BR CURLOPT_WRITEDATA (3),
+.BR CURLOPT_WRITEFUNCTION (3)

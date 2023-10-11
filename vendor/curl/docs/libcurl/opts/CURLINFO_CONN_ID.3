@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_CONN_ID 3 "07 June 2023" "libcurl" "libcurl"
+.TH CURLINFO_CONN_ID 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 CURLINFO_CONN_ID \- get the ID of the last connection used by the handle
 .SH SYNOPSIS
@@ -65,5 +66,6 @@ Added in 8.2.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
-.BR CURLINFO_XFER_ID "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLINFO_XFER_ID (3)

@@ -29,6 +29,11 @@
 # CSRC2 = file4.c file5.c file6.c
 # CSOURCES = $(CSRC1) $(CSRC2)
 
+# libcurl sources to include in curltool lib we use for test binaries
+CURLTOOL_LIBCURL_CFILES = \
+  ../lib/base64.c \
+  ../lib/dynbuf.c
+
 # libcurl has sources that provide functions named curlx_* that aren't part of
 # the official API, but we reuse the code here to avoid duplication.
 CURLX_CFILES = \
@@ -42,15 +47,15 @@ CURLX_CFILES = \
   ../lib/warnless.c
 
 CURLX_HFILES = \
-  ../lib/curl_setup.h \
-  ../lib/strtoofft.h \
-  ../lib/timediff.h \
-  ../lib/nonblock.h \
-  ../lib/warnless.h \
   ../lib/curl_ctype.h \
   ../lib/curl_multibyte.h \
+  ../lib/curl_setup.h \
+  ../lib/dynbuf.h \
+  ../lib/nonblock.h \
+  ../lib/strtoofft.h \
+  ../lib/timediff.h \
   ../lib/version_win32.h \
-  ../lib/dynbuf.h
+  ../lib/warnless.h
 
 CURL_CFILES = \
   slist_wc.c \
@@ -83,10 +88,10 @@ CURL_CFILES = \
   tool_paramhlp.c \
   tool_parsecfg.c \
   tool_progress.c \
-  tool_stderr.c \
-  tool_strdup.c \
   tool_setopt.c \
   tool_sleep.c \
+  tool_stderr.c \
+  tool_strdup.c \
   tool_urlglob.c \
   tool_util.c \
   tool_vms.c \

@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_INFILESIZE_LARGE 3 "17 Jun 2014" libcurl libcurl
+.TH CURLOPT_INFILESIZE_LARGE 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_INFILESIZE_LARGE \- size of the input file to send off
 .SH SYNOPSIS
@@ -71,4 +72,6 @@ SMTP support added in 7.23.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_INFILESIZE "(3), " CURLOPT_UPLOAD "(3), "
+.BR CURLINFO_CONTENT_LENGTH_UPLOAD_T (3),
+.BR CURLOPT_INFILESIZE (3),
+.BR CURLOPT_UPLOAD (3)

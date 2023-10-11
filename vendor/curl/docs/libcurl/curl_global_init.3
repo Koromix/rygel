@@ -21,7 +21,8 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH curl_global_init 3 "11 May 2004" "libcurl" "libcurl"
+.TH curl_global_init 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_global_init - Global libcurl initialization
 .SH SYNOPSIS
@@ -113,9 +114,9 @@ Added in 7.8
 If this function returns non-zero, something went wrong and you cannot use the
 other curl functions.
 .SH "SEE ALSO"
-.BR curl_global_init_mem "(3), "
-.BR curl_global_cleanup "(3), "
-.BR curl_global_sslset "(3), "
-.BR curl_easy_init "(3), "
-.BR libcurl "(3), "
-.BR curl_global_trace "(3), "
+.BR curl_easy_init (3),
+.BR curl_global_cleanup (3),
+.BR curl_global_init_mem (3),
+.BR curl_global_sslset (3),
+.BR curl_global_trace (3),
+.BR libcurl (3)

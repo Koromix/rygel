@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_SSL_VERIFYRESULT 3 "1 Sep 2015" libcurl libcurl
+.TH CURLINFO_SSL_VERIFYRESULT 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLINFO_SSL_VERIFYRESULT \- get the result of the certificate verification
 .SH SYNOPSIS
@@ -59,4 +60,6 @@ Added in 7.5. Only set by the OpenSSL/libressl/boringssl and GnuTLS backends.
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLINFO_PROXY_SSL_VERIFYRESULT (3)

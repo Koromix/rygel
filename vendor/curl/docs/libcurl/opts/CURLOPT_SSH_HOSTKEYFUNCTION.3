@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_SSH_HOSTKEYFUNCTION 3 "4 Nov 2021" libcurl libcurl
+.TH CURLOPT_SSH_HOSTKEYFUNCTION 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_SSH_HOSTKEYFUNCTION \- callback to check host key
 .SH SYNOPSIS
@@ -83,5 +84,5 @@ Added in 7.84.0 , work only with libssh2 backend.
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_SSH_HOSTKEYDATA "(3), "
-.BR CURLOPT_SSH_KNOWNHOSTS "(3), "
+.BR CURLOPT_SSH_HOSTKEYDATA (3),
+.BR CURLOPT_SSH_KNOWNHOSTS (3)

@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_FTP_SSL_CCC 3 "19 Jun 2014" libcurl libcurl
+.TH CURLOPT_FTP_SSL_CCC 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_FTP_SSL_CCC \- switch off SSL again with FTP after auth
 .SH SYNOPSIS
@@ -65,4 +66,6 @@ Added in 7.16.1
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_USE_SSL "(3), " CURLOPT_FTPSSLAUTH "(3), "
+.BR CURLOPT_FTPSSLAUTH (3),
+.BR CURLOPT_PROTOCOLS_STR (3),
+.BR CURLOPT_USE_SSL (3)

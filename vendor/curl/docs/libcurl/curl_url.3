@@ -21,7 +21,8 @@
 .\" * SPDX-License-Identifier: curl
 .\" *
 .\" **************************************************************************
-.TH curl_url 3 "6 Aug 2018" "libcurl" "libcurl"
+.TH curl_url 3 "September 26, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_url - returns a new URL handle
 .SH SYNOPSIS
@@ -58,5 +59,9 @@ Added in 7.62.0
 .SH RETURN VALUE
 Returns a \fBCURLU *\fP if successful, or NULL if out of memory.
 .SH "SEE ALSO"
-.BR curl_url_cleanup "(3), " curl_url_get "(3), " curl_url_set "(3), "
-.BR curl_url_dup "(3), " curl_url_strerror "(3), " CURLOPT_CURLU "(3)"
+.BR curl_url_cleanup (3),
+.BR curl_url_dup (3),
+.BR curl_url_get (3),
+.BR curl_url_set (3),
+.BR curl_url_strerror (3),
+.BR CURLOPT_CURLU (3)

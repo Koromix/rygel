@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_HTTPGET 3 "17 Jun 2014" libcurl libcurl
+.TH CURLOPT_HTTPGET 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_HTTPGET \- ask for an HTTP GET request
 .SH SYNOPSIS
@@ -64,5 +65,7 @@ Along with HTTP
 .SH RETURN VALUE
 Returns CURLE_OK if HTTP is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_NOBODY "(3), " CURLOPT_UPLOAD "(3), " CURLOPT_POST "(3), "
-.BR curl_easy_reset "(3) "
+.BR curl_easy_reset (3),
+.BR CURLOPT_NOBODY (3),
+.BR CURLOPT_POST (3),
+.BR CURLOPT_UPLOAD (3)

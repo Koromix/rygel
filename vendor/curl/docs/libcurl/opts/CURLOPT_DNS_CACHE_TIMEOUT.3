@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_DNS_CACHE_TIMEOUT 3 "17 Jun 2014" libcurl libcurl
+.TH CURLOPT_DNS_CACHE_TIMEOUT 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_DNS_CACHE_TIMEOUT \- life-time for DNS cache entries
 .SH SYNOPSIS
@@ -81,5 +82,8 @@ Always
 .SH RETURN VALUE
 Returns CURLE_OK
 .SH "SEE ALSO"
-.BR CURLOPT_DNS_USE_GLOBAL_CACHE "(3), " CURLOPT_DNS_SERVERS "(3), "
-.BR CURLOPT_RESOLVE "(3), "
+.BR CURLOPT_CONNECTTIMEOUT_MS (3),
+.BR CURLOPT_DNS_SERVERS (3),
+.BR CURLOPT_DNS_USE_GLOBAL_CACHE (3),
+.BR CURLOPT_MAXAGE_CONN (3),
+.BR CURLOPT_RESOLVE (3)

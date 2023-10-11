@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_HTTPHEADER 3 "17 Jun 2014" libcurl libcurl
+.TH CURLOPT_HTTPHEADER 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_HTTPHEADER \- set of HTTP headers
 .SH SYNOPSIS
@@ -157,6 +158,9 @@ As long as HTTP is enabled. Use in MIME mail added in 7.56.0.
 .SH RETURN VALUE
 Returns CURLE_OK if HTTP is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_CUSTOMREQUEST "(3), " CURLOPT_HEADEROPT "(3), "
-.BR CURLOPT_PROXYHEADER "(3), " CURLOPT_HEADER "(3), "
-.BR CURLOPT_MIMEPOST "(3), " curl_mime_init "(3)"
+.BR curl_mime_init (3),
+.BR CURLOPT_CUSTOMREQUEST (3),
+.BR CURLOPT_HEADER (3),
+.BR CURLOPT_HEADEROPT (3),
+.BR CURLOPT_MIMEPOST (3),
+.BR CURLOPT_PROXYHEADER (3)

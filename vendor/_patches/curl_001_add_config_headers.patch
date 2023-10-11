@@ -1,9 +1,9 @@
-diff --git b/vendor/curl/lib/config-freebsd.h a/vendor/curl/lib/config-freebsd.h
+diff --git a/vendor/curl/lib/config-freebsd.h b/vendor/curl/lib/config-freebsd.h
 new file mode 100644
-index 000000000..21b5e1184
+index 000000000..4f9cee4d6
 --- /dev/null
-+++ a/vendor/curl/lib/config-freebsd.h
-@@ -0,0 +1,1074 @@
++++ b/vendor/curl/lib/config-freebsd.h
+@@ -0,0 +1,1080 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -220,6 +220,9 @@ index 000000000..21b5e1184
 +
 +/* Define to 1 if you have the freeaddrinfo function. */
 +#define HAVE_FREEADDRINFO 1
++
++/* Define to 1 if you have the fseeko function. */
++#define HAVE_FSEEKO 1
 +
 +/* Define to 1 if you have the fsetxattr function. */
 +/* #undef HAVE_FSETXATTR */
@@ -591,6 +594,9 @@ index 000000000..21b5e1184
 +
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
++
++/* Define to 1 if you have the `snprintf' function. */
++#define HAVE_SNPRINTF 1
 +
 +/* Define to 1 if struct sockaddr_in6 has the sin6_scope_id member */
 +#define HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID 1
@@ -1078,12 +1084,12 @@ index 000000000..21b5e1184
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/config-linux.h a/vendor/curl/lib/config-linux.h
+diff --git a/vendor/curl/lib/config-linux.h b/vendor/curl/lib/config-linux.h
 new file mode 100644
-index 000000000..d412d9d6c
+index 000000000..86ab1f0f2
 --- /dev/null
-+++ a/vendor/curl/lib/config-linux.h
-@@ -0,0 +1,1038 @@
++++ b/vendor/curl/lib/config-linux.h
+@@ -0,0 +1,1044 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -1284,6 +1290,9 @@ index 000000000..d412d9d6c
 +
 +/* Define to 1 if you have the freeaddrinfo function. */
 +#define HAVE_FREEADDRINFO 1
++
++/* Define to 1 if you have the fseeko function. */
++#define HAVE_FSEEKO 1
 +
 +/* Define to 1 if you have the fsetxattr function. */
 +#define HAVE_FSETXATTR 1
@@ -1654,6 +1663,9 @@ index 000000000..d412d9d6c
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
 +
++/* Define to 1 if you have the `snprintf' function. */
++#define HAVE_SNPRINTF 1
++
 +/* Define to 1 if sig_atomic_t is an available typedef. */
 +#define HAVE_SIG_ATOMIC_T 1
 +
@@ -2122,12 +2134,12 @@ index 000000000..d412d9d6c
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/config-macos.h a/vendor/curl/lib/config-macos.h
+diff --git a/vendor/curl/lib/config-macos.h b/vendor/curl/lib/config-macos.h
 new file mode 100644
-index 000000000..07765a704
+index 000000000..82b08e5e9
 --- /dev/null
-+++ a/vendor/curl/lib/config-macos.h
-@@ -0,0 +1,1038 @@
++++ b/vendor/curl/lib/config-macos.h
+@@ -0,0 +1,1044 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -2328,6 +2340,9 @@ index 000000000..07765a704
 +
 +/* Define to 1 if you have the freeaddrinfo function. */
 +#define HAVE_FREEADDRINFO 1
++
++/* Define to 1 if you have the fseeko function. */
++#define HAVE_FSEEKO 1
 +
 +/* Define to 1 if you have the fsetxattr function. */
 +#define HAVE_FSETXATTR 1
@@ -2698,6 +2713,9 @@ index 000000000..07765a704
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
 +
++/* Define to 1 if you have the `snprintf' function. */
++#define HAVE_SNPRINTF 1
++
 +/* Define to 1 if sig_atomic_t is an available typedef. */
 +#define HAVE_SIG_ATOMIC_T 1
 +
@@ -3166,12 +3184,12 @@ index 000000000..07765a704
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/config-openbsd.h a/vendor/curl/lib/config-openbsd.h
+diff --git a/vendor/curl/lib/config-openbsd.h b/vendor/curl/lib/config-openbsd.h
 new file mode 100644
-index 000000000..6e87eb53a
+index 000000000..a0a09ebf2
 --- /dev/null
-+++ a/vendor/curl/lib/config-openbsd.h
-@@ -0,0 +1,1080 @@
++++ b/vendor/curl/lib/config-openbsd.h
+@@ -0,0 +1,1086 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -3388,6 +3406,9 @@ index 000000000..6e87eb53a
 +
 +/* Define to 1 if you have the freeaddrinfo function. */
 +#define HAVE_FREEADDRINFO 1
++
++/* Define to 1 if you have the fseeko function. */
++#define HAVE_FSEEKO 1
 +
 +/* Define to 1 if you have the fsetxattr function. */
 +/* #undef HAVE_FSETXATTR */
@@ -3762,6 +3783,9 @@ index 000000000..6e87eb53a
 +
 +/* Define to 1 if you have the sigsetjmp function or macro. */
 +#define HAVE_SIGSETJMP 1
++
++/* Define to 1 if you have the `snprintf' function. */
++#define HAVE_SNPRINTF 1
 +
 +/* Define to 1 if struct sockaddr_in6 has the sin6_scope_id member */
 +#define HAVE_SOCKADDR_IN6_SIN6_SCOPE_ID 1
@@ -4252,11 +4276,11 @@ index 000000000..6e87eb53a
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/curl_setup.h a/vendor/curl/lib/curl_setup.h
-index 76fccb81d..54d7551c0 100644
---- b/vendor/curl/lib/curl_setup.h
-+++ a/vendor/curl/lib/curl_setup.h
-@@ -92,6 +92,22 @@
+diff --git a/vendor/curl/lib/curl_setup.h b/vendor/curl/lib/curl_setup.h
+index ba14972e2..960103888 100644
+--- a/vendor/curl/lib/curl_setup.h
++++ b/vendor/curl/lib/curl_setup.h
+@@ -87,6 +87,22 @@
  #  endif
  #endif
  

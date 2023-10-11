@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_AWS_SIGV4 3 "03 Jun 2020" libcurl libcurl
+.TH CURLOPT_AWS_SIGV4 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_AWS_SIGV4 \- V4 signature
 .SH SYNOPSIS
@@ -102,4 +103,7 @@ For \fBaws:s3\fP, a \fBx-amz-content-sha256\fP header is added to every request
 if not already present. For s3 requests with unknown payload, this header takes
 the special value "UNSIGNED-PAYLOAD".
 .SH "SEE ALSO"
-.BR CURLOPT_HEADEROPT "(3), " CURLOPT_HTTPHEADER "(3), "
+.BR CURLOPT_HEADEROPT (3),
+.BR CURLOPT_HTTPAUTH (3),
+.BR CURLOPT_HTTPHEADER (3),
+.BR CURLOPT_PROXYAUTH (3)

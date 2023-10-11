@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_FILETIME 3 "25 Jan 2018" libcurl libcurl
+.TH CURLINFO_FILETIME 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLINFO_FILETIME_T \- get the remote time of the retrieved document
 .SH SYNOPSIS
@@ -73,4 +74,6 @@ Added in 7.59.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLOPT_FILETIME (3)

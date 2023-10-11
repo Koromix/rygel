@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_REFERER 3 "17 Jun 2014" libcurl libcurl
+.TH CURLOPT_REFERER 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_REFERER \- the HTTP referer header
 .SH SYNOPSIS
@@ -60,5 +61,7 @@ If built with HTTP support
 Returns CURLE_OK if HTTP support is enabled, CURLE_UNKNOWN_OPTION if not, or
 CURLE_OUT_OF_MEMORY if there was insufficient heap space.
 .SH "SEE ALSO"
-.BR CURLOPT_USERAGENT "(3), " CURLOPT_HTTPHEADER "(3), "
-.BR CURLINFO_REFERER "(3), "
+.BR CURLINFO_REDIRECT_URL (3),
+.BR CURLINFO_REFERER (3),
+.BR CURLOPT_HTTPHEADER (3),
+.BR CURLOPT_USERAGENT (3)

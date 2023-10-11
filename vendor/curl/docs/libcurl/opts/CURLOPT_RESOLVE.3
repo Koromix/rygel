@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_RESOLVE 3 "19 Jun 2014" libcurl libcurl
+.TH CURLOPT_RESOLVE 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_RESOLVE \- provide custom host name to IP address resolves
 .SH SYNOPSIS
@@ -108,5 +109,6 @@ Support for adding non-permanent entries by using the "+" prefix was added in
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_IPRESOLVE "(3), " CURLOPT_DNS_CACHE_TIMEOUT "(3), "
-.BR CURLOPT_CONNECT_TO "(3), "
+.BR CURLOPT_CONNECT_TO (3),
+.BR CURLOPT_DNS_CACHE_TIMEOUT (3),
+.BR CURLOPT_IPRESOLVE (3)

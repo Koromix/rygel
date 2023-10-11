@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_SCHEME 3 "23 November 2016" libcurl libcurl
+.TH CURLINFO_SCHEME 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLINFO_SCHEME \- get the URL scheme (sometimes called protocol) used in the connection
 .SH SYNOPSIS
@@ -62,5 +63,8 @@ Added in 7.52.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLINFO_RESPONSE_CODE "(3), "
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLINFO_EFFECTIVE_URL (3),
+.BR CURLINFO_PROTOCOL (3),
+.BR CURLINFO_RESPONSE_CODE (3)

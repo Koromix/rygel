@@ -116,6 +116,7 @@ static const struct LongShort aliases[]= {
   {"*r", "create-dirs",              ARG_BOOL},
   {"*R", "create-file-mode",         ARG_STRING},
   {"*s", "max-redirs",               ARG_STRING},
+  {"*S", "ipfs-gateway",             ARG_STRING},
   {"*t", "proxy-ntlm",               ARG_BOOL},
   {"*u", "crlf",                     ARG_BOOL},
   {"*v", "stderr",                   ARG_FILENAME},
@@ -825,8 +826,9 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
       struct curlx_dynbuf nbuf;
       bool replaced;
 
-      if(aliases[hit].desc != ARG_STRING) {
-        /* --expand on an option that isn't a string */
+      if((aliases[hit].desc != ARG_STRING) &&
+         (aliases[hit].desc != ARG_FILENAME)) {
+        /* --expand on an option that isn't a string or a filename */
         err = PARAM_EXPAND_ERROR;
         goto error;
       }
@@ -1135,6 +1137,10 @@ ParameterError getparameter(const char *flag, /* f or -long-flag */
           break;
         if(config->maxredirs < -1)
           err = PARAM_BAD_NUMERIC;
+        break;
+
+      case 'S': /* ipfs gateway url */
+        GetStr(&config->ipfs_gateway, nextarg);
         break;
 
       case 't': /* --proxy-ntlm */
@@ -2772,9 +2778,9 @@ ParameterError parse_args(struct GlobalConfig *global, int argc,
     const char *reason = param2text(result);
 
     if(orig_opt && strcmp(":", orig_opt))
-      helpf(stderr, "option %s: %s", orig_opt, reason);
+      helpf(tool_stderr, "option %s: %s", orig_opt, reason);
     else
-      helpf(stderr, "%s", reason);
+      helpf(tool_stderr, "%s", reason);
   }
 
   curlx_unicodefree(orig_opt);

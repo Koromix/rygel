@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_PROXY_SSL_OPTIONS 3 "16 Nov 2016" libcurl libcurl
+.TH CURLOPT_PROXY_SSL_OPTIONS 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_PROXY_SSL_OPTIONS \- HTTPS proxy SSL behavior options
 .SH SYNOPSIS
@@ -98,5 +99,7 @@ Added in 7.52.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_PROXY_SSLVERSION "(3), " CURLOPT_PROXY_SSL_CIPHER_LIST "(3), "
-.BR CURLOPT_SSLVERSION "(3), " CURLOPT_SSL_CIPHER_LIST "(3), "
+.BR CURLOPT_PROXY_SSL_CIPHER_LIST (3),
+.BR CURLOPT_PROXY_SSLVERSION (3),
+.BR CURLOPT_SSL_CIPHER_LIST (3),
+.BR CURLOPT_SSLVERSION (3)

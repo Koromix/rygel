@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_EFFECTIVE_METHOD 3 "28 Aug 2015" libcurl libcurl
+.TH CURLINFO_EFFECTIVE_METHOD 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLINFO_EFFECTIVE_METHOD \- get the last used HTTP method
 .SH SYNOPSIS
@@ -67,4 +68,7 @@ Added in 7.72.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLOPT_CUSTOMREQUEST (3),
+.BR CURLOPT_FOLLOWLOCATION (3)

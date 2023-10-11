@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH curl_version_info 3 "2 Nov 2014" "libcurl" "libcurl"
+.TH curl_version_info 3 "September 27, 2023" "libcurl 8.4.0" "libcurl"
+
 .SH NAME
 curl_version_info - returns runtime libcurl version info
 .SH SYNOPSIS
@@ -46,7 +47,7 @@ or not, instead of using compile-time checks, as dynamic/DLL libraries can be
 changed independent of applications.
 
 This function can alter the returned static data as long as
-\fIcurl_global_init\fP has not been called. It is therefore not thread-safe
+\fIcurl_global_init(3)\fP has not been called. It is therefore not thread-safe
 before libcurl initialization occurs.
 
 The curl_version_info_data struct looks like this

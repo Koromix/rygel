@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_PORT 3 "17 Jun 2014" libcurl libcurl
+.TH CURLOPT_PORT 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_PORT \- remote port number to connect to
 .SH SYNOPSIS
@@ -65,4 +66,6 @@ Always
 .SH RETURN VALUE
 Returns CURLE_OK
 .SH "SEE ALSO"
-.BR CURLOPT_STDERR "(3), " CURLOPT_DEBUGFUNCTION "(3), "
+.BR CURLINFO_PRIMARY_PORT (3),
+.BR CURLOPT_STDERR (3),
+.BR CURLOPT_URL (3)

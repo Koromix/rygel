@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_PROXY_KEYPASSWD 3 "16 Nov 2016" libcurl libcurl
+.TH CURLOPT_PROXY_KEYPASSWD 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_PROXY_KEYPASSWD \- passphrase for the proxy private key
 .SH SYNOPSIS
@@ -62,5 +63,7 @@ Added in 7.52.0
 Returns CURLE_OK if TLS enabled, CURLE_UNKNOWN_OPTION if not, or
 CURLE_OUT_OF_MEMORY if there was insufficient heap space.
 .SH "SEE ALSO"
-.BR CURLOPT_PROXY_SSLKEY "(3), " CURLOPT_SSH_PRIVATE_KEYFILE "(3), "
-.BR CURLOPT_SSLKEY "(3), "
+.BR CURLOPT_KEYPASSWD (3),
+.BR CURLOPT_PROXY_SSLKEY (3),
+.BR CURLOPT_SSH_PRIVATE_KEYFILE (3),
+.BR CURLOPT_SSLKEY (3)

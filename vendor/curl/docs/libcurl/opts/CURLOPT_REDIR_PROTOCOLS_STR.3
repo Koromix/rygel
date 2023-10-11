@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_REDIR_PROTOCOLS_STR 3 "19 Jun 2014" libcurl libcurl
+.TH CURLOPT_REDIR_PROTOCOLS_STR 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_REDIR_PROTOCOLS_STR \- protocols allowed to redirect to
 .SH SYNOPSIS
@@ -86,4 +87,8 @@ Returns CURLE_UNKNOWN_OPTION if the option is not implemented,
 CURLE_UNSUPPORTED_PROTOCOL if a listed protocol is not supported or disabled,
 CURLE_BAD_FUNCTION_ARGUMENT if no protocol is listed else CURLE_OK.
 .SH "SEE ALSO"
-.BR CURLOPT_PROTOCOLS_STR "(3), "
+.BR CURLOPT_PROTOCOLS_STR (3),
+.BR CURLINFO_SCHEME (3),
+.BR CURLOPT_DEFAULT_PROTOCOL (3),
+.BR CURLOPT_PROTOCOLS (3),
+.BR CURLOPT_REDIR_PROTOCOLS (3)

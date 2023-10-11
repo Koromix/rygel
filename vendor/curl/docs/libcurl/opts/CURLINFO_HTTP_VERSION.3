@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_HTTP_VERSION 3 "11 May 2016" libcurl libcurl
+.TH CURLINFO_HTTP_VERSION 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLINFO_HTTP_VERSION \- get the http version used in the connection
 .SH SYNOPSIS
@@ -57,5 +58,6 @@ Added in 7.50.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLINFO_RESPONSE_CODE "(3), "
-.BR curl_easy_getinfo "(3), " curl_easy_setopt "(3), "
+.BR curl_easy_getinfo (3),
+.BR curl_easy_setopt (3),
+.BR CURLINFO_RESPONSE_CODE (3)

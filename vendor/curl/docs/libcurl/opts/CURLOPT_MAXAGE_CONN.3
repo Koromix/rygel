@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_MAXAGE_CONN 3 "18 Apr 2019" libcurl libcurl
+.TH CURLOPT_MAXAGE_CONN 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_MAXAGE_CONN \- max idle time allowed for reusing a connection
 .SH SYNOPSIS
@@ -64,5 +65,7 @@ Added in 7.65.0
 .SH RETURN VALUE
 Returns CURLE_OK.
 .SH "SEE ALSO"
-.BR CURLOPT_TIMEOUT "(3), " CURLOPT_FORBID_REUSE "(3), "
-.BR CURLOPT_FRESH_CONNECT "(3), " CURLOPT_MAXLIFETIME_CONN "(3), "
+.BR CURLOPT_FORBID_REUSE (3),
+.BR CURLOPT_FRESH_CONNECT (3),
+.BR CURLOPT_MAXLIFETIME_CONN (3),
+.BR CURLOPT_TIMEOUT (3)

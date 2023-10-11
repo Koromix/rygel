@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLINFO_RETRY_AFTER 3 "6 Aug 2019" libcurl libcurl
+.TH CURLINFO_RETRY_AFTER 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLINFO_RETRY_AFTER \- returns the Retry-After retry delay
 .SH SYNOPSIS
@@ -65,4 +66,6 @@ Added in 7.66.0
 .SH RETURN VALUE
 Returns CURLE_OK if the option is supported, and CURLE_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLOPT_STDERR "(3), " CURLOPT_HEADERFUNCTION "(3), "
+.BR curl_easy_header (3),
+.BR CURLOPT_HEADERFUNCTION (3),
+.BR CURLOPT_STDERR (3)

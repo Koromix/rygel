@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLMOPT_PUSHDATA 3 "1 Jun 2015" libcurl libcurl
+.TH CURLMOPT_PUSHDATA 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLMOPT_PUSHDATA \- pointer to pass to push callback
 .SH SYNOPSIS
@@ -76,6 +77,7 @@ Added in 7.44.0
 .SH RETURN VALUE
 Returns CURLM_OK if the option is supported, and CURLM_UNKNOWN_OPTION if not.
 .SH "SEE ALSO"
-.BR CURLMOPT_PUSHFUNCTION "(3), " CURLMOPT_PIPELINING "(3), "
-.BR CURLOPT_PIPEWAIT "(3), "
+.BR CURLMOPT_PIPELINING (3),
+.BR CURLMOPT_PUSHFUNCTION (3),
+.BR CURLOPT_PIPEWAIT (3),
 .BR RFC 7540

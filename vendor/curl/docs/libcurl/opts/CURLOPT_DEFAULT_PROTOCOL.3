@@ -22,7 +22,8 @@
 .\" *
 .\" **************************************************************************
 .\"
-.TH CURLOPT_DEFAULT_PROTOCOL 3 "18 Aug 2015" libcurl libcurl
+.TH CURLOPT_DEFAULT_PROTOCOL 3 "September 26, 2023" "ibcurl 8.4.0" libcurl
+
 .SH NAME
 CURLOPT_DEFAULT_PROTOCOL \- default protocol to use if the URL is missing a
 scheme name
@@ -83,4 +84,6 @@ CURLE_OUT_OF_MEMORY if there was insufficient heap space.
 
 CURLE_UNKNOWN_OPTION if the option is not supported.
 .SH "SEE ALSO"
-.BR CURLOPT_URL "(3), "
+.BR CURLINFO_PROTOCOL (3),
+.BR CURLINFO_SCHEME (3),
+.BR CURLOPT_URL (3)
