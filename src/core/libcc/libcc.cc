@@ -3340,7 +3340,7 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
         return OpenResult::OtherError;
     }
 
-    err_guard.disable();
+    err_guard.Disable();
     *out_fd = fd;
 
     return OpenResult::Success;
