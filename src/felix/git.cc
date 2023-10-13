@@ -105,16 +105,47 @@ bool GitVersioneer::Prepare(const char *root_directory)
     const char *packed_filename = Fmt(&str_alloc, "%1%/packed-refs", repo_directory).ptr;
     const char *head_filename = Fmt(&str_alloc, "%1%/HEAD", repo_directory).ptr;
     const char *unpacked_directory = Fmt(&str_alloc, "%1%/refs/tags", repo_directory).ptr;
-    const char *pack_directory = Fmt(&str_alloc, "%1%/objects/pack", repo_directory).ptr;
 
-    Fmt(&loose_filename, "%1%/objects%/_________________________________________", repo_directory);
+    // Prepare base object directories
+    HeapArray<const char *> object_directories;
+    {
+        const char *obj_directory = Fmt(&str_alloc, "%1%/objects", repo_directory).ptr;
+        object_directories.Append(obj_directory);
+    }
+
+    // Load alternate object directories (if any)
+    for (Size i = 0; i < object_directories.len; i++) {
+        const char *obj_directory = object_directories[i];
+        const char *alternate_filename = Fmt(&str_alloc, "%1%/info/alternates", obj_directory).ptr;
+
+        if (TestFile(alternate_filename)) {
+            StreamReader st(alternate_filename);
+            LineReader reader(&st);
+
+            Span<const char> line;
+            while (reader.Next(&line)) {
+                const char *obj_directory = DuplicateString(line, &str_alloc).ptr;
+                object_directories.Append(obj_directory);
+            }
+            if (!reader.IsValid())
+                return false;
+        }
+    }
 
     // List IDX and pack files
-    if (!EnumerateFiles(pack_directory, "*.idx", 0, 1024, &str_alloc, &idx_filenames))
-        return false;
-    for (const char *idx_filename: idx_filenames) {
-        const char *pack_filename = Fmt(&str_alloc, "%1.pack", MakeSpan(idx_filename, strlen(idx_filename) - 4)).ptr;
-        pack_filenames.Append(pack_filename);
+    for (const char *obj_directory: object_directories) {
+        const char *pack_directory = Fmt(&str_alloc, "%1%/pack", obj_directory).ptr;
+
+        if (!EnumerateFiles(pack_directory, "*.idx", 0, 1024, &str_alloc, &idx_filenames))
+            return false;
+
+        for (const char *idx_filename: idx_filenames) {
+            const char *pack_filename = Fmt(&str_alloc, "%1.pack", MakeSpan(idx_filename, strlen(idx_filename) - 4)).ptr;
+            pack_filenames.Append(pack_filename);
+        }
+
+        Span<char> loose_filename = Fmt(&str_alloc, "%1%/_________________________________________", obj_directory);
+        loose_filenames.Append(loose_filename);
     }
 
     // First, read packed references
@@ -312,19 +343,24 @@ GitVersioneer::AttributeResult GitVersioneer::ReadAttribute(Span<const char> id,
 
 GitVersioneer::AttributeResult GitVersioneer::ReadAttribute(const GitHash &hash, const char *attr, GitHash *out_hash)
 {
-    DecodeHash(hash.raw[0], loose_filename.end() - 41);
-    loose_filename[loose_filename.len - 39] = *RG_PATH_SEPARATORS;
-    DecodeHash(MakeSpan(hash.raw + 1, 19), loose_filename.end() - 38);
+    // Try loose files
+    for (Span<char> loose_filename: loose_filenames) {
+        DecodeHash(hash.raw[0], loose_filename.end() - 41);
+        loose_filename[loose_filename.len - 39] = *RG_PATH_SEPARATORS;
+        DecodeHash(MakeSpan(hash.raw + 1, 19), loose_filename.end() - 38);
 
-    if (TestFile(loose_filename.ptr)) {
+        if (!TestFile(loose_filename.ptr))
+            continue;
+
         return ReadLooseAttribute(loose_filename.ptr, attr, out_hash);
-    } else {
-        PackLocation location = {};
-        if (!FindInIndexes(0, hash, &location))
-            return AttributeResult::Error;
-
-        return ReadPackAttribute(location.idx, location.offset, attr, out_hash);
     }
+
+    // Try packed files
+    PackLocation location = {};
+    if (!FindInIndexes(0, hash, &location))
+        return AttributeResult::Error;
+
+    return ReadPackAttribute(location.idx, location.offset, attr, out_hash);
 }
 
 GitVersioneer::AttributeResult GitVersioneer::ReadLooseAttribute(const char *filename, const char *attr, GitHash *out_hash)

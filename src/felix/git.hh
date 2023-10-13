@@ -53,7 +53,7 @@ class GitVersioneer {
     HeapArray<GitHash> commits;
 
     // Reuse for performance
-    HeapArray<char> loose_filename;
+    HeapArray<Span<char>> loose_filenames;
 
     BlockAllocator str_alloc;
 
