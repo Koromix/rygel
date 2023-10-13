@@ -23,8 +23,7 @@ import sys
 import tempfile
 
 PROJECTS = {
-    'goupile': ['goupile2', 'git@framagit.org:interhop/goupile.git'],
-    'ansible-hds': ['master', 'git@framagit.org:interhop/hds/ansible-hds.git']
+    'goupile': ['goupile2', 'git@framagit.org:interhop/goupile.git']
 }
 
 def update_repository(root_directory, clone_directory, remote_url, remote_branch):
