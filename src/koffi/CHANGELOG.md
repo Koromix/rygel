@@ -4,6 +4,10 @@
 
 ### Koffi 2.6
 
+#### Koffi 2.6.2 (2023-10-13)
+
+- Add indirect loading script to help some bundlers
+
 #### Koffi 2.6.1 (2023-09-18)
 
 - Support string direction qualifiers in classic function definitions
