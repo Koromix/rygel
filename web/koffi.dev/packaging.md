@@ -36,6 +36,14 @@ resources/
 MyApp.exe
 ```
 
+## Indirect loader
+
+*New in Koffi 2.6.2*
+
+Some bundlers (such as vite) don't like when require is used with native modules.
+
+In this case, you can use `js require('koffi/indirect')` but you will need to make sure that the native Koffi modules are packaged properly.
+
 ## Packaging examples
 
 ### Electron with electron-builder

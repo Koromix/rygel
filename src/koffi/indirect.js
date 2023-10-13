@@ -23,8 +23,8 @@
 
 const util = require('util');
 const fs = require('fs');
-const { get_napi_version, determine_arch } = require('../../cnoke/src/tools.js');
-const pkg = require('../package.json');
+const { get_napi_version, determine_arch } = require('../cnoke/src/tools.js');
+const pkg = require('./package.json');
 
 if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
     let major = parseInt(process.versions.node, 10);
@@ -42,32 +42,10 @@ let triplet = `${process.platform}_${arch}`;
 
 let native = null;
 
-// Try an explicit list with static strings to help bundlers
-try {
-    switch (triplet) {
-        case 'darwin_arm64': { native = require('../build/koffi/darwin_arm64/koffi.node'); } break;
-        case 'darwin_x64': { native = require('../build/koffi/darwin_x64/koffi.node'); } break;
-        case 'freebsd_arm64': { native = require('../build/koffi/freebsd_arm64/koffi.node'); } break;
-        case 'freebsd_ia32': { native = require('../build/koffi/freebsd_ia32/koffi.node'); } break;
-        case 'freebsd_x64': { native = require('../build/koffi/freebsd_x64/koffi.node'); } break;
-        case 'linux_arm32hf': { native = require('../build/koffi/linux_arm32hf/koffi.node'); } break;
-        case 'linux_arm64': { native = require('../build/koffi/linux_arm64/koffi.node'); } break;
-        case 'linux_ia32': { native = require('../build/koffi/linux_ia32/koffi.node'); } break;
-        case 'linux_riscv64hf64': { native = require('../build/koffi/linux_riscv64hf64/koffi.node'); } break;
-        case 'linux_x64': { native = require('../build/koffi/linux_x64/koffi.node'); } break;
-        case 'openbsd_ia32': { native = require('../build/koffi/openbsd_ia32/koffi.node'); } break;
-        case 'openbsd_x64': { native = require('../build/koffi/openbsd_x64/koffi.node'); } break;
-        case 'win32_arm64': { native = require('../build/koffi/win32_arm64/koffi.node'); } break;
-        case 'win32_ia32': { native = require('../build/koffi/win32_ia32/koffi.node'); } break;
-        case 'win32_x64': { native = require('../build/koffi/win32_x64/koffi.node'); } break;
-    }
-} catch (err) {
-    // Go on!
-}
-
-// And now, search everywhere we know
-if (native == null) {
+// Search everywhere we know
+{
     let names = [
+        `/build/koffi/${process.platform}_${arch}/koffi.node`,
         `/koffi/${process.platform}_${arch}/koffi.node`,
         `/node_modules/koffi/build/koffi/${process.platform}_${arch}/koffi.node`
     ];

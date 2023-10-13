@@ -439,25 +439,33 @@ async function dist() {
 
         let pkg = JSON.parse(json);
 
-        pkg.main = pkg.main.replace('.dev.js', '.js');
         pkg.scripts = {
             install: 'node src/cnoke/cnoke.js -p . -d src/koffi --prebuild'
         };
         delete pkg.devDependencies;
 
         esbuild.buildSync({
-            entryPoints: [dist_dir + '/src/koffi/src/index.js'],
+            entryPoints: [dist_dir + '/src/koffi/index.js'],
             bundle: true,
             minify: false,
             write: true,
             platform: 'node',
-            outfile: dist_dir + '/src/index.js'
+            outfile: dist_dir + '/index.js'
+        });
+        esbuild.buildSync({
+            entryPoints: [dist_dir + '/src/koffi/indirect.js'],
+            bundle: true,
+            minify: false,
+            write: true,
+            platform: 'node',
+            outfile: dist_dir + '/indirect.js'
         });
 
         fs.writeFileSync(dist_dir + '/package.json', JSON.stringify(pkg, null, 4));
         fs.unlinkSync(dist_dir + '/src/koffi/package.json');
-        fs.unlinkSync(dist_dir + '/src/koffi/src/index.js');
-        fs.renameSync(dist_dir + '/src/koffi/src/index.d.ts', dist_dir + '/src/index.d.ts');
+        fs.unlinkSync(dist_dir + '/src/koffi/index.js');
+        fs.unlinkSync(dist_dir + '/src/koffi/indirect.js');
+        fs.renameSync(dist_dir + '/src/koffi/index.d.ts', dist_dir + '/index.d.ts');
         fs.unlinkSync(dist_dir + '/src/koffi/.gitignore');
         fs.renameSync(dist_dir + '/src/koffi/README.md', dist_dir + '/README.md');
         fs.renameSync(dist_dir + '/src/koffi/LICENSE.txt', dist_dir + '/LICENSE.txt');

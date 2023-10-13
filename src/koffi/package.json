@@ -22,8 +22,8 @@
     "email": "niels.martignene@protonmail.com",
     "url": "https://koromix.dev/"
   },
-  "main": "src/index.js",
-  "types": "src/index.d.ts",
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "scripts": {
     "test": "node tools/qemu.js test",
     "prepack": "echo 'Use \"npm run prepare\" instead' && false",
