@@ -12,9 +12,7 @@
 # along with this program. If not, see https://www.gnu.org/licenses/.
 
 - name: hds
-
   hosts: all
-
   roles:
     - role: nginx
       when: 'nginx_domains is defined'

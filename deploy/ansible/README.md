@@ -34,7 +34,7 @@ created through the administration panel cannot be restored, and this key cannot
 The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
 
 ```sh
-ansible-playbook hds.yml -i inventories/hds/preprod/hosts.yml -u <USER> --key-file <KEY_FILE> --vault-password-file /path/to/ansible-hds.vault --ask-become-pass
+ansible-playbook hds.yml -i inventories/hds/preprod/hosts.yml -u <USER> --key-file <KEY_FILE> --vault-password-file keys/hds.vault --ask-become-pass
 ```
 
 ### Production
@@ -43,7 +43,7 @@ Ask GPLExpert :)
 
 ## Vagrant
 
-Execute from the directory with the relevant Vagrantfile (e.g. _vagrant/pknet_ for PKnet).
+Execute from the directory with the relevant Vagrantfile (e.g. _vagrant/hds_ for HDS).
 
 ### Initialize VMs
 
@@ -55,18 +55,4 @@ vagrant up --no-provision
 
 ```sh
 vagrant provision
-```
-
-## PK network
-
-The secret ansible-vault key is needed for this. You must __never ever__ distribute it or put it in the repository!
-
-```sh
-ansible-playbook pknet.yml -i inventories/pknet/prod/hosts.yml -u <USER> --key-file <KEY_FILE> --vault-password-file /path/to/ansible-pknet.vault --ask-become-pass
-```
-
-## Add a new host/VPS
-
-```sh
-ansible-playbook playbook.yml -i inventories/pknet/prod -e ansible_user=debian -e ansible_password=PASSWORD -l HOST --tags=base pknet.yml
 ```
