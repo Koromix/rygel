@@ -138,8 +138,8 @@ First, you must update the code in three steps:
 Once this is done, you can publish a new release with the following commands:
 
 ```sh
-node qemu.js test # If not done before
-node qemu.js dist
+node tools/qemu.js test # If not done before
+node tools/qemu.js dist
 
 cd build/dist
 npm publish
