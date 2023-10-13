@@ -14,7 +14,7 @@
  */
 
 #include <string.h>
-#include "musl_fnmatch.h"
+#include "fnmatch.h"
 #include <stdlib.h>
 #include <wchar.h>
 #include <wctype.h>

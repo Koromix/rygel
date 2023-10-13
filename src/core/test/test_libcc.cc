@@ -11,15 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "../src/core/libcc/libcc.hh"
+#include "src/core/libcc/libcc.hh"
 #include "test.hh"
 
 // Comparative benchmarks
 #ifdef _WIN32
     extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
 #endif
-#include "vendor/musl_fnmatch.h"
-#include "vendor/stb_sprintf.h"
+#include "musl/fnmatch.h"
+#include "vendor/stb/stb_sprintf.h"
 #include "vendor/fmt/include/fmt/format.h"
 #include "vendor/fmt/include/fmt/compile.h"
 
