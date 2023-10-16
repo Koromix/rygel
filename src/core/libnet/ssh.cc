@@ -22,6 +22,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "curl.hh"
 #include "ssh.hh"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -246,13 +247,16 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
             case SSH_KNOWN_HOSTS_NOT_FOUND:
             case SSH_KNOWN_HOSTS_UNKNOWN: {
-                char hex[256];
-                Fmt(hex, "%1", FmtSpan(hash, FmtType::SmallHex, ":"));
+                char base64[256] = {};
+                RG_ASSERT(sodium_base64_ENCODED_LEN(hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING) < RG_SIZE(base64));
+
+                CopyString("SHA256:", base64);
+                sodium_bin2base64(base64 + 7, RG_SIZE(base64) - 7, hash.ptr, hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING);
 
                 LogInfo("The server is unknown. Do you trust the host key?");
 
                 char prompt[512];
-                Fmt(prompt, "Do you trust the server (public key hash: %1)", hex);
+                Fmt(prompt, "Do you trust the server (public key hash: %1)", base64);
 
                 bool trust = false;
                 if (!PromptYN(prompt, &trust))
