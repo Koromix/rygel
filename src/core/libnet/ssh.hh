@@ -42,7 +42,7 @@ struct ssh_Config {
     const char *path = nullptr;
 
     bool known_hosts = true;
-    const char *host_hash = nullptr;
+    const char *fingerprint = nullptr;
 
     const char *password = nullptr;
     const char *keyfile = nullptr;

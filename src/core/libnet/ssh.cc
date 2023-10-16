@@ -43,8 +43,8 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
         return true;
     } else if (key == "KnownHosts") {
         return ParseBool(value, &known_hosts);
-    } else if (key == "HostHash") {
-        host_hash = DuplicateString(value, &str_alloc).ptr;
+    } else if (key == "Fingerprint") {
+        fingerprint = DuplicateString(value, &str_alloc).ptr;
         return true;
     } else if (key == "Password") {
         password = DuplicateString(value, &str_alloc).ptr;
@@ -78,6 +78,11 @@ bool ssh_Config::Complete()
         }
     }
 
+    if (!fingerprint) {
+        const char *str = getenv("SSH_FINGERPRINT");
+        fingerprint = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
+    }
+
     return true;
 }
 
@@ -98,8 +103,8 @@ bool ssh_Config::Validate() const
         valid = false;
     }
 
-    if (!known_hosts && !host_hash) {
-        LogError("Cannot use SFTP without KnownHosts and no valid server hash");
+    if (!known_hosts && !fingerprint) {
+        LogError("Cannot use SFTP without HostFingerprint and no valid server hash");
         valid = false;
     }
     if (!password && !keyfile) {
@@ -119,7 +124,7 @@ void ssh_Config::Clone(ssh_Config *out_config) const
     out_config->username = username ? DuplicateString(username, &out_config->str_alloc).ptr : nullptr;
     out_config->path = path ? DuplicateString(path, &out_config->str_alloc).ptr : nullptr;
     out_config->known_hosts = known_hosts;
-    out_config->host_hash = host_hash ? DuplicateString(host_hash, &out_config->str_alloc).ptr : nullptr;
+    out_config->fingerprint = fingerprint ? DuplicateString(fingerprint, &out_config->str_alloc).ptr : nullptr;
     out_config->password = password ? DuplicateString(password, &out_config->str_alloc).ptr : nullptr;
     out_config->keyfile = keyfile ? DuplicateString(keyfile, &out_config->str_alloc).ptr : nullptr;
 }
@@ -252,6 +257,9 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
                 CopyString("SHA256:", base64);
                 sodium_bin2base64(base64 + 7, RG_SIZE(base64) - 7, hash.ptr, hash.len, sodium_base64_VARIANT_ORIGINAL_NO_PADDING);
+
+                if (config.fingerprint && TestStr(base64, config.fingerprint))
+                    break;
 
                 LogInfo("The server is unknown. Do you trust the host key?");
 
