@@ -4822,7 +4822,7 @@ bool NotifySystemd()
         return false;
     }
 
-    DeleteEnvironmentVar("NOTIFY_SOCKET");
+    unsetenv("NOTIFY_SOCKET");
     return true;
 }
 #endif

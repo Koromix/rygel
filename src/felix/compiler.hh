@@ -180,9 +180,12 @@ struct Command {
     };
 
     Span<const char> cmd_line; // Must be C safe (NULL termination)
+    Span<const ExecuteInfo::KeyValue> env_variables;
+
     Size cache_len;
     Size rsp_offset;
     int skip_lines;
+
     DependencyMode deps_mode;
     const char *deps_filename; // Used by MakeLike and EsbuildMeta modes
 };

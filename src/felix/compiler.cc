@@ -137,11 +137,6 @@ static bool DetectCcache() {
 
     if (!init) {
         detected = FindExecutableInPath("ccache");
-
-        if (detected) {
-            SetEnvironmentVar("CCACHE_DEPEND", "1");
-            SetEnvironmentVar("CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime");
-        }
     }
 
     return detected;
@@ -353,6 +348,13 @@ public:
 
         if (features & (int)CompileFeature::Ccache) {
             Fmt(&buf, "ccache ");
+
+            static const ExecuteInfo::KeyValue variables[] = {
+                { "CCACHE_DEPEND", "1" },
+                { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" }
+            };
+
+            out_cmd->env_variables = variables;
         }
 
         // Compiler
@@ -861,6 +863,13 @@ public:
 
         if (features & (int)CompileFeature::Ccache) {
             Fmt(&buf, "ccache ");
+
+            static const ExecuteInfo::KeyValue variables[] = {
+                { "CCACHE_DEPEND", "1" },
+                { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" }
+            };
+
+            out_cmd->env_variables = variables;
         }
 
         // Compiler

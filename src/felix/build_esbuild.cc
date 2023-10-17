@@ -80,15 +80,18 @@ bool Builder::PrepareEsbuild()
         if (FindExecutableInPath("go")) {
             LogInfo("Building esbuild with Go compiler...");
 
-            const char *gocache_dir = Fmt(&str_alloc, "%1/Go", shared_directory).ptr;
-            SetEnvironmentVar("GOCACHE", gocache_dir);
-
             const char *cmd_line = Fmt(&str_alloc, "go build -o \"%1\" -buildvcs=false ./cmd/esbuild", binary).ptr;
             const char *work_dir = "vendor/esbuild/src";
+            const char *gocache_dir = Fmt(&str_alloc, "%1/Go", shared_directory).ptr;
+
+            ExecuteInfo::KeyValue variables[] = {
+                { "GOCACHE", gocache_dir }
+            };
 
             ExecuteInfo info = {};
 
             info.work_dir = work_dir;
+            info.env_variables = variables;
 
             HeapArray<char> output_buf;
             int exit_code;
