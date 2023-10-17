@@ -2146,37 +2146,6 @@ fail:
     return str_buf;
 }
 
-void SetEnvironmentVar(const char *name, const char *value)
-{
-    RG_ASSERT(name && name[0] && !strchr(name, '='));
-    RG_ASSERT(value);
-
-    if (win32_utf8) {
-        RG_CRITICAL(SetEnvironmentVariableA(name, value), "Failed to set environment variable '%1' to '%2': %3", name, value, GetWin32ErrorString());
-    } else {
-        wchar_t name_w[256];
-        wchar_t value_w[4096];
-
-        RG_CRITICAL(ConvertUtf8ToWin32Wide(name, name_w) >= 0, "Failed to set environment variable '%1' to '%2'", name, value);
-        RG_CRITICAL(ConvertUtf8ToWin32Wide(value, value_w) >= 0, "Failed to set environment variable '%1' to '%2'", name, value);
-        RG_CRITICAL(SetEnvironmentVariableW(name_w, value_w), "Failed to set environment variable '%1' to '%2': %3", name, value, GetWin32ErrorString());
-    }
-}
-
-void DeleteEnvironmentVar(const char *name)
-{
-    RG_ASSERT(name && name[0] && !strchr(name, '='));
-
-    if (win32_utf8) {
-        RG_CRITICAL(SetEnvironmentVariableA(name, nullptr), "Failed to clear environment variable '%1': %2", name, GetWin32ErrorString());
-    } else {
-        wchar_t name_w[256];
-
-        RG_CRITICAL(ConvertUtf8ToWin32Wide(name, name_w) >= 0, "Failed to clear environment variable '%1'", name);
-        RG_CRITICAL(SetEnvironmentVariableW(name_w, nullptr), "Failed to clear environment variable '%1': %2", name, GetWin32ErrorString());
-    }
-}
-
 static FileType FileAttributesToType(uint32_t attr)
 {
     if (attr & FILE_ATTRIBUTE_DIRECTORY) {
@@ -2359,20 +2328,6 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
 }
 
 #else
-
-void SetEnvironmentVar(const char *name, const char *value)
-{
-    RG_ASSERT(name && name[0] && !strchr(name, '='));
-    RG_ASSERT(value);
-
-    RG_CRITICAL(!setenv(name, value, 1), "Failed to set environment variable '%1' to '%2': %3", name, value, strerror(errno));
-}
-
-void DeleteEnvironmentVar(const char *name)
-{
-    RG_ASSERT(name && name[0] && !strchr(name, '='));
-    RG_CRITICAL(!unsetenv(name), "Failed to clear environment variable '%1': %2", name, strerror(errno));
-}
 
 static FileType FileModeToType(mode_t mode)
 {

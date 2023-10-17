@@ -3853,9 +3853,6 @@ Size ConvertWin32WideToUtf8(const wchar_t *str_w, Span<char> out_str);
 char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
 #endif
 
-void SetEnvironmentVar(const char *name, const char *value);
-void DeleteEnvironmentVar(const char *name);
-
 static inline bool IsPathSeparator(char c)
 {
 #ifdef _WIN32
