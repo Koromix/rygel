@@ -4,9 +4,13 @@
 
 ### Koffi 2.6
 
-#### Koffi 2.6.2 (2023-10-13)
+#### Koffi 2.6.3 (2023-10-17)
 
 - Add indirect loading script to help some bundlers
+
+```{warning}
+Pre-built binaries don't work correctly in Koffi 2.6.2, skip this version.
+```
 
 #### Koffi 2.6.1 (2023-09-18)
 
