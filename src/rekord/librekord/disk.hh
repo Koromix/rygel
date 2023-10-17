@@ -19,7 +19,7 @@
 
 namespace RG {
 
-class rk_Config;
+struct rk_Config;
 struct s3_Config;
 struct ssh_Config;
 
