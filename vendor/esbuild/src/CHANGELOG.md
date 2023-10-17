@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.19.5
+
+* Fix a regression in 0.19.0 regarding `paths` in `tsconfig.json` ([#3354](https://github.com/evanw/esbuild/issues/3354))
+
+    The fix in esbuild version 0.19.0 to process `tsconfig.json` aliases before the `--packages=external` setting unintentionally broke an edge case in esbuild's handling of certain `tsconfig.json` aliases where there are multiple files with the same name in different directories. This release adjusts esbuild's behavior for this edge case so that it passes while still processing aliases before `--packages=external`. Please read the linked issue for more details.
+
+* Fix a CSS `font` property minification bug ([#3452](https://github.com/evanw/esbuild/issues/3452))
+
+    This release fixes a bug where esbuild's CSS minifier didn't insert a space between the font size and the font family in the `font` CSS shorthand property in the edge case where the original source code didn't already have a space and the leading string token was shortened to an identifier:
+
+    ```css
+    /* Original code */
+    .foo { font: 16px"Menlo"; }
+
+    /* Old output (with --minify) */
+    .foo{font:16pxMenlo}
+
+    /* New output (with --minify) */
+    .foo{font:16px Menlo}
+    ```
+
+* Fix bundling CSS with asset names containing spaces ([#3410](https://github.com/evanw/esbuild/issues/3410))
+
+    Assets referenced via CSS `url()` tokens may cause esbuild to generate invalid output when bundling if the file name contains spaces (e.g. `url(image 2.png)`). With this release, esbuild will now quote all bundled asset references in `url()` tokens to avoid this problem. This only affects assets loaded using the `file` and `copy` loaders.
+
+* Fix invalid CSS `url()` tokens in `@import` rules ([#3426](https://github.com/evanw/esbuild/issues/3426))
+
+    In the future, CSS `url()` tokens may contain additional stuff after the URL. This is irrelevant today as no CSS specification does this. But esbuild previously had a bug where using these tokens in an `@import` rule resulted in malformed output. This bug has been fixed.
+
+* Fix `browser` + `false` + `type: module` in `package.json` ([#3367](https://github.com/evanw/esbuild/issues/3367))
+
+    The `browser` field in `package.json` allows you to map a file to `false` to have it be treated as an empty file when bundling for the browser. However, if `package.json` contains `"type": "module"` then all `.js` files will be considered ESM, not CommonJS. Importing a named import from an empty CommonJS file gives you undefined, but importing a named export from an empty ESM file is a build error. This release changes esbuild's interpretation of these files mapped to `false` in this situation from ESM to CommonJS to avoid generating build errors for named imports.
+
+* Fix a bug in top-level await error reporting ([#3400](https://github.com/evanw/esbuild/issues/3400))
+
+    Using `require()` on a file that contains [top-level await](https://v8.dev/features/top-level-await) is not allowed because `require()` must return synchronously and top-level await makes that impossible. You will get a build error if you try to bundle code that does this with esbuild. This release fixes a bug in esbuild's error reporting code for complex cases of this situation involving multiple levels of imports to get to the module containing the top-level await.
+
+* Update to Unicode 15.1.0
+
+    The character tables that determine which characters form valid JavaScript identifiers have been updated from Unicode version 15.0.0 to the newly-released Unicode version 15.1.0. I'm not putting an example in the release notes because all of the new characters will likely just show up as little squares since fonts haven't been updated yet. But you can read https://www.unicode.org/versions/Unicode15.1.0/#Summary for more information about the changes.
+
+    This upgrade was contributed by [@JLHwung](https://github.com/JLHwung).
+
 ## 0.19.4
 
 * Fix printing of JavaScript decorators in tricky cases ([#3396](https://github.com/evanw/esbuild/issues/3396))

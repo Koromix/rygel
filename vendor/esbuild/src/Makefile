@@ -20,7 +20,7 @@ test-all:
 	@$(MAKE) --no-print-directory -j6 test-common test-deno ts-type-tests test-wasm-node test-wasm-browser lib-typecheck test-yarnpnp
 
 check-go-version:
-	@go version | grep ' go1\.20\.7 ' || (echo 'Please install Go version 1.20.7' && false)
+	@go version | grep ' go1\.20\.10 ' || (echo 'Please install Go version 1.20.10' && false)
 
 # Note: Don't add "-race" here by default. The Go race detector is currently
 # only supported on the following configurations:
@@ -1046,9 +1046,15 @@ bench-rome-parcel2: | require/parcel2/node_modules bench/rome bench/rome-verify
 
 	# Inject aliases into "package.json" to fix Parcel 2 ignoring "tsconfig.json".
 	# Also inject "engines": "node" to avoid Parcel 2 mangling node globals.
+	# Also inject "includeNodeModules": true or the aliases will be ignored.
 	cat require/parcel2/package.json | sed '/^\}/d' > bench/rome/parcel2/package.json
 	echo ', "engines": { "node": "14.0.0" }' >> bench/rome/parcel2/package.json
+	echo ', "targets": { "main": { "includeNodeModules": true, "optimize": true } }' >> bench/rome/parcel2/package.json
 	echo ', $(ROME_PARCEL_ALIASES) }' >> bench/rome/parcel2/package.json
+
+	# Parcel's minifier preserves all comments in the source code by default.
+	# Removing comments in the minified output requires a config file.
+	echo '{ "format": { "comments": false } }' > bench/rome/parcel2/.terserrc
 
 	cd bench/rome/parcel2 && time -p node_modules/.bin/parcel build entry.ts --dist-dir . --cache-dir .cache
 	du -h bench/rome/parcel2/entry.js*

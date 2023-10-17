@@ -375,6 +375,27 @@ func TestNumber(t *testing.T) {
 	}
 }
 
+func TestURL(t *testing.T) {
+	expectPrinted(t, "a { background: url(foo.png) }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url('foo.png') }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\"foo.png\") }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\"foo.png\" ) }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\"foo.png\"\t) }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\"foo.png\"\r) }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\"foo.png\"\n) }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\"foo.png\"\f) }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\"foo.png\"\r\n) }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url( \"foo.png\") }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\t\"foo.png\") }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\r\"foo.png\") }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\n\"foo.png\") }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\f\"foo.png\") }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\r\n\"foo.png\") }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url( \"foo.png\" ) }", "a {\n  background: url(foo.png);\n}\n", "")
+	expectPrinted(t, "a { background: url(\"foo.png\" extra-stuff) }", "a {\n  background: url(\"foo.png\" extra-stuff);\n}\n", "")
+	expectPrinted(t, "a { background: url( \"foo.png\" extra-stuff ) }", "a {\n  background: url(\"foo.png\" extra-stuff);\n}\n", "")
+}
+
 func TestHexColor(t *testing.T) {
 	// "#RGBA"
 
@@ -1281,15 +1302,19 @@ func TestAtImport(t *testing.T) {
 	expectPrinted(t, "@import url();", "@import \"\";\n", "")
 	expectPrinted(t, "@import url(foo.css);", "@import \"foo.css\";\n", "")
 	expectPrinted(t, "@import url(foo.css) ;", "@import \"foo.css\";\n", "")
+	expectPrinted(t, "@import url( foo.css );", "@import \"foo.css\";\n", "")
 	expectPrinted(t, "@import url(\"foo.css\");", "@import \"foo.css\";\n", "")
 	expectPrinted(t, "@import url(\"foo.css\") ;", "@import \"foo.css\";\n", "")
+	expectPrinted(t, "@import url( \"foo.css\" );", "@import \"foo.css\";\n", "")
 	expectPrinted(t, "@import url(\"foo.css\") print;", "@import \"foo.css\" print;\n", "")
 	expectPrinted(t, "@import url(\"foo.css\") screen and (orientation:landscape);", "@import \"foo.css\" screen and (orientation:landscape);\n", "")
 
 	expectPrinted(t, "@import;", "@import;\n", "<stdin>: WARNING: Expected URL token but found \";\"\n")
 	expectPrinted(t, "@import ;", "@import;\n", "<stdin>: WARNING: Expected URL token but found \";\"\n")
 	expectPrinted(t, "@import \"foo.css\"", "@import \"foo.css\";\n", "<stdin>: WARNING: Expected \";\" but found end of file\n")
-	expectPrinted(t, "@import url(\"foo.css\";", "@import \"foo.css\";\n", "<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
+	expectPrinted(t, "@import url(\"foo.css\" extra-stuff);", "@import url(\"foo.css\" extra-stuff);\n", "<stdin>: WARNING: Expected URL token but found \"url(\"\n")
+	expectPrinted(t, "@import url(\"foo.css\";", "@import url(\"foo.css\";);\n",
+		"<stdin>: WARNING: Expected URL token but found \"url(\"\n<stdin>: WARNING: Expected \")\" to go with \"(\"\n<stdin>: NOTE: The unbalanced \"(\" is here:\n")
 	expectPrinted(t, "@import noturl(\"foo.css\");", "@import noturl(\"foo.css\");\n", "<stdin>: WARNING: Expected URL token but found \"noturl(\"\n")
 	expectPrinted(t, "@import url(foo.css", "@import \"foo.css\";\n", `<stdin>: WARNING: Expected ")" to end URL token
 <stdin>: NOTE: The unbalanced "(" is here:
@@ -2215,6 +2240,14 @@ func TestFont(t *testing.T) {
 
 	expectPrintedMangleMinify(t, "a { font: italic small-caps bold ultra-condensed 1rem/1.2 'aaa bbb' }", "a{font:italic small-caps 700 ultra-condensed 1rem/1.2 aaa bbb}", "")
 	expectPrintedMangleMinify(t, "a { font: italic small-caps bold ultra-condensed 1rem / 1.2 'aaa bbb' }", "a{font:italic small-caps 700 ultra-condensed 1rem/1.2 aaa bbb}", "")
+
+	// See: https://github.com/evanw/esbuild/issues/3452
+	expectPrinted(t, "a { font: 10px'foo' }", "a {\n  font: 10px\"foo\";\n}\n", "")
+	expectPrinted(t, "a { font: 10px'123' }", "a {\n  font: 10px\"123\";\n}\n", "")
+	expectPrintedMangle(t, "a { font: 10px'foo' }", "a {\n  font: 10px foo;\n}\n", "")
+	expectPrintedMangle(t, "a { font: 10px'123' }", "a {\n  font: 10px\"123\";\n}\n", "")
+	expectPrintedMangleMinify(t, "a { font: 10px'foo' }", "a{font:10px foo}", "")
+	expectPrintedMangleMinify(t, "a { font: 10px'123' }", "a{font:10px\"123\"}", "")
 }
 
 func TestWarningUnexpectedCloseBrace(t *testing.T) {
