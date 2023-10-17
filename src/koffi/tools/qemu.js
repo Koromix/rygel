@@ -474,6 +474,16 @@ async function dist() {
         fs.rmdirSync(dist_dir + '/web');
     }
 
+    console.log('>> Test prebuild');
+    {
+        let pkg = JSON.parse(fs.readFileSync(dist_dir + '/package.json'));
+        let require_filename = path.join(dist_dir, expand_path(pkg.cnoke.require, pkg.version));
+
+        let proc = spawnSync(process.execPath, ['-e', 'require(process.argv[1])', require_filename]);
+        if (proc.status !== 0)
+            throw new Error('Failed to use prebuild:\n' + (proc.stderr || proc.stdout));
+    }
+
     return dist_dir;
 }
 
@@ -974,4 +984,18 @@ async function exec_remote(machine, cmd, cwd = null) {
         console.log(err);
         return err;
     }
+}
+
+function expand_path(str, version) {
+    let ret = str.replace(/{{ *([a-zA-Z_][a-zA-Z_0-9]*) *}}/g, (match, p1) => {
+        switch (p1) {
+            case 'version': return version;
+            case 'platform': return process.platform;
+            case 'arch': return arch;
+
+            default: return match;
+        }
+    });
+
+    return ret;
 }
