@@ -4055,17 +4055,29 @@ bool CreatePipe(int pfd[2]);
 void CloseDescriptorSafe(int *fd_ptr);
 #endif
 
-bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+struct ExecuteInfo {
+    struct KeyValue {
+        const char *key;
+        const char *value;
+    };
+
+    const char *work_dir = nullptr;
+
+    bool reset_env = false;
+    Span<const KeyValue> env_variables = {};
+};
+
+bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code);
-bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         Span<const uint8_t> in_buf, Size max_len,
                         HeapArray<uint8_t> *out_buf, int *out_code);
 
 // Simple variants
-static inline bool ExecuteCommandLine(const char *cmd_line, const char *work_dir, int *out_code)
-    { return ExecuteCommandLine(cmd_line, work_dir, {}, {}, out_code); }
-static inline bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,int *out_code)
+    { return ExecuteCommandLine(cmd_line, info, {}, {}, out_code); }
+static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                                       Span<const uint8_t> in_buf,
                                       FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
@@ -4075,22 +4087,22 @@ static inline bool ExecuteCommandLine(const char *cmd_line, const char *work_dir
         return buf;
     };
 
-    return ExecuteCommandLine(cmd_line, work_dir, read_once, out_func, out_code);
+    return ExecuteCommandLine(cmd_line, info, read_once, out_func, out_code);
 }
 
 // Char variants
-static inline bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                                       Span<const char> in_buf,
                                       FunctionRef<void(Span<char> buf)> out_func, int *out_code)
 {
     const auto write = [&](Span<uint8_t> buf) { out_func(buf.As<char>()); };
-    return ExecuteCommandLine(cmd_line, work_dir, in_buf.As<const uint8_t>(), write, out_code);
+    return ExecuteCommandLine(cmd_line, info, in_buf.As<const uint8_t>(), write, out_code);
 }
-static inline bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                                       Span<const char> in_buf, Size max_len,
                                       HeapArray<char> *out_buf, int *out_code)
 {
-    return ExecuteCommandLine(cmd_line, work_dir, in_buf.As<const uint8_t>(), max_len,
+    return ExecuteCommandLine(cmd_line, info, in_buf.As<const uint8_t>(), max_len,
                               (HeapArray<uint8_t> *)out_buf, out_code);
 }
 

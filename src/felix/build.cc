@@ -1299,7 +1299,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
     int exit_code;
     bool started;
     if (!build.fake) {
-        started = ExecuteCommandLine(cmd_line, nullptr, {}, Megabytes(4), &output_buf, &exit_code);
+        started = ExecuteCommandLine(cmd_line, {}, {}, Megabytes(4), &output_buf, &exit_code);
     } else {
         started = true;
         exit_code = 0;

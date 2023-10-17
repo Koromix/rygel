@@ -83,12 +83,16 @@ bool Builder::PrepareEsbuild()
             const char *gocache_dir = Fmt(&str_alloc, "%1/Go", shared_directory).ptr;
             SetEnvironmentVar("GOCACHE", gocache_dir);
 
-            const char *work_dir = "vendor/esbuild/src";
             const char *cmd_line = Fmt(&str_alloc, "go build -o \"%1\" -buildvcs=false ./cmd/esbuild", binary).ptr;
+            const char *work_dir = "vendor/esbuild/src";
+
+            ExecuteInfo info = {};
+
+            info.work_dir = work_dir;
 
             HeapArray<char> output_buf;
             int exit_code;
-            bool started = ExecuteCommandLine(cmd_line, work_dir, {}, Megabytes(4), &output_buf, &exit_code);
+            bool started = ExecuteCommandLine(cmd_line, info, {}, Megabytes(4), &output_buf, &exit_code);
 
             if (!started) {
                 return false;

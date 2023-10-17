@@ -3919,7 +3919,7 @@ struct PendingIO {
     }
 };
 
-bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
@@ -3934,9 +3934,9 @@ bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
 
     // Convert work directory
     Span<wchar_t> work_dir_w;
-    if (work_dir) {
-        work_dir_w = AllocateSpan<wchar_t>(&temp_alloc, 2 * strlen(work_dir) + 1);
-        if (ConvertUtf8ToWin32Wide(work_dir, work_dir_w) < 0)
+    if (info.work_dir) {
+        work_dir_w = AllocateSpan<wchar_t>(&temp_alloc, 2 * strlen(info.work_dir) + 1);
+        if (ConvertUtf8ToWin32Wide(info.work_dir, work_dir_w) < 0)
             return false;
     } else {
         work_dir_w = {};
@@ -3988,6 +3988,45 @@ bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
     if (out_func.IsValid() && !CreateOverlappedPipe(true, false, PipeMode::Byte, out_pipe))
         return false;
 
+    // Prepare environment (if needed)
+    HeapArray<wchar_t> new_env_w;
+    if (info.reset_env || info.env_variables.len) {
+        if (!info.reset_env) {
+            Span<wchar_t> current_env = MakeSpan(GetEnvironmentStringsW(), 0);
+
+            do {
+                Size len = (Size)wcslen(current_env.end());
+                current_env.len += len + 1;
+            } while (current_env.ptr[current_env.len]);
+
+            new_env_w.Append(current_env);
+        }
+
+        for (const ExecuteInfo::KeyValue &kv: info.env_variables) {
+            Span<const char> key = kv.key;
+            Span<const char> value = kv.value;
+
+            Size len = 2 * (key.len + value.len + 1) + 1;
+            new_env_w.Reserve(len);
+
+            len = ConvertUtf8ToWin32Wide(key, new_env_w.TakeAvailable());
+            if (len < 0) [[unlikely]]
+                return false;
+            new_env_w.len += len;
+
+            new_env_w.Append(L'=');
+
+            len = ConvertUtf8ToWin32Wide(value, new_env_w.TakeAvailable());
+            if (len < 0) [[unlikely]]
+                return false;
+            new_env_w.len += len;
+
+            new_env_w.Append(0);
+        }
+
+        new_env_w.Append(0);
+    }
+
     // Start process
     HANDLE process_handle;
     {
@@ -4012,9 +4051,11 @@ bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
             si.dwFlags |= STARTF_USESTDHANDLES;
         }
 
+        int flags = CREATE_NEW_PROCESS_GROUP | CREATE_UNICODE_ENVIRONMENT;
+
         PROCESS_INFORMATION pi = {};
-        if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, CREATE_NEW_PROCESS_GROUP,
-                            nullptr, work_dir_w.ptr, &si, &pi)) {
+        if (!CreateProcessW(nullptr, cmd_line_w.ptr, nullptr, nullptr, TRUE, flags,
+                            new_env_w.ptr, work_dir_w.ptr, &si, &pi)) {
             LogError("Failed to start process: %1", GetWin32ErrorString());
             return false;
         }
@@ -4223,10 +4264,12 @@ void CloseDescriptorSafe(int *fd_ptr)
     *fd_ptr = -1;
 }
 
-bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         FunctionRef<Span<const uint8_t>()> in_func,
                         FunctionRef<void(Span<uint8_t> buf)> out_func, int *out_code)
 {
+    BlockAllocator temp_alloc;
+
     // Create read pipes
     int in_pfd[2] = {-1, -1};
     RG_DEFER {
@@ -4277,6 +4320,26 @@ bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
         }
     }
 
+    // Prepare new environment (if needed)
+    HeapArray<char *> new_env;
+    if (info.reset_env || info.env_variables.len) {
+        if (!info.reset_env) {
+            char **ptr = environ;
+
+            while (*ptr) {
+                new_env.Append(*ptr);
+                ptr++;
+            }
+        }
+
+        for (const ExecuteInfo::KeyValue &kv: info.env_variables) {
+            const char *var = Fmt(&temp_alloc, "%1=%2", kv.key, kv.value).ptr;
+            new_env.Append((char *)var);
+        }
+
+        new_env.Append(nullptr);
+    }
+
     // Start process
     pid_t pid;
     {
@@ -4297,12 +4360,12 @@ bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
             return false;
         }
 
-        if (work_dir) {
-            const char *argv[] = {"env", "-C", work_dir, "sh", "-c", cmd_line, nullptr };
-            errno = posix_spawn(&pid, "/bin/env", &file_actions, nullptr, const_cast<char **>(argv), environ);
+        if (info.work_dir) {
+            const char *argv[] = {"env", "-C", info.work_dir, "sh", "-c", cmd_line, nullptr };
+            errno = posix_spawn(&pid, "/bin/env", &file_actions, nullptr, const_cast<char **>(argv), new_env.ptr ? new_env.ptr : environ);
         } else {
             const char *argv[] = {"sh", "-c", cmd_line, nullptr};
-            errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr, const_cast<char **>(argv), environ);
+            errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr, const_cast<char **>(argv), new_env.ptr ? new_env.ptr : environ);
         }
         if (errno) {
             LogError("Failed to start process: %1", strerror(errno));
@@ -4444,7 +4507,7 @@ bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
 
 #endif
 
-bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
+bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                         Span<const uint8_t> in_buf, Size max_len,
                         HeapArray<uint8_t> *out_buf, int *out_code)
 {
@@ -4467,8 +4530,8 @@ bool ExecuteCommandLine(const char *cmd_line, const char *work_dir,
     // Don't f*ck up the log
     bool warned = false;
 
-    bool success = ExecuteCommandLine(cmd_line, work_dir, [&]() { return in_buf; },
-                                                          [&](Span<uint8_t> buf) {
+    bool success = ExecuteCommandLine(cmd_line, info, [&]() { return in_buf; },
+                                                      [&](Span<uint8_t> buf) {
         if (out_buf->len - start_len <= max_len - buf.len) {
             out_buf->Append(buf);
         } else if (!warned) {
@@ -4494,7 +4557,7 @@ Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
     };
 
     int exit_code;
-    if (!ExecuteCommandLine(cmd_line, nullptr, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code))
+    if (!ExecuteCommandLine(cmd_line, {}, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code))
         return -1;
     if (exit_code) {
         LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);
@@ -4507,7 +4570,7 @@ Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
 bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
 {
     int exit_code;
-    if (!ExecuteCommandLine(cmd_line, nullptr, {}, Mebibytes(1), out_output, &exit_code))
+    if (!ExecuteCommandLine(cmd_line, {}, {}, Mebibytes(1), out_output, &exit_code))
         return false;
     if (exit_code) {
         LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);
