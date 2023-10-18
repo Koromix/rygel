@@ -132,13 +132,7 @@ static bool IdentifyCompiler(const char *bin, const char *needle)
 }
 
 static bool DetectCcache() {
-    static bool detected = false;
-    static bool init = false;
-
-    if (!init) {
-        detected = FindExecutableInPath("ccache");
-    }
-
+    static bool detected = FindExecutableInPath("ccache");
     return detected;
 }
 
