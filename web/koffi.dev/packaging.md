@@ -1,6 +1,8 @@
 # Bundlers and Koffi
 
-## Bundling and native modules
+## Bundling
+
+### Native modules
 
 *Simplified in Koffi 2.5.9*
 
@@ -36,7 +38,7 @@ resources/
 MyApp.exe
 ```
 
-## Indirect loader
+### Indirect loader
 
 *New in Koffi 2.6.2*
 
