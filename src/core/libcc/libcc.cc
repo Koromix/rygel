@@ -5269,18 +5269,18 @@ void FillRandomSafe(void *out_buf, Size len)
 
         memset(rnd_state, 0, RG_SIZE(rnd_state));
 #if defined(_WIN32)
-        RG_CRITICAL(RtlGenRandom(&buf, RG_SIZE(buf)), "RtlGenRandom() failed: %s", GetWin32ErrorString());
+        RG_CRITICAL(RtlGenRandom(&buf, RG_SIZE(buf)), "RtlGenRandom() failed: %1", GetWin32ErrorString());
 #elif defined(__linux__)
         {
 restart:
             int ret = syscall(SYS_getrandom, &buf, RG_SIZE(buf), 0);
-            RG_CRITICAL(ret >= 0, "getentropy() failed: %s", strerror(errno));
+            RG_CRITICAL(ret >= 0, "getentropy() failed: %1", strerror(errno));
 
             if (ret < RG_SIZE(buf))
                 goto restart;
         }
 #else
-        RG_CRITICAL(getentropy(&buf, RG_SIZE(buf)) == 0, "getentropy() failed: %s", strerror(errno));
+        RG_CRITICAL(getentropy(&buf, RG_SIZE(buf)) == 0, "getentropy() failed: %1", strerror(errno));
 #endif
 
         InitChaCha20(rnd_state, buf.key, buf.iv);
