@@ -5706,13 +5706,23 @@ void AsyncPool::RegisterAsync()
                 // tries to dereference destroyed stuff. It turns out that std::thread calls this
                 // function, and we don't want that, so avoid std::thread on Windows.
                 HANDLE h = CreateThread(nullptr, 0, RunWorkerWin32, worker, 0, nullptr);
-                RG_CRITICAL(h, "CreateThread() failed: %1", GetWin32ErrorString());
+                if (!h) [[unlikely]] {
+                    LogError("Failed to create worker thread: %1", GetWin32ErrorString());
+
+                    worker->pool = nullptr;
+                    return;
+                }
 
                 CloseHandle(h);
 #else
                 pthread_t thread;
                 int ret = pthread_create(&thread, nullptr, RunWorkerPthread, worker);
-                RG_CRITICAL(!ret, "pthread_create() failed: %1", strerror(ret));
+                if (ret) [[unlikely]] {
+                    LogError("Failed to create worker thread: %1", strerror(ret));
+
+                    worker->pool = nullptr;
+                    return;
+                }
 
                 pthread_detach(thread);
 #endif
