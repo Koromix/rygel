@@ -4278,7 +4278,8 @@ class Fiber {
 #elif defined(RG_FIBER_USE_UCONTEXT)
     ucontext_t ucp = {};
 #else
-    std::thread thread;
+    pthread_t thread;
+    bool joinable = false;
 
     std::mutex mutex;
     std::condition_variable cv;
@@ -4306,7 +4307,7 @@ private:
 #elif defined(RG_FIBER_USE_UCONTEXT)
     static void FiberCallback(unsigned int high, unsigned int low);
 #else
-    static void ThreadCallback(void *udata);
+    static void *ThreadCallback(void *udata);
     void Toggle(int to, std::unique_lock<std::mutex> *lock);
 #endif
 };

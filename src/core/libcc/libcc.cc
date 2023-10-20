@@ -6039,10 +6039,16 @@ void Fiber::FiberCallback(unsigned int high, unsigned int low)
 static RG_THREAD_LOCAL std::unique_lock<std::mutex> *fib_lock;
 static RG_THREAD_LOCAL Fiber *fib_self;
 
-Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
+Fiber::Fiber(const std::function<bool()> &f, Size)
     : f(f)
 {
-    thread = std::thread(ThreadCallback, this);
+    int ret = pthread_create(&thread, nullptr, ThreadCallback, this);
+    if (ret) {
+        LogError("Failed to create thread: %1", strerror(ret));
+        return;
+    }
+    joinable = true;
+
     done = false;
 
     while (toggle == 1) {
@@ -6055,8 +6061,8 @@ Fiber::~Fiber()
     // We are forced to execute it until the end
     Finalize();
 
-    if (thread.joinable()) {
-        thread.join();
+    if (joinable) {
+        pthread_join(thread, nullptr);
     }
 }
 
@@ -6087,7 +6093,7 @@ bool Fiber::SwitchBack()
     }
 }
 
-void Fiber::ThreadCallback(void *udata)
+void *Fiber::ThreadCallback(void *udata)
 {
     Fiber *self = (Fiber *)udata;
 
@@ -6104,6 +6110,8 @@ void Fiber::ThreadCallback(void *udata)
 
     self->toggle = 0;
     self->cv.notify_one();
+
+    return nullptr;
 }
 
 void Fiber::Toggle(int to, std::unique_lock<std::mutex> *lock)
