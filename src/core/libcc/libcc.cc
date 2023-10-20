@@ -1426,7 +1426,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 RG_ASSERT(arg.u.random.len <= RG_SIZE(out_buf.data));
 
                 for (Size j = 0; j < arg.u.random.len; j++) {
-                    int rnd = GetRandomIntSafe(0, (int)chars.len);
+                    int rnd = GetRandomIntFast(0, (int)chars.len);
                     out_buf.Append(chars[rnd]);
                 }
 
@@ -5081,79 +5081,6 @@ const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix
 // Random
 // ------------------------------------------------------------------------
 
-static inline uint32_t ROTL32(uint32_t v, int n)
-{
-    return (v << n) | (v >> (32 - n));
-}
-
-static inline uint64_t ROTL64(uint64_t v, int n) {
-    return (v << n) | (v >> (64 - n));
-}
-
-FastRandom::FastRandom()
-{
-    do {
-        FillRandomSafe(state, RG_SIZE(state));
-    } while (std::all_of(std::begin(state), std::end(state), [](uint64_t v) { return !v; }));
-}
-
-FastRandom::FastRandom(uint64_t seed)
-{
-    // splitmix64 generator to seed xoshiro256++, as recommended
-
-    seed += 0x9e3779b97f4a7c15;
-
-    for (int i = 0; i < 4; i++) {
-        seed = (seed ^ (seed >> 30)) * 0xbf58476d1ce4e5b9;
-        seed = (seed ^ (seed >> 27)) * 0x94d049bb133111eb;
-        state[i] = seed ^ (seed >> 31);
-    }
-}
-
-void FastRandom::Fill(void *out_buf, Size len)
-{
-    for (Size i = 0; i < len; i += 8) {
-        uint64_t rnd = Next();
-
-        Size copy_len = std::min(RG_SIZE(rnd), len - i);
-        memcpy((uint8_t *)out_buf + i, &rnd, copy_len);
-    }
-}
-
-int FastRandom::GetInt(int min, int max)
-{
-    int range = max - min;
-    RG_ASSERT(range >= 2);
-
-    unsigned int treshold = (UINT_MAX - UINT_MAX % range);
-
-    unsigned int x;
-    do {
-        Fill(&x, RG_SIZE(x));
-    } while (x >= treshold);
-    x %= range;
-
-    return min + (int)x;
-}
-
-uint64_t FastRandom::Next()
-{
-    // xoshiro256++ by David Blackman and Sebastiano Vigna (vigna@acm.org)
-    // Hopefully I did not screw it up :)
-
-    uint64_t result = ROTL64(state[0] + state[3], 23) + state[0];
-    uint64_t t = state[1] << 17;
-
-    state[2] ^= state[0];
-    state[3] ^= state[1];
-    state[1] ^= state[2];
-    state[0] ^= state[3];
-    state[2] ^= t;
-    state[3] = ROTL64(state[3], 45);
-
-    return result;
-}
-
 static RG_THREAD_LOCAL Size rnd_remain;
 static RG_THREAD_LOCAL int64_t rnd_time;
 #ifndef _WIN32
@@ -5162,6 +5089,17 @@ static RG_THREAD_LOCAL pid_t rnd_pid;
 static RG_THREAD_LOCAL uint32_t rnd_state[16];
 static RG_THREAD_LOCAL uint8_t rnd_buf[64];
 static RG_THREAD_LOCAL Size rnd_offset;
+
+static thread_local FastRandom rng_fast;
+
+static inline uint32_t ROTL32(uint32_t v, int n)
+{
+    return (v << n) | (v >> (32 - n));
+}
+
+static inline uint64_t ROTL64(uint64_t v, int n) {
+    return (v << n) | (v >> (64 - n));
+}
 
 static void InitChaCha20(uint32_t state[16], uint32_t key[8], uint32_t iv[2])
 {
@@ -5328,6 +5266,75 @@ int GetRandomIntSafe(int min, int max)
     x %= range;
 
     return min + (int)x;
+}
+
+FastRandom::FastRandom()
+{
+    do {
+        FillRandomSafe(state, RG_SIZE(state));
+    } while (std::all_of(std::begin(state), std::end(state), [](uint64_t v) { return !v; }));
+}
+
+FastRandom::FastRandom(uint64_t seed)
+{
+    // splitmix64 generator to seed xoshiro256++, as recommended
+
+    seed += 0x9e3779b97f4a7c15;
+
+    for (int i = 0; i < 4; i++) {
+        seed = (seed ^ (seed >> 30)) * 0xbf58476d1ce4e5b9;
+        seed = (seed ^ (seed >> 27)) * 0x94d049bb133111eb;
+        state[i] = seed ^ (seed >> 31);
+    }
+}
+
+void FastRandom::Fill(void *out_buf, Size len)
+{
+    for (Size i = 0; i < len; i += 8) {
+        uint64_t rnd = Next();
+
+        Size copy_len = std::min(RG_SIZE(rnd), len - i);
+        memcpy((uint8_t *)out_buf + i, &rnd, copy_len);
+    }
+}
+
+int FastRandom::GetInt(int min, int max)
+{
+    int range = max - min;
+    RG_ASSERT(range >= 2);
+
+    unsigned int treshold = (UINT_MAX - UINT_MAX % range);
+
+    unsigned int x;
+    do {
+        Fill(&x, RG_SIZE(x));
+    } while (x >= treshold);
+    x %= range;
+
+    return min + (int)x;
+}
+
+uint64_t FastRandom::Next()
+{
+    // xoshiro256++ by David Blackman and Sebastiano Vigna (vigna@acm.org)
+    // Hopefully I did not screw it up :)
+
+    uint64_t result = ROTL64(state[0] + state[3], 23) + state[0];
+    uint64_t t = state[1] << 17;
+
+    state[2] ^= state[0];
+    state[3] ^= state[1];
+    state[1] ^= state[2];
+    state[0] ^= state[3];
+    state[2] ^= t;
+    state[3] = ROTL64(state[3], 45);
+
+    return result;
+}
+
+int GetRandomIntFast(int min, int max)
+{
+    return rng_fast.GetInt(min, max);
 }
 
 // ------------------------------------------------------------------------
@@ -5743,7 +5750,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
     if (async_running_pool != async->pool) {
         for (;;) {
-            int idx = GetRandomIntSafe(0, workers.len);
+            int idx = GetRandomIntFast(0, workers.len);
             WorkerData *worker = &workers[idx];
 
             std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);
