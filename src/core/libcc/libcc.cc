@@ -5535,7 +5535,10 @@ struct Task {
     std::function<bool()> func;
 };
 
-struct TaskQueue {
+struct WorkerData {
+    AsyncPool *pool = nullptr;
+    int idx;
+
     std::mutex queue_mutex;
     BucketArray<Task> tasks;
 };
@@ -5551,15 +5554,13 @@ class AsyncPool {
     int refcount = 0;
 
     int async_count = 0;
-    HeapArray<bool> workers_state;
-
-    HeapArray<TaskQueue> queues;
+    HeapArray<WorkerData> workers;
     std::atomic_int pending_tasks { 0 };
 
 public:
     AsyncPool(int threads, bool leak);
 
-    int GetWorkerCount() const { return (int)queues.len; }
+    int GetWorkerCount() const { return (int)workers.len; }
     int CountPendingTasks() const { return pending_tasks; }
 
     void RegisterAsync();
@@ -5570,7 +5571,7 @@ public:
     void RunWorker(int worker_idx);
     void SyncOn(Async *async);
 
-    void RunTasks(int queue_idx);
+    void RunTasks(int worker_idx);
     void RunTask(Task *task);
 };
 
@@ -5661,25 +5662,62 @@ AsyncPool::AsyncPool(int threads, bool leak)
         threads = RG_ASYNC_MAX_THREADS;
     }
 
-    // The first queue is for the main thread, whereas workers_state[0] is
-    // not used but it's easier to index it the same way.
-    workers_state.AppendDefault(threads);
-    queues.AppendDefault(threads);
+    // The first queue is for the main thread
+    workers.AppendDefault(threads);
 
     refcount = leak;
 }
+
+#ifdef _WIN32
+
+static DWORD WINAPI RunWorkerWin32(void *udata)
+{
+    WorkerData *worker = (WorkerData *)udata;
+    worker->pool->RunWorker(worker->idx);
+    return 0;
+}
+
+#else
+
+static void *RunWorkerPthread(void *udata)
+{
+    WorkerData *worker = (WorkerData *)udata;
+    worker->pool->RunWorker(worker->idx);
+    return nullptr;
+}
+
+#endif
 
 void AsyncPool::RegisterAsync()
 {
     std::lock_guard<std::mutex> lock_pool(pool_mutex);
 
     if (!async_count++) {
-        for (int i = 1; i < workers_state.len; i++) {
-            if (!workers_state[i]) {
-                std::thread(&AsyncPool::RunWorker, this, i).detach();
+        for (int i = 1; i < workers.len; i++) {
+            WorkerData *worker = &workers[i];
+
+            if (!worker->pool) {
+                worker->pool = this;
+                worker->idx = i;
+
+#ifdef _WIN32
+                // Our worker threads may exit after main() has returned (or exit has been called),
+                // which can trigger crashes in _Cnd_do_broadcast_at_thread_exit() because it
+                // tries to dereference destroyed stuff. It turns out that std::thread calls this
+                // function, and we don't want that, so avoid std::thread on Windows.
+                HANDLE h = CreateThread(nullptr, 0, RunWorkerWin32, worker, 0, nullptr);
+                RG_CRITICAL(h, "CreateThread() failed: %1", GetWin32ErrorString());
+
+                CloseHandle(h);
+#else
+                pthread_t thread;
+                int ret = pthread_create(&thread, nullptr, RunWorkerPthread, worker);
+                RG_CRITICAL(!ret, "pthread_create() failed: %1", strerror(ret));
+
+                pthread_detach(thread);
+#endif
 
                 refcount++;
-                workers_state[i] = true;
             }
         }
     }
@@ -5695,20 +5733,20 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
     if (async_running_pool != async->pool) {
         for (;;) {
-            int idx = GetRandomIntSafe(0, queues.len);
-            TaskQueue *queue = &queues[idx];
+            int idx = GetRandomIntSafe(0, workers.len);
+            WorkerData *worker = &workers[idx];
 
-            std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
+            std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);
             if (lock_queue.owns_lock()) {
-                queue->tasks.Append({ async, func });
+                worker->tasks.Append({ async, func });
                 break;
             }
         }
     } else {
-        TaskQueue *queue = &queues[async_running_worker_idx];
+        WorkerData *worker = &workers[async_running_worker_idx];
 
-        std::lock_guard<std::mutex> lock_queue(queue->queue_mutex);
-        queue->tasks.Append({ async, func });
+        std::lock_guard<std::mutex> lock_queue(worker->queue_mutex);
+        worker->tasks.Append({ async, func });
     }
 
     async->remaining_tasks++;
@@ -5738,7 +5776,8 @@ void AsyncPool::RunWorker(int worker_idx)
         pending_cv.wait_for(lock_pool, duration, [&]() { return !!pending_tasks; });
     }
 
-    workers_state[worker_idx] = false;
+    workers[worker_idx].pool = nullptr;
+
     if (!--refcount) {
         lock_pool.unlock();
         delete this;
@@ -5757,31 +5796,31 @@ void AsyncPool::SyncOn(Async *async)
     async_running_worker_idx = 0;
 
     while (async->remaining_tasks) {
-        RunTasks(async_running_worker_idx);
+        RunTasks(0);
 
         std::unique_lock<std::mutex> lock_sync(pool_mutex);
         sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
     }
 }
 
-void AsyncPool::RunTasks(int queue_idx)
+void AsyncPool::RunTasks(int worker_idx)
 {
     // The '12' factor is pretty arbitrary, don't try to find meaning there
-    for (int i = 0; i < workers_state.len * 12; i++) {
-        TaskQueue *queue = &queues[queue_idx];
-        std::unique_lock<std::mutex> lock_queue(queue->queue_mutex, std::try_to_lock);
+    for (int i = 0; i < workers.len * 12; i++) {
+        WorkerData *worker = &workers[worker_idx];
+        std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);
 
-        if (lock_queue.owns_lock() && queue->tasks.len) {
-            Task task = std::move(queue->tasks[0]);
+        if (lock_queue.owns_lock() && worker->tasks.len) {
+            Task task = std::move(worker->tasks[0]);
 
-            queue->tasks.RemoveFirst();
-            queue->tasks.Trim();
+            worker->tasks.RemoveFirst();
+            worker->tasks.Trim();
 
             lock_queue.unlock();
 
             RunTask(&task);
         } else {
-            queue_idx = (++queue_idx < queues.len) ? queue_idx : 0;
+            worker_idx = (++worker_idx < workers.len) ? worker_idx : 0;
         }
     }
 }
