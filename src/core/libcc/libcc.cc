@@ -5307,7 +5307,7 @@ int FastRandom::GetInt(int min, int max)
 
     unsigned int x;
     do {
-        Fill(&x, RG_SIZE(x));
+        x = (unsigned int)Next();
     } while (x >= treshold);
     x %= range;
 
