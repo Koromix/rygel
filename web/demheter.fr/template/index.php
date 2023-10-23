@@ -150,8 +150,8 @@ if (count($news)) {
     echo '<div id="news">';
 
     if (count($news) > 1) {
-        echo '<img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />
-              <img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />';
+        echo '<img style="left: 16px;" src="/static/misc/left.png" alt="" onclick="toggleNews(-1, true)" />
+              <img style="right: 16px;" src="/static/misc/right.png" alt="" onclick="toggleNews(1, true)" />';
     }
 
     foreach ($news as $i => $item) {
