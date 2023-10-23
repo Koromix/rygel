@@ -66,7 +66,8 @@ a:hover { color: var(--color, black); }
 #top li {
     position: relative;
     list-style-type: none;
-    padding-left: 10px;
+    padding-left: 8px;
+    border-left: 2px solid rgba(0, 0, 0, 0);
 }
 #top li a {
     color: #383838;
@@ -83,10 +84,7 @@ a:hover { color: var(--color, black); }
 }
 #top li > a.active { font-weight: bold; }
 #top li > div { display: none; }
-.nojs #top li:hover, #top li.active {
-    border-left: 2px solid #ff6600;
-    padding-left: 8px;
-}
+.nojs #top li:hover, #top li.active { border-left-color: #ff6600; }
 .nojs #top li:hover > a, #top li.active > a {
     margin-bottom: 1px;
     border-bottom: none;
