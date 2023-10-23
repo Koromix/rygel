@@ -251,5 +251,10 @@ function parse_markdown($text) {
 
             init();
         </script>
+
+        <script type="text/javascript" src="{{ ASSET main.js }}"></script>
+        <script>
+            init();
+        </script>
     </body>
 </html>
