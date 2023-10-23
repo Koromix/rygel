@@ -69,6 +69,9 @@ async function submitNews(e) {
     let payload = [];
 
     for (let tr of target.querySelectorAll('tbody > tr')) {
+        if (tr.querySelector('.image') == null)
+            continue;
+
         let item = {
             image: tr.querySelector('.image').value,
             title: tr.querySelector('.title').value,
