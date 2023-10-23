@@ -183,7 +183,11 @@ pre {
         align-items: start;
         z-index: 8;
     }
-    #top a { border-bottom: none; }
+    #top a {
+        font-size: 1.1em;
+        height: 1.6em;
+        border-bottom: none;
+    }
     #top a:hover { margin-bottom: -2px; }
     .js #top a:not(.active) { display: none; }
     #top.active menu {
@@ -191,6 +195,11 @@ pre {
         gap: 4px;
     }
     #top.active a { display: block !important; }
+
+    #side a {
+        font-size: 1.1em;
+        height: 1.6em;
+    }
 
     .js #deploy {
         display: block !important;
