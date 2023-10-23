@@ -27,24 +27,31 @@ switch ($method) {
     } break;
 
     case "news": {
-        $data = read_json_body();
+        assert_admin();
 
         $db = new SQLite3("../data/news.db", SQLITE3_OPEN_READWRITE);
 
-        $db->query("BEGIN TRANSACTION");
+        if ($_SERVER["REQUEST_METHOD"] == "POST") {
+            $data = read_json_body();
 
-        $db->query("DELETE FROM news");
-        foreach ($data["news"] as $news) {
-            $stmt = $db->prepare("INSERT INTO news (image, title, content) VALUES (:image, :title, :content)");
+            $db->query("BEGIN TRANSACTION");
+            $db->query("DELETE FROM news");
+            foreach ($data["news"] as $news) {
+                $stmt = $db->prepare("INSERT INTO news (image, title, content) VALUES (:image, :title, :content)");
 
-            $stmt->bindValue(":image", $news["image"]);
-            $stmt->bindValue(":title", $news["title"]);
-            $stmt->bindValue(":content", $news["content"]);
+                $stmt->bindValue(":image", $news["image"]);
+                $stmt->bindValue(":title", $news["title"]);
+                $stmt->bindValue(":content", $news["content"]);
 
-            $stmt->execute();
+                $stmt->execute();
+            }
+            $db->query("COMMIT");
         }
 
-        $db->query("COMMIT");
+        $res = $db->query("SELECT image, title, content FROM news ORDER BY id");
+        $news = fetch_all($res);
+
+        echo json_encode($news, JSON_UNESCAPED_UNICODE);
     } break;
 
     default: { fatal(404, "Unknown API"); } break;

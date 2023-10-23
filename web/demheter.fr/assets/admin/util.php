@@ -58,13 +58,13 @@ function assert_method($method) {
 }
 
 function assert_admin() {
+    if (session_status() != PHP_SESSION_ACTIVE)
+        session_start();
+
     $admin = $_SESSION["admin"] ?? false;
 
-    if (!$admin) {
-        http_response_code(302);
-        header("Location: /admin");
-        return;
-    }
+    if (!$admin)
+        fatal(401, "Please log in");
 }
 
 function read_body($max_size) {
