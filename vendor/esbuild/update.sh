@@ -31,6 +31,12 @@ mv esbuild bin/esbuild_linux_x64
 touch bin/esbuild_linux_x64
 chmod +x bin/esbuild_linux_x64
 
+curl -O https://registry.npmjs.org/@esbuild/linux-arm64/-/linux-arm64-$VERSION.tgz
+tar zx --strip-components=2 -f linux-arm64-$VERSION.tgz package/bin/esbuild
+mv esbuild bin/esbuild_linux_arm64
+touch bin/esbuild_linux_arm64
+chmod +x bin/esbuild_linux_arm64
+
 curl -O https://registry.npmjs.org/@esbuild/darwin-x64/-/darwin-x64-$VERSION.tgz
 tar zx --strip-components=2 -f darwin-x64-$VERSION.tgz package/bin/esbuild
 mv esbuild bin/esbuild_macos_x64

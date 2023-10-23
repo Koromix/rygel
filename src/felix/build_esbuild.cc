@@ -39,6 +39,8 @@ bool Builder::PrepareEsbuild()
         const char *binary = "vendor\\esbuild\\bin\\esbuild_windows_x64.exe";
 #elif defined(__linux__) && defined(__x86_64__)
         const char *binary = "vendor/esbuild/bin/esbuild_linux_x64";
+#elif defined(__linux__) && defined(__aarch64__)
+        const char *binary = "vendor/esbuild/bin/esbuild_linux_arm64";
 #elif defined(__APPLE__) && defined(__x86_64__)
         const char *binary = "vendor/esbuild/bin/esbuild_macos_x64";
 #elif defined(__APPLE__) && defined(__aarch64__)
