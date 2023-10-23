@@ -1231,6 +1231,9 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
                         LogError("Invalid GHS coefficient value %1", ghs_coefficient);
                         valid = false;
                     }
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
                 }
             } else if (prop.section == "Supplements") {
                 do {
