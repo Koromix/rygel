@@ -210,6 +210,9 @@ function parse_markdown($text) {
             function toggleNews(delta, explicit) {
                 let news = document.querySelector('#news');
 
+                if (news == null)
+                    return;
+
                 if (explicit || !news.classList.contains('expand')) {
                     let divs = Array.from(document.querySelectorAll('#news > div'));
                     let idx = divs.findIndex(div => div.classList.contains('active'));
