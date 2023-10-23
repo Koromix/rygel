@@ -124,7 +124,6 @@
             </menu>
         </nav>
 
-        <div id="news">
 <?php
 
 require_once("vendor/parsedown/Parsedown.php");
@@ -147,26 +146,32 @@ $db->query("
 $res = $db->query("SELECT image, title, content FROM news ORDER BY id");
 $news = fetch_all($res);
 
-if (count($news) > 1) {
-    echo '<img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />
-          <img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />';
-}
+if (count($news)) {
+    echo '<div id="news">';
 
-foreach ($news as $i => $item) {
-    $cls = $i ? "" : "active";
+    if (count($news) > 1) {
+        echo '<img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />
+              <img style="left: 16px;" src="/static/img/left.png" alt="" onclick="toggleNews(-1, true)" />';
+    }
 
-    $title = htmlspecialchars($item["title"]);
-    $content = parse_markdown($item["content"]);
+    foreach ($news as $i => $item) {
+        $cls = $i ? "" : "active";
 
-    echo <<<INFO
-        <div class="{$cls}">
-            <img src="{$item["image"]}" alt="" />
-            <div>
-                <p class="title">$title</p>
-                $content
+        $title = htmlspecialchars($item["title"]);
+        $content = parse_markdown($item["content"]);
+
+        echo <<<INFO
+            <div class="{$cls}">
+                <img src="{$item["image"]}" alt="" />
+                <div>
+                    <p class="title">$title</p>
+                    $content
+                </div>
             </div>
-        </div>
-    INFO;
+        INFO;
+    }
+
+    echo '</div>';
 }
 
 function fetch_all($res) {
@@ -182,7 +187,6 @@ function parse_markdown($text) {
 }
 
 ?>
-        </div>
 
         <main>
             {{ CONTENT }}
