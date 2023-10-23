@@ -37,11 +37,13 @@ struct PackAssetSet {
 };
 
 enum class PackFlag {
-    UseLiterals = 1 << 0,
-    NoSymbols = 1 << 1,
-    NoArray = 1 << 2
+    UseEmbed = 1 << 0,
+    UseLiterals = 1 << 1,
+    NoSymbols = 1 << 2,
+    NoArray = 1 << 3
 };
 static const char *const PackFlagNames[] = {
+    "UseEmbed",
     "UseLiterals",
     "NoSymbols",
     "NoArray"

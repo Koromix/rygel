@@ -359,31 +359,51 @@ bool PackAssets(Span<const PackAsset> assets, unsigned int flags, const char *ou
 {
     BlockAllocator temp_alloc;
 
-    StreamWriter st;
-    if (output_path) {
-        st.Open(output_path);
-    } else {
-        st.Open(stdout, "<stdout>");
-    }
-    if (!st.IsValid())
+    if ((flags & (int)PackFlag::UseEmbed) && (flags & (int)PackFlag::UseLiterals)) {
+        LogError("Cannot use both UseEmbed and UseLiterals flags");
         return false;
+    }
 
-    PrintLn(&st, CodePrefix);
+    StreamWriter c;
+    StreamWriter bin;
+    if (output_path) {
+        if (!c.Open(output_path))
+            return false;
+
+        if (flags & (int)PackFlag::UseEmbed) {
+            const char *bin_filename = Fmt(&temp_alloc, "%1.bin", output_path).ptr;
+
+            if (!bin.Open(bin_filename))
+                return false;
+        }
+    } else {
+        if (flags & (int)PackFlag::UseEmbed) {
+            LogError("You must use an explicit output path for UseEmbed");
+            return false;
+        }
+
+        if (!c.Open(stdout, "<stdout>"))
+            return false;
+    }
+
+    PrintLn(&c, CodePrefix);
 
     // Work around the ridiculousness of C++ not liking empty arrays
     HeapArray<BlobInfo> blobs;
     if (assets.len) {
-        bool use_literals = flags & (int)PackFlag::UseLiterals;
-
         std::function<void(Span<const uint8_t>)> print;
-        if (use_literals) {
-            print = [&](Span<const uint8_t> buf) { PrintAsLiterals(buf, &st); };
-        } else {
-            print = [&](Span<const uint8_t> buf) { PrintAsArray(buf, &st); };
-        }
 
-        PrintLn(&st, R"(
+        PrintLn(&c, R"(
 static const uint8_t raw_data[] = {)");
+
+        if (flags & (int)PackFlag::UseEmbed) {
+            PrintLn(&c, "    #embed \"%1.bin\"", output_path);
+            print = [&](Span<const uint8_t> buf) { bin.Write(buf); };
+        } else if (flags & (int)PackFlag::UseLiterals) {
+            print = [&](Span<const uint8_t> buf) { PrintAsLiterals(buf, &c); };
+        } else {
+            print = [&](Span<const uint8_t> buf) { PrintAsArray(buf, &c); };
+        }
 
         // Pack assets and source maps
         for (const PackAsset &asset: assets) {
@@ -392,60 +412,74 @@ static const uint8_t raw_data[] = {)");
             blob.name = asset.name;
             blob.compression_type = asset.compression_type;
 
-            PrintLn(&st, "    // %1", blob.name);
-            Print(&st, "    ");
-            blob.len = WriteAsset(asset, print);
-            if (blob.len < 0)
-                return false;
+            if (flags & (int)PackFlag::UseEmbed) {
+                blob.len = WriteAsset(asset, print);
+                if (blob.len < 0)
+                    return false;
 
-            // Put NUL byte at the end to make it a valid C string
-            print(0);
-            PrintLn(&st);
+                // Put NUL byte at the end to make it a valid C string
+                print(0);
+            } else {
+                PrintLn(&c, "    // %1", blob.name);
+                Print(&c, "    ");
+                blob.len = WriteAsset(asset, print);
+                if (blob.len < 0)
+                    return false;
+
+                // Put NUL byte at the end to make it a valid C string
+                print(0);
+                PrintLn(&c);
+            }
 
             blobs.Append(blob);
         }
 
-        PrintLn(&st, "};");
+        PrintLn(&c, "};");
     }
 
     if (!(flags & (int)PackFlag::NoArray)) {
-        PrintLn(&st);
+        PrintLn(&c);
 
-        PrintLn(&st, "EXPORT_SYMBOL EXTERN_SYMBOL const Span PackedAssets;");
+        PrintLn(&c, "EXPORT_SYMBOL EXTERN_SYMBOL const Span PackedAssets;");
         if (assets.len) {
-            PrintLn(&st, "static AssetInfo assets[%1] = {", blobs.len);
+            PrintLn(&c, "static AssetInfo assets[%1] = {", blobs.len);
 
             // Write asset table
             for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
                 const BlobInfo &blob = blobs[i];
 
-                PrintLn(&st, "    {\"%1\", %2, { raw_data + %3, %4 }},",
+                PrintLn(&c, "    {\"%1\", %2, { raw_data + %3, %4 }},",
                              blob.name, (int)blob.compression_type, raw_offset, blob.len);
 
                 raw_offset += blob.len + 1;
             }
 
-            PrintLn(&st, "};");
+            PrintLn(&c, "};");
         }
-        PrintLn(&st, "const Span PackedAssets = {%1, %2};", blobs.len ? "assets" : "0", blobs.len);
+        PrintLn(&c, "const Span PackedAssets = {%1, %2};", blobs.len ? "assets" : "0", blobs.len);
     }
 
     if (!(flags & (int)PackFlag::NoSymbols)) {
-        PrintLn(&st);
+        PrintLn(&c);
 
         for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
             const BlobInfo &blob = blobs[i];
             const char *var = MakeVariableName(blob.name, &temp_alloc);
 
-            PrintLn(&st, "EXPORT_SYMBOL EXTERN_SYMBOL const AssetInfo %1;", var);
-            PrintLn(&st, "const AssetInfo %1 = {\"%2\", %3, { raw_data + %4, %5 }};",
+            PrintLn(&c, "EXPORT_SYMBOL EXTERN_SYMBOL const AssetInfo %1;", var);
+            PrintLn(&c, "const AssetInfo %1 = {\"%2\", %3, { raw_data + %4, %5 }};",
                          var, blob.name, (int)blob.compression_type, raw_offset, blob.len);
 
             raw_offset += blob.len + 1;
         }
     }
 
-    return st.Close();
+    if (!c.Close())
+        return false;
+    if ((flags & (int)PackFlag::UseEmbed) && !bin.Close())
+        return false;
+
+    return true;
 }
 
 }
