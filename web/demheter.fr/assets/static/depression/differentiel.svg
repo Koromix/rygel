@@ -37,7 +37,7 @@
      inkscape:showpageshadow="2"
      inkscape:deskcolor="#d1d1d1" />
   <style>
-    @import url(&quot;/static/opensans/OpenSans.css&quot;);
+    @import url(&quot;/static/site.min.css&quot;);
   </style>
   <defs
      id="defs7">

@@ -139,3 +139,8 @@ function deploy() {
     let top = document.querySelector('nav#top');
     top.classList.toggle('active');
 }
+
+export {
+    init,
+    deploy
+}

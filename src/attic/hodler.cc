@@ -24,10 +24,29 @@ static const char *const UrlFormatNames[] = {
 };
 
 struct FileHash {
-    const char *path;
+    const char *name;
+    const char *filename;
     uint8_t sha256[32];
 
-    RG_HASHTABLE_HANDLER(FileHash, path);
+    RG_HASHTABLE_HANDLER(FileHash, name);
+};
+
+struct AssetCopy {
+    const char *dest_directory;
+    const char *src_directory;
+    HeapArray<const char *> ignore;
+};
+
+struct AssetBundle {
+    const char *name;
+    const char *dest_filename;
+    const char *src_filename;
+    const char *options;
+};
+
+struct AssetSet {
+    BucketArray<FileHash> hashes;
+    HashTable<const char *, const FileHash *> map;
 };
 
 struct PageSection {
@@ -113,10 +132,12 @@ static int32_t DecodeUtf8Unsafe(const char *str)
 
 static const char *SectionToPageName(Span<const char> section, Allocator *alloc)
 {
-    // File name and extension
-    SplitStrReverse(section, '.', &section);
+    Span<const char> basename = SplitStrReverseAny(section, RG_PATH_SEPARATORS);
 
-    const char *name = DuplicateString(section, alloc).ptr;
+    // Strip extension
+    SplitStrReverse(basename, '.', &basename);
+
+    const char *name = DuplicateString(basename, alloc).ptr;
     return name;
 }
 
@@ -173,34 +194,115 @@ static const char *TextToID(Span<const char> text, Allocator *alloc)
     return id.ptr;
 }
 
-static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8_t out_hash[32])
+static const char *FindEsbuild(const char *path, Allocator *alloc)
 {
-    if (!reader->IsValid())
-        return false;
+    if (!path) {
+        const char *str = getenv("ESBUILD_PATH");
+        path = (str && str[0]) ? str : ".";
+    }
 
-    crypto_hash_sha256_state state;
-    crypto_hash_sha256_init(&state);
+    FileInfo file_info;
+    StatResult stat = StatFile(path, (int)StatFlag::IgnoreMissing, &file_info);
 
-    do {
-        LocalArray<uint8_t, 16384> buf;
-        buf.len = reader->Read(buf.data);
-        if (buf.len < 0)
+    if (stat == StatResult::MissingPath) {
+        goto missing;
+    } else if (stat != StatResult::Success) {
+        return nullptr;
+    }
+
+    if (file_info.type == FileType::Directory) {
+#if defined(_WIN64)
+        const char *binary = Fmt(alloc, "%1%/esbuild_windows_x64.exe", path).ptr;
+#elif defined(__linux__) && defined(__x86_64__)
+        const char *binary = Fmt(alloc, "%1%/esbuild_linux_x64", path).ptr;
+#elif defined(__linux__) && defined(__aarch64__)
+        const char *binary = Fmt(alloc, "%1%/esbuild_linux_arm64", path).ptr;
+#elif defined(__APPLE__) && defined(__x86_64__)
+        const char *binary = Fmt(alloc, "%1%/esbuild_macos_x64", path).ptr;
+#elif defined(__APPLE__) && defined(__aarch64__)
+        const char *binary = Fmt(alloc, "%1%/esbuild_macos_arm64", path).ptr;
+#else
+        const char *binary = nullptr;
+#endif
+
+        if (!binary || !TestFile(binary))
+            goto missing;
+
+        path = binary;
+    }
+
+    return path;
+
+missing:
+    LogError("Cannot find esbuild, please set ESBUILD_PATH");
+    return nullptr;
+}
+
+static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, uint8_t out_hash[32])
+{
+    char cmd[4096];
+
+    // Prepare command
+    if (bundle.options) {
+        Fmt(cmd, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
+                 "  --minify --platform=browser %4",
+            esbuild_binary, bundle.src_filename, bundle.dest_filename, bundle.options);
+    } else {
+        Fmt(cmd, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
+                 "  --minify --platform=browser",
+            esbuild_binary, bundle.src_filename, bundle.dest_filename);
+    }
+
+    // Run esbuild
+    {
+        HeapArray<char> output_buf;
+        int exit_code;
+        bool started = ExecuteCommandLine(cmd, {}, {}, Megabytes(4), &output_buf, &exit_code);
+
+        if (!started) {
             return false;
+        } else if (exit_code) {
+            LogError("Failed to run esbuild %!..+(exit code %1)%!0", exit_code);
+            stderr_st.Write(output_buf);
 
-        if (!writer->Write(buf))
             return false;
-        crypto_hash_sha256_update(&state, buf.data, buf.len);
-    } while (!reader->IsEOF());
+        }
+    }
 
-    if (!writer->Close())
-        return false;
-    crypto_hash_sha256_final(&state, out_hash);
+    // Compute destination hash
+    {
+        StreamReader reader(bundle.dest_filename);
+
+        crypto_hash_sha256_state state;
+        crypto_hash_sha256_init(&state);
+
+        do {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = reader.Read(buf.data);
+            if (buf.len < 0)
+                return false;
+
+            crypto_hash_sha256_update(&state, buf.data, buf.len);
+        } while (!reader.IsEOF());
+
+        crypto_hash_sha256_final(&state, out_hash);
+    }
 
     return true;
 }
 
+static void RenderAsset(Span<const char> path, const FileHash *hash, StreamWriter *writer)
+{
+    if (hash) {
+        FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
+        Print(writer, "/%1?%2", path, suffix);
+    } else {
+        Print(writer, "/%1", path);
+    }
+}
+
 // XXX: Resolve page links in content
-static bool RenderMarkdown(PageData *page, const HashTable<const char *, const FileHash *> &assets, Allocator *alloc)
+static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *alloc)
 {
     HeapArray<char> content;
     if (ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
@@ -251,14 +353,9 @@ static bool RenderMarkdown(PageData *page, const HashTable<const char *, const F
                 Print(writer, "%1", FmtRandom(8));
             } else if (StartsWith(key, "ASSET ")) {
                 Span<const char> path = TrimStr(key.Take(6, key.len - 6));
-                const FileHash *hash = assets.FindValue(path, nullptr);
+                const FileHash *hash = assets.map.FindValue(path, nullptr);
 
-                if (hash) {
-                    FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
-                    Print(writer, "/%1?%2", path, suffix);
-                } else {
-                    Print(writer, "/%1", path);
-                }
+                RenderAsset(path, hash, writer);
             } else {
                 Print(writer, "{{%1}}", expr);
             }
@@ -314,8 +411,7 @@ static bool RenderMarkdown(PageData *page, const HashTable<const char *, const F
 }
 
 static bool RenderTemplate(const char *template_filename, Span<const PageData> pages, Size page_idx,
-                           const HashTable<const char *, const FileHash *> &assets,
-                           const char *dest_filename)
+                           const AssetSet &assets, const char *dest_filename)
 {
     StreamReader reader(template_filename);
     StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
@@ -333,14 +429,9 @@ static bool RenderTemplate(const char *template_filename, Span<const PageData> p
             Print(writer, "%1", FmtRandom(8));
         } else if (StartsWith(key, "ASSET ")) {
             Span<const char> path = TrimStr(key.Take(6, key.len - 6));
-            const FileHash *hash = assets.FindValue(path, nullptr);
+            const FileHash *hash = assets.map.FindValue(path, nullptr);
 
-            if (hash) {
-                FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
-                Print(writer, "/%1?%2", path, suffix);
-            } else {
-                Print(writer, "/%1", path);
-            }
+            RenderAsset(path, hash, writer);
         } else if (key == "LINKS") {
             for (Size i = 0; i < pages.len; i++) {
                 const PageData *menu_page = &pages[i];
@@ -406,23 +497,49 @@ static bool RenderTemplate(const char *template_filename, Span<const PageData> p
     return true;
 }
 
-static bool BuildAll(const char *config_filename, UrlFormat urls, const char *output_dir, bool gzip)
+static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8_t out_hash[32])
+{
+    if (!reader->IsValid())
+        return false;
+
+    crypto_hash_sha256_state state;
+    crypto_hash_sha256_init(&state);
+
+    do {
+        LocalArray<uint8_t, 16384> buf;
+        buf.len = reader->Read(buf.data);
+        if (buf.len < 0)
+            return false;
+
+        if (!writer->Write(buf))
+            return false;
+        crypto_hash_sha256_update(&state, buf.data, buf.len);
+    } while (!reader->IsEOF());
+
+    if (!writer->Close())
+        return false;
+    crypto_hash_sha256_final(&state, out_hash);
+
+    return true;
+}
+
+static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *output_dir, bool gzip)
 {
     BlockAllocator temp_alloc;
 
     // Output directory
     if (!MakeDirectory(output_dir, false))
         return false;
-    LogInfo("Configuration file: %!..+%1%!0", config_filename);
+    LogInfo("Source directory: %!..+%1%!0", source_dir);
     LogInfo("Output directory: %!..+%1%!0", output_dir);
 
-    Span<const char> config_dir = GetPathDirectory(config_filename);
-    const char *asset_dir = Fmt(&temp_alloc, "%1%/assets", config_dir).ptr;
+    const char *pages_filename = Fmt(&temp_alloc, "%1%/pages.ini", source_dir).ptr;
+    const char *assets_filename = Fmt(&temp_alloc, "%1%/assets.ini", source_dir).ptr;
 
     // List pages
     HeapArray<PageData> pages;
     {
-        StreamReader st(config_filename);
+        StreamReader st(pages_filename);
         if (!st.IsValid())
             return false;
 
@@ -442,7 +559,7 @@ static bool BuildAll(const char *config_filename, UrlFormat urls, const char *ou
             PageData page = {};
 
             page.name = SectionToPageName(prop.section, &temp_alloc);
-            page.src_filename = NormalizePath(prop.section, config_dir, &temp_alloc).ptr;
+            page.src_filename = NormalizePath(prop.section, source_dir, &temp_alloc).ptr;
             page.description = "";
 
             do {
@@ -453,7 +570,7 @@ static bool BuildAll(const char *config_filename, UrlFormat urls, const char *ou
                 } else if (prop.key == "Description") {
                     page.description = DuplicateString(prop.value, &temp_alloc).ptr;
                 } else if (prop.key == "Template") {
-                    page.template_filename = NormalizePath(prop.value, config_dir, &temp_alloc).ptr;
+                    page.template_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
@@ -489,26 +606,144 @@ static bool BuildAll(const char *config_filename, UrlFormat urls, const char *ou
             return false;
     }
 
-    // Copy static assets
-    BucketArray<FileHash> hashes;
-    HashTable<const char *, const FileHash *> hashes_map;
-    if (TestFile(asset_dir, FileType::Directory)) {
-        Async async;
-
-        HeapArray<const char *> asset_filenames;
-        if (!EnumerateFiles(asset_dir, nullptr, 3, 1024, &temp_alloc, &asset_filenames))
+    // List asset settings and rules
+    const char *esbuild_path = nullptr;
+    HeapArray<AssetCopy> copies;
+    HeapArray<AssetBundle> bundles;
+    if (TestFile(assets_filename)) {
+        StreamReader st(assets_filename);
+        if (!st.IsValid())
             return false;
 
-        Size prefix_len = strlen(asset_dir);
+        IniParser ini(&st);
+        ini.PushLogFilter();
+        RG_DEFER { PopLogFilter(); };
 
-        for (const char *src_filename: asset_filenames) {
+        bool valid = true;
+
+        IniProperty prop;
+        while (ini.Next(&prop)) {
+            if (!prop.section.len) {
+                if (prop.key == "EsbuildPath") {
+                    esbuild_path = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } else {
+                // Type property must be specified first
+                if (prop.key != "Type") {
+                    LogError("Property 'Type' must be specified first");
+                    valid = false;
+
+                    while (ini.NextInSection(&prop));
+                    continue;
+                }
+
+                if (prop.value == "Copy") {
+                    AssetCopy *copy = copies.AppendDefault();
+
+                    copy->dest_directory = NormalizePath(prop.section, output_dir, &temp_alloc).ptr;
+
+                    while (ini.NextInSection(&prop)) {
+                        if (prop.key == "From") {
+                            copy->src_directory = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
+                        } else if (prop.key == "Ignore") {
+                            while (prop.value.len) {
+                                Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
+
+                                if (part.len) {
+                                    const char *pattern = DuplicateString(part, &temp_alloc).ptr;
+                                    copy->ignore.Append(pattern);
+                                }
+                            }
+                        } else {
+                            LogError("Unknown attribute '%1'", prop.key);
+                            valid = false;
+                        }
+                    }
+
+                    if (!copy->src_directory) {
+                        LogError("Missing copy source directory");
+                        valid = false;
+                    }
+                } else if (prop.value == "Bundle") {
+                    AssetBundle *bundle = bundles.AppendDefault();
+
+                    bundle->name = DuplicateString(prop.section, &temp_alloc).ptr;
+                    bundle->dest_filename = NormalizePath(prop.section, output_dir, &temp_alloc).ptr;
+
+                    while (ini.NextInSection(&prop)) {
+                        if (prop.key == "Source") {
+                            bundle->src_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
+                        } else if (prop.key == "Options") {
+                            bundle->options = DuplicateString(prop.value, &temp_alloc).ptr;
+                        } else {
+                            LogError("Unknown attribute '%1'", prop.key);
+                            valid = false;
+                        }
+                    }
+
+                    if (!bundle->src_filename) {
+                        LogError("Missing bundle source");
+                        valid = false;
+                    }
+                } else {
+                    LogError("Unknown asset rule type '%1'", prop.value);
+                    valid = false;
+
+                    while (ini.NextInSection(&prop));
+                }
+            }
+        }
+        if (!ini.IsValid() || !valid)
+            return false;
+    }
+    if (!copies.len) {
+        AssetCopy copy = {};
+
+        copy.dest_directory = output_dir;
+        copy.src_directory = Fmt(&temp_alloc, "%1%/assets", source_dir).ptr;
+
+        copies.Append(copy);
+    }
+
+    // Normalize settings
+    if (bundles.len) {
+        esbuild_path = FindEsbuild(esbuild_path, &temp_alloc);
+        if (!esbuild_path)
+            return false;
+    }
+
+    AssetSet assets;
+
+    // Copy static assets
+    for (const AssetCopy &copy: copies) {
+        Async async;
+
+        HeapArray<const char *> src_filenames;
+        if (!EnumerateFiles(copy.src_directory, nullptr, 3, 1024, &temp_alloc, &src_filenames))
+            return false;
+
+        // Remove ignored patterns
+        src_filenames.RemoveFrom(std::remove_if(src_filenames.begin(), src_filenames.end(),
+                                                 [&](const char *filename) {
+            return std::any_of(copy.ignore.begin(), copy.ignore.end(),
+                               [&](const char *pattern) { return MatchPathSpec(filename, pattern); });
+        }) - src_filenames.begin());
+
+        Size prefix_len = strlen(copy.src_directory);
+
+        for (const char *src_filename: src_filenames) {
             const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
 
-            const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_dir, basename).ptr;
+            const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", copy.dest_directory, basename).ptr;
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
-            FileHash *hash = hashes.AppendDefault();
-            hash->path = basename;
+            FileHash *hash = assets.hashes.AppendDefault();
+
+            hash->name = basename;
+            hash->filename = dest_filename;
 
             async.Run([=]() {
                 if (!EnsureDirectoryExists(dest_filename))
@@ -543,19 +778,36 @@ static bool BuildAll(const char *config_filename, UrlFormat urls, const char *ou
 
                 return true;
             });
+
+            assets.map.Set(hash);
         }
 
         if (!async.Sync())
             return false;
+    }
 
-        for (const FileHash &hash: hashes) {
-            hashes_map.Set(&hash);
+    // Bundle JS files
+    {
+        Async async;
+
+        for (const AssetBundle &bundle: bundles) {
+            FileHash *hash = assets.hashes.AppendDefault();
+
+            hash->name = bundle.name;
+            hash->filename = bundle.dest_filename;
+
+            async.Run([=] { return BundleScript(bundle, esbuild_path, hash->sha256); });
+
+            assets.map.Set(hash);
         }
+
+        if (!async.Sync())
+            return false;
     }
 
     // Render markdown
     for (PageData &page: pages) {
-        if (!RenderMarkdown(&page, hashes_map, &temp_alloc))
+        if (!RenderMarkdown(&page, assets, &temp_alloc))
             return false;
     }
 
@@ -578,8 +830,8 @@ static bool BuildAll(const char *config_filename, UrlFormat urls, const char *ou
             bool gzip_file = gzip && TestStr(ext, ".html");
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
-            async.Run([=, &pages]() {
-                if (!RenderTemplate(pages[i].template_filename, pages, i, hashes_map, dest_filename))
+            async.Run([=, &pages, &assets]() {
+                if (!RenderTemplate(pages[i].template_filename, pages, i, assets, dest_filename))
                     return false;
 
                 if (gzip_file) {
@@ -612,7 +864,7 @@ int Main(int argc, char *argv[])
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = "HodlerSite.ini";
+    const char *source_dir = ".";
     const char *output_dir = nullptr;
     bool gzip = false;
     UrlFormat urls = UrlFormat::Pretty;
@@ -621,7 +873,7 @@ int Main(int argc, char *argv[])
         PrintLn(fp, R"(Usage: %!..+%1 [options] -O <output_dir>%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration filename
+    %!..+-S, --source_dir <file>%!0      Set source directory
                                  %!D..(default: %2)%!0
 
     %!..+-O, --output_dir <dir>%!0       Set output directory
@@ -629,7 +881,7 @@ Options:
 
     %!..+-u, --urls <FORMAT>%!0          Change URL format (%3)
                                  %!D..(default: %4)%!0)",
-                FelixTarget, config_filename, FmtSpan(UrlFormatNames), UrlFormatNames[(int)urls]);
+                FelixTarget, source_dir, FmtSpan(UrlFormatNames), UrlFormatNames[(int)urls]);
     };
 
     // Handle version
@@ -647,8 +899,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(stdout);
                 return 0;
-            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
-                config_filename = opt.current_value;
+            } else if (opt.Test("-S", "--source_dir", OptionType::Value)) {
+                source_dir = opt.current_value;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
             } else if (opt.Test("--gzip")) {
@@ -670,7 +922,7 @@ Options:
         return 1;
     }
 
-    if (!BuildAll(config_filename, urls, output_dir, gzip))
+    if (!BuildAll(source_dir, urls, output_dir, gzip))
         return 1;
 
     LogInfo("Done!");

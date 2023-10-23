@@ -1,3 +1,5 @@
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+
 if (String.prototype.format == null) {
     String.prototype.format = function(...args) {
         let str = this.replace(/{(\d+)}/g, (match, idx) => {
@@ -470,3 +472,10 @@ const UI = new function() {
         };
     };
 };
+
+export {
+    Util,
+    Log,
+    Net,
+    UI
+}

@@ -1,13 +1,15 @@
-#top { display: none; }
-#side { display: none; }
+@media print {
+    #top { display: none; }
+    #side { display: none; }
 
-main { padding-right: 16px !important; }
-footer { display: none; }
+    main { padding-right: 16px !important; }
+    footer { display: none; }
 
-.schema { width: 90%; }
+    .schema { width: 90%; }
 
-h1:not(:first-child) { break-before: page; }
+    h1:not(:first-child) { break-before: page; }
 
-.columns { display: block; }
-.columns > * { width: auto; }
-.columns > * + * { margin-top: 3em; }
+    .columns { display: block; }
+    .columns > * { width: auto; }
+    .columns > * + * { margin-top: 3em; }
+}

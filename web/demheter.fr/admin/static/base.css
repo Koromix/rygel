@@ -335,14 +335,14 @@ table tbody tr.highlight {
     --color: white; /* Override color of compatible children elements */
 }
 table tr.item.editable td:last-child {
-    background: url('../../assets/img/edit.webp');
+    background: url('edit.webp');
     background-repeat: no-repeat;
     background-size: 16px 16px;
     background-position: center right;
     padding-right: 24px;
 }
 table tr.locked td:last-child {
-    background: url('../../assets/img/locked.webp');
+    background: url('locked.webp');
     background-repeat: no-repeat;
     background-size: 16px 16px;
     background-position: center right;

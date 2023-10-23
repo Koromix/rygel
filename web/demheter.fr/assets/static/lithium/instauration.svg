@@ -31,7 +31,7 @@
      inkscape:current-layer="svg164" />
   <style
      id="style2">
-    @import url(&quot;/static/opensans/OpenSans.css&quot;);
+    @import url(&quot;/static/site.min.css&quot;);
   </style>
   <defs
      id="defs10">

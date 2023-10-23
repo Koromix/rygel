@@ -5,16 +5,8 @@
 
         <meta charset="utf-8">
 
-        <script src="assets/lit-html.min.js"></script>
-        <script>
-            window.html = lithtml.html;
-            window.svg = lithtml.svg;
-            window.render = lithtml.render;
-        </script>
-
-        <link rel="stylesheet" href="assets/base.css">
-        <script src="assets/base.js"></script>
-        <script src="assets/admin.js"></script>
+        <link rel="stylesheet" href="static/admin.min.css">
+        <script src="static/admin.min.js"></script>
 
         <style>
             .loading {
@@ -99,8 +91,8 @@
 
                 document.body.classList.add('loading');
                 window.addEventListener('load', function(e) {
-                    if (typeof start !== 'undefined') {
-                        var p = start();
+                    if (typeof admin !== 'undefined') {
+                        var p = admin.start();
 
                         p.catch(function(err) {
                             document.querySelector('#page').innerHTML =

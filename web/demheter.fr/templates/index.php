@@ -8,9 +8,7 @@
         <meta name="description" content="{{ DESCRIPTION }}">
         <link rel="icon" href="{{ ASSET favicon.png }}">
 
-        <link rel="stylesheet" href="{{ ASSET static/main.css }}">
-        <link rel="stylesheet" href="{{ ASSET static/print.css }}" media="print">
-        <link rel="stylesheet" href="{{ ASSET static/opensans/OpenSans.css }}">
+        <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
 
         <style>
             #news {
@@ -114,7 +112,7 @@
     </head>
 
     <body class="nojs">
-        <div id="deploy" onclick="deploy(); return false;"></div>
+        <div id="deploy" onclick="main.deploy(); return false;"></div>
 
         <nav id="top">
             <menu>
@@ -201,7 +199,7 @@ function parse_markdown($text) {
             </div>
         </footer>
 
-        <script type="text/javascript" src="{{ ASSET static/main.js }}"></script>
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
         <script>
             let news_timer = null;
 
@@ -249,12 +247,7 @@ function parse_markdown($text) {
                 news_timer = setTimeout(() => toggleNews(1, false), explicit ? 14000 : 6000);
             }
 
-            init();
-        </script>
-
-        <script type="text/javascript" src="{{ ASSET static/main.js }}"></script>
-        <script>
-            init();
+            main.init();
         </script>
     </body>
 </html>

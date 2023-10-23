@@ -11,12 +11,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
+import * as hljs from './highlight.min.js';
+
 function init() {
     initSide();
     initScroll();
 
     document.body.classList.remove('nojs');
     document.body.classList.add('js');
+
+    hljs.highlightAll();
 }
 
 function initSide() {
@@ -106,4 +110,9 @@ function initScroll() {
 function deploy() {
     let top = document.querySelector('nav#top');
     top.classList.toggle('active');
+}
+
+export {
+    init,
+    deploy
 }

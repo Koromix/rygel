@@ -35,7 +35,7 @@
      fit-margin-right="0"
      fit-margin-bottom="0" />
   <style>
-    @import url(&quot;/static/opensans/OpenSans.css&quot;);
+    @import url(&quot;/static/site.min.css&quot;);
   </style>
   <defs
      id="defs5281">

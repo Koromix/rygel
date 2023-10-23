@@ -1,9 +1,12 @@
-Log.pushHandler(UI.notifyHandler);
+import { Util, Net, Log, UI } from './base.js';
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 
 let admin = false;
 let news = null;
 
 async function start() {
+    Log.pushHandler(UI.notifyHandler);
+
     try {
         news = await Net.get('api.php?method=news');
         admin = true;
@@ -153,4 +156,8 @@ function addNews(e) {
 function deleteNews(item) {
     news = news.filter(it => it !== item);
     run();
+}
+
+export {
+    start
 }

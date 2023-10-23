@@ -7,16 +7,12 @@
         <title>Niels Martignène – {{ TITLE }}</title>
         <meta name="author" content="Niels Martignène">
 
-        <link rel="stylesheet" href="{{ ASSET static/main.css }}">
-        <link rel="stylesheet" href="{{ ASSET static/opensans/OpenSans.css }}">
-        <link rel="stylesheet" href="{{ ASSET static/highlight.min.css }}" async>
-
-        <script type="text/javascript" src="{{ ASSET static/main.js }}" async></script>
-        <script type="text/javascript" src="{{ ASSET static/highlight.min.js }}" async></script>
+        <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
     </head>
 
     <body class="nojs">
-        <div id="deploy" onclick="deploy(); return false;"></div>
+        <div id="deploy" onclick="main.deploy(); return false;"></div>
 
         <nav id="top">
             <menu>
@@ -37,10 +33,7 @@
         </main>
 
         <script>
-            window.addEventListener('load', () => {
-                init();
-                hljs.highlightAll();
-            });
+            main.init();
         </script>
     </body>
 </html>
