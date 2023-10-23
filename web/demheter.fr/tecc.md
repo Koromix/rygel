@@ -1,6 +1,6 @@
 # Thérapies Émotionnelles, Comportementales et Cognitives
 
-<object class="schema" type="image/svg+xml" data="{{ ASSET psycho/TECC.svg }}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET static/psycho/TECC.svg }}"></object>
 
 # Applications gratuites
 

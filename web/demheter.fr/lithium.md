@@ -13,7 +13,7 @@
 
 # Mise en place
 
-<object class="schema" type="image/svg+xml" data="{{ ASSET lithium/instauration.svg }}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET static/lithium/instauration.svg }}"></object>
 
 # Surveillance
 

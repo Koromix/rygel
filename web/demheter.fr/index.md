@@ -6,7 +6,7 @@
         <p>Le projet DEMHETER consiste en la mise en place d’un réseau régional Hauts de France organisé en niveaux de soins et  spécialisé dans l’évaluation et la prise en charge des troubles de l’humeur afin de fluidifier le parcours de soins des patients et de faciliter l’accès à l’électroconvulsivothérapie.
         <p>Ci-contre, à titre indicatif, une carte de la région indiquant les taux populationnels de patients souffrant de troubles dépressifs en service de psychiatrie d’après une <a href="https://www.f2rsmpsy.fr/fichs/13263.pdf">analyse du RIM-P en 2013</a> (Recueil d’Information Médicalisé en Psychiatrie).
     </div>
-    <img src="{{ ASSET misc/carte.webp }}" alt="Carte dépression HdF" />
+    <img src="{{ ASSET static/misc/carte.webp }}" alt="Carte dépression HdF" />
 </div>
 
 # Niveaux de soin
@@ -43,5 +43,5 @@
         <p>Au printemps et en été, sous l’influence de la joie de Déméter, heureuse de retrouver sa fille, toutes les plantes renaissent et la terre est fertile. En automne, les plantes dépérissent en même temps qu’augmente la douleur de Déméter de devoir laisser partir sa fille vers les Enfers. Et enfin en hiver, Déméter, pleine de douleur, rend les sols infertiles.
         <p>Ainsi naquirent les saisons et l’inexorable cycle d’affliction de Déméter.
     </div>
-    <img src="{{ ASSET misc/demeter.webp }}" alt="Déméter" />
+    <img src="{{ ASSET static/misc/demeter.webp }}" alt="Déméter" />
 </div>

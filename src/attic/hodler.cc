@@ -255,9 +255,9 @@ static bool RenderMarkdown(PageData *page, const HashTable<const char *, const F
 
                 if (hash) {
                     FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
-                    Print(writer, "/static/%1?%2", path, suffix);
+                    Print(writer, "/%1?%2", path, suffix);
                 } else {
-                    Print(writer, "/static/%1", path);
+                    Print(writer, "/%1", path);
                 }
             } else {
                 Print(writer, "{{%1}}", expr);
@@ -337,9 +337,9 @@ static bool RenderTemplate(const char *template_filename, Span<const PageData> p
 
             if (hash) {
                 FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
-                Print(writer, "/static/%1?%2", path, suffix);
+                Print(writer, "/%1?%2", path, suffix);
             } else {
-                Print(writer, "/static/%1", path);
+                Print(writer, "/%1", path);
             }
         } else if (key == "LINKS") {
             for (Size i = 0; i < pages.len; i++) {

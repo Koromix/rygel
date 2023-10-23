@@ -34,11 +34,11 @@ Source : [« Troubles bipolaires : repérage et diagnostic en premier recours »
 
 ## Syndrome maniaque
 
-<object class="schema" type="image/svg+xml" data="{{ ASSET bipolarite/syndrome_maniaque.svg }}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET static/bipolarite/syndrome_maniaque.svg }}"></object>
 
 ## Syndrome dépressif
 
-<object class="schema" type="image/svg+xml" data="{{ ASSET bipolarite/depression_et_bipolarite.svg }}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET static/bipolarite/depression_et_bipolarite.svg }}"></object>
 
 <style>
     #episode\_maniaque { background: #ec9d36; }

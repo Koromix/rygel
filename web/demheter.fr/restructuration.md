@@ -1,6 +1,6 @@
 # Restructuration cognitive
 
-<object class="schema" type="image/svg+xml" data="{{ ASSET psycho/restructuration.svg }}"></object>
+<object class="schema" type="image/svg+xml" data="{{ ASSET static/psycho/restructuration.svg }}"></object>
 
 Pour en savoir plus, téléchargez l'application [Worry Watch](https://worrywatch.com/).
 

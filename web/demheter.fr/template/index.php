@@ -8,9 +8,9 @@
         <meta name="description" content="{{ DESCRIPTION }}">
         <link rel="icon" href="{{ ASSET favicon.png }}">
 
-        <link rel="stylesheet" href="{{ ASSET main.css }}">
-        <link rel="stylesheet" href="{{ ASSET print.css }}" media="print">
-        <link rel="stylesheet" href="{{ ASSET opensans/OpenSans.css }}">
+        <link rel="stylesheet" href="{{ ASSET static/main.css }}">
+        <link rel="stylesheet" href="{{ ASSET static/print.css }}" media="print">
+        <link rel="stylesheet" href="{{ ASSET static/opensans/OpenSans.css }}">
 
         <style>
             #news {
@@ -118,7 +118,7 @@
 
         <nav id="top">
             <menu>
-                <a id="logo" href="/"><img src="{{ ASSET logo.webp }}" alt="Logo DEMHETER" /></a>
+                <a id="logo" href="/"><img src="{{ ASSET static/logo.webp }}" alt="Logo DEMHETER" /></a>
 
 {{ LINKS }}
             </menu>
@@ -194,14 +194,14 @@ function parse_markdown($text) {
 
         <footer>
             <div>DEMHETER © 2022</div>
-            <img src="{{ ASSET logo.webp }}" alt="" width="300" height="64">
+            <img src="{{ ASSET static/logo.webp }}" alt="" width="300" height="64">
             <div style="font-size: 0.8em;">
                 CHU de Lille, 59037 Lille CEDEX<br>
                 <a href="mailto:demheter@chu-lille.fr" style="font-weight: bold; color: inherit;">demheter@chu-lille.fr</a>
             </div>
         </footer>
 
-        <script type="text/javascript" src="{{ ASSET main.js }}"></script>
+        <script type="text/javascript" src="{{ ASSET static/main.js }}"></script>
         <script>
             let news_timer = null;
 
@@ -252,7 +252,7 @@ function parse_markdown($text) {
             init();
         </script>
 
-        <script type="text/javascript" src="{{ ASSET main.js }}"></script>
+        <script type="text/javascript" src="{{ ASSET static/main.js }}"></script>
         <script>
             init();
         </script>
