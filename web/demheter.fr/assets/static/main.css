@@ -285,7 +285,7 @@ footer {
     }
     #top li a {
         font-size: 1.1em;
-        height: 1.6em;
+        line-height: 1.6em;
     }
     #top li > a:hover, #top li.active > a { margin-bottom: -2px; }
     #top li > a {
@@ -301,7 +301,7 @@ footer {
 
     #side a {
         font-size: 1.1em;
-        height: 1.6em;
+        line-height: 1.6em;
     }
 
     #logo {
