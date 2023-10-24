@@ -55,7 +55,7 @@ export async function start(prov, options = {}) {
 
     // Set up map
     map.init(ENV.map);
-    map.setMarkers('Etablissements', map_markers);
+    map.setMarkers('Etablissements', map_markers, handleClick);
     map.move(options.latitude, options.longitude, options.zoom);
 
     runner.onUpdate = updateMap;
@@ -321,51 +321,64 @@ export function refreshMap() {
     }
 
     let markers = provider.fillMap(filters);
-
-    for (let marker of markers) {
-        if (marker.etab == null)
-            continue;
-
-        marker.click = async () => {
-            let etab = isConnected() ? Object.assign({}, marker.etab) : marker.etab;
-
-            edit_key = null;
-
-            try {
-                await UI.dialog({
-                    run: (render, close) => html`
-                        <div class="title">
-                            ${makeField(etab, 'name', 'text')}
-                            <div style="flex: 1;"></div>
-                            <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-                        </div>
-
-                        <div @click=${handlePopupClick}>
-                            ${provider.renderPopup(etab, edit_key)}
-                        </div>
-
-                        ${isConnected() ? html`
-                            <div class="footer">
-                                <button type="button" class="danger"
-                                        @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(etab.id).then(close))}>Supprimer</button>
-                                <div style="flex: 1;"></div>
-                                <button @click=${closeOrSubmit} type="submit">Modifier</button>
-                                <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                            </div>
-                        ` : ''}
-                    `,
-
-                    submit: (elements) => updateEntry(etab)
-                });
-            } finally {
-                closeAddress();
-            }
-        };
-    }
-
     map_markers.push(...markers);
 
     runner.busy();
+}
+
+async function handleClick(markers) {
+    if (markers.length > 1) {
+        await UI.dialog({
+            run: (render, close) => html`
+                <div class="title">
+                    Plusieurs entrées disponibles
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                </div>
+
+                <div @click=${handlePopupClick}>
+                    ${markers.map(marker => html`
+                        <a @click=${UI.wrap(e => { handleClick([marker]); close(); })}>${marker.etab.name}</a><br>
+                    `)}
+                </div>
+            `
+        });
+    } else {
+        let marker = markers[0];
+        let etab = isConnected() ? Object.assign({}, marker.etab) : marker.etab;
+
+        edit_key = null;
+
+        try {
+            await UI.dialog({
+                run: (render, close) => html`
+                    <div class="title">
+                        ${makeField(etab, 'name', 'text')}
+                        <div style="flex: 1;"></div>
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    </div>
+
+                    <div @click=${handlePopupClick}>
+                        ${provider.renderPopup(etab, edit_key)}
+                    </div>
+
+                    ${isConnected() ? html`
+                        <div class="footer">
+                            <button type="button" class="danger"
+                                    @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(etab.id).then(close))}>Supprimer</button>
+                            <div style="flex: 1;"></div>
+                            <button @click=${closeOrSubmit} type="submit">Modifier</button>
+                            <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                        </div>
+                    ` : ''}
+                `,
+
+                submit: (elements) => updateEntry(etab)
+            });
+        } finally {
+            closeAddress();
+        }
+    }
 }
 
 function closeOrSubmit(e) {

@@ -100,7 +100,8 @@ function DemheterProvider() {
                         latitude: etab.address.latitude,
                         longitude: etab.address.longitude,
                         icon: getEtabIcon(etab),
-                        size: (etab.type == 'Centre' ? 48 : 40)
+                        size: (etab.type == 'Centre' ? 48 : 40),
+                        clickable: true
                     };
 
                     marker.etab = etab;

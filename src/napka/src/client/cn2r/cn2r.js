@@ -122,13 +122,15 @@ function Cn2rProvider() {
                             longitude: etab.address.longitude,
                             icon: icons.crp,
                             size: 48,
+                            clickable: true
                         };
                     } else {
                         marker = {
                             latitude: etab.address.latitude,
                             longitude: etab.address.longitude,
                             icon: icons.misc,
-                            size: 40
+                            size: 40,
+                            clickable: true
                         };
                     }
 

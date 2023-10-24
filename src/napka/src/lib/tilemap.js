@@ -82,11 +82,16 @@ function TileMap(runner) {
         runner.busy();
     };
 
-    this.setMarkers = function(key, markers) {
+    this.setMarkers = function(key, markers, click) {
         if (!Array.isArray(markers))
             throw new Error('Not an array of markers');
 
-        marker_groups[key] = markers;
+        let group = {
+            markers: markers,
+            click: click
+        };
+
+        marker_groups[key] = group;
     };
 
     this.clearMarkers = function(key) {
@@ -110,31 +115,35 @@ function TileMap(runner) {
         }
 
         // Detect what we're pointing at (if anything)
-        let target = null;
+        let target_group = null;
+        let target_markers = [];
         {
             let groups = Object.values(marker_groups);
 
             for (let i = groups.length - 1; i >= 0; i--) {
-                let markers = groups[i];
+                let group = groups[i];
+                let markers = group.markers;
 
                 for (let j = markers.length - 1; j >= 0; j--) {
                     let marker = markers[j];
 
-                    if (marker.click == null)
-                        continue;
+                    if (marker.clickable) {
+                        let pos = self.coordToScreen(marker.latitude, marker.longitude);
 
-                    let pos = self.coordToScreen(marker.latitude, marker.longitude);
+                        if (distance(pos, mouse_state) < adaptMarkerSize(marker.size, state.zoom) / 2) {
+                            if (target_group != group)
+                                target_markers.length = 0;
 
-                    if (distance(pos, mouse_state) < adaptMarkerSize(marker.size, state.zoom) / 2) {
-                        target = marker;
-                        break;
+                            target_group = group;
+                            target_markers.push(marker);
+                        }
                     }
                 }
             }
         }
 
         // Handle actions
-        if (mouse_state.left >= 1 && (target == null || state.grab != null)) {
+        if (mouse_state.left >= 1 && (target_group == null || state.grab != null)) {
             if (state.grab != null) {
                 state.pos.x += state.grab.x - mouse_state.x;
                 state.pos.y += state.grab.y - mouse_state.y;
@@ -147,13 +156,13 @@ function TileMap(runner) {
         } else if (!mouse_state.left) {
             state.grab = null;
         }
-        if (mouse_state.left == -1 && target != null && state.grab == null)
-            target.click();
+        if (mouse_state.left == -1 && target_group != null && state.grab == null)
+            target_group.click(target_markers);
 
         // Adjust cursor style
         if (state.grab != null) {
             runner.cursor = 'grabbing';
-        } else if (target != null) {
+        } else if (target_group != null) {
             runner.cursor = 'pointer';
         } else {
             runner.cursor = 'grab';
@@ -311,8 +320,8 @@ function TileMap(runner) {
 
             ctx.filter = null || 'none';
 
-            for (let markers of Object.values(marker_groups)) {
-                for (let marker of markers) {
+            for (let group of Object.values(marker_groups)) {
+                for (let marker of group.markers) {
                     let pos = self.coordToScreen(marker.latitude, marker.longitude);
 
                     if (zoom_animation != null) {
