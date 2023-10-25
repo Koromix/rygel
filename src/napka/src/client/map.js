@@ -353,7 +353,8 @@ async function handleClick(markers) {
             await UI.dialog({
                 run: (render, close) => html`
                     <div class="title">
-                        ${makeField(etab, 'name', 'text')}
+                        ${edit_key == 'name' ? makeField(etab, 'name', 'markdown') : ''}
+                        ${edit_key != 'name' ? html`<div style="max-width: 660px;">${makeField(etab, 'name', 'markdown')}</div>` : ''}
                         <div style="flex: 1;"></div>
                         <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                     </div>
@@ -422,7 +423,7 @@ export function makeField(etab, key, type, view = null) {
             let rendered = markdown.render(etab[key] || '');
 
             return html`
-                <span class="sub">Texte complémentaire :</span> <a @click=${e => toggleEdit(e, key)}>✎</a><br/>
+                <span class="sub">Modifier :</span> <a @click=${e => toggleEdit(e, key)}>✎</a><br/>
                 ${unsafeHTML(rendered)}
             `;
         } else {
