@@ -234,11 +234,11 @@ function Cn2rProvider() {
                     <u>Pour contacter le CRP :</u><br/><br/>
                     ${isConnected() || etab.rdv_fixe ? html`Téléphone : <b>${field(etab, 'rdv_fixe', parse.cleanPhoneNumber(etab.rdv_fixe))}</b>
                                        ${isConnected() || etab.rdv_portable ? html` ou ${field(etab, 'rdv_portable', parse.cleanPhoneNumber(etab.rdv_portable))}` : ''}<br/>` : ''}
-                    ${isConnected() || etab.rdv_mail ? html`Courriel : ${field(etab, 'rdv_mail', etab.rdv_mail ? html`<a href=${'mailto:' + etab.rdv_mail}>${etab.rdv_mail}</a>` : html`<span class="sub">(inconnu)</span>`)}</a><br/>` : ''}
+                    ${isConnected() || etab.rdv_mail ? html`Courriel : ${field(etab, 'rdv_mail', etab.rdv_mail ? html`<a href=${'mailto:' + etab.rdv_mail} style="white-space: nowrap;">${etab.rdv_mail}</a>` : html`<span class="sub">(inconnu)</span>`)}</a><br/>` : ''}
                     ${!etab.rdv_fixe && !etab.rdv_mail && !etab.rdv_web ? html`Présentez-vous directement au centre<br/>` : ''}
                     ${etab.rdv_courrier_mt && !isConnected() ? html`<br/>⚠\uFE0E Vous devez disposer d'un courrier de votre médecin traitant<br/>` : ''}
                     ${isConnected() ? html`<br/>⚠\uFE0E Nécessité d'un médecin traitant : ${field(etab, 'rdv_courrier_mt')}<br/>` : ''}
-                    ${!isConnected() && etab.rdv_complement ? html`<br/>${unsafeHTML(renderMarkdown(etab.rdv_complement.trim()))}` : ''}
+                    ${!isConnected() && etab.rdv_complement ? html`${unsafeHTML(renderMarkdown(etab.rdv_complement.trim()))}` : ''}
                     ${isConnected() ? html`<br/>${field(etab, 'rdv_complement')}` : ''}
                 </div>
             </div>

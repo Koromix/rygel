@@ -183,7 +183,6 @@ a:hover { color: var(--color, #0d114a); }
 
 .planning_tip {
     text-align: center;
-    font-style: italic;
     color: #999;
     font-size: 0.9em;
 }
