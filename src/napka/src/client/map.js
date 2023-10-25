@@ -55,7 +55,8 @@ export async function start(prov, options = {}) {
 
     // Set up map
     map.init(ENV.map);
-    map.setMarkers('Etablissements', map_markers, handleClick);
+    map.onClick = handleClick;
+    map.setMarkers('Etablissements', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
 
     runner.onUpdate = updateMap;

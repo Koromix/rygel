@@ -120,6 +120,7 @@ function Cn2rProvider() {
                         marker = {
                             latitude: etab.address.latitude,
                             longitude: etab.address.longitude,
+                            cluster: '#30346a',
                             icon: icons.crp,
                             size: 48,
                             clickable: true
@@ -128,6 +129,7 @@ function Cn2rProvider() {
                         marker = {
                             latitude: etab.address.latitude,
                             longitude: etab.address.longitude,
+                            cluster: '#bf4561',
                             icon: icons.misc,
                             size: 40,
                             clickable: true

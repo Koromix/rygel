@@ -13,6 +13,99 @@
 
 import { Util, Net, LruMap } from '../../../web/libjs/common.js';
 
+function SpatialMap() {
+    let self = this;
+
+    let factor = 8;
+    let map = new Map;
+
+    Object.defineProperties(this, {
+        clusters: { get: getClusters, enumerable: true }
+    })
+
+    this.add = function(x, y, element) {
+        let xp = Math.floor(x / factor);
+        let yp = Math.floor(y / factor);
+        let sizep = Math.ceil(element.size / factor / 3);
+
+        let item = {
+            x: x,
+            y: y,
+            xp: xp,
+            yp: yp,
+            element: element
+        };
+
+        let matched = false;
+
+        if (element.cluster != null) {
+            outer: for (let i = -sizep; i <= sizep; i++) {
+                for (let j = -sizep; j <= sizep; j++) {
+                    let maybe = element.cluster + ':' + (xp + i) + ':' + (yp + j);
+                    let match = map.get(maybe);
+
+                    if (match == null)
+                        continue;
+
+                    match.items.push(item);
+                    matched = true;
+
+                    map.delete(key(match));
+
+                    match.xp = match.items.reduce((acc, item) => acc + item.xp, 0) / match.items.length;
+                    match.yp = match.items.reduce((acc, item) => acc + item.yp, 0) / match.items.length;
+
+                    map.set(key(match), match);
+
+                    break outer;
+                }
+            }
+        }
+
+        if (!matched) {
+            let match = {
+                cluster: element.cluster,
+                xp: xp,
+                yp: yp,
+                items: [item]
+            };
+
+            map.set(key(match), match);
+        }
+    };
+
+    function key(match) {
+        let key = match.cluster + ':' + match.xp + ':' + match.yp;
+        return key;
+    }
+
+    function getClusters() {
+        let clusters = Array.from(map.values()).map(match => {
+            let pos = {
+                x: match.items.reduce((acc, item) => acc + item.x, 0) / match.items.length,
+                y: match.items.reduce((acc, item) => acc + item.y, 0) / match.items.length
+            };
+
+            let radius = Math.max(...match.items.map(item => {
+                let dist = distance(pos, { x: item.x, y: item.y });
+                return dist + item.element.size;
+            }));
+
+            let cluster = {
+                x: pos.x,
+                y: pos.y,
+                size: radius,
+                color: match.cluster,
+                items: match.items.map(item => item.element)
+            };
+
+            return cluster;
+        });
+
+        return clusters;
+    }
+}
+
 function TileMap(runner) {
     let self = this;
 
@@ -26,6 +119,8 @@ function TileMap(runner) {
 
     let marker_groups = {};
 
+    let handle_click = (markers) => {};
+
     const DEFAULT_ZOOM = 7;
     const MAX_FETCHERS = 8;
 
@@ -33,6 +128,8 @@ function TileMap(runner) {
 
     let last_wheel_time = 0;
     let zoom_animation = null;
+
+    let render_elements = [];
 
     let missing_assets = 0;
     let active_fetchers = 0;
@@ -51,7 +148,9 @@ function TileMap(runner) {
             return self.screenToCoord(center);
         }, enumerable: true },
 
-        zoomLevel: { get: () => state.zoom, enumerable: true }
+        zoomLevel: { get: () => state.zoom, enumerable: true },
+
+        onClick: { get: () => handle_click, set: func => { handle_click = func; }, enumerable: true }
     });
 
     this.init = async function(config) {
@@ -82,16 +181,11 @@ function TileMap(runner) {
         runner.busy();
     };
 
-    this.setMarkers = function(key, markers, click) {
+    this.setMarkers = function(key, markers) {
         if (!Array.isArray(markers))
             throw new Error('Not an array of markers');
 
-        let group = {
-            markers: markers,
-            click: click
-        };
-
-        marker_groups[key] = group;
+        marker_groups[key] = markers;
     };
 
     this.clearMarkers = function(key) {
@@ -114,36 +208,72 @@ function TileMap(runner) {
             }
         }
 
-        // Detect what we're pointing at (if anything)
-        let target_group = null;
-        let target_markers = [];
+        // Create render elements (markers and clusters)
         {
+            let viewport = getViewport();
+
             let groups = Object.values(marker_groups);
+            let grid = new SpatialMap;
 
-            for (let i = groups.length - 1; i >= 0; i--) {
-                let group = groups[i];
-                let markers = group.markers;
-
-                for (let j = markers.length - 1; j >= 0; j--) {
-                    let marker = markers[j];
-
-                    if (marker.clickable) {
-                        let pos = self.coordToScreen(marker.latitude, marker.longitude);
-
-                        if (distance(pos, mouse_state) < adaptMarkerSize(marker.size, state.zoom) / 2) {
-                            if (target_group != group)
-                                target_markers.length = 0;
-
-                            target_group = group;
-                            target_markers.push(marker);
-                        }
-                    }
+            for (let markers of groups) {
+                for (let marker of markers) {
+                    let pos = latLongToXY(marker.latitude, marker.longitude, state.zoom);
+                    grid.add(pos.x, pos.y, marker);
                 }
+            }
+
+            let markers = [];
+            let clusters = [];
+
+            for (let cluster of grid.clusters) {
+                if (cluster.items.length == 1) {
+                    let element = {
+                        type: 'marker',
+
+                        x: cluster.x - viewport.x1,
+                        y: cluster.y - viewport.y1,
+                        size: cluster.size,
+                        clickable: cluster.items[0].clickable,
+
+                        markers: cluster.items
+                    };
+
+                    markers.push(element);
+                } else {
+                    let element = {
+                        type: 'cluster',
+
+                        x: cluster.x - viewport.x1,
+                        y: cluster.y - viewport.y1,
+                        size: cluster.size,
+                        clickable: true,
+
+                        markers: cluster.items,
+                        color: cluster.color
+                    };
+
+                    clusters.push(element);
+                }
+            }
+
+            // Show explicit markers above all else
+            render_elements = [...clusters, ...markers];
+        }
+
+        // Detect user targets
+        let targets = [];
+        for (let i = render_elements.length - 1; i >= 0; i--) {
+            let element = render_elements[i];
+
+            if (element.clickable &&
+                    distance(element, mouse_state) < adaptMarkerSize(element.size, state.zoom) / 2) {
+                targets = element.markers;
+                break;
             }
         }
 
         // Handle actions
-        if (mouse_state.left >= 1 && (target_group == null || state.grab != null)) {
+        if (mouse_state.left >= 1 && (!targets.length || state.grab != null)) {
             if (state.grab != null) {
                 state.pos.x += state.grab.x - mouse_state.x;
                 state.pos.y += state.grab.y - mouse_state.y;
@@ -156,13 +286,13 @@ function TileMap(runner) {
         } else if (!mouse_state.left) {
             state.grab = null;
         }
-        if (mouse_state.left == -1 && target_group != null && state.grab == null)
-            target_group.click(target_markers);
+        if (mouse_state.left == -1 && targets.length && state.grab == null)
+            handle_click(targets);
 
         // Adjust cursor style
         if (state.grab != null) {
             runner.cursor = 'grabbing';
-        } else if (target_group != null) {
+        } else if (targets.length) {
             runner.cursor = 'pointer';
         } else {
             runner.cursor = 'grab';
@@ -318,51 +448,74 @@ function TileMap(runner) {
 
             let current_filter = null;
 
-            ctx.filter = null || 'none';
+            ctx.filter = 'none';
 
-            for (let group of Object.values(marker_groups)) {
-                for (let marker of group.markers) {
-                    let pos = self.coordToScreen(marker.latitude, marker.longitude);
+            for (let element of render_elements) {
+                if (zoom_animation != null) {
+                    let centered = {
+                        x: element.x - canvas.width / 2,
+                        y: element.y - canvas.height / 2
+                    };
 
-                    if (zoom_animation != null) {
-                        let centered = {
-                            x: pos.x - canvas.width / 2,
-                            y: pos.y - canvas.height / 2
-                        };
+                    element.x = Math.round(canvas.width / 2 + anim_scale * (centered.x + adjust.x));
+                    element.y = Math.round(canvas.height / 2 + anim_scale * (centered.y + adjust.y));
+                }
 
-                        pos.x = Math.round(canvas.width / 2 + anim_scale * (centered.x + adjust.x));
-                        pos.y = Math.round(canvas.height / 2 + anim_scale * (centered.y + adjust.y));
-                    }
+                if (element.x < -element.size || element.x > canvas.width + element.size)
+                    continue;
+                if (element.y < -element.size || element.y > canvas.height + element.size)
+                    continue;
 
-                    if (pos.x < -marker.size || pos.x > canvas.width + marker.size)
-                        continue;
-                    if (pos.y < -marker.size || pos.y > canvas.height + marker.size)
-                        continue;
+                switch (element.type) {
+                    case 'marker': {
+                        let marker = element.markers[0];
 
-                    if (marker.filter != current_filter) {
-                        ctx.filter = marker.filter || 'none';
-                        current_filter = marker.filter;
-                    }
+                        if (marker.filter != current_filter) {
+                            ctx.filter = marker.filter ?? 'none';
+                            current_filter = marker.filter;
+                        }
 
-                    if (marker.icon != null) {
-                        let img = getImage(marker_textures, marker.icon);
+                        if (marker.icon != null) {
+                            let img = getImage(marker_textures, marker.icon);
 
-                        let width = adaptMarkerSize(marker.size, anim_zoom);
-                        let height = adaptMarkerSize(marker.size, anim_zoom);
+                            let width = adaptMarkerSize(marker.size, anim_zoom);
+                            let height = adaptMarkerSize(marker.size, anim_zoom);
 
-                        if (img != null)
-                            ctx.drawImage(img, pos.x - width / 2, pos.y - height / 2, width, height);
-                    } else if (marker.circle != null) {
-                        let radius = adaptMarkerSize(marker.size / 2, state.zoom);
+                            if (img != null)
+                                ctx.drawImage(img, element.x - width / 2, element.y - height / 2, width, height);
+                        } else if (marker.circle != null) {
+                            let radius = adaptMarkerSize(marker.size / 2, state.zoom);
+
+                            ctx.beginPath();
+                            ctx.arc(element.x, element.y, radius, 0, 2 * Math.PI, false);
+
+                            ctx.fillStyle = marker.circle;
+                            ctx.fill();
+                        }
+                    } break;
+
+                    case 'cluster': {
+                        let radius = adaptMarkerSize(element.size / 2, state.zoom);
+
+                        if (current_filter) {
+                            ctx.filter = 'none';
+                            current_filter = null;
+                        }
 
                         ctx.beginPath();
-                        ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
+                        ctx.arc(element.x, element.y, radius, 0, 2 * Math.PI, false);
 
-                        ctx.fillStyle = marker.circle || 'red';
+                        ctx.fillStyle = element.color;
                         ctx.fill();
-                    } else {
-                        console.error('Unknown marker type');
-                    }
+
+                        ctx.font = Math.floor(element.size / 2) + 'px Open Sans';
+
+                        let text = element.markers.length;
+                        let width = ctx.measureText(text).width + 8;
+
+                        ctx.fillStyle = 'white';
+                        ctx.fillText(text, element.x - width / 2 + 4, element.y + element.size / 6);
+                    } break;
                 }
             }
 
@@ -576,8 +729,8 @@ function TileMap(runner) {
         let y = 0.5 - Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI);
 
         let size = mapSize(zoom);
-        let px = Util.clamp(x * size + 0.5, 0, ((size - 1) >>> 0));
-        let py = Util.clamp(y * size + 0.5, 0, ((size - 1) >>> 0));
+        let px = Util.clamp(Math.round(x * size + 0.5), 0, ((size - 1) >>> 0));
+        let py = Util.clamp(Math.round(y * size + 0.5), 0, ((size - 1) >>> 0));
 
         return { x: px, y: py };
     }
@@ -609,13 +762,13 @@ function TileMap(runner) {
     function mapSize(zoom) {
         return tiles.tilesize * Math.pow(2, zoom);
     }
+}
 
-    function distance(p1, p2) {
-        let dx = p1.x - p2.x;
-        let dy = p1.y - p2.y;
+function distance(p1, p2) {
+    let dx = p1.x - p2.x;
+    let dy = p1.y - p2.y;
 
-        return Math.sqrt(dx * dx + dy * dy);
-    }
+    return Math.sqrt(dx * dx + dy * dy);
 }
 
 export { TileMap }

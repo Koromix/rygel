@@ -99,8 +99,9 @@ function DemheterProvider() {
                     let marker = {
                         latitude: etab.address.latitude,
                         longitude: etab.address.longitude,
+                        cluster: (etab.type == 'Psychologue') ? '#d352a3' : null,
                         icon: getEtabIcon(etab),
-                        size: (etab.type == 'Centre' ? 48 : 40),
+                        size: (etab.type == 'Centre') ? 48 : 40,
                         clickable: true
                     };
 
