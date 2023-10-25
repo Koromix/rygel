@@ -184,10 +184,10 @@ function Cn2rProvider() {
         let content = html`
             <div class="info">
                 <div>
-                    <i>${field(etab, 'etab_statut')}</i>
                     ${!isConnected() && etab.etab_crp ?
                         html`<span class="tag" style="background: #24579d;"
-                                   title="Centre Régional de Psychotraumatisme">CRP</span>` : ''}
+                                   title="Centre Régional de Psychotraumatisme">CRP</span>&nbsp;` : ''}
+                    <i>${field(etab, 'etab_statut')}</i>
                     ${isConnected() ?
                         html`<br/>Statut <span class="tag" style="background: #24579d;"
                                                title="Centre Régional de Psychotraumatisme">CRP</span> : ${field(etab, 'etab_crp')}` : ''}
@@ -221,22 +221,20 @@ function Cn2rProvider() {
                     ${edit_key == 'rdv_horaires' ? html`${field(etab, 'rdv_horaires')}<br/>` : ''}<br/>
 
                     Accès personnes à mobilité réduite : ${field(etab, 'etab_acces_pmr')}<br/>
-
                 </div>
 
                 <div>
-                    Accueil : ${field(etab, 'rdv_publics', (etab.rdv_publics || []).map(pub =>
-                        html`<span class="tag" style="background: #ff6600;">${pub}</span> `))}<br/>
-                    Consultations : ${field(etab, 'rdv_consultations', (etab.rdv_consultations || []).map(cs =>
-                        html`<span class="tag" style="background: #444;">${cs}</span> `))}<br/><br/>
+                    Accueil : ${field(etab, 'rdv_publics')}<br/>
+                    ${isConnected() ? html`
+                        Consultations : ${field(etab, 'rdv_consultations', (etab.rdv_consultations || []).map(cs =>
+                            html`<span class="tag" style="background: #444;">${cs}</span> `))}<br/><br/>
+                    ` : ''}
+                    Modalités : ${field(etab, 'rdv_modalites')}<br/><br/>
 
-                    <i>Modalités : ${field(etab, 'rdv_modalites')}</i><br/><br/>
-
-                    <u>Pour prendre un rendez-vous :</u><br/><br/>
-                    ${isConnected() || etab.rdv_fixe ? html`Par téléphone : <b>${field(etab, 'rdv_fixe', parse.cleanPhoneNumber(etab.rdv_fixe))}</b>
+                    <u>Pour contacter le CRP :</u><br/><br/>
+                    ${isConnected() || etab.rdv_fixe ? html`Téléphone : <b>${field(etab, 'rdv_fixe', parse.cleanPhoneNumber(etab.rdv_fixe))}</b>
                                        ${isConnected() || etab.rdv_portable ? html` ou ${field(etab, 'rdv_portable', parse.cleanPhoneNumber(etab.rdv_portable))}` : ''}<br/>` : ''}
-                    ${isConnected() || etab.rdv_mail ? html`Par courriel : ${field(etab, 'rdv_mail', etab.rdv_mail ? html`<a href=${'mailto:' + etab.rdv_mail}>${etab.rdv_mail}</a>` : html`<span class="sub">(inconnu)</span>`)}</a><br/>` : ''}
-                    ${isConnected() || etab.rdv_web ? html`Par internet : ${field(etab, 'rdv_web', etab.rdv_web ? html`<a href=${parse.cleanURL(etab.rdv_web)} target="_blank" style="">Prendre un rendez-vous</a>` : html`<span class="sub">(inconnu)</span>`)}<br/>` : ''}
+                    ${isConnected() || etab.rdv_mail ? html`Courriel : ${field(etab, 'rdv_mail', etab.rdv_mail ? html`<a href=${'mailto:' + etab.rdv_mail}>${etab.rdv_mail}</a>` : html`<span class="sub">(inconnu)</span>`)}</a><br/>` : ''}
                     ${!etab.rdv_fixe && !etab.rdv_mail && !etab.rdv_web ? html`Présentez-vous directement au centre<br/>` : ''}
                     ${etab.rdv_courrier_mt && !isConnected() ? html`<br/>⚠\uFE0E Vous devez disposer d'un courrier de votre médecin traitant<br/>` : ''}
                     ${isConnected() ? html`<br/>⚠\uFE0E Nécessité d'un médecin traitant : ${field(etab, 'rdv_courrier_mt')}<br/>` : ''}
