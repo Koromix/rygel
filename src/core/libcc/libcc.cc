@@ -5750,7 +5750,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
     if (async_running_pool != async->pool) {
         for (;;) {
-            int idx = GetRandomIntFast(0, workers.len);
+            int idx = GetRandomIntFast(0, (int)workers.len);
             WorkerData *worker = &workers[idx];
 
             std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);

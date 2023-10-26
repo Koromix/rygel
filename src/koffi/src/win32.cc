@@ -79,7 +79,7 @@ static bool ReadAt(HANDLE h, int32_t offset, void *buf, int len)
         return false;
     if (!ReadFile(h, buf, (DWORD)len, &read, &ov))
         return false;
-    if (read != len)
+    if (read != (DWORD)len)
         return false;
 
     return true;

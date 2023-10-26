@@ -2224,7 +2224,7 @@ static Napi::Value ResetKoffi(const Napi::CallbackInfo &info)
     return env.Undefined();
 }
 
-static InstanceData *CreateInstance(Napi::Env env)
+static InstanceData *CreateInstance()
 {
     InstanceData *instance = new InstanceData();
     RG_DEFER_N(err_guard) { delete instance; };
@@ -2247,7 +2247,7 @@ static InstanceData *CreateInstance(Napi::Env env)
 
 static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 {
-    InstanceData *instance = CreateInstance(env);
+    InstanceData *instance = CreateInstance();
     RG_CRITICAL(instance, "Failed to initialize Koffi");
 
     env.SetInstanceData(instance);
