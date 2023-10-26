@@ -31,17 +31,17 @@ find_package(CNoke)
 set(CMAKE_CXX_STANDARD 20)
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-
-    add_compile_options(/Zc:__cplusplus /W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus /W4 /wd4200 /wd4201 /wd4127 /wd4458 /wd4706 /wd4702 /wd4324")
 
     # ASM_MASM does not (yet) work on Windows ARM64
     if(NOT CMAKE_GENERATOR_PLATFORM MATCHES "ARM64")
         enable_language(ASM_MASM)
     endif()
 else()
-    add_compile_options(-Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wswitch -Werror=switch)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter -Wswitch -Werror=switch")
+
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_compile_options(-Wno-unknown-warning-option)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-warning-option")
     endif()
 endif()
 
