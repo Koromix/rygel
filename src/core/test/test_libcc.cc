@@ -620,9 +620,10 @@ BENCHMARK_FUNCTION("libcc/BenchFmt")
 
 #ifndef _WIN32
     RunBenchmark("asprintf", iterations, [&]() {
-        char *ret = nullptr;
-        asprintf(&ret, "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
-        free(ret);
+        char *str = nullptr;
+        int ret = asprintf(&str, "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
+        (void)ret;
+        free(str);
     });
 #endif
 
