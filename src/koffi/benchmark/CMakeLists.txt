@@ -28,14 +28,10 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
 set(CMAKE_CXX_STANDARD 20)
-if(MSVC)
-    add_compile_options(/W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4201 /wd4324)
-else()
-    add_compile_options(-Wall -Wextra -Wno-missing-field-initializers -Wno-unused-parameter)
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_compile_options(-Wno-unknown-warning-option)
-    endif()
-endif()
+
+# ---- Vendor libraries ----
+
+include (../cmake/raylib.cmake)
 
 # ---- atoi ----
 

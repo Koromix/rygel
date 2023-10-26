@@ -19,34 +19,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-cmake_minimum_required(VERSION 3.6)
-project(koffi_test C CXX)
-
-# ---- Vendor lLibraries ----
-
-include (../cmake/raylib.cmake)
-include (../cmake/sqlite.cmake)
-
-# ---- Test code ----
-
-add_library(sync SHARED sync.c)
-set_target_properties(sync PROPERTIES PREFIX "")
-
-if(MSVC)
-    target_compile_options(sync PRIVATE /wd4116)
-    target_link_options(sync PRIVATE "/DEF:${CMAKE_CURRENT_SOURCE_DIR}/sync.def")
-endif()
-
-add_library(async SHARED async.c)
-set_target_properties(async PROPERTIES PREFIX "")
-
-add_library(callbacks SHARED callbacks.c)
-set_target_properties(callbacks PROPERTIES PREFIX "")
-
-add_library(union SHARED union.c)
-set_target_properties(union PROPERTIES PREFIX "")
+add_library(sqlite3 SHARED ../../../vendor/sqlite3/sqlite3.c)
+set_target_properties(sqlite3 PROPERTIES PREFIX "")
 
 if(WIN32)
-    add_library(win32 SHARED win32.c)
-    set_target_properties(win32 PROPERTIES PREFIX "")
+    target_compile_definitions(sqlite3 PRIVATE SQLITE_API=__declspec\(dllexport\))
 endif()
