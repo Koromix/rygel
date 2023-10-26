@@ -203,8 +203,8 @@ R"(Usage: %!..+%1 macify [options] <binary>%!0
 Options:
     %!..+-O, --output_dir <dir>%!0       Set application bundle directory
 
-       %!..+--title <title>%!0           Set bundle name
-       %!..+--icon <icon>%!0             Set bundle icon (ICNS)
+        %!..+--title <title>%!0          Set bundle name
+        %!..+--icon <icon>%!0            Set bundle icon (ICNS)
 
     %!..+-f, --force%!0                  Overwrite destination files
 
