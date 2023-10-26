@@ -2428,11 +2428,15 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
                       (int64_t)sb.st_mtim.tv_nsec / 1000000;
     out_info->btime = (int64_t)sb.__st_birthtim.tv_sec * 1000 +
                       (int64_t)sb.__st_birthtim.tv_nsec / 1000000;
-#else
+#elif defined(__FreeBSD__)
     out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
                       (int64_t)sb.st_mtim.tv_nsec / 1000000;
     out_info->btime = (int64_t)sb.st_birthtim.tv_sec * 1000 +
                       (int64_t)sb.st_birthtim.tv_nsec / 1000000;
+#else
+    out_info->mtime = (int64_t)sb.st_mtim.tv_sec * 1000 +
+                      (int64_t)sb.st_mtim.tv_nsec / 1000000;
+    out_info->btime = out_info->mtime;
 #endif
     out_info->mode = (unsigned int)sb.st_mode;
     out_info->uid = (uint32_t)sb.st_uid;
