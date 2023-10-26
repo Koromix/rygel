@@ -122,7 +122,8 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
             }
 
             if (matches) {
-                const char *binary = Fmt(alloc, "%1%/%2%/bin%/qmake%3", candidate, basename, compiler->GetLinkExtension()).ptr;
+                const char *ext = compiler->GetLinkExtension(TargetType::Executable);
+                const char *binary = Fmt(alloc, "%1%/%2%/bin%/qmake%3", candidate, basename, ext).ptr;
 
                 if (TestFile(binary, FileType::File)) {
                     // Interrupt enumeration, we're done!

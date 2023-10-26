@@ -114,30 +114,32 @@ enum class CompileFeature {
     Ccache = 1 << 1,
     Warnings = 1 << 2,
     DebugInfo = 1 << 3,
-    StaticLink = 1 << 4,
-    OptimizeSpeed = 1 << 5,
-    OptimizeSize = 1 << 6,
-    HotAssets = 1 << 7,
-    ASan = 1 << 8,
-    TSan = 1 << 9,
-    UBSan = 1 << 10,
-    LTO = 1 << 11,
-    SafeStack = 1 << 12,
-    ZeroInit = 1 << 13,
-    CFI = 1 << 14,
-    ShuffleCode = 1 << 15,
-    DynamicRuntime = 1 << 16,
-    NoConsole = 1 << 17,
+    LinkLibrary = 1 << 4,
+    StaticLink = 1 << 5,
+    OptimizeSpeed = 1 << 6,
+    OptimizeSize = 1 << 7,
+    HotAssets = 1 << 8,
+    ASan = 1 << 9,
+    TSan = 1 << 10,
+    UBSan = 1 << 11,
+    LTO = 1 << 12,
+    SafeStack = 1 << 13,
+    ZeroInit = 1 << 14,
+    CFI = 1 << 15,
+    ShuffleCode = 1 << 16,
+    DynamicRuntime = 1 << 17,
+    NoConsole = 1 << 18,
 
-    AESNI = 1 << 18,
-    AVX2 = 1 << 19,
-    AVX512 = 1 << 20
+    AESNI = 1 << 19,
+    AVX2 = 1 << 20,
+    AVX512 = 1 << 21
 };
 static const OptionDesc CompileFeatureOptions[] = {
     {"PCH",            "Use precompiled headers for faster compilation"},
     {"Ccache",         "Use Ccache accelerator (must be in PATH)"},
     {"Warnings",       "Enable compiler warnings"},
     {"DebugInfo",      "Add debug information to generated binaries"},
+    {"LinkLibrary",   "Link library targets to .so/.dll files"},
     {"StaticLink",     "Static link base system libraries (libc, etc.)"},
     {"OptimizeSpeed",  "Optimize generated builds for speed"},
     {"OptimizeSize",   "Optimize generated builds for size"},
@@ -166,9 +168,13 @@ enum class SourceType {
     QtResources
 };
 
-enum class LinkType {
+enum class TargetType {
     Executable,
-    SharedLibrary
+    Library
+};
+static const char *const TargetTypeNames[] = {
+    "Executable",
+    "Library"
 };
 
 struct Command {
@@ -203,8 +209,8 @@ public:
     virtual bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const = 0;
 
     virtual const char *GetObjectExtension() const = 0;
-    virtual const char *GetLinkExtension() const = 0;
-    virtual const char *GetPostExtension() const = 0;
+    virtual const char *GetLinkExtension(TargetType type) const = 0;
+    virtual const char *GetPostExtension(TargetType type) const = 0;
 
     virtual bool GetCore(Span<const char *const> definitions, Allocator *alloc,
                          HeapArray<const char *> *out_filenames,
@@ -232,7 +238,7 @@ public:
                                      Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames,
-                                 Span<const char *const> libraries, LinkType link_type,
+                                 Span<const char *const> libraries, TargetType link_type,
                                  uint32_t features, bool env_flags, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;
     virtual void MakePostCommand(const char *src_filename, const char *dest_filename,

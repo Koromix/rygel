@@ -236,6 +236,7 @@ public:
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
+        supported |= (int)CompileFeature::LinkLibrary;
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::LTO;
@@ -293,12 +294,22 @@ public:
         const char *ext = (platform == HostPlatform::Windows) ? ".obj" : ".o";
         return ext;
     }
-    const char *GetLinkExtension() const override
+    const char *GetLinkExtension(TargetType type) const override
     {
-        const char *ext = (platform == HostPlatform::Windows) ? ".exe" : "";
-        return ext;
+        switch (type) {
+            case TargetType::Executable: {
+                const char *ext = (platform == HostPlatform::Windows) ? ".exe" : "";
+                return ext;
+            } break;
+            case TargetType::Library: {
+                const char *ext = (platform == HostPlatform::Windows) ? ".dll" : ".so";
+                return ext;
+            } break;
+        }
+
+        RG_UNREACHABLE();
     }
-    const char *GetPostExtension() const override { return nullptr; }
+    const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
@@ -544,7 +555,7 @@ public:
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
-                         Span<const char *const> libraries, LinkType link_type,
+                         Span<const char *const> libraries, TargetType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
@@ -554,11 +565,11 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: {
+            case TargetType::Executable: {
                 bool link_static = features & (int)CompileFeature::StaticLink;
                 Fmt(&buf, "\"%1\"%2", cxx, link_static ? " -static" : "");
             } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
+            case TargetType::Library: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -640,7 +651,7 @@ public:
                 if (platform == HostPlatform::Linux) {
                     Fmt(&buf, "  -static-libgcc -static-libstdc++ -ldl -lrt");
                 }
-                if (link_type == LinkType::Executable) {
+                if (link_type == TargetType::Executable) {
                     Fmt(&buf, " -pie");
                 }
                 if (architecture == HostArchitecture::ARM32) {
@@ -760,6 +771,7 @@ public:
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
+        supported |= (int)CompileFeature::LinkLibrary;
         if (platform != HostPlatform::Windows) {
             // Sometimes it works, somestimes not and the object files are
             // corrupt... just avoid PCH on MinGW
@@ -808,12 +820,22 @@ public:
     }
 
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension() const override
+    const char *GetLinkExtension(TargetType type) const override
     {
-        const char *ext = (platform == HostPlatform::Windows) ? ".exe" : "";
-        return ext;
+        switch (type) {
+            case TargetType::Executable: {
+                const char *ext = (platform == HostPlatform::Windows) ? ".exe" : "";
+                return ext;
+            } break;
+            case TargetType::Library: {
+                const char *ext = (platform == HostPlatform::Windows) ? ".dll" : ".so";
+                return ext;
+            } break;
+        }
+
+        RG_UNREACHABLE();
     }
-    const char *GetPostExtension() const override { return nullptr; }
+    const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
@@ -1032,7 +1054,7 @@ public:
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
-                         Span<const char *const> libraries, LinkType link_type,
+                         Span<const char *const> libraries, TargetType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
@@ -1042,11 +1064,11 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: {
+            case TargetType::Executable: {
                 bool static_link = features & (int)CompileFeature::StaticLink;
                 Fmt(&buf, "\"%1\"%2", cxx, static_link ? " -static" : "");
             } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
+            case TargetType::Library: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -1124,7 +1146,7 @@ public:
                 if (platform == HostPlatform::Linux) {
                     Fmt(&buf, " -ldl -lrt");
                 }
-                if (link_type == LinkType::Executable) {
+                if (link_type == TargetType::Executable) {
                     Fmt(&buf, " -pie");
                 }
                 if (architecture == HostArchitecture::ARM32) {
@@ -1208,6 +1230,7 @@ public:
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::StaticLink;
+        supported |= (int)CompileFeature::LinkLibrary;
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::CFI;
@@ -1238,8 +1261,16 @@ public:
     }
 
     const char *GetObjectExtension() const override { return ".obj"; }
-    const char *GetLinkExtension() const override { return ".exe"; }
-    const char *GetPostExtension() const override { return nullptr; }
+    const char *GetLinkExtension(TargetType type) const override
+    {
+        switch (type) {
+            case TargetType::Executable: return ".exe";
+            case TargetType::Library: return ".dll";
+        }
+
+        RG_UNREACHABLE();
+    }
+    const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
                  HeapArray<const char *> *, const char **) const override { return true; }
@@ -1407,7 +1438,7 @@ public:
     }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
-                         Span<const char *const> libraries, LinkType link_type,
+                         Span<const char *const> libraries, TargetType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
@@ -1417,8 +1448,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "\"%1\" /nologo", link); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "\"%1\" /nologo /DLL", link); } break;
+            case TargetType::Executable: { Fmt(&buf, "\"%1\" /nologo", link); } break;
+            case TargetType::Library: { Fmt(&buf, "\"%1\" /nologo /DLL", link); } break;
         }
         Fmt(&buf, " \"/OUT:%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -1542,6 +1573,7 @@ public:
         supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
+        supported |= (int)CompileFeature::LinkLibrary;
         supported |= (int)CompileFeature::LTO;
 
         uint32_t unsupported = features & ~supported;
@@ -1563,8 +1595,11 @@ public:
     }
 
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension() const override { return ".elf"; }
-    const char *GetPostExtension() const override { return ".hex"; }
+    const char *GetLinkExtension(TargetType type) const override {
+        RG_ASSERT(type == TargetType::Executable);
+        return ".elf";
+    }
+    const char *GetPostExtension(TargetType) const override { return ".hex"; }
 
     bool GetCore(Span<const char *const> definitions, Allocator *alloc,
                  HeapArray<const char *> *out_filenames, HeapArray<const char *> *out_definitions,
@@ -1768,7 +1803,7 @@ public:
     void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
-                         Span<const char *const> libraries, LinkType link_type,
+                         Span<const char *const> libraries, TargetType link_type,
                          uint32_t features, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
@@ -1778,8 +1813,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "\"%1\"", cc); } break;
-            case LinkType::SharedLibrary: { RG_UNREACHABLE(); } break;
+            case TargetType::Executable: { Fmt(&buf, "\"%1\"", cc); } break;
+            case TargetType::Library: { RG_UNREACHABLE(); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -1891,6 +1926,7 @@ public:
         supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
+        supported |= (int)CompileFeature::LinkLibrary;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -1911,7 +1947,7 @@ public:
     }
 
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension() const override
+    const char *GetLinkExtension(TargetType) const override
     {
         switch (platform) {
             case HostPlatform::EmscriptenNode: return ".js";
@@ -1921,13 +1957,10 @@ public:
             default: { RG_UNREACHABLE(); } break;
         }
     }
-    const char *GetPostExtension() const override
+    const char *GetPostExtension(TargetType) const override
     {
-        if (platform == HostPlatform::EmscriptenBox) {
-            return ".c";
-        } else {
-            return nullptr;
-        }
+        const char *ext = (platform == HostPlatform::EmscriptenBox) ? ".c" : nullptr;
+        return ext;
     }
 
     bool GetCore(Span<const char *const>, Allocator *, HeapArray<const char *> *,
@@ -1954,6 +1987,15 @@ public:
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
+
+        // Hide noisy EmCC messages
+        {
+            static const ExecuteInfo::KeyValue variables[] = {
+                { "EMCC_LOGGING", "0" }
+            };
+
+            out_cmd->env_variables = variables;
+        }
 
         HeapArray<char> buf(alloc);
 
@@ -1985,6 +2027,7 @@ public:
         } else {
             Fmt(&buf, " -Wno-everything");
         }
+        Fmt(&buf, " -fPIC");
 
         // Features
         if (features & (int)CompileFeature::DebugInfo) {
@@ -2035,7 +2078,7 @@ public:
     void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
-                         Span<const char *const> libraries, LinkType link_type,
+                         Span<const char *const> libraries, TargetType link_type,
                          uint32_t, bool env_flags, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
@@ -2045,8 +2088,8 @@ public:
 
         // Linker
         switch (link_type) {
-            case LinkType::Executable: { Fmt(&buf, "\"%1\"", cxx); } break;
-            case LinkType::SharedLibrary: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
+            case TargetType::Executable: { Fmt(&buf, "\"%1\"", cxx); } break;
+            case TargetType::Library: { Fmt(&buf, "\"%1\"", cxx); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
@@ -2067,10 +2110,16 @@ public:
             Fmt(&buf, " -Wl,--end-group");
         }
 
-        // Features
-        Fmt(&buf, " -s STANDALONE_WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=2147483648");
+        // Platform flags
+        Fmt(&buf, " -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=2147483648");
         if (platform == HostPlatform::EmscriptenNode) {
             Fmt(&buf, " -s NODERAWFS=1 -lnodefs.js");
+        } else if (platform == HostPlatform::EmscriptenBox) {
+            Fmt(&buf, " -s STANDALONE_WASM=1");
+
+            if (link_type == TargetType::Library) {
+                Fmt(&buf, " -s SIDE_MODULE=1");
+            }
         }
 
         if (env_flags) {

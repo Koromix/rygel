@@ -203,6 +203,16 @@ bool Builder::AddTarget(const TargetInfo &target)
     HeapArray<const char *> predep_filenames;
     HeapArray<const char *> qrc_filenames;
 
+    // Should we link this target?
+    bool link = false;
+    switch (target.type) {
+        case TargetType::Executable: { link = true; } break;
+        case TargetType::Library: {
+            uint32_t features = target.CombineFeatures(build.features);
+            link = (features & (int)CompileFeature::LinkLibrary);
+        } break;
+    }
+
     // Core platform source files (e.g. Teensy core)
     TargetInfo *core = nullptr;
     const char *ns = nullptr;
@@ -355,7 +365,7 @@ bool Builder::AddTarget(const TargetInfo &target)
                                               target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
 
             Command cmd = {};
-            build.compiler->MakeLinkCommand(obj_filename, {}, LinkType::SharedLibrary,
+            build.compiler->MakeLinkCommand(obj_filename, {}, TargetType::Library,
                                             features, build.env, module_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(module_filename)).ptr;
@@ -381,7 +391,7 @@ bool Builder::AddTarget(const TargetInfo &target)
     }
 
     // Version string
-    if (target.type == TargetType::Executable) {
+    if (link) {
         const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
@@ -427,9 +437,9 @@ bool Builder::AddTarget(const TargetInfo &target)
         return false;
 
     // Link commands
-    if (target.type == TargetType::Executable) {
-        const char *link_ext = build.compiler->GetLinkExtension();
-        const char *post_ext = build.compiler->GetPostExtension();
+    if (link) {
+        const char *link_ext = build.compiler->GetLinkExtension(target.type);
+        const char *post_ext = build.compiler->GetPostExtension(target.type);
 
         // Generate linked output
         const char *link_filename;
@@ -438,7 +448,7 @@ bool Builder::AddTarget(const TargetInfo &target)
             uint32_t features = target.CombineFeatures(build.features);
 
             Command cmd = {};
-            build.compiler->MakeLinkCommand(obj_filenames, link_libraries, LinkType::Executable,
+            build.compiler->MakeLinkCommand(obj_filenames, link_libraries, target.type,
                                             features, build.env, link_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(link_filename)).ptr;

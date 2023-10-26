@@ -22,15 +22,6 @@ struct TargetConfig;
 struct TargetInfo;
 struct SourceFeatures;
 
-enum class TargetType {
-    Executable,
-    Library
-};
-static const char *const TargetTypeNames[] = {
-    "Executable",
-    "Library"
-};
-
 struct SourceFileInfo {
     // In order to build source files with the correct definitions (and include directories, etc.),
     // we need to use the options from the target that first found this source file!
