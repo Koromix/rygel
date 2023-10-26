@@ -73,7 +73,8 @@ async function main() {
         switch (process.argv[2]) {
             case 'test': { command = test; } break;
             case 'debug': { command = debug; } break;
-            case 'dist': { command = dist; } break;
+            case 'build':
+            case 'dist': { command = build; } break;
             case 'start': { command = start; } break;
             case 'stop': { command = stop; } break;
             case 'info': { command = info; } break;
@@ -306,7 +307,7 @@ async function start(detach = true) {
     return success;
 }
 
-async function dist() {
+async function build() {
     let dist_dir = script_dir + '/../build/dist';
     let snapshot_dir = snapshot();
 
@@ -350,7 +351,7 @@ async function dist() {
             success &= await upload(snapshot_dir, machine => Object.values(machine.builds).map(build => build.directory));
 
             console.log('>> Run build commands...');
-            await build();
+            await compile();
         }
 
         console.log('>> Get build artifacts');
@@ -487,7 +488,7 @@ async function dist() {
     return dist_dir;
 }
 
-async function build(debug = false) {
+async function compile(debug = false) {
     let success = true;
 
     await Promise.all(machines.map(async machine => {
@@ -621,7 +622,7 @@ async function test(debug = false) {
     success &= await upload(snapshot_dir, machine => Object.values(machine.builds).map(build => build.directory));
 
     console.log('>> Run build commands...');
-    await build(debug);
+    await compile(debug);
 
     console.log('>> Run test commands...');
     await Promise.all(machines.map(async machine => {

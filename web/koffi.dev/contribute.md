@@ -139,7 +139,7 @@ Once this is done, you can publish a new release with the following commands:
 
 ```sh
 node tools/qemu.js test # If not done before
-node tools/qemu.js dist
+node tools/qemu.js build
 
 cd build/dist
 npm publish
