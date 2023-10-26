@@ -4,6 +4,10 @@
 
 ### Koffi 2.6
 
+#### Koffi 2.6.4 (2023-10-26)
+
+- Fix build issue with recent Visual Studio versions
+
 #### Koffi 2.6.3 (2023-10-17)
 
 - Add indirect loading script to help some bundlers
