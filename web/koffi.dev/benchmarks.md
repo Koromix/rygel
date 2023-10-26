@@ -10,8 +10,8 @@ Here is a quick overview of the execution time of Koffi calls on three benchmark
 
 <table style="margin: 0 auto;">
     <tr>
-        <td><a href="_static/perf_linux_20220812.png" target="_blank"><img src="_static/perf_linux_20220812.png" alt="Linux x86_64 performance" style="width: 350px;"/></a></td>
-        <td><a href="_static/perf_windows_20220812.png" target="_blank"><img src="_static/perf_windows_20220812.png" alt="Windows x86_64 performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_linux_20231028.png" target="_blank"><img src="_static/perf_linux_20231028.png" alt="Linux x86_64 performance" style="width: 350px;"/></a></td>
+        <td><a href="_static/perf_windows_20231028.png" target="_blank"><img src="_static/perf_windows_20231028.png" alt="Windows x86_64 performance" style="width: 350px;"/></a></td>
     </tr>
 </table>
 
@@ -31,9 +31,9 @@ This test is based around repeated calls to a simple standard C function `rand`,
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-rand_napi     | 842 ns         | x1.00                | (ref)
-rand_koffi    | 1114 ns        | x0.76                | +32%
-rand_node_ffi | 44845 ns       | x0.02                | +5224%
+rand_napi     | 700 ns         | x1.00                | (ref)
+rand_koffi    | 1152 ns        | x0.61                | +64%
+rand_node_ffi | 32750 ns       | x0.02                | +4576%
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
@@ -43,9 +43,9 @@ This test is similar to the rand one, but it is based on `atoi`, which takes a s
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-atoi_napi     | 921 ns         | x1.00                | (ref)
-atoi_koffi    | 1357 ns        | x0.68                | +47%
-atoi_node_ffi | 152550 ns      | x0.006               | +16472%
+atoi_napi     | 1028 ns        | x1.00                | (ref)
+atoi_koffi    | 1730 ns        | x0.59                | +68%
+atoi_node_ffi | 121670 ns      | x0.008               | +11738%
 
 Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
@@ -58,10 +58,10 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 
 Benchmark          | Iteration time | Relative performance | Overhead
 ------------------ | -------------- | -------------------- | --------
-raylib_cc          | 215.7 µs       | x1.20                | -17%
-raylib_node_raylib | 258.9 µs       | x1.00                | (ref)
-raylib_koffi       | 311.6 µs       | x0.83                | +20%
-raylib_node_ffi    | 928.4 µs       | x0.28                | +259%
+raylib_cc          | 18.5 µs        | x1.42                | -30%
+raylib_node_raylib | 26.3 µs        | x1.00                | (ref)
+raylib_koffi       | 28.0 µs        | x0.94                | +6%
+raylib_node_ffi    | 87.0 µs        | x0.30                | +230%
 
 ## Windows x86_64
 
@@ -77,9 +77,9 @@ This test is based around repeated calls to a simple standard C function `rand`,
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-rand_napi     | 964 ns         | x1.00                | (ref)
-rand_koffi    | 1274 ns        | x0.76                | +32%
-rand_node_ffi | 42300 ns       | x0.02                | +4289%
+rand_napi     | 859 ns         | x1.00                | (ref)
+rand_koffi    | 1352 ns        | x0.64                | +57%
+rand_node_ffi | 35640 ns       | x0.02                | +4048%
 
 Because rand is a pretty small function, the FFI overhead is clearly visible.
 
@@ -91,9 +91,9 @@ The results below were measured on my x86_64 Windows machine (Intel® Core™ i5
 
 Benchmark     | Iteration time | Relative performance | Overhead
 ------------- | -------------- | -------------------- | --------
-atoi_napi     | 1415 ns        | x1.00                | (ref)
-atoi_koffi    | 2193 ns        | x0.65                | +55%
-atoi_node_ffi | 168300 ns      | x0.008               | +11792%
+atoi_napi     | 1336 ns        | x1.00                | (ref)
+atoi_koffi    | 2440 ns        | x0.55                | +83%
+atoi_node_ffi | 136890 ns      | x0.010               | +10144%
 
 Because atoi is a pretty small function, the FFI overhead is clearly visible.
 
@@ -106,26 +106,19 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 
 Benchmark          | Iteration time | Relative performance | Overhead
 ------------------ | -------------- | -------------------- | --------
-raylib_cc          | 211.8 µs       | x1.25                | -20%
-raylib_node_raylib | 264.4 µs       | x1.00                | (ref)
-raylib_koffi       | 318.9 µs       | x0.83                | +21%
-raylib_node_ffi    | 1146.2 µs      | x0.23                | +334%
-
-Please note that in order to get fair numbers for raylib_node_raylib, it was recompiled with clang-cl before running the benchmark with the following commands:
-
-```batch
-cd node_modules\raylib
-rmdir /S /Q bin build
-npx cmake-js compile -t ClangCL
-```
+raylib_cc          | 18.2 µs        | x1.50                | -33%
+raylib_node_raylib | 27.3 µs        | x1.00                | (ref)
+raylib_koffi       | 29.8 µs        | x0.92                | +9%
+raylib_node_ffi    | 96.3 µs        | x0.28                | +253%
 
 ## Running benchmarks
 
-Open a console, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` (or `node ..\..\cnoke\cnoke.js` on Windows) before doing anything else.
-
-Please note that all benchmark results are made with Clang-built binaries.
+Please note that all benchmark results on this page are made with Clang-built binaries.
 
 ```sh
+cd koffi
+node ../../cnoke/cnoke.js --prefer-clang
+
 cd koffi/benchmark
 node ../../cnoke/cnoke.js --prefer-clang
 ```
