@@ -259,6 +259,6 @@ extern const Span<const SupportedCompiler> SupportedCompilers;
 
 std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec);
 
-RG_EXPORT bool DetermineSourceType(const char *filename, SourceType *out_type = nullptr);
+bool DetermineSourceType(const char *filename, SourceType *out_type = nullptr);
 
 }
