@@ -79,11 +79,13 @@ function TileMap(runner) {
     };
 
     this.move = function(lat, lng, zoom = null) {
-        if (zoom != null)
+        if (zoom != null) {
             state.zoom = zoom;
-        state.pos = latLongToXY(lat, lng, state.zoom);
-
+            self.refresh();
+        }
         zoom_animation = null;
+
+        state.pos = latLongToXY(lat, lng, state.zoom);
 
         runner.busy();
     };
@@ -93,10 +95,96 @@ function TileMap(runner) {
             throw new Error('Not an array of markers');
 
         marker_groups[key] = markers;
+
+        self.refresh();
     };
 
     this.clearMarkers = function(key) {
         delete marker_groups[key];
+        self.refresh();
+    };
+
+    this.refresh = function() {
+        render_elements.length = 0;
+
+        let groups = Object.values(marker_groups);
+        let markers = [];
+
+        for (let group of groups)
+            markers.push(...group);
+
+        let clusters = clusterize(markers.map(marker => {
+            let pos = latLongToXY(marker.latitude, marker.longitude, state.zoom);
+
+            return {
+                x: pos.x,
+                y: pos.y,
+                size: marker.size,
+                cluster: marker.cluster,
+                marker: marker
+            };
+        }));
+
+        let viewport = getViewport();
+
+        for (let cluster of clusters) {
+            if (cluster.length == 1) {
+                let item = cluster[0];
+                let marker = item.marker;
+
+                let element = {
+                    type: 'marker',
+
+                    x: item.x,
+                    y: item.y,
+                    size: marker.size,
+                    clickable: marker.clickable,
+                    priority: marker.priority ?? 1,
+
+                    markers: [marker]
+                };
+
+                render_elements.push(element);
+            } else {
+                let rect = {
+                    x1: Math.min(...cluster.map(item => item.x - item.size / 2)),
+                    y1: Math.min(...cluster.map(item => item.y - item.size / 2)),
+                    x2: Math.max(...cluster.map(item => item.x + item.size / 2)),
+                    y2: Math.max(...cluster.map(item => item.y + item.size / 2))
+                };
+
+                let center = {
+                    x: (rect.x1 + rect.x2) / 2,
+                    y: (rect.y1 + rect.y2) / 2
+                };
+                let radius = Math.max(rect.x2 - rect.x1, rect.y2 - rect.y1) / 2;
+
+                let element = {
+                    type: 'cluster',
+
+                    x: center.x,
+                    y: center.y,
+                    size: 2 * radius,
+                    clickable: true,
+                    priority: 0,
+
+                    markers: cluster.map(item => item.marker),
+                    color: cluster[0].cluster
+                };
+
+                render_elements.push(element);
+            }
+        }
+
+        // Show individual markers on top, sorted by priority (if any)
+        // and size, and then show clusters by size.
+        render_elements.sort((element0, element1) => {
+            if (element0.priority != element1.priority) {
+                return element0.priority - element1.priority;
+            } else {
+                return element1.size - element0.size;
+            }
+        });
     };
 
     this.update = function() {
@@ -115,99 +203,24 @@ function TileMap(runner) {
             }
         }
 
-        // Create render elements (markers and clusters)
+        // Detect user targets
+        let targets = [];
         {
             let viewport = getViewport();
 
-            let groups = Object.values(marker_groups);
-            let markers = [];
+            for (let i = render_elements.length - 1; i >= 0; i--) {
+                let element = render_elements[i];
 
-            for (let group of groups)
-                markers.push(...group);
-
-            let clusters = clusterize(markers.map(marker => {
-                let pos = latLongToXY(marker.latitude, marker.longitude, state.zoom);
-
-                return {
-                    x: pos.x,
-                    y: pos.y,
-                    size: marker.size,
-                    cluster: marker.cluster,
-                    marker: marker
+                let pos = {
+                    x: element.x - viewport.x1,
+                    y: element.y - viewport.y1,
                 };
-            }));
 
-            render_elements.length = 0;
-
-            for (let cluster of clusters) {
-                if (cluster.length == 1) {
-                    let item = cluster[0];
-                    let marker = item.marker;
-
-                    let element = {
-                        type: 'marker',
-
-                        x: item.x - viewport.x1,
-                        y: item.y - viewport.y1,
-                        size: marker.size,
-                        clickable: marker.clickable,
-                        priority: marker.priority ?? 1,
-
-                        markers: [marker]
-                    };
-
-                    render_elements.push(element);
-                } else {
-                    let rect = {
-                        x1: Math.min(...cluster.map(item => item.x - item.size / 2)),
-                        y1: Math.min(...cluster.map(item => item.y - item.size / 2)),
-                        x2: Math.max(...cluster.map(item => item.x + item.size / 2)),
-                        y2: Math.max(...cluster.map(item => item.y + item.size / 2))
-                    };
-
-                    let pos = {
-                        x: (rect.x1 + rect.x2) / 2,
-                        y: (rect.y1 + rect.y2) / 2
-                    };
-                    let radius = Math.max(rect.x2 - rect.x1, rect.y2 - rect.y1) / 2;
-
-                    let element = {
-                        type: 'cluster',
-
-                        x: pos.x - viewport.x1,
-                        y: pos.y - viewport.y1,
-                        size: 2 * radius,
-                        clickable: true,
-                        priority: 0,
-
-                        markers: cluster.map(item => item.marker),
-                        color: cluster[0].cluster
-                    };
-
-                    render_elements.push(element);
+                if (element.clickable &&
+                        distance(pos, mouse_state) < adaptMarkerSize(element.size, state.zoom) / 2) {
+                    targets = element.markers;
+                    break;
                 }
-            }
-
-            // Show individual markers on top, sorted by priority (if any)
-            // and size, and then show clusters by size.
-            render_elements.sort((element0, element1) => {
-                if (element0.priority != element1.priority) {
-                    return element0.priority - element1.priority;
-                } else {
-                    return element1.size - element0.size;
-                }
-            });
-        }
-
-        // Detect user targets
-        let targets = [];
-        for (let i = render_elements.length - 1; i >= 0; i--) {
-            let element = render_elements[i];
-
-            if (element.clickable &&
-                    distance(element, mouse_state) < adaptMarkerSize(element.size, state.zoom) / 2) {
-                targets = element.markers;
-                break;
             }
         }
 
@@ -306,6 +319,7 @@ function TileMap(runner) {
 
         state.zoom += delta;
 
+        self.refresh();
         stopFetchers();
     };
 
@@ -390,19 +404,24 @@ function TileMap(runner) {
             ctx.filter = 'none';
 
             for (let element of render_elements) {
+                let pos = {
+                    x: element.x - viewport.x1,
+                    y: element.y - viewport.y1,
+                };
+
                 if (zoom_animation != null) {
                     let centered = {
-                        x: element.x - canvas.width / 2,
-                        y: element.y - canvas.height / 2
+                        x: pos.x - canvas.width / 2,
+                        y: pos.y - canvas.height / 2
                     };
 
-                    element.x = Math.round(canvas.width / 2 + anim_scale * (centered.x + adjust.x));
-                    element.y = Math.round(canvas.height / 2 + anim_scale * (centered.y + adjust.y));
+                    pos.x = Math.round(canvas.width / 2 + anim_scale * (centered.x + adjust.x));
+                    pos.y = Math.round(canvas.height / 2 + anim_scale * (centered.y + adjust.y));
                 }
 
-                if (element.x < -element.size || element.x > canvas.width + element.size)
+                if (pos.x < -element.size || pos.x > canvas.width + pos.size)
                     continue;
-                if (element.y < -element.size || element.y > canvas.height + element.size)
+                if (pos.y < -element.size || pos.y > canvas.height + pos.size)
                     continue;
 
                 switch (element.type) {
@@ -421,12 +440,12 @@ function TileMap(runner) {
                             let height = adaptMarkerSize(marker.size, anim_zoom);
 
                             if (img != null)
-                                ctx.drawImage(img, element.x - width / 2, element.y - height / 2, width, height);
+                                ctx.drawImage(img, pos.x - width / 2, pos.y - height / 2, width, height);
                         } else if (marker.circle != null) {
                             let radius = adaptMarkerSize(marker.size / 2, state.zoom);
 
                             ctx.beginPath();
-                            ctx.arc(element.x, element.y, radius, 0, 2 * Math.PI, false);
+                            ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
 
                             ctx.fillStyle = marker.circle;
                             ctx.fill();
@@ -442,7 +461,7 @@ function TileMap(runner) {
                         }
 
                         ctx.beginPath();
-                        ctx.arc(element.x, element.y, radius, 0, 2 * Math.PI, false);
+                        ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
 
                         ctx.fillStyle = element.color;
                         ctx.fill();
@@ -453,7 +472,7 @@ function TileMap(runner) {
                         let width = ctx.measureText(text).width + 8;
 
                         ctx.fillStyle = 'white';
-                        ctx.fillText(text, element.x - width / 2 + 4, element.y + element.size / 6);
+                        ctx.fillText(text, pos.x - width / 2 + 4, pos.y + element.size / 6);
                     } break;
                 }
             }

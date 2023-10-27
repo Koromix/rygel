@@ -324,6 +324,8 @@ export function refreshMap() {
     let markers = provider.fillMap(filters);
     map_markers.push(...markers);
 
+    map.refresh();
+
     runner.busy();
 }
 
