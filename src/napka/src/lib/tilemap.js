@@ -158,22 +158,25 @@ function TileMap(runner) {
 
                     render_elements.push(element);
                 } else {
-                    let pos = {
-                        x: cluster.reduce((acc, item) => acc + item.x, 0) / cluster.length,
-                        y: cluster.reduce((acc, item) => acc + item.y, 0) / cluster.length
+                    let rect = {
+                        x1: Math.min(...cluster.map(item => item.x - item.size / 2)),
+                        y1: Math.min(...cluster.map(item => item.y - item.size / 2)),
+                        x2: Math.max(...cluster.map(item => item.x + item.size / 2)),
+                        y2: Math.max(...cluster.map(item => item.y + item.size / 2))
                     };
 
-                    let radius = Math.max(...cluster.map(item => {
-                        let dist = distance(pos, { x: item.x, y: item.y });
-                        return dist + item.marker.size / 2;
-                    }));
+                    let pos = {
+                        x: (rect.x1 + rect.x2) / 2,
+                        y: (rect.y1 + rect.y2) / 2
+                    };
+                    let radius = Math.max(rect.x2 - rect.x1, rect.y2 - rect.y1) / 2;
 
                     let element = {
                         type: 'cluster',
 
                         x: pos.x - viewport.x1,
                         y: pos.y - viewport.y1,
-                        size: radius,
+                        size: 2 * radius,
                         clickable: true,
                         priority: 0,
 
