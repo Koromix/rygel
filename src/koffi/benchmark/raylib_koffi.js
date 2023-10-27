@@ -105,7 +105,7 @@ function main() {
     // We need to call InitWindow before using anything else (such as fonts)
     SetTraceLogLevel(4); // Warnings
     SetWindowState(0x80); // Hidden
-    InitWindow(640, 480, "Raylib Test");
+    InitWindow(800, 600, "Raylib Test");
 
     let img = GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
     let font = GetFontDefault();

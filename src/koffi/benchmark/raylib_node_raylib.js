@@ -40,7 +40,7 @@ function main() {
     // We need to call InitWindow before using anything else (such as fonts)
     r.SetTraceLogLevel(4); // Warnings
     r.SetWindowState(0x80); // Hidden
-    r.InitWindow(640, 480, "Raylib Test");
+    r.InitWindow(800, 600, "Raylib Test");
 
     let img = r.GenImageColor(800, 600, { r: 0, g: 0, b: 0, a: 255 });
     let font = r.GetFontDefault();

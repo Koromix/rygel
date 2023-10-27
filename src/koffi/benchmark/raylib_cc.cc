@@ -24,6 +24,8 @@
 
 namespace RG {
 
+// #define RENDER
+
 int Main(int argc, char **argv)
 {
     int time = 5000;
@@ -35,8 +37,10 @@ int Main(int argc, char **argv)
 
     // We need to call InitWindow before using anything else (such as fonts)
     SetTraceLogLevel(LOG_WARNING);
+#ifndef RENDER
     SetWindowState(FLAG_WINDOW_HIDDEN);
-    InitWindow(640, 480, "Raylib Test");
+#endif
+    InitWindow(800, 600, "Raylib Test");
 
     Image img = GenImageColor(800, 600, Color { 0, 0, 0, 255 });
     Font font = GetFontDefault();
@@ -65,6 +69,14 @@ int Main(int argc, char **argv)
 
             ImageDrawTextEx(&img, font, text, pos, 10, 1, color);
         }
+
+#ifdef RENDER
+        BeginDrawing();
+        Texture2D tex = LoadTextureFromImage(img);
+        DrawTexture(tex, 0, 0, WHITE);
+        EndDrawing();
+        UnloadTexture(tex);
+#endif
 
         iterations += 3600;
     }
