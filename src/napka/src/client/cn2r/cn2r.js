@@ -235,7 +235,7 @@ function Cn2rProvider() {
                     ` : ''}
                     Modalités : ${field(etab, 'rdv_modalites')}<br/><br/>
 
-                    <u>Pour contacter le CRP :</u><br/><br/>
+                    <u>Pour contacter le CRP</u> :<br/><br/>
                     ${isConnected() || etab.rdv_fixe ? html`Téléphone : <b>${field(etab, 'rdv_fixe', parse.cleanPhoneNumber(etab.rdv_fixe))}</b>
                                        ${isConnected() || etab.rdv_portable ? html` ou ${field(etab, 'rdv_portable', parse.cleanPhoneNumber(etab.rdv_portable))}` : ''}<br/>` : ''}
                     ${isConnected() || etab.rdv_mail ? html`Courriel : ${field(etab, 'rdv_mail', etab.rdv_mail ? html`<a href=${'mailto:' + etab.rdv_mail} style="white-space: nowrap;">${etab.rdv_mail}</a>` : html`<span class="sub">(inconnu)</span>`)}</a><br/>` : ''}
