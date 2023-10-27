@@ -261,6 +261,7 @@ function PpnpsProvider() {
                         longitude: etab.address.longitude,
                         icon: icon,
                         size: wide ? 48 : 40,
+                        priority: 0 + wide,
                         clickable: true,
                         filter: wide ? 'hue-rotate(180deg)' : null
                     };
