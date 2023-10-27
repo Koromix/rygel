@@ -100,7 +100,7 @@ function DemheterProvider() {
                         latitude: etab.address.latitude,
                         longitude: etab.address.longitude,
                         cluster: (etab.type == 'Psychologue') ? '#d352a3' : null,
-                        priority: (etab.type == 'Psychologue') ? 1 : 2,
+                        priority: 1 + (etab.type == 'Centre') + !!etab.demheter,
                         icon: getEtabIcon(etab),
                         size: (etab.type == 'Centre') ? 48 : 40,
                         clickable: true
