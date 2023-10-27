@@ -466,13 +466,19 @@ function TileMap(runner) {
                         ctx.fillStyle = element.color;
                         ctx.fill();
 
-                        ctx.font = Math.floor(element.size / 2) + 'px Open Sans';
-
                         let text = element.markers.length;
-                        let width = ctx.measureText(text).width + 8;
+
+                        let size = Math.floor(element.size / 2) + 1;
+                        let width = null;
+
+                        // Find appropriate font size
+                        do {
+                            ctx.font = (--size) + 'px Open Sans';
+                            width = ctx.measureText(text).width;
+                        } while (width > 1.5 * radius);
 
                         ctx.fillStyle = 'white';
-                        ctx.fillText(text, pos.x - width / 2 + 4, pos.y + element.size / 6);
+                        ctx.fillText(text, pos.x - width / 2, pos.y + size / 3);
                     } break;
                 }
             }
