@@ -121,6 +121,7 @@ function Cn2rProvider() {
                             latitude: etab.address.latitude,
                             longitude: etab.address.longitude,
                             cluster: '#30346a',
+                            priority: 2,
                             icon: icons.crp,
                             size: 48,
                             clickable: true
@@ -130,6 +131,7 @@ function Cn2rProvider() {
                             latitude: etab.address.latitude,
                             longitude: etab.address.longitude,
                             cluster: '#bf4561',
+                            priority: 1,
                             icon: icons.misc,
                             size: 40,
                             clickable: true

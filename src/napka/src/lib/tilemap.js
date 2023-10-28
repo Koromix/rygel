@@ -13,99 +13,6 @@
 
 import { Util, Net, LruMap } from '../../../web/libjs/common.js';
 
-function SpatialMap() {
-    let self = this;
-
-    let factor = 8;
-    let map = new Map;
-
-    Object.defineProperties(this, {
-        clusters: { get: getClusters, enumerable: true }
-    })
-
-    this.add = function(x, y, element) {
-        let xp = Math.floor(x / factor);
-        let yp = Math.floor(y / factor);
-        let sizep = Math.ceil(element.size / factor / 3);
-
-        let item = {
-            x: x,
-            y: y,
-            xp: xp,
-            yp: yp,
-            element: element
-        };
-
-        let matched = false;
-
-        if (element.cluster != null) {
-            outer: for (let i = -sizep; i <= sizep; i++) {
-                for (let j = -sizep; j <= sizep; j++) {
-                    let maybe = element.cluster + ':' + (xp + i) + ':' + (yp + j);
-                    let match = map.get(maybe);
-
-                    if (match == null)
-                        continue;
-
-                    match.items.push(item);
-                    matched = true;
-
-                    map.delete(key(match));
-
-                    match.xp = match.items.reduce((acc, item) => acc + item.xp, 0) / match.items.length;
-                    match.yp = match.items.reduce((acc, item) => acc + item.yp, 0) / match.items.length;
-
-                    map.set(key(match), match);
-
-                    break outer;
-                }
-            }
-        }
-
-        if (!matched) {
-            let match = {
-                cluster: element.cluster,
-                xp: xp,
-                yp: yp,
-                items: [item]
-            };
-
-            map.set(key(match), match);
-        }
-    };
-
-    function key(match) {
-        let key = match.cluster + ':' + match.xp + ':' + match.yp;
-        return key;
-    }
-
-    function getClusters() {
-        let clusters = Array.from(map.values()).map(match => {
-            let pos = {
-                x: match.items.reduce((acc, item) => acc + item.x, 0) / match.items.length,
-                y: match.items.reduce((acc, item) => acc + item.y, 0) / match.items.length
-            };
-
-            let radius = Math.max(...match.items.map(item => {
-                let dist = distance(pos, { x: item.x, y: item.y });
-                return dist + item.element.size;
-            }));
-
-            let cluster = {
-                x: pos.x,
-                y: pos.y,
-                size: radius,
-                color: match.cluster,
-                items: match.items.map(item => item.element)
-            };
-
-            return cluster;
-        });
-
-        return clusters;
-    }
-}
-
 function TileMap(runner) {
     let self = this;
 
@@ -213,51 +120,80 @@ function TileMap(runner) {
             let viewport = getViewport();
 
             let groups = Object.values(marker_groups);
-            let grid = new SpatialMap;
-
-            for (let markers of groups) {
-                for (let marker of markers) {
-                    let pos = latLongToXY(marker.latitude, marker.longitude, state.zoom);
-                    grid.add(pos.x, pos.y, marker);
-                }
-            }
-
             let markers = [];
-            let clusters = [];
 
-            for (let cluster of grid.clusters) {
-                if (cluster.items.length == 1) {
+            for (let group of groups)
+                markers.push(...group);
+
+            let clusters = clusterize(markers.map(marker => {
+                let pos = latLongToXY(marker.latitude, marker.longitude, state.zoom);
+
+                return {
+                    x: pos.x,
+                    y: pos.y,
+                    size: marker.size,
+                    cluster: marker.cluster,
+                    marker: marker
+                };
+            }));
+
+            render_elements.length = 0;
+
+            for (let cluster of clusters) {
+                if (cluster.length == 1) {
+                    let item = cluster[0];
+                    let marker = item.marker;
+
                     let element = {
                         type: 'marker',
 
-                        x: cluster.x - viewport.x1,
-                        y: cluster.y - viewport.y1,
-                        size: cluster.size,
-                        clickable: cluster.items[0].clickable,
+                        x: item.x - viewport.x1,
+                        y: item.y - viewport.y1,
+                        size: marker.size,
+                        clickable: marker.clickable,
+                        priority: marker.priority ?? 1,
 
-                        markers: cluster.items
+                        markers: [marker]
                     };
 
-                    markers.push(element);
+                    render_elements.push(element);
                 } else {
+                    let pos = {
+                        x: cluster.reduce((acc, item) => acc + item.x, 0) / cluster.length,
+                        y: cluster.reduce((acc, item) => acc + item.y, 0) / cluster.length
+                    };
+
+                    let radius = Math.max(...cluster.map(item => {
+                        let dist = distance(pos, { x: item.x, y: item.y });
+                        return dist + item.marker.size / 2;
+                    }));
+
                     let element = {
                         type: 'cluster',
 
-                        x: cluster.x - viewport.x1,
-                        y: cluster.y - viewport.y1,
-                        size: cluster.size,
+                        x: pos.x - viewport.x1,
+                        y: pos.y - viewport.y1,
+                        size: radius,
                         clickable: true,
+                        priority: 0,
 
-                        markers: cluster.items,
-                        color: cluster.color
+                        markers: cluster.map(item => item.marker),
+                        color: cluster[0].cluster
                     };
 
-                    clusters.push(element);
+                    render_elements.push(element);
                 }
             }
 
-            // Show explicit markers above all else
-            render_elements = [...clusters, ...markers];
+            // Show individual markers on top, sorted by priority (if any)
+            // and size, and then show clusters by size.
+            render_elements.sort((element0, element1) => {
+                if (element0.priority != element1.priority) {
+                    return element0.priority - element1.priority;
+                } else {
+                    return element1.size - element0.size;
+                }
+            });
         }
 
         // Detect user targets
@@ -762,6 +698,52 @@ function TileMap(runner) {
     function mapSize(zoom) {
         return tiles.tilesize * Math.pow(2, zoom);
     }
+}
+
+function clusterize(items) {
+    items = items.slice().sort((item1, item2) => item1.x - item2.x);
+
+    let max_distance = Math.max(...items.map(item => item.size));
+    let clusters = [];
+
+    for (let i = 0; i < items.length;) {
+        let item = items[i];
+
+        let cluster = [item];
+        let remain = [];
+
+        if (item.cluster != null) {
+            for (let j = i + 1; j < items.length; j++) {
+                let other = items[j];
+
+                if (other.x - item.x >= max_distance)
+                    break;
+
+                if (other.cluster != item.cluster) {
+                    remain.push(other);
+                    continue;
+                }
+
+                let dist = distance(item, other);
+                let treshold = Math.min(item.size, other.size) / 2;
+
+                if (dist < treshold) {
+                    cluster.push(other);
+                } else {
+                    remain.push(other);
+                }
+            }
+
+            i += items.splice(i, cluster.length, ...cluster).length;
+            items.splice(i, remain.length, ...remain);
+        } else {
+            i++;
+        }
+
+        clusters.push(cluster);
+    }
+
+    return clusters;
 }
 
 function distance(p1, p2) {
