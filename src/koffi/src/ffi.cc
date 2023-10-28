@@ -225,20 +225,26 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         return env.Null();
     }
 
+    Napi::String name = info[0].As<Napi::String>();
+    Napi::Object obj = info[named].As<Napi::Object>();
+    Napi::Array keys = obj.GetPropertyNames();
+
     RG_DEFER_NC(err_guard, len = instance->types.len) {
-        for (Size i = len + 1; i < instance->types.len; i++) {
-            const TypeInfo &type = instance->types[i];
-            instance->types_map.Remove(type.name);
+        Size start = len + !named;
+
+        for (Size i = start; i < instance->types.len; i++) {
+            const TypeInfo *it = &instance->types[i];
+            const TypeInfo **ptr = instance->types_map.Find(it->name);
+
+            if (ptr && *ptr == it) {
+                instance->types_map.Remove(ptr);
+            }
         }
 
         instance->types.RemoveFrom(len);
     };
 
     TypeInfo *type = instance->types.AppendDefault();
-
-    Napi::String name = info[0].As<Napi::String>();
-    Napi::Object obj = info[named].As<Napi::Object>();
-    Napi::Array keys = obj.GetPropertyNames();
 
     if (named) {
         type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
@@ -365,20 +371,26 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
+    Napi::String name = info[0].As<Napi::String>();
+    Napi::Object obj = info[named].As<Napi::Object>();
+    Napi::Array keys = obj.GetPropertyNames();
+
     RG_DEFER_NC(err_guard, len = instance->types.len) {
-        for (Size i = len + 1; i < instance->types.len; i++) {
-            const TypeInfo &type = instance->types[i];
-            instance->types_map.Remove(type.name);
+        Size start = len + !named;
+
+        for (Size i = start; i < instance->types.len; i++) {
+            const TypeInfo *it = &instance->types[i];
+            const TypeInfo **ptr = instance->types_map.Find(it->name);
+
+            if (ptr && *ptr == it) {
+                instance->types_map.Remove(ptr);
+            }
         }
 
         instance->types.RemoveFrom(len);
     };
 
     TypeInfo *type = instance->types.AppendDefault();
-
-    Napi::String name = info[0].As<Napi::String>();
-    Napi::Object obj = info[named].As<Napi::Object>();
-    Napi::Array keys = obj.GetPropertyNames();
 
     if (named) {
         type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
