@@ -340,9 +340,9 @@ function Builder(config = {}) {
 
     function get_cache_directory() {
         if (process.platform == 'win32') {
-            let cache_dir = process.env['APPDATA'];
+            let cache_dir = process.env['LOCALAPPDATA'] ?? process.env['APPDATA'];
             if (cache_dir == null)
-                throw new Error('Missing APPDATA environment variable');
+                throw new Error('Missing LOCALAPPDATA and APPDATA environment variable');
 
             cache_dir = path.join(cache_dir, 'cnoke');
             return cache_dir;
