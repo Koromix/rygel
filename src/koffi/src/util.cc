@@ -120,7 +120,9 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         const TypeInfo *type = ResolveType(env, str.c_str(), out_directions);
 
         if (!type) {
-            ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
+            if (!env.IsExceptionPending()) {
+                ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
+            }
             return nullptr;
         }
 
