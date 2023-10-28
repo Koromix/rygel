@@ -104,8 +104,9 @@ class CallData;
 typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
 
 enum class TypeFlag {
-    HasTypedArray = 1 << 0,
-    IsCharLike = 1 << 1
+    IsIncomplete = 1 << 0,
+    HasTypedArray = 1 << 1,
+    IsCharLike = 1 << 2
 };
 
 enum class ArrayHint {

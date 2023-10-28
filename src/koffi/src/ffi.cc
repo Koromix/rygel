@@ -225,18 +225,38 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         return env.Null();
     }
 
+    RG_DEFER_NC(err_guard, len = instance->types.len) {
+        for (Size i = len + 1; i < instance->types.len; i++) {
+            const TypeInfo &type = instance->types[i];
+            instance->types_map.Remove(type.name);
+        }
+
+        instance->types.RemoveFrom(len);
+    };
+
     TypeInfo *type = instance->types.AppendDefault();
-    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[named].As<Napi::Object>();
     Napi::Array keys = obj.GetPropertyNames();
 
-    type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+    if (named) {
+        type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
+
+        bool inserted;
+        instance->types_map.TrySet(type->name, type, &inserted);
+
+        if (!inserted) {
+            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+            return env.Null();
+        }
+    } else {
+        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+    }
 
     type->primitive = PrimitiveKind::Record;
     type->align = 1;
+    type->flags = (int)TypeFlag::IsIncomplete;
 
     HashSet<const char *> members;
     int64_t size = 0;
@@ -308,16 +328,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     }
     type->size = (int32_t)size;
 
-    // If the insert succeeds, we cannot fail anymore
-    if (named) {
-        bool inserted;
-        instance->types_map.TrySet(type->name, type, &inserted);
-
-        if (!inserted) {
-            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
-            return env.Null();
-        }
-    }
+    type->flags &= ~(int)TypeFlag::IsIncomplete;
     err_guard.Disable();
 
     return WrapType(env, instance, type);
@@ -354,18 +365,38 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
+    RG_DEFER_NC(err_guard, len = instance->types.len) {
+        for (Size i = len + 1; i < instance->types.len; i++) {
+            const TypeInfo &type = instance->types[i];
+            instance->types_map.Remove(type.name);
+        }
+
+        instance->types.RemoveFrom(len);
+    };
+
     TypeInfo *type = instance->types.AppendDefault();
-    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[named].As<Napi::Object>();
     Napi::Array keys = obj.GetPropertyNames();
 
-    type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+    if (named) {
+        type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
+
+        bool inserted;
+        instance->types_map.TrySet(type->name, type, &inserted);
+
+        if (!inserted) {
+            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+            return env.Null();
+        }
+    } else {
+        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+    }
 
     type->primitive = PrimitiveKind::Union;
     type->align = 1;
+    type->flags = (int)TypeFlag::IsIncomplete;
 
     HashSet<const char *> members;
     int32_t size = 0;
@@ -428,16 +459,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     }
     type->size = (int32_t)size;
 
-    // If the insert succeeds, we cannot fail anymore
-    if (named) {
-        bool inserted;
-        instance->types_map.TrySet(type->name, type, &inserted);
-
-        if (!inserted) {
-            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
-            return env.Null();
-        }
-    }
+    type->flags &= ~(int)TypeFlag::IsIncomplete;
     err_guard.Disable();
 
     // Union constructor

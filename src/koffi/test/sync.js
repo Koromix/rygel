@@ -792,5 +792,23 @@ async function test() {
     assert.equal(GetSymbolInt(), 12);
     assert.equal(GetSymbolStr(), 'I can encode!');
 
+    // Allow self-referencing structs and unions
+    assert.doesNotThrow(() => { koffi.struct('SelfRef1', { self: 'SelfRef1 *' }); });
+    assert.throws(
+        () => { koffi.struct('SelfRef2', { self: 'SelfRef2' }); },
+        {
+            name: 'TypeError',
+            message: 'Cannot directly use incomplete type'
+        }
+    );
+    assert.doesNotThrow(() => { koffi.union('SelfRef3', { self: 'SelfRef3 *' }); });
+    assert.throws(
+        () => { koffi.struct('SelfRef4', { self: 'SelfRef4' }); },
+        {
+            name: 'TypeError',
+            message: 'Cannot directly use incomplete type'
+        }
+    );
+
     lib.unload();
 }

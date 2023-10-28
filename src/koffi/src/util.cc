@@ -301,6 +301,11 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
         RG_ASSERT(type);
     }
 
+    if (type->flags & (int)TypeFlag::IsIncomplete) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Cannot directly use incomplete type");
+        return nullptr;
+    }
+
     return type;
 }
 
