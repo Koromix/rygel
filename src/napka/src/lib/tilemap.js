@@ -90,6 +90,63 @@ function TileMap(runner) {
         runner.busy();
     };
 
+    this.reveal = function(markers, minimize = false) {
+        let prev_zoom = state.zoom;
+
+        let zoom = tiles.max_zoom + 1;
+        let pos1 = null;
+        let pos2 = null;
+
+        let items0 = markers.map(marker => markerToItem(marker, state.zoom));
+        let cluster0 = clusterize(items0);
+
+        // Looping is a bit dumb but it's easy and it works
+        while (zoom > tiles.min_zoom) {
+            let items = markers.map(marker => markerToItem(marker, zoom - 1));
+            let cluster = clusterize(items);
+
+            let min = {
+                x: Math.min(...items.map(item => item.x)),
+                y: Math.min(...items.map(item => item.y))
+            };
+            let max = {
+                x: Math.max(...items.map(item => item.x)),
+                y: Math.max(...items.map(item => item.y))
+            };
+
+            let valid = Math.abs(max.x - min.x) <= canvas.width &&
+                        Math.abs(max.y - min.y) <= canvas.height;
+
+            zoom--;
+            pos1 = min;
+            pos2 = max;
+
+            if (valid && minimize && (zoom <= state.zoom || cluster.length > cluster0.length))
+                break;
+            if (valid && !minimize)
+                break;
+        }
+
+        let zoomed = (zoom != prev_zoom);
+
+        if (minimize && !zoomed)
+            return false;
+
+        state.pos = {
+            x: (pos1.x + pos2.x) / 2,
+            y: (pos1.y + pos2.y) / 2
+        };
+        state.zoom = zoom;
+
+        zoom_animation = null;
+
+        self.refresh();
+
+        runner.busy();
+
+        return zoomed;
+    };
+
     this.setMarkers = function(key, markers) {
         if (!Array.isArray(markers))
             throw new Error('Not an array of markers');
@@ -107,23 +164,10 @@ function TileMap(runner) {
     this.refresh = function() {
         render_elements.length = 0;
 
-        let groups = Object.values(marker_groups);
-        let markers = [];
-
-        for (let group of groups)
-            markers.push(...group);
-
-        let clusters = clusterize(markers.map(marker => {
-            let pos = latLongToXY(marker.latitude, marker.longitude, state.zoom);
-
-            return {
-                x: pos.x,
-                y: pos.y,
-                size: marker.size,
-                cluster: marker.cluster,
-                marker: marker
-            };
-        }));
+        let items = [];
+        for (let group of Object.values(marker_groups))
+            items.push(...group.map(marker => markerToItem(marker, state.zoom)));
+        let clusters = clusterize(items);
 
         let viewport = getViewport();
 
@@ -725,6 +769,20 @@ function TileMap(runner) {
 
     function mapSize(zoom) {
         return tiles.tilesize * Math.pow(2, zoom);
+    }
+
+    function markerToItem(marker, zoom) {
+        let pos = latLongToXY(marker.latitude, marker.longitude, zoom);
+
+        let item = {
+            x: pos.x,
+            y: pos.y,
+            size: marker.size,
+            cluster: marker.cluster,
+            marker: marker
+        };
+
+        return item;
     }
 }
 

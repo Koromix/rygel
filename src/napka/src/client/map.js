@@ -331,21 +331,25 @@ export function refreshMap() {
 
 async function handleClick(markers) {
     if (markers.length > 1) {
-        await UI.dialog({
-            run: (render, close) => html`
-                <div class="title">
-                    Plusieurs entrées disponibles
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-                </div>
+        let zoomed = map.reveal(markers, true);
 
-                <div @click=${handlePopupClick}>
-                    ${markers.map(marker => html`
-                        <a @click=${UI.wrap(e => { handleClick([marker]); close(); })}>${marker.etab.name}</a><br>
-                    `)}
-                </div>
-            `
-        });
+        if (!zoomed) {
+            await UI.dialog({
+                run: (render, close) => html`
+                    <div class="title">
+                        Plusieurs entrées disponibles
+                        <div style="flex: 1;"></div>
+                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    </div>
+
+                    <div @click=${handlePopupClick}>
+                        ${markers.map(marker => html`
+                            <a @click=${UI.wrap(e => { handleClick([marker]); close(); })}>${marker.etab.name}</a><br>
+                        `)}
+                    </div>
+                `
+            });
+        }
     } else {
         let marker = markers[0];
         let etab = isConnected() ? Object.assign({}, marker.etab) : marker.etab;
