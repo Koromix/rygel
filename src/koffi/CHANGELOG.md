@@ -4,6 +4,10 @@
 
 ### Koffi 2.6
 
+#### Koffi 2.6.6 (2023-10-28)
+
+- Better handle errors while making struct or union types
+
 #### Koffi 2.6.5 (2023-10-28)
 
 - Allow self-referential structs and unions
