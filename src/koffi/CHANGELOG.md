@@ -7,7 +7,7 @@
 #### Koffi 2.6.5 (2023-10-28)
 
 - Allow self-referential structs and unions
-- Fix rare Node.js "FATAL ERROR" with some invalid types specifiers
+- Fix rare Node.js "FATAL ERROR" with some invalid type specifiers
 
 #### Koffi 2.6.4 (2023-10-26)
 
