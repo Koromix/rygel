@@ -106,16 +106,16 @@ function TileMap(runner) {
             let cluster = clusterize(items);
 
             let min = {
-                x: Math.min(...items.map(item => item.x)),
-                y: Math.min(...items.map(item => item.y))
+                x: Math.min(...items.map(item => item.x - item.size)),
+                y: Math.min(...items.map(item => item.y - item.size))
             };
             let max = {
-                x: Math.max(...items.map(item => item.x)),
-                y: Math.max(...items.map(item => item.y))
+                x: Math.max(...items.map(item => item.x + item.size)),
+                y: Math.max(...items.map(item => item.y + item.size))
             };
 
-            let valid = Math.abs(max.x - min.x) <= canvas.width &&
-                        Math.abs(max.y - min.y) <= canvas.height;
+            let valid = Math.abs(max.x - min.x) <= canvas.width * 0.9 &&
+                        Math.abs(max.y - min.y) <= canvas.height * 0.9;
 
             zoom--;
             pos1 = min;
