@@ -230,7 +230,7 @@ function buildFiles(map) {
     let js = esbuild.buildSync({
         entryPoints: [prefix + `/${map.name}.js`],
         bundle: true,
-        minify: false,
+        minify: true,
         write: false,
         format: 'iife',
         globalName: 'napka',
