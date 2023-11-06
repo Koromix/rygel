@@ -811,7 +811,7 @@ function addAutomaticActions(builder, model) {
         });
 
         if (can_lock) {
-            let label = !form_thread.locked ? 'Verrouiller' : 'Déverrouiller';
+            let label = !form_thread.locked ? '+Verrouiller' : 'Déverrouiller';
             let color = !form_thread.locked ? null : '#ff6600';
 
             builder.action(label, { color: color }, async e => {
