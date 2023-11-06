@@ -19,6 +19,7 @@ import { profile } from './goupile.js';
 import * as UI from './ui.js';
 import { exportRecords } from './data_export.js';
 import { ApplicationInfo, ApplicationBuilder } from './instance_app.js';
+import { InstancePublisher } from './instance_publish.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
 import { MagicData } from './form_data.js';
 import { MetaModel, MetaInterface } from './form_meta.js';
