@@ -29,6 +29,7 @@ function ApplicationInfo(profile) {
         { key: 'control', label: 'Contrôles', color: '#d9ab46' },
         { key: 'wait', label: 'En attente', color: '#3b96c8' },
         { key: 'check', label: 'À vérifier', color: '#44997c' },
+        { key: 'error', label: 'Erreur', color: '#db0a0a' },
         { key: 'locked', label: 'Terminé', color: '#d921e8' }
     ];
 }
