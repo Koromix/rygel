@@ -265,7 +265,10 @@ function renderMenu() {
                     return renderDropItem(item);
                 }
             }) : ''}
-            ${show_title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
+            ${show_title ? html`<button title=${route.page.title} class="active">
+                ${form_thread.locked ? '🔒' : ''}
+                ${route.page.title}
+            </button>` : ''}
             ${app.panels.data && (!UI.isPanelActive('view') || form_thread.saved) ? html`
                 <div style="width: 15px;"></div>
                 <button class="icon" style="background-position-y: calc(-758px + 1.2em);"
