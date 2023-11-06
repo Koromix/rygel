@@ -47,7 +47,9 @@ function ApplicationBuilder(app) {
 
     Object.defineProperties(this, {
         head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
-        tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true }
+        tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
+
+        warnUnsaved: makeOptionProperty('warn_unsaved')
     });
 
     this.panel = function(panel, enable) {
@@ -194,6 +196,25 @@ function ApplicationBuilder(app) {
     function expandOptions(options) {
         options = Object.assign({}, options_stack[options_stack.length - 1], options);
         return options;
+    }
+
+    function makeOptionProperty(key) {
+        let prop = {
+            get: () => {
+                let options = options_stack[options_stack.length - 1];
+                return options[key];
+            },
+
+            set: value => {
+                let options = {};
+                options[key] = value;
+                self.pushOptions(options);
+            },
+
+            enumerable: true
+        };
+
+        return prop;
     }
 }
 
