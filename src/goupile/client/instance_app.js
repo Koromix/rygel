@@ -42,6 +42,7 @@ function ApplicationBuilder(app) {
     let options_stack = [
         {
             warn_unsaved: true,
+            has_lock: false,
 
             export_dialog: null,
             export_filter: null
@@ -53,6 +54,7 @@ function ApplicationBuilder(app) {
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
 
         warnUnsaved: makeOptionProperty('warn_unsaved'),
+        hasLock: makeOptionProperty('has_lock'),
 
         exportDialog: makeOptionProperty('export_dialog'),
         exportFilter: makeOptionProperty('export_filter')

@@ -297,17 +297,27 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         }
 
         bool success = instance->db->Transaction([&]() {
-            // Get existing entry and check for mismatch
+            // Get existing entry and check for lock or mismatch
             int64_t prev_anchor;
             {
                 sq_Statement stmt;
-                if (!instance->db->Prepare("SELECT tid, store, anchor FROM rec_entries WHERE eid = ?1",
+                if (!instance->db->Prepare(R"(SELECT t.locked, e.tid, e.store, e.anchor
+                                              FROM rec_entries e
+                                              INNER JOIN rec_threads t ON (t.tid = e.tid)
+                                              WHERE e.eid = ?1)",
                                            &stmt, fragment.eid))
                     return false;
 
                 if (stmt.Step()) {
-                    const char *prev_tid = (const char *)sqlite3_column_text(stmt, 0);
-                    const char *prev_store = (const char *)sqlite3_column_text(stmt, 1);
+                    bool locked = sqlite3_column_int(stmt, 0);
+                    const char *prev_tid = (const char *)sqlite3_column_text(stmt, 1);
+                    const char *prev_store = (const char *)sqlite3_column_text(stmt, 2);
+
+                    if (locked) {
+                        LogError("This record is locked");
+                        io->AttachError(403);
+                        return false;
+                    }
 
                     if (prev_tid && !TestStr(tid, prev_tid)) {
                         LogError("Record entry thread mismatch");
@@ -320,7 +330,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         return false;
                     }
 
-                    prev_anchor = sqlite3_column_int64(stmt, 2);
+                    prev_anchor = sqlite3_column_int64(stmt, 3);
                 } else if (stmt.IsValid()) {
                     prev_anchor = -1;
                 } else {
@@ -449,6 +459,124 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
         io->AttachText(200, "{}", "application/json");
     });
+}
+
+static void HandleLock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io, bool lock)
+{
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!stamp || !stamp->HasPermission(UserPermission::DataEdit)) {
+        LogError("User is not allowed to %1 records", lock ? "lock" : "unlock");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        char tid[27];
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(64), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "tid") {
+                    Span<const char> str = nullptr;
+
+                    if (parser.ParseString(&str)) {
+                        if (!CheckULID(str)) {
+                            io->AttachError(422);
+                            return;
+                        }
+
+                        CopyString(str, tid);
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Check missing or invalid values
+        {
+            bool valid = true;
+
+            if (!tid[0]) {
+                LogError("Missing or empty 'tid' value");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        bool success = instance->db->Transaction([&]() {
+            sq_Statement stmt;
+            if (!instance->db->Prepare("SELECT t.locked FROM rec_threads t WHERE tid = ?1",
+                                       &stmt, tid))
+                return false;
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("Thread '%1' does not exist", tid);
+                    io->AttachError(404);
+                }
+                return false;
+            }
+
+            bool locked = sqlite3_column_int(stmt, 0);
+
+            if (locked && !stamp->HasPermission(UserPermission::DataAudit)) {
+                LogError("User is not allowed to unlock records");
+                io->AttachError(403);
+                return false;
+            }
+
+            if (!instance->db->Run("UPDATE rec_threads SET locked = ?2 WHERE tid = ?1",
+                                   tid, lock))
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return;
+
+        io->AttachText(200, "{}", "application/json");
+    });
+}
+
+void HandleRecordLock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    HandleLock(instance, request, io, true);
+}
+
+void HandleRecordUnlock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    HandleLock(instance, request, io, false);
 }
 
 }

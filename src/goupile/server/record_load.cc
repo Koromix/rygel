@@ -38,6 +38,7 @@ struct RecordFilter {
 struct RecordInfo {
     int64_t t = -1;
     const char *tid = nullptr;
+    bool locked = false;
 
     int64_t e = -1;
     const char *eid = nullptr;
@@ -82,7 +83,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
 
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(SELECT t.rowid AS t, t.tid,
+                       R"(SELECT t.rowid AS t, t.tid, t.locked,
                                  e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence, e.tags AS tags,
                                  IIF(?6 = 1, e.data, NULL) AS data,
                                  IIF(?7 = 1, e.meta, NULL) AS meta
@@ -198,7 +199,7 @@ again:
         return false;
 
     int64_t t = sqlite3_column_int64(stmt, 0);
-    int64_t e = sqlite3_column_int64(stmt, 2);
+    int64_t e = sqlite3_column_int64(stmt, 3);
 
     // This can happen with the recursive CTE is used for historical data
     if (e == cursor.e)
@@ -206,20 +207,21 @@ again:
 
     cursor.t = t;
     cursor.tid = (const char *)sqlite3_column_text(stmt, 1);
+    cursor.locked = sqlite3_column_int(stmt, 2);
 
     cursor.e = e;
-    cursor.eid = (const char *)sqlite3_column_text(stmt, 3);
-    cursor.deleted = !!sqlite3_column_int(stmt, 4);
-    cursor.anchor = sqlite3_column_int64(stmt, 5);
-    cursor.ctime = sqlite3_column_int64(stmt, 6);
-    cursor.mtime = sqlite3_column_int64(stmt, 7);
-    cursor.store = (const char *)sqlite3_column_text(stmt, 8);
-    cursor.sequence = sqlite3_column_int64(stmt, 9);
-    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 10), sqlite3_column_bytes(stmt, 10));
+    cursor.eid = (const char *)sqlite3_column_text(stmt, 4);
+    cursor.deleted = !!sqlite3_column_int(stmt, 5);
+    cursor.anchor = sqlite3_column_int64(stmt, 6);
+    cursor.ctime = sqlite3_column_int64(stmt, 7);
+    cursor.mtime = sqlite3_column_int64(stmt, 8);
+    cursor.store = (const char *)sqlite3_column_text(stmt, 9);
+    cursor.sequence = sqlite3_column_int64(stmt, 10);
+    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 11), sqlite3_column_bytes(stmt, 11));
 
-    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 11), sqlite3_column_bytes(stmt, 11))
+    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12))
                             : MakeSpan((const char *)nullptr, 0);
-    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12))
+    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13))
                             : MakeSpan((const char *)nullptr, 0);
 
     return true;
@@ -301,6 +303,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
 
         json.Key("tid"); json.String(cursor->tid);
         json.Key("saved"); json.Bool(true);
+        json.Key("locked"); json.Bool(cursor->locked);
 
         json.Key("entries"); json.StartObject();
         do {
@@ -418,6 +421,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
 
         json.Key("tid"); json.String(cursor->tid);
         json.Key("saved"); json.Bool(true);
+        json.Key("locked"); json.Bool(cursor->locked);
 
         json.Key("entries"); json.StartObject();
         do {

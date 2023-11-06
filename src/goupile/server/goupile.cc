@@ -692,6 +692,10 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleRecordAudit(instance, request, io);
     } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
         HandleRecordSave(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/lock") && request.method == http_RequestMethod::Post) {
+        HandleRecordLock(instance, request, io);
+    } else if (TestStr(instance_url, "/api/records/unlock") && request.method == http_RequestMethod::Post) {
+        HandleRecordUnlock(instance, request, io);
     } else if (TestStr(instance_url, "/api/export/data") && request.method == http_RequestMethod::Get) {
         HandleExportData(instance, request, io);
     } else if (TestStr(instance_url, "/api/export/meta") && request.method == http_RequestMethod::Get) {

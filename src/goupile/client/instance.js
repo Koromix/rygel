@@ -610,7 +610,8 @@ function renderData() {
                                                         title=${col.title}><a href=${url}>Afficher</a></td>`;
                                     }
                                 })}
-                                ${goupile.hasPermission('data_delete') ?
+                                ${row.locked ? html`<th>🔒</th>` : ''}
+                                ${goupile.hasPermission('data_delete') && !row.locked ?
                                     html`<th><a @click=${UI.wrap(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
                             </tr>
                         `;
@@ -786,7 +787,11 @@ function addAutomaticActions(builder, model) {
         let label = force ? '+Forcer l\'enregistrement' : '+Enregistrer';
         let color = force ? null : '#2d8261';
 
-        builder.action(label, { disabled: !form_state.hasChanged(), color: color }, async () => {
+        let can_save = form_thread.locked || !form_state.hasChanged();
+        let can_lock = form_thread.saved && route.page.options.has_lock &&
+                       (!form_thread.locked || goupile.hasPermission('data_audit'));
+
+        builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: color }, async () => {
             if (!force)
                 form_builder.triggerErrors();
             await saveRecord();
@@ -801,6 +806,28 @@ function addAutomaticActions(builder, model) {
 
             go();
         });
+
+        if (can_lock) {
+            let label = !form_thread.locked ? 'Verrouiller' : 'Déverrouiller';
+            let color = !form_thread.locked ? null : '#ff6600';
+
+            builder.action(label, { color: color }, async e => {
+                if (form_state.hasChanged())
+                    await UI.confirm(e, html`Cette action <b>annulera les modifications en cours</b>, souhaitez-vous continuer ?`, label, () => {});
+
+                await changeLock(form_thread.tid, !form_thread.locked);
+
+                // Reload list
+                data_threads = null;
+
+                // Reload thread
+                await loadRecord(form_thread.tid, null, route.page);
+                route.tid = form_thread.tid;
+                route.anchor = null;
+
+                go();
+            });
+        }
 
         if (form_state.hasChanged()) {
             builder.action('-');
@@ -823,6 +850,9 @@ function addAutomaticTags(variables) {
 
         let note = form_data.getNote(intf.key.root, 'status', {});
         let status = note[intf.key.name] ?? {};
+
+        if (form_thread.locked)
+            intf.options.readonly = true;
 
         if (status.locked) {
             tags.push('locked');
@@ -1402,6 +1432,7 @@ async function run(push_history = true) {
 
                     return {
                         tid: thread.tid,
+                        locked: thread.locked,
                         sequence: sequence,
                         ctime: new Date(min_ctime),
                         mtime: new Date(max_mtime),
@@ -1610,6 +1641,7 @@ async function loadRecord(tid, anchor, page) {
         new_thread = {
             tid: Util.makeULID(),
             saved: false,
+            locked: false,
             entries: {}
         };
     }
@@ -1732,6 +1764,11 @@ async function saveRecord() {
             }
         });
     });
+}
+
+async function changeLock(tid, lock) {
+    let url = ENV.urls.instance + `api/records/${lock ? 'lock' : 'unlock'}`;
+    await Net.post(url, { tid: tid });
 }
 
 export {
