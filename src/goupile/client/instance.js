@@ -695,7 +695,7 @@ async function renderPage() {
             app: app,
             form: builder,
             meta: new MetaInterface(form_data, meta),
-            values: form_state.data
+            values: form_state.values
         });
 
         addAutomaticActions(builder, model);
