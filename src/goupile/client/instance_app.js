@@ -41,7 +41,10 @@ function ApplicationBuilder(app) {
 
     let options_stack = [
         {
-            warn_unsaved: true
+            warn_unsaved: true,
+
+            export_dialog: null,
+            export_filter: null
         }
     ];
 
@@ -49,7 +52,10 @@ function ApplicationBuilder(app) {
         head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
 
-        warnUnsaved: makeOptionProperty('warn_unsaved')
+        warnUnsaved: makeOptionProperty('warn_unsaved'),
+
+        exportDialog: makeOptionProperty('export_dialog'),
+        exportFilter: makeOptionProperty('export_filter')
     });
 
     this.panel = function(panel, enable) {
@@ -59,6 +65,7 @@ function ApplicationBuilder(app) {
         app.panels[panel] = enable;
     };
 
+    // Keep public for backward compatibility
     this.pushOptions = function(options = {}) {
         options = expandOptions(options);
         options_stack.push(options);

@@ -628,11 +628,38 @@ function renderData() {
 
             ${goupile.hasPermission('data_export') ? html`
                 <div class="ui_actions">
-                    <button @click=${UI.wrap(e => exportRecords(app.stores.slice(1).map(store => store.key)))}>Exporter les données</button>
+                    <button @click=${UI.wrap(runExportDialog)}>Exporter les données</button>
                 </div>
             ` : ''}
         </div>
     `;
+}
+
+async function runExportDialog(e) {
+    // XXX: Restrict to current thread
+    let stores = app.stores.slice(1).map(store => store.key);
+
+    let dialog = route.page.options.export_dialog;
+    let filter = route.page.options.export_filter;
+
+    if (filter == null)
+        filter = () => true;
+
+    if (dialog != null) {
+        await UI.dialog(e, 'Export', {}, (d, resolve, reject) => {
+            dialog(d);
+
+            d.action('Exporter', { disabled: !d.isValid() }, async () => {
+                // Get proper object, with stringified dates
+                let json = JSON.parse(JSON.stringify(d.values));
+
+                await exportRecords(stores, values => filter(values, json));
+                resolve();
+            });
+        });
+    } else {
+        await exportRecords(stores, values => filter(values, {}));
+    }
 }
 
 function toggleTagFilter(tag) {

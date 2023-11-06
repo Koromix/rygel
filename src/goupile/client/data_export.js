@@ -17,7 +17,10 @@ import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 
-async function exportRecords(stores) {
+async function exportRecords(stores, filter = null) {
+    if (filter == null)
+        filter = () => true;
+
     if (typeof XSLX === 'undefined')
         await Net.loadScript(`${ENV.urls.static}sheetjs/xlsx.mini.min.js`);
 
@@ -65,6 +68,8 @@ async function exportRecords(stores) {
             let entry = thread.entries[store];
 
             if (table == null || entry == null)
+                continue;
+            if (!filter(entry.data))
                 continue;
 
             let row = [
