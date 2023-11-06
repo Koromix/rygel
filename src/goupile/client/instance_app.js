@@ -30,7 +30,7 @@ function ApplicationInfo(profile) {
         { key: 'wait', label: 'En attente', color: '#3b96c8' },
         { key: 'check', label: 'À vérifier', color: '#44997c' },
         { key: 'error', label: 'Erreur', color: '#db0a0a' },
-        { key: 'locked', label: 'Terminé', color: '#d921e8' }
+        { key: 'draft', label: 'Brouillon', color: '#d921e8' }
     ];
 }
 
