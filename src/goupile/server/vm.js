@@ -75,3 +75,5 @@ function VmApi(native, main) {
         throw new Error(msg);
     }
 }
+
+export { VmApi }

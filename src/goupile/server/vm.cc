@@ -169,14 +169,17 @@ int RunVM(Span<const char *> arguments)
     RG_DEFER { mz_zip_reader_end(&fs_zip); };
 
     // Get packed server script
-    Span<const char> vm_js;
+    HeapArray<char> vm_js;
     {
         const AssetInfo *asset = FindPackedAsset("src/goupile/server/vm.js");
-
         RG_ASSERT(asset);
-        RG_ASSERT(asset->compression_type == CompressionType::None);
 
-        vm_js = asset->data.As<const char>();
+        StreamReader reader(asset->data, "<asset>", asset->compression_type);
+        StreamWriter writer(&vm_js, "<memory>");
+
+        if (!SpliceStream(&reader, -1, &writer))
+            return false;
+        RG_ASSERT(writer.Close());
     }
 
     // Prepare VM for JS execution
@@ -223,10 +226,11 @@ int RunVM(Span<const char *> arguments)
     JSObjectRef api;
     {
         JSObjectRef global = JSContextGetGlobalObject(ctx);
-        JSValueRef construct = JSObjectGetProperty(ctx, global, js_AutoString("VmApi"), nullptr);
+        JSValueRef app = JSObjectGetProperty(ctx, global, js_AutoString("app"), nullptr);
+        JSValueRef construct = JSValueIsObject(ctx, app) ? JSObjectGetProperty(ctx, (JSObjectRef)app, js_AutoString("VmApi"), nullptr) : JSValueMakeUndefined(ctx);
 
-        RG_ASSERT(construct);
-        RG_ASSERT(JSValueIsObject(ctx, construct) && JSObjectIsFunction(ctx, (JSObjectRef)construct));
+        RG_ASSERT(JSValueIsObject(ctx, construct));
+        RG_ASSERT(JSObjectIsFunction(ctx, (JSObjectRef)construct));
 
         JSValueRef args[] = {
             native,
