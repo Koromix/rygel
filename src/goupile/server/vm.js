@@ -13,13 +13,13 @@
 
 import { ApplicationInfo, ApplicationBuilder } from '../client/instance_app.js';
 
-function VmApi(native, main) {
+function VmApi(native) {
     let self = this;
 
-    // Build main script
-    main = buildScript(main, ['app', 'profile']);
-
     this.buildApp = async function(profile) {
+        let script = native.getFile('main.js');
+        let main = buildScript(script, ['app', 'profile']);
+
         let app = new ApplicationInfo(profile);
         let builder = new ApplicationBuilder(app);
 

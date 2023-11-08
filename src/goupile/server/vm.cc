@@ -207,21 +207,6 @@ int RunVM(Span<const char *> arguments)
         native = (JSValueRef)obj;
     }
 
-    // Find main script
-    js_AutoString main;
-    {
-        Span<const uint8_t> code = {};
-
-        if (!LoadViewFile("main.js", Mebibytes(2), &code))
-            return 1;
-        if (!code.ptr) {
-            LogError("Missing 'main.js' file");
-            return 1;
-        }
-
-        main.Reset(code.As<const char>());
-    }
-
     // Create API instance
     JSObjectRef api;
     {
@@ -233,8 +218,7 @@ int RunVM(Span<const char *> arguments)
         RG_ASSERT(JSObjectIsFunction(ctx, (JSObjectRef)construct));
 
         JSValueRef args[] = {
-            native,
-            JSValueMakeString(ctx, main)
+            native
         };
 
         JSValueRef ex = nullptr;
@@ -288,7 +272,7 @@ int RunVM(Span<const char *> arguments)
         }
     }
 
-    // Execute main script
+    // Build app from main script
     JSValueRef app;
     {
         JSValueRef args[] = {
