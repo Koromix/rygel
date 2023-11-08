@@ -4595,6 +4595,10 @@ public:
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
         : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
+    StreamWriter(HeapArray<char> *mem, const char *filename = nullptr,
+                 CompressionType compression_type = CompressionType::None,
+                 CompressionSpeed compression_speed = CompressionSpeed::Default)
+        : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
     StreamWriter(FILE *fp, const char *filename,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
@@ -4612,6 +4616,10 @@ public:
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
+    bool Open(HeapArray<char> *mem, const char *filename = nullptr,
+              CompressionType compression_type = CompressionType::None,
+              CompressionSpeed compression_speed = CompressionSpeed::Default)
+        { return Open((HeapArray<uint8_t> *)mem, filename, compression_type, compression_speed); }
     bool Open(FILE *fp, const char *filename,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
