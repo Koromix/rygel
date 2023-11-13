@@ -141,10 +141,19 @@
 
 namespace fast_float {
 
+#define FASTFLOAT_JSONFMT (1 << 5)
+#define FASTFLOAT_FORTRANFMT (1 << 6)
+
 enum chars_format {
   scientific = 1 << 0,
   fixed = 1 << 2,
   hex = 1 << 3,
+  no_infnan = 1 << 4,
+  // RFC 8259: https://datatracker.ietf.org/doc/html/rfc8259#section-6
+  json = FASTFLOAT_JSONFMT | fixed | scientific | no_infnan,
+  // Extension of RFC 8259 where, e.g., "inf" and "nan" are allowed.
+  json_or_infnan = FASTFLOAT_JSONFMT | fixed | scientific,
+  fortran = FASTFLOAT_FORTRANFMT | fixed | scientific,
   general = fixed | scientific
 };
 
@@ -346,18 +355,16 @@ struct value128 {
   constexpr value128() : low(0), high(0) {}
 };
 
-/* Helper C++11 constexpr generic implementation of leading_zeroes */
-fastfloat_really_inline constexpr
+/* Helper C++14 constexpr generic implementation of leading_zeroes */
+fastfloat_really_inline FASTFLOAT_CONSTEXPR14
 int leading_zeroes_generic(uint64_t input_num, int last_bit = 0) {
-  return (
-    ((input_num & uint64_t(0xffffffff00000000)) && (input_num >>= 32, last_bit |= 32)),
-    ((input_num & uint64_t(        0xffff0000)) && (input_num >>= 16, last_bit |= 16)),
-    ((input_num & uint64_t(            0xff00)) && (input_num >>=  8, last_bit |=  8)),
-    ((input_num & uint64_t(              0xf0)) && (input_num >>=  4, last_bit |=  4)),
-    ((input_num & uint64_t(               0xc)) && (input_num >>=  2, last_bit |=  2)),
-    ((input_num & uint64_t(               0x2)) && (input_num >>=  1, last_bit |=  1)),
-    63 - last_bit
-  );
+    if(input_num & uint64_t(0xffffffff00000000)) { input_num >>= 32; last_bit |= 32; }
+    if(input_num & uint64_t(        0xffff0000)) { input_num >>= 16; last_bit |= 16; }
+    if(input_num & uint64_t(            0xff00)) { input_num >>=  8; last_bit |=  8; }
+    if(input_num & uint64_t(              0xf0)) { input_num >>=  4; last_bit |=  4; }
+    if(input_num & uint64_t(               0xc)) { input_num >>=  2; last_bit |=  2; }
+    if(input_num & uint64_t(               0x2)) { input_num >>=  1; last_bit |=  1; }
+    return 63 - last_bit;
 }
 
 /* result might be undefined when input_num is zero */
@@ -953,9 +960,13 @@ FASTFLOAT_SIMD_RESTORE_WARNINGS
 
 #endif // FASTFLOAT_SSE2
 
-// dummy for compile
-//template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>())>
+// MSVC SFINAE is broken pre-VS2017
+#if defined(_MSC_VER) && _MSC_VER <= 1900
 template <typename UC>
+#else
+template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>())>
+#endif
+// dummy for compile
 uint64_t simd_read8_to_u64(UC const*) {
   return 0;
 }
@@ -1057,8 +1068,13 @@ FASTFLOAT_SIMD_RESTORE_WARNINGS
 
 #endif // FASTFLOAT_HAS_SIMD
 
-// dummy for compile
+// MSVC SFINAE is broken pre-VS2017
+#if defined(_MSC_VER) && _MSC_VER <= 1900
+template <typename UC>
+#else
 template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>())>
+#endif
+// dummy for compile
 bool simd_parse_if_eight_digits_unrolled(UC const*, uint64_t&) {
   return 0;
 }
@@ -1113,7 +1129,7 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
   answer.too_many_digits = false;
   answer.negative = (*p == UC('-'));
 #ifdef FASTFLOAT_ALLOWS_LEADING_PLUS // disabled by default
-  if ((*p == UC('-')) || (*p == UC('+'))) {
+  if ((*p == UC('-')) || (!(fmt & FASTFLOAT_JSONFMT) && *p == UC('+'))) {
 #else
   if (*p == UC('-')) { // C++17 20.19.3.(7.1) explicitly forbids '+' sign here
 #endif
@@ -1121,8 +1137,14 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
     if (p == pend) {
       return answer;
     }
-    if (!is_integer(*p) && (*p != decimal_point)) { // a sign must be followed by an integer or the dot
-      return answer;
+    if (fmt & FASTFLOAT_JSONFMT) {
+      if (!is_integer(*p)) { // a sign must be followed by an integer
+        return answer;
+      }    
+    } else {
+      if (!is_integer(*p) && (*p != decimal_point)) { // a sign must be followed by an integer or the dot
+        return answer;
+      }
     }
   }
   UC const * const start_digits = p;
@@ -1139,8 +1161,16 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
   UC const * const end_of_integer_part = p;
   int64_t digit_count = int64_t(end_of_integer_part - start_digits);
   answer.integer = span<const UC>(start_digits, size_t(digit_count));
+  if (fmt & FASTFLOAT_JSONFMT) {
+    // at least 1 digit in integer part, without leading zeros
+    if (digit_count == 0 || (start_digits[0] == UC('0') && digit_count > 1)) {
+      return answer;
+    }
+  }
+
   int64_t exponent = 0;
-  if ((p != pend) && (*p == decimal_point)) {
+  const bool has_decimal_point = (p != pend) && (*p == decimal_point);
+  if (has_decimal_point) {
     ++p;
     UC const * before = p;
     // can occur at most twice without overflowing, but let it occur more, since
@@ -1156,14 +1186,27 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
     answer.fraction = span<const UC>(before, size_t(p - before));
     digit_count -= exponent;
   }
-  // we must have encountered at least one integer!
-  if (digit_count == 0) {
+  if (fmt & FASTFLOAT_JSONFMT) {
+    // at least 1 digit in fractional part
+    if (has_decimal_point && exponent == 0) {
+      return answer;
+    }
+  } 
+  else if (digit_count == 0) { // we must have encountered at least one integer!
     return answer;
   }
   int64_t exp_number = 0;            // explicit exponential part
-  if ((fmt & chars_format::scientific) && (p != pend) && ((UC('e') == *p) || (UC('E') == *p))) {
+  if ( ((fmt & chars_format::scientific) &&
+        (p != pend) &&
+        ((UC('e') == *p) || (UC('E') == *p)))
+       ||
+       ((fmt & FASTFLOAT_FORTRANFMT) &&
+        (p != pend) &&
+        ((UC('+') == *p) || (UC('-') == *p) || (UC('d') == *p) || (UC('D') == *p)))) {
     UC const * location_of_e = p;
-    ++p;
+    if ((UC('e') == *p) || (UC('E') == *p) || (UC('d') == *p) || (UC('D') == *p)) {
+      ++p;
+    }
     bool neg_exp = false;
     if ((p != pend) && (UC('-') == *p)) {
       neg_exp = true;
@@ -3341,7 +3384,13 @@ from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
   }
   parsed_number_string_t<UC> pns = parse_number_string<UC>(first, last, options);
   if (!pns.valid) {
-    return detail::parse_infnan(first, last, value);
+    if (options.format & chars_format::no_infnan) {
+      answer.ec = std::errc::invalid_argument;
+      answer.ptr = first;
+      return answer;
+    } else {
+      return detail::parse_infnan(first, last, value);
+    }
   }
 
   answer.ec = std::errc(); // be optimistic
