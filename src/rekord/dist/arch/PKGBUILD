@@ -13,5 +13,5 @@ source=('rekord')
 sha256sums=('SKIP')
 
 package() {
-    install -D -m0755 meestic "${pkgdir}/usr/bin/meestic"
+    install -D -m0755 rekord "${pkgdir}/usr/bin/rekord"
 }
