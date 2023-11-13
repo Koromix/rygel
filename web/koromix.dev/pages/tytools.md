@@ -143,7 +143,7 @@ the _solution TyTools.sln_.
 
 To build 64-bit binaries, you should use _VS2015 x64 Native Tools Command Prompt_ instead.
 
-## Build on Mac OS X
+## Build on macOS
 
 Install Xcode, the developer command-line tools and [CMake](http://www.cmake.org/). The native
 Clang compiler can build TyTools.

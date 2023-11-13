@@ -4,7 +4,7 @@ libhs is a **C library to enumerate HID and serial devices** and interact with t
 
 - *single-file*: one header is all you need to make it work.
 - *public domain*: use it, hack it, do whatever you want.
-- *multiple platforms*: Windows (≥ XP), Mac OS X (≥ 10.9) and Linux.
+- *multiple platforms*: Windows (≥ XP), macOS (≥ 10.9) and Linux.
 - *multiple compilers*: MSV (≥ 2015), GCC and Clang.
 - *driverless*: uses native OS-provided interfaces and does not require custom drivers.
 
