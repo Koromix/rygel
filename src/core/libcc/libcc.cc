@@ -2067,11 +2067,17 @@ bool IsWin32Utf8()
 
 Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w)
 {
-    RG_ASSERT(out_str_w.len >= 2);
+    if (!out_str_w.len) {
+        LogError("Output buffer is too small");
+        return -1;
+    }
 
-    if (!str.len) [[unlikely]] {
+    if (!str.len) {
         out_str_w[0] = 0;
         return 0;
+    } else if (out_str_w.len == 1) {
+        LogError("Output buffer is too small");
+        return -1;
     }
 
     int len = MultiByteToWideChar(CP_UTF8, 0, str.ptr, (int)str.len, out_str_w.ptr, (int)out_str_w.len - 1);
@@ -2092,7 +2098,10 @@ Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w)
 
 Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
 {
-    RG_ASSERT(out_str.len >= 1);
+    if (!out_str.len) {
+        LogError("Output buffer is too small");
+        return -1;
+    }
 
     int len = WideCharToMultiByte(CP_UTF8, 0, str_w, -1, out_str.ptr, (int)out_str.len - 1, nullptr, nullptr);
     if (!len) {
