@@ -276,7 +276,7 @@ static void RedirectErrors() {
 
         // Append context
         if (ctx) {
-            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.Take(0, RG_LEN(buf_w.data) / 2));
+            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.TakeAvailable() - 2);
             if (len < 0)
                 return;
             wcscpy(buf_w.data + len, L": ");
