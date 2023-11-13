@@ -5218,7 +5218,7 @@ restart:
             int ret = syscall(SYS_getrandom, &buf, RG_SIZE(buf), 0);
             RG_CRITICAL(ret >= 0, "getentropy() failed: %1", strerror(errno));
 
-            if (ret < RG_SIZE(buf))
+            if (ret < RG_SIZE(buf)) [[unlikely]]
                 goto restart;
         }
 #else
