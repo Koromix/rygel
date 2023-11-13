@@ -56,7 +56,7 @@ static int RunTarget(const char *target_filename, Span<const char *const> argume
 
         cmd.Append(quote ? " \"" : " ");
         for (Size i = 0; arg[i]; i++) {
-            if (strchr("\"", arg[i])) {
+            if (arg[i] == '"') {
                 cmd.Append('\\');
             }
             cmd.Append(arg[i]);
