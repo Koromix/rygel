@@ -1231,10 +1231,10 @@ static bool ParsePriceTable(Span<const uint8_t> file_data, const mco_TableInfo &
                         LogError("Invalid GHS coefficient value %1", ghs_coefficient);
                         valid = false;
                     }
-                } else {
-                    LogError("Unknown attribute '%1'", prop.key);
-                    valid = false;
                 }
+
+                // Other attributes were used by earlier code to get information
+                // about the period, don't error out for unknown attributes!
             } else if (prop.section == "Supplements") {
                 do {
                     if (prop.key == "REA") {
