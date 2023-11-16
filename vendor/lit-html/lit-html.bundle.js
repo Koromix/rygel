@@ -76,13 +76,13 @@ var init_lit_html = __esm({
       }
       return [C(t4, l3 + (t4[s4] || "<?>") + (2 === i6 ? "</svg>" : "")), o5];
     };
-    V = class _V {
+    V = class {
       constructor({ strings: t4, _$litType$: s4 }, n5) {
         let r3;
         this.parts = [];
         let c4 = 0, a2 = 0;
         const u3 = t4.length - 1, d2 = this.parts, [f4, v2] = P(t4, s4);
-        if (this.el = _V.createElement(f4, n5), E.currentNode = this.el.content, 2 === s4) {
+        if (this.el = V.createElement(f4, n5), E.currentNode = this.el.content, 2 === s4) {
           const t5 = this.el.content.firstChild;
           t5.replaceWith(...t5.childNodes);
         }
@@ -149,7 +149,7 @@ var init_lit_html = __esm({
           void 0 !== s4 && (void 0 !== s4.strings ? (s4._$AI(t4, s4, i6), i6 += s4.strings.length - 2) : s4._$AI(t4[i6])), i6++;
       }
     };
-    M = class _M {
+    M = class {
       get _$AU() {
         return this._$AM?._$AU ?? this._$Cv;
       }
@@ -197,7 +197,7 @@ var init_lit_html = __esm({
         const i6 = this._$AH;
         let s4, e6 = 0;
         for (const h5 of t4)
-          e6 === i6.length ? i6.push(s4 = new _M(this.k(l()), this.k(l()), this, this.options)) : s4 = i6[e6], s4._$AI(h5), e6++;
+          e6 === i6.length ? i6.push(s4 = new M(this.k(l()), this.k(l()), this, this.options)) : s4 = i6[e6], s4._$AI(h5), e6++;
         e6 < i6.length && (this._$AR(s4 && s4._$AB.nextSibling, e6), i6.length = e6);
       }
       _$AR(t4 = this._$AA.nextSibling, i6) {
@@ -231,9 +231,9 @@ var init_lit_html = __esm({
           for (t4 = h5[0], n5 = 0; n5 < h5.length - 1; n5++)
             r3 = N(this, e7[s4 + n5], i6, n5), r3 === w && (r3 = this._$AH[n5]), o5 ||= !c(r3) || r3 !== this._$AH[n5], r3 === T ? t4 = T : t4 !== T && (t4 += (r3 ?? "") + h5[n5 + 1]), this._$AH[n5] = r3;
         }
-        o5 && !e6 && this.j(t4);
+        o5 && !e6 && this.O(t4);
       }
-      j(t4) {
+      O(t4) {
         t4 === T ? this.element.removeAttribute(this.name) : this.element.setAttribute(this.name, t4 ?? "");
       }
     };
@@ -241,7 +241,7 @@ var init_lit_html = __esm({
       constructor() {
         super(...arguments), this.type = 3;
       }
-      j(t4) {
+      O(t4) {
         this.element[this.name] = t4 === T ? void 0 : t4;
       }
     };
@@ -249,7 +249,7 @@ var init_lit_html = __esm({
       constructor() {
         super(...arguments), this.type = 4;
       }
-      j(t4) {
+      O(t4) {
         this.element.toggleAttribute(this.name, !!t4 && t4 !== T);
       }
     };
@@ -278,9 +278,9 @@ var init_lit_html = __esm({
         N(this, t4);
       }
     };
-    z = { S: e, A: h, P: o, C: 1, M: P, L: S, R: u, V: N, D: M, I: R, H, N: I, U: k, B: L };
+    z = { j: e, P: h, A: o, C: 1, M: P, L: S, R: u, V: N, D: M, I: R, H, N: I, U: k, B: L };
     Z = t.litHtmlPolyfillSupport;
-    Z?.(V, M), (t.litHtmlVersions ??= []).push("3.0.0");
+    Z?.(V, M), (t.litHtmlVersions ??= []).push("3.1.0");
     j = (t4, i6, s4) => {
       const e6 = s4?.renderBefore ?? i6;
       let h5 = e6._$litPart$;
