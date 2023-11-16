@@ -31,9 +31,9 @@ if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
     let required = get_napi_version(pkg.cnoke.napi, major);
 
     if (required != null) {
-        throw new Error(`Project ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${pkg.cnoke.napi})`);
+        throw new Error(`This engine is based on Node ${process.versions.node}, but ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${pkg.cnoke.napi})`);
     } else {
-        throw new Error(`Project ${pkg.name} does not support the Node ${major}.x branch (N-API < ${pkg.cnoke.napi})`);
+        throw new Error(`This engine is based on Node ${process.versions.node}, but ${pkg.name} does not support the Node ${major}.x branch (N-API < ${pkg.cnoke.napi})`);
     }
 }
 
