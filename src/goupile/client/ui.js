@@ -86,7 +86,7 @@ async function draw() {
         new_expanded = {};
 
         if (active_panels[0] == null && active_panels[1] == null) {
-            let panel = panels.values().next();
+            let panel = panels.values().next().value;
             active_panels[panel.position] = panel;
         }
 
