@@ -205,13 +205,7 @@ async function run() {
     // Update entries and fields
     db.transaction(() => {
         imp.updateEntries(db, '3114', 'commun', entries);
-
-        db.prepare(`UPDATE layers SET fields = ?
-                    FROM (SELECT id, name FROM maps) AS map
-                    WHERE layers.map_id = map.id AND
-                          map.name = ? AND layers.name = ?`).run('{}', '3114', 'commun');
     })();
-
     await imp.geomapMissing(db, '3114', MAPBOX_ACCESS_TOKEN);
 
     db.close();

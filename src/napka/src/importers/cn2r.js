@@ -129,7 +129,6 @@ async function run() {
     db.transaction(() => {
         imp.updateEntries(db, 'cn2r', 'etablissements', etablissements, { etab_personnel: 'individus' });
     })();
-
     await imp.geomapMissing(db, 'cn2r', MAPBOX_ACCESS_TOKEN);
 
     // Update missing statuses

@@ -139,7 +139,6 @@ async function run() {
         imp.updateEntries(db, 'demheter', 'centres', centres);
         imp.updateEntries(db, 'demheter', 'psychologues', psychologues);
     })();
-
     await imp.geomapMissing(db, 'demheter', MAPBOX_ACCESS_TOKEN);
 
     db.close();
