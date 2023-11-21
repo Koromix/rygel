@@ -178,15 +178,10 @@ function renderMenu() {
         <div style="flex: 1;"></div>
 
         ${provider.renderFilters()}
-
-        <div id="admin">
-            ${!isConnected() ? html`<button @click=${UI.wrap(login)}>Se connecter</button>` : ''}
-            ${isConnected() ? html`<button @click=${UI.insist(logout)}>Se déconnecter</button>` : ''}
-        </div>
     `, menu_el);
 }
 
-async function login() {
+export async function login() {
     await UI.dialog({
         submit_on_return: false,
 
@@ -219,7 +214,7 @@ async function login() {
     });
 }
 
-async function logout() {
+export async function logout() {
     profile = await Net.post('api/admin/logout') || {};
     renderMenu();
 }

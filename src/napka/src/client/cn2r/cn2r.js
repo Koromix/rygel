@@ -15,7 +15,8 @@ import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
 import { Util, Log, Net } from '../../../../web/libjs/common.js';
 import * as parse from '../../lib/parse.js';
-import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
+import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown,
+         login, logout, isConnected } from '../map.js';
 
 const ICONS = {
     crp: 'static/icons/crp.png',
@@ -101,6 +102,11 @@ function Cn2rProvider() {
                                       checked/>A domicile</label>
                     </div>
                 </fieldset>
+            </div>
+
+            <div id="admin">
+                ${!isConnected() ? html`<button @click=${UI.wrap(login)}>Se connecter</button>` : ''}
+                ${isConnected() ? html`<button @click=${UI.insist(logout)}>Se déconnecter</button>` : ''}
             </div>
         `;
     }
