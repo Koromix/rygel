@@ -267,8 +267,8 @@ console.log([
   !6 /* b */,
   typeof 6 /* b */
 ], [
-  3 /* a */ + 6 /* b */,
-  3 /* a */ - 6 /* b */,
+  9,
+  -3,
   3 /* a */ * 6 /* b */,
   3 /* a */ / 6 /* b */,
   3 /* a */ % 6 /* b */,
@@ -305,8 +305,8 @@ console.log([
   !6,
   typeof 6
 ], [
-  3 + 6,
-  3 - 6,
+  9,
+  -3,
   3 * 6,
   3 / 6,
   3 % 6,
@@ -439,6 +439,15 @@ var StaticAccessor = class {
 };
 
 ================================================================================
+TestDCEOfDestructuring
+---------- /out/entry.js ----------
+// entry.js
+var KEEP1 = x;
+var [KEEP2] = [x];
+var [KEEP3] = [...{}];
+var { KEEP4 } = {};
+
+================================================================================
 TestDCEOfExperimentalDecorators
 ---------- /out/keep-these.js ----------
 // decorator.ts
@@ -526,8 +535,7 @@ TestDCEOfIIFE
 keepThisButRemoveTheIIFE;
 
 ---------- /out/keep-these.js ----------
-undef = /* @__PURE__ */ (() => {
-})();
+undef = void 0;
 keepMe();
 ((x = keepMe()) => {
 })();
@@ -536,6 +544,22 @@ var someVar;
 })(someVar);
 (({ z }) => {
 })(someVar);
+var keepThis = stuff();
+keepThis();
+((_ = keepMe()) => {
+})();
+var isPure = /* @__PURE__ */ ((x, y) => 123)();
+use(isPure);
+var isNotPure = ((x = foo, y = bar) => 123)();
+use(isNotPure);
+(async () => ({ get then() {
+  notPure();
+} }))();
+(async function() {
+  return { get then() {
+    notPure();
+  } };
+})();
 
 ================================================================================
 TestDCEOfUsingDeclarations

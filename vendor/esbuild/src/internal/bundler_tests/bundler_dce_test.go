@@ -4302,6 +4302,8 @@ func TestDCEOfIIFE(t *testing.T) {
 				(() => { /* @__PURE__ */ removeMe() })();
 				var someVar;
 				(x => {})(someVar);
+				var removeThis = /* @__PURE__ */ (() => stuff())();
+				var removeThis2 = (() => 123)();
 			`,
 			"/keep-these.js": `
 				undef = (() => {})();
@@ -4310,6 +4312,15 @@ func TestDCEOfIIFE(t *testing.T) {
 				var someVar;
 				(([y]) => {})(someVar);
 				(({z}) => {})(someVar);
+				var keepThis = /* @__PURE__ */ (() => stuff())();
+				keepThis();
+				((_ = keepMe()) => {})();
+				var isPure = ((x, y) => 123)();
+				use(isPure);
+				var isNotPure = ((x = foo, y = bar) => 123)();
+				use(isNotPure);
+				(async () => ({ get then() { notPure() } }))();
+				(async function() { return { get then() { notPure() } }; })();
 			`,
 		},
 		entryPaths: []string{
@@ -4320,6 +4331,34 @@ func TestDCEOfIIFE(t *testing.T) {
 			AbsOutputDir: "/out",
 			MinifySyntax: true,
 			TreeShaking:  true,
+		},
+	})
+}
+
+func TestDCEOfDestructuring(t *testing.T) {
+	dce_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.js": `
+				// Identifier bindings
+				var remove1
+				var remove2 = null
+				var KEEP1 = x
+
+				// Array patterns
+				var [remove3] = []
+				var [remove4, ...remove5] = [...[1, 2], 3]
+				var [, , remove6] = [, , 3]
+				var [KEEP2] = [x]
+				var [KEEP3] = [...{}]
+
+				// Object patterns (not handled right now)
+				var { KEEP4 } = {}
+			`,
+		},
+		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
 		},
 	})
 }

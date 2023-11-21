@@ -3,12 +3,23 @@ package js_ast
 import (
 	"math"
 	"strconv"
+	"strings"
 
 	"github.com/evanw/esbuild/internal/ast"
 	"github.com/evanw/esbuild/internal/compat"
 	"github.com/evanw/esbuild/internal/helpers"
 	"github.com/evanw/esbuild/internal/logger"
 )
+
+type HelperContext struct {
+	isUnbound func(ast.Ref) bool
+}
+
+func MakeHelperContext(isUnbound func(ast.Ref) bool) HelperContext {
+	return HelperContext{
+		isUnbound: isUnbound,
+	}
+}
 
 // If this returns true, then calling this expression captures the target of
 // the property access as "this" when calling the function in the property.
@@ -79,7 +90,9 @@ func MaybeSimplifyNot(expr Expr) (Expr, bool) {
 		return Expr{Loc: expr.Loc, Data: &EBoolean{Value: e.Value == 0 || math.IsNaN(e.Value)}}, true
 
 	case *EBigInt:
-		return Expr{Loc: expr.Loc, Data: &EBoolean{Value: e.Value == "0"}}, true
+		if equal, ok := CheckEqualityBigInt(e.Value, "0"); ok {
+			return Expr{Loc: expr.Loc, Data: &EBoolean{Value: equal}}, true
+		}
 
 	case *EString:
 		return Expr{Loc: expr.Loc, Data: &EBoolean{Value: len(e.Value) == 0}}, true
@@ -507,7 +520,7 @@ func ConvertBindingToExpr(binding Binding, wrapIdentifier func(logger.Loc, ast.R
 //
 // This function intentionally avoids mutating the input AST so it can be
 // called after the AST has been frozen (i.e. after parsing ends).
-func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbound func(ast.Ref) bool) Expr {
+func (ctx HelperContext) SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature) Expr {
 	switch e := expr.Data.(type) {
 	case *EAnnotation:
 		if e.Flags.Has(CanBeRemovedIfUnusedFlag) {
@@ -515,7 +528,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 		}
 
 	case *EInlinedEnum:
-		return SimplifyUnusedExpr(e.Value, unsupportedFeatures, isUnbound)
+		return ctx.SimplifyUnusedExpr(e.Value, unsupportedFeatures)
 
 	case *ENull, *EUndefined, *EMissing, *EBoolean, *ENumber, *EBigInt,
 		*EString, *EThis, *ERegExp, *EFunction, *EArrow, *EImportMeta:
@@ -530,7 +543,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 		if e.MustKeepDueToWithStmt {
 			break
 		}
-		if e.CanBeRemovedIfUnused || !isUnbound(e.Ref) {
+		if e.CanBeRemovedIfUnused || !ctx.isUnbound(e.Ref) {
 			return Expr{}
 		}
 
@@ -547,7 +560,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 						comma = JoinWithComma(comma, Expr{Loc: templateLoc, Data: template})
 						template = nil
 					}
-					comma = JoinWithComma(comma, SimplifyUnusedExpr(part.Value, unsupportedFeatures, isUnbound))
+					comma = JoinWithComma(comma, ctx.SimplifyUnusedExpr(part.Value, unsupportedFeatures))
 					continue
 				}
 
@@ -573,7 +586,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 			if _, ok := spread.Data.(*ESpread); ok {
 				items := make([]Expr, 0, len(e.Items))
 				for _, item := range e.Items {
-					item = SimplifyUnusedExpr(item, unsupportedFeatures, isUnbound)
+					item = ctx.SimplifyUnusedExpr(item, unsupportedFeatures)
 					if item.Data != nil {
 						items = append(items, item)
 					}
@@ -590,7 +603,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 		// array items with side effects. Apply this simplification recursively.
 		var result Expr
 		for _, item := range e.Items {
-			result = JoinWithComma(result, SimplifyUnusedExpr(item, unsupportedFeatures, isUnbound))
+			result = JoinWithComma(result, ctx.SimplifyUnusedExpr(item, unsupportedFeatures))
 		}
 		return result
 
@@ -604,7 +617,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 				for _, property := range e.Properties {
 					// Spread properties must always be evaluated
 					if property.Kind != PropertySpread {
-						value := SimplifyUnusedExpr(property.ValueOrNil, unsupportedFeatures, isUnbound)
+						value := ctx.SimplifyUnusedExpr(property.ValueOrNil, unsupportedFeatures)
 						if value.Data != nil {
 							// Keep the value
 							property.ValueOrNil = value
@@ -638,17 +651,17 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 					Right: Expr{Loc: property.Key.Loc, Data: &EString{}},
 				}})
 			}
-			result = JoinWithComma(result, SimplifyUnusedExpr(property.ValueOrNil, unsupportedFeatures, isUnbound))
+			result = JoinWithComma(result, ctx.SimplifyUnusedExpr(property.ValueOrNil, unsupportedFeatures))
 		}
 		return result
 
 	case *EIf:
-		yes := SimplifyUnusedExpr(e.Yes, unsupportedFeatures, isUnbound)
-		no := SimplifyUnusedExpr(e.No, unsupportedFeatures, isUnbound)
+		yes := ctx.SimplifyUnusedExpr(e.Yes, unsupportedFeatures)
+		no := ctx.SimplifyUnusedExpr(e.No, unsupportedFeatures)
 
 		// "foo() ? 1 : 2" => "foo()"
 		if yes.Data == nil && no.Data == nil {
-			return SimplifyUnusedExpr(e.Test, unsupportedFeatures, isUnbound)
+			return ctx.SimplifyUnusedExpr(e.Test, unsupportedFeatures)
 		}
 
 		// "foo() ? 1 : bar()" => "foo() || bar()"
@@ -670,7 +683,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 		// These operators must not have any type conversions that can execute code
 		// such as "toString" or "valueOf". They must also never throw any exceptions.
 		case UnOpVoid, UnOpNot:
-			return SimplifyUnusedExpr(e.Value, unsupportedFeatures, isUnbound)
+			return ctx.SimplifyUnusedExpr(e.Value, unsupportedFeatures)
 
 		case UnOpTypeof:
 			if _, ok := e.Value.Data.(*EIdentifier); ok && e.WasOriginallyTypeofIdentifier {
@@ -679,7 +692,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 				// "typeof x" is special-cased in the standard to never throw.
 				return Expr{}
 			}
-			return SimplifyUnusedExpr(e.Value, unsupportedFeatures, isUnbound)
+			return ctx.SimplifyUnusedExpr(e.Value, unsupportedFeatures)
 		}
 
 	case *EBinary:
@@ -690,7 +703,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 		// These operators must not have any type conversions that can execute code
 		// such as "toString" or "valueOf". They must also never throw any exceptions.
 		case BinOpStrictEq, BinOpStrictNe, BinOpComma:
-			return JoinWithComma(SimplifyUnusedExpr(left, unsupportedFeatures, isUnbound), SimplifyUnusedExpr(right, unsupportedFeatures, isUnbound))
+			return JoinWithComma(ctx.SimplifyUnusedExpr(left, unsupportedFeatures), ctx.SimplifyUnusedExpr(right, unsupportedFeatures))
 
 		// We can simplify "==" and "!=" even though they can call "toString" and/or
 		// "valueOf" if we can statically determine that the types of both sides are
@@ -698,7 +711,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 		// "toString" and/or "valueOf" to be called.
 		case BinOpLooseEq, BinOpLooseNe:
 			if MergedKnownPrimitiveTypes(left, right) != PrimitiveUnknown {
-				return JoinWithComma(SimplifyUnusedExpr(left, unsupportedFeatures, isUnbound), SimplifyUnusedExpr(right, unsupportedFeatures, isUnbound))
+				return JoinWithComma(ctx.SimplifyUnusedExpr(left, unsupportedFeatures), ctx.SimplifyUnusedExpr(right, unsupportedFeatures))
 			}
 
 		case BinOpLogicalAnd, BinOpLogicalOr, BinOpNullishCoalescing:
@@ -706,15 +719,15 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 			// we know the left operand will only be used for its boolean value and
 			// can be simplified under that assumption
 			if e.Op != BinOpNullishCoalescing {
-				left = SimplifyBooleanExpr(left)
+				left = ctx.SimplifyBooleanExpr(left)
 			}
 
 			// Preserve short-circuit behavior: the left expression is only unused if
 			// the right expression can be completely removed. Otherwise, the left
 			// expression is important for the branch.
-			right = SimplifyUnusedExpr(right, unsupportedFeatures, isUnbound)
+			right = ctx.SimplifyUnusedExpr(right, unsupportedFeatures)
 			if right.Data == nil {
-				return SimplifyUnusedExpr(left, unsupportedFeatures, isUnbound)
+				return ctx.SimplifyUnusedExpr(left, unsupportedFeatures)
 			}
 
 			// Try to take advantage of the optional chain operator to shorten code
@@ -778,7 +791,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 				if _, ok := arg.Data.(*ESpread); ok {
 					arg.Data = &EArray{Items: []Expr{arg}, IsSingleLine: true}
 				}
-				result = JoinWithComma(result, SimplifyUnusedExpr(arg, unsupportedFeatures, isUnbound))
+				result = JoinWithComma(result, ctx.SimplifyUnusedExpr(arg, unsupportedFeatures))
 			}
 			return result
 		}
@@ -839,7 +852,7 @@ func SimplifyUnusedExpr(expr Expr, unsupportedFeatures compat.JSFeature, isUnbou
 				if _, ok := arg.Data.(*ESpread); ok {
 					arg.Data = &EArray{Items: []Expr{arg}, IsSingleLine: true}
 				}
-				result = JoinWithComma(result, SimplifyUnusedExpr(arg, unsupportedFeatures, isUnbound))
+				result = JoinWithComma(result, ctx.SimplifyUnusedExpr(arg, unsupportedFeatures))
 			}
 			return result
 		}
@@ -938,8 +951,20 @@ func ToNumberWithoutSideEffects(data E) (float64, bool) {
 	case *ENull:
 		return 0, true
 
-	case *EUndefined:
+	case *EUndefined, *ERegExp:
 		return math.NaN(), true
+
+	case *EArray:
+		if len(e.Items) == 0 {
+			// "+[]" => "0"
+			return 0, true
+		}
+
+	case *EObject:
+		if len(e.Properties) == 0 {
+			// "+{}" => "NaN"
+			return math.NaN(), true
+		}
 
 	case *EBoolean:
 		if e.Value {
@@ -950,9 +975,65 @@ func ToNumberWithoutSideEffects(data E) (float64, bool) {
 
 	case *ENumber:
 		return e.Value, true
+
+	case *EString:
+		// "+''" => "0"
+		if len(e.Value) == 0 {
+			return 0, true
+		}
+
+		// "+'1'" => "1"
+		if num, ok := StringToEquivalentNumberValue(e.Value); ok {
+			return num, true
+		}
 	}
 
 	return 0, false
+}
+
+func ToStringWithoutSideEffects(data E) (string, bool) {
+	switch e := data.(type) {
+	case *ENull:
+		return "null", true
+
+	case *EUndefined:
+		return "undefined", true
+
+	case *EBoolean:
+		if e.Value {
+			return "true", true
+		} else {
+			return "false", true
+		}
+
+	case *EBigInt:
+		// Only do this if there is no radix
+		if len(e.Value) < 2 || e.Value[0] != '0' {
+			return e.Value, true
+		}
+
+	case *ENumber:
+		if str, ok := TryToStringOnNumberSafely(e.Value, 10); ok {
+			return str, true
+		}
+
+	case *ERegExp:
+		return e.Value, true
+
+	case *EDot:
+		// This is dumb but some JavaScript obfuscators use this to generate string literals
+		if e.Name == "constructor" {
+			switch e.Target.Data.(type) {
+			case *EString:
+				return "function String() { [native code] }", true
+
+			case *ERegExp:
+				return "function RegExp() { [native code] }", true
+			}
+		}
+	}
+
+	return "", false
 }
 
 func extractNumericValue(data E) (float64, bool) {
@@ -1001,6 +1082,32 @@ func ShouldFoldBinaryArithmeticWhenMinifying(binary *EBinary) bool {
 		BinOpBitwiseOr,
 		BinOpBitwiseXor:
 		return true
+
+	case BinOpAdd:
+		// Addition of small-ish integers can definitely be folded without issues
+		// "1 + 2" => "3"
+		if left, right, ok := extractNumericValues(binary.Left, binary.Right); ok &&
+			left == math.Trunc(left) && math.Abs(left) <= 0xFFFF_FFFF &&
+			right == math.Trunc(right) && math.Abs(right) <= 0xFFFF_FFFF {
+			return true
+		}
+
+	case BinOpSub:
+		// Subtraction of small-ish integers can definitely be folded without issues
+		// "3 - 1" => "2"
+		if left, right, ok := extractNumericValues(binary.Left, binary.Right); ok &&
+			left == math.Trunc(left) && math.Abs(left) <= 0xFFFF_FFFF &&
+			right == math.Trunc(right) && math.Abs(right) <= 0xFFFF_FFFF {
+			return true
+		}
+
+	case BinOpDiv:
+		// "0/0" => "NaN"
+		// "1/0" => "Infinity"
+		// "1/-0" => "-Infinity"
+		if _, right, ok := extractNumericValues(binary.Left, binary.Right); ok && right == 0 {
+			return true
+		}
 
 	case BinOpShl:
 		// "1 << 3" => "8"
@@ -1130,6 +1237,22 @@ func IsBinaryNullAndUndefined(left Expr, right Expr, op OpCode) (Expr, Expr, boo
 	return Expr{}, Expr{}, false
 }
 
+func CheckEqualityBigInt(a string, b string) (equal bool, ok bool) {
+	// Equal literals are always equal
+	if a == b {
+		return true, true
+	}
+
+	// Unequal literals are unequal if neither has a radix. Leading zeros are
+	// disallowed in bigint literals without a radix, so in this case we know
+	// each value is in canonical form.
+	if (len(a) < 2 || a[0] != '0') && (len(b) < 2 || b[0] != '0') {
+		return false, true
+	}
+
+	return false, false
+}
+
 type EqualityKind uint8
 
 const (
@@ -1244,7 +1367,7 @@ func CheckEqualityIfNoSideEffects(left E, right E, kind EqualityKind) (equal boo
 		case *EBigInt:
 			// "0n === 0n" is true
 			// "0n === 1n" is false
-			return l.Value == r.Value, true
+			return CheckEqualityBigInt(l.Value, r.Value)
 
 		case *ENull, *EUndefined:
 			// "(not null or undefined) == undefined" is false
@@ -1389,9 +1512,9 @@ func joinStrings(a []uint16, b []uint16) []uint16 {
 // correctness bugs by accidentally stringifying a number differently than how
 // a real JavaScript VM would do it. So we are conservative and we only do this
 // when we know it'll be the same result.
-func tryToStringOnNumberSafely(n float64) (string, bool) {
+func TryToStringOnNumberSafely(n float64, radix int) (string, bool) {
 	if i := int32(n); float64(i) == n {
-		return strconv.Itoa(int(i)), true
+		return strconv.FormatInt(int64(i), radix), true
 	}
 	if math.IsNaN(n) {
 		return "NaN", true
@@ -1405,6 +1528,45 @@ func tryToStringOnNumberSafely(n float64) (string, bool) {
 	return "", false
 }
 
+// Note: We don't know if this is string addition yet at this point
+func foldAdditionPreProcess(expr Expr) Expr {
+	switch e := expr.Data.(type) {
+	case *EInlinedEnum:
+		// "See through" inline enum constants
+		expr = e.Value
+
+	case *EArray:
+		// "[] + x" => "'' + x"
+		// "[1,2] + x" => "'1,2' + x"
+		items := make([]string, 0, len(e.Items))
+		for _, item := range e.Items {
+			switch item.Data.(type) {
+			case *EUndefined, *ENull:
+				items = append(items, "")
+				continue
+			}
+			if str, ok := ToStringWithoutSideEffects(item.Data); ok {
+				item.Data = &EString{Value: helpers.StringToUTF16(str)}
+			}
+			str, ok := item.Data.(*EString)
+			if !ok {
+				break
+			}
+			items = append(items, helpers.UTF16ToString(str.Value))
+		}
+		if len(items) == len(e.Items) {
+			expr.Data = &EString{Value: helpers.StringToUTF16(strings.Join(items, ","))}
+		}
+
+	case *EObject:
+		// "{} + x" => "'[object Object]' + x"
+		if len(e.Properties) == 0 {
+			expr.Data = &EString{Value: helpers.StringToUTF16("[object Object]")}
+		}
+	}
+	return expr
+}
+
 type StringAdditionKind uint8
 
 const (
@@ -1415,13 +1577,8 @@ const (
 // This function intentionally avoids mutating the input AST so it can be
 // called after the AST has been frozen (i.e. after parsing ends).
 func FoldStringAddition(left Expr, right Expr, kind StringAdditionKind) Expr {
-	// "See through" inline enum constants
-	if l, ok := left.Data.(*EInlinedEnum); ok {
-		left = l.Value
-	}
-	if r, ok := right.Data.(*EInlinedEnum); ok {
-		right = r.Value
-	}
+	left = foldAdditionPreProcess(left)
+	right = foldAdditionPreProcess(right)
 
 	// Transforming the left operand into a string is not safe if it comes from
 	// a nested AST node. The following transforms are invalid:
@@ -1430,14 +1587,10 @@ func FoldStringAddition(left Expr, right Expr, kind StringAdditionKind) Expr {
 	//   "0 + 1 + `${x}`" => "0 + `1${x}`"
 	//
 	if kind != StringAdditionWithNestedLeft {
-		if l, ok := left.Data.(*ENumber); ok {
-			switch right.Data.(type) {
-			case *EString, *ETemplate:
-				// "0 + 'x'" => "0 + 'x'"
-				// "0 + `${x}`" => "0 + `${x}`"
-				if str, ok := tryToStringOnNumberSafely(l.Value); ok {
-					left.Data = &EString{Value: helpers.StringToUTF16(str)}
-				}
+		switch right.Data.(type) {
+		case *EString, *ETemplate:
+			if str, ok := ToStringWithoutSideEffects(left.Data); ok {
+				left.Data = &EString{Value: helpers.StringToUTF16(str)}
 			}
 		}
 	}
@@ -1445,10 +1598,8 @@ func FoldStringAddition(left Expr, right Expr, kind StringAdditionKind) Expr {
 	switch l := left.Data.(type) {
 	case *EString:
 		// "'x' + 0" => "'x' + '0'"
-		if r, ok := right.Data.(*ENumber); ok {
-			if str, ok := tryToStringOnNumberSafely(r.Value); ok {
-				right.Data = &EString{Value: helpers.StringToUTF16(str)}
-			}
+		if str, ok := ToStringWithoutSideEffects(right.Data); ok {
+			right.Data = &EString{Value: helpers.StringToUTF16(str)}
 		}
 
 		switch r := right.Data.(type) {
@@ -1478,10 +1629,8 @@ func FoldStringAddition(left Expr, right Expr, kind StringAdditionKind) Expr {
 	case *ETemplate:
 		if l.TagOrNil.Data == nil {
 			// "`${x}` + 0" => "`${x}` + '0'"
-			if r, ok := right.Data.(*ENumber); ok {
-				if str, ok := tryToStringOnNumberSafely(r.Value); ok {
-					right.Data = &EString{Value: helpers.StringToUTF16(str)}
-				}
+			if str, ok := ToStringWithoutSideEffects(right.Data); ok {
+				right.Data = &EString{Value: helpers.StringToUTF16(str)}
 			}
 
 			switch r := right.Data.(type) {
@@ -1551,7 +1700,7 @@ func InlineStringsAndNumbersIntoTemplate(loc logger.Loc, e *ETemplate) Expr {
 			part.Value = value.Value
 		}
 		if value, ok := part.Value.Data.(*ENumber); ok {
-			if str, ok := tryToStringOnNumberSafely(value.Value); ok {
+			if str, ok := TryToStringOnNumberSafely(value.Value, 10); ok {
 				part.Value.Data = &EString{Value: helpers.StringToUTF16(str)}
 			}
 		}
@@ -1686,7 +1835,8 @@ func ToBooleanWithSideEffects(data E) (boolean bool, sideEffects SideEffects, ok
 		return e.Value != 0 && !math.IsNaN(e.Value), NoSideEffects, true
 
 	case *EBigInt:
-		return e.Value != "0", NoSideEffects, true
+		equal, ok := CheckEqualityBigInt(e.Value, "0")
+		return !equal, NoSideEffects, ok
 
 	case *EString:
 		return len(e.Value) > 0, NoSideEffects, true
@@ -1745,17 +1895,17 @@ func ToBooleanWithSideEffects(data E) (boolean bool, sideEffects SideEffects, ok
 //
 // This function intentionally avoids mutating the input AST so it can be
 // called after the AST has been frozen (i.e. after parsing ends).
-func SimplifyBooleanExpr(expr Expr) Expr {
+func (ctx HelperContext) SimplifyBooleanExpr(expr Expr) Expr {
 	switch e := expr.Data.(type) {
 	case *EUnary:
 		if e.Op == UnOpNot {
 			// "!!a" => "a"
 			if e2, ok2 := e.Value.Data.(*EUnary); ok2 && e2.Op == UnOpNot {
-				return SimplifyBooleanExpr(e2.Value)
+				return ctx.SimplifyBooleanExpr(e2.Value)
 			}
 
 			// "!!!a" => "!a"
-			return Expr{Loc: expr.Loc, Data: &EUnary{Op: UnOpNot, Value: SimplifyBooleanExpr(e.Value)}}
+			return Expr{Loc: expr.Loc, Data: &EUnary{Op: UnOpNot, Value: ctx.SimplifyBooleanExpr(e.Value)}}
 		}
 
 	case *EBinary:
@@ -1780,8 +1930,8 @@ func SimplifyBooleanExpr(expr Expr) Expr {
 
 		case BinOpLogicalAnd:
 			// "if (!!a && !!b)" => "if (a && b)"
-			left = SimplifyBooleanExpr(left)
-			right = SimplifyBooleanExpr(right)
+			left = ctx.SimplifyBooleanExpr(left)
+			right = ctx.SimplifyBooleanExpr(right)
 
 			if boolean, SideEffects, ok := ToBooleanWithSideEffects(right.Data); ok && boolean && SideEffects == NoSideEffects {
 				// "if (anything && truthyNoSideEffects)" => "if (anything)"
@@ -1790,8 +1940,8 @@ func SimplifyBooleanExpr(expr Expr) Expr {
 
 		case BinOpLogicalOr:
 			// "if (!!a || !!b)" => "if (a || b)"
-			left = SimplifyBooleanExpr(left)
-			right = SimplifyBooleanExpr(right)
+			left = ctx.SimplifyBooleanExpr(left)
+			right = ctx.SimplifyBooleanExpr(right)
 
 			if boolean, SideEffects, ok := ToBooleanWithSideEffects(right.Data); ok && !boolean && SideEffects == NoSideEffects {
 				// "if (anything || falsyNoSideEffects)" => "if (anything)"
@@ -1805,8 +1955,8 @@ func SimplifyBooleanExpr(expr Expr) Expr {
 
 	case *EIf:
 		// "if (a ? !!b : !!c)" => "if (a ? b : c)"
-		yes := SimplifyBooleanExpr(e.Yes)
-		no := SimplifyBooleanExpr(e.No)
+		yes := ctx.SimplifyBooleanExpr(e.Yes)
+		no := ctx.SimplifyBooleanExpr(e.No)
 
 		if boolean, SideEffects, ok := ToBooleanWithSideEffects(yes.Data); ok && SideEffects == NoSideEffects {
 			if boolean {
@@ -1831,6 +1981,12 @@ func SimplifyBooleanExpr(expr Expr) Expr {
 		if yes != e.Yes || no != e.No {
 			return Expr{Loc: expr.Loc, Data: &EIf{Test: e.Test, Yes: yes, No: no}}
 		}
+
+	default:
+		// "!![]" => "true"
+		if boolean, sideEffects, ok := ToBooleanWithSideEffects(expr.Data); ok && (sideEffects == NoSideEffects || ctx.ExprCanBeRemovedIfUnused(expr)) {
+			return Expr{Loc: expr.Loc, Data: &EBoolean{Value: boolean}}
+		}
 	}
 
 	return expr
@@ -1840,9 +1996,10 @@ type StmtsCanBeRemovedIfUnusedFlags uint8
 
 const (
 	KeepExportClauses StmtsCanBeRemovedIfUnusedFlags = 1 << iota
+	ReturnCanBeRemovedIfUnused
 )
 
-func StmtsCanBeRemovedIfUnused(stmts []Stmt, flags StmtsCanBeRemovedIfUnusedFlags, isUnbound func(ast.Ref) bool) bool {
+func (ctx HelperContext) StmtsCanBeRemovedIfUnused(stmts []Stmt, flags StmtsCanBeRemovedIfUnusedFlags) bool {
 	for _, stmt := range stmts {
 		switch s := stmt.Data.(type) {
 		case *SFunction, *SEmpty:
@@ -1855,12 +2012,17 @@ func StmtsCanBeRemovedIfUnused(stmts []Stmt, flags StmtsCanBeRemovedIfUnusedFlag
 			// its side effects.
 
 		case *SClass:
-			if !ClassCanBeRemovedIfUnused(s.Class, isUnbound) {
+			if !ctx.ClassCanBeRemovedIfUnused(s.Class) {
+				return false
+			}
+
+		case *SReturn:
+			if (flags&ReturnCanBeRemovedIfUnused) == 0 || (s.ValueOrNil.Data != nil && !ctx.ExprCanBeRemovedIfUnused(s.ValueOrNil)) {
 				return false
 			}
 
 		case *SExpr:
-			if !ExprCanBeRemovedIfUnused(s.Value, isUnbound) {
+			if !ctx.ExprCanBeRemovedIfUnused(s.Value) {
 				if s.IsFromClassOrFnThatCanBeRemovedIfUnused {
 					// This statement was automatically generated when lowering a class
 					// or function that we were able to analyze as having no side effects
@@ -1883,14 +2045,46 @@ func StmtsCanBeRemovedIfUnused(stmts []Stmt, flags StmtsCanBeRemovedIfUnusedFlag
 			}
 
 			for _, decl := range s.Decls {
-				if _, ok := decl.Binding.Data.(*BIdentifier); !ok {
+				// Check that the bindings are side-effect free
+				switch binding := decl.Binding.Data.(type) {
+				case *BIdentifier:
+					// An identifier binding has no side effects
+
+				case *BArray:
+					// Destructuring the initializer has no side effects if the
+					// initializer is an array, since we assume the iterator is then
+					// the built-in side-effect free array iterator.
+					if _, ok := decl.ValueOrNil.Data.(*EArray); ok {
+						for _, item := range binding.Items {
+							if item.DefaultValueOrNil.Data != nil && !ctx.ExprCanBeRemovedIfUnused(item.DefaultValueOrNil) {
+								return false
+							}
+
+							switch item.Binding.Data.(type) {
+							case *BIdentifier, *BMissing:
+								// Right now we only handle an array pattern with identifier
+								// bindings or with empty holes (i.e. "missing" elements)
+							default:
+								return false
+							}
+						}
+						break
+					}
+					return false
+
+				default:
+					// Consider anything else to potentially have side effects
 					return false
 				}
+
+				// Check that the initializer is side-effect free
 				if decl.ValueOrNil.Data != nil {
-					if !ExprCanBeRemovedIfUnused(decl.ValueOrNil, isUnbound) {
+					if !ctx.ExprCanBeRemovedIfUnused(decl.ValueOrNil) {
 						return false
-					} else if s.Kind.IsUsing() {
-						// "using" declarations are only side-effect free if they are initialized to null or undefined
+					}
+
+					// "using" declarations are only side-effect free if they are initialized to null or undefined
+					if s.Kind.IsUsing() {
 						if t := KnownPrimitiveType(decl.ValueOrNil.Data); t != PrimitiveNull && t != PrimitiveUndefined {
 							return false
 						}
@@ -1899,7 +2093,7 @@ func StmtsCanBeRemovedIfUnused(stmts []Stmt, flags StmtsCanBeRemovedIfUnusedFlag
 			}
 
 		case *STry:
-			if !StmtsCanBeRemovedIfUnused(s.Block.Stmts, 0, isUnbound) || (s.Finally != nil && !StmtsCanBeRemovedIfUnused(s.Finally.Block.Stmts, 0, isUnbound)) {
+			if !ctx.StmtsCanBeRemovedIfUnused(s.Block.Stmts, 0) || (s.Finally != nil && !ctx.StmtsCanBeRemovedIfUnused(s.Finally.Block.Stmts, 0)) {
 				return false
 			}
 
@@ -1914,7 +2108,7 @@ func StmtsCanBeRemovedIfUnused(stmts []Stmt, flags StmtsCanBeRemovedIfUnusedFlag
 		case *SExportDefault:
 			switch s2 := s.Value.Data.(type) {
 			case *SExpr:
-				if !ExprCanBeRemovedIfUnused(s2.Value, isUnbound) {
+				if !ctx.ExprCanBeRemovedIfUnused(s2.Value) {
 					return false
 				}
 
@@ -1922,7 +2116,7 @@ func StmtsCanBeRemovedIfUnused(stmts []Stmt, flags StmtsCanBeRemovedIfUnusedFlag
 				// These never have side effects
 
 			case *SClass:
-				if !ClassCanBeRemovedIfUnused(s2.Class, isUnbound) {
+				if !ctx.ClassCanBeRemovedIfUnused(s2.Class) {
 					return false
 				}
 
@@ -1940,7 +2134,7 @@ func StmtsCanBeRemovedIfUnused(stmts []Stmt, flags StmtsCanBeRemovedIfUnusedFlag
 	return true
 }
 
-func ClassCanBeRemovedIfUnused(class Class, isUnbound func(ast.Ref) bool) bool {
+func (ctx HelperContext) ClassCanBeRemovedIfUnused(class Class) bool {
 	if len(class.Decorators) > 0 {
 		return false
 	}
@@ -1955,13 +2149,13 @@ func ClassCanBeRemovedIfUnused(class Class, isUnbound func(ast.Ref) bool) bool {
 	// thing for a bundler to do. So we pretend that this edge case doesn't
 	// exist. At the time of writing, both Rollup and Terser don't consider this
 	// to be a side effect either.
-	if class.ExtendsOrNil.Data != nil && !ExprCanBeRemovedIfUnused(class.ExtendsOrNil, isUnbound) {
+	if class.ExtendsOrNil.Data != nil && !ctx.ExprCanBeRemovedIfUnused(class.ExtendsOrNil) {
 		return false
 	}
 
 	for _, property := range class.Properties {
 		if property.Kind == PropertyClassStaticBlock {
-			if !StmtsCanBeRemovedIfUnused(property.ClassStaticBlock.Block.Stmts, 0, isUnbound) {
+			if !ctx.StmtsCanBeRemovedIfUnused(property.ClassStaticBlock.Block.Stmts, 0) {
 				return false
 			}
 			continue
@@ -1986,11 +2180,11 @@ func ClassCanBeRemovedIfUnused(class Class, isUnbound func(ast.Ref) bool) bool {
 		}
 
 		if property.Flags.Has(PropertyIsStatic) {
-			if property.ValueOrNil.Data != nil && !ExprCanBeRemovedIfUnused(property.ValueOrNil, isUnbound) {
+			if property.ValueOrNil.Data != nil && !ctx.ExprCanBeRemovedIfUnused(property.ValueOrNil) {
 				return false
 			}
 
-			if property.InitializerOrNil.Data != nil && !ExprCanBeRemovedIfUnused(property.InitializerOrNil, isUnbound) {
+			if property.InitializerOrNil.Data != nil && !ctx.ExprCanBeRemovedIfUnused(property.InitializerOrNil) {
 				return false
 			}
 
@@ -2037,13 +2231,13 @@ func ClassCanBeRemovedIfUnused(class Class, isUnbound func(ast.Ref) bool) bool {
 	return true
 }
 
-func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
+func (ctx HelperContext) ExprCanBeRemovedIfUnused(expr Expr) bool {
 	switch e := expr.Data.(type) {
 	case *EAnnotation:
 		return e.Flags.Has(CanBeRemovedIfUnusedFlag)
 
 	case *EInlinedEnum:
-		return ExprCanBeRemovedIfUnused(e.Value, isUnbound)
+		return ctx.ExprCanBeRemovedIfUnused(e.Value)
 
 	case *ENull, *EUndefined, *EMissing, *EBoolean, *ENumber, *EBigInt,
 		*EString, *EThis, *ERegExp, *EFunction, *EArrow, *EImportMeta:
@@ -2053,7 +2247,7 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		return e.CanBeRemovedIfUnused
 
 	case *EClass:
-		return ClassCanBeRemovedIfUnused(e.Class, isUnbound)
+		return ctx.ClassCanBeRemovedIfUnused(e.Class)
 
 	case *EIdentifier:
 		if e.MustKeepDueToWithStmt {
@@ -2079,7 +2273,7 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		// incorrect but proper TDZ analysis is very complicated and would have to
 		// be very conservative, which would inhibit a lot of optimizations of code
 		// inside closures. This may need to be revisited if it proves problematic.
-		if e.CanBeRemovedIfUnused || !isUnbound(e.Ref) {
+		if e.CanBeRemovedIfUnused || !ctx.isUnbound(e.Ref) {
 			return true
 		}
 
@@ -2103,13 +2297,20 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		return true
 
 	case *EIf:
-		return ExprCanBeRemovedIfUnused(e.Test, isUnbound) &&
-			((isSideEffectFreeUnboundIdentifierRef(e.Yes, e.Test, true, isUnbound) || ExprCanBeRemovedIfUnused(e.Yes, isUnbound)) &&
-				(isSideEffectFreeUnboundIdentifierRef(e.No, e.Test, false, isUnbound) || ExprCanBeRemovedIfUnused(e.No, isUnbound)))
+		return ctx.ExprCanBeRemovedIfUnused(e.Test) &&
+			((ctx.isSideEffectFreeUnboundIdentifierRef(e.Yes, e.Test, true) || ctx.ExprCanBeRemovedIfUnused(e.Yes)) &&
+				(ctx.isSideEffectFreeUnboundIdentifierRef(e.No, e.Test, false) || ctx.ExprCanBeRemovedIfUnused(e.No)))
 
 	case *EArray:
 		for _, item := range e.Items {
-			if !ExprCanBeRemovedIfUnused(item, isUnbound) {
+			if spread, ok := item.Data.(*ESpread); ok {
+				if _, ok := spread.Value.Data.(*EArray); ok {
+					// Spread of an inline array such as "[...[x]]" is side-effect free
+					item = spread.Value
+				}
+			}
+
+			if !ctx.ExprCanBeRemovedIfUnused(item) {
 				return false
 			}
 		}
@@ -2121,7 +2322,7 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 			if property.Kind == PropertySpread || (property.Flags.Has(PropertyIsComputed) && !IsPrimitiveLiteral(property.Key.Data)) {
 				return false
 			}
-			if property.ValueOrNil.Data != nil && !ExprCanBeRemovedIfUnused(property.ValueOrNil, isUnbound) {
+			if property.ValueOrNil.Data != nil && !ctx.ExprCanBeRemovedIfUnused(property.ValueOrNil) {
 				return false
 			}
 		}
@@ -2134,7 +2335,7 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		// can be removed. The annotation causes us to ignore the target.
 		if canCallBeRemoved {
 			for _, arg := range e.Args {
-				if !ExprCanBeRemovedIfUnused(arg, isUnbound) {
+				if !ctx.ExprCanBeRemovedIfUnused(arg) {
 					return false
 				}
 			}
@@ -2146,7 +2347,7 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		// arguments can be removed. The annotation causes us to ignore the target.
 		if e.CanBeUnwrappedIfUnused {
 			for _, arg := range e.Args {
-				if !ExprCanBeRemovedIfUnused(arg, isUnbound) {
+				if !ctx.ExprCanBeRemovedIfUnused(arg) {
 					return false
 				}
 			}
@@ -2158,7 +2359,7 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		// These operators must not have any type conversions that can execute code
 		// such as "toString" or "valueOf". They must also never throw any exceptions.
 		case UnOpVoid, UnOpNot:
-			return ExprCanBeRemovedIfUnused(e.Value, isUnbound)
+			return ctx.ExprCanBeRemovedIfUnused(e.Value)
 
 		// The "typeof" operator doesn't do any type conversions so it can be removed
 		// if the result is unused and the operand has no side effects. However, it
@@ -2170,7 +2371,7 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 				// Expressions such as "typeof x" never have any side effects
 				return true
 			}
-			return ExprCanBeRemovedIfUnused(e.Value, isUnbound)
+			return ctx.ExprCanBeRemovedIfUnused(e.Value)
 		}
 
 	case *EBinary:
@@ -2178,17 +2379,17 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		// These operators must not have any type conversions that can execute code
 		// such as "toString" or "valueOf". They must also never throw any exceptions.
 		case BinOpStrictEq, BinOpStrictNe, BinOpComma, BinOpNullishCoalescing:
-			return ExprCanBeRemovedIfUnused(e.Left, isUnbound) && ExprCanBeRemovedIfUnused(e.Right, isUnbound)
+			return ctx.ExprCanBeRemovedIfUnused(e.Left) && ctx.ExprCanBeRemovedIfUnused(e.Right)
 
 		// Special-case "||" to make sure "typeof x === 'undefined' || x" can be removed
 		case BinOpLogicalOr:
-			return ExprCanBeRemovedIfUnused(e.Left, isUnbound) &&
-				(isSideEffectFreeUnboundIdentifierRef(e.Right, e.Left, false, isUnbound) || ExprCanBeRemovedIfUnused(e.Right, isUnbound))
+			return ctx.ExprCanBeRemovedIfUnused(e.Left) &&
+				(ctx.isSideEffectFreeUnboundIdentifierRef(e.Right, e.Left, false) || ctx.ExprCanBeRemovedIfUnused(e.Right))
 
 		// Special-case "&&" to make sure "typeof x !== 'undefined' && x" can be removed
 		case BinOpLogicalAnd:
-			return ExprCanBeRemovedIfUnused(e.Left, isUnbound) &&
-				(isSideEffectFreeUnboundIdentifierRef(e.Right, e.Left, true, isUnbound) || ExprCanBeRemovedIfUnused(e.Right, isUnbound))
+			return ctx.ExprCanBeRemovedIfUnused(e.Left) &&
+				(ctx.isSideEffectFreeUnboundIdentifierRef(e.Right, e.Left, true) || ctx.ExprCanBeRemovedIfUnused(e.Right))
 
 		// For "==" and "!=", pretend the operator was actually "===" or "!==". If
 		// we know that we can convert it to "==" or "!=", then we can consider the
@@ -2197,14 +2398,14 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		// and since "typeof x === 'object'" is considered to be side-effect free,
 		// we must also consider "typeof x == 'object'" to be side-effect free.
 		case BinOpLooseEq, BinOpLooseNe:
-			return CanChangeStrictToLoose(e.Left, e.Right) && ExprCanBeRemovedIfUnused(e.Left, isUnbound) && ExprCanBeRemovedIfUnused(e.Right, isUnbound)
+			return CanChangeStrictToLoose(e.Left, e.Right) && ctx.ExprCanBeRemovedIfUnused(e.Left) && ctx.ExprCanBeRemovedIfUnused(e.Right)
 
 		// Special-case "<" and ">" with string, number, or bigint arguments
 		case BinOpLt, BinOpGt, BinOpLe, BinOpGe:
 			left := KnownPrimitiveType(e.Left.Data)
 			switch left {
 			case PrimitiveString, PrimitiveNumber, PrimitiveBigInt:
-				return KnownPrimitiveType(e.Right.Data) == left && ExprCanBeRemovedIfUnused(e.Left, isUnbound) && ExprCanBeRemovedIfUnused(e.Right, isUnbound)
+				return KnownPrimitiveType(e.Right.Data) == left && ctx.ExprCanBeRemovedIfUnused(e.Left) && ctx.ExprCanBeRemovedIfUnused(e.Right)
 			}
 		}
 
@@ -2214,7 +2415,7 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 		// have a "ToString" operation with no side effects.
 		if e.TagOrNil.Data == nil {
 			for _, part := range e.Parts {
-				if !ExprCanBeRemovedIfUnused(part.Value, isUnbound) || KnownPrimitiveType(part.Value.Data) == PrimitiveUnknown {
+				if !ctx.ExprCanBeRemovedIfUnused(part.Value) || KnownPrimitiveType(part.Value.Data) == PrimitiveUnknown {
 					return false
 				}
 			}
@@ -2226,8 +2427,8 @@ func ExprCanBeRemovedIfUnused(expr Expr, isUnbound func(ast.Ref) bool) bool {
 	return false
 }
 
-func isSideEffectFreeUnboundIdentifierRef(value Expr, guardCondition Expr, isYesBranch bool, isUnbound func(ast.Ref) bool) bool {
-	if id, ok := value.Data.(*EIdentifier); ok && isUnbound(id.Ref) {
+func (ctx HelperContext) isSideEffectFreeUnboundIdentifierRef(value Expr, guardCondition Expr, isYesBranch bool) bool {
+	if id, ok := value.Data.(*EIdentifier); ok && ctx.isUnbound(id.Ref) {
 		if binary, ok := guardCondition.Data.(*EBinary); ok {
 			switch binary.Op {
 			case BinOpStrictEq, BinOpStrictNe, BinOpLooseEq, BinOpLooseNe:
@@ -2377,18 +2578,18 @@ func MangleObjectSpread(properties []Property) []Property {
 
 // This function intentionally avoids mutating the input AST so it can be
 // called after the AST has been frozen (i.e. after parsing ends).
-func MangleIfExpr(loc logger.Loc, e *EIf, unsupportedFeatures compat.JSFeature, isUnbound func(ast.Ref) bool) Expr {
+func (ctx HelperContext) MangleIfExpr(loc logger.Loc, e *EIf, unsupportedFeatures compat.JSFeature) Expr {
 	test := e.Test
 	yes := e.Yes
 	no := e.No
 
 	// "(a, b) ? c : d" => "a, b ? c : d"
 	if comma, ok := test.Data.(*EBinary); ok && comma.Op == BinOpComma {
-		return JoinWithComma(comma.Left, MangleIfExpr(comma.Right.Loc, &EIf{
+		return JoinWithComma(comma.Left, ctx.MangleIfExpr(comma.Right.Loc, &EIf{
 			Test: comma.Right,
 			Yes:  yes,
 			No:   no,
-		}, unsupportedFeatures, isUnbound))
+		}, unsupportedFeatures))
 	}
 
 	// "!a ? b : c" => "a ? c : b"
@@ -2399,7 +2600,7 @@ func MangleIfExpr(loc logger.Loc, e *EIf, unsupportedFeatures compat.JSFeature, 
 
 	if ValuesLookTheSame(yes.Data, no.Data) {
 		// "/* @__PURE__ */ a() ? b : b" => "b"
-		if ExprCanBeRemovedIfUnused(test, isUnbound) {
+		if ctx.ExprCanBeRemovedIfUnused(test) {
 			return yes
 		}
 
@@ -2486,7 +2687,7 @@ func MangleIfExpr(loc logger.Loc, e *EIf, unsupportedFeatures compat.JSFeature, 
 			// without side effects. For example, if the test or the call target is
 			// an unbound identifier, reordering could potentially mean evaluating
 			// the code could throw a different ReferenceError.
-			if ExprCanBeRemovedIfUnused(test, isUnbound) && ExprCanBeRemovedIfUnused(y.Target, isUnbound) {
+			if ctx.ExprCanBeRemovedIfUnused(test) && ctx.ExprCanBeRemovedIfUnused(y.Target) {
 				sameTailArgs := true
 				for i, count := 1, len(y.Args); i < count; i++ {
 					if !ValuesLookTheSame(y.Args[i].Data, n.Args[i].Data) {
@@ -2504,7 +2705,7 @@ func MangleIfExpr(loc logger.Loc, e *EIf, unsupportedFeatures compat.JSFeature, 
 						temp := EIf{Test: test, Yes: yesSpread.Value, No: noSpread.Value}
 						clone := *y
 						clone.Args = append([]Expr{}, clone.Args...)
-						clone.Args[0] = Expr{Loc: loc, Data: &ESpread{Value: MangleIfExpr(loc, &temp, unsupportedFeatures, isUnbound)}}
+						clone.Args[0] = Expr{Loc: loc, Data: &ESpread{Value: ctx.MangleIfExpr(loc, &temp, unsupportedFeatures)}}
 						return Expr{Loc: loc, Data: &clone}
 					}
 
@@ -2514,7 +2715,7 @@ func MangleIfExpr(loc logger.Loc, e *EIf, unsupportedFeatures compat.JSFeature, 
 						temp := EIf{Test: test, Yes: y.Args[0], No: n.Args[0]}
 						clone := *y
 						clone.Args = append([]Expr{}, clone.Args...)
-						clone.Args[0] = MangleIfExpr(loc, &temp, unsupportedFeatures, isUnbound)
+						clone.Args[0] = ctx.MangleIfExpr(loc, &temp, unsupportedFeatures)
 						return Expr{Loc: loc, Data: &clone}
 					}
 				}
@@ -2556,7 +2757,7 @@ func MangleIfExpr(loc logger.Loc, e *EIf, unsupportedFeatures compat.JSFeature, 
 			}
 		}
 
-		if ExprCanBeRemovedIfUnused(check, isUnbound) {
+		if ctx.ExprCanBeRemovedIfUnused(check) {
 			// "a != null ? a : b" => "a ?? b"
 			if !unsupportedFeatures.Has(compat.NullishCoalescing) && ValuesLookTheSame(check.Data, whenNonNull.Data) {
 				return JoinWithLeftAssociativeOp(BinOpNullishCoalescing, check, whenNull)

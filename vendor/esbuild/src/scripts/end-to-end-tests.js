@@ -3083,6 +3083,20 @@ tests.push(
   }),
 )
 
+// Test import attributes
+tests.push(
+  test(['--bundle', 'entry.js', '--outfile=node.js', '--format=esm'], {
+    'entry.js': `
+      import * as foo from './package.json' with { type: 'json' }
+      if (foo.default.type !== 'module' || 'type' in foo) throw 'fail: static'
+
+      const bar = await import('./package.json', { with: { type: 'json' } })
+      if (bar.default.type !== 'module' || 'type' in bar) throw 'fail: dynamic'
+    `,
+    'package.json': `{ "type": "module" }`,
+  }),
+)
+
 // Test directive preservation
 tests.push(
   // The "__pow" symbol must not be hoisted above "use strict"
@@ -3242,7 +3256,7 @@ for (const minify of [[], ['--minify-syntax']]) {
       test(['in.js', '--outfile=node.js', '--log-level=error'].concat(minify), {
         'in.js': `if ({a: 1, a: 2}${access} !== 2) throw 'fail'`,
       }),
-      test(['in.js', '--outfile=node.js'].concat(minify), {
+      test(['in.js', '--outfile=node.js', '--log-level=error'].concat(minify), {
         'in.js': `if ({a: 1, [String.fromCharCode(97)]: 2}${access} !== 2) throw 'fail'`,
       }),
       test(['in.js', '--outfile=node.js'].concat(minify), {
@@ -5462,6 +5476,53 @@ for (let flags of [['--target=es2022'], ['--target=es6'], ['--bundle', '--target
         try { temp = (class A { capture = () => A; static a = 1; static [A.a]() { return 2 } }) } catch (err) { staticMethod = err }
         if (!staticMethod) throw 'fail: staticMethod'
       `,
+    }),
+
+    // https://github.com/evanw/esbuild/issues/3326
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        const log: string[] = []
+        class Test1 {
+          static deco(target: any, key: any, desc: any): any { log.push('Test1') }
+          @Test1.deco static test(): void { }
+        }
+        class Test2 {
+          static deco(target: any, key: any, desc: any): any { log.push('Test2') }
+          @Test2.deco static test(): Test2 { return new Test2(); }
+        }
+        @Test3.deco
+        class Test3 {
+          static deco(target: any): any { log.push('Test3') }
+        }
+        if (log + '' !== 'Test1,Test2,Test3') throw 'fail: ' + log
+      `,
+      'tsconfig.json': `{
+        "compilerOptions": {
+          "experimentalDecorators": true,
+        },
+      }`,
+    }),
+
+    // https://github.com/evanw/esbuild/issues/3394
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        const dec = (arg: number): ParameterDecorator => () => { answer = arg }
+        let answer = 0
+
+        class Foo {
+          static #foo = 123
+          static bar = 234
+          method(@dec(Foo.#foo + Foo.bar) arg: any) {
+          }
+        }
+
+        if (answer !== 357) throw 'fail: ' + answer
+      `,
+      'tsconfig.json': `{
+        "compilerOptions": {
+          "experimentalDecorators": true,
+        },
+      }`,
     }),
   )
 

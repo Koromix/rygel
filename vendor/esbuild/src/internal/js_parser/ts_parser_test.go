@@ -878,13 +878,12 @@ func TestTSPrivateIdentifiers(t *testing.T) {
 	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static get #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
 	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static set #foo() {x} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
 
-	// Decorators are not able to access private names, since they use the scope
-	// that encloses the class declaration. Note that the TypeScript compiler has
-	// a bug where it doesn't handle this case and generates invalid code as a
-	// result: https://github.com/microsoft/TypeScript/issues/48515.
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { static #foo; @dec(Foo.#foo) bar }", "<stdin>: ERROR: Private name \"#foo\" must be declared in an enclosing class\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { static #foo; @dec(Foo.#foo) bar() {} }", "<stdin>: ERROR: Private name \"#foo\" must be declared in an enclosing class\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { static #foo; bar(@dec(Foo.#foo) x) {} }", "<stdin>: ERROR: Private name \"#foo\" must be declared in an enclosing class\n")
+	// Decorators are now able to access private names, since the TypeScript
+	// compiler was changed to move them into a "static {}" block within the
+	// class body: https://github.com/microsoft/TypeScript/pull/50074
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { static #foo; @dec(Foo.#foo) bar }", "")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { static #foo; @dec(Foo.#foo) bar() {} }", "")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { static #foo; bar(@dec(Foo.#foo) x) {} }", "")
 }
 
 func TestTSInterface(t *testing.T) {
@@ -2540,12 +2539,14 @@ func TestTSImportEqualsInNamespace(t *testing.T) {
 func TestTSTypeOnlyImport(t *testing.T) {
 	expectPrintedTS(t, "import type foo from 'bar'; x", "x;\n")
 	expectPrintedTS(t, "import type foo from 'bar'\nx", "x;\n")
+	expectPrintedTS(t, "import type from from 'bar'; x", "x;\n")
 	expectPrintedTS(t, "import type * as foo from 'bar'; x", "x;\n")
 	expectPrintedTS(t, "import type * as foo from 'bar'\nx", "x;\n")
 	expectPrintedTS(t, "import type {foo, bar as baz} from 'bar'; x", "x;\n")
 	expectPrintedTS(t, "import type {'foo' as bar} from 'bar'\nx", "x;\n")
 	expectPrintedTS(t, "import type foo = require('bar'); x", "x;\n")
 	expectPrintedTS(t, "import type foo = bar.baz; x", "x;\n")
+	expectPrintedTS(t, "import type from = require('bar'); x", "x;\n")
 
 	expectPrintedTS(t, "import type = bar; type", "const type = bar;\ntype;\n")
 	expectPrintedTS(t, "import type = foo.bar; type", "const type = foo.bar;\ntype;\n")
@@ -2578,6 +2579,8 @@ func TestTSTypeOnlyImport(t *testing.T) {
 
 	expectParseErrorTS(t, "import type foo, * as foo from 'bar'", "<stdin>: ERROR: Expected \"from\" but found \",\"\n")
 	expectParseErrorTS(t, "import type foo, {foo} from 'bar'", "<stdin>: ERROR: Expected \"from\" but found \",\"\n")
+	expectParseErrorTS(t, "import type from, * as foo from 'bar'", "<stdin>: ERROR: Expected \"from\" but found \",\"\n")
+	expectParseErrorTS(t, "import type from, {foo} from 'bar'", "<stdin>: ERROR: Expected \"from\" but found \",\"\n")
 	expectParseErrorTS(t, "import type * as foo = require('bar')", "<stdin>: ERROR: Expected \"from\" but found \"=\"\n")
 	expectParseErrorTS(t, "import type {foo} = require('bar')", "<stdin>: ERROR: Expected \"from\" but found \"=\"\n")
 

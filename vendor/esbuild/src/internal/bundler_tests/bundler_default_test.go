@@ -7773,39 +7773,39 @@ func TestErrorsForAssertTypeJSON(t *testing.T) {
 				".copy": config.LoaderCopy,
 			},
 		},
-		expectedScanLog: `js-entry.js: ERROR: Cannot use non-default import "unused" with a standard JSON module
-js-entry.js: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "unused" import (which is non-standard behavior).
-js-entry.js: ERROR: Cannot use non-default import "used" with a standard JSON module
-js-entry.js: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "used" import (which is non-standard behavior).
-js-entry.js: WARNING: Non-default import "prop" is undefined with a standard JSON module
-js-entry.js: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "prop" import (which is non-standard behavior).
-js-entry.js: ERROR: Cannot use non-default import "exported" with a standard JSON module
-js-entry.js: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "exported" import (which is non-standard behavior).
-js-entry.js: ERROR: Cannot use non-default import "def3" with a standard JSON module
-js-entry.js: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "def3" import (which is non-standard behavior).
+		expectedScanLog: `js-entry.js: ERROR: Cannot use non-default import "unused" with a JSON import assertion
+js-entry.js: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "unused" import.
+js-entry.js: ERROR: Cannot use non-default import "used" with a JSON import assertion
+js-entry.js: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "used" import.
+js-entry.js: WARNING: Non-default import "prop" is undefined with a JSON import assertion
+js-entry.js: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "prop" import.
+js-entry.js: ERROR: Cannot use non-default import "exported" with a JSON import assertion
+js-entry.js: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "exported" import.
+js-entry.js: ERROR: Cannot use non-default import "def3" with a JSON import assertion
+js-entry.js: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "def3" import.
 js-entry.js: ERROR: The file "foo.text" was loaded with the "text" loader
 js-entry.js: NOTE: This import assertion requires the loader to be "json" instead:
 NOTE: You need to either reconfigure esbuild to ensure that the loader for this file is "json" or you need to remove this import assertion.
 js-entry.js: ERROR: The file "foo.file" was loaded with the "file" loader
 js-entry.js: NOTE: This import assertion requires the loader to be "json" instead:
 NOTE: You need to either reconfigure esbuild to ensure that the loader for this file is "json" or you need to remove this import assertion.
-ts-entry.ts: ERROR: Cannot use non-default import "used" with a standard JSON module
-ts-entry.ts: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "used" import (which is non-standard behavior).
-ts-entry.ts: WARNING: Non-default import "prop" is undefined with a standard JSON module
-ts-entry.ts: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "prop" import (which is non-standard behavior).
-ts-entry.ts: ERROR: Cannot use non-default import "exported" with a standard JSON module
-ts-entry.ts: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "exported" import (which is non-standard behavior).
-ts-entry.ts: ERROR: Cannot use non-default import "def3" with a standard JSON module
-ts-entry.ts: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "def3" import (which is non-standard behavior).
+ts-entry.ts: ERROR: Cannot use non-default import "used" with a JSON import assertion
+ts-entry.ts: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "used" import.
+ts-entry.ts: WARNING: Non-default import "prop" is undefined with a JSON import assertion
+ts-entry.ts: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "prop" import.
+ts-entry.ts: ERROR: Cannot use non-default import "exported" with a JSON import assertion
+ts-entry.ts: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "exported" import.
+ts-entry.ts: ERROR: Cannot use non-default import "def3" with a JSON import assertion
+ts-entry.ts: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "def3" import.
 `,
 	})
 }
@@ -7847,12 +7847,12 @@ func TestOutputForAssertTypeJSON(t *testing.T) {
 				".copy": config.LoaderCopy,
 			},
 		},
-		expectedScanLog: `js-entry.js: WARNING: Non-default import "prop" is undefined with a standard JSON module
-js-entry.js: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "prop" import (which is non-standard behavior).
-ts-entry.ts: WARNING: Non-default import "prop" is undefined with a standard JSON module
-ts-entry.ts: NOTE: This is considered an import of a standard JSON module because of the import assertion here:
-NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "prop" import (which is non-standard behavior).
+		expectedScanLog: `js-entry.js: WARNING: Non-default import "prop" is undefined with a JSON import assertion
+js-entry.js: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "prop" import.
+ts-entry.ts: WARNING: Non-default import "prop" is undefined with a JSON import assertion
+ts-entry.ts: NOTE: The JSON import assertion is here:
+NOTE: You can either keep the import assertion and only use the "default" import, or you can remove the import assertion and use the "prop" import.
 `,
 	})
 }
@@ -8032,6 +8032,26 @@ func TestMetafileVeryLongExternalPaths(t *testing.T) {
 	})
 }
 
+func TestMetafileImportWithTypeJSON(t *testing.T) {
+	default_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/project/entry.js": `
+				import a from './data.json'
+				import b from './data.json' assert { type: 'json' }
+				import c from './data.json' with { type: 'json' }
+				x = [a, b, c]
+			`,
+			"/project/data.json": `{"some": "data"}`,
+		},
+		entryPaths: []string{"/project/entry.js"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputDir:  "/out",
+			NeedsMetafile: true,
+		},
+	})
+}
+
 func TestCommentPreservation(t *testing.T) {
 	default_suite.expectBundled(t, bundled{
 		files: map[string]string{
@@ -8187,9 +8207,8 @@ func TestCommentPreservation(t *testing.T) {
 		},
 		entryPaths: []string{"/entry.js"},
 		options: config.Options{
-			Mode:         config.ModeBundle,
+			Mode:         config.ModePassThrough,
 			AbsOutputDir: "/out",
-			OutputFormat: config.FormatCommonJS,
 			ExternalSettings: config.ExternalSettings{
 				PreResolve: config.ExternalMatchers{
 					Exact: map[string]bool{"foo": true},
@@ -8532,5 +8551,59 @@ func TestDecoratorPrintingCJS(t *testing.T) {
 		},
 		expectedCompileLog: `entry.js: WARNING: Import "undef" will always be undefined because the file "empty.js" has no exports
 `,
+	})
+}
+
+// React's development-mode transform has a special "__self" value that's sort
+// of supposed to be set to "this". Except there's no specification for it
+// AFAIK and the value of "this" isn't always allowed to be accessed. For
+// example, accessing it before "super()" in a constructor call will crash.
+//
+// From what I understand the React team wanted to have it in case they need it
+// for some run-time warnings, but having it be accurate in all cases doesn't
+// really matter. For example, I'm not sure if it needs to even be any value in
+// particular for top-level JSX elements (top-level "this" can technically be
+// the module's exports object, which could materialize a lot of code to
+// generate one when bundling, so Facebook probably doesn't want that to
+// happen?).
+//
+// Anyway, this test case documents what esbuild does in case a specification
+// is produced in the future and it turns out esbuild should be doing something
+// else.
+func TestJSXDevSelfEdgeCases(t *testing.T) {
+	default_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/function-this.jsx":             `export function Foo() { return <div/> }`,
+			"/class-this.jsx":                `export class Foo { foo() { return <div/> } }`,
+			"/normal-constructor.jsx":        `export class Foo { constructor() { this.foo = <div/> } }`,
+			"/derived-constructor.jsx":       `export class Foo extends Object { constructor() { super(<div/>); this.foo = <div/> } }`,
+			"/normal-constructor-arg.jsx":    `export class Foo { constructor(foo = <div/>) {} }`,
+			"/derived-constructor-arg.jsx":   `export class Foo extends Object { constructor(foo = <div/>) { super() } }`,
+			"/normal-constructor-field.tsx":  `export class Foo { foo = <div/> }`,
+			"/derived-constructor-field.tsx": `export class Foo extends Object { foo = <div/> }`,
+			"/static-field.jsx":              `export class Foo { static foo = <div/> }`,
+			"/top-level-this-esm.jsx":        `export let foo = <div/>; if (Foo) { foo = <Foo>nested top-level this</Foo> }`,
+			"/top-level-this-cjs.jsx":        `exports.foo = <div/>`,
+			"/typescript-namespace.tsx":      `export namespace Foo { export let foo = <div/> }`,
+			"/typescript-enum.tsx":           `export enum Foo { foo = <div/> }`,
+			"/tsconfig.json":                 `{ "compilerOptions": { "useDefineForClassFields": false } }`,
+		},
+		entryPaths: []string{"*"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+			JSX: config.JSXOptions{
+				AutomaticRuntime: true,
+				Development:      true,
+			},
+			UnsupportedJSFeatures: compat.ClassStaticField,
+			ExternalSettings: config.ExternalSettings{
+				PreResolve: config.ExternalMatchers{
+					Exact: map[string]bool{
+						"react/jsx-dev-runtime": true,
+					},
+				},
+			},
+		},
 	})
 }

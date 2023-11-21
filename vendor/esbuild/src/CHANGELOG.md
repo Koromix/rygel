@@ -1,5 +1,246 @@
 # Changelog
 
+## 0.19.7
+
+* Add support for bundling code that uses import attributes ([#3384](https://github.com/evanw/esbuild/issues/3384))
+
+    JavaScript is gaining new syntax for associating a map of string key-value pairs with individual ESM imports. The proposal is still a work in progress and is still undergoing significant changes before being finalized. However, the first iteration has already been shipping in Chromium-based browsers for a while, and the second iteration has landed in V8 and is now shipping in node, so it makes sense for esbuild to support it. Here are the two major iterations of this proposal (so far):
+
+    1. Import assertions (deprecated, will not be standardized)
+        * Uses the `assert` keyword
+        * Does _not_ affect module resolution
+        * Causes an error if the assertion fails
+        * Shipping in Chrome 91+ (and in esbuild 0.11.22+)
+
+    2. Import attributes (currently set to become standardized)
+        * Uses the `with` keyword
+        * Affects module resolution
+        * Unknown attributes cause an error
+        * Shipping in node 21+
+
+    You can already use esbuild to bundle code that uses import assertions (the first iteration). However, this feature is mostly useless for bundlers because import assertions are not allowed to affect module resolution. It's basically only useful as an annotation on external imports, which esbuild will then preserve in the output for use in a browser (which would otherwise refuse to load certain imports).
+
+    With this release, esbuild now supports bundling code that uses import attributes (the second iteration). This is much more useful for bundlers because they are allowed to affect module resolution, which means the key-value pairs can be provided to plugins. Here's an example, which uses esbuild's built-in support for the upcoming [JSON module standard](https://github.com/tc39/proposal-json-modules):
+
+    ```js
+    // On static imports
+    import foo from './package.json' with { type: 'json' }
+    console.log(foo)
+
+    // On dynamic imports
+    const bar = await import('./package.json', { with: { type: 'json' } })
+    console.log(bar)
+    ```
+
+    One important consequence of the change in semantics between import assertions and import attributes is that two imports with identical paths but different import attributes are now considered to be different modules. This is because the import attributes are provided to the loader, which might then use those attributes during loading. For example, you could imagine an image loader that produces an image of a different size depending on the import attributes.
+
+    Import attributes are now reported in the [metafile](https://esbuild.github.io/api/#metafile) and are now provided to [on-load plugins](https://esbuild.github.io/plugins/#on-load) as a map in the `with` property. For example, here's an esbuild plugin that turns all imports with a `type` import attribute equal to `'cheese'` into a module that exports the cheese emoji:
+
+    ```js
+    const cheesePlugin = {
+      name: 'cheese',
+      setup(build) {
+        build.onLoad({ filter: /.*/ }, args => {
+          if (args.with.type === 'cheese') return {
+            contents: `export default "🧀"`,
+          }
+        })
+      }
+    }
+
+    require('esbuild').build({
+      bundle: true,
+      write: false,
+      stdin: {
+        contents: `
+          import foo from 'data:text/javascript,' with { type: 'cheese' }
+          console.log(foo)
+        `,
+      },
+      plugins: [cheesePlugin],
+    }).then(result => {
+      const code = new Function(result.outputFiles[0].text)
+      code()
+    })
+    ```
+
+    > [!Warning]
+    > It's possible that the second iteration of this feature may change significantly again even though it's already shipping in real JavaScript VMs (since it has already happened once before). In that case, esbuild may end up adjusting its implementation to match the eventual standard behavior. So keep in mind that by using this, you are using an unstable upcoming JavaScript feature that may undergo breaking changes in the future.
+
+* Adjust TypeScript experimental decorator behavior ([#3230](https://github.com/evanw/esbuild/issues/3230), [#3326](https://github.com/evanw/esbuild/issues/3326), [#3394](https://github.com/evanw/esbuild/issues/3394))
+
+    With this release, esbuild will now allow TypeScript experimental decorators to access both static class properties and `#private` class names. For example:
+
+    ```js
+    const check =
+      <T,>(a: T, b: T): PropertyDecorator =>
+        () => console.log(a === b)
+
+    async function test() {
+      class Foo {
+        static #foo = 1
+        static bar = 1 + Foo.#foo
+        @check(Foo.#foo, 1) a: any
+        @check(Foo.bar, await Promise.resolve(2)) b: any
+      }
+    }
+
+    test().then(() => console.log('pass'))
+    ```
+
+    This will now print `true true pass` when compiled by esbuild. Previously esbuild evaluated TypeScript decorators outside of the class body, so it didn't allow decorators to access `Foo` or `#foo`. Now esbuild does something different, although it's hard to concisely explain exactly what esbuild is doing now (see the background section below for more information).
+
+    Note that TypeScript's experimental decorator support is currently buggy: TypeScript's compiler passes this test if only the first `@check` is present or if only the second `@check` is present, but TypeScript's compiler fails this test if both checks are present together. I haven't changed esbuild to match TypeScript's behavior exactly here because I'm waiting for TypeScript to fix these bugs instead.
+
+    Some background: TypeScript experimental decorators don't have consistent semantics regarding the context that the decorators are evaluated in. For example, TypeScript will let you use `await` within a decorator, which implies that the decorator runs outside the class body (since `await` isn't supported inside a class body), but TypeScript will also let you use `#private` names, which implies that the decorator runs inside the class body (since `#private` names are only supported inside a class body). The value of `this` in a decorator is also buggy (the run-time value of `this` changes if any decorator in the class uses a `#private` name but the type of `this` doesn't change, leading to the type checker no longer matching reality). These inconsistent semantics make it hard for esbuild to implement this feature as decorator evaluation happens in some superposition of both inside and outside the class body that is particular to the internal implementation details of the TypeScript compiler.
+
+* Forbid `--keep-names` when targeting old browsers ([#3477](https://github.com/evanw/esbuild/issues/3477))
+
+    The `--keep-names` setting needs to be able to assign to the `name` property on functions and classes. However, before ES6 this property was non-configurable, and attempting to assign to it would throw an error. So with this release, esbuild will no longer allow you to enable this setting while also targeting a really old browser.
+
+## 0.19.6
+
+* Fix a constant folding bug with bigint equality
+
+    This release fixes a bug where esbuild incorrectly checked for bigint equality by checking the equality of the bigint literal text. This is correct if the bigint doesn't have a radix because bigint literals without a radix are always in canonical form (since leading zeros are not allowed). However, this is incorrect if the bigint has a radix (e.g. `0x123n`) because the canonical form is not enforced when a radix is present.
+
+    ```js
+    // Original code
+    console.log(!!0n, !!1n, 123n === 123n)
+    console.log(!!0x0n, !!0x1n, 123n === 0x7Bn)
+
+    // Old output
+    console.log(false, true, true);
+    console.log(true, true, false);
+
+    // New output
+    console.log(false, true, true);
+    console.log(!!0x0n, !!0x1n, 123n === 0x7Bn);
+    ```
+
+* Add some improvements to the JavaScript minifier
+
+    This release adds more cases to the JavaScript minifier, including support for inlining `String.fromCharCode` and `String.prototype.charCodeAt` when possible:
+
+    ```js
+    // Original code
+    document.onkeydown = e => e.keyCode === 'A'.charCodeAt(0) && console.log(String.fromCharCode(55358, 56768))
+
+    // Old output (with --minify)
+    document.onkeydown=o=>o.keyCode==="A".charCodeAt(0)&&console.log(String.fromCharCode(55358,56768));
+
+    // New output (with --minify)
+    document.onkeydown=o=>o.keyCode===65&&console.log("🧀");
+    ```
+
+    In addition, immediately-invoked function expressions (IIFEs) that return a single expression are now inlined when minifying. This makes it possible to use IIFEs in combination with `@__PURE__` annotations to annotate arbitrary expressions as side-effect free without the IIFE wrapper impacting code size. For example:
+
+    ```js
+    // Original code
+    const sideEffectFreeOffset = /* @__PURE__ */ (() => computeSomething())()
+    use(sideEffectFreeOffset)
+
+    // Old output (with --minify)
+    const e=(()=>computeSomething())();use(e);
+
+    // New output (with --minify)
+    const e=computeSomething();use(e);
+    ```
+
+* Automatically prefix the `mask-composite` CSS property for WebKit ([#3493](https://github.com/evanw/esbuild/issues/3493))
+
+    The `mask-composite` property will now be prefixed as `-webkit-mask-composite` for older WebKit-based browsers. In addition to prefixing the property name, handling older browsers also requires rewriting the values since WebKit uses non-standard names for the mask composite modes:
+
+    ```css
+    /* Original code */
+    div {
+      mask-composite: add, subtract, intersect, exclude;
+    }
+
+    /* New output (with --target=chrome100) */
+    div {
+      -webkit-mask-composite:
+        source-over,
+        source-out,
+        source-in,
+        xor;
+      mask-composite:
+        add,
+        subtract,
+        intersect,
+        exclude;
+    }
+    ```
+
+* Avoid referencing `this` from JSX elements in derived class constructors ([#3454](https://github.com/evanw/esbuild/issues/3454))
+
+    When you enable `--jsx=automatic` and `--jsx-dev`, the JSX transform is supposed to insert `this` as the last argument to the `jsxDEV` function. I'm not sure exactly why this is and I can't find any specification for it, but in any case this causes the generated code to crash when you use a JSX element in a derived class constructor before the call to `super()` as `this` is not allowed to be accessed at that point. For example
+
+    ```js
+    // Original code
+    class ChildComponent extends ParentComponent {
+      constructor() {
+        super(<div />)
+      }
+    }
+
+    // Problematic output (with --loader=jsx --jsx=automatic --jsx-dev)
+    import { jsxDEV } from "react/jsx-dev-runtime";
+    class ChildComponent extends ParentComponent {
+      constructor() {
+        super(/* @__PURE__ */ jsxDEV("div", {}, void 0, false, {
+          fileName: "<stdin>",
+          lineNumber: 3,
+          columnNumber: 15
+        }, this)); // The reference to "this" crashes here
+      }
+    }
+    ```
+
+    The TypeScript compiler doesn't handle this at all while the Babel compiler just omits `this` for the entire constructor (even after the call to `super()`). There seems to be no specification so I can't be sure that this change doesn't break anything important. But given that Babel is pretty loose with this and TypeScript doesn't handle this at all, I'm guessing this value isn't too important. React's blog post seems to indicate that this value was intended to be used for a React-specific migration warning at some point, so it could even be that this value is irrelevant now. Anyway the crash in this case should now be fixed.
+
+* Allow package subpath imports to map to node built-ins ([#3485](https://github.com/evanw/esbuild/issues/3485))
+
+    You are now able to use a [subpath import](https://nodejs.org/api/packages.html#subpath-imports) in your package to resolve to a node built-in module. For example, with a `package.json` file like this:
+
+    ```json
+    {
+      "type": "module",
+      "imports": {
+        "#stream": {
+          "node": "stream",
+          "default": "./stub.js"
+        }
+      }
+    }
+    ```
+
+    You can now import from node's `stream` module like this:
+
+    ```js
+    import * as stream from '#stream';
+    console.log(Object.keys(stream));
+    ```
+
+    This will import from node's `stream` module when the platform is `node` and from `./stub.js` otherwise.
+
+* No longer throw an error when a `Symbol` is missing ([#3453](https://github.com/evanw/esbuild/issues/3453))
+
+    Certain JavaScript syntax features use special properties on the global `Symbol` object. For example, the asynchronous iteration syntax uses `Symbol.asyncIterator`. Previously esbuild's generated code for older browsers required this symbol to be polyfilled. However, starting with this release esbuild will use [`Symbol.for()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/for) to construct these symbols if they are missing instead of throwing an error about a missing polyfill. This means your code no longer needs to include a polyfill for missing symbols as long as your code also uses `Symbol.for()` for missing symbols.
+
+* Parse upcoming changes to TypeScript syntax ([#3490](https://github.com/evanw/esbuild/issues/3490), [#3491](https://github.com/evanw/esbuild/pull/3491))
+
+    With this release, you can now use `from` as the name of a default type-only import in TypeScript code, as well as `of` as the name of an `await using` loop iteration variable:
+
+    ```ts
+    import type from from 'from'
+    for (await using of of of) ;
+    ```
+
+    This matches similar changes in the TypeScript compiler ([#56376](https://github.com/microsoft/TypeScript/issues/56376) and [#55555](https://github.com/microsoft/TypeScript/issues/55555)) which will start allowing this syntax in an upcoming version of TypeScript. Please never actually write code like this.
+
+    The type-only import syntax change was contributed by [@magic-akari](https://github.com/magic-akari).
+
 ## 0.19.5
 
 * Fix a regression in 0.19.0 regarding `paths` in `tsconfig.json` ([#3354](https://github.com/evanw/esbuild/issues/3354))
