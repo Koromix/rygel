@@ -68,7 +68,7 @@ function EchosProvider() {
                     <label>
                         <input type="checkbox" data-filter="this.hotspot"
                                checked/> Hotspots
-                        <img src="static/icons/hot1.png" width="24" height="24" alt="" />
+                        <img src="static/icons/hot2.png" width="24" height="24" alt="" />
                     </label>
                     <label>
                         <input type="checkbox" data-filter="!this.hotspot"
