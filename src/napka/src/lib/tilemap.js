@@ -287,8 +287,7 @@ function TileMap(runner) {
 
             if (tooltips.length) {
                 render_tooltip = {
-                    x: target.x,
-                    y: target.y,
+                    target: target,
                     text: Array.from(new Set(tooltips)).join('\n')
                 };
             } else {
@@ -402,7 +401,7 @@ function TileMap(runner) {
             x1: Math.floor(state.pos.x - canvas.width / 2),
             y1: Math.floor(state.pos.y - canvas.height / 2),
             x2: Math.ceil(state.pos.x + canvas.width / 2),
-            y2: Math.floor(state.pos.y + canvas.height / 2)
+            y2: Math.ceil(state.pos.y + canvas.height / 2)
         };
 
         return viewport;
@@ -540,13 +539,18 @@ function TileMap(runner) {
             if (render_tooltip != null) {
                 ctx.font = '12px Open Sans';
 
-                let pos = {
-                    x: render_tooltip.x - viewport.x1 + 5,
-                    y: render_tooltip.y - viewport.y1 - 5
-                };
+                let target = render_tooltip.target;
 
                 let width = ctx.measureText(render_tooltip.text).width;
                 let height = 14;
+
+                let pos = {
+                    x: target.x + (target.size / 2) - viewport.x1 + 5,
+                    y: target.y - viewport.y1 + 4
+                };
+
+                if (pos.x + width > viewport.x2 - viewport.x1 - 10)
+                    pos.x = target.x - (target.size / 2) - width - viewport.x1 - 15;
 
                 ctx.fillStyle = '#ffffffdd';
                 ctx.fillRect(pos.x, pos.y - height, width + 10, height + 6);
