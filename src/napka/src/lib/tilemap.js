@@ -38,6 +38,7 @@ function TileMap(runner) {
     let zoom_animation = null;
 
     let render_elements = [];
+    let render_tooltip = null;
 
     let missing_assets = 0;
     let active_fetchers = 0;
@@ -260,7 +261,7 @@ function TileMap(runner) {
         }
 
         // Detect user targets
-        let targets = [];
+        let target = null;
         {
             let viewport = getViewport();
 
@@ -274,14 +275,31 @@ function TileMap(runner) {
 
                 if (element.clickable &&
                         distance(pos, mouse_state) < adaptMarkerSize(element.size, state.zoom) / 2) {
-                    targets = element.markers;
+                    target = element;
                     break;
                 }
             }
         }
 
+        // Handle tooltip
+        if (target != null) {
+            let tooltips = target.markers.filter(marker => marker.tooltip).map(marker => marker.tooltip);
+
+            if (tooltips.length) {
+                render_tooltip = {
+                    x: target.x,
+                    y: target.y,
+                    text: Array.from(new Set(tooltips)).join('\n')
+                };
+            } else {
+                render_tooltip = null;
+            }
+        } else {
+            render_tooltip = null;
+        }
+
         // Handle actions
-        if (mouse_state.left >= 1 && (!targets.length || state.grab != null)) {
+        if (mouse_state.left >= 1 && (target == null || state.grab != null)) {
             if (state.grab != null) {
                 state.pos.x += state.grab.x - mouse_state.x;
                 state.pos.y += state.grab.y - mouse_state.y;
@@ -294,13 +312,13 @@ function TileMap(runner) {
         } else if (!mouse_state.left) {
             state.grab = null;
         }
-        if (mouse_state.left == -1 && targets.length && state.grab == null)
-            handle_click(targets);
+        if (mouse_state.left == -1 && target != null && state.grab == null)
+            handle_click(target.markers);
 
         // Adjust cursor style
         if (state.grab != null) {
             runner.cursor = 'grabbing';
-        } else if (targets.length) {
+        } else if (target != null) {
             runner.cursor = 'pointer';
         } else {
             runner.cursor = 'grab';
@@ -462,7 +480,7 @@ function TileMap(runner) {
             for (let element of render_elements) {
                 let pos = {
                     x: element.x - viewport.x1,
-                    y: element.y - viewport.y1,
+                    y: element.y - viewport.y1
                 };
 
                 if (zoom_animation != null) {
@@ -516,6 +534,25 @@ function TileMap(runner) {
                     ctx.fillStyle = 'white';
                     ctx.fillText(element.text, pos.x - width / 2, pos.y + size / 3);
                 }
+            }
+
+            // Draw tooltip
+            if (render_tooltip != null) {
+                ctx.font = '12px Open Sans';
+
+                let pos = {
+                    x: render_tooltip.x - viewport.x1 + 5,
+                    y: render_tooltip.y - viewport.y1 - 5
+                };
+
+                let width = ctx.measureText(render_tooltip.text).width;
+                let height = 14;
+
+                ctx.fillStyle = '#ffffffdd';
+                ctx.fillRect(pos.x, pos.y - height, width + 10, height + 6);
+
+                ctx.fillStyle = 'black';
+                ctx.fillText(render_tooltip.text, pos.x + 5, pos.y);
             }
 
             ctx.restore();

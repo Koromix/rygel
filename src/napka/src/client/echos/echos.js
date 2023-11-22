@@ -99,6 +99,7 @@ function EchosProvider() {
                             latitude: entry.address.latitude,
                             longitude: entry.address.longitude,
                             cluster: entry.lieu,
+                            tooltip: entry.lieu,
                             priority: 2,
                             icon: icons.hot1,
                             size: 24,
@@ -108,7 +109,7 @@ function EchosProvider() {
                         marker = {
                             latitude: entry.address.latitude,
                             longitude: entry.address.longitude,
-                            // cluster: '#e1902e',
+                            tooltip: entry.lieu,
                             priority: 1,
                             circle: '#e1902e',
                             size: 18,
