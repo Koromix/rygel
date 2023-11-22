@@ -146,9 +146,9 @@ function EchosProvider() {
 
         let content = html`
             <div>
-                Code postal : <b>${cp}</b><br/>
-                Ville : <b>${city}</b>
-                ${entry.lieu ? html`<br/><br/>Lieu : ${entry.lieu}` : ''}
+                ${entry.lieu ? html`Lieu : <b>${entry.lieu}</b><br/>` : ''}
+                Ville : <b>${city} (${cp})</b>
+                ${entry.hotspot ? html`<br/><span style="color: #db0a0a;">⚠\uFE0E Hotspot</span>` : ''}
             </div>
         `;
 

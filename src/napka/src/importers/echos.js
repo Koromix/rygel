@@ -148,7 +148,7 @@ function transformIML(row) {
         version: null,
         hide: 0,
 
-        name: row.IML,
+        name: row.Hotspot || row.Denomination || row.Type || row.IML,
         address: makeAddress(row.CP, row.Commune),
 
         lieu: row.Hotspot || row.Denomination || row.Type,
