@@ -151,7 +151,8 @@ function transformIML(row) {
         name: row.IML,
         address: makeAddress(row.CP, row.Commune),
 
-        lieu: row.Denomination || row.Type
+        lieu: row.Hotspot || row.Denomination || row.Type,
+        hotspot: !!row.Hotspot
     };
 
     entry.version = crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex');

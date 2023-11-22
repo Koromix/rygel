@@ -27,6 +27,7 @@ function TileMap(runner) {
     let marker_groups = {};
 
     let handle_click = (markers) => {};
+    let style_cluster = (element) => {};
 
     const DEFAULT_ZOOM = 7;
     const MAX_FETCHERS = 8;
@@ -57,7 +58,9 @@ function TileMap(runner) {
 
         zoomLevel: { get: () => state.zoom, enumerable: true },
 
-        onClick: { get: () => handle_click, set: func => { handle_click = func; }, enumerable: true }
+        onClick: { get: () => handle_click, set: func => { handle_click = func; }, enumerable: true },
+
+        styleCluster: { get: () => style_cluster, set: func => { style_cluster = func; }, enumerable: true }
     });
 
     this.init = async function(config) {
@@ -222,6 +225,8 @@ function TileMap(runner) {
 
                     markers: cluster.map(item => item.marker)
                 };
+
+                style_cluster(element);
 
                 render_elements.push(element);
             }

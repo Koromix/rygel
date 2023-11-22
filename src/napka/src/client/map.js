@@ -56,6 +56,8 @@ export async function start(prov, options = {}) {
     // Set up map
     map.init(ENV.map);
     map.onClick = handleClick;
+    if (provider.styleCluster != null)
+        map.styleCluster = provider.styleCluster;
     map.setMarkers('Etablissements', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
 

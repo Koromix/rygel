@@ -30,7 +30,9 @@ import { Util, Log, Net } from '../../../../web/libjs/common.js';
 import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
 const ICONS = {
-    hang: 'static/icons/hang.png'
+    hot1: 'static/icons/hot1.png',
+    hot2: 'static/icons/hot2.png',
+    other: 'static/icons/other.png'
 };
 
 function EchosProvider() {
@@ -64,9 +66,14 @@ function EchosProvider() {
 
                 <div class="group">
                     <label>
-                        <input type="checkbox" data-filter="this.type == 'Suicide'"
-                               checked/> Suicides
-                        <img src="static/icons/hang.png" width="24" height="24" alt="" />
+                        <input type="checkbox" data-filter="this.hotspot"
+                               checked/> Hotspots
+                        <img src="static/icons/hot1.png" width="24" height="24" alt="" />
+                    </label>
+                    <label>
+                        <input type="checkbox" data-filter="!this.hotspot"
+                               checked/> Autres lieux
+                        <img src="static/icons/other.png" width="24" height="24" alt="" />
                     </label>
                 </div>
             </div>
@@ -82,15 +89,29 @@ function EchosProvider() {
                 total++;
 
                 if (filters.every(filtre => filtre(etab))) {
-                    let marker = {
-                        latitude: etab.address.latitude,
-                        longitude: etab.address.longitude,
-                        cluster: '#e1572e',
-                        priority: 1,
-                        icon: getEtabIcon(etab),
-                        size: 24,
-                        clickable: true
-                    };
+                    let marker = null;
+
+                    if (etab.hotspot) {
+                        marker = {
+                            latitude: etab.address.latitude,
+                            longitude: etab.address.longitude,
+                            cluster: etab.lieu,
+                            priority: 2,
+                            icon: icons.hot1,
+                            size: 24,
+                            clickable: true
+                        };
+                    } else {
+                        marker = {
+                            latitude: etab.address.latitude,
+                            longitude: etab.address.longitude,
+                            // cluster: '#e1902e',
+                            priority: 1,
+                            circle: '#e1902e',
+                            size: 18,
+                            clickable: true
+                        };
+                    }
 
                     marker.etab = etab;
 
@@ -113,9 +134,11 @@ function EchosProvider() {
         return markers;
     };
 
-    function getEtabIcon(etab) {
-        return icons.hang;
-    }
+    this.styleCluster = function(element) {
+        element.icon = icons.hot2;
+        element.size = 30;
+        element.priority = 3;
+    };
 
     this.renderPopup = function(etab, edit_key) {
         let cp = etab.address.address.substr(0, 5);
