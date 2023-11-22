@@ -37,7 +37,7 @@ const ICONS = {
 };
 
 function DemheterProvider() {
-    let etablissements;
+    let entries;
 
     let icons = {};
 
@@ -47,7 +47,7 @@ function DemheterProvider() {
             Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
         ]);
 
-        etablissements = [
+        entries = [
             ...data.psychologues.rows.map(psy => ({ type: 'Psychologue', ...psy })),
             ...data.centres.rows.map(centre => ({ type: 'Centre', ...centre }))
         ];
@@ -91,22 +91,22 @@ function DemheterProvider() {
         let markers = [];
         let total = 0;
 
-        for (let etab of etablissements) {
-            if (etab.address.latitude != null) {
+        for (let entry of entries) {
+            if (entry.address.latitude != null) {
                 total++;
 
-                if (filters.every(filtre => filtre(etab))) {
+                if (filters.every(filtre => filtre(entry))) {
                     let marker = {
-                        latitude: etab.address.latitude,
-                        longitude: etab.address.longitude,
-                        cluster: (etab.type == 'Psychologue') ? '#d352a3' : null,
-                        priority: 1 + (etab.type == 'Centre') + !!etab.demheter,
-                        icon: getEtabIcon(etab),
-                        size: (etab.type == 'Centre') ? 48 : 40,
+                        latitude: entry.address.latitude,
+                        longitude: entry.address.longitude,
+                        cluster: (entry.type == 'Psychologue') ? '#d352a3' : null,
+                        priority: 1 + (entry.type == 'Centre') + !!entry.demheter,
+                        icon: getEntryIcon(entry),
+                        size: (entry.type == 'Centre') ? 48 : 40,
                         clickable: true
                     };
 
-                    marker.etab = etab;
+                    marker.entry = entry;
 
                     markers.push(marker);
                 }
@@ -127,51 +127,51 @@ function DemheterProvider() {
         return markers;
     };
 
-    function getEtabIcon(etab) {
-        if (etab.type == 'Centre') {
-            if (etab.demheter && etab.ect) {
+    function getEntryIcon(entry) {
+        if (entry.type == 'Centre') {
+            if (entry.demheter && entry.ect) {
                 return icons.dual;
-            } else if (etab.demheter) {
+            } else if (entry.demheter) {
                 return icons.demheter;
-            } else if (etab.ect) {
+            } else if (entry.ect) {
                 return icons.ect;
             }
-        } else if (etab.type === 'Psychologue') {
+        } else if (entry.type === 'Psychologue') {
             return icons.psychologist;
         }
 
         return null;
     }
 
-    this.renderPopup = function(etab, edit_key) {
+    this.renderEntry = function(entry, edit_key) {
         let content = html`
             <div>
-                <i>${etab.type}</i>
-                ${etab.type == 'Centre' && etab.demheter ? html`<span class="tag" style="background: #ff6600;">DEMHETER</span>` : ''}
-                ${etab.type == 'Centre' && etab.ect ? html`<span class="tag" style="background: #18a059;">ECT</span>` : ''}
+                <i>${entry.type}</i>
+                ${entry.type == 'Centre' && entry.demheter ? html`<span class="tag" style="background: #ff6600;">DEMHETER</span>` : ''}
+                ${entry.type == 'Centre' && entry.ect ? html`<span class="tag" style="background: #18a059;">ECT</span>` : ''}
                 <br/><br/>
 
-                Adresse : <b>${field(etab, 'address')}</b><br/><br/>
+                Adresse : <b>${field(entry, 'address')}</b><br/><br/>
 
                 <u>Pour prendre un rendez-vous :</u><br/>
-                ${etab.type == 'Psychologue' ? unsafeHTML(renderMarkdown(etab.orientation.trim())) : ''}
-                ${etab.type == 'Centre' && etab.mail ?
-                    html`Adressez un courriel électronique à l'adresse <a href=${'mailto:' + etab.mail}>${etab.mail}</a><br/>` : ''}
-                ${etab.type == 'Centre' && !etab.mail ? html`Prenez rendez-vous par téléphone<br/>` : ''}
+                ${entry.type == 'Psychologue' ? unsafeHTML(renderMarkdown(entry.orientation.trim())) : ''}
+                ${entry.type == 'Centre' && entry.mail ?
+                    html`Adressez un courriel électronique à l'adresse <a href=${'mailto:' + entry.mail}>${entry.mail}</a><br/>` : ''}
+                ${entry.type == 'Centre' && !entry.mail ? html`Prenez rendez-vous par téléphone<br/>` : ''}
                 <br/>
-                ${etab.mail ? html`Courriel : <a href=${'mailto:' + etab.mail}>${etab.mail}</a><br/>` : ''}
-                ${etab.telephone ? html`Téléphone : <a href=${'tel:+33' + etab.telephone.substr(1)}>${etab.telephone}</a><br/>` : ''}
+                ${entry.mail ? html`Courriel : <a href=${'mailto:' + entry.mail}>${entry.mail}</a><br/>` : ''}
+                ${entry.telephone ? html`Téléphone : <a href=${'tel:+33' + entry.telephone.substr(1)}>${entry.telephone}</a><br/>` : ''}
             </div>
         `;
 
         return content;
     };
 
-    function field(etab, key, view = null) {
-        if (key == 'address' && etab[key] != null) {
-            return makeField(etab, key, 'address');
+    function field(entry, key, view = null) {
+        if (key == 'address' && entry[key] != null) {
+            return makeField(entry, key, 'address');
         } else {
-            return makeField(etab, key, fields[key], view);
+            return makeField(entry, key, fields[key], view);
         }
     }
 }

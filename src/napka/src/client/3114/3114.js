@@ -33,7 +33,7 @@ const ICONS = {
 };
 
 function PpnpsProvider() {
-    let etablissements;
+    let entries;
 
     let ignore_refresh = false;
 
@@ -45,10 +45,10 @@ function PpnpsProvider() {
             Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
         ]);
 
-        etablissements = data.rows;
-        etablissements.sort((etab1, etab2) => {
-            let wide1 = (etab1.rayon != null && etab1.rayon.startsWith('France'));
-            let wide2 = (etab2.rayon != null && etab2.rayon.startsWith('France'));
+        entries = data.rows;
+        entries.sort((entry1, entry2) => {
+            let wide1 = (entry1.rayon != null && entry1.rayon.startsWith('France'));
+            let wide2 = (entry2.rayon != null && entry2.rayon.startsWith('France'));
 
             return wide1 - wide2;
         });
@@ -242,23 +242,23 @@ function PpnpsProvider() {
         let markers = [];
         let total = 0;
 
-        for (let etab of etablissements) {
-            if (etab.address.latitude != null) {
+        for (let entry of entries) {
+            if (entry.address.latitude != null) {
                 total++;
 
-                if (filters.every(filtre => filtre(etab))) {
-                    let wide = etab.rayon != null && etab.rayon.startsWith('France');
-                    let icon = icons[etab.categorie];
+                if (filters.every(filtre => filtre(entry))) {
+                    let wide = entry.rayon != null && entry.rayon.startsWith('France');
+                    let icon = icons[entry.categorie];
 
                     if (icon == null) {
-                        if (etab.categorie != null)
-                            console.error('Missing icon', etab.categorie);
+                        if (entry.categorie != null)
+                            console.error('Missing icon', entry.categorie);
                         icon = icons['Non connu'];
                     }
 
                     let marker = {
-                        latitude: etab.address.latitude,
-                        longitude: etab.address.longitude,
+                        latitude: entry.address.latitude,
+                        longitude: entry.address.longitude,
                         icon: icon,
                         size: wide ? 48 : 40,
                         priority: 0 + wide,
@@ -266,7 +266,7 @@ function PpnpsProvider() {
                         filter: wide ? 'hue-rotate(180deg)' : null
                     };
 
-                    marker.etab = etab;
+                    marker.entry = entry;
 
                     markers.push(marker);
                 }
@@ -287,13 +287,13 @@ function PpnpsProvider() {
         return markers;
     };
 
-    this.renderPopup = function(etab, edit_key) {
+    this.renderEntry = function(entry, edit_key) {
         let columns = 0;
         let show_we = 0;
         let days_map = {};
-        if (etab.horaires != null) {
-            for (let i = 0; i < etab.horaires.length; i++) {
-                let horaire = etab.horaires[i];
+        if (entry.horaires != null) {
+            for (let i = 0; i < entry.horaires.length; i++) {
+                let horaire = entry.horaires[i];
 
                 let ptr = days_map[horaire.type + '_' + horaire.jour];
                 if (ptr == null) {
@@ -310,19 +310,19 @@ function PpnpsProvider() {
         let content = html`
             <div class="info">
                 <div>
-                    ${etab.categorie ? html`
+                    ${entry.categorie ? html`
                         <i>
-                            ${etab.categorie}
-                            ${etab.categorie2 && (etab.categorie2 !== 'Autre' || etab.categorie2_prec == null) ? html`<br/>${etab.categorie2}` : ''}
-                            ${etab.categorie2 === 'Autre' && etab.categorie2_prec != null ? html`<br/>Autre : ${etab.categorie2_prec}` : ''}
+                            ${entry.categorie}
+                            ${entry.categorie2 && (entry.categorie2 !== 'Autre' || entry.categorie2_prec == null) ? html`<br/>${entry.categorie2}` : ''}
+                            ${entry.categorie2 === 'Autre' && entry.categorie2_prec != null ? html`<br/>Autre : ${entry.categorie2_prec}` : ''}
                         </i><br/><br/>
                     ` : ''}
 
-                    Adresse : <b>${field(etab, 'address')}</b>
-                    ${etab.rayon ? html`<br/>Rayon d'action : <b>${etab.rayon}</b>` : ''}<br/><br/>
+                    Adresse : <b>${field(entry, 'address')}</b>
+                    ${entry.rayon ? html`<br/>Rayon d'action : <b>${entry.rayon}</b>` : ''}<br/><br/>
 
-                    ${etab.horaires == null ? html`<span class="tag" style="background: #db0a0a;">⚠\uFE0E Horaires non communiqués</span>` : ''}
-                    ${etab.horaires != null ? html`
+                    ${entry.horaires == null ? html`<span class="tag" style="background: #db0a0a;">⚠\uFE0E Horaires non communiqués</span>` : ''}
+                    ${entry.horaires != null ? html`
                         <div class="planning_tip">Horaires donnés à titre indicatif</div>
                         <table class="planning">
                             <colgroup>
@@ -354,51 +354,51 @@ function PpnpsProvider() {
                 </div>
 
                 <div>
-                    ${etab.public != null ? html`
-                        Publics : ${etab.public.map(pub => html`<span class="tag" style="background: #ff6600;">${pub}</span> `)}<br/><br/>
+                    ${entry.public != null ? html`
+                        Publics : ${entry.public.map(pub => html`<span class="tag" style="background: #ff6600;">${pub}</span> `)}<br/><br/>
                     ` : ''}
 
-                    ${etab.publics != null ? html`
-                        Problématiques : ${etab.publics.map(pub => pub !== 'Autre' ? html`<br/><i>- ${pub}</i>` : '')}
-                        ${etab.publics99 ? html`<br/><i>- Autres : ${etab.publics99.trim()}</i>` : ''}<br/><br/>
+                    ${entry.publics != null ? html`
+                        Problématiques : ${entry.publics.map(pub => pub !== 'Autre' ? html`<br/><i>- ${pub}</i>` : '')}
+                        ${entry.publics99 ? html`<br/><i>- Autres : ${entry.publics99.trim()}</i>` : ''}<br/><br/>
                     ` : ''}
 
-                    ${etab.modalites != null ? html`
-                        Modalités : ${etab.modalites.map(mod => mod !== 'Autre' ? html`<span class="tag" style="background: #444;">${mod}</span> ` : '')}
-                        ${etab.modalites_prec ? html`<br/><i>Autre modalité : ${etab.modalites_prec.trim()}</i>` : ''}<br/><br/>
+                    ${entry.modalites != null ? html`
+                        Modalités : ${entry.modalites.map(mod => mod !== 'Autre' ? html`<span class="tag" style="background: #444;">${mod}</span> ` : '')}
+                        ${entry.modalites_prec ? html`<br/><i>Autre modalité : ${entry.modalites_prec.trim()}</i>` : ''}<br/><br/>
                     ` : ''}
 
-                    ${etab.cout != null ? html`
-                        Coût : <span class="tag" style="background: #24579d;">${etab.cout}</span>
-                        ${etab.cout_prec ? html`<br/><i>Autre option : ${etab.cout_prec.trim()}</i>` : ''}<br/><br/>
+                    ${entry.cout != null ? html`
+                        Coût : <span class="tag" style="background: #24579d;">${entry.cout}</span>
+                        ${entry.cout_prec ? html`<br/><i>Autre option : ${entry.cout_prec.trim()}</i>` : ''}<br/><br/>
                     ` : ''}
 
-                    ${etab.delai_pec != null ? html`
-                        Délai de PEC : <span class="tag" style="background: #2d8261;">${etab.delai_pec}</span><br/><br/>
+                    ${entry.delai_pec != null ? html`
+                        Délai de PEC : <span class="tag" style="background: #2d8261;">${entry.delai_pec}</span><br/><br/>
                     ` : ''}
 
                     <u>Pour prendre un rendez-vous :</u><br/><br/>
-                    ${etab.tel || etab.mail || etab.www ? html`
-                        ${etab.tel ? html`Par téléphone : <a href=${'tel:' + parse.cleanPhoneNumber(etab.tel)}><b>${parse.cleanPhoneNumber(etab.tel)}</b></a><br/>` : ''}
-                        ${etab.mail ? html`Par courriel : <a href=${'mailto:' + parse.cleanMail(etab.mail)}>${parse.cleanMail(etab.mail)}</a><br/>` : ''}
-                        ${etab.www ? html`Par internet : <a href=${parse.cleanURL(etab.www)} target="_blank">Accéder au site</a><br/>` : ''}
+                    ${entry.tel || entry.mail || entry.www ? html`
+                        ${entry.tel ? html`Par téléphone : <a href=${'tel:' + parse.cleanPhoneNumber(entry.tel)}><b>${parse.cleanPhoneNumber(entry.tel)}</b></a><br/>` : ''}
+                        ${entry.mail ? html`Par courriel : <a href=${'mailto:' + parse.cleanMail(entry.mail)}>${parse.cleanMail(entry.mail)}</a><br/>` : ''}
+                        ${entry.www ? html`Par internet : <a href=${parse.cleanURL(entry.www)} target="_blank">Accéder au site</a><br/>` : ''}
                     ` : html`Présentez-vous directement au centre<br/>`}
                 </div>
             </div>
 
             <div class="info">
-                ${etab.orgaforma ? html`<br/><i>${Util.capitalize(etab.orgaforma.trim())}</i>` : ''}
+                ${entry.orgaforma ? html`<br/><i>${Util.capitalize(entry.orgaforma.trim())}</i>` : ''}
             </div>
         `;
 
         return content;
     };
 
-    function field(etab, key, view = null) {
-        if (key == 'address' && etab[key] != null) {
-            return makeField(etab, key, 'address');
+    function field(entry, key, view = null) {
+        if (key == 'address' && entry[key] != null) {
+            return makeField(entry, key, 'address');
         } else {
-            return makeField(etab, key, fields[key], view);
+            return makeField(entry, key, fields[key], view);
         }
     }
 }

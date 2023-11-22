@@ -36,7 +36,7 @@ const ICONS = {
 };
 
 function EchosProvider() {
-    let etablissements;
+    let entries;
 
     let icons = {};
 
@@ -46,7 +46,7 @@ function EchosProvider() {
             Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
         ]);
 
-        etablissements = [
+        entries = [
             ...data.iml.rows.map(psy => ({ type: 'Suicide', ...psy }))
         ];
 
@@ -84,18 +84,18 @@ function EchosProvider() {
         let markers = [];
         let total = 0;
 
-        for (let etab of etablissements) {
-            if (etab.address.latitude != null) {
+        for (let entry of entries) {
+            if (entry.address.latitude != null) {
                 total++;
 
-                if (filters.every(filtre => filtre(etab))) {
+                if (filters.every(filtre => filtre(entry))) {
                     let marker = null;
 
-                    if (etab.hotspot) {
+                    if (entry.hotspot) {
                         marker = {
-                            latitude: etab.address.latitude,
-                            longitude: etab.address.longitude,
-                            cluster: etab.lieu,
+                            latitude: entry.address.latitude,
+                            longitude: entry.address.longitude,
+                            cluster: entry.lieu,
                             priority: 2,
                             icon: icons.hot1,
                             size: 24,
@@ -103,8 +103,8 @@ function EchosProvider() {
                         };
                     } else {
                         marker = {
-                            latitude: etab.address.latitude,
-                            longitude: etab.address.longitude,
+                            latitude: entry.address.latitude,
+                            longitude: entry.address.longitude,
                             // cluster: '#e1902e',
                             priority: 1,
                             circle: '#e1902e',
@@ -113,7 +113,7 @@ function EchosProvider() {
                         };
                     }
 
-                    marker.etab = etab;
+                    marker.entry = entry;
 
                     markers.push(marker);
                 }
@@ -140,26 +140,26 @@ function EchosProvider() {
         element.priority = 3;
     };
 
-    this.renderPopup = function(etab, edit_key) {
-        let cp = etab.address.address.substr(0, 5);
-        let city = etab.address.address.substr(6).trim();
+    this.renderEntry = function(entry, edit_key) {
+        let cp = entry.address.address.substr(0, 5);
+        let city = entry.address.address.substr(6).trim();
 
         let content = html`
             <div>
                 Code postal : <b>${cp}</b><br/>
                 Ville : <b>${city}</b>
-                ${etab.lieu ? html`<br/><br/>Lieu : ${etab.lieu}` : ''}
+                ${entry.lieu ? html`<br/><br/>Lieu : ${entry.lieu}` : ''}
             </div>
         `;
 
         return content;
     };
 
-    function field(etab, key, view = null) {
-        if (key == 'address' && etab[key] != null) {
-            return makeField(etab, key, 'address');
+    function field(entry, key, view = null) {
+        if (key == 'address' && entry[key] != null) {
+            return makeField(entry, key, 'address');
         } else {
-            return makeField(etab, key, fields[key], view);
+            return makeField(entry, key, fields[key], view);
         }
     }
 }

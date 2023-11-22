@@ -25,21 +25,21 @@ const ICONS = {
 };
 
 function Cn2rProvider() {
-    let etablissements;
+    let entries;
     let fields;
 
     let icons = {};
 
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
-            Net.get('api/entries/etablissements'),
+            Net.get('api/entries/entrylissements'),
             Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
         ]);
 
-        etablissements = data.rows;
+        entries = data.rows;
         fields = data.fields;
 
-        etablissements.sort((etab1, etab2) => !!etab1.etab_crp - !!etab2.etab_crp);
+        entries.sort((entry1, entry2) => !!entry1.etab_crp - !!entry2.etab_crp);
 
         // We've preloaded images
         {
@@ -59,11 +59,11 @@ function Cn2rProvider() {
                     <legend>Établissements</legend>
 
                     <div>
-                        <label><input type="checkbox" data-filter="this.etab_statut === 'Etablissement public'"
+                        <label><input type="checkbox" data-filter="this.etab_statut === 'entrylissement public'"
                                       checked/>Publics</label>
-                        <label><input type="checkbox" data-filter="this.etab_statut === 'Etablissement privé à but non lucratif'"
+                        <label><input type="checkbox" data-filter="this.etab_statut === 'entrylissement privé à but non lucratif'"
                                       checked/>Privés à but non lucratif</label>
-                        <label><input type="checkbox" data-filter="this.etab_statut === 'Etablissement privé à but lucratif'"
+                        <label><input type="checkbox" data-filter="this.etab_statut === 'entrylissement privé à but lucratif'"
                                       checked/>Privés à but lucratif</label>
                     </div>
                 </fieldset>
@@ -116,17 +116,17 @@ function Cn2rProvider() {
         let markers = [];
         let total = 0;
 
-        for (let etab of etablissements) {
-            if (etab.address.latitude != null) {
+        for (let entry of entries) {
+            if (entry.address.latitude != null) {
                 total++;
 
-                if (filters.every(filtre => filtre(etab))) {
+                if (filters.every(filtre => filtre(entry))) {
                     let marker = null;
 
-                    if (etab.etab_crp) {
+                    if (entry.etab_crp) {
                         marker = {
-                            latitude: etab.address.latitude,
-                            longitude: etab.address.longitude,
+                            latitude: entry.address.latitude,
+                            longitude: entry.address.longitude,
                             cluster: '#30346a',
                             priority: 2,
                             icon: icons.crp,
@@ -135,8 +135,8 @@ function Cn2rProvider() {
                         };
                     } else {
                         marker = {
-                            latitude: etab.address.latitude,
-                            longitude: etab.address.longitude,
+                            latitude: entry.address.latitude,
+                            longitude: entry.address.longitude,
                             cluster: '#bf4561',
                             priority: 1,
                             icon: icons.misc,
@@ -145,7 +145,7 @@ function Cn2rProvider() {
                         };
                     }
 
-                    marker.etab = etab;
+                    marker.entry = entry;
 
                     markers.push(marker);
                 }
@@ -170,12 +170,12 @@ function Cn2rProvider() {
         return markers;
     };
 
-    this.renderPopup = function(etab, edit_key) {
+    this.renderEntry = function(entry, edit_key) {
         let columns = 0;
         let show_we = 0;
         let days_map = {};
-        if (etab.rdv_horaires != null && etab.rdv_horaires.schedule != null) {
-            let schedule = etab.rdv_horaires.schedule;
+        if (entry.rdv_horaires != null && entry.rdv_horaires.schedule != null) {
+            let schedule = entry.rdv_horaires.schedule;
 
             for (let i = 0; i < schedule.length; i++) {
                 let horaire = schedule[i];
@@ -195,20 +195,20 @@ function Cn2rProvider() {
         let content = html`
             <div class="info">
                 <div>
-                    ${!isConnected() && etab.etab_crp ?
+                    ${!isConnected() && entry.etab_crp ?
                         html`<span class="tag" style="background: #24579d;"
                                    title="Centre Régional de Psychotraumatisme">CRP</span>&nbsp;` : ''}
-                    <i>${field(etab, 'etab_statut')}</i>
+                    <i>${field(entry, 'etab_statut')}</i>
                     ${isConnected() ?
                         html`<br/>Statut <span class="tag" style="background: #24579d;"
-                                               title="Centre Régional de Psychotraumatisme">CRP</span> : ${field(etab, 'etab_crp')}` : ''}
+                                               title="Centre Régional de Psychotraumatisme">CRP</span> : ${field(entry, 'etab_crp')}` : ''}
                     <br/><br/>
 
-                    Adresse : <b>${field(etab, 'address')}</b><br/><br/>
+                    Adresse : <b>${field(entry, 'address')}</b><br/><br/>
 
-                    ${!checkSchedule(etab.rdv_horaires) ? html`<span class="tag" style="background: #db0a0a;">⚠\uFE0E Horaires non communiqués</span>${makeEdit(etab, 'rdv_horaires')}<br/>` : ''}
-                    ${checkSchedule(etab.rdv_horaires) ? html`
-                        <div class="planning_tip">Horaires donnés à titre indicatif${makeEdit(etab, 'rdv_horaires')}</div>
+                    ${!checkSchedule(entry.rdv_horaires) ? html`<span class="tag" style="background: #db0a0a;">⚠\uFE0E Horaires non communiqués</span>${makeEdit(entry, 'rdv_horaires')}<br/>` : ''}
+                    ${checkSchedule(entry.rdv_horaires) ? html`
+                        <div class="planning_tip">Horaires donnés à titre indicatif${makeEdit(entry, 'rdv_horaires')}</div>
                         ${edit_key != 'rdv_horaires' ? html`
                             <table class="planning">
                                 ${Util.mapRange(1, show_we ? 8 : 6, day => {
@@ -229,28 +229,28 @@ function Cn2rProvider() {
                             </table>
                         ` : ''}
                     ` : ''}
-                    ${edit_key == 'rdv_horaires' ? html`${field(etab, 'rdv_horaires')}<br/>` : ''}<br/>
+                    ${edit_key == 'rdv_horaires' ? html`${field(entry, 'rdv_horaires')}<br/>` : ''}<br/>
 
-                    Accès personnes à mobilité réduite : ${field(etab, 'etab_acces_pmr')}<br/>
+                    Accès personnes à mobilité réduite : ${field(entry, 'etab_acces_pmr')}<br/>
                 </div>
 
                 <div>
-                    Accueil : ${field(etab, 'rdv_publics')}<br/>
+                    Accueil : ${field(entry, 'rdv_publics')}<br/>
                     ${isConnected() ? html`
-                        Consultations : ${field(etab, 'rdv_consultations', (etab.rdv_consultations || []).map(cs =>
+                        Consultations : ${field(entry, 'rdv_consultations', (entry.rdv_consultations || []).map(cs =>
                             html`<span class="tag" style="background: #444;">${cs}</span> `))}<br/><br/>
                     ` : ''}
-                    Modalités : ${field(etab, 'rdv_modalites')}<br/><br/>
+                    Modalités : ${field(entry, 'rdv_modalites')}<br/><br/>
 
                     <u>Pour contacter le CRP</u> :<br/><br/>
-                    ${isConnected() || etab.rdv_fixe ? html`Téléphone : <b>${field(etab, 'rdv_fixe', parse.cleanPhoneNumber(etab.rdv_fixe))}</b>
-                                       ${isConnected() || etab.rdv_portable ? html` ou ${field(etab, 'rdv_portable', parse.cleanPhoneNumber(etab.rdv_portable))}` : ''}<br/>` : ''}
-                    ${isConnected() || etab.rdv_mail ? html`Courriel : ${field(etab, 'rdv_mail', etab.rdv_mail ? html`<a href=${'mailto:' + etab.rdv_mail} style="white-space: nowrap;">${etab.rdv_mail}</a>` : html`<span class="sub">(inconnu)</span>`)}</a><br/>` : ''}
-                    ${!etab.rdv_fixe && !etab.rdv_mail && !etab.rdv_web ? html`Présentez-vous directement au centre<br/>` : ''}
-                    ${etab.rdv_courrier_mt && !isConnected() ? html`<br/>⚠\uFE0E Vous devez disposer d'un courrier de votre médecin traitant<br/>` : ''}
-                    ${isConnected() ? html`<br/>⚠\uFE0E Nécessité d'un médecin traitant : ${field(etab, 'rdv_courrier_mt')}<br/>` : ''}
-                    ${!isConnected() && etab.rdv_complement ? html`${unsafeHTML(renderMarkdown(etab.rdv_complement.trim()))}` : ''}
-                    ${isConnected() ? html`<br/>${field(etab, 'rdv_complement')}` : ''}
+                    ${isConnected() || entry.rdv_fixe ? html`Téléphone : <b>${field(entry, 'rdv_fixe', parse.cleanPhoneNumber(entry.rdv_fixe))}</b>
+                                       ${isConnected() || entry.rdv_portable ? html` ou ${field(entry, 'rdv_portable', parse.cleanPhoneNumber(entry.rdv_portable))}` : ''}<br/>` : ''}
+                    ${isConnected() || entry.rdv_mail ? html`Courriel : ${field(entry, 'rdv_mail', entry.rdv_mail ? html`<a href=${'mailto:' + entry.rdv_mail} style="white-space: nowrap;">${entry.rdv_mail}</a>` : html`<span class="sub">(inconnu)</span>`)}</a><br/>` : ''}
+                    ${!entry.rdv_fixe && !entry.rdv_mail && !entry.rdv_web ? html`Présentez-vous directement au centre<br/>` : ''}
+                    ${entry.rdv_courrier_mt && !isConnected() ? html`<br/>⚠\uFE0E Vous devez disposer d'un courrier de votre médecin traitant<br/>` : ''}
+                    ${isConnected() ? html`<br/>⚠\uFE0E Nécessité d'un médecin traitant : ${field(entry, 'rdv_courrier_mt')}<br/>` : ''}
+                    ${!isConnected() && entry.rdv_complement ? html`${unsafeHTML(renderMarkdown(entry.rdv_complement.trim()))}` : ''}
+                    ${isConnected() ? html`<br/>${field(entry, 'rdv_complement')}` : ''}
                 </div>
             </div>
         `;
@@ -258,11 +258,11 @@ function Cn2rProvider() {
         return content;
     };
 
-    function field(etab, key, view = null) {
-        if (key == 'address' && etab[key] != null) {
-            return makeField(etab, key, 'address');
+    function field(entry, key, view = null) {
+        if (key == 'address' && entry[key] != null) {
+            return makeField(entry, key, 'address');
         } else {
-            return makeField(etab, key, fields[key], view);
+            return makeField(entry, key, fields[key], view);
         }
     }
 

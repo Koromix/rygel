@@ -58,7 +58,7 @@ export async function start(prov, options = {}) {
     map.onClick = handleClick;
     if (provider.styleCluster != null)
         map.styleCluster = provider.styleCluster;
-    map.setMarkers('Etablissements', map_markers);
+    map.setMarkers('entries', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
 
     runner.onUpdate = updateMap;
@@ -341,7 +341,7 @@ async function handleClick(markers) {
 
                     <div @click=${handlePopupClick}>
                         ${markers.map(marker => html`
-                            <a @click=${UI.wrap(e => { handleClick([marker]); close(); })}>${marker.etab.name}</a><br>
+                            <a @click=${UI.wrap(e => { handleClick([marker]); close(); })}>${marker.entry.name}</a><br>
                         `)}
                     </div>
                 `
@@ -349,7 +349,7 @@ async function handleClick(markers) {
         }
     } else {
         let marker = markers[0];
-        let etab = isConnected() ? Object.assign({}, marker.etab) : marker.etab;
+        let entry = isConnected() ? Object.assign({}, marker.entry) : marker.entry;
 
         edit_key = null;
 
@@ -357,20 +357,20 @@ async function handleClick(markers) {
             await UI.dialog({
                 run: (render, close) => html`
                     <div class="title">
-                        ${edit_key == 'name' ? makeField(etab, 'name', 'markdown') : ''}
-                        ${edit_key != 'name' ? html`<div style="max-width: 660px;">${makeField(etab, 'name', 'markdown')}</div>` : ''}
+                        ${edit_key == 'name' ? makeField(entry, 'name', 'markdown') : ''}
+                        ${edit_key != 'name' ? html`<div style="max-width: 660px;">${makeField(entry, 'name', 'markdown')}</div>` : ''}
                         <div style="flex: 1;"></div>
                         <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
                     </div>
 
                     <div @click=${handlePopupClick}>
-                        ${provider.renderPopup(etab, edit_key)}
+                        ${provider.renderEntry(entry, edit_key)}
                     </div>
 
                     ${isConnected() ? html`
                         <div class="footer">
                             <button type="button" class="danger"
-                                    @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(etab.id).then(close))}>Supprimer</button>
+                                    @click=${UI.confirm('Supprimer cet établissement', e => deleteEntry(entry.id).then(close))}>Supprimer</button>
                             <div style="flex: 1;"></div>
                             <button @click=${closeOrSubmit} type="submit">Modifier</button>
                             <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
@@ -378,7 +378,7 @@ async function handleClick(markers) {
                     ` : ''}
                 `,
 
-                submit: (elements) => updateEntry(etab)
+                submit: (elements) => updateEntry(entry)
             });
         } finally {
             closeAddress();
@@ -398,8 +398,8 @@ function handlePopupClick(e) {
     closeAddress();
 }
 
-export function makeField(etab, key, type, view = null) {
-    let value = etab[key];
+export function makeField(entry, key, type, view = null) {
+    let value = entry[key];
 
     if (type == 'address' && value != null) {
         value = value.address;
@@ -424,7 +424,7 @@ export function makeField(etab, key, type, view = null) {
         return view;
     } else if (key != edit_key) {
         if (type == 'markdown') {
-            let rendered = markdown.render(etab[key] || '');
+            let rendered = markdown.render(entry[key] || '');
 
             return html`
                 <span class="sub">Modifier :</span> <a @click=${e => toggleEdit(e, key)}>✎</a><br/>
@@ -439,59 +439,59 @@ export function makeField(etab, key, type, view = null) {
     if (type == 'boolean') {
         return html`
             <span style="white-space: nowrap;">
-                <label><input name="yesno" type="radio" value="1" .checked=${etab[key]} @change=${e => editEnum(etab, key, true)}> Oui</label>
-                <label><input name="yesno" type="radio" value="0" .checked=${!etab[key]} @change=${e => editEnum(etab, key, false)}> Non</label>
+                <label><input name="yesno" type="radio" value="1" .checked=${entry[key]} @change=${e => editEnum(entry, key, true)}> Oui</label>
+                <label><input name="yesno" type="radio" value="0" .checked=${!entry[key]} @change=${e => editEnum(entry, key, false)}> Non</label>
             </span>
         `;
-    } else if (Array.isArray(type) && !Array.isArray(etab[key])) {
+    } else if (Array.isArray(type) && !Array.isArray(entry[key])) {
         return html`
-            <select @change=${e => editEnum(etab, key, e.target.value)}>
-                ${type.map(opt => html`<option value=${opt} .selected=${opt == etab[key]}>${opt}</option>`)}
+            <select @change=${e => editEnum(entry, key, e.target.value)}>
+                ${type.map(opt => html`<option value=${opt} .selected=${opt == entry[key]}>${opt}</option>`)}
             </select>
         `;
-    } else if (Array.isArray(type) && Array.isArray(etab[key])) {
+    } else if (Array.isArray(type) && Array.isArray(entry[key])) {
         return html`
             <span style="white-space: nowrap;">
                 ${type.map((opt, idx) =>
-                    html`<label><input type="checkbox" .checked=${etab[key].includes(opt)}
-                                       @change=${e => editMulti(etab, key, idx, opt, e.target.checked)}> ${opt}</label>`)}
+                    html`<label><input type="checkbox" .checked=${entry[key].includes(opt)}
+                                       @change=${e => editMulti(entry, key, idx, opt, e.target.checked)}> ${opt}</label>`)}
             </span>
         `;
     } else if (type == 'markdown' || type == 'schedule') {
         return html`
             <textarea rows="3" style="width: 100%;"
-                      @change=${e => editText(etab, key, type, e.target.value)}
-                      @keypress=${e => handleTextShortcuts(e, etab, key, type)}>${value || ''}</textarea>
+                      @change=${e => editText(entry, key, type, e.target.value)}
+                      @keypress=${e => handleTextShortcuts(e, entry, key, type)}>${value || ''}</textarea>
         `;
     } else if (type == 'address') {
         return html`
             <textarea rows="3" style="width: 100%;"
-                      @input=${e => completeAddress(e, (_, result) => editText(etab, key, type, result.address))}
-                      @keypress=${e => handleTextShortcuts(e, etab, key, type)}>${value || ''}</textarea>
+                      @input=${e => completeAddress(e, (_, result) => editText(entry, key, type, result.address))}
+                      @keypress=${e => handleTextShortcuts(e, entry, key, type)}>${value || ''}</textarea>
         `;
     } else {
         return html`
             <input type="text" .value=${value || ''}
-                   @change=${UI.wrap(e => editText(etab, key, type, e.target.value))}
-                   @keypress=${e => handleTextShortcuts(e, etab, key, type)} />
+                   @change=${UI.wrap(e => editText(entry, key, type, e.target.value))}
+                   @keypress=${e => handleTextShortcuts(e, entry, key, type)} />
         `;
     }
 }
 
-export function makeEdit(etab, key) {
+export function makeEdit(entry, key) {
     if (!isConnected())
         return '';
 
      return html` <a @click=${e => toggleEdit(e, key)}>✎</a>`;
 }
 
-function handleTextShortcuts(e, etab, key, type) {
+function handleTextShortcuts(e, entry, key, type) {
     if (e.keyCode == 27) {
         toggleEdit(e, null);
     } else if (e.target.tagName == 'TEXTAREA' && e.keyCode == 13 && e.ctrlKey) {
-        editText(etab, key, type, e.target.value);
+        editText(entry, key, type, e.target.value);
     } else if (e.target.tagName == 'INPUT' && e.keyCode == 13) {
-        editText(etab, key, type, e.target.value);
+        editText(entry, key, type, e.target.value);
         e.preventDefault();
     }
 }
@@ -504,7 +504,7 @@ function toggleEdit(e, key) {
     e.preventDefault();
 }
 
-async function editText(etab, key, type, value) {
+async function editText(entry, key, type, value) {
     if (type == 'address') {
         let results = await Net.post('api/admin/geocode', { address: value });
 
@@ -513,20 +513,20 @@ async function editText(etab, key, type, value) {
 
             if (!info.address)
                 info.address = value;
-            etab[key] = info;
+            entry[key] = info;
 
             if (key == 'address')
-                map.move(etab.address.latitude, etab.address.longitude);
+                map.move(entry.address.latitude, entry.address.longitude);
         }
     } else if (type == 'schedule') {
         let schedule = parse.parseSchedule(value);
 
-        etab[key] = {
+        entry[key] = {
             text: value,
             schedule: schedule
         };
     } else {
-        etab[key] = value;
+        entry[key] = value;
     }
 
     edit_key = null;
@@ -535,31 +535,31 @@ async function editText(etab, key, type, value) {
     UI.runDialog();
 }
 
-function editMulti(etab, key, idx, value, insert) {
-    if (!Array.isArray(etab[key]))
-        etab[key] = [];
+function editMulti(entry, key, idx, value, insert) {
+    if (!Array.isArray(entry[key]))
+        entry[key] = [];
 
-    let values = etab[key].filter(it => it != value);
+    let values = entry[key].filter(it => it != value);
     if (insert)
         values.splice(idx, 0, value);
 
-    etab[key] = values;
+    entry[key] = values;
     edit_changes.add(key);
 }
 
-async function editEnum(etab, key, value) {
-    etab[key] = value;
+async function editEnum(entry, key, value) {
+    entry[key] = value;
     edit_changes.add(key);
 
     edit_key = null;
     UI.runDialog();
 }
 
-export async function updateEntry(etab) {
-    let payload = { id: etab.id };
+export async function updateEntry(entry) {
+    let payload = { id: entry.id };
 
     for (let key of edit_changes.values())
-        payload[key] = etab[key];
+        payload[key] = entry[key];
 
     await Net.post('api/admin/edit', payload);
 
