@@ -138,6 +138,9 @@ function EchosProvider() {
         element.icon = icons.hot2;
         element.size = 30;
         element.priority = 3;
+
+        // We don't need to show the list
+        element.markers.length = 1;
     };
 
     this.renderEntry = function(entry, edit_key) {
@@ -148,7 +151,7 @@ function EchosProvider() {
             <div>
                 ${entry.lieu ? html`Lieu : <b>${entry.lieu}</b><br/>` : ''}
                 Ville : <b>${city} (${cp})</b>
-                ${entry.hotspot ? html`<br/><span style="color: #db0a0a;">⚠\uFE0E Hotspot</span>` : ''}
+                ${entry.hotspot ? html`<br/><br/><span style="color: #db0a0a;">⚠\uFE0E Hotspot</span>` : ''}
             </div>
         `;
 
