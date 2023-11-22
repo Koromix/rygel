@@ -182,8 +182,12 @@ function TileMap(runner) {
                     x: item.x,
                     y: item.y,
                     size: marker.size,
+                    icon: marker.icon,
+                    circle: marker.circle,
+
                     clickable: marker.clickable,
                     priority: marker.priority ?? 1,
+                    filter: marker.filter,
 
                     markers: [marker]
                 };
@@ -209,11 +213,14 @@ function TileMap(runner) {
                     x: center.x,
                     y: center.y,
                     size: 2 * radius,
+                    circle: cluster[0].cluster,
+                    text: '' + cluster.length,
+
                     clickable: true,
                     priority: 0,
+                    filter: null,
 
-                    markers: cluster.map(item => item.marker),
-                    color: cluster[0].cluster
+                    markers: cluster.map(item => item.marker)
                 };
 
                 render_elements.push(element);
@@ -468,62 +475,41 @@ function TileMap(runner) {
                 if (pos.y < -element.size || pos.y > canvas.height + pos.size)
                     continue;
 
-                switch (element.type) {
-                    case 'marker': {
-                        let marker = element.markers[0];
+                if (element.filter != current_filter) {
+                    ctx.filter = element.filter ?? 'none';
+                    current_filter = element.filter;
+                }
 
-                        if (marker.filter != current_filter) {
-                            ctx.filter = marker.filter ?? 'none';
-                            current_filter = marker.filter;
-                        }
+                if (element.icon != null) {
+                    let img = getImage(marker_textures, element.icon);
 
-                        if (marker.icon != null) {
-                            let img = getImage(marker_textures, marker.icon);
+                    let width = adaptMarkerSize(element.size, anim_zoom);
+                    let height = adaptMarkerSize(element.size, anim_zoom);
 
-                            let width = adaptMarkerSize(marker.size, anim_zoom);
-                            let height = adaptMarkerSize(marker.size, anim_zoom);
+                    if (img != null)
+                        ctx.drawImage(img, pos.x - width / 2, pos.y - height / 2, width, height);
+                } else if (element.circle != null) {
+                    let radius = adaptMarkerSize(element.size / 2, state.zoom);
 
-                            if (img != null)
-                                ctx.drawImage(img, pos.x - width / 2, pos.y - height / 2, width, height);
-                        } else if (marker.circle != null) {
-                            let radius = adaptMarkerSize(marker.size / 2, state.zoom);
+                    ctx.beginPath();
+                    ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
 
-                            ctx.beginPath();
-                            ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
+                    ctx.fillStyle = element.circle;
+                    ctx.fill();
+                }
 
-                            ctx.fillStyle = marker.circle;
-                            ctx.fill();
-                        }
-                    } break;
+                if (element.text) {
+                    let size = Math.floor(element.size / 2) + 1;
+                    let width = null;
 
-                    case 'cluster': {
-                        let radius = adaptMarkerSize(element.size / 2, state.zoom);
+                    // Find appropriate font size
+                    do {
+                        ctx.font = (--size) + 'px Open Sans';
+                        width = ctx.measureText(element.text).width;
+                    } while (width > 0.75 * element.size);
 
-                        if (current_filter) {
-                            ctx.filter = 'none';
-                            current_filter = null;
-                        }
-
-                        ctx.beginPath();
-                        ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
-
-                        ctx.fillStyle = element.color;
-                        ctx.fill();
-
-                        let text = element.markers.length;
-
-                        let size = Math.floor(element.size / 2) + 1;
-                        let width = null;
-
-                        // Find appropriate font size
-                        do {
-                            ctx.font = (--size) + 'px Open Sans';
-                            width = ctx.measureText(text).width;
-                        } while (width > 1.5 * radius);
-
-                        ctx.fillStyle = 'white';
-                        ctx.fillText(text, pos.x - width / 2, pos.y + size / 3);
-                    } break;
+                    ctx.fillStyle = 'white';
+                    ctx.fillText(element.text, pos.x - width / 2, pos.y + size / 3);
                 }
             }
 
