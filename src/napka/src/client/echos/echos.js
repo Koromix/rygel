@@ -85,6 +85,9 @@ function EchosProvider() {
         let total = 0;
 
         for (let entry of entries) {
+            if (entry.address.address.startsWith('05'))
+                continue;
+
             if (entry.address.latitude != null) {
                 total++;
 
