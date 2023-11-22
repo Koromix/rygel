@@ -188,6 +188,7 @@ function TileMap(runner) {
                     size: marker.size,
                     icon: marker.icon,
                     circle: marker.circle,
+                    text: marker.text,
 
                     clickable: marker.clickable,
                     priority: marker.priority ?? 1,
@@ -213,6 +214,7 @@ function TileMap(runner) {
 
                 let element = {
                     type: 'cluster',
+                    cluster: cluster[0].cluster,
 
                     x: center.x,
                     y: center.y,

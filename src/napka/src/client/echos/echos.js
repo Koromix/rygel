@@ -30,9 +30,9 @@ import { Util, Log, Net } from '../../../../web/libjs/common.js';
 import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
 const ICONS = {
-    hot1: 'static/icons/hot1.png',
-    hot2: 'static/icons/hot2.png',
-    other: 'static/icons/other.png'
+    iml1: 'static/icons/iml1.png',
+    iml2: 'static/icons/iml2.png',
+    sncf: 'static/icons/sncf.png'
 };
 
 function EchosProvider() {
@@ -47,7 +47,8 @@ function EchosProvider() {
         ]);
 
         entries = [
-            ...data.iml.rows.map(psy => ({ type: 'Suicide', ...psy }))
+            ...data.iml.rows.map(row => ({ type: 'IML', ...row })),
+            ...data.sncf.rows.map(row => ({ type: 'SNCF', ...row }))
         ];
 
         // We've preloaded images
@@ -66,14 +67,19 @@ function EchosProvider() {
 
                 <div class="group">
                     <label>
-                        <input type="checkbox" data-filter="this.hotspot"
-                               checked/> Hotspots
-                        <img src="static/icons/hot1.png" width="24" height="24" alt="" />
+                        <input type="checkbox" data-filter="this.type == 'IML' && this.hotspot"
+                               checked/> Hotspots IML
+                        <img src="static/icons/iml2.png" width="24" height="24" alt="" />
                     </label>
                     <label>
-                        <input type="checkbox" data-filter="!this.hotspot"
-                               checked/> Autres lieux
-                        <img src="static/icons/other.png" width="24" height="24" alt="" />
+                        <input type="checkbox" data-filter="this.type == 'IML' && !this.hotspot"
+                               checked/> Autres IML
+                        <img src="static/icons/iml1.png" width="24" height="24" alt="" />
+                    </label>
+                    <label>
+                        <input type="checkbox" data-filter="this.type == 'SNCF'"
+                               checked/> SNCF
+                        <img src="static/icons/sncf.png" width="24" height="24" alt="" />
                     </label>
                 </div>
             </div>
@@ -94,25 +100,37 @@ function EchosProvider() {
                 if (filters.every(filtre => filtre(entry))) {
                     let marker = null;
 
-                    if (entry.hotspot) {
+                    if (entry.type == 'IML' && entry.hotspot) {
                         marker = {
                             latitude: entry.address.latitude,
                             longitude: entry.address.longitude,
-                            cluster: entry.lieu,
+                            cluster: `IML:${entry.lieu}`,
+                            text: '1',
                             tooltip: entry.lieu,
                             priority: 2,
-                            icon: icons.hot1,
+                            icon: icons.iml1,
                             size: 24,
                             clickable: true
                         };
-                    } else {
+                    } else if (entry.type == 'IML') {
                         marker = {
                             latitude: entry.address.latitude,
                             longitude: entry.address.longitude,
                             tooltip: entry.lieu,
                             priority: 1,
-                            icon: icons.other,
-                            size: 18,
+                            icon: icons.iml1,
+                            size: 16,
+                            clickable: true
+                        };
+                    } else if (entry.type == 'SNCF') {
+                        marker = {
+                            latitude: entry.address.latitude,
+                            longitude: entry.address.longitude,
+                            cluster: `SNCF:${entry.address.latitude},${entry.address.longitude}`,
+                            tooltip: entry.lieu,
+                            priority: 1,
+                            icon: icons.sncf,
+                            size: 16,
                             clickable: true
                         };
                     }
@@ -139,9 +157,15 @@ function EchosProvider() {
     };
 
     this.styleCluster = function(element) {
-        element.icon = icons.hot2;
-        element.size = 30;
-        element.priority = 3;
+        if (element.cluster.startsWith('IML:')) {
+            element.icon = icons.iml2;
+            element.size = 30;
+            element.priority = 3;
+        } else if (element.cluster.startsWith('SNCF:')) {
+            element.circle = '#878787';
+            element.size = 24;
+            element.priority = 3;
+        }
 
         // We don't need to show the list
         element.markers.length = 1;

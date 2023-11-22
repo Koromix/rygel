@@ -27,6 +27,7 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 const LIST_KEYS = [];
 
 const IML_MAPPINGS = {};
+const SNCF_MAPPINGS = {};
 
 main();
 
@@ -69,6 +70,7 @@ async function run() {
                                                              fields = excluded.fields`);
 
         stmt.run(map_id, 'iml', 'IML', JSON.stringify(IML_MAPPINGS));
+        stmt.run(map_id, 'sncf', 'SNCF', JSON.stringify(SNCF_MAPPINGS));
     })();
 
     // Load online spreadsheet file
@@ -125,17 +127,22 @@ async function run() {
             if (row.Code == null)
                 break;
 
-            if (checkCP(row.CP) && row.Commune != null)
-                table.push(row);
+            table.push(row);
         }
 
         tables[ws.name] = table;
     }
 
     let iml = tables['IML'].map(transformIML);
+    let sncf = tables['SNCF'].map(transformSNCF);
+
+    // Filter out bad or non-useful data
+    iml = iml.filter(row => checkCP(row.CP) && row.Commune != null);
+    sncf = sncf.filter(row => row.latitude != null && row.kind == 'Suicide' && row.deces);
 
     db.transaction(() => {
         imp.updateEntries(db, 'echos', 'iml', iml);
+        imp.updateEntries(db, 'echos', 'sncf', sncf);
     })();
     await imp.geomapMissing(db, 'echos', GOOGLE_API_KEY);
 
@@ -154,6 +161,36 @@ function transformIML(row) {
         lieu: row.Hotspot || row.Denomination || row.Type,
         hotspot: !!row.Hotspot
     };
+
+    entry.version = crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex');
+
+    return entry;
+}
+
+function transformSNCF(row) {
+    let location = row.Localisation?.match(/(\-?[0-9]+\.[0-9]+) +(\-?[0-9]+\.[0-9]+)/);
+
+    if (location?.length == 3) {
+        location = [parseFloat(location[1]), parseFloat(location[2])];
+    } else {
+        location = null;
+    }
+
+    let entry = {
+        import: '' + row.Code,
+        version: null,
+        hide: 0,
+
+        name: row.Ville,
+        address: row.Ville,
+        latitude: location?.[1],
+        longitude: location?.[0],
+
+        kind: row.Presomption,
+        deces: row.Deces
+    };
+
+    console.log(entry);
 
     entry.version = crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex');
 
