@@ -20,7 +20,7 @@ import * as parse from '../lib/parse.js';
 import * as imp from '../lib/import.js';
 
 const F2RSM_EXPORT_KEY = process.env.F2RSM_EXPORT_KEY || '';
-const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 
 const EXPORT_URL = 'https://f2rsm.goupile.org/2nps/api/records/export';
 
@@ -137,8 +137,8 @@ async function run() {
 
         if (!F2RSM_EXPORT_KEY)
             errors.push('Missing F2RSM_EXPORT_KEY (export key for Goupile 3114 project)');
-        if (!MAPBOX_ACCESS_TOKEN)
-            errors.push('Missing MAPBOX_ACCESS_TOKEN');
+        if (!GOOGLE_API_KEY)
+            errors.push('Missing GOOGLE_API_KEY');
 
         if (errors.length)
             throw new Error(errors.join('\n'));
@@ -206,7 +206,7 @@ async function run() {
     db.transaction(() => {
         imp.updateEntries(db, '3114', 'commun', entries);
     })();
-    await imp.geomapMissing(db, '3114', MAPBOX_ACCESS_TOKEN);
+    await imp.geomapMissing(db, '3114', GOOGLE_API_KEY);
 
     db.close();
 }

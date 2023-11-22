@@ -20,14 +20,14 @@ function FileInfo(filename = null, buffer = null) {
     this.buffer = buffer;
 }
 
-async function geomapMissing(db, map_name, access_token) {
+async function geomapMissing(db, map_name, api_key) {
     let rows = db.prepare(`SELECT e.id, e.address FROM entries e
                                INNER JOIN layers l ON (l.id = e.layer_id)
                                INNER JOIN maps m ON (m.id = l.map_id)
                                WHERE m.name = ? AND e.latitude IS NULL`).all(map_name);
 
     for (let row of rows) {
-        let results = await geomapAddress(row.address, access_token);
+        let results = await geomapAddress(row.address, api_key);
 
         if (results.length) {
             let ret = results[0];
@@ -36,13 +36,12 @@ async function geomapMissing(db, map_name, access_token) {
     }
 }
 
-async function geomapAddress(address, access_token) {
-    let url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${querystring.escape(address.replace(';', ' '))}.json`;
+async function geomapAddress(address, api_key) {
+    let url = 'https://maps.googleapis.com/maps/api/geocode/json';
 
     url += '?' + new URLSearchParams({
-        access_token: access_token,
-        fuzzyMatch: true,
-        country: 'fr',
+        key: api_key,
+        address: address,
         language: 'fr'
     });
 
@@ -62,21 +61,15 @@ async function geomapAddress(address, access_token) {
         return [];
     }
 
-    let features = json.features.slice();
-
-    // Sort by most relevant
-    features.sort((feature1, feature2) => feature2.relevance - feature1.relevance);
-
-    if (!features.length || !features[0].relevance) {
+    if (!json.results.length) {
         console.error(`No match for '${address}'`);
         return [];
     }
 
-    let results = features.map(feature => ({
-        address: feature.place_name,
-        latitude: feature.center[1],
-        longitude: feature.center[0],
-        relevance: feature.relevance
+    let results = json.results.map(result => ({
+        address: result.formatted_address,
+        latitude: result.geometry.location.lat,
+        longitude: result.geometry.location.lng
     }));
 
     return results;

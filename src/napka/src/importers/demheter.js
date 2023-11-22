@@ -22,7 +22,7 @@ import * as parse from '../lib/parse.js';
 import * as imp from '../lib/import.js';
 
 const DEMHETER_XLSX_URL = process.env.DEMHETER_XLSX_URL || '';
-const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 
 const LIST_KEYS = ["Identites", "Mails"];
 
@@ -50,8 +50,8 @@ async function run() {
 
         if (!DEMHETER_XLSX_URL)
             errors.push('Missing DEMHETER_XLSX_URL (public link to download XLSX file)');
-        if (!MAPBOX_ACCESS_TOKEN)
-            errors.push('Missing MAPBOX_ACCESS_TOKEN');
+        if (!GOOGLE_API_KEY)
+            errors.push('Missing GOOGLE_API_KEY');
 
         if (errors.length)
             throw new Error(errors.join('\n'));
@@ -139,7 +139,7 @@ async function run() {
         imp.updateEntries(db, 'demheter', 'centres', centres);
         imp.updateEntries(db, 'demheter', 'psychologues', psychologues);
     })();
-    await imp.geomapMissing(db, 'demheter', MAPBOX_ACCESS_TOKEN);
+    await imp.geomapMissing(db, 'demheter', GOOGLE_API_KEY);
 
     db.close();
 }

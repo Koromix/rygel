@@ -20,7 +20,7 @@ import * as parse from '../lib/parse.js';
 import * as imp from '../lib/import.js';
 
 const CN2R_DS_TOKEN = process.env.CN2R_DS_TOKEN || '';
-const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 
 const URL = 'https://www.demarches-simplifiees.fr/api/v2/graphql';
 const DEMARCHE_STRUCTURES = 34851;
@@ -99,8 +99,8 @@ async function run() {
 
         if (!CN2R_DS_TOKEN)
             errors.push('Missing CN2R_DS_TOKEN (for demarches-simplifiees.fr)');
-        if (!MAPBOX_ACCESS_TOKEN)
-            errors.push('Missing MAPBOX_ACCESS_TOKEN');
+        if (!GOOGLE_API_KEY)
+            errors.push('Missing GOOGLE_API_KEY');
 
         if (errors.length)
             throw new Error(errors.join('\n'));
@@ -129,7 +129,7 @@ async function run() {
     db.transaction(() => {
         imp.updateEntries(db, 'cn2r', 'etablissements', etablissements, { etab_personnel: 'individus' });
     })();
-    await imp.geomapMissing(db, 'cn2r', MAPBOX_ACCESS_TOKEN);
+    await imp.geomapMissing(db, 'cn2r', GOOGLE_API_KEY);
 
     // Update missing statuses
     {

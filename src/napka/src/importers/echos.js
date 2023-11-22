@@ -22,7 +22,7 @@ import * as parse from '../lib/parse.js';
 import * as imp from '../lib/import.js';
 
 const ECHOS_XLSX_URL = process.argv[2] || process.env.ECHOS_XLSX_URL || '';
-const MAPBOX_ACCESS_TOKEN = process.env.MAPBOX_ACCESS_TOKEN || '';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 
 const LIST_KEYS = [];
 
@@ -47,8 +47,8 @@ async function run() {
 
         if (!ECHOS_XLSX_URL)
             errors.push('Missing ECHOS_XLSX_URL or argument path to XLSX file');
-        if (!MAPBOX_ACCESS_TOKEN)
-            errors.push('Missing MAPBOX_ACCESS_TOKEN');
+        if (!GOOGLE_API_KEY)
+            errors.push('Missing GOOGLE_API_KEY');
 
         if (errors.length)
             throw new Error(errors.join('\n'));
@@ -137,7 +137,7 @@ async function run() {
     db.transaction(() => {
         imp.updateEntries(db, 'echos', 'iml', iml);
     })();
-    await imp.geomapMissing(db, 'echos', MAPBOX_ACCESS_TOKEN);
+    await imp.geomapMissing(db, 'echos', GOOGLE_API_KEY);
 
     db.close();
 }
