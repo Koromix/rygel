@@ -819,15 +819,6 @@ const Net = new function() {
         return img;
     };
 
-    this.loadSound = async function(url) {
-        let response = await Net.fetch(url);
-
-        let buf = await response.arrayBuffer();
-        let sound = await audio.decodeAudioData(buf);
-
-        return sound;
-    };
-
     this.setOnline = function(online2) {
         if (online2 !== online) {
             online = online2;
