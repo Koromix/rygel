@@ -32,7 +32,7 @@ function Cn2rProvider() {
 
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
-            Net.get('api/entries/entrylissements'),
+            Net.get('api/entries/etablissements'),
             Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
         ]);
 
@@ -59,11 +59,11 @@ function Cn2rProvider() {
                     <legend>Établissements</legend>
 
                     <div>
-                        <label><input type="checkbox" data-filter="this.etab_statut === 'entrylissement public'"
+                        <label><input type="checkbox" data-filter="this.etab_statut === 'Etablissement public'"
                                       checked/>Publics</label>
-                        <label><input type="checkbox" data-filter="this.etab_statut === 'entrylissement privé à but non lucratif'"
+                        <label><input type="checkbox" data-filter="this.etab_statut === 'Etablissement privé à but non lucratif'"
                                       checked/>Privés à but non lucratif</label>
-                        <label><input type="checkbox" data-filter="this.etab_statut === 'entrylissement privé à but lucratif'"
+                        <label><input type="checkbox" data-filter="this.etab_statut === 'Etablissement privé à but lucratif'"
                                       checked/>Privés à but lucratif</label>
                     </div>
                 </fieldset>
