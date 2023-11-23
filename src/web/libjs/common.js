@@ -801,20 +801,11 @@ const Net = new function() {
         });
     };
 
-    this.loadImage = async function(url, texture = false) {
-        let img = await new Promise((resolve, reject) => {
-            let img = new Image();
+    this.loadImage = async function(url) {
+        let response = await self.fetch(url);
 
-            img.src = url;
-            img.crossOrigin = 'anonymous';
-
-            img.onload = () => resolve(img);
-            img.onerror = () => reject(new Error(`Failed to load texture '${url}'`));
-        });
-
-        // Fix latency spikes caused by image decoding
-        if (texture && typeof createImageBitmap != 'undefined')
-            img = await createImageBitmap(img);
+        let blob = await response.blob();
+        let img = await createImageBitmap(blob);
 
         return img;
     };

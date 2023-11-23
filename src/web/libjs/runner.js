@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import { Util, Log } from './common.js';
+import { Util, Log, Net } from './common.js';
 
 let audio = null;
 
@@ -521,18 +521,7 @@ function AppRunner(canvas) {
 }
 
 async function loadTexture(url) {
-    let texture = await new Promise((resolve, reject) => {
-        let img = new Image();
-
-        img.src = url;
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error(`Failed to load texture '${url}'`));
-    });
-
-    // Fix latency spikes caused by image decoding
-    if (typeof createImageBitmap != 'undefined')
-        texture = await createImageBitmap(texture);
-
+    let texture = await Net.loadImage(url);
     return texture;
 }
 

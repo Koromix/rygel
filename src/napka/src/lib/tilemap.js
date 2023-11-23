@@ -574,31 +574,6 @@ function TileMap(runner) {
         }
     };
 
-    async function startFetcher() {
-        active_fetchers++;
-
-        while (fetch_queue.length) {
-            let idx = Util.getRandomInt(0, fetch_queue.length);
-            let [handle] = fetch_queue.splice(idx, 1);
-
-            fetch_handles.set(handle.url, handle);
-
-            try {
-                let img = await fetchImage(handle);
-
-                handle.cache.set(handle.url, img);
-                runner.busy();
-            } catch (err) {
-                if (err != null)
-                    console.error(err);
-            } finally {
-                fetch_handles.delete(handle.url);
-            }
-        }
-
-        active_fetchers--;
-    }
-
     function adaptMarkerSize(size, zoom) {
         if (zoom >= 7) {
             return size;
@@ -692,7 +667,7 @@ function TileMap(runner) {
                 valid: true,
                 cache: cache,
                 url: url,
-                img: null
+                controller: null
             };
 
             fetch_queue.push(handle);
@@ -716,34 +691,51 @@ function TileMap(runner) {
         return ret;
     }
 
-    async function fetchImage(handle) {
-        let img = await new Promise((resolve, reject) => {
-            let img = new Image();
+    async function startFetcher() {
+        active_fetchers++;
 
-            if (!handle.valid) {
-                reject(null);
-                return;
+        while (fetch_queue.length) {
+            let idx = Util.getRandomInt(0, fetch_queue.length);
+            let [handle] = fetch_queue.splice(idx, 1);
+
+            fetch_handles.set(handle.url, handle);
+
+            try {
+                let img = await fetchImage(handle);
+
+                if (img != null) {
+                    handle.cache.set(handle.url, img);
+                    runner.busy();
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                fetch_handles.delete(handle.url);
             }
+        }
 
-            img.onload = () => resolve(img);
-            img.onerror = () => {
-                if (!handle.valid)
-                    reject(null);
+        active_fetchers--;
+    }
 
-                reject(new Error(`Failed to load texture '${handle.url}'`));
-            };
+    async function fetchImage(handle) {
+        if (!handle.valid)
+            return null;
 
-            img.src = handle.url;
-            img.crossOrigin = 'anonymous';
+        handle.controller = new AbortController;
 
-            handle.img = img;
-        });
+        try {
+            let response = await Net.fetch(handle.url, { signal: handle.controller.signal });
+            let blob = await response.blob();
+            let img = await createImageBitmap(blob);
 
-        // Fix latency spikes caused by image decoding
-        if (typeof createImageBitmap != 'undefined')
-            img = await createImageBitmap(img);
+            return img;
+        } catch (err) {
+            if (!handle.valid)
+                return null;
 
-        return img;
+            handle.valid = false;
+            throw new Error(`Failed to load texture '${handle.url}'`);
+        }
     }
 
     function stopFetchers() {
@@ -752,8 +744,8 @@ function TileMap(runner) {
         for (let handle of fetch_handles.values()) {
             handle.valid = false;
 
-            if (handle.img != null)
-                handle.img.setAttribute('src', '');
+            if (handle.controller != null)
+                handle.controller.abort();
         }
     }
 

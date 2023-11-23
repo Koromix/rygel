@@ -43,7 +43,7 @@ function EchosProvider() {
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
             Net.get('api/entries'),
-            Promise.all(Object.values(ICONS).map(url => Net.loadImage(url, true)))
+            Promise.all(Object.values(ICONS).map(url => Net.loadImage(url)))
         ]);
 
         entries = [
