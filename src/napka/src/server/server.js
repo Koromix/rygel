@@ -162,7 +162,7 @@ Options:
 }
 
 function buildClient(app, map, live) {
-    let files = buildFiles(map);
+    let files = buildFiles(map, live);
 
     for (let filename in files) {
         let type = mime.getType(filename);
@@ -195,7 +195,7 @@ function buildClient(app, map, live) {
     }
 }
 
-function buildFiles(map) {
+function buildFiles(map, live) {
     let files = {};
     let timer = null;
 
@@ -220,7 +220,8 @@ function buildFiles(map) {
     let css = esbuild.buildSync({
         entryPoints: [prefix + `/${map.name}.css`],
         bundle: true,
-        minify: true,
+        minify: !live,
+        sourcemap: live ? 'inline' : false,
         write: false,
         loader: {
             '.png': 'dataurl'
@@ -232,7 +233,8 @@ function buildFiles(map) {
     let js = esbuild.buildSync({
         entryPoints: [prefix + `/${map.name}.js`],
         bundle: true,
-        minify: true,
+        minify: !live,
+        sourcemap: live ? 'inline' : false,
         write: false,
         format: 'iife',
         globalName: 'napka',
