@@ -120,7 +120,7 @@ function main() {
         for (let layer of layers)
             layer.fields = JSON.parse(layer.fields);
 
-        // Public map and layer endppoints
+        // Public map and layer endpoints
         app.route('/' + it.name + '/api/entries').get((req, res) => {
             let entries = map.fetchMap(db, layers);
             res.json(entries);
@@ -231,9 +231,9 @@ function buildFiles(map, live, sourcemap) {
         loader: {
             '.png': 'dataurl'
         },
-        outfile: 'map.css'
+        outfile: 'napka.css'
     });
-    files['map.css'] = Buffer.from(css.outputFiles[0].contents);
+    files['napka.css'] = Buffer.from(css.outputFiles[0].contents);
 
     let js = esbuild.buildSync({
         entryPoints: [prefix + `/${map.name}.js`],
@@ -249,9 +249,9 @@ function buildFiles(map, live, sourcemap) {
             'firefox60',
             'safari11'
         ],
-        outfile: 'map.js'
+        outfile: 'napka.js'
     });
-    files['map.js'] = Buffer.from(js.outputFiles[0].contents);
+    files['napka.js'] = Buffer.from(js.outputFiles[0].contents);
 
     if (fs.existsSync(prefix + '/icons')) {
         for (let basename of fs.readdirSync(prefix + '/icons')) {
