@@ -15,7 +15,7 @@ import path from 'path';
 import sqlite3 from 'better-sqlite3';
 
 const DATABASE = path.resolve('.', process.env.DATABASE || 'data/napka.db');
-const SCHEMA = 15;
+const SCHEMA = 16;
 
 function open(options = {}) {
     let db = sqlite3(DATABASE, options);
@@ -574,6 +574,12 @@ function migrate(db, version) {
             case 14: {
                 db.exec(`
                     DROP TABLE tiles;
+                `);
+            } // fallthrough
+
+            case 15: {
+                db.exec(`
+                    ALTER TABLE maps ADD COLUMN style_id TEXT;
                 `);
             } // fallthrough
         }

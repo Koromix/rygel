@@ -128,6 +128,8 @@ function main() {
             });
         }
 
+        let style_id = it.style_id ?? MAPBOX_STYLE_ID;
+
         // Session API
         app.route('/' + it.name + '/api/admin/login').post((req, res) => session.login(db, req, res));
         app.route('/' + it.name + '/api/admin/logout').post((req, res) => session.logout(db, req, res));
@@ -139,7 +141,7 @@ function main() {
         app.route('/' + it.name + '/api/admin/delete').post((req, res) => map.deleteEntry(db, req, res));
 
         // Tiles API
-        app.route('/' + it.name + '/tiles/:z/:x/:y').get((req, res) => relayTile(cache_db, req, res));
+        app.route('/' + it.name + '/tiles/:z/:x/:y').get((req, res) => relayTile(cache_db, style_id, req, res));
     }
 
     app.listen(PORT, () => {
@@ -256,8 +258,8 @@ function buildFiles(map) {
     return files;
 }
 
-async function relayTile(db, req, res) {
-    let template = `https://api.mapbox.com/styles/v1/${MAPBOX_USERNAME}/${MAPBOX_STYLE_ID}/tiles/{tilesize}/{z}/{x}/{y}`;
+async function relayTile(db, style_id, req, res) {
+    let template = `https://api.mapbox.com/styles/v1/${MAPBOX_USERNAME}/${style_id}/tiles/{tilesize}/{z}/{x}/{y}`;
     let url = parseURL(template, req.params.z, req.params.x, req.params.y);
 
     // Try cached version first
