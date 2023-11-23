@@ -136,7 +136,7 @@ int GetSelfMachine()
     return GetFileMachine(h, false);
 }
 
-int GetDllMachine(const char16_t *filename)
+int GetDllMachine(const wchar_t *filename)
 {
     HANDLE h = CreateFileW((LPCWSTR)filename, GENERIC_READ,
                            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,

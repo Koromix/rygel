@@ -112,6 +112,6 @@ static inline TEB *GetTEB()
 extern const HashMap<int, const char *> WindowsMachineNames;
 
 int GetSelfMachine();
-int GetDllMachine(const char16_t *filename);
+int GetDllMachine(const wchar_t *filename);
 
 }

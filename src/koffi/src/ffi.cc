@@ -1640,14 +1640,24 @@ static Napi::Value UnloadLibrary(const Napi::CallbackInfo &info)
 }
 
 #ifdef _WIN32
-static HANDLE LoadWindowsLibrary(Napi::Env env, const char16_t *filename)
+static HANDLE LoadWindowsLibrary(Napi::Env env, const char *path)
 {
-    HANDLE module = LoadLibraryW((LPCWSTR)filename);
+    BlockAllocator temp_alloc;
+
+    DWORD flags = LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR;
+
+    Span<const char> filename = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
+    Span<wchar_t> filename_w = AllocateSpan<wchar_t>(&temp_alloc, filename.len + 1);
+
+    if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+        return nullptr;
+
+    HMODULE module = LoadLibraryExW(filename_w.ptr, nullptr, flags);
 
     if (!module) {
         if (GetLastError() == ERROR_BAD_EXE_FORMAT) {
             int process = GetSelfMachine();
-            int dll = GetDllMachine(filename);
+            int dll = GetDllMachine(filename_w.ptr);
 
             if (process >= 0 && dll >= 0 && dll != process) {
                 ThrowError<Napi::Error>(env, "Cannot load '%1' DLL in '%2' process",
@@ -1700,7 +1710,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     void *module = nullptr;
 #ifdef _WIN32
     if (info[0].IsString()) {
-        std::u16string filename = info[0].As<Napi::String>();
+        std::string filename = info[0].As<Napi::String>();
         module = LoadWindowsLibrary(env, filename.c_str());
 
         if (!module)
