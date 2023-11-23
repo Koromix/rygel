@@ -55,6 +55,7 @@ function main() {
     }
 
     let live = false;
+    let sourcemap = false;
 
     // Parse options
     for (let i = 2; i < process.argv.length; i++) {
@@ -84,6 +85,9 @@ function main() {
             return;
         } else if (arg == '--live') {
             live = true;
+            sourcemap = true;
+        } else if (arg == '--sourcemap') {
+            sourcemap = true;
         } else if (arg[0] == '-') {
             throw new Error(`Unexpected argument '${arg}'`);
         }
@@ -107,7 +111,7 @@ function main() {
 
     // Static endpoints
     for (let map of maps)
-        buildClient(app, map, live);
+        buildClient(app, map, live, sourcemap);
 
     // Expose API endpoints for all maps
     for (let it of maps) {
@@ -155,14 +159,15 @@ function printUsage() {
     let help = `Usage: node server.js [options...]
 
 Options:
-        --live                   Rebuild client code for each load
+        --live                   Rebuild client code dynamically (implies --sourcemap)
+        --sourcemap              Include inlined sourcemap in JS code
 `;
 
     console.log(help);
 }
 
-function buildClient(app, map, live) {
-    let files = buildFiles(map, live);
+function buildClient(app, map, live, sourcemap) {
+    let files = buildFiles(map, live, sourcemap);
 
     for (let filename in files) {
         let type = mime.getType(filename);
@@ -195,7 +200,7 @@ function buildClient(app, map, live) {
     }
 }
 
-function buildFiles(map, live) {
+function buildFiles(map, live, sourcemap) {
     let files = {};
     let timer = null;
 
@@ -221,7 +226,7 @@ function buildFiles(map, live) {
         entryPoints: [prefix + `/${map.name}.css`],
         bundle: true,
         minify: !live,
-        sourcemap: live ? 'inline' : false,
+        sourcemap: sourcemap ? 'inline' : false,
         write: false,
         loader: {
             '.png': 'dataurl'
@@ -234,7 +239,7 @@ function buildFiles(map, live) {
         entryPoints: [prefix + `/${map.name}.js`],
         bundle: true,
         minify: !live,
-        sourcemap: live ? 'inline' : false,
+        sourcemap: sourcemap ? 'inline' : false,
         write: false,
         format: 'iife',
         globalName: 'napka',
