@@ -60,7 +60,7 @@ async function run() {
     // Create map and layers if needed
     db.transaction(() => {
         let map_id = db.prepare(`INSERT INTO maps (name, title, mail, style_id)
-                                     VALUES ('echos', 'ECHOS', 'niels.martignene@protonmail.com', 'clpaaj4xk004p01pa84497gvr')
+                                     VALUES ('echos', 'ECHoS', 'niels.martignene@protonmail.com', 'clpaaj4xk004p01pa84497gvr')
                                      ON CONFLICT DO UPDATE SET title = excluded.title,
                                                                mail = excluded.mail,
                                                                style_id = excluded.style_id
