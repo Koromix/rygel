@@ -72,6 +72,12 @@ typedef union MultiU {
     float f2[2];
     uint64_t u;
     uint8_t raw[8];
+    struct {
+        short a;
+        char b;
+        char c;
+        int d;
+    } st;
 } MultiU;
 
 EXPORT SingleU MakeSingleU(float f)
