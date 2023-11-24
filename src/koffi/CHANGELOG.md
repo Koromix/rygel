@@ -4,10 +4,6 @@
 
 ### Koffi 2.6
 
-#### Koffi 2.6.7 (2023-11-16)
-
-- Show current version of Node when too old
-
 #### Koffi 2.6.6 (2023-10-28)
 
 - Better handle errors while making struct or union types
