@@ -280,7 +280,7 @@ Pre-built binaries don't work correctly in Koffi 2.5.13 to 2.5.15, skip those ve
 - Avoid CNoke dependency
 - Clear out development dependencies from package.json
 
-#### Koffi 2.3.1 (2023-01-3O)
+#### Koffi 2.3.1 (2023-01-30)
 
 - Error out when trying to use ambiguous `void *` arguments (input and/or output)
 - Adjust TypeScript definitions ([@insraq](https://github.com/insraq))
