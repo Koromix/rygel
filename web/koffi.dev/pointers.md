@@ -19,7 +19,7 @@ The following Win32 example uses `GetCursorPos()` (with an output parameter) to 
 // ES6 syntax: import koffi from 'koffi';
 const koffi = require('koffi');
 
-const lib = koffi.load('kernel32.dll');
+const lib = koffi.load('user32.dll');
 
 // Type declarations
 const POINT = koffi.struct('POINT', {
