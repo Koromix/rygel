@@ -40,7 +40,10 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = __dirname + '/build/win32.dll';
+    // Test relative path because on Windows this uses a different code path
+    process.chdir(__dirname);
+
+    let lib_filename = './build/win32.dll';
     let lib = koffi.load(lib_filename);
 
     const DivideBySafe = lib.func('int DivideBySafe(int a, int b)');

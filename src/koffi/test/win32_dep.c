@@ -29,18 +29,13 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
-#define IMPORT __declspec(dllimport)
 #define EXPORT __declspec(dllexport)
 
-IMPORT int DoDivideBySafe(int a, int b);
-
-EXPORT int DivideBySafe(int a, int b)
+EXPORT int DoDivideBySafe(int a, int b)
 {
-    return DoDivideBySafe(a, b);
-}
-
-EXPORT int CallThrough(int (*func)(void))
-{
-    int ret = func();
-    return ret;
+    __try {
+        return a / b;
+    } __except (GetExceptionCode() == EXCEPTION_INT_DIVIDE_BY_ZERO) {
+        return -42;
+    }
 }

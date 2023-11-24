@@ -47,6 +47,10 @@ add_library(union SHARED union.c)
 set_target_properties(union PROPERTIES PREFIX "")
 
 if(WIN32)
+    add_library(win32_dep SHARED win32_dep.c)
+    set_target_properties(win32_dep PROPERTIES PREFIX "")
+
     add_library(win32 SHARED win32.c)
+    target_link_libraries(win32 win32_dep)
     set_target_properties(win32 PROPERTIES PREFIX "")
 endif()
