@@ -193,6 +193,19 @@ static inline Napi::Value NewBigInt(Napi::Env env, uint64_t value)
     }
 }
 
+static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)
+{
+    Napi::Env env = obj.Env();
+
+    napi_value result;
+    napi_status status = napi_get_all_property_names(env, obj, napi_key_own_only,
+                                                     (napi_key_filter)(napi_key_enumerable | napi_key_skip_symbols),
+                                                     napi_key_numbers_to_strings, &result);
+    RG_ASSERT(status == napi_ok);
+
+    return Napi::Array(env, result);
+}
+
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
 
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);

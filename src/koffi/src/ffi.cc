@@ -131,7 +131,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
         int max_async_calls = new_config.resident_async_pools + new_config.max_temporaries;
 
         Napi::Object obj = info[0].As<Napi::Object>();
-        Napi::Array keys = obj.GetPropertyNames();
+        Napi::Array keys = GetOwnPropertyNames(obj);
 
         for (uint32_t i = 0; i < keys.Length(); i++) {
             std::string key = keys.Get(i).As<Napi::String>();
@@ -227,7 +227,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[named].As<Napi::Object>();
-    Napi::Array keys = obj.GetPropertyNames();
+    Napi::Array keys = GetOwnPropertyNames(obj);
 
     RG_DEFER_NC(err_guard, len = instance->types.len) {
         Size start = len + !named;
@@ -373,7 +373,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 
     Napi::String name = info[0].As<Napi::String>();
     Napi::Object obj = info[named].As<Napi::Object>();
-    Napi::Array keys = obj.GetPropertyNames();
+    Napi::Array keys = GetOwnPropertyNames(obj);
 
     RG_DEFER_NC(err_guard, len = instance->types.len) {
         Size start = len + !named;

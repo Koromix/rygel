@@ -383,7 +383,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 return false;
             }
         } else {
-            Napi::Array properties = obj.GetPropertyNames();
+            Napi::Array properties = GetOwnPropertyNames(obj);
 
             if (properties.Length() != 1 || !properties.Get(0u).IsString()) [[unlikely]] {
                 ThrowError<Napi::Error>(env, "Expected object with single property name for union");
