@@ -24,7 +24,8 @@ async function geomapMissing(db, map_name, api_key) {
     let rows = db.prepare(`SELECT e.id, e.address FROM entries e
                                INNER JOIN layers l ON (l.id = e.layer_id)
                                INNER JOIN maps m ON (m.id = l.map_id)
-                               WHERE m.name = ? AND e.latitude IS NULL`).all(map_name);
+                               WHERE m.name = ? AND e.invalid_address = 0
+                                                AND e.latitude IS NULL`).all(map_name);
 
     for (let row of rows) {
         let results = await geomapAddress(row.address, api_key);
@@ -32,6 +33,8 @@ async function geomapMissing(db, map_name, api_key) {
         if (results.length) {
             let ret = results[0];
             db.prepare('UPDATE entries SET latitude = ?, longitude = ? WHERE id = ?').run(ret.latitude, ret.longitude, row.id);
+        } else {
+            db.prepare('UPDATE entries SET invalid_address = 1 WHERE id = ?').run(row.id);
         }
     }
 }
@@ -93,6 +96,7 @@ function updateEntries(db, map_name, layer_name, rows, links = {}) {
 
             name: row.name,
             address: row.address,
+            invalid_address: 0,
             latitude: row.latitude,
             longitude: row.longitude,
 

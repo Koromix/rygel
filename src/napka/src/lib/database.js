@@ -15,7 +15,7 @@ import path from 'path';
 import sqlite3 from 'better-sqlite3';
 
 const DATABASE = path.resolve('.', process.env.DATABASE || 'data/napka.db');
-const SCHEMA = 16;
+const SCHEMA = 17;
 
 function open(options = {}) {
     let db = sqlite3(DATABASE, options);
@@ -580,6 +580,61 @@ function migrate(db, version) {
             case 15: {
                 db.exec(`
                     ALTER TABLE maps ADD COLUMN style_id TEXT;
+                `);
+            } // fallthrough
+
+            case 16: {
+                db.exec(`
+                    DROP TRIGGER entries_to_old;
+                    DROP INDEX entries_li;
+
+                    ALTER TABLE old_entries RENAME TO old_entries_BAK;
+                    ALTER TABLE entries RENAME TO entries_BAK;
+
+                    CREATE TABLE entries (
+                        id INTEGER PRIMARY KEY,
+                        layer_id INTEGER NOT NULL REFERENCES layers (id),
+                        import TEXT,
+                        version TEXT NOT NULL,
+                        hide INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        address TEXT,
+                        invalid_address INTEGER CHECK(invalid_address IN (0, 1)) NOT NULL,
+                        latitude REAL,
+                        longitude REAL,
+                        main TEXT NOT NULL,
+                        extra TEXT NOT NULL
+                    );
+                    CREATE TABLE old_entries (
+                        id INTEGER PRIMARY KEY,
+                        layer_id INTEGER NOT NULL REFERENCES layers (id),
+                        import TEXT,
+                        version TEXT NOT NULL,
+                        hide INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        address TEXT,
+                        invalid_address INTEGER CHECK(invalid_address IN (0, 1)) NOT NULL,
+                        latitude REAL,
+                        longitude REAL,
+                        main TEXT NOT NULL,
+                        extra TEXT NOT NULL
+                    );
+
+                    INSERT INTO entries (id, layer_id, import, version, hide, name, address, invalid_address, latitude, longitude, main, extra)
+                        SELECT id, layer_id, import, version, hide, name, address, 0, latitude, longitude, main, extra FROM entries_BAK;
+                    INSERT INTO old_entries (id, layer_id, import, version, hide, name, address, invalid_address, latitude, longitude, main, extra)
+                        SELECT id, layer_id, import, version, 0, name, address, 0, latitude, longitude, main, extra FROM old_entries_BAK;
+
+                    CREATE UNIQUE INDEX entries_li ON entries (layer_id, import);
+
+                    CREATE TRIGGER entries_to_old BEFORE UPDATE ON entries
+                    BEGIN
+                        INSERT INTO old_entries (layer_id, import, version, hide, name, address, invalid_address, latitude, longitude, main, extra)
+                            VALUES (old.layer_id, old.import, old.version, old.hide, old.name, old.address, old.invalid_address, old.latitude, old.longitude, old.main, old.extra);
+                    END;
+
+                    DROP TABLE entries_BAK;
+                    DROP TABLE old_entries_BAK;
                 `);
             } // fallthrough
         }
