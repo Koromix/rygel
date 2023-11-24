@@ -191,8 +191,6 @@ function transformSNCF(row) {
         deces: row.Deces
     };
 
-    console.log(entry);
-
     entry.version = crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex');
 
     return entry;
