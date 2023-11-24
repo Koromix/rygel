@@ -172,13 +172,13 @@ function EchosProvider() {
     };
 
     this.renderEntry = function(entry, edit_key) {
-        let cp = entry.address.address.substr(0, 5);
-        let city = entry.address.address.substr(6).trim();
+        let address = entry.address.address;
+        let city = (entry.type == 'IML') ? `${address.substr(6).trim()} (${address.substr(0, 5)})` : address;
 
         let content = html`
             <div>
                 ${entry.lieu ? html`Lieu : <b>${entry.lieu}</b><br/>` : ''}
-                Ville : <b>${city} (${cp})</b>
+                Ville : <b>${city}</b>
                 ${entry.hotspot ? html`<br/><br/><span style="color: #db0a0a;">⚠\uFE0E Hotspot</span>` : ''}
             </div>
         `;
