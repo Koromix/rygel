@@ -4,12 +4,16 @@
 
 ### Koffi 2.6
 
-#### Koffi 2.6.8 (2023-11-24)
+#### Koffi 2.6.9 (2023-11-25)
 
 - Search in DLL directory for additional dependencies on Windows
 - Ignore prototype properties when making structs or unions
 - Show detected version of Node when not adequate
 - Minor documentation fixes
+
+```{warning}
+Loading Win32 system libraries can fail in Koffi 2.6.8, skip this version.
+```
 
 #### Koffi 2.6.6 (2023-10-28)
 
