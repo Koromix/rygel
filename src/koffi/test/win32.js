@@ -46,8 +46,11 @@ async function test() {
     let lib_filename = './build/win32.dll';
     let lib = koffi.load(lib_filename);
 
+    let kernel32 = koffi.load('kernel32.dll');
+
     const DivideBySafe = lib.func('int DivideBySafe(int a, int b)');
     const CallThrough = lib.func('int CallThrough(CallThroughFunc *func)');
+    const Sleep = kernel32.func('void __stdcall Sleep(uint32_t dwMilliseconds)');
 
     // Sync SEH support
     assert.equal(DivideBySafe(12, 3), 4);
@@ -78,4 +81,7 @@ async function test() {
         assert.equal(results[0], -15);
         assert.equal(results[1], -42);
     }
+
+    // Simple Win32 call, just in case
+    Sleep(1);
 }

@@ -1640,19 +1640,28 @@ static Napi::Value UnloadLibrary(const Napi::CallbackInfo &info)
 }
 
 #ifdef _WIN32
-static HANDLE LoadWindowsLibrary(Napi::Env env, const char *path)
+static HANDLE LoadWindowsLibrary(Napi::Env env, Span<const char> path)
 {
     BlockAllocator temp_alloc;
 
-    DWORD flags = LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR;
+    Span<wchar_t> filename_w = AllocateSpan<wchar_t>(&temp_alloc, path.len + 1);
 
-    Span<const char> filename = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
-    Span<wchar_t> filename_w = AllocateSpan<wchar_t>(&temp_alloc, filename.len + 1);
-
-    if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+    if (ConvertUtf8ToWin32Wide(path, filename_w) < 0)
         return nullptr;
 
-    HMODULE module = LoadLibraryExW(filename_w.ptr, nullptr, flags);
+    HMODULE module = LoadLibraryW(filename_w.ptr);
+
+    if (!module) {
+        DWORD flags = LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR;
+
+        Span<const char> filename = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
+        Span<wchar_t> filename_w = AllocateSpan<wchar_t>(&temp_alloc, filename.len + 1);
+
+        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+            return nullptr;
+
+        module = LoadLibraryExW(filename_w.ptr, nullptr, flags);
+    }
 
     if (!module) {
         if (GetLastError() == ERROR_BAD_EXE_FORMAT) {
