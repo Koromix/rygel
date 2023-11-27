@@ -621,6 +621,9 @@ async function test(debug = false) {
     success &= await start(false);
     success &= await upload(snapshot_dir, machine => Object.values(machine.builds).map(build => build.directory));
 
+    // Errors beyond here are actual failures
+    let ignored = ignore.size;
+
     console.log('>> Run build commands...');
     await compile(debug);
 
@@ -676,7 +679,9 @@ async function test(debug = false) {
     if (machines.some(machine => machine.started))
         success &= await stop(false);
 
-    console.log('');
+    // Build failures need to register as errors
+    success &= (ignore.size == ignored);
+
     if (success) {
         console.log('>> Status: ' + chalk.bold.green('SUCCESS'));
         if (ignore.size)
