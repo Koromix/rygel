@@ -111,6 +111,8 @@ static inline TEB *GetTEB()
 
 extern const HashMap<int, const char *> WindowsMachineNames;
 
+void *LoadWindowsLibrary(Napi::Env env, Span<const char> path); // Returns HANDLE
+
 int GetSelfMachine();
 int GetDllMachine(const wchar_t *filename);
 
