@@ -659,7 +659,9 @@ func TestTSClass(t *testing.T) {
 	expectPrintedTS(t, "(class <T> extends Foo<T>() {})", "(class extends Foo() {\n});\n")
 	expectPrintedTS(t, "(class <T> implements Foo<T> {})", "(class {\n});\n")
 
+	// Check ASI for "abstract"
 	expectPrintedTS(t, "abstract \n class A {}", "abstract;\nclass A {\n}\n")
+	expectPrintedTS(t, "export default abstract \n class A {}", "export default abstract;\nclass A {\n}\n")
 	expectPrintedTS(t, "abstract class A { abstract \n foo(): void {} }", "class A {\n  abstract;\n  foo() {\n  }\n}\n")
 
 	expectPrintedTS(t, "abstract class A { abstract foo(): void; bar(): void {} }", "class A {\n  bar() {\n  }\n}\n")
@@ -897,6 +899,18 @@ func TestTSInterface(t *testing.T) {
 	expectPrintedTS(t, "interface A<T extends number> extends B.C<D, E>, F.G<H, I> {} x", "x;\n")
 	expectPrintedTS(t, "export interface A<T extends number> extends B.C<D, E>, F.G<H, I> {} x", "x;\n")
 	expectPrintedTS(t, "export default interface Foo {} x", "x;\n")
+	expectParseErrorTS(t, "export default interface + x",
+		"<stdin>: ERROR: \"interface\" is a reserved word and cannot be used in an ECMAScript module\n"+
+			"<stdin>: NOTE: This file is considered to be an ECMAScript module because of the \"export\" keyword here:\n")
+
+	// Check ASI for "interface"
+	expectPrintedTS(t, "interface\nFoo\n{}", "interface;\nFoo;\n{\n}\n")
+	expectPrintedTS(t, "export default interface\nFoo {} x", "x;\n")
+	expectPrintedTS(t, "export default interface\nFoo\n{} x", "x;\n")
+	expectParseErrorTS(t, "interface\nFoo {}", "<stdin>: ERROR: Expected \";\" but found \"{\"\n")
+	expectParseErrorTS(t, "export interface\nFoo {}", "<stdin>: ERROR: Unexpected \"interface\"\n")
+	expectParseErrorTS(t, "export interface\nFoo\n{}", "<stdin>: ERROR: Unexpected \"interface\"\n")
+	expectParseErrorTS(t, "export default interface\nFoo", "<stdin>: ERROR: Expected \"{\" but found end of file\n")
 }
 
 func TestTSNamespace(t *testing.T) {
@@ -1857,30 +1871,28 @@ func TestTSExperimentalDecorator(t *testing.T) {
 	expectPrintedExperimentalDecoratorTS(t, "declare class Foo { foo(@dec(() => 0) x) } {let foo}", "{\n  let foo;\n}\n")
 
 	// Decorators must only work on class statements
-	notes := "<stdin>: NOTE: The preceding decorator is here:\n" +
-		"NOTE: Decorators can only be used with class declarations.\n"
-	expectParseErrorExperimentalDecoratorTS(t, "@dec enum foo {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"enum\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec namespace foo {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"namespace\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec function foo() {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"function\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec abstract", "<stdin>: ERROR: Expected \"class\" but found end of file\n")
-	expectParseErrorExperimentalDecoratorTS(t, "@dec declare: x", "<stdin>: ERROR: Expected \"class\" after decorator but found \":\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec declare enum foo {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"enum\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec declare namespace foo {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"namespace\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec declare function foo()", "<stdin>: ERROR: Expected \"class\" after decorator but found \"function\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec export {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"{\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec export enum foo {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"enum\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec export namespace foo {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"namespace\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec export function foo() {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"function\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec export default abstract", "<stdin>: ERROR: Expected \"class\" but found end of file\n")
-	expectParseErrorExperimentalDecoratorTS(t, "@dec export declare enum foo {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"enum\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec export declare namespace foo {}", "<stdin>: ERROR: Expected \"class\" after decorator but found \"namespace\"\n"+notes)
-	expectParseErrorExperimentalDecoratorTS(t, "@dec export declare function foo()", "<stdin>: ERROR: Expected \"class\" after decorator but found \"function\"\n"+notes)
+	expectParseErrorExperimentalDecoratorTS(t, "@dec enum foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec namespace foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec function foo() {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec abstract", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec declare: x", "<stdin>: ERROR: Unexpected \":\"\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec declare enum foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec declare namespace foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec declare function foo()", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec export {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec export enum foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec export namespace foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec export function foo() {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec export default abstract", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec export declare enum foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec export declare namespace foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@dec export declare function foo()", "<stdin>: ERROR: Decorators are not valid here\n")
 
 	// Decorators must be forbidden outside class statements
 	note := "<stdin>: NOTE: This is a class expression, not a class declaration:\n"
-	expectParseErrorExperimentalDecoratorTS(t, "(class { @dec foo })", "<stdin>: ERROR: Experimental decorators can only be used with class declarations in TypeScript\n"+note)
-	expectParseErrorExperimentalDecoratorTS(t, "(class { @dec foo() {} })", "<stdin>: ERROR: Experimental decorators can only be used with class declarations in TypeScript\n"+note)
-	expectParseErrorExperimentalDecoratorTS(t, "(class { foo(@dec x) {} })", "<stdin>: ERROR: Experimental decorators can only be used with class declarations in TypeScript\n"+note)
+	expectParseErrorExperimentalDecoratorTS(t, "(class { @dec foo })", "<stdin>: ERROR: TypeScript experimental decorators can only be used with class declarations\n"+note)
+	expectParseErrorExperimentalDecoratorTS(t, "(class { @dec foo() {} })", "<stdin>: ERROR: TypeScript experimental decorators can only be used with class declarations\n"+note)
+	expectParseErrorExperimentalDecoratorTS(t, "(class { foo(@dec x) {} })", "<stdin>: ERROR: TypeScript experimental decorators can only be used with class declarations\n"+note)
 	expectParseErrorExperimentalDecoratorTS(t, "({ @dec foo })", "<stdin>: ERROR: Expected identifier but found \"@\"\n")
 	expectParseErrorExperimentalDecoratorTS(t, "({ @dec foo() {} })", "<stdin>: ERROR: Expected identifier but found \"@\"\n")
 	expectParseErrorExperimentalDecoratorTS(t, "({ foo(@dec x) {} })", "<stdin>: ERROR: Expected identifier but found \"@\"\n")
@@ -1992,55 +2004,79 @@ func TestTSExperimentalDecorator(t *testing.T) {
 	expectPrintedExperimentalDecoratorTS(t, "@x?.y() class Foo {}", "let Foo = class {\n};\nFoo = __decorateClass([\n  x?.y()\n], Foo);\n")
 	expectPrintedExperimentalDecoratorTS(t, "@x?.[y]() class Foo {}", "let Foo = class {\n};\nFoo = __decorateClass([\n  x?.[y]()\n], Foo);\n")
 	expectPrintedExperimentalDecoratorTS(t, "@new Function() class Foo {}", "let Foo = class {\n};\nFoo = __decorateClass([\n  new Function()\n], Foo);\n")
-	expectParseErrorExperimentalDecoratorTS(t, "@x[y] class Foo {}",
-		"<stdin>: ERROR: Expected \"class\" after decorator but found \"[\"\n<stdin>: NOTE: The preceding decorator is here:\n"+
-			"NOTE: Decorators can only be used with class declarations.\n<stdin>: ERROR: Expected \";\" but found \"class\"\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@x[y] class Foo {}", "<stdin>: ERROR: Expected \";\" but found \"class\"\n")
 	expectParseErrorExperimentalDecoratorTS(t, "@() => {} class Foo {}", "<stdin>: ERROR: Unexpected \")\"\n")
+	expectParseErrorExperimentalDecoratorTS(t, "x = @y function() {}",
+		"<stdin>: ERROR: TypeScript experimental decorators cannot be used in expression position\n"+
+			"<stdin>: ERROR: Expected \"class\" but found \"function\"\n")
+
+	// Check ASI for "abstract"
+	expectPrintedExperimentalDecoratorTS(t, "@x abstract class Foo {}", "let Foo = class {\n};\nFoo = __decorateClass([\n  x\n], Foo);\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@x abstract\nclass Foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+
+	// Check decorator locations in relation to the "export" keyword
+	expectPrintedExperimentalDecoratorTS(t, "@x export class Foo {}", "export let Foo = class {\n};\nFoo = __decorateClass([\n  x\n], Foo);\n")
+	expectPrintedExperimentalDecoratorTS(t, "export @x class Foo {}", "export let Foo = class {\n};\nFoo = __decorateClass([\n  x\n], Foo);\n")
+	expectPrintedExperimentalDecoratorTS(t, "@x export default class {}",
+		"let stdin_default = class {\n};\nstdin_default = __decorateClass([\n  x\n], stdin_default);\nexport {\n  stdin_default as default\n};\n")
+	expectPrintedExperimentalDecoratorTS(t, "export default @x class {}",
+		"let stdin_default = class {\n};\nstdin_default = __decorateClass([\n  x\n], stdin_default);\nexport {\n  stdin_default as default\n};\n")
+	expectPrintedExperimentalDecoratorTS(t, "@x export default class Foo {}", "let Foo = class {\n};\nFoo = __decorateClass([\n  x\n], Foo);\nexport {\n  Foo as default\n};\n")
+	expectPrintedExperimentalDecoratorTS(t, "export default @x class Foo {}", "let Foo = class {\n};\nFoo = __decorateClass([\n  x\n], Foo);\nexport {\n  Foo as default\n};\n")
+	expectParseErrorExperimentalDecoratorTS(t, "export default (@x class {})", "<stdin>: ERROR: TypeScript experimental decorators cannot be used in expression position\n")
+	expectParseErrorExperimentalDecoratorTS(t, "export default (@x class Foo {})", "<stdin>: ERROR: TypeScript experimental decorators cannot be used in expression position\n")
+	expectParseErrorExperimentalDecoratorTS(t, "export @x default class {}", "<stdin>: ERROR: Unexpected \"default\"\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@x export @y class Foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@x export default abstract", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorExperimentalDecoratorTS(t, "@x export @y default class {}", "<stdin>: ERROR: Decorators are not valid here\n<stdin>: ERROR: Unexpected \"default\"\n")
+
+	// TypeScript experimental decorators are actually allowed on declared fields
+	expectPrintedExperimentalDecoratorTS(t, "class Foo { @(() => {}) declare foo: any; @(() => {}) bar: any }",
+		"class Foo {\n  bar;\n}\n__decorateClass([\n  () => {\n  }\n], Foo.prototype, \"foo\", 2);\n__decorateClass([\n  () => {\n  }\n], Foo.prototype, \"bar\", 2);\n")
 }
 
 func TestTSDecorators(t *testing.T) {
-	expectPrintedTS(t, "@x @y class Foo {}", "@x\n@y\nclass Foo {\n}\n")
-	expectPrintedTS(t, "@x @y export class Foo {}", "@x\n@y\nexport class Foo {\n}\n")
-	expectPrintedTS(t, "@x @y export default class Foo {}", "@x\n@y\nexport default class Foo {\n}\n")
+	expectPrintedTS(t, "@x @y class Foo {}", "@x @y class Foo {\n}\n")
+	expectPrintedTS(t, "@x @y export class Foo {}", "@x @y export class Foo {\n}\n")
+	expectPrintedTS(t, "@x @y export default class Foo {}", "@x @y export default class Foo {\n}\n")
 	expectPrintedTS(t, "_ = @x @y class {}", "_ = @x @y class {\n};\n")
 
-	expectPrintedTS(t, "class Foo { @x y: any }", "class Foo {\n  @x\n  y;\n}\n")
-	expectPrintedTS(t, "class Foo { @x y(): any {} }", "class Foo {\n  @x\n  y() {\n  }\n}\n")
-	expectPrintedTS(t, "class Foo { @x static y: any }", "class Foo {\n  @x\n  static y;\n}\n")
-	expectPrintedTS(t, "class Foo { @x static y(): any {} }", "class Foo {\n  @x\n  static y() {\n  }\n}\n")
-	expectPrintedTS(t, "class Foo { @x accessor y: any }", "class Foo {\n  @x\n  accessor y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x y: any }", "class Foo {\n  @x y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x y(): any {} }", "class Foo {\n  @x y() {\n  }\n}\n")
+	expectPrintedTS(t, "class Foo { @x static y: any }", "class Foo {\n  @x static y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x static y(): any {} }", "class Foo {\n  @x static y() {\n  }\n}\n")
+	expectPrintedTS(t, "class Foo { @x accessor y: any }", "class Foo {\n  @x accessor y;\n}\n")
 
-	expectPrintedTS(t, "class Foo { @x #y: any }", "class Foo {\n  @x\n  #y;\n}\n")
-	expectPrintedTS(t, "class Foo { @x #y(): any {} }", "class Foo {\n  @x\n  #y() {\n  }\n}\n")
-	expectPrintedTS(t, "class Foo { @x static #y: any }", "class Foo {\n  @x\n  static #y;\n}\n")
-	expectPrintedTS(t, "class Foo { @x static #y(): any {} }", "class Foo {\n  @x\n  static #y() {\n  }\n}\n")
-	expectPrintedTS(t, "class Foo { @x accessor #y: any }", "class Foo {\n  @x\n  accessor #y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x #y: any }", "class Foo {\n  @x #y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x #y(): any {} }", "class Foo {\n  @x #y() {\n  }\n}\n")
+	expectPrintedTS(t, "class Foo { @x static #y: any }", "class Foo {\n  @x static #y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x static #y(): any {} }", "class Foo {\n  @x static #y() {\n  }\n}\n")
+	expectPrintedTS(t, "class Foo { @x accessor #y: any }", "class Foo {\n  @x accessor #y;\n}\n")
 
 	expectParseErrorTS(t, "class Foo { x(@y z) {} }", "<stdin>: ERROR: Parameter decorators only work when experimental decorators are enabled\n"+
 		"NOTE: You can enable experimental decorators by adding \"experimentalDecorators\": true to your \"tsconfig.json\" file.\n")
 	expectParseErrorTS(t, "class Foo { @x static {} }", "<stdin>: ERROR: Expected \";\" but found \"{\"\n")
 
 	expectPrintedTS(t, "@\na\n(\n)\n@\n(\nb\n)\nclass\nFoo\n{\n}\n", "@a()\n@b\nclass Foo {\n}\n")
-	expectPrintedTS(t, "@(a, b) class Foo {}\n", "@(a, b)\nclass Foo {\n}\n")
-	expectPrintedTS(t, "@x() class Foo {}", "@x()\nclass Foo {\n}\n")
-	expectPrintedTS(t, "@x.y() class Foo {}", "@x.y()\nclass Foo {\n}\n")
-	expectPrintedTS(t, "@(() => {}) class Foo {}", "@(() => {\n})\nclass Foo {\n}\n")
+	expectPrintedTS(t, "@(a, b) class Foo {}", "@(a, b) class Foo {\n}\n")
+	expectPrintedTS(t, "@x() class Foo {}", "@x() class Foo {\n}\n")
+	expectPrintedTS(t, "@x.y() class Foo {}", "@x.y() class Foo {\n}\n")
+	expectPrintedTS(t, "@(() => {}) class Foo {}", "@(() => {\n}) class Foo {\n}\n")
 	expectPrintedTS(t, "class Foo { #x = @y.#x.y.#x class {} }", "class Foo {\n  #x = @y.#x.y.#x class {\n  };\n}\n")
 	expectParseErrorTS(t, "@123 class Foo {}", "<stdin>: ERROR: Expected identifier but found \"123\"\n")
-	expectParseErrorTS(t, "@x[y] class Foo {}",
-		"<stdin>: ERROR: Expected \"class\" after decorator but found \"[\"\n<stdin>: NOTE: The preceding decorator is here:\n"+
-			"NOTE: Decorators can only be used with class declarations.\n<stdin>: ERROR: Expected \";\" but found \"class\"\n")
+	expectParseErrorTS(t, "@x[y] class Foo {}", "<stdin>: ERROR: Expected \";\" but found \"class\"\n")
 	expectParseErrorTS(t, "@x?.() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
 	expectParseErrorTS(t, "@x?.y() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
 	expectParseErrorTS(t, "@x?.[y]() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
 	expectParseErrorTS(t, "@new Function() class Foo {}", "<stdin>: ERROR: Expected identifier but found \"new\"\n")
 	expectParseErrorTS(t, "@() => {} class Foo {}", "<stdin>: ERROR: Unexpected \")\"\n")
+	expectParseErrorTS(t, "x = @y function() {}", "<stdin>: ERROR: Expected \"class\" but found \"function\"\n")
 
-	expectPrintedTS(t, "class Foo { @x<{}> y: any }", "class Foo {\n  @x\n  y;\n}\n")
-	expectPrintedTS(t, "class Foo { @x<{}>() y: any }", "class Foo {\n  @x()\n  y;\n}\n")
-	expectPrintedTS(t, "class Foo { @x<{}> @y<[], () => {}> z: any }", "class Foo {\n  @x\n  @y\n  z;\n}\n")
-	expectPrintedTS(t, "class Foo { @x<{}>() @y<[], () => {}>() z: any }", "class Foo {\n  @x()\n  @y()\n  z;\n}\n")
-	expectPrintedTS(t, "class Foo { @x<{}>.y<[], () => {}> z: any }", "class Foo {\n  @x.y\n  z;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}> y: any }", "class Foo {\n  @x y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}>() y: any }", "class Foo {\n  @x() y;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}> @y<[], () => {}> z: any }", "class Foo {\n  @x @y z;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}>() @y<[], () => {}>() z: any }", "class Foo {\n  @x() @y() z;\n}\n")
+	expectPrintedTS(t, "class Foo { @x<{}>.y<[], () => {}> z: any }", "class Foo {\n  @x.y z;\n}\n")
 
 	// TypeScript 5.0+ allows this but Babel doesn't. I believe this is a bug
 	// with TypeScript: https://github.com/microsoft/TypeScript/issues/55336
@@ -2054,6 +2090,28 @@ func TestTSDecorators(t *testing.T) {
 	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static x }", errorText)
 	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static x() {} }", errorText)
 	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static accessor x }", errorText)
+
+	// Check ASI for "abstract"
+	expectPrintedTS(t, "@x abstract class Foo {}", "@x class Foo {\n}\n")
+	expectParseErrorTS(t, "@x abstract\nclass Foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+
+	// Check decorator locations in relation to the "export" keyword
+	expectPrintedTS(t, "@x export class Foo {}", "@x export class Foo {\n}\n")
+	expectPrintedTS(t, "export @x class Foo {}", "@x export class Foo {\n}\n")
+	expectPrintedTS(t, "@x export default class {}", "@x export default class {\n}\n")
+	expectPrintedTS(t, "export default @x class {}", "@x export default class {\n}\n")
+	expectPrintedTS(t, "@x export default class Foo {}", "@x export default class Foo {\n}\n")
+	expectPrintedTS(t, "export default @x class Foo {}", "@x export default class Foo {\n}\n")
+	expectPrintedTS(t, "export default (@x class {})", "export default (@x class {\n});\n")
+	expectPrintedTS(t, "export default (@x class Foo {})", "export default (@x class Foo {\n});\n")
+	expectParseErrorTS(t, "export @x default class {}", "<stdin>: ERROR: Unexpected \"default\"\n")
+	expectParseErrorTS(t, "@x export @y class Foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorTS(t, "@x export default abstract", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorTS(t, "@x export @y default class {}", "<stdin>: ERROR: Decorators are not valid here\n<stdin>: ERROR: Unexpected \"default\"\n")
+
+	// JavaScript decorators are not allowed on declared fields
+	expectParseErrorTS(t, "class Foo { @(() => {}) declare foo: any; @(() => {}) bar: any }",
+		"<stdin>: ERROR: Decorators are not valid here\n")
 }
 
 func TestTSTry(t *testing.T) {

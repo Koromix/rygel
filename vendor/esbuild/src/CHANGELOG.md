@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.19.8
+
+* Add a treemap chart to esbuild's bundle analyzer ([#2848](https://github.com/evanw/esbuild/issues/2848))
+
+    The bundler analyzer on esbuild's website (https://esbuild.github.io/analyze/) now has a treemap chart type in addition to the two existing chart types (sunburst and flame). This should be more familiar for people coming from other similar tools, as well as make better use of large screens.
+
+* Allow decorators after the `export` keyword ([#104](https://github.com/evanw/esbuild/issues/104))
+
+    Previously esbuild's decorator parser followed the original behavior of TypeScript's experimental decorators feature, which only allowed decorators to come before the `export` keyword. However, the upcoming JavaScript decorators feature also allows decorators to come after the `export` keyword. And with TypeScript 5.0, TypeScript now also allows experimental decorators to come after the `export` keyword too. So esbuild now allows this as well:
+
+    ```js
+    // This old syntax has always been permitted:
+    @decorator export class Foo {}
+    @decorator export default class Foo {}
+
+    // This new syntax is now permitted too:
+    export @decorator class Foo {}
+    export default @decorator class Foo {}
+    ```
+
+    In addition, esbuild's decorator parser has been rewritten to fix several subtle and likely unimportant edge cases with esbuild's parsing of exports and decorators in TypeScript (e.g. TypeScript apparently does automatic semicolon insertion after `interface` and `export interface` but not after `export default interface`).
+
+* Pretty-print decorators using the same whitespace as the original
+
+    When printing code containing decorators, esbuild will now try to respect whether the original code contained newlines after the decorator or not. This can make generated code containing many decorators much more compact to read:
+
+    ```js
+    // Original code
+    class Foo {
+      @a @b @c abc
+      @x @y @z xyz
+    }
+
+    // Old output
+    class Foo {
+      @a
+      @b
+      @c
+      abc;
+      @x
+      @y
+      @z
+      xyz;
+    }
+
+    // New output
+    class Foo {
+      @a @b @c abc;
+      @x @y @z xyz;
+    }
+    ```
+
 ## 0.19.7
 
 * Add support for bundling code that uses import attributes ([#3384](https://github.com/evanw/esbuild/issues/3384))
@@ -64,8 +116,7 @@
     })
     ```
 
-    > [!Warning]
-    > It's possible that the second iteration of this feature may change significantly again even though it's already shipping in real JavaScript VMs (since it has already happened once before). In that case, esbuild may end up adjusting its implementation to match the eventual standard behavior. So keep in mind that by using this, you are using an unstable upcoming JavaScript feature that may undergo breaking changes in the future.
+    Warning: It's possible that the second iteration of this feature may change significantly again even though it's already shipping in real JavaScript VMs (since it has already happened once before). In that case, esbuild may end up adjusting its implementation to match the eventual standard behavior. So keep in mind that by using this, you are using an unstable upcoming JavaScript feature that may undergo breaking changes in the future.
 
 * Adjust TypeScript experimental decorator behavior ([#3230](https://github.com/evanw/esbuild/issues/3230), [#3326](https://github.com/evanw/esbuild/issues/3326), [#3394](https://github.com/evanw/esbuild/issues/3394))
 

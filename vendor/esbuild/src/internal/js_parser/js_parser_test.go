@@ -2000,46 +2000,43 @@ func TestAutoAccessors(t *testing.T) {
 }
 
 func TestDecorators(t *testing.T) {
-	expectPrinted(t, "@x @y class Foo {}", "@x\n@y\nclass Foo {\n}\n")
-	expectPrinted(t, "@x @y export class Foo {}", "@x\n@y\nexport class Foo {\n}\n")
-	expectPrinted(t, "@x @y export default class Foo {}", "@x\n@y\nexport default class Foo {\n}\n")
+	expectPrinted(t, "@x @y class Foo {}", "@x @y class Foo {\n}\n")
+	expectPrinted(t, "@x @y export class Foo {}", "@x @y export class Foo {\n}\n")
+	expectPrinted(t, "@x @y export default class Foo {}", "@x @y export default class Foo {\n}\n")
 	expectPrinted(t, "_ = @x @y class {}", "_ = @x @y class {\n};\n")
 
-	expectPrinted(t, "class Foo { @x y }", "class Foo {\n  @x\n  y;\n}\n")
-	expectPrinted(t, "class Foo { @x y() {} }", "class Foo {\n  @x\n  y() {\n  }\n}\n")
-	expectPrinted(t, "class Foo { @x static y }", "class Foo {\n  @x\n  static y;\n}\n")
-	expectPrinted(t, "class Foo { @x static y() {} }", "class Foo {\n  @x\n  static y() {\n  }\n}\n")
-	expectPrinted(t, "class Foo { @x accessor y }", "class Foo {\n  @x\n  accessor y;\n}\n")
+	expectPrinted(t, "class Foo { @x y }", "class Foo {\n  @x y;\n}\n")
+	expectPrinted(t, "class Foo { @x y() {} }", "class Foo {\n  @x y() {\n  }\n}\n")
+	expectPrinted(t, "class Foo { @x static y }", "class Foo {\n  @x static y;\n}\n")
+	expectPrinted(t, "class Foo { @x static y() {} }", "class Foo {\n  @x static y() {\n  }\n}\n")
+	expectPrinted(t, "class Foo { @x accessor y }", "class Foo {\n  @x accessor y;\n}\n")
 
-	expectPrinted(t, "class Foo { @x #y }", "class Foo {\n  @x\n  #y;\n}\n")
-	expectPrinted(t, "class Foo { @x #y() {} }", "class Foo {\n  @x\n  #y() {\n  }\n}\n")
-	expectPrinted(t, "class Foo { @x static #y }", "class Foo {\n  @x\n  static #y;\n}\n")
-	expectPrinted(t, "class Foo { @x static #y() {} }", "class Foo {\n  @x\n  static #y() {\n  }\n}\n")
-	expectPrinted(t, "class Foo { @x accessor #y }", "class Foo {\n  @x\n  accessor #y;\n}\n")
+	expectPrinted(t, "class Foo { @x #y }", "class Foo {\n  @x #y;\n}\n")
+	expectPrinted(t, "class Foo { @x #y() {} }", "class Foo {\n  @x #y() {\n  }\n}\n")
+	expectPrinted(t, "class Foo { @x static #y }", "class Foo {\n  @x static #y;\n}\n")
+	expectPrinted(t, "class Foo { @x static #y() {} }", "class Foo {\n  @x static #y() {\n  }\n}\n")
+	expectPrinted(t, "class Foo { @x accessor #y }", "class Foo {\n  @x accessor #y;\n}\n")
 
 	expectParseError(t, "class Foo { x(@y z) {} }", "<stdin>: ERROR: Parameter decorators are not allowed in JavaScript\n")
 	expectParseError(t, "class Foo { @x static {} }", "<stdin>: ERROR: Expected \";\" but found \"{\"\n")
 
 	expectPrinted(t, "@\na\n(\n)\n@\n(\nb\n)\nclass\nFoo\n{\n}\n", "@a()\n@b\nclass Foo {\n}\n")
-	expectPrinted(t, "@(a, b) class Foo {}\n", "@(a, b)\nclass Foo {\n}\n")
-	expectPrinted(t, "@x() class Foo {}", "@x()\nclass Foo {\n}\n")
-	expectPrinted(t, "@x.y() class Foo {}", "@x.y()\nclass Foo {\n}\n")
-	expectPrinted(t, "@(() => {}) class Foo {}", "@(() => {\n})\nclass Foo {\n}\n")
+	expectPrinted(t, "@(a, b) class Foo {}", "@(a, b) class Foo {\n}\n")
+	expectPrinted(t, "@x() class Foo {}", "@x() class Foo {\n}\n")
+	expectPrinted(t, "@x.y() class Foo {}", "@x.y() class Foo {\n}\n")
+	expectPrinted(t, "@(() => {}) class Foo {}", "@(() => {\n}) class Foo {\n}\n")
 	expectPrinted(t, "class Foo { #x = @y.#x.y.#x class {} }", "class Foo {\n  #x = @y.#x.y.#x class {\n  };\n}\n")
 	expectParseError(t, "@123 class Foo {}", "<stdin>: ERROR: Expected identifier but found \"123\"\n")
-	expectParseError(t, "@x[y] class Foo {}",
-		"<stdin>: ERROR: Expected \"class\" after decorator but found \"[\"\n<stdin>: NOTE: The preceding decorator is here:\n"+
-			"NOTE: Decorators can only be used with class declarations.\n<stdin>: ERROR: Expected \";\" but found \"class\"\n")
+	expectParseError(t, "@x[y] class Foo {}", "<stdin>: ERROR: Expected \";\" but found \"class\"\n")
 	expectParseError(t, "@x?.() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
 	expectParseError(t, "@x?.y() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
 	expectParseError(t, "@x?.[y]() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
 	expectParseError(t, "@new Function() class Foo {}", "<stdin>: ERROR: Expected identifier but found \"new\"\n")
 	expectParseError(t, "@() => {} class Foo {}", "<stdin>: ERROR: Unexpected \")\"\n")
+	expectParseError(t, "x = @y function() {}", "<stdin>: ERROR: Expected \"class\" but found \"function\"\n")
 
 	// See: https://github.com/microsoft/TypeScript/issues/55336
-	expectParseError(t, "@x().y() class Foo {}",
-		"<stdin>: ERROR: Expected \"class\" after decorator but found \".\"\n"+
-			"<stdin>: NOTE: The preceding decorator is here:\nNOTE: Decorators can only be used with class declarations.\n")
+	expectParseError(t, "@x().y() class Foo {}", "<stdin>: ERROR: Unexpected \".\"\n")
 
 	errorText := "<stdin>: ERROR: Transforming JavaScript decorators to the configured target environment is not supported yet\n"
 	expectParseErrorWithUnsupportedFeatures(t, compat.Decorators, "@dec class Foo {}", errorText)
@@ -2049,6 +2046,24 @@ func TestDecorators(t *testing.T) {
 	expectParseErrorWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec static x }", errorText)
 	expectParseErrorWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec static x() {} }", errorText)
 	expectParseErrorWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec static accessor x }", errorText)
+
+	// Check ASI for "abstract"
+	expectParseError(t, "@x abstract class Foo {}", "<stdin>: ERROR: Expected \";\" but found \"class\"\n")
+	expectParseError(t, "@x abstract\nclass Foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+
+	// Check decorator locations in relation to the "export" keyword
+	expectPrinted(t, "@x export class Foo {}", "@x export class Foo {\n}\n")
+	expectPrinted(t, "export @x class Foo {}", "@x export class Foo {\n}\n")
+	expectPrinted(t, "@x export default class {}", "@x export default class {\n}\n")
+	expectPrinted(t, "export default @x class {}", "@x export default class {\n}\n")
+	expectPrinted(t, "@x export default class Foo {}", "@x export default class Foo {\n}\n")
+	expectPrinted(t, "export default @x class Foo {}", "@x export default class Foo {\n}\n")
+	expectPrinted(t, "export default (@x class {})", "export default (@x class {\n});\n")
+	expectPrinted(t, "export default (@x class Foo {})", "export default (@x class Foo {\n});\n")
+	expectParseError(t, "export @x default class {}", "<stdin>: ERROR: Unexpected \"default\"\n")
+	expectParseError(t, "@x export @y class Foo {}", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseError(t, "@x export default abstract", "<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseError(t, "@x export @y default class {}", "<stdin>: ERROR: Decorators are not valid here\n<stdin>: ERROR: Unexpected \"default\"\n")
 }
 
 func TestGenerator(t *testing.T) {
@@ -2943,6 +2958,14 @@ func TestExport(t *testing.T) {
 	expectParseError(t, "export let", "<stdin>: ERROR: Expected identifier but found end of file\n")
 	expectParseError(t, "export const", "<stdin>: ERROR: Expected identifier but found end of file\n")
 
+	// Do not parse TypeScript export syntax in JavaScript
+	expectParseError(t, "export enum Foo {}", "<stdin>: ERROR: Unexpected \"enum\"\n")
+	expectParseError(t, "export interface Foo {}", "<stdin>: ERROR: Unexpected \"interface\"\n")
+	expectParseError(t, "export namespace Foo {}", "<stdin>: ERROR: Unexpected \"namespace\"\n")
+	expectParseError(t, "export abstract class Foo {}", "<stdin>: ERROR: Unexpected \"abstract\"\n")
+	expectParseError(t, "export declare class Foo {}", "<stdin>: ERROR: Unexpected \"declare\"\n")
+	expectParseError(t, "export declare function foo() {}", "<stdin>: ERROR: Unexpected \"declare\"\n")
+
 	// String export alias with "export {}"
 	expectPrinted(t, "let x; export {x as ''}", "let x;\nexport { x as \"\" };\n")
 	expectPrinted(t, "let x; export {x as '🍕'}", "let x;\nexport { x as \"🍕\" };\n")
@@ -3058,6 +3081,10 @@ func TestExportDefault(t *testing.T) {
 	expectPrinted(t, "export default async function* foo() {} - after", "export default async function* foo() {\n}\n-after;\n")
 	expectPrinted(t, "export default class {} - after", "export default class {\n}\n-after;\n")
 	expectPrinted(t, "export default class Foo {} - after", "export default class Foo {\n}\n-after;\n")
+
+	// Check ASI for "abstract"
+	expectPrinted(t, "export default abstract\nclass Foo {}", "export default abstract;\nclass Foo {\n}\n")
+	expectParseError(t, "export default abstract class {}", "<stdin>: ERROR: Expected \";\" but found \"class\"\n")
 }
 
 func TestExportClause(t *testing.T) {
