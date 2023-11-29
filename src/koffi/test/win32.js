@@ -50,7 +50,18 @@ async function test() {
 
     const DivideBySafe = lib.func('int DivideBySafe(int a, int b)');
     const CallThrough = lib.func('int CallThrough(CallThroughFunc *func)');
+
     const Sleep = kernel32.func('void __stdcall Sleep(uint32_t dwMilliseconds)');
+    const GetLastError = kernel32.func('uint32_t __stdcall GetLastError()');
+    const SetLastError = kernel32.func('void __stdcall SetLastError(uint32_t dwErrorCode)');
+
+    // Try to make sure GetLastError() survives across Koffi calls
+    for (let i = 0; i < 100; i++) {
+        SetLastError(i);
+        Sleep(0);
+        assert.equal(GetLastError(), i);
+        assert.equal(GetLastError(), i);
+    }
 
     // Sync SEH support
     assert.equal(DivideBySafe(12, 3), 4);
@@ -81,7 +92,4 @@ async function test() {
         assert.equal(results[0], -15);
         assert.equal(results[1], -42);
     }
-
-    // Simple Win32 call, just in case
-    Sleep(1);
 }

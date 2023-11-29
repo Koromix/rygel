@@ -336,6 +336,8 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         teb->StackLimit = limit;
         teb->DeallocationStack = dealloc;
         teb->GuaranteedStackBytes = guaranteed;
+
+        instance->last_error = teb->LastErrorValue;
     };
 
     // Adjust stack limits so SEH works correctly
@@ -344,6 +346,8 @@ void CallData::Execute(const FunctionInfo *func, void *native)
     teb->StackLimit = mem->stack0.ptr;
     teb->DeallocationStack = mem->stack0.ptr;
     teb->GuaranteedStackBytes = 0;
+
+    teb->LastErrorValue = instance->last_error;
 #endif
 
 #define PERFORM_CALL(Suffix) \

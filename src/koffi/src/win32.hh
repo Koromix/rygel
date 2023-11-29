@@ -72,9 +72,11 @@ struct TEB {
     void *ExceptionList;
     void *StackBase;
     void *StackLimit;
-    char _pad1[5216];
+    char _pad1[80];
+    unsigned long LastErrorValue;
+    char _pad2[5132];
     void *DeallocationStack;
-    char _pad2[712];
+    char _pad3[712];
     uint32_t GuaranteedStackBytes;
 };
 static_assert(RG_OFFSET_OF(TEB, DeallocationStack) == 0x1478);
@@ -86,9 +88,11 @@ struct TEB {
     void *ExceptionList;
     void *StackBase;
     void *StackLimit;
-    char _pad1[3584];
+    char _pad1[40];
+    unsigned long LastErrorValue;
+    char _pad2[3540];
     void *DeallocationStack;
-    char _pad2[360];
+    char _pad3[360];
     uint32_t GuaranteedStackBytes;
 };
 static_assert(RG_OFFSET_OF(TEB, DeallocationStack) == 0xE0C);
