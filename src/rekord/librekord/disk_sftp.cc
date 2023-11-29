@@ -76,7 +76,7 @@ private:
 SftpDisk::SftpDisk(const ssh_Config &config, int threads)
 {
     if (threads < 0) {
-        threads = std::min(32, GetCoreCount() * 4);
+        threads = std::max(32, 4 * GetCoreCount());
     }
 
     config.Clone(&this->config);

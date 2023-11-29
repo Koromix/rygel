@@ -42,7 +42,7 @@ S3Disk::S3Disk(const s3_Config &config, int threads)
 {
     // S3 is slow unless you use parallelism
     if (threads < 0) {
-        threads = 64;
+        threads = std::max(32, 4 * GetCoreCount());
     }
 
     if (!s3.Open(config))

@@ -40,7 +40,7 @@ public:
 LocalDisk::LocalDisk(const char *path, int threads)
 {
     if (threads < 0) {
-        threads = GetCoreCount() * 32;
+        threads = 32 * GetCoreCount();
     }
 
     Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &str_alloc);
