@@ -4,6 +4,10 @@
 
 ### Koffi 2.6
 
+#### Koffi 2.6.10 (2023-11-29)
+
+- Protect GetLastError() value from Node.js and V8 on Windows
+
 #### Koffi 2.6.9 (2023-11-25)
 
 - Search in DLL directory for additional dependencies on Windows
