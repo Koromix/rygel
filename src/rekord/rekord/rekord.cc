@@ -17,6 +17,8 @@
 #include "src/core/libwrap/json.hh"
 #include "src/rekord/librekord/librekord.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/pugixml/src/pugixml.hpp"
+#include <iostream> // for pugixml
 #ifndef _WIN32
     #include <sys/time.h>
     #include <sys/resource.h>
@@ -26,12 +28,14 @@ namespace RG {
 
 enum class OutputFormat {
     Human,
-    JSON
+    JSON,
+    XML
 };
 
 static const char *const OutputFormatNames[] = {
     "Human",
-    "JSON"
+    "JSON",
+    "XML"
 };
 
 static bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
@@ -579,6 +583,26 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
 
             json.Flush();
             PrintLn();
+        } break;
+
+        case OutputFormat::XML: {
+            pugi::xml_document doc;
+            pugi::xml_node root = doc.append_child("snapshots");
+
+            for (const rk_SnapshotInfo &snapshot: snapshots) {
+                pugi::xml_node element = root.append_child("snapshot");
+
+                char id[128];
+                Fmt(id, "%1", snapshot.id);
+
+                element.append_attribute("id") = id;
+                element.append_attribute("name") = snapshot.name ? snapshot.name : "";
+                element.append_attribute("time") = snapshot.time;
+                element.append_attribute("size") = snapshot.len;
+                element.append_attribute("storage") = snapshot.stored;
+            }
+
+            doc.save(std::cout, "    ");
         } break;
     }
 
