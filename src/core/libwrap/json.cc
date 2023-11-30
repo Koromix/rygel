@@ -434,65 +434,6 @@ bool json_Parser::IncreaseDepth()
     return true;
 }
 
-void json_StreamWriter::Put(char c)
-{
-    buf.Append((uint8_t)c);
-
-    if (buf.len == RG_SIZE(buf.data)) {
-        st->Write(buf);
-        buf.Clear();
-    }
-}
-
-void json_StreamWriter::Put(Span<const char> str)
-{
-    Flush();
-    st->Write(str);
-}
-
-void json_StreamWriter::Flush()
-{
-    st->Write(buf);
-    buf.Clear();
-}
-
-bool json_Writer::StartString()
-{
-    Prefix(rapidjson::kStringType);
-    writer.Put('"');
-    writer.Flush();
-
-    return true;
-}
-
-bool json_Writer::EndString()
-{
-    writer.Put('"');
-    return true;
-}
-
-bool json_Writer::StartRaw()
-{
-    Prefix(rapidjson::kStringType);
-    writer.Flush();
-
-    return true;
-}
-
-bool json_Writer::EndRaw()
-{
-    return true;
-}
-
-bool json_Writer::Raw(Span<const char> str)
-{
-    StartRaw();
-    writer.Put(str);
-    EndRaw();
-
-    return true;
-}
-
 Span<const char> json_ConvertToJsonName(Span<const char> name, Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len >= 2);

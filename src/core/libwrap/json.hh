@@ -27,6 +27,7 @@ RG_PUSH_NO_WARNINGS
 namespace rapidjson { typedef RG::Size SizeType; }
 #include "vendor/rapidjson/reader.h"
 #include "vendor/rapidjson/writer.h"
+#include "vendor/rapidjson/prettywriter.h"
 #include "vendor/rapidjson/error/en.h"
 RG_POP_NO_WARNINGS
 
@@ -190,33 +191,86 @@ public:
 
     bool IsValid() const { return st->IsValid(); }
 
-    void Put(char c);
-    void Put(Span<const char> str);
-    void Flush();
+    void Put(char c)
+    {
+        buf.Append((uint8_t)c);
+
+        if (buf.len == RG_SIZE(buf.data)) {
+            st->Write(buf);
+            buf.Clear();
+        }
+    }
+
+    void Put(Span<const char> str)
+    {
+        Flush();
+        st->Write(str);
+    }
+
+    void Flush()
+    {
+        st->Write(buf);
+        buf.Clear();
+    }
 };
 
-class json_Writer: public rapidjson::Writer<json_StreamWriter> {
-    RG_DELETE_COPY(json_Writer)
+template <typename T = rapidjson::Writer<json_StreamWriter>>
+class json_WriterBase: public T {
+    RG_DELETE_COPY(json_WriterBase)
 
     json_StreamWriter writer;
 
 public:
-    json_Writer(StreamWriter *st) : rapidjson::Writer<json_StreamWriter>(writer), writer(st) {}
+    json_WriterBase(StreamWriter *st) : T(writer), writer(st) {}
 
     bool IsValid() const { return writer.IsValid(); }
 
     // Hacky helpers to write long strings: call StartString() and write directly to
     // the stream. Call EndString() when done. Make sure you escape properly!
-    bool StartString();
-    bool EndString();
+    bool StartString()
+    {
+        T::Prefix(rapidjson::kStringType);
+        writer.Put('"');
+        writer.Flush();
+
+        return true;
+    }
+
+    bool EndString()
+    {
+        writer.Put('"');
+        return true;
+    }
+
 
     // Same thing for raw JSON (e.g. JSON pulled from database)
-    bool StartRaw();
-    bool EndRaw();
-    bool Raw(Span<const char> str);
+    bool StartRaw()
+    {
+        T::Prefix(rapidjson::kStringType);
+        writer.Flush();
+
+        return true;
+    }
+
+    bool EndRaw()
+    {
+        return true;
+    }
+
+    bool Raw(Span<const char> str)
+    {
+        StartRaw();
+        writer.Put(str);
+        EndRaw();
+
+        return true;
+    }
 
     void Flush() { writer.Flush(); }
 };
+
+typedef json_WriterBase<rapidjson::Writer<json_StreamWriter>> json_Writer;
+typedef json_WriterBase<rapidjson::PrettyWriter<json_StreamWriter>> json_PrettyWriter;
 
 // This is to be used only with small static strings (e.g. enum strings)
 Span<const char> json_ConvertToJsonName(Span<const char> name, Span<char> out_buf);

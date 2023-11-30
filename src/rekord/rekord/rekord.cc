@@ -14,6 +14,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "src/core/libnet/curl.hh"
 #include "src/core/libpasswd/libpasswd.hh"
+#include "src/core/libwrap/json.hh"
 #include "src/rekord/librekord/librekord.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #ifndef _WIN32
@@ -22,6 +23,16 @@
 #endif
 
 namespace RG {
+
+enum class OutputFormat {
+    Human,
+    JSON
+};
+
+static const char *const OutputFormatNames[] = {
+    "Human",
+    "JSON"
+};
 
 static bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
@@ -443,6 +454,7 @@ static int RunList(Span<const char *> arguments)
 
     // Options
     rk_Config config;
+    OutputFormat format = OutputFormat::Human;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -456,7 +468,12 @@ Options:
         %!..+--password <pwd>%!0         Set repository password
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: automatic)%!0)", FelixTarget);
+                                 %!D..(default: automatic)%!0
+
+    %!..+-f, --format <format>%!0        Change output format
+                                 %!D..(default: %2)%!0
+
+Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -479,6 +496,11 @@ Options:
                 config.username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 config.password = opt.current_value;
+            } else if (opt.Test("-f", "--format", OptionType::Value)) {
+                if (!OptionToEnum(OutputFormatNames, opt.current_value, &format)) {
+                    LogError("Unknown output format '%1'", opt.current_value);
+                    return 1;
+                }
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
@@ -511,21 +533,53 @@ Options:
     if (!rk_List(disk.get(), &temp_alloc, &snapshots))
         return 1;
 
-    if (snapshots.len) {
-        for (const rk_SnapshotInfo &snapshot: snapshots) {
-            TimeSpec spec = DecomposeTime(snapshot.time);
+    switch (format) {
+        case OutputFormat::Human: {
+            if (snapshots.len) {
+                for (const rk_SnapshotInfo &snapshot: snapshots) {
+                    TimeSpec spec = DecomposeTime(snapshot.time);
 
-            PrintLn("%!..+%1%!0", snapshot.id);
-            if (snapshot.name) {
-                PrintLn("+ Name: %!..+%1%!0", snapshot.name);
+                    PrintLn("%!..+%1%!0", snapshot.id);
+                    if (snapshot.name) {
+                        PrintLn("+ Name: %!..+%1%!0", snapshot.name);
+                    }
+                    PrintLn("+ Time: %!..+%1%!0", FmtTimeNice(spec));
+                    PrintLn("+ Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
+                    PrintLn("+ Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
+                    PrintLn();
+                }
+            } else {
+                LogInfo("There does not seem to be any snapshot");
             }
-            PrintLn("+ Time: %!..+%1%!0", FmtTimeNice(spec));
-            PrintLn("+ Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
-            PrintLn("+ Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
+        } break;
+
+        case OutputFormat::JSON: {
+            json_PrettyWriter json(&stdout_st);
+
+            json.StartArray();
+            for (const rk_SnapshotInfo &snapshot: snapshots) {
+                json.StartObject();
+
+                char id[128];
+                Fmt(id, "%1", snapshot.id);
+
+                json.Key("id"); json.String(id);
+                if (snapshot.name) {
+                    json.Key("name"); json.String(snapshot.name);
+                } else {
+                    json.Key("name"); json.Null();
+                }
+                json.Key("time"); json.Int64(snapshot.time);
+                json.Key("size"); json.Int64(snapshot.len);
+                json.Key("storage"); json.Int64(snapshot.stored);
+
+                json.EndObject();
+            }
+            json.EndArray();
+
+            json.Flush();
             PrintLn();
-        }
-    } else {
-        LogInfo("There does not seem to be any snapshot");
+        } break;
     }
 
     return 0;
