@@ -408,7 +408,7 @@ Options:
     }
 
     if (!name) {
-        LogError("No name provided");
+        LogError("No ID provided");
         return 1;
     }
     if (!dest_filename) {
