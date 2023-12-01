@@ -2862,6 +2862,7 @@ enum class FmtType {
     Float,
     Double,
     Binary,
+    Octal,
     BigHex,
     SmallHex,
     MemorySize,
@@ -2957,6 +2958,13 @@ static inline FmtArg FmtBin(uint64_t u)
 {
     FmtArg arg;
     arg.type = FmtType::Binary;
+    arg.u.u = u;
+    return arg;
+}
+static inline FmtArg FmtOctal(uint64_t u)
+{
+    FmtArg arg;
+    arg.type = FmtType::Octal;
     arg.u.u = u;
     return arg;
 }

@@ -931,6 +931,35 @@ static Span<char> FormatUnsignedToDecimal(uint64_t value, char out_buf[32])
     return MakeSpan(out_buf + offset, 32 - offset);
 }
 
+static Span<char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
+{
+    Size msb = 64 - (Size)CountLeadingZeros(value);
+    if (!msb) {
+        msb = 1;
+    }
+
+    for (Size i = 0; i < msb; i++) {
+        bool bit = (value >> (msb - i - 1)) & 0x1;
+        out_buf[i] = bit ? '1' : '0';
+    }
+
+    return MakeSpan(out_buf, msb);
+}
+
+static Span<char> FormatUnsignedToOctal(uint64_t value, char out_buf[64])
+{
+    static const char literals[] = "012345678";
+
+    Size offset = 64;
+    do {
+        uint64_t digit = value & 0x7;
+        value >>= 3;
+        out_buf[--offset] = literals[digit];
+    } while (value);
+
+    return MakeSpan(out_buf + offset, 64 - offset);
+}
+
 static Span<char> FormatUnsignedToBigHex(uint64_t value, char out_buf[32])
 {
     static const char literals[] = "0123456789ABCDEF";
@@ -957,21 +986,6 @@ static Span<char> FormatUnsignedToSmallHex(uint64_t value, char out_buf[32])
     } while (value);
 
     return MakeSpan(out_buf + offset, 32 - offset);
-}
-
-static Span<char> FormatUnsignedToBinary(uint64_t value, char out_buf[64])
-{
-    Size msb = 64 - (Size)CountLeadingZeros(value);
-    if (!msb) {
-        msb = 1;
-    }
-
-    for (Size i = 0; i < msb; i++) {
-        bool bit = (value >> (msb - i - 1)) & 0x1;
-        out_buf[i] = bit ? '1' : '0';
-    }
-
-    return MakeSpan(out_buf, msb);
 }
 
 #ifdef JKJ_HEADER_DRAGONBOX
@@ -1250,6 +1264,9 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
             case FmtType::Binary: {
                 out = FormatUnsignedToBinary(arg.u.u, num_buf);
             } break;
+            case FmtType::Octal: {
+                out = FormatUnsignedToOctal(arg.u.u, num_buf);
+            } break;
             case FmtType::BigHex: {
                 out = FormatUnsignedToBigHex(arg.u.u, num_buf);
             } break;
@@ -1480,6 +1497,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                         case FmtType::Integer:
                         case FmtType::Unsigned:
                         case FmtType::Binary:
+                        case FmtType::Octal:
                         case FmtType::BigHex:
                         case FmtType::SmallHex: {
                             switch (arg.u.span.type_len) {
