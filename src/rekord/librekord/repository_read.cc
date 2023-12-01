@@ -375,7 +375,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             switch (entry.kind) {
                 case (int)rk_FileEntry::Kind::Directory: {
                     if (entry_type != rk_ObjectType::Directory) {
-                        LogError("Object '%1' is not a directory", entry.id);
+                        LogError("Object '%1' is not a Directory", entry.id);
                         return false;
                     }
 
@@ -387,7 +387,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
                 case (int)rk_FileEntry::Kind::File: {
                     if (entry_type != rk_ObjectType::File && entry_type != rk_ObjectType::Chunk) {
-                        LogError("Object '%1' is not a file", entry.id);
+                        LogError("Object '%1' is not a File", entry.id);
                         return false;
                     }
 
@@ -405,7 +405,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
                 case (int)rk_FileEntry::Kind::Link: {
                     if (entry_type != rk_ObjectType::Link) {
-                        LogError("Object '%1' is not a link", entry.id);
+                        LogError("Object '%1' is not a Link", entry.id);
                         return false;
                     }
 
@@ -502,7 +502,7 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
                         return false;
 
                     if (type != rk_ObjectType::Chunk) [[unlikely]] {
-                        LogError("Object '%1' is not a chunk", entry.id);
+                        LogError("Object '%1' is not a Chunk", entry.id);
                         return false;
                     }
                     if (buf.len != entry.len) [[unlikely]] {
@@ -672,7 +672,7 @@ bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *ou
                     return false;
 
                 if (type != rk_ObjectType::Snapshot) {
-                    LogError("Object '%1' is not a snapshot (ignoring)", id);
+                    LogError("Object '%1' is not a Snapshot (ignoring)", id);
                     return true;
                 }
                 if (obj.len <= RG_SIZE(rk_SnapshotHeader)) {
