@@ -43,22 +43,25 @@ enum class ExtractFlag {
     FlattenName = 1 << 2
 };
 
+struct EntryInfo {
+    rk_ID id;
+
+    int kind;
+    unsigned int flags;
+
+    const char *basename;
+
+    int64_t mtime;
+    int64_t btime;
+    uint32_t mode;
+    uint32_t uid;
+    uint32_t gid;
+    int64_t size;
+
+    const char *filename;
+};
+
 class GetContext {
-    struct EntryInfo {
-        rk_ID id;
-        int kind;
-        const char *basename;
-
-        int64_t mtime;
-        int64_t btime;
-        uint32_t mode;
-        uint32_t uid;
-        uint32_t gid;
-        int64_t size;
-
-        const char *filename;
-    };
-
     rk_Disk *disk;
     bool chown;
 
@@ -250,6 +253,54 @@ static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t
 
 #endif
 
+static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_separators,
+                        Allocator *alloc, EntryInfo *out_entry)
+{
+    rk_FileEntry *ptr = (rk_FileEntry *)(entries.ptr + offset);
+
+    if (entries.len - offset < RG_SIZE(*ptr)) {
+        LogError("Malformed entry in directory object");
+        return -1;
+    }
+
+    EntryInfo entry = {};
+
+    entry.id = ptr->id;
+    entry.kind = LittleEndian(ptr->kind);
+    entry.flags = LittleEndian(ptr->flags);
+    entry.basename = DuplicateString(ptr->GetName(), alloc).ptr;
+
+    entry.mtime = LittleEndian(ptr->mtime);
+    entry.btime = LittleEndian(ptr->btime);
+    entry.mode = LittleEndian(ptr->mode);
+    entry.uid = LittleEndian(ptr->uid);
+    entry.gid = LittleEndian(ptr->gid);
+    entry.size = LittleEndian(ptr->size);
+
+    // Sanity checks
+    if (entry.kind != (int8_t)rk_FileEntry::Kind::Directory &&
+            entry.kind != (int8_t)rk_FileEntry::Kind::File &&
+            entry.kind != (int8_t)rk_FileEntry::Kind::Link) {
+        LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry.kind));
+        return -1;
+    }
+    if (!entry.basename[0] || PathContainsDotDot(entry.basename)) {
+        LogError("Unsafe file name '%1'", entry.basename);
+        return -1;
+    }
+    if (PathIsAbsolute(entry.basename)) {
+        LogError("Unsafe file name '%1'", entry.basename);
+        return -1;
+    }
+    if (!allow_separators && strpbrk(entry.basename, RG_PATH_SEPARATORS)) {
+        LogError("Unsafe file name '%1'", entry.basename);
+        return -1;
+    }
+
+    *out_entry = entry;
+    return ptr->GetSize();
+}
+
 bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname)
 {
     flags |= (int)ExtractFlag::SkipMeta;
@@ -307,62 +358,22 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
     for (Size offset = 0; offset < entries.len;) {
         EntryInfo entry = {};
+        const char *filename = nullptr;
 
-        // Extract entry information
-        {
-            rk_FileEntry *ptr = (rk_FileEntry *)(entries.ptr + offset);
-
-            if (entries.len - offset < RG_SIZE(*ptr)) {
-                LogError("Malformed entry in directory object");
-                return false;
-            }
-
-            // Skip entry for next iteration
-            offset += ptr->GetSize();
-
-            int flags = LittleEndian(ptr->flags);
-
-            if (!(flags & (int)rk_FileEntry::Flags::Readable))
-                continue;
-
-            entry.id = ptr->id;
-            entry.kind = LittleEndian(ptr->kind);
-            entry.basename = DuplicateString(ptr->GetName(), &shared->temp_alloc).ptr;
-
-            entry.mtime = LittleEndian(ptr->mtime);
-            entry.btime = LittleEndian(ptr->btime);
-            entry.mode = LittleEndian(ptr->mode);
-            entry.uid = LittleEndian(ptr->uid);
-            entry.gid = LittleEndian(ptr->gid);
-            entry.size = LittleEndian(ptr->size);
-        }
-
-        // Sanity checks
-        if (entry.kind != (int8_t)rk_FileEntry::Kind::Directory &&
-                entry.kind != (int8_t)rk_FileEntry::Kind::File &&
-                entry.kind != (int8_t)rk_FileEntry::Kind::Link) {
-            LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry.kind));
+        Size skip = DecodeEntry(entries, offset, flags & (int)ExtractFlag::AllowSeparators, &shared->temp_alloc, &entry);
+        if (skip < 0)
             return false;
-        }
-        if (!entry.basename[0] || PathContainsDotDot(entry.basename)) {
-            LogError("Unsafe file name '%1'", entry.basename);
-            return false;
-        }
-        if (PathIsAbsolute(entry.basename)) {
-            LogError("Unsafe file name '%1'", entry.basename);
-            return false;
-        }
-        if (!(flags & (int)ExtractFlag::AllowSeparators) && strpbrk(entry.basename, RG_PATH_SEPARATORS)) {
-            LogError("Unsafe file name '%1'", entry.basename);
-            return false;
-        }
+        offset += skip;
+
+        if (!(entry.flags & (int)rk_FileEntry::Flags::Readable))
+            continue;
 
         if (flags & (int)ExtractFlag::FlattenName) {
-            entry.filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, SplitStrReverse(entry.basename, '/')).ptr;
+            filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, SplitStrReverse(entry.basename, '/')).ptr;
         } else {
-            entry.filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
+            filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
 
-            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry.filename))
+            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(filename))
                 return false;
         }
 
@@ -379,7 +390,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                     }
 
-                    if (!MakeDirectory(entry.filename, false))
+                    if (!MakeDirectory(filename, false))
                         return false;
                     if (!ExtractEntries(entry_obj, 0, entry))
                         return false;
@@ -391,16 +402,16 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                     }
 
-                    int fd = GetFile(entry.id, entry_type, entry_obj, entry.filename);
+                    int fd = GetFile(entry.id, entry_type, entry_obj, filename);
                     if (fd < 0)
                         return false;
                     RG_DEFER { close(fd); };
 
                     // Set file metadata
                     if (chown) {
-                        SetFileOwner(fd, entry.filename, entry.uid, entry.gid);
+                        SetFileOwner(fd, filename, entry.uid, entry.gid);
                     }
-                    SetFileMetaData(fd, entry.filename, entry.mtime, entry.btime, entry.mode);
+                    SetFileMetaData(fd, filename, entry.mtime, entry.btime, entry.mode);
                 } break;
 
                 case (int)rk_FileEntry::Kind::Link: {
@@ -412,7 +423,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     // NUL terminate the path
                     entry_obj.Append(0);
 
-                    if (!CreateSymbolicLink(entry.filename, (const char *)entry_obj.ptr, true))
+                    if (!CreateSymbolicLink(filename, (const char *)entry_obj.ptr, true))
                         return false;
                 } break;
 
@@ -701,6 +712,179 @@ bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_sn
 
     std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
               [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
+
+    out_guard.Disable();
+    return true;
+}
+
+class TreeContext {
+    rk_Disk *disk;
+    rk_TreeSettings settings;
+
+    Async tasks;
+
+public:
+    TreeContext(rk_Disk *disk, const rk_TreeSettings &settings);
+
+    bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
+                        Allocator *alloc, HeapArray<rk_FileInfo> *out_files);
+
+    bool Sync() { return tasks.Sync(); }
+};
+
+TreeContext::TreeContext(rk_Disk *disk, const rk_TreeSettings &settings)
+    : disk(disk), settings(settings), tasks(disk->GetThreads())
+{
+}
+
+bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
+                                 Allocator *alloc, HeapArray<rk_FileInfo> *out_files)
+{
+    if (entries.len < RG_SIZE(int64_t)) [[unlikely]] {
+        LogError("Malformed directory object");
+        return false;
+    }
+    entries.len -= RG_SIZE(int64_t);
+
+    // Get total length from end of stream
+    int64_t dir_len = 0;
+    memcpy(&dir_len, entries.end(), RG_SIZE(dir_len));
+    dir_len = LittleEndian(dir_len);
+
+    Async async(&tasks);
+
+    HeapArray<EntryInfo> decoded;
+    for (Size offset = 0; offset < entries.len;) {
+        EntryInfo entry = {};
+
+        Size skip = DecodeEntry(entries, offset, allow_separators, alloc, &entry);
+        if (skip < 0)
+            return false;
+        offset += skip;
+
+        decoded.Append(entry);
+    }
+
+    HeapArray<HeapArray<uint8_t>> objects;
+    objects.AppendDefault(decoded.len);
+
+    for (Size i = 0; i < decoded.len; i++) {
+        const EntryInfo &entry = decoded[i];
+        rk_ObjectType expect_type;
+
+        if (entry.kind == (int)rk_FileEntry::Kind::Directory) {
+            expect_type = rk_ObjectType::Directory;
+        } else if (entry.kind == (int)rk_FileEntry::Kind::Link) {
+            expect_type = rk_ObjectType::Link;
+        } else {
+            continue;
+        }
+
+        async.Run([=, out_obj = &objects[i], this]() {
+            rk_ObjectType entry_type;
+            if (!disk->ReadObject(entry.id, &entry_type, out_obj))
+                return false;
+
+            if (entry_type != expect_type) {
+                LogError("Object '%1' is not a %2", entry.id, rk_ObjectTypeNames[(int)expect_type]);
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    if (!async.Sync())
+        return false;
+
+    for (Size i = 0; i < decoded.len; i++) {
+        const EntryInfo &entry = decoded[i];
+        Span<const uint8_t> entry_obj = objects[i];
+
+        Size file_idx = out_files->len;
+        rk_FileInfo *file = out_files->AppendDefault();
+
+        file->id = entry.id;
+        file->depth = depth;
+        switch (entry.kind) {
+            case (int)rk_FileEntry::Kind::Directory: { file->type = rk_FileType::Directory; } break;
+            case (int)rk_FileEntry::Kind::File: { file->type = rk_FileType::File; } break;
+            case (int)rk_FileEntry::Kind::Link: { file->type = rk_FileType::Link; } break;
+
+            default: { RG_UNREACHABLE(); } break;
+        }
+        file->basename = entry.basename;
+        file->mtime = entry.mtime;
+        file->btime = entry.btime;
+        file->mode = entry.mode;
+        file->uid = entry.uid;
+        file->gid = entry.gid;
+        file->size = entry.size;
+
+        switch (file->type) {
+            case rk_FileType::Directory: {
+                if (settings.max_depth >= 0 && depth >= settings.max_depth)
+                    break;
+
+                Size prev_len = out_files->len;
+                if (!RecurseEntries(entry_obj, false, depth + 1, alloc, out_files))
+                    return false;
+
+                // Reacquire correct pointer (array may have moved)
+                file = &(*out_files)[file_idx];
+
+                for (Size j = prev_len; j < out_files->len; j++) {
+                    const rk_FileInfo &child = (*out_files)[j];
+                    file->u.children += (child.depth == depth + 1);
+                }
+            } break;
+            case rk_FileType::File: { file->u.readable = (entry.flags & (int)rk_FileEntry::Flags::Readable); } break;
+            case rk_FileType::Link: { file->u.target = DuplicateString(entry_obj.As<const char>(), alloc).ptr; } break;
+        }
+    }
+
+    return true;
+}
+
+bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Allocator *alloc,
+             HeapArray<rk_FileInfo> *out_files)
+{
+    Size prev_len = out_files->len;
+    RG_DEFER_N(out_guard) { out_files->RemoveFrom(prev_len); };
+
+    rk_ObjectType type;
+    HeapArray<uint8_t> obj;
+    if (!disk->ReadObject(id, &type, &obj))
+        return false;
+
+    TreeContext tree(disk, settings);
+
+    switch (type) {
+        case rk_ObjectType::Directory: {
+            if (!tree.RecurseEntries(obj, false, 0, alloc, out_files))
+                return false;
+        } break;
+
+        case rk_ObjectType::Snapshot: {
+            // There must be at least one entry
+            if (obj.len <= RG_SIZE(rk_SnapshotHeader)) {
+                LogError("Malformed snapshot object '%1'", id);
+                return false;
+            }
+
+            Span<uint8_t> entries = obj.Take(RG_SIZE(rk_SnapshotHeader), obj.len - RG_SIZE(rk_SnapshotHeader));
+
+            if (!tree.RecurseEntries(entries, true, 0, alloc, out_files))
+                return false;
+        } break;
+
+        case rk_ObjectType::Chunk:
+        case rk_ObjectType::File:
+        case rk_ObjectType::Link: {
+            LogInfo("Expected snapshot or directory object, not '%1'", rk_ObjectTypeNames[(int)type]);
+            return false;
+        } break;
+    }
 
     out_guard.Disable();
     return true;

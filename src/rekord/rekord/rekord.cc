@@ -609,6 +609,243 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     return 0;
 }
 
+static int RunTree(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    rk_Config config;
+    rk_TreeSettings settings;
+    OutputFormat format = OutputFormat::Human;
+    const char *name = nullptr;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 tree [-R <repo>] <ID>%!0
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+
+    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-u, --user <user>%!0            Set repository username
+        %!..+--password <pwd>%!0         Set repository password
+
+    %!..+-j, --threads <threads>%!0      Change number of threads
+                                 %!D..(default: automatic)%!0
+
+        %!..+--depth <depth>%!0          Set maximum recursion depth
+                                 %!D..(default: All)%!0
+
+    %!..+-f, --format <format>%!0        Change output format
+                                 %!D..(default: %2)%!0
+
+Available output formats: %!..+%3%!0)",
+                FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+    };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
+            } else if (opt.Test("--password", OptionType::Value)) {
+                config.password = opt.current_value;
+            } else if (opt.Test("-j", "--threads", OptionType::Value)) {
+                if (!ParseInt(opt.current_value, &config.threads))
+                    return 1;
+                if (config.threads < 1) {
+                    LogError("Threads count cannot be < 1");
+                    return 1;
+                }
+            } else if (opt.Test("--depth", OptionType::Value)) {
+                if (TestStr(opt.current_value, "All")) {
+                    settings.max_depth = -1;
+                } else if (!ParseInt(opt.current_value, &settings.max_depth)) {
+                    return 1;
+                } else if (settings.max_depth < 0) {
+                    LogInfo("Option --depth must be 0 or more (or 'All')");
+                    return 1;
+                }
+            } else if (opt.Test("-f", "--format", OptionType::Value)) {
+                if (!OptionToEnum(OutputFormatNames, opt.current_value, &format)) {
+                    LogError("Unknown output format '%1'", opt.current_value);
+                    return 1;
+                }
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        name = opt.ConsumeNonOption();
+    }
+
+    if (!name) {
+        LogError("No ID provided");
+        return 1;
+    }
+
+    if (!config.Complete(true))
+        return 1;
+
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
+    if (!disk)
+        return 1;
+
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
+        LogError("Cannot list with write-only key");
+        return 1;
+    }
+    LogInfo();
+
+    HeapArray<rk_FileInfo> files;
+    {
+        rk_ID id = {};
+        if (!rk_ParseID(name, &id))
+            return 1;
+        if (!rk_Tree(disk.get(), id, settings, &temp_alloc, &files))
+            return 1;
+    }
+
+    switch (format) {
+        case OutputFormat::Human: {
+            if (files.len) {
+                for (const rk_FileInfo &file: files) {
+                    TimeSpec mspec = DecomposeTime(file.mtime);
+                    int indent = file.depth * 3;
+
+                    char suffix = (file.type == rk_FileType::Directory) ? '/' : ' ';
+                    int align = std::max(60 - indent - strlen(file.basename), (size_t)0);
+
+                    PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 (0%6) %!D..[%7]%!0 %8",
+                            FmtArg(" ").Repeat(indent), rk_FileTypeNames[(int)file.type][0],
+                            file.basename, suffix, FmtArg(" ").Repeat(align), FmtOctal(file.mode),
+                            FmtTimeNice(mspec), file.type == rk_FileType::File ? FmtDiskSize(file.size) : FmtArg(""));
+                }
+            } else {
+                LogInfo("There does not seem to be any file");
+            }
+        } break;
+
+        case OutputFormat::JSON: {
+            json_PrettyWriter json(&stdout_st);
+            int depth = 0;
+
+            json.StartArray();
+            for (const rk_FileInfo &file: files) {
+                char buf[128];
+
+                while (file.depth < depth) {
+                    json.EndArray();
+                    json.EndObject();
+
+                    depth--;
+                }
+
+                json.StartObject();
+
+                json.Key("id"); json.String(Fmt(buf, "%1", file.id).ptr);
+                json.Key("type"); json.String(rk_FileTypeNames[(int)file.type]);
+                json.Key("name"); json.String(file.basename);
+                json.Key("mtime"); json.Int64(file.mtime);
+                json.Key("btime"); json.Int64(file.btime);
+                json.Key("mode"); json.String(Fmt(buf, "0o%1", FmtOctal(file.mode)).ptr);
+                json.Key("uid"); json.Uint(file.uid);
+                json.Key("gid"); json.Uint(file.gid);
+
+                switch (file.type) {
+                    case rk_FileType::Directory: {
+                        json.Key("children"); json.StartArray();
+
+                        if (file.u.children) {
+                            depth++;
+                            continue;
+                        } else {
+                            json.EndArray();
+                        }
+                    } break;
+                    case rk_FileType::File: { json.Key("size"); json.Int64(file.size); } break;
+                    case rk_FileType::Link: {
+                        json.Key("target"); json.String(file.u.target);
+                    } break;
+                }
+
+                json.EndObject();
+            }
+            while (depth--) {
+                json.EndArray();
+                json.EndObject();
+            }
+            json.EndArray();
+
+            json.Flush();
+            PrintLn();
+        } break;
+
+        case OutputFormat::XML: {
+            pugi::xml_document doc;
+            pugi::xml_node root = doc.append_child("tree");
+
+            pugi::xml_node ptr = root;
+            int depth = 0;
+
+            for (const rk_FileInfo &file: files) {
+                char buf[128];
+
+                while (file.depth < depth) {
+                    ptr = ptr.parent();
+                    depth--;
+                }
+
+                pugi::xml_node element;
+
+                switch (file.type) {
+                    case rk_FileType::Directory: { element = ptr.append_child("directory"); } break;
+                    case rk_FileType::File: { element = ptr.append_child("file"); } break;
+                    case rk_FileType::Link: { element = ptr.append_child("link"); } break;
+                }
+
+                element.append_attribute("id") = Fmt(buf, "%1", file.id).ptr;
+                element.append_attribute("name") = file.basename;
+                element.append_attribute("mtime") = file.mtime;
+                element.append_attribute("btime") = file.btime;
+                element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(file.mode)).ptr;
+                element.append_attribute("uid") = file.uid;
+                element.append_attribute("gid") = file.gid;
+
+                switch (file.type) {
+                    case rk_FileType::Directory: {
+                        if (file.u.children) {
+                            depth++;
+                            ptr = element;
+                        }
+                    } break;
+                    case rk_FileType::File: { element.append_attribute("size") = file.size; } break;
+                    case rk_FileType::Link: { element.append_attribute("target") = file.u.target; } break;
+                }
+            }
+
+            doc.save(std::cout, "    ");
+        } break;
+    }
+
+    return 0;
+}
+
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
@@ -623,7 +860,10 @@ Management commands:
 Snapshot commands:
     %!..+put%!0                          Store encrypted directory or file
     %!..+get%!0                          Get and decrypt directory or file
+
+Exploration commands:
     %!..+list%!0                         List snapshots
+    %!..+tree%!0                         Export snapshot or directory tree
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -703,6 +943,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunGet(arguments);
     } else if (TestStr(cmd, "list")) {
         return RunList(arguments);
+    } else if (TestStr(cmd, "tree")) {
+        return RunTree(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

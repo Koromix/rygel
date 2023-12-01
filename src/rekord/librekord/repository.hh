@@ -32,6 +32,10 @@ struct rk_GetSettings {
     bool chown = false;
 };
 
+struct rk_TreeSettings {
+    int max_depth = -1;
+};
+
 struct rk_SnapshotInfo {
     rk_ID id;
 
@@ -41,11 +45,47 @@ struct rk_SnapshotInfo {
     int64_t stored;
 };
 
+enum class rk_FileType {
+    File,
+    Directory,
+    Link
+};
+static const char *const rk_FileTypeNames[] = {
+    "File",
+    "Directory",
+    "Link"
+};
+
+struct rk_FileInfo {
+    rk_ID id;
+
+    int depth;
+    rk_FileType type;
+    const char *basename;
+
+    int64_t mtime;
+    int64_t btime;
+    uint32_t mode;
+    uint32_t uid;
+    uint32_t gid;
+    int64_t size;
+
+    union {
+        Size children; // for directories
+        bool readable; // for files
+        const char *target; // for symbolic links
+    } u;
+};
+
+// Snapshot commands
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
             rk_ID *out_id, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
-
 bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings,
             const char *dest_path, int64_t *out_len = nullptr);
+
+// Exploration commands
 bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
+bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Allocator *alloc,
+             HeapArray<rk_FileInfo> *out_files);
 
 }
