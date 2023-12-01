@@ -647,7 +647,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
     return true;
 }
 
-bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
+bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
 {
     Size prev_len = out_snapshots->len;
     RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
@@ -684,7 +684,7 @@ bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *ou
                 const rk_SnapshotHeader *header = (const rk_SnapshotHeader *)obj.ptr;
 
                 snapshot.id = id;
-                snapshot.name = header->name[0] ? DuplicateString(header->name, str_alloc).ptr : nullptr;
+                snapshot.name = header->name[0] ? DuplicateString(header->name, alloc).ptr : nullptr;
                 snapshot.time = LittleEndian(header->time);
                 snapshot.len = LittleEndian(header->len);
                 snapshot.stored = LittleEndian(header->stored) + obj.len;

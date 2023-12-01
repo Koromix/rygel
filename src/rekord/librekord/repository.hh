@@ -44,7 +44,8 @@ struct rk_SnapshotInfo {
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
             rk_ID *out_id, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
 
-bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len = nullptr);
-bool rk_List(rk_Disk *disk, Allocator *str_alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
+bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings,
+            const char *dest_path, int64_t *out_len = nullptr);
+bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
 
 }
