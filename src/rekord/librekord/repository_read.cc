@@ -256,7 +256,7 @@ static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t
 static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_separators,
                         Allocator *alloc, EntryInfo *out_entry)
 {
-    rk_FileEntry *ptr = (rk_FileEntry *)(entries.ptr + offset);
+    rk_RawFile *ptr = (rk_RawFile *)(entries.ptr + offset);
 
     if (entries.len - offset < RG_SIZE(*ptr)) {
         LogError("Malformed entry in directory object");
@@ -278,9 +278,9 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     entry.size = LittleEndian(ptr->size);
 
     // Sanity checks
-    if (entry.kind != (int8_t)rk_FileEntry::Kind::Directory &&
-            entry.kind != (int8_t)rk_FileEntry::Kind::File &&
-            entry.kind != (int8_t)rk_FileEntry::Kind::Link) {
+    if (entry.kind != (int8_t)rk_RawFile::Kind::Directory &&
+            entry.kind != (int8_t)rk_RawFile::Kind::File &&
+            entry.kind != (int8_t)rk_RawFile::Kind::Link) {
         LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry.kind));
         return -1;
     }
@@ -365,7 +365,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             return false;
         offset += skip;
 
-        if (!(entry.flags & (int)rk_FileEntry::Flags::Readable))
+        if (!(entry.flags & (int)rk_RawFile::Flags::Readable))
             continue;
 
         if (flags & (int)ExtractFlag::FlattenName) {
@@ -384,7 +384,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                 return false;
 
             switch (entry.kind) {
-                case (int)rk_FileEntry::Kind::Directory: {
+                case (int)rk_RawFile::Kind::Directory: {
                     if (entry_type != rk_ObjectType::Directory) {
                         LogError("Object '%1' is not a Directory", entry.id);
                         return false;
@@ -396,7 +396,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                 } break;
 
-                case (int)rk_FileEntry::Kind::File: {
+                case (int)rk_RawFile::Kind::File: {
                     if (entry_type != rk_ObjectType::File && entry_type != rk_ObjectType::Chunk) {
                         LogError("Object '%1' is not a File", entry.id);
                         return false;
@@ -414,7 +414,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     SetFileMetaData(fd, filename, entry.mtime, entry.btime, entry.mode);
                 } break;
 
-                case (int)rk_FileEntry::Kind::Link: {
+                case (int)rk_RawFile::Kind::Link: {
                     if (entry_type != rk_ObjectType::Link) {
                         LogError("Object '%1' is not a Link", entry.id);
                         return false;
@@ -479,7 +479,7 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
     int64_t file_len = -1;
     switch (type) {
         case rk_ObjectType::File: {
-            if (file_obj.len % RG_SIZE(rk_ChunkEntry) != RG_SIZE(int64_t)) {
+            if (file_obj.len % RG_SIZE(rk_RawChunk) != RG_SIZE(int64_t)) {
                 LogError("Malformed file object '%1'", id);
                 return -1;
             }
@@ -499,9 +499,9 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
             Async async(&tasks);
 
             // Write unencrypted file
-            for (Size offset = 0; offset < file_obj.len; offset += RG_SIZE(rk_ChunkEntry)) {
+            for (Size offset = 0; offset < file_obj.len; offset += RG_SIZE(rk_RawChunk)) {
                 async.Run([=, this]() {
-                    rk_ChunkEntry entry = {};
+                    rk_RawChunk entry = {};
 
                     memcpy(&entry, file_obj.ptr + offset, RG_SIZE(entry));
                     entry.offset = LittleEndian(entry.offset);
@@ -534,7 +534,7 @@ int GetContext::GetFile(const rk_ID &id, rk_ObjectType type, Span<const uint8_t>
 
             // Check actual file size
             if (file_obj.len) {
-                const rk_ChunkEntry *entry = (const rk_ChunkEntry *)(file_obj.end() - RG_SIZE(rk_ChunkEntry));
+                const rk_RawChunk *entry = (const rk_RawChunk *)(file_obj.end() - RG_SIZE(rk_RawChunk));
                 int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
                 if (len != file_len) [[unlikely]] {
@@ -772,9 +772,9 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         const EntryInfo &entry = decoded[i];
         rk_ObjectType expect_type;
 
-        if (entry.kind == (int)rk_FileEntry::Kind::Directory) {
+        if (entry.kind == (int)rk_RawFile::Kind::Directory) {
             expect_type = rk_ObjectType::Directory;
-        } else if (entry.kind == (int)rk_FileEntry::Kind::Link) {
+        } else if (entry.kind == (int)rk_RawFile::Kind::Link) {
             expect_type = rk_ObjectType::Link;
         } else {
             continue;
@@ -807,9 +807,9 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         file->id = entry.id;
         file->depth = depth;
         switch (entry.kind) {
-            case (int)rk_FileEntry::Kind::Directory: { file->type = rk_FileType::Directory; } break;
-            case (int)rk_FileEntry::Kind::File: { file->type = rk_FileType::File; } break;
-            case (int)rk_FileEntry::Kind::Link: { file->type = rk_FileType::Link; } break;
+            case (int)rk_RawFile::Kind::Directory: { file->type = rk_FileType::Directory; } break;
+            case (int)rk_RawFile::Kind::File: { file->type = rk_FileType::File; } break;
+            case (int)rk_RawFile::Kind::Link: { file->type = rk_FileType::Link; } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
@@ -838,7 +838,7 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                     file->u.children += (child.depth == depth + 1);
                 }
             } break;
-            case rk_FileType::File: { file->u.readable = (entry.flags & (int)rk_FileEntry::Flags::Readable); } break;
+            case rk_FileType::File: { file->u.readable = (entry.flags & (int)rk_RawFile::Flags::Readable); } break;
             case rk_FileType::Link: { file->u.target = DuplicateString(entry_obj.As<const char>(), alloc).ptr; } break;
         }
     }

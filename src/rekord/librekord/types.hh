@@ -34,7 +34,7 @@ struct rk_SnapshotHeader {
 static_assert(RG_SIZE(rk_SnapshotHeader) == 536);
 
 #pragma pack(push, 1)
-struct rk_FileEntry {
+struct rk_RawFile {
     enum class Flags {
         Stated = 1 << 0,
         Readable = 1 << 1
@@ -59,22 +59,22 @@ struct rk_FileEntry {
     uint32_t mode; // Little Endian
     int64_t size; // Little Endian
 
-    inline Size GetSize() { return RG_SIZE(rk_FileEntry) + name_len + extended_len; }
+    inline Size GetSize() { return RG_SIZE(rk_RawFile) + name_len + extended_len; }
 
-    inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(rk_FileEntry), name_len); }
-    inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(rk_FileEntry), name_len); }
+    inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(rk_RawFile), name_len); }
+    inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(rk_RawFile), name_len); }
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(rk_FileEntry) == 76);
+static_assert(RG_SIZE(rk_RawFile) == 76);
 
 #pragma pack(push, 1)
-struct rk_ChunkEntry {
+struct rk_RawChunk {
     int64_t offset; // Little Endian
     int32_t len;    // Little Endian
     rk_ID id;
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(rk_ChunkEntry) == 44);
+static_assert(RG_SIZE(rk_RawChunk) == 44);
 
 bool rk_ParseID(const char *str, rk_ID *out_id);
 
