@@ -609,6 +609,72 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     return 0;
 }
 
+static void ListFilePlain(const rk_FileInfo &file, int start_depth)
+{
+    TimeSpec mspec = DecomposeTime(file.mtime);
+    int indent = (start_depth + file.depth) * 2;
+
+    char suffix = (file.type == rk_FileType::Directory) ? '/' : ' ';
+    int align = std::max(60 - indent - strlen(file.basename), (size_t)0);
+
+    PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 (0%6) %!D..[%7]%!0 %8",
+            FmtArg(" ").Repeat(indent), rk_FileTypeNames[(int)file.type][0],
+            file.basename, suffix, FmtArg(" ").Repeat(align), FmtOctal(file.mode),
+            FmtTimeNice(mspec), file.type == rk_FileType::File ? FmtDiskSize(file.size) : FmtArg(""));
+}
+
+static void DumpFileJson(json_PrettyWriter *json, const rk_FileInfo &file)
+{
+    char buf[128];
+
+    json->Key("id"); json->String(Fmt(buf, "%1", file.id).ptr);
+    json->Key("type"); json->String(rk_FileTypeNames[(int)file.type]);
+    json->Key("name"); json->String(file.basename);
+    json->Key("mtime"); json->Int64(file.mtime);
+    json->Key("btime"); json->Int64(file.btime);
+    json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(file.mode)).ptr);
+    json->Key("uid"); json->Uint(file.uid);
+    json->Key("gid"); json->Uint(file.gid);
+
+    switch (file.type) {
+        case rk_FileType::Directory: { json->Key("children"); json->StartArray(); } break;
+        case rk_FileType::File: { json->Key("size"); json->Int64(file.size); } break;
+        case rk_FileType::Link: { json->Key("target"); json->String(file.u.target); } break;
+        case rk_FileType::Unknown: {} break;
+    }
+}
+
+static pugi::xml_node DumpFileXml(pugi::xml_node *ptr, const rk_FileInfo &file)
+{
+    char buf[128];
+
+    pugi::xml_node element;
+
+    switch (file.type) {
+        case rk_FileType::Directory: { element = ptr->append_child("directory"); } break;
+        case rk_FileType::File: { element = ptr->append_child("file"); } break;
+        case rk_FileType::Link: { element = ptr->append_child("link"); } break;
+        case rk_FileType::Unknown: { element = ptr->append_child("unknown"); } break;
+    }
+
+    element.append_attribute("id") = Fmt(buf, "%1", file.id).ptr;
+    element.append_attribute("name") = file.basename;
+    element.append_attribute("mtime") = file.mtime;
+    element.append_attribute("btime") = file.btime;
+    element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(file.mode)).ptr;
+    element.append_attribute("uid") = file.uid;
+    element.append_attribute("gid") = file.gid;
+
+    switch (file.type) {
+        case rk_FileType::Directory: {} break;
+        case rk_FileType::File: { element.append_attribute("size") = file.size; } break;
+        case rk_FileType::Link: { element.append_attribute("target") = file.u.target; } break;
+        case rk_FileType::Unknown: {} break;
+    }
+
+    return element;
+}
+
 static int RunTree(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -725,16 +791,7 @@ Available output formats: %!..+%3%!0)",
         case OutputFormat::Human: {
             if (files.len) {
                 for (const rk_FileInfo &file: files) {
-                    TimeSpec mspec = DecomposeTime(file.mtime);
-                    int indent = file.depth * 3;
-
-                    char suffix = (file.type == rk_FileType::Directory) ? '/' : ' ';
-                    int align = std::max(60 - indent - strlen(file.basename), (size_t)0);
-
-                    PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 (0%6) %!D..[%7]%!0 %8",
-                            FmtArg(" ").Repeat(indent), rk_FileTypeNames[(int)file.type][0],
-                            file.basename, suffix, FmtArg(" ").Repeat(align), FmtOctal(file.mode),
-                            FmtTimeNice(mspec), file.type == rk_FileType::File ? FmtDiskSize(file.size) : FmtArg(""));
+                    ListFilePlain(file, 0);
                 }
             } else {
                 LogInfo("There does not seem to be any file");
@@ -747,8 +804,6 @@ Available output formats: %!..+%3%!0)",
 
             json.StartArray();
             for (const rk_FileInfo &file: files) {
-                char buf[128];
-
                 while (file.depth < depth) {
                     json.EndArray();
                     json.EndObject();
@@ -758,29 +813,15 @@ Available output formats: %!..+%3%!0)",
 
                 json.StartObject();
 
-                json.Key("id"); json.String(Fmt(buf, "%1", file.id).ptr);
-                json.Key("type"); json.String(rk_FileTypeNames[(int)file.type]);
-                json.Key("name"); json.String(file.basename);
-                json.Key("mtime"); json.Int64(file.mtime);
-                json.Key("btime"); json.Int64(file.btime);
-                json.Key("mode"); json.String(Fmt(buf, "0o%1", FmtOctal(file.mode)).ptr);
-                json.Key("uid"); json.Uint(file.uid);
-                json.Key("gid"); json.Uint(file.gid);
+                DumpFileJson(&json, file);
 
-                switch (file.type) {
-                    case rk_FileType::Directory: {
-                        json.Key("children"); json.StartArray();
-
-                        if (file.u.children) {
-                            depth++;
-                            continue;
-                        } else {
-                            json.EndArray();
-                        }
-                    } break;
-                    case rk_FileType::File: { json.Key("size"); json.Int64(file.size); } break;
-                    case rk_FileType::Link: { json.Key("target"); json.String(file.u.target); } break;
-                    case rk_FileType::Unknown: {} break;
+                if (file.type == rk_FileType::Directory) {
+                    if (file.u.children) {
+                        depth++;
+                        continue;
+                    } else {
+                        json.EndArray();
+                    }
                 }
 
                 json.EndObject();
@@ -803,40 +844,16 @@ Available output formats: %!..+%3%!0)",
             int depth = 0;
 
             for (const rk_FileInfo &file: files) {
-                char buf[128];
-
                 while (file.depth < depth) {
                     ptr = ptr.parent();
                     depth--;
                 }
 
-                pugi::xml_node element;
+                pugi::xml_node element = DumpFileXml(&ptr, file);
 
-                switch (file.type) {
-                    case rk_FileType::Directory: { element = ptr.append_child("directory"); } break;
-                    case rk_FileType::File: { element = ptr.append_child("file"); } break;
-                    case rk_FileType::Link: { element = ptr.append_child("link"); } break;
-                    case rk_FileType::Unknown: { element = ptr.append_child("unknown"); } break;
-                }
-
-                element.append_attribute("id") = Fmt(buf, "%1", file.id).ptr;
-                element.append_attribute("name") = file.basename;
-                element.append_attribute("mtime") = file.mtime;
-                element.append_attribute("btime") = file.btime;
-                element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(file.mode)).ptr;
-                element.append_attribute("uid") = file.uid;
-                element.append_attribute("gid") = file.gid;
-
-                switch (file.type) {
-                    case rk_FileType::Directory: {
-                        if (file.u.children) {
-                            depth++;
-                            ptr = element;
-                        }
-                    } break;
-                    case rk_FileType::File: { element.append_attribute("size") = file.size; } break;
-                    case rk_FileType::Link: { element.append_attribute("target") = file.u.target; } break;
-                    case rk_FileType::Unknown: {} break;
+                if (file.type == rk_FileType::Directory && file.u.children) {
+                    depth++;
+                    ptr = element;
                 }
             }
 
