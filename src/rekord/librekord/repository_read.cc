@@ -253,6 +253,7 @@ static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t
 
 #endif
 
+// Does not fill EntryInfo::filename
 static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_separators,
                         Allocator *alloc, EntryInfo *out_entry)
 {
@@ -358,7 +359,6 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
     for (Size offset = 0; offset < entries.len;) {
         EntryInfo entry = {};
-        const char *filename = nullptr;
 
         Size skip = DecodeEntry(entries, offset, flags & (int)ExtractFlag::AllowSeparators, &shared->temp_alloc, &entry);
         if (skip < 0)
@@ -369,11 +369,11 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             continue;
 
         if (flags & (int)ExtractFlag::FlattenName) {
-            filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, SplitStrReverse(entry.basename, '/')).ptr;
+            entry.filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, SplitStrReverse(entry.basename, '/')).ptr;
         } else {
-            filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
+            entry.filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
 
-            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(filename))
+            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry.filename))
                 return false;
         }
 
@@ -390,7 +390,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                     }
 
-                    if (!MakeDirectory(filename, false))
+                    if (!MakeDirectory(entry.filename, false))
                         return false;
                     if (!ExtractEntries(entry_obj, 0, entry))
                         return false;
@@ -402,16 +402,16 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                     }
 
-                    int fd = GetFile(entry.id, entry_type, entry_obj, filename);
+                    int fd = GetFile(entry.id, entry_type, entry_obj, entry.filename);
                     if (fd < 0)
                         return false;
                     RG_DEFER { close(fd); };
 
                     // Set file metadata
                     if (chown) {
-                        SetFileOwner(fd, filename, entry.uid, entry.gid);
+                        SetFileOwner(fd, entry.filename, entry.uid, entry.gid);
                     }
-                    SetFileMetaData(fd, filename, entry.mtime, entry.btime, entry.mode);
+                    SetFileMetaData(fd, entry.filename, entry.mtime, entry.btime, entry.mode);
                 } break;
 
                 case (int)rk_RawFile::Kind::Link: {
@@ -423,7 +423,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     // NUL terminate the path
                     entry_obj.Append(0);
 
-                    if (!CreateSymbolicLink(filename, (const char *)entry_obj.ptr, true))
+                    if (!CreateSymbolicLink(entry.filename, (const char *)entry_obj.ptr, true))
                         return false;
                 } break;
 
