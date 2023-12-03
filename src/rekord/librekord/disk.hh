@@ -34,14 +34,14 @@ static const char *const rk_DiskModeNames[] = {
     "ReadWrite"
 };
 
-enum class rk_ObjectType: int8_t {
+enum class rk_BlobType: int8_t {
     Chunk = 0,
     File = 1,
     Directory = 2,
     Snapshot = 3,
     Link = 4
 };
-static const char *const rk_ObjectTypeNames[] = {
+static const char *const rk_BlobTypeNames[] = {
     "Chunk",
     "File",
     "Directory",
@@ -99,8 +99,8 @@ public:
     sq_Database *GetCache() { return &cache_db; }
     int GetThreads() const { return threads; }
 
-    bool ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj);
-    Size WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj);
+    bool ReadBlob(const rk_ID &id, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
+    Size WriteBlob(const rk_ID &id, rk_BlobType type, Span<const uint8_t> blob);
 
     Size WriteTag(const rk_ID &id);
     bool ListTags(HeapArray<rk_ID> *out_ids);

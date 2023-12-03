@@ -57,7 +57,7 @@ public:
     bool Init(const char *full_pwd, const char *write_pwd) override;
 
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
-    Size ReadRaw(const char *path, HeapArray<uint8_t> *out_obj) override;
+    Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
@@ -268,11 +268,11 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     return total_len;
 }
 
-Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
+Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
 {
     GET_CONNECTION(conn);
 
-    RG_DEFER_NC(out_guard, len = out_obj->len) { out_obj->RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = out_buf->len) { out_buf->RemoveFrom(len); };
 
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -293,15 +293,15 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_obj)
     Size total_len = 0;
 
     for (;;) {
-        out_obj->Grow(Mebibytes(1));
+        out_buf->Grow(Mebibytes(1));
 
-        ssize_t bytes = sftp_read(file, out_obj->end(), out_obj->Available());
+        ssize_t bytes = sftp_read(file, out_buf->end(), out_buf->Available());
         if (bytes < 0) {
             LogError("Failed to read file '%1': %2", filename, ssh_get_error(conn->ssh));
             return -1;
         }
 
-        out_obj->len += (Size)bytes;
+        out_buf->len += (Size)bytes;
         total_len += (Size)bytes;
 
         if (!bytes)

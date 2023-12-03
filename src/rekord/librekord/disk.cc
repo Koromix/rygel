@@ -41,7 +41,7 @@ struct SecretData {
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-struct ObjectIntro {
+struct BlobIntro {
     int8_t version;
     int8_t type;
     uint8_t ekey[crypto_secretstream_xchacha20poly1305_KEYBYTES + crypto_box_SEALBYTES];
@@ -51,8 +51,8 @@ struct ObjectIntro {
 
 static const int SecretVersion = 1;
 static const int CacheVersion = 2;
-static const int ObjectVersion = 7;
-static const Size ObjectSplit = Kibibytes(32);
+static const int BlobVersion = 7;
+static const Size BlobSplit = Kibibytes(32);
 
 bool rk_Disk::Open(const char *username, const char *pwd)
 {
@@ -110,13 +110,13 @@ static inline FmtArg GetPrefix3(const rk_ID &id)
     return FmtHex(prefix).Pad0(-3);
 }
 
-bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uint8_t> *out_obj)
+bool rk_Disk::ReadBlob(const rk_ID &id, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::ReadWrite);
 
-    Size prev_len = out_obj->len;
-    RG_DEFER_N(err_guard) { out_obj->RemoveFrom(prev_len); };
+    Size prev_len = out_blob->len;
+    RG_DEFER_N(err_guard) { out_blob->RemoveFrom(prev_len); };
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
@@ -126,56 +126,56 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
         return false;
     Span<const uint8_t> remain = raw;
 
-    // Init object decryption
+    // Init blob decryption
     crypto_secretstream_xchacha20poly1305_state state;
     int version;
-    rk_ObjectType type;
+    rk_BlobType type;
     {
-        ObjectIntro intro;
+        BlobIntro intro;
         if (remain.len < RG_SIZE(intro)) {
-            LogError("Truncated object");
+            LogError("Truncated blob");
             return false;
         }
         memcpy(&intro, remain.ptr, RG_SIZE(intro));
 
-        if (intro.version > ObjectVersion) {
-            LogError("Unexpected object version %1 (expected %2)", intro.version, ObjectVersion);
+        if (intro.version > BlobVersion) {
+            LogError("Unexpected blob version %1 (expected %2)", intro.version, BlobVersion);
             return false;
         }
-        if (intro.type < 0 || intro.type >= RG_LEN(rk_ObjectTypeNames)) {
-            LogError("Invalid object type 0x%1", FmtHex(intro.type));
+        if (intro.type < 0 || intro.type >= RG_LEN(rk_BlobTypeNames)) {
+            LogError("Invalid blob type 0x%1", FmtHex(intro.type));
             return false;
         }
 
         version = intro.version;
-        type = (rk_ObjectType)intro.type;
+        type = (rk_BlobType)intro.type;
 
         uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
         if (crypto_box_seal_open(key, intro.ekey, RG_SIZE(intro.ekey), pkey, skey) != 0) {
-            LogError("Failed to unseal object (wrong key?)");
+            LogError("Failed to unseal blob (wrong key?)");
             return false;
         }
 
         if (crypto_secretstream_xchacha20poly1305_init_pull(&state, intro.header, key) != 0) {
-            LogError("Failed to initialize symmetric decryption (corrupt object?)");
+            LogError("Failed to initialize symmetric decryption (corrupt blob?)");
             return false;
         }
 
-        remain.ptr += RG_SIZE(ObjectIntro);
-        remain.len -= RG_SIZE(ObjectIntro);
+        remain.ptr += RG_SIZE(BlobIntro);
+        remain.len -= RG_SIZE(BlobIntro);
     }
 
     if (version < 7) {
-        LogError("Unsupported old object format version %1", version);
+        LogError("Unsupported old blob format version %1", version);
         return false;
     }
 
-    // Read and decrypt object
+    // Read and decrypt blob
     {
         DecodeLZ4 lz4;
 
         while (remain.len) {
-            Size in_len = std::min(remain.len, ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES);
+            Size in_len = std::min(remain.len, BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES);
             Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
 
             Span<const uint8_t> cypher = MakeSpan(remain.ptr, in_len);
@@ -185,7 +185,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
             uint8_t tag;
             if (crypto_secretstream_xchacha20poly1305_pull(&state, buf.ptr, &buf_len, &tag,
                                                            cypher.ptr, cypher.len, nullptr, 0) != 0) {
-                LogError("Failed during symmetric decryption (corrupt object?)");
+                LogError("Failed during symmetric decryption (corrupt blob?)");
                 return false;
             }
 
@@ -194,7 +194,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
 
             bool eof = !remain.len;
             bool success = lz4.Flush(eof, [&](Span<const uint8_t> buf) {
-                out_obj->Append(buf);
+                out_blob->Append(buf);
                 return true;
             });
             if (!success)
@@ -202,7 +202,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
 
             if (eof) {
                 if (tag != crypto_secretstream_xchacha20poly1305_TAG_FINAL) {
-                    LogError("Truncated object");
+                    LogError("Truncated blob");
                     return false;
                 }
                 break;
@@ -215,7 +215,7 @@ bool rk_Disk::ReadObject(const rk_ID &id, rk_ObjectType *out_type, HeapArray<uin
     return true;
 }
 
-Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_t> obj)
+Size rk_Disk::WriteBlob(const rk_ID &id, rk_BlobType type, Span<const uint8_t> blob)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
@@ -224,12 +224,12 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
     path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
 
     Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
-        // Write object intro
+        // Write blob intro
         crypto_secretstream_xchacha20poly1305_state state;
         {
-            ObjectIntro intro = {};
+            BlobIntro intro = {};
 
-            intro.version = ObjectVersion;
+            intro.version = BlobVersion;
             intro.type = (int8_t)type;
 
             uint8_t key[crypto_secretstream_xchacha20poly1305_KEYBYTES];
@@ -254,38 +254,38 @@ Size rk_Disk::WriteObject(const rk_ID &id, rk_ObjectType type, Span<const uint8_
         if (!lz4.Start())
             return false;
 
-        // Encrypt object data
+        // Encrypt blob data
         {
             bool complete = false;
 
             do {
-                Size frag_len = std::min(ObjectSplit, obj.len);
-                Span<const uint8_t> frag = obj.Take(0, frag_len);
+                Size frag_len = std::min(BlobSplit, blob.len);
+                Span<const uint8_t> frag = blob.Take(0, frag_len);
 
-                obj.ptr += frag.len;
-                obj.len -= frag.len;
+                blob.ptr += frag.len;
+                blob.len -= frag.len;
 
-                complete |= (frag.len < ObjectSplit);
+                complete |= (frag.len < BlobSplit);
 
                 if (!lz4.Append(frag))
                     return false;
 
                 bool success = lz4.Flush(complete, [&](Span<const uint8_t> buf) {
                     // This should rarely loop because data should compress to less
-                    // than ObjectSplit but we ought to be safe ;)
+                    // than BlobSplit but we ought to be safe ;)
 
-                    Size treshold = complete ? 1 : ObjectSplit;
+                    Size treshold = complete ? 1 : BlobSplit;
                     Size processed = 0;
 
                     while (buf.len >= treshold) {
-                        Size piece_len = std::min(ObjectSplit, buf.len);
+                        Size piece_len = std::min(BlobSplit, buf.len);
                         Span<const uint8_t> piece = buf.Take(0, piece_len);
 
                         buf.ptr += piece.len;
                         buf.len -= piece.len;
                         processed += piece.len;
 
-                        uint8_t cypher[ObjectSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
+                        uint8_t cypher[BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES];
                         unsigned char tag = (complete && !buf.len) ? crypto_secretstream_xchacha20poly1305_TAG_FINAL : 0;
                         unsigned long long cypher_len;
                         crypto_secretstream_xchacha20poly1305_push(&state, cypher, &cypher_len, piece.ptr, piece.len, nullptr, 0, tag);
@@ -372,8 +372,8 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
         const char *filename = filenames[i];
 
         async.Run([=, &ready, this]() {
-            uint8_t obj[crypto_box_SEALBYTES + 32];
-            Size len = ReadRaw(filename, obj);
+            uint8_t blob[crypto_box_SEALBYTES + 32];
+            Size len = ReadRaw(filename, blob);
 
             if (len != crypto_box_SEALBYTES + 32) {
                 if (len >= 0) {
@@ -383,7 +383,7 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
             }
 
             rk_ID id = {};
-            if (crypto_box_seal_open(id.hash, obj, RG_SIZE(obj), pkey, skey) != 0) {
+            if (crypto_box_seal_open(id.hash, blob, RG_SIZE(blob), pkey, skey) != 0) {
                 LogError("Failed to unseal tag (ignoring)");
                 return true;
             }
@@ -554,7 +554,7 @@ bool rk_Disk::ReadKey(const char *path, const char *pwd, uint8_t *out_payload, b
 
         if (len != RG_SIZE(data)) {
             if (len >= 0) {
-                LogError("Truncated key object '%1'", path);
+                LogError("Truncated key '%1'", path);
             }
 
             *out_error = true;

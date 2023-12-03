@@ -55,7 +55,7 @@ public:
     int64_t GetWritten() const { return stat_written; }
 };
 
-static void HashBlake3(rk_ObjectType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_ID *out_id)
+static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_ID *out_id)
 {
     blake3_hasher hasher;
 
@@ -87,7 +87,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         Size parent_entry = -1;
 
         const char *dirname = nullptr;
-        HeapArray<uint8_t> obj;
+        HeapArray<uint8_t> blob;
         bool failed = false;
 
         std::atomic_int64_t total_len { 0 };
@@ -114,7 +114,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 Size basename_len = strlen(basename);
                 Size entry_len = RG_SIZE(rk_RawFile) + basename_len;
 
-                rk_RawFile *entry = (rk_RawFile *)pending->obj.AppendDefault(entry_len);
+                rk_RawFile *entry = (rk_RawFile *)pending->blob.AppendDefault(entry_len);
 
                 // Stat file
                 {
@@ -133,7 +133,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 PendingDirectory *ptr = pending_directories.AppendDefault();
 
                                 ptr->parent_idx = i;
-                                ptr->parent_entry = (const uint8_t *)entry - pending->obj.ptr;
+                                ptr->parent_entry = (const uint8_t *)entry - pending->blob.ptr;
                                 ptr->dirname = filename;
                             } break;
 
@@ -172,7 +172,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
             if (ret != EnumResult::Success) {
                 pending->failed = true;
-                pending->obj.RemoveFrom(0);
+                pending->blob.RemoveFrom(0);
 
                 if (ret == EnumResult::AccessDenied || ret == EnumResult::MissingPath) {
                     continue;
@@ -183,8 +183,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             }
 
             // Process data entries (file, links)
-            for (Size offset = 0; offset < pending->obj.len;) {
-                rk_RawFile *entry = (rk_RawFile *)(pending->obj.ptr + offset);
+            for (Size offset = 0; offset < pending->blob.len;) {
+                rk_RawFile *entry = (rk_RawFile *)(pending->blob.ptr + offset);
 
                 const char *filename = Fmt(&temp_alloc, "%1%/%2", pending->dirname, entry->GetName()).ptr;
 
@@ -265,9 +265,9 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 target.len = (Size)ret;
                             }
 
-                            HashBlake3(rk_ObjectType::Link, target, salt.ptr, &entry->id);
+                            HashBlake3(rk_BlobType::Link, target, salt.ptr, &entry->id);
 
-                            Size ret = disk->WriteObject(entry->id, rk_ObjectType::Link, target);
+                            Size ret = disk->WriteBlob(entry->id, rk_BlobType::Link, target);
                             if (ret < 0)
                                 return false;
                             stat_written += ret;
@@ -294,19 +294,19 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     if (!success)
         return PutResult::Error;
 
-    // Finalize and upload directory objects
+    // Finalize and upload directory blobs
     async.Run([&]() {
         for (Size i = pending_directories.len - 1; i >= 0; i--) {
             PendingDirectory *pending = &pending_directories[i];
 
             int64_t len_64le = LittleEndian(pending->total_len.load());
-            pending->obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
+            pending->blob.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-            HashBlake3(rk_ObjectType::Directory, pending->obj, salt.ptr, &pending->id);
+            HashBlake3(rk_BlobType::Directory, pending->blob, salt.ptr, &pending->id);
 
             if (pending->parent_idx >= 0) {
                 PendingDirectory *parent = &pending_directories[pending->parent_idx];
-                rk_RawFile *entry = (rk_RawFile *)(parent->obj.ptr + pending->parent_entry);
+                rk_RawFile *entry = (rk_RawFile *)(parent->blob.ptr + pending->parent_entry);
 
                 entry->id = pending->id;
                 if (!pending->failed) {
@@ -317,12 +317,12 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             }
 
             async.Run([pending, this]() mutable {
-                Size written = disk->WriteObject(pending->id, rk_ObjectType::Directory, pending->obj);
+                Size written = disk->WriteBlob(pending->id, rk_BlobType::Directory, pending->blob);
                 if (written < 0)
                     return false;
                 stat_written += written;
 
-                stat_len += pending->obj.len;
+                stat_len += pending->blob.len;
 
                 return true;
             });
@@ -338,10 +338,10 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 if (pending.failed)
                     continue;
 
-                Size limit = pending.obj.len - RG_SIZE(int64_t);
+                Size limit = pending.blob.len - RG_SIZE(int64_t);
 
                 for (Size offset = 0; offset < limit;) {
-                    rk_RawFile *entry = (rk_RawFile *)(pending.obj.ptr + offset);
+                    rk_RawFile *entry = (rk_RawFile *)(pending.blob.ptr + offset);
 
                     const char *filename = Fmt(&temp_alloc, "%1%/%2", pending.dirname, entry->GetName()).ptr;
                     int flags = LittleEndian(entry->flags);
@@ -389,7 +389,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id, int64_t *
         }
     }
 
-    HeapArray<uint8_t> file_obj;
+    HeapArray<uint8_t> file_blob;
     Size file_len = 0;
 
     // Split the file
@@ -418,13 +418,13 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id, int64_t *
 
             // We can't relocate in the inner loop
             Size needed = (remain.len / ChunkMin + 1) * RG_SIZE(rk_RawChunk) + 8;
-            file_obj.Grow(needed);
+            file_blob.Grow(needed);
 
             // Chunk file and write chunks out in parallel
             do {
                 Size processed = splitter.Process(remain, st.IsEOF(), [&](Size idx, int64_t total, Span<const uint8_t> chunk) {
-                    RG_ASSERT(idx * RG_SIZE(rk_RawChunk) == file_obj.len);
-                    file_obj.len += RG_SIZE(rk_RawChunk);
+                    RG_ASSERT(idx * RG_SIZE(rk_RawChunk) == file_blob.len);
+                    file_blob.len += RG_SIZE(rk_RawChunk);
 
                     async.Run([&, idx, total, chunk]() {
                         rk_RawChunk entry = {};
@@ -432,14 +432,14 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id, int64_t *
                         entry.offset = LittleEndian(total);
                         entry.len = LittleEndian((int32_t)chunk.len);
 
-                        HashBlake3(rk_ObjectType::Chunk, chunk, salt.ptr, &entry.id);
+                        HashBlake3(rk_BlobType::Chunk, chunk, salt.ptr, &entry.id);
 
-                        Size ret = disk->WriteObject(entry.id, rk_ObjectType::Chunk, chunk);
+                        Size ret = disk->WriteBlob(entry.id, rk_BlobType::Chunk, chunk);
                         if (ret < 0)
                             return false;
                         stat_written += ret;
 
-                        memcpy(file_obj.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
+                        memcpy(file_blob.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
 
                         return true;
                     });
@@ -465,18 +465,18 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id, int64_t *
 
     // Write list of chunks (unless there is exactly one)
     rk_ID file_id = {};
-    if (file_obj.len != RG_SIZE(rk_RawChunk)) {
+    if (file_blob.len != RG_SIZE(rk_RawChunk)) {
         int64_t len_64le = LittleEndian(st.GetRawRead());
-        file_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
+        file_blob.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-        HashBlake3(rk_ObjectType::File, file_obj, salt.ptr, &file_id);
+        HashBlake3(rk_BlobType::File, file_blob, salt.ptr, &file_id);
 
-        Size ret = disk->WriteObject(file_id, rk_ObjectType::File, file_obj);
+        Size ret = disk->WriteBlob(file_id, rk_BlobType::File, file_blob);
         if (ret < 0)
             return PutResult::Error;
         stat_written += ret;
     } else {
-        const rk_RawChunk *entry0 = (const rk_RawChunk *)file_obj.ptr;
+        const rk_RawChunk *entry0 = (const rk_RawChunk *)file_blob.ptr;
         file_id = entry0->id;
     }
 
@@ -501,7 +501,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         return false;
     }
     if (settings.raw && filenames.len != 1) {
-        LogError("Only one object can be backup up in raw mode");
+        LogError("Only one object can be backuped up in raw mode");
         return false;
     }
     if (settings.name && strlen(settings.name) >= RG_SIZE(rk_SnapshotHeader::name)) {
@@ -512,8 +512,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     Span<const uint8_t> salt = disk->GetSalt();
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
-    HeapArray<uint8_t> snapshot_obj;
-    rk_SnapshotHeader *header = (rk_SnapshotHeader *)snapshot_obj.AppendDefault(RG_SIZE(rk_SnapshotHeader));
+    HeapArray<uint8_t> snapshot_blob;
+    rk_SnapshotHeader *header = (rk_SnapshotHeader *)snapshot_blob.AppendDefault(RG_SIZE(rk_SnapshotHeader));
 
     CopyString(settings.name ? settings.name : "", header->name);
     header->time = LittleEndian(GetUnixTime());
@@ -533,7 +533,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         RG_ASSERT(!PathContainsDotDot(name.ptr));
 
         Size entry_len = RG_SIZE(rk_RawFile) + name.len;
-        rk_RawFile *entry = (rk_RawFile *)snapshot_obj.Grow(entry_len);
+        rk_RawFile *entry = (rk_RawFile *)snapshot_blob.Grow(entry_len);
 
         // Transform name (same length or shorter)
         {
@@ -562,7 +562,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             }
         }
 
-        snapshot_obj.len += entry->GetSize();
+        snapshot_blob.len += entry->GetSize();
 
         FileInfo file_info;
         if (StatFile(filename, (int)StatFlag::FollowSymlink, &file_info) != StatResult::Success)
@@ -614,13 +614,13 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         header->stored = LittleEndian(total_written);
 
         int64_t len_64le = LittleEndian(total_len);
-        snapshot_obj.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
+        snapshot_blob.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-        HashBlake3(rk_ObjectType::Snapshot, snapshot_obj, salt.ptr, &id);
+        HashBlake3(rk_BlobType::Snapshot, snapshot_blob, salt.ptr, &id);
 
-        // Write snapshot object
+        // Write snapshot blob
         {
-            Size ret = disk->WriteObject(id, rk_ObjectType::Snapshot, snapshot_obj);
+            Size ret = disk->WriteBlob(id, rk_BlobType::Snapshot, snapshot_blob);
             if (ret < 0)
                 return false;
             total_written += ret;
@@ -634,7 +634,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             total_written += ret;
         }
     } else {
-        const rk_RawFile *entry = (const rk_RawFile *)(snapshot_obj.ptr + RG_SIZE(rk_SnapshotHeader));
+        const rk_RawFile *entry = (const rk_RawFile *)(snapshot_blob.ptr + RG_SIZE(rk_SnapshotHeader));
         id = entry->id;
     }
 
