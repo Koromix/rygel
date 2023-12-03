@@ -72,9 +72,10 @@ struct rk_ObjectInfo {
     uint32_t gid;
     int64_t size;
 
+    bool readable;
+
     union {
         Size children; // for directories
-        bool readable; // for files
         const char *target; // for symbolic links
     } u;
 };

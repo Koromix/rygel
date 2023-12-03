@@ -825,6 +825,8 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->gid = entry.gid;
         obj->size = entry.size;
 
+        obj->readable = (entry.flags & (int)rk_RawFile::Flags::Readable);
+
         switch (obj->type) {
             case rk_ObjectType::Directory: {
                 if (settings.max_depth >= 0 && depth >= settings.max_depth)
@@ -842,7 +844,7 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                     obj->u.children += (child.depth == depth + 1);
                 }
             } break;
-            case rk_ObjectType::File: { obj->u.readable = (entry.flags & (int)rk_RawFile::Flags::Readable); } break;
+            case rk_ObjectType::File: {} break;
             case rk_ObjectType::Link: { obj->u.target = DuplicateString(entry_blob.As<const char>(), alloc).ptr; } break;
             case rk_ObjectType::Unknown: {} break;
         }

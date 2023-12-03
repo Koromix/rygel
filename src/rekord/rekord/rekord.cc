@@ -616,11 +616,12 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth)
 
     char suffix = (obj.type == rk_ObjectType::Directory) ? '/' : ' ';
     int align = std::max(60 - indent - strlen(obj.basename), (size_t)0);
+    bool size = (obj.readable && obj.type == rk_ObjectType::File);
 
     PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 (0%6) %!D..[%7]%!0 %8",
             FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
             obj.basename, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode),
-            FmtTimeNice(mspec), obj.type == rk_ObjectType::File ? FmtDiskSize(obj.size) : FmtArg(""));
+            FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
 }
 
 static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
@@ -628,7 +629,11 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     char buf[128];
 
     json->Key("type"); json->String(rk_ObjectTypeNames[(int)obj.type]);
-    json->Key("id"); json->String(Fmt(buf, "%1", obj.id).ptr);
+    if (obj.readable) {
+        json->Key("id"); json->String(Fmt(buf, "%1", obj.id).ptr);
+    } else {
+        json->Key("id"); json->Null();
+    }
     json->Key("name"); json->String(obj.basename);
     json->Key("mtime"); json->Int64(obj.mtime);
     json->Key("btime"); json->Int64(obj.btime);
@@ -636,11 +641,13 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     json->Key("uid"); json->Uint(obj.uid);
     json->Key("gid"); json->Uint(obj.gid);
 
-    switch (obj.type) {
-        case rk_ObjectType::Directory: { json->Key("children"); json->StartArray(); } break;
-        case rk_ObjectType::File: { json->Key("size"); json->Int64(obj.size); } break;
-        case rk_ObjectType::Link: { json->Key("target"); json->String(obj.u.target); } break;
-        case rk_ObjectType::Unknown: {} break;
+    if (obj.readable) {
+        switch (obj.type) {
+            case rk_ObjectType::Directory: { json->Key("children"); json->StartArray(); } break;
+            case rk_ObjectType::File: { json->Key("size"); json->Int64(obj.size); } break;
+            case rk_ObjectType::Link: { json->Key("target"); json->String(obj.u.target); } break;
+            case rk_ObjectType::Unknown: {} break;
+        }
     }
 }
 
@@ -650,7 +657,11 @@ static pugi::xml_node ListObjectXml(pugi::xml_node *ptr, const rk_ObjectInfo &ob
 
     pugi::xml_node element = ptr->append_child(rk_ObjectTypeNames[(int)obj.type]);
 
-    element.append_attribute("id") = Fmt(buf, "%1", obj.id).ptr;
+    if (obj.readable) {
+        element.append_attribute("id") = Fmt(buf, "%1", obj.id).ptr;
+    } else {
+        element.append_attribute("id") = "";
+    }
     element.append_attribute("name") = obj.basename;
     element.append_attribute("mtime") = obj.mtime;
     element.append_attribute("btime") = obj.btime;
@@ -658,11 +669,13 @@ static pugi::xml_node ListObjectXml(pugi::xml_node *ptr, const rk_ObjectInfo &ob
     element.append_attribute("uid") = obj.uid;
     element.append_attribute("gid") = obj.gid;
 
-    switch (obj.type) {
-        case rk_ObjectType::Directory: {} break;
-        case rk_ObjectType::File: { element.append_attribute("size") = obj.size; } break;
-        case rk_ObjectType::Link: { element.append_attribute("target") = obj.u.target; } break;
-        case rk_ObjectType::Unknown: {} break;
+    if (obj.readable) {
+        switch (obj.type) {
+            case rk_ObjectType::Directory: {} break;
+            case rk_ObjectType::File: { element.append_attribute("size") = obj.size; } break;
+            case rk_ObjectType::Link: { element.append_attribute("target") = obj.u.target; } break;
+            case rk_ObjectType::Unknown: {} break;
+        }
     }
 
     return element;
