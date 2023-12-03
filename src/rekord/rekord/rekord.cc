@@ -587,10 +587,10 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
 
         case OutputFormat::XML: {
             pugi::xml_document doc;
-            pugi::xml_node root = doc.append_child("snapshots");
+            pugi::xml_node root = doc.append_child("Snapshots");
 
             for (const rk_SnapshotInfo &snapshot: snapshots) {
-                pugi::xml_node element = root.append_child("snapshot");
+                pugi::xml_node element = root.append_child("Snapshot");
 
                 char id[128];
                 Fmt(id, "%1", snapshot.id);
@@ -648,14 +648,7 @@ static pugi::xml_node ListObjectXml(pugi::xml_node *ptr, const rk_ObjectInfo &ob
 {
     char buf[128];
 
-    pugi::xml_node element;
-
-    switch (obj.type) {
-        case rk_ObjectType::Directory: { element = ptr->append_child("directory"); } break;
-        case rk_ObjectType::File: { element = ptr->append_child("file"); } break;
-        case rk_ObjectType::Link: { element = ptr->append_child("link"); } break;
-        case rk_ObjectType::Unknown: { element = ptr->append_child("unknown"); } break;
-    }
+    pugi::xml_node element = ptr->append_child(rk_ObjectTypeNames[(int)obj.type]);
 
     element.append_attribute("id") = Fmt(buf, "%1", obj.id).ptr;
     element.append_attribute("name") = obj.basename;
@@ -838,7 +831,7 @@ Available output formats: %!..+%3%!0)",
 
         case OutputFormat::XML: {
             pugi::xml_document doc;
-            pugi::xml_node root = doc.append_child("tree");
+            pugi::xml_node root = doc.append_child("Tree");
 
             pugi::xml_node ptr = root;
             int depth = 0;
