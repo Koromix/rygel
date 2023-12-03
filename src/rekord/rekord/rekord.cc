@@ -627,8 +627,8 @@ static void DumpFileJson(json_PrettyWriter *json, const rk_FileInfo &file)
 {
     char buf[128];
 
-    json->Key("id"); json->String(Fmt(buf, "%1", file.id).ptr);
     json->Key("type"); json->String(rk_FileTypeNames[(int)file.type]);
+    json->Key("id"); json->String(Fmt(buf, "%1", file.id).ptr);
     json->Key("name"); json->String(file.basename);
     json->Key("mtime"); json->Int64(file.mtime);
     json->Key("btime"); json->Int64(file.btime);
