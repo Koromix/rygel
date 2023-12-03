@@ -757,8 +757,6 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     memcpy(&dir_len, entries.end(), RG_SIZE(dir_len));
     dir_len = LittleEndian(dir_len);
 
-    Async async(&tasks);
-
     HeapArray<EntryInfo> decoded;
     for (Size offset = 0; offset < entries.len;) {
         EntryInfo entry = {};
@@ -771,44 +769,22 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         decoded.Append(entry);
     }
 
-    HeapArray<HeapArray<uint8_t>> blobs;
-    blobs.AppendDefault(decoded.len);
+    Async async(&tasks);
+
+    struct RecurseContext {
+        rk_ObjectInfo obj;
+        HeapArray<rk_ObjectInfo> children;
+
+        BlockAllocator str_alloc;
+    };
+
+    HeapArray<RecurseContext> contexts;
+    contexts.AppendDefault(decoded.len);
 
     for (Size i = 0; i < decoded.len; i++) {
         const EntryInfo &entry = decoded[i];
-        rk_BlobType expect_type;
 
-        if (entry.kind == (int)rk_RawFile::Kind::Directory) {
-            expect_type = rk_BlobType::Directory;
-        } else if (entry.kind == (int)rk_RawFile::Kind::Link) {
-            expect_type = rk_BlobType::Link;
-        } else {
-            continue;
-        }
-
-        async.Run([=, out_blob = &blobs[i], this]() {
-            rk_BlobType entry_type;
-            if (!disk->ReadBlob(entry.id, &entry_type, out_blob))
-                return false;
-
-            if (entry_type != expect_type) {
-                LogError("Blob '%1' is not a %2", entry.id, rk_BlobTypeNames[(int)expect_type]);
-                return false;
-            }
-
-            return true;
-        });
-    }
-
-    if (!async.Sync())
-        return false;
-
-    for (Size i = 0; i < decoded.len; i++) {
-        const EntryInfo &entry = decoded[i];
-        Span<const uint8_t> entry_blob = blobs[i];
-
-        Size obj_idx = out_objects->len;
-        rk_ObjectInfo *obj = out_objects->AppendDefault();
+        rk_ObjectInfo *obj = &contexts[i].obj;
 
         obj->id = entry.id;
         obj->depth = depth;
@@ -827,28 +803,60 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->uid = entry.uid;
         obj->gid = entry.gid;
         obj->size = entry.size;
-
         obj->readable = (entry.flags & (int)rk_RawFile::Flags::Readable);
 
-        switch (obj->type) {
-            case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
+        rk_BlobType expect_type;
+        if (entry.kind == (int)rk_RawFile::Kind::Directory) {
+            expect_type = rk_BlobType::Directory;
+        } else if (entry.kind == (int)rk_RawFile::Kind::Link) {
+            expect_type = rk_BlobType::Link;
+        } else {
+            continue;
+        }
 
-            case rk_ObjectType::Directory: {
-                Size prev_len = out_objects->len;
-                if (!RecurseEntries(entry_blob, false, depth + 1, alloc, out_objects))
-                    return false;
+        async.Run([=, &contexts, this]() {
+            rk_BlobType entry_type;
+            HeapArray<uint8_t> entry_blob;
 
-                // Reacquire correct pointer (array may have moved)
-                obj = &(*out_objects)[obj_idx];
+            if (!disk->ReadBlob(entry.id, &entry_type, &entry_blob))
+                return false;
 
-                for (Size j = prev_len; j < out_objects->len; j++) {
-                    const rk_ObjectInfo &child = (*out_objects)[j];
-                    obj->children += (child.depth == depth + 1);
-                }
-            } break;
-            case rk_ObjectType::File: {} break;
-            case rk_ObjectType::Link: { obj->target = DuplicateString(entry_blob.As<const char>(), alloc).ptr; } break;
-            case rk_ObjectType::Unknown: {} break;
+            if (entry_type != expect_type) {
+                LogError("Blob '%1' is not a %2", entry.id, rk_BlobTypeNames[(int)expect_type]);
+                return false;
+            }
+
+            switch (obj->type) {
+                case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
+
+                case rk_ObjectType::Directory: {
+                    RecurseContext *ctx = &contexts[i];
+
+                    if (!RecurseEntries(entry_blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
+                        return false;
+
+                    for (const rk_ObjectInfo &child: ctx->children) {
+                        obj->children += (child.depth == depth + 1);
+                    }
+                } break;
+                case rk_ObjectType::File: {} break;
+                case rk_ObjectType::Link: { obj->target = DuplicateString(entry_blob.As<const char>(), alloc).ptr; } break;
+                case rk_ObjectType::Unknown: {} break;
+            }
+
+            return true;
+        });
+    }
+
+    if (!async.Sync())
+        return false;
+
+    for (const RecurseContext &ctx: contexts) {
+        out_objects->Append(ctx.obj);
+
+        for (const rk_ObjectInfo &child: ctx.children) {
+            rk_ObjectInfo *ptr = out_objects->Append(child);
+            ptr->name = DuplicateString(ptr->name, alloc).ptr;
         }
     }
 
