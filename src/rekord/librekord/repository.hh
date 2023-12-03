@@ -45,24 +45,24 @@ struct rk_SnapshotInfo {
     int64_t stored;
 };
 
-enum class rk_FileType {
+enum class rk_ObjectType {
     File,
     Directory,
     Link,
     Unknown
 };
-static const char *const rk_FileTypeNames[] = {
+static const char *const rk_ObjectTypeNames[] = {
     "File",
     "Directory",
     "Link",
     "Unknown"
 };
 
-struct rk_FileInfo {
+struct rk_ObjectInfo {
     rk_ID id;
 
     int depth;
-    rk_FileType type;
+    rk_ObjectType type;
     const char *basename;
 
     int64_t mtime;
@@ -88,6 +88,6 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings,
 // Exploration commands
 bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
 bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Allocator *alloc,
-             HeapArray<rk_FileInfo> *out_files);
+             HeapArray<rk_ObjectInfo> *out_objects);
 
 }

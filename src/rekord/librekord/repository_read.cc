@@ -283,19 +283,19 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
             entry.kind != (int8_t)rk_RawFile::Kind::File &&
             entry.kind != (int8_t)rk_RawFile::Kind::Link &&
             entry.kind != (int8_t)rk_RawFile::Kind::Unknown) {
-        LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry.kind));
+        LogError("Unknown object kind 0x%1", FmtHex((unsigned int)entry.kind));
         return -1;
     }
     if (!entry.basename[0] || PathContainsDotDot(entry.basename)) {
-        LogError("Unsafe file name '%1'", entry.basename);
+        LogError("Unsafe object name '%1'", entry.basename);
         return -1;
     }
     if (PathIsAbsolute(entry.basename)) {
-        LogError("Unsafe file name '%1'", entry.basename);
+        LogError("Unsafe object name '%1'", entry.basename);
         return -1;
     }
     if (!allow_separators && strpbrk(entry.basename, RG_PATH_SEPARATORS)) {
-        LogError("Unsafe file name '%1'", entry.basename);
+        LogError("Unsafe object name '%1'", entry.basename);
         return -1;
     }
 
@@ -730,7 +730,7 @@ public:
     TreeContext(rk_Disk *disk, const rk_TreeSettings &settings);
 
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
-                        Allocator *alloc, HeapArray<rk_FileInfo> *out_files);
+                        Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
     bool Sync() { return tasks.Sync(); }
 };
@@ -741,7 +741,7 @@ TreeContext::TreeContext(rk_Disk *disk, const rk_TreeSettings &settings)
 }
 
 bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
-                                 Allocator *alloc, HeapArray<rk_FileInfo> *out_files)
+                                 Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
     if (entries.len < RG_SIZE(int64_t)) [[unlikely]] {
         LogError("Malformed directory blob");
@@ -804,47 +804,47 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         const EntryInfo &entry = decoded[i];
         Span<const uint8_t> entry_blob = blobs[i];
 
-        Size file_idx = out_files->len;
-        rk_FileInfo *file = out_files->AppendDefault();
+        Size obj_idx = out_objects->len;
+        rk_ObjectInfo *obj = out_objects->AppendDefault();
 
-        file->id = entry.id;
-        file->depth = depth;
+        obj->id = entry.id;
+        obj->depth = depth;
         switch (entry.kind) {
-            case (int)rk_RawFile::Kind::Directory: { file->type = rk_FileType::Directory; } break;
-            case (int)rk_RawFile::Kind::File: { file->type = rk_FileType::File; } break;
-            case (int)rk_RawFile::Kind::Link: { file->type = rk_FileType::Link; } break;
-            case (int)rk_RawFile::Kind::Unknown: { file->type = rk_FileType::Unknown; } break;
+            case (int)rk_RawFile::Kind::Directory: { obj->type = rk_ObjectType::Directory; } break;
+            case (int)rk_RawFile::Kind::File: { obj->type = rk_ObjectType::File; } break;
+            case (int)rk_RawFile::Kind::Link: { obj->type = rk_ObjectType::Link; } break;
+            case (int)rk_RawFile::Kind::Unknown: { obj->type = rk_ObjectType::Unknown; } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
-        file->basename = entry.basename;
-        file->mtime = entry.mtime;
-        file->btime = entry.btime;
-        file->mode = entry.mode;
-        file->uid = entry.uid;
-        file->gid = entry.gid;
-        file->size = entry.size;
+        obj->basename = entry.basename;
+        obj->mtime = entry.mtime;
+        obj->btime = entry.btime;
+        obj->mode = entry.mode;
+        obj->uid = entry.uid;
+        obj->gid = entry.gid;
+        obj->size = entry.size;
 
-        switch (file->type) {
-            case rk_FileType::Directory: {
+        switch (obj->type) {
+            case rk_ObjectType::Directory: {
                 if (settings.max_depth >= 0 && depth >= settings.max_depth)
                     break;
 
-                Size prev_len = out_files->len;
-                if (!RecurseEntries(entry_blob, false, depth + 1, alloc, out_files))
+                Size prev_len = out_objects->len;
+                if (!RecurseEntries(entry_blob, false, depth + 1, alloc, out_objects))
                     return false;
 
                 // Reacquire correct pointer (array may have moved)
-                file = &(*out_files)[file_idx];
+                obj = &(*out_objects)[obj_idx];
 
-                for (Size j = prev_len; j < out_files->len; j++) {
-                    const rk_FileInfo &child = (*out_files)[j];
-                    file->u.children += (child.depth == depth + 1);
+                for (Size j = prev_len; j < out_objects->len; j++) {
+                    const rk_ObjectInfo &child = (*out_objects)[j];
+                    obj->u.children += (child.depth == depth + 1);
                 }
             } break;
-            case rk_FileType::File: { file->u.readable = (entry.flags & (int)rk_RawFile::Flags::Readable); } break;
-            case rk_FileType::Link: { file->u.target = DuplicateString(entry_blob.As<const char>(), alloc).ptr; } break;
-            case rk_FileType::Unknown: {} break;
+            case rk_ObjectType::File: { obj->u.readable = (entry.flags & (int)rk_RawFile::Flags::Readable); } break;
+            case rk_ObjectType::Link: { obj->u.target = DuplicateString(entry_blob.As<const char>(), alloc).ptr; } break;
+            case rk_ObjectType::Unknown: {} break;
         }
     }
 
@@ -852,10 +852,10 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 }
 
 bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Allocator *alloc,
-             HeapArray<rk_FileInfo> *out_files)
+             HeapArray<rk_ObjectInfo> *out_objects)
 {
-    Size prev_len = out_files->len;
-    RG_DEFER_N(out_guard) { out_files->RemoveFrom(prev_len); };
+    Size prev_len = out_objects->len;
+    RG_DEFER_N(out_guard) { out_objects->RemoveFrom(prev_len); };
 
     rk_BlobType type;
     HeapArray<uint8_t> blob;
@@ -866,7 +866,7 @@ bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Al
 
     switch (type) {
         case rk_BlobType::Directory: {
-            if (!tree.RecurseEntries(blob, false, 0, alloc, out_files))
+            if (!tree.RecurseEntries(blob, false, 0, alloc, out_objects))
                 return false;
         } break;
 
@@ -879,7 +879,7 @@ bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Al
 
             Span<uint8_t> entries = blob.Take(RG_SIZE(rk_SnapshotHeader), blob.len - RG_SIZE(rk_SnapshotHeader));
 
-            if (!tree.RecurseEntries(entries, true, 0, alloc, out_files))
+            if (!tree.RecurseEntries(entries, true, 0, alloc, out_objects))
                 return false;
         } break;
 

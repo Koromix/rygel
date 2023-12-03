@@ -609,67 +609,67 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     return 0;
 }
 
-static void ListFilePlain(const rk_FileInfo &file, int start_depth)
+static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth)
 {
-    TimeSpec mspec = DecomposeTime(file.mtime);
-    int indent = (start_depth + file.depth) * 2;
+    TimeSpec mspec = DecomposeTime(obj.mtime);
+    int indent = (start_depth + obj.depth) * 2;
 
-    char suffix = (file.type == rk_FileType::Directory) ? '/' : ' ';
-    int align = std::max(60 - indent - strlen(file.basename), (size_t)0);
+    char suffix = (obj.type == rk_ObjectType::Directory) ? '/' : ' ';
+    int align = std::max(60 - indent - strlen(obj.basename), (size_t)0);
 
     PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 (0%6) %!D..[%7]%!0 %8",
-            FmtArg(" ").Repeat(indent), rk_FileTypeNames[(int)file.type][0],
-            file.basename, suffix, FmtArg(" ").Repeat(align), FmtOctal(file.mode),
-            FmtTimeNice(mspec), file.type == rk_FileType::File ? FmtDiskSize(file.size) : FmtArg(""));
+            FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
+            obj.basename, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode),
+            FmtTimeNice(mspec), obj.type == rk_ObjectType::File ? FmtDiskSize(obj.size) : FmtArg(""));
 }
 
-static void DumpFileJson(json_PrettyWriter *json, const rk_FileInfo &file)
+static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
 {
     char buf[128];
 
-    json->Key("type"); json->String(rk_FileTypeNames[(int)file.type]);
-    json->Key("id"); json->String(Fmt(buf, "%1", file.id).ptr);
-    json->Key("name"); json->String(file.basename);
-    json->Key("mtime"); json->Int64(file.mtime);
-    json->Key("btime"); json->Int64(file.btime);
-    json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(file.mode)).ptr);
-    json->Key("uid"); json->Uint(file.uid);
-    json->Key("gid"); json->Uint(file.gid);
+    json->Key("type"); json->String(rk_ObjectTypeNames[(int)obj.type]);
+    json->Key("id"); json->String(Fmt(buf, "%1", obj.id).ptr);
+    json->Key("name"); json->String(obj.basename);
+    json->Key("mtime"); json->Int64(obj.mtime);
+    json->Key("btime"); json->Int64(obj.btime);
+    json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr);
+    json->Key("uid"); json->Uint(obj.uid);
+    json->Key("gid"); json->Uint(obj.gid);
 
-    switch (file.type) {
-        case rk_FileType::Directory: { json->Key("children"); json->StartArray(); } break;
-        case rk_FileType::File: { json->Key("size"); json->Int64(file.size); } break;
-        case rk_FileType::Link: { json->Key("target"); json->String(file.u.target); } break;
-        case rk_FileType::Unknown: {} break;
+    switch (obj.type) {
+        case rk_ObjectType::Directory: { json->Key("children"); json->StartArray(); } break;
+        case rk_ObjectType::File: { json->Key("size"); json->Int64(obj.size); } break;
+        case rk_ObjectType::Link: { json->Key("target"); json->String(obj.u.target); } break;
+        case rk_ObjectType::Unknown: {} break;
     }
 }
 
-static pugi::xml_node DumpFileXml(pugi::xml_node *ptr, const rk_FileInfo &file)
+static pugi::xml_node ListObjectXml(pugi::xml_node *ptr, const rk_ObjectInfo &obj)
 {
     char buf[128];
 
     pugi::xml_node element;
 
-    switch (file.type) {
-        case rk_FileType::Directory: { element = ptr->append_child("directory"); } break;
-        case rk_FileType::File: { element = ptr->append_child("file"); } break;
-        case rk_FileType::Link: { element = ptr->append_child("link"); } break;
-        case rk_FileType::Unknown: { element = ptr->append_child("unknown"); } break;
+    switch (obj.type) {
+        case rk_ObjectType::Directory: { element = ptr->append_child("directory"); } break;
+        case rk_ObjectType::File: { element = ptr->append_child("file"); } break;
+        case rk_ObjectType::Link: { element = ptr->append_child("link"); } break;
+        case rk_ObjectType::Unknown: { element = ptr->append_child("unknown"); } break;
     }
 
-    element.append_attribute("id") = Fmt(buf, "%1", file.id).ptr;
-    element.append_attribute("name") = file.basename;
-    element.append_attribute("mtime") = file.mtime;
-    element.append_attribute("btime") = file.btime;
-    element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(file.mode)).ptr;
-    element.append_attribute("uid") = file.uid;
-    element.append_attribute("gid") = file.gid;
+    element.append_attribute("id") = Fmt(buf, "%1", obj.id).ptr;
+    element.append_attribute("name") = obj.basename;
+    element.append_attribute("mtime") = obj.mtime;
+    element.append_attribute("btime") = obj.btime;
+    element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
+    element.append_attribute("uid") = obj.uid;
+    element.append_attribute("gid") = obj.gid;
 
-    switch (file.type) {
-        case rk_FileType::Directory: {} break;
-        case rk_FileType::File: { element.append_attribute("size") = file.size; } break;
-        case rk_FileType::Link: { element.append_attribute("target") = file.u.target; } break;
-        case rk_FileType::Unknown: {} break;
+    switch (obj.type) {
+        case rk_ObjectType::Directory: {} break;
+        case rk_ObjectType::File: { element.append_attribute("size") = obj.size; } break;
+        case rk_ObjectType::Link: { element.append_attribute("target") = obj.u.target; } break;
+        case rk_ObjectType::Unknown: {} break;
     }
 
     return element;
@@ -778,23 +778,23 @@ Available output formats: %!..+%3%!0)",
     }
     LogInfo();
 
-    HeapArray<rk_FileInfo> files;
+    HeapArray<rk_ObjectInfo> objects;
     {
         rk_ID id = {};
         if (!rk_ParseID(name, &id))
             return 1;
-        if (!rk_Tree(disk.get(), id, settings, &temp_alloc, &files))
+        if (!rk_Tree(disk.get(), id, settings, &temp_alloc, &objects))
             return 1;
     }
 
     switch (format) {
         case OutputFormat::Human: {
-            if (files.len) {
-                for (const rk_FileInfo &file: files) {
-                    ListFilePlain(file, 0);
+            if (objects.len) {
+                for (const rk_ObjectInfo &obj: objects) {
+                    ListObjectPlain(obj, 0);
                 }
             } else {
-                LogInfo("There does not seem to be any file");
+                LogInfo("There does not seem to be any object");
             }
         } break;
 
@@ -803,8 +803,8 @@ Available output formats: %!..+%3%!0)",
             int depth = 0;
 
             json.StartArray();
-            for (const rk_FileInfo &file: files) {
-                while (file.depth < depth) {
+            for (const rk_ObjectInfo &obj: objects) {
+                while (obj.depth < depth) {
                     json.EndArray();
                     json.EndObject();
 
@@ -813,10 +813,10 @@ Available output formats: %!..+%3%!0)",
 
                 json.StartObject();
 
-                DumpFileJson(&json, file);
+                ListObjectJson(&json, obj);
 
-                if (file.type == rk_FileType::Directory) {
-                    if (file.u.children) {
+                if (obj.type == rk_ObjectType::Directory) {
+                    if (obj.u.children) {
                         depth++;
                         continue;
                     } else {
@@ -843,15 +843,15 @@ Available output formats: %!..+%3%!0)",
             pugi::xml_node ptr = root;
             int depth = 0;
 
-            for (const rk_FileInfo &file: files) {
-                while (file.depth < depth) {
+            for (const rk_ObjectInfo &obj: objects) {
+                while (obj.depth < depth) {
                     ptr = ptr.parent();
                     depth--;
                 }
 
-                pugi::xml_node element = DumpFileXml(&ptr, file);
+                pugi::xml_node element = ListObjectXml(&ptr, obj);
 
-                if (file.type == rk_FileType::Directory && file.u.children) {
+                if (obj.type == rk_ObjectType::Directory && obj.u.children) {
                     depth++;
                     ptr = element;
                 }
