@@ -27,13 +27,13 @@
 namespace RG {
 
 enum class OutputFormat {
-    Human,
+    Plain,
     JSON,
     XML
 };
 
 static const char *const OutputFormatNames[] = {
-    "Human",
+    "Plain",
     "JSON",
     "XML"
 };
@@ -458,7 +458,7 @@ static int RunList(Span<const char *> arguments)
 
     // Options
     rk_Config config;
-    OutputFormat format = OutputFormat::Human;
+    OutputFormat format = OutputFormat::Plain;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -538,7 +538,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         return 1;
 
     switch (format) {
-        case OutputFormat::Human: {
+        case OutputFormat::Plain: {
             if (snapshots.len) {
                 for (const rk_SnapshotInfo &snapshot: snapshots) {
                     TimeSpec spec = DecomposeTime(snapshot.time);
@@ -688,7 +688,7 @@ static int RunTree(Span<const char *> arguments)
     // Options
     rk_Config config;
     rk_TreeSettings settings;
-    OutputFormat format = OutputFormat::Human;
+    OutputFormat format = OutputFormat::Plain;
     const char *name = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -794,7 +794,7 @@ Available output formats: %!..+%3%!0)",
     }
 
     switch (format) {
-        case OutputFormat::Human: {
+        case OutputFormat::Plain: {
             if (objects.len) {
                 for (const rk_ObjectInfo &obj: objects) {
                     ListObjectPlain(obj, 0);
