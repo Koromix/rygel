@@ -661,7 +661,8 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     }
 }
 
-static pugi::xml_node ListObjectXml(pugi::xml_node *ptr, const rk_ObjectInfo &obj)
+template <typename T>
+pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
 {
     char buf[128];
 
@@ -697,10 +698,132 @@ static pugi::xml_node ListObjectXml(pugi::xml_node *ptr, const rk_ObjectInfo &ob
     return element;
 }
 
-static int RunTree(Span<const char *> arguments)
+static bool ExportTree(const char *cmd, rk_Config *config,
+                       const rk_TreeSettings &settings, OutputFormat format, const char *name)
 {
     BlockAllocator temp_alloc;
 
+    if (!name) {
+        LogError("No ID provided");
+        return false;
+    }
+
+    if (!config->Complete(true))
+        return false;
+
+    std::unique_ptr<rk_Disk> disk = rk_Open(*config, true);
+    if (!disk)
+        return false;
+
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
+        LogError("Cannot list with write-only key");
+        return false;
+    }
+    LogInfo();
+
+    HeapArray<rk_ObjectInfo> objects;
+    {
+        rk_ID id = {};
+        if (!rk_ParseID(name, &id))
+            return false;
+        if (!rk_Tree(disk.get(), id, settings, &temp_alloc, &objects))
+            return false;
+    }
+
+    switch (format) {
+        case OutputFormat::Plain: {
+            if (objects.len) {
+                for (const rk_ObjectInfo &obj: objects) {
+                    ListObjectPlain(obj, 0);
+                }
+            } else {
+                LogInfo("There does not seem to be any object");
+            }
+        } break;
+
+        case OutputFormat::JSON: {
+            json_PrettyWriter json(&stdout_st);
+            int depth = 0;
+
+            if (cmd) {
+                json.StartArray();
+            }
+            for (const rk_ObjectInfo &obj: objects) {
+                while (obj.depth < depth) {
+                    json.EndArray();
+                    json.EndObject();
+
+                    depth--;
+                }
+
+                json.StartObject();
+
+                ListObjectJson(&json, obj);
+
+                if (obj.type == rk_ObjectType::Snapshot || obj.type == rk_ObjectType::Directory) {
+                    if (obj.children) {
+                        depth++;
+                        continue;
+                    } else {
+                        json.EndArray();
+                    }
+                }
+
+                json.EndObject();
+            }
+            while (depth--) {
+                json.EndArray();
+                json.EndObject();
+            }
+            if (cmd) {
+                json.EndArray();
+            }
+
+            json.Flush();
+            PrintLn();
+        } break;
+
+        case OutputFormat::XML: {
+            pugi::xml_document doc;
+            pugi::xml_node root;
+
+            if (cmd) {
+                root = doc.append_child(cmd);
+            }
+
+            pugi::xml_node ptr = root;
+            int depth = 0;
+
+            for (const rk_ObjectInfo &obj: objects) {
+                while (obj.depth < depth) {
+                    ptr = ptr.parent();
+                    depth--;
+                }
+
+                pugi::xml_node element = !ptr.empty() ? ListObjectXml(&ptr, obj) : ListObjectXml(&doc, obj);
+
+                if ((obj.type == rk_ObjectType::Snapshot ||
+                        obj.type == rk_ObjectType::Directory) && obj.children) {
+                    depth++;
+                    ptr = element;
+                }
+            }
+
+            if (!cmd) {
+                doc.prepend_move(ptr);
+                // doc.remove_child(root);
+            }
+
+            doc.save(std::cout, "    ");
+        } break;
+    }
+
+    return true;
+}
+
+static int RunTree(Span<const char *> arguments)
+{
     // Options
     rk_Config config;
     rk_TreeSettings settings;
@@ -781,110 +904,72 @@ Available output formats: %!..+%3%!0)",
         name = opt.ConsumeNonOption();
     }
 
-    if (!name) {
-        LogError("No ID provided");
-        return 1;
-    }
+    return !ExportTree("Tree", &config, settings, format, name);
+}
 
-    if (!config.Complete(true))
+static int RunShow(Span<const char *> arguments)
+{
+    // Options
+    rk_Config config;
+    rk_TreeSettings settings;
+    OutputFormat format = OutputFormat::Plain;
+    const char *name = nullptr;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 show [-R <repo>] <ID>%!0
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+
+    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-u, --user <user>%!0            Set repository username
+        %!..+--password <pwd>%!0         Set repository password
+
+    %!..+-f, --format <format>%!0        Change output format
+                                 %!D..(default: %2)%!0
+
+Available output formats: %!..+%3%!0)",
+                FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+    };
+
+    if (!FindAndLoadConfig(arguments, &config))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
-    if (!disk)
-        return 1;
-
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
-        LogError("Cannot list with write-only key");
-        return 1;
-    }
-    LogInfo();
-
-    HeapArray<rk_ObjectInfo> objects;
+    // Parse arguments
     {
-        rk_ID id = {};
-        if (!rk_ParseID(name, &id))
-            return 1;
-        if (!rk_Tree(disk.get(), id, settings, &temp_alloc, &objects))
-            return 1;
-    }
+        OptionParser opt(arguments);
 
-    switch (format) {
-        case OutputFormat::Plain: {
-            if (objects.len) {
-                for (const rk_ObjectInfo &obj: objects) {
-                    ListObjectPlain(obj, 0);
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
+            } else if (opt.Test("-u", "--username", OptionType::Value)) {
+                config.username = opt.current_value;
+            } else if (opt.Test("--password", OptionType::Value)) {
+                config.password = opt.current_value;
+            } else if (opt.Test("-f", "--format", OptionType::Value)) {
+                if (!OptionToEnum(OutputFormatNames, opt.current_value, &format)) {
+                    LogError("Unknown output format '%1'", opt.current_value);
+                    return 1;
                 }
             } else {
-                LogInfo("There does not seem to be any object");
+                opt.LogUnknownError();
+                return 1;
             }
-        } break;
+        }
 
-        case OutputFormat::JSON: {
-            json_PrettyWriter json(&stdout_st);
-            int depth = 0;
-
-            json.StartArray();
-            for (const rk_ObjectInfo &obj: objects) {
-                while (obj.depth < depth) {
-                    json.EndArray();
-                    json.EndObject();
-
-                    depth--;
-                }
-
-                json.StartObject();
-
-                ListObjectJson(&json, obj);
-
-                if (obj.type == rk_ObjectType::Snapshot || obj.type == rk_ObjectType::Directory) {
-                    if (obj.children) {
-                        depth++;
-                        continue;
-                    } else {
-                        json.EndArray();
-                    }
-                }
-
-                json.EndObject();
-            }
-            while (depth--) {
-                json.EndArray();
-                json.EndObject();
-            }
-            json.EndArray();
-
-            json.Flush();
-            PrintLn();
-        } break;
-
-        case OutputFormat::XML: {
-            pugi::xml_document doc;
-            pugi::xml_node root = doc.append_child("Tree");
-
-            pugi::xml_node ptr = root;
-            int depth = 0;
-
-            for (const rk_ObjectInfo &obj: objects) {
-                while (obj.depth < depth) {
-                    ptr = ptr.parent();
-                    depth--;
-                }
-
-                pugi::xml_node element = ListObjectXml(&ptr, obj);
-
-                if ((obj.type == rk_ObjectType::Snapshot ||
-                        obj.type == rk_ObjectType::Directory) && obj.children) {
-                    depth++;
-                    ptr = element;
-                }
-            }
-
-            doc.save(std::cout, "    ");
-        } break;
+        name = opt.ConsumeNonOption();
     }
 
-    return 0;
+    settings.max_depth = 0;
+
+    return !ExportTree(nullptr, &config, settings, format, name);
 }
 
 int Main(int argc, char **argv)
@@ -905,6 +990,7 @@ Snapshot commands:
 Exploration commands:
     %!..+list%!0                         List snapshots
     %!..+tree%!0                         Export snapshot or directory tree
+    %!..+info%!0                         Export info about object
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -986,6 +1072,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunList(arguments);
     } else if (TestStr(cmd, "tree")) {
         return RunTree(arguments);
+    } else if (TestStr(cmd, "show")) {
+        return RunShow(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

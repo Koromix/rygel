@@ -911,7 +911,7 @@ bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Al
         case rk_BlobType::Chunk:
         case rk_BlobType::File:
         case rk_BlobType::Link: {
-            LogInfo("Expected snapshot or directory blob, not '%1'", rk_BlobTypeNames[(int)type]);
+            LogInfo("Expected Snapshot or Directory blob, not %1", rk_BlobTypeNames[(int)type]);
             return false;
         } break;
     }
