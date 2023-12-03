@@ -779,9 +779,8 @@ Available output formats: %!..+%3%!0)",
                         }
                     } break;
                     case rk_FileType::File: { json.Key("size"); json.Int64(file.size); } break;
-                    case rk_FileType::Link: {
-                        json.Key("target"); json.String(file.u.target);
-                    } break;
+                    case rk_FileType::Link: { json.Key("target"); json.String(file.u.target); } break;
+                    case rk_FileType::Unknown: {} break;
                 }
 
                 json.EndObject();
@@ -817,6 +816,7 @@ Available output formats: %!..+%3%!0)",
                     case rk_FileType::Directory: { element = ptr.append_child("directory"); } break;
                     case rk_FileType::File: { element = ptr.append_child("file"); } break;
                     case rk_FileType::Link: { element = ptr.append_child("link"); } break;
+                    case rk_FileType::Unknown: { element = ptr.append_child("unknown"); } break;
                 }
 
                 element.append_attribute("id") = Fmt(buf, "%1", file.id).ptr;
@@ -836,6 +836,7 @@ Available output formats: %!..+%3%!0)",
                     } break;
                     case rk_FileType::File: { element.append_attribute("size") = file.size; } break;
                     case rk_FileType::Link: { element.append_attribute("target") = file.u.target; } break;
+                    case rk_FileType::Unknown: {} break;
                 }
             }
 

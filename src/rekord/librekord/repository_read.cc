@@ -281,7 +281,8 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     // Sanity checks
     if (entry.kind != (int8_t)rk_RawFile::Kind::Directory &&
             entry.kind != (int8_t)rk_RawFile::Kind::File &&
-            entry.kind != (int8_t)rk_RawFile::Kind::Link) {
+            entry.kind != (int8_t)rk_RawFile::Kind::Link &&
+            entry.kind != (int8_t)rk_RawFile::Kind::Unknown) {
         LogError("Unknown file kind 0x%1", FmtHex((unsigned int)entry.kind));
         return -1;
     }
@@ -365,6 +366,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             return false;
         offset += skip;
 
+        if (entry.kind == (int)rk_RawFile::Kind::Unknown)
+            continue;
         if (!(entry.flags & (int)rk_RawFile::Flags::Readable))
             continue;
 
@@ -810,6 +813,7 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
             case (int)rk_RawFile::Kind::Directory: { file->type = rk_FileType::Directory; } break;
             case (int)rk_RawFile::Kind::File: { file->type = rk_FileType::File; } break;
             case (int)rk_RawFile::Kind::Link: { file->type = rk_FileType::Link; } break;
+            case (int)rk_RawFile::Kind::Unknown: { file->type = rk_FileType::Unknown; } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
@@ -840,6 +844,7 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
             } break;
             case rk_FileType::File: { file->u.readable = (entry.flags & (int)rk_RawFile::Flags::Readable); } break;
             case rk_FileType::Link: { file->u.target = DuplicateString(entry_obj.As<const char>(), alloc).ptr; } break;
+            case rk_FileType::Unknown: {} break;
         }
     }
 

@@ -48,12 +48,14 @@ struct rk_SnapshotInfo {
 enum class rk_FileType {
     File,
     Directory,
-    Link
+    Link,
+    Unknown
 };
 static const char *const rk_FileTypeNames[] = {
     "File",
     "Directory",
-    "Link"
+    "Link",
+    "Unknown"
 };
 
 struct rk_FileInfo {
