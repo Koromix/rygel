@@ -348,20 +348,20 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         }
     };
 
-    std::shared_ptr<SharedContext> shared = std::make_shared<SharedContext>();
+    std::shared_ptr<SharedContext> ctx = std::make_shared<SharedContext>();
 
     if (!(flags & (int)ExtractFlag::SkipMeta)) {
         RG_ASSERT(dest.basename);
 
-        shared->meta = dest;
-        shared->meta.filename = DuplicateString(dest.filename, &shared->temp_alloc).ptr;
-        shared->chown = chown;
+        ctx->meta = dest;
+        ctx->meta.filename = DuplicateString(dest.filename, &ctx->temp_alloc).ptr;
+        ctx->chown = chown;
     }
 
     for (Size offset = 0; offset < entries.len;) {
         EntryInfo entry = {};
 
-        Size skip = DecodeEntry(entries, offset, flags & (int)ExtractFlag::AllowSeparators, &shared->temp_alloc, &entry);
+        Size skip = DecodeEntry(entries, offset, flags & (int)ExtractFlag::AllowSeparators, &ctx->temp_alloc, &entry);
         if (skip < 0)
             return false;
         offset += skip;
@@ -372,15 +372,15 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             continue;
 
         if (flags & (int)ExtractFlag::FlattenName) {
-            entry.filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, SplitStrReverse(entry.basename, '/')).ptr;
+            entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, SplitStrReverse(entry.basename, '/')).ptr;
         } else {
-            entry.filename = Fmt(&shared->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
+            entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
 
             if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry.filename))
                 return false;
         }
 
-        tasks.Run([=, shared = shared, this] () {
+        tasks.Run([=, ctx = ctx, this] () {
             rk_BlobType entry_type;
             HeapArray<uint8_t> entry_blob;
             if (!disk->ReadBlob(entry.id, &entry_type, &entry_blob))
