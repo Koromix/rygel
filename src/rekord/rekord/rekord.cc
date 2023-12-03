@@ -615,12 +615,12 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth)
     int indent = (start_depth + obj.depth) * 2;
 
     char suffix = (obj.type == rk_ObjectType::Directory) ? '/' : ' ';
-    int align = std::max(60 - indent - strlen(obj.basename), (size_t)0);
+    int align = std::max(60 - indent - strlen(obj.name), (size_t)0);
     bool size = (obj.readable && obj.type == rk_ObjectType::File);
 
     PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 (0%6) %!D..[%7]%!0 %8",
             FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
-            obj.basename, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode),
+            obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode),
             FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
 }
 
@@ -634,18 +634,28 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     } else {
         json->Key("id"); json->Null();
     }
-    json->Key("name"); json->String(obj.basename);
-    json->Key("mtime"); json->Int64(obj.mtime);
-    json->Key("btime"); json->Int64(obj.btime);
-    json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr);
-    json->Key("uid"); json->Uint(obj.uid);
-    json->Key("gid"); json->Uint(obj.gid);
+    if (obj.name) {
+        json->Key("name"); json->String(obj.name);
+    } else {
+        json->Key("name"); json->Null();
+    }
+
+    if (obj.type == rk_ObjectType::Snapshot) {
+        json->Key("time"); json->Int64(obj.mtime);
+    } else {
+        json->Key("mtime"); json->Int64(obj.mtime);
+        json->Key("btime"); json->Int64(obj.btime);
+        json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr);
+        json->Key("uid"); json->Uint(obj.uid);
+        json->Key("gid"); json->Uint(obj.gid);
+    }
 
     if (obj.readable) {
         switch (obj.type) {
+            case rk_ObjectType::Snapshot:
             case rk_ObjectType::Directory: { json->Key("children"); json->StartArray(); } break;
             case rk_ObjectType::File: { json->Key("size"); json->Int64(obj.size); } break;
-            case rk_ObjectType::Link: { json->Key("target"); json->String(obj.u.target); } break;
+            case rk_ObjectType::Link: { json->Key("target"); json->String(obj.target); } break;
             case rk_ObjectType::Unknown: {} break;
         }
     }
@@ -662,18 +672,24 @@ static pugi::xml_node ListObjectXml(pugi::xml_node *ptr, const rk_ObjectInfo &ob
     } else {
         element.append_attribute("id") = "";
     }
-    element.append_attribute("name") = obj.basename;
-    element.append_attribute("mtime") = obj.mtime;
-    element.append_attribute("btime") = obj.btime;
-    element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
-    element.append_attribute("uid") = obj.uid;
-    element.append_attribute("gid") = obj.gid;
+    element.append_attribute("name") = obj.name ? obj.name : "";
+
+    if (obj.type == rk_ObjectType::Snapshot) {
+        element.append_attribute("time") = obj.mtime;
+    } else {
+        element.append_attribute("mtime") = obj.mtime;
+        element.append_attribute("btime") = obj.btime;
+        element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
+        element.append_attribute("uid") = obj.uid;
+        element.append_attribute("gid") = obj.gid;
+    }
 
     if (obj.readable) {
         switch (obj.type) {
+            case rk_ObjectType::Snapshot:
             case rk_ObjectType::Directory: {} break;
             case rk_ObjectType::File: { element.append_attribute("size") = obj.size; } break;
-            case rk_ObjectType::Link: { element.append_attribute("target") = obj.u.target; } break;
+            case rk_ObjectType::Link: { element.append_attribute("target") = obj.target; } break;
             case rk_ObjectType::Unknown: {} break;
         }
     }
@@ -821,8 +837,8 @@ Available output formats: %!..+%3%!0)",
 
                 ListObjectJson(&json, obj);
 
-                if (obj.type == rk_ObjectType::Directory) {
-                    if (obj.u.children) {
+                if (obj.type == rk_ObjectType::Snapshot || obj.type == rk_ObjectType::Directory) {
+                    if (obj.children) {
                         depth++;
                         continue;
                     } else {
@@ -857,7 +873,8 @@ Available output formats: %!..+%3%!0)",
 
                 pugi::xml_node element = ListObjectXml(&ptr, obj);
 
-                if (obj.type == rk_ObjectType::Directory && obj.u.children) {
+                if ((obj.type == rk_ObjectType::Snapshot ||
+                        obj.type == rk_ObjectType::Directory) && obj.children) {
                     depth++;
                     ptr = element;
                 }

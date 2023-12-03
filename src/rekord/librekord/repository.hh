@@ -46,12 +46,14 @@ struct rk_SnapshotInfo {
 };
 
 enum class rk_ObjectType {
+    Snapshot,
     File,
     Directory,
     Link,
     Unknown
 };
 static const char *const rk_ObjectTypeNames[] = {
+    "Snapshot",
     "File",
     "Directory",
     "Link",
@@ -63,7 +65,7 @@ struct rk_ObjectInfo {
 
     int depth;
     rk_ObjectType type;
-    const char *basename;
+    const char *name; // Can be NULL for snapshots
 
     int64_t mtime;
     int64_t btime;
@@ -71,13 +73,11 @@ struct rk_ObjectInfo {
     uint32_t uid;
     uint32_t gid;
     int64_t size;
-
     bool readable;
 
-    union {
-        Size children; // for directories
-        const char *target; // for symbolic links
-    } u;
+    int64_t stored; // for snapshots
+    Size children; // for snapshots and directories
+    const char *target; // for symbolic links
 };
 
 // Snapshot commands

@@ -749,6 +749,9 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     }
     entries.len -= RG_SIZE(int64_t);
 
+    if (settings.max_depth >= 0 && depth > settings.max_depth)
+        return true;
+
     // Get total length from end of stream
     int64_t dir_len = 0;
     memcpy(&dir_len, entries.end(), RG_SIZE(dir_len));
@@ -817,7 +820,7 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 
             default: { RG_UNREACHABLE(); } break;
         }
-        obj->basename = entry.basename;
+        obj->name = entry.basename;
         obj->mtime = entry.mtime;
         obj->btime = entry.btime;
         obj->mode = entry.mode;
@@ -828,10 +831,9 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->readable = (entry.flags & (int)rk_RawFile::Flags::Readable);
 
         switch (obj->type) {
-            case rk_ObjectType::Directory: {
-                if (settings.max_depth >= 0 && depth >= settings.max_depth)
-                    break;
+            case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
 
+            case rk_ObjectType::Directory: {
                 Size prev_len = out_objects->len;
                 if (!RecurseEntries(entry_blob, false, depth + 1, alloc, out_objects))
                     return false;
@@ -841,11 +843,11 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 
                 for (Size j = prev_len; j < out_objects->len; j++) {
                     const rk_ObjectInfo &child = (*out_objects)[j];
-                    obj->u.children += (child.depth == depth + 1);
+                    obj->children += (child.depth == depth + 1);
                 }
             } break;
             case rk_ObjectType::File: {} break;
-            case rk_ObjectType::Link: { obj->u.target = DuplicateString(entry_blob.As<const char>(), alloc).ptr; } break;
+            case rk_ObjectType::Link: { obj->target = DuplicateString(entry_blob.As<const char>(), alloc).ptr; } break;
             case rk_ObjectType::Unknown: {} break;
         }
     }
@@ -879,10 +881,31 @@ bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Al
                 return false;
             }
 
+            const rk_SnapshotHeader *header = (const rk_SnapshotHeader *)blob.ptr;
+            rk_ObjectInfo *obj = out_objects->AppendDefault();
+
+            obj->id = id;
+            obj->type = rk_ObjectType::Snapshot;
+            obj->name = header->name[0] ? DuplicateString(header->name, alloc).ptr : nullptr;
+            obj->mtime = header->time;
+            obj->btime = header->time;
+            obj->size = header->len;
+            obj->readable = true;
+
+            obj->stored = header->stored;
+
             Span<uint8_t> entries = blob.Take(RG_SIZE(rk_SnapshotHeader), blob.len - RG_SIZE(rk_SnapshotHeader));
 
-            if (!tree.RecurseEntries(entries, true, 0, alloc, out_objects))
+            if (!tree.RecurseEntries(entries, true, 1, alloc, out_objects))
                 return false;
+
+            // Reacquire correct pointer (array may have moved)
+            obj = &(*out_objects)[prev_len];
+
+            for (Size i = prev_len; i < out_objects->len; i++) {
+                const rk_ObjectInfo &child = (*out_objects)[i];
+                obj->children += (child.depth == 1);
+            }
         } break;
 
         case rk_BlobType::Chunk:
