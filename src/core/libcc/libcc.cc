@@ -2173,7 +2173,7 @@ fail:
     return str_buf;
 }
 
-static FileType FileAttributesToType(uint32_t attr)
+static inline FileType FileAttributesToType(uint32_t attr)
 {
     if (attr & FILE_ATTRIBUTE_DIRECTORY) {
         return FileType::Directory;
