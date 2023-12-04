@@ -543,14 +543,11 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 for (const rk_SnapshotInfo &snapshot: snapshots) {
                     TimeSpec spec = DecomposeTime(snapshot.time);
 
-                    PrintLn("%!..+%1%!0", snapshot.id);
                     if (snapshot.name) {
-                        PrintLn("+ Name: %!..+%1%!0", snapshot.name);
+                        PrintLn("%1   %!..+%2%!0 [%3]", snapshot.id, FmtArg(snapshot.name).Pad(24), FmtTimeNice(spec));
+                    } else {
+                        PrintLn("%1   %!D..(anonymous)%!0              [%2]", snapshot.id, FmtTimeNice(spec));
                     }
-                    PrintLn("+ Time: %!..+%1%!0", FmtTimeNice(spec));
-                    PrintLn("+ Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
-                    PrintLn("+ Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
-                    PrintLn();
                 }
             } else {
                 LogInfo("There does not seem to be any snapshot");
