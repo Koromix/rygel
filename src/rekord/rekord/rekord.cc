@@ -624,10 +624,17 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
     int align = std::max(60 - indent - strlen(obj.name), (size_t)0);
     bool size = (obj.readable && obj.type == rk_ObjectType::File);
 
-    PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 %!D..(0%6)%!0 [%7] %!.._%8%!0",
-            FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
-            obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
-            FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
+    if (obj.mode) {
+        PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 %!D..(0%6)%!0 [%7] %!.._%8%!0",
+                FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
+                obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
+                FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
+    } else {
+        PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5        [%6] %!.._%7%!0",
+                FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
+                obj.name, suffix, FmtArg(" ").Repeat(align),
+                FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
+    }
 
     if (verbose == 1) {
         PrintLn("%1    + UID/GID: %!..+%2:%3%!0", FmtArg(" ").Repeat(indent), obj.uid, obj.gid);
