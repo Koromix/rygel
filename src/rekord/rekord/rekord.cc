@@ -144,7 +144,7 @@ Options:
     return 0;
 }
 
-static int RunExportMasterKey(Span<const char *> arguments)
+static int RunExportKey(Span<const char *> arguments)
 {
     // Options
     rk_Config config;
@@ -207,8 +207,8 @@ Options:
 
     if (!WriteFile(disk->GetFullKey(), output_filename))
         return 1;
-
     LogInfo("Unprotected full-access key written to: %!..+%1%!0", output_filename);
+
     return 0;
 }
 
@@ -1063,7 +1063,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     if (TestStr(cmd, "init")) {
         return RunInit(arguments);
     } else if (TestStr(cmd, "export_key")) {
-        return RunExportMasterKey(arguments);
+        return RunExportKey(arguments);
     } else if (TestStr(cmd, "put")) {
         return RunPut(arguments);
     } else if (TestStr(cmd, "get")) {
