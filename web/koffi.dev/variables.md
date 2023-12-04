@@ -69,7 +69,7 @@ In Koffi 2.2 and earlier versions, the length argument is only used to decode st
 
 *New in Koffi 2.6*
 
-Use `koffi.encode()` to encode C pointers, wrapped as external objects or as simple numbers.
+Use `koffi.encode()` to encode JS values into C symbols or pointers, wrapped as external objects or as simple numbers.
 
 Some arguments are optional and this function can be called in several ways:
 
