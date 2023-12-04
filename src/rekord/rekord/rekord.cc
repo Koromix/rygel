@@ -459,6 +459,7 @@ static int RunList(Span<const char *> arguments)
     // Options
     rk_Config config;
     OutputFormat format = OutputFormat::Plain;
+    int verbose = 0;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -476,6 +477,7 @@ Options:
 
     %!..+-f, --format <format>%!0        Change output format
                                  %!D..(default: %2)%!0
+    %!..+-v, --verbose%!0                Enable verbose output (plain only)
 
 Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
     };
@@ -500,11 +502,6 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 config.username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 config.password = opt.current_value;
-            } else if (opt.Test("-f", "--format", OptionType::Value)) {
-                if (!OptionToEnum(OutputFormatNames, opt.current_value, &format)) {
-                    LogError("Unknown output format '%1'", opt.current_value);
-                    return 1;
-                }
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
@@ -512,6 +509,13 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                     LogError("Threads count cannot be < 1");
                     return 1;
                 }
+            } else if (opt.Test("-f", "--format", OptionType::Value)) {
+                if (!OptionToEnum(OutputFormatNames, opt.current_value, &format)) {
+                    LogError("Unknown output format '%1'", opt.current_value);
+                    return 1;
+                }
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose++;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -547,6 +551,11 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                         PrintLn("%1   %!..+%2%!0 [%3]", snapshot.id, FmtArg(snapshot.name).Pad(24), FmtTimeNice(spec));
                     } else {
                         PrintLn("%1   %!D..(anonymous)%!0              [%2]", snapshot.id, FmtTimeNice(spec));
+                    }
+
+                    if (verbose) {
+                        PrintLn("+ Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
+                        PrintLn("+ Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
                     }
                 }
             } else {
@@ -606,7 +615,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     return 0;
 }
 
-static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth)
+static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbose)
 {
     TimeSpec mspec = DecomposeTime(obj.mtime);
     int indent = (start_depth + obj.depth) * 2;
@@ -615,10 +624,18 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth)
     int align = std::max(60 - indent - strlen(obj.name), (size_t)0);
     bool size = (obj.readable && obj.type == rk_ObjectType::File);
 
-    PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 (0%6) %!D..[%7]%!0 %8",
+    PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 %!D..(0%6)%!0 [%7] %!.._%8%!0",
             FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
-            obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode),
+            obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
             FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
+
+    if (verbose == 1) {
+        PrintLn("%1    + UID/GID: %!..+%2:%3%!0", FmtArg(" ").Repeat(indent), obj.uid, obj.gid);
+    }
+    if (verbose > 1) {
+        TimeSpec bspec = DecomposeTime(obj.btime);
+        PrintLn("%1    + Birth time: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtTimeNice(bspec));
+    }
 }
 
 static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
@@ -695,8 +712,8 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
     return element;
 }
 
-static bool ExportTree(const char *cmd, rk_Config *config,
-                       const rk_TreeSettings &settings, OutputFormat format, const char *name)
+static bool ExportTree(const char *cmd, rk_Config *config, const rk_TreeSettings &settings,
+                       OutputFormat format, int verbose, const char *name)
 {
     BlockAllocator temp_alloc;
 
@@ -732,7 +749,7 @@ static bool ExportTree(const char *cmd, rk_Config *config,
         case OutputFormat::Plain: {
             if (objects.len) {
                 for (const rk_ObjectInfo &obj: objects) {
-                    ListObjectPlain(obj, 0);
+                    ListObjectPlain(obj, 0, verbose);
                 }
             } else {
                 LogInfo("There does not seem to be any object");
@@ -825,6 +842,7 @@ static int RunTree(Span<const char *> arguments)
     rk_Config config;
     rk_TreeSettings settings;
     OutputFormat format = OutputFormat::Plain;
+    int verbose = 0;
     const char *name = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -846,6 +864,7 @@ Options:
 
     %!..+-f, --format <format>%!0        Change output format
                                  %!D..(default: %2)%!0
+    %!..+-v, --verbose%!0                Enable verbose output (plain only)
 
 Available output formats: %!..+%3%!0)",
                 FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
@@ -892,6 +911,8 @@ Available output formats: %!..+%3%!0)",
                     LogError("Unknown output format '%1'", opt.current_value);
                     return 1;
                 }
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose++;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -901,7 +922,7 @@ Available output formats: %!..+%3%!0)",
         name = opt.ConsumeNonOption();
     }
 
-    return !ExportTree("Tree", &config, settings, format, name);
+    return !ExportTree("Tree", &config, settings, format, verbose, name);
 }
 
 static int RunShow(Span<const char *> arguments)
@@ -910,6 +931,7 @@ static int RunShow(Span<const char *> arguments)
     rk_Config config;
     rk_TreeSettings settings;
     OutputFormat format = OutputFormat::Plain;
+    int verbose = 0;
     const char *name = nullptr;
 
     const auto print_usage = [=](FILE *fp) {
@@ -925,6 +947,7 @@ Options:
 
     %!..+-f, --format <format>%!0        Change output format
                                  %!D..(default: %2)%!0
+    %!..+-v, --verbose%!0                Enable verbose output (plain only)
 
 Available output formats: %!..+%3%!0)",
                 FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
@@ -955,6 +978,8 @@ Available output formats: %!..+%3%!0)",
                     LogError("Unknown output format '%1'", opt.current_value);
                     return 1;
                 }
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose++;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -966,7 +991,7 @@ Available output formats: %!..+%3%!0)",
 
     settings.max_depth = 0;
 
-    return !ExportTree(nullptr, &config, settings, format, name);
+    return !ExportTree(nullptr, &config, settings, format, verbose, name);
 }
 
 int Main(int argc, char **argv)
