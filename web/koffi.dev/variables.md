@@ -98,3 +98,9 @@ console.log(koffi.decode(my_string, 'const char *')) // Prints "Hello World!"
 ```
 
 When encoding strings (either directly or embedded in arrays or structs), the memory will be bound to the raw pointer value and managed by Koffi. You can assign to the same string again and again without any leak or risk of use-after-free.
+
+There is also an optional ending `length` argument that you can use to encode an array. For example, here is how you can encode an array with 3 float values: `koffi.encode(symbol, 'float', [1, 2, 3], 3)`. This is equivalent to `koffi.encode(symbol, koffi.array('float', 3), [1, 2, 3])`.
+
+```{note}
+The length argument did not work correctly before Koffi 2.6.11.
+```
