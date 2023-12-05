@@ -465,3 +465,28 @@ footer {
     gap: 20px;
     border: 2px solid #ffd212;
 }
+
+.shelf {
+    display: flex;
+    margin: 1em;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.buttons {
+    margin: 1em;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.buttons > a {
+    display: block;
+    width: 40%;
+    background: #ddd;
+    padding: 1em;
+    text-decoration: none;
+    text-align: center;
+}
+.buttons > a:hover { background: #ccc; }

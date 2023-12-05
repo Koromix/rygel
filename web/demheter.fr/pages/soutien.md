@@ -6,21 +6,6 @@
     </div>
 </div>
 
-# Orientation et outils
-
-Le site de [Psycom](https://www.psycom.org/) peut vous aider à vous orienter et fournit des outils pratiques :
-
-- [Ressources pour s'orienter](https://www.psycom.org/sorienter/)
-- [Outils pratiques](https://www.psycom.org/agir/)
-
-# Pour apprendre
-
-Si vous désirez en savoir plus sur les troubles de l'humeur et sur les pensées suicidaires :
-
-- [Troubles dépressifs](https://www.psycom.org/comprendre/la-sante-mentale/les-troubles-psy/troubles-depressifs/)
-- [Troubles bipolaires](https://www.psycom.org/comprendre/la-sante-mentale/les-troubles-psy/troubles-bipolaires/)
-- [Pensées suicidaires](https://www.psycom.org/comprendre/la-sante-mentale/quand-on-a-des-pensees-suicidaires/)
-
 # Accompagnement des proches
 
 L'[UNAFAM](https://www.unafam.org/) est une association qui accompagne les familles adhérentes au sein de 305 points d'accueil, pour briser l’isolement et leur permettre de retrouver la force d’avancer.
