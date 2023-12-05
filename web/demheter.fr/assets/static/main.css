@@ -490,9 +490,10 @@ footer {
     display: block;
     width: 40%;
     min-width: 250px;
-    background: #ddd;
-    padding: 1em;
+    background: #3c7778;
+    color: white;
+    padding: 0.6em 1em;
     text-decoration: none;
     text-align: center;
 }
-.buttons > a:hover { background: #ccc; }
+.buttons > a:hover { background: #346768; }
