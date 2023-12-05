@@ -62,7 +62,7 @@ bool thop_has_casemix;
 StructureSet thop_structure_set;
 UserSet thop_user_set;
 
-char thop_etag[33];
+char thop_etag[17];
 
 static DictionarySet dictionary_set;
 static HashTable<Span<const char>, Route> routes;
@@ -266,6 +266,13 @@ static void InitRoutes()
     Span<const AssetInfo> assets = GetPackedAssets();
     RG_ASSERT(assets.len > 0);
 
+    // We can use a global ETag because everything is in the binary
+    {
+        uint64_t buf;
+        FillRandomSafe(&buf, RG_SIZE(buf));
+        Fmt(thop_etag, "%1", FmtHex(buf).Pad0(-16));
+    }
+
     // Static assets and dictionaries
     AssetInfo html = {};
     for (const AssetInfo &asset: assets) {
@@ -296,6 +303,8 @@ static void InitRoutes()
             writer->Write(FelixCompiler);
         } else if (key == "BASE_URL") {
             writer->Write(thop_config.base_url);
+        } else if (key == "BUSTER") {
+            writer->Write(thop_etag);
         } else if (key == "HAS_USERS") {
             writer->Write(thop_has_casemix ? "true" : "false");
         } else {
@@ -327,13 +336,6 @@ static void InitRoutes()
     // MCO casemix API
     add_function_route(http_RequestMethod::Get, "/api/mco/aggregate", ProduceMcoAggregate);
     add_function_route(http_RequestMethod::Get, "/api/mco/results", ProduceMcoResults);
-
-    // We can use a global ETag because everything is in the binary
-    {
-        uint64_t buf[2];
-        FillRandomSafe(&buf, RG_SIZE(buf));
-        Fmt(thop_etag, "%1%2", FmtHex(buf[0]).Pad0(-16), FmtHex(buf[1]).Pad0(-16));
-    }
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)

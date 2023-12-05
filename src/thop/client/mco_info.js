@@ -543,7 +543,7 @@ function renderListInfo(type, label, current_list) {
 
 async function exportListToXLSX(records, handler) {
     if (typeof XLSX === 'undefined')
-        await Net.loadScript(`${ENV.base_url}static/XLSX.bundle.js`);
+        await Net.loadScript(`${ENV.base_url}static/XLSX.bundle.js?${ENV.buster}`);
 
     let ws = XLSX.utils.aoa_to_sheet([
         handler.columns.map(col => col.key),
@@ -659,7 +659,7 @@ async function runGhs() {
     // Render grid or plot
     if (route.ghs.plot) {
         if (typeof Chart === 'undefined')
-            await Net.loadScript(`${ENV.base_url}static/chart.bundle.js`);
+            await Net.loadScript(`${ENV.base_url}static/chart.bundle.js?${ENV.buster}`);
 
         render(chart_canvas, document.querySelector('#th_view'));
         updatePriceChart(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
