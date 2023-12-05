@@ -54,7 +54,7 @@ There is also an optional ending `length` argument that you can use in two cases
 - Use it to give the number of bytes to decode in non-NUL terminated strings: `koffi.decode(value, 'char *', 5)`
 - Decode consecutive values into an array. For example, here is how you can decode an array with 3 float values: `koffi.decode(value, 'float', 3)`. This is equivalent to `koffi.decode(value, koffi.array('float', 3))`.
 
-Thge example below will decode the symbol `my_string` defined above but only the first three bytes.
+The example below will decode the symbol `my_string` defined above but only the first three bytes.
 
 ```js
 // Only decode 3 bytes from the C string my_string
