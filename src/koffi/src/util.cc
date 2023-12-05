@@ -200,48 +200,54 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
         }
     }
 
-    // Skip initial const qualifiers
-    str = TrimStr(str);
-    while (SplitIdentifier(str) == "const") {
-        str = str.Take(6, str.len - 6);
-        str = TrimStr(str);
-    }
-    str = TrimStr(str);
+    Span<const char> name;
+    Span<const char> after;
+    {
+        Span<const char> remain = str;
 
-    Span<const char> remain = str;
-
-    // Consume one or more identifiers (e.g. unsigned int)
-    for (;;) {
+        // Skip initial const qualifiers
+        remain = TrimStr(remain);
+        while (SplitIdentifier(remain) == "const") {
+            remain = remain.Take(6, remain.len - 6);
+            remain = TrimStr(remain);
+        }
         remain = TrimStr(remain);
 
-        Span<const char> token = SplitIdentifier(remain);
-        if (!token.len)
-            break;
-        remain = remain.Take(token.len, remain.len - token.len);
+        after = remain;
+
+        // Consume one or more identifiers (e.g. unsigned int)
+        for (;;) {
+            after = TrimStr(after);
+
+            Span<const char> token = SplitIdentifier(after);
+            if (!token.len)
+                break;
+            after = after.Take(token.len, after.len - token.len);
+        }
+
+        name = TrimStr(MakeSpan(remain.ptr, after.ptr - remain.ptr));
     }
 
-    Span<const char> name = TrimStr(MakeSpan(str.ptr, remain.ptr - str.ptr));
-
     // Consume pointer indirections
-    while (remain.len) {
-        if (remain[0] == '*') {
-            remain = remain.Take(1, remain.len - 1);
+    while (after.len) {
+        if (after[0] == '*') {
+            after = after.Take(1, after.len - 1);
             indirect++;
 
             if (indirect >= RG_SIZE(disposables) * 8) [[unlikely]] {
                 ThrowError<Napi::Error>(env, "Too many pointer indirections");
                 return nullptr;
             }
-        } else if (remain[0] == '!') {
-            remain = remain.Take(1, remain.len - 1);
+        } else if (after[0] == '!') {
+            after = after.Take(1, after.len - 1);
             disposables |= (1u << indirect);
-        } else if (SplitIdentifier(remain) == "const") {
-            remain = remain.Take(6, remain.len - 6);
+        } else if (SplitIdentifier(after) == "const") {
+            after = after.Take(6, after.len - 6);
         } else {
             break;
         }
 
-        remain = TrimStr(remain);
+        after = TrimStr(after);
     }
 
     const TypeInfo *type = instance->types_map.FindValue(name, nullptr);
