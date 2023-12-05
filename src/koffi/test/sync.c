@@ -186,6 +186,7 @@ typedef struct BufferInfo {
 
 EXPORT int sym_int = 0;
 EXPORT const char *sym_str = NULL;
+EXPORT int sym_int3[3] = { 0, 0, 0 };
 
 EXPORT int8_t GetMinusOne1(void)
 {
@@ -947,4 +948,11 @@ EXPORT int GetSymbolInt()
 EXPORT const char *GetSymbolStr()
 {
     return sym_str;
+}
+
+EXPORT int GetSymbolInt3(int out[3])
+{
+    out[0] = sym_int3[0];
+    out[1] = sym_int3[1];
+    out[2] = sym_int3[2];
 }

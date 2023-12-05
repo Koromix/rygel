@@ -1966,7 +1966,7 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
     Napi::Env env = info.Env();
 
     bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
-    bool has_len = (info.Length() >= 4u + has_offset && info[2u + has_offset].IsNumber());
+    bool has_len = (info.Length() >= 4u + has_offset && info[3u + has_offset].IsNumber());
 
     if (info.Length() < 3u + has_offset) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 to 5 arguments, got %2", 3 + has_offset, info.Length());
@@ -1979,10 +1979,10 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
 
     Napi::Value ref = info[0];
     int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
-    Napi::Value value = info[2u + has_offset + has_len];
+    Napi::Value value = info[2u + has_offset];
 
     if (has_len) {
-        Size len = info[2u + has_offset].As<Napi::Number>();
+        Size len = info[3u + has_offset].As<Napi::Number>();
 
         if (!Encode(ref, offset, value, type, &len))
             return env.Null();
