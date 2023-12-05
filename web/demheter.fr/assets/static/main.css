@@ -468,7 +468,7 @@ footer {
 
 .shelf {
     display: flex;
-    margin: 1em;
+    margin: 2em 1em;
     gap: 20px;
     justify-content: center;
     flex-wrap: wrap;
