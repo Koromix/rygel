@@ -194,7 +194,6 @@ pre {
 }
 
 @media screen and (max-width: 960px) {
-    #top.border { border-bottom: none; }
     #top menu {
         padding-left: 60px;
         flex-direction: column;
