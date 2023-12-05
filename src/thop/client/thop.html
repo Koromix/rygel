@@ -119,8 +119,8 @@
 
                 document.body.classList.add('th_loading');
                 window.addEventListener('load', function(e) {
-                    if (typeof app !== 'undefined') {
-                        var p = app.start();
+                    if (typeof thop !== 'undefined') {
+                        var p = thop.start();
 
                         p.catch(function(err) {
                             document.body.innerHTML =

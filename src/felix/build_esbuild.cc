@@ -119,6 +119,22 @@ bool Builder::PrepareEsbuild()
     RG_UNREACHABLE();
 }
 
+static const char *MakeGlobalName(const char *filename, Allocator *alloc)
+{
+    Span<const char> basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+    Span<const char> name = SplitStr(basename, '.');
+
+    Span<char> buf = AllocateSpan<char>(alloc, name.len + 1);
+
+    for (Size i = 0; i < name.len; i++) {
+        char c = name[i];
+        buf[i] = IsAsciiAlphaOrDigit(c) ? c : '_';
+    }
+    buf[name.len] = 0;
+
+    return buf.ptr;
+}
+
 const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
 {
     RG_ASSERT(src.type == SourceType::Esbuild);
@@ -145,7 +161,10 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
         {
             HeapArray<char> buf(&str_alloc);
 
+            const char *global_name = MakeGlobalName(src.filename, &str_alloc);
+
             Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning", esbuild_binary, src.filename);
+            Fmt(&buf, " --format=iife --global-name=%1", global_name);
             Fmt(&buf, " --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
 
             if (features & (int)CompileFeature::DebugInfo) {

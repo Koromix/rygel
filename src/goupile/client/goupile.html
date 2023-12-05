@@ -125,8 +125,8 @@
 
                 document.body.classList.add('gp_loading');
                 window.addEventListener('load', function(e) {
-                    if (typeof app !== 'undefined') {
-                        var p = app.start();
+                    if (typeof goupile !== 'undefined') {
+                        var p = goupile.start();
 
                         p.catch(function(err) {
                             document.querySelector('#ui_main').innerHTML =
