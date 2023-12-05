@@ -293,3 +293,8 @@ button { cursor: pointer; }
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* -------------------- Misc -------------------- */
+
+label:has(input[type=checkbox]), label:has(input[type=radio]) { cursor: pointer; }
+input[type=checkbox], input[type=radio] { cursor: pointer; }
