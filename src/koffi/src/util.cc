@@ -117,13 +117,28 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
 
     if (value.IsString()) {
         std::string str = value.As<Napi::String>();
-        const TypeInfo *type = ResolveType(env, str.c_str(), out_directions);
+
+        // Quick path for known types (int, float *, etc.)
+        const TypeInfo *type = instance->types_map.FindValue(str.c_str(), nullptr);
 
         if (!type) {
-            if (!env.IsExceptionPending()) {
-                ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
+            type = ResolveType(env, str.c_str(), out_directions);
+
+            if (!type) {
+                if (!env.IsExceptionPending()) {
+                    ThrowError<Napi::TypeError>(env, "Unknown or invalid type name '%1'", str.c_str());
+                }
+                return nullptr;
             }
-            return nullptr;
+
+            // Cache for quick future access
+            bool inserted;
+            auto bucket = instance->types_map.TrySetDefault(str.c_str(), &inserted);
+
+            if (inserted) {
+                bucket->key = DuplicateString(str.c_str(), &instance->str_alloc).ptr;
+                bucket->value = type;
+            }
         }
 
         return type;
