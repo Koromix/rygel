@@ -484,6 +484,7 @@ footer {
 .buttons > a {
     display: block;
     width: 40%;
+    min-width: 250px;
     background: #ddd;
     padding: 1em;
     text-decoration: none;
