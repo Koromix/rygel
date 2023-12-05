@@ -245,7 +245,7 @@ button { cursor: pointer; }
     -ms-user-select: none;
 }
 
-.th_log_entry {
+#th_log > div {
     margin-bottom: 8px;
     padding: 10px;
     background: #373737;
@@ -255,10 +255,10 @@ button { cursor: pointer; }
     filter: opacity(96%);
 }
 @media (hover: hover) {
-    .th_log_entry:hover { filter: opacity(40%); }
+    #th_log > div:hover { filter: opacity(40%); }
 }
-.th_log_entry.success { background: #016a27; }
-.th_log_entry.error { background: #db0a0a; }
+#th_log > div.success { background: #016a27; }
+#th_log > div.error { background: #db0a0a; }
 
 .th_log_close {
     float: right;

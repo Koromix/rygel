@@ -364,21 +364,24 @@ function renderLog() {
     render(log_entries.map((entry, idx) => {
         let msg = (entry.msg instanceof Error) ? entry.msg.message : entry.msg;
 
+        if (typeof msg === 'string')
+            msg = msg.split('\n').map(line => [line, html`<br/>`]);
+
         if (entry.type === 'progress') {
-            return html`<div class="th_log_entry progress">
+            return html`<div class="progress">
                 <div class="th_log_spin"></div>
-                ${msg.split('\n').map(line => [line, html`<br/>`])}
+                ${msg}
             </div>`;
         } else if (entry.type === 'error') {
             return html`<div class="error" @click=${e => entry.close()}>
-                <button class="ui_log_close">X</button>
+                <button class="th_log_close">X</button>
                 <b>Une erreur est survenue</b><br/>
                 ${msg}
             </div>`;
         } else {
-            return html`<div class=${'th_log_entry ' + entry.type} @click=${e => entry.close()}>
+            return html`<div class=${entry.type} @click=${e => entry.close()}>
                 <button class="th_log_close">X</button>
-                ${msg.split('\n').map(line => [line, html`<br/>`])}
+                ${msg}
             </div>`;
         }
     }), log_el);
