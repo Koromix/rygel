@@ -4,6 +4,11 @@
 
 ### Koffi 2.6
 
+#### Koffi 2.6.11 (2023-12-05)
+
+- Speed up resolving simple and often used type names
+- Fix use of optional length argument with [koffi.encode()](variables.md#encode-to-c-memory)
+
 #### Koffi 2.6.10 (2023-11-29)
 
 - Protect GetLastError() value from Node.js and V8 on Windows
