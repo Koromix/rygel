@@ -659,7 +659,7 @@ async function runGhs() {
     // Render grid or plot
     if (route.ghs.plot) {
         if (typeof Chart === 'undefined')
-            await Net.loadScript(`${ENV.base_url}static/chart.min.js`);
+            await Net.loadScript(`${ENV.base_url}static/chart.bundle.js`);
 
         render(chart_canvas, document.querySelector('#th_view'));
         updatePriceChart(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
@@ -840,7 +840,7 @@ function updatePriceChart(ghm_root, columns, max_duration, apply_coeff) {
     } else {
         let ctx = chart_canvas.getContext('2d');
 
-        chart_obj = new Chart(ctx, {
+        chart_obj = new chart.Chart(ctx, {
             type: 'line',
             data: {
                 datasets: datasets
