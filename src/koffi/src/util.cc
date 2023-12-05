@@ -121,7 +121,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         // Quick path for known types (int, float *, etc.)
         const TypeInfo *type = instance->types_map.FindValue(str.c_str(), nullptr);
 
-        if (!type) {
+        if (!type || (type->flags & (int)TypeFlag::IsIncomplete)) {
             type = ResolveType(env, str.c_str(), out_directions);
 
             if (!type) {
