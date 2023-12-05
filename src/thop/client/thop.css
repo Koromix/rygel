@@ -45,7 +45,7 @@ main {
     padding: 6px 12px 6px 12px;
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse) or (max-width: 1100px) {
     #th_side {
         display: block;
         width: 100%;
@@ -86,7 +86,7 @@ button { cursor: pointer; }
     margin: 0 auto;
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse) or (max-width: 1100px) {
     .th_form {
         width: auto;
         margin: 0 auto;
@@ -134,11 +134,11 @@ button { cursor: pointer; }
     text-align: center;
     font-size: 0.8em;
 }
-@media (pointer: coarse), (-ms-high-contrast: active), (-ms-high-contrast: none) {
+@media (pointer: coarse) or (max-width: 1100px), (-ms-high-contrast: active), (-ms-high-contrast: none) {
     #th_version { display: none; }
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse) or (max-width: 1100px) {
     #th_logo { display: none; }
 
     .th_deploy {
@@ -200,7 +200,7 @@ button { cursor: pointer; }
     text-align: center;
 }
 
-@media (pointer: coarse) {
+@media (pointer: coarse) or (max-width: 1100px) {
     #th_header {
         position: fixed;
         top: 38px;
