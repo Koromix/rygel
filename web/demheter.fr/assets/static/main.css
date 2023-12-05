@@ -466,6 +466,11 @@ footer {
     border: 2px solid #ffd212;
 }
 
+@media screen and (max-width: 960px) {
+    .tel_3114 { flex-direction: column; }
+    .tel_3114 > img { margin: 0.5em 0; }
+}
+
 .shelf {
     display: flex;
     margin: 2em 1em;
