@@ -76,6 +76,10 @@ a:hover { color: var(--color, black); }
     color: #383838;
     text-decoration: none;
 }
+#top li > div a.category {
+    cursor: default;
+    pointer-events: none;
+}
 #top li > a {
     display: block;
     border-bottom: 1px solid #383838;

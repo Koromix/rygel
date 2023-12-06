@@ -473,7 +473,7 @@ static Size RenderMenu(Span<const PageData> pages, Size active_idx,
         bool active = (active_idx >= i && active_idx < j);
         int margin = std::max(0, depth - 1);
 
-        Print(writer, "<a href=\"#\"%1 style=\"margin-left: %2em;\">%3</a>", active ? " class=\"active\"" : "", margin, category);
+        Print(writer, "<a href=\"#\" class=\"category%1\" style=\"margin-left: %2em;\">%3</a>", active ? " active" : "", margin, category);
         PrintLn(writer, "%1", depth ? "" : "<div>");
         while (i < j) {
             i = RenderMenu(pages, active_idx, i, j, depth + 1, writer);
