@@ -47,7 +47,7 @@ Apprenez à identifier la catatonie (ou syndrome catatonique) grâce aux vidéos
 
 # Thérapies Émotionnelles, Comportementales et Cognitives ^ TECC
 
-## Fiches explicatives
+## Guides pratiques
 
 Le site [tccmontreal.com](https://tccmontreal.com) fournit des guides de pratique pour les thérapeutes selon les diagnostics.
 
