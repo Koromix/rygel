@@ -1,9 +1,9 @@
 diff --git a/vendor/curl/lib/config-freebsd.h b/vendor/curl/lib/config-freebsd.h
 new file mode 100644
-index 000000000..4f9cee4d6
+index 000000000..3745108c8
 --- /dev/null
 +++ b/vendor/curl/lib/config-freebsd.h
-@@ -0,0 +1,1080 @@
+@@ -0,0 +1,1074 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -338,9 +338,6 @@ index 000000000..4f9cee4d6
 +/* Define to 1 if you have a IPv6 capable working inet_pton function. */
 +#define HAVE_INET_PTON 1
 +
-+/* Define to 1 if you have the <inttypes.h> header file. */
-+#define HAVE_INTTYPES_H 1
-+
 +/* Define to 1 if you have the ioctl function. */
 +#define HAVE_IOCTL 1
 +
@@ -618,9 +615,6 @@ index 000000000..4f9cee4d6
 +
 +/* Define to 1 if you have the <stdbool.h> header file. */
 +#define HAVE_STDBOOL_H 1
-+
-+/* Define to 1 if you have the <stdint.h> header file. */
-+#define HAVE_STDINT_H 1
 +
 +/* Define to 1 if you have the <stdio.h> header file. */
 +#define HAVE_STDIO_H 1
@@ -1086,10 +1080,10 @@ index 000000000..4f9cee4d6
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/config-linux.h b/vendor/curl/lib/config-linux.h
 new file mode 100644
-index 000000000..86ab1f0f2
+index 000000000..b13f95dd8
 --- /dev/null
 +++ b/vendor/curl/lib/config-linux.h
-@@ -0,0 +1,1044 @@
+@@ -0,0 +1,1038 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -1430,9 +1424,6 @@ index 000000000..86ab1f0f2
 +/* Define to 1 if you have a IPv6 capable working inet_pton function. */
 +#define HAVE_INET_PTON 1
 +
-+/* Define to 1 if you have the <inttypes.h> header file. */
-+#define HAVE_INTTYPES_H 1
-+
 +/* Define to 1 if you have the ioctl function. */
 +#define HAVE_IOCTL 1
 +
@@ -1692,9 +1683,6 @@ index 000000000..86ab1f0f2
 +
 +/* Define to 1 if you have the <stdbool.h> header file. */
 +#define HAVE_STDBOOL_H 1
-+
-+/* Define to 1 if you have the <stdint.h> header file. */
-+#define HAVE_STDINT_H 1
 +
 +/* Define to 1 if you have the <stdlib.h> header file. */
 +#define HAVE_STDLIB_H 1
@@ -2136,10 +2124,10 @@ index 000000000..86ab1f0f2
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/config-macos.h b/vendor/curl/lib/config-macos.h
 new file mode 100644
-index 000000000..82b08e5e9
+index 000000000..236f2a57e
 --- /dev/null
 +++ b/vendor/curl/lib/config-macos.h
-@@ -0,0 +1,1044 @@
+@@ -0,0 +1,1038 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -2480,9 +2468,6 @@ index 000000000..82b08e5e9
 +/* Define to 1 if you have a IPv6 capable working inet_pton function. */
 +#define HAVE_INET_PTON 1
 +
-+/* Define to 1 if you have the <inttypes.h> header file. */
-+#define HAVE_INTTYPES_H 1
-+
 +/* Define to 1 if you have the ioctl function. */
 +#define HAVE_IOCTL 1
 +
@@ -2742,9 +2727,6 @@ index 000000000..82b08e5e9
 +
 +/* Define to 1 if you have the <stdbool.h> header file. */
 +#define HAVE_STDBOOL_H 1
-+
-+/* Define to 1 if you have the <stdint.h> header file. */
-+#define HAVE_STDINT_H 1
 +
 +/* Define to 1 if you have the <stdlib.h> header file. */
 +#define HAVE_STDLIB_H 1
@@ -3186,10 +3168,10 @@ index 000000000..82b08e5e9
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/config-openbsd.h b/vendor/curl/lib/config-openbsd.h
 new file mode 100644
-index 000000000..a0a09ebf2
+index 000000000..743638517
 --- /dev/null
 +++ b/vendor/curl/lib/config-openbsd.h
-@@ -0,0 +1,1086 @@
+@@ -0,0 +1,1080 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
 +
@@ -3524,9 +3506,6 @@ index 000000000..a0a09ebf2
 +/* Define to 1 if you have a IPv6 capable working inet_pton function. */
 +#define HAVE_INET_PTON 1
 +
-+/* Define to 1 if you have the <inttypes.h> header file. */
-+#define HAVE_INTTYPES_H 1
-+
 +/* Define to 1 if you have the ioctl function. */
 +#define HAVE_IOCTL 1
 +
@@ -3810,9 +3789,6 @@ index 000000000..a0a09ebf2
 +
 +/* Define to 1 if you have the <stdbool.h> header file. */
 +#define HAVE_STDBOOL_H 1
-+
-+/* Define to 1 if you have the <stdint.h> header file. */
-+#define HAVE_STDINT_H 1
 +
 +/* Define to 1 if you have the <stdio.h> header file. */
 +#define HAVE_STDIO_H 1
@@ -4277,10 +4253,10 @@ index 000000000..a0a09ebf2
 +/* the signed version of size_t */
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/curl_setup.h b/vendor/curl/lib/curl_setup.h
-index ba14972e2..960103888 100644
+index a08784140..9978b5f96 100644
 --- a/vendor/curl/lib/curl_setup.h
 +++ b/vendor/curl/lib/curl_setup.h
-@@ -87,6 +87,22 @@
+@@ -84,6 +84,22 @@
  #  endif
  #endif
  

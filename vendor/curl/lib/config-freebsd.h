@@ -332,9 +332,6 @@
 /* Define to 1 if you have a IPv6 capable working inet_pton function. */
 #define HAVE_INET_PTON 1
 
-/* Define to 1 if you have the <inttypes.h> header file. */
-#define HAVE_INTTYPES_H 1
-
 /* Define to 1 if you have the ioctl function. */
 #define HAVE_IOCTL 1
 
@@ -612,9 +609,6 @@
 
 /* Define to 1 if you have the <stdbool.h> header file. */
 #define HAVE_STDBOOL_H 1
-
-/* Define to 1 if you have the <stdint.h> header file. */
-#define HAVE_STDINT_H 1
 
 /* Define to 1 if you have the <stdio.h> header file. */
 #define HAVE_STDIO_H 1
