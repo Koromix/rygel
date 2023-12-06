@@ -478,6 +478,7 @@ footer {
     justify-content: center;
     flex-wrap: wrap;
 }
+.shelf img { object-fit: contain; }
 
 .buttons {
     margin: 1em;

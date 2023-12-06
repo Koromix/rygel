@@ -13,7 +13,7 @@ Voici une sélection de jeux adaptés à différentes situations.
 ## Le trouble bipolaire ^ Trouble bipolaire
 
 <div class="shelf">
-    <a href="http://rectoverso.le-jeu.fr/" target="_blank"><img src="{{ ASSET static/jeux/recto_verso.png }}" alt="RectoVero (le jeu)" height="180" /></a>
+    <a href="http://rectoverso.le-jeu.fr/" target="_blank"><img src="{{ ASSET static/jeux/recto_verso.png }}" alt="RectoVero (le jeu)" width="600" /></a>
 </div>
 
 ## Gestion des émotions
