@@ -311,7 +311,7 @@ footer {
     #logo {
         height: 80%;
         margin: 0 auto;
-        transform: translate(-24px, 0);
+        transform: translate(-10px, 0);
     }
     #top.active #logo { display: none; }
 
