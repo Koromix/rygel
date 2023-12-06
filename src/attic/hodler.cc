@@ -410,6 +410,74 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
     return true;
 }
 
+static Size RenderMenu(Span<const PageData> pages, Size active_idx,
+                       Size idx, Size end, int depth, StreamWriter *writer)
+{
+    const PageData *page = &pages[idx];
+
+    if (!page->menu) {
+        RG_ASSERT(!depth);
+        return idx + 1;
+    }
+
+    Span<const char> category = {};
+    Span<const char> title = page->menu;
+
+    for (Size i = 0; i <= depth; i++) {
+        Span<const char> remain = title;
+        Span<const char> frag = TrimStr(SplitStr(remain, '/', &remain));
+
+        if (!remain.len) {
+            category = {};
+            break;
+        }
+
+        category = frag;
+        title = remain;
+    }
+    title = TrimStr(title);
+
+    Print(writer, "%1", depth ? "" : "<li>");
+
+    if (category.len) {
+        Size i = idx;
+        Size j = i + 1;
+
+        while (j < end) {
+            Span<const char> remain = pages[j].menu;
+            Span<const char> new_category = {};
+
+            for (int k = 0; k <= depth; k++) {
+                new_category = TrimStr(SplitStr(remain, '/', &remain));
+            }
+
+            if (new_category != category)
+                break;
+            j++;
+        }
+
+        bool active = (active_idx >= i && active_idx < j);
+        int margin = std::max(0, depth - 1);
+
+        Print(writer, "<a href=\"#\"%1 style=\"margin-left: %2em;\">%3</a>", active ? " class=\"active\"" : "", margin, category);
+        PrintLn(writer, "%1", depth ? "" : "<div>");
+        while (i < j) {
+            i = RenderMenu(pages, active_idx, i, j, depth + 1, writer);
+        }
+        PrintLn(writer, "%1", depth ? "" : "</div></li>");
+
+        return j;
+    } else {
+        bool active = (active_idx == idx);
+        int margin = std::max(0, depth - 1);
+
+        Print(writer, "<a href=\"%1\"%2 style=\"margin-left: %3em;\">%4</a>", page->url, active ? " class=\"active\"" : "", margin, title);
+        PrintLn(writer, "%1", depth ? "" : "</li>");
+
+        return idx + 1;
+    }
+}
+
 static bool RenderTemplate(const char *template_filename, Span<const PageData> pages, Size page_idx,
                            const AssetSet &assets, const char *dest_filename)
 {
@@ -433,43 +501,8 @@ static bool RenderTemplate(const char *template_filename, Span<const PageData> p
 
             RenderAsset(path, hash, writer);
         } else if (key == "LINKS") {
-            for (Size i = 0; i < pages.len; i++) {
-                const PageData *menu_page = &pages[i];
-
-                if (!menu_page->menu)
-                    continue;
-
-                if (strchr(menu_page->menu, '/')) {
-                    Span<const char> category = TrimStr(SplitStr(menu_page->menu, '/'));
-
-                    Size j = i + 1;
-                    while (j < pages.len) {
-                        Span<const char> new_category = TrimStr(SplitStr(pages[j].menu, '/'));
-
-                        if (new_category != category)
-                            break;
-                        j++;
-                    }
-
-                    bool active = (page_idx >= i && page_idx < j);
-                    PrintLn(writer, "<li><a href=\"#\"%1>%2</a><div>", active ? " class=\"active\"" : "", category);
-
-                    for (; i < j; i++) {
-                        menu_page = &pages[i];
-
-                        const char *item = TrimStrLeft(strchr(menu_page->menu, '/') + 1).ptr;
-                        SplitStr(menu_page->menu, '/', &item);
-
-                        bool active = (page_idx == i);
-                        PrintLn(writer, "<a href=\"%1\"%2>%3</a>", menu_page->url, active ? " class=\"active\"" : "", item);
-                    }
-                    i = j - 1;
-
-                    PrintLn(writer, "</div></li>");
-                } else {
-                    bool active = (page_idx == i);
-                    PrintLn(writer, "<li><a href=\"%1\"%2>%3</a></li>", menu_page->url, active ? " class=\"active\"" : "", menu_page->menu);
-                }
+            for (Size i = 0; i < pages.len;) {
+                i = RenderMenu(pages, page_idx, i, pages.len, 0, writer);
             }
         } else if (key == "TOC") {
             if (page.sections.len > 1) {
