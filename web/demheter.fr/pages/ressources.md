@@ -45,7 +45,7 @@ Apprenez à identifier la catatonie (ou syndrome catatonique) grâce aux vidéos
     <iframe width="560" height="315" src="https://www.youtube.com/embed/i9zEJM_OWzE?si=BwGVg_hEtTWFN1fw" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 </div>
 
-# Thérapies Émotionnelles, Comportementales et Cognitives
+# Thérapies Émotionnelles, Comportementales et Cognitives ^ TECC
 
 ## Fiches explicatives
 
@@ -65,7 +65,7 @@ Le site [tccmontreal.com](https://tccmontreal.com) fournit des guides de pratiqu
     <a href="https://www.elsevier-masson.fr/la-therapie-des-schemas-9782294758669.html" target="_blank"><img src="{{ ASSET static/livres/tecc/therapie_des_schemas_principes_et_outils.jpg }}" alt="La thérapie des schémas : Principes et outils pratiques" height="340" /></a>
 </div>
 
-# Électro-convulsivo-thérapie (ECT)
+# Électro-convulsivo-thérapie (ECT) ^ Électro-convulsivo-thérapie
 
 Consultez le site [CONN-ECT](https://www.conn-ect.com/) pour en apprendre davantage sur l'électroconvulsivothérapie, ses indications, ses bénéfices et ses risques.
 

@@ -10,7 +10,7 @@ Voici une sélection de jeux adaptés à différentes situations.
     <a href="https://www.umeo-store.com/accueil/251-alternastrat-anxiete-depression.html" target="_blank"><img src="{{ ASSET static/jeux/umeo_anxiete_depression.png }}" alt="AlternaCog - Anxiété et dépression (UMEO)" width="400" /></a>
 </div>
 
-## Le trouble bipolaire
+## Le trouble bipolaire ^ Trouble bipolaire
 
 <div class="shelf">
     <a href="http://rectoverso.le-jeu.fr/" target="_blank"><img src="{{ ASSET static/jeux/recto_verso.png }}" alt="RectoVero (le jeu)" height="180" /></a>
@@ -23,7 +23,7 @@ Voici une sélection de jeux adaptés à différentes situations.
     <a href="https://www.umeo-store.com/jeux-therapeutiques/206-jeu-emocartes-adultes.html" target="_blank"><img src="{{ ASSET static/jeux/umeo_emocartes_adultes.png }}" alt="EmoCartes - Adultes (UMEO)" width="340" /></a>
 </div>
 
-## Les distortions cognitives
+## Les distortions cognitives ^ Distortions cognitives
 
 <div class="shelf">
     <a href="https://www.umeo-store.com/jeux-therapeutiques/208-jeu-discog.html" target="_blank"><img src="{{ ASSET static/jeux/umeo_discog.png }}" alt="Discog (UMEO)" height="340" /></a>

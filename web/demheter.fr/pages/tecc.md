@@ -1,4 +1,4 @@
-# Thérapies Émotionnelles, Comportementales et Cognitives
+# Thérapies Émotionnelles, Comportementales et Cognitives ^ TECC
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET static/psycho/TECC.svg }}"></object>
 

@@ -1,11 +1,11 @@
 # Indications
 
-## Indications principales
+## Indications principales ^ Principales
 
 - Traitement prophylactique des rechutes des troubles bipolaires et des troubles schizo-affectifs
 - Traitement curatif des états maniaques ou hypomaniaques
 
-## Autres indications psychiatriques (hors AMM)
+## Autres indications psychiatriques (hors AMM) ^ Autres indications
 
 - Potentialisation d'un traitement antidépresseur dans la dépression unipolaire
 - Troubles psychotiques induits par des stéroïdes

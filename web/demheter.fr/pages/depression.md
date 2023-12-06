@@ -15,7 +15,7 @@ Source : [https://www.la-depression.org/comprendre-la-depression/la-depression-e
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET static/depression/semiologie.svg }}"></object>
 
-## Diagnostic différentiel
+## Diagnostic différentiel ^ Différentiel
 
 <object class="schema" type="image/svg+xml" data="{{ ASSET static/depression/differentiel.svg }}"></object>
 
