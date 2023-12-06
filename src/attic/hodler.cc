@@ -389,9 +389,23 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                 if (level < 3 && cmark_node_get_type(child) == CMARK_NODE_TEXT) {
                     PageSection sec = {};
 
+                    const char *literal = cmark_node_get_literal(child);
+
+                    Span<const char> toc;
+                    Span<const char> title = SplitStr(literal, '^', &toc);
+
+                    if (toc.len) {
+                        toc = DuplicateString(toc, alloc);
+                        title = DuplicateString(title, alloc);
+
+                        cmark_node_set_literal(child, title.ptr);
+                    } else {
+                        toc = DuplicateString(title, alloc);
+                    }
+
                     sec.level = level;
-                    sec.title = DuplicateString(cmark_node_get_literal(child), alloc).ptr;
-                    sec.id = TextToID(sec.title, alloc);
+                    sec.title = toc.ptr;
+                    sec.id = TextToID(title, alloc);
 
                     page->sections.Append(sec);
 
