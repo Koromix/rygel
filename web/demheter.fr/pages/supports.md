@@ -34,5 +34,5 @@ Voici une sélection de jeux adaptés à différentes situations.
 Ce jeu fournit aux usagers des clefs pour comprendre et agir tout au long de leur parcours de soin.
 
 <div class="shelf">
-    <a href="https://www.santementale.fr/2020/07/parcours-de-soin-un-jeu-pour-comprendre-et-gair/" target="_blank"><img src="{{ ASSET static/jeux/parcours_de_soin.jpg }}" alt="" height="200" /></a>
+    <a href="https://www.santementale.fr/2020/07/parcours-de-soin-un-jeu-pour-comprendre-et-gair/" target="_blank"><img src="{{ ASSET static/jeux/parcours_de_soin.jpg }}" alt="Parcours de soin : un jeu pour comprendre et agir" height="200" /></a>
 </div>
