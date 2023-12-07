@@ -82,6 +82,42 @@ const Util = new function() {
             yield func(i);
     };
 
+    this.loadFile = async function() {
+        let file = await new Promise((resolve, reject) => {
+            let input = document.createElement('input');
+            input.type = 'file';
+
+            let cancel = true;
+
+            // Detect file selection
+            input.onchange = async (e) => {
+                let file = e.target.files[0];
+
+                if (file != null) {
+                    resolve(file);
+                    cancel = false;
+                } else {
+                    reject();
+                }
+            };
+
+            // Hack to detect cancellation... great API!
+            let teardown = () => {
+                document.body.removeEventListener('focus', teardown, true);
+
+                setTimeout(() => {
+                    if (cancel)
+                        reject();
+                }, 200);
+            };
+            document.body.addEventListener('focus', teardown, true);
+
+            input.click();
+        });
+
+        return file;
+    }
+
     this.getCookie = function(key, default_value = undefined) {
         let cookies = document.cookie;
         let offset = 0;
@@ -359,6 +395,117 @@ const Net = new function() {
     };
 };
 
+const Base64 = new function() {
+    const BaseChars = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+                       'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b',
+                       'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+                       'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3',
+                       '4', '5', '6', '7', '8', '9', '+', '/'];
+    const BaseCodes = [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                       null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                       null, null, null, null, null, null, null, null, null, null, null, 0x3E, null, null, null, 0x3F,
+                       0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, null, null, null, 0x00, null, null,
+                       null, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+                       0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, null, null, null, null, null,
+                       null, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+                       0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33];
+
+    const UrlChars = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+                      'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b',
+                      'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+                      'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '0', '1', '2', '3',
+                      '4', '5', '6', '7', '8', '9', '-', '_'];
+    const UrlCodes = [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                      null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null,
+                      null, null, null, null, null, null, null, null, null, null, null, null, null, 0x3E, null, null,
+                      0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3A, 0x3B, 0x3C, 0x3D, null, null, null, null, null, null,
+                      null, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+                      0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, null, null, null, null, 0x3F,
+                      null, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
+                      0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33];
+
+    this.toBase64 = function(bytes) { return convertToBase64(bytes, BaseChars, true); };
+    this.toBase64Url = function(bytes) { return convertToBase64(bytes, UrlChars, false); };
+
+    function convertToBase64(bytes, chars, pad) {
+        if (bytes instanceof ArrayBuffer)
+            bytes = new Uint8Array(bytes);
+
+        let result = '';
+        let length = bytes.length;
+
+        let i = 0;
+
+        for (i = 2; i < length; i += 3) {
+            result += chars[bytes[i - 2] >> 2];
+            result += chars[(bytes[i - 2] & 0x03) << 4 | bytes[i - 1] >> 4];
+            result += chars[(bytes[i - 1] & 0x0F) << 2 | bytes[i] >> 6];
+            result += chars[bytes[i] & 0x3F];
+        }
+
+        if (i == length + 1) {
+            result += chars[bytes[i - 2] >> 2];
+            result += chars[(bytes[i - 2] & 0x03) << 4];
+            result += pad ? '==' : '';
+        } else if (i == length) {
+            result += chars[bytes[i - 2] >> 2];
+            result += chars[(bytes[i - 2] & 0x03) << 4 | bytes[i - 1] >> 4];
+            result += chars[(bytes[i - 1] & 0x0F) << 2];
+            result += pad ? '=' : '';
+        }
+
+        return result;
+    }
+
+    this.toBytes = function(str) { return convertToBytes(str, BaseCodes, true); };
+    this.toBytesUrl = function(str) { return convertToBytes(str, UrlCodes, false); };
+
+    function convertToBytes(str, codes, pad) {
+        let missing = 0;
+        let length = str.length;
+
+        if (pad) {
+            if (str.length % 4 != 0)
+                throw new Error('Invalid base64 string');
+
+            missing = (str[str.length - 1] == '=') +
+                      (str[str.length - 2] == '=') +
+                      (str[str.length - 3] == '=');
+        } else {
+            missing = (4 - (str.length & 3)) & 3;
+            length += missing;
+        }
+
+        if (missing > 2)
+            throw new Error('Invalid base64 string');
+
+        let result = new Uint8Array(3 * (length / 4));
+
+        for (let i = 0, j = 0; i < length; i += 4, j += 3) {
+            let tmp = (getBase64Code(codes, str.charCodeAt(i)) << 18) |
+                      (getBase64Code(codes, str.charCodeAt(i + 1)) << 12) |
+                      (getBase64Code(codes, str.charCodeAt(i + 2)) << 6) |
+                      (getBase64Code(codes, str.charCodeAt(i + 3)) << 0);
+
+            result[j] = tmp >> 16;
+            result[j + 1] = tmp >> 8 & 0xFF;
+            result[j + 2] = tmp & 0xFF;
+        }
+
+        return result.subarray(0, result.length - missing);
+    }
+
+    function getBase64Code(codes, c) {
+        if (isNaN(c))
+            return 0;
+
+        let code = codes[c];
+        if (code == null)
+            throw new Error('Invalid base64 string');
+        return code;
+    }
+};
+
 const UI = new function() {
     let log_entries = [];
 
@@ -477,5 +624,6 @@ export {
     Util,
     Log,
     Net,
+    Base64,
     UI
 }

@@ -1,4 +1,4 @@
-import { Util, Net, Log, UI } from './base.js';
+import { Util, Net, Log, Base64, UI } from './base.js';
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 
 let admin = false;
@@ -8,7 +8,7 @@ async function start() {
     Log.pushHandler(UI.notifyHandler);
 
     try {
-        news = await Net.get('api.php?method=news');
+        news = await Net.get('/api/api.php?method=news');
         admin = true;
     } catch (err) {
         if (err.status != 401)
@@ -21,7 +21,7 @@ async function start() {
 async function run() {
     if (admin) {
         if (news == null)
-            news = await Net.get('api.php?method=news');
+            news = await Net.get('/api/api.php?method=news');
         renderNews();
     } else {
         renderLogin();
@@ -56,35 +56,8 @@ async function login(e) {
     let target = e.target;
     let password = target.elements.password.value;
 
-    await Net.post('api.php?method=login', { password: password });
+    await Net.post('/api/api.php?method=login', { password: password });
     admin = true;
-
-    run();
-}
-
-async function resetNews() {
-    news = await Net.get('api.php?method=news');
-    run();
-}
-
-async function submitNews(e) {
-    let target = e.target;
-    let payload = [];
-
-    for (let tr of target.querySelectorAll('tbody > tr')) {
-        if (tr.querySelector('.image') == null)
-            continue;
-
-        let item = {
-            image: tr.querySelector('.image').value,
-            title: tr.querySelector('.title').value,
-            content: tr.querySelector('.content').value
-        };
-
-        payload.push(item);
-    }
-
-    news = await Net.post('api.php?method=news', { news: payload });
 
     run();
 }
@@ -111,28 +84,40 @@ function renderNews() {
                         </colgroup>
 
                         <thead>
-                            <th>Image (URL)</th>
+                            <th>Image</th>
                             <th>Titre</th>
                             <th>Contenu</th>
                             <th></th>
                         </thead>
 
                         <tbody>
-                            ${news.map(item => html`
-                                <tr>
-                                    <td><input class="image" type="text" value=${item.image}></td>
-                                    <td><input class="title" type="text" value=${item.title}></td>
-                                    <td><textarea class="content" style="width: 100%";" rows="5">${item.content}</textarea></td>
-                                    <td class="right">
-                                        <button type="button" class="small"
-                                                @click=${UI.wrap(e => deleteNews(item))}><img src="assets/delete.webp" alt="Supprimer" /></button>
-                                    </td>
-                                </tr>
-                            `)}
+                            ${news.map(item => {
+                                return html`
+                                    <tr>
+                                        <td style="text-align: center;">
+                                            ${item.png === true ? html`<img src=${'/api/api.php?method=png&id=' + item.id} height="32" alt=""/><br/>` : ''}
+                                            ${typeof item.png == 'string' ? html`<img src=${'data:image/png;base64,' + item.png} height="32" alt=""/><br/>` : ''}
+                                            <div style="float: right">
+                                                <button type="button" class="small" @click=${e => updateImage(item)}>Modifier</button>
+                                                ${item.png ? html`<button type="button" class="small"  @click=${e => { item.png = null; run(); }}><img src="assets/delete.webp" alt="Supprimer" /></button>` : ''}
+                                            </div>
+                                        </td>
+                                        <td><input class="title" type="text" value=${item.title}
+                                                   @input=${e => { item.title = e.target.value; }}></td>
+                                        <td><textarea class="content" style="width: 100%";" rows="5"
+                                                      @input=${e => { item.content = e.target.value; }}>${item.content}</textarea></td>
+                                        <td class="right">
+                                            <button type="button" class="small"
+                                                    @click=${UI.wrap(e => deleteNews(item))}><img src="assets/delete.webp" alt="Supprimer" /></button>
+                                        </td>
+                                    </tr>
+                                `;
+                            })}
                             ${!news.length ? html`<tr><td colspan="4" style="text-align: center;">Aucun contenu à afficher</td></tr>` : ''}
                         </tbody>
                     </table>
                 </div>
+
                 <div class="footer">
                     <button type="button" class="danger" @click=${UI.wrap(resetNews)}>Annuler</button>
                     <button type="submit">Valider</button>
@@ -144,7 +129,7 @@ function renderNews() {
 
 function addNews(e) {
     let item = {
-        image: '',
+        png: null,
         title: '',
         content: ''
     };
@@ -158,6 +143,29 @@ function deleteNews(item) {
     run();
 }
 
-export {
-    start
+async function updateImage(item) {
+    let file = await Util.loadFile();
+
+    let buf = await file.arrayBuffer();
+    let base64 = Base64.toBase64(buf);
+
+    item.png = base64;
+
+    run();
 }
+
+async function resetNews() {
+    news = await Net.get('/api/api.php?method=news');
+    run();
+}
+
+async function submitNews(e) {
+    let target = e.target;
+    let payload = [];
+
+    news = await Net.post('/api/api.php?method=news', { news: news });
+
+    run();
+}
+
+export { start }

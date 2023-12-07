@@ -124,25 +124,16 @@
 
 <?php
 
-require_once("vendor/parsedown/Parsedown.php");
+require_once(__DIR__ . "/api/parsedown/Parsedown.php");
 
-$db = new SQLite3("data/news.db", SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
+if (file_exists(__DIR__ . "/data/news.db")) {
+    $db = new SQLite3("data/news.db", SQLITE3_OPEN_READWRITE);
 
-$db->query("
-    CREATE TABLE IF NOT EXISTS news (
-        id INTEGER,
-        image TEXT NOT NULL,
-        title TEXT NOT NULL,
-        content TEXT NOT NULL,
-        date INTEGER,
-        duration INTEGER,
-
-        PRIMARY KEY('id')
-    );
-");
-
-$res = $db->query("SELECT image, title, content FROM news ORDER BY id");
-$news = fetch_all($res);
+    $res = $db->query("SELECT id, IIF(png IS NULL, 0, 1) AS png, title, content FROM news ORDER BY id");
+    $news = fetch_all($res);
+} else {
+    $news = [];
+}
 
 if (count($news)) {
     echo '<div id="news">';
@@ -155,12 +146,13 @@ if (count($news)) {
     foreach ($news as $i => $item) {
         $cls = $i ? "" : "active";
 
+        $image = $item["png"] ? ("/api/api.php?method=png&id=" . $item["id"]) : "";
         $title = htmlspecialchars($item["title"]);
         $content = parse_markdown($item["content"]);
 
         echo <<<INFO
             <div class="{$cls}">
-                <img src="{$item["image"]}" alt="" />
+                <img src="{$image}" alt="" />
                 <div>
                     <p class="title">$title</p>
                     $content
