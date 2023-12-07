@@ -188,7 +188,7 @@ const Base64 = new function() {
 };
 
 // ------------------------------------------------------------------------
-// Base 64
+// SHA-256
 // ------------------------------------------------------------------------
 
 function Sha256(data) {
@@ -388,7 +388,7 @@ function Sha256(data) {
         this.update(data);
         return this.finalize();
     }
-}
+};
 
 // Javascript Blob/File API sucks, plain and simple
 Sha256.async = async function(blob) {
