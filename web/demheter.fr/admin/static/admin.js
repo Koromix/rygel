@@ -99,7 +99,7 @@ function renderNews() {
                                             ${typeof item.png == 'string' ? html`<img src=${'data:image/png;base64,' + item.png} height="32" alt=""/><br/>` : ''}
                                             <div style="float: right">
                                                 <button type="button" class="small" @click=${e => updateImage(item)}>Modifier</button>
-                                                ${item.png ? html`<button type="button" class="small"  @click=${e => { item.png = null; run(); }}><img src="assets/delete.webp" alt="Supprimer" /></button>` : ''}
+                                                ${item.png ? html`<button type="button" class="small"  @click=${e => { item.png = null; run(); }}><img src="static/delete.webp" alt="Supprimer" /></button>` : ''}
                                             </div>
                                         </td>
                                         <td><input class="title" type="text" value=${item.title}
@@ -108,7 +108,7 @@ function renderNews() {
                                                       @input=${e => { item.content = e.target.value; }}>${item.content}</textarea></td>
                                         <td class="right">
                                             <button type="button" class="small"
-                                                    @click=${UI.wrap(e => deleteNews(item))}><img src="assets/delete.webp" alt="Supprimer" /></button>
+                                                    @click=${UI.wrap(e => deleteNews(item))}><img src="static/delete.webp" alt="Supprimer" /></button>
                                         </td>
                                     </tr>
                                 `;
