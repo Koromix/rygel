@@ -15,7 +15,7 @@ Le site de [Psycom](https://www.psycom.org/) peut vous aider à vous orienter et
     <a href="https://www.psycom.org/agir/" target="_blank">Outils pratiques</a>
 </div>
 
-# Pour apprendre
+# Pour comprendre
 
 ## Sites internet
 
