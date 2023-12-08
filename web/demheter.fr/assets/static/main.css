@@ -281,7 +281,7 @@ footer {
     #top menu {
         height: 90px;
         padding-left: 60px;
-        padding-bottom: 0px;
+        padding-bottom: 16px;
         flex-direction: column;
         gap: 0;
         align-items: start;
@@ -309,7 +309,7 @@ footer {
     }
 
     #logo {
-        height: 80%;
+        height: 100%;
         margin: 0 auto;
         transform: translate(-10px, 0);
     }
