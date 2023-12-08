@@ -3,6 +3,7 @@
 define("PASSWORD_HASH", '$2y$10$wTBwj.0pChAHLS7xlCCja.AwEHg873eOgxnk7kBt2Tbokjn9ueZla');
 
 require_once(__DIR__ . "/util.php");
+require_once(__DIR__ . "/database.php");
 
 $method = $_GET["method"] ?? null;
 
@@ -91,66 +92,6 @@ switch ($method) {
     } break;
 
     default: { fatal(404, "Unknown API"); } break;
-}
-
-function open_database() {
-    $db = new SQLite3(__DIR__ . "/../data/news.db", SQLITE3_OPEN_READWRITE | SQLITE3_OPEN_CREATE);
-
-    $schema = 2;
-    $version = $db->querySingle("PRAGMA user_version");
-
-    try {
-        $db->query("BEGIN TRANSACTION");
-
-        switch ($version) {
-            case 0: {
-                $db->query("
-                    CREATE TABLE IF NOT EXISTS news (
-                        id INTEGER,
-                        image TEXT NOT NULL,
-                        title TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        date INTEGER,
-                        duration INTEGER,
-
-                        PRIMARY KEY('id')
-                    );
-                ");
-            } // fallthrough
-
-            case 1: {
-                $db->query("
-                    ALTER TABLE news RENAME TO news_BAK;
-
-                    CREATE TABLE news (
-                        id INTEGER,
-                        png BLOB,
-                        title TEXT NOT NULL,
-                        content TEXT NOT NULL,
-                        date INTEGER,
-                        duration INTEGER,
-
-                        changeset TEXT,
-
-                        PRIMARY KEY('id')
-                    );
-
-                    INSERT INTO news (id, title, content, date, duration)
-                        SELECT id, title, content, date, duration FROM news_BAK;
-
-                    DROP TABLE news_BAK;
-                ");
-            } // fallthrough
-        }
-
-        $db->query("PRAGMA user_version = " . $schema);
-        $db->query("COMMIT");
-    } catch (Throwable $e) {
-        $db->query("ROLLBACK");
-        throw $e;
-    }
-
-    return $db;
 }
 
 ?>

@@ -113,12 +113,4 @@ function fatal($code, $text, ...$args) {
     die($text . "\n");
 }
 
-
-function fetch_all($res) {
-    $rows = [];
-    while ($row = $res->fetchArray(SQLITE3_ASSOC))
-        $rows[] = $row;
-    return $rows;
-}
-
 ?>

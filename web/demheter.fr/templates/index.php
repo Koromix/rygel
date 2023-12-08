@@ -127,7 +127,9 @@
 require_once(__DIR__ . "/api/parsedown/Parsedown.php");
 
 if (file_exists(__DIR__ . "/data/news.db")) {
-    $db = new SQLite3("data/news.db", SQLITE3_OPEN_READWRITE);
+    require_once(__DIR__ . "/api/database.php");
+
+    $db = open_database();
 
     $res = $db->query("SELECT id, IIF(png IS NULL, 0, 1) AS png, title, content FROM news ORDER BY id");
     $news = fetch_all($res);
@@ -162,13 +164,6 @@ if (count($news)) {
     }
 
     echo '</div>';
-}
-
-function fetch_all($res) {
-    $rows = [];
-    while ($row = $res->fetchArray(SQLITE3_ASSOC))
-        $rows[] = $row;
-    return $rows;
 }
 
 function parse_markdown($text) {
