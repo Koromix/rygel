@@ -328,7 +328,7 @@ const Util = new function() {
         throw new Error('Invalid ULID string (incorrect character)');
     }
 
-    this.saveBlob = function(blob, filename) {
+    this.saveFile = function(blob, filename) {
         let url = URL.createObjectURL(blob);
 
         let a = document.createElement('a');
@@ -341,6 +341,42 @@ const Util = new function() {
 
         if (URL.revokeObjectURL)
             setTimeout(() => URL.revokeObjectURL(url), 60000);
+    };
+
+    this.loadFile = async function() {
+        let file = await new Promise((resolve, reject) => {
+            let input = document.createElement('input');
+            input.type = 'file';
+
+            let cancel = true;
+
+            // Detect file selection
+            input.onchange = async (e) => {
+                let file = e.target.files[0];
+
+                if (file != null) {
+                    resolve(file);
+                    cancel = false;
+                } else {
+                    reject();
+                }
+            };
+
+            // Hack to detect cancellation... great API!
+            let teardown = () => {
+                document.body.removeEventListener('focus', teardown, true);
+
+                setTimeout(() => {
+                    if (cancel)
+                        reject();
+                }, 200);
+            };
+            document.body.addEventListener('focus', teardown, true);
+
+            input.click();
+        });
+
+        return file;
     };
 
     this.parseEvalErrorLine = function(err) {
