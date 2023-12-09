@@ -2,8 +2,8 @@
 
 define("PASSWORD_HASH", '$2y$10$wTBwj.0pChAHLS7xlCCja.AwEHg873eOgxnk7kBt2Tbokjn9ueZla');
 
-require_once(__DIR__ . "/util.php");
-require_once(__DIR__ . "/database.php");
+require_once(__DIR__ . "/../lib/util.php");
+require_once(__DIR__ . "/../lib/database.php");
 
 $method = $_GET["method"] ?? null;
 
@@ -41,16 +41,23 @@ switch ($method) {
             foreach ($data["news"] as $item) {
                 $stmt = $db->prepare("INSERT INTO news (id, png, title, content, changeset)
                                       VALUES (:id, :png, :title, :content, :changeset)
-                                      ON CONFLICT(id) DO UPDATE SET png = IIF(excluded.png = 1, png, excluded.png),
+                                      ON CONFLICT(id) DO UPDATE SET png = excluded.png,
                                                                     title = excluded.title,
                                                                     content = excluded.content,
                                                                     changeset = excluded.changeset");
                 if (isset($item["id"]))
                     $stmt->bindValue(":id", $item["id"]);
-                if (is_bool($item["png"]) || $item["png"] === null) {
-                    $stmt->bindValue(":png", $item["png"] ? 1 : null);
+                if (is_string($item["png"]) && !preg_match("/^[a-z0-9]{64}$/", $item["png"])) {
+                    $png = base64_decode($item["png"]);
+
+                    $sha256 = hash("sha256", $item["pnfg"]);
+                    $filename = __DIR__ . '/../data/' . $sha256 . '.png';
+
+                    file_put_contents($filename, $png);
+
+                    $stmt->bindValue(":png", $sha256);
                 } else {
-                    $stmt->bindValue(":png", base64_decode($item["png"]));
+                    $stmt->bindValue(":png", $item["png"]);
                 }
                 $stmt->bindValue(":title", $item["title"]);
                 $stmt->bindValue(":content", $item["content"]);
@@ -65,30 +72,10 @@ switch ($method) {
             $db->query("COMMIT");
         }
 
-        $res = $db->query("SELECT id, IIF(png IS NULL, 0, 1) AS png, title, content FROM news ORDER BY id");
+        $res = $db->query("SELECT id, png, title, content FROM news ORDER BY id");
         $news = fetch_all($res);
 
-        foreach ($news as &$it)
-            $it["png"] = boolval($it["png"]);
-
         echo json_encode($news, JSON_UNESCAPED_UNICODE);
-    } break;
-
-    case "png": {
-        $db = open_database();
-
-        if (empty($_GET["id"]))
-            fatal(422, "Missing image index");
-
-        try {
-            $stream = $db->openBlob("news", "png", intval($_GET["id"]));
-        } catch (ErrorException $e) {
-            fatal(404, "PNG does not exist");
-        }
-        $png = stream_get_contents($stream);
-
-        header('Content-Type: image/png');
-        echo $png;
     } break;
 
     default: { fatal(404, "Unknown API"); } break;

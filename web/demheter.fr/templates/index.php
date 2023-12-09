@@ -124,14 +124,14 @@
 
 <?php
 
-require_once(__DIR__ . "/api/parsedown/Parsedown.php");
+require_once(__DIR__ . "/lib/parsedown/Parsedown.php");
 
 if (file_exists(__DIR__ . "/data/news.db")) {
-    require_once(__DIR__ . "/api/database.php");
+    require_once(__DIR__ . "/lib/database.php");
 
     $db = open_database();
 
-    $res = $db->query("SELECT id, IIF(png IS NULL, 0, 1) AS png, title, content FROM news ORDER BY id");
+    $res = $db->query("SELECT png, title, content FROM news ORDER BY id");
     $news = fetch_all($res);
 } else {
     $news = [];
@@ -148,7 +148,7 @@ if (count($news)) {
     foreach ($news as $i => $item) {
         $cls = $i ? "" : "active";
 
-        $image = $item["png"] ? ("/api/api.php?method=png&id=" . $item["id"]) : "";
+        $image = $item["png"] ? "/data/{$item["png"]}.png" : "";
         $title = htmlspecialchars($item["title"]);
         $content = parse_markdown($item["content"]);
 

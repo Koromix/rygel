@@ -10,7 +10,7 @@ async function start() {
     Log.pushHandler(UI.notifyHandler);
 
     try {
-        news = await Net.get('/api/api.php?method=news');
+        news = await Net.get('api.php?method=news');
         admin = true;
     } catch (err) {
         if (err.status != 401)
@@ -23,7 +23,7 @@ async function start() {
 async function run() {
     if (admin) {
         if (news == null)
-            news = await Net.get('/api/api.php?method=news');
+            news = await Net.get('api.php?method=news');
         renderNews();
     } else {
         renderLogin();
@@ -58,7 +58,7 @@ async function login(e) {
     let target = e.target;
     let password = target.elements.password.value;
 
-    await Net.post('/api/api.php?method=login', { password: password });
+    await Net.post('api.php?method=login', { password: password });
     admin = true;
 
     run();
@@ -94,14 +94,23 @@ function renderNews() {
 
                         <tbody>
                             ${news.map(item => {
+                                let image = null;
+
+                                if (typeof item.png == 'string') {
+                                    if (item.png.match(/^[a-z0-9]{32}$/)) {
+                                        image = `/data/${item.png}.png`;
+                                    } else {
+                                        image = 'data:image/png;base64,' + item.png;
+                                    }
+                                }
+
                                 return html`
                                     <tr>
                                         <td style="text-align: center;">
-                                            ${item.png === true ? html`<img src=${'/api/api.php?method=png&id=' + item.id} height="32" alt=""/><br/>` : ''}
-                                            ${typeof item.png == 'string' ? html`<img src=${'data:image/png;base64,' + item.png} height="32" alt=""/><br/>` : ''}
+                                            ${image != null ? html`<img src=${image} height="32" alt=""/><br/>` : ''}
                                             <div style="float: right">
                                                 <button type="button" class="small" @click=${e => updateImage(item)}>Modifier</button>
-                                                ${item.png ? html`<button type="button" class="small"  @click=${e => { item.png = null; run(); }}><img src="static/delete.webp" alt="Supprimer" /></button>` : ''}
+                                                ${item.png != null ? html`<button type="button" class="small"  @click=${e => { item.png = null; run(); }}><img src="static/delete.webp" alt="Supprimer" /></button>` : ''}
                                             </div>
                                         </td>
                                         <td><input class="title" type="text" value=${item.title}
@@ -157,7 +166,7 @@ async function updateImage(item) {
 }
 
 async function resetNews() {
-    news = await Net.get('/api/api.php?method=news');
+    news = await Net.get('api.php?method=news');
     run();
 }
 
@@ -165,7 +174,7 @@ async function submitNews(e) {
     let target = e.target;
     let payload = [];
 
-    news = await Net.post('/api/api.php?method=news', { news: news });
+    news = await Net.post('api.php?method=news', { news: news });
 
     run();
 }
