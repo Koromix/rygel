@@ -692,16 +692,18 @@ const Log = new function() {
 // Network
 // ------------------------------------------------------------------------
 
-function NetworkError() {
-    if (Error.captureStackTrace) {
-        Error.captureStackTrace(this, this.constructor);
-    } else {
-        this.stack = (new Error()).stack;
+class NetworkError extends Error {
+    constructor() {
+        super('Request failure: network error');
     }
-    this.message = 'Request failure: network error';
 }
-NetworkError.prototype = new Error();
-NetworkError.prototype.name = 'NetworkError';
+
+class HttpError extends Error {
+    constructor(status, msg) {
+        super(msg);
+        this.status = status;
+    }
+};
 
 const Net = new function() {
     let self = this;
@@ -761,8 +763,8 @@ const Net = new function() {
         let response = await self.fetch(url, options);
 
         if (!response.ok) {
-            let text = (await response.text()).trim();
-            throw new Error(text);
+            let msg = await self.readError(response);
+            throw new HttpError(response.status, msg);
         }
 
         let json = await response.json();
@@ -782,8 +784,8 @@ const Net = new function() {
         let response = await self.fetch(url, options);
 
         if (!response.ok) {
-            let text = (await response.text()).trim();
-            throw new Error(text);
+            let msg = await self.readError(response);
+            throw new HttpError(response.status, msg);
         }
 
         let json = await response.json();
