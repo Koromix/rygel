@@ -522,6 +522,97 @@ func TestHexColor(t *testing.T) {
 	expectPrintedMangle(t, "a { color: #AABBCCEF }", "a {\n  color: #aabbccef;\n}\n", "")
 }
 
+func TestColorFunctions(t *testing.T) {
+	expectPrinted(t, "a { color: color(display-p3 0.5 0.0 0.0%) }", "a {\n  color: color(display-p3 0.5 0.0 0.0%);\n}\n", "")
+	expectPrinted(t, "a { color: color(display-p3 0.5 0.0 0.0% / 0.5) }", "a {\n  color: color(display-p3 0.5 0.0 0.0% / 0.5);\n}\n", "")
+
+	// Check minification of tokens
+	expectPrintedMangle(t, "a { color: color(display-p3 0.5 0.0 0.0%) }", "a {\n  color: color(display-p3 .5 0 0%);\n}\n", "")
+	expectPrintedMangle(t, "a { color: color(display-p3 0.5 0.0 0.0% / 0.5) }", "a {\n  color: color(display-p3 .5 0 0% / .5);\n}\n", "")
+
+	// Check out-of-range colors
+	expectPrintedLower(t, "a { before: 0; color: color(display-p3 1 0 0); after: 1 }",
+		"a {\n  before: 0;\n  color: #ff0f0e;\n  color: color(display-p3 1 0 0);\n  after: 1;\n}\n", "")
+	expectPrintedLowerMangle(t, "a { before: 0; color: color(display-p3 1 0 0); after: 1 }",
+		"a {\n  before: 0;\n  color: #ff0f0e;\n  color: color(display-p3 1 0 0);\n  after: 1;\n}\n", "")
+	expectPrintedLower(t, "a { before: 0; color: color(display-p3 1 0 0 / 0.5); after: 1 }",
+		"a {\n  before: 0;\n  color: rgba(255, 15, 14, .5);\n  color: color(display-p3 1 0 0 / 0.5);\n  after: 1;\n}\n", "")
+	expectPrintedLowerMangle(t, "a { before: 0; color: color(display-p3 1 0 0 / 0.5); after: 1 }",
+		"a {\n  before: 0;\n  color: rgba(255, 15, 14, .5);\n  color: color(display-p3 1 0 0 / .5);\n  after: 1;\n}\n", "")
+	expectPrintedLower(t, "a { before: 0; background: color(display-p3 1 0 0); after: 1 }",
+		"a {\n  before: 0;\n  background: #ff0f0e;\n  background: color(display-p3 1 0 0);\n  after: 1;\n}\n", "")
+	expectPrintedLowerMangle(t, "a { before: 0; background: color(display-p3 1 0 0); after: 1 }",
+		"a {\n  before: 0;\n  background: #ff0f0e;\n  background: color(display-p3 1 0 0);\n  after: 1;\n}\n", "")
+	expectPrintedLower(t, "a { before: 0; background: color(display-p3 1 0 0 / 0.5); after: 1 }",
+		"a {\n  before: 0;\n  background: rgba(255, 15, 14, .5);\n  background: color(display-p3 1 0 0 / 0.5);\n  after: 1;\n}\n", "")
+	expectPrintedLowerMangle(t, "a { before: 0; background: color(display-p3 1 0 0 / 0.5); after: 1 }",
+		"a {\n  before: 0;\n  background: rgba(255, 15, 14, .5);\n  background: color(display-p3 1 0 0 / .5);\n  after: 1;\n}\n", "")
+	expectPrintedLower(t, "a { before: 0; box-shadow: 1px color(display-p3 1 0 0); after: 1 }",
+		"a {\n  before: 0;\n  box-shadow: 1px #ff0f0e;\n  box-shadow: 1px color(display-p3 1 0 0);\n  after: 1;\n}\n", "")
+	expectPrintedLowerMangle(t, "a { before: 0; box-shadow: 1px color(display-p3 1 0 0); after: 1 }",
+		"a {\n  before: 0;\n  box-shadow: 1px #ff0f0e;\n  box-shadow: 1px color(display-p3 1 0 0);\n  after: 1;\n}\n", "")
+	expectPrintedLower(t, "a { before: 0; box-shadow: 1px color(display-p3 1 0 0 / 0.5); after: 1 }",
+		"a {\n  before: 0;\n  box-shadow: 1px rgba(255, 15, 14, .5);\n  box-shadow: 1px color(display-p3 1 0 0 / 0.5);\n  after: 1;\n}\n", "")
+	expectPrintedLowerMangle(t, "a { before: 0; box-shadow: 1px color(display-p3 1 0 0 / 0.5); after: 1 }",
+		"a {\n  before: 0;\n  box-shadow: 1px rgba(255, 15, 14, .5);\n  box-shadow: 1px color(display-p3 1 0 0 / .5);\n  after: 1;\n}\n", "")
+
+	// Don't insert a fallback after a previous instance of the same property
+	expectPrintedLower(t, "a { color: red; color: color(display-p3 1 0 0) }",
+		"a {\n  color: red;\n  color: color(display-p3 1 0 0);\n}\n", "")
+	expectPrintedLower(t, "a { color: color(display-p3 1 0 0); color: color(display-p3 0 1 0) }",
+		"a {\n  color: #ff0f0e;\n  color: color(display-p3 1 0 0);\n  color: color(display-p3 0 1 0);\n}\n", "")
+
+	// Check case sensitivity
+	expectPrintedLower(t, "a { color: color(srgb 0.87 0.98 0.807) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "A { Color: Color(Srgb 0.87 0.98 0.807) }", "A {\n  Color: #deface;\n}\n", "")
+	expectPrintedLower(t, "A { COLOR: COLOR(SRGB 0.87 0.98 0.807) }", "A {\n  COLOR: #deface;\n}\n", "")
+
+	// Check in-range colors in various color spaces
+	expectPrintedLower(t, "a { color: color(a98-rgb 0.9 0.98 0.81) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(a98-rgb 90% 98% 81%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(display-p3 0.89 0.977 0.823) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(display-p3 89% 97.7% 82.3%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(prophoto-rgb 0.877 0.959 0.793) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(prophoto-rgb 87.7% 95.9% 79.3%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(rec2020 0.895 0.968 0.805) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(rec2020 89.5% 96.8% 80.5%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(srgb 0.87 0.98 0.807) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(srgb 87% 98% 80.7%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(srgb-linear 0.73 0.96 0.62) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(srgb-linear 73% 96% 62%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(xyz 0.754 0.883 0.715) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(xyz 75.4% 88.3% 71.5%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(xyz-d50 0.773 0.883 0.545) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(xyz-d50 77.3% 88.3% 54.5%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(xyz-d65 0.754 0.883 0.715) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: color(xyz-d65 75.4% 88.3% 71.5%) }", "a {\n  color: #deface;\n}\n", "")
+
+	// Check color functions with unusual percent reference ranges
+	expectPrintedLower(t, "a { color: lab(95.38 -15 18) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: lab(95.38% -15 18) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: lab(95.38 -12% 18) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: lab(95.38% -15 14.4%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: lch(95.38 23.57 130.22) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: lch(95.38% 23.57 130.22) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: lch(95.38 19% 130.22) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: lch(95.38 23.57 0.362turn) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: oklab(0.953 -0.045 0.046) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: oklab(95.3% -0.045 0.046) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: oklab(0.953 -11.2% 0.046) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: oklab(0.953 -0.045 11.5%) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: oklch(0.953 0.064 134) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: oklch(95.3% 0.064 134) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: oklch(0.953 16% 134) }", "a {\n  color: #deface;\n}\n", "")
+	expectPrintedLower(t, "a { color: oklch(0.953 0.064 0.372turn) }", "a {\n  color: #deface;\n}\n", "")
+
+	// Test alpha
+	expectPrintedLower(t, "a { color: color(srgb 0.87 0.98 0.807 / 0.5) }", "a {\n  color: rgba(222, 250, 206, .5);\n}\n", "")
+	expectPrintedLower(t, "a { color: lab(95.38 -15 18 / 0.5) }", "a {\n  color: rgba(222, 250, 206, .5);\n}\n", "")
+	expectPrintedLower(t, "a { color: lch(95.38 23.57 130.22 / 0.5) }", "a {\n  color: rgba(222, 250, 206, .5);\n}\n", "")
+	expectPrintedLower(t, "a { color: oklab(0.953 -0.045 0.046 / 0.5) }", "a {\n  color: rgba(222, 250, 206, .5);\n}\n", "")
+	expectPrintedLower(t, "a { color: oklch(0.953 0.064 134 / 0.5) }", "a {\n  color: rgba(222, 250, 206, .5);\n}\n", "")
+}
+
 func TestColorNames(t *testing.T) {
 	expectPrinted(t, "a { color: #f00 }", "a {\n  color: #f00;\n}\n", "")
 	expectPrinted(t, "a { color: #f00f }", "a {\n  color: #f00f;\n}\n", "")
@@ -582,13 +673,14 @@ func TestColorHSLA(t *testing.T) {
 
 func TestLowerColor(t *testing.T) {
 	expectPrintedLower(t, "a { color: rebeccapurple }", "a {\n  color: #663399;\n}\n", "")
+	expectPrintedLower(t, "a { color: ReBeCcApUrPlE }", "a {\n  color: #663399;\n}\n", "")
 
-	expectPrintedLower(t, "a { color: #0123 }", "a {\n  color: rgba(0, 17, 34, 0.2);\n}\n", "")
+	expectPrintedLower(t, "a { color: #0123 }", "a {\n  color: rgba(0, 17, 34, .2);\n}\n", "")
 	expectPrintedLower(t, "a { color: #1230 }", "a {\n  color: rgba(17, 34, 51, 0);\n}\n", "")
-	expectPrintedLower(t, "a { color: #1234 }", "a {\n  color: rgba(17, 34, 51, 0.267);\n}\n", "")
-	expectPrintedLower(t, "a { color: #123f }", "a {\n  color: rgba(17, 34, 51, 1);\n}\n", "")
-	expectPrintedLower(t, "a { color: #12345678 }", "a {\n  color: rgba(18, 52, 86, 0.471);\n}\n", "")
-	expectPrintedLower(t, "a { color: #ff00007f }", "a {\n  color: rgba(255, 0, 0, 0.498);\n}\n", "")
+	expectPrintedLower(t, "a { color: #1234 }", "a {\n  color: rgba(17, 34, 51, .267);\n}\n", "")
+	expectPrintedLower(t, "a { color: #123f }", "a {\n  color: #112233;\n}\n", "")
+	expectPrintedLower(t, "a { color: #12345678 }", "a {\n  color: rgba(18, 52, 86, .47);\n}\n", "")
+	expectPrintedLower(t, "a { color: #ff00007f }", "a {\n  color: rgba(255, 0, 0, .498);\n}\n", "")
 
 	expectPrintedLower(t, "a { color: rgb(1 2 3) }", "a {\n  color: rgb(1, 2, 3);\n}\n", "")
 	expectPrintedLower(t, "a { color: hsl(1 2% 3%) }", "a {\n  color: hsl(1, 2%, 3%);\n}\n", "")
@@ -602,9 +694,13 @@ func TestLowerColor(t *testing.T) {
 	expectPrintedLower(t, "a { color: hsla(-200grad 2% 3%) }", "a {\n  color: hsl(-180, 2%, 3%);\n}\n", "")
 
 	expectPrintedLower(t, "a { color: rgb(1 2 3 / 4) }", "a {\n  color: rgba(1, 2, 3, 4);\n}\n", "")
+	expectPrintedLower(t, "a { color: RGB(1 2 3 / 4) }", "a {\n  color: rgba(1, 2, 3, 4);\n}\n", "")
 	expectPrintedLower(t, "a { color: rgba(1% 2% 3% / 4%) }", "a {\n  color: rgba(1%, 2%, 3%, 0.04);\n}\n", "")
+	expectPrintedLower(t, "a { color: RGBA(1% 2% 3% / 4%) }", "a {\n  color: RGBA(1%, 2%, 3%, 0.04);\n}\n", "")
 	expectPrintedLower(t, "a { color: hsl(1 2% 3% / 4) }", "a {\n  color: hsla(1, 2%, 3%, 4);\n}\n", "")
+	expectPrintedLower(t, "a { color: HSL(1 2% 3% / 4) }", "a {\n  color: hsla(1, 2%, 3%, 4);\n}\n", "")
 	expectPrintedLower(t, "a { color: hsla(1 2% 3% / 4%) }", "a {\n  color: hsla(1, 2%, 3%, 0.04);\n}\n", "")
+	expectPrintedLower(t, "a { color: HSLA(1 2% 3% / 4%) }", "a {\n  color: HSLA(1, 2%, 3%, 0.04);\n}\n", "")
 
 	expectPrintedLower(t, "a { color: rgb(1, 2, 3, 4) }", "a {\n  color: rgba(1, 2, 3, 4);\n}\n", "")
 	expectPrintedLower(t, "a { color: rgba(1%, 2%, 3%, 4%) }", "a {\n  color: rgba(1%, 2%, 3%, 0.04);\n}\n", "")
@@ -613,6 +709,170 @@ func TestLowerColor(t *testing.T) {
 	expectPrintedLower(t, "a { color: hsl(1, 2%, 3%, 4) }", "a {\n  color: hsla(1, 2%, 3%, 4);\n}\n", "")
 	expectPrintedLower(t, "a { color: hsla(1deg, 2%, 3%, 4%) }", "a {\n  color: hsla(1, 2%, 3%, 0.04);\n}\n", "")
 	expectPrintedLower(t, "a { color: hsl(1deg, 2%, 3%, 0.4%) }", "a {\n  color: hsla(1, 2%, 3%, 0.004);\n}\n", "")
+
+	expectPrintedLower(t, "a { color: hwb(90deg 20% 40%) }", "a {\n  color: #669933;\n}\n", "")
+	expectPrintedLower(t, "a { color: HWB(90deg 20% 40%) }", "a {\n  color: #669933;\n}\n", "")
+	expectPrintedLower(t, "a { color: hwb(90deg 20% 40% / 0.2) }", "a {\n  color: rgba(102, 153, 51, .2);\n}\n", "")
+	expectPrintedLower(t, "a { color: hwb(1deg 40% 80%) }", "a {\n  color: #555555;\n}\n", "")
+	expectPrintedLower(t, "a { color: hwb(1deg 9000% 50%) }", "a {\n  color: #aaaaaa;\n}\n", "")
+	expectPrintedLower(t, "a { color: hwb(1deg 9000% 50% / 0.6) }", "a {\n  color: rgba(170, 170, 170, .6);\n}\n", "")
+	expectPrintedLower(t, "a { color: hwb(90deg, 20%, 40%) }", "a {\n  color: hwb(90deg, 20%, 40%);\n}\n", "") // This is invalid
+	expectPrintedLower(t, "a { color: hwb(none 20% 40%) }", "a {\n  color: hwb(none 20% 40%);\n}\n", "")       // Interpolation
+	expectPrintedLower(t, "a { color: hwb(90deg none 40%) }", "a {\n  color: hwb(90deg none 40%);\n}\n", "")   // Interpolation
+	expectPrintedLower(t, "a { color: hwb(90deg 20% none) }", "a {\n  color: hwb(90deg 20% none);\n}\n", "")   // Interpolation
+
+	expectPrintedMangle(t, "a { color: hwb(90deg 20% 40%) }", "a {\n  color: #693;\n}\n", "")
+	expectPrintedMangle(t, "a { color: hwb(0.75turn 20% 40% / 0.75) }", "a {\n  color: #663399bf;\n}\n", "")
+	expectPrintedLowerMangle(t, "a { color: hwb(90deg 20% 40%) }", "a {\n  color: #693;\n}\n", "")
+	expectPrintedLowerMangle(t, "a { color: hwb(0.75turn 20% 40% / 0.75) }", "a {\n  color: rgba(102, 51, 153, .75);\n}\n", "")
+}
+
+func TestBackground(t *testing.T) {
+	expectPrinted(t, "a { background: #11223344 }", "a {\n  background: #11223344;\n}\n", "")
+	expectPrintedMangle(t, "a { background: #11223344 }", "a {\n  background: #1234;\n}\n", "")
+	expectPrintedLower(t, "a { background: #11223344 }", "a {\n  background: rgba(17, 34, 51, .267);\n}\n", "")
+
+	expectPrinted(t, "a { background: border-box #11223344 }", "a {\n  background: border-box #11223344;\n}\n", "")
+	expectPrintedMangle(t, "a { background: border-box #11223344 }", "a {\n  background: border-box #1234;\n}\n", "")
+	expectPrintedLower(t, "a { background: border-box #11223344 }", "a {\n  background: border-box rgba(17, 34, 51, .267);\n}\n", "")
+}
+
+func TestGradient(t *testing.T) {
+	gradientKinds := []string{
+		"linear-gradient",
+		"radial-gradient",
+		"conic-gradient",
+		"repeating-linear-gradient",
+		"repeating-radial-gradient",
+		"repeating-conic-gradient",
+	}
+
+	for _, gradient := range gradientKinds {
+		var code string
+
+		// Different properties
+		expectPrinted(t, "a { background: "+gradient+"(red, blue) }", "a {\n  background: "+gradient+"(red, blue);\n}\n", "")
+		expectPrinted(t, "a { background-image: "+gradient+"(red, blue) }", "a {\n  background-image: "+gradient+"(red, blue);\n}\n", "")
+		expectPrinted(t, "a { border-image: "+gradient+"(red, blue) }", "a {\n  border-image: "+gradient+"(red, blue);\n}\n", "")
+		expectPrinted(t, "a { mask-image: "+gradient+"(red, blue) }", "a {\n  mask-image: "+gradient+"(red, blue);\n}\n", "")
+
+		// Basic
+		code = "a { background: " + gradient + "(yellow, #11223344) }"
+		expectPrinted(t, code, "a {\n  background: "+gradient+"(yellow, #11223344);\n}\n", "")
+		expectPrintedMangle(t, code, "a {\n  background: "+gradient+"(#ff0, #1234);\n}\n", "")
+		expectPrintedMinify(t, code, "a{background:"+gradient+"(yellow,#11223344)}", "")
+		expectPrintedLowerUnsupported(t, compat.HexRGBA, code,
+			"a {\n  background: "+gradient+"(yellow, rgba(17, 34, 51, .267));\n}\n", "")
+
+		// Basic with positions
+		code = "a { background: " + gradient + "(yellow 10%, #11223344 90%) }"
+		expectPrinted(t, code, "a {\n  background: "+gradient+"(yellow 10%, #11223344 90%);\n}\n", "")
+		expectPrintedMangle(t, code, "a {\n  background: "+gradient+"(#ff0 10%, #1234 90%);\n}\n", "")
+		expectPrintedMinify(t, code, "a{background:"+gradient+"(yellow 10%,#11223344 90%)}", "")
+		expectPrintedLowerUnsupported(t, compat.HexRGBA, code,
+			"a {\n  background: "+gradient+"(yellow 10%, rgba(17, 34, 51, .267) 90%);\n}\n", "")
+
+		// Basic with hints
+		code = "a { background: " + gradient + "(yellow, 25%, #11223344) }"
+		expectPrinted(t, code, "a {\n  background:\n    "+gradient+"(\n      yellow,\n      25%,\n      #11223344);\n}\n", "")
+		expectPrintedMangle(t, code, "a {\n  background:\n    "+gradient+"(\n      #ff0,\n      25%,\n      #1234);\n}\n", "")
+		expectPrintedMinify(t, code, "a{background:"+gradient+"(yellow,25%,#11223344)}", "")
+		expectPrintedLowerUnsupported(t, compat.HexRGBA, code,
+			"a {\n  background:\n    "+gradient+"(\n      yellow,\n      25%,\n      rgba(17, 34, 51, .267));\n}\n", "")
+		expectPrintedLowerUnsupported(t, compat.GradientMidpoints, code,
+			"a {\n  background:\n    "+gradient+"(\n      #ffff00,\n      #f2f303de 3.12%,\n      #eced04d0 6.25%,\n      "+
+				"#e1e306bd 12.5%,\n      #cdd00ba2 25%,\n      #a2a8147b 50%,\n      #6873205d 75%,\n      #11223344);\n}\n", "")
+
+		// Double positions
+		code = "a { background: " + gradient + "(green, red 10%, red 20%, yellow 70% 80%, black) }"
+		expectPrinted(t, code, "a {\n  background:\n    "+gradient+"(\n      green,\n      red 10%,\n      "+
+			"red 20%,\n      yellow 70% 80%,\n      black);\n}\n", "")
+		expectPrintedMangle(t, code, "a {\n  background:\n    "+gradient+"(\n      green,\n      "+
+			"red 10% 20%,\n      #ff0 70% 80%,\n      #000);\n}\n", "")
+		expectPrintedMinify(t, code, "a{background:"+gradient+"(green,red 10%,red 20%,yellow 70% 80%,black)}", "")
+		expectPrintedLowerUnsupported(t, compat.GradientDoublePosition, code,
+			"a {\n  background:\n    "+gradient+"(\n      green,\n      red 10%,\n      red 20%,\n      "+
+				"yellow 70%,\n      yellow 80%,\n      black);\n}\n", "")
+
+		// Double positions with hints
+		code = "a { background: " + gradient + "(green, red 10%, red 20%, 30%, yellow 70% 80%, 85%, black) }"
+		expectPrinted(t, code, "a {\n  background:\n    "+gradient+"(\n      green,\n      red 10%,\n      red 20%,\n      "+
+			"30%,\n      yellow 70% 80%,\n      85%,\n      black);\n}\n", "")
+		expectPrintedMangle(t, code, "a {\n  background:\n    "+gradient+"(\n      green,\n      red 10% 20%,\n      "+
+			"30%,\n      #ff0 70% 80%,\n      85%,\n      #000);\n}\n", "")
+		expectPrintedMinify(t, code, "a{background:"+gradient+"(green,red 10%,red 20%,30%,yellow 70% 80%,85%,black)}", "")
+		expectPrintedLowerUnsupported(t, compat.GradientDoublePosition, code,
+			"a {\n  background:\n    "+gradient+"(\n      green,\n      red 10%,\n      red 20%,\n      30%,\n      "+
+				"yellow 70%,\n      yellow 80%,\n      85%,\n      black);\n}\n", "")
+
+		// Non-double positions with hints
+		code = "a { background: " + gradient + "(green, red 10%, 1%, red 20%, black) }"
+		expectPrinted(t, code, "a {\n  background:\n    "+gradient+"(\n      green,\n      red 10%,\n      1%,\n      "+
+			"red 20%,\n      black);\n}\n", "")
+		expectPrintedMangle(t, code, "a {\n  background:\n    "+gradient+"(\n      green,\n      red 10%,\n      "+
+			"1%,\n      red 20%,\n      #000);\n}\n", "")
+		expectPrintedMinify(t, code, "a{background:"+gradient+"(green,red 10%,1%,red 20%,black)}", "")
+		expectPrintedLowerUnsupported(t, compat.GradientDoublePosition, code,
+			"a {\n  background:\n    "+gradient+"(\n      green,\n      red 10%,\n      1%,\n      red 20%,\n      black);\n}\n", "")
+
+		// Out-of-gamut colors
+		code = "a { background: " + gradient + "(yellow, color(display-p3 1 0 0)) }"
+		expectPrinted(t, code, "a {\n  background: "+gradient+"(yellow, color(display-p3 1 0 0));\n}\n", "")
+		expectPrintedMangle(t, code, "a {\n  background: "+gradient+"(#ff0, color(display-p3 1 0 0));\n}\n", "")
+		expectPrintedMinify(t, code, "a{background:"+gradient+"(yellow,color(display-p3 1 0 0))}", "")
+		expectPrintedLowerUnsupported(t, compat.ColorFunctions, code,
+			"a {\n  background:\n    "+gradient+"(\n      #ffff00,\n      #ffe971 12.5%,\n      #ffd472 25%,\n      "+
+				"#ffab5f 50%,\n      #ff7b45 75%,\n      #ff5e38 87.5%,\n      #ff5534 90.62%,\n      #ff4c30 93.75%,\n      "+
+				"#ff412c 96.88%,\n      #ff0e0e);\n  "+
+				"background:\n    "+gradient+"(\n      #ffff00,\n      color(xyz 0.734 0.805 0.111) 12.5%,\n      "+
+				"color(xyz 0.699 0.693 0.087) 25%,\n      color(xyz 0.627 0.501 0.048) 50%,\n      "+
+				"color(xyz 0.556 0.348 0.019) 75%,\n      color(xyz 0.521 0.284 0.009) 87.5%,\n      "+
+				"color(xyz 0.512 0.27 0.006) 90.62%,\n      color(xyz 0.504 0.256 0.004) 93.75%,\n      "+
+				"color(xyz 0.495 0.242 0.002) 96.88%,\n      color(xyz 0.487 0.229 0));\n}\n", "")
+
+		// Whitespace
+		code = "a { background: " + gradient + "(color-mix(in lab,red,green)calc(1px)calc(2px),color-mix(in lab,blue,red)calc(98%)calc(99%)) }"
+		expectPrinted(t, code, "a {\n  background: "+gradient+
+			"(color-mix(in lab, red, green)calc(1px)calc(2px), color-mix(in lab, blue, red)calc(98%)calc(99%));\n}\n", "")
+		expectPrintedMangle(t, code, "a {\n  background: "+gradient+
+			"(color-mix(in lab, red, green) 1px 2px, color-mix(in lab, blue, red) 98% 99%);\n}\n", "")
+		expectPrintedMinify(t, code, "a{background:"+gradient+
+			"(color-mix(in lab,red,green)calc(1px)calc(2px),color-mix(in lab,blue,red)calc(98%)calc(99%))}", "")
+		expectPrintedLowerUnsupported(t, compat.GradientDoublePosition, code, "a {\n  background:\n    "+gradient+
+			"(\n      color-mix(in lab, red, green) calc(1px),\n      color-mix(in lab, red, green) calc(2px),"+
+			"\n      color-mix(in lab, blue, red) calc(98%),\n      color-mix(in lab, blue, red) calc(99%));\n}\n", "")
+		expectPrintedLowerMangle(t, code, "a {\n  background:\n    "+gradient+
+			"(\n      color-mix(in lab, red, green) 1px,\n      color-mix(in lab, red, green) 2px,"+
+			"\n      color-mix(in lab, blue, red) 98%,\n      color-mix(in lab, blue, red) 99%);\n}\n", "")
+
+		// Color space interpolation
+		expectPrintedLowerUnsupported(t, compat.GradientInterpolation,
+			"a { background: "+gradient+"(in srgb, red, green) }",
+			"a {\n  background: "+gradient+"(#ff0000, #008000);\n}\n", "")
+		expectPrintedLowerUnsupported(t, compat.GradientInterpolation,
+			"a { background: "+gradient+"(in srgb-linear, red, green) }",
+			"a {\n  background:\n    "+gradient+"(\n      #ff0000,\n      #fb1300 3.12%,\n      #f81f00 6.25%,\n      "+
+				"#f02e00 12.5%,\n      #e14200 25%,\n      #bc5c00 50%,\n      #897000 75%,\n      #637800 87.5%,\n      "+
+				"#477c00 93.75%,\n      #317e00 96.88%,\n      #008000);\n}\n", "")
+		expectPrintedLowerUnsupported(t, compat.GradientInterpolation,
+			"a { background: "+gradient+"(in lab, red, green) }",
+			"a {\n  background:\n    "+gradient+"(\n      #ff0000,\n      color(xyz 0.396 0.211 0.019) 3.12%,\n      "+
+				"color(xyz 0.38 0.209 0.02) 6.25%,\n      color(xyz 0.35 0.205 0.02) 12.5%,\n      "+
+				"color(xyz 0.294 0.198 0.02) 25%,\n      color(xyz 0.2 0.183 0.022) 50%,\n      "+
+				"color(xyz 0.129 0.168 0.024) 75%,\n      color(xyz 0.101 0.161 0.025) 87.5%,\n      "+
+				"color(xyz 0.089 0.158 0.025) 93.75%,\n      color(xyz 0.083 0.156 0.025) 96.88%,\n      #008000);\n}\n", "")
+
+		// Hue interpolation
+		expectPrintedLowerUnsupported(t, compat.GradientInterpolation,
+			"a { background: "+gradient+"(in hsl shorter hue, red, green) }",
+			"a {\n  background:\n    "+gradient+"(\n      #ff0000,\n      #df7000 25%,\n      "+
+				"#bfbf00 50%,\n      #50a000 75%,\n      #008000);\n}\n", "")
+		expectPrintedLowerUnsupported(t, compat.GradientInterpolation,
+			"a { background: "+gradient+"(in hsl longer hue, red, green) }",
+			"a {\n  background:\n    "+gradient+"(\n      #ff0000,\n      #ef0078 12.5%,\n      "+
+				"#df00df 25%,\n      #6800cf 37.5%,\n      #0000c0 50%,\n      #0058b0 62.5%,\n      "+
+				"#00a0a0 75%,\n      #009048 87.5%,\n      #008000);\n}\n", "")
+	}
 }
 
 func TestDeclaration(t *testing.T) {
@@ -1937,7 +2197,8 @@ func TestTransform(t *testing.T) {
 	expectPrintedMangle(t, "a { transform: matrix(1, 0, 0, 2, 0, 0) }", "a {\n  transform: scaleY(2);\n}\n", "")
 	expectPrintedMangle(t, "a { transform: matrix(2, 0, 0, 3, 0, 0) }", "a {\n  transform: scale(2, 3);\n}\n", "")
 	expectPrintedMangle(t, "a { transform: matrix(2, 0, 0, 2, 0, 0) }", "a {\n  transform: scale(2);\n}\n", "")
-	expectPrintedMangle(t, "a { transform: matrix(1, 0, 0, 1, 1, 2) }", "a {\n  transform: matrix(1, 0, 0, 1, 1, 2);\n}\n", "")
+	expectPrintedMangle(t, "a { transform: matrix(1, 0, 0, 1, 1, 2) }",
+		"a {\n  transform:\n    matrix(\n      1, 0,\n      0, 1,\n      1, 2);\n}\n", "")
 
 	expectPrintedMangle(t, "a { transform: translate(0, 0) }", "a {\n  transform: translate(0);\n}\n", "")
 	expectPrintedMangle(t, "a { transform: translate(0px, 0px) }", "a {\n  transform: translate(0);\n}\n", "")
@@ -2010,13 +2271,13 @@ func TestTransform(t *testing.T) {
 
 	expectPrintedMangle(t,
 		"a { transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2) }",
-		"a {\n  transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 2);\n}\n", "")
+		"a {\n  transform:\n    matrix3d(\n      1, 0, 0, 0,\n      0, 1, 0, 0,\n      0, 0, 1, 0,\n      0, 0, 0, 2);\n}\n", "")
 	expectPrintedMangle(t,
 		"a { transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 3, 4, 1) }",
-		"a {\n  transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 3, 4, 1);\n}\n", "")
+		"a {\n  transform:\n    matrix3d(\n      1, 0, 0, 0,\n      0, 1, 0, 0,\n      0, 0, 1, 0,\n      2, 3, 4, 1);\n}\n", "")
 	expectPrintedMangle(t,
 		"a { transform: matrix3d(1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1) }",
-		"a {\n  transform: matrix3d(1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1);\n}\n", "")
+		"a {\n  transform:\n    matrix3d(\n      1, 0, 1, 0,\n      0, 1, 0, 0,\n      1, 0, 1, 0,\n      0, 0, 0, 1);\n}\n", "")
 	expectPrintedMangle(t,
 		"a { transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1) }",
 		"a {\n  transform: scaleZ(1);\n}\n", "")
@@ -2040,7 +2301,7 @@ func TestTransform(t *testing.T) {
 		"a {\n  transform: scale3d(1, 2, 3);\n}\n", "")
 	expectPrintedMangle(t,
 		"a { transform: matrix3d(2, 3, 0, 0, 4, 5, 0, 0, 0, 0, 1, 0, 6, 7, 0, 1) }",
-		"a {\n  transform: matrix3d(2, 3, 0, 0, 4, 5, 0, 0, 0, 0, 1, 0, 6, 7, 0, 1);\n}\n", "")
+		"a {\n  transform:\n    matrix3d(\n      2, 3, 0, 0,\n      4, 5, 0, 0,\n      0, 0, 1, 0,\n      6, 7, 0, 1);\n}\n", "")
 
 	expectPrintedMangle(t, "a { transform: translate3d(0, 0, 0) }", "a {\n  transform: translateZ(0);\n}\n", "")
 	expectPrintedMangle(t, "a { transform: translate3d(0%, 0%, 0) }", "a {\n  transform: translateZ(0);\n}\n", "")

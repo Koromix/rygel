@@ -26,9 +26,43 @@ const jsFeatures: Partial<Record<JSFeature, string>> = {
 }
 
 const cssFeatures: Partial<Record<CSSFeature, string | string[]>> = {
-  InsetProperty: 'css.properties.inset',
-  RebeccaPurple: 'css.types.color.named-color.rebeccapurple',
+  ColorFunctions: [
+    'css.types.color.color',
+    'css.types.color.lab',
+    'css.types.color.lch',
+    'css.types.color.oklab',
+    'css.types.color.oklch',
+  ],
+  GradientDoublePosition: [
+    'css.types.image.gradient.conic-gradient.doubleposition',
+    'css.types.image.gradient.linear-gradient.doubleposition',
+    'css.types.image.gradient.radial-gradient.doubleposition',
+    'css.types.image.gradient.repeating-linear-gradient.doubleposition',
+    'css.types.image.gradient.repeating-radial-gradient.doubleposition',
+  ],
+  GradientInterpolation: [
+    'css.types.image.gradient.conic-gradient.hue_interpolation_method',
+    'css.types.image.gradient.conic-gradient.interpolation_color_space',
+    'css.types.image.gradient.linear-gradient.hue_interpolation_method',
+    'css.types.image.gradient.linear-gradient.interpolation_color_space',
+    'css.types.image.gradient.radial-gradient.hue_interpolation_method',
+    'css.types.image.gradient.radial-gradient.interpolation_color_space',
+    'css.types.image.gradient.repeating-conic-gradient.hue_interpolation_method',
+    'css.types.image.gradient.repeating-conic-gradient.interpolation_color_space',
+    'css.types.image.gradient.repeating-linear-gradient.hue_interpolation_method',
+    'css.types.image.gradient.repeating-linear-gradient.interpolation_color_space',
+    'css.types.image.gradient.repeating-radial-gradient.hue_interpolation_method',
+    'css.types.image.gradient.repeating-radial-gradient.interpolation_color_space',
+  ],
+  GradientMidpoints: [
+    'css.types.image.gradient.linear-gradient.interpolation_hints',
+    'css.types.image.gradient.radial-gradient.interpolation_hints',
+    'css.types.image.gradient.repeating-linear-gradient.interpolation_hints',
+    'css.types.image.gradient.repeating-radial-gradient.interpolation_hints',
+  ],
   HexRGBA: 'css.types.color.rgb_hexadecimal_notation.alpha_hexadecimal_notation',
+  HWB: 'css.types.color.hwb',
+  InsetProperty: 'css.properties.inset',
   Modern_RGB_HSL: [
     'css.types.color.hsl.alpha_parameter',
     'css.types.color.hsl.space_separated_parameters',
@@ -40,6 +74,7 @@ const cssFeatures: Partial<Record<CSSFeature, string | string[]>> = {
     'css.types.color.rgba.space_separated_parameters',
   ],
   Nesting: 'css.selectors.nesting',
+  RebeccaPurple: 'css.types.color.named-color.rebeccapurple',
 }
 
 const similarPrefixedProperty: Record<string, { prefix: string, property: string }> = {
