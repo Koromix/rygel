@@ -17,6 +17,30 @@ find [development builds on koromix.dev](https://koromix.dev/files/tytools/).
 All the code related to these programs is under **public domain**, you can do whatever you want
 with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) for more information.
 
+# Install
+
+## Windows
+
+Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
+
+## macOS
+
+Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
+
+## Linux
+
+A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+
+Execute the following commands (as root) to add the repository to your system:
+
+```sh
+curl https://download.koromix.dev/debian/keys/niels.martignene@protonmail.com.gpg -o /usr/share/keyrings/niels.martignene@protonmail.com.gpg
+echo "deb [signed-by=/usr/share/keyrings/niels.martignene@protonmail.com.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
+
+apt update
+apt install tytools
+```
+
 # Using tycmd
 
 You can manage multiple devices connected simultaneously, tycmd (and the other tools) uniquely

@@ -25,6 +25,14 @@ Restart MeesticTray to apply changes made to the file.
 
 Install the Debian package to configure the system daemon (which is necessary to manage access to the HID device) and the GUI application. Both will start automatically but you may need to restart your session to see the system tray icon.
 
+```sh
+curl https://download.koromix.dev/debian/keys/niels.martignene@protonmail.com.gpg -o /usr/share/keyrings/niels.martignene@protonmail.com.gpg
+echo "deb [signed-by=/usr/share/keyrings/niels.martignene@protonmail.com.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
+
+apt update
+apt install meestic
+```
+
 If you are using GNOME, please install an extension such as `Tray Icons: Reloaded` or the MeesticTray tray icon may not be visible.
 
 Customize `/etc/meestic.ini` to edit default profiles. Restart the daemon after each change to load the new profiles with:

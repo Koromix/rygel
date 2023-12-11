@@ -15,7 +15,29 @@ TyCommander | Qt GUI (static)           | Upload, monitor and communicate with m
 TyUpdater   | Qt GUI (static)           | Simple firmware / sketch uploader
 tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boards
 
-Download the [latest release from GitHub](https://github.com/Koromix/tytools/releases).
+# Install
+
+## Windows
+
+Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
+
+## macOS
+
+Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
+
+## Linux
+
+A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+
+Execute the following commands (as root) to add the repository to your system:
+
+```sh
+curl https://download.koromix.dev/debian/keys/niels.martignene@protonmail.com.gpg -o /usr/share/keyrings/niels.martignene@protonmail.com.gpg
+echo "deb [signed-by=/usr/share/keyrings/niels.martignene@protonmail.com.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
+
+apt update
+apt install tytools
+```
 
 # Using tycmd
 

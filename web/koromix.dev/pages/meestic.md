@@ -7,9 +7,31 @@ Meestic is a small utility made to control **the lights of MSI Delta 15 laptop k
     <img src="static/meestic/windows.webp" width="266" height="169" alt="Windows screenshot" />
 </div>
 
-You can use the command-line or the GUI version. Download ready-to-use binaries from the release section of the [ dedicated repository](https://github.com/Koromix/meestic/releases/latest).
+You can use the command-line or the GUI version.
 
 It was made by looking at the HID packets sent by the Windows tool with Wireshark. It is provided "as is", I don't make any guarantee about this tool.
+
+# Install
+
+## Windows
+
+Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/meestic/releases/latest).
+
+## Linux
+
+A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+
+Execute the following commands (as root) to add the repository to your system:
+
+```sh
+curl https://download.koromix.dev/debian/keys/niels.martignene@protonmail.com.gpg -o /usr/share/keyrings/niels.martignene@protonmail.com.gpg
+echo "deb [signed-by=/usr/share/keyrings/niels.martignene@protonmail.com.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
+
+apt update
+apt install meestic
+```
+
+For other distributions, you can [build the code from source](#build-from-source) as documented below.
 
 # Graphical interface
 
