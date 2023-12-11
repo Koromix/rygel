@@ -8,6 +8,14 @@ Rekord is a multi-platform **backup tool with deduplication and asymmetric encry
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/rekord).
 
+# SaneBB
+
+SaneBB is a **small and fast BBCode parser in Java**, which I made as an alternative to the horribly overengineered and [inner-platform effect](https://en.wikipedia.org/wiki/Inner-platform_effect) victim [KefirBB library](https://github.com/kefirfromperm/kefirbb).
+
+It's a single Java file, the documentation is included at the top of the file.
+
+You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/master/SaneBB.java).
+
 # Blikk
 
 Blikk is an **embeddable beginner-friendly programming language** with static types, fast compilation.
@@ -101,11 +109,3 @@ It can be used in three ways:
 The classifier was carefully assembled from the documentation and through retro-engineering of the official classifier (GenRSA), without source code access.
 
 You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/drd).
-
-# SaneBB
-
-SaneBB is a **small and fast BBCode parser in Java**, which I made as an alternative to the horribly overengineered and [inner-platform effect](https://en.wikipedia.org/wiki/Inner-platform_effect) victim [KefirBB library](https://github.com/kefirfromperm/kefirbb).
-
-It's a single Java file, the documentation is included at the top of the file.
-
-You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/master/SaneBB.java).
