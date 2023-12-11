@@ -3,6 +3,8 @@ import { Util, Net, Log } from '../../../../src/web/libjs/common.js';
 import { Base64 } from '../../../../src/web/libjs/crypto.js';
 import { UI } from './ui.js';
 
+import './admin.css';
+
 let admin = false;
 let news = null;
 
