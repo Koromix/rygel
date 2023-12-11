@@ -8,11 +8,15 @@
 
 # Accompagnement des proches
 
+## UNAFAM
+
 L'[UNAFAM](https://www.unafam.org/) est une association qui accompagne les familles adhérentes au sein de 305 points d'accueil, pour briser l’isolement et leur permettre de retrouver la force d’avancer.
 
 <div class="shelf">
     <a href="https://www.unafam.org/" target="_blank"><img src="{{ ASSET static/partners/unafam.png }}" alt="UNAFAM" /></a>
 </div>
+
+## Autres ressources
 
 Le site du [Crehpsy des Hauts-de-France](https://www.crehpsy-hdf.fr/soutenir-aidants.html) recense et propose une orientation pour les proches.
 
@@ -23,11 +27,15 @@ D'autres ressources sont disponibles, dont notamment :
 
 # Associations d'entraide
 
+## Clubhouse France
+
 L'association [Clubhouse France](https://www.clubhousefrance.org/) est une association qui lutte contre la stigmatisation et l’isolement des personnes en situation de handicap psychique, et facilite leur réinsertion sociale et professionnelle.
 
 <div class="shelf">
     <a href="https://www.clubhousefrance.org/" target="_blank"><img src="{{ ASSET static/partners/clubhouse.png }}" alt="Clubhouse France" /></a>
 </div>
+
+## Annuaires
 
 La [FNAPSY](https://www.fnapsy.org/) (Fédération Nationale des Associations d'usages en Psychiatrie) propose sur son site un [annuaire des associations d'usages](https://www.fnapsy.org/?page=8) que vous pouvez consulter.
 
