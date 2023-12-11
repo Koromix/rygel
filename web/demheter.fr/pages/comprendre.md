@@ -61,6 +61,8 @@ Radiofrance propose différents podcasts sur les troubles bipolaires et sur la d
 
 # Témoignages
 
+Pour en savoir plus sur le projet DEMHETER, nous vous conseillons de regarder ce témoignagne vidéo d'un patient pris en charge par l'équipe DEMHETER, mis en ligne par le CHU de Lille :
+
 <div class="shelf">
     <iframe width="560" height="315" src="https://www.youtube.com/embed/EMHhdp1PqPE?si=lzG6iWltdGPuOMY7" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
 </div>
