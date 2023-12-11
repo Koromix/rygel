@@ -139,6 +139,8 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
                 bucket->key = DuplicateString(str.c_str(), &instance->str_alloc).ptr;
                 bucket->value = type;
             }
+        } else if (out_directions) {
+            *out_directions = 1;
         }
 
         return type;
