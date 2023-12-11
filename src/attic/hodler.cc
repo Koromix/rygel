@@ -569,6 +569,12 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
     return true;
 }
 
+static bool ShouldCompressFile(const char *filename)
+{
+    const char *mimetype = GetMimeType(GetPathExtension(filename));
+    return StartsWith(mimetype, "text/");
+}
+
 static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *output_dir, bool gzip)
 {
     BlockAllocator temp_alloc;
@@ -809,7 +815,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 }
 
                 // Create gzipped version
-                if (gzip && CanCompressFile(dest_filename)) {
+                if (gzip && ShouldCompressFile(dest_filename)) {
                     reader.Rewind();
 
                     StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
