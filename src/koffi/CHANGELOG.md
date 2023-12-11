@@ -4,6 +4,10 @@
 
 ### Koffi 2.6
 
+#### Koffi 2.6.12 (2023-12-11)
+
+- Fix possible crash introduced in Koffi 2.6.11
+
 #### Koffi 2.6.11 (2023-12-05)
 
 - Speed up resolving simple and often used type names
