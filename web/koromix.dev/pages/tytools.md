@@ -39,6 +39,8 @@ apt update
 apt install tytools
 ```
 
+For other distributions, you can [build the code from source](#hacking-tytools) as documented below.
+
 # Using tycmd
 
 You can manage multiple devices connected simultaneously, tycmd (and the other TyTools) uniquely
@@ -135,11 +137,10 @@ your Teensy.
 
 ## Build on Windows
 
-You can use MSVC (≥ 2015) or MinGW-w64. I have not tested Clang on Windows yet. The historical
+You can use MSVC (≥ 2019) or MinGW-w64. I have not tested Clang on Windows yet. The historical
 MinGW toolchain is not supported.
 
-You need to install [CMake](http://www.cmake.org/) to build the project files before you can
-use Visual Studio or MinGW.
+Only 64-bit builds are supported, 32-bit builds are not supported anymore.
 
 If **you don't have Qt, only the libraries and command-line tools** will be compiled. There
 are two options to enable Qt in TyTools:
@@ -147,28 +148,24 @@ are two options to enable Qt in TyTools:
 - _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for
   your compiler with the official Qt installer. The binaries need the Qt DLLs to work.
 - _static Qt build_: Harder, but will produce autonomous binaries. Read the README in the [qt5
-  directory](https://github.com/Koromix/tytools/tree/master/qt5) for instructions.
+  directory](https://github.com/Koromix/rygel/tree/master/src/tytools/dist/qt5) for instructions.
 
-To build TyTools with MSVC 2015 32-bit, launch _VS2015 x86 Native Tools Command Prompt_,
-navigate to the project directory and execute CMake:
+To build TyTools with MSVC 2019 64-bit, launch _VS2019 x64 Native Tools Command Prompt_,
+navigate to the project directory and execute:
 
 ```bat
-REM You can of course use another build directory if you prefer.
-mkdir build
-mkdir build/win32
-cd build/win32
-cmake ../..
+bootstrap.bat
+felix -pFast tycmd
+felix -pFast tycommander tycommanderc
+felix -pFast tyuploader
 ```
 
-This will create Visual Studio project and solution files in _build/win32_. You can then open
-the _solution TyTools.sln_.
+If you want to build debug binaries instead, just use `./felix <target>`.
 
-To build 64-bit binaries, you should use _VS2015 x64 Native Tools Command Prompt_ instead.
 
 ## Build on macOS
 
-Install Xcode, the developer command-line tools and [CMake](http://www.cmake.org/). The native
-Clang compiler can build TyTools.
+Install Xcode and the developer command-line tools. The native Clang compiler can build TyTools.
 
 If **you don't have Qt, only the libraries and command-line tools** will be compiled. There
 are two options to enable Qt in TyTools:
@@ -176,23 +173,19 @@ are two options to enable Qt in TyTools:
 - _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for
   your compiler with the official Qt installer. The binaries need the Qt DLLs to work.
 - _static Qt build_: Harder, but will produce autonomous binaries. Read the README in the [qt5
-  directory](https://github.com/Koromix/tytools/tree/master/qt5) for instructions.
+  directory](https://github.com/Koromix/rygel/tree/master/src/tytools/dist/qt) for instructions.
 
 After Qt is ready, you can build TyTools by executing the following commands in the
 project directory:
 
 ```sh
-# You can of course use another directory if you prefer.
-mkdir -p build/darwin && cd build/darwin
-cd build/darwin
-cmake ../..
+./bootstrap.sh
+./felix -pFast tycmd
+./felix -pFast tycommander
+./felix -pFast tyuploader
 ```
 
-If you want to build debug binaries instead, you should specify the build type:
-
-```sh
-cmake -DCMAKE_BUILD_TYPE=Debug ../..
-```
+If you want to build debug binaries instead, just use `./felix <target>`.
 
 ## Build on Linux
 
@@ -203,13 +196,13 @@ TyTools can be built with GCC or Clang.
 To install the dependencies on Debian or Ubuntu execute:
 
 ```sh
-sudo apt-get install build-essential cmake libudev-dev qtbase5-dev
+sudo apt-get install build-essential libudev-dev qtbase6-dev
 ```
 
 On Arch Linux you can do so (as root):
 
 ```sh
-pacman -S --needed base-devel cmake udev qt5-base
+pacman -S --needed base-devel udev qt6-base
 ```
 
 ### Compilation
@@ -217,17 +210,13 @@ pacman -S --needed base-devel cmake udev qt5-base
 Open the project directory in a terminal and execute:
 
 ```sh
-# You can of course use another directory if you prefer.
-mkdir -p build/linux && cd build/linux
-cmake ../..
-make
+./boostrap.sh
+./felix -pFast tycmd
+./felix -pFast tycommander
+./felix -pFast tyuploader
 ```
 
-If you want to build debug binaries instead, you should specify the build type:
-
-```sh
-cmake -DCMAKE_BUILD_TYPE=Debug ../..
-```
+If you want to build debug binaries instead, just use `./felix <target>`.
 
 # License
 
