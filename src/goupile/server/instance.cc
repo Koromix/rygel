@@ -219,7 +219,7 @@ bool InstanceHolder::SyncViews(const char *directory)
 
                 // Simple heuristic, non-compressible files are probably not scripts and
                 // JS processes probably don't need them. Probably dumb but it works for now.
-                if (!http_ShouldCompressFile(filename))
+                if (!CanCompressFile(filename))
                     continue;
 
                 CompressionType src_encoding;
@@ -1096,7 +1096,7 @@ bool MigrateInstance(sq_Database *db)
                     // Do we need to uncompress this entry? If not, skip!
                     if (compression_type == CompressionType::None)
                         continue;
-                    if (http_ShouldCompressFile(filename))
+                    if (CanCompressFile(filename))
                         continue;
 
                     // Open source blob

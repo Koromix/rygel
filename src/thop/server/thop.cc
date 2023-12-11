@@ -245,7 +245,7 @@ static void InitRoutes()
         route.matching = matching;
         route.type = Route::Type::Asset;
         route.u.st.asset = asset;
-        route.u.st.mime_type = http_GetMimeType(GetPathExtension(asset.name));
+        route.u.st.mime_type = GetMimeType(GetPathExtension(asset.name));
 
         routes.Set(route);
     };

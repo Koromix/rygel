@@ -298,8 +298,8 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
             if (StartsWith(asset.name, "src/goupile/demo/")) {
                 const char *filename = asset.name + 17;
 
-                CompressionType compression_type = http_ShouldCompressFile(filename) ? CompressionType::Gzip
-                                                                                     : CompressionType::None;
+                CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
+                                                                                : CompressionType::None;
 
                 HeapArray<uint8_t> blob;
                 char sha256[65];

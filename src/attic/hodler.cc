@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 #include "src/core/libcc/libcc.hh"
-#include "src/core/libnet/libnet.hh"
 extern "C" {
     #include "vendor/cmark-gfm/src/cmark-gfm.h"
     #include "vendor/cmark-gfm/extensions/cmark-gfm-core-extensions.h"
@@ -810,7 +809,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 }
 
                 // Create gzipped version
-                if (gzip && http_ShouldCompressFile(dest_filename)) {
+                if (gzip && CanCompressFile(dest_filename)) {
                     reader.Rewind();
 
                     StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);

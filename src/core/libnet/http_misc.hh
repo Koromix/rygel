@@ -34,9 +34,6 @@ struct http_ByteRange {
     Size end;
 };
 
-const char *http_GetMimeType(Span<const char> extension,
-                             const char *default_type = "application/octet-stream");
-
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
 bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 16> *out_ranges);
 
@@ -45,8 +42,6 @@ static inline void http_EncodeUrlSafe(Span<const char> str, HeapArray<char> *out
     { return http_EncodeUrlSafe(str, nullptr, out_buf); }
 
 bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io);
-
-bool http_ShouldCompressFile(const char *filename);
 
 class http_JsonPageBuilder: public json_Writer {
     http_IO *io = nullptr;

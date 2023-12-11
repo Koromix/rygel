@@ -80,7 +80,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 
 static void AddMimeTypeHeader(const char *filename, http_IO *io)
 {
-   const char *mime_type = http_GetMimeType(GetPathExtension(filename), nullptr);
+   const char *mime_type = GetMimeType(GetPathExtension(filename), nullptr);
 
     if (mime_type) {
         io->AddHeader("Content-Type", mime_type);
@@ -244,7 +244,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 LocalArray<Span<const char>, RG_LEN(ranges.data) * 2> boundaries;
                 Size total_len = 0;
                 {
-                    const char *mime_type = http_GetMimeType(GetPathExtension(filename), nullptr);
+                    const char *mime_type = GetMimeType(GetPathExtension(filename), nullptr);
 
                     for (Size i = 0; i < ranges.len; i++) {
                         const http_ByteRange &range = ranges[i];
@@ -471,8 +471,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             UnlinkFile(tmp_filename);
         };
 
-        CompressionType compression_type = http_ShouldCompressFile(filename) ? CompressionType::Gzip
-                                                                             : CompressionType::None;
+        CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
+                                                                        : CompressionType::None;
 
         // Read and compress request body
         Size total_len = 0;

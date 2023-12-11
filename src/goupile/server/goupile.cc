@@ -272,7 +272,7 @@ static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *et
         MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
         io->AttachResponse(304, response);
     } else {
-        const char *mimetype = http_GetMimeType(GetPathExtension(asset.name));
+        const char *mimetype = GetMimeType(GetPathExtension(asset.name));
 
         io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
         io->AddCachingHeaders(max_age, etag);

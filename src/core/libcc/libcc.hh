@@ -5016,4 +5016,12 @@ static inline const char *Prompt(const char *prompt, Allocator *alloc)
     { return Prompt(prompt, nullptr, nullptr, alloc); }
 bool PromptYN(const char *prompt, bool *out_value);
 
+// ------------------------------------------------------------------------
+// Mime types
+// ------------------------------------------------------------------------
+
+const char *GetMimeType(Span<const char> extension, const char *default_typ = "application/octet-stream");
+
+bool CanCompressFile(const char *filename);
+
 }

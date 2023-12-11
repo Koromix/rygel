@@ -25,25 +25,6 @@
 
 namespace RG {
 
-const char *http_GetMimeType(Span<const char> extension, const char *default_type)
-{
-    static const HashMap<Span<const char>, const char *> mime_types = {
-        #define MIMETYPE(Extension, MimeType) { (Extension), (MimeType) },
-        #include "mimetypes.inc"
-
-        {"", "application/octet-stream"}
-    };
-
-    const char *mime_type = mime_types.FindValue(extension, nullptr);
-
-    if (!mime_type) {
-        LogError("Unknown MIME type for extension '%1'", extension);
-        mime_type = default_type;
-    }
-
-    return mime_type;
-}
-
 // Mostly compliant, respects 'q=0' weights but it does not care about ordering beyond that. The
 // caller is free to choose a preferred encoding among acceptable ones.
 uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
@@ -215,51 +196,6 @@ bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)
         io->AttachError(403);
         return false;
     }
-
-    return true;
-}
-
-bool http_ShouldCompressFile(const char *filename)
-{
-    char extension[8];
-    {
-        const char *ptr = GetPathExtension(filename).ptr;
-
-        Size i = 0;
-        while (i < RG_SIZE(extension) - 1 && ptr[i]) {
-            extension[i] = LowerAscii(ptr[i]);
-            i++;
-        }
-        extension[i] = 0;
-    }
-
-    if (TestStrI(extension, ".zip"))
-        return false;
-    if (TestStrI(extension, ".rar"))
-        return false;
-    if (TestStrI(extension, ".7z"))
-        return false;
-    if (TestStrI(extension, ".gz") || TestStrI(extension, ".tgz"))
-        return false;
-    if (TestStrI(extension, ".bz2") || TestStrI(extension, ".tbz2"))
-        return false;
-    if (TestStrI(extension, ".xz") || TestStrI(extension, ".txz"))
-        return false;
-    if (TestStrI(extension, ".zst") || TestStrI(extension, ".tzst"))
-        return false;
-    if (TestStrI(extension, ".woff") || TestStrI(extension, ".woff2"))
-        return false;
-    if (TestStrI(extension, ".db") || TestStrI(extension, ".sqlite3"))
-        return false;
-
-    const char *mime_type = http_GetMimeType(extension);
-
-    if (StartsWith(mime_type, "video/"))
-        return false;
-    if (StartsWith(mime_type, "audio/"))
-        return false;
-    if (StartsWith(mime_type, "image/") && !TestStr(mime_type, "image/svg+xml"))
-        return false;
 
     return true;
 }

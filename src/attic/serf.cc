@@ -137,7 +137,7 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
     }
 
     // Send the file
-    const char *mimetype = http_GetMimeType(GetPathExtension(filename));
+    const char *mimetype = GetMimeType(GetPathExtension(filename));
     io->AttachFile(200, filename, mimetype);
     io->AddCachingHeaders(config.max_age, etag);
 }
