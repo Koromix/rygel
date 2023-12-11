@@ -392,7 +392,7 @@ public:
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
-            Fmt(&buf, " -Os -DNDEBUG");
+            Fmt(&buf, " -Os -DNDEBUG -ffunction-sections -fdata-sections");
         } else {
             Fmt(&buf, " -O0 -ftrapv -fno-omit-frame-pointer");
         }
@@ -661,6 +661,9 @@ public:
         }
 
         // Features
+        if (features & (int)CompileFeature::OptimizeSpeed) {
+            Fmt(&buf, " -Wl,--gc-sections");
+        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
             if (platform == HostPlatform::Windows && (features & (int)CompileFeature::DynamicRuntime)) {
@@ -918,7 +921,7 @@ public:
         if (features & (int)CompileFeature::OptimizeSpeed) {
             Fmt(&buf, " -O2 -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
-            Fmt(&buf, " -Os -DNDEBUG");
+            Fmt(&buf, " -Os -DNDEBUG -ffunction-sections -fdata-sections");
         } else {
             Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error -fno-omit-frame-pointer");
         }
@@ -1156,6 +1159,9 @@ public:
         }
 
         // Features
+        if (features & (int)CompileFeature::OptimizeSpeed) {
+            Fmt(&buf, " -Wl,--gc-sections");
+        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
