@@ -99,7 +99,7 @@ function renderNews() {
                                 let image = null;
 
                                 if (typeof item.png == 'string') {
-                                    if (item.png.match(/^[a-z0-9]{32}$/)) {
+                                    if (item.png.match(/^[a-z0-9]{64}$/)) {
                                         image = `/data/${item.png}.png`;
                                     } else {
                                         image = 'data:image/png;base64,' + item.png;
