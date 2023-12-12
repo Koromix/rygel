@@ -27,7 +27,11 @@ Execute the following commands (as root) to add the repository to your system:
 mkdir -p -m0755 /etc/apt/keyrings
 curl https://download.koromix.dev/debian/koromix-archive-keyring.gpg -o /etc/apt/keyrings/koromix-archive-keyring.gpg
 echo "deb [signed-by=/etc/apt/keyrings/koromix-archive-keyring.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
+```
 
+Once this is done, refresh the repository cache and install the package:
+
+```sh
 apt update
 apt install meestic
 ```
