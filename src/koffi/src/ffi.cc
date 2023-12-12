@@ -2326,7 +2326,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     Napi::Object types = InitBaseTypes(env);
     exports.Set("types", types);
 
-    exports.Set("internal", Napi::Boolean::New(env, false));
     exports.Set("version", Napi::String::New(env, RG_STRINGIFY(VERSION)));
 
     return exports;
