@@ -152,8 +152,8 @@ are two options to enable Qt in TyTools:
 
 - _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for
   your compiler with the official Qt installer. The binaries need the Qt DLLs to work.
-- _static Qt build_: Harder, but will produce autonomous binaries. Read the README in the [qt5
-  directory](https://github.com/Koromix/rygel/tree/master/src/tytools/dist/qt5) for instructions.
+- _static Qt build_: Harder, but will produce autonomous binaries. Read the README in the [qt6
+  directory](https://github.com/Koromix/rygel/tree/master/src/tytools/dist/qt6) for instructions.
 
 To build TyTools with MSVC 2019 64-bit, launch _VS2019 x64 Native Tools Command Prompt_,
 navigate to the project directory and execute:
@@ -177,8 +177,8 @@ are two options to enable Qt in TyTools:
 
 - _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for
   your compiler with the official Qt installer. The binaries need the Qt DLLs to work.
-- _static Qt build_: Harder, but will produce autonomous binaries. Read the README in the [qt5
-  directory](https://github.com/Koromix/rygel/tree/master/src/tytools/dist/qt) for instructions.
+- _static Qt build_: Harder, but will produce autonomous binaries. Read the README in the [qt6
+  directory](https://github.com/Koromix/rygel/tree/master/src/tytools/dist/qt6) for instructions.
 
 After Qt is ready, you can build TyTools by executing the following commands in the
 project directory:
