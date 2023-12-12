@@ -5599,7 +5599,6 @@ public:
     AsyncPool(int threads, bool leak);
 
     int GetWorkerCount() const { return (int)workers.len; }
-    int CountPendingTasks() const { return pending_tasks; }
 
     void RegisterAsync();
     void UnregisterAsync();
@@ -5671,11 +5670,6 @@ bool Async::Sync()
 {
     pool->SyncOn(this);
     return success;
-}
-
-int Async::CountPendingTasks()
-{
-    return pool->CountPendingTasks();
 }
 
 bool Async::IsTaskRunning()
@@ -5805,6 +5799,11 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 
         pending_cv.notify_all();
         sync_cv.notify_all();
+    }
+
+    // Limit queue size (back pressure)
+    while (pending_tasks >= RG_ASYNC_MAX_PENDING_TASKS) {
+        RunTasks(0);
     }
 }
 
