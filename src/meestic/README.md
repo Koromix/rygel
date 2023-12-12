@@ -26,8 +26,9 @@ Restart MeesticTray to apply changes made to the file.
 Install the Debian package to configure the system daemon (which is necessary to manage access to the HID device) and the GUI application. Both will start automatically but you may need to restart your session to see the system tray icon.
 
 ```sh
-curl https://download.koromix.dev/debian/keys/niels.martignene@protonmail.com.gpg -o /usr/share/keyrings/niels.martignene@protonmail.com.gpg
-echo "deb [signed-by=/usr/share/keyrings/niels.martignene@protonmail.com.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
+mkdir -p -m0755 /etc/apt/keyrings
+curl https://download.koromix.dev/debian/koromix-archive-keyring.gpg -o /etc/apt/keyrings/koromix-archive-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/koromix-archive-keyring.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
 
 apt update
 apt install meestic

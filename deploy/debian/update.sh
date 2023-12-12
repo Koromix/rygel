@@ -1,20 +1,21 @@
 #!/bin/bash -e
 
-if [ $# -lt 1 ]; then
-    echo 1>&2 "Usage: $0 <GPG user> [directory]"
+if [ $# -lt 2 ]; then
+    echo 1>&2 "Usage: $0 <name> <GPG user> [directory]"
     exit 1
 fi
 
 SCRIPT_DIR="$(realpath $(dirname $0))"
-GPG_USER="$1"
 
-if [ $# -gt 1 ]; then
-    cd "$2"
+REPO_NAME="$1"
+GPG_USER="$2"
+
+if [ $# -gt 2 ]; then
+    cd "$3"
 fi
 
 rm -rf keys
-mkdir -p keys
-gpg --local-user "$GPG_USER" --export >"keys/$GPG_USER.gpg"
+gpg --local-user "$GPG_USER" --export >"$REPO_NAME-archive-keyring.gpg"
 
 # Keep old content
 mkdir -p pool
