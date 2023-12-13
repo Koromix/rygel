@@ -129,7 +129,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                                            f.data IS NOT NULL
                               ORDER BY anchor
                           )
-                          SELECT t.rowid AS t, t.tid,
+                          SELECT t.rowid AS t, t.tid, t.locked,
                                  e.rowid AS e, e.eid, e.deleted, rec.anchor, e.ctime, rec.mtime,
                                  e.store, e.sequence, rec.tags, rec.data, rec.meta
                               FROM rec
