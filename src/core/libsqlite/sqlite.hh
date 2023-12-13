@@ -80,7 +80,7 @@ class sq_Statement {
     sqlite3_stmt *stmt = nullptr;
     bool unlock = false;
 
-    int rc;
+    int rc = 0;
 
 public:
     sq_Statement() {}
@@ -93,6 +93,7 @@ public:
 
     bool IsValid() const { return stmt && (rc == SQLITE_DONE || rc == SQLITE_ROW); };
     bool IsRow() const { return stmt && rc == SQLITE_ROW; }
+    bool IsDone() const { return stmt && rc == SQLITE_DONE; }
 
     bool Run();
     bool Step();

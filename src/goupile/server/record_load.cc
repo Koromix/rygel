@@ -89,7 +89,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                                  IIF(?7 = 1, e.meta, NULL) AS meta
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
-                          WHERE 1+1)").len;
+                          WHERE 1=1)").len;
 
         if (filter.single_tid) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.tid = ?1").len;
@@ -191,8 +191,12 @@ bool RecordWalker::NextInThread()
 
 bool RecordWalker::Step()
 {
+    if (stmt.IsDone())
+        return false;
+
     if (!step)
         return true;
+    step = false;
 
 again:
     if (!stmt.Step())
