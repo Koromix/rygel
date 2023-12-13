@@ -27,6 +27,10 @@ static const Size ChunkAverage = Kibibytes(2048);
 static const Size ChunkMin = Kibibytes(1024);
 static const Size ChunkMax = Kibibytes(8192);
 
+static const Size FileBigSize = Mebibytes(64);
+static const Size FileDefaultSize = 2 * ChunkMax;
+static const int FileBigLimit = 4;
+
 enum class PutResult {
     Success,
     Ignore,
@@ -44,6 +48,8 @@ class PutContext {
 
     Async dir_async;
     Async file_async;
+
+    std::atomic_int big_semaphore { FileBigLimit };
 
 public:
     PutContext(rk_Disk *disk);
@@ -396,12 +402,17 @@ PutResult PutContext::PutFile(const char *src_filename, rk_ID *out_id, int64_t *
     {
         rk_Splitter splitter(ChunkAverage, ChunkMin, ChunkMax, salt64);
 
+        bool use_big_buffer = (--big_semaphore >= 0);
+        RG_DEFER { big_semaphore++; };
+
         HeapArray<uint8_t> buf;
-        {
-            Size needed = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : Mebibytes(16);
-            needed = std::clamp(needed, ChunkMax, Mebibytes(128));
+        if (use_big_buffer) {
+            Size needed = (st.ComputeRawLen() >= 0) ? st.ComputeRawLen() : FileDefaultSize;
+            needed = std::clamp(needed, ChunkMax, FileBigSize);
 
             buf.SetCapacity(needed);
+        } else {
+            buf.SetCapacity(FileDefaultSize);
         }
 
         do {
