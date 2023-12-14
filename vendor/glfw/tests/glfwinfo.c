@@ -230,9 +230,10 @@ static void list_vulkan_instance_layers(void)
 
     for (i = 0;  i < lp_count;  i++)
     {
-        printf(" %s (v%u) \"%s\"\n",
+        printf(" %s (spec version %u.%u) \"%s\"\n",
                lp[i].layerName,
-               lp[i].specVersion >> 22,
+               VK_VERSION_MAJOR(lp[i].specVersion),
+               VK_VERSION_MINOR(lp[i].specVersion),
                lp[i].description);
     }
 
@@ -259,9 +260,10 @@ static void list_vulkan_device_layers(VkInstance instance, VkPhysicalDevice devi
 
     for (i = 0;  i < lp_count;  i++)
     {
-        printf(" %s (v%u) \"%s\"\n",
+        printf(" %s (spec version %u.%u) \"%s\"\n",
                lp[i].layerName,
-               lp[i].specVersion >> 22,
+               VK_VERSION_MAJOR(lp[i].specVersion),
+               VK_VERSION_MINOR(lp[i].specVersion),
                lp[i].description);
     }
 
@@ -753,6 +755,17 @@ int main(int argc, char** argv)
     if (list_extensions)
         list_context_extensions(client, major, minor);
 
+    glfwDestroyWindow(window);
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+    window = glfwCreateWindow(200, 200, "Version", NULL, NULL);
+    if (!window)
+    {
+        glfwTerminate();
+        exit(EXIT_FAILURE);
+    }
+
     printf("Vulkan loader: %s\n",
            glfwVulkanSupported() ? "available" : "missing");
 
@@ -851,6 +864,19 @@ int main(int argc, char** argv)
             exit(EXIT_FAILURE);
         }
 
+        if (re)
+        {
+            VkSurfaceKHR surface = VK_NULL_HANDLE;
+
+            if (glfwCreateWindowSurface(instance, window, NULL, &surface) == VK_SUCCESS)
+            {
+                printf("Vulkan window surface created successfully\n");
+                vkDestroySurfaceKHR(instance, surface, NULL);
+            }
+            else
+                printf("Failed to create Vulkan window surface\n");
+        }
+
         free((void*) re);
 
         gladLoadVulkanUserPtr(NULL, (GLADuserptrloadfunc) glfwGetInstanceProcAddress, instance);
@@ -936,6 +962,8 @@ int main(int argc, char** argv)
         free(pd);
         vkDestroyInstance(instance, NULL);
     }
+
+    glfwDestroyWindow(window);
 
     glfwTerminate();
     exit(EXIT_SUCCESS);
