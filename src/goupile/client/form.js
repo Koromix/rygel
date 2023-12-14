@@ -11,7 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, svg,
+         directive, Directive, noChange, nothing } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
@@ -1088,9 +1089,9 @@ function FormBuilder(state, model) {
 
         // Setting files on input file elements is fragile. At least on Firefox, assigning
         // its own value to the property results in an empty FileList for some reason.
-        class SetFiles extends lithtml.Directive {
+        class SetFiles extends Directive {
             update(part, [value]) {
-                if (value === lithtml.noChange || value === lithtml.nothing)
+                if (value === noChange || value === nothing)
                     return value;
 
                 let el = part.element;
@@ -1108,7 +1109,7 @@ function FormBuilder(state, model) {
                 return value;
             }
         }
-        let set_files = lithtml.directive(SetFiles);
+        let set_files = directive(SetFiles);
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
             ${makeLabel(intf, id)}
@@ -1782,7 +1783,7 @@ instead of:
             // Users are allowed to use complex HTML as label. Turn it into text for storage!
             if (typeof label === 'string' || typeof label === 'number') {
                 label = '' + label;
-            } else if (typeof lithtml !== 'undefined') {
+            } else if (typeof render !== 'undefined') {
                 let el = document.createElement('span');
                 render(label, el);
                 label = el.textContent;
