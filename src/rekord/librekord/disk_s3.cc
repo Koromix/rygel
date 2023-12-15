@@ -124,7 +124,7 @@ std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *user
 
     if (!disk->GetURL())
         return nullptr;
-    if (username && !disk->Open(username, pwd))
+    if (pwd && !disk->Open(username, pwd))
         return nullptr;
 
     return disk;

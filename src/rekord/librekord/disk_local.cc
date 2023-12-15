@@ -275,7 +275,7 @@ std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username
 
     if (!disk->GetURL())
         return nullptr;
-    if (username && !disk->Open(username, pwd))
+    if (pwd && !disk->Open(username, pwd))
         return nullptr;
 
     return disk;
