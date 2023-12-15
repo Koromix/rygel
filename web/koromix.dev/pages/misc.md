@@ -1,13 +1,3 @@
-# Rekord
-
-Rekord is a multi-platform **backup tool with deduplication and asymmetric encryption**, with support for multiple storage back-ends including:
-
-- Local filesystem
-- S3 storage
-- SFTP servers
-
-You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/rekord).
-
 # SaneBB
 
 SaneBB is a **small and fast BBCode parser in Java**, which I made as an alternative to the horribly overengineered and [inner-platform effect](https://en.wikipedia.org/wiki/Inner-platform_effect) victim [KefirBB library](https://github.com/kefirfromperm/kefirbb).

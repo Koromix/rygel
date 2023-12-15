@@ -27,6 +27,12 @@ Koffi is a **fast and easy-to-use JS to C FFI module** for [Node.js](https://nod
 
 Find out more on the [page dedicated to Koffi](koffi).
 
+## Rekord
+
+Rekord is a multi-platform **backup tool with deduplication and asymmetric encryption**, with support for local and remote storage back-ends.
+
+Find out more on the [page dedicated to Rekord](rekord).
+
 ## TyTools
 
 TyTools is a collection of independent tools to manage, flash and communicate with **[Teensy](https://www.pjrc.com/teensy/) microcontrollers**.
@@ -59,7 +65,6 @@ The projects on this page are provided as-is, and are in **various states of com
 
 Project | Description | Language
 ------- | ----------- | --------
-[Rekord](https://github.com/Koromix/rygel/tree/master/src/rekord) | Backup tool with deduplication and asymmetric encryption | C++
 [SaneBB](https://github.com/Koromix/libraries/blob/master/SaneBB.java) | Small (single-file) and fast BBCode parser in Java | Java
 [Blikk](https://github.com/Koromix/rygel/tree/master/src/blikk) | Embeddable beginner-friendly programming language with static types, fast compilation | C++
 [Serf](https://github.com/Koromix/rygel/tree/master/src/attic#serf) | Serf is a small HTTP server made for local testing with customizable headers | C++
