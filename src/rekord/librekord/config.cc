@@ -19,16 +19,16 @@ namespace RG {
 
 bool rk_Config::Complete(bool require_auth)
 {
-    if (!repository) {
-        const char *str = getenv("REKORD_REPOSITORY");
+    if (!url) {
+        const char *str = getenv("REKORD_URL");
         if (!str) {
             LogError("Missing repository location");
             return false;
         }
-        repository = DuplicateString(str, &str_alloc).ptr;
+        url = DuplicateString(str, &str_alloc).ptr;
     }
 
-    if (!rk_DecodeURL(repository, this))
+    if (!rk_DecodeURL(url, this))
         return false;
 
     if (require_auth && !username) {
@@ -65,10 +65,11 @@ bool rk_Config::Validate(bool require_auth) const
 {
     bool valid = true;
 
-    if (!repository) {
+    if (!url) {
         LogError("Missing repository location");
         valid = false;
     }
+
     if (require_auth && !username) {
         LogError("Missing repository username");
         valid = false;
@@ -117,27 +118,27 @@ static bool LooksLikeSSH(Span<const char> str)
 bool rk_DecodeURL(Span<const char> url, rk_Config *out_config)
 {
     if (url == "S3") {
-        out_config->repository = "S3";
+        out_config->url = "S3";
         out_config->type = rk_DiskType::S3;
 
         return true;
     } else if (LooksLikeS3(url)) {
-        out_config->repository = DuplicateString(url, &out_config->str_alloc).ptr;
+        out_config->url = DuplicateString(url, &out_config->str_alloc).ptr;
         out_config->type = rk_DiskType::S3;
 
         return s3_DecodeURL(url, &out_config->s3);
     } else if (url == "SFTP") {
-        out_config->repository = "SFTP";
+        out_config->url = "SFTP";
         out_config->type = rk_DiskType::SFTP;
 
         return true;
     } else if (LooksLikeSSH(url)) {
-        out_config->repository = DuplicateString(url, &out_config->str_alloc).ptr;
+        out_config->url = DuplicateString(url, &out_config->str_alloc).ptr;
         out_config->type = rk_DiskType::SFTP;
 
         return ssh_DecodeURL(url, &out_config->ssh);
     } else {
-        out_config->repository = DuplicateString(url, &out_config->str_alloc).ptr;
+        out_config->url = DuplicateString(url, &out_config->str_alloc).ptr;
         out_config->type = rk_DiskType::Local;
 
         return true;
@@ -161,7 +162,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
         while (ini.Next(&prop)) {
             if (prop.section == "Repository") {
                 do {
-                    if (prop.key == "Repository") {
+                    if (prop.key == "URL") {
                         valid &= rk_DecodeURL(prop.value, &config);
                     } else if (prop.key == "Username") {
                         config.username = DuplicateString(prop.value, &config.str_alloc).ptr;
@@ -176,7 +177,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                 do {
                     valid &= config.s3.SetProperty(prop.key, prop.value, root_directory);
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "SFTP") {
+            } else if (prop.section == "SSH" || prop.section == "SFTP") {
                 do {
                     valid &= config.ssh.SetProperty(prop.key, prop.value, root_directory);
                 } while (ini.NextInSection(&prop));

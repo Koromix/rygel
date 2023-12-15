@@ -35,7 +35,7 @@ bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
     OptionParser opt(arguments, OptionMode::Skip);
 
-    const char *config_filename = nullptr;
+    const char *config_filename = getenv("REKORD_CONFIG_FILE");
 
     while (opt.Next()) {
         if (opt.Test("-C", "--config_file", OptionType::Value)) {

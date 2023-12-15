@@ -61,7 +61,7 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
 bool ssh_Config::Complete()
 {
     if (!password && !keyfile) {
-        const char *str = getenv("SSH_KEYFILE");
+        const char *str = getenv("SSH_KEY_FILE");
 
         if (str) {
             keyfile = DuplicateString(str, &str_alloc).ptr;
@@ -108,7 +108,7 @@ bool ssh_Config::Validate() const
         valid = false;
     }
     if (!password && !keyfile) {
-        LogError("Missing SFTP password (SSH_PASSWORD) and/or keyfile (SSH_KEYFILE)");
+        LogError("Missing SFTP password (SSH_PASSWORD) and/or keyfile (SSH_KEY_FILE)");
         valid = false;
     }
 

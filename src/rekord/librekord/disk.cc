@@ -746,7 +746,7 @@ std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool require_password)
         return nullptr;
 
     switch (config.type) {
-        case rk_DiskType::Local: return rk_OpenLocalDisk(config.repository, config.username, config.password, config.threads);
+        case rk_DiskType::Local: return rk_OpenLocalDisk(config.url, config.username, config.password, config.threads);
         case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, config.username, config.password, config.threads);
         case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, config.username, config.password, config.threads);
     }
