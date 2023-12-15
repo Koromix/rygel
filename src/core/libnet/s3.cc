@@ -276,7 +276,7 @@ bool s3_Session::Open(const s3_Config &config)
         this->config.port = -1;
     }
 
-    if (this->config.region) {
+    if (!this->config.region) {
         const char *region = getenv("AWS_REGION");
         this->config.region = region ? DuplicateString(region, &this->config.str_alloc).ptr : nullptr;
     }
