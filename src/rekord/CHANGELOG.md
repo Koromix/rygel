@@ -1,5 +1,12 @@
 # Changelog
 
+## Rekord 0.7
+
+- Fix init of local and S3 rekord repositories
+- Adjust names of config keys and environment variables
+- Support s3:// scheme for S3 repository URLs
+- Minor CLI output changes
+
 ## Rekord 0.6
 
 - Fix excessive memory usage when storing big files in parallel
