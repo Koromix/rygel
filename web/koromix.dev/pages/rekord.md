@@ -39,24 +39,22 @@ apt install rekord
 
 For other distributions, you can [build the code from source](#build-from-source) as documented below.
 
-# Usage
+# Configuration
 
-## Repository configuration
+## Local filesystem
 
-### Local filesystem
-
-To create a repository in a local directory, create an INI file with the configuration:
+To create a repository in a local directory, create an INI file (name it how you want) with the following configuration:
 
 ```ini
 [Repository]
 URL = /path/to/repository
 ```
 
-You can name this file any way you prefer and store it where you want.
+Once this is done, use [rekord init](#initialize-repository) to create the repository.
 
-### S3 storage
+## S3 storage
 
-To create a repository stored in an S3-compatible server, create an INI file with the configuration:
+To create a repository stored on an S3-compatible server, create an INI file (name it how you want) with the following configuration:
 
 ```ini
 [Repository]
@@ -67,11 +65,13 @@ KeyID = <AWS access key ID>
 SecretKey = <AWS secret key>
 ```
 
-You can name this file any way you prefer and store it where you want.
-
 You can omit the `SecretKey` value, in which case a prompt will ask you the access key.
 
-### SFTP server
+Once this is done, use [rekord init](#initialize-repository) to create the repository.
+
+## SFTP server
+
+To create a repository stored on an SFTP host, create an INI file (name it how you want) with the following configuration:
 
 ```ini
 [Repository]
@@ -94,6 +94,10 @@ URL = ssh://foo@example.com/backup
 KeyFile = /home/bar/.ssh/id_ed25519
 Fingerprint = SHA256:Y9pmJfkaok8t0dFJrfi8/LLUNhOYwAZGHUNGsYAiJUM
 ```
+
+Once this is done, use [rekord init](#initialize-repository) to create the repository.
+
+# Commands
 
 ## Initialize repository
 
