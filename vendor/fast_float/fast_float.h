@@ -10,7 +10,8 @@
 // with contributions from Fabio Pellacini
 // with contributions from Lénárd Szolnoki
 // with contributions from Jan Pharago
-// with contributions from Maya Warrier//
+// with contributions from Maya Warrier
+//
 //
 // Licensed under the Apache License, Version 2.0, or the
 // MIT License or the Boost License. This file may not be copied,
@@ -263,7 +264,7 @@ using parse_options = parse_options_t<char>;
 #define FASTFLOAT_NEON 1
 #endif
 
-#if defined(FASTFLOAT_SSE2) || defined(FASTFLOAT_ARM64)
+#if defined(FASTFLOAT_SSE2) || defined(FASTFLOAT_NEON)
 #define FASTFLOAT_HAS_SIMD 1
 #endif
 
@@ -302,7 +303,7 @@ using parse_options = parse_options_t<char>;
 // rust style `try!()` macro, or `?` operator
 #define FASTFLOAT_TRY(x) { if (!(x)) return false; }
 
-#define FASTFLOAT_ENABLE_IF(...) typename std::enable_if<(__VA_ARGS__), int>::type = 0
+#define FASTFLOAT_ENABLE_IF(...) typename std::enable_if<(__VA_ARGS__), int>::type
 
 
 namespace fast_float {
@@ -313,6 +314,20 @@ fastfloat_really_inline constexpr bool cpp20_and_in_constexpr() {
 #else
   return false;
 #endif
+}
+
+template <typename T>
+fastfloat_really_inline constexpr bool is_supported_float_type() {
+  return std::is_same<T, float>::value || std::is_same<T, double>::value;
+}
+
+template <typename UC>
+fastfloat_really_inline constexpr bool is_supported_char_type() {
+  return
+    std::is_same<UC, char>::value ||
+    std::is_same<UC, wchar_t>::value ||
+    std::is_same<UC, char16_t>::value ||
+    std::is_same<UC, char32_t>::value;
 }
 
 // Compares two ASCII strings in a case insensitive manner.
@@ -363,7 +378,7 @@ int leading_zeroes_generic(uint64_t input_num, int last_bit = 0) {
     if(input_num & uint64_t(            0xff00)) { input_num >>=  8; last_bit |=  8; }
     if(input_num & uint64_t(              0xf0)) { input_num >>=  4; last_bit |=  4; }
     if(input_num & uint64_t(               0xc)) { input_num >>=  2; last_bit |=  2; }
-    if(input_num & uint64_t(               0x2)) { input_num >>=  1; last_bit |=  1; }
+    if(input_num & uint64_t(               0x2)) { /* input_num >>=  1; */ last_bit |=  1; }
     return 63 - last_bit;
 }
 
@@ -803,6 +818,69 @@ constexpr char32_t const * str_const_inf<char32_t>()
 {
     return U"infinity";
 }
+
+
+template <typename = void>
+struct int_luts {
+  static constexpr uint8_t chdigit[] = {
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 255, 255, 255, 255, 255, 255,
+    255, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 255, 255, 255, 255, 255,
+    255, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
+    25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+    255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
+  };
+
+  static constexpr size_t maxdigits_u64[] = {
+    64, 41, 32, 28, 25, 23, 22, 21,
+    20, 19, 18, 18, 17, 17, 16, 16,
+    16, 16, 15, 15, 15, 15, 14, 14,
+    14, 14, 14, 14, 14, 13, 13, 13,
+    13, 13, 13
+  };
+
+  static constexpr uint64_t min_safe_u64[] = {
+    9223372036854775808ull, 12157665459056928801ull, 4611686018427387904, 7450580596923828125, 4738381338321616896,
+    3909821048582988049, 9223372036854775808ull, 12157665459056928801ull, 10000000000000000000ull, 5559917313492231481,
+    2218611106740436992, 8650415919381337933, 2177953337809371136, 6568408355712890625, 1152921504606846976, 
+    2862423051509815793, 6746640616477458432, 15181127029874798299ull, 1638400000000000000, 3243919932521508681,
+    6221821273427820544, 11592836324538749809ull, 876488338465357824, 1490116119384765625, 2481152873203736576,
+    4052555153018976267, 6502111422497947648, 10260628712958602189ull, 15943230000000000000ull, 787662783788549761,
+    1152921504606846976, 1667889514952984961, 2386420683693101056, 3379220508056640625, 4738381338321616896
+  };
+};
+
+template <typename T>
+constexpr uint8_t int_luts<T>::chdigit[];
+
+template <typename T>
+constexpr size_t int_luts<T>::maxdigits_u64[];
+
+template <typename T>
+constexpr uint64_t int_luts<T>::min_safe_u64[];
+
+template <typename UC>
+fastfloat_really_inline
+constexpr uint8_t ch_to_digit(UC c) { return int_luts<>::chdigit[static_cast<unsigned char>(c)]; }
+
+fastfloat_really_inline
+constexpr size_t max_digits_u64(int base) { return int_luts<>::maxdigits_u64[base - 2]; }
+
+// If a u64 is exactly max_digits_u64() in length, this is
+// the value below which it has definitely overflowed. 
+fastfloat_really_inline
+constexpr uint64_t min_safe_u64(int base) { return int_luts<>::min_safe_u64[base - 2]; }
+
 } // namespace fast_float
 
 #endif
@@ -832,7 +910,7 @@ namespace fast_float {
  * to determine whether we allow the fixed point and scientific notation respectively.
  * The default is  `fast_float::chars_format::general` which allows both `fixed` and `scientific`.
  */
-template<typename T, typename UC = char>
+template<typename T, typename UC = char, typename = FASTFLOAT_ENABLE_IF(is_supported_float_type<T>())>
 FASTFLOAT_CONSTEXPR20
 from_chars_result_t<UC> from_chars(UC const * first, UC const * last,
                              T &value, chars_format fmt = chars_format::general)  noexcept;
@@ -844,6 +922,12 @@ template<typename T, typename UC = char>
 FASTFLOAT_CONSTEXPR20
 from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
                                       T &value, parse_options_t<UC> options)  noexcept;
+/**
+* from_chars for integer types.
+*/
+template <typename T, typename UC = char, typename = FASTFLOAT_ENABLE_IF(!is_supported_float_type<T>())>
+FASTFLOAT_CONSTEXPR20
+from_chars_result_t<UC> from_chars(UC const * first, UC const * last, T& value, int base = 10) noexcept;
 
 } // namespace fast_float
 #endif // FASTFLOAT_FAST_FLOAT_H
@@ -855,6 +939,7 @@ from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
 #include <cstdint>
 #include <cstring>
 #include <iterator>
+#include <limits>
 #include <type_traits>
 
 
@@ -964,7 +1049,7 @@ FASTFLOAT_SIMD_RESTORE_WARNINGS
 #if defined(_MSC_VER) && _MSC_VER <= 1900
 template <typename UC>
 #else
-template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>())>
+template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>()) = 0>
 #endif
 // dummy for compile
 uint64_t simd_read8_to_u64(UC const*) {
@@ -1072,7 +1157,7 @@ FASTFLOAT_SIMD_RESTORE_WARNINGS
 #if defined(_MSC_VER) && _MSC_VER <= 1900
 template <typename UC>
 #else
-template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>())>
+template <typename UC, FASTFLOAT_ENABLE_IF(!has_simd_opt<UC>()) = 0>
 #endif
 // dummy for compile
 bool simd_parse_if_eight_digits_unrolled(UC const*, uint64_t&) {
@@ -1080,7 +1165,7 @@ bool simd_parse_if_eight_digits_unrolled(UC const*, uint64_t&) {
 }
 
 
-template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value)>
+template <typename UC, FASTFLOAT_ENABLE_IF(!std::is_same<UC, char>::value) = 0>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
 void loop_parse_if_eight_digits(const UC*& p, const UC* const pend, uint64_t& i) {
   if (!has_simd_opt<UC>()) {
@@ -1285,6 +1370,106 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
   }
   answer.exponent = exponent;
   answer.mantissa = i;
+  return answer;
+}
+
+template <typename T, typename UC>
+fastfloat_really_inline FASTFLOAT_CONSTEXPR20
+from_chars_result_t<UC> parse_int_string(UC const* p, UC const* pend, T& value, int base)
+{
+  from_chars_result_t<UC> answer;
+  
+  UC const* const first = p;
+
+  bool negative = (*p == UC('-'));
+  if (!std::is_signed<T>::value && negative) {
+    answer.ec = std::errc::invalid_argument;
+    answer.ptr = first;
+    return answer;
+  }
+#ifdef FASTFLOAT_ALLOWS_LEADING_PLUS // disabled by default
+  if ((*p == UC('-')) || (*p == UC('+'))) {
+#else
+  if (*p == UC('-')) {
+#endif
+    ++p;
+  }
+
+  UC const* const start_num = p;
+  while (*p == UC('0')) { 
+    ++p; 
+  }
+  const bool has_leading_zeros = p > start_num;
+
+  UC const* const start_digits = p;
+
+  uint64_t i = 0;
+  if (base == 10) {
+    loop_parse_if_eight_digits(p, pend, i); // use SIMD if possible
+  }
+  while (p != pend) {
+    uint8_t digit = ch_to_digit(*p);
+    if (digit >= base) {
+      break;
+    }
+    i = uint64_t(base) * i + digit; // might overflow, check this later
+    p++; 
+  }
+  
+  size_t digit_count = size_t(p - start_digits);
+
+  if (digit_count == 0) {
+    if (has_leading_zeros) {
+      value = 0;
+      answer.ec = std::errc();
+      answer.ptr = p;
+    }
+    else {
+      answer.ec = std::errc::invalid_argument;
+      answer.ptr = first;
+    }
+    return answer; 
+  }
+
+  answer.ptr = p;
+
+  // check u64 overflow
+  size_t max_digits = max_digits_u64(base);
+  if (digit_count > max_digits) {
+    answer.ec = std::errc::result_out_of_range;
+    return answer;
+  }
+  // this check can be eliminated for all other types, but they will all require a max_digits(base) equivalent
+  if (digit_count == max_digits && i < min_safe_u64(base)) {
+    answer.ec = std::errc::result_out_of_range;
+    return answer;
+  }
+
+  // check other types overflow
+  if (!std::is_same<T, uint64_t>::value) {
+    if (i > uint64_t(std::numeric_limits<T>::max()) + uint64_t(negative)) {
+      answer.ec = std::errc::result_out_of_range;
+      return answer;
+    }
+  }
+
+  if (negative) {
+#ifdef FASTFLOAT_VISUAL_STUDIO
+#pragma warning(push)
+#pragma warning(disable: 4146) 
+#endif
+    // this weird workaround is required because:
+    // - converting unsigned to signed when its value is greater than signed max is UB pre-C++23.
+    // - reinterpret_casting (~i + 1) would work, but it is not constexpr
+    // this is always optimized into a neg instruction.
+    value = T(-std::numeric_limits<T>::max() - T(i - std::numeric_limits<T>::max()));
+#ifdef FASTFLOAT_VISUAL_STUDIO
+#pragma warning(pop)
+#endif
+  }
+  else { value = T(i); }
+
+  answer.ec = std::errc();
   return answer;
 }
 
@@ -3353,7 +3538,7 @@ fastfloat_really_inline bool rounds_to_nearest() noexcept {
 
 } // namespace detail
 
-template<typename T, typename UC>
+template<typename T, typename UC, typename>
 FASTFLOAT_CONSTEXPR20
 from_chars_result_t<UC> from_chars(UC const * first, UC const * last,
                              T &value, chars_format fmt /*= chars_format::general*/)  noexcept  {
@@ -3365,11 +3550,8 @@ FASTFLOAT_CONSTEXPR20
 from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
                                       T &value, parse_options_t<UC> options)  noexcept  {
 
-  static_assert (std::is_same<T, double>::value || std::is_same<T, float>::value, "only float and double are supported");
-  static_assert (std::is_same<UC, char>::value ||
-                 std::is_same<UC, wchar_t>::value ||
-                 std::is_same<UC, char16_t>::value ||
-                 std::is_same<UC, char32_t>::value , "only char, wchar_t, char16_t and char32_t are supported");
+  static_assert (is_supported_float_type<T>(), "only float and double are supported");
+  static_assert (is_supported_char_type<UC>(), "only char, wchar_t, char16_t and char32_t are supported");
 
   from_chars_result_t<UC> answer;
 #ifdef FASTFLOAT_SKIP_WHITE_SPACE  // disabled by default
@@ -3422,10 +3604,10 @@ from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
       // We do not have that fegetround() == FE_TONEAREST.
       // Next is a modified Clinger's fast path, inspired by Jakub Jelínek's proposal
       if (pns.exponent >= 0 && pns.mantissa <=binary_format<T>::max_mantissa_fast_path(pns.exponent)) {
-#if defined(__clang__)
+#if defined(__clang__) || defined(FASTFLOAT_32BIT)
         // Clang may map 0 to -0.0 when fegetround() == FE_DOWNWARD
         if(pns.mantissa == 0) {
-          value = pns.negative ? -0. : 0.;
+          value = pns.negative ? T(-0.) : T(0.);
           return answer;
         }
 #endif
@@ -3450,6 +3632,27 @@ from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
     answer.ec = std::errc::result_out_of_range;
   }
   return answer;
+}
+
+
+template <typename T, typename UC, typename>
+FASTFLOAT_CONSTEXPR20
+from_chars_result_t<UC> from_chars(UC const* first, UC const* last, T& value, int base) noexcept
+{
+  static_assert (is_supported_char_type<UC>(), "only char, wchar_t, char16_t and char32_t are supported");
+
+  from_chars_result_t<UC> answer;
+#ifdef FASTFLOAT_SKIP_WHITE_SPACE  // disabled by default
+  while ((first != last) && fast_float::is_space(uint8_t(*first))) {
+    first++;
+  }
+#endif
+  if (first == last || base < 2 || base > 36) {
+    answer.ec = std::errc::invalid_argument;
+    answer.ptr = first;
+    return answer;
+  }
+  return parse_int_string(first, last, value, base);
 }
 
 } // namespace fast_float
