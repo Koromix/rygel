@@ -91,6 +91,9 @@ bool s3_Config::Validate() const
     if (!scheme) {
         LogError("Missing S3 protocol");
         valid = false;
+    } else if (!TestStr(scheme, "http") && !TestStr(scheme, "https") && !TestStr(scheme, "s3")) {
+        LogError("Invalid S3 protocol '%1'", scheme);
+        valid = false;
     }
     if (!host) {
         LogError("Missing S3 host");
@@ -109,7 +112,6 @@ bool s3_Config::Validate() const
         LogError("Missing AWS key ID (AWS_ACCESS_KEY_ID) variable");
         return false;
     }
-
     if (!access_key) {
         LogError("Missing AWS secret key (AWS_SECRET_ACCESS_KEY) variable");
         return false;
@@ -145,7 +147,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         memcpy(url0, url.ptr, url.len);
         url0[url.len] = 0;
 
-        ret = curl_url_set(h, CURLUPART_URL, url0, 0);
+        ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
         if (ret != CURLUE_OK) {
             LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
             return false;
@@ -270,6 +272,9 @@ bool s3_Session::Open(const s3_Config &config)
     config.Clone(&this->config);
 
     // Skip explicit port when not needed
+    if (TestStr(config.scheme, "s3")) {
+        this->config.scheme = "https";
+    }
     if (config.port == 80 && TestStr(config.scheme, "http")) {
         this->config.port = -1;
     } else if (config.port == 443 && TestStr(config.scheme, "https")) {
@@ -282,9 +287,9 @@ bool s3_Session::Open(const s3_Config &config)
     }
 
     if (config.port > 0) {
-        url = Fmt(&this->config.str_alloc, "%1://%2:%3/%4", config.scheme, config.host, this->config.port, config.path_mode ? config.bucket : "").ptr;
+        url = Fmt(&this->config.str_alloc, "%1://%2:%3/%4", this->config.scheme, config.host, this->config.port, config.path_mode ? config.bucket : "").ptr;
     } else {
-        url = Fmt(&this->config.str_alloc, "%1://%2/%3", config.scheme, config.host, config.path_mode ? config.bucket : "").ptr;
+        url = Fmt(&this->config.str_alloc, "%1://%2/%3", this->config.scheme, config.host, config.path_mode ? config.bucket : "").ptr;
     }
 
     return OpenAccess();

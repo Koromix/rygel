@@ -94,9 +94,9 @@ bool rk_Config::Validate(bool require_auth) const
     return valid;
 }
 
-static bool LooksLikeURL(Span<const char> str)
+static bool LooksLikeS3(Span<const char> str)
 {
-    bool ret = StartsWith(str, "http://") || StartsWith(str, "https://");
+    bool ret = StartsWith(str, "http://") || StartsWith(str, "https://") || StartsWith(str, "s3://");
     return ret;
 }
 
@@ -121,7 +121,7 @@ bool rk_DecodeURL(Span<const char> url, rk_Config *out_config)
         out_config->type = rk_DiskType::S3;
 
         return true;
-    } else if (LooksLikeURL(url)) {
+    } else if (LooksLikeS3(url)) {
         out_config->repository = DuplicateString(url, &out_config->str_alloc).ptr;
         out_config->type = rk_DiskType::S3;
 
