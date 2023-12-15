@@ -203,7 +203,7 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
     int align = std::max(60 - indent - strlen(obj.name), (size_t)0);
     bool size = (obj.readable && obj.type == rk_ObjectType::File);
 
-    if (obj.mode) {
+    if (obj.type != rk_ObjectType::Link && obj.mode) {
         PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 %!D..(0%6)%!0 [%7] %!.._%8%!0",
                 FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
                 obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
@@ -247,7 +247,9 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     } else {
         json->Key("mtime"); json->Int64(obj.mtime);
         json->Key("btime"); json->Int64(obj.btime);
-        json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr);
+        if (obj.type != rk_ObjectType::Link) {
+            json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr);
+        }
         json->Key("uid"); json->Uint(obj.uid);
         json->Key("gid"); json->Uint(obj.gid);
     }
@@ -282,7 +284,9 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
     } else {
         element.append_attribute("mtime") = obj.mtime;
         element.append_attribute("btime") = obj.btime;
-        element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
+        if (obj.type != rk_ObjectType::Link) {
+            element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
+        }
         element.append_attribute("uid") = obj.uid;
         element.append_attribute("gid") = obj.gid;
     }
