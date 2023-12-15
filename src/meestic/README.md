@@ -6,6 +6,33 @@ You can use the command-line or the GUI version. Download ready-to-use binaries 
 
 It was made by looking at the HID packets sent by the Windows tool with Wireshark. It is provided "as is", I don't make any guarantee about this tool.
 
+# Install
+
+## Windows
+
+Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/meestic/releases/latest).
+
+## Linux
+
+A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+
+Execute the following commands (as root) to add the repository to your system:
+
+```sh
+mkdir -p -m0755 /etc/apt/keyrings
+curl https://download.koromix.dev/debian/koromix-archive-keyring.gpg -o /etc/apt/keyrings/koromix-archive-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/koromix-archive-keyring.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
+```
+
+Once this is done, refresh the repository cache and install the package:
+
+```sh
+apt update
+apt install meestic
+```
+
+For other distributions, you can [build the code from source](#build-from-source) as documented below.
+
 # Graphical interface
 
 MeesticTray runs in the **system tray**, and provides customizable profiles that you can cycle through with the tray icon or with the keyboard light function key.
