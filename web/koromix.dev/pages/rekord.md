@@ -12,11 +12,11 @@ This software has not been stabilized yet and **must not be used as your primary
 
 ## Windows
 
-Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/rekord/releases/latest).
+Ready-to-use Windows binaries will be provided once the software stabilizes. In the meantime, you can build it yourself or [try it on Debian](#linux).
 
 ## macOS
 
-Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/rekord/releases/latest).
+Ready-to-use macOS binaries will be provided once the software stabilizes. In the meantime, you can build it yourself or [try it on Debian](#linux).
 
 ## Linux
 
