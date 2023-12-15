@@ -90,11 +90,15 @@ Options:
     std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
     if (!disk)
         return 1;
-    if (!disk->Init(full_pwd, write_pwd))
-        return 1;
 
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
+
+    LogInfo("Initializing...");
+    if (!disk->Init(full_pwd, write_pwd))
+        return 1;
+    LogInfo();
+
     LogInfo("Default account name: %!..+default%!0");
     LogInfo();
     LogInfo("Default full password: %!..+%1%!0", full_pwd);
@@ -165,9 +169,13 @@ Options:
         LogError("You must use the read-write password with this command");
         return 1;
     }
+    LogInfo();
 
+    LogInfo("Extracting full key...");
     if (!WriteFile(disk->GetFullKey(), output_filename))
         return 1;
+    LogInfo();
+
     LogInfo("Unprotected full-access key written to: %!..+%1%!0", output_filename);
 
     return 0;
@@ -269,8 +277,8 @@ Options:
     if (disk->GetMode() != rk_DiskMode::WriteOnly) {
         LogWarning("You should use the write-only key with this command");
     }
-
     LogInfo();
+
     LogInfo("Backing up...");
 
     int64_t now = GetMonotonicTime();
@@ -389,8 +397,8 @@ Options:
         LogError("Cannot decrypt with write-only key");
         return 1;
     }
-
     LogInfo();
+
     LogInfo("Extracting...");
 
     int64_t now = GetMonotonicTime();
