@@ -141,7 +141,7 @@ In order to build Meestic on Linux, clone the repository and run these commands 
 
 ```sh
 # Install required dependencies on Debian or Ubuntu:
-sudo apt install git build-essential libudev-dev
+sudo apt install build-essential libudev-dev
 
 # Build binaries
 ./bootstrap.sh

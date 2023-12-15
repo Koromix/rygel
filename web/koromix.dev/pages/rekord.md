@@ -243,7 +243,7 @@ In order to build Rekord on Linux, clone the repository and run these commands f
 
 ```sh
 # Install required dependencies on Debian or Ubuntu:
-sudo apt install git build-essential
+sudo apt install build-essential
 
 # Build binaries
 ./bootstrap.sh
