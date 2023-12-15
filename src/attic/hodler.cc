@@ -140,7 +140,7 @@ static const char *SectionToPageName(Span<const char> section, Allocator *alloc)
     return name;
 }
 
-static const char *TextToID(Span<const char> text, Allocator *alloc)
+static const char *TextToID(Span<const char> text, char replace_char, Allocator *alloc)
 {
     Span<char> id = AllocateSpan<char>(alloc, text.len + 1);
 
@@ -157,7 +157,7 @@ static const char *TextToID(Span<const char> text, Allocator *alloc)
                 id[len++] = LowerAscii((char)uc);
                 skip_special = false;
             } else if (!skip_special) {
-                id[len++] = '_';
+                id[len++] = replace_char;
                 skip_special = true;
             }
         } else if (bytes > 1) {
@@ -182,7 +182,7 @@ static const char *TextToID(Span<const char> text, Allocator *alloc)
         offset += bytes;
     }
 
-    while (len > 1 && id[len - 1] == '_') {
+    while (len > 1 && id[len - 1] == replace_char) {
         len--;
     }
     if (!len)
@@ -404,12 +404,17 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
 
                     sec.level = level;
                     sec.title = toc.ptr;
-                    sec.id = TextToID(title, alloc);
+                    sec.id = TextToID(title, '-', alloc);
 
                     page->sections.Append(sec);
 
                     cmark_node *frag = cmark_node_new(CMARK_NODE_HTML_INLINE);
-                    cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a>", sec.id).ptr);
+                    if (strchr(sec.id, '-')) {
+                        const char *old_id = TextToID(title, '_', alloc);
+                        cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a><a id=\"%2\"></a>", sec.id, old_id).ptr);
+                    } else {
+                        cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a>", sec.id).ptr);
+                    }
                     cmark_node_prepend_child(node, frag);
                 }
             }

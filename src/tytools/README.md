@@ -47,7 +47,7 @@ apt update
 apt install tytools
 ```
 
-For other distributions, you can [build the code from source](https://koromix.dev/tytools#hacking_tytools) as documented on the website.
+For other distributions, you can [build the code from source](https://koromix.dev/tytools#hacking-tytools) as documented on the website.
 
 # Using tycmd
 
