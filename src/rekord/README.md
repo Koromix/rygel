@@ -1,10 +1,10 @@
 # Overview
 
-Rekord is a multi-platform **backup tool with deduplication and asymmetric encryption**, with support for multiple storage back-ends including:
+Rekord is a **multi-platform backup tool**, with the following features:
 
-- Local filesystem
-- S3 storage
-- SFTP servers
+- *Write-only passwords / keys* (using asymmetic encryption)
+- *Data deduplication* based on content-defined chunking
+- *Local and remote storage back-ends*: local directory, S3 storage, SFTP servers
 
 This software has not been stabilized yet and **must not be used as your primary backup** tool. You've been warned!
 
