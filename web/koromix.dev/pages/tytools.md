@@ -158,7 +158,7 @@ are two options to enable Qt in TyTools:
 To build TyTools with MSVC 2019 64-bit, launch _VS2019 x64 Native Tools Command Prompt_,
 navigate to the project directory and execute:
 
-```bat
+```sh
 bootstrap.bat
 felix -pFast tycmd
 felix -pFast tycommander tycommanderc

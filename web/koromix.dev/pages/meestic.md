@@ -128,7 +128,7 @@ Be careful, color names and most options are **case-sensitive**.
 
 In order to build Meestic on Windows, clone the repository and run these commands from the root directory in a *Visual Studio command prompt* (x64 or x86, as you prefer):
 
-```batch
+```sh
 bootstrap.bat
 felix -pFast meestic MeesticTray
 ```

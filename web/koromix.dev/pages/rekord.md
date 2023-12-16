@@ -230,7 +230,7 @@ rekord get <ID> -O <path>
 
 In order to build Rekord on Windows, clone the repository and run these commands from the root directory in a _Visual Studio command prompt_ (x64 or x86, as you prefer):
 
-```batch
+```sh
 bootstrap.bat
 felix -pFast rekord
 ```
