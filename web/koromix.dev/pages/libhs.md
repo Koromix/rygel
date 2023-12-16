@@ -1,18 +1,16 @@
 # Overview
 
-libhs is a **C library to enumerate HID and serial devices** and interact with them.
+libhs is a C library to **enumerate and interact with USB HID and USB serial devices** and interact with them. It is:
 
-- *single-file*: one header is all you need to make it work.
-- *public domain*: use it, hack it, do whatever you want.
-- *multiple platforms*: Windows (≥ XP), macOS (≥ 10.9) and Linux.
-- *multiple compilers*: MSVC (≥ 2015), GCC and Clang.
-- *driverless*: uses native OS-provided interfaces and does not require custom drivers.
+- Single-file: one header is all you need to make it work.
+- Public domain: use it, hack it, do whatever you want.
+- Multiple platforms: Windows (≥ XP), macOS (≥ 10.9) and Linux.
+- Multiple compilers: MSVC (≥ 2015), GCC and Clang.
+- Driverless: uses native OS-provided interfaces and does not require custom drivers.
 
 # Build
 
-Just [download libhs.h from the GitHub repository](https://github.com/Koromix/libraries). This file
-provides both the interface and the implementation. To instantiate the implementation, `#define
-HS_IMPLEMENTATION` in *ONE* source file, before including libhs.h.
+Just [download libhs.h from the GitHub repository](https://github.com/Koromix/libraries). This file provides both the interface and the implementation. To instantiate the implementation, `#define HS_IMPLEMENTATION` in *ONE* source file, before including libhs.h.
 
 libhs depends on **a few OS-provided libraries** that you need to link:
 
@@ -23,22 +21,17 @@ Windows (MinGW-w64) | Link `-luser32 -ladvapi32 -lsetupapi -lhid`
 OSX (Clang)         | Link _CoreFoundation and IOKit_
 Linux (GCC)         | Link `-ludev`
 
-This library is developed as part of the TyTools project where you can find the original
-[libhs source code](https://github.com/Koromix/tytools/tree/master/src/libhs). The
-amalgamated header file is automatically produced by CMake scripts.
+This library is developed as part of the TyTools project where you can find the original [libhs source code](https://github.com/Koromix/tytools/tree/master/src/libhs). The amalgamated header file is automatically produced by CMake scripts.
 
-Look at [Sean Barrett's excellent stb libraries](https://github.com/nothings/stb) for the
-reasoning behind this mode of distribution.
+Look at [Sean Barrett's excellent stb libraries](https://github.com/nothings/stb) for the reasoning behind this mode of distribution.
 
 # Contribute
 
-You can clone the code and report bugs on the [TyTools GitHub
-repository](https://github.com/Koromix/tytools).
+You can clone the code and report bugs on the [TyTools GitHub repository](https://github.com/Koromix/tytools).
 
 # Examples
 
-You can find a few complete [working examples in the GitHub
-repository](https://github.com/Koromix/tytools/tree/master/src/libhs/examples).
+You can find a few complete [working examples in the GitHub repository](https://github.com/Koromix/tytools/tree/master/src/libhs/examples).
 
 The following code uses libhs to enumerate serial and HID devices:
 
@@ -95,5 +88,4 @@ int main(void)
 
 # License
 
-All the code related to these programs is under **public domain**, you can do whatever you want
-with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) more more information.
+All the code related to these programs is under **public domain**, you can do whatever you want with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) more more information.
