@@ -12,7 +12,7 @@
    along with this program. If not, see https://www.gnu.org/licenses/. */
 
 @import url('../../../../vendor/opensans/OpenSans.css');
-@import url('highlight.min.css');
+@import url('../../../../vendor/highlight.js/styles/github.css');
 
 html { scroll-padding-top: 80px; }
 
