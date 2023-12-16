@@ -132,6 +132,13 @@ Be careful, color names and most options are **case-sensitive**.
 
 # Build from source
 
+Start by cloning the git repository here: [https://github.com/Koromix/rygel](https://github.com/Koromix/rygel):
+
+```sh
+git clone https://github.com/Koromix/rygel
+cd rygel
+```
+
 ## Windows
 
 In order to build Meestic on Windows, clone the repository and run these commands from the root directory in a *Visual Studio command prompt* (x64 or x86, as you prefer):

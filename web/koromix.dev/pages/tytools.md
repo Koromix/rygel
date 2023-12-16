@@ -140,6 +140,13 @@ your Teensy.
 
 # Hacking TyTools
 
+Start by cloning the git repository here: [https://github.com/Koromix/rygel](https://github.com/Koromix/rygel):
+
+```sh
+git clone https://github.com/Koromix/rygel
+cd rygel
+```
+
 ## Build on Windows
 
 You can use MSVC (≥ 2019) or MinGW-w64. I have not tested Clang on Windows yet. The historical
@@ -166,7 +173,6 @@ felix -pFast tyuploader
 ```
 
 If you want to build debug binaries instead, just use `./felix <target>`.
-
 
 ## Build on macOS
 
