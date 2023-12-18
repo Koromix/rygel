@@ -164,6 +164,7 @@ The output looks something like this:
 
 ```
 # <type> <name>                                                   <mode> <date>                      <size>
+
 [S] vpn/opt                                                              [2023-12-15 06:18:10 +0100] 
   [D] opt/                                                        (0755) [2023-10-05 17:03:38 +0200] 
     [D] certificates/                                             (0750) [2023-12-13 09:43:10 +0100] 
