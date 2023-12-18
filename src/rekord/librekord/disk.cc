@@ -481,10 +481,9 @@ rk_Disk::TestResult rk_Disk::TestFast(const char *path)
 
             return really_exists ? TestResult::Exists : TestResult::Missing;
         } else if (should_exist && !really_exists) {
-            cache_db.Run("DELETE FROM objects");
-            cache_db.Run("DELETE FROM stats");
+            ClearCache();
 
-            LogError("The local cache database was mismatched and could have resulted in missing data in the backup");
+            LogError("The local cache database was mismatched and could have resulted in missing data in the backup.");
             LogError("You must start over to fix this situation.");
 
             return TestResult::FatalError;
