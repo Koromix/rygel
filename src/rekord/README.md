@@ -113,14 +113,14 @@ rekord init
 
 This command will initialize the repository with a random 256-bit master key.
 
-The command will give you this **master key** in base64 form. You should **store it in a secure place**, it can be used to read the data and reset user accounts even if the data. However, if it leaks, everyone will be able to decrypt your snapshots.
+The command will give you this **master key** in base64 form. You should **store it in a secure place**, it can be used to reset user accounts and passwords (see below). However, if it leaks, everyone will be able to decrypt your snapshots.
 
 A write-only key (a public key) is derived from this master (secret) key. Both keys are stored encrypted in the repository, each with a dedicated password that will be provided to you:
 
 - *Master password*, which allows writing and reading from the repository
 - *Write-only password*, which can be used to create snapshots but cannot be used to list or restore existing snapshots
 
-Please store these passwords securely. However, if you lose them, you will still be able to reset them as long as you have the **master key**. This one, you must not lose or leak!
+Please store these passwords securely. However, if you lose them, you will still be able to reset them as long as you have the **master key**. As mentioned previously, this one, you must not lose or leak!
 
 ## Create snapshots
 
