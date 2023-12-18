@@ -14,6 +14,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "rekord.hh"
 #include "src/core/libpasswd/libpasswd.hh"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
@@ -31,7 +32,7 @@ R"(Usage: %!..+%1 init [-C <config>] [dir]
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-        %!..+--full_password <pwd>%!0    Set full password manually
+        %!..+--master_password <pwd>%!0  Set master password manually
         %!..+--write_password <pwd>%!0   Set write-only password manually)", FelixTarget);
     };
 
@@ -48,7 +49,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
-            } else if (opt.Test("--full_password", OptionType::Value)) {
+            } else if (opt.Test("--master_password", OptionType::Value)) {
                 if (!CopyString(opt.current_value, full_pwd)) {
                     LogError("Password is too long");
                     return 1;
@@ -99,12 +100,19 @@ Options:
         return 1;
     LogInfo();
 
-    LogInfo("Default account name: %!..+default%!0");
+    // Export master key
+    char master_key[257] = {};
+    {
+        Span<const uint8_t> key = disk->GetFullKey();
+        sodium_bin2base64(master_key, RG_SIZE(master_key), key.ptr, (size_t)key.len, sodium_base64_VARIANT_ORIGINAL);
+    }
+
+    LogInfo("Master key: %!..+%1%!0", master_key);
     LogInfo();
-    LogInfo("Default full password: %!..+%1%!0", full_pwd);
-    LogInfo("  write-only password: %!..+%1%!0", write_pwd);
+    LogInfo("Default master password: %!..+%1%!0", full_pwd);
+    LogInfo("    write-only password: %!..+%1%!0", write_pwd);
     LogInfo();
-    LogInfo("Please write them down, they cannot be recovered and the backup will be lost if you lose them.");
+    LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
 
     return 0;
 }
@@ -113,7 +121,6 @@ int RunExportKey(Span<const char *> arguments)
 {
     // Options
     rk_Config config;
-    const char *output_filename = "full.key";
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -124,10 +131,7 @@ Options:
 
     %!..+-R, --repository <dir>%!0       Set repository directory
     %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
-
-    %!..+-O, --output_file <file>%!0     Output key to specific file
-                                 %!D..(default: %2)%!0)", FelixTarget, output_filename);
+        %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -171,12 +175,14 @@ Options:
     }
     LogInfo();
 
-    LogInfo("Extracting full key...");
-    if (!WriteFile(disk->GetFullKey(), output_filename))
-        return 1;
-    LogInfo();
+    // Export master key
+    char master_key[257] = {};
+    {
+        Span<const uint8_t> key = disk->GetFullKey();
+        sodium_bin2base64(master_key, RG_SIZE(master_key), key.ptr, (size_t)key.len, sodium_base64_VARIANT_ORIGINAL);
+    }
 
-    LogInfo("Unprotected full-access key written to: %!..+%1%!0", output_filename);
+    LogInfo("Master key: %!..+%1%!0", master_key);
 
     return 0;
 }
