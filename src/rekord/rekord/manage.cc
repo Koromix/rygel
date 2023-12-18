@@ -32,6 +32,8 @@ R"(Usage: %!..+%1 init [-C <config>] [dir]
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
+    %!..+-R, --repository <dir>%!0       Set repository directory
+
         %!..+--master_password <pwd>%!0  Set master password manually
         %!..+--write_password <pwd>%!0   Set write-only password manually)", FelixTarget);
     };
@@ -49,6 +51,9 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
             } else if (opt.Test("--master_password", OptionType::Value)) {
                 if (!CopyString(opt.current_value, full_pwd)) {
                     LogError("Password is too long");
@@ -64,11 +69,6 @@ Options:
                 return 1;
             }
         }
-
-        const char *repo = opt.ConsumeNonOption();
-
-        if (repo && !rk_DecodeURL(repo, &config))
-            return 1;
     }
 
     // Generate repository passwords
