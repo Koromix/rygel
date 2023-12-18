@@ -1,5 +1,11 @@
 # Changelog
 
+## Rekord 0.8
+
+- Export master key after repository initialization
+- Change `rekord export_key` to export in base64 format
+- Change `rekord init` to use -R for repository URL (like other commands)
+
 ## Rekord 0.7
 
 - Fix init of local and S3 rekord repositories
