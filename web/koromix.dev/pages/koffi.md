@@ -8,7 +8,7 @@ Koffi is a **fast and easy-to-use C to JS FFI module** for [Node.js](https://nod
 * Well-tested code base for popular OS/architecture combinations
 
 <p style="text-align: center;">
-    <img src="static/koffi/node_c.webp" width="190" height="128" alt=""/>
+    <img src="{{ ASSET static/koffi/node_c.webp }}" width="190" height="128" alt=""/>
 </p>
 
 You can find more information about Koffi on the official web site: [https://koffi.dev/](https://koffi.dev)

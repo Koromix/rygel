@@ -3,8 +3,8 @@
 TyTools is a collection of independent tools to manage, flash and communicate with **[Teensy](https://www.pjrc.com/teensy/) microcontrollers**.
 
 <p style="text-align: center;">
-    <a href="static/tytools/tycommander.webp" target="_blank">
-        <img src="static/tytools/tycommander.webp" width="677"
+    <a href="{{ ASSET static/tytools/tycommander.webp }}" target="_blank">
+        <img src="{{ ASSET static/tytools/tycommander.webp }}" width="677"
              style="max-width: 90vw; object-fit: scale-down;" alt="Screenshot of TyCommander" />
     </a>
 </div>
