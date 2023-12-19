@@ -90,7 +90,7 @@ Authtool can **generate and check passwords**, and can also **create and check T
 
 Empress uses the compression algorithms implemented in libcc to provide simple **single-file compression and decompression**, and so far supports Zlib, Gzip, Brotli and LZ4.
 
-Its main purpose is to be test the compression and decompression implementations against official tools.
+Its main purpose is to test compression and decompression implementations against official tools.
 
 # Hodler
 
