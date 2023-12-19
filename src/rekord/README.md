@@ -4,6 +4,7 @@ Rekord is a **multi-platform backup tool**, with the following features:
 
 - Write-only passwords / keys (using asymmetic encryption)
 - Data deduplication based on content-defined chunking
+- Data compression with LZ4
 - Local and remote storage back-ends: local directory, S3 storage, SFTP servers
 
 > [!WARNING]  
