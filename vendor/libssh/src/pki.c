@@ -2543,24 +2543,24 @@ int ssh_pki_signature_verify(ssh_session session,
         unsigned char application_hash[SHA256_DIGEST_LEN] = {0};
         unsigned char input_hash[SHA256_DIGEST_LEN] = {0};
 
-        ctx = _ssh_sha256_init();
+        ctx = sha256_ctx_init();
         if (ctx == NULL) {
             SSH_LOG(SSH_LOG_WARN,
                     "Can not create SHA256CTX for application hash");
            return SSH_ERROR;
         }
-        _ssh_sha256_update(ctx, ssh_string_data(key->sk_application),
+        sha256_ctx_update(ctx, ssh_string_data(key->sk_application),
                ssh_string_len(key->sk_application));
-        _ssh_sha256_final(application_hash, ctx);
+        sha256_ctx_final(application_hash, ctx);
 
-        ctx = _ssh_sha256_init();
+        ctx = sha256_ctx_init();
         if (ctx == NULL) {
             SSH_LOG(SSH_LOG_WARN,
                     "Can not create SHA256CTX for input hash");
            return SSH_ERROR;
         }
-        _ssh_sha256_update(ctx, input, input_len);
-        _ssh_sha256_final(input_hash, ctx);
+        sha256_ctx_update(ctx, input, input_len);
+        sha256_ctx_final(input_hash, ctx);
 
         sk_buffer = ssh_buffer_new();
         if (sk_buffer == NULL) {

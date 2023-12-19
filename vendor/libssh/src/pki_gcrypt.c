@@ -256,22 +256,22 @@ static int passphrase_to_key(char *data, unsigned int datalen,
   unsigned int md_not_empty;
 
   for (j = 0, md_not_empty = 0; j < keylen; ) {
-    md = _ssh_md5_init();
+    md = md5_ctx_init();
     if (md == NULL) {
       return -1;
     }
 
     if (md_not_empty) {
-      _ssh_md5_update(md, digest, MD5_DIGEST_LEN);
+      md5_ctx_update(md, digest, MD5_DIGEST_LEN);
     } else {
       md_not_empty = 1;
     }
 
-    _ssh_md5_update(md, data, datalen);
+    md5_ctx_update(md, data, datalen);
     if (salt) {
-      _ssh_md5_update(md, salt, PKCS5_SALT_LEN);
+      md5_ctx_update(md, salt, PKCS5_SALT_LEN);
     }
-    _ssh_md5_final(digest, md);
+    md5_ctx_final(digest, md);
 
     for (i = 0; j < keylen && i < MD5_DIGEST_LEN; j++, i++) {
       if (key) {
@@ -2287,22 +2287,22 @@ ssh_signature pki_sign_data(const ssh_key privkey,
 
     switch (hash_type) {
     case SSH_DIGEST_SHA256:
-        _ssh_sha256(input, input_len, hash);
+        sha256_direct(input, input_len, hash);
         hlen = SHA256_DIGEST_LEN;
         sign_input = hash;
         break;
     case SSH_DIGEST_SHA384:
-        _ssh_sha384(input, input_len, hash);
+        sha384_direct(input, input_len, hash);
         hlen = SHA384_DIGEST_LEN;
         sign_input = hash;
         break;
     case SSH_DIGEST_SHA512:
-        _ssh_sha512(input, input_len, hash);
+        sha512_direct(input, input_len, hash);
         hlen = SHA512_DIGEST_LEN;
         sign_input = hash;
         break;
     case SSH_DIGEST_SHA1:
-        _ssh_sha1(input, input_len, hash);
+        sha1_direct(input, input_len, hash);
         hlen = SHA_DIGEST_LEN;
         sign_input = hash;
         break;
@@ -2369,25 +2369,25 @@ int pki_verify_data_signature(ssh_signature signature,
 
     switch (signature->hash_type) {
     case SSH_DIGEST_SHA256:
-        _ssh_sha256(input, input_len, hash);
+        sha256_direct(input, input_len, hash);
         hlen = SHA256_DIGEST_LEN;
         hash_type = "sha256";
         verify_input = hash;
         break;
     case SSH_DIGEST_SHA384:
-        _ssh_sha384(input, input_len, hash);
+        sha384_direct(input, input_len, hash);
         hlen = SHA384_DIGEST_LEN;
         hash_type = "sha384";
         verify_input = hash;
         break;
     case SSH_DIGEST_SHA512:
-        _ssh_sha512(input, input_len, hash);
+        sha512_direct(input, input_len, hash);
         hlen = SHA512_DIGEST_LEN;
         hash_type = "sha512";
         verify_input = hash;
         break;
     case SSH_DIGEST_SHA1:
-        _ssh_sha1(input, input_len, hash);
+        sha1_direct(input, input_len, hash);
         hlen = SHA_DIGEST_LEN;
         hash_type = "sha1";
         verify_input = hash;

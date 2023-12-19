@@ -1,5 +1,12 @@
 CHANGELOG
 =========
+version 0.10.6 (released 2023-12-18)
+ * Fix CVE-2023-6004: Command injection using proxycommand
+ * Fix CVE-2023-48795: Potential downgrade attack using strict kex
+ * Fix CVE-2023-6918: Missing checks for return values of MD functions
+ * Fix ssh_send_issue_banner() for CMD(PowerShell)
+ * Avoid passing other events to callbacks when poll is called recursively (#202)
+ * Allow @ in usernames when parsing from URI composes
 
 version 0.10.5 (released 2023-05-04)
  * Fix CVE-2023-1667: a NULL dereference during rekeying with algorithm guessing

@@ -391,6 +391,38 @@ static void torture_freed_channel_get_exit_status(void **state)
     assert_ssh_return_code_equal(session, rc, SSH_ERROR);
 }
 
+static void torture_pubkey_hash(void **state)
+{
+    struct torture_state *s = *state;
+    ssh_session session = s->ssh.session;
+    char *hash = NULL;
+    char *hexa = NULL;
+    int rc = 0;
+
+    /* bad arguments */
+    rc = ssh_get_pubkey_hash(session, NULL);
+    assert_int_equal(rc, SSH_ERROR);
+
+    rc = ssh_get_pubkey_hash(NULL, (unsigned char **)&hash);
+    assert_int_equal(rc, SSH_ERROR);
+
+    /* deprecated, but should be covered by tests! */
+    rc = ssh_get_pubkey_hash(session, (unsigned char **)&hash);
+    if (ssh_fips_mode()) {
+        /* When in FIPS mode, expect the call to fail */
+        assert_int_equal(rc, SSH_ERROR);
+    } else {
+        assert_int_equal(rc, MD5_DIGEST_LEN);
+
+        hexa = ssh_get_hexa((unsigned char *)hash, rc);
+        SSH_STRING_FREE_CHAR(hash);
+        assert_string_equal(hexa,
+                            "ee:80:7f:61:f9:d5:be:f1:96:86:cc:96:7a:db:7a:7b");
+
+        SSH_STRING_FREE_CHAR(hexa);
+    }
+}
+
 int torture_run_tests(void) {
     int rc;
     struct CMUnitTest tests[] = {
@@ -419,6 +451,9 @@ int torture_run_tests(void) {
                                         session_setup,
                                         session_teardown),
         cmocka_unit_test_setup_teardown(torture_freed_channel_get_exit_status,
+                                        session_setup,
+                                        session_teardown),
+        cmocka_unit_test_setup_teardown(torture_pubkey_hash,
                                         session_setup,
                                         session_teardown),
     };

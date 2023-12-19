@@ -165,6 +165,7 @@ if (CLIENT_TESTING OR SERVER_TESTING)
     find_package(nss_wrapper 1.1.2 REQUIRED)
     find_package(uid_wrapper 1.2.0 REQUIRED)
     find_package(pam_wrapper 1.0.1 REQUIRED)
+    find_package(priv_wrapper 1.0.0)
 
     if (NOT SSHD_EXECUTABLE)
         message(SEND_ERROR "Could not find sshd which is required for client testing")
@@ -212,13 +213,18 @@ if (CLIENT_TESTING OR SERVER_TESTING)
         set(WITH_TIMEOUT "1")
     endif()
 
-    # chroot_wrapper
-    add_library(chroot_wrapper SHARED chroot_wrapper.c)
-    set(CHROOT_WRAPPER_LIBRARY ${libssh_BINARY_DIR}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}chroot_wrapper${CMAKE_SHARED_LIBRARY_SUFFIX})
-    set(TEST_TARGET_LIBRARIES
-        ${TEST_TARGET_LIBRARIES}
-        chroot_wrapper
-    )
+    # For chroot() use priv_wrapper package if found, or internal chroot_wrapper
+    if (priv_wrapper_FOUND)
+        set(CHROOT_WRAPPER "${PRIV_WRAPPER_LIBRARY}")
+    else()
+        add_library(chroot_wrapper SHARED chroot_wrapper.c)
+        set(CHROOT_WRAPPER_LIBRARY ${libssh_BINARY_DIR}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}chroot_wrapper${CMAKE_SHARED_LIBRARY_SUFFIX})
+        set(TEST_TARGET_LIBRARIES
+            ${TEST_TARGET_LIBRARIES}
+            chroot_wrapper
+        )
+        set(CHROOT_WRAPPER "${CHROOT_WRAPPER_LIBRARY}")
+    endif()
 
     # ssh_ping
     add_executable(ssh_ping ssh_ping.c)
@@ -239,7 +245,10 @@ if (CLIENT_TESTING OR SERVER_TESTING)
     configure_file(etc/pam.d/sshd.in ${CMAKE_CURRENT_BINARY_DIR}/etc/pam.d/sshd @ONLY)
 
 
-    set(TORTURE_ENVIRONMENT "LD_PRELOAD=${SOCKET_WRAPPER_LIBRARY}:${NSS_WRAPPER_LIBRARY}:${UID_WRAPPER_LIBRARY}:${PAM_WRAPPER_LIBRARY}:${CHROOT_WRAPPER_LIBRARY}")
+    set(TORTURE_ENVIRONMENT "LD_PRELOAD=${SOCKET_WRAPPER_LIBRARY}:${NSS_WRAPPER_LIBRARY}:${UID_WRAPPER_LIBRARY}:${PAM_WRAPPER_LIBRARY}:${CHROOT_WRAPPER}")
+    if (priv_wrapper_FOUND)
+        list(APPEND TORTURE_ENVIRONMENT PRIV_WRAPPER=1 PRIV_WRAPPER_CHROOT_DISABLE=1)
+    endif()
     list(APPEND TORTURE_ENVIRONMENT UID_WRAPPER=1 UID_WRAPPER_ROOT=1)
     list(APPEND TORTURE_ENVIRONMENT NSS_WRAPPER_PASSWD=${CMAKE_CURRENT_BINARY_DIR}/etc/passwd)
     list(APPEND TORTURE_ENVIRONMENT NSS_WRAPPER_SHADOW=${CMAKE_CURRENT_BINARY_DIR}/etc/shadow)

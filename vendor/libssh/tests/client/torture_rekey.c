@@ -148,6 +148,29 @@ static void torture_rekey_default(void **state)
     ssh_disconnect(s->ssh.session);
 }
 
+static void sanity_check_session(void **state)
+{
+    struct torture_state *s = *state;
+    struct ssh_crypto_struct *c = NULL;
+
+    c = s->ssh.session->current_crypto;
+    assert_non_null(c);
+    assert_int_equal(c->in_cipher->max_blocks,
+                     bytes / c->in_cipher->blocksize);
+    assert_int_equal(c->out_cipher->max_blocks,
+                     bytes / c->out_cipher->blocksize);
+    /* when strict kex is used, the newkeys reset the sequence number */
+    if ((s->ssh.session->flags & SSH_SESSION_FLAG_KEX_STRICT) != 0) {
+        assert_int_equal(c->out_cipher->packets, s->ssh.session->send_seq);
+        assert_int_equal(c->in_cipher->packets, s->ssh.session->recv_seq);
+    } else {
+        /* Otherwise we have less encrypted packets than transferred
+         * (first are not encrypted) */
+        assert_true(c->out_cipher->packets < s->ssh.session->send_seq);
+        assert_true(c->in_cipher->packets < s->ssh.session->recv_seq);
+    }
+}
+
 /* We lower the rekey limits manually and check that the rekey
  * really happens when sending data
  */
@@ -166,16 +189,10 @@ static void torture_rekey_send(void **state)
     rc = ssh_connect(s->ssh.session);
     assert_ssh_return_code(s->ssh.session, rc);
 
-    /* The blocks limit is set correctly */
-    c = s->ssh.session->current_crypto;
-    assert_int_equal(c->in_cipher->max_blocks,
-                     bytes / c->in_cipher->blocksize);
-    assert_int_equal(c->out_cipher->max_blocks,
-                     bytes / c->out_cipher->blocksize);
-    /* We should have less encrypted packets than transferred (first are not encrypted) */
-    assert_true(c->out_cipher->packets < s->ssh.session->send_seq);
-    assert_true(c->in_cipher->packets < s->ssh.session->recv_seq);
+    sanity_check_session(state);
     /* Copy the initial secret hash = session_id so we know we changed keys later */
+    c = s->ssh.session->current_crypto;
+    assert_non_null(c);
     secret_hash = malloc(c->digest_len);
     assert_non_null(secret_hash);
     memcpy(secret_hash, c->secret_hash, c->digest_len);
@@ -273,15 +290,10 @@ static void torture_rekey_recv(void **state)
     mode_t mask;
     int rc;
 
-    /* The blocks limit is set correctly */
+    sanity_check_session(state);
+    /* Copy the initial secret hash = session_id so we know we changed keys later */
     c = s->ssh.session->current_crypto;
     assert_non_null(c);
-    assert_int_equal(c->in_cipher->max_blocks, bytes / c->in_cipher->blocksize);
-    assert_int_equal(c->out_cipher->max_blocks, bytes / c->out_cipher->blocksize);
-    /* We should have less encrypted packets than transferred (first are not encrypted) */
-    assert_true(c->out_cipher->packets < s->ssh.session->send_seq);
-    assert_true(c->in_cipher->packets < s->ssh.session->recv_seq);
-    /* Copy the initial secret hash = session_id so we know we changed keys later */
     secret_hash = malloc(c->digest_len);
     assert_non_null(secret_hash);
     memcpy(secret_hash, c->secret_hash, c->digest_len);
@@ -468,15 +480,10 @@ static void torture_rekey_different_kex(void **state)
     assert_ssh_return_code(s->ssh.session, rc);
 
     /* The blocks limit is set correctly */
-    c = s->ssh.session->current_crypto;
-    assert_int_equal(c->in_cipher->max_blocks,
-                     bytes / c->in_cipher->blocksize);
-    assert_int_equal(c->out_cipher->max_blocks,
-                     bytes / c->out_cipher->blocksize);
-    /* We should have less encrypted packets than transferred (first are not encrypted) */
-    assert_true(c->out_cipher->packets < s->ssh.session->send_seq);
-    assert_true(c->in_cipher->packets < s->ssh.session->recv_seq);
+    sanity_check_session(state);
     /* Copy the initial secret hash = session_id so we know we changed keys later */
+    c = s->ssh.session->current_crypto;
+    assert_non_null(c);
     secret_hash = malloc(c->digest_len);
     assert_non_null(secret_hash);
     memcpy(secret_hash, c->secret_hash, c->digest_len);

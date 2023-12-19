@@ -30,6 +30,8 @@ struct pkd_daemon_args {
 
     uint64_t rekey_data_limit;
 
+    int original_dir_fd;
+
     struct {
         int list;
 
@@ -44,6 +46,10 @@ struct pkd_daemon_args {
         struct {
             char *mkdtemp_str;
         } socket_wrapper;
+
+        struct {
+            char *mkdtemp_str;
+        } temp_dir;
     } opts;
 };
 

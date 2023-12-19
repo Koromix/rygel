@@ -19,6 +19,7 @@ optional:
 - [nss_wrapper](https://cwrap.org/) >= 1.1.2
 - [uid_wrapper](https://cwrap.org/) >= 1.2.0
 - [pam_wrapper](https://cwrap.org/) >= 1.0.1
+- [priv_wrapper](https://cwrap.org/) >= 1.0.0
 
 Note that these version numbers are version we know works correctly. If you
 build and run libssh successfully with an older version, please let us know.

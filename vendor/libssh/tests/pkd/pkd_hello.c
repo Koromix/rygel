@@ -1,15 +1,16 @@
 /*
  * pkd_hello.c --
  *
- * (c) 2014, 2017-2018 Jon Simons <jon@jonsimons.org>
+ * (c) 2014, 2017-2018, 2022 Jon Simons <jon@jonsimons.org>
  */
 #include "config.h"
 
+#include <fcntl.h>
 #include <setjmp.h> // for cmocka
 #include <stdarg.h> // for cmocka
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h> // for cmocka
+#include <unistd.h>
 #include <cmocka.h>
 
 #include "libssh/priv.h"
@@ -33,7 +34,7 @@ static size_t default_payload_len = sizeof(default_payload_buf);
 #include <argp.h>
 #define PROGNAME "pkd_hello"
 #define ARGP_PROGNAME "libssh " PROGNAME
-const char *argp_program_version = ARGP_PROGNAME " 2017-07-12";
+const char *argp_program_version = ARGP_PROGNAME " 2022-11-12";
 const char *argp_program_bug_address = "Jon Simons <jon@jonsimons.org>";
 
 static char doc[] = \
@@ -61,6 +62,8 @@ static struct argp_option options[] = {
       "Run each test for the given number of iterations (default is 10)", 0 },
     { "match", 'm', "testmatch", 0,
       "Run all tests with the given string", 0 },
+    { "temp-dir", 'L', "<mkdtemp-template>", 0,
+      "Run in a temporary directory using the given mkdtemp template", 0 },
     { "socket-wrapper-dir", 'w', "<mkdtemp-template>", 0,
       "Run in socket-wrapper mode using the given mkdtemp directory template", 0 },
     { "stdout", 'o', NULL, 0,
@@ -89,6 +92,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
         break;
     case 'l':
         pkd_dargs.opts.list = 1;
+        break;
+    case 'L':
+        pkd_dargs.opts.temp_dir.mkdtemp_str = arg;
         break;
     case 'i':
         pkd_dargs.opts.iterations = atoi(arg);
@@ -950,6 +956,52 @@ static int pkd_run_tests(void) {
     return rc;
 }
 
+static int pkd_init_temp_dir(void) {
+    int rc = 0;
+    char *mkdtemp_str = NULL;
+    pkd_dargs.original_dir_fd = -1;
+
+    if (pkd_dargs.opts.temp_dir.mkdtemp_str == NULL) {
+        return 0;
+    }
+
+    pkd_dargs.original_dir_fd = open(".", O_RDONLY);
+    if (pkd_dargs.original_dir_fd < 0) {
+        fprintf(stderr, "pkd_init_temp_dir open failed\n");
+        return -1;
+    }
+
+    mkdtemp_str = strdup(pkd_dargs.opts.temp_dir.mkdtemp_str);
+    if (mkdtemp_str == NULL) {
+        fprintf(stderr, "pkd_init_temp_dir strdup failed\n");
+        goto errstrdup;
+    }
+    pkd_dargs.opts.temp_dir.mkdtemp_str = mkdtemp_str;
+
+    if (mkdtemp(mkdtemp_str) == NULL) {
+        fprintf(stderr, "pkd_init_temp_dir mkdtemp '%s' failed\n", mkdtemp_str);
+        goto errmkdtemp;
+    }
+
+    rc = chdir(mkdtemp_str);
+    if (rc != 0) {
+        fprintf(stderr, "pkd_init_temp_dir chdir '%s' failed\n", mkdtemp_str);
+        goto errchdir;
+    }
+
+    return 0;
+
+errchdir:
+    rmdir(mkdtemp_str);
+errmkdtemp:
+    free(mkdtemp_str);
+errstrdup:
+    close(pkd_dargs.original_dir_fd);
+    pkd_dargs.original_dir_fd = -1;
+    rc = -1;
+    return rc;
+}
+
 static int pkd_init_socket_wrapper(void) {
     int rc = 0;
     char *mkdtemp_str = NULL;
@@ -991,6 +1043,33 @@ static int pkd_rmfiles(const char *path) {
     return system_checked(bin);
 }
 
+static int pkd_cleanup_temp_dir(void) {
+    int rc = 0;
+
+    if (pkd_dargs.opts.temp_dir.mkdtemp_str == NULL) {
+        return 0;
+    }
+
+    if (fchdir(pkd_dargs.original_dir_fd) != 0) {
+        fprintf(stderr, "pkd_cleanup_temp_dir failed fchdir\n");
+        rc = -1;
+        goto out;
+    }
+
+    if (rmdir(pkd_dargs.opts.temp_dir.mkdtemp_str) != 0) {
+        fprintf(stderr, "pkd_cleanup_temp_dir rmdir '%s' failed\n",
+                        pkd_dargs.opts.temp_dir.mkdtemp_str);
+        rc = -1;
+        goto out;
+    }
+
+out:
+    close(pkd_dargs.original_dir_fd);
+    pkd_dargs.original_dir_fd = -1;
+    free(pkd_dargs.opts.temp_dir.mkdtemp_str);
+    return rc;
+}
+
 static int pkd_cleanup_socket_wrapper(void) {
     int rc = 0;
 
@@ -1011,12 +1090,12 @@ static int pkd_cleanup_socket_wrapper(void) {
         goto errrmdir;
     }
 
-    free(pkd_dargs.opts.socket_wrapper.mkdtemp_str);
-
-    goto out;
+    goto outfree;
 errrmdir:
 errrmfiles:
     rc = -1;
+outfree:
+    free(pkd_dargs.opts.socket_wrapper.mkdtemp_str);
 out:
     return rc;
 }
@@ -1042,10 +1121,16 @@ int main(int argc, char **argv) {
     (void) argc;  (void) argv;
 #endif /* HAVE_ARGP_H */
 
+    rc = pkd_init_temp_dir();
+    if (rc != 0) {
+        fprintf(stderr, "pkd_init_temp_dir failed: %d\n", rc);
+        goto out_finalize;
+    }
+
     rc = pkd_init_socket_wrapper();
     if (rc != 0) {
         fprintf(stderr, "pkd_init_socket_wrapper failed: %d\n", rc);
-        goto out_finalize;
+        goto out_tempdir;
     }
 
     if (pkd_dargs.opts.list != 0) {
@@ -1062,6 +1147,12 @@ int main(int argc, char **argv) {
     rc = pkd_cleanup_socket_wrapper();
     if (rc != 0) {
         fprintf(stderr, "pkd_cleanup_socket_wrapper failed: %d\n", rc);
+    }
+
+out_tempdir:
+    rc = pkd_cleanup_temp_dir();
+    if (rc != 0) {
+        fprintf(stderr, "pkd_cleanup_temp_dir failed: %d\n", rc);
     }
 
 out_finalize:

@@ -202,7 +202,7 @@ static int match_hashed_host(const char *host, const char *sourcehash)
   /* Openssh hash structure :
    * |1|base64 encoded salt|base64 encoded hash
    * hash is produced that way :
-   * hash := HMAC_SHA1(key=salt,data=host)
+   * hash := HMAC_SHA1_direct(key=salt,data=host)
    */
   unsigned char buffer[256] = {0};
   ssh_buffer salt;

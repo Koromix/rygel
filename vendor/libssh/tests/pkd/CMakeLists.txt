@@ -34,7 +34,7 @@ target_link_libraries(pkd_hello ${pkd_libs})
 # specified with `-i` and may be helpful for chasing down bugs that
 # are not 100% reproducible.
 #
-add_test(pkd_hello_i1 ${CMAKE_CURRENT_BINARY_DIR}/pkd_hello -e -o -i1 -w /tmp/pkd_socket_wrapper_XXXXXX)
+add_test(pkd_hello_i1 ${CMAKE_CURRENT_BINARY_DIR}/pkd_hello -e -o -i1 -w /tmp/pkd_socket_wrapper_XXXXXX -L pkd_scratch_XXXXXX)
 #
 # Configure environment for cwrap socket wrapper.
 #
@@ -49,7 +49,7 @@ set_property(TEST pkd_hello_i1 PROPERTY ENVIRONMENT ${PKD_ENVIRONMENT})
 #
 # pkd_hello_rekey is used to test server-side implementation of rekeying.
 #
-add_test(pkd_hello_rekey ${CMAKE_CURRENT_BINARY_DIR}/pkd_hello -t torture_pkd_openssh_rsa_rsa_default -i1 --rekey=16 -v -v -v -w /tmp/pkd_socket_wrapper_XXXXXX)
+add_test(pkd_hello_rekey ${CMAKE_CURRENT_BINARY_DIR}/pkd_hello -t torture_pkd_openssh_rsa_rsa_default -i1 --rekey=16 -v -v -v -w /tmp/pkd_socket_wrapper_XXXXXX -L pkd_scratch_XXXXXX)
 set_property(TEST pkd_hello_rekey PROPERTY ENVIRONMENT OPENSSL_ENABLE_SHA1_SIGNATURES=1)
 
 endif (WITH_SERVER AND UNIX AND NOT WIN32)

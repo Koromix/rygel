@@ -2825,16 +2825,16 @@ static const EVP_MD *pki_digest_to_md(enum ssh_digest_e hash_type)
 
     switch (hash_type) {
     case SSH_DIGEST_SHA256:
-        md = EVP_sha256();
+        md = EVP_sha256_direct();
         break;
     case SSH_DIGEST_SHA384:
-        md = EVP_sha384();
+        md = EVP_sha384_direct();
         break;
     case SSH_DIGEST_SHA512:
-        md = EVP_sha512();
+        md = EVP_sha512_direct();
         break;
     case SSH_DIGEST_SHA1:
-        md = EVP_sha1();
+        md = EVP_sha1_direct();
         break;
     case SSH_DIGEST_AUTO:
         md = NULL;

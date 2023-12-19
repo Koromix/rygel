@@ -91,6 +91,7 @@ endif()
 if (WIN32)
   set(LIBSSH_LINK_LIBRARIES
     ${LIBSSH_LINK_LIBRARIES}
+    iphlpapi
     ws2_32
   )
 endif (WIN32)

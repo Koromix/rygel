@@ -125,73 +125,19 @@ ENGINE *pki_get_engine(void)
     return engine;
 }
 
-#ifdef HAVE_OPENSSL_ECC
-static const EVP_MD *nid_to_evpmd(int nid)
-{
-    switch (nid) {
-        case NID_X9_62_prime256v1:
-            return EVP_sha256();
-        case NID_secp384r1:
-            return EVP_sha384();
-        case NID_secp521r1:
-            return EVP_sha512();
-        default:
-            return NULL;
-    }
-
-    return NULL;
-}
-
-void evp(int nid, unsigned char *digest, size_t len, unsigned char *hash, unsigned int *hlen)
-{
-    const EVP_MD *evp_md = nid_to_evpmd(nid);
-    EVP_MD_CTX *md = EVP_MD_CTX_new();
-
-    EVP_DigestInit(md, evp_md);
-    EVP_DigestUpdate(md, digest, len);
-    EVP_DigestFinal(md, hash, hlen);
-    EVP_MD_CTX_free(md);
-}
-
-EVPCTX evp_init(int nid)
-{
-    const EVP_MD *evp_md = nid_to_evpmd(nid);
-
-    EVPCTX ctx = EVP_MD_CTX_new();
-    if (ctx == NULL) {
-        return NULL;
-    }
-
-    EVP_DigestInit(ctx, evp_md);
-
-    return ctx;
-}
-
-void evp_update(EVPCTX ctx, const void *data, size_t len)
-{
-    EVP_DigestUpdate(ctx, data, len);
-}
-
-void evp_final(EVPCTX ctx, unsigned char *md, unsigned int *mdlen)
-{
-    EVP_DigestFinal(ctx, md, mdlen);
-    EVP_MD_CTX_free(ctx);
-}
-#endif /* HAVE_OPENSSL_ECC */
-
 #ifdef HAVE_OPENSSL_EVP_KDF_CTX
 #if OPENSSL_VERSION_NUMBER < 0x30000000L
 static const EVP_MD *sshkdf_digest_to_md(enum ssh_kdf_digest digest_type)
 {
     switch (digest_type) {
     case SSH_KDF_SHA1:
-        return EVP_sha1();
+        return EVP_sha1_direct();
     case SSH_KDF_SHA256:
-        return EVP_sha256();
+        return EVP_sha256_direct();
     case SSH_KDF_SHA384:
-        return EVP_sha384();
+        return EVP_sha384_direct();
     case SSH_KDF_SHA512:
-        return EVP_sha512();
+        return EVP_sha512_direct();
     }
     return NULL;
 }
@@ -356,16 +302,16 @@ HMACCTX hmac_init(const void *key, size_t len, enum ssh_hmac_e type)
 
     switch (type) {
     case SSH_HMAC_SHA1:
-        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha1(), NULL, pkey);
+        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha1_direct(), NULL, pkey);
         break;
     case SSH_HMAC_SHA256:
-        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha256(), NULL, pkey);
+        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha256_direct(), NULL, pkey);
         break;
     case SSH_HMAC_SHA512:
-        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha512(), NULL, pkey);
+        rc = EVP_DigestSignInit(ctx, NULL, EVP_sha512_direct(), NULL, pkey);
         break;
     case SSH_HMAC_MD5:
-        rc = EVP_DigestSignInit(ctx, NULL, EVP_md5(), NULL, pkey);
+        rc = EVP_DigestSignInit(ctx, NULL, EVP_md5_direct(), NULL, pkey);
         break;
     default:
         rc = -1;

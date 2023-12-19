@@ -1491,22 +1491,22 @@ ssh_signature pki_sign_data(const ssh_key privkey,
 
     switch (hash_type) {
     case SSH_DIGEST_SHA256:
-        _ssh_sha256(input, input_len, hash);
+        sha256_direct(input, input_len, hash);
         hlen = SHA256_DIGEST_LEN;
         sign_input = hash;
         break;
     case SSH_DIGEST_SHA384:
-        _ssh_sha384(input, input_len, hash);
+        sha384_direct(input, input_len, hash);
         hlen = SHA384_DIGEST_LEN;
         sign_input = hash;
         break;
     case SSH_DIGEST_SHA512:
-        _ssh_sha512(input, input_len, hash);
+        sha512_direct(input, input_len, hash);
         hlen = SHA512_DIGEST_LEN;
         sign_input = hash;
         break;
     case SSH_DIGEST_SHA1:
-        _ssh_sha1(input, input_len, hash);
+        sha1_direct(input, input_len, hash);
         hlen = SHA_DIGEST_LEN;
         sign_input = hash;
         break;
@@ -1570,25 +1570,25 @@ int pki_verify_data_signature(ssh_signature signature,
 
     switch (signature->hash_type) {
     case SSH_DIGEST_SHA256:
-        _ssh_sha256(input, input_len, hash);
+        sha256_direct(input, input_len, hash);
         hlen = SHA256_DIGEST_LEN;
         md = MBEDTLS_MD_SHA256;
         verify_input = hash;
         break;
     case SSH_DIGEST_SHA384:
-        _ssh_sha384(input, input_len, hash);
+        sha384_direct(input, input_len, hash);
         hlen = SHA384_DIGEST_LEN;
         md = MBEDTLS_MD_SHA384;
         verify_input = hash;
         break;
     case SSH_DIGEST_SHA512:
-        _ssh_sha512(input, input_len, hash);
+        sha512_direct(input, input_len, hash);
         hlen = SHA512_DIGEST_LEN;
         md = MBEDTLS_MD_SHA512;
         verify_input = hash;
         break;
     case SSH_DIGEST_SHA1:
-        _ssh_sha1(input, input_len, hash);
+        sha1_direct(input, input_len, hash);
         hlen = SHA_DIGEST_LEN;
         md = MBEDTLS_MD_SHA1;
         verify_input = hash;

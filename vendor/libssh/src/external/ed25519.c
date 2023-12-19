@@ -71,9 +71,9 @@ static void get_hram(unsigned char *hram,
     for (i = 32;i < 64;++i)    playground[i] = pk[i-32];
     for (i = 64;i < smlen;++i) playground[i] = sm[i];
 
-    ctx = _ssh_sha512_init();
-    _ssh_sha512_update(ctx, playground, smlen);
-    _ssh_sha512_final(hram, ctx);
+    ctx = sha512_ctx_init();
+    sha512_ctx_update(ctx, playground, smlen);
+    sha512_ctx_final(hram, ctx);
 }
 
 
@@ -92,9 +92,9 @@ int _ssh_crypto_sign_ed25519_keypair(ed25519_pubkey pk,
         return -1;
     }
 
-    ctx = _ssh_sha512_init();
-    _ssh_sha512_update(ctx, sk, 32);
-    _ssh_sha512_final(extsk, ctx);
+    ctx = sha512_ctx_init();
+    sha512_ctx_update(ctx, sk, 32);
+    sha512_ctx_final(extsk, ctx);
     extsk[0] &= 248;
     extsk[31] &= 127;
     extsk[31] |= 64;
@@ -126,9 +126,9 @@ int _ssh_crypto_sign_ed25519(unsigned char *sm,
     unsigned char hmg[SHA512_DIGEST_LEN];
     unsigned char hram[SHA512_DIGEST_LEN];
 
-    ctx = _ssh_sha512_init();
-    _ssh_sha512_update(ctx, sk, 32);
-    _ssh_sha512_final(extsk, ctx);
+    ctx = sha512_ctx_init();
+    sha512_ctx_update(ctx, sk, 32);
+    sha512_ctx_final(extsk, ctx);
 
     extsk[0] &= 248;
     extsk[31] &= 127;
@@ -143,9 +143,9 @@ int _ssh_crypto_sign_ed25519(unsigned char *sm,
     }
 
     /* Generate k as h(extsk[32],...,extsk[63],m) */
-    ctx = _ssh_sha512_init();
-    _ssh_sha512_update(ctx, sm + 32, mlen + 32);
-    _ssh_sha512_final(hmg, ctx);
+    ctx = sha512_ctx_init();
+    sha512_ctx_update(ctx, sm + 32, mlen + 32);
+    sha512_ctx_final(hmg, ctx);
 
     /* Computation of R */
     sc25519_from64bytes(&sck, hmg);

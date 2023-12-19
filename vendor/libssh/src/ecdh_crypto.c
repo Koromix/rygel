@@ -619,18 +619,12 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
         goto error;
     }
 
-    /* Send the MSG_NEWKEYS */
-    rc = ssh_buffer_add_u8(session->out_buffer, SSH2_MSG_NEWKEYS);
-    if (rc < 0) {
-        goto error;
-    }
-
     session->dh_handshake_state = DH_STATE_NEWKEYS_SENT;
-    rc = ssh_packet_send(session);
-    if (rc == SSH_ERROR){
+    /* Send the MSG_NEWKEYS */
+    rc = ssh_packet_send_newkeys(session);
+    if (rc == SSH_ERROR) {
         goto error;
     }
-    SSH_LOG(SSH_LOG_PROTOCOL, "SSH_MSG_NEWKEYS sent");
 
     return SSH_PACKET_USED;
 error:

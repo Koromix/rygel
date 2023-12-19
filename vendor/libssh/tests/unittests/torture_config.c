@@ -995,6 +995,34 @@ static void torture_config_proxyjump(void **state,
     assert_string_equal(session->opts.ProxyCommand,
                         "ssh -W '[%h]:%p' 2620:52:0::fed");
 
+    /* Multiple @ is allowed in second jump */
+    config = "Host allowed-hostname\n"
+             "\tProxyJump localhost,user@principal.com@jumpbox:22\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "allowed-hostname");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.ProxyCommand,
+                        "ssh -J user@principal.com@jumpbox:22 -W '[%h]:%p' localhost");
+
+    /* Multiple @ is allowed */
+    config = "Host allowed-hostname\n"
+             "\tProxyJump user@principal.com@jumpbox:22\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "allowed-hostname");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.ProxyCommand,
+                        "ssh -l user@principal.com -p 22 -W '[%h]:%p' jumpbox");
+
     /* In this part, we try various other config files and strings. */
 
     /* Try to create some invalid configurations */
@@ -1008,18 +1036,6 @@ static void torture_config_proxyjump(void **state,
     }
     torture_reset_config(session);
     ssh_options_set(session, SSH_OPTIONS_HOST, "bad-port");
-    _parse_config(session, file, string, SSH_ERROR);
-
-    /* Too many @ */
-    config = "Host bad-hostname\n"
-             "\tProxyJump user@principal.com@jumpbox:22\n";
-    if (file != NULL) {
-        torture_write_file(file, config);
-    } else {
-        string = config;
-    }
-    torture_reset_config(session);
-    ssh_options_set(session, SSH_OPTIONS_HOST, "bad-hostname");
     _parse_config(session, file, string, SSH_ERROR);
 
     /* Braces mismatch in hostname */
@@ -1092,18 +1108,6 @@ static void torture_config_proxyjump(void **state,
     }
     torture_reset_config(session);
     ssh_options_set(session, SSH_OPTIONS_HOST, "bad-port-2");
-    _parse_config(session, file, string, SSH_ERROR);
-
-    /* Too many @ in second jump */
-    config = "Host bad-hostname\n"
-             "\tProxyJump localhost,user@principal.com@jumpbox:22\n";
-    if (file != NULL) {
-        torture_write_file(file, config);
-    } else {
-        string = config;
-    }
-    torture_reset_config(session);
-    ssh_options_set(session, SSH_OPTIONS_HOST, "bad-hostname");
     _parse_config(session, file, string, SSH_ERROR);
 
     /* Braces mismatch in second jump */
@@ -1448,10 +1452,10 @@ static void torture_config_parser_get_cmd(void **state)
     } else if (pid == 0) {
         ssh_execute_command(tok, fileno(outfile), fileno(outfile));
         /* Does not return */
-    } else {        
-        /* parent 
+    } else {
+        /* parent
          * wait child process */
-        wait(NULL); 
+        wait(NULL);
         infile = fopen("output.log", "r");
         assert_non_null(infile);
         p = fgets(buffer, sizeof(buffer), infile);

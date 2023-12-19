@@ -11,7 +11,7 @@ static const unsigned char base[32] = {9};
 int _ssh_crypto_scalarmult_base(unsigned char *q,
   const unsigned char *n)
 {
-  return crypto_scalarmult(q,n,base);
+  return _ssh_crypto_scalarmult(q,n,base);
 }
 
 static void add(unsigned int out[32],const unsigned int a[32],const unsigned int b[32])
