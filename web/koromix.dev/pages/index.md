@@ -1,12 +1,14 @@
 # Introduction
 
-Hi visitor!
-
-My name is **Niels Martignène**, and I've been a programmer for over twenty years. It all began when I stumbled upon an old [Amstrad CPC-6128](https://en.wikipedia.org/wiki/Amstrad_CPC#CPC6128) in my parents' attic, and found out you could use BASIC to program simple games on it.
-
-Nowadays I work on various **C++ applications/libraries**, and some **web applications**. I also do some C and assembly programming. You can find information about some of the open-source projects I've worked on over the years on this website.
-
-I'm **available for hire**, please contact me on [niels.martignene@protonmail.com](mailto:niels.martignene@protonmail.com) if you are interested.
+<div id="me">
+    <img src="{{ ASSET static/niels.jpg }}" alt="Photo of me" />
+    <div>
+        <p>Hi visitor!
+        <p>My name is <b>Niels Martignène</b> (or <a href="https://github.com/Koromix" target="_blank">Koromix</a>), and I've been a programmer for over twenty years. It all began when I stumbled upon an old <a href="https://en.wikipedia.org/wiki/Amstrad_CPC#CPC6128" target="_blank">Amstrad CPC-6128</a> in my parents' attic, and found out you could use BASIC to program simple games on it.
+        <p>Nowadays I work on various <b>C++ applications/libraries</b>, and some <b>web applications</b>. I also do some C and assembly programming. You can find information about some of the open-source projects I've worked on over the years on this website.
+        <p>I'm <b>available for hire</b>, please contact me on <a href="mailto:niels.martignene@protonmail.com">niels.martignene@protonmail.com</a> if you are interested.
+    </div>
+</div>
 
 # Main projects
 

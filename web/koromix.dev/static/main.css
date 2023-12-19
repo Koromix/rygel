@@ -101,6 +101,8 @@ main {
 }
 #side ~ main { padding-right: 290px; }
 
+p:first-child { margin-top: 0; }
+p:last-child { margin-bottom: 0; }
 h1, h2, h3 { margin-top: 0; }
 * + h1, * + h2, * + h3 { margin: 0.8em 0 0 0; }
 h1 {
@@ -163,6 +165,18 @@ pre {
     z-index: 0;
 }
 .nojs pre { padding: 6px; }
+
+
+#me {
+    display: flex;
+    gap: 2em;
+    align-items: center;
+}
+#me > img {
+    width: 192px;
+    height: 192px;
+}
+#me > div { flex: 1; }
 
 #hire {
     display: block;
@@ -235,4 +249,6 @@ pre {
     }
 
     pre { margin: 1em 0; }
+
+    #me > img { display: none; }
 }
