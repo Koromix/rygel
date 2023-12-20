@@ -1144,7 +1144,12 @@ int Main(int argc, char **argv)
     } else if (TestStr(cmd, "unseal")) {
         return RunUnseal(arguments);
     } else if (TestStr(cmd, "vm")) {
+#ifdef HAVE_JSCORE
         return RunVM(arguments);
+#else
+        LogError("Comman not supported in this build");
+        return 1;
+#endif
     } else if (TestStr(cmd, "serve")) {
         return RunServe(arguments);
     } else {
