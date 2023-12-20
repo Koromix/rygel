@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    configure)
+        if ! getent group goupile >/dev/null; then
+            addgroup --quiet --system goupile
+        fi
+
+        if ! getent passwd goupile >/dev/null; then
+            adduser --system --ingroup goupile --home /var/lib/goupile goupile \
+                --gecos "goupile eCRF daemon"
+        fi
+
+        if [ ! -f /var/lib/goupile/default/goupile.ini ]; then
+            mkdir -p /var/lib/goupile/default
+            /usr/bin/goupile init /var/lib/goupile/default -t default \
+                -u admin --password admin --allow_unsafe_password -o goupile
+        fi
+    ;;
+esac    
+
+exit 0
