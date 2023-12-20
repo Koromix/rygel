@@ -7,7 +7,89 @@ It is licensed under the [AGPL 3 license](https://www.gnu.org/licenses/#AGPL). Y
 download and use the goupile source code. Everyone is granted the right to copy, modify
 and redistribute it.
 
-# How to build
+# Get started
+
+## Installation
+
+### RedHat
+
+XXX
+
+### Debian
+
+A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+
+Execute the following commands (as root) to add the repository to your system:
+
+```sh
+mkdir -p -m0755 /etc/apt/keyrings
+curl https://download.koromix.dev/debian/koromix-archive-keyring.gpg -o /etc/apt/keyrings/koromix-archive-keyring.gpg
+echo "deb [signed-by=/etc/apt/keyrings/koromix-archive-keyring.gpg] https://download.koromix.dev/debian stable main" > /etc/apt/sources.list.d/koromix.dev-stable.list
+```
+
+Once this is done, refresh the repository cache and install the package:
+
+```sh
+apt update
+apt install goupile
+```
+
+Start and enable the server with the following commands:
+
+```sh
+systemctl enable goupile
+systemctl start goupile
+```
+
+## Servicing
+
+### Updates
+
+You should ideally configure your server for automated updates:
+
+```sh
+apt install -y unattended-upgrades
+dpkg-reconfigure -pmedium unattended-upgrades
+```
+
+### Backups
+
+The live Goupile data lives in `/var/lib/goupile`. You should backup this directory regularly.
+
+## Reverse proxy
+
+### NGINX
+
+Edit your NGINX config (directly or in a server file in `/etc/nginx/sites-available`) to make it work as a reverse proxy for Goupile.
+
+The server block should you something like this:
+
+```
+server {
+    # ...
+
+    location / {
+        proxy_http_version 1.1;
+        proxy_buffering on;
+        proxy_read_timeout 180;
+        send_timeout 180;
+
+        proxy_request_buffering off;
+        client_max_body_size 256M;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+
+        proxy_pass http://127.0.0.1:8889/;
+    }
+}
+```
+
+### Apache 2
+
+XXX
+
+# Build from source
 
 This repository uses a dedicated build tool called felix. To get started, you need to build
 this tool. You can use the bootstrap scripts at the root of the repository to bootstrap it:
