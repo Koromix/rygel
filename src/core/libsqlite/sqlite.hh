@@ -163,6 +163,8 @@ public:
     bool SetSynchronousFull(bool enable);
     bool SetSnapshotDirectory(const char *directory, int64_t full_delay);
 
+    bool UsesSnapshot() const { return snapshot; }
+
     bool GetUserVersion(int *out_version);
     bool SetUserVersion(int version);
 

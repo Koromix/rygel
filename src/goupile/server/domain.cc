@@ -298,8 +298,6 @@ bool DomainHolder::Open(const char *filename)
         return false;
     if (!db.SetSynchronousFull(config.sync_full))
         return false;
-    if (!db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
-        return false;
 
     // Make sure tmp and instances live on the same volume, because we need to
     // perform atomic renames in some cases.
@@ -424,6 +422,11 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
         const char *master_key;
         InstanceHolder *prev_instance;
     };
+
+    // Delay this so that the SQLite background thread does not run when domain is opened,
+    // which prevents unshare() from working on Linux.
+    if (!db.UsesSnapshot() && !db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
+        return false;
 
     int64_t prev_unique = next_unique;
 
