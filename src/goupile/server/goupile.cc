@@ -131,6 +131,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"lstat64", sb_FilterAction::Allow},
         {"fstatat64", sb_FilterAction::Allow},
         {"newfstatat", sb_FilterAction::Allow},
+        {"statx", sb_FilterAction::Allow},
         {"access", sb_FilterAction::Allow},
         {"ioctl/tty", sb_FilterAction::Allow},
         {"getrandom", sb_FilterAction::Allow},
@@ -923,10 +924,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
     LogInfo("Init assets");
     InitAssets();
-    LogInfo("Init instances");
+
+    LogInfo("Init domain");
     if (!gp_domain.Open(config_filename))
-        return 1;
-    if (!gp_domain.SyncAll())
         return 1;
 
     // Parse arguments
@@ -960,12 +960,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     if (gp_domain.config.smtp.url && !InitSMTP(gp_domain.config.smtp))
         return 1;
 
-    // We need to bind the socket before sandboxing
-    LogInfo("Init HTTP server");
-    http_Daemon daemon;
-    if (!daemon.Bind(gp_domain.config.http))
-        return 1;
-
 #ifdef __linux__
     if (!NotifySystemd())
         return 1;
@@ -994,6 +988,16 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         if (!ApplySandbox(reveal_paths, mask_files))
             return 1;
     }
+
+    LogInfo("Init instances");
+    if (!gp_domain.SyncAll())
+        return 1;
+
+    // We need to bind the socket before sandboxing
+    LogInfo("Init HTTP server");
+    http_Daemon daemon;
+    if (!daemon.Bind(gp_domain.config.http))
+        return 1;
 
     // From here on, don't quit abruptly
     WaitForInterrupt(0);
