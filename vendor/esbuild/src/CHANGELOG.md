@@ -1,5 +1,134 @@
 # Changelog
 
+## 0.19.10
+
+* Fix glob imports in TypeScript files ([#3319](https://github.com/evanw/esbuild/issues/3319))
+
+    This release fixes a problem where bundling a TypeScript file containing a glob import could emit a call to a helper function that doesn't exist. The problem happened because esbuild's TypeScript transformation removes unused imports (which is required for correctness, as they may be type-only imports) and esbuild's glob import transformation wasn't correctly marking the imported helper function as used. This wasn't caught earlier because most of esbuild's glob import tests were written in JavaScript, not in TypeScript.
+
+* Fix `require()` glob imports with bundling disabled ([#3546](https://github.com/evanw/esbuild/issues/3546))
+
+    Previously `require()` calls containing glob imports were incorrectly transformed when bundling was disabled. All glob imports should only be transformed when bundling is enabled. This bug has been fixed.
+
+* Fix a panic when transforming optional chaining with `define` ([#3551](https://github.com/evanw/esbuild/issues/3551), [#3554](https://github.com/evanw/esbuild/pull/3554))
+
+    This release fixes a case where esbuild could crash with a panic, which was triggered by using `define` to replace an expression containing an optional chain. Here is an example:
+
+    ```js
+    // Original code
+    console.log(process?.env.SHELL)
+
+    // Old output (with --define:process.env={})
+    /* panic: Internal error (while parsing "<stdin>") */
+
+    // New output (with --define:process.env={})
+    var define_process_env_default = {};
+    console.log(define_process_env_default.SHELL);
+    ```
+
+    This fix was contributed by [@hi-ogawa](https://github.com/hi-ogawa).
+
+* Work around a bug in node's CommonJS export name detector ([#3544](https://github.com/evanw/esbuild/issues/3544))
+
+    The export names of a CommonJS module are dynamically-determined at run time because CommonJS exports are properties on a mutable object. But the export names of an ES module are statically-determined at module instantiation time by using `import` and `export` syntax and cannot be changed at run time.
+
+    When you import a CommonJS module into an ES module in node, node scans over the source code to attempt to detect the set of export names that the CommonJS module will end up using. That statically-determined set of names is used as the set of names that the ES module is allowed to import at module instantiation time. However, this scan appears to have bugs (or at least, can cause false positives) because it doesn't appear to do any scope analysis. Node will incorrectly consider the module to export something even if the assignment is done to a local variable instead of to the module-level `exports` object. For example:
+
+    ```js
+    // confuseNode.js
+    exports.confuseNode = function(exports) {
+      // If this local is called "exports", node incorrectly
+      // thinks this file has an export called "notAnExport".
+      exports.notAnExport = function() {
+      };
+    };
+    ```
+
+    You can see that node incorrectly thinks the file `confuseNode.js` has an export called `notAnExport` when that file is loaded in an ES module context:
+
+    ```console
+    $ node -e 'import("./confuseNode.js").then(console.log)'
+    [Module: null prototype] {
+      confuseNode: [Function (anonymous)],
+      default: { confuseNode: [Function (anonymous)] },
+      notAnExport: undefined
+    }
+    ```
+
+    To avoid this, esbuild will now rename local variables that use the names `exports` and `module` when generating CommonJS output for the `node` platform.
+
+* Fix the return value of esbuild's `super()` shim ([#3538](https://github.com/evanw/esbuild/issues/3538))
+
+    Some people write `constructor` methods that use the return value of `super()` instead of using `this`. This isn't too common because [TypeScript doesn't let you do that](https://github.com/microsoft/TypeScript/issues/37847) but it can come up when writing JavaScript. Previously esbuild's class lowering transform incorrectly transformed the return value of `super()` into `undefined`. With this release, the return value of `super()` will now be `this` instead:
+
+    ```js
+    // Original code
+    class Foo extends Object {
+      field
+      constructor() {
+        console.log(typeof super())
+      }
+    }
+    new Foo
+
+    // Old output (with --target=es6)
+    class Foo extends Object {
+      constructor() {
+        var __super = (...args) => {
+          super(...args);
+          __publicField(this, "field");
+        };
+        console.log(typeof __super());
+      }
+    }
+    new Foo();
+
+    // New output (with --target=es6)
+    class Foo extends Object {
+      constructor() {
+        var __super = (...args) => {
+          super(...args);
+          __publicField(this, "field");
+          return this;
+        };
+        console.log(typeof __super());
+      }
+    }
+    new Foo();
+    ```
+
+* Terminate the Go GC when esbuild's `stop()` API is called ([#3552](https://github.com/evanw/esbuild/issues/3552))
+
+    If you use esbuild with WebAssembly and pass the `worker: false` flag to `esbuild.initialize()`, then esbuild will run the WebAssembly module on the main thread. If you do this within a Deno test and that test calls `esbuild.stop()` to clean up esbuild's resources, Deno may complain that a `setTimeout()` call lasted past the end of the test. This happens when the Go is in the middle of a garbage collection pass and has scheduled additional ongoing garbage collection work. Normally calling `esbuild.stop()` will terminate the web worker that the WebAssembly module runs in, which will terminate the Go GC, but that doesn't happen if you disable the web worker with `worker: false`.
+
+    With this release, esbuild will now attempt to terminate the Go GC in this edge case by calling `clearTimeout()` on these pending timeouts.
+
+* Apply `/* @__NO_SIDE_EFFECTS__ */` on tagged template literals ([#3511](https://github.com/evanw/esbuild/issues/3511))
+
+    Tagged template literals that reference functions annotated with a `@__NO_SIDE_EFFECTS__` comment are now able to be removed via tree-shaking if the result is unused. This is a convention from [Rollup](https://github.com/rollup/rollup/pull/5024). Here is an example:
+
+    ```js
+    // Original code
+    const html = /* @__NO_SIDE_EFFECTS__ */ (a, ...b) => ({ a, b })
+    html`<a>remove</a>`
+    x = html`<b>keep</b>`
+
+    // Old output (with --tree-shaking=true)
+    const html = /* @__NO_SIDE_EFFECTS__ */ (a, ...b) => ({ a, b });
+    html`<a>remove</a>`;
+    x = html`<b>keep</b>`;
+
+    // New output (with --tree-shaking=true)
+    const html = /* @__NO_SIDE_EFFECTS__ */ (a, ...b) => ({ a, b });
+    x = html`<b>keep</b>`;
+    ```
+
+    Note that this feature currently only works within a single file, so it's not especially useful. This feature does not yet work across separate files. I still recommend using `@__PURE__` annotations instead of this feature, as they have wider tooling support. The drawback of course is that `@__PURE__` annotations need to be added at each call site, not at the declaration, and for non-call expressions such as template literals you need to wrap the expression in an IIFE (immediately-invoked function expression) to create a call expression to apply the `@__PURE__` annotation to.
+
+* Publish builds for IBM AIX PowerPC 64-bit ([#3549](https://github.com/evanw/esbuild/issues/3549))
+
+    This release publishes a binary executable to npm for IBM AIX PowerPC 64-bit, which means that in theory esbuild can now be installed in that environment with `npm install esbuild`. This hasn't actually been tested yet. If you have access to such a system, it would be helpful to confirm whether or not doing this actually works.
+
 ## 0.19.9
 
 * Add support for transforming new CSS gradient syntax for older browsers

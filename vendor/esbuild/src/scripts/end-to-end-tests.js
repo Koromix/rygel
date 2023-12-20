@@ -2109,6 +2109,26 @@ tests.push(
     'foo.js': `export default 123`,
     'node.js': `import out from './out.js'; if (out !== 123) throw 'fail'`,
   }),
+  test(['--bundle', 'foo.js', '--outfile=out.js', '--format=cjs', '--platform=node'], {
+    'foo.js': `
+      export function confuseNode(exports) {
+        // If this local is called "exports", node incorrectly
+        // thinks this file has an export called "notAnExport".
+        // We must make sure that it doesn't have that name
+        // when targeting Node with CommonJS. See also:
+        // https://github.com/evanw/esbuild/issues/3544
+        exports.notAnExport = function() {
+        };
+      }
+    `,
+    'node.js': `
+      exports.async = async () => {
+        const foo = await import('./out.js')
+        if (typeof foo.confuseNode !== 'function') throw 'fail: confuseNode'
+        if ('notAnExport' in foo) throw 'fail: notAnExport'
+      }
+    `,
+  }, { async: true }),
 
   // External package
   test(['--bundle', 'foo.js', '--outfile=out.js', '--format=cjs', '--external:fs'], {
@@ -5524,6 +5544,84 @@ for (let flags of [['--target=es2022'], ['--target=es6'], ['--bundle', '--target
         },
       }`,
     }),
+
+    // https://github.com/evanw/esbuild/issues/3538
+    test(['in.js', '--outfile=node.js'].concat(flags), {
+      'in.js': `
+        class Foo extends Array {
+          pass = false
+          constructor() {
+            let base = super()
+            this.pass = base === this &&
+              base instanceof Array &&
+              base instanceof Foo
+          }
+        }
+        if (!new Foo().pass) throw 'fail'
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        class Foo extends Array {
+          pass: boolean = false
+          constructor() {
+            let base = super()
+            this.pass = base === this &&
+              base instanceof Array &&
+              base instanceof Foo
+          }
+        }
+        if (!new Foo().pass) throw 'fail'
+      `,
+      'tsconfig.json': `{
+        "compilerOptions": {
+          "useDefineForClassFields": false,
+        },
+      }`,
+    }),
+    test(['in.js', '--outfile=node.js'].concat(flags), {
+      'in.js': `
+        class Bar {
+          constructor(x) {
+            return x
+          }
+        }
+        class Foo extends Bar {
+          pass = false
+          constructor() {
+            let base = super([])
+            this.pass = base === this &&
+              base instanceof Array &&
+              !(base instanceof Foo)
+          }
+        }
+        if (!new Foo().pass) throw 'fail'
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        class Bar {
+          constructor(x) {
+            return x
+          }
+        }
+        class Foo extends Bar {
+          pass: boolean = false
+          constructor() {
+            let base = super([])
+            this.pass = base === this &&
+              base instanceof Array &&
+              !(base instanceof Foo)
+          }
+        }
+        if (!new Foo().pass) throw 'fail'
+      `,
+      'tsconfig.json': `{
+        "compilerOptions": {
+          "useDefineForClassFields": false,
+        },
+      }`,
+    }),
   )
 
   // https://github.com/evanw/esbuild/issues/3177
@@ -8116,66 +8214,68 @@ if (process.platform === 'darwin' || process.platform === 'win32') {
 }
 
 // Test glob import behavior
-tests.push(
-  test(['./src/*.ts', '--outdir=out', '--bundle', '--format=cjs'], {
-    'node.js': `
-      if (require('./out/a.js') !== 10) throw 'fail: a'
-      if (require('./out/b.js') !== 11) throw 'fail: b'
-      if (require('./out/c.js') !== 12) throw 'fail: c'
-    `,
-    'src/a.ts': `module.exports = 10 as number`,
-    'src/b.ts': `module.exports = 11 as number`,
-    'src/c.ts': `module.exports = 12 as number`,
-  }),
-  test(['in.js', '--outfile=node.js', '--bundle'], {
-    'in.js': `
-      for (let i = 0; i < 3; i++) {
-        const value = require('./' + i + '.js')
-        if (value !== i + 10) throw 'fail: ' + i
-      }
-    `,
-    '0.js': `module.exports = 10`,
-    '1.js': `module.exports = 11`,
-    '2.js': `module.exports = 12`,
-  }),
-  test(['in.js', '--outfile=node.js', '--bundle'], {
-    'in.js': `
-      for (let i = 0; i < 3; i++) {
-        const value = require(\`./\${i}.js\`)
-        if (value !== i + 10) throw 'fail: ' + i
-      }
-    `,
-    '0.js': `module.exports = 10`,
-    '1.js': `module.exports = 11`,
-    '2.js': `module.exports = 12`,
-  }),
-  test(['in.js', '--outfile=node.js', '--bundle'], {
-    'in.js': `
-      export let async = async () => {
+for (const ext of ['.js', '.ts']) {
+  tests.push(
+    test(['./src/*' + ext, '--outdir=out', '--bundle', '--format=cjs'], {
+      'node.js': `
+        if (require('./out/a.js') !== 10) throw 'fail: a'
+        if (require('./out/b.js') !== 11) throw 'fail: b'
+        if (require('./out/c.js') !== 12) throw 'fail: c'
+      `,
+      ['src/a' + ext]: `module.exports = 10`,
+      ['src/b' + ext]: `module.exports = 11`,
+      ['src/c' + ext]: `module.exports = 12`,
+    }),
+    test(['in' + ext, '--outfile=node.js', '--bundle'], {
+      ['in' + ext]: `
         for (let i = 0; i < 3; i++) {
-          const { default: value } = await import('./' + i + '.js')
+          const value = require('./' + i + '${ext}')
           if (value !== i + 10) throw 'fail: ' + i
         }
-      }
-    `,
-    '0.js': `export default 10`,
-    '1.js': `export default 11`,
-    '2.js': `export default 12`,
-  }, { async: true }),
-  test(['in.js', '--outfile=node.js', '--bundle'], {
-    'in.js': `
-      export let async = async () => {
+      `,
+      ['0' + ext]: `module.exports = 10`,
+      ['1' + ext]: `module.exports = 11`,
+      ['2' + ext]: `module.exports = 12`,
+    }),
+    test(['in' + ext, '--outfile=node.js', '--bundle'], {
+      ['in' + ext]: `
         for (let i = 0; i < 3; i++) {
-          const { default: value } = await import(\`./\${i}.js\`)
+          const value = require(\`./\${i}${ext}\`)
           if (value !== i + 10) throw 'fail: ' + i
         }
-      }
-    `,
-    '0.js': `export default 10`,
-    '1.js': `export default 11`,
-    '2.js': `export default 12`,
-  }, { async: true }),
-)
+      `,
+      ['0' + ext]: `module.exports = 10`,
+      ['1' + ext]: `module.exports = 11`,
+      ['2' + ext]: `module.exports = 12`,
+    }),
+    test(['in' + ext, '--outfile=node.js', '--bundle'], {
+      ['in' + ext]: `
+        export let async = async () => {
+          for (let i = 0; i < 3; i++) {
+            const { default: value } = await import('./' + i + '${ext}')
+            if (value !== i + 10) throw 'fail: ' + i
+          }
+        }
+      `,
+      ['0' + ext]: `export default 10`,
+      ['1' + ext]: `export default 11`,
+      ['2' + ext]: `export default 12`,
+    }, { async: true }),
+    test(['in' + ext, '--outfile=node.js', '--bundle'], {
+      ['in' + ext]: `
+        export let async = async () => {
+          for (let i = 0; i < 3; i++) {
+            const { default: value } = await import(\`./\${i}${ext}\`)
+            if (value !== i + 10) throw 'fail: ' + i
+          }
+        }
+      `,
+      ['0' + ext]: `export default 10`,
+      ['1' + ext]: `export default 11`,
+      ['2' + ext]: `export default 12`,
+    }, { async: true }),
+  )
+}
 
 // Test "using" declarations
 for (const flags of [[], '--supported:async-await=false']) {

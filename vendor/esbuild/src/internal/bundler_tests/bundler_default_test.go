@@ -1673,6 +1673,31 @@ func TestExportWildcardFSNodeCommonJS(t *testing.T) {
 	})
 }
 
+// https://github.com/evanw/esbuild/issues/3544
+func TestNodeAnnotationFalsePositiveIssue3544(t *testing.T) {
+	default_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.mjs": `
+				export function confuseNode(exports) {
+					// If this local is called "exports", node incorrectly
+					// thinks this file has an export called "notAnExport".
+					// We must make sure that it doesn't have that name
+					// when targeting Node with CommonJS.
+					exports.notAnExport = function() {
+					};
+				}
+			`,
+		},
+		entryPaths: []string{"/entry.mjs"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			OutputFormat:  config.FormatCommonJS,
+			AbsOutputFile: "/out.js",
+			Platform:      config.PlatformNode,
+		},
+	})
+}
+
 func TestMinifiedBundleES6(t *testing.T) {
 	default_suite.expectBundled(t, bundled{
 		files: map[string]string{
@@ -5300,6 +5325,64 @@ func TestDefineOptionalChainLowered(t *testing.T) {
 			AbsOutputFile:         "/out.js",
 			Defines:               &defines,
 			UnsupportedJSFeatures: compat.OptionalChain,
+		},
+	})
+}
+
+// See: https://github.com/evanw/esbuild/issues/3551
+func TestDefineOptionalChainPanicIssue3551(t *testing.T) {
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"x": {
+			DefineExpr: &config.DefineExpr{
+				Constant: &js_ast.ENumber{Value: 1},
+			},
+		},
+		"a.b": {
+			DefineExpr: &config.DefineExpr{
+				Constant: &js_ast.ENumber{Value: 1},
+			},
+		},
+	})
+	default_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/id-define.js": `
+				x?.y.z;
+				(x?.y).z;
+				x?.y["z"];
+				(x?.y)["z"];
+				x?.y();
+				(x?.y)();
+				x?.y.z();
+				(x?.y).z();
+				x?.y["z"]();
+				(x?.y)["z"]();
+				delete x?.y.z;
+				delete (x?.y).z;
+				delete x?.y["z"];
+				delete (x?.y)["z"];
+			`,
+			"/dot-define.js": `
+				a?.b.c;
+				(a?.b).c;
+				a?.b["c"];
+				(a?.b)["c"];
+				a?.b();
+				(a?.b)();
+				a?.b.c();
+				(a?.b).c();
+				a?.b["c"]();
+				(a?.b)["c"]();
+				delete a?.b.c;
+				delete (a?.b).c;
+				delete a?.b["c"];
+				delete (a?.b)["c"];
+			`,
+		},
+		entryPaths: []string{"/id-define.js", "/dot-define.js"},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/out",
+			Defines:      &defines,
 		},
 	})
 }

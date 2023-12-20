@@ -10,6 +10,32 @@ var glob_suite = suite{
 	name: "glob",
 }
 
+func TestGlobBasicNoBundle(t *testing.T) {
+	glob_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.js": `
+				const ab = Math.random() < 0.5 ? 'a.js' : 'b.js'
+				console.log({
+					concat: {
+						require: require('./src/' + ab),
+						import: import('./src/' + ab),
+					},
+					template: {
+						require: require(` + "`./src/${ab}`" + `),
+						import: import(` + "`./src/${ab}`" + `),
+					},
+				})
+			`,
+		},
+		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:          config.ModeConvertFormat,
+			OutputFormat:  config.FormatCommonJS,
+			AbsOutputFile: "/out.js",
+		},
+	})
+}
+
 func TestGlobBasicNoSplitting(t *testing.T) {
 	glob_suite.expectBundled(t, bundled{
 		files: map[string]string{
@@ -37,6 +63,33 @@ func TestGlobBasicNoSplitting(t *testing.T) {
 	})
 }
 
+func TestTSGlobBasicNoSplitting(t *testing.T) {
+	glob_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.ts": `
+				const ab = Math.random() < 0.5 ? 'a.ts' : 'b.ts'
+				console.log({
+					concat: {
+						require: require('./src/' + ab),
+						import: import('./src/' + ab),
+					},
+					template: {
+						require: require(` + "`./src/${ab}`" + `),
+						import: import(` + "`./src/${ab}`" + `),
+					},
+				})
+			`,
+			"/src/a.ts": `module.exports = 'a'`,
+			"/src/b.ts": `module.exports = 'b'`,
+		},
+		entryPaths: []string{"/entry.ts"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputFile: "/out.js",
+		},
+	})
+}
+
 func TestGlobBasicSplitting(t *testing.T) {
 	glob_suite.expectBundled(t, bundled{
 		files: map[string]string{
@@ -57,6 +110,34 @@ func TestGlobBasicSplitting(t *testing.T) {
 			"/src/b.js": `module.exports = 'b'`,
 		},
 		entryPaths: []string{"/entry.js"},
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputDir:  "/out",
+			CodeSplitting: true,
+		},
+	})
+}
+
+func TestTSGlobBasicSplitting(t *testing.T) {
+	glob_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/entry.ts": `
+				const ab = Math.random() < 0.5 ? 'a.ts' : 'b.ts'
+				console.log({
+					concat: {
+						require: require('./src/' + ab),
+						import: import('./src/' + ab),
+					},
+					template: {
+						require: require(` + "`./src/${ab}`" + `),
+						import: import(` + "`./src/${ab}`" + `),
+					},
+				})
+			`,
+			"/src/a.ts": `module.exports = 'a'`,
+			"/src/b.ts": `module.exports = 'b'`,
+		},
+		entryPaths: []string{"/entry.ts"},
 		options: config.Options{
 			Mode:          config.ModeBundle,
 			AbsOutputDir:  "/out",
