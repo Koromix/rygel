@@ -393,6 +393,7 @@ int RunInit(Span<const char *> arguments)
     const char *title = nullptr;
     const char *username = nullptr;
     const char *password = nullptr;
+    bool check_password = true;
     bool totp = false;
     char archive_key[45] = {};
     char decrypt_key[45] = {};
@@ -411,6 +412,8 @@ Options:
     %!..+-u, --username <username>%!0    Name of default user
         %!..+--password <pwd>%!0         Password of default user
         %!..+--totp%!0                   Enable TOTP for root user
+
+        %!..+--allow_unsafe_password%!0  Allow unsafe passwords
 
         %!..+--archive_key <key>%!0      Set domain public archive key
 
@@ -436,6 +439,8 @@ Options:
                 username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 password = opt.current_value;
+            } else if (opt.Test("--allow_unsafe_password")) {
+                check_password = false;
             } else if (opt.Test("--totp")) {
                 totp = true;
             } else if (opt.Test("--archive_key", OptionType::Value)) {
@@ -531,7 +536,7 @@ retry_title:
     if (!CheckUserName(username))
         return 1;
     if (password) {
-        if (!pwd_CheckPassword(password, username))
+        if (check_password && !pwd_CheckPassword(password, username))
             return 1;
     } else {
 retry_pwd:
@@ -539,7 +544,7 @@ retry_pwd:
         if (!password)
             return 1;
 
-        if (!pwd_CheckPassword(password, username))
+        if (check_password && !pwd_CheckPassword(password, username))
             goto retry_pwd;
 
         const char *password2 = Prompt("Confirm: ", nullptr, "*", &temp_alloc);
