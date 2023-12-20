@@ -89,10 +89,10 @@ function renderInstances() {
             <table class="ui_table fixed">
                 <colgroup>
                     <col/>
-                    ${profile.root ? html`<col style="width: 100px;"/>` : ''}
                     <col style="width: 100px;"/>
                     <col style="width: 100px;"/>
-                    ${profile.root ? html`<col style="width: 100px;"/>` : ''}
+                    <col style="width: 100px;"/>
+                    <col style="width: 100px;"/>
                 </colgroup>
 
                 <tbody>
@@ -104,14 +104,12 @@ function renderInstances() {
                                 ${instance.master == null ? instance.key : ''}
                                 (<a href=${'/' + instance.key} target="_blank">accès</a>)
                             </td>
-                            ${profile.root && instance.master == null ?
-                                html`<td><a role="button" tabindex="0" @click=${UI.wrap(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a></td>` : ''}
-                            ${profile.root && instance.master != null ? html`<td></td>` : ''}
+                            <td><a role="button" tabindex="0" @click=${UI.wrap(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a></td>
                             <td><a role="button" tabindex="0" href=${Util.pasteURL('/admin/', { select: instance.key })} 
                                    @click=${UI.wrap(instance != selected_instance ? (e => togglePanel('users', true))
                                                                                         : (e => { go(e, '/admin/'); e.preventDefault(); }))}>Droits</a></td>
                             <td><a role="button" tabindex="0" @click=${UI.wrap(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>
-                            ${profile.root ? html`<td><a role="button" tabindex="0" @click=${UI.wrap(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a></td>` : ''}
+                            <td>${profile.root || instance.master != null ? html`<a role="button" tabindex="0" @click=${UI.wrap(e => runDeleteInstanceDialog(e, instance))}>Supprimer</a>` : ''}</td>
                         </tr>
                     `)}
                 </tbody>
