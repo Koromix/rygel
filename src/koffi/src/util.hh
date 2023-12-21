@@ -208,6 +208,8 @@ static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)
 
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
 
+bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
+
 int AnalyseFlat(const TypeInfo *type, FunctionRef<void(const TypeInfo *type, int offset, int count)> func);
 
 void DumpMemory(const char *type, Span<const uint8_t> bytes);

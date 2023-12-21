@@ -880,35 +880,50 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
     return WrapType(env, instance, type);
 }
 
-static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value ret,
-                                 Napi::Array parameters, FunctionInfo *func)
+static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *out_func)
 {
+    Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
+    Napi::String name = info[0u].As<Napi::String>();
+    Napi::Value ret = info[1u];
+    Napi::Array parameters = info[2u].As<Napi::Array>();
+
+    // Detect optional call convention
+    if (name.IsString() && DetectCallConvention(name.Utf8Value().c_str(), &out_func->convention)) {
+        if (info.Length() < 4) {
+            ThrowError<Napi::TypeError>(env, "Expected 4 arguments, got %1", info.Length());
+            return false;
+        }
+
+        name = info[1u].As<Napi::String>();
+        ret = info[2u];
+        parameters = info[3u].As<Napi::Array>();
+    }
+
 #ifdef _WIN32
-    if (!name.IsString() && !name.IsNumber()) {
+    if (name.IsNumber()) {
+        out_func->ordinal_name = name.As<Napi::Number>().Int32Value();
+        name = name.ToString();
+    }
+#endif
+    if (!name.IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
         return false;
     }
-#else
-    if (!name.IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, name));
-        return false;
-    }
-#endif
 
-    func->name = DuplicateString(name.ToString().Utf8Value().c_str(), &instance->str_alloc).ptr;
+    out_func->name = DuplicateString(name.ToString().Utf8Value().c_str(), &instance->str_alloc).ptr;
 
-    func->ret.type = ResolveType(ret);
-    if (!func->ret.type)
+    out_func->ret.type = ResolveType(ret);
+    if (!out_func->ret.type)
         return false;
-    if (!CanReturnType(func->ret.type)) {
-        ThrowError<Napi::TypeError>(env, "You are not allowed to directly return %1 values (maybe try %1 *)", func->ret.type->name);
+    if (!CanReturnType(out_func->ret.type)) {
+        ThrowError<Napi::TypeError>(env, "You are not allowed to directly return %1 values (maybe try %1 *)", out_func->ret.type->name);
         return false;
     }
 
     if (!parameters.IsArray()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, parameters), func->name);
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, parameters), out_func->name);
         return false;
     }
 
@@ -918,7 +933,7 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
         Napi::String str = parameters.Get(parameters_len - 1).As<Napi::String>();
 
         if (str.IsString() && str.Utf8Value() == "...") {
-            func->variadic = true;
+            out_func->variadic = true;
             parameters_len--;
         }
     }
@@ -934,21 +949,21 @@ static bool ParseClassicFunction(Napi::Env env, Napi::String name, Napi::Value r
             ThrowError<Napi::TypeError>(env, "Type %1 cannot be used as a parameter", param.type->name);
             return false;
         }
-        if (func->parameters.len >= MaxParameters) {
+        if (out_func->parameters.len >= MaxParameters) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 parameters", MaxParameters);
             return false;
         }
-        if ((param.directions & 2) && ++func->out_parameters >= MaxParameters) {
+        if ((param.directions & 2) && ++out_func->out_parameters >= MaxParameters) {
             ThrowError<Napi::TypeError>(env, "Functions cannot have more than %1 output parameters", MaxParameters);
             return false;
         }
 
         param.offset = (int8_t)j;
 
-        func->parameters.Append(param);
+        out_func->parameters.Append(param);
     }
 
-    func->required_parameters = (int8_t)func->parameters.len;
+    out_func->required_parameters = (int8_t)out_func->parameters.len;
 
     return true;
 }
@@ -962,7 +977,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     RG_DEFER_N(err_guard) { instance->callbacks.RemoveLast(1); };
 
     if (info.Length() >= 3) {
-        if (!ParseClassicFunction(env, info[0u].As<Napi::String>(), info[1u], info[2u].As<Napi::Array>(), func))
+        if (!ParseClassicFunction(info, func))
             return env.Null();
     } else if (info.Length() >= 1) {
         if (!info[0].IsString()) {
@@ -1519,7 +1534,7 @@ extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, Bac
     }
 }
 
-static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConvention convention)
+static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1529,10 +1544,9 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     RG_DEFER { func->Unref(); };
 
     func->lib = lib->Ref();
-    func->convention = convention;
 
     if (info.Length() >= 3) {
-        if (!ParseClassicFunction(env, info[0u].As<Napi::String>(), info[1u], info[2u].As<Napi::Array>(), func))
+        if (!ParseClassicFunction(info, func))
             return env.Null();
     } else if (info.Length() >= 1) {
         if (!info[0].IsString()) {
@@ -1562,7 +1576,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
     }
 
 #ifdef _WIN32
-    if (info[0].IsString()) {
+    if (func->ordinal_name < 0) {
         if (func->decorated_name) {
             func->native = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
         }
@@ -1570,7 +1584,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info, CallConve
             func->native = (void *)GetProcAddress((HMODULE)lib->module, func->name);
         }
     } else {
-        uint16_t ordinal = (uint16_t)info[0].As<Napi::Number>().Uint32Value();
+        uint16_t ordinal = (uint16_t)func->ordinal_name;
 
         func->decorated_name = nullptr;
         func->native = (void *)GetProcAddress((HMODULE)lib->module, (LPCSTR)(size_t)ordinal);
@@ -1720,20 +1734,13 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
             func.AddFinalizer([](Napi::Env, LibraryHolder *lib) { lib->Unref(); }, lib); \
             obj.Set((Name), func); \
         } while (false)
-#define ADD_CONVENTION(Name, Value) ADD_METHOD((Name), FindLibraryFunction(info, Value))
 
-    ADD_CONVENTION("func", CallConvention::Cdecl);
-    ADD_CONVENTION("cdecl", CallConvention::Cdecl);
-    ADD_CONVENTION("stdcall", CallConvention::Stdcall);
-    ADD_CONVENTION("fastcall", CallConvention::Fastcall);
-    ADD_CONVENTION("thiscall", CallConvention::Thiscall);
-
+    ADD_METHOD("func", FindLibraryFunction(info));
     ADD_METHOD("symbol", FindSymbol(info));
 
     // We can't unref the library after unload, obviously
     obj.Set("unload", Napi::Function::New(env, UnloadLibrary, "unload", (void *)lib->Ref()));
 
-#undef ADD_CONVENTION
 #undef ADD_METHOD
 
     return obj;

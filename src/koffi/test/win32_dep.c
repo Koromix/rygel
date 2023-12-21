@@ -31,7 +31,7 @@
 
 #define EXPORT __declspec(dllexport)
 
-EXPORT int DoDivideBySafe(int a, int b)
+EXPORT int __cdecl DoDivideBySafe(int a, int b)
 {
     __try {
         return a / b;

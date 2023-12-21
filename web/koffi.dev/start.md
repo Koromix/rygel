@@ -99,8 +99,8 @@ const IDYES = 6;
 const IDNO = 7;
 
 // Find functions
-const MessageBoxA = lib.stdcall('MessageBoxA', 'int', ['void *', 'str', 'str', 'uint']);
-const MessageBoxW = lib.stdcall('MessageBoxW', 'int', ['void *', 'str16', 'str16', 'uint']);
+const MessageBoxA = lib.func('__stdcall', 'MessageBoxA', 'int', ['void *', 'str', 'str', 'uint']);
+const MessageBoxW = lib.func('__stdcall', 'MessageBoxW', 'int', ['void *', 'str16', 'str16', 'uint']);
 
 let ret = MessageBoxA(null, 'Do you want another message box?', 'Koffi', MB_YESNO | MB_ICONQUESTION);
 if (ret == IDYES)

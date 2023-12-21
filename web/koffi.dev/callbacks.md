@@ -8,6 +8,8 @@ The function `koffi.proto()` was introduced in Koffi 2.4, it was called `koffi.c
 
 ## Callback types
 
+*Changed in Koffi 2.7*
+
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
 
 ```js
@@ -19,6 +21,21 @@ const ExampleCallback = koffi.proto('ExampleCallback', 'void', ['int']);
 
 // With the prototype parser, this callback expects a double and float, and returns the sum as a double
 const AddDoubleFloat = koffi.proto('double AddDoubleFloat(double d, float f)');
+```
+
+For alternative [calling conventions](functions.md#calling-conventions) (such as `stdcall` on Windows x86 32-bit), you can specify as the first argument with the classic syntax, or after the return type in prototype strings, like this:
+
+```js
+const HANDLE = koffi.pointer('HANDLE', koffi.opaque());
+const HWND = koffi.alias('HWND', HANDLE);
+
+// These two declarations work the same, and use the __stdcall convention on Windows x86
+const EnumWindowsProc = koffi.proto('bool __stdcall EnumWindowsProc (HWND hwnd, long lParam)');
+const EnumWindowsProc = koffi.proto('EnumWindowsProc', 'bool', ['HWND', 'long']);
+```
+
+```{note}
+Before Koffi 2.7, it was impossible to use an alternative callback calling convention with the classic syntax. Use a prototype string or upgrade to Koffi 2.7 to solve this limitation.
 ```
 
 Once your callback type is declared, you can use a pointer to it in struct definitions, as function parameters and/or return types, or to call/decode function pointers.

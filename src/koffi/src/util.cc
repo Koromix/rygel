@@ -1508,6 +1508,25 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
     return wrapper;
 }
 
+bool DetectCallConvention(Span<const char> name, CallConvention *out_convention)
+{
+    if (name == "__cdecl") {
+        *out_convention = CallConvention::Cdecl;
+        return true;
+    } else if (name == "__stdcall") {
+        *out_convention = CallConvention::Stdcall;
+        return true;
+    } else if (name == "__fastcall") {
+        *out_convention = CallConvention::Fastcall;
+        return true;
+    } else if (name == "__thiscall") {
+        *out_convention = CallConvention::Thiscall;
+        return true;
+    } else {
+        return false;
+    }
+}
+
 static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionRef<void(const TypeInfo *type, int offset, int count)> func)
 {
     if (type->primitive == PrimitiveKind::Record) {

@@ -32,15 +32,15 @@
 #define IMPORT __declspec(dllimport)
 #define EXPORT __declspec(dllexport)
 
-IMPORT int DoDivideBySafe(int a, int b);
+IMPORT int __cdecl DoDivideBySafe(int a, int b);
 
 EXPORT int DivideBySafe(int a, int b)
 {
     return DoDivideBySafe(a, b);
 }
 
-EXPORT int CallThrough(int (*func)(void))
+EXPORT int CallThrough(int (__stdcall *func)(int value), int value)
 {
-    int ret = func();
+    int ret = func(value);
     return ret;
 }

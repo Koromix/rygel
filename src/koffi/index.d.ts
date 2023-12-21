@@ -67,18 +67,16 @@ declare module 'koffi' {
     export interface IKoffiLib {
         func(definition: string): KoffiFunction;
         func(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+        func(convention: string, name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
-        cdecl(definition: string): KoffiFunction;
-        cdecl(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
-
-        stdcall(definition: string): KoffiFunction;
-        stdcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
-
-        fastcall(definition: string): KoffiFunction;
-        fastcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
-
-        thiscall(definition: string): KoffiFunction;
-        thiscall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+        /** @deprecated */ cdecl(definition: string): KoffiFunction;
+        /** @deprecated */ cdecl(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+        /** @deprecated */ stdcall(definition: string): KoffiFunction;
+        /** @deprecated */ stdcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+        /** @deprecated */ fastcall(definition: string): KoffiFunction;
+        /** @deprecated */ fastcall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
+        /** @deprecated */ thiscall(definition: string): KoffiFunction;
+        /** @deprecated */ thiscall(name: string, result: TypeSpec, arguments: TypeSpec[]): KoffiFunction;
 
         symbol(name: string, type: TypeSpec): any;
 
@@ -118,8 +116,10 @@ declare module 'koffi' {
 
     export function proto(definition: string): IKoffiCType;
     export function proto(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
+    export function proto(convention: string, name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
     /** @deprecated */ export function callback(definition: string): IKoffiCType;
     /** @deprecated */ export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
+    /** @deprecated */ export function callback(convention: string, name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
 
     export function register(callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
     export function register(thisValue: any, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;

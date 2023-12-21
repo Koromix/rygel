@@ -25,7 +25,8 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const util = require('util');
 
-const CallThroughFunc = koffi.proto('int CallThroughFunc()');
+const CallThroughFunc1 = koffi.proto('int __stdcall CallThroughFunc1(int)');
+const CallThroughFunc2 = koffi.proto('__stdcall', 'CallThroughFunc2', 'int', ['int']);
 
 main();
 
@@ -48,8 +49,9 @@ async function test() {
 
     let kernel32 = koffi.load('kernel32.dll');
 
-    const DivideBySafe = lib.func('int DivideBySafe(int a, int b)');
-    const CallThrough = lib.func('int CallThrough(CallThroughFunc *func)');
+    const DivideBySafe = lib.cdecl('DivideBySafe', 'int', ['int', 'int']);
+    const CallThrough1 = lib.func('int CallThrough(CallThroughFunc1 *func, int value)');
+    const CallThrough2 = lib.func('int CallThrough(CallThroughFunc2 *func, int value)');
 
     const Sleep = kernel32.func('void __stdcall Sleep(uint32_t dwMilliseconds)');
     const GetLastError = kernel32.func('uint32_t __stdcall GetLastError()');
@@ -79,14 +81,14 @@ async function test() {
     }
 
     // Test SEH inside callback
-    assert.equal(CallThrough(() => DivideBySafe(16, 2)), 8);
-    assert.equal(CallThrough(() => DivideBySafe(16 * 2, 0)), -42);
+    assert.equal(CallThrough1((value) => DivideBySafe(value, 2), 16), 8);
+    assert.equal(CallThrough2((value) => DivideBySafe(value * 2, 0), 16), -42);
 
     // Test SEH inside callback running async
     {
         let results = await Promise.all([
-            util.promisify(CallThrough.async)(() => DivideBySafe(75, -5)),
-            util.promisify(CallThrough.async)(() => DivideBySafe(7, 5 - 5))
+            util.promisify(CallThrough1.async)((value) => DivideBySafe(value + 5, -5), 70),
+            util.promisify(CallThrough2.async)((value) => DivideBySafe(value + 2, 5 - 5), 5)
         ]);
 
         assert.equal(results[0], -15);

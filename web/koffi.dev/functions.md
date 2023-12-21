@@ -83,18 +83,26 @@ On x86 platforms, only the Cdecl convention can be used for variadic functions.
 
 ### Calling conventions
 
+*Changed in Koffi 2.7*
+
 By default, calling a C function happens synchronously.
 
 Most architectures only support one procedure call standard per process. The 32-bit x86 platform is an exception to this, and Koffi supports several x86 conventions:
 
- Convention   | Classic form                  | Prototype form | Description
-------------- | ----------------------------- | -------------- | -------------------------------------------------------------------
- **Cdecl**    | `koffi.cdecl` or `koffi.func` | _(default)_    | This is the default convention, and the only one on other platforms
- **Stdcall**  | `koffi.stdcall`               | __stdcall      | This convention is used extensively within the Win32 API
- **Fastcall** | `koffi.fastcall`              | __fastcall     | Rarely used, uses ECX and EDX for first two parameters
- **Thiscall** | `koffi.thiscall`              | __thiscall     | Rarely used, uses ECX for first parameter
+ Convention   | Classic form                                  | Prototype form | Description
+------------- | --------------------------------------------- | -------------- | -------------------------------------------------------------------
+ **Cdecl**    | `koffi.func(name, ret, params)`               | _(default)_    | This is the default convention, and the only one on other platforms
+ **Stdcall**  | `koffi.func('__stdcall', name, ret, params)`  | __stdcall      | This convention is used extensively within the Win32 API
+ **Fastcall** | `koffi.func('__fastcall', name, ret, params)` | __fastcall     | Rarely used, uses ECX and EDX for first two parameters
+ **Thiscall** | `koffi.func('__thiscall', name, ret, params)` | __thiscall     | Rarely used, uses ECX for first parameter
 
 You can safely use these on non-x86 platforms, they are simply ignored.
+
+```{note}
+Support for specifying the convention as the first argument of the classic form was introduced in Koffi 2.7.
+
+In earlier versions, you had to use `koffi.stdcall()` and similar functions. These functions are still supported but deprecated, and will be removed in Koffi 3.0.
+```
 
 Below you can find a small example showing how to use a non-default calling convention, with the two syntaxes:
 
@@ -105,7 +113,7 @@ const koffi = require('koffi');
 const lib = koffi.load('user32.dll');
 
 // The following two declarations are equivalent, and use stdcall on x86 (and the default ABI on other platforms)
-const MessageBoxA_1 = lib.stdcall('MessageBoxA', 'int', ['void *', 'str', 'str', 'uint']);
+const MessageBoxA_1 = lib.func('__stdcall', 'MessageBoxA', 'int', ['void *', 'str', 'str', 'uint']);
 const MessageBoxA_2 = lib.func('int __stdcall MessageBoxA(void *hwnd, str text, str caption, uint type)');
 ```
 

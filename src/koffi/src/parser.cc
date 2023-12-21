@@ -40,15 +40,7 @@ bool PrototypeParser::Parse(const char *str, FunctionInfo *out_func)
         MarkError("You are not allowed to directly return %1 values (maybe try %1 *)", out_func->ret.type->name);
         return false;
     }
-    if (Match("__cdecl")) {
-        out_func->convention = CallConvention::Cdecl;
-    } else if (Match("__stdcall")) {
-        out_func->convention = CallConvention::Stdcall;
-    } else if (Match("__fastcall")) {
-        out_func->convention = CallConvention::Fastcall;
-    } else if (Match("__thiscall")) {
-        out_func->convention = CallConvention::Thiscall;
-    }
+    offset += (offset < tokens.len && DetectCallConvention(tokens[offset], &out_func->convention));
     out_func->name = ParseIdentifier();
 
     Consume("(");

@@ -181,7 +181,7 @@ async function test() {
     const AddPack2 = lib.fastcall('AddPack2', 'void', ['int', 'int', koffi.inout(koffi.pointer(Pack2))]);
     const FillPack3 = lib.func('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
     const RetPack3 = lib.func('RetPack3', Pack3, ['int', 'int', 'int']);
-    const AddPack3 = lib.fastcall('AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
+    const AddPack3 = lib.func('__fastcall', 'AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
     const PackFloat1 = lib.func('Float1 PackFloat1(float f, _Out_ Float1 *out)');
     const ThroughFloat1 = lib.func('Float1 ThroughFloat1(Float1 f1)');
     const PackFloat2 = lib.func('Float2 PackFloat2(float a, float b, _Out_ Float2 *out)');

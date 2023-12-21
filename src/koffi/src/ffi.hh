@@ -220,6 +220,9 @@ struct FunctionInfo {
 
     const char *name;
     const char *decorated_name; // Only set for some platforms/calling conventions
+#ifdef _WIN32
+    int ordinal_name = -1;
+#endif
     const LibraryHolder *lib = nullptr;
 
     void *native;
