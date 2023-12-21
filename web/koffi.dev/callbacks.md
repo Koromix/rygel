@@ -31,7 +31,7 @@ const HWND = koffi.alias('HWND', HANDLE);
 
 // These two declarations work the same, and use the __stdcall convention on Windows x86
 const EnumWindowsProc = koffi.proto('bool __stdcall EnumWindowsProc (HWND hwnd, long lParam)');
-const EnumWindowsProc = koffi.proto('EnumWindowsProc', 'bool', ['HWND', 'long']);
+const EnumWindowsProc = koffi.proto('__stdcall', 'EnumWindowsProc', 'bool', ['HWND', 'long']);
 ```
 
 ```{warning}
