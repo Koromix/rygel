@@ -2,6 +2,14 @@
 
 ## Version history
 
+### Koffi 2.7
+
+#### Koffi 2.7.0 (2023-12-21)
+
+- Support alternative [callback calling convention](callbacks.md#callback-types) in classic syntax
+- Change syntax for [calling conventions](functions.md#calling-conventions) with classic syntax
+- Drop unused "internal" property from Koffi
+
 ### Koffi 2.6
 
 #### Koffi 2.6.12 (2023-12-11)
