@@ -18,12 +18,29 @@
 
 namespace RG {
 
+static bool GeneratePassword(Span<char> out_pwd)
+{
+    RG_ASSERT(out_pwd.len >= 33);
+
+    // Avoid characters that are annoying in consoles
+    unsigned int flags = (int)pwd_GenerateFlag::LowersNoAmbi |
+                         (int)pwd_GenerateFlag::UppersNoAmbi |
+                         (int)pwd_GenerateFlag::DigitsNoAmbi |
+                         (int)pwd_GenerateFlag::Specials;
+
+    return pwd_GeneratePassword(flags, out_pwd);
+}
+
 int RunInit(Span<const char *> arguments)
 {
+    BlockAllocator temp_alloc;
+
     // Options
     rk_Config config;
-    char full_pwd[129] = {};
-    char write_pwd[129] = {};
+    const char *full_pwd = nullptr;
+    const char *write_pwd = nullptr;
+    bool random_full_pwd = true;
+    bool random_write_pwd = true;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -34,8 +51,8 @@ Options:
 
     %!..+-R, --repository <dir>%!0       Set repository directory
 
-        %!..+--master_password <pwd>%!0  Set master password manually
-        %!..+--write_password <pwd>%!0   Set write-only password manually)", FelixTarget);
+        %!..+--master_password [pwd]%!0  Set master password manually
+        %!..+--write_password [pwd]%!0   Set write-only password manually)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -54,16 +71,12 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
-            } else if (opt.Test("--master_password", OptionType::Value)) {
-                if (!CopyString(opt.current_value, full_pwd)) {
-                    LogError("Password is too long");
-                    return 1;
-                }
-            } else if (opt.Test("--write_password", OptionType::Value)) {
-                if (!CopyString(opt.current_value, write_pwd)) {
-                    LogError("Password is too long");
-                    return 1;
-                }
+            } else if (opt.Test("--master_password", OptionType::OptionalValue)) {
+                full_pwd = opt.current_value;
+                random_full_pwd = false;
+            } else if (opt.Test("--write_password", OptionType::OptionalValue)) {
+                write_pwd = opt.current_value;
+                random_write_pwd = false;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -72,16 +85,24 @@ Options:
     }
 
     // Generate repository passwords
-    {
-        // Avoid characters that are annoying in consoles
-        unsigned int flags = (int)pwd_GenerateFlag::LowersNoAmbi |
-                             (int)pwd_GenerateFlag::UppersNoAmbi |
-                             (int)pwd_GenerateFlag::DigitsNoAmbi |
-                             (int)pwd_GenerateFlag::Specials;
-
-        if (!full_pwd[0] && !pwd_GeneratePassword(flags, MakeSpan(full_pwd, 33)))
+    if (random_full_pwd) {
+        Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
+        if (!GeneratePassword(buf))
+           return 1;
+       full_pwd = buf.ptr;
+    } else if (!full_pwd) {
+        full_pwd = Prompt("Master password: ", nullptr, "*", &temp_alloc);
+        if (!full_pwd)
             return 1;
-        if (!write_pwd[0] && !pwd_GeneratePassword(flags, MakeSpan(write_pwd, 33)))
+    }
+    if (random_write_pwd) {
+        Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
+        if (!GeneratePassword(buf))
+           return 1;
+        write_pwd = buf.ptr;
+    } else if (!write_pwd) {
+        write_pwd = Prompt("Write-only password: ", nullptr, "*", &temp_alloc);
+        if (!write_pwd)
             return 1;
     }
 
@@ -91,6 +112,7 @@ Options:
     std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
     if (!disk)
         return 1;
+    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
     LogInfo("Repository: %!..+%1%!0", disk->GetURL());
     LogInfo();
@@ -109,8 +131,16 @@ Options:
 
     LogInfo("Master key: %!..+%1%!0", master_key);
     LogInfo();
-    LogInfo("Default master password: %!..+%1%!0", full_pwd);
-    LogInfo("    write-only password: %!..+%1%!0", write_pwd);
+    if (random_full_pwd) {
+        LogInfo("Default master password: %!..+%1%!0", full_pwd);
+    } else {
+        LogInfo("Default master password: %!D..(hidden)%!0");
+    }
+    if (random_write_pwd) {
+        LogInfo("    write-only password: %!..+%1%!0", write_pwd);
+    } else {
+        LogInfo("    write-only password: %!D..(hidden)%!0");
+    }
     LogInfo();
     LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
 
