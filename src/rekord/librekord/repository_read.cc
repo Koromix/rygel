@@ -44,7 +44,7 @@ enum class ExtractFlag {
 };
 
 struct EntryInfo {
-    rk_ID id;
+    rk_Hash hash;
 
     int kind;
     unsigned int flags;
@@ -75,7 +75,7 @@ public:
     bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
     bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest);
 
-    int GetFile(const rk_ID &id, rk_BlobType type, Span<const uint8_t> file_blob, const char *dest_filename);
+    int GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> file_blob, const char *dest_filename);
 
     bool Sync() { return tasks.Sync(); }
 
@@ -266,7 +266,7 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
 
     EntryInfo entry = {};
 
-    entry.id = ptr->id;
+    entry.hash = ptr->hash;
     entry.kind = LittleEndian(ptr->kind);
     entry.flags = LittleEndian(ptr->flags);
     entry.basename = DuplicateString(ptr->GetName(), alloc).ptr;
@@ -383,13 +383,13 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         tasks.Run([=, ctx = ctx, this] () {
             rk_BlobType entry_type;
             HeapArray<uint8_t> entry_blob;
-            if (!disk->ReadBlob(entry.id, &entry_type, &entry_blob))
+            if (!disk->ReadBlob(entry.hash, &entry_type, &entry_blob))
                 return false;
 
             switch (entry.kind) {
                 case (int)rk_RawFile::Kind::Directory: {
                     if (entry_type != rk_BlobType::Directory) {
-                        LogError("Blob '%1' is not a Directory", entry.id);
+                        LogError("Blob '%1' is not a Directory", entry.hash);
                         return false;
                     }
 
@@ -401,11 +401,11 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
                 case (int)rk_RawFile::Kind::File: {
                     if (entry_type != rk_BlobType::File && entry_type != rk_BlobType::Chunk) {
-                        LogError("Blob '%1' is not a File", entry.id);
+                        LogError("Blob '%1' is not a File", entry.hash);
                         return false;
                     }
 
-                    int fd = GetFile(entry.id, entry_type, entry_blob, entry.filename);
+                    int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename);
                     if (fd < 0)
                         return false;
                     RG_DEFER { close(fd); };
@@ -419,7 +419,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
                 case (int)rk_RawFile::Kind::Link: {
                     if (entry_type != rk_BlobType::Link) {
-                        LogError("Blob '%1' is not a Link", entry.id);
+                        LogError("Blob '%1' is not a Link", entry.hash);
                         return false;
                     }
 
@@ -440,7 +440,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     return true;
 }
 
-int GetContext::GetFile(const rk_ID &id, rk_BlobType type, Span<const uint8_t> file_blob, const char *dest_filename)
+int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> file_blob, const char *dest_filename)
 {
     RG_ASSERT(type == rk_BlobType::File || type == rk_BlobType::Chunk);
 
@@ -483,7 +483,7 @@ int GetContext::GetFile(const rk_ID &id, rk_BlobType type, Span<const uint8_t> f
     switch (type) {
         case rk_BlobType::File: {
             if (file_blob.len % RG_SIZE(rk_RawChunk) != RG_SIZE(int64_t)) {
-                LogError("Malformed file blob '%1'", id);
+                LogError("Malformed file blob '%1'", hash);
                 return -1;
             }
             file_blob.len -= RG_SIZE(int64_t);
@@ -493,7 +493,7 @@ int GetContext::GetFile(const rk_ID &id, rk_BlobType type, Span<const uint8_t> f
             file_len = LittleEndian(file_len);
 
             if (file_len < 0) {
-                LogError("Malformed file blob '%1'", id);
+                LogError("Malformed file blob '%1'", hash);
                 return -1;
             }
             if (!ReserveFile(fd, dest_filename, file_len))
@@ -512,15 +512,15 @@ int GetContext::GetFile(const rk_ID &id, rk_BlobType type, Span<const uint8_t> f
 
                     rk_BlobType type;
                     HeapArray<uint8_t> buf;
-                    if (!disk->ReadBlob(entry.id, &type, &buf))
+                    if (!disk->ReadBlob(entry.hash, &type, &buf))
                         return false;
 
                     if (type != rk_BlobType::Chunk) [[unlikely]] {
-                        LogError("Blob '%1' is not a Chunk", entry.id);
+                        LogError("Blob '%1' is not a Chunk", entry.hash);
                         return false;
                     }
                     if (buf.len != entry.len) [[unlikely]] {
-                        LogError("Chunk size mismatch for '%1'", entry.id);
+                        LogError("Chunk size mismatch for '%1'", entry.hash);
                         return false;
                     }
                     if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
@@ -541,7 +541,7 @@ int GetContext::GetFile(const rk_ID &id, rk_BlobType type, Span<const uint8_t> f
                 int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
                 if (len != file_len) [[unlikely]] {
-                    LogError("File size mismatch for '%1'", entry->id);
+                    LogError("File size mismatch for '%1'", entry->hash);
                     return -1;
                 }
             }
@@ -580,11 +580,11 @@ int GetContext::GetFile(const rk_ID &id, rk_BlobType type, Span<const uint8_t> f
     return fd;
 }
 
-bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len)
+bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len)
 {
     rk_BlobType type;
     HeapArray<uint8_t> blob;
-    if (!disk->ReadBlob(id, &type, &blob))
+    if (!disk->ReadBlob(hash, &type, &blob))
         return false;
 
     GetContext get(disk, settings.chown);
@@ -599,7 +599,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
                 }
             }
 
-            int fd = get.GetFile(id, type, blob, dest_path);
+            int fd = get.GetFile(hash, type, blob, dest_path);
             if (fd < 0)
                 return false;
             close(fd);
@@ -633,7 +633,7 @@ bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings, cons
 
             // There must be at least one entry
             if (blob.len <= RG_SIZE(rk_SnapshotHeader)) {
-                LogError("Malformed snapshot blob '%1'", id);
+                LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
 
@@ -666,8 +666,8 @@ bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_sn
     Size prev_len = out_snapshots->len;
     RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
 
-    HeapArray<rk_ID> ids;
-    if (!disk->ListTags(&ids))
+    HeapArray<rk_Hash> hashes;
+    if (!disk->ListTags(&hashes))
         return false;
 
     Async async(disk->GetThreads());
@@ -676,28 +676,28 @@ bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_sn
     {
         std::mutex mutex;
 
-        for (const rk_ID &id: ids) {
+        for (const rk_Hash &hash: hashes) {
             async.Run([=, &mutex]() {
                 rk_SnapshotInfo snapshot = {};
 
                 rk_BlobType type;
                 HeapArray<uint8_t> blob;
-                if (!disk->ReadBlob(id, &type, &blob))
+                if (!disk->ReadBlob(hash, &type, &blob))
                     return false;
 
                 if (type != rk_BlobType::Snapshot) {
-                    LogError("Blob '%1' is not a Snapshot (ignoring)", id);
+                    LogError("Blob '%1' is not a Snapshot (ignoring)", hash);
                     return true;
                 }
                 if (blob.len <= RG_SIZE(rk_SnapshotHeader)) {
-                    LogError("Malformed snapshot blob '%1' (ignoring)", id);
+                    LogError("Malformed snapshot blob '%1' (ignoring)", hash);
                     return true;
                 }
 
                 std::lock_guard lock(mutex);
                 const rk_SnapshotHeader *header = (const rk_SnapshotHeader *)blob.ptr;
 
-                snapshot.id = id;
+                snapshot.hash = hash;
                 snapshot.name = header->name[0] ? DuplicateString(header->name, alloc).ptr : nullptr;
                 snapshot.time = LittleEndian(header->time);
                 snapshot.len = LittleEndian(header->len);
@@ -786,7 +786,7 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 
         rk_ObjectInfo *obj = &contexts[i].obj;
 
-        obj->id = entry.id;
+        obj->hash = entry.hash;
         obj->depth = depth;
         switch (entry.kind) {
             case (int)rk_RawFile::Kind::Directory: { obj->type = rk_ObjectType::Directory; } break;
@@ -818,11 +818,11 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
             rk_BlobType entry_type;
             HeapArray<uint8_t> entry_blob;
 
-            if (!disk->ReadBlob(entry.id, &entry_type, &entry_blob))
+            if (!disk->ReadBlob(entry.hash, &entry_type, &entry_blob))
                 return false;
 
             if (entry_type != expect_type) {
-                LogError("Blob '%1' is not a %2", entry.id, rk_BlobTypeNames[(int)expect_type]);
+                LogError("Blob '%1' is not a %2", entry.hash, rk_BlobTypeNames[(int)expect_type]);
                 return false;
             }
 
@@ -863,15 +863,15 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     return true;
 }
 
-bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Allocator *alloc,
-             HeapArray<rk_ObjectInfo> *out_objects)
+bool rk_Tree(rk_Disk *disk, const rk_Hash &hash, const rk_TreeSettings &settings,
+             Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
     Size prev_len = out_objects->len;
     RG_DEFER_N(out_guard) { out_objects->RemoveFrom(prev_len); };
 
     rk_BlobType type;
     HeapArray<uint8_t> blob;
-    if (!disk->ReadBlob(id, &type, &blob))
+    if (!disk->ReadBlob(hash, &type, &blob))
         return false;
 
     TreeContext tree(disk, settings);
@@ -885,14 +885,14 @@ bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Al
         case rk_BlobType::Snapshot: {
             // There must be at least one entry
             if (blob.len <= RG_SIZE(rk_SnapshotHeader)) {
-                LogError("Malformed snapshot blob '%1'", id);
+                LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
 
             const rk_SnapshotHeader *header = (const rk_SnapshotHeader *)blob.ptr;
             rk_ObjectInfo *obj = out_objects->AppendDefault();
 
-            obj->id = id;
+            obj->hash = hash;
             obj->type = rk_ObjectType::Snapshot;
             obj->name = header->name[0] ? DuplicateString(header->name, alloc).ptr : nullptr;
             obj->mtime = header->time;

@@ -109,11 +109,11 @@ public:
     sq_Database *GetCache() { return &cache_db; }
     int GetThreads() const { return threads; }
 
-    bool ReadBlob(const rk_ID &id, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
-    Size WriteBlob(const rk_ID &id, rk_BlobType type, Span<const uint8_t> blob);
+    bool ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
+    Size WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> blob);
 
-    Size WriteTag(const rk_ID &id);
-    bool ListTags(HeapArray<rk_ID> *out_ids);
+    Size WriteTag(const rk_Hash &hash);
+    bool ListTags(HeapArray<rk_Hash> *out_hashes);
 
 protected:
     bool InitDefault(const char *full_pwd, const char *write_pwd);

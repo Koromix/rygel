@@ -51,7 +51,7 @@ struct BlobIntro {
 #pragma pack(pop)
 
 static const int SecretVersion = 1;
-static const int CacheVersion = 2;
+static const int CacheVersion = 3;
 static const int BlobVersion = 7;
 static const Size BlobSplit = Kibibytes(32);
 
@@ -281,13 +281,13 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
     return true;
 }
 
-static inline FmtArg GetPrefix3(const rk_ID &id)
+static inline FmtArg GetPrefix3(const rk_Hash &hash)
 {
-    uint16_t prefix = ((uint16_t)id.hash[0] << 4) | ((uint16_t)id.hash[1] >> 4);
+    uint16_t prefix = ((uint16_t)hash.hash[0] << 4) | ((uint16_t)hash.hash[1] >> 4);
     return FmtHex(prefix).Pad0(-3);
 }
 
-bool rk_Disk::ReadBlob(const rk_ID &id, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
+bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Full);
@@ -296,7 +296,7 @@ bool rk_Disk::ReadBlob(const rk_ID &id, rk_BlobType *out_type, HeapArray<uint8_t
     RG_DEFER_N(err_guard) { out_blob->RemoveFrom(prev_len); };
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(hash), hash).len;
 
     HeapArray<uint8_t> raw;
     if (ReadRaw(path.data, &raw) < 0)
@@ -392,13 +392,13 @@ bool rk_Disk::ReadBlob(const rk_ID &id, rk_BlobType *out_type, HeapArray<uint8_t
     return true;
 }
 
-Size rk_Disk::WriteBlob(const rk_ID &id, rk_BlobType type, Span<const uint8_t> blob)
+Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> blob)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
 
     LocalArray<char, 256> path;
-    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
+    path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(hash), hash).len;
 
     switch (TestFast(path.data)) {
         case TestResult::Exists: return 0;
@@ -492,15 +492,15 @@ Size rk_Disk::WriteBlob(const rk_ID &id, rk_BlobType type, Span<const uint8_t> b
     return written;
 }
 
-Size rk_Disk::WriteTag(const rk_ID &id)
+Size rk_Disk::WriteTag(const rk_Hash &hash)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
 
-    // Prepare sealed ID
+    // Prepare sealed hash
     uint8_t cypher[crypto_box_SEALBYTES + 32];
-    if (crypto_box_seal(cypher, id.hash, RG_SIZE(id.hash), pkey) != 0) {
-        LogError("Failed to seal ID");
+    if (crypto_box_seal(cypher, hash.hash, RG_SIZE(hash.hash), pkey) != 0) {
+        LogError("Failed to seal hash");
         return -1;
     }
 
@@ -518,19 +518,19 @@ Size rk_Disk::WriteTag(const rk_ID &id)
     }
 
     // We really really should never reach this...
-    LogError("Failed to create tag for '%1'", id);
+    LogError("Failed to create tag for '%1'", hash);
     return -1;
 }
 
-bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
+bool rk_Disk::ListTags(HeapArray<rk_Hash> *out_hashes)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Full);
 
     BlockAllocator temp_alloc;
 
-    Size start_len = out_ids->len;
-    RG_DEFER_N(out_guard) { out_ids->RemoveFrom(start_len); };
+    Size start_len = out_hashes->len;
+    RG_DEFER_N(out_guard) { out_hashes->RemoveFrom(start_len); };
 
     HeapArray<const char *> filenames;
     {
@@ -545,7 +545,7 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
     }
 
     HeapArray<bool> ready;
-    out_ids->AppendDefault(filenames.len);
+    out_hashes->AppendDefault(filenames.len);
     ready.AppendDefault(filenames.len);
 
     Async async(GetThreads());
@@ -565,13 +565,13 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
                 return true;
             }
 
-            rk_ID id = {};
-            if (crypto_box_seal_open(id.hash, blob, RG_SIZE(blob), pkey, skey) != 0) {
+            rk_Hash hash = {};
+            if (crypto_box_seal_open(hash.hash, blob, RG_SIZE(blob), pkey, skey) != 0) {
                 LogError("Failed to unseal tag (ignoring)");
                 return true;
             }
 
-            out_ids->ptr[start_len + i] = id;
+            out_hashes->ptr[start_len + i] = hash;
             ready[i] = true;
 
             return true;
@@ -583,10 +583,10 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
 
     Size j = 0;
     for (Size i = 0; i < filenames.len; i++) {
-        out_ids->ptr[start_len + j] = out_ids->ptr[start_len + i];
+        out_hashes->ptr[start_len + j] = out_hashes->ptr[start_len + i];
         j += ready[i];
     }
-    out_ids->len = start_len + j;
+    out_hashes->len = start_len + j;
 
     out_guard.Disable();
     return true;
@@ -865,9 +865,17 @@ bool rk_Disk::OpenCache()
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 2: {
+                    bool success = cache_db.RunMany(R"(
+                        ALTER TABLE stats RENAME COLUMN id TO hash;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 2);
+                static_assert(CacheVersion == 3);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))

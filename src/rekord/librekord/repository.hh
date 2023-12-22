@@ -37,7 +37,7 @@ struct rk_TreeSettings {
 };
 
 struct rk_SnapshotInfo {
-    rk_ID id;
+    rk_Hash hash;
 
     const char *name; // Can be NULL
     int64_t time;
@@ -61,7 +61,7 @@ static const char *const rk_ObjectTypeNames[] = {
 };
 
 struct rk_ObjectInfo {
-    rk_ID id;
+    rk_Hash hash;
 
     int depth;
     rk_ObjectType type;
@@ -82,13 +82,13 @@ struct rk_ObjectInfo {
 
 // Snapshot commands
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
-            rk_ID *out_id, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
-bool rk_Get(rk_Disk *disk, const rk_ID &id, const rk_GetSettings &settings,
+            rk_Hash *out_hash, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
+bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings,
             const char *dest_path, int64_t *out_len = nullptr);
 
 // Exploration commands
 bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
-bool rk_Tree(rk_Disk *disk, const rk_ID &id, const rk_TreeSettings &settings, Allocator *alloc,
-             HeapArray<rk_ObjectInfo> *out_objects);
+bool rk_Tree(rk_Disk *disk, const rk_Hash &hash, const rk_TreeSettings &settings,
+             Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
 }

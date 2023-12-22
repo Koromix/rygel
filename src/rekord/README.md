@@ -129,7 +129,7 @@ However, if you lose them, you will still be able to reset any account (includin
 
 ## Create snapshots
 
-Each snapshot has a unique ID (which is actually a BLAKE3 hash in hexadecimal form), which is generated automatically when the snapshot is created.
+Each snapshot has a unique hash (which is actually a BLAKE3 hash in hexadecimal form), which is generated automatically when the snapshot is created.
 
 You need to give snapshots a name (or use `--anonymous` to skip this). This name does not have to be unique and only exists to help you categorize snapshots.
 
@@ -138,7 +138,7 @@ export REKORD_CONFIG_FILE = /path/to/config.ini
 rekord put -n <NAME> <PATHS...>
 ```
 
-The command will give you the snapshot ID once it finishes. You can retrieve the ID later with [rekord list](#list-snapshots).
+The command will give you the snapshot hash once it finishes. You can retrieve the hash later with [rekord list](#list-snapshots).
 
 ## List snapshots
 
@@ -150,7 +150,7 @@ rekord list
 The output looks something like this:
 
 ```
-# <ID>                                                             <name>                   <date>
+# <hash>                                                           <name>                   <date>
 
 DA24E2C01C2AF6ACADF94FED087FD2695DF1E5352FA5474E091DABE38A104641   webserver1               [2023-11-26 06:09:57 +0100]
 96389F2763173C9575C85A9D8972FE8DC06FC220BA7A05A673D7C19E520C22EB   webserver1               [2023-11-27 06:05:15 +0100]
@@ -161,11 +161,11 @@ Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 
 ## Explore snapshot
 
-You can list the directories and files in a snapshot with the `rekord tree` command. You need to know the unique [snapshot ID](#list-snapshots) for this.
+You can list the directories and files in a snapshot with the `rekord tree` command. You need to know the unique [snapshot hash](#list-snapshots) for this.
 
 ```sh
 export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord tree <ID>
+rekord tree <hash>
 ```
 
 The output looks something like this:
@@ -226,11 +226,11 @@ Use `--format JSON` or `--format XML` to get the file tree in a JSON or XML form
 
 ## Restore snapshot
 
-Use the `rekord get` command to restore the files from a snapshot onto the local filesystem. You need to know the unique [snapshot ID](#list-snapshots) for this.
+Use the `rekord get` command to restore the files from a snapshot onto the local filesystem. You need to know the unique [snapshot hash](#list-snapshots) for this.
 
 ```sh
 export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord get <ID> -O <path>
+rekord get <hash> -O <path>
 ```
 
 # Build from source

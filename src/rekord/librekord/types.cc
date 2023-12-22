@@ -29,18 +29,18 @@ static inline int ParseHexadecimalChar(char c)
     }
 }
 
-bool rk_ParseID(const char *str, rk_ID *out_id)
+bool rk_ParseHash(const char *str, rk_Hash *out_hash)
 {
     for (Size i = 0, j = 0; str[j]; i++, j += 2) {
         int high = ParseHexadecimalChar(str[j]);
         int low = (high >= 0) ? ParseHexadecimalChar(str[j + 1]) : -1;
 
         if (low < 0) {
-            LogError("Malformed ID string '%1'", str);
+            LogError("Malformed hash string '%1'", str);
             return false;
         }
 
-        out_id->hash[i] = (uint8_t)((high << 4) | low);
+        out_hash->hash[i] = (uint8_t)((high << 4) | low);
     }
 
     return true;

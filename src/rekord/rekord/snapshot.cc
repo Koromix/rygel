@@ -39,7 +39,7 @@ Options:
 
     %!..+-n, --name <name>%!0            Set user friendly name
         %!..+--anonymous%!0              Allow snapshot without name
-        %!..+--raw%!0                    Skip snapshot object and report data ID
+        %!..+--raw%!0                    Skip snapshot object and report data hash
 
         %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is
 
@@ -118,16 +118,16 @@ Options:
 
     int64_t now = GetMonotonicTime();
 
-    rk_ID id = {};
+    rk_Hash hash = {};
     int64_t total_len = 0;
     int64_t total_written = 0;
-    if (!rk_Put(disk.get(), settings, filenames, &id, &total_len, &total_written))
+    if (!rk_Put(disk.get(), settings, filenames, &hash, &total_len, &total_written))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
 
     LogInfo();
-    LogInfo("%1 ID: %!..+%2%!0", settings.raw ? "Data" : "Snapshot", id);
+    LogInfo("%1 hash: %!..+%2%!0", settings.raw ? "Data" : "Snapshot", hash);
     LogInfo("Stored size: %!..+%1%!0", FmtDiskSize(total_len));
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(total_written));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
@@ -147,7 +147,7 @@ int RunGet(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 get [-R <repo>] <ID> -O <path>%!0
+R"(Usage: %!..+%1 get [-R <repo>] <hash> -O <path>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -212,7 +212,7 @@ Options:
     }
 
     if (!name) {
-        LogError("No ID provided");
+        LogError("No hash provided");
         return 1;
     }
     if (!dest_filename) {
@@ -240,10 +240,10 @@ Options:
 
     int64_t file_len = 0;
     {
-        rk_ID id = {};
-        if (!rk_ParseID(name, &id))
+        rk_Hash hash = {};
+        if (!rk_ParseHash(name, &hash))
             return 1;
-        if (!rk_Get(disk.get(), id, settings, dest_filename, &file_len))
+        if (!rk_Get(disk.get(), hash, settings, dest_filename, &file_len))
             return 1;
     }
 

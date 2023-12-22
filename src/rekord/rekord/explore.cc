@@ -115,9 +115,9 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                     TimeSpec spec = DecomposeTime(snapshot.time);
 
                     if (snapshot.name) {
-                        PrintLn("%1   %!..+%2%!0 [%3]", snapshot.id, FmtArg(snapshot.name).Pad(24), FmtTimeNice(spec));
+                        PrintLn("%1   %!..+%2%!0 [%3]", snapshot.hash, FmtArg(snapshot.name).Pad(24), FmtTimeNice(spec));
                     } else {
-                        PrintLn("%1   %!D..(anonymous)%!0              [%2]", snapshot.id, FmtTimeNice(spec));
+                        PrintLn("%1   %!D..(anonymous)%!0              [%2]", snapshot.hash, FmtTimeNice(spec));
                     }
 
                     if (verbose) {
@@ -137,10 +137,10 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
             for (const rk_SnapshotInfo &snapshot: snapshots) {
                 json.StartObject();
 
-                char id[128];
-                Fmt(id, "%1", snapshot.id);
+                char hash[128];
+                Fmt(hash, "%1", snapshot.hash);
 
-                json.Key("id"); json.String(id);
+                json.Key("hash"); json.String(hash);
                 if (snapshot.name) {
                     json.Key("name"); json.String(snapshot.name);
                 } else {
@@ -165,10 +165,10 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
             for (const rk_SnapshotInfo &snapshot: snapshots) {
                 pugi::xml_node element = root.append_child("Snapshot");
 
-                char id[128];
-                Fmt(id, "%1", snapshot.id);
+                char hash[128];
+                Fmt(hash, "%1", snapshot.hash);
 
-                element.append_attribute("id") = id;
+                element.append_attribute("hash") = hash;
                 element.append_attribute("name") = snapshot.name ? snapshot.name : "";
                 element.append_attribute("time") = snapshot.time;
                 element.append_attribute("size") = snapshot.len;
@@ -220,9 +220,9 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
 
     json->Key("type"); json->String(rk_ObjectTypeNames[(int)obj.type]);
     if (obj.readable) {
-        json->Key("id"); json->String(Fmt(buf, "%1", obj.id).ptr);
+        json->Key("hash"); json->String(Fmt(buf, "%1", obj.hash).ptr);
     } else {
-        json->Key("id"); json->Null();
+        json->Key("hash"); json->Null();
     }
     if (obj.name) {
         json->Key("name"); json->String(obj.name);
@@ -261,9 +261,9 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
     pugi::xml_node element = ptr->append_child(rk_ObjectTypeNames[(int)obj.type]);
 
     if (obj.readable) {
-        element.append_attribute("id") = Fmt(buf, "%1", obj.id).ptr;
+        element.append_attribute("hash") = Fmt(buf, "%1", obj.hash).ptr;
     } else {
-        element.append_attribute("id") = "";
+        element.append_attribute("hash") = "";
     }
     element.append_attribute("name") = obj.name ? obj.name : "";
 
@@ -298,7 +298,7 @@ static bool ExportTree(const char *cmd, rk_Config *config, const rk_TreeSettings
     BlockAllocator temp_alloc;
 
     if (!name) {
-        LogError("No ID provided");
+        LogError("No hash provided");
         return false;
     }
 
@@ -318,10 +318,10 @@ static bool ExportTree(const char *cmd, rk_Config *config, const rk_TreeSettings
 
     HeapArray<rk_ObjectInfo> objects;
     {
-        rk_ID id = {};
-        if (!rk_ParseID(name, &id))
+        rk_Hash hash = {};
+        if (!rk_ParseHash(name, &hash))
             return false;
-        if (!rk_Tree(disk.get(), id, settings, &temp_alloc, &objects))
+        if (!rk_Tree(disk.get(), hash, settings, &temp_alloc, &objects))
             return false;
     }
 
@@ -427,7 +427,7 @@ int RunTree(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 tree [-R <repo>] <ID>%!0
+R"(Usage: %!..+%1 tree [-R <repo>] <hash>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -516,7 +516,7 @@ int RunShow(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 show [-R <repo>] <ID>%!0
+R"(Usage: %!..+%1 show [-R <repo>] <hash>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file

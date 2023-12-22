@@ -17,11 +17,11 @@
 
 namespace RG {
 
-struct rk_ID {
+struct rk_Hash {
     uint8_t hash[32];
     operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
 };
-static_assert(RG_SIZE(rk_ID) == 32);
+static_assert(RG_SIZE(rk_Hash) == 32);
 
 #pragma pack(push, 1)
 struct rk_SnapshotHeader {
@@ -47,7 +47,7 @@ struct rk_RawFile {
         Unknown = -1
     };
 
-    rk_ID id;
+    rk_Hash hash;
     int16_t flags; // Little Endian
     int16_t kind; // Little Endian
     int16_t name_len; // Little Endian
@@ -71,11 +71,11 @@ static_assert(RG_SIZE(rk_RawFile) == 76);
 struct rk_RawChunk {
     int64_t offset; // Little Endian
     int32_t len;    // Little Endian
-    rk_ID id;
+    rk_Hash hash;
 };
 #pragma pack(pop)
 static_assert(RG_SIZE(rk_RawChunk) == 44);
 
-bool rk_ParseID(const char *str, rk_ID *out_id);
+bool rk_ParseHash(const char *str, rk_Hash *out_hash);
 
 }
