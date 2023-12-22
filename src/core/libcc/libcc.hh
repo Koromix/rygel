@@ -1220,11 +1220,22 @@ public:
     {
         RG_ASSERT(len <= N - count);
 
-        T *it = data + len;
-        *it = {};
-        len += count;
+        T *first = data + len;
+#if __cplusplus >= 201703L
+        if constexpr(!std::is_trivial<T>::value) {
+#else
+        if (true) {
+#endif
+            for (Size i = 0; i < count; i++) {
+                new (data + len) T();
+                len++;
+            }
+        } else {
+            memset_safe(first, 0, count * RG_SIZE(T));
+            len += count;
+        }
 
-        return it;
+        return first;
     }
 
     T *Append(const T &value)
@@ -1434,6 +1445,7 @@ public:
             memset_safe(first, 0, count * RG_SIZE(T));
             len += count;
         }
+
         return first;
     }
 
