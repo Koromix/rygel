@@ -87,6 +87,17 @@ Options:
         }
     }
 
+    if (!config.Complete(false))
+        return 1;
+
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
+    if (!disk)
+        return 1;
+    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
+
+    LogInfo("Repository: %!..+%1%!0", disk->GetURL());
+    LogInfo();
+
     // Generate repository passwords
     if (random_full_pwd) {
         Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
@@ -108,17 +119,6 @@ Options:
         if (!write_pwd)
             return 1;
     }
-
-    if (!config.Complete(false))
-        return 1;
-
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
-    if (!disk)
-        return 1;
-    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
-
-    LogInfo("Repository: %!..+%1%!0", disk->GetURL());
-    LogInfo();
 
     LogInfo("Initializing...");
     if (!disk->Init(full_pwd, write_pwd))
@@ -313,12 +313,42 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
         return 1;
     }
 
+    if (!config.Complete(authenticate))
+        return 1;
+
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, authenticate);
+    if (!disk)
+        return 1;
+
     // Use master key instead of username/password
-    if (!authenticate && !master64) {
-        master64 = Prompt("Master key: ", nullptr, "*", &temp_alloc);
-        if (!master64)
+    if (!authenticate) {
+        RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
+
+        if (!master64) {
+            master64 = Prompt("Master key: ", nullptr, "*", &temp_alloc);
+            if (!master64)
+                return 1;
+        }
+
+        LocalArray<uint8_t, 128> master_key;
+        size_t key_len;
+        if (sodium_base642bin(master_key.data, RG_SIZE(master_key.data), master64, strlen(master64),
+                              nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL) < 0) {
+            LogError("Malformed master key");
             return 1;
+        }
+        master_key.len = (Size)key_len;
+
+        if (!disk->Authenticate(master_key))
+            return false;
     }
+
+    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
+    if (mode == rk_DiskMode::Full && disk->GetMode() != rk_DiskMode::Full) {
+        LogError("You must use the read-write password with this command");
+        return 1;
+    }
+    LogInfo();
 
     // Generate repository passwords
     if (mode == rk_DiskMode::Full) {
@@ -346,36 +376,6 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
         if (!write_pwd)
             return 1;
     }
-
-    if (!config.Complete(authenticate))
-        return 1;
-
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, authenticate);
-    if (!disk)
-        return 1;
-
-    if (!authenticate) {
-        RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
-
-        LocalArray<uint8_t, 128> master_key;
-        size_t key_len;
-        if (sodium_base642bin(master_key.data, RG_SIZE(master_key.data), master64, strlen(master64),
-                              nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL) < 0) {
-            LogError("Malformed master key");
-            return 1;
-        }
-        master_key.len = (Size)key_len;
-
-        if (!disk->Authenticate(master_key))
-            return false;
-    }
-
-    LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (mode == rk_DiskMode::Full && disk->GetMode() != rk_DiskMode::Full) {
-        LogError("You must use the read-write password with this command");
-        return 1;
-    }
-    LogInfo();
 
     if (!disk->InitUser(username, full_pwd, write_pwd, force))
         return 1;
