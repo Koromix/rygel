@@ -399,8 +399,6 @@ Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
     %!..+-R, --repository <dir>%!0       Set repository directory
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
 
         %!..+--force%!0                  Force deletion %!D..(to delete yourself)%!0)", FelixTarget);
     };
@@ -421,10 +419,6 @@ Options:
             } else if (opt.Test("-R", "--repository", OptionType::Value)) {
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
-            } else if (opt.Test("-u", "--username", OptionType::Value)) {
-                config.username = opt.current_value;
-            } else if (opt.Test("--password", OptionType::Value)) {
-                config.password = opt.current_value;
             } else if (opt.Test("--force")) {
                 force = true;
             } else {
@@ -441,18 +435,15 @@ Options:
         return 1;
     }
 
-    if (!config.Complete(true))
+    if (!config.Complete(false))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
     if (!disk)
         return 1;
+    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
-        LogError("You must use the read-write password with this command");
-        return 1;
-    }
     LogInfo();
 
     if (!force && TestStr(username, config.username)) {

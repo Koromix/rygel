@@ -180,7 +180,6 @@ bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *w
 bool rk_Disk::DeleteUser(const char *username)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
 
     BlockAllocator temp_alloc;
 
