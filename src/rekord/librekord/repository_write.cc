@@ -552,6 +552,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
         Size entry_len = RG_SIZE(rk_RawFile) + name.len;
         rk_RawFile *entry = (rk_RawFile *)snapshot_blob.Grow(entry_len);
+        memset(entry, 0, (size_t)entry_len);
 
         // Transform name (same length or shorter)
         {
