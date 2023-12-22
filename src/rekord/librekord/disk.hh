@@ -26,12 +26,12 @@ struct ssh_Config;
 enum class rk_DiskMode {
     Secure,
     WriteOnly,
-    ReadWrite
+    Full
 };
 static const char *const rk_DiskModeNames[] = {
     "Secure",
     "WriteOnly",
-    "ReadWrite"
+    "Full"
 };
 
 enum class rk_BlobType: int8_t {
@@ -51,7 +51,7 @@ static const char *const rk_BlobTypeNames[] = {
 
 struct rk_UserInfo {
     const char *username;
-    bool write_only;
+    rk_DiskMode mode; // WriteOnly or Full
 };
 
 class rk_Disk {
@@ -97,12 +97,12 @@ public:
 
     Span<const uint8_t> GetFullKey() const
     {
-        RG_ASSERT(mode == rk_DiskMode::ReadWrite);
+        RG_ASSERT(mode == rk_DiskMode::Full);
         return skey;
     }
     Span<const uint8_t> GetWriteKey() const
     {
-        RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
+        RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
         return pkey;
     }
 

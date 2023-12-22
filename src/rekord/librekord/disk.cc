@@ -78,7 +78,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
             mode = rk_DiskMode::WriteOnly;
             memset(skey, 0, RG_SIZE(skey));
         } else if (ReadKey(full_filename, pwd, skey, &error)) {
-            mode = rk_DiskMode::ReadWrite;
+            mode = rk_DiskMode::Full;
             crypto_scalarmult_base(pkey, skey);
         } else {
             if (!error) {
@@ -111,7 +111,7 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
         return false;
     }
 
-    mode = rk_DiskMode::ReadWrite;
+    mode = rk_DiskMode::Full;
     memcpy(skey, key.ptr, key.len);
     crypto_scalarmult_base(pkey, skey);
 
@@ -140,7 +140,11 @@ void rk_Disk::Lock()
 bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
+    if (full_pwd) {
+        RG_ASSERT(mode == rk_DiskMode::Full);
+    } else {
+        RG_ASSERT(mode == rk_DiskMode::Full || mode == rk_DiskMode::WriteOnly);
+    }
 
     BlockAllocator temp_alloc;
 
@@ -233,12 +237,14 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
                 user = out_users->AppendDefault();
 
                 user->username = bucket->key;
-                user->write_only = true;
+                user->mode = rk_DiskMode::WriteOnly;
             } else {
                 user = &(*out_users)[bucket->value];
             }
 
-            user->write_only &= (mode == "write");
+            if (mode != "write") {
+                user->mode = rk_DiskMode::Full;
+            }
         }
 
         return true;
@@ -259,7 +265,7 @@ static inline FmtArg GetPrefix3(const rk_ID &id)
 bool rk_Disk::ReadBlob(const rk_ID &id, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
+    RG_ASSERT(mode == rk_DiskMode::Full);
 
     Size prev_len = out_blob->len;
     RG_DEFER_N(err_guard) { out_blob->RemoveFrom(prev_len); };
@@ -364,7 +370,7 @@ bool rk_Disk::ReadBlob(const rk_ID &id, rk_BlobType *out_type, HeapArray<uint8_t
 Size rk_Disk::WriteBlob(const rk_ID &id, rk_BlobType type, Span<const uint8_t> blob)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
+    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
@@ -464,7 +470,7 @@ Size rk_Disk::WriteBlob(const rk_ID &id, rk_BlobType type, Span<const uint8_t> b
 Size rk_Disk::WriteTag(const rk_ID &id)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::ReadWrite);
+    RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
 
     // Prepare sealed ID
     uint8_t cypher[crypto_box_SEALBYTES + 32];
@@ -494,7 +500,7 @@ Size rk_Disk::WriteTag(const rk_ID &id)
 bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
 {
     RG_ASSERT(url);
-    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
+    RG_ASSERT(mode == rk_DiskMode::Full);
 
     BlockAllocator temp_alloc;
 
@@ -598,7 +604,7 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
     names.Append("keys/default/write");
 
     // Success!
-    mode = rk_DiskMode::ReadWrite;
+    mode = rk_DiskMode::Full;
 
     err_guard.Disable();
     return true;

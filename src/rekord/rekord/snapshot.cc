@@ -228,7 +228,7 @@ Options:
         return 1;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
+    if (disk->GetMode() != rk_DiskMode::Full) {
         LogError("Cannot decrypt with write-only key");
         return 1;
     }

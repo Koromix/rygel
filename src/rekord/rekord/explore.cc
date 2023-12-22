@@ -98,8 +98,8 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         return 1;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
-        LogError("Cannot list with write-only key");
+    if (disk->GetMode() != rk_DiskMode::Full) {
+        LogError("You must use the read-write password with this command");
         return 1;
     }
     LogInfo();
@@ -310,8 +310,8 @@ static bool ExportTree(const char *cmd, rk_Config *config, const rk_TreeSettings
         return false;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
-        LogError("Cannot list with write-only key");
+    if (disk->GetMode() != rk_DiskMode::Full) {
+        LogError("You must use the read-write password with this command");
         return false;
     }
     LogInfo();

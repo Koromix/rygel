@@ -202,7 +202,7 @@ Options:
         return 1;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
+    if (disk->GetMode() != rk_DiskMode::Full) {
         LogError("You must use the read-write password with this command");
         return 1;
     }
@@ -228,7 +228,7 @@ int RunAddUser(Span<const char *> arguments)
     rk_Config config;
     bool authenticate = true;
     const char *master64 = nullptr;
-    bool write_only = false;
+    rk_DiskMode mode = rk_DiskMode::Full;
     const char *full_pwd = nullptr;
     const char *write_pwd = nullptr;
     bool random_full_pwd = true;
@@ -248,11 +248,15 @@ Options:
         %!..+--password <pwd>%!0         Set repository password
     %!..+-k, --master_key [key]%!0       Use master key instead of username/password
 
-    %!..+-w, --write_only%!0             Create write-only user
+    %!..+-m, --mode <mode>%!0            Access mode (see below)
+
         %!..+--master_password [pwd]%!0  Set master password manually
         %!..+--write_password [pwd]%!0   Set write-only password manually
 
-        %!..+--force%!0                  Overwrite exisiting user %!D..(if any)%!0)", FelixTarget);
+        %!..+--force%!0                  Overwrite exisiting user %!D..(if any)%!0
+
+Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_DiskMode::Full],
+                                                       rk_DiskModeNames[(int)rk_DiskMode::WriteOnly]);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -278,8 +282,15 @@ Options:
             } else if (opt.Test("-k", "--master_key", OptionType::OptionalValue)) {
                 master64 = opt.current_value;
                 authenticate = false;
-            } else if (opt.Test("-w", "--write-only")) {
-                write_only = true;
+            } else if (opt.Test("-m", "--mode", OptionType::Value)) {
+                if (TestStr(opt.current_value, rk_DiskModeNames[(int)rk_DiskMode::Full])) {
+                    mode = rk_DiskMode::Full;
+                } else if (TestStr(opt.current_value, rk_DiskModeNames[(int)rk_DiskMode::WriteOnly])) {
+                    mode = rk_DiskMode::WriteOnly;
+                } else {
+                    LogError("Unknown mode '%1'", opt.current_value);
+                    return 1;
+                }
             } else if (opt.Test("--master_password", OptionType::OptionalValue)) {
                 full_pwd = opt.current_value;
                 random_full_pwd = false;
@@ -310,7 +321,7 @@ Options:
     }
 
     // Generate repository passwords
-    if (!write_only) {
+    if (mode == rk_DiskMode::Full) {
         if (random_full_pwd) {
             Span<char> buf = AllocateSpan<char>(&temp_alloc, 33);
             if (!GeneratePassword(buf))
@@ -360,7 +371,7 @@ Options:
     }
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
-    if (disk->GetMode() != rk_DiskMode::ReadWrite) {
+    if (mode == rk_DiskMode::Full && disk->GetMode() != rk_DiskMode::Full) {
         LogError("You must use the read-write password with this command");
         return 1;
     }
@@ -371,7 +382,7 @@ Options:
 
     LogInfo("Added user: %!..+%1%!0", username);
     LogInfo();
-    if (write_only) {
+    if (mode != rk_DiskMode::Full) {
         LogInfo("New user master password: %!D..(none)%!0");
     } else if (random_full_pwd) {
         LogInfo("New user master password: %!..+%1%!0", full_pwd);
@@ -532,7 +543,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         case OutputFormat::Plain: {
             if (users.len) {
                 for (const rk_UserInfo &user: users) {
-                    PrintLn("%!..+%1%!0 [%2]", FmtArg(user.username).Pad(24), user.write_only ? "write-only" : "full");
+                    PrintLn("%!..+%1%!0 [%2]", FmtArg(user.username).Pad(24), rk_DiskModeNames[(int)user.mode]);
                 }
             } else {
                 LogInfo("There does not seem to be any user");
@@ -547,7 +558,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 json.StartObject();
 
                 json.Key("name"); json.String(user.username);
-                json.Key("mode"); json.String(user.write_only ? "write_only" : "full");
+                json.Key("mode"); json.String(rk_DiskModeNames[(int)user.mode]);
 
                 json.EndObject();
             }
@@ -565,7 +576,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 pugi::xml_node element = root.append_child("User");
 
                 element.append_attribute("name") = user.username;
-                element.append_attribute("mode") = user.write_only ? "write_only" : "full";
+                element.append_attribute("mode") = rk_DiskModeNames[(int)user.mode];
             }
 
             doc.save(std::cout, "    ");
