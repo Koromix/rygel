@@ -1,5 +1,12 @@
 # Changelog
 
+## Rekord 0.10
+
+- Replace object ID mentions with object hash
+- Generate or prompt for passwords after config check
+- Add `rekord change_id` command
+- Fix broken highlight in help texts
+
 ## Rekord 0.9.1
 
 - Fix possible use-after-free while snapshotting
