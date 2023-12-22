@@ -300,13 +300,20 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     if (!success)
         return PutResult::Error;
 
+    // We won't be able to resize/reallocate in async tasks
+    // Make sure there is room for the length at the end!
+    for (PendingDirectory &pending: pending_directories) {
+        Size needed = RG_SIZE(int64_t);
+        pending.blob.AppendDefault(needed);
+    }
+
     // Finalize and upload directory blobs
     async.Run([&]() {
         for (Size i = pending_directories.len - 1; i >= 0; i--) {
             PendingDirectory *pending = &pending_directories[i];
 
             int64_t len_64le = LittleEndian(pending->total_len.load());
-            pending->blob.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
+            memcpy(pending->blob.end() - RG_SIZE(len_64le), &len_64le, RG_SIZE(len_64le));
 
             HashBlake3(rk_BlobType::Directory, pending->blob, salt.ptr, &pending->id);
 
