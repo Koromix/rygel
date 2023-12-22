@@ -56,14 +56,14 @@ public:
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
 
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
+
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
-
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
     bool TestRaw(const char *path) override;
@@ -229,6 +229,38 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
         return false;
 
     err_guard.Disable();
+    return true;
+}
+
+bool SftpDisk::CreateDirectory(const char *path)
+{
+    GET_CONNECTION(conn);
+
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
+
+    if (sftp_mkdir(conn->sftp, filename.data, 0755) < 0 &&
+            sftp_get_error(conn->sftp) != SSH_FX_FILE_ALREADY_EXISTS) {
+        LogError("Failed to create directory '%1': %2", filename, ssh_get_error(conn->ssh));
+        return false;
+    }
+
+    return true;
+}
+
+bool SftpDisk::DeleteDirectory(const char *path)
+{
+    GET_CONNECTION(conn);
+
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
+
+    if (sftp_rmdir(conn->sftp, filename.data) < 0 &&
+            sftp_get_error(conn->sftp) != SSH_FX_NO_SUCH_FILE) {
+        LogError("Failed to delete directory '%1': %2", filename, ssh_get_error(conn->ssh));
+        return false;
+    }
+
     return true;
 }
 
@@ -413,38 +445,6 @@ bool SftpDisk::DeleteRaw(const char *path)
     if (sftp_unlink(conn->sftp, filename.data) < 0 &&
             sftp_get_error(conn->sftp) != SSH_FX_NO_SUCH_FILE) {
         LogError("Failed to delete file '%1': %2", filename, ssh_get_error(conn->ssh));
-        return false;
-    }
-
-    return true;
-}
-
-bool SftpDisk::CreateDirectory(const char *path)
-{
-    GET_CONNECTION(conn);
-
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
-
-    if (sftp_mkdir(conn->sftp, filename.data, 0755) < 0 &&
-            sftp_get_error(conn->sftp) != SSH_FX_FILE_ALREADY_EXISTS) {
-        LogError("Failed to create directory '%1': %2", filename, ssh_get_error(conn->ssh));
-        return false;
-    }
-
-    return true;
-}
-
-bool SftpDisk::DeleteDirectory(const char *path)
-{
-    GET_CONNECTION(conn);
-
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
-
-    if (sftp_rmdir(conn->sftp, filename.data) < 0 &&
-            sftp_get_error(conn->sftp) != SSH_FX_NO_SUCH_FILE) {
-        LogError("Failed to delete directory '%1': %2", filename, ssh_get_error(conn->ssh));
         return false;
     }
 

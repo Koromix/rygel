@@ -27,14 +27,14 @@ public:
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
 
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
+
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
-
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
     bool TestRaw(const char *path) override;
@@ -67,6 +67,18 @@ bool S3Disk::Init(const char *full_pwd, const char *write_pwd)
     return InitDefault(full_pwd, write_pwd);
 }
 
+bool S3Disk::CreateDirectory(const char *)
+{
+    // Directories don't really exist, it's just a prefix
+    return true;
+}
+
+bool S3Disk::DeleteDirectory(const char *)
+{
+    // Directories don't really exist, it's just a prefix
+    return true;
+}
+
 Size S3Disk::ReadRaw(const char *path, Span<uint8_t> out_buf)
 {
     return s3.GetObject(path, out_buf);
@@ -94,18 +106,6 @@ Size S3Disk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<c
 bool S3Disk::DeleteRaw(const char *path)
 {
     return s3.DeleteObject(path);
-}
-
-bool S3Disk::CreateDirectory(const char *)
-{
-    // Directories don't really exist, it's just a prefix
-    return true;
-}
-
-bool S3Disk::DeleteDirectory(const char *)
-{
-    // Directories don't really exist, it's just a prefix
-    return true;
 }
 
 bool S3Disk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)

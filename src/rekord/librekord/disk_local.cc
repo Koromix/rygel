@@ -26,14 +26,14 @@ public:
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
 
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
+
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
-
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
     bool TestRaw(const char *path) override;
@@ -130,6 +130,22 @@ bool LocalDisk::Init(const char *full_pwd, const char *write_pwd)
     return true;
 }
 
+bool LocalDisk::CreateDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return MakeDirectory(filename.data, false);
+}
+
+bool LocalDisk::DeleteDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return UnlinkDirectory(filename.data);
+}
+
 Size LocalDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
 {
     LocalArray<char, MaxPathSize + 128> filename;
@@ -208,22 +224,6 @@ bool LocalDisk::DeleteRaw(const char *path)
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
     return UnlinkFile(filename.data);
-}
-
-bool LocalDisk::CreateDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    return MakeDirectory(filename.data, false);
-}
-
-bool LocalDisk::DeleteDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    return UnlinkDirectory(filename.data);
 }
 
 bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)

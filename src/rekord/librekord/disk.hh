@@ -112,14 +112,14 @@ public:
 protected:
     bool InitDefault(const char *full_pwd, const char *write_pwd);
 
+    virtual bool CreateDirectory(const char *path) = 0;
+    virtual bool DeleteDirectory(const char *path) = 0;
+
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;
     virtual Size ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
 
     virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
     virtual bool DeleteRaw(const char *path) = 0;
-
-    virtual bool CreateDirectory(const char *path) = 0;
-    virtual bool DeleteDirectory(const char *path) = 0;
 
     bool PutCache(const char *key);
 
