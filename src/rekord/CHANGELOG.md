@@ -1,5 +1,10 @@
 # Changelog
 
+## Rekord 0.9
+
+- Add user management commands
+- Support `<username>@<host>:[path]` syntax for SSH URLs
+
 ## Rekord 0.8
 
 - Export master key after repository initialization
