@@ -1,5 +1,9 @@
 # Changelog
 
+## Rekord 0.9.1
+
+- Fix possible use-after-free while snapshotting
+
 ## Rekord 0.9
 
 - Add user management commands
