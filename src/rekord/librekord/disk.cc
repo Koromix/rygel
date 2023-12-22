@@ -64,6 +64,11 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     const char *full_filename = Fmt(&str_alloc, "keys/%1/full", username).ptr;
     const char *write_filename = Fmt(&str_alloc, "keys/%1/write", username).ptr;
 
+    if (!TestRaw(write_filename)) {
+        LogError("User '%1' does not exist", username);
+        return false;
+    }
+
     // Open disk and determine mode
     {
         bool error = false;
