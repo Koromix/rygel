@@ -105,6 +105,8 @@ public:
     sq_Database *GetCache() { return &cache_db; }
     int GetThreads() const { return threads; }
 
+    bool ChangeID();
+
     bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
     bool DeleteUser(const char *username);
     bool ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users);
@@ -138,10 +140,10 @@ private:
     bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
     bool ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error);
 
-    bool WriteSecret(const char *path, Span<const uint8_t> buf);
+    bool WriteSecret(const char *path, Span<const uint8_t> buf, bool overwrite);
     bool ReadSecret(const char *path, Span<uint8_t> out_buf);
 
-    Size WriteDirect(const char *path, Span<const uint8_t> buf);
+    Size WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite);
 
     bool OpenCache();
     void ClearCache();

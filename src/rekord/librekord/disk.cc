@@ -157,6 +157,24 @@ static bool CheckUserName(Span<const char> username)
     return true;
 }
 
+bool rk_Disk::ChangeID()
+{
+    RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::Full || mode == rk_DiskMode::WriteOnly);
+
+    uint8_t new_id[RG_SIZE(id)];
+    randombytes_buf(new_id, RG_SIZE(new_id));
+
+    if (!WriteSecret("rekord", new_id, true))
+        return false;
+    memcpy(id, new_id, RG_SIZE(id));
+
+    cache_db.Close();
+    OpenCache();
+
+    return true;
+}
+
 bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force)
 {
     RG_ASSERT(url);
@@ -509,7 +527,7 @@ Size rk_Disk::WriteTag(const rk_Hash &hash)
         LocalArray<char, 256> path;
         path.len = Fmt(path.data, "tags/%1", FmtRandom(8)).len;
 
-        Size written = WriteDirect(path.data, cypher);
+        Size written = WriteDirect(path.data, cypher, false);
 
         if (written > 0)
             return written;
@@ -616,7 +634,7 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
     randombytes_buf(id, RG_SIZE(id));
     crypto_box_keypair(pkey, skey);
 
-    if (!WriteSecret("rekord", id))
+    if (!WriteSecret("rekord", id, false))
         return false;
     names.Append("rekord");
 
@@ -713,7 +731,7 @@ bool rk_Disk::WriteKey(const char *path, const char *pwd, const uint8_t payload[
     crypto_secretbox_easy(data.cypher, payload, 32, data.nonce, key);
 
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&data, RG_SIZE(data));
-    Size written = WriteDirect(path, buf);
+    Size written = WriteDirect(path, buf, false);
 
     if (written < 0)
         return false;
@@ -754,7 +772,7 @@ bool rk_Disk::ReadKey(const char *path, const char *pwd, uint8_t *out_payload, b
     return success;
 }
 
-bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data)
+bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data, bool overwrite)
 {
     RG_ASSERT(data.len + crypto_secretbox_MACBYTES <= RG_SIZE(SecretData::cypher));
 
@@ -767,7 +785,7 @@ bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data)
 
     Size len = RG_OFFSET_OF(SecretData, cypher) + crypto_secretbox_MACBYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&secret, len);
-    Size written = WriteDirect(path, buf);
+    Size written = WriteDirect(path, buf, overwrite);
 
     if (written < 0)
         return false;
@@ -804,9 +822,9 @@ bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
     return true;
 }
 
-Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf)
+Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite)
 {
-    if (TestRaw(path))
+    if (!overwrite && TestRaw(path))
         return 0;
 
     Size written = WriteRaw(path, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });
