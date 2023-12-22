@@ -258,7 +258,7 @@ bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
 
 static inline FmtArg GetPrefix3(const rk_ID &id)
 {
-    uint64_t prefix = ((uint64_t)id.hash[0] << 4) | ((uint64_t)id.hash[1] >> 4);
+    uint16_t prefix = ((uint16_t)id.hash[0] << 4) | ((uint16_t)id.hash[1] >> 4);
     return FmtHex(prefix).Pad0(-3);
 }
 
