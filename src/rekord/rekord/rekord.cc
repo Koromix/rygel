@@ -26,6 +26,7 @@ int RunInit(Span<const char *> arguments);
 int RunExportKey(Span<const char *> arguments);
 int RunAddUser(Span<const char *> arguments);
 int RunDeleteUser(Span<const char *> arguments);
+int RunListUsers(Span<const char *> arguments);
 
 int RunPut(Span<const char *> arguments);
 int RunGet(Span<const char *> arguments);
@@ -65,6 +66,7 @@ Management commands:
 
     %!..+add_user%!0                     Add user
     %!..+delete_user%!0                  Delete user
+    %!..+list_users%!0                   List repository users
 
 Snapshot commands:
     %!..+put%!0                          Store encrypted directory or file
@@ -151,6 +153,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunAddUser(arguments);
     } else if (TestStr(cmd, "delete_user")) {
         return RunDeleteUser(arguments);
+    } else if (TestStr(cmd, "list_users")) {
+        return RunListUsers(arguments);
     } else if (TestStr(cmd, "put")) {
         return RunPut(arguments);
     } else if (TestStr(cmd, "get")) {

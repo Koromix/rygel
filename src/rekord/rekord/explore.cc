@@ -19,18 +19,6 @@
 
 namespace RG {
 
-enum class OutputFormat {
-    Plain,
-    JSON,
-    XML
-};
-
-static const char *const OutputFormatNames[] = {
-    "Plain",
-    "JSON",
-    "XML"
-};
-
 int RunList(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;

@@ -16,6 +16,7 @@
 #include "disk.hh"
 #include "lz4.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/re2/re2/re2.h"
 
 namespace RG {
 
@@ -205,6 +206,47 @@ bool rk_Disk::DeleteUser(const char *username)
     if (!DeleteDirectory(directory))
         return false;
 
+    return true;
+}
+
+bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
+{
+    RG_DEFER_NC(out_guard, len = out_users->len) { out_users->RemoveFrom(len); };
+
+    RE2 pattern("keys/([a-zA-Z0-9\\.\\-_]+)/(write|full)");
+    HashMap<const char *, Size> known_map;
+
+    bool success = ListRaw("keys", [&](const char *filename) {
+        std::string username;
+        std::string mode;
+
+        if (RE2::FullMatch(filename, pattern, &username, &mode)) {
+            bool inserted;
+            auto bucket = known_map.TrySetDefault(username.c_str(), &inserted);
+
+            rk_UserInfo *user = nullptr;
+
+            if (inserted) {
+                bucket->key = DuplicateString(bucket->key, alloc).ptr;
+                bucket->value = out_users->len;
+
+                user = out_users->AppendDefault();
+
+                user->username = bucket->key;
+                user->write_only = true;
+            } else {
+                user = &(*out_users)[bucket->value];
+            }
+
+            user->write_only &= (mode == "write");
+        }
+
+        return true;
+    });
+    if (!success)
+        return false;
+
+    out_guard.Disable();
     return true;
 }
 

@@ -12,9 +12,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/libcc/libcc.hh"
+#include "src/core/libwrap/json.hh"
 #include "rekord.hh"
 #include "src/core/libpasswd/libpasswd.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/pugixml/src/pugixml.hpp"
+#include <iostream> // for pugixml
 
 namespace RG {
 
@@ -455,6 +458,119 @@ Options:
         return 1;
 
     LogInfo("Deleted user: %!..+%1%!0", username);
+
+    return 0;
+}
+
+int RunListUsers(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    rk_Config config;
+    OutputFormat format = OutputFormat::Plain;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp,
+R"(Usage: %!..+%1 list_users [-C <config>]
+
+Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
+
+    %!..+-R, --repository <dir>%!0       Set repository directory
+
+    %!..+-f, --format <format>%!0        Change output format
+                                 %!D..(default: %2)%!0
+
+Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+    };
+
+    if (!FindAndLoadConfig(arguments, &config))
+        return 1;
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("-R", "--repository", OptionType::Value)) {
+                if (!rk_DecodeURL(opt.current_value, &config))
+                    return 1;
+            } else if (opt.Test("-f", "--format", OptionType::Value)) {
+                if (!OptionToEnum(OutputFormatNames, opt.current_value, &format)) {
+                    LogError("Unknown output format '%1'", opt.current_value);
+                    return 1;
+                }
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+    }
+
+    if (!config.Complete(false))
+        return 1;
+
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
+    if (!disk)
+        return 1;
+    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
+
+    LogInfo("Repository: %!..+%1%!0", disk->GetURL());
+    LogInfo();
+
+    HeapArray<rk_UserInfo> users;
+    if (!disk->ListUsers(&temp_alloc, &users))
+        return 1;
+
+    switch (format) {
+        case OutputFormat::Plain: {
+            if (users.len) {
+                for (const rk_UserInfo &user: users) {
+                    PrintLn("%!..+%1%!0 [%2]", FmtArg(user.username).Pad(24), user.write_only ? "write-only" : "full");
+                }
+            } else {
+                LogInfo("There does not seem to be any user");
+            }
+        } break;
+
+        case OutputFormat::JSON: {
+            json_PrettyWriter json(&stdout_st);
+
+            json.StartArray();
+            for (const rk_UserInfo &user: users) {
+                json.StartObject();
+
+                json.Key("name"); json.String(user.username);
+                json.Key("mode"); json.String(user.write_only ? "write_only" : "full");
+
+                json.EndObject();
+            }
+            json.EndArray();
+
+            json.Flush();
+            PrintLn();
+        } break;
+
+        case OutputFormat::XML: {
+            pugi::xml_document doc;
+            pugi::xml_node root = doc.append_child("Users");
+
+            for (const rk_UserInfo &user: users) {
+                pugi::xml_node element = root.append_child("User");
+
+                element.append_attribute("name") = user.username;
+                element.append_attribute("mode") = user.write_only ? "write_only" : "full";
+            }
+
+            doc.save(std::cout, "    ");
+        } break;
+    }
 
     return 0;
 }

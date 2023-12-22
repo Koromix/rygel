@@ -18,6 +18,18 @@
 
 namespace RG {
 
+enum class OutputFormat {
+    Plain,
+    JSON,
+    XML
+};
+
+static const char *const OutputFormatNames[] = {
+    "Plain",
+    "JSON",
+    "XML"
+};
+
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config);
 
 }

@@ -49,6 +49,11 @@ static const char *const rk_BlobTypeNames[] = {
     "Link"
 };
 
+struct rk_UserInfo {
+    const char *username;
+    bool write_only;
+};
+
 class rk_Disk {
 protected:
     const char *url = nullptr;
@@ -83,6 +88,7 @@ public:
 
     bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
     bool DeleteUser(const char *username);
+    bool ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users);
 
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetID() const { return id; }
