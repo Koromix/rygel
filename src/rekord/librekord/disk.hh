@@ -86,10 +86,6 @@ public:
     bool Authenticate(Span<const uint8_t> key);
     void Lock();
 
-    bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
-    bool DeleteUser(const char *username);
-    bool ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users);
-
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetID() const { return id; }
     Span<const uint8_t> GetSalt() const { return pkey; }
@@ -108,6 +104,10 @@ public:
 
     sq_Database *GetCache() { return &cache_db; }
     int GetThreads() const { return threads; }
+
+    bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
+    bool DeleteUser(const char *username);
+    bool ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users);
 
     bool ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
     Size WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> blob);
