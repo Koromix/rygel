@@ -134,12 +134,11 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
     CURLU *h = curl_url();
     RG_DEFER { curl_url_cleanup(h); };
 
-    CURLUcode ret;
-    {
+    if (StartsWith(url, "ssh://") || StartsWith(url, "sftp://")) {
         char url0[32768];
-
         Fmt(url0, "%1", url);
-        ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
+
+        CURLUcode ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
 
         if (ret == CURLUE_BAD_SCHEME) {
             Fmt(url0, "ssh://%1", url);
@@ -150,19 +149,28 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config)
             LogError("Failed to parse URL '%1': %2", url, curl_url_strerror(ret));
             return false;
         }
+
+        out_config->host = curl_GetUrlPartStr(h, CURLUPART_HOST, &out_config->str_alloc).ptr;
+        out_config->port = curl_GetUrlPartInt(h, CURLUPART_PORT);
+        out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, &out_config->str_alloc).ptr;
+        out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
+    } else {
+        Span<const char> remain = url;
+
+        Span<const char> username = SplitStr(remain, '@', &remain);
+        Span<const char> host = SplitStr(remain, ':', &remain);
+        Span<const char> path = remain;
+
+        if (host.ptr == username.end() || path.ptr == host.end()) {
+            LogError("Failed to parse SSH URL, expected <user>@");
+            return false;
+        }
+
+        out_config->host = DuplicateString(host, &out_config->str_alloc).ptr;
+        out_config->port = 22;
+        out_config->username = DuplicateString(username, &out_config->str_alloc).ptr;
+        out_config->path = DuplicateString(path, &out_config->str_alloc).ptr;
     }
-
-    const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, &out_config->str_alloc).ptr;
-
-    if (scheme && !TestStr(scheme, "ssh") && !TestStr(scheme, "sftp")) {
-        LogError("Invalid scheme for SSH: '%1'", scheme);
-        return false;
-    }
-
-    out_config->host = curl_GetUrlPartStr(h, CURLUPART_HOST, &out_config->str_alloc).ptr;
-    out_config->port = curl_GetUrlPartInt(h, CURLUPART_PORT);
-    out_config->username = curl_GetUrlPartStr(h, CURLUPART_USER, &out_config->str_alloc).ptr;
-    out_config->path = curl_GetUrlPartStr(h, CURLUPART_PATH, &out_config->str_alloc).ptr;
 
     // The first '/' separates the host from the path, use '//' for absolute path
     if (out_config->path && out_config->path[0] == '/') {

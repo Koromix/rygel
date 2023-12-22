@@ -107,9 +107,7 @@ static bool LooksLikeSSH(Span<const char> str)
         return true;
 
     re2::StringPiece sp(str.ptr, (size_t)str.len);
-    if (RE2::PartialMatch(sp, "^(?:[a-zA-Z0-9\\._\\-]+@)?[^/]*:"))
-        return true;
-    if (RE2::PartialMatch(sp, "^[a-zA-Z0-9\\._\\-]*@[^/]:?"))
+    if (RE2::PartialMatch(sp, "^[a-zA-Z0-9\\._\\-]+@[^/]+:?"))
         return true;
 
     return false;

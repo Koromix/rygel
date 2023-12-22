@@ -100,7 +100,7 @@ SftpDisk::SftpDisk(const ssh_Config &config, int threads)
     ReleaseConnection(conn);
 
     // We're good!
-    if (config.port > 0) {
+    if (config.port > 0 && config.port != 22) {
         url = Fmt(&str_alloc, "sftp://%1@%2:%3/%4", config.username, config.host, config.port, config.path ? config.path : "").ptr;
     } else {
         url = Fmt(&str_alloc, "sftp://%1@%2/%3", config.username, config.host, config.path ? config.path : "").ptr;
