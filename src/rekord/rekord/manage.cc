@@ -246,7 +246,7 @@ Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
-    %!..+-k, --master_key [key]%!0       Use master key instead of username/password
+        %!..+--master_key [key]%!0       Use master key instead of username/password
 
     %!..+-m, --mode <mode>%!0            Access mode (see below)
 
@@ -279,7 +279,7 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
                 config.username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 config.password = opt.current_value;
-            } else if (opt.Test("-k", "--master_key", OptionType::OptionalValue)) {
+            } else if (opt.Test("--master_key", OptionType::OptionalValue)) {
                 master64 = opt.current_value;
                 authenticate = false;
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
