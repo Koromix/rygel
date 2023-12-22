@@ -47,7 +47,7 @@ int RunInit(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 init [-C <config>] [dir]
+R"(Usage: %!..+%1 init [-C <config>] [dir]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -157,7 +157,7 @@ int RunExportKey(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 export_key [-C <config>]
+R"(Usage: %!..+%1 export_key [-C <config>]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -227,7 +227,7 @@ int RunChangeID(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 change_id [-C <config>]
+R"(Usage: %!..+%1 change_id [-C <config>]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -300,7 +300,7 @@ int RunAddUser(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 add_user [-C <config>] <username>
+R"(Usage: %!..+%1 add_user [-C <config>] <username>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -469,7 +469,7 @@ int RunDeleteUser(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 delete_user [-C <config>] <username>
+R"(Usage: %!..+%1 delete_user [-C <config>] <username>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -550,7 +550,7 @@ int RunListUsers(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 list_users [-C <config>]
+R"(Usage: %!..+%1 list_users [-C <config>]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file

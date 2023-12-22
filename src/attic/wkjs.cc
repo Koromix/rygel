@@ -26,7 +26,7 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](FILE *fp) {
         PrintLn(fp, R"(Usage: %!..+%1 [options] <file>
-       %1 [options] -c <code>
+       %1 [options] -c <code>%!0
 
 Options:
     %!..+-c, --command%!0                Run code directly from argument)", FelixTarget);
