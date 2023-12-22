@@ -449,20 +449,25 @@ Options:
         return 1;
     }
 
-    if (!config.Complete(false))
+    if (!config.Complete(!force))
         return 1;
 
-    std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
+    std::unique_ptr<rk_Disk> disk = rk_Open(config, !force);
     if (!disk)
         return 1;
-    RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     LogInfo();
 
-    if (!force && TestStr(username, config.username)) {
-        LogError("Cannot delete yourself (unless --force is used)");
-        return 1;
+    if (!force) {
+        if (disk->GetMode() != rk_DiskMode::Full) {
+            LogError("Refusing to delete without full authentification (unless --force is used)");
+            return 1;
+        }
+        if (TestStr(username, config.username)) {
+            LogError("Cannot delete yourself (unless --force is used)");
+            return 1;
+        }
     }
 
     if (!disk->DeleteUser(username))
