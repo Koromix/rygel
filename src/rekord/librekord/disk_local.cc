@@ -32,6 +32,9 @@ public:
     Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) override;
     bool DeleteRaw(const char *path) override;
 
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
+
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
 
     bool TestSlow(const char *path) override;
@@ -146,12 +149,6 @@ Size LocalDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
 
 Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
-    switch (TestFast(path)) {
-        case TestResult::Exists: return 0;
-        case TestResult::Missing: {} break;
-        case TestResult::FatalError: return -1;
-    }
-
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
@@ -212,6 +209,22 @@ bool LocalDisk::DeleteRaw(const char *path)
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
     return UnlinkFile(filename.data);
+}
+
+bool LocalDisk::CreateDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return MakeDirectory(filename.data, false);
+}
+
+bool LocalDisk::DeleteDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return UnlinkDirectory(filename.data);
 }
 
 bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)

@@ -93,6 +93,33 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     return true;
 }
 
+bool rk_Disk::Authenticate(Span<const uint8_t> key)
+{
+    RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::Secure);
+
+    RG_DEFER_N(err_guard) { Lock(); };
+
+    if (key.len != RG_SIZE(skey)) {
+        LogError("Malformed master key");
+        return false;
+    }
+
+    mode = rk_DiskMode::ReadWrite;
+    memcpy(skey, key.ptr, key.len);
+    crypto_scalarmult_base(pkey, skey);
+
+    // Read repository ID
+    if (!ReadSecret("rekord", id))
+        return false;
+
+    if (!OpenCache())
+        return false;
+
+    err_guard.Disable();
+    return true;
+}
+
 void rk_Disk::Lock()
 {
     mode = rk_DiskMode::Secure;
@@ -102,6 +129,79 @@ void rk_Disk::Lock()
     ZeroMemorySafe(skey, RG_SIZE(skey));
 
     cache_db.Close();
+}
+
+bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force)
+{
+    RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
+
+    BlockAllocator temp_alloc;
+
+    if (!full_pwd && !write_pwd) {
+        LogError("Cannot create user '%1' without any password", username);
+        return false;
+    }
+
+    const char *directory = Fmt(&temp_alloc, "keys/%1", username).ptr;
+    const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
+    const char *write_filename = Fmt(&temp_alloc, "%1/write", directory).ptr;
+
+    bool exists = (full_pwd && TestSlow(full_filename)) ||
+                  (write_pwd && TestSlow(write_filename));
+
+    if (exists) {
+        if (force) {
+            LogWarning("Overwriting existing user '%1'", username);
+        } else {
+            LogError("User '%1' already exists", username);
+            return false;
+        }
+    }
+
+    DeleteRaw(full_filename);
+    DeleteRaw(write_filename);
+
+    if (!CreateDirectory(directory))
+        return false;
+    if (full_pwd && !WriteKey(full_filename, full_pwd, skey))
+        return false;
+    if (write_pwd && !WriteKey(write_filename, write_pwd, pkey))
+        return false;
+
+    return true;
+}
+
+bool rk_Disk::DeleteUser(const char *username)
+{
+    RG_ASSERT(url);
+    RG_ASSERT(mode == rk_DiskMode::ReadWrite);
+
+    BlockAllocator temp_alloc;
+
+    const char *directory = Fmt(&temp_alloc, "keys/%1", username).ptr;
+    const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
+    const char *write_filename = Fmt(&temp_alloc, "%1/write", directory).ptr;
+
+    bool exists = TestSlow(full_filename) || TestSlow(write_filename);
+
+    if (!exists) {
+        LogError("User '%1' does not exist", username);
+
+        // Clean up directory (if any) anyway
+        DeleteDirectory(directory);
+
+        return false;
+    }
+
+    if (!DeleteRaw(full_filename))
+        return false;
+    if (!DeleteRaw(write_filename))
+        return false;
+    if (!DeleteDirectory(directory))
+        return false;
+
+    return true;
 }
 
 static inline FmtArg GetPrefix3(const rk_ID &id)
@@ -222,6 +322,12 @@ Size rk_Disk::WriteBlob(const rk_ID &id, rk_BlobType type, Span<const uint8_t> b
 
     LocalArray<char, 256> path;
     path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(id), id).len;
+
+    switch (TestFast(path.data)) {
+        case TestResult::Exists: return 0;
+        case TestResult::Missing: {} break;
+        case TestResult::FatalError: return -1;
+    }
 
     Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
         // Write blob intro

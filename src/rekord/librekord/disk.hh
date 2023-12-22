@@ -78,7 +78,11 @@ public:
     virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
 
     bool Authenticate(const char *username, const char *pwd);
+    bool Authenticate(Span<const uint8_t> key);
     void Lock();
+
+    bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
+    bool DeleteUser(const char *username);
 
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetID() const { return id; }
@@ -115,6 +119,9 @@ protected:
 
     virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
     virtual bool DeleteRaw(const char *path) = 0;
+
+    virtual bool CreateDirectory(const char *path) = 0;
+    virtual bool DeleteDirectory(const char *path) = 0;
 
     bool PutCache(const char *key);
 
