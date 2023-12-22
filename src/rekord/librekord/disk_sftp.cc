@@ -223,7 +223,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
         async.Sync();
     }
 
-    if (!InitKeys(full_pwd, write_pwd))
+    if (!InitDefault(full_pwd, write_pwd))
         return false;
 
     err_guard.Disable();
@@ -604,7 +604,7 @@ std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *u
 
     if (!disk->GetURL())
         return nullptr;
-    if (pwd && !disk->Open(username, pwd))
+    if (username && !disk->Authenticate(username, pwd))
         return nullptr;
 
     return disk;

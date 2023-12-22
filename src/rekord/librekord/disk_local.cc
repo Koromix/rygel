@@ -121,7 +121,7 @@ bool LocalDisk::Init(const char *full_pwd, const char *write_pwd)
         }
     }
 
-    if (!InitKeys(full_pwd, write_pwd))
+    if (!InitDefault(full_pwd, write_pwd))
         return false;
 
     err_guard.Disable();
@@ -275,7 +275,7 @@ std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username
 
     if (!disk->GetURL())
         return nullptr;
-    if (pwd && !disk->Open(username, pwd))
+    if (username && !disk->Authenticate(username, pwd))
         return nullptr;
 
     return disk;

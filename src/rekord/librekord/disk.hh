@@ -77,8 +77,8 @@ public:
 
     virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
 
-    bool Open(const char *username, const char *pwd);
-    void Close();
+    bool Authenticate(const char *username, const char *pwd);
+    void Lock();
 
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetID() const { return id; }
@@ -106,7 +106,7 @@ public:
     bool ListTags(HeapArray<rk_ID> *out_ids);
 
 protected:
-    bool InitKeys(const char *full_pwd, const char *write_pwd);
+    bool InitDefault(const char *full_pwd, const char *write_pwd);
 
     TestResult TestFast(const char *path);
 
@@ -136,7 +136,7 @@ private:
     bool RebuildCache();
 };
 
-std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool require_password);
+std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate);
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads = -1);
 std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, int threads = -1);

@@ -62,7 +62,7 @@ bool S3Disk::Init(const char *full_pwd, const char *write_pwd)
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
 
-    return InitKeys(full_pwd, write_pwd);
+    return InitDefault(full_pwd, write_pwd);
 }
 
 Size S3Disk::ReadRaw(const char *path, Span<uint8_t> out_buf)
@@ -124,7 +124,7 @@ std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *user
 
     if (!disk->GetURL())
         return nullptr;
-    if (pwd && !disk->Open(username, pwd))
+    if (username && !disk->Authenticate(username, pwd))
         return nullptr;
 
     return disk;

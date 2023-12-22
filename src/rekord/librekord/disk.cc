@@ -54,12 +54,12 @@ static const int CacheVersion = 2;
 static const int BlobVersion = 7;
 static const Size BlobSplit = Kibibytes(32);
 
-bool rk_Disk::Open(const char *username, const char *pwd)
+bool rk_Disk::Authenticate(const char *username, const char *pwd)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
 
-    RG_DEFER_N(err_guard) { Close(); };
+    RG_DEFER_N(err_guard) { Lock(); };
 
     const char *full_filename = Fmt(&str_alloc, "keys/%1/full", username).ptr;
     const char *write_filename = Fmt(&str_alloc, "keys/%1/write", username).ptr;
@@ -93,7 +93,7 @@ bool rk_Disk::Open(const char *username, const char *pwd)
     return true;
 }
 
-void rk_Disk::Close()
+void rk_Disk::Lock()
 {
     mode = rk_DiskMode::Secure;
 
@@ -409,7 +409,7 @@ bool rk_Disk::ListTags(HeapArray<rk_ID> *out_ids)
     return true;
 }
 
-bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
+bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Secure);
@@ -417,7 +417,7 @@ bool rk_Disk::InitKeys(const char *full_pwd, const char *write_pwd)
     // Drop created files if anything fails
     HeapArray<const char *> names;
     RG_DEFER_N(err_guard) {
-        Close();
+        Lock();
 
         DeleteRaw("rekord");
         DeleteRaw("keys/default/full");
@@ -739,15 +739,18 @@ bool rk_Disk::RebuildCache()
     return true;
 }
 
-std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool require_password)
+std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate)
 {
-    if (!config.Validate(require_password))
+    if (!config.Validate(authenticate))
         return nullptr;
 
+    const char *username = authenticate ? config.username : nullptr;
+    const char *password = authenticate ? config.password : nullptr;
+
     switch (config.type) {
-        case rk_DiskType::Local: return rk_OpenLocalDisk(config.url, config.username, config.password, config.threads);
-        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, config.username, config.password, config.threads);
-        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, config.username, config.password, config.threads);
+        case rk_DiskType::Local: return rk_OpenLocalDisk(config.url, username, password, config.threads);
+        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, username, password, config.threads);
+        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, username, password, config.threads);
     }
 
     RG_UNREACHABLE();
