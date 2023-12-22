@@ -36,8 +36,7 @@ public:
     bool DeleteDirectory(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
-
-    bool TestSlow(const char *path) override;
+    bool TestRaw(const char *path) override;
 };
 
 LocalDisk::LocalDisk(const char *path, int threads)
@@ -273,7 +272,7 @@ bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> fu
     return true;
 }
 
-bool LocalDisk::TestSlow(const char *path)
+bool LocalDisk::TestRaw(const char *path)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;

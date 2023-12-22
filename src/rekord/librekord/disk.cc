@@ -147,8 +147,8 @@ bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *w
     const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
     const char *write_filename = Fmt(&temp_alloc, "%1/write", directory).ptr;
 
-    bool exists = (full_pwd && TestSlow(full_filename)) ||
-                  (write_pwd && TestSlow(write_filename));
+    bool exists = (full_pwd && TestRaw(full_filename)) ||
+                  (write_pwd && TestRaw(write_filename));
 
     if (exists) {
         if (force) {
@@ -183,7 +183,7 @@ bool rk_Disk::DeleteUser(const char *username)
     const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
     const char *write_filename = Fmt(&temp_alloc, "%1/write", directory).ptr;
 
-    bool exists = TestSlow(full_filename) || TestSlow(write_filename);
+    bool exists = TestRaw(full_filename) || TestRaw(write_filename);
 
     if (!exists) {
         LogError("User '%1' does not exist", username);
@@ -530,7 +530,7 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
         DeleteRaw("keys/default/write");
     };
 
-    if (TestSlow("rekord")) {
+    if (TestRaw("rekord")) {
         LogError("Repository '%1' looks already initialized", url);
         return false;
     }
@@ -558,10 +558,20 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
     return true;
 }
 
+bool rk_Disk::PutCache(const char *key)
+{
+    if (!cache_db.IsValid())
+        return true;
+
+    bool success = cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                                   ON CONFLICT DO NOTHING)", key);
+    return success;
+}
+
 rk_Disk::TestResult rk_Disk::TestFast(const char *path)
 {
     if (!cache_db.IsValid())
-        return TestSlow(path) ? TestResult::Exists : TestResult::Missing;
+        return TestRaw(path) ? TestResult::Exists : TestResult::Missing;
 
     bool should_exist;
     {
@@ -575,7 +585,7 @@ rk_Disk::TestResult rk_Disk::TestFast(const char *path)
 
     // Probabilistic check
     if (GetRandomIntSafe(0, 100) < 2) {
-        bool really_exists = TestSlow(path);
+        bool really_exists = TestRaw(path);
 
         if (really_exists && !should_exist) {
             std::unique_lock<std::mutex> lock(cache_mutex, std::try_to_lock);
@@ -597,16 +607,6 @@ rk_Disk::TestResult rk_Disk::TestFast(const char *path)
     }
 
     return should_exist ? TestResult::Exists : TestResult::Missing;
-}
-
-bool rk_Disk::PutCache(const char *key)
-{
-    if (!cache_db.IsValid())
-        return true;
-
-    bool success = cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                                   ON CONFLICT DO NOTHING)", key);
-    return success;
 }
 
 static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
@@ -729,7 +729,7 @@ bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
 
 Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf)
 {
-    if (TestSlow(path))
+    if (TestRaw(path))
         return 0;
 
     Size written = WriteRaw(path, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });

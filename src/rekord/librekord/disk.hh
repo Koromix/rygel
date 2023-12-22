@@ -112,8 +112,6 @@ public:
 protected:
     bool InitDefault(const char *full_pwd, const char *write_pwd);
 
-    TestResult TestFast(const char *path);
-
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;
     virtual Size ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
 
@@ -126,10 +124,11 @@ protected:
     bool PutCache(const char *key);
 
     virtual bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) = 0;
-
-    virtual bool TestSlow(const char *path) = 0;
+    virtual bool TestRaw(const char *path) = 0;
 
 private:
+    TestResult TestFast(const char *path);
+
     bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
     bool ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error);
 

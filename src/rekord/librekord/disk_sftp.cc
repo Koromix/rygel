@@ -66,8 +66,7 @@ public:
     bool DeleteDirectory(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
-
-    bool TestSlow(const char *path) override;
+    bool TestRaw(const char *path) override;
 
 private:
     ConnectionData *ReserveConnection();
@@ -528,7 +527,7 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
     return true;
 }
 
-bool SftpDisk::TestSlow(const char *path)
+bool SftpDisk::TestRaw(const char *path)
 {
     GET_CONNECTION(conn);
 
