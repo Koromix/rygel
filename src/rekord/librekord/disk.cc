@@ -137,6 +137,26 @@ void rk_Disk::Lock()
     cache_db.Close();
 }
 
+static bool CheckUserName(Span<const char> username)
+{
+    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.' || c == '-'; };
+
+    if (!username.len) {
+        LogError("Username cannot be empty");
+        return false;
+    }
+    if (username.len > 32) {
+        LogError("Username cannot be have more than 32 characters");
+        return false;
+    }
+    if (!std::all_of(username.begin(), username.end(), test_char)) {
+        LogError("Username must only contain lowercase alphanumeric, '_', '.' or '-' characters");
+        return false;
+    }
+
+    return true;
+}
+
 bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force)
 {
     RG_ASSERT(url);
@@ -148,6 +168,8 @@ bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *w
 
     BlockAllocator temp_alloc;
 
+    if (!CheckUserName(username))
+        return false;
     if (!full_pwd && !write_pwd) {
         LogError("Cannot create user '%1' without any password", username);
         return false;
@@ -187,6 +209,9 @@ bool rk_Disk::DeleteUser(const char *username)
     RG_ASSERT(url);
 
     BlockAllocator temp_alloc;
+
+    if (!CheckUserName(username))
+        return false;
 
     const char *directory = Fmt(&temp_alloc, "keys/%1", username).ptr;
     const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
