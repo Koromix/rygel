@@ -49,6 +49,10 @@ class GitVersioneer {
     HeapArray<const char *> idx_filenames;
     HeapArray<const char *> pack_filenames;
 
+    // FILE object cache
+    HeapArray<FILE *> idx_files;
+    HeapArray<FILE *> pack_files;
+
     // Already known commit IDs
     HeapArray<GitHash> commits;
 
@@ -58,6 +62,8 @@ class GitVersioneer {
     BlockAllocator str_alloc;
 
 public:
+    ~GitVersioneer();
+
     bool Prepare(const char *root_directory);
 
     bool IsValid() const { return commits.len; }

@@ -91,6 +91,23 @@ static void DecodeHash(Span<const uint8_t> raw, char *out_id)
     out_id[j] = 0;
 }
 
+static inline void CloseSafe(FILE *fp)
+{
+    if (fp) {
+        fclose(fp);
+    }
+}
+
+GitVersioneer::~GitVersioneer()
+{
+    for (FILE *fp: idx_files) {
+        CloseSafe(fp);
+    }
+    for (FILE *fp: pack_files) {
+        CloseSafe(fp);
+    }
+}
+
 bool GitVersioneer::Prepare(const char *root_directory)
 {
     RG_ASSERT(!repo_directory);
@@ -143,6 +160,9 @@ bool GitVersioneer::Prepare(const char *root_directory)
             const char *pack_filename = Fmt(&str_alloc, "%1.pack", MakeSpan(idx_filename, strlen(idx_filename) - 4)).ptr;
             pack_filenames.Append(pack_filename);
         }
+
+        idx_files.AppendDefault(idx_filenames.len);
+        pack_files.AppendDefault(pack_filenames.len);
 
         Span<char> loose_filename = Fmt(&str_alloc, "%1%/_________________________________________", obj_directory);
         loose_filenames.Append(loose_filename);
@@ -433,12 +453,16 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
 {
     for (Size i = 0; i < idx_filenames.len; i++) {
         Size idx = (start_idx + i) % idx_filenames.len;
-        const char *idx_filename = idx_filenames[idx];
+        FILE *fp = idx_files[idx];
 
-        FILE *fp = OpenFile(idx_filename, (int)OpenFlag::Read);
-        if (!fp) 
-            return false;
-        RG_DEFER { fclose(fp); };
+        if (!fp) {
+            const char *idx_filename = idx_filenames[idx];
+
+            fp = OpenFile(idx_filename, (int)OpenFlag::Read);
+            if (!fp) 
+                return false;
+            idx_files[idx] = fp;
+        }
 
         IdxHeader header = {};
         if (!ReadSection(fp, 0, RG_SIZE(header), &header))
@@ -544,20 +568,24 @@ static Span<const uint8_t> ParseOffset(Span<const uint8_t> buf, int64_t *out_off
 
 GitVersioneer::AttributeResult GitVersioneer::ReadPackAttribute(Size idx, Size offset, const char *attr, GitHash *out_hash)
 {
-    const char *pack_filename = pack_filenames[idx];
+    FILE *fp = pack_files[idx];
 
-    FILE *fp = OpenFile(pack_filename, (int)OpenFlag::Read);
-    if (!fp)
-        return AttributeResult::Error;
-    RG_DEFER { fclose(fp); };
+    if (!fp) {
+        const char *pack_filename = pack_filenames[idx];
 
-    // Check PACK header
-    PackHeader header = {};
-    if (!ReadSection(fp, 0, RG_SIZE(header), &header))
-        return AttributeResult::Error;
-    if (BigEndian(header.magic) != 0x5041434B || BigEndian(header.version) != 2) {
-        LogError("Invalid or unsupported PACK file");
-        return AttributeResult::Error;
+        fp = OpenFile(pack_filename, (int)OpenFlag::Read);
+        if (!fp)
+            return AttributeResult::Error;
+        pack_files[idx] = fp;
+
+        // Check PACK header
+        PackHeader header = {};
+        if (!ReadSection(fp, 0, RG_SIZE(header), &header))
+            return AttributeResult::Error;
+        if (BigEndian(header.magic) != 0x5041434B || BigEndian(header.version) != 2) {
+            LogError("Invalid or unsupported PACK file");
+            return AttributeResult::Error;
+        }
     }
 
     int type = -1;
@@ -712,6 +740,9 @@ bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, Heap
             } while ((chunk[used++] & 0x80) && used < RG_LEN(chunk));
         }
         offset += used;
+
+        if (used != RG_SIZE(chunk) && !SeekFile(fp, offset))
+            return false;
     }
 
     // Deal with delta encoding
@@ -725,6 +756,9 @@ bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, Heap
         negative = base - negative;
 
         out_obj->Append(MakeSpan((const uint8_t *)&negative, RG_SIZE(negative)));
+
+        if (!SeekFile(fp, offset))
+            return false;
     } else if (type == 7) { // OBJ_REF_DELTA
         uint8_t hash[20];
         if (!ReadSection(fp, offset, RG_SIZE(hash), hash))
@@ -733,10 +767,6 @@ bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, Heap
 
         out_obj->Append(hash);
     }
-
-    // Decompress (zlib)
-    if (!SeekFile(fp, offset))
-        return false;
 
     StreamReader reader(fp, "<pack>", CompressionType::Zlib);
     {
