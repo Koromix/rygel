@@ -60,6 +60,20 @@ static void torture_options_set_host(void **state) {
     assert_non_null(session->opts.host);
     assert_string_equal(session->opts.host, "localhost");
 
+    /* IPv4 address */
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, "127.1.1.1");
+    assert_true(rc == 0);
+    assert_non_null(session->opts.host);
+    assert_string_equal(session->opts.host, "127.1.1.1");
+    assert_null(session->opts.username);
+
+    /* IPv6 address */
+    rc = ssh_options_set(session, SSH_OPTIONS_HOST, "::1");
+    assert_true(rc == 0);
+    assert_non_null(session->opts.host);
+    assert_string_equal(session->opts.host, "::1");
+    assert_null(session->opts.username);
+
     rc = ssh_options_set(session, SSH_OPTIONS_HOST, "guru@meditation");
     assert_true(rc == 0);
     assert_non_null(session->opts.host);
@@ -67,12 +81,14 @@ static void torture_options_set_host(void **state) {
     assert_non_null(session->opts.username);
     assert_string_equal(session->opts.username, "guru");
 
+    /* more @ in uri is OK -- it should go to the username */
     rc = ssh_options_set(session, SSH_OPTIONS_HOST, "at@login@hostname");
     assert_true(rc == 0);
     assert_non_null(session->opts.host);
     assert_string_equal(session->opts.host, "hostname");
     assert_non_null(session->opts.username);
     assert_string_equal(session->opts.username, "at@login");
+
 }
 
 static void torture_options_set_ciphers(void **state) {

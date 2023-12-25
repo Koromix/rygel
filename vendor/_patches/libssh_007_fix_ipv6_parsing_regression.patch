@@ -1,0 +1,225 @@
+diff --git a/vendor/libssh/include/libssh/config_parser.h b/vendor/libssh/include/libssh/config_parser.h
+index a7dd42a2c..ca353432b 100644
+--- a/vendor/libssh/include/libssh/config_parser.h
++++ b/vendor/libssh/include/libssh/config_parser.h
+@@ -30,6 +30,8 @@
+ extern "C" {
+ #endif
+ 
++#include <stdbool.h>
++
+ char *ssh_config_get_cmd(char **str);
+ 
+ char *ssh_config_get_token(char **str);
+@@ -49,14 +51,17 @@ int ssh_config_get_yesno(char **str, int notfound);
+  *                       be stored or NULL if we do not care about the result.
+  * @param[out]  port     Pointer to the location, where the new port will
+  *                       be stored or NULL if we do not care about the result.
++ * @param[in]   ignore_port Set to true if the we should not attempt to parse
++ *                       port number.
+  *
+  * @returns     SSH_OK if the provided string is in format of SSH URI,
+  *              SSH_ERROR on failure
+  */
+ int ssh_config_parse_uri(const char *tok,
+-        char **username,
+-        char **hostname,
+-        char **port);
++                         char **username,
++                         char **hostname,
++                         char **port,
++                         bool ignore_port);
+ 
+ #ifdef __cplusplus
+ }
+diff --git a/vendor/libssh/src/config.c b/vendor/libssh/src/config.c
+index c5c40125a..273db7c8c 100644
+--- a/vendor/libssh/src/config.c
++++ b/vendor/libssh/src/config.c
+@@ -464,7 +464,7 @@ ssh_config_parse_proxy_jump(ssh_session session, const char *s, bool do_parsing)
+         }
+         if (parse_entry) {
+             /* We actually care only about the first item */
+-            rv = ssh_config_parse_uri(cp, &username, &hostname, &port);
++            rv = ssh_config_parse_uri(cp, &username, &hostname, &port, false);
+             /* The rest of the list needs to be passed on */
+             if (endp != NULL) {
+                 next = strdup(endp + 1);
+@@ -475,7 +475,7 @@ ssh_config_parse_proxy_jump(ssh_session session, const char *s, bool do_parsing)
+             }
+         } else {
+             /* The rest is just sanity-checked to avoid failures later */
+-            rv = ssh_config_parse_uri(cp, NULL, NULL, NULL);
++            rv = ssh_config_parse_uri(cp, NULL, NULL, NULL, false);
+         }
+         if (rv != SSH_OK) {
+             goto out;
+diff --git a/vendor/libssh/src/config_parser.c b/vendor/libssh/src/config_parser.c
+index b8b94611a..d4b2d2c3b 100644
+--- a/vendor/libssh/src/config_parser.c
++++ b/vendor/libssh/src/config_parser.c
+@@ -162,9 +162,10 @@ int ssh_config_get_yesno(char **str, int notfound)
+ }
+ 
+ int ssh_config_parse_uri(const char *tok,
+-        char **username,
+-        char **hostname,
+-        char **port)
++                         char **username,
++                         char **hostname,
++                         char **port,
++                         bool ignore_port)
+ {
+     char *endp = NULL;
+     long port_n;
+@@ -210,12 +211,17 @@ int ssh_config_parse_uri(const char *tok,
+         if (endp == NULL) {
+             goto error;
+         }
+-    } else {
+-        /* Hostnames or aliases expand to the last colon or to the end */
++    } else if (!ignore_port) {
++        /* Hostnames or aliases expand to the last colon (if port is requested)
++         * or to the end */
+         endp = strrchr(tok, ':');
+         if (endp == NULL) {
+             endp = strchr(tok, '\0');
+         }
++    } else {
++        /* If no port is requested, expand to the end of line
++         * (to accommodate the IPv6 addresses) */
++        endp = strchr(tok, '\0');
+     }
+     if (tok == endp) {
+         /* Zero-length hostnames are not valid */
+diff --git a/vendor/libssh/src/options.c b/vendor/libssh/src/options.c
+index 385114555..b3ecffe15 100644
+--- a/vendor/libssh/src/options.c
++++ b/vendor/libssh/src/options.c
+@@ -516,17 +516,11 @@ int ssh_options_set(ssh_session session, enum ssh_options_e type,
+                 ssh_set_error_invalid(session);
+                 return -1;
+             } else {
+-                char *username = NULL, *hostname = NULL, *port = NULL;
+-                rc = ssh_config_parse_uri(value, &username, &hostname, &port);
++                char *username = NULL, *hostname = NULL;
++                rc = ssh_config_parse_uri(value, &username, &hostname, NULL, true);
+                 if (rc != SSH_OK) {
+                     return -1;
+                 }
+-                if (port != NULL) {
+-                    SAFE_FREE(username);
+-                    SAFE_FREE(hostname);
+-                    SAFE_FREE(port);
+-                    return -1;
+-                }
+                 if (username != NULL) {
+                     SAFE_FREE(session->opts.username);
+                     session->opts.username = username;
+diff --git a/vendor/libssh/tests/unittests/torture_config.c b/vendor/libssh/tests/unittests/torture_config.c
+index b7c763afd..26a24215b 100644
+--- a/vendor/libssh/tests/unittests/torture_config.c
++++ b/vendor/libssh/tests/unittests/torture_config.c
+@@ -1850,6 +1850,53 @@ static void torture_config_make_absolute_no_sshdir(void **state)
+     torture_config_make_absolute_int(state, 1);
+ }
+ 
++static void torture_config_parse_uri(void **state)
++{
++    char *username = NULL;
++    char *hostname = NULL;
++    char *port = NULL;
++    int rc;
++
++    (void)state; /* unused */
++
++    rc = ssh_config_parse_uri("localhost", &username, &hostname, &port, false);
++    assert_return_code(rc, errno);
++    assert_null(username);
++    assert_string_equal(hostname, "localhost");
++    SAFE_FREE(hostname);
++    assert_null(port);
++
++    rc = ssh_config_parse_uri("1.2.3.4", &username, &hostname, &port, false);
++    assert_return_code(rc, errno);
++    assert_null(username);
++    assert_string_equal(hostname, "1.2.3.4");
++    SAFE_FREE(hostname);
++    assert_null(port);
++
++    rc = ssh_config_parse_uri("1.2.3.4:2222", &username, &hostname, &port, false);
++    assert_return_code(rc, errno);
++    assert_null(username);
++    assert_string_equal(hostname, "1.2.3.4");
++    SAFE_FREE(hostname);
++    assert_string_equal(port, "2222");
++    SAFE_FREE(port);
++
++    rc = ssh_config_parse_uri("[1:2:3::4]:2222", &username, &hostname, &port, false);
++    assert_return_code(rc, errno);
++    assert_null(username);
++    assert_string_equal(hostname, "1:2:3::4");
++    SAFE_FREE(hostname);
++    assert_string_equal(port, "2222");
++    SAFE_FREE(port);
++
++    /* do not want port */
++    rc = ssh_config_parse_uri("1:2:3::4", &username, &hostname, NULL, true);
++    assert_return_code(rc, errno);
++    assert_null(username);
++    assert_string_equal(hostname, "1:2:3::4");
++    SAFE_FREE(hostname);
++}
++
+ int torture_run_tests(void)
+ {
+     int rc;
+@@ -1922,6 +1969,8 @@ int torture_run_tests(void)
+                                         setup, teardown),
+         cmocka_unit_test_setup_teardown(torture_config_make_absolute_no_sshdir,
+                                         setup_no_sshdir, teardown),
++        cmocka_unit_test_setup_teardown(torture_config_parse_uri,
++                                        setup, teardown),
+     };
+ 
+ 
+diff --git a/vendor/libssh/tests/unittests/torture_options.c b/vendor/libssh/tests/unittests/torture_options.c
+index 425d7295b..8a5505a19 100644
+--- a/vendor/libssh/tests/unittests/torture_options.c
++++ b/vendor/libssh/tests/unittests/torture_options.c
+@@ -60,6 +60,20 @@ static void torture_options_set_host(void **state) {
+     assert_non_null(session->opts.host);
+     assert_string_equal(session->opts.host, "localhost");
+ 
++    /* IPv4 address */
++    rc = ssh_options_set(session, SSH_OPTIONS_HOST, "127.1.1.1");
++    assert_true(rc == 0);
++    assert_non_null(session->opts.host);
++    assert_string_equal(session->opts.host, "127.1.1.1");
++    assert_null(session->opts.username);
++
++    /* IPv6 address */
++    rc = ssh_options_set(session, SSH_OPTIONS_HOST, "::1");
++    assert_true(rc == 0);
++    assert_non_null(session->opts.host);
++    assert_string_equal(session->opts.host, "::1");
++    assert_null(session->opts.username);
++
+     rc = ssh_options_set(session, SSH_OPTIONS_HOST, "guru@meditation");
+     assert_true(rc == 0);
+     assert_non_null(session->opts.host);
+@@ -67,12 +81,14 @@ static void torture_options_set_host(void **state) {
+     assert_non_null(session->opts.username);
+     assert_string_equal(session->opts.username, "guru");
+ 
++    /* more @ in uri is OK -- it should go to the username */
+     rc = ssh_options_set(session, SSH_OPTIONS_HOST, "at@login@hostname");
+     assert_true(rc == 0);
+     assert_non_null(session->opts.host);
+     assert_string_equal(session->opts.host, "hostname");
+     assert_non_null(session->opts.username);
+     assert_string_equal(session->opts.username, "at@login");
++
+ }
+ 
+ static void torture_options_set_ciphers(void **state) {
