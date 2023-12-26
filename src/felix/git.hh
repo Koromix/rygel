@@ -61,6 +61,8 @@ public:
 
     ~GitVersioneer();
 
+    static bool IsAvailable();
+
     bool Prepare(const char *root_directory);
 
     bool IsValid() const { return commits.len; }

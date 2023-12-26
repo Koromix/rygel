@@ -15,7 +15,6 @@
 
 #include "src/core/libcc/libcc.hh"
 #include "compiler.hh"
-#include "git.hh"
 #include "locate.hh"
 #include "target.hh"
 
@@ -125,9 +124,6 @@ class Builder {
     HashMap<const char *, int64_t> mtime_map;
     HashMap<const void *, const char *> target_headers;
 
-    // Reuse for performance
-    GitVersioneer versioneer;
-
     // Build
     std::mutex out_mutex;
     HeapArray<const char *> clear_filenames;
@@ -145,7 +141,7 @@ public:
 
     Builder(const BuildSettings &build);
 
-    bool AddTarget(const TargetInfo &target);
+    bool AddTarget(const TargetInfo &target, const char *version_str);
     bool AddSource(const SourceFileInfo &src);
 
     bool Build(int jobs, bool verbose);
@@ -170,8 +166,7 @@ private:
     const char *CompileStaticQtHelper(const TargetInfo &target);
     void ParsePrlFile(const char *filename, HeapArray<const char *> *out_libraries);
 
-    bool UpdateVersionSource(const TargetInfo &target, const char *dest_filename);
-    bool BuildGitVersion(Span<const char> tag_name, Span<char> out_version);
+    bool UpdateVersionSource(const char *target, const char *version, const char *dest_filename);
 
     const char *GetTargetIncludeDirectory(const TargetInfo &target);
 

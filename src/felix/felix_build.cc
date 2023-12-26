@@ -14,6 +14,7 @@
 #include "src/core/libcc/libcc.hh"
 #include "build.hh"
 #include "compiler.hh"
+#include "git.hh"
 #include "target.hh"
 
 #ifdef _WIN32
@@ -38,6 +39,11 @@ struct BuildPreset {
 
     BuildSettings build;
     uint32_t maybe_features = 0;
+};
+
+struct EnabledTarget {
+    const TargetInfo *target;
+    const char *version = nullptr;
 };
 
 static int RunTarget(const char *target_filename, Span<const char *const> arguments)
@@ -591,7 +597,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Select targets
-    HeapArray<const TargetInfo *> enabled_targets;
+    HeapArray<EnabledTarget> enabled_targets;
     HeapArray<const SourceFileInfo *> enabled_sources;
     if (selectors.len) {
         bool valid = true;
@@ -613,7 +619,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                             valid = false;
                         }
 
-                        enabled_targets.Append(&target);
+                        enabled_targets.Append({ &target });
                         match = true;
                     }
                 }
@@ -648,7 +654,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     } else {
         for (const TargetInfo &target: target_set.targets) {
             if (target.enable_by_default && target.TestPlatforms(host_spec.platform)) {
-                enabled_targets.Append(&target);
+                enabled_targets.Append({ &target });
             }
         }
 
@@ -656,6 +662,27 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             LogError("No target to build by default for platform '%1'", HostPlatformNames[(int)host_spec.platform]);
             return 1;
         }
+    }
+
+    LogInfo("Determining versions...");
+    if (GitVersioneer::IsAvailable()) {
+        GitVersioneer versioneer;
+
+        // Continue even if versionign  version
+        if (!versioneer.Prepare("."))
+            return 1;
+
+        for (Size i = 0; i < enabled_targets.len; i++) {
+            EnabledTarget *it = &enabled_targets[i];
+
+            if (it->target->type != TargetType::Executable)
+                continue;
+
+            const char *version = versioneer.Version(it->target->version_tag);
+            it->version = version ? DuplicateString(version, &temp_alloc).ptr : nullptr;
+        }
+    } else {
+        LogWarning("Built without git versioning support");
     }
 
     // Find and check target used with --run
@@ -688,8 +715,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
     // Build stuff!
     Builder builder(build);
-    for (const TargetInfo *target: enabled_targets) {
-        if (!builder.AddTarget(*target))
+    for (const EnabledTarget &it: enabled_targets) {
+        if (!builder.AddTarget(*it.target, it.version))
             return 1;
     }
     for (const SourceFileInfo *src: enabled_sources) {

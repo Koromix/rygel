@@ -108,11 +108,16 @@ GitVersioneer::~GitVersioneer()
     }
 }
 
+bool GitVersioneer::IsAvailable()
+{
+    return IsDecompressorAvailable(CompressionType::Zlib);
+}
+
 bool GitVersioneer::Prepare(const char *root_directory)
 {
     RG_ASSERT(!repo_directory);
 
-    if (!IsDecompressorAvailable(CompressionType::Zlib)) {
+    if (!IsAvailable()) {
         LogError("Cannot use git versioning without zlib support");
         return false;
     }
