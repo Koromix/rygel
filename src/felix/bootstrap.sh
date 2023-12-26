@@ -2,7 +2,8 @@
 
 cd $(dirname $0)
 
-SRC=$(ls -1 ../felix/*.cc ../core/libcc/libcc.cc ../core/libwrap/json.cc ../../vendor/pugixml/src/pugixml.cpp)
+SRC=$(ls -1 ../felix/*.cc ../core/libcc/libcc.cc ../core/libcc/miniz.cc ../core/libwrap/json.cc \
+            ../../vendor/miniz/miniz.c ../../vendor/pugixml/src/pugixml.cpp)
 
 PRESET=Fast
 TEMP=../../bin/BootstrapFelix
