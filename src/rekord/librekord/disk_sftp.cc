@@ -19,6 +19,11 @@
 
 namespace RG {
 
+// Fix mess caused by windows.h (included by libssh)
+#ifdef CreateDirectory
+    #undef CreateDirectory
+#endif
+
 static const int MaxPathSize = 4096 - 128;
 
 struct ConnectionData {
