@@ -34,18 +34,12 @@ class GitVersioneer {
         Size offset;
     };
 
-    enum class AttributeResult {
-        Success,
-        Missing,
-        Error
-    };
-
     const char *repo_directory = nullptr;
 
     // Prepared stuff
     HashMap<const char *, GitHash> ref_map;
     HashMap<GitHash, const char *> hash_map;
-    HashSet<Span<const char>> prefix_set;
+    HashMap<Span<const char>, int64_t> prefix_map;
     HeapArray<const char *> idx_filenames;
     HeapArray<const char *> pack_filenames;
 
@@ -62,6 +56,9 @@ class GitVersioneer {
     BlockAllocator str_alloc;
 
 public:
+    int64_t max_delta_date = 14 * 86400000ll;
+    Size max_delta_count = 2000;
+
     ~GitVersioneer();
 
     bool Prepare(const char *root_directory);
@@ -72,13 +69,15 @@ public:
     const char *Version(Span<const char> key);
 
 private:
-    AttributeResult ReadAttribute(Span<const char> id, const char *attr, GitHash *out_hash);
-    AttributeResult ReadAttribute(const GitHash &hash, const char *attr, GitHash *out_hash);
+    bool CacheTagInfo(Span<const char> tag, Span<const char> id);
 
-    AttributeResult ReadLooseAttribute(const char *filename, const char *attr, GitHash *out_hash);
+    bool ReadAttributes(Span<const char> id, FunctionRef<bool(Span<const char> key, Span<const char> value)> func);
+    bool ReadAttributes(const GitHash &hash, FunctionRef<bool(Span<const char> key, Span<const char> value)> func);
+
+    bool ReadLooseAttributes(const char *filename, FunctionRef<bool(Span<const char> key, Span<const char> value)> func);
 
     bool FindInIndexes(Size start_idx, const GitHash &hash, PackLocation *out_location);
-    AttributeResult ReadPackAttribute(Size idx, Size offset, const char *attr, GitHash *out_hash);
+    bool ReadPackAttributes(Size idx, Size offset, FunctionRef<bool(Span<const char> key, Span<const char> value)> func);
     bool ReadPackObject(FILE *fp, Size offset, int *out_type, HeapArray<uint8_t> *out_obj);
 };
 
