@@ -664,7 +664,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
-    LogInfo("Determining versions...");
+    LogInfo("Computing versions...");
     if (GitVersioneer::IsAvailable()) {
         GitVersioneer versioneer;
 
