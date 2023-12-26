@@ -104,8 +104,8 @@ declare module 'koffi' {
     /** @deprecated */ export function handle(): IKoffiCType;
 
     export function pointer(ref: TypeSpec): IKoffiCType;
-    export function pointer(ref: TypeSpec, asteriskCount: number): IKoffiCType;
-    export function pointer(name: string, ref: TypeSpec, asteriskCount: number): IKoffiCType;
+    export function pointer(ref: TypeSpec, asteriskCount?: number): IKoffiCType;
+    export function pointer(name: string, ref: TypeSpec, asteriskCount?: number): IKoffiCType;
 
     export function out(type: TypeSpec): IKoffiCType;
     export function inout(type: TypeSpec): IKoffiCType;
