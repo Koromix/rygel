@@ -668,7 +668,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     if (GitVersioneer::IsAvailable()) {
         GitVersioneer versioneer;
 
-        // Continue even if versionign  version
         if (!versioneer.Prepare("."))
             return 1;
 
@@ -678,6 +677,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             if (it->target->type != TargetType::Executable)
                 continue;
 
+            // Continue even if versioning fails
             const char *version = versioneer.Version(it->target->version_tag);
             it->version = version ? DuplicateString(version, &temp_alloc).ptr : nullptr;
         }
