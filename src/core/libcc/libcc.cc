@@ -3881,8 +3881,11 @@ bool CreateOverlappedPipe(bool overlap0, bool overlap1, PipeMode mode, HANDLE ou
 
 void CloseHandleSafe(HANDLE *handle_ptr)
 {
-    if (*handle_ptr && *handle_ptr != INVALID_HANDLE_VALUE) {
-        CloseHandle(*handle_ptr);
+    HANDLE h = *handle_ptr;
+
+    if (h && h != INVALID_HANDLE_VALUE) {
+        CancelIo(h);
+        CloseHandle(h);
     }
 
     *handle_ptr = nullptr;
@@ -4021,6 +4024,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             CloseHandleSafe(&si.hStdOutput);
             CloseHandleSafe(&si.hStdError);
         };
+
         if (in_func.IsValid() || out_func.IsValid()) {
             if (!DuplicateHandle(GetCurrentProcess(), in_func.IsValid() ? in_pipe[0] : GetStdHandle(STD_INPUT_HANDLE),
                                  GetCurrentProcess(), &si.hStdInput, 0, TRUE, DUPLICATE_SAME_ACCESS)) {
@@ -4095,6 +4099,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                 if (proc_in.err && proc_in.err != ERROR_BROKEN_PIPE && proc_in.err != ERROR_NO_DATA) {
                     LogError("Failed to write to process: %1", GetWin32ErrorString(proc_in.err));
                 }
+
                 proc_in.pending = true;
             }
 
@@ -4111,30 +4116,23 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                     }
                 }
 
-                if (proc_out.err && proc_out.err != ERROR_BROKEN_PIPE && proc_out.err != ERROR_NO_DATA) {
-                    LogError("Failed to read process output: %1", GetWin32ErrorString(proc_out.err));
+                if (proc_out.err) {
+                    if (proc_out.err != ERROR_BROKEN_PIPE && proc_out.err != ERROR_NO_DATA) {
+                        LogError("Failed to read process output: %1", GetWin32ErrorString(proc_out.err));
+                    }
+                    break;
                 }
+
                 proc_out.pending = true;
             }
 
-            HANDLE events[2] = {
-                process_handle,
-                console_ctrl_event
-            };
-
-            running = (WaitForMultipleObjectsEx(RG_LEN(events), events, FALSE, INFINITE, TRUE) > WAIT_OBJECT_0 + 1);
+            running = (WaitForSingleObjectEx(console_ctrl_event, INFINITE, TRUE) != WAIT_OBJECT_0);
         }
     }
 
     // Terminate any remaining I/O
-    if (in_pipe[1]) {
-        CancelIo(in_pipe[1]);
-        CloseHandleSafe(&in_pipe[1]);
-    }
-    if (out_pipe[0]) {
-        CancelIo(out_pipe[0]);
-        CloseHandleSafe(&out_pipe[0]);
-    }
+    CloseHandleSafe(&in_pipe[1]);
+    CloseHandleSafe(&out_pipe[0]);
 
     // Wait for process exit
     {
