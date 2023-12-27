@@ -385,14 +385,14 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks");
         if (clang_ver >= 130000) {
             Fmt(&buf, " -fno-finite-loops");
         }
         if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O2 -DNDEBUG");
+            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
-            Fmt(&buf, " -Os -DNDEBUG -ffunction-sections -fdata-sections");
+            Fmt(&buf, " -Os -fwrapv -DNDEBUG -ffunction-sections -fdata-sections");
         } else {
             Fmt(&buf, " -O0 -ftrapv -fno-omit-frame-pointer");
         }
@@ -914,16 +914,16 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
+        Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks");
         if (gcc_ver >= 100000) {
             Fmt(&buf, " -fno-finite-loops");
         }
         if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O2 -DNDEBUG");
+            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
-            Fmt(&buf, " -Os -DNDEBUG -ffunction-sections -fdata-sections");
+            Fmt(&buf, " -Os -fwrapv -DNDEBUG -ffunction-sections -fdata-sections");
         } else {
-            Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error -fno-omit-frame-pointer");
+            Fmt(&buf, " -O0 -ftrapv -fsanitize-undefined-trap-on-error -fno-omit-frame-pointer");
         }
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
@@ -1698,13 +1698,13 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks");
         if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O2 -DNDEBUG");
+            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
-            Fmt(&buf, " -Os -DNDEBUG");
+            Fmt(&buf, " -Os -fwrapv -DNDEBUG");
         } else {
-            Fmt(&buf, " -O0 -fsanitize=signed-integer-overflow -fsanitize-undefined-trap-on-error -fno-omit-frame-pointer");
+            Fmt(&buf, " -O0 -ftrapv -fsanitize-undefined-trap-on-error -fno-omit-frame-pointer");
         }
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
@@ -2019,11 +2019,11 @@ public:
         out_cmd->rsp_offset = buf.len;
 
         // Build options
-        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks");
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks");
         if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O1 -DNDEBUG");
+            Fmt(&buf, " -O1 -fwrapv -DNDEBUG");
         } else if (features & (int)CompileFeature::OptimizeSize) {
-            Fmt(&buf, " -Os -DNDEBUG");
+            Fmt(&buf, " -Os -fwrapv -DNDEBUG");
         } else {
             Fmt(&buf, " -O0 -ftrapv");
         }
