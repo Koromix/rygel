@@ -12,13 +12,13 @@ DOCKER_IMAGE=debian10
 build() {
     apt install libudev-dev
 
-    ./bootstrap.sh --no_user
-    ./felix -pFast --no_user -O "${BUILD_DIR}" meestic MeesticTray
+    ./bootstrap.sh
+    ./felix -pFast meestic MeesticTray
 }
 
 package() {
-    install -D -m0755 ${BUILD_DIR}/meestic ${ROOT_DIR}/usr/bin/meestic
-    install -D -m0755 ${BUILD_DIR}/MeesticTray ${ROOT_DIR}/usr/bin/MeesticTray
+    install -D -m0755 ${BUILD_DIR}/bin/Fast/meestic ${ROOT_DIR}/usr/bin/meestic
+    install -D -m0755 ${BUILD_DIR}/bin/Fast/MeesticTray ${ROOT_DIR}/usr/bin/MeesticTray
 
     install -D -m0644 src/meestic/MeesticTray.ini ${ROOT_DIR}/etc/meestic.ini
     install -D -m0644 src/meestic/dist/debian/MeesticTray.desktop ${ROOT_DIR}/usr/share/applications/MeesticTray.desktop

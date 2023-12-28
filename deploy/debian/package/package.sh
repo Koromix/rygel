@@ -1,9 +1,11 @@
 #!/bin/sh -e
 
-DEST_DIR=bin/Packages/${PKG_NAME}/debian
-DEBIAN_DIR=${DEST_DIR}/debian
-ROOT_DIR=${DEST_DIR}/root
+PKG_DIR=bin/Packages
+DEST_DIR=${PKG_DIR}/${PKG_NAME}/debian
 BUILD_DIR=${DEST_DIR}/build
+DEBIAN_DIR=${DEST_DIR}/pkg/debian
+ROOT_DIR=${DEST_DIR}/pkg/root
+CLIENT_DIR=${DEST_DIR}/client
 
 if [ "$1" = "" -o "$1" = "package" ]; then
     ./bootstrap.sh
@@ -12,11 +14,13 @@ if [ "$1" = "" -o "$1" = "package" ]; then
     VERSION=$(bin/Debug/${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
     DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 
-    rm -rf ${DEST_DIR}
-    mkdir -p ${DEBIAN_DIR} ${ROOT_DIR} ${BUILD_DIR}
+    sudo rm -rf ${DEST_DIR}
+    mkdir -p ${DEBIAN_DIR} ${ROOT_DIR}
+    mkdir -p ${CLIENT_DIR}/upper
 
     docker build -t rygel/${DOCKER_IMAGE} deploy/docker/${DOCKER_IMAGE}
-    docker run -t -i --rm -v $(pwd):/io rygel/${DOCKER_IMAGE} /io/${SCRIPT_PATH} build
+    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
+    mv ${CLIENT_DIR}/upper ${BUILD_DIR}
 
     package
 
@@ -47,15 +51,20 @@ ${PKG_NAME} ($VERSION) unstable; urgency=low
  -- ${PKG_AUTHOR}  $DATE
 " > ${DEBIAN_DIR}/changelog
 
-    (cd ${DEST_DIR} && dpkg-buildpackage -uc -us)
-    cp ${DEST_DIR}/${PKG_NAME}_*.deb ${DEST_DIR}/../
+    (cd ${DEBIAN_DIR}/.. && dpkg-buildpackage -uc -us)
+    cp ${DEBIAN_DIR}/../../${PKG_NAME}_*.deb ${PKG_DIR}/
 elif [ "$1" = "build" ]; then
-    cd /io
-
     # Fix git error about dubious repository ownership
     git config --global safe.directory '*'
 
-    build
+    mkdir -p /repo /io/client/work
+    mount -t overlay overlay -o lowerdir=/io/host,upperdir=/io/client/upper,workdir=/io/client/work /repo
+    rm -f /repo/FelixBuild.ini.user
+
+    (cd /repo && build)
+
+    umount /repo
+    rm -rf /io/client/work
 else
     echo "Unknown command '$1'" >&2
     exit 1

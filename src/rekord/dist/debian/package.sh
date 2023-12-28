@@ -10,12 +10,12 @@ VERSION_TARGET=rekord
 DOCKER_IMAGE=debian11
 
 build() {
-    ./bootstrap.sh --no_user
-    ./felix -pFast --no_user -O "${BUILD_DIR}" rekord
+    ./bootstrap.sh
+    ./felix -pFast rekord
 }
 
 package() {
-    install -D -m0755 ${BUILD_DIR}/rekord ${ROOT_DIR}/usr/bin/rekord
+    install -D -m0755 ${BUILD_DIR}/bin/Fast/rekord ${ROOT_DIR}/usr/bin/rekord
 }
 
 cd "$(dirname $0)/../../../.."

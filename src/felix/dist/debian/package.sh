@@ -10,12 +10,12 @@ VERSION_TARGET=felix
 DOCKER_IMAGE=debian10
 
 build() {
-    ./bootstrap.sh --no_user
-    ./felix -pFast --no_user -O "${BUILD_DIR}" felix
+    ./bootstrap.sh
+    ./felix -pFast felix
 }
 
 package() {
-    install -D -m0755 ${BUILD_DIR}/felix ${ROOT_DIR}/usr/bin/felix
+    install -D -m0755 ${BUILD_DIR}/bin/Fast/felix ${ROOT_DIR}/usr/bin/felix
 }
 
 cd "$(dirname $0)/../../../.."
