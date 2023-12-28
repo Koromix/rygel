@@ -785,9 +785,7 @@ public:
             supported |= (int)CompileFeature::LTO;
         }
         supported |= (int)CompileFeature::ZeroInit;
-        if (gcc_ver >= 90000) {
-            supported |= (int)CompileFeature::CFI;
-        }
+        supported |= (int)CompileFeature::CFI;
         if (platform == HostPlatform::Windows) {
             supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
@@ -811,6 +809,10 @@ public:
         }
         if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
             LogError("Cannot use ASan and TSan at the same time");
+            return false;
+        }
+        if (gcc_ver < 90000 && (features & (int)CompileFeature::CFI)) {
+            LogError("CFI requires GCC >= 9.0, try --host option (e.g. --host=,gcc-9)");
             return false;
         }
         if (gcc_ver < 120100 && (features & (int)CompileFeature::ZeroInit)) {
