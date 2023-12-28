@@ -80,6 +80,8 @@ Here are a few example patterns:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     LocalArray<char, MaxPasswordLength + 1> password_buf;
@@ -185,6 +187,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (sodium_init() < 0) {
@@ -300,6 +304,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (!label) {
@@ -425,6 +431,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (!secret) {
@@ -517,6 +525,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (secret) {

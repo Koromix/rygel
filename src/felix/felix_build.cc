@@ -501,6 +501,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             // the --run option will break the loop and all remaining
             // arguments will be passed as-is to the target.
             opt.ConsumeNonOptions(&selectors);
+
             if (!opt.Next())
                 break;
 

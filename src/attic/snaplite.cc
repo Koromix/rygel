@@ -108,6 +108,7 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
         }
 
         src_filename = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     HeapArray<const char *> snapshot_filenames;
@@ -203,6 +204,7 @@ Options:
         }
 
         src_filename = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     HeapArray<const char *> snapshot_filenames;
@@ -431,6 +433,7 @@ Options:
         }
 
         database_filename = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     if (!database_filename) {

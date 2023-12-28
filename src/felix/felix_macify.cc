@@ -237,6 +237,7 @@ Options:
         }
 
         binary_filename = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     if (!binary_filename) {

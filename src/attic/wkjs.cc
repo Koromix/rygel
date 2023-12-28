@@ -56,6 +56,7 @@ Options:
         }
 
         filename_or_code = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     if (!filename_or_code) {

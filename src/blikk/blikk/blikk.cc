@@ -164,6 +164,7 @@ Options:
         }
 
         filename_or_code = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     switch (mode) {

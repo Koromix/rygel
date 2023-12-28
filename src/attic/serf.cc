@@ -403,6 +403,8 @@ Options:
         const char *root_directory = opt.ConsumeNonOption();
         config.root_directory = root_directory ? root_directory : config.root_directory;
 
+        opt.LogUnusedArguments();
+
         // We may have changed some stuff (such as HTTP port), so revalidate
         if (!config.Validate())
             return 1;

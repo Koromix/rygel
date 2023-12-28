@@ -57,6 +57,7 @@ int Main(int argc, char **argv)
         }
 
         pattern = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     // We want to group the output, make sure everything is sorted correctly

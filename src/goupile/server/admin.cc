@@ -474,6 +474,8 @@ Options:
 
         root_directory = opt.ConsumeNonOption();
         root_directory = NormalizePath(root_directory ? root_directory : ".", GetWorkingDirectory(), &temp_alloc).ptr;
+
+        opt.LogUnusedArguments();
     }
 
     // Errors and defaults
@@ -695,6 +697,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     DomainConfig config;
@@ -871,6 +875,7 @@ Options:
             LogError("No archive filename provided");
             return 1;
         }
+        opt.LogUnusedArguments();
     }
 
     StreamReader reader(archive_filename);

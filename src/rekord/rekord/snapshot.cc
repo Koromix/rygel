@@ -89,6 +89,7 @@ Options:
         }
 
         opt.ConsumeNonOptions(&filenames);
+        opt.LogUnusedArguments();
     }
 
     if (!filenames.len) {
@@ -209,6 +210,7 @@ Options:
         }
 
         name = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     if (!name) {

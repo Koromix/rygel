@@ -419,6 +419,7 @@ Test options:)");
             LogError("No filename provided");
             return 1;
         }
+        opt.LogUnusedArguments();
     }
 
     LogInfo("Load tables");
@@ -601,6 +602,7 @@ Dump options:
         }
 
         opt.ConsumeNonOptions(&filenames);
+        opt.LogUnusedArguments();
     }
 
     mco_TableSet table_set;
@@ -653,6 +655,7 @@ List options:
             LogError("No specifier string provided");
             return 1;
         }
+        opt.LogUnusedArguments();
     }
 
     mco_TableSet table_set;
@@ -735,6 +738,8 @@ Map options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     mco_TableSet table_set;
@@ -810,6 +815,7 @@ Pack options:
             LogError("No stay file provided");
             return 1;
         }
+        opt.LogUnusedArguments();
     }
 
     LogInfo("Load stays");
@@ -864,6 +870,7 @@ int RunMcoShow(Span<const char *> arguments)
             LogError("No element name provided");
             return 1;
         }
+        opt.LogUnusedArguments();
     }
 
     mco_TableSet table_set;

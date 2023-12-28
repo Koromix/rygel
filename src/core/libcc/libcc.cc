@@ -7516,6 +7516,13 @@ void OptionParser::LogUnknownError() const
     }
 }
 
+void OptionParser::LogUnusedArguments() const
+{
+    if (pos < args.len) {
+       LogWarning("Unused command-line arguments");
+    }
+}
+
 // ------------------------------------------------------------------------
 // Console prompter (simplified readline)
 // ------------------------------------------------------------------------

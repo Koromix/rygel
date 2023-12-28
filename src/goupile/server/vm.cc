@@ -156,11 +156,11 @@ int RunVM(Span<const char *> arguments)
         }
 
         zip_filename = opt.ConsumeNonOption();
-
         if (!zip_filename) {
             LogError("Missing view ZIP filename");
             return 1;
         }
+        opt.LogUnusedArguments();
     }
 
     // Open ZIP view

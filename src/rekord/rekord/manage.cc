@@ -85,6 +85,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (!config.Complete(false))
@@ -192,6 +194,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (!config.Complete(true))
@@ -262,6 +266,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (!config.Complete(true))
@@ -368,6 +374,7 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
         }
 
         username = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     if (!username) {
@@ -504,6 +511,7 @@ Options:
         }
 
         username = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     if (!username) {
@@ -589,6 +597,8 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (!config.Complete(false))

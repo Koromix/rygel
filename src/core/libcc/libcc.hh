@@ -4899,7 +4899,9 @@ public:
         { return Test(test1, nullptr, type); }
 
     bool TestHasFailed() const { return test_failed; }
+
     void LogUnknownError() const;
+    void LogUnusedArguments() const;
 };
 
 template <typename T>

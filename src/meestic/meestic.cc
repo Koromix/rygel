@@ -582,11 +582,8 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTar
             }
         }
 
-        for (;;) {
-            const char *arg = opt.ConsumeNonOption();
-            if (!arg)
-                break;
-
+        const char *arg;
+        while ((arg = opt.ConsumeNonOption())) {
             RgbColor color;
             if (!ParseColor(arg, &color))
                 return 1;

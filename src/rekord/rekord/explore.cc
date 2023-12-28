@@ -88,6 +88,8 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     if (!config.Complete(true))
@@ -500,6 +502,7 @@ Available output formats: %!..+%3%!0)",
         }
 
         name = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     return !ExportTree("Tree", &config, settings, format, verbose, name);
@@ -567,6 +570,7 @@ Available output formats: %!..+%3%!0)",
         }
 
         name = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
     }
 
     settings.max_depth = 0;
