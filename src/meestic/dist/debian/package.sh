@@ -1,54 +1,32 @@
 #!/bin/sh -e
 
+PKG_NAME=meestic
+PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
+PKG_DESCRIPTION="CLI and GUI tools to control the keyboard lighting on MSI Delta 15 laptops"
+PKG_DEPENDENCIES="libudev1"
+
+SCRIPT_PATH=src/meestic/dist/debian/package.sh
+VERSION_TARGET=meestic
+DOCKER_IMAGE=debian10
+
+build() {
+    apt install libudev-dev
+
+    ./bootstrap.sh --no_user
+    ./felix -pFast --no_user -O "${BUILD_DIR}" meestic MeesticTray
+}
+
+package() {
+    install -D -m0755 ${BUILD_DIR}/meestic ${ROOT_DIR}/usr/bin/meestic
+    install -D -m0755 ${BUILD_DIR}/MeesticTray ${ROOT_DIR}/usr/bin/MeesticTray
+
+    install -D -m0644 src/meestic/MeesticTray.ini ${ROOT_DIR}/etc/meestic.ini
+    install -D -m0644 src/meestic/dist/debian/MeesticTray.desktop ${ROOT_DIR}/usr/share/applications/MeesticTray.desktop
+    install -D -m0644 src/meestic/dist/debian/MeesticTray.desktop ${ROOT_DIR}/etc/xdg/autostart/MeesticTray.desktop
+    install -D -m0644 src/meestic/images/meestic.png ${ROOT_DIR}/usr/share/icons/hicolor/512x512/apps/MeesticTray.png
+
+    install -D -m0644 src/meestic/dist/debian/meestic.service ${DEBIAN_DIR}/meestic.service
+}
+
 cd "$(dirname $0)/../../../.."
-
-./bootstrap.sh
-./felix -pDebug meestic
-
-VERSION=$(bin/Debug/meestic --version | awk -F'[ _]' '/^meestic/ {print $2}')
-DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
-PACKAGE_DIR=bin/Packages/meestic/debian
-
-rm -rf $PACKAGE_DIR/pkg
-mkdir -p $PACKAGE_DIR $PACKAGE_DIR/pkg $PACKAGE_DIR/pkg/debian
-
-docker build -t rygel/debian10 deploy/docker/debian10
-docker run -t -i --rm -v $(pwd):/io rygel/debian10 /io/src/meestic/dist/debian/build.sh
-
-install -D -m0755 bin/Packages/meestic/debian/bin/meestic $PACKAGE_DIR/pkg/meestic
-install -D -m0755 bin/Packages/meestic/debian/bin/MeesticTray $PACKAGE_DIR/pkg/MeesticTray
-install -D -m0644 src/meestic/MeesticTray.ini $PACKAGE_DIR/pkg/meestic.ini
-install -D -m0644 src/meestic/dist/debian/MeesticTray.desktop $PACKAGE_DIR/pkg/MeesticTray.desktop
-install -D -m0644 src/meestic/images/meestic.png $PACKAGE_DIR/pkg/MeesticTray.png
-
-install -D -m0644 src/meestic/dist/debian/meestic.service $PACKAGE_DIR/pkg/debian/meestic.service
-install -D -m0755 src/meestic/dist/debian/rules $PACKAGE_DIR/pkg/debian/rules
-install -D -m0644 src/meestic/dist/debian/compat $PACKAGE_DIR/pkg/debian/compat
-install -D -m0644 src/meestic/dist/debian/install $PACKAGE_DIR/pkg/debian/install
-install -D -m0644 src/meestic/dist/debian/format $PACKAGE_DIR/pkg/debian/source/format
-
-echo "\
-Source: meestic
-Section: utils
-Priority: optional
-Maintainer: Niels Martignène <niels.martignene@protonmail.com>
-Standards-Version: 4.5.1
-Rules-Requires-Root: no
-
-Package: meestic
-Architecture: any
-Depends: libudev1
-Description: CLI and GUI tools to control the keyboard lighting on MSI Delta 15 laptops
-" > $PACKAGE_DIR/pkg/debian/control
-echo "\
-meestic ($VERSION) unstable; urgency=low
-
-  * Current release.
-
- -- Niels Martignène <niels.martignene@protonmail.com>  $DATE
-" > $PACKAGE_DIR/pkg/debian/changelog
-
-(cd $PACKAGE_DIR/pkg && dpkg-buildpackage -uc -us)
-cp $PACKAGE_DIR/*.deb $PACKAGE_DIR/../
-
-./bootstrap.sh
+. deploy/debian/package/package.sh

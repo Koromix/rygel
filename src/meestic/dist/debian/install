@@ -1,6 +1,0 @@
-meestic usr/bin
-MeesticTray usr/bin
-meestic.ini etc
-MeesticTray.desktop usr/share/applications
-MeesticTray.desktop etc/xdg/autostart
-MeesticTray.png usr/share/icons/hicolor/512x512/apps
