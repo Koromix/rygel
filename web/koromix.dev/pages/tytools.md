@@ -155,10 +155,8 @@ Only 64-bit builds are supported, 32-bit builds are not supported anymore.
 
 If **you don't have Qt, only the libraries and command-line tools** will be compiled. There are two options to enable Qt in TyTools:
 
-- _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for your compiler with the official Qt installer. The binaries need the Qt DLLs to work.
-- _static Qt build_: Harder, but will produce autonomous binaries.
-
-Follow the [Qt instructions in the felix README](https://github.com/Koromix/rygel/tree/master/src/felix/README.md#building-qt-apps) to proceed.
+- _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for your compiler with the [official Qt installer](https://www.qt.io/download-open-source). The binaries need the Qt DLLs to work.
+- _static Qt build_: Harder, but will produce autonomous binaries. Follow the [Qt instructions in the felix README](https://github.com/Koromix/rygel/tree/master/src/felix/README.md#building-qt-apps) to proceed.
 
 Once Qt is ready, launch _VS2019 x64 Native Tools Command Prompt_, navigate to the project directory and run the following commands:
 
@@ -177,10 +175,8 @@ Install Xcode and the developer command-line tools. The native Clang compiler ca
 
 If **you don't have Qt, only the libraries and command-line tools** will be compiled. There are two options to enable Qt in TyTools:
 
-- _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for your compiler with the official Qt installer. The binaries need the Qt DLLs to work.
-- _static Qt build_: Harder, but will produce autonomous binaries.
-
-Follow the [Qt instructions in the felix README](https://github.com/Koromix/rygel/tree/master/src/felix/README.md#building-qt-apps) to proceed.
+- _dynamic Qt build_: Easiest option, you only need to install the pre-built Qt DLLs for your compiler with the [official Qt installer](https://www.qt.io/download-open-source). The binaries need the Qt DLLs to work.
+- _static Qt build_: Harder, but will produce autonomous binaries. Follow the [Qt instructions in the felix README](https://github.com/Koromix/rygel/tree/master/src/felix/README.md#building-qt-apps) to proceed.
 
 Once Qt is ready, you can build TyTools by executing the following commands in the project directory:
 
@@ -223,8 +219,3 @@ Open the project directory in a terminal and execute:
 ```
 
 If you want to build debug binaries instead, just use `./felix <target>`.
-
-# License
-
-All the code related to these programs is under **public domain**, you can do whatever you want
-with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) more more information.
