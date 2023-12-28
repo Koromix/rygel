@@ -664,6 +664,25 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
+    // Find and check target used with --run
+    const TargetInfo *run_target = nullptr;
+    if (run_target_name) {
+        if (host_spec.platform != NativePlatform) {
+            LogError("Cannot use --run when cross-compiling");
+            return 1;
+        }
+
+        run_target = target_set.targets_map.FindValue(run_target_name, nullptr);
+
+        if (!run_target) {
+            LogError("Run target '%1' does not exist", run_target_name);
+            return 1;
+        } else if (run_target->type != TargetType::Executable) {
+            LogError("Cannot run non-executable target '%1'", run_target->name);
+            return 1;
+        }
+    }
+
     LogInfo("Computing versions...");
     if (GitVersioneer::IsAvailable()) {
         GitVersioneer versioneer;
@@ -683,25 +702,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     } else {
         LogWarning("Built without git versioning support");
-    }
-
-    // Find and check target used with --run
-    const TargetInfo *run_target = nullptr;
-    if (run_target_name) {
-        if (host_spec.platform != NativePlatform) {
-            LogError("Cannot use --run when cross-compiling");
-            return 1;
-        }
-
-        run_target = target_set.targets_map.FindValue(run_target_name, nullptr);
-
-        if (!run_target) {
-            LogError("Run target '%1' does not exist", run_target_name);
-            return 1;
-        } else if (run_target->type != TargetType::Executable) {
-            LogError("Cannot run non-executable target '%1'", run_target->name);
-            return 1;
-        }
     }
 
     // We're ready to output stuff
