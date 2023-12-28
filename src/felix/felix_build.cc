@@ -292,7 +292,7 @@ int RunBuild(Span<const char *> arguments)
     BuildSettings build = {};
     uint32_t maybe_features = 0;
     int jobs = std::min(GetCoreCount() + 1, RG_ASYNC_MAX_THREADS);
-    bool quiet = false;
+    int quiet = 0;
     bool verbose = false;
     const char *run_target_name = nullptr;
     Span<const char *> run_arguments = {};
@@ -330,7 +330,7 @@ Options:
     %!..+-s, --stop_after_error%!0       Continue build after errors
         %!..+--rebuild%!0                Force rebuild all files
 
-    %!..+-q, --quiet%!0                  Hide felix progress statements
+    %!..+-q, --quiet%!0                  Reduce felix verbosity (use -qq for silence)
     %!..+-v, --verbose%!0                Show detailed build commands
     %!..+-n, --dry_run%!0                Fake command execution
 
@@ -538,7 +538,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("--rebuild")) {
                 build.rebuild = true;
             } else if (opt.Test("-q", "--quiet")) {
-                quiet = true;
+                quiet++;
             } else if (opt.Test("-v", "--verbose")) {
                 verbose = true;
             } else if (opt.Test("-n", "--dry_run")) {
@@ -562,7 +562,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
-    if (quiet) {
+    if (quiet >= 2) {
         SetLogHandler([](LogLevel level, const char *ctx, const char *msg) {
             if (level != LogLevel::Info) {
                 DefaultLogHandler(level, ctx, msg);
@@ -587,7 +587,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Load configuration file
-    LogInfo("Loading targets...");
+    if (!quiet) {
+        LogInfo("Loading targets...");
+    }
     TargetSet target_set;
     if (!LoadTargetSet(config_filename, host_spec.platform, host_spec.architecture, &target_set))
         return 1;
@@ -683,7 +685,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
-    LogInfo("Computing versions...");
+    if (!quiet) {
+        LogInfo("Computing versions...");
+    }
     if (GitVersioneer::IsAvailable()) {
         GitVersioneer versioneer;
 
@@ -705,15 +709,17 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // We're ready to output stuff
-    LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
-    LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
-    LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)host_spec.platform]);
-    LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
-    LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
+    if (!quiet) {
+        LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
+        LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
+        LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)host_spec.platform]);
+        LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
+        LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
+    }
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
         return 1;
 
-    // Build stuff!
+    // Prepare build
     Builder builder(build);
     for (const EnabledTarget &it: enabled_targets) {
         if (!builder.AddTarget(*it.target, it.version))
@@ -723,6 +729,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         if (!builder.AddSource(*src))
             return 1;
     }
+
+    // Build stuff!
     if (!builder.Build(jobs, verbose))
         return 1;
 
