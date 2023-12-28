@@ -11,7 +11,7 @@ BUILD=../../bin/$PRESET
 BINARY=../../felix
 
 if command -v $BINARY >/dev/null 2>&1; then
-    $BINARY -p$PRESET felix $* && ln -sf bin/$PRESET/felix $BINARY && exit
+    $BINARY -p$PRESET felix $* && $BUILD/felix -q -p$PRESET felix $* && ln -sf bin/$PRESET/felix $BINARY && exit
     rm -f $BINARY
 fi
 

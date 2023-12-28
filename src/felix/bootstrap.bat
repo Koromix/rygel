@@ -11,7 +11,8 @@ set BUILD=..\..\bin\Fast
 set BINARY=..\..\felix.exe
 
 if EXIST %BINARY% (
-    %BINARY% -pFast felix && copy %BUILD%\felix.exe %BINARY% && exit /B
+    %BINARY% -pFast felix && copy %BUILD%\felix.exe %BINARY% && ^
+        %BINARY% -q -pFast felix && copy %BUILD%\felix.exe %BINARY% && exit /B
     if EXIST %BINARY% del %BINARY%
 )
 
