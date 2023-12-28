@@ -12,10 +12,8 @@ DOCKER_IMAGE=debian11
 build() {
     ./bootstrap.sh
     ./felix -pFast rekord
-}
 
-package() {
-    install -D -m0755 ${BUILD_DIR}/bin/Fast/rekord ${ROOT_DIR}/usr/bin/rekord
+    install -D -m0755 bin/Fast/rekord ${ROOT_DIR}/usr/bin/rekord
 }
 
 cd "$(dirname $0)/../../../.."

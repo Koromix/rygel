@@ -1,31 +1,22 @@
 PKG_DIR=bin/Packages
 DEST_DIR=${PKG_DIR}/${PKG_NAME}/debian
-BUILD_DIR=${DEST_DIR}/build
 DEBIAN_DIR=${DEST_DIR}/pkg/debian
 ROOT_DIR=${DEST_DIR}/pkg/root
 CLIENT_DIR=${DEST_DIR}/client
 
 if [ "$1" = "" -o "$1" = "package" ]; then
     ./bootstrap.sh
-    ./felix -pDebug ${VERSION_TARGET}
 
-    VERSION=$(bin/Debug/${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}" | sed 's/-/./')
+    VERSION=$(./felix --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}" | sed 's/-/./')
     DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 
     sudo rm -rf ${DEST_DIR}
     mkdir -p ${DEBIAN_DIR} ${ROOT_DIR}
     mkdir -p ${CLIENT_DIR}/upper
 
-    docker build -t rygel/${DOCKER_IMAGE} deploy/docker/${DOCKER_IMAGE}
-    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
-    mv ${CLIENT_DIR}/upper ${BUILD_DIR}
-
-    package
-
     install -D -m0755 deploy/debian/package/rules ${DEBIAN_DIR}/rules
     install -D -m0644 deploy/debian/package/compat ${DEBIAN_DIR}/compat
     install -D -m0644 deploy/debian/package/format ${DEBIAN_DIR}/source/format
-    (cd ${ROOT_DIR} && find -type f -printf "%h/%f %h\n" | awk -F ' ' '{print "root/" substr($1, 3) " " substr($2, 3)}') | sort > ${DEBIAN_DIR}/install
 
     echo "\
 Source: ${PKG_NAME}
@@ -49,8 +40,10 @@ ${PKG_NAME} ($VERSION) unstable; urgency=low
  -- ${PKG_AUTHOR}  $DATE
 " > ${DEBIAN_DIR}/changelog
 
-    (cd ${DEBIAN_DIR}/.. && dpkg-buildpackage -uc -us)
-    cp ${DEBIAN_DIR}/../../${PKG_NAME}_*.deb ${PKG_DIR}/
+    docker build -t rygel/${DOCKER_IMAGE} deploy/docker/${DOCKER_IMAGE}
+    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
+
+    cp ${CLIENT_DIR}/upper/${DEST_DIR}/${PKG_NAME}_*.deb ${PKG_DIR}/
 elif [ "$1" = "build" ]; then
     # Fix git error about dubious repository ownership
     git config --global safe.directory '*'
@@ -59,8 +52,13 @@ elif [ "$1" = "build" ]; then
     mount -t overlay overlay -o lowerdir=/io/host,upperdir=/io/client/upper,workdir=/io/client/work /repo
     rm -f /repo/FelixBuild.ini.user
 
-    (cd /repo && build)
+    cd /repo
+    build
 
+    (cd ${ROOT_DIR} && find -type f -printf "%h/%f %h\n" | awk -F ' ' '{print "root/" substr($1, 3) " " substr($2, 3)}') | sort > ${DEBIAN_DIR}/install
+    (cd ${DEBIAN_DIR}/.. && dpkg-buildpackage -uc -us)
+
+    cd /
     umount /repo
     rm -rf /io/client/work
 else

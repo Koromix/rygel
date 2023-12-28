@@ -12,10 +12,8 @@ DOCKER_IMAGE=debian10
 build() {
     ./bootstrap.sh
     ./felix -pFast felix
-}
 
-package() {
-    install -D -m0755 ${BUILD_DIR}/bin/Fast/felix ${ROOT_DIR}/usr/bin/felix
+    install -D -m0755 bin/Fast/felix ${ROOT_DIR}/usr/bin/felix
 }
 
 cd "$(dirname $0)/../../../.."

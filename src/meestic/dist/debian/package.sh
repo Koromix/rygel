@@ -14,11 +14,9 @@ build() {
 
     ./bootstrap.sh
     ./felix -pFast meestic MeesticTray
-}
 
-package() {
-    install -D -m0755 ${BUILD_DIR}/bin/Fast/meestic ${ROOT_DIR}/usr/bin/meestic
-    install -D -m0755 ${BUILD_DIR}/bin/Fast/MeesticTray ${ROOT_DIR}/usr/bin/MeesticTray
+    install -D -m0755 bin/Fast/meestic ${ROOT_DIR}/usr/bin/meestic
+    install -D -m0755 bin/Fast/MeesticTray ${ROOT_DIR}/usr/bin/MeesticTray
 
     install -D -m0644 src/meestic/MeesticTray.ini ${ROOT_DIR}/etc/meestic.ini
     install -D -m0644 src/meestic/dist/debian/MeesticTray.desktop ${ROOT_DIR}/usr/share/applications/MeesticTray.desktop
