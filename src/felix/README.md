@@ -75,7 +75,7 @@ wget https://ftp.nluug.nl/languages/qt/archive/qt/6.5/6.5.2/submodules/qtbase-ev
 tar xvf qtbase-everywhere-src-6.5.2.tar.xz
 cd qtbase-everywhere-src-6.5.2
 
-./configure -release -static -confirm-license -prefix $HOME/Qt/Static/6.5.2 \
+./configure -release -static -opensource -prefix $HOME/Qt/Static/6.5.2 \
             -no-icu -no-cups -qt-pcre -qt-zlib -qt-libpng -qt-libjpeg -xcb -fontconfig
 cmake --build . --parallel
 cmake --install .
@@ -98,7 +98,7 @@ wget https://ftp.nluug.nl/languages/qt/archive/qt/6.5/6.5.2/submodules/qtbase-ev
 tar xvf qtbase-everywhere-src-6.5.2.tar.xz
 cd qtbase-everywhere-src-6.5.2
 
-./configure -release -static -opensource -confirm-license -prefix $HOME/Qt/Static/6.5.2 \
+./configure -release -static -opensource -prefix $HOME/Qt/Static/6.5.2 \
             -no-cups -no-freetype -qt-pcre -no-icu -no-harfbuzz -no-pkg-config
 cmake --build . --parallel
 cmake --install .
@@ -122,9 +122,9 @@ Extract it, open a command prompt and execute the following commands:
 ```sh
 cd qtbase-everywhere-src-6.5.2
 
-configure -release -static -platform win32-msvc -opensource -confirm-license -prefix C:/Qt/Static/6.5.2 ^
-          -static-runtime -no-opengl -no-harfbuzz -no-icu -no-cups -qt-pcre -qt-zlib -qt-freetype ^
-          -qt-libpng -qt-libjpeg
+configure -release -static -opensource -platform win32-msvc -prefix C:/Qt/Static/6.5.2 ^
+          -static-runtime -no-opengl -no-harfbuzz -no-icu -no-cups -qt-pcre -qt-zlib ^
+          -qt-freetype -qt-libpng -qt-libjpeg
 
 cmake --build . --parallel
 cmake --install .
