@@ -1,5 +1,3 @@
-#!/bin/sh -e
-
 PKG_DIR=bin/Packages
 DEST_DIR=${PKG_DIR}/${PKG_NAME}/debian
 BUILD_DIR=${DEST_DIR}/build
