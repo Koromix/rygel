@@ -11,7 +11,7 @@ if [ "$1" = "" -o "$1" = "package" ]; then
     ./bootstrap.sh
     ./felix -pDebug ${VERSION_TARGET}
 
-    VERSION=$(bin/Debug/${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
+    VERSION=$(bin/Debug/${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}" | sed 's/-/./')
     DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 
     sudo rm -rf ${DEST_DIR}
