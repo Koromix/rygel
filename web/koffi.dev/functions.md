@@ -9,7 +9,7 @@ To declare functions, start by loading the shared library with `koffi.load(filen
 const koffi = require('koffi');
 
 const lib = koffi.load('/path/to/shared/library'); // File extension depends on platforms: .so, .dll, .dylib, etc.
-````
+```
 
 This library will be automatically unloaded once all references to it are gone (including all the functions that use it, as described below).
 

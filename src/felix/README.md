@@ -63,7 +63,7 @@ If it does not, set the environment variable QMAKE_PATH to point to the `qmake` 
 ```sh
 export QMAKE_PATH=/path/to/qmake
 felix QtApp
-````
+```
 
 ## Static Qt on Linux
 
