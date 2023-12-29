@@ -350,13 +350,13 @@ See the example below:
 const koffi = require('koffi');
 
 // Those two structs are exactly the same, only the array conversion hint is different
-const Foo1 = koffi.struct('Foo', {
+const Foo1 = koffi.struct('Foo1', {
     i: 'int',
-    a16: koffi.array('int16_t', 8)
+    a16: koffi.array('int16_t', 2)
 });
-const Foo2 = koffi.struct('Foo', {
+const Foo2 = koffi.struct('Foo2', {
     i: 'int',
-    a16: koffi.array('int16_t', 8, 'Array')
+    a16: koffi.array('int16_t', 2, 'Array')
 });
 
 // Uses an hypothetical C function that just returns the struct passed as a parameter
