@@ -14,7 +14,7 @@
    <string>TyUploader</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../resources/resources.qrc">
+   <iconset resource="../assets/resources.qrc">
     <normaloff>:/tyuploader</normaloff>:/tyuploader</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -49,7 +49,7 @@
          <string>Upload</string>
         </property>
         <property name="icon">
-         <iconset resource="../../resources/resources.qrc">
+         <iconset resource="../assets/resources.qrc">
           <normaloff>:/upload</normaloff>:/upload</iconset>
         </property>
         <property name="iconSize">
@@ -81,7 +81,7 @@
          <string>Reset</string>
         </property>
         <property name="icon">
-         <iconset resource="../../resources/resources.qrc">
+         <iconset resource="../assets/resources.qrc">
           <normaloff>:/reset</normaloff>:/reset</iconset>
         </property>
         <property name="iconSize">
@@ -305,7 +305,7 @@
   </action>
  </widget>
  <resources>
-  <include location="../../resources/resources.qrc"/>
+  <include location="../assets/resources.qrc"/>
  </resources>
  <connections/>
 </ui>

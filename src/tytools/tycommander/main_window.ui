@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>591</width>
-    <height>562</height>
+    <height>589</height>
    </rect>
   </property>
   <property name="contextMenuPolicy">
@@ -17,7 +17,7 @@
    <string>TyCommander</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../resources/resources.qrc">
+   <iconset resource="../assets/resources.qrc">
     <normaloff>:/tycommander</normaloff>:/tycommander</iconset>
   </property>
   <property name="unifiedTitleAndToolBarOnMac">
@@ -912,7 +912,7 @@
   </widget>
   <action name="actionUpload">
    <property name="icon">
-    <iconset resource="../../resources/resources.qrc">
+    <iconset resource="../assets/resources.qrc">
      <normaloff>:/upload</normaloff>:/upload</iconset>
    </property>
    <property name="text">
@@ -924,7 +924,7 @@
   </action>
   <action name="actionReset">
    <property name="icon">
-    <iconset resource="../../resources/resources.qrc">
+    <iconset resource="../assets/resources.qrc">
      <normaloff>:/reset</normaloff>:/reset</iconset>
    </property>
    <property name="text">
@@ -949,7 +949,7 @@
   </action>
   <action name="actionReboot">
    <property name="icon">
-    <iconset resource="../../resources/resources.qrc">
+    <iconset resource="../assets/resources.qrc">
      <normaloff>:/reboot</normaloff>:/reboot</iconset>
    </property>
    <property name="text">
@@ -1020,7 +1020,7 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset resource="../../resources/resources.qrc">
+    <iconset resource="../assets/resources.qrc">
      <normaloff>:/monitor</normaloff>:/monitor</iconset>
    </property>
    <property name="text">
@@ -1126,8 +1126,8 @@
   <tabstop>serialLogSizeSpin</tabstop>
  </tabstops>
  <resources>
-  <include location="../../resources/resources.qrc"/>
-  <include location="../../resources/resources.qrc"/>
+  <include location="../assets/resources.qrc"/>
+  <include location="../assets/resources.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowIcon">
-   <iconset resource="../../resources/resources.qrc">
+   <iconset resource="../assets/resources.qrc">
     <normaloff>:/tycommander</normaloff>:/tycommander</iconset>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
@@ -57,7 +57,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../resources/resources.qrc"/>
+  <include location="../assets/resources.qrc"/>
  </resources>
  <connections/>
 </ui>
