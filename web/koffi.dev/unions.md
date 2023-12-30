@@ -49,8 +49,8 @@ const U = koffi.union('U', { i: 'int', str: 'char *' });
 
 const DoSomething = lib.func('void DoSomething(const char *type, U u)');
 
-DoSomething('int', { .i = 42 });
-DoSomething('string', { .str = 'Hello!' });
+DoSomething('int', { i: 42 });
+DoSomething('string', { str: 'Hello!' });
 ```
 
 ### Win32 example
