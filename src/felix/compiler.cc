@@ -136,6 +136,12 @@ static bool DetectCcache() {
     return detected;
 }
 
+static bool DetectDistCC() {
+    static bool detected = FindExecutableInPath("distcc") &&
+                           (getenv("DISTCC_HOSTS") || getenv("DISTCC_POTENTIAL_HOSTS"));
+    return detected;
+}
+
 class ClangCompiler final: public Compiler {
     const char *cc;
     const char *cxx;
@@ -230,6 +236,9 @@ public:
         supported |= (int)CompileFeature::OptimizeSize;
         if (DetectCcache()) {
             supported |= (int)CompileFeature::Ccache;
+        }
+        if (DetectDistCC()) {
+            supported |= (int)CompileFeature::DistCC;
         }
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
@@ -353,12 +362,24 @@ public:
         if (features & (int)CompileFeature::Ccache) {
             Fmt(&buf, "ccache ");
 
-            static const ExecuteInfo::KeyValue variables[] = {
-                { "CCACHE_DEPEND", "1" },
-                { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" }
-            };
+            if (dest_filename && (features & (int)CompileFeature::DistCC)) {
+                static const ExecuteInfo::KeyValue variables[] = {
+                    { "CCACHE_DEPEND", "1" },
+                    { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" },
+                    { "CCACHE_PREFIX", "distcc" }
+                };
 
-            out_cmd->env_variables = variables;
+                out_cmd->env_variables = variables;
+            } else {
+                static const ExecuteInfo::KeyValue variables[] = {
+                    { "CCACHE_DEPEND", "1" },
+                    { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" }
+                };
+
+                out_cmd->env_variables = variables;
+            }
+        } else if (dest_filename && (features & (int)CompileFeature::DistCC)) {
+            Fmt(&buf, "distcc ");
         }
 
         // Compiler
@@ -769,6 +790,9 @@ public:
         if (DetectCcache()) {
             supported |= (int)CompileFeature::Ccache;
         }
+        if (DetectDistCC()) {
+            supported |= (int)CompileFeature::DistCC;
+        }
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
@@ -883,12 +907,24 @@ public:
         if (features & (int)CompileFeature::Ccache) {
             Fmt(&buf, "ccache ");
 
-            static const ExecuteInfo::KeyValue variables[] = {
-                { "CCACHE_DEPEND", "1" },
-                { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" }
-            };
+            if (dest_filename && (features & (int)CompileFeature::DistCC)) {
+                static const ExecuteInfo::KeyValue variables[] = {
+                    { "CCACHE_DEPEND", "1" },
+                    { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" },
+                    { "CCACHE_PREFIX", "distcc" }
+                };
 
-            out_cmd->env_variables = variables;
+                out_cmd->env_variables = variables;
+            } else {
+                static const ExecuteInfo::KeyValue variables[] = {
+                    { "CCACHE_DEPEND", "1" },
+                    { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" }
+                };
+
+                out_cmd->env_variables = variables;
+            }
+        } else if (dest_filename && (features & (int)CompileFeature::DistCC)) {
+            Fmt(&buf, "distcc ");
         }
 
         // Compiler
