@@ -5,7 +5,7 @@ Meestic is a small utility made to control **the lights of MSI Delta 15 laptop k
 <p style="text-align: center;">
     <img src="{{ ASSET static/meestic/kde.webp }}" width="266" height="169" alt="KDE screenshot" />
     <img src="{{ ASSET static/meestic/windows.webp }}" width="266" height="169" alt="Windows screenshot" />
-</div>
+</p>
 
 You can use the command-line or the GUI version.
 
