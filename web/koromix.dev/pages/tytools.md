@@ -25,9 +25,9 @@ Download ready-to-use binaries from the release section of the [dedicated reposi
 
 Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
 
-## Linux
+## Linux (Debian)
 
-A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
+A signed Debian repository is provided, and should work with Ubuntu 22.04+.
 
 Execute the following commands (as root) to add the repository to your system:
 
@@ -45,6 +45,31 @@ apt install tytools
 ```
 
 For other distributions, you can [build the code from source](#hacking-tytools) as documented below.
+
+## Linux (RPM)
+
+A signed RPM repository is provided, and should work with Fedora 38+.
+
+Execute the following commands (as root) to add the repository to your system:
+
+```sh
+curl https://download.koromix.dev/rpm/koromix-repo.asc -o /etc/pki/rpm-gpg/koromix-repo.asc
+
+echo "[koromix]
+name=koromix repository
+baseurl=https://download.koromix.dev/rpm
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/koromix-repo.asc" > /etc/yum.repos.d/koromix.repo
+```
+
+Once this is done, install the package with this command:
+
+```sh
+dnf install tytools
+```
+
+For other distributions, you can [build the code from source](#build-from-source) as documented below.
 
 # Using tycmd
 

@@ -20,7 +20,7 @@ Ready-to-use Windows binaries will be provided once the software stabilizes. In 
 
 Ready-to-use macOS binaries will be provided once the software stabilizes. In the meantime, you can build it yourself or [try it on Debian](#linux).
 
-## Linux
+## Linux (Debian)
 
 A signed Debian repository is provided, and should work with Debian 11 and Debian derivatives (such as Ubuntu).
 
@@ -37,6 +37,31 @@ Once this is done, refresh the repository cache and install the package:
 ```sh
 apt update
 apt install rekord
+```
+
+For other distributions, you can [build the code from source](#build-from-source) as documented below.
+
+## Linux (RPM)
+
+A signed RPM repository is provided, and should work with RHEL and Fedora.
+
+Execute the following commands (as root) to add the repository to your system:
+
+```sh
+curl https://download.koromix.dev/rpm/koromix-repo.asc -o /etc/pki/rpm-gpg/koromix-repo.asc
+
+echo "[koromix]
+name=koromix repository
+baseurl=https://download.koromix.dev/rpm
+enabled=1
+gpgcheck=1
+gpgkey=file:///etc/pki/rpm-gpg/koromix-repo.asc" > /etc/yum.repos.d/koromix.repo
+```
+
+Once this is done, install the package with this command:
+
+```sh
+dnf install rekord
 ```
 
 For other distributions, you can [build the code from source](#build-from-source) as documented below.
