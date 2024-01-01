@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+# Dependencies: gpg and apt-utils
+
 if [ $# -lt 2 ]; then
     echo 1>&2 "Usage: $0 <name> <GPG user> [directory]"
     exit 1
