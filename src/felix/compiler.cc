@@ -235,8 +235,6 @@ public:
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
-        supported |= (int)CompileFeature::StaticLink;
-        supported |= (int)CompileFeature::LinkLibrary;
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::UBSan;
         supported |= (int)CompileFeature::LTO;
@@ -251,8 +249,9 @@ public:
         if (platform == HostPlatform::Linux) {
             supported |= (int)CompileFeature::SafeStack;
         }
+        supported |= (int)CompileFeature::StaticRuntime;
+        supported |= (int)CompileFeature::LinkLibrary;
         if (platform == HostPlatform::Windows) {
-            supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
         }
         supported |= (int)CompileFeature::AESNI;
@@ -455,12 +454,12 @@ public:
             Fmt(&buf, " -g");
         }
         if (platform == HostPlatform::Windows) {
-            if (features & (int)CompileFeature::DynamicRuntime) {
-                Fmt(&buf, " -D_DLL");
-            } else {
+            if (features & (int)CompileFeature::StaticRuntime) {
                 if (src_type == SourceType::Cxx) {
                     Fmt(&buf, " -Xclang -flto-visibility-public-std -D_SILENCE_CLANG_CONCEPTS_MESSAGE");
                 }
+            } else {
+                Fmt(&buf, " -D_DLL");
             }
         }
         if (features & (int)CompileFeature::ASan) {
@@ -566,7 +565,7 @@ public:
         // Linker
         switch (link_type) {
             case TargetType::Executable: {
-                bool link_static = features & (int)CompileFeature::StaticLink;
+                bool link_static = (features & (int)CompileFeature::StaticRuntime);
                 Fmt(&buf, "\"%1\"%2", cxx, link_static ? " -static" : "");
             } break;
             case TargetType::Library: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
@@ -629,10 +628,10 @@ public:
 
                 Fmt(&buf, " -Wl,/NODEFAULTLIB:libcmt -Wl,/NODEFAULTLIB:msvcrt -Wl,setargv.obj -Wl,oldnames.lib");
 
-                if (features & (int)CompileFeature::DynamicRuntime) {
-                    Fmt(&buf, " -Wl,msvcrt%1.lib", suffix);
-                } else {
+                if (features & (int)CompileFeature::StaticRuntime) {
                     Fmt(&buf, " -Wl,libcmt%1.lib", suffix);
+                } else {
+                    Fmt(&buf, " -Wl,msvcrt%1.lib", suffix);
                 }
 
                 if (features & (int)CompileFeature::DebugInfo) {
@@ -666,7 +665,7 @@ public:
         }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
-            if (platform == HostPlatform::Windows && (features & (int)CompileFeature::DynamicRuntime)) {
+            if (platform == HostPlatform::Windows && !(features & (int)CompileFeature::StaticRuntime)) {
                 Fmt(&buf, " -shared-libasan");
             }
         }
@@ -773,8 +772,6 @@ public:
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
-        supported |= (int)CompileFeature::StaticLink;
-        supported |= (int)CompileFeature::LinkLibrary;
         if (platform != HostPlatform::Windows) {
             // Sometimes it works, somestimes not and the object files are
             // corrupt... just avoid PCH on MinGW
@@ -786,8 +783,9 @@ public:
         }
         supported |= (int)CompileFeature::ZeroInit;
         supported |= (int)CompileFeature::CFI;
+        supported |= (int)CompileFeature::StaticRuntime;
+        supported |= (int)CompileFeature::LinkLibrary;
         if (platform == HostPlatform::Windows) {
-            supported |= (int)CompileFeature::DynamicRuntime;
             supported |= (int)CompileFeature::NoConsole;
         }
         supported |= (int)CompileFeature::AESNI;
@@ -1070,7 +1068,7 @@ public:
         // Linker
         switch (link_type) {
             case TargetType::Executable: {
-                bool static_link = features & (int)CompileFeature::StaticLink;
+                bool static_link = (features & (int)CompileFeature::StaticRuntime);
                 Fmt(&buf, "\"%1\"%2", cxx, static_link ? " -static" : "");
             } break;
             case TargetType::Library: { Fmt(&buf, "\"%1\" -shared", cxx); } break;
@@ -1134,7 +1132,7 @@ public:
                 }
 
                 Fmt(&buf, " -static-libgcc -static-libstdc++");
-                if (!(features & (int)CompileFeature::StaticLink)) {
+                if (!(features & (int)CompileFeature::StaticRuntime)) {
                     Fmt(&buf, " -Wl,-Bstatic -lstdc++ -lpthread -lssp -Wl,-Bdynamic");
                 }
             } break;
@@ -1237,15 +1235,12 @@ public:
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
-        supported |= (int)CompileFeature::StaticLink;
-        supported |= (int)CompileFeature::LinkLibrary;
         supported |= (int)CompileFeature::ASan;
         supported |= (int)CompileFeature::LTO;
         supported |= (int)CompileFeature::CFI;
-        if (platform == HostPlatform::Windows) {
-            supported |= (int)CompileFeature::DynamicRuntime;
-            supported |= (int)CompileFeature::NoConsole;
-        }
+        supported |= (int)CompileFeature::LinkLibrary;
+        supported |= (int)CompileFeature::StaticRuntime;
+        supported |= (int)CompileFeature::NoConsole;
         supported |= (int)CompileFeature::AESNI;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
@@ -1373,10 +1368,10 @@ public:
         if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " /Z7 /Zo");
         }
-        if (features & (int)CompileFeature::DynamicRuntime) {
-            Fmt(&buf, " /MD");
-        } else {
+        if (features & (int)CompileFeature::StaticRuntime) {
             Fmt(&buf, " /MT");
+        } else {
+            Fmt(&buf, " /MD");
         }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " /fsanitize=address");
@@ -1581,7 +1576,6 @@ public:
         supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
-        supported |= (int)CompileFeature::LinkLibrary;
         supported |= (int)CompileFeature::LTO;
 
         uint32_t unsupported = features & ~supported;
@@ -1934,7 +1928,6 @@ public:
         supported |= (int)CompileFeature::OptimizeSize;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
-        supported |= (int)CompileFeature::LinkLibrary;
 
         uint32_t unsupported = features & ~supported;
         if (unsupported) {
@@ -2097,7 +2090,7 @@ public:
         // Linker
         switch (link_type) {
             case TargetType::Executable: { Fmt(&buf, "\"%1\"", cxx); } break;
-            case TargetType::Library: { Fmt(&buf, "\"%1\"", cxx); } break;
+            case TargetType::Library: { RG_UNREACHABLE(); } break;
         }
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;

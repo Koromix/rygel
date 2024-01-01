@@ -391,7 +391,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     }
 
     // Version string
-    if (link) {
+    if (target.type == TargetType::Executable) {
         const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
