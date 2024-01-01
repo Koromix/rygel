@@ -20,3 +20,4 @@ gpg --local-user "$GPG_USER" --export --armour >"$REPO_NAME-repo.asc"
 find *.rpm -exec rpmsign --addsign {} --define='%_gpgbin /usr/bin/gpg' --define='%__gpg /usr/bin/gpg' --key-id "$GPG_USER" \;
 
 createrepo_c .
+gpg --local-user "$GPG_USER" --detach-sign --armor repodata/repomd.xml
