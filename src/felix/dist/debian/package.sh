@@ -4,6 +4,7 @@ PKG_NAME=felix
 PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="Small build system made specifically for this repository"
 PKG_DEPENDENCIES=""
+PKG_LICENSE=AGPL-3.0-or-later
 
 SCRIPT_PATH=src/felix/dist/debian/package.sh
 VERSION_TARGET=felix

@@ -4,6 +4,7 @@ PKG_NAME=tytools
 PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="GUI and command-line tools to manage Teensy devices"
 PKG_DEPENDENCIES="libqt6core6, libudev1"
+PKG_LICENSE=Unlicense
 
 SCRIPT_PATH=src/tytools/dist/debian/package.sh
 VERSION_TARGET=tycmd

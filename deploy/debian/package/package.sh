@@ -23,6 +23,7 @@ Source: ${PKG_NAME}
 Section: utils
 Priority: optional
 Maintainer: ${PKG_AUTHOR}
+License: ${PKG_LICENSE}
 Standards-Version: 4.5.1
 Rules-Requires-Root: no
 
