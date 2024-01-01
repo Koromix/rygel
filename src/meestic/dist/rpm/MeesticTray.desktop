@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type = Application
+Name = MeesticTray
+Exec = MeesticTray
+Icon = MeesticTray
+Terminal = false
+Categories = Utility

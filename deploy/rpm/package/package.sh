@@ -1,0 +1,70 @@
+PKG_DIR=bin/Packages
+DEST_DIR=${PKG_DIR}/${PKG_NAME}/rpm
+RPM_DIR=${DEST_DIR}/pkg
+ROOT_DIR=${DEST_DIR}/pkg/root
+CLIENT_DIR=${DEST_DIR}/client
+
+if [ "$1" = "" -o "$1" = "package" ]; then
+    ./bootstrap.sh
+
+    VERSION=$(./felix --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}" | sed 's/-/./')
+    DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
+
+    sudo rm -rf ${DEST_DIR}
+    mkdir -p ${RPM_DIR} ${ROOT_DIR}
+    mkdir -p ${CLIENT_DIR}/upper
+
+    echo "\
+Name: ${PKG_NAME}
+Version: ${VERSION}
+Release: 1
+Summary: ${PKG_DESCRIPTION}
+License: ${PKG_LICENSE}
+BuildRequires: systemd-rpm-macros
+
+%description
+${PKG_DESCRIPTION}
+
+%prep
+# Not needed
+
+%build
+# Not needed" > ${RPM_DIR}/${PKG_NAME}.spec
+
+    docker build -t rygel/${DOCKER_IMAGE} deploy/docker/${DOCKER_IMAGE}
+    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
+
+    cp ${CLIENT_DIR}/upper/${DEST_DIR}/${PKG_NAME}-*.rpm ${PKG_DIR}/
+elif [ "$1" = "build" ]; then
+    # Fix git error about dubious repository ownership
+    git config --global safe.directory '*'
+
+    mkdir -p /repo /io/client/work
+    mount -t overlay overlay -o lowerdir=/io/host,upperdir=/io/client/upper,workdir=/io/client/work /repo
+    rm -f /repo/FelixBuild.ini.user
+
+    cd /repo
+    build
+
+echo "
+%install" >> ${RPM_DIR}/${PKG_NAME}.spec
+    (cd ${ROOT_DIR} && find -type f -printf "%#m %p\n" | awk -F ' ' "{print \"install -D -m\" \$1 \" /repo/${ROOT_DIR}/\" substr(\$2, 3) \" %{buildroot}/\" substr(\$2, 3)}") | sort >> ${RPM_DIR}/${PKG_NAME}.spec
+
+echo "
+%files" >> ${RPM_DIR}/${PKG_NAME}.spec
+    (cd ${ROOT_DIR} && find -type f | cut -c '2-') | sort >> ${RPM_DIR}/${PKG_NAME}.spec
+
+echo "
+%changelog
+# Skip for now" >> ${RPM_DIR}/${PKG_NAME}.spec
+
+    (cd ${RPM_DIR} && rpmbuild -ba ${PKG_NAME}.spec)
+    (cd ${DEST_DIR} && find $HOME/rpmbuild/RPMS/ -name "${PKG_NAME}-*.rpm" -exec cp {} ./ \;)
+
+    cd /
+    umount /repo
+    rm -rf /io/client/work
+else
+    echo "Unknown command '$1'" >&2
+    exit 1
+fi
