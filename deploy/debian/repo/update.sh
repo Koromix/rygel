@@ -16,7 +16,6 @@ if [ $# -gt 2 ]; then
     cd "$3"
 fi
 
-rm -rf keys
 gpg --local-user "$GPG_USER" --export >"$REPO_NAME-archive-keyring.gpg"
 
 # Keep old content
