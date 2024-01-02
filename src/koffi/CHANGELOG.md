@@ -4,6 +4,11 @@
 
 ### Koffi 2.7
 
+#### Koffi 2.7.1 (2024-01-02)
+
+- Support C-like `int[3]` syntax for [fixed array types](input.md#fixed-size-c-arrays)
+- Refuse type specifiers with invalid tokens at the end (previously ignored)
+
 #### Koffi 2.7.0 (2023-12-21)
 
 - Support alternative [callback calling convention](callbacks.md#callback-types) in classic syntax
