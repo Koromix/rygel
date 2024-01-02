@@ -738,7 +738,7 @@ async function test() {
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 2, 'int', 2, 'int', 21), 42);
     assert.equal(GetBinaryIntFunction('missing'), null);
 
-    // Communicatre through raw buffers
+    // Communicate through raw buffers
     {
         let buf1 = { len: 6, ptr: new Uint8Array(8) };
         let buf2 = { len: 10, ptr: new Uint8Array(10) };
