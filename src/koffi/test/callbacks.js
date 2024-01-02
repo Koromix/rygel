@@ -313,7 +313,7 @@ async function test() {
         let vectors = [null, null, null, null, null, null, null];
 
         MakeVectorsIndirect(src.length, (len, out) => {
-            koffi.encode(out, koffi.array('Vec2', len), src);
+            koffi.encode(out, 'Vec2 [' + len + ']', src);
             return 0;
         }, vectors);
 

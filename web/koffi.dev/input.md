@@ -336,6 +336,8 @@ try {
 
 ### Fixed-size C arrays
 
+*Changed in Koffi 2.7.1*
+
 Fixed-size arrays are declared with `koffi.array(type, length)`. Just like in C, they cannot be passed as functions parameters (they degenerate to pointers), or returned by value. You can however embed them in struct types.
 
 Koffi applies the following conversion rules when passing arrays to/from C:
@@ -365,6 +367,19 @@ const ReturnFoo2 = lib.func('Foo2 ReturnFoo(Foo2 p)');
 
 console.log(ReturnFoo1({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: Int16Array(2) [6, 8] }
 console.log(ReturnFoo2({ i: 5, a16: [6, 8] })) // Prints { i: 5, a16: [6, 8] }
+```
+
+You can also declare arrays with the C-like short syntax in type declarations, as shown below:
+
+```js
+const StructType = koffi.struct('StructType', {
+    f8: 'float [8]',
+    self4: 'StructType *[4]'
+});
+```
+
+```{note}
+The short C-like syntax was introduced in Koffi 2.7.1, use `koffi.array()` for older versions.
 ```
 
 ### Fixed-size string buffers

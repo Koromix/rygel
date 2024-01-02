@@ -54,7 +54,7 @@ const Float2 = koffi.struct('Float2', {
 });
 const Float3 = koffi.struct('Float3', {
     a: 'float',
-    b: koffi.array('float', 2)
+    b: 'float[2]'
 });
 
 const Double2 = koffi.struct('Double2', {
@@ -275,7 +275,7 @@ async function test() {
     const IfElseStr = lib.func('const char *IfElseStr(const char *a, const char *b, bool cond)');
     const sym_int = lib.symbol('sym_int', 'int');
     const sym_str = lib.symbol('sym_str', 'const char *');
-    const sym_int3 = lib.symbol('sym_int3', koffi.array('int', 3));
+    const sym_int3 = lib.symbol('sym_int3', 'int [ 3 ]');
     const GetSymbolInt = lib.func('int GetSymbolInt()');
     const GetSymbolStr = lib.func('const char *GetSymbolStr()');
     const GetSymbolInt3 = lib.func('void GetSymbolInt3(_Out_ int *out)');
@@ -826,6 +826,13 @@ async function test() {
             message: 'Cannot directly use incomplete type'
         }
     );
+
+    // Check various array type errors
+    assert.throws(() => lib.func('int[3] WhoCares()'), /Array types decay to pointers/);
+    assert.throws(() => koffi.struct('JohnDoe', { a: 'int[3]!' }), /Cannot create disposable type for non-pointer/);
+    assert.throws(() => koffi.struct('JaneDoe', { a: 'int!' }), /Cannot create disposable type for non-pointer/);
+    assert.throws(() => lib.func('void WhoKnows(const char *ptr, int[5] arg)'), /Array types decay to pointers/);
+    assert.throws(() => lib.func('void NoBody(const char *ptr, int arg[5])'), /Array types decay to pointers/);
 
     lib.unload();
 }

@@ -192,7 +192,8 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    int indirect = 0;
+    // Each item can be > 0 for array or 0 for a pointer
+    LocalArray<Size, 8> arrays;
     uint8_t disposables = 0;
 
     // Consume parameter direction qualifier
@@ -223,18 +224,18 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
         Span<const char> remain = str;
 
         // Skip initial const qualifiers
-        remain = TrimStr(remain);
+        remain = TrimStrLeft(remain);
         while (SplitIdentifier(remain) == "const") {
             remain = remain.Take(6, remain.len - 6);
-            remain = TrimStr(remain);
+            remain = TrimStrLeft(remain);
         }
-        remain = TrimStr(remain);
+        remain = TrimStrLeft(remain);
 
         after = remain;
 
         // Consume one or more identifiers (e.g. unsigned int)
         for (;;) {
-            after = TrimStr(after);
+            after = TrimStrLeft(after);
 
             Span<const char> token = SplitIdentifier(after);
             if (!token.len)
@@ -245,27 +246,57 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
         name = TrimStr(MakeSpan(remain.ptr, after.ptr - remain.ptr));
     }
 
-    // Consume pointer indirections
+    // Consume type indirections (pointer, array, etc.)
     while (after.len) {
         if (after[0] == '*') {
             after = after.Take(1, after.len - 1);
-            indirect++;
 
-            if (indirect >= RG_SIZE(disposables) * 8) [[unlikely]] {
-                ThrowError<Napi::Error>(env, "Too many pointer indirections");
+            if (!arrays.Available()) [[unlikely]] {
+                ThrowError<Napi::Error>(env, "Too many type indirections");
                 return nullptr;
             }
+
+            arrays.Append(0);
         } else if (after[0] == '!') {
             after = after.Take(1, after.len - 1);
-            disposables |= (1u << indirect);
+            disposables |= (1u << arrays.len);
+        } else if (after[0] == '[') {
+            after = after.Take(1, after.len - 1);
+
+            Size len = 0;
+
+            after = TrimStrLeft(after);
+            if (!ParseInt(after, &len, 0, &after) || len < 0) [[unlikely]] {
+                ThrowError<Napi::Error>(env, "Invalid array length");
+                return nullptr;
+            }
+            after = TrimStrLeft(after);
+            if (!after.len || after[0] != ']') [[unlikely]] {
+                ThrowError<Napi::Error>(env, "Expected ']' after array length");
+                return nullptr;
+            }
+            after = after.Take(1, after.len - 1);
+
+            if (!arrays.Available()) [[unlikely]] {
+                ThrowError<Napi::Error>(env, "Too many type indirections");
+                return nullptr;
+            }
+
+            arrays.Append(len);
         } else if (SplitIdentifier(after) == "const") {
             after = after.Take(6, after.len - 6);
         } else {
-            ThrowError<Napi::Error>(env, "Unexpected character '%1' in type specifier", after[0]);
-            return nullptr;
+            after = TrimStrRight(after);
+
+            if (after.len) [[unlikely]] {
+                ThrowError<Napi::Error>(env, "Unexpected character '%1' in type specifier", after[0]);
+                return nullptr;
+            }
+
+            break;
         }
 
-        after = TrimStr(after);
+        after = TrimStrLeft(after);
     }
 
     const TypeInfo *type = instance->types_map.FindValue(name, nullptr);
@@ -318,11 +349,29 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
             type = copy;
         }
 
-        if (i >= indirect)
+        if (i >= arrays.len)
             break;
+        Size len = arrays[i];
 
-        type = MakePointerType(instance, type);
-        RG_ASSERT(type);
+        if (len > 0) {
+            if (type->flags & (int)TypeFlag::IsIncomplete) [[unlikely]] {
+                ThrowError<Napi::TypeError>(env, "Cannot make array of incomplete type");
+                return nullptr;
+            }
+
+            if (len > instance->config.max_type_size / type->size) {
+                ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / type->size);
+                return nullptr;
+            }
+
+            type = MakeArrayType(instance, type, len);
+            RG_ASSERT(type);
+        } else {
+            RG_ASSERT(!len);
+
+            type = MakePointerType(instance, type);
+            RG_ASSERT(type);
+        }
     }
 
     if (type->flags & (int)TypeFlag::IsIncomplete) [[unlikely]] {

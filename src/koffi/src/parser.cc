@@ -144,6 +144,10 @@ const TypeInfo *PrototypeParser::ParseType(int *out_directions)
     while (++offset < tokens.len && (tokens[offset] == '*' ||
                                      tokens[offset] == '!' ||
                                      tokens[offset] == "const"));
+    if (offset < tokens.len && tokens[offset] == "[") [[unlikely]] {
+        MarkError("Array types decay to pointers in prototypes (C standard), use pointers");
+        return instance->void_type;
+    }
     offset--;
 
     while (offset >= start) {
