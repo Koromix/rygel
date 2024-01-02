@@ -261,7 +261,8 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
         } else if (SplitIdentifier(after) == "const") {
             after = after.Take(6, after.len - 6);
         } else {
-            break;
+            ThrowError<Napi::Error>(env, "Unexpected character '%1' in type specifier", after[0]);
+            return nullptr;
         }
 
         after = TrimStr(after);
