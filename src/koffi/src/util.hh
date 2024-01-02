@@ -22,14 +22,11 @@
 #pragma once
 
 #include "src/core/libcc/libcc.hh"
+#include "ffi.hh"
 
 #include <napi.h>
 
 namespace RG {
-
-struct InstanceData;
-struct TypeInfo;
-struct FunctionInfo;
 
 extern const int TypeInfoMarker;
 extern const int CastMarker;

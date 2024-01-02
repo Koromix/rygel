@@ -24,6 +24,7 @@
 #include "src/core/libcc/libcc.hh"
 
 #include <intrin.h>
+#include <napi.h>
 
 namespace RG {
 

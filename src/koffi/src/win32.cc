@@ -21,6 +21,7 @@
 
 #ifdef _WIN32
 
+#include "util.hh"
 #include "win32.hh"
 
 #ifndef NOMINMAX
