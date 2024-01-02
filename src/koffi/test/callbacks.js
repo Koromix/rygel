@@ -25,6 +25,13 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const util = require('util');
 
+// We need to change this on Windows because the DLL CRT might
+// not (probably not) match the one used by Node.js!
+let free_ptr = koffi.free;
+
+const StrFree = koffi.disposable('str_free', koffi.types.str, ptr => free_ptr(ptr));
+const Str16Free = koffi.disposable('str16_free', 'str16', ptr => free_ptr(ptr));
+
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
     e: [8, 'short'],
@@ -74,6 +81,7 @@ async function test() {
     const lib_filename = __dirname + '/build/callbacks' + koffi.extension;
     const lib = koffi.load(lib_filename);
 
+    const CallFree = lib.func('void CallFree(void *ptr)');
     const CallJS = lib.func('int CallJS(const char *str, SimpleCallback *cb)');
     const CallRecursiveJS = lib.func('float CallRecursiveJS(int i, RecursiveCallback *func)');
     const ModifyBFG = lib.func('BFG ModifyBFG(int x, double y, const char *str, BigCallback *func, _Out_ BFG *p)');
@@ -89,7 +97,9 @@ async function test() {
     const CallQSort = lib.func('void CallQSort(_Inout_ void *base, size_t nmemb, size_t size, void *cb)');
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
-    const FmtRepeat = lib.func('const char *! FmtRepeat(RepeatCallback *cb)');
+    const FmtRepeat = lib.func('str_free FmtRepeat(RepeatCallback *cb)');
+
+    free_ptr = CallFree;
 
     // Start with test of callback inside async function to make sure the async broker is registered,
     // and avoid regression (see issue #74).

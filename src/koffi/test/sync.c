@@ -188,6 +188,11 @@ EXPORT int sym_int = 0;
 EXPORT const char *sym_str = NULL;
 EXPORT int sym_int3[3] = { 0, 0, 0 };
 
+EXPORT void CallFree(void *ptr)
+{
+    free(ptr);
+}
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;

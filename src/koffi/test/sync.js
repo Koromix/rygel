@@ -25,6 +25,13 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const util = require('util');
 
+// We need to change this on Windows because the DLL CRT might
+// not (probably not) match the one used by Node.js!
+let free_ptr = koffi.free;
+
+const StrFree = koffi.disposable('str_free', koffi.types.str, ptr => free_ptr(ptr));
+const Str16Free = koffi.disposable('str16_free', 'str16', ptr => free_ptr(ptr));
+
 const Pack1 = koffi.struct('Pack1', {
     a: 'int'
 });
@@ -118,9 +125,6 @@ const IntContainer = koffi.struct('IntContainer', {
     len: 'int'
 });
 
-const StrFree = koffi.disposable('str_free', koffi.types.str, koffi.free);
-const Str16Free = koffi.disposable('str16_free', 'str16');
-
 const StrStruct = koffi.struct('StrStruct', {
     str: 'str',
     str16: koffi.types.string16
@@ -169,6 +173,7 @@ async function test() {
     let lib_filename = __dirname + '/build/sync' + koffi.extension;
     let lib = koffi.load(lib_filename);
 
+    const CallFree = lib.func('void CallFree(void *ptr)');
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
     const GetMinusOne2 = lib.func('int16_t GetMinusOne2(void)');
     const GetMinusOne4 = lib.func('int32_t GetMinusOne4(void)');
@@ -202,11 +207,11 @@ async function test() {
     const MakePackedBFG = lib.func('AliasBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const MakePolymorphBFG = lib.func('void MakePolymorphBFG(int type, int x, double y, const char *str, _Out_ void *p)');
     const ReturnBigString = process.platform == 'win32' ?
-                            lib.stdcall(1, koffi.disposable('str', koffi.free), ['str']) :
+                            lib.stdcall(1, koffi.disposable('str', CallFree), ['str']) :
                             lib.func('const char *! __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
-    const Concat16 = lib.func('const char16_t *! Concat16(const char16_t *str1, const char16_t *str2)');
-    const Concat16Out1 = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const char16_t *!*)');
+    const Concat16 = lib.func('str16_free Concat16(const char16_t *str1, const char16_t *str2)');
+    const Concat16Out1 = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const str16_free *)');
     const Concat16Out2 = lib.func('Concat16Out', 'void', [koffi.pointer('char16_t'), koffi.pointer('char16_t'), koffi.out(koffi.pointer(Str16Free))]);
     const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
@@ -274,6 +279,8 @@ async function test() {
     const GetSymbolInt = lib.func('int GetSymbolInt()');
     const GetSymbolStr = lib.func('const char *GetSymbolStr()');
     const GetSymbolInt3 = lib.func('void GetSymbolInt3(_Out_ int *out)');
+
+    free_ptr = CallFree;
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);

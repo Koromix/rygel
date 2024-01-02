@@ -87,6 +87,11 @@ typedef struct StructCallbacks {
 } StructCallbacks;
 typedef void RepeatCallback(int *repeat, const char **str);
 
+EXPORT void CallFree(void *ptr)
+{
+    free(ptr);
+}
+
 EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
