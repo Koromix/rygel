@@ -72,7 +72,7 @@ async function test() {
     let lib = koffi.load(lib_filename, { lazy: true });
 
     const MakeSingleU = lib.func('SingleU MakeSingleU(float f)');
-    const MakeSingleUIndirect = lib.func('MakeSingleUIndirect', 'void', ['float', '_Out_ SingleU *out)']);
+    const MakeSingleUIndirect = lib.func('MakeSingleUIndirect', 'void', ['float', '_Out_ SingleU *']);
     const MakeDualU = lib.func('DualU MakeDualU(double d)');
     const MakeDualUIndirect = lib.func('void MakeDualUIndirect(double d, _Out_ DualU *out)');
     const MakeMultiU = lib.func('MultiU MakeMultiU(float a, float b)');
