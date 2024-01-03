@@ -6,7 +6,7 @@ PKG_DESCRIPTION="Backup tool with deduplication and asymmetric encryption"
 PKG_DEPENDENCIES=""
 PKG_LICENSE=AGPL-3.0-or-later
 
-SCRIPT_PATH=src/rekord/dist/debian/package.sh
+SCRIPT_PATH=src/rekord/dist/linux/debian.sh
 VERSION_TARGET=rekord
 DOCKER_IMAGE=debian11
 

@@ -3,17 +3,16 @@
 PKG_NAME=tytools
 PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="GUI and command-line tools to manage Teensy devices"
-PKG_DEPENDENCIES="qt6-qtbase, libudev"
+PKG_DEPENDENCIES="libqt6core6, libudev1"
 PKG_LICENSE=Unlicense
 
-SCRIPT_PATH=src/tytools/dist/rpm/package.sh
+SCRIPT_PATH=src/tytools/dist/linux/debian.sh
 VERSION_TARGET=tycmd
-DOCKER_IMAGE=fedora38
+DOCKER_IMAGE=debian12
 
 build() {
-    dnf install -y qt6-qtbase-devel libudev-devel
-
-    export QMAKE_PATH=/usr/lib64/qt6/bin/qmake
+    apt update
+    apt install -y qt6-base-dev qt6-base-dev-tools libudev-dev
 
     ./bootstrap.sh
     ./felix -pFast tycmd tycommander tyuploader
@@ -26,8 +25,8 @@ build() {
     install -D -m0644 src/tytools/tyuploader/tyuploader_linux.desktop ${ROOT_DIR}/usr/share/applications/TyUploader.desktop
     install -D -m0644 src/tytools/assets/images/tycommander.png ${ROOT_DIR}/usr/share/icons/hicolor/512x512/apps/tycommander.png
     install -D -m0644 src/tytools/assets/images/tyuploader.png ${ROOT_DIR}/usr/share/icons/hicolor/512x512/apps/tyuploader.png
-    install -D -m0644 src/tytools/dist/rpm/teensy.rules ${ROOT_DIR}/usr/lib/udev/rules.d/00-teensy.rules
+    install -D -m0644 src/tytools/dist/linux/teensy.rules ${ROOT_DIR}/usr/lib/udev/rules.d/00-teensy.rules
 }
 
 cd "$(dirname $0)/../../../.."
-. deploy/rpm/package/package.sh
+. deploy/debian/package/package.sh

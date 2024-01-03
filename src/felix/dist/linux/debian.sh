@@ -6,9 +6,9 @@ PKG_DESCRIPTION="Small build system made specifically for this repository"
 PKG_DEPENDENCIES=""
 PKG_LICENSE=AGPL-3.0-or-later
 
-SCRIPT_PATH=src/felix/dist/rpm/package.sh
+SCRIPT_PATH=src/felix/dist/linux/debian.sh
 VERSION_TARGET=felix
-DOCKER_IMAGE=rocky9
+DOCKER_IMAGE=debian10
 
 build() {
     ./bootstrap.sh
@@ -18,4 +18,4 @@ build() {
 }
 
 cd "$(dirname $0)/../../../.."
-. deploy/rpm/package/package.sh
+. deploy/debian/package/package.sh
