@@ -262,6 +262,9 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
     }
     config.view_directory = NormalizePath("views", root_directory, &config.str_alloc).ptr;
 
+    if (!config.Validate())
+        return false;
+
     std::swap(*out_config, config);
     return true;
 }
