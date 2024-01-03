@@ -205,6 +205,9 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
                 FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
     }
 
+    if (verbose >= 1) {
+        PrintLn("%1    + Hash: %!..+%2%!0", FmtArg(" ").Repeat(indent), obj.hash);
+    }
     if (obj.type != rk_ObjectType::Snapshot) {
         if (verbose >= 1) {
             PrintLn("%1    + UID/GID: %!..+%2:%3%!0", FmtArg(" ").Repeat(indent), obj.uid, obj.gid);
