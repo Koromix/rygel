@@ -308,6 +308,8 @@ bool DomainHolder::Open(const char *filename)
         return false;
 
     // Make sure directories exist
+    if (!MakeDirectory(config.instances_directory, false))
+        return false;
     if (!MakeDirectory(config.tmp_directory, false))
         return false;
     if (!MakeDirectory(config.archive_directory, false))
