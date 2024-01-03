@@ -44,6 +44,9 @@ struct DomainConfig {
     TimeMode archive_zone = TimeMode::Local;
     int archive_retention = 7;
 
+    const char *default_username = nullptr;
+    const char *default_password = nullptr;
+
     http_Config http { 8889 };
     const char *require_host = nullptr;
 

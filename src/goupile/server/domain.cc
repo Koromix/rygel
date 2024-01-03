@@ -187,6 +187,16 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid = false;
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Defaults") {
+                do {
+                    if (prop.key == "DefaultUser") {
+                        config.default_username = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "DefaultPassword") {
+                        config.default_password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "RequireHost") {
@@ -340,6 +350,43 @@ bool DomainHolder::Open(const char *filename)
             }
         }
     }
+
+    // Make sure we have at least one user
+    if (config.default_username && config.default_password) {
+        sq_Statement stmt;
+        if (!db.Prepare("SELECT userid FROM dom_users", &stmt))
+            return false;
+
+        if (!stmt.Step()) {
+            if (!stmt.IsValid())
+                return false;
+
+            char hash[PasswordHashBytes];
+            if (!HashPassword(config.default_password, hash))
+                return false;
+
+            // Create local key
+            char local_key[45];
+            {
+                uint8_t buf[32];
+                FillRandomSafe(buf);
+                sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+            }
+
+            if (!db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
+                                                  change_password, root, local_key, confirm)
+                           VALUES (1, ?1, ?2, 1, 1, ?3, ?4))",
+                        config.default_username, hash, local_key, nullptr))
+                return false;
+        }
+    }
+
+    // Don't keep this in memory!
+    if (config.default_password) {
+        Size len = strlen(config.default_password);
+        ZeroMemorySafe((void *)config.default_password, len);
+    }
+    config.default_password = nullptr;
 
     err_guard.Disable();
     return true;
