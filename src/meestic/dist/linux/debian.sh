@@ -24,6 +24,8 @@ build() {
     install -D -m0644 src/meestic/dist/linux/MeesticTray.desktop ${ROOT_DIR}/etc/xdg/autostart/MeesticTray.desktop
     install -D -m0644 src/meestic/images/meestic.png ${ROOT_DIR}/usr/share/icons/hicolor/512x512/apps/MeesticTray.png
 
+    echo '/etc/meestic.ini' > ${DEBIAN_DIR}/conffiles
+
     install -D -m0644 src/meestic/dist/linux/meestic.service ${DEBIAN_DIR}/meestic.service
 }
 
