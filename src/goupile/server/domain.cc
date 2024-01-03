@@ -102,8 +102,17 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                     }
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Data" || prop.section == "Paths") {
+                bool first = true;
+
                 do {
-                    if (prop.key == "DatabaseFile") {
+                    if (prop.key == "RootDirectory") {
+                        if (first) {
+                            root_directory = NormalizePath(prop.value, root_directory, &config.str_alloc);
+                        } else {
+                            LogError("RootDirectory must be first of section");
+                            valid = false;
+                        }
+                    } else if (prop.key == "DatabaseFile") {
                         config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "ArchiveDirectory" || prop.key == "BackupDirectory") {
                         config.archive_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
@@ -134,6 +143,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
                     }
+
+                    first = false;
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Archives") {
                 do {
