@@ -515,10 +515,6 @@ public:
                 // to not take this precaution. Without it, SQLite3 crashes.
                 Fmt(&buf, " -fsanitize-cfi-icall-generalize-pointers");
             }
-
-            if (clang_ver >= 150000) {
-                Fmt(&buf, " -fcf-protection=branch");
-            }
         }
         if (features & (int)CompileFeature::ShuffleCode) {
             Fmt(&buf, " -ffunction-sections -fdata-sections");
@@ -806,7 +802,6 @@ public:
             supported |= (int)CompileFeature::LTO;
         }
         supported |= (int)CompileFeature::ZeroInit;
-        supported |= (int)CompileFeature::CFI;
         supported |= (int)CompileFeature::StaticRuntime;
         supported |= (int)CompileFeature::LinkLibrary;
         if (platform == HostPlatform::Windows) {
@@ -831,10 +826,6 @@ public:
         }
         if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
             LogError("Cannot use ASan and TSan at the same time");
-            return false;
-        }
-        if (gcc_ver < 90000 && (features & (int)CompileFeature::CFI)) {
-            LogError("CFI requires GCC >= 9.0, try --host option (e.g. --host=,gcc-9)");
             return false;
         }
         if (gcc_ver < 120100 && (features & (int)CompileFeature::ZeroInit)) {
@@ -1037,9 +1028,6 @@ public:
         }
         if (features & (int)CompileFeature::ZeroInit) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
-        }
-        if (features & (int)CompileFeature::CFI) {
-            Fmt(&buf, " -fcf-protection=branch");
         }
 
         // Sources and definitions
