@@ -1,0 +1,29 @@
+[Unit]
+Description=Goupile eCRF (%i)
+Documentation=https://goupile.fr/
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=notify
+User=goupile
+Group=goupile
+RuntimeDirectory=goupile
+RuntimeDirectoryPreserve=yes
+ExecStartPre=+/usr/bin/mkdir -p /var/lib/goupile/%i
+ExecStartPre=+/usr/bin/chown goupile:goupile /var/lib/goupile/%i
+ExecStartPre=+/usr/bin/chmod 0700 /var/lib/goupile/%i
+ExecStart=/usr/bin/goupile --sandbox -C /run/goupile/%i.ini
+Restart=on-failure
+RestartSec=20
+TimeoutStopSec=30
+LimitNOFILE=4096
+
+# Allow Goupile to manipulate namespaces despite
+# kernel.unprivileged_userns_clone=0.
+SecureBits=keep-caps
+CapabilityBoundingSet=CAP_SYS_ADMIN
+AmbientCapabilities=CAP_SYS_ADMIN
+
+[Install]
+WantedBy=multi-user.target

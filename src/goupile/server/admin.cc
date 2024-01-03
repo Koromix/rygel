@@ -45,6 +45,7 @@ R"([Domain]
 Title = %1
 
 [Data]
+# RootDirectory = .
 # DatabaseFile = goupile.db
 # ArchiveDirectory = archives
 # SnapshotDirectory = snapshots
