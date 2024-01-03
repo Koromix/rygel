@@ -8,7 +8,7 @@ PKG_LICENSE=AGPL-3.0-or-later
 
 SCRIPT_PATH=src/meestic/dist/linux/debian.sh
 VERSION_TARGET=meestic
-DOCKER_IMAGE=debian10
+DOCKER_IMAGE=debian11
 
 build() {
     apt install libudev-dev

@@ -8,7 +8,7 @@ PKG_LICENSE=AGPL-3.0-or-later
 
 SCRIPT_PATH=src/felix/dist/linux/debian.sh
 VERSION_TARGET=felix
-DOCKER_IMAGE=debian10
+DOCKER_IMAGE=debian11
 
 build() {
     ./bootstrap.sh
