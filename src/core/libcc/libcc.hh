@@ -249,14 +249,6 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
     #define RG_UNREACHABLE() __assume(0)
 #endif
 
-#if defined(__EMSCRIPTEN__)
-    #define RG_EXPORT EMSCRIPTEN_KEEPALIVE
-#elif defined(_WIN32)
-    #define RG_EXPORT __declspec(dllexport)
-#else
-    #define RG_EXPORT __attribute__((visibility("default")))
-#endif
-
 #define RG_DELETE_COPY(Cls) \
     Cls(const Cls&) = delete; \
     Cls &operator=(const Cls&) = delete;
