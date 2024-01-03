@@ -126,6 +126,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         }
                     } else if (prop.key == "SynchronousFull") {
                         valid &= ParseBool(prop.value, &config.sync_full);
+                    } else if (prop.key == "AutoCreate") {
+                        valid &= ParseBool(prop.value, &config.auto_create);
                     } else if (prop.key == "AutoMigrate") {
                         valid &= ParseBool(prop.value, &config.auto_migrate);
                     } else {
@@ -295,12 +297,16 @@ bool DomainHolder::Open(const char *filename)
         return false;
 
     // Open and configure main database
-    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE))
-        return false;
-    if (!db.SetWAL(true))
-        return false;
-    if (!db.SetSynchronousFull(config.sync_full))
-        return false;
+    {
+        int flags = SQLITE_OPEN_READWRITE | (config.auto_create ? SQLITE_OPEN_CREATE : 0);
+
+        if (!db.Open(config.database_filename, flags))
+            return false;
+        if (!db.SetWAL(true))
+            return false;
+        if (!db.SetSynchronousFull(config.sync_full))
+            return false;
+    }
 
     // Make sure tmp and instances live on the same volume, because we need to
     // perform atomic renames in some cases.

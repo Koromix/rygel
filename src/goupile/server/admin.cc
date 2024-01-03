@@ -49,6 +49,7 @@ Title = %1
 # ArchiveDirectory = archives
 # SnapshotDirectory = snapshots
 # SynchronousFull = Off
+# AutoCreate = On
 # AutoMigrate = On
 
 [Archives]
