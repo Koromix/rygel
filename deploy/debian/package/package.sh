@@ -23,7 +23,6 @@ Source: ${PKG_NAME}
 Section: utils
 Priority: optional
 Maintainer: ${PKG_AUTHOR}
-License: ${PKG_LICENSE}
 Standards-Version: 4.5.1
 Rules-Requires-Root: no
 
@@ -40,6 +39,9 @@ ${PKG_NAME} ($VERSION) unstable; urgency=low
 
  -- ${PKG_AUTHOR}  $DATE
 " > ${DEBIAN_DIR}/changelog
+
+    echo "\
+License: ${PKG_LICENSE}" > ${DEBIAN_DIR}/copyright
 
     docker build -t rygel/${DOCKER_IMAGE} deploy/docker/${DOCKER_IMAGE}
     docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
