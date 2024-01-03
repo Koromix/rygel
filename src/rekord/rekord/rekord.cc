@@ -32,9 +32,8 @@ int RunListUsers(Span<const char *> arguments);
 int RunPut(Span<const char *> arguments);
 int RunGet(Span<const char *> arguments);
 
+int RunLog(Span<const char *> arguments);
 int RunList(Span<const char *> arguments);
-int RunTree(Span<const char *> arguments);
-int RunShow(Span<const char *> arguments);
 
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
@@ -63,6 +62,7 @@ int Main(int argc, char **argv)
 
 Management commands:
     %!..+init%!0                         Init new backup repository
+
     %!..+export_key%!0                   Export master repository key
     %!..+change_id%!0                    Change repository cache ID
 
@@ -71,13 +71,12 @@ Management commands:
     %!..+list_users%!0                   List repository users
 
 Snapshot commands:
-    %!..+put%!0                          Store encrypted directory or file
-    %!..+get%!0                          Get and decrypt directory or file
+    %!..+put%!0                          Store directory or file and make snapshot
+    %!..+get%!0                          Get and decrypt snapshot, directory or file
 
 Exploration commands:
-    %!..+list%!0                         List snapshots
-    %!..+tree%!0                         Export snapshot or directory tree
-    %!..+info%!0                         Export info about object
+    %!..+log%!0                          List known snapshots
+    %!..+list%!0                         List snapshot or directory children
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -163,12 +162,10 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunPut(arguments);
     } else if (TestStr(cmd, "get")) {
         return RunGet(arguments);
+    } else if (TestStr(cmd, "log")) {
+        return RunLog(arguments);
     } else if (TestStr(cmd, "list")) {
         return RunList(arguments);
-    } else if (TestStr(cmd, "tree")) {
-        return RunTree(arguments);
-    } else if (TestStr(cmd, "show")) {
-        return RunShow(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

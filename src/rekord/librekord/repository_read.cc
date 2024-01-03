@@ -661,7 +661,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
     return true;
 }
 
-bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
+bool rk_Log(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
 {
     Size prev_len = out_snapshots->len;
     RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
@@ -720,14 +720,14 @@ bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_sn
     return true;
 }
 
-class TreeContext {
+class ListContext {
     rk_Disk *disk;
-    rk_TreeSettings settings;
+    rk_ListSettings settings;
 
     Async tasks;
 
 public:
-    TreeContext(rk_Disk *disk, const rk_TreeSettings &settings);
+    ListContext(rk_Disk *disk, const rk_ListSettings &settings);
 
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
                         Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
@@ -735,12 +735,12 @@ public:
     bool Sync() { return tasks.Sync(); }
 };
 
-TreeContext::TreeContext(rk_Disk *disk, const rk_TreeSettings &settings)
+ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings)
     : disk(disk), settings(settings), tasks(disk->GetThreads())
 {
 }
 
-bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
+bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
                                  Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
     if (entries.len < RG_SIZE(int64_t)) [[unlikely]] {
@@ -748,9 +748,6 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         return false;
     }
     entries.len -= RG_SIZE(int64_t);
-
-    if (settings.max_depth >= 0 && depth > settings.max_depth)
-        return true;
 
     // Get total length from end of stream
     int64_t dir_len = 0;
@@ -830,13 +827,15 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                 case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
 
                 case rk_ObjectType::Directory: {
-                    RecurseContext *ctx = &contexts[i];
+                    if (settings.max_depth < 0 || depth <= settings.max_depth) {
+                        RecurseContext *ctx = &contexts[i];
 
-                    if (!RecurseEntries(entry_blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
-                        return false;
+                        if (!RecurseEntries(entry_blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
+                            return false;
 
-                    for (const rk_ObjectInfo &child: ctx->children) {
-                        obj->children += (child.depth == depth + 1);
+                        for (const rk_ObjectInfo &child: ctx->children) {
+                            obj->children += (child.depth == depth + 1);
+                        }
                     }
                 } break;
                 case rk_ObjectType::File: {} break;
@@ -863,7 +862,7 @@ bool TreeContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     return true;
 }
 
-bool rk_Tree(rk_Disk *disk, const rk_Hash &hash, const rk_TreeSettings &settings,
+bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
              Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
     Size prev_len = out_objects->len;
@@ -874,7 +873,7 @@ bool rk_Tree(rk_Disk *disk, const rk_Hash &hash, const rk_TreeSettings &settings
     if (!disk->ReadBlob(hash, &type, &blob))
         return false;
 
-    TreeContext tree(disk, settings);
+    ListContext tree(disk, settings);
 
     switch (type) {
         case rk_BlobType::Directory: {

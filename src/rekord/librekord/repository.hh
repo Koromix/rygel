@@ -32,8 +32,8 @@ struct rk_GetSettings {
     bool chown = false;
 };
 
-struct rk_TreeSettings {
-    int max_depth = -1;
+struct rk_ListSettings {
+    int max_depth = 0;
 };
 
 struct rk_SnapshotInfo {
@@ -87,8 +87,8 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings,
             const char *dest_path, int64_t *out_len = nullptr);
 
 // Exploration commands
-bool rk_List(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
-bool rk_Tree(rk_Disk *disk, const rk_Hash &hash, const rk_TreeSettings &settings,
+bool rk_Log(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
+bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
              Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
 }

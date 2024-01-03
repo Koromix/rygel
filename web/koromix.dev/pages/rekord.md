@@ -169,7 +169,7 @@ The command will give you the snapshot hash once it finishes. You can retrieve t
 
 ```sh
 export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord list
+rekord log
 ```
 
 The output looks something like this:
@@ -186,14 +186,23 @@ Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 
 ## Explore snapshot
 
-You can list the directories and files in a snapshot with the `rekord tree` command. You need to know the unique [snapshot hash](#list-snapshots) for this.
+You can list the directories and files in a snapshot with the `rekord list` command. You need to know the unique [snapshot hash](#list-snapshots) for this.
 
 ```sh
 export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord tree <hash>
+rekord list <hash>
 ```
 
 The output looks something like this:
+
+```
+# <type> <name>                                                   <mode> <date>                      <size>
+
+[S] vpn/opt                                                              [2023-12-15 06:18:10 +0100] 
+  [D] opt/                                                        (0755) [2023-10-05 17:03:38 +0200] 
+```
+
+You can recursively list the content with `rekord list <hash> --recurse` flag:
 
 ```
 # <type> <name>                                                   <mode> <date>                      <size>
