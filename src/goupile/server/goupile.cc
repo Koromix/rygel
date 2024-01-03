@@ -865,8 +865,6 @@ Options:
                                  %!D..(default: %3)%!0
         %!..+--sandbox%!0                Run sandboxed (on supported platforms)
 
-        %!..+--no_migrate%!0             Disable automatic migration of database schemas
-
 Other commands:
     %!..+init%!0                         Create new domain
     %!..+migrate%!0                      Migrate existing domain
@@ -941,8 +939,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
                     return 1;
             } else if (opt.Test("--sandbox")) {
                 // Already handled
-            } else if (opt.Test("--no_migrate")) {
-                gp_domain.config.auto_migrate = false;
             } else {
                 opt.LogUnknownError();
                 return 1;
