@@ -912,7 +912,7 @@ function isLocked() {
 function confirmDangerousAction(e) {
     if (controller == null)
         return;
-    if (controller.hasUnsavedData != null && !controller.hasUnsavedData())
+    if (controller.hasUnsavedData == null || !controller.hasUnsavedData())
         return;
 
     return UI.confirm(e, html`Si vous continuez, vous <span style="color: red; font-weight: bold;">PERDREZ les modifications en cours</span>.
