@@ -27,7 +27,7 @@ Download ready-to-use binaries from the release section of the [dedicated reposi
 
 ## Linux (Debian)
 
-A signed Debian repository is provided, and should work with Ubuntu 22.04+.
+A signed Debian repository is provided, and should work with Debian 12 and Ubuntu 22.04 (and later versions).
 
 Execute the following commands (as root) to add the repository to your system:
 

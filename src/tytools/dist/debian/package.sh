@@ -8,9 +8,12 @@ PKG_LICENSE=Unlicense
 
 SCRIPT_PATH=src/tytools/dist/debian/package.sh
 VERSION_TARGET=tycmd
-DOCKER_IMAGE=ubuntu2204
+DOCKER_IMAGE=debian12
 
 build() {
+    apt update
+    apt install -y qt6-base-dev qt6-base-dev-tools libudev-dev
+
     ./bootstrap.sh
     ./felix -pFast tycmd tycommander tyuploader
 
