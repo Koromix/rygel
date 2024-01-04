@@ -374,6 +374,8 @@ bool DomainHolder::Open(const char *filename)
             if (!stmt.IsValid())
                 return false;
 
+            LogWarning("Creating default user '%1'", config.default_username);
+
             char hash[PasswordHashBytes];
             if (!HashPassword(config.default_password, hash))
                 return false;
