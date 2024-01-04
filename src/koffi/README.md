@@ -25,9 +25,9 @@ Go to the web site for more information: https://koffi.dev/
 
 # Project history
 
-You can consult the [changelog](https://koffi.dev/changes) on the official website.
+You can consult the [changelog](https://koffi.dev/changelog) on the official website.
 
-Major version increments can include breaking API changes, use the [migration guide](https://koffi.dev/changes#migration-guide) for more information.
+Major version increments can include breaking API changes, use the [migration guide](https://koffi.dev/changelog#migration-guide) for more information.
 
 # License
 
