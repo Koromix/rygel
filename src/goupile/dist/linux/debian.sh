@@ -27,28 +27,26 @@ echo '\
 
 set -e
 
-case "$1" in
-    configure)
-        if ! getent group goupile >/dev/null; then
-            addgroup --quiet --system goupile
-        fi
-        if ! getent passwd goupile >/dev/null; then
-            adduser --system --ingroup goupile --home /var/lib/goupile goupile \
-                --gecos "goupile eCRF daemon"
-        fi
-        if [ "$2" = "3.0" ]; then
-            public_key=$(awk -F " = " "/PublicKey/ { print \$2 }" /var/lib/goupile/default/goupile.ini | xargs)
-            echo > /etc/goupile/domains.d/default.ini
-            echo "[Domain]" >> /etc/goupile/domains.d/default.ini
-            echo "ArchiveKey = ${public_key}" >> /etc/goupile/domains.d/default.ini
-            echo "Port = 8888" >> /etc/goupile/domains.d/default.ini
-        fi
-        if [ -d /run/systemd/system ]; then
-            /lib/systemd/system-generators/goupile-systemd-generator /run/systemd/generator
-            systemctl --system daemon-reload >/dev/null || true
-        fi
-    ;;
-esac
+if [ "$1" = "configure" ]; then
+    if ! getent group goupile >/dev/null; then
+        addgroup --quiet --system goupile
+    fi
+    if ! getent passwd goupile >/dev/null; then
+        adduser --system --ingroup goupile --home /var/lib/goupile goupile \
+            --gecos "goupile eCRF daemon"
+    fi
+    if [ "$2" = "3.0" ]; then
+        public_key=$(awk -F " = " "/PublicKey/ { print \$2 }" /var/lib/goupile/default/goupile.ini | xargs)
+        echo > /etc/goupile/domains.d/default.ini
+        echo "[Domain]" >> /etc/goupile/domains.d/default.ini
+        echo "ArchiveKey = ${public_key}" >> /etc/goupile/domains.d/default.ini
+        echo "Port = 8888" >> /etc/goupile/domains.d/default.ini
+    fi
+    if [ -d /run/systemd/system ]; then
+        /lib/systemd/system-generators/goupile-systemd-generator /run/systemd/generator
+        systemctl --system daemon-reload >/dev/null || true
+    fi
+fi
 
 exit 0' > ${DEBIAN_DIR}/postinst
     chmod +x ${DEBIAN_DIR}/postinst
@@ -58,11 +56,9 @@ exit 0' > ${DEBIAN_DIR}/postinst
 
 set -e
 
-case "$1" in
-    purge)
-        rm -rf /etc/goupile
-    ;;
-esac
+if [ "$1" = "purge" ]; then
+    rm -rf /etc/goupile
+fi
 
 exit 0' > ${DEBIAN_DIR}/postrm
     chmod +x ${DEBIAN_DIR}/postrm
