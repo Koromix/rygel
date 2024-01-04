@@ -848,10 +848,10 @@ int RunUnseal(Span<const char *> arguments)
         PrintLn(fp, R"(Usage: %!..+%1 unseal [options] <archive_file>%!0
 
 Options:
-    %!..+-O, --output_file <file>%!0      Set output file
-    %!..+-k, --decrypt_key <key>%!0       Set decryption key
+    %!..+-O, --output_file <file>%!0     Set output file
+    %!..+-k, --decrypt_key <key>%!0      Set decryption key
 
-        %!..+--check%!0                   Only check that key is valid)", FelixTarget);
+        %!..+--check%!0                  Only check that key is valid)", FelixTarget);
     };
 
     // Parse arguments
