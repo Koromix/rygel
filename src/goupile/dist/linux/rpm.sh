@@ -35,6 +35,14 @@ fi
 if [ -d /run/systemd/system ]; then
     /lib/systemd/system-generators/goupile-systemd-generator /run/systemd/generator
     systemctl --system daemon-reload >/dev/null || true
+fi
+
+%postun
+if [ "$1" = "0" ]; then
+    if [ -d /run/systemd/system ]; then
+        /lib/systemd/system-generators/goupile-systemd-generator /run/systemd/generator
+        systemctl --system daemon-reload >/dev/null || true
+    fi
 fi' >> ${RPM_DIR}/${PKG_NAME}.spec
 }
 

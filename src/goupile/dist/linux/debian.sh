@@ -59,6 +59,10 @@ set -e
 if [ "$1" = "purge" ]; then
     rm -rf /etc/goupile
 fi
+if [ -d /run/systemd/system ]; then
+    rm -f /run/systemd/generator/multi-user.target.wants/goupile@*.service || true
+    systemctl --system daemon-reload >/dev/null || true
+fi
 
 exit 0' > ${DEBIAN_DIR}/postrm
     chmod +x ${DEBIAN_DIR}/postrm
