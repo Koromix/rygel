@@ -297,8 +297,8 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
             return false;
 
         for (const AssetInfo &asset: GetPackedAssets()) {
-            if (StartsWith(asset.name, "src/goupile/demo/")) {
-                const char *filename = asset.name + 17;
+            if (StartsWith(asset.name, "src/goupile/server/demo/")) {
+                const char *filename = asset.name + 24;
 
                 CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
                                                                                 : CompressionType::None;
