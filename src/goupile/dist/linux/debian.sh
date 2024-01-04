@@ -21,10 +21,6 @@ build() {
     install -D -m0644 src/goupile/dist/linux/template.ini ${ROOT_DIR}/etc/goupile/template.ini
     install -D -m0644 src/goupile/dist/linux/goupile@.service ${ROOT_DIR}/lib/systemd/system/goupile@.service
 
-    echo '\
-/etc/goupile/domains.ini
-/etc/goupile/template.ini' > ${DEBIAN_DIR}/conffiles
-
 echo '\
 #!/bin/sh
 
@@ -55,6 +51,20 @@ esac
 
 exit 0' > ${DEBIAN_DIR}/postinst
     chmod +x ${DEBIAN_DIR}/postinst
+
+    echo '\
+#!/bin/sh
+
+set -e
+
+case "$1" in
+    purge)
+        rm -rf /etc/goupile
+    ;;
+esac
+
+exit 0' > ${DEBIAN_DIR}/postrm
+    chmod +x ${DEBIAN_DIR}/postrm
 }
 
 cd "$(dirname $0)/../../../.."
