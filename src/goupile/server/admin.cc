@@ -387,6 +387,50 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
     return true;
 }
 
+static void GenerateKeyPair(Span<char> out_decrypt, Span<char> out_archive)
+{
+    static_assert(crypto_box_PUBLICKEYBYTES == 32);
+    static_assert(crypto_box_SECRETKEYBYTES == 32);
+
+    RG_ASSERT(out_decrypt.len >= 45);
+    RG_ASSERT(out_archive.len >= 45);
+
+    uint8_t sk[crypto_box_SECRETKEYBYTES];
+    uint8_t pk[crypto_box_PUBLICKEYBYTES];
+    crypto_box_keypair(pk, sk);
+
+    sodium_bin2base64(out_decrypt.ptr, out_decrypt.len, sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+    sodium_bin2base64(out_archive.ptr, out_archive.len, pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
+}
+
+static void LogKeyPair(const char *decrypt_key, const char *archive_key)
+{
+    LogInfo("Backup decryption key: %!..+%1%!0", decrypt_key);
+    LogInfo("           Public key: %!..+%1%!0", archive_key);
+    LogInfo();
+    LogInfo("You need this key to restore Goupile archives, %!..+you must not lose it!%!0");
+    LogInfo("There is no way to get it back, without it the archives are lost.");
+}
+
+static bool ParseKeyString(Span<const char> str, uint8_t out_key[32] = nullptr)
+{
+    static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
+
+    uint8_t key[32];
+    size_t key_len;
+    int ret = sodium_base642bin(key, RG_SIZE(key), str.ptr, (size_t)str.len,
+                                nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
+    if (ret || key_len != 32) {
+        LogError("Malformed key value");
+        return false;
+    }
+
+    if (out_key) {
+        memcpy(out_key, key, RG_SIZE(key));
+    }
+    return true;
+}
+
 int RunInit(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -397,8 +441,8 @@ int RunInit(Span<const char *> arguments)
     const char *password = nullptr;
     bool check_password = true;
     bool totp = false;
-    char archive_key[45] = {};
     char decrypt_key[45] = {};
+    char archive_key[45] = {};
     const char *demo = nullptr;
     bool change_owner = false;
     uid_t owner_uid = 0;
@@ -446,16 +490,8 @@ Options:
             } else if (opt.Test("--totp")) {
                 totp = true;
             } else if (opt.Test("--archive_key", OptionType::Value)) {
-                static_assert(crypto_box_curve25519xsalsa20poly1305_PUBLICKEYBYTES == 32);
-
-                uint8_t key[32];
-                size_t key_len;
-                int ret = sodium_base642bin(key, RG_SIZE(key), opt.current_value, strlen(opt.current_value),
-                                            nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
-                if (ret || key_len != 32) {
-                    LogError("Malformed --archive_key value");
+                if (!ParseKeyString(opt.current_value))
                     return 1;
-                }
 
                 RG_ASSERT(strlen(opt.current_value) < RG_SIZE(archive_key));
                 CopyString(opt.current_value, archive_key);
@@ -564,15 +600,7 @@ retry_pwd:
 
     // Create archive key pair
     if (!archive_key[0]) {
-        static_assert(crypto_box_PUBLICKEYBYTES == 32);
-        static_assert(crypto_box_SECRETKEYBYTES == 32);
-
-        uint8_t pk[crypto_box_PUBLICKEYBYTES];
-        uint8_t sk[crypto_box_SECRETKEYBYTES];
-        crypto_box_keypair(pk, sk);
-
-        sodium_bin2base64(archive_key, RG_SIZE(archive_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
-        sodium_bin2base64(decrypt_key, RG_SIZE(decrypt_key), sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+        GenerateKeyPair(archive_key, decrypt_key);
     }
 
     // Create domain config
@@ -656,11 +684,7 @@ retry_pwd:
 
     if (decrypt_key[0]) {
         LogInfo();
-        LogInfo("Backup decryption key: %!..+%1%!0", decrypt_key);
-        LogInfo("           Public key: %!..+%1%!0", archive_key);
-        LogInfo();
-        LogInfo("You need this key to restore Goupile archives, %!..+you must not lose it!%!0");
-        LogInfo("There is no way to get it back, without it the archives are lost.");
+        LogKeyPair(decrypt_key, archive_key);
     }
 
     root_guard.Disable();
@@ -739,6 +763,83 @@ Options:
 
     if (!db.Close())
         return 1;
+
+    return 0;
+}
+
+int RunKeys(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    char decrypt_key[45] = {};
+    char archive_key[45] = {};
+    bool random_key = true;
+
+    const auto print_usage = [=](FILE *fp) {
+        PrintLn(fp, R"(Usage: %!..+%1 keys%!0
+
+Options:
+    %!..+-k, --decrypt_key [key]%!0      Use existing decryption key)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(stdout);
+                return 0;
+            } else if (opt.Test("-k", "--decrypt_key", OptionType::OptionalValue)) {
+                if (opt.current_value) {
+                    if (!ParseKeyString(opt.current_value))
+                        return 1;
+
+                    RG_ASSERT(strlen(opt.current_value) < RG_SIZE(decrypt_key));
+                    CopyString(opt.current_value, decrypt_key);
+                } else {
+                    memset(decrypt_key, 0, RG_SIZE(decrypt_key));
+                }
+
+                random_key = false;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        opt.LogUnusedArguments();
+    }
+
+    if (random_key) {
+        GenerateKeyPair(decrypt_key, archive_key);
+    } else {
+        uint8_t sk[crypto_box_SECRETKEYBYTES];
+        uint8_t pk[crypto_box_PUBLICKEYBYTES];
+
+        if (!decrypt_key[0]) {
+again:
+            const char *key = Prompt("Decryption key: ", nullptr, "*", &temp_alloc);
+            if (!key)
+                return 1;
+            if (!ParseKeyString(key, sk))
+                goto again;
+        } else {
+            // Already checked it is well formed
+            size_t key_len;
+            int ret = sodium_base642bin(sk, RG_SIZE(sk), decrypt_key, strlen(decrypt_key),
+                                        nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL);
+            RG_ASSERT(!ret && key_len == 32);
+        }
+
+        crypto_scalarmult_base(pk, sk);
+
+        sodium_bin2base64(decrypt_key, RG_SIZE(decrypt_key), sk, RG_SIZE(sk), sodium_base64_VARIANT_ORIGINAL);
+        sodium_bin2base64(archive_key, RG_SIZE(archive_key), pk, RG_SIZE(pk), sodium_base64_VARIANT_ORIGINAL);
+    }
+
+    LogKeyPair(decrypt_key, archive_key);
 
     return 0;
 }

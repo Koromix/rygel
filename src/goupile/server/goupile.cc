@@ -868,6 +868,7 @@ Options:
 Other commands:
     %!..+init%!0                         Create new domain
     %!..+migrate%!0                      Migrate existing domain
+    %!..+keys%!0                         Generate archive key pairs
     %!..+unseal%!0                       Unseal domain archive
 
 For help about those commands, type: %!..+%1 <command> --help%!0)",
@@ -1143,6 +1144,8 @@ int Main(int argc, char **argv)
         return RunInit(arguments);
     } else if (TestStr(cmd, "migrate")) {
         return RunMigrate(arguments);
+    } else if (TestStr(cmd, "keys")) {
+        return RunKeys(arguments);
     } else if (TestStr(cmd, "unseal")) {
         return RunUnseal(arguments);
     } else if (TestStr(cmd, "vm")) {

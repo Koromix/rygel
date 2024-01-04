@@ -20,6 +20,8 @@ namespace RG {
 
 int RunInit(Span<const char *> arguments);
 int RunMigrate(Span<const char *> arguments);
+int RunKeys(Span<const char *> arguments);
+
 int RunUnseal(Span<const char *> arguments);
 
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io);
