@@ -849,7 +849,7 @@ int RunUnseal(Span<const char *> arguments)
 
 Options:
     %!..+-O, --output_file <file>%!0      Set output file
-    %!..+-k, --key <key>%!0               Set decryption key
+    %!..+-k, --decrypt_key <key>%!0       Set decryption key
 
         %!..+--check%!0                   Only check that key is valid)", FelixTarget);
     };
