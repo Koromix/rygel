@@ -17,7 +17,8 @@ build() {
     install -D -m0755 bin/Paranoid/goupile ${ROOT_DIR}/bin/goupile
 
     install -D -m0755 src/goupile/dist/linux/generator.py ${ROOT_DIR}/lib/systemd/system-generators/goupile-systemd-generator
-    install -D -m0644 src/goupile/dist/linux/domains.ini ${ROOT_DIR}/etc/goupile/domains.ini
+    install -D -m0755 src/goupile/dist/linux/create_domain.py ${ROOT_DIR}/usr/lib/goupile/create_domain
+    install -D -m0644 src/goupile/dist/linux/README.md ${ROOT_DIR}/etc/goupile/domains.d/README.md
     install -D -m0644 src/goupile/dist/linux/template.ini ${ROOT_DIR}/etc/goupile/template.ini
     install -D -m0644 src/goupile/dist/linux/goupile@.service ${ROOT_DIR}/lib/systemd/system/goupile@.service
 
@@ -37,10 +38,10 @@ case "$1" in
         fi
         if [ "$2" = "3.0" ]; then
             public_key=$(awk -F " = " "/PublicKey/ { print \$2 }" /var/lib/goupile/default/goupile.ini | xargs)
-            echo >> /etc/goupile/domains.ini
-            echo "[default]" >> /etc/goupile/domains.ini
-            echo "ArchiveKey = ${public_key}" >> /etc/goupile/domains.ini
-            echo "Port = 8888" >> /etc/goupile/domains.ini
+            echo > /etc/goupile/domains.d/default.ini
+            echo "[Domain]" >> /etc/goupile/domains.d/default.ini
+            echo "ArchiveKey = ${public_key}" >> /etc/goupile/domains.d/default.ini
+            echo "Port = 8888" >> /etc/goupile/domains.d/default.ini
         fi
         if [ -d /run/systemd/system ]; then
             /lib/systemd/system-generators/goupile-systemd-generator /run/systemd/generator

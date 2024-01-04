@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 BINARY_FILENAME = '/usr/bin/goupile'
 
-DOMAINS_FILENAME = '/etc/goupile/domains.ini'
+DOMAINS_DIRECTORY = '/etc/goupile/domains.d'
 TEMPLATE_FILENAME = '/etc/goupile/template.ini'
 UNIT_FILENAME = '/usr/lib/systemd/system/goupile@.service'
 
@@ -44,15 +44,23 @@ def load_config(filename):
 
     return config
 
-def load_domains(config):
+def load_domains(path):
     domains = []
 
     used_names = set()
     used_ports = set()
 
-    for name in config.sections():
+    for name in os.listdir(path):
+        if not name.endswith('.ini'):
+            continue
+
+        filename = os.path.join(path, name)
+        name, _ = os.path.splitext(name)
+
+        config = load_config(filename)
+        section = config['Domain']
+
         domain = DomainConfig()
-        section = config[name]
 
         domain.name = name
         domain.archive_key = decode_key(section['ArchiveKey'])
@@ -131,8 +139,7 @@ if __name__ == '__main__':
     parser.add_argument('late', metavar = 'late', type = str, help = 'path for late units', nargs = '?')
     args = parser.parse_args()
 
-    config = load_config(DOMAINS_FILENAME)
-    domains = load_domains(config)
+    domains = load_domains(DOMAINS_DIRECTORY)
 
     sync_domains(CONFIG_DIRECTORY, domains, TEMPLATE_FILENAME)
     sync_units(args.normal, domains)
