@@ -3,7 +3,7 @@
 To create a new domain, run the following command:
 
 ```sh
-/usr/lib/goupile/create_domain <name> -p <HTTP port>
+/usr/lib/goupile/create_domain <name> [-p <HTTP port>]
 systemctl start goupile@<name>
 ```
 
