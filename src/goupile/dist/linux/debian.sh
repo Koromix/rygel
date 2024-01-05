@@ -42,6 +42,8 @@ if [ "$1" = "configure" ]; then
         echo "[Domain]" > /etc/goupile/domains.d/default.ini
         echo "ArchiveKey = ${public_key}" >> /etc/goupile/domains.d/default.ini
         echo "Port = 8889" >> /etc/goupile/domains.d/default.ini
+        systemctl disable goupile >/dev/null 2>&1 || true
+        systemctl stop goupile >/dev/null 2>&1 || true
     fi
     if [ -d /run/systemd/system ]; then
         /lib/goupile/manage.py sync
