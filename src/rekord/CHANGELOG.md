@@ -1,5 +1,10 @@
 # Changelog
 
+## Rekord 0.11
+
+- Rename exploration commands
+- Fix broken compilation on Windows
+
 ## Rekord 0.10
 
 - Replace object ID mentions with object hash
