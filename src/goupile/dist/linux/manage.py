@@ -50,8 +50,6 @@ class ServiceStatus:
 def create(args):
     if not re.match('^[a-zA-Z0-9_\-\.]+$', args.name):
         raise ValueError('Name must only contain alphanumeric, \'.\', \'-\' or \'_\' characters')
-    if args.port is not None and (args.port <= 0 or args.port > 65535):
-        raise ValueError(f'Invalid port value {args.port}')
 
     domains = load_domains(DOMAINS_DIRECTORY)
     ports = { domain.port for domain in domains }
@@ -63,8 +61,9 @@ def create(args):
         port = args.port
     else:
         port = FIRST_PORT
-        while port in ports:
+        while str(port) in ports:
             port += 1
+        port = str(port)
 
     sk = secrets.token_bytes(32)
     decrypt_key = base64.b64encode(sk).decode('UTF-8')
@@ -145,10 +144,13 @@ def decode_key(str):
         raise ValueError(f'Malformed archive key "{str}"');
     return key
 
-def decode_port(str):
-    port = int(str)
-    if port <= 0 or port > 65535:
-        raise ValueError(f'Invalid TCP port "{str}"')
+def decode_port(port):
+    if port.isnumeric():
+        if int(port) <= 0 or int(port) > 65535:
+            raise ValueError(f'Invalid TCP port "{str}"')
+    else:
+        if not port.startswith('/'):
+            raise ValueError(f'Use absolute path for UNIX socket')
     return port
 
 def sync_domains(path, domains, template):
@@ -168,7 +170,12 @@ def sync_domains(path, domains, template):
             config['Data'][key] = value
         config['Data']['RootDirectory'] = root_directory
         config['Archives']['PublicKey'] = base64.b64encode(domain.archive_key).decode('UTF-8')
-        config['HTTP']['Port'] = str(domain.port)
+        if domain.port.isnumeric():
+            config['HTTP']['SocketType'] = 'Dual'
+            config['HTTP']['Port'] = domain.port
+        else:
+            config['HTTP']['SocketType'] = 'Unix'
+            config['HTTP']['UnixPath'] = domain.port
 
         with open(ini_filename, 'w') as f:
             config.write(f)
@@ -252,7 +259,7 @@ def make_domain_config(archive_key, port):
 
     config.add_section('Domain')
     config['Domain']['ArchiveKey'] = archive_key
-    config['Domain']['Port'] = str(port)
+    config['Domain']['Port'] = port
 
     return config
 
@@ -266,7 +273,7 @@ if __name__ == '__main__':
     sub = subparsers.add_parser('create')
     sub.add_argument('name', metavar = 'name', type = str, help = 'domain name')
     sub.add_argument('-f', '--force', dest = 'force', action = 'store_true', help = 'Overwrite existing domain config')
-    sub.add_argument('-p', '--port', dest = 'port', type = int, required = False, help = 'HTTP port')
+    sub.add_argument('-p', '--port', dest = 'port', type = decode_port, required = False, help = 'HTTP port or unix socket')
     sub.add_argument('--no_sync', dest = 'sync', action = 'store_false', help = 'Skip automatic domain sync')
     sub.set_defaults(func = create)
 
