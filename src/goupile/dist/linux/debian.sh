@@ -37,8 +37,7 @@ if [ "$1" = "configure" ]; then
     fi
     if [ "$2" = "3.0" ]; then
         public_key=$(awk -F " = " "/PublicKey/ { print \$2 }" /var/lib/goupile/default/goupile.ini | xargs)
-        echo > /etc/goupile/domains.d/default.ini
-        echo "[Domain]" >> /etc/goupile/domains.d/default.ini
+        echo "[Domain]" > /etc/goupile/domains.d/default.ini
         echo "ArchiveKey = ${public_key}" >> /etc/goupile/domains.d/default.ini
         echo "Port = 8888" >> /etc/goupile/domains.d/default.ini
     fi
