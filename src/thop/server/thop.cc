@@ -475,7 +475,7 @@ Options:
                                  %!D..(default: <profile_dir>%/mco_authorizations.ini
                                            <profile_dir>%/mco_authorizations.txt)%!0
 
-        %!..+--port <port>%!0            Change web server port
+    %!..+-p, --port <port>%!0            Change web server port
                                  %!D..(default: %3)%!0
         %!..+--base_url <url>%!0         Change base URL
                                  %!D..(default: %4)%!0)",
@@ -531,7 +531,7 @@ Options:
                 thop_config.table_directories.Append(opt.current_value);
             } else if (opt.Test("--mco_auth_file", OptionType::Value)) {
                 thop_config.mco_authorization_filename = opt.current_value;
-            } else if (opt.Test("--port", OptionType::Value)) {
+            } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &thop_config.http.port))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {

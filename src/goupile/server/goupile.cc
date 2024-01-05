@@ -861,7 +861,7 @@ Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
                                  %!D..(default: %2)%!0
 
-        %!..+--port <port>%!0            Change web server port
+    %!..+-p, --port <port>%!0            Change web server port
                                  %!D..(default: %3)%!0
         %!..+--sandbox%!0                Run sandboxed (on supported platforms)
 
@@ -935,7 +935,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         while (opt.Next()) {
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
-            } else if (opt.Test("--port", OptionType::Value)) {
+            } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &gp_domain.config.http.port))
                     return 1;
             } else if (opt.Test("--sandbox")) {
