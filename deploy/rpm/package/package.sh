@@ -48,11 +48,13 @@ elif [ "$1" = "build" ]; then
 
 echo "
 %install" >> ${RPM_DIR}/${PKG_NAME}.spec
-    (cd ${ROOT_DIR} && find -type f -printf "%#m %p\n" | awk -F ' ' "{print \"install -D -m\" \$1 \" /repo/${ROOT_DIR}/\" substr(\$2, 3) \" %{buildroot}/\" substr(\$2, 3)}") | sort >> ${RPM_DIR}/${PKG_NAME}.spec
+    (cd ${ROOT_DIR} && find -mindepth 1 -type d | awk -F ' ' "{print \"mkdir %{buildroot}/\" substr(\$1, 3)}") | sort >> ${RPM_DIR}/${PKG_NAME}.spec
+    (cd ${ROOT_DIR} && find -type f -printf "%#m %p\n" | awk -F ' ' "{print \"install -m\" \$1 \" /repo/${ROOT_DIR}/\" substr(\$2, 3) \" %{buildroot}/\" substr(\$2, 3)}") | sort >> ${RPM_DIR}/${PKG_NAME}.spec
+    (cd ${ROOT_DIR} && find -type l -printf "%l %p\n" | awk -F ' ' "{print \"ln -s \" \$1 \" %{buildroot}/\" substr(\$2, 3)}") | sort >> ${RPM_DIR}/${PKG_NAME}.spec
 
 echo "
 %files" >> ${RPM_DIR}/${PKG_NAME}.spec
-    (cd ${ROOT_DIR} && find -type f | cut -c '2-') | sort >> ${RPM_DIR}/${PKG_NAME}.spec
+    (cd ${ROOT_DIR} && find \( -type f -o -type l \) | cut -c '2-') | sort >> ${RPM_DIR}/${PKG_NAME}.spec
 
 echo "
 %changelog
