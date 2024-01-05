@@ -34,7 +34,7 @@ ROOT_DIRECTORY = '/var/lib/goupile'
 GENERATOR_DIRECTORY = '/run/systemd/generator'
 UNIT_FILENAME = '/usr/lib/systemd/system/goupile@.service'
 
-FIRST_PORT = 8888
+FIRST_PORT = 8889
 
 @dataclass
 class DomainConfig:

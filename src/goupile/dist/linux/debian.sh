@@ -41,7 +41,7 @@ if [ "$1" = "configure" ]; then
         public_key=$(awk -F " = " "/PublicKey/ { print \$2 }" /var/lib/goupile/default/goupile.ini | xargs)
         echo "[Domain]" > /etc/goupile/domains.d/default.ini
         echo "ArchiveKey = ${public_key}" >> /etc/goupile/domains.d/default.ini
-        echo "Port = 8888" >> /etc/goupile/domains.d/default.ini
+        echo "Port = 8889" >> /etc/goupile/domains.d/default.ini
     fi
     if [ -d /run/systemd/system ]; then
         /lib/goupile/manage.py sync
