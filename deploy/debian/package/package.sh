@@ -7,7 +7,7 @@ CLIENT_DIR=${DEST_DIR}/client
 if [ "$1" = "" -o "$1" = "package" ]; then
     ./bootstrap.sh
 
-    VERSION=$(./felix --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}" | sed 's/-/./')
+    VERSION=$(./felix --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
     DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 
     sudo rm -rf ${DEST_DIR}
