@@ -719,7 +719,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     if (!quiet) {
         LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
         LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
-        LogInfo("  Host: %!..+%1%!0", HostPlatformNames[(int)host_spec.platform]);
+        LogInfo("  Host: %!..+%1 (%2)%!0", HostPlatformNames[(int)host_spec.platform],
+                                           HostArchitectureNames[(int)host_spec.architecture]);
         LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
         LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
     }
