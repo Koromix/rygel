@@ -392,7 +392,7 @@ Options:
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &config.http.port))
+                if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
             } else {
                 opt.LogUnknownError();

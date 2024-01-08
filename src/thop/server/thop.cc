@@ -532,7 +532,7 @@ Options:
             } else if (opt.Test("--mco_auth_file", OptionType::Value)) {
                 thop_config.mco_authorization_filename = opt.current_value;
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &thop_config.http.port))
+                if (!thop_config.http.SetPortOrPath(opt.current_value))
                     return 1;
             } else if (opt.Test("--base_url", OptionType::Value)) {
                 thop_config.base_url = opt.current_value;

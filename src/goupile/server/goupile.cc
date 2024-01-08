@@ -936,7 +936,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
-                if (!ParseInt(opt.current_value, &gp_domain.config.http.port))
+                if (!gp_domain.config.http.SetPortOrPath(opt.current_value))
                     return 1;
             } else if (opt.Test("--sandbox")) {
                 // Already handled

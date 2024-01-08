@@ -83,6 +83,30 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
     return false;
 }
 
+bool http_Config::SetPortOrPath(Span<const char> str)
+{
+    if (std::all_of(str.begin(), str.end(), IsAsciiDigit)) {
+        int new_port;
+        if (!ParseInt(str, &new_port))
+            return false;
+
+        if (new_port <= 0 || port > UINT16_MAX) {
+            LogError("HTTP port %1 is invalid (range: 1 - %2)", port, UINT16_MAX);
+            return false;
+        }
+
+        if (sock_type != SocketType::IPv4 && sock_type != SocketType::IPv6 && sock_type != SocketType::Dual) {
+            sock_type = SocketType::Dual;
+        }
+        port = new_port;
+    } else {
+        sock_type = SocketType::Unix;
+        unix_path = NormalizePath(str, &str_alloc).ptr;
+    }
+
+    return true;
+}
+
 bool http_Config::Validate() const
 {
     bool valid = true;

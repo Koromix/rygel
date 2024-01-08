@@ -63,6 +63,7 @@ struct http_Config {
     BlockAllocator str_alloc;
 
     bool SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory = {});
+    bool SetPortOrPath(Span<const char> str);
     bool Validate() const;
 
     http_Config() = default;
