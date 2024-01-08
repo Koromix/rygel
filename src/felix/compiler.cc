@@ -404,6 +404,9 @@ public:
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
         out_cmd->rsp_offset = buf.len;
 
+        // Cross-compilation (Linux only for now)
+        AddClangTarget(&buf);
+
         // Build options
         Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
         if (clang_ver >= 130000) {
@@ -590,6 +593,9 @@ public:
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
 
+        // Cross-compilation (Linux only for now)
+        AddClangTarget(&buf);
+
         // Build mode
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " -flto");
@@ -727,6 +733,31 @@ public:
     }
 
     void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+
+private:
+    void AddClangTarget(HeapArray<char> *out_buf) const
+    {
+        // Only for Linux (for now)
+
+#ifdef __linux__
+        if (architecture != NativeArchitecture) {
+            RG_ASSERT(platform == HostPlatform::Linux);
+
+            switch (architecture)  {
+                case HostArchitecture::x86: { Fmt(out_buf, " --target=i386-pc-linux-gnu"); } break;
+                case HostArchitecture::x64: { Fmt(out_buf, " --target=x86_64-pc-linux-gnu"); } break;
+                case HostArchitecture::ARM64: { Fmt(out_buf, " --target=aarch64-pc-linux-gnu"); } break;
+                case HostArchitecture::RISCV64: { Fmt(out_buf, " --target=riscv64-pc-linux-gnu"); } break;
+
+                case HostArchitecture::ARM32:
+                case HostArchitecture::AVR:
+                case HostArchitecture::Web: { RG_UNREACHABLE(); } break;
+            }
+        }
+#else
+        RG_ASSERT(architecture == NativeArchitecture);
+#endif
+    }
 };
 
 class GnuCompiler final: public Compiler {
@@ -2254,12 +2285,58 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             LogError("Path to cross-platform MinGW must be explicitly specified");
             return nullptr;
         }
-        if (!IdentifyCompiler(spec.cc, "mingw-w64") && !IdentifyCompiler(spec.cc, "w64-mingw32")) {
+
+        if (IdentifyCompiler(spec.cc, "mingw-w64") && !IdentifyCompiler(spec.cc, "w64-mingw32")) {
+            return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
+        } else {
             LogError("Only MinGW-w64 can be used for Windows cross-compilation at the moment");
             return nullptr;
         }
+    } else if (spec.platform == HostPlatform::Linux) {
+        // Go with GCC if not specified otherwise
+        if (!spec.cc) {
+            switch (spec.architecture) {
+                case HostArchitecture::x86: { spec.cc = "i686-linux-gnu-gcc"; } break;
+                case HostArchitecture::x64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
+                case HostArchitecture::ARM64: { spec.cc = "aarch64-linux-gnu-gcc"; } break;
+                case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
 
-        return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
+                case HostArchitecture::ARM32:
+                case HostArchitecture::AVR:
+                case HostArchitecture::Web: {} break;
+            }
+        }
+
+        if (IdentifyCompiler(spec.cc, "gcc")) {
+            return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
+        } else if (IdentifyCompiler(spec.cc, "clang")) {
+            if (!spec.ld) {
+                spec.ld = "lld";
+            }
+            if (!IdentifyCompiler(spec.ld, "lld")) {
+                LogError("Use LLD for cross-compiling with Clang");
+                return nullptr;
+            }
+
+            switch (spec.architecture)  {
+                case HostArchitecture::x86:
+                case HostArchitecture::x64:
+                case HostArchitecture::ARM64:
+                case HostArchitecture::RISCV64: {} break;
+
+                case HostArchitecture::ARM32:
+                case HostArchitecture::AVR:
+                case HostArchitecture::Web: {
+                    LogError("Clang cross-compilation for '%1' is not supported", HostArchitectureNames[(int)spec.architecture]);
+                    return nullptr;
+                } break;
+            }
+
+            return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
+        } else {
+            LogError("Only GCC or Clang can be used for Linux cross-compilation at the moment");
+            return nullptr;
+        }
 #endif
     } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/AVR/")) {
         if (!spec.cc) {
