@@ -351,11 +351,37 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                     io->AttachError(403);
                     return false;
                 }
+
+                if (!stamp->HasPermission(UserPermission::DataLoad)) {
+                    if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, tid) VALUES (?1, ?2)
+                                              ON CONFLICT DO NOTHING)",
+                                           -session->userid, tid))
+                        return false;
+                }
             } else {
                 if (!stamp->HasPermission(UserPermission::DataEdit)) {
                     LogError("You are not allowed to edit records");
                     io->AttachError(403);
                     return false;
+                }
+
+                if (!stamp->HasPermission(UserPermission::DataLoad)) {
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare(R"(SELECT t.rowid
+                                                  FROM rec_threads t
+                                                  INNER JOIN ins_claims c ON (c.userid = ?1 AND c.tid = t.tid)
+                                                  WHERE t.tid = ?2)", &stmt))
+                        return false;
+                    sqlite3_bind_int64(stmt, 1, -session->userid);
+                    sqlite3_bind_text(stmt, 2, tid, -1, SQLITE_STATIC);
+
+                    if (!stmt.Step()) {
+                        if (stmt.IsValid()) {
+                            LogError("You are not allowed to alter this record");
+                            io->AttachError(403);
+                        }
+                        return false;
+                    }
                 }
             }
             if (has_deletes && !stamp->HasPermission(UserPermission::DataDelete)) {

@@ -151,7 +151,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         return false;
 
     sqlite3_bind_text(stmt, 1, filter.single_tid, -1, SQLITE_STATIC);
-    sqlite3_bind_int64(stmt, 2, userid);
+    sqlite3_bind_int64(stmt, 2, -userid);
     sqlite3_bind_int64(stmt, 3, filter.audit_anchor);
     sqlite3_bind_int64(stmt, 4, filter.start_t);
     sqlite3_bind_int64(stmt, 5, filter.end_t);
@@ -256,7 +256,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
         io->AttachError(401);
         return;
     }
-    if (!stamp || !stamp->HasPermission(UserPermission::DataLoad)) {
+    if (!stamp) {
         LogError("User is not allowed to list data");
         io->AttachError(403);
         return;
@@ -265,7 +265,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     int64_t anchor = -1;
     if (const char *str = request.GetQueryValue("anchor"); str) {
         if (!stamp->HasPermission(UserPermission::DataLoad) ||
-                    !stamp->HasPermission(UserPermission::DataAudit)) {
+                !stamp->HasPermission(UserPermission::DataAudit)) {
             LogError("User is not allowed to access historical data");
             io->AttachError(403);
             return;
