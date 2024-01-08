@@ -959,6 +959,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     if (gp_domain.config.smtp.url && !InitSMTP(gp_domain.config.smtp))
         return 1;
 
+    // We need to bind the socket before sandboxing
+    LogInfo("Init HTTP server");
+    http_Daemon daemon;
+    if (!daemon.Bind(gp_domain.config.http))
+        return 1;
+
 #ifdef __linux__
     if (!NotifySystemd())
         return 1;
@@ -990,12 +996,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
     LogInfo("Init instances");
     if (!gp_domain.SyncAll())
-        return 1;
-
-    // We need to bind the socket before sandboxing
-    LogInfo("Init HTTP server");
-    http_Daemon daemon;
-    if (!daemon.Bind(gp_domain.config.http))
         return 1;
 
     // From here on, don't quit abruptly
