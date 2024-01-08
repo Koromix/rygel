@@ -207,7 +207,7 @@ bool http_Daemon::Start(const http_Config &config,
     if (config.max_connections) {
         mhd_options.Append({ MHD_OPTION_CONNECTION_LIMIT, config.max_connections, nullptr });
     }
-    mhd_options.Append({ MHD_OPTION_CONNECTION_TIMEOUT, config.idle_timeout / 1000, nullptr });
+    mhd_options.Append({ MHD_OPTION_CONNECTION_TIMEOUT, (intptr_t)(config.idle_timeout / 1000), nullptr });
     mhd_options.Append({ MHD_OPTION_END, 0, nullptr });
     client_addr_mode = config.client_addr_mode;
 

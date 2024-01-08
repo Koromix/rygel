@@ -26,7 +26,7 @@ static const char *const drd_SectorNames[] = {
     "Private"
 };
 
-union drd_DiagnosisCode {
+union alignas(8) drd_DiagnosisCode {
     int64_t value;
     char str[7];
 
@@ -98,7 +98,7 @@ union drd_DiagnosisCode {
     uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
 
-union drd_ProcedureCode {
+union alignas(8) drd_ProcedureCode {
     int64_t value;
     char str[8];
 

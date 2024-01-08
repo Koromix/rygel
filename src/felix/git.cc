@@ -626,7 +626,7 @@ static Span<const uint8_t> ParseOffset(Span<const uint8_t> buf, int64_t *out_off
     return buf.Take(used, buf.len - used);
 }
 
-bool GitVersioneer::ReadPackAttributes(Size idx, Size offset, FunctionRef<bool(Span<const char> key, Span<const char> value)> func)
+bool GitVersioneer::ReadPackAttributes(Size idx, int64_t offset, FunctionRef<bool(Span<const char> key, Span<const char> value)> func)
 {
     FILE *fp = pack_files[idx];
 

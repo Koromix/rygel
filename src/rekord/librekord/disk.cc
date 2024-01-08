@@ -370,7 +370,7 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
         DecodeLZ4 lz4;
 
         while (remain.len) {
-            Size in_len = std::min(remain.len, BlobSplit + crypto_secretstream_xchacha20poly1305_ABYTES);
+            Size in_len = std::min(remain.len, BlobSplit + (Size)crypto_secretstream_xchacha20poly1305_ABYTES);
             Size out_len = in_len - crypto_secretstream_xchacha20poly1305_ABYTES;
 
             Span<const uint8_t> cypher = MakeSpan(remain.ptr, in_len);
@@ -812,7 +812,7 @@ bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
     }
 
     len -= RG_OFFSET_OF(SecretData, cypher);
-    len = std::min(len, out_buf.len + crypto_secretbox_MACBYTES);
+    len = std::min(len, out_buf.len + (Size)crypto_secretbox_MACBYTES);
 
     if (crypto_secretbox_open_easy(out_buf.ptr, secret.cypher, len, secret.nonce, pkey)) {
         LogError("Failed to decrypt secret '%1'", path);

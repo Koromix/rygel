@@ -18,7 +18,7 @@
 
 namespace RG {
 
-struct mco_ProcedureRealisation {
+struct alignas(8) mco_ProcedureRealisation {
     drd_ProcedureCode proc;
     int8_t phase;
     int8_t activity;

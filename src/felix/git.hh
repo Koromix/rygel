@@ -79,8 +79,8 @@ private:
     bool ReadLooseAttributes(const char *filename, FunctionRef<bool(Span<const char> key, Span<const char> value)> func);
 
     bool FindInIndexes(Size start_idx, const GitHash &hash, PackLocation *out_location);
-    bool ReadPackAttributes(Size idx, Size offset, FunctionRef<bool(Span<const char> key, Span<const char> value)> func);
-    bool ReadPackObject(FILE *fp, Size offset, int *out_type, HeapArray<uint8_t> *out_obj);
+    bool ReadPackAttributes(Size idx, int64_t offset, FunctionRef<bool(Span<const char> key, Span<const char> value)> func);
+    bool ReadPackObject(FILE *fp, int64_t offset, int *out_type, HeapArray<uint8_t> *out_obj);
 };
 
 }

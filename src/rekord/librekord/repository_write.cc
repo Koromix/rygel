@@ -234,7 +234,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         }
 
                         async.Run([=, this]() {
-                            Size file_len = 0;
+                            int64_t file_len = 0;
                             PutResult ret = PutFile(filename, &entry->hash, &file_len);
 
                             if (ret == PutResult::Success) {

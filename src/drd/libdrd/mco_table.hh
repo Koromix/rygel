@@ -121,7 +121,7 @@ struct mco_ExclusionInfo {
     uint8_t raw[232];
 };
 
-struct mco_ProcedureInfo {
+struct alignas(8) mco_ProcedureInfo {
     drd_ProcedureCode proc;
     int8_t phase;
     uint8_t activities;
