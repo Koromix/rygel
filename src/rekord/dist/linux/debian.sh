@@ -5,6 +5,7 @@ PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="Backup tool with deduplication and asymmetric encryption"
 PKG_DEPENDENCIES=""
 PKG_LICENSE=AGPL-3.0-or-later
+PKG_ARCHITECTURES="amd64 i386 arm64"
 
 SCRIPT_PATH=src/rekord/dist/linux/debian.sh
 VERSION_TARGET=rekord
