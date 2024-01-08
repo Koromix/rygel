@@ -12,7 +12,7 @@ DOCKER_IMAGE=debian11
 
 build() {
     ./bootstrap.sh
-    ./felix -pFast rekord
+    ./felix -pFast --host=$2 rekord
 
     install -D -m0755 bin/Fast/rekord ${ROOT_DIR}/usr/bin/rekord
 }

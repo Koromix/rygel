@@ -12,7 +12,7 @@ DOCKER_IMAGE=debian11
 
 build() {
     ./bootstrap.sh
-    ./felix -pFast felix
+    ./felix -pFast --host=$2 felix
 
     install -D -m0755 bin/Fast/felix ${ROOT_DIR}/usr/bin/felix
 }

@@ -12,7 +12,7 @@ if [ "$1" = "" -o "$1" = "package" ]; then
 
     sudo rm -rf ${DEST_DIR}
     mkdir -p ${DEBIAN_DIR} ${ROOT_DIR}
-    mkdir -p ${CLIENT_DIR}/upper
+    mkdir -p ${CLIENT_DIR}/upper ${CLIENT_DIR}/work
 
     install -D -m0755 deploy/debian/package/rules ${DEBIAN_DIR}/rules
     install -D -m0644 deploy/debian/package/compat ${DEBIAN_DIR}/compat
@@ -44,22 +44,24 @@ ${PKG_NAME} ($VERSION) unstable; urgency=low
 License: ${PKG_LICENSE}" > ${DEBIAN_DIR}/copyright
 
     docker build -t rygel/${DOCKER_IMAGE} deploy/docker/${DOCKER_IMAGE}
-    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build
+    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build x86_64-linux-gnu amd64 x64
+    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build i686-linux-gnu i386 x86
+    docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build aarch64-linux-gnu arm64 ARM64
 
-    cp ${CLIENT_DIR}/upper/${DEST_DIR}/${PKG_NAME}_*.deb ${PKG_DIR}/
+    cp ${CLIENT_DIR}/upper/*/${DEST_DIR}/${PKG_NAME}_*.deb ${PKG_DIR}/
 elif [ "$1" = "build" ]; then
     # Fix git error about dubious repository ownership
     git config --global safe.directory '*'
 
-    mkdir -p /repo /io/client/work
-    mount -t overlay overlay -o lowerdir=/io/host,upperdir=/io/client/upper,workdir=/io/client/work /repo
+    mkdir -p /repo /io/client/upper/$3 /io/client/work/$3
+    mount -t overlay overlay -o lowerdir=/io/host,upperdir=/io/client/upper/$3,workdir=/io/client/work/$3 /repo
     rm -f /repo/FelixBuild.ini.user
 
     cd /repo
-    build
+    build "$3" ",$4"
 
     (cd ${ROOT_DIR} && find \( -type f -o -type l \) -printf "%h/%f %h\n" | awk -F ' ' '{print "root/" substr($1, 3) " " substr($2, 3)}') | sort > ${DEBIAN_DIR}/install
-    (cd ${DEBIAN_DIR}/.. && dpkg-buildpackage -uc -us)
+    (cd ${DEBIAN_DIR}/.. && dpkg-buildpackage -uc -us -b -t "$2" -a "$3")
 
     cd /
     umount /repo
