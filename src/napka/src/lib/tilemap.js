@@ -543,22 +543,31 @@ function TileMap(runner) {
 
                 let target = render_tooltip.target;
 
-                let width = ctx.measureText(render_tooltip.text).width;
-                let height = 14;
+                let lines = render_tooltip.text.split('\n');
+                let width = Math.max(...lines.map(line => ctx.measureText(line).width));
+                let height = 16 * lines.length;
 
                 let pos = {
                     x: target.x + (target.size / 2) - viewport.x1 + 5,
-                    y: target.y - viewport.y1 + 4
+                    y: target.y - viewport.y1 - height / 2 - 5
                 };
 
                 if (pos.x + width > viewport.x2 - viewport.x1 - 10)
                     pos.x = target.x - (target.size / 2) - width - viewport.x1 - 15;
+                if (pos.y < 10) {
+                    pos.y = 10;
+                } else if (pos.y + height > viewport.y2 - viewport.y1 - 10) {
+                    pos.y = viewport.y2 - height - viewport.y1 - 10;
+                }
 
                 ctx.fillStyle = '#ffffffdd';
-                ctx.fillRect(pos.x, pos.y - height, width + 10, height + 6);
+                ctx.fillRect(pos.x, pos.y, width + 10, height + 6);
 
                 ctx.fillStyle = 'black';
-                ctx.fillText(render_tooltip.text, pos.x + 5, pos.y);
+                for (let i = 0; i < lines.length; i++) {
+                    let y = pos.y + (i + 1) * 16;
+                    ctx.fillText(lines[i], pos.x + 5, y);
+                }
             }
 
             ctx.restore();
