@@ -65,7 +65,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             } else if (prop.section == "Institution") {
                 do {
                     if (prop.key == "Sector") {
-                        if (!OptionToEnum(drd_SectorNames, prop.value, &config.sector)) {
+                        if (!OptionToEnumI(drd_SectorNames, prop.value, &config.sector)) {
                             LogError("Unkown sector '%1'", prop.value);
                             valid = false;
                         }
@@ -80,7 +80,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                         config.mco_authorization_filename = NormalizePath(prop.value, root_directory,
                                                                           &config.str_alloc).ptr;
                     } else if (prop.key == "DispenseMode") {
-                        if (!OptionToEnum(mco_DispenseModeOptions, prop.value, &config.mco_dispense_mode)) {
+                        if (!OptionToEnumI(mco_DispenseModeOptions, prop.value, &config.mco_dispense_mode)) {
                             LogError("Unknown dispensation mode '%1'", prop.value);
                             valid = false;
                         }

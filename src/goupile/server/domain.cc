@@ -178,7 +178,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                             }
                         }
                     } else if (prop.key == "AutoZone") {
-                        if (!OptionToEnum(TimeModeNames, prop.value, &config.archive_zone)) {
+                        if (!OptionToEnumI(TimeModeNames, prop.value, &config.archive_zone)) {
                             LogError("Unknown time mode '%1'", prop.value);
                             valid = false;
                         }
@@ -234,7 +234,7 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
             } else if (prop.section == "SMS") {
                 do {
                     if (prop.key == "Provider") {
-                        if (!OptionToEnum(sms_ProviderNames, prop.value, &config.sms.provider)) {
+                        if (!OptionToEnumI(sms_ProviderNames, prop.value, &config.sms.provider)) {
                             LogError("Unknown SMS provider '%1'", prop.value);
                             valid = false;
                         }

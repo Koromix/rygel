@@ -30,7 +30,7 @@ static drd_Sector GetSectorFromString(SEXP sector_xp, drd_Sector default_sector)
 
     if (sector_str) {
         drd_Sector sector;
-        if (!OptionToEnum(drd_SectorNames, sector_str, &sector)) {
+        if (!OptionToEnumI(drd_SectorNames, sector_str, &sector)) {
             LogError("Sector '%1' does not exist", sector_str);
             rcc_StopWithLastError();
         }
@@ -524,7 +524,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     unsigned int flags = 0;
     for (const char *opt: options_vec) {
-        if (!OptionToFlag(mco_ClassifyFlagOptions, opt, &flags)) {
+        if (!OptionToFlagI(mco_ClassifyFlagOptions, opt, &flags)) {
             LogError("Unknown classifier option '%1'", opt);
             rcc_StopWithLastError();
         }
@@ -532,7 +532,7 @@ RcppExport SEXP drdR_mco_Classify(SEXP classifier_xp, SEXP stays_xp, SEXP diagno
 
     int dispense_mode = -1;
     if (dispense_mode_str &&
-            !OptionToEnum(mco_DispenseModeOptions, dispense_mode_str, &dispense_mode)) {
+            !OptionToEnumI(mco_DispenseModeOptions, dispense_mode_str, &dispense_mode)) {
         LogError("Unknown dispensation mode '%1'", dispense_mode_str);
         rcc_StopWithLastError();
     }

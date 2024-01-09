@@ -373,13 +373,13 @@ Test options:)");
                 while (flags_str[0]) {
                     Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
-                    if (part.len && !OptionToFlag(mco_ClassifyFlagOptions, part, &classifier_flags)) {
+                    if (part.len && !OptionToFlagI(mco_ClassifyFlagOptions, part, &classifier_flags)) {
                         LogError("Unknown classifier flag '%1'", part);
                         return 1;
                     }
                 }
             } else if (opt.Test("-d", "--dispense", OptionType::Value)) {
-                if (!OptionToEnum(mco_DispenseModeOptions, opt.current_value, &dispense_mode)) {
+                if (!OptionToEnumI(mco_DispenseModeOptions, opt.current_value, &dispense_mode)) {
                     LogError("Unknown dispensation mode '%1'", opt.current_value);
                     return 1;
                 }
@@ -398,7 +398,7 @@ Test options:)");
                     while (flags_str[0]) {
                         Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
-                        if (part.len && !OptionToFlag(TestFlagOptions, part, &test_flags)) {
+                        if (part.len && !OptionToFlagI(TestFlagOptions, part, &test_flags)) {
                             LogError("Unknown test flag '%1'", part);
                             return 1;
                         }

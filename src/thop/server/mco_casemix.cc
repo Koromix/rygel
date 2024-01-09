@@ -66,7 +66,7 @@ static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *ke
         return false;
     }
 
-    if (!OptionToEnum(mco_DispenseModeOptions, str, out_dispense_mode)) {
+    if (!OptionToEnumI(mco_DispenseModeOptions, str, out_dispense_mode)) {
         LogError("Invalid '%1' parameter value '%2'", key, str);
         io->AttachError(422);
         return false;

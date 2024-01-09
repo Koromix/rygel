@@ -171,7 +171,7 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_enable, uint3
         if (part.len) {
             uint32_t *dest = enable ? out_enable : out_disable;
 
-            if (!OptionToFlag(CompileFeatureOptions, part, dest)) {
+            if (!OptionToFlagI(CompileFeatureOptions, part, dest)) {
                 LogError("Unknown target feature '%1'", part);
                 valid = false;
             }
@@ -214,7 +214,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
             // Type property must be specified first
             if (prop.key == "Type") {
-                if (OptionToEnum(TargetTypeNames, prop.value, &target_config.type)) {
+                if (OptionToEnumI(TargetTypeNames, prop.value, &target_config.type)) {
                     target_config.enable_by_default = (target_config.type == TargetType::Executable);
                 } else if (prop.value == "ExternalLibrary") { // Compatibility
                     target_config.type = TargetType::Library;
@@ -602,7 +602,7 @@ bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match
         // Architecture?
         {
             HostArchitecture architecture;
-            if (OptionToEnum(HostArchitectureNames, test, &architecture)) {
+            if (OptionToEnumI(HostArchitectureNames, test, &architecture)) {
                 match &= (architecture == this->architecture);
                 continue;
             }
@@ -629,7 +629,7 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
     while (remain.len) {
         Span<const char> part = SplitStrAny(remain, ", ", &remain);
 
-        if (part == "Win32") {
+        if (TestStrI(part, "Win32")) {
             // Old name, supported for compatibility (easier bisect)
             platforms |= 1 << (int)HostPlatform::Windows;
             continue;

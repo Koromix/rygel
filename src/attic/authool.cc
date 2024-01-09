@@ -284,7 +284,7 @@ Options:
             } else if (opt.Test("-i", "--issuer", OptionType::Value)) {
                 issuer = opt.current_value;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                if (!OptionToEnumI(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
                     LogError("Unknown HMAC algorithm '%1'", opt.current_value);
                     return 1;
                 }
@@ -399,7 +399,7 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                if (!OptionToEnumI(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
                     LogError("Unknown HMAC algorithm '%1'", opt.current_value);
                     return 1;
                 }
@@ -493,7 +493,7 @@ Options:
                 print_usage(stdout);
                 return 0;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
+                if (!OptionToEnumI(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
                     LogError("Unknown HMAC algorithm '%1'", opt.current_value);
                     return 1;
                 }

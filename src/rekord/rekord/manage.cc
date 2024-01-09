@@ -588,7 +588,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 if (!rk_DecodeURL(opt.current_value, &config))
                     return 1;
             } else if (opt.Test("-f", "--format", OptionType::Value)) {
-                if (!OptionToEnum(OutputFormatNames, opt.current_value, &format)) {
+                if (!OptionToEnumI(OutputFormatNames, opt.current_value, &format)) {
                     LogError("Unknown output format '%1'", opt.current_value);
                     return 1;
                 }

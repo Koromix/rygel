@@ -60,7 +60,7 @@ Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(in
                 while (flags_str[0]) {
                     Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
-                    if (part.len && !OptionToFlag(PackFlagNames, part, &flags)) {
+                    if (part.len && !OptionToFlagI(PackFlagNames, part, &flags)) {
                         LogError("Unknown packing flag '%1'", part);
                         return 1;
                     }
@@ -74,7 +74,7 @@ Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(in
                     return 1;
                 }
             } else if (opt.Test("-c", "--compress", OptionType::Value)) {
-                if (!OptionToEnum(CompressionTypeNames, opt.current_value, &compression_type)) {
+                if (!OptionToEnumI(CompressionTypeNames, opt.current_value, &compression_type)) {
                     LogError("Unknown compression type '%1'", opt.current_value);
                     return 1;
                 }

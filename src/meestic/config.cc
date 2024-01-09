@@ -76,7 +76,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
                 do {
                     if (prop.key == "Mode") {
-                        if (!OptionToEnum(LightModeOptions, prop.value, &profile->settings.mode)) {
+                        if (!OptionToEnumI(LightModeOptions, prop.value, &profile->settings.mode)) {
                             LogError("Invalid mode '%1'", prop.value);
                             valid = false;
                         }

@@ -4927,6 +4927,36 @@ bool OptionToEnum(Span<const OptionDesc> options, Span<const char> str, T *out_v
 }
 
 template <typename T>
+bool OptionToEnumI(Span<const char *const> options, Span<const char> str, T *out_value)
+{
+    for (Size i = 0; i < options.len; i++) {
+        const char *opt = options[i];
+
+        if (TestStrI(opt, str)) {
+            *out_value = (T)i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename T>
+bool OptionToEnumI(Span<const OptionDesc> options, Span<const char> str, T *out_value)
+{
+    for (Size i = 0; i < options.len; i++) {
+        const OptionDesc &desc = options[i];
+
+        if (TestStrI(desc.name, str)) {
+            *out_value = (T)i;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename T>
 bool OptionToFlag(Span<const char *const> options, Span<const char> str, T *out_flags, bool enable = true)
 {
     for (Size i = 0; i < options.len; i++) {
@@ -4948,6 +4978,36 @@ bool OptionToFlag(Span<const OptionDesc> options, Span<const char> str, T *out_f
         const OptionDesc &desc = options[i];
 
         if (TestStr(desc.name, str)) {
+            *out_flags = ApplyMask(*out_flags, 1u << i, enable);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename T>
+bool OptionToFlagI(Span<const char *const> options, Span<const char> str, T *out_flags, bool enable = true)
+{
+    for (Size i = 0; i < options.len; i++) {
+        const char *opt = options[i];
+
+        if (TestStrI(opt, str)) {
+            *out_flags = ApplyMask(*out_flags, 1u << i, enable);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+template <typename T>
+bool OptionToFlagI(Span<const OptionDesc> options, Span<const char> str, T *out_flags, bool enable = true)
+{
+    for (Size i = 0; i < options.len; i++) {
+        const OptionDesc &desc = options[i];
+
+        if (TestStrI(desc.name, str)) {
             *out_flags = ApplyMask(*out_flags, 1u << i, enable);
             return true;
         }

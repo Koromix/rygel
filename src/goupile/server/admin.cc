@@ -1583,7 +1583,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                             char mode[128];
                             json_ConvertFromJsonName(str, mode);
 
-                            if (!OptionToEnum(SyncModeNames, mode, &config.sync_mode)) {
+                            if (!OptionToEnumI(SyncModeNames, mode, &config.sync_mode)) {
                                 LogError("Invalid sync mode '%1'", str);
                                 io->AttachError(422);
                                 return;
@@ -1847,7 +1847,7 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
                             char perm[128];
                             json_ConvertFromJsonName(str, perm);
 
-                            if (!OptionToFlag(UserPermissionNames, perm, &permissions)) {
+                            if (!OptionToFlagI(UserPermissionNames, perm, &permissions)) {
                                 LogError("Unknown permission '%1'", str);
                                 io->AttachError(422);
                                 return;

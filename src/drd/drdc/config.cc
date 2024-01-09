@@ -49,7 +49,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             } else if (prop.section == "Institution") {
                 do {
                     if (prop.key == "Sector") {
-                        if (!OptionToEnum(drd_SectorNames, prop.value, &config.sector)) {
+                        if (!OptionToEnumI(drd_SectorNames, prop.value, &config.sector)) {
                             LogError("Unkown sector '%1'", prop.value);
                             valid = false;
                         }

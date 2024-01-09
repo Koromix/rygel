@@ -963,7 +963,7 @@ Options:
             } else if (opt.Test("--gzip")) {
                 gzip = true;
             } else if (opt.Test("-u", "--urls", OptionType::Value)) {
-                if (!OptionToEnum(UrlFormatNames, opt.current_value, &urls)) {
+                if (!OptionToEnumI(UrlFormatNames, opt.current_value, &urls)) {
                     LogError("Unknown URL format '%1'", opt.current_value);
                     return true;
                 }

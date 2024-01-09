@@ -61,7 +61,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
             } else if (opt.Test("-D", "--output_dir", OptionType::Value)) {
                 output_directory = opt.current_value;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(CompressionTypeNames, opt.current_value, &compression_type) ||
+                if (!OptionToEnumI(CompressionTypeNames, opt.current_value, &compression_type) ||
                         compression_type == CompressionType::None) {
                     LogError("Unknown compression algorithm '%1'", opt.current_value);
                     return 1;
@@ -236,7 +236,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
             } else if (opt.Test("-D", "--output_dir", OptionType::Value)) {
                 output_directory = opt.current_value;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
-                if (!OptionToEnum(CompressionTypeNames, opt.current_value, &compression_type) ||
+                if (!OptionToEnumI(CompressionTypeNames, opt.current_value, &compression_type) ||
                         compression_type == CompressionType::None) {
                     LogError("Unknown compression algorithm '%1'", opt.current_value);
                     return 1;

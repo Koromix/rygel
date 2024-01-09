@@ -52,7 +52,7 @@ bool HandleCommonOption(OptionParser &opt)
     } else if (opt.Test("--mco_auth_file", OptionType::Value)) {
         drdc_config.mco_authorization_filename = opt.current_value;
     } else if (opt.Test("-s", "--sector", OptionType::Value)) {
-        if (!OptionToEnum(drd_SectorNames, opt.current_value, &drdc_config.sector)) {
+        if (!OptionToEnumI(drd_SectorNames, opt.current_value, &drdc_config.sector)) {
             LogError("Unknown sector '%1'", opt.current_value);
             return false;
         }

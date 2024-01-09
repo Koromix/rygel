@@ -116,9 +116,9 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
     Span<const char> cc = SplitStr(str, ',', &str);
     Span<const char> ld = SplitStr(str, ',', &str);
 
-    if (architecture == "Native") {
+    if (TestStrI(architecture, "Native")) {
         out_spec->architecture = NativeArchitecture;
-    } else if (!OptionToEnum(HostArchitectureNames, architecture, &out_spec->architecture)) {
+    } else if (!OptionToEnumI(HostArchitectureNames, architecture, &out_spec->architecture)) {
         out_spec->architecture = NativeArchitecture;
 
         ld = cc;
@@ -126,7 +126,7 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
     }
 
     if (platform.len) {
-        if (platform == "Native") {
+        if (TestStrI(platform, "Native")) {
             out_spec->platform = NativePlatform;
         } else {
             unsigned int platforms = ParseSupportedPlatforms(platform);
@@ -169,10 +169,10 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_features, uin
             maybe = true;
         }
 
-        if (part == "All" && !maybe) {
+        if (TestStrI(part, "All") && !maybe) {
             *out_features = enable ? 0xFFFFFFFFul : 0;
-        } else if (part.len && !OptionToFlag(CompileFeatureOptions, part,
-                                             maybe ? out_maybe : out_features, enable)) {
+        } else if (part.len && !OptionToFlagI(CompileFeatureOptions, part,
+                                              maybe ? out_maybe : out_features, enable)) {
             LogError("Unknown target feature '%1'", part);
             return false;
         }

@@ -177,7 +177,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     CompressionType dest_encoding;
     {
         const char *name = (const char *)sqlite3_column_text(stmt, 1);
-        if (!name || !OptionToEnum(CompressionTypeNames, name, &src_encoding)) {
+        if (!name || !OptionToEnumI(CompressionTypeNames, name, &src_encoding)) {
             LogError("Unknown compression type '%1'", name);
             return true;
         }

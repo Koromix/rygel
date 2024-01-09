@@ -51,7 +51,7 @@ namespace RG {
 bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
 {
     if (key == "SocketType" || key == "IPStack") {
-        if (!OptionToEnum(SocketTypeNames, value, &sock_type)) {
+        if (!OptionToEnumI(SocketTypeNames, value, &sock_type)) {
             LogError("Unknown socket type '%1'", value);
             return false;
         }
@@ -71,7 +71,7 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
     } else if (key == "AsyncThreads") {
         return ParseInt(value, &async_threads);
     } else if (key == "ClientAddress") {
-        if (!OptionToEnum(http_ClientAddressModeNames, value, &client_addr_mode)) {
+        if (!OptionToEnumI(http_ClientAddressModeNames, value, &client_addr_mode)) {
             LogError("Unknown client address mode '%1'", value);
             return false;
         }
@@ -395,7 +395,7 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
         if (TestStr(method, "HEAD")) {
             io->request.method = http_RequestMethod::Get;
             io->request.headers_only = true;
-        } else if (!OptionToEnum(http_RequestMethodNames, method, &io->request.method)) {
+        } else if (!OptionToEnumI(http_RequestMethodNames, method, &io->request.method)) {
             io->AttachError(405);
             return MHD_queue_response(conn, (unsigned int)io->code, io->response);
         }

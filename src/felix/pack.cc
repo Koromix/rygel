@@ -149,7 +149,7 @@ static bool LoadMergeRules(const char *filename, BlockAllocator *alloc, HeapArra
 
             do {
                 if (prop.key == "CompressionType") {
-                    if (OptionToEnum(CompressionTypeNames, prop.value, &rule->compression_type)) {
+                    if (OptionToEnumI(CompressionTypeNames, prop.value, &rule->compression_type)) {
                         rule->override_compression = true;
                     } else {
                         LogError("Unknown compression type '%1'", prop.value);

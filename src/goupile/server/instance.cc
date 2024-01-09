@@ -74,7 +74,7 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                 if (TestStr(setting, "UseOffline")) {
                     valid &= ParseBool(value, &config.use_offline);
                 } else if (TestStr(setting, "SyncMode")) {
-                    if (!OptionToEnum(SyncModeNames, value, &config.sync_mode)) {
+                    if (!OptionToEnumI(SyncModeNames, value, &config.sync_mode)) {
                         LogError("Unknown sync mode '%1'", value);
                         valid = false;
                     }
@@ -225,7 +225,7 @@ bool InstanceHolder::SyncViews(const char *directory)
                 CompressionType src_encoding;
                 {
                     const char *name = (const char *)sqlite3_column_text(stmt, 3);
-                    if (!name || !OptionToEnum(CompressionTypeNames, name, &src_encoding)) {
+                    if (!name || !OptionToEnumI(CompressionTypeNames, name, &src_encoding)) {
                         LogError("Unknown compression type '%1'", name);
                         return true;
                     }
@@ -857,7 +857,7 @@ bool MigrateInstance(sq_Database *db)
                     CompressionType compression_type;
                     {
                         const char *name = (const char *)sqlite3_column_text(stmt, 2);
-                        if (!name || !OptionToEnum(CompressionTypeNames, name, &compression_type)) {
+                        if (!name || !OptionToEnumI(CompressionTypeNames, name, &compression_type)) {
                             LogError("Unknown compression type '%1'", name);
                             return false;
                         }
@@ -1087,7 +1087,7 @@ bool MigrateInstance(sq_Database *db)
                     CompressionType compression_type;
                     {
                         const char *name = (const char *)sqlite3_column_text(stmt, 3);
-                        if (!name || !OptionToEnum(CompressionTypeNames, name, &compression_type)) {
+                        if (!name || !OptionToEnumI(CompressionTypeNames, name, &compression_type)) {
                             LogError("Unknown compression type '%1'", name);
                             return false;
                         }

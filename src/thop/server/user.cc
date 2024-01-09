@@ -156,9 +156,9 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
                         bool enable;
                         Span<const char> part = SplitListValue(prop.value, &prop.value, &enable);
 
-                        if (part == "All") {
+                        if (TestStrI(part, "All")) {
                             user->permissions = enable ? UINT_MAX : 0;
-                        } else if (part.len && !OptionToFlag(UserPermissionNames, part, &user->permissions, enable)) {
+                        } else if (part.len && !OptionToFlagI(UserPermissionNames, part, &user->permissions, enable)) {
                             LogError("Unknown permission '%1'", part);
                             valid = false;
                         }
@@ -181,9 +181,9 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
                         bool enable;
                         Span<const char> part = SplitListValue(prop.value, &prop.value, &enable);
 
-                        if (part == "All") {
+                        if (TestStrI(part, "All")) {
                             user->mco_dispense_modes = enable ? UINT_MAX : 0;
-                        } else if (part.len && !OptionToFlag(mco_DispenseModeOptions, part, &user->mco_dispense_modes, enable)) {
+                        } else if (part.len && !OptionToFlagI(mco_DispenseModeOptions, part, &user->mco_dispense_modes, enable)) {
                             LogError("Unknown dispensation mode '%1'", part);
                             valid = false;
                         }
