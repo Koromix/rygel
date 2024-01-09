@@ -237,7 +237,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     valid &= !!target_config.platforms;
                 } else {
                     Span<const char> suffix;
-                    prop.key = SplitStr(prop.key, '_', &suffix);
+                    prop.key = SplitStr(prop.key, '@', &suffix);
 
                     if (suffix.len) {
                         bool use_property = false;
@@ -594,7 +594,7 @@ bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match
     bool match = true;
 
     while (str.len) {
-        Span<const char> test = SplitStr(str, '_', &str);
+        Span<const char> test = SplitStr(str, '@', &str);
 
         if (!test.len)
             continue;
