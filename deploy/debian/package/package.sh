@@ -45,13 +45,13 @@ License: ${PKG_LICENSE}" > ${DEBIAN_DIR}/copyright
 
     docker build -t rygel/${DOCKER_IMAGE} deploy/docker/${DOCKER_IMAGE}
     if echo "${PKG_ARCHITECTURES}" | grep -q -w amd64; then
-        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build x86_64-linux-gnu amd64 x64
+        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build x86_64-linux-gnu amd64
     fi
     if echo "${PKG_ARCHITECTURES}" | grep -q -w i386; then
-        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build i686-linux-gnu i386 x86
+        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build i686-linux-gnu i386
     fi
     if echo "${PKG_ARCHITECTURES}" | grep -q -w arm64; then
-        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build aarch64-linux-gnu arm64 ARM64
+        docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build aarch64-linux-gnu arm64
     fi
 
     cp ${CLIENT_DIR}/upper/*/${DEST_DIR}/${PKG_NAME}_*.deb ${PKG_DIR}/
@@ -64,7 +64,7 @@ elif [ "$1" = "build" ]; then
     rm -f /repo/FelixBuild.ini.user
 
     cd /repo
-    build "$3" ":$4"
+    build "$3" ":$3"
 
     (cd ${ROOT_DIR} && find \( -type f -o -type l \) -printf "%h/%f %h\n" | awk -F ' ' '{print "root/" substr($1, 3) " " substr($2, 3)}') | sort > ${DEBIAN_DIR}/install
     (cd ${DEBIAN_DIR}/.. && dpkg-buildpackage -uc -us -b -t "$2" -a "$3")

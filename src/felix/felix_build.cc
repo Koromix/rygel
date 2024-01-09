@@ -111,11 +111,23 @@ static int RunTarget(const char *target_filename, Span<const char *const> argume
 
 static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifier *out_spec)
 {
-    Span<const char> platform = SplitStr(str, ',', &str);
-    Span<const char> architecture = SplitStr(str, ',', &str);
-    Span<const char> cc = SplitStr(str, ',', &str);
-    Span<const char> ld = SplitStr(str, ',', &str);
+    Span<const char> platform = SplitStr(str, ':', &str);
+    Span<const char> architecture = SplitStr(str, ':', &str);
+    Span<const char> cc = SplitStr(str, ':', &str);
+    Span<const char> ld = SplitStr(str, ':', &str);
 
+    // Short cut (unspecified platform)
+    if (TestStrI(platform, "Native")) {
+        out_spec->architecture = NativeArchitecture;
+    } else if (OptionToEnumI(HostArchitectureNames, platform, &out_spec->architecture)) {
+        out_spec->platform = NativePlatform;
+
+        ld = cc;
+        cc = architecture;
+        architecture = "";
+    }
+
+    // Explcit architecture
     if (TestStrI(architecture, "Native")) {
         out_spec->architecture = NativeArchitecture;
     } else if (!OptionToEnumI(HostArchitectureNames, architecture, &out_spec->architecture)) {

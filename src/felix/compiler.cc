@@ -256,7 +256,7 @@ public:
             supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
         }
         if (platform == HostPlatform::Linux) {
-            if (architecture == HostArchitecture::x64) {
+            if (architecture == HostArchitecture::x86_64) {
                 supported |= (int)CompileFeature::SafeStack;
             } else if (architecture == HostArchitecture::ARM64) {
                 supported |= (int)CompileFeature::SafeStack;
@@ -436,7 +436,7 @@ public:
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
 
-        if (architecture == HostArchitecture::x64) {
+        if (architecture == HostArchitecture::x86_64) {
             Fmt(&buf, " -mpopcnt -msse4.1 -msse4.2 -mssse3");
 
             if (features & (int)CompileFeature::AESNI) {
@@ -448,7 +448,7 @@ public:
             if (features & (int)CompileFeature::AVX512) {
                 Fmt(&buf, " -mavx512f -mavx512vl");
             }
-        } else if (architecture == HostArchitecture::x86) {
+        } else if (architecture == HostArchitecture::i386) {
             Fmt(&buf, " -msse2");
         }
 
@@ -504,7 +504,7 @@ public:
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::SafeStack) {
-            if (architecture == HostArchitecture::x64) {
+            if (architecture == HostArchitecture::x86_64) {
                 Fmt(&buf, " -fsanitize=safe-stack");
             } else if (architecture == HostArchitecture::ARM64) {
                 Fmt(&buf, " -fsanitize=shadow-call-stack -ffixed-x18");
@@ -707,7 +707,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         if (features & (int)CompileFeature::SafeStack) {
-            if (architecture == HostArchitecture::x64) {
+            if (architecture == HostArchitecture::x86_64) {
                 Fmt(&buf, " -fsanitize=safe-stack");
             } else if (architecture == HostArchitecture::ARM64) {
                 Fmt(&buf, " -fsanitize=shadow-call-stack -ffixed-x18");
@@ -756,8 +756,8 @@ private:
             RG_ASSERT(platform == HostPlatform::Linux);
 
             switch (architecture)  {
-                case HostArchitecture::x86: { Fmt(out_buf, " --target=i386-pc-linux-gnu"); } break;
-                case HostArchitecture::x64: { Fmt(out_buf, " --target=x86_64-pc-linux-gnu"); } break;
+                case HostArchitecture::i386: { Fmt(out_buf, " --target=i386-pc-linux-gnu"); } break;
+                case HostArchitecture::x86_64: { Fmt(out_buf, " --target=x86_64-pc-linux-gnu"); } break;
                 case HostArchitecture::ARM64: { Fmt(out_buf, " --target=aarch64-pc-linux-gnu"); } break;
                 case HostArchitecture::RISCV64: { Fmt(out_buf, " --target=riscv64-pc-linux-gnu"); } break;
 
@@ -1011,7 +1011,7 @@ public:
             Fmt(&buf, " -DFELIX_HOT_ASSETS");
         }
 
-        if (architecture == HostArchitecture::x64) {
+        if (architecture == HostArchitecture::x86_64) {
             Fmt(&buf, " -mpopcnt -msse4.1 -msse4.2 -mssse3");
 
             if (features & (int)CompileFeature::AESNI) {
@@ -1023,7 +1023,7 @@ public:
             if (features & (int)CompileFeature::AVX512) {
                 Fmt(&buf, " -mavx512f -mavx512vl");
             }
-        } else if (architecture == HostArchitecture::x86) {
+        } else if (architecture == HostArchitecture::i386) {
             Fmt(&buf, " -msse2");
         }
 
@@ -1448,7 +1448,7 @@ public:
             Fmt(&buf, " /guard:cf /guard:ehcont");
         }
 
-        if (architecture == HostArchitecture::x64) {
+        if (architecture == HostArchitecture::x86_64) {
             if (features & (int)CompileFeature::AVX2) {
                 Fmt(&buf, " /arch:AVX2");
             }
@@ -2292,7 +2292,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 
         return EmCompiler::Create(spec.platform, spec.cc);
 #ifdef __linux__
-    } else if (spec.platform == HostPlatform::Windows && spec.architecture == HostArchitecture::x64) {
+    } else if (spec.platform == HostPlatform::Windows && spec.architecture == HostArchitecture::x86_64) {
         if (!spec.cc) {
             LogError("Path to cross-platform MinGW must be explicitly specified");
             return nullptr;
@@ -2308,8 +2308,8 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         // Go with GCC if not specified otherwise
         if (!spec.cc) {
             switch (spec.architecture) {
-                case HostArchitecture::x86: { spec.cc = "i686-linux-gnu-gcc"; } break;
-                case HostArchitecture::x64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
+                case HostArchitecture::i386: { spec.cc = "i686-linux-gnu-gcc"; } break;
+                case HostArchitecture::x86_64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
                 case HostArchitecture::ARM64: { spec.cc = "aarch64-linux-gnu-gcc"; } break;
                 case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
 
@@ -2331,8 +2331,8 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             }
 
             switch (spec.architecture)  {
-                case HostArchitecture::x86:
-                case HostArchitecture::x64:
+                case HostArchitecture::i386:
+                case HostArchitecture::x86_64:
                 case HostArchitecture::ARM64:
                 case HostArchitecture::RISCV64: {} break;
 
