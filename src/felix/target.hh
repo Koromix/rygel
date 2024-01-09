@@ -130,6 +130,7 @@ private:
 };
 
 unsigned int ParseSupportedPlatforms(Span<const char> str);
+bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture);
 int64_t ParseVersionString(Span<const char> str, int components);
 
 bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, HostArchitecture architecture, TargetSet *out_set);

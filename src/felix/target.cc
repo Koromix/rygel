@@ -602,7 +602,7 @@ bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match
         // Architecture?
         {
             HostArchitecture architecture;
-            if (OptionToEnumI(HostArchitectureNames, test, &architecture)) {
+            if (ParseArchitecture(test, &architecture)) {
                 match &= (architecture == this->architecture);
                 continue;
             }
@@ -657,6 +657,29 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
     }
 
     return platforms;
+}
+
+bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture)
+{
+    if (OptionToEnumI(HostArchitectureNames, str, out_architecture))
+        return true;
+
+    // Alternatives
+    if (TestStrI(str, "amd64")) {
+        *out_architecture = HostArchitecture::x86_64;
+        return true;
+    } else if (TestStrI(str, "x86")) {
+        *out_architecture = HostArchitecture::i386;
+        return true;
+    } else if (TestStrI(str, "aarch64")) {
+        *out_architecture = HostArchitecture::ARM64;
+        return true;
+    } else if (TestStrI(str, "armhf")) {
+        *out_architecture = HostArchitecture::ARM32;
+        return true;
+    }
+
+    return false;
 }
 
 int64_t ParseVersionString(Span<const char> str, int components)

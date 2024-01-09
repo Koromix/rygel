@@ -123,7 +123,7 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
     // Short form with architecture but native platform
     if (TestStrI(platform, "Native")) {
         out_spec->architecture = NativeArchitecture;
-    } else if (OptionToEnumI(HostArchitectureNames, platform, &out_spec->architecture)) {
+    } else if (ParseArchitecture(platform, &out_spec->architecture)) {
         out_spec->platform = NativePlatform;
 
         platform = "";
@@ -135,7 +135,7 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
     if (architecture.len) {
         if (TestStrI(architecture, "Native")) {
             out_spec->architecture = NativeArchitecture;
-        } else if (!OptionToEnumI(HostArchitectureNames, architecture, &out_spec->architecture)) {
+        } else if (!ParseArchitecture(architecture, &out_spec->architecture)) {
             out_spec->architecture = NativeArchitecture;
 
             ld = cc;
