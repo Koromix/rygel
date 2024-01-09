@@ -116,25 +116,31 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
     Span<const char> cc = SplitStr(str, ':', &str);
     Span<const char> ld = SplitStr(str, ':', &str);
 
-    // Short cut (unspecified platform)
+    // Defaults
+    out_spec->platform = NativePlatform;
+    out_spec->architecture = NativeArchitecture;
+
+    // Short form with architecture but native platform
     if (TestStrI(platform, "Native")) {
         out_spec->architecture = NativeArchitecture;
     } else if (OptionToEnumI(HostArchitectureNames, platform, &out_spec->architecture)) {
         out_spec->platform = NativePlatform;
 
+        platform = "";
         ld = cc;
         cc = architecture;
         architecture = "";
     }
 
-    // Explcit architecture
-    if (TestStrI(architecture, "Native")) {
-        out_spec->architecture = NativeArchitecture;
-    } else if (!OptionToEnumI(HostArchitectureNames, architecture, &out_spec->architecture)) {
-        out_spec->architecture = NativeArchitecture;
+    if (architecture.len) {
+        if (TestStrI(architecture, "Native")) {
+            out_spec->architecture = NativeArchitecture;
+        } else if (!OptionToEnumI(HostArchitectureNames, architecture, &out_spec->architecture)) {
+            out_spec->architecture = NativeArchitecture;
 
-        ld = cc;
-        cc = architecture;
+            ld = cc;
+            cc = architecture;
+        }
     }
 
     if (platform.len) {
@@ -153,9 +159,8 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
                 out_spec->platform = (HostPlatform)ctz;
             }
         }
-    } else {
-        out_spec->platform = NativePlatform;
     }
+
     out_spec->cc = cc.len ? NormalizePath(cc, alloc).ptr : nullptr;
     out_spec->ld = ld.len ? DuplicateString(ld, alloc).ptr : nullptr;
 

@@ -64,7 +64,7 @@ elif [ "$1" = "build" ]; then
     rm -f /repo/FelixBuild.ini.user
 
     cd /repo
-    build "$3" ":$3"
+    build "$3"
 
     (cd ${ROOT_DIR} && find \( -type f -o -type l \) -printf "%h/%f %h\n" | awk -F ' ' '{print "root/" substr($1, 3) " " substr($2, 3)}') | sort > ${DEBIAN_DIR}/install
     (cd ${DEBIAN_DIR}/.. && dpkg-buildpackage -uc -us -b -t "$2" -a "$3")
