@@ -16,7 +16,7 @@ build() {
     apt install -y qt6-base-dev:$1 qt6-base-dev-tools:$1 libudev-dev:$1
 
     ./bootstrap.sh
-    ./felix -pFast --host=$2 tycmd tycommander tyuploader
+    ./felix -pFast --host=$1 tycmd tycommander tyuploader
 
     install -D -m0755 bin/Fast/tycmd ${ROOT_DIR}/usr/bin/tycmd
     install -D -m0755 bin/Fast/tycommander ${ROOT_DIR}/usr/bin/tycommander

@@ -14,7 +14,7 @@ build() {
     dnf install -y clang lld
 
     ./bootstrap.sh
-    ./felix -pParanoid --host=,clang,lld goupile
+    ./felix -pParanoid --host=:clang:lld goupile
 
     install -D -m0755 bin/Paranoid/goupile ${ROOT_DIR}/bin/goupile
 

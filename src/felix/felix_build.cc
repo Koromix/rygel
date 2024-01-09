@@ -357,9 +357,9 @@ Supported compilers:)");
 
         PrintLn(fp, R"(
 Use %!..+--host=<host>%!0 to specify a custom platform, such as: %!..+felix --host=Teensy35%!0.
-You can also use %!..+--host=,<binary>%!0 to specify a custom C compiler, such as: %!..+felix --host=,clang-11%!0.
+You can also use %!..+--host=:<binary>%!0 to specify a custom C compiler, such as: %!..+felix --host=:clang-11%!0.
 Felix will use the matching C++ compiler automatically. Finally, you can also use this option to
-change the linker: %!..+felix --host=,clang-11,lld-11%!0 or %!..+felix --host=,,gold%!0.
+change the linker: %!..+felix --host=:clang-11:lld-11%!0 or %!..+felix --host=::gold%!0.
 
 Supported compiler features:)");
 

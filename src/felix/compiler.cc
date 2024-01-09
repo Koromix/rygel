@@ -293,7 +293,7 @@ public:
             return false;
         }
         if (lld_ver < 110000 && (features & (int)CompileFeature::ShuffleCode)) {
-            LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=,clang-11,lld-11)");
+            LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=:clang-11:lld-11)");
             return false;
         }
 
@@ -872,7 +872,7 @@ public:
             return false;
         }
         if (gcc_ver < 120100 && (features & (int)CompileFeature::ZeroInit)) {
-            LogError("ZeroInit requires GCC >= 12.1, try --host option (e.g. --host=,gcc-12)");
+            LogError("ZeroInit requires GCC >= 12.1, try --host option (e.g. --host=:gcc-12)");
             return false;
         }
 
