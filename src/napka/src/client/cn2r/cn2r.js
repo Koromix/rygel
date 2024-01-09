@@ -127,7 +127,7 @@ function Cn2rProvider() {
                         marker = {
                             latitude: entry.address.latitude,
                             longitude: entry.address.longitude,
-                            cluster: '#30346a',
+                            cluster: '#000052',
                             priority: 2,
                             icon: icons.crp,
                             size: 48,
@@ -137,7 +137,7 @@ function Cn2rProvider() {
                         marker = {
                             latitude: entry.address.latitude,
                             longitude: entry.address.longitude,
-                            cluster: '#bf4561',
+                            cluster: '#bf4866',
                             priority: 1,
                             icon: icons.misc,
                             size: 40,
@@ -196,11 +196,11 @@ function Cn2rProvider() {
             <div class="info">
                 <div>
                     ${!isConnected() && entry.etab_crp ?
-                        html`<span class="tag" style="background: #24579d;"
+                        html`<span class="tag" style="background: #000552;"
                                    title="Centre Régional de Psychotraumatisme">CRP</span>&nbsp;` : ''}
                     <i>${field(entry, 'etab_statut')}</i>
                     ${isConnected() ?
-                        html`<br/>Statut <span class="tag" style="background: #24579d;"
+                        html`<br/>Statut <span class="tag" style="background: #000552;"
                                                title="Centre Régional de Psychotraumatisme">CRP</span> : ${field(entry, 'etab_crp')}` : ''}
                     <br/><br/>
 
@@ -238,7 +238,7 @@ function Cn2rProvider() {
                     Accueil : ${field(entry, 'rdv_publics')}<br/>
                     ${isConnected() ? html`
                         Consultations : ${field(entry, 'rdv_consultations', (entry.rdv_consultations || []).map(cs =>
-                            html`<span class="tag" style="background: #444;">${cs}</span> `))}<br/><br/>
+                            html`<span class="tag" style="background: #8fc7bf;">${cs}</span> `))}<br/><br/>
                     ` : ''}
                     Modalités : ${field(entry, 'rdv_modalites')}<br/><br/>
 
