@@ -22,12 +22,13 @@ gpg --local-user "$GPG_USER" --export >"$REPO_NAME-archive-keyring.gpg"
 mkdir -p pool
 
 rm -rf dists
-mkdir -p dists/stable/main/binary-amd64
 
-apt-ftparchive --arch amd64 packages pool >dists/stable/main/binary-amd64/Packages
-gzip -f -k -9 dists/stable/main/binary-amd64/Packages
+for arch in amd64 i386 arm64; do
+    mkdir -p dists/stable/main/binary-$arch
+    apt-ftparchive --arch $arch packages pool >dists/stable/main/binary-$arch/Packages
+    gzip -f -k -9 dists/stable/main/binary-$arch/Packages
+done
 
 apt-ftparchive -c "$SCRIPT_DIR/release.conf" release dists/stable/ >dists/stable/Release
-rm -f dists/stable/Release.gpg dists/stable/InRelease
 gpg --local-user "$GPG_USER" -abs -o dists/stable/Release.gpg dists/stable/Release
 gpg --local-user "$GPG_USER" --clearsign -o dists/stable/InRelease dists/stable/Release
