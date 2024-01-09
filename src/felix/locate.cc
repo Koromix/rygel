@@ -188,6 +188,8 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
             value = TrimStr(value);
 
             if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
+                qt.binaries = DuplicateString(value, alloc).ptr;
+
                 if (!qt.moc) {
                     const char *binary = Fmt(alloc, "%1%/moc%2", value, RG_EXECUTABLE_EXTENSION).ptr;
                     qt.moc = TestFile(binary, FileType::File) ? binary : nullptr;
@@ -200,8 +202,6 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
                     const char *binary = Fmt(alloc, "%1%/uic%2", value, RG_EXECUTABLE_EXTENSION).ptr;
                     qt.uic = TestFile(binary, FileType::File) ? binary : nullptr;
                 }
-            } else if (key == "QT_INSTALL_BINS") {
-                qt.binaries = DuplicateString(value, alloc).ptr;
             } else if (key == "QT_INSTALL_HEADERS") {
                 qt.headers = DuplicateString(value, alloc).ptr;
             } else if (key == "QT_INSTALL_LIBS") {
