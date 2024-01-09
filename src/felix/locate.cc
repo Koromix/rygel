@@ -144,6 +144,66 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
     return false;
 }
 
+static const char *GetGnuArchitectureString(HostArchitecture architecture)
+{
+    switch (architecture) {
+        case HostArchitecture::i386: return "i386";
+        case HostArchitecture::x86_64: return "x86_64";
+        case HostArchitecture::ARM32: return "armv7";
+        case HostArchitecture::ARM64: return "aarch64";
+        case HostArchitecture::RISCV64: return "riscv64gc";
+        case HostArchitecture::AVR: return "avr";
+        case HostArchitecture::Web: return "web";
+    }
+
+    RG_UNREACHABLE();
+}
+
+static bool AdjustLibraryPath(const char *name, const Compiler *compiler,
+                              Span<const char> path, Allocator *alloc, const char **out_path)
+{
+    *out_path = nullptr;
+
+    if (compiler->platform != NativePlatform) {
+        LogError("Cross-compilation is not supported with Qt (as of now)");
+        return false;
+    }
+
+    if (compiler->architecture != NativeArchitecture) {
+        Span<const char> from = GetGnuArchitectureString(NativeArchitecture);
+        Span<const char> to = GetGnuArchitectureString(compiler->architecture);
+
+        HeapArray<char> buf(alloc);
+
+        for (Size i = 0; i < path.len;) {
+            Span<const char> remain = path.Take(i, path.len - i);
+
+            if (StartsWith(remain, from) && (!i || strchr("_-./", path[i - 1]))
+                                         && (i + from.len >= path.len || strchr("_-./", path[i + from.len]))) {
+                buf.Append(to);
+                i += from.len;
+            } else {
+                buf.Append(path[i]);
+                i++;
+            }
+        }
+
+        buf.Grow(1);
+        buf.ptr[buf.len] = 0;
+
+        if (!TestFile(buf.ptr, FileType::Directory)) {
+            LogError("Missing Qt %1 for %2", name, HostArchitectureNames[(int)compiler->architecture]);
+            return false;
+        }
+
+        *out_path = buf.TrimAndLeak(1).ptr;
+    } else {
+        *out_path = DuplicateString(path, alloc).ptr;
+    }
+
+    return true;
+}
+
 bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *alloc, QtInfo *out_qt)
 {
     QtInfo qt = {};
@@ -174,7 +234,7 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
         }
     }
 
-    bool valid = false;
+    bool valid = true;
 
     // Parse specs to find moc, include paths, library path
     {
@@ -182,7 +242,7 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
         LineReader reader(&st);
 
         Span<const char> line;
-        while (!valid && reader.Next(&line)) {
+        while (reader.Next(&line)) {
             Span<const char> value = {};
             Span<const char> key = TrimStr(SplitStr(line, ':', &value));
             value = TrimStr(value);
@@ -205,9 +265,9 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
             } else if (key == "QT_INSTALL_HEADERS") {
                 qt.headers = DuplicateString(value, alloc).ptr;
             } else if (key == "QT_INSTALL_LIBS") {
-                qt.libraries = DuplicateString(value, alloc).ptr;
+                valid &= AdjustLibraryPath("libraries", compiler, value, alloc, &qt.libraries);
             } else if (key == "QT_INSTALL_PLUGINS") {
-                qt.plugins = DuplicateString(value, alloc).ptr;
+                valid &= AdjustLibraryPath("plugins", compiler, value, alloc, &qt.plugins);
             } else if (key == "QT_VERSION") {
                 qt.version = ParseVersionString(value, 3);
 
@@ -217,10 +277,10 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
                 }
                 qt.version_major = (int)(qt.version / 1000000);
             }
-
-            valid = qt.moc && qt.rcc && qt.uic && qt.binaries &&
-                    qt.headers && qt.libraries && qt.plugins && qt.version_major;
         }
+
+        valid &= qt.moc && qt.rcc && qt.uic && qt.binaries &&
+                 qt.headers && qt.libraries && qt.plugins && qt.version_major;
     }
 
     if (!valid) {
