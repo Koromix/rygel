@@ -7013,14 +7013,14 @@ bool IsDecompressorAvailable(CompressionType compression_type)
 static bool CheckIniKey(Span<const char> key)
 {
     const auto test_char = [](char c) { return IsAsciiAlphaOrDigit(c) || c == '_' ||
-                                               c == '-' || c == '.' || c == '/'; };
+                                               c == '-' || c == '.' || c == '/' || c == '@'; };
 
     if (!key.len) {
         LogError("INI key cannot be empty");
         return false;
     }
     if (!std::all_of(key.begin(), key.end(), test_char)) {
-        LogError("INI key must only contain alphanumeric, '.', '-' or '_' characters");
+        LogError("INI key must only contain alphanumeric, '.', '-', '_', '/' or '@' characters");
         return false;
     }
 
