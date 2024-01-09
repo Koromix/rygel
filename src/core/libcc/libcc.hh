@@ -3293,7 +3293,7 @@ static inline bool TestStrI(Span<const char> str1, const char *str2)
     return (i == str1.len) && !str2[i];
 }
 static inline bool TestStrI(const char *str1, Span<const char> str2)
-    { return TestStr(str2, str1); }
+    { return TestStrI(str2, str1); }
 static inline bool TestStrI(const char *str1, const char *str2)
 {
     Size i = 0;
