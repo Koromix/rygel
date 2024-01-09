@@ -13,7 +13,8 @@ DOCKER_IMAGE=debian12
 
 build() {
     apt update
-    apt install -y qt6-base-dev:$1 qt6-base-dev-tools:$1 libudev-dev:$1
+    apt install -y qt6-base-dev qt6-base-dev-tools libudev-dev \
+                   qt6-base-dev:$1 libudev-dev:$1
 
     ./bootstrap.sh
     ./felix -pFast --host=$1 tycmd tycommander tyuploader

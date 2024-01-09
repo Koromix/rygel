@@ -12,7 +12,7 @@ VERSION_TARGET=meestic
 DOCKER_IMAGE=debian11
 
 build() {
-    apt install -y libudev-dev:$1
+    apt install -y libudev-dev libudev-dev:$1
 
     ./bootstrap.sh
     ./felix -pFast --host=$1 meestic MeesticTray
