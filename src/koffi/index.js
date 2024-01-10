@@ -67,26 +67,30 @@ try {
 
 // And now, search everywhere we know
 if (native == null) {
+    let roots = [__dirname];
+
+    if (process.resourcesPath != null)
+        roots.push(process.resourcesPath);
+
     let names = [
         `/build/koffi/${process.platform}_${arch}/koffi.node`,
         `/koffi/${process.platform}_${arch}/koffi.node`,
         `/node_modules/koffi/build/koffi/${process.platform}_${arch}/koffi.node`
     ];
 
-    for (let name of names) {
-        if (fs.existsSync(__dirname + name)) {
-            native = require(__dirname + name);
-            break;
-        }
-    }
-
-    if (native == null && process.resourcesPath != null) {
+    for (let root of roots) {
         for (let name of names) {
-            if (fs.existsSync(process.resourcesPath + name)) {
-                native = require(process.resourcesPath + name);
+            let filename = root + name;
+
+            if (fs.existsSync(filename)) {
+                // Trick so that webpack does not try to do anything with require() call
+                native = eval('require')(filename);
                 break;
             }
         }
+
+        if (native != null)
+            break;
     }
 }
 
