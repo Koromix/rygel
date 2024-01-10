@@ -10,6 +10,10 @@ if [ "$1" = "" -o "$1" = "package" ]; then
     VERSION=$(./felix --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
     DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 
+    RELEASE=$(echo $VERSION | sed 's/^.*-//')
+    VERSION=$(echo $VERSION | sed 's/-.*$//')
+    [ "$RELEASE" = "$VERSION" ] && RELEASE=1
+
     sudo rm -rf ${DEST_DIR}
     mkdir -p ${RPM_DIR} ${ROOT_DIR}
     mkdir -p ${CLIENT_DIR}/upper
@@ -17,7 +21,7 @@ if [ "$1" = "" -o "$1" = "package" ]; then
     echo "\
 Name: ${PKG_NAME}
 Version: ${VERSION}
-Release: 1
+Release: ${RELEASE}
 Summary: ${PKG_DESCRIPTION}
 License: ${PKG_LICENSE}
 BuildRequires: systemd-rpm-macros
