@@ -77,7 +77,7 @@ static const char *const HostPlatformNames[] = {
 #endif
 
 enum class HostArchitecture {
-    i386,
+    x86,
     x86_64,
     ARM32,
     ARM64,
@@ -86,7 +86,7 @@ enum class HostArchitecture {
     Web
 };
 static const char *const HostArchitectureNames[] = {
-    "i386",
+    "x86",
     "x86_64",
     "ARM32",
     "ARM64",
@@ -96,7 +96,7 @@ static const char *const HostArchitectureNames[] = {
 };
 
 #if defined(__i386__) || defined(_M_IX86)
-    static const HostArchitecture NativeArchitecture = HostArchitecture::i386;
+    static const HostArchitecture NativeArchitecture = HostArchitecture::x86;
 #elif defined(__x86_64__) || defined(_M_AMD64)
     static const HostArchitecture NativeArchitecture = HostArchitecture::x86_64;
 #elif defined(__arm__) || (defined(__M_ARM) && !defined(_M_ARM64))

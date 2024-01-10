@@ -668,8 +668,8 @@ bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture)
     if (TestStrI(str, "amd64")) {
         *out_architecture = HostArchitecture::x86_64;
         return true;
-    } else if (TestStrI(str, "x86")) {
-        *out_architecture = HostArchitecture::i386;
+    } else if (TestStrI(str, "i386")) {
+        *out_architecture = HostArchitecture::x86;
         return true;
     } else if (TestStrI(str, "aarch64")) {
         *out_architecture = HostArchitecture::ARM64;

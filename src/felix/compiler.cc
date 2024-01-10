@@ -448,7 +448,7 @@ public:
             if (features & (int)CompileFeature::AVX512) {
                 Fmt(&buf, " -mavx512f -mavx512vl");
             }
-        } else if (architecture == HostArchitecture::i386) {
+        } else if (architecture == HostArchitecture::x86) {
             Fmt(&buf, " -msse2");
         }
 
@@ -756,7 +756,7 @@ private:
             RG_ASSERT(platform == HostPlatform::Linux);
 
             switch (architecture)  {
-                case HostArchitecture::i386: { Fmt(out_buf, " --target=i386-pc-linux-gnu"); } break;
+                case HostArchitecture::x86: { Fmt(out_buf, " --target=x86-pc-linux-gnu"); } break;
                 case HostArchitecture::x86_64: { Fmt(out_buf, " --target=x86_64-pc-linux-gnu"); } break;
                 case HostArchitecture::ARM64: { Fmt(out_buf, " --target=aarch64-pc-linux-gnu"); } break;
                 case HostArchitecture::RISCV64: { Fmt(out_buf, " --target=riscv64-pc-linux-gnu"); } break;
@@ -1023,7 +1023,7 @@ public:
             if (features & (int)CompileFeature::AVX512) {
                 Fmt(&buf, " -mavx512f -mavx512vl");
             }
-        } else if (architecture == HostArchitecture::i386) {
+        } else if (architecture == HostArchitecture::x86) {
             Fmt(&buf, " -msse2");
         }
 
@@ -2308,7 +2308,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         // Go with GCC if not specified otherwise
         if (!spec.cc) {
             switch (spec.architecture) {
-                case HostArchitecture::i386: { spec.cc = "i686-linux-gnu-gcc"; } break;
+                case HostArchitecture::x86: { spec.cc = "i686-linux-gnu-gcc"; } break;
                 case HostArchitecture::x86_64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
                 case HostArchitecture::ARM64: { spec.cc = "aarch64-linux-gnu-gcc"; } break;
                 case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
@@ -2331,7 +2331,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             }
 
             switch (spec.architecture)  {
-                case HostArchitecture::i386:
+                case HostArchitecture::x86:
                 case HostArchitecture::x86_64:
                 case HostArchitecture::ARM64:
                 case HostArchitecture::RISCV64: {} break;
