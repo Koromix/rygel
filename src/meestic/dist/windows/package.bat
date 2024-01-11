@@ -4,7 +4,8 @@ setlocal EnableDelayedExpansion
 cd %~dp0
 cd ..\..\..\..
 
-felix -pFast meestic MeesticTray
+start bootstrap.bat
+felix.exe -pFast meestic MeesticTray
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\meestic.exe --version') do (
     set RAW_VERSION=%%i

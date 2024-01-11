@@ -4,6 +4,7 @@ setlocal EnableDelayedExpansion
 cd %~dp0
 cd ..\..\..\..
 
+start boostrap.bat
 felix -pFast tycmd tycommander tycommanderc tyuploader
 
 for /f "tokens=2 delims= " %%i in ('bin\Fast\tycmd.exe --version') do (
