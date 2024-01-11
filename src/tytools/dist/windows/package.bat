@@ -53,7 +53,7 @@ cd %PACKAGE_DIR%
 
 REM Create MSI package
 wix extension add -g WixToolset.UI.wixext
-wix build tytools.wxs -o tytools_%VERSION%_win64.msi -ext WixToolset.UI.wixext
+wix build tytools.wxs -o ..\..\tytools_%VERSION%_win64.msi -ext WixToolset.UI.wixext
 
 REM Create ZIP file
-tar.exe -a -c -f tytools_%VERSION%_win64.zip README.md LICENSE.txt tycmd.exe TyCommander.exe TyCommanderC.exe TyUploader.exe
+tar.exe -a -c -f ..\..\tytools_%VERSION%_win64.zip README.md LICENSE.txt tycmd.exe TyCommander.exe TyCommanderC.exe TyUploader.exe

@@ -32,4 +32,4 @@ copy src\rekord\README.md %PACKAGE_DIR%\README.md
 cd %PACKAGE_DIR%
 
 REM Create ZIP file
-tar.exe -a -c -f rekord_%VERSION%_win64.zip README.md rekord.exe
+tar.exe -a -c -f ..\..\rekord_%VERSION%_win64.zip README.md rekord.exe

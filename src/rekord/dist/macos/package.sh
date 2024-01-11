@@ -7,7 +7,7 @@ cd "$(dirname $0)/../../../.."
 
 VERSION=$(bin/Fast/rekord --version | awk -F'[ _]' '/^rekord/ {print $2}')
 PACKAGE_DIR=bin/Packages/rekord/macos
-DMG_FILENAME=$PACKAGE_DIR/rekord_${VERSION}_osx.dmg
+DMG_FILENAME=bin/Packages/rekord_${VERSION}_macos.dmg
 
 rm -rf $PACKAGE_DIR/pkg
 mkdir -p $PACKAGE_DIR $PACKAGE_DIR/pkg

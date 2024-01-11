@@ -47,7 +47,7 @@ echo ^</Wix^> >> %PACKAGE_DIR%\meestic.wxs
 cd %PACKAGE_DIR%
 
 REM Create MSI package
-wix build meestic.wxs -o meestic_%VERSION%_win64.msi
+wix build meestic.wxs -o ..\..\meestic_%VERSION%_win64.msi
 
 REM Create ZIP file
-tar.exe -a -c -f meestic_%VERSION%_win64.zip README.md meestic.exe MeesticTray.exe MeesticTray.ini.example
+tar.exe -a -c -f ..\..\meestic_%VERSION%_win64.zip README.md meestic.exe MeesticTray.exe MeesticTray.ini.example
