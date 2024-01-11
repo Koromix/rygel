@@ -1,7 +1,7 @@
 # Introduction
 
 <div id="me">
-    <img src="{{ ASSET static/niels.jpg }}" alt="Photo of me" />
+    <img src="{{ ASSET static/niels.webp }}" alt="Photo of me" />
     <div>
         <p>Hi visitor!
         <p>My name is <b>Niels Martignène</b> (or <a href="https://github.com/Koromix" target="_blank">Koromix</a>), and I've been a programmer for over twenty years. It all began when I stumbled upon an old <a href="https://en.wikipedia.org/wiki/Amstrad_CPC#CPC6128" target="_blank">Amstrad CPC-6128</a> in my parents' attic, and found out you could use BASIC to program simple games on it.

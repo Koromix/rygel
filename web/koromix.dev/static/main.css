@@ -173,8 +173,8 @@ pre {
     align-items: center;
 }
 #me > img {
-    width: 192px;
-    height: 192px;
+    width: 210px;
+    height: 300px;
 }
 #me > div { flex: 1; }
 
