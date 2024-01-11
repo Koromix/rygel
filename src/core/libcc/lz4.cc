@@ -39,25 +39,23 @@ class LZ4Decompressor: public StreamDecompressor {
     Size out_len = 0;
 
 public:
-    LZ4Decompressor(StreamReader *reader) : StreamDecompressor(reader) {}
+    LZ4Decompressor(StreamReader *reader, CompressionType type);
     ~LZ4Decompressor();
 
-    bool Init(CompressionType type) override;
     Size Read(Size max_len, void *out_buf) override;
 };
 
-LZ4Decompressor::~LZ4Decompressor()
-{
-    LZ4F_freeDecompressionContext(decoder);
-}
-
-bool LZ4Decompressor::Init(CompressionType)
+LZ4Decompressor::LZ4Decompressor(StreamReader *reader, CompressionType)
+    : StreamDecompressor(reader) 
 {
     LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&decoder, LZ4F_VERSION);
     if (LZ4F_isError(err))
         throw std::bad_alloc();
+}
 
-    return true;
+LZ4Decompressor::~LZ4Decompressor()
+{
+    LZ4F_freeDecompressionContext(decoder);
 }
 
 Size LZ4Decompressor::Read(Size max_len, void *user_buf)
@@ -113,20 +111,15 @@ class LZ4Compressor: public StreamCompressor {
     HeapArray<uint8_t> dynamic_buf;
 
 public:
-    LZ4Compressor(StreamWriter *writer) : StreamCompressor(writer) {}
+    LZ4Compressor(StreamWriter *writer, CompressionType type, CompressionSpeed speed);
     ~LZ4Compressor();
 
-    bool Init(CompressionType type, CompressionSpeed speed) override;
     bool Write(Span<const uint8_t> buf) override;
     bool Finalize() override;
 };
 
-LZ4Compressor::~LZ4Compressor()
-{
-    LZ4F_freeCompressionContext(encoder);
-}
-
-bool LZ4Compressor::Init(CompressionType, CompressionSpeed speed)
+LZ4Compressor::LZ4Compressor(StreamWriter *writer, CompressionType, CompressionSpeed speed)
+    : StreamCompressor(writer)
 {
     LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
     if (LZ4F_isError(err))
@@ -141,15 +134,15 @@ bool LZ4Compressor::Init(CompressionType, CompressionSpeed speed)
     dynamic_buf.Grow(LZ4F_HEADER_SIZE_MAX);
 
     size_t ret = LZ4F_compressBegin(encoder, dynamic_buf.end(), dynamic_buf.capacity - dynamic_buf.len, &prefs);
-
-    if (LZ4F_isError(ret)) {
-        LogError("Failed to start LZ4 stream for '%1': %2", GetFileName(), LZ4F_getErrorName(ret));
-        return false;
-    }
+    if (LZ4F_isError(ret))
+        throw std::bad_alloc();
 
     dynamic_buf.len += ret;
+}
 
-    return true;
+LZ4Compressor::~LZ4Compressor()
+{
+    LZ4F_freeCompressionContext(encoder);
 }
 
 bool LZ4Compressor::Write(Span<const uint8_t> buf)

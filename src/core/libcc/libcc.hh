@@ -4496,7 +4496,6 @@ public:
     StreamDecompressor(StreamReader *reader) : reader(reader) {}
     virtual ~StreamDecompressor() {}
 
-    virtual bool Init(CompressionType type) = 0;
     virtual Size Read(Size max_len, void *out_buf) = 0;
 
 protected:
@@ -4509,7 +4508,7 @@ protected:
     void SetEOF(bool eof) { reader->eof = eof; }
 };
 
-typedef StreamDecompressor *CreateDecompressorFunc(StreamReader *reader);
+typedef StreamDecompressor *CreateDecompressorFunc(StreamReader *reader, CompressionType type);
 
 class StreamDecompressorHelper {
 public:
@@ -4517,9 +4516,9 @@ public:
 };
 
 #define RG_REGISTER_DECOMPRESSOR(Type, Cls) \
-    static StreamDecompressor *RG_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader) \
+    static StreamDecompressor *RG_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader, CompressionType type) \
     { \
-        StreamDecompressor *decompressor = new Cls(reader); \
+        StreamDecompressor *decompressor = new Cls(reader, type); \
         return decompressor; \
     } \
     static StreamDecompressorHelper RG_UNIQUE_NAME(CreateDecompressorHelper)((Type), RG_UNIQUE_NAME(CreateDecompressor))
@@ -4695,7 +4694,6 @@ public:
     StreamCompressor(StreamWriter *writer) : writer(writer) {}
     virtual ~StreamCompressor() {}
 
-    virtual bool Init(CompressionType type, CompressionSpeed speed) = 0;
     virtual bool Write(Span<const uint8_t> buf) = 0;
     virtual bool Finalize() = 0;
 
@@ -4706,7 +4704,7 @@ protected:
     bool WriteRaw(Span<const uint8_t> buf) { return writer->WriteRaw(buf); }
 };
 
-typedef StreamCompressor *CreateCompressorFunc(StreamWriter *writer);
+typedef StreamCompressor *CreateCompressorFunc(StreamWriter *writer, CompressionType type, CompressionSpeed speed);
 
 class StreamCompressorHelper {
 public:
@@ -4714,9 +4712,9 @@ public:
 };
 
 #define RG_REGISTER_COMPRESSOR(Type, Cls) \
-    static StreamCompressor *RG_UNIQUE_NAME(CreateCompressor)(StreamWriter *writer) \
+    static StreamCompressor *RG_UNIQUE_NAME(CreateCompressor)(StreamWriter *writer, CompressionType type, CompressionSpeed speed) \
     { \
-        StreamCompressor *compressor = new Cls(writer); \
+        StreamCompressor *compressor = new Cls(writer, type, speed); \
         return compressor; \
     } \
     static StreamCompressorHelper RG_UNIQUE_NAME(CreateCompressorHelper)((Type), RG_UNIQUE_NAME(CreateCompressor))

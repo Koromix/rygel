@@ -6510,16 +6510,8 @@ bool StreamReader::InitDecompressor(CompressionType type)
             return false;
         }
 
-        decompressor = func(this);
-
-        if (!decompressor) {
-            error = true;
-            return false;
-        }
-        if (!decompressor->Init(type)) {
-            error = true;
-            return false;
-        }
+        decompressor = func(this, type);
+        RG_ASSERT(decompressor);
     }
 
     compression_type = type;
@@ -6898,16 +6890,8 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
             return false;
         }
 
-        compressor = func(this);
-
-        if (!compressor) {
-            error = true;
-            return false;
-        }
-        if (!compressor->Init(type, speed)) {
-            error = true;
-            return false;
-        }
+        compressor = func(this, type, speed);
+        RG_ASSERT(compressor);
     }
 
     compression_type = type;

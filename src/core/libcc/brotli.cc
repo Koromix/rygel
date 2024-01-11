@@ -37,27 +37,23 @@ class BrotliDecompressor: public StreamDecompressor {
     Size out_len = 0;
 
 public:
-    BrotliDecompressor(StreamReader *reader) : StreamDecompressor(reader) {}
+    BrotliDecompressor(StreamReader *reader, CompressionType type);
     ~BrotliDecompressor();
 
-    bool Init(CompressionType type) override;
     Size Read(Size max_len, void *out_buf) override;
 };
 
-BrotliDecompressor::~BrotliDecompressor()
-{
-    if (state) {
-        BrotliDecoderDestroyInstance(state);
-    }
-}
-
-bool BrotliDecompressor::Init(CompressionType)
+BrotliDecompressor::BrotliDecompressor(StreamReader *reader, CompressionType)
+    : StreamDecompressor(reader)
 {
     state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
     if (!state)
         throw std::bad_alloc();
+}
 
-    return true;
+BrotliDecompressor::~BrotliDecompressor()
+{
+    BrotliDecoderDestroyInstance(state);
 }
 
 Size BrotliDecompressor::Read(Size max_len, void *user_buf)
@@ -109,22 +105,15 @@ class BrotliCompressor: public StreamCompressor {
     BrotliEncoderStateStruct *state = nullptr;
 
 public:
-    BrotliCompressor(StreamWriter *writer) : StreamCompressor(writer) {}
+    BrotliCompressor(StreamWriter *writer, CompressionType type, CompressionSpeed speed);
     ~BrotliCompressor();
 
-    bool Init(CompressionType type, CompressionSpeed speed) override;
     bool Write(Span<const uint8_t> buf) override;
     bool Finalize() override;
 };
 
-BrotliCompressor::~BrotliCompressor()
-{
-    if (state) {
-        BrotliEncoderDestroyInstance(state);
-    }
-}
-
-bool BrotliCompressor::Init(CompressionType, CompressionSpeed speed)
+BrotliCompressor::BrotliCompressor(StreamWriter *writer, CompressionType, CompressionSpeed speed)
+    : StreamCompressor(writer)
 {
     state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
     if (!state)
@@ -137,8 +126,11 @@ bool BrotliCompressor::Init(CompressionType, CompressionSpeed speed)
         case CompressionSpeed::Slow: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 11); } break;
         case CompressionSpeed::Fast: { BrotliEncoderSetParameter(state, BROTLI_PARAM_QUALITY, 0); } break;
     }
+}
 
-    return true;
+BrotliCompressor::~BrotliCompressor()
+{
+    BrotliEncoderDestroyInstance(state);
 }
 
 bool BrotliCompressor::Write(Span<const uint8_t> buf)

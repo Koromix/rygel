@@ -45,21 +45,19 @@ class MinizDecompressor: public StreamDecompressor {
     Size uncompressed_size = 0;
 
 public:
-    MinizDecompressor(StreamReader *reader) : StreamDecompressor(reader) {}
+    MinizDecompressor(StreamReader *reader, CompressionType type);
     ~MinizDecompressor() {}
 
-    bool Init(CompressionType type) override;
     Size Read(Size max_len, void *out_buf) override;
 };
 
-bool MinizDecompressor::Init(CompressionType type)
+MinizDecompressor::MinizDecompressor(StreamReader *reader, CompressionType type)
+    : StreamDecompressor(reader)
 {
     static_assert(RG_SIZE(out_buf) >= TINFL_LZ_DICT_SIZE);
 
     tinfl_init(&inflator);
     is_gzip = (type == CompressionType::Gzip);
-
-    return true;
 }
 
 Size MinizDecompressor::Read(Size max_len, void *user_buf)
@@ -229,10 +227,9 @@ class MinizCompressor: public StreamCompressor {
     LocalArray<uint8_t, 1024> small_buf;
 
 public:
-    MinizCompressor(StreamWriter *writer) : StreamCompressor(writer) {}
+    MinizCompressor(StreamWriter *writer, CompressionType type, CompressionSpeed speed);
     ~MinizCompressor() {}
 
-    bool Init(CompressionType type, CompressionSpeed speed) override;
     bool Write(Span<const uint8_t> buf) override;
     bool Finalize() override;
 
@@ -240,7 +237,8 @@ private:
     bool WriteDeflate(Span<const uint8_t> buf);
 };
 
-bool MinizCompressor::Init(CompressionType type, CompressionSpeed speed)
+MinizCompressor::MinizCompressor(StreamWriter *writer, CompressionType type, CompressionSpeed speed)
+    : StreamCompressor(writer)
 {
     is_gzip = (type == CompressionType::Gzip);
 
@@ -256,10 +254,7 @@ bool MinizCompressor::Init(CompressionType type, CompressionSpeed speed)
         MinizCompressor *compressor = (MinizCompressor *)udata;
         return (int)compressor->WriteRaw(MakeSpan((uint8_t *)buf, len));
     }, this, flags);
-    if (status != TDEFL_STATUS_OKAY) {
-        LogError("Failed to initialize Deflate compression for '%1'", GetFileName());
-        return false;
-    }
+    RG_ASSERT(status == TDEFL_STATUS_OKAY);
 
     if (is_gzip) {
         static uint8_t gzip_header[] = {
@@ -271,11 +266,8 @@ bool MinizCompressor::Init(CompressionType type, CompressionSpeed speed)
             0           // OS
         };
 
-        if (!WriteRaw(gzip_header))
-            return false;
+        WriteRaw(gzip_header);
     }
-
-    return true;
 }
 
 bool MinizCompressor::Write(Span<const uint8_t> buf)
