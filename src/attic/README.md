@@ -95,3 +95,7 @@ Its main purpose is to test compression and decompression implementations agains
 # Hodler
 
 Hodler is a simple and **limited static-site builder** that I use to generate the pages on [koromix.dev](https://koromix.dev/) and [demheter.fr](https://demheter.fr/) from Markdown files.
+
+# Snaplite
+
+Snaplite is a support tool to explore and restore SQLite snapshots stream, which is an extension I've made to SQLite WAL, and is used (among others) in goupile.

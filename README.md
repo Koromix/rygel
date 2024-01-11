@@ -15,7 +15,6 @@ Most projects are licensed under the [AGPL 3.0 license](https://www.gnu.org/lice
 | *meestic*  | Control the keyboard lighting on MSI Delta 15 laptops                            | Felix      | **Good** | AGPL 3    |
 | *napka*    | List and map of mental healthcare resources in France                            | Node.js    | **WIP**  | AGPL 3    |
 | *rekord*   | Backup tool with deduplication and asymmetric encryption                         | Felix      | **WIP**  | AGPL 3    |
-| *snaplite* | Support tool for SQLite snapshots made from core/libsqlite                       | Felix      | **Good** | AGPL 3    |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd                | Felix      | **Good** | AGPL 3    |
 | *tytools*  | Independent tools to manage, flash and communicate with Teensy microcontrollers  | Felix      | **Good** | Unlicense |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                               | Felix      | **Good** | AGPL 3    |
