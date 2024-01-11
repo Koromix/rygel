@@ -48,8 +48,9 @@ echo         ^<?include tytools.wxi ?^> >> %PACKAGE_DIR%\tytools.wxs
 echo     ^</Package^> >> %PACKAGE_DIR%\tytools.wxs
 echo ^</Wix^> >> %PACKAGE_DIR%\tytools.wxs
 
-REM Create MSI package
 cd %PACKAGE_DIR%
+
+REM Create MSI package
 wix extension add -g WixToolset.UI.wixext
 wix build tytools.wxs -o tytools_%VERSION%_win64.msi -ext WixToolset.UI.wixext
 
