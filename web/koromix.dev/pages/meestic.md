@@ -15,7 +15,7 @@ It was made by looking at the HID packets sent by the Windows tool with Wireshar
 
 ## Windows
 
-Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/meestic/releases/latest).
+Download ready-to-use binaries here: [https://download.koromix.dev/windows/](https://download.koromix.dev/windows/)
 
 ## Linux (Debian)
 

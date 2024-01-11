@@ -19,11 +19,11 @@ tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boa
 
 ## Windows
 
-Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
+Download ready-to-use binaries here: [https://download.koromix.dev/windows/](https://download.koromix.dev/windows/)
 
 ## macOS
 
-Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
+Download ready-to-use binaries here: [https://download.koromix.dev/macos/](https://download.koromix.dev/macos/)
 
 ## Linux (Debian)
 

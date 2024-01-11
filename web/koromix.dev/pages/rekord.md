@@ -13,11 +13,11 @@ This software has not been stabilized yet and **must not be used as your primary
 
 ## Windows
 
-Ready-to-use Windows binaries will be provided once the software stabilizes. In the meantime, you can build it yourself or [try it on Debian](#linux).
+Download ready-to-use binaries here: [https://download.koromix.dev/windows/](https://download.koromix.dev/windows/)
 
 ## macOS
 
-Ready-to-use macOS binaries will be provided once the software stabilizes. In the meantime, you can build it yourself or [try it on Debian](#linux).
+Download ready-to-use binaries here: [https://download.koromix.dev/macos/](https://download.koromix.dev/macos/)
 
 ## Linux (Debian)
 
