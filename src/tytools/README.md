@@ -10,8 +10,6 @@ TyCommander | Qt GUI (static)           | Upload, monitor and communicate with m
 TyUploader  | Qt GUI (static)           | Simple firmware / sketch uploader
 tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boards
 
-All the code related to these programs is under **public domain**, you can do whatever you want with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) for more information.
-
 # Install
 
 ## Windows
@@ -221,3 +219,7 @@ Open the project directory in a terminal and execute:
 ```
 
 If you want to build debug binaries instead, just use `./felix <target>`.
+
+# License
+
+All the code related to these programs is under **public domain**, you can do whatever you want with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) for more information.
