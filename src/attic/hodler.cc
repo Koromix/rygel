@@ -317,6 +317,7 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
     // Enable syntax extensions
     {
         static const char *const extensions[] = {
+            "autolink",
             "table",
             "strikethrough"
         };
