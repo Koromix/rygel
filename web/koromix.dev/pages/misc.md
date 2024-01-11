@@ -10,7 +10,7 @@ You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/maste
 
 Blikk is an **embeddable beginner-friendly programming language** with static types, fast compilation.
 
-You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/blikk).
+You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/blikk).
 
 # Serf
 
@@ -42,7 +42,7 @@ Cross-Origin-Embedder-Policy = require-corp
 Cross-Origin-Opener-Policy = same-origin
 ```
 
-You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/attic#serf).
+You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#serf).
 
 # SeatSH
 
@@ -54,7 +54,7 @@ It will transparently forward standard streams (stdin, stdout, stderr) and repor
 
 It is mainly useful for automated test systems, do not install it on production machines because it is a security risk. SeatSH only makes sure that the user connected to the SSH matches the one on the active console session, nothing more.
 
-You can find out more [in the code repository](https://github.com/Koromix/rygel/tree/master/src/attic#seatsh).
+You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#seatsh).
 
 # CNoke
 

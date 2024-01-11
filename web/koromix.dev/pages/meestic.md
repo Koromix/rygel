@@ -150,7 +150,7 @@ Be careful, color names and most options are **case-sensitive**.
 
 # Build from source
 
-Start by cloning the git repository here: [https://github.com/Koromix/rygel](https://github.com/Koromix/rygel):
+Start by cloning the [git repository](https://github.com/Koromix/rygel):
 
 ```sh
 git clone https://github.com/Koromix/rygel
@@ -187,4 +187,4 @@ After that, the binaries will be available in the `bin/Fast` directory.
 
 This program is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License** as published by the Free Software Foundation, either **version 3 of the License**, or (at your option) any later version.
 
-Find more information here: [https://www.gnu.org/licenses/](https://www.gnu.org/licenses/)
+Find more information here: https://www.gnu.org/licenses/

@@ -11,7 +11,7 @@ Koffi is a **fast and easy-to-use C to JS FFI module** for [Node.js](https://nod
     <img src="{{ ASSET static/koffi/node_c.webp }}" width="190" height="128" alt=""/>
 </p>
 
-You can find more information about Koffi on the official web site: [https://koffi.dev/](https://koffi.dev)
+You can find more information about Koffi on the official web site: https://koffi.dev/
 
 # Platforms
 
@@ -49,4 +49,4 @@ The following combinations of OS and architectures __are officially supported an
 
 This program is free software: you can redistribute it and/or modify it under the terms of the **MIT License**.
 
-Find more information here: [https://choosealicense.com/licenses/mit/](https://choosealicense.com/licenses/mit/)
+Find more information here: https://choosealicense.com/licenses/mit/

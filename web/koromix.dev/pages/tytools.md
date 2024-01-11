@@ -19,11 +19,11 @@ tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boa
 
 ## Windows
 
-Download ready-to-use binaries here: [https://download.koromix.dev/windows/](https://download.koromix.dev/windows/)
+Download ready-to-use binaries here: https://download.koromix.dev/windows/
 
 ## macOS
 
-Download ready-to-use binaries here: [https://download.koromix.dev/macos/](https://download.koromix.dev/macos/)
+Download ready-to-use binaries here: https://download.koromix.dev/macos/
 
 ## Linux (Debian)
 
@@ -166,7 +166,7 @@ your Teensy.
 
 # Hacking TyTools
 
-Start by cloning the git repository here: [https://github.com/Koromix/rygel](https://github.com/Koromix/rygel):
+Start by cloning the [git repository](https://github.com/Koromix/rygel):
 
 ```sh
 git clone https://github.com/Koromix/rygel

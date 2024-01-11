@@ -7,7 +7,7 @@ La dépression en quelques chiffres :
 - Prévalence **double chez la femme** par rapport à l’homme
 - **1er facteur de morbidité et d’incapacité** sur le plan mondial
 
-Source : [https://www.la-depression.org/comprendre-la-depression/la-depression-en-chiffre/](https://www.la-depression.org/comprendre-la-depression/la-depression-en-chiffre/)
+Source : https://www.la-depression.org/comprendre-la-depression/la-depression-en-chiffre/
 
 # Diagnostic
 

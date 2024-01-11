@@ -13,11 +13,11 @@ This software has not been stabilized yet and **must not be used as your primary
 
 ## Windows
 
-Download ready-to-use binaries here: [https://download.koromix.dev/windows/](https://download.koromix.dev/windows/)
+Download ready-to-use binaries here: https://download.koromix.dev/windows/
 
 ## macOS
 
-Download ready-to-use binaries here: [https://download.koromix.dev/macos/](https://download.koromix.dev/macos/)
+Download ready-to-use binaries here: https://download.koromix.dev/macos/
 
 ## Linux (Debian)
 
@@ -269,7 +269,7 @@ rekord get <hash> -O <path>
 
 # Build from source
 
-Start by cloning the git repository here: [https://github.com/Koromix/rygel](https://github.com/Koromix/rygel):
+Start by cloning the [git repository](https://github.com/Koromix/rygel):
 
 ```sh
 git clone https://github.com/Koromix/rygel
@@ -306,4 +306,4 @@ After that, the binary will be available in the `bin/Fast` directory.
 
 This program is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License** as published by the Free Software Foundation, either **version 3 of the License**, or (at your option) any later version.
 
-Find more information here: [https://www.gnu.org/licenses/](https://www.gnu.org/licenses/)
+Find more information here: https://www.gnu.org/licenses/
