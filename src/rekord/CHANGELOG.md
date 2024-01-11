@@ -1,5 +1,10 @@
 # Changelog
 
+## Rekord 0.11.1
+
+- Use case-insensitive test for rekord CLI output format name
+- Add Windows and macOS builds
+
 ## Rekord 0.11
 
 - Rename exploration commands
