@@ -296,6 +296,7 @@ static void RenderAsset(Span<const char> path, const FileHash *hash, StreamWrite
         FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
         Print(writer, "/%1?%2", path, suffix);
     } else {
+        LogWarning("Unknown asset '%1'", path);
         Print(writer, "/%1", path);
     }
 }
@@ -701,7 +702,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 if (prop.value == "Copy") {
                     AssetCopy *copy = copies.AppendDefault();
 
-                    copy->dest_directory = NormalizePath(prop.section, output_dir, &temp_alloc).ptr;
+                    copy->dest_directory = NormalizePath(prop.section, &temp_alloc).ptr;
 
                     while (ini.NextInSection(&prop)) {
                         if (prop.key == "From") {
@@ -760,7 +761,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
     if (!copies.len) {
         AssetCopy copy = {};
 
-        copy.dest_directory = output_dir;
+        copy.dest_directory = ".";
         copy.src_directory = Fmt(&temp_alloc, "%1%/assets", source_dir).ptr;
 
         copies.Append(copy);
@@ -795,12 +796,13 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
         for (const char *src_filename: src_filenames) {
             const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
 
-            const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", copy.dest_directory, basename).ptr;
+            const char *url = NormalizePath(basename, copy.dest_directory, &temp_alloc).ptr;
+            const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_dir, url).ptr;
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
             FileHash *hash = assets.hashes.AppendDefault();
 
-            hash->name = basename;
+            hash->name = url;
             hash->filename = dest_filename;
 
             async.Run([=]() {
