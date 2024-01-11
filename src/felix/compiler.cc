@@ -747,7 +747,7 @@ public:
     void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
 private:
-    void AddClangTarget(HeapArray<char> *out_buf) const
+    void AddClangTarget([[maybe_unused]] HeapArray<char> *out_buf) const
     {
         // Only for Linux (for now)
 
