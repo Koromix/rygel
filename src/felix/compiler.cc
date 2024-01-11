@@ -691,7 +691,7 @@ public:
         }
 
         // Features
-        if (features & (int)CompileFeature::OptimizeSpeed) {
+        if (features & (int)CompileFeature::OptimizeSize) {
             Fmt(&buf, " -Wl,--gc-sections");
         }
         if (features & (int)CompileFeature::ASan) {
@@ -1226,7 +1226,7 @@ public:
         }
 
         // Features
-        if (features & (int)CompileFeature::OptimizeSpeed) {
+        if (features & (int)CompileFeature::OptimizeSize) {
             Fmt(&buf, " -Wl,--gc-sections");
         }
         if (features & (int)CompileFeature::ASan) {
