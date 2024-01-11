@@ -8,8 +8,7 @@ Il y a deux possibilités :
 ## Tables et versions précompilées
 
 Pour obtenir les *tables de groupage* et le client en ligne de commande, il suffit
-de télécharger la dernière archive de drdc disponible sur mon serveur :
-[https://koromix.dev/files/drd](https://koromix.dev/files/drd).
+de télécharger la dernière archive de drdc disponible sur mon serveur : https://koromix.dev/files/drd/
 
 La version Linux de drdc est compilée statiquement et avec musl-libc, donc elle devrait
 fonctionner sur toutes les distributions (x86_64).
@@ -32,7 +31,7 @@ instructions sont la section *How to build*.
 
 Les tables ne sont pas dans ce dépôt, je n'ai pas envie de provoquer l'ATIH. Elles doivent
 être extraites patiemment de GenRSA ou, beaucoup plus simplement, il suffit de télécharger la
-dernière version de drdc sur [https://koromix.dev/files/drd](https://koromix.dev/files/drd).
+dernière version de drdc sur mon serveur : https://koromix.dev/files/drd
 
 Une fois l'archive extraite, il faut configurer les autorisations d'UF. Pour cela il faut
 remplacer *path/to/profile/mco_authorizations.txt* par le fichier FICUM utilisé par

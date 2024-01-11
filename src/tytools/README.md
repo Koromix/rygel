@@ -10,19 +10,17 @@ TyCommander | Qt GUI (static)           | Upload, monitor and communicate with m
 TyUploader  | Qt GUI (static)           | Simple firmware / sketch uploader
 tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boards
 
-Download the [latest release from GitHub](https://github.com/Koromix/tytools/releases). You can find [development builds on koromix.dev](https://koromix.dev/files/tytools/).
-
 All the code related to these programs is under **public domain**, you can do whatever you want with it. See the LICENSE file or [unlicense.org](https://unlicense.org/) for more information.
 
 # Install
 
 ## Windows
 
-Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
+Download ready-to-use binaries here: https://download.koromix.dev/windows/
 
 ## macOS
 
-Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/tytools/releases).
+Download ready-to-use binaries here: https://download.koromix.dev/macos/
 
 ## Linux (Debian)
 
@@ -144,7 +142,7 @@ You can also use `tycmd reset -b` to start the bootloader. This is the same as p
 
 # Hacking TyTools
 
-Start by cloning the git repository here: [https://github.com/Koromix/rygel](https://github.com/Koromix/rygel):
+Start by cloning the [git repository](https://github.com/Koromix/rygel):
 
 ```sh
 git clone https://github.com/Koromix/rygel

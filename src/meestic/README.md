@@ -2,15 +2,13 @@
 
 Meestic is a small utility made to control **the lights of MSI Delta 15 laptop keyboards** on Windows and Linux. It provides both a CLI and a system-tray GUI, and can fully replace the official MSI tool (which is not even available for Linux).
 
-You can use the command-line or the GUI version. Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/meestic/releases/latest).
-
 It was made by looking at the HID packets sent by the Windows tool with Wireshark. It is provided "as is", I don't make any guarantee about this tool.
 
 # Install
 
 ## Windows
 
-Download ready-to-use binaries from the release section of the [dedicated repository](https://github.com/Koromix/meestic/releases/latest).
+Download ready-to-use binaries here: [https://download.koromix.dev/windows/](https://download.koromix.dev/windows/)
 
 ## Linux (Debian)
 
@@ -158,7 +156,7 @@ Be careful, color names and most options are **case-sensitive**.
 
 # Build from source
 
-Start by cloning the git repository here: [https://github.com/Koromix/rygel](https://github.com/Koromix/rygel):
+Start by cloning the [git repository](https://github.com/Koromix/rygel):
 
 ```sh
 git clone https://github.com/Koromix/rygel
@@ -190,3 +188,9 @@ sudo apt install build-essential libudev-dev
 ```
 
 After that, the binaries will be available in the `bin/Fast` directory.
+
+# License
+
+This program is free software: you can redistribute it and/or modify it under the terms of the **GNU Affero General Public License** as published by the Free Software Foundation, either **version 3 of the License**, or (at your option) any later version.
+
+Find more information here: https://www.gnu.org/licenses/
