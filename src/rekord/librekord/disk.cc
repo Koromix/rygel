@@ -88,12 +88,13 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
         }
     }
 
-    // Read repository ID
-    if (!ReadSecret("rekord", id))
-        return false;
-
-    if (!OpenCache())
-        return false;
+    // Open local cache
+    {
+        uint8_t id[32];
+        if (!ReadSecret("rekord", id))
+            return false;
+        OpenCache(id);
+    }
 
     err_guard.Disable();
     return true;
@@ -115,12 +116,13 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
     memcpy(skey, key.ptr, key.len);
     crypto_scalarmult_base(pkey, skey);
 
-    // Read repository ID
-    if (!ReadSecret("rekord", id))
-        return false;
-
-    if (!OpenCache())
-        return false;
+    // Open local cache
+    {
+        uint8_t id[32];
+        if (!ReadSecret("rekord", id))
+            return false;
+        OpenCache(id);
+    }
 
     err_guard.Disable();
     return true;
@@ -130,7 +132,7 @@ void rk_Disk::Lock()
 {
     mode = rk_DiskMode::Secure;
 
-    ZeroMemorySafe(id, RG_SIZE(id));
+    ZeroMemorySafe(cache_id, RG_SIZE(cache_id));
     ZeroMemorySafe(pkey, RG_SIZE(pkey));
     ZeroMemorySafe(skey, RG_SIZE(skey));
 
@@ -162,15 +164,14 @@ bool rk_Disk::ChangeID()
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Full || mode == rk_DiskMode::WriteOnly);
 
-    uint8_t new_id[RG_SIZE(id)];
-    randombytes_buf(new_id, RG_SIZE(new_id));
+    uint8_t id[32];
+    randombytes_buf(id, RG_SIZE(id));
 
-    if (!WriteSecret("rekord", new_id, true))
+    if (!WriteSecret("rekord", id, true))
         return false;
-    memcpy(id, new_id, RG_SIZE(id));
 
     cache_db.Close();
-    OpenCache();
+    OpenCache(id);
 
     return true;
 }
@@ -630,13 +631,20 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
         return false;
     }
 
-    // Generate random ID and keys
-    randombytes_buf(id, RG_SIZE(id));
+    // Generate random key pair
     crypto_box_keypair(pkey, skey);
 
-    if (!WriteSecret("rekord", id, false))
-        return false;
-    names.Append("rekord");
+    // Generate random ID for local cache
+    {
+        uint8_t id[32];
+        randombytes_buf(id, RG_SIZE(id));
+
+        if (!WriteSecret("rekord", id, false))
+            return false;
+        names.Append("rekord");
+
+        OpenCache(id);
+    }
 
     // Write key files
     if (!WriteKey("keys/default/full", full_pwd, skey))
@@ -831,8 +839,24 @@ Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf, bool overwr
     return written;
 }
 
-bool rk_Disk::OpenCache()
+bool rk_Disk::OpenCache(Span<const uint8_t> id)
 {
+    RG_ASSERT(id.len >= 16);
+    RG_ASSERT(!cache_db.IsValid());
+
+    // Combine repository URL and ID to create secure ID
+    {
+        static_assert(RG_SIZE(cache_id) == crypto_hash_sha256_BYTES);
+
+        crypto_hash_sha256_state state;
+        crypto_hash_sha256_init(&state);
+
+        crypto_hash_sha256_update(&state, id.ptr, (size_t)id.len);
+        crypto_hash_sha256_update(&state, (const uint8_t *)url, strlen(url));
+
+        crypto_hash_sha256_final(&state, cache_id);
+    }
+
     const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
     if (!cache_dir) {
         LogError("Cannot find user cache path");
@@ -841,7 +865,7 @@ bool rk_Disk::OpenCache()
     if (!MakeDirectory(cache_dir, false))
         return false;
 
-    const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(id, FmtType::SmallHex, "").Pad0(-2)).ptr;
+    const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(cache_id, FmtType::SmallHex, "").Pad0(-2)).ptr;
     LogDebug("Cache file: %1", cache_filename);
 
     if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))

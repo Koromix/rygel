@@ -58,7 +58,7 @@ class rk_Disk {
 protected:
     const char *url = nullptr;
 
-    uint8_t id[32];
+    uint8_t cache_id[32];
 
     rk_DiskMode mode = rk_DiskMode::Secure;
     uint8_t pkey[32] = {};
@@ -87,7 +87,6 @@ public:
     void Lock();
 
     const char *GetURL() const { return url; }
-    Span<const uint8_t> GetID() const { return id; }
     Span<const uint8_t> GetSalt() const { return pkey; }
     rk_DiskMode GetMode() const { return mode; }
 
@@ -145,7 +144,7 @@ private:
 
     Size WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite);
 
-    bool OpenCache();
+    bool OpenCache(Span<const uint8_t> id);
     void ClearCache();
     bool RebuildCache();
 };
