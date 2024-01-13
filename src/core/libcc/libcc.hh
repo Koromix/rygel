@@ -3140,18 +3140,22 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
 
 // Shortcut log functions
 #ifdef RG_DEBUG
-template <typename... Args>
-static inline void LogDebug(Args... args) { Log(LogLevel::Debug, "Debug", args...); }
+    const char *DebugLogContext(const char *filename, int line);
+
+    #define LogDebug(...) Log(LogLevel::Debug, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
+    #define LogInfo(...) Log(LogLevel::Info, nullptr __VA_OPT__(,) __VA_ARGS__)
+    #define LogWarning(...) Log(LogLevel::Warning, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
+    #define LogError(...) Log(LogLevel::Error, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
 #else
-template <typename... Args>
-static inline void LogDebug(Args...) {}
+    template <typename... Args>
+    static inline void LogDebug(Args...) {}
+    template <typename... Args>
+    static inline void LogInfo(Args... args) { Log(LogLevel::Info, nullptr, args...); }
+    template <typename... Args>
+    static inline void LogWarning(Args... args) { Log(LogLevel::Warning, "Warning: ", args...); }
+    template <typename... Args>
+    static inline void LogError(Args... args) { Log(LogLevel::Error, "Error: ", args...); }
 #endif
-template <typename... Args>
-static inline void LogInfo(Args... args) { Log(LogLevel::Info, nullptr, args...); }
-template <typename... Args>
-static inline void LogWarning(Args... args) { Log(LogLevel::Warning, "Warning", args...); }
-template <typename... Args>
-static inline void LogError(Args... args) { Log(LogLevel::Error, "Error", args...); }
 
 void SetLogHandler(const std::function<LogFunc> &func);
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);

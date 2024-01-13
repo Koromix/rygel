@@ -380,8 +380,7 @@ void json_Parser::PushLogFilter()
 {
     RG::PushLogFilter([this](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
         char ctx_buf[1024];
-        Fmt(ctx_buf, "%1(%2:%3)%4%5", st.GetFileName(), st.GetLineNumber(), st.GetLineOffset(),
-                                      ctx ? ": " : "", ctx ? ctx : "");
+        Fmt(ctx_buf, "%1%2(%3:%4): ", ctx ? ctx : "", st.GetFileName(), st.GetLineNumber(), st.GetLineOffset());
 
         func(level, ctx_buf, msg);
     });

@@ -882,14 +882,10 @@ void http_IO::PushLogFilter()
             last_err = DuplicateString(msg, &allocator).ptr;
         }
 
-        if (ctx) {
-            char ctx_buf[512];
-            Fmt(ctx_buf, "%1: %2", request.client_addr, ctx);
+        char ctx_buf[512];
+        Fmt(ctx_buf, "%1%2: ", ctx ? ctx : "", request.client_addr);
 
-            func(level, ctx_buf, msg);
-        } else {
-            func(level, request.client_addr, msg);
-        }
+        func(level, ctx_buf, msg);
     });
 }
 

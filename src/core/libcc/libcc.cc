@@ -1932,6 +1932,23 @@ bool GetDebugFlag(const char *name)
     }
 }
 
+#ifndef NDEBUG
+const char *DebugLogContext(const char *filename, int line)
+{
+    static RG_THREAD_LOCAL LocalArray<char, 1024> buf;
+
+    buf.len = Fmt(buf.data, "  [%1:%2] ", filename, line).len;
+
+    if (buf.len > 32) {
+        char *ptr = buf.end() - 32;
+        memcpy(ptr, "  [...", 6);
+        return ptr;
+    } else {
+        return buf.data;
+    }
+}
+#endif
+
 static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *msg)
 {
     const std::function<LogFilterFunc> &func = *log_filters[idx];
@@ -2001,9 +2018,9 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
 {
     switch (level)  {
         case LogLevel::Debug:
-        case LogLevel::Info: { PrintLn(stderr, "%!D..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
-        case LogLevel::Warning: { PrintLn(stderr, "%!M..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
-        case LogLevel::Error: { PrintLn(stderr, "%!R..%1%2%!0%3", ctx ? ctx : "", ctx ? ": " : "", msg); } break;
+        case LogLevel::Info: { PrintLn(stderr, "%!D..%1%!0%2", ctx ? ctx : "", msg); } break;
+        case LogLevel::Warning: { PrintLn(stderr, "%!M..%1%!0%2", ctx ? ctx : "", msg); } break;
+        case LogLevel::Error: { PrintLn(stderr, "%!R..%1%!0%2", ctx ? ctx : "", msg); } break;
     }
 
     fflush(stderr);
@@ -2047,11 +2064,10 @@ bool RedirectLogToWindowsEvents(const char *name)
 
         // Append context
         if (ctx) {
-            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.Take(0, RG_LEN(buf_w.data) / 2));
+            Size len = ConvertUtf8ToWin32Wide(ctx, buf_w.TakeAvailable());
             if (len < 0)
                 return;
-            wcscpy(buf_w.data + len, L": ");
-            buf_w.len += len + 2;
+            buf_w.len += len;
         }
 
         // Append message
@@ -6613,9 +6629,9 @@ void LineReader::PushLogFilter()
         char ctx_buf[1024];
 
         if (line_number > 0) {
-            Fmt(ctx_buf, "%1(%2)%3%4", st->GetFileName(), line_number, ctx ? ": " : "", ctx ? ctx : "");
+            Fmt(ctx_buf, "%1%2(%3): ", ctx ? ctx : "", st->GetFileName(), line_number);
         } else {
-            Fmt(ctx_buf, "%1%2%3", st->GetFileName(), ctx ? ": " : "", ctx ? ctx : "");
+            Fmt(ctx_buf, "%1%2: ", ctx ? ctx : "", st->GetFileName());
         }
 
         func(level, ctx_buf, msg);
