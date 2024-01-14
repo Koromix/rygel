@@ -14,7 +14,7 @@ function main() {
     let platform;
     let architecture;
     {
-        let proc = spawnSync('felix', ['--version']);
+        let proc = spawnSync('../../felix', ['--version']);
         if (proc.status !== 0)
             throw new Error('Failed to get host information from felix');
         let output = proc.stdout.toString();
