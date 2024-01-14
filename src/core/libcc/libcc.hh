@@ -4367,6 +4367,9 @@ public:
         : StreamReader() { Open(func, filename, compression_type); }
     ~StreamReader() { Close(true); }
 
+    // Call before Open!
+    void SetDecoder(StreamDecoder *decoder);
+
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
     bool Open(FILE *fp, const char *filename,
@@ -4564,6 +4567,9 @@ public:
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
         : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
     ~StreamWriter() { Close(true); }
+
+    // Call before Open!
+    void SetEncoder(StreamEncoder *encoder);
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None,

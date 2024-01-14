@@ -6198,6 +6198,15 @@ StreamWriter stderr_st(stderr, "<stderr>");
 static CreateDecompressorFunc *DecompressorFunctions[RG_LEN(CompressionTypeNames)];
 static CreateCompressorFunc *CompressorFunctions[RG_LEN(CompressionTypeNames)];
 
+void StreamReader::SetDecoder(StreamDecoder *decoder)
+{
+    RG_ASSERT(decoder);
+    RG_ASSERT(!filename);
+    RG_ASSERT(!this->decoder);
+
+    this->decoder = decoder;
+}
+
 bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
                         CompressionType compression_type)
 {
@@ -6627,6 +6636,15 @@ void LineReader::PushLogFilter()
 
         func(level, ctx_buf, msg);
     });
+}
+
+void StreamWriter::SetEncoder(StreamEncoder *encoder)
+{
+    RG_ASSERT(encoder);
+    RG_ASSERT(!filename);
+    RG_ASSERT(!this->encoder);
+
+    this->encoder = encoder;
 }
 
 bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
