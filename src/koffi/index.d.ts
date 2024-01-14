@@ -150,6 +150,8 @@ declare module 'koffi' {
     export function config(cfg: Record<string, unknown>): Record<string, unknown>;
     export function stats(): Record<string, unknown>;
 
+    export function free(value: any): void;
+
     export function errno(): number;
     export function errno(value: number): number;
 
