@@ -6304,6 +6304,7 @@ bool StreamReader::Close(bool implicit)
 
     if (decoder) {
         delete decoder;
+        decoder = nullptr;
     }
 
     switch (source.type) {
@@ -6815,7 +6816,9 @@ bool StreamWriter::Close(bool implicit)
 
     if (encoder) {
         error = error || !encoder->Finalize();
+
         delete encoder;
+        encoder = nullptr;
     }
 
     switch (dest.type) {

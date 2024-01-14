@@ -4557,6 +4557,7 @@ class StreamWriter {
 
         bool vt100;
     } dest;
+
     StreamEncoder *encoder = nullptr;
 
     int64_t raw_written = 0;
