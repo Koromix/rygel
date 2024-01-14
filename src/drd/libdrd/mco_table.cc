@@ -1447,8 +1447,7 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> filenames)
     bool success = true;
 
     for (const char *filename: filenames) {
-        CompressionType compression_type;
-        Span<const char> extension = GetPathExtension(filename, &compression_type);
+        Span<const char> extension = GetPathExtension(filename);
 
         bool (mco_TableSetBuilder::*load_func)(StreamReader *st);
         if (extension == ".tab") {
@@ -1462,7 +1461,7 @@ bool mco_TableSetBuilder::LoadFiles(Span<const char *const> filenames)
             continue;
         }
 
-        StreamReader st(filename, compression_type);
+        StreamReader st(filename);
         if (!st.IsValid()) {
             success = false;
             continue;

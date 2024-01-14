@@ -225,8 +225,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
     bool success = true;
 
     for (const char *filename: filenames) {
-        CompressionType compression_type;
-        Span<const char> extension = GetPathExtension(filename, &compression_type);
+        Span<const char> extension = GetPathExtension(filename);
 
         bool (UserSetBuilder::*load_func)(StreamReader *st);
         if (extension == ".ini") {
@@ -238,7 +237,7 @@ bool UserSetBuilder::LoadFiles(Span<const char *const> filenames)
             continue;
         }
 
-        StreamReader st(filename, compression_type);
+        StreamReader st(filename);
         if (!st.IsValid()) {
             success = false;
             continue;
