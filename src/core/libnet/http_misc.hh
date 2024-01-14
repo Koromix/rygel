@@ -48,6 +48,7 @@ class http_JsonPageBuilder: public json_Writer {
 
     HeapArray<uint8_t> buf;
     StreamWriter st;
+    CompressionType encoding;
 
 public:
     http_JsonPageBuilder(): json_Writer(&st) {}

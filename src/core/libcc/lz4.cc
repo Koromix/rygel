@@ -27,7 +27,7 @@
 
 namespace RG {
 
-class LZ4Decompressor: public StreamDecompressor {
+class LZ4Decompressor: public StreamDecoder {
     LZ4F_dctx *decoder = nullptr;
     bool done = false;
 
@@ -46,7 +46,7 @@ public:
 };
 
 LZ4Decompressor::LZ4Decompressor(StreamReader *reader, CompressionType)
-    : StreamDecompressor(reader) 
+    : StreamDecoder(reader) 
 {
     LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&decoder, LZ4F_VERSION);
     if (LZ4F_isError(err))
@@ -104,7 +104,7 @@ Size LZ4Decompressor::Read(Size max_len, void *user_buf)
     RG_UNREACHABLE();
 }
 
-class LZ4Compressor: public StreamCompressor {
+class LZ4Compressor: public StreamEncoder {
     LZ4F_cctx *encoder = nullptr;
     LZ4F_preferences_t prefs = {};
 
@@ -119,7 +119,7 @@ public:
 };
 
 LZ4Compressor::LZ4Compressor(StreamWriter *writer, CompressionType, CompressionSpeed speed)
-    : StreamCompressor(writer)
+    : StreamEncoder(writer)
 {
     LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
     if (LZ4F_isError(err))

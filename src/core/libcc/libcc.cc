@@ -6302,9 +6302,8 @@ bool StreamReader::Close(bool implicit)
 {
     RG_ASSERT(implicit || this != &stdin_st);
 
-    if (decompressor) {
-        RG_ASSERT(compression_type != CompressionType::None);
-        delete decompressor;
+    if (decoder) {
+        delete decoder;
     }
 
     switch (source.type) {
@@ -6324,7 +6323,6 @@ bool StreamReader::Close(bool implicit)
 
     filename = nullptr;
     error = true;
-    compression_type = CompressionType::None;
     source.type = SourceType::Memory;
     source.eof = false;
     eof = false;
@@ -6338,6 +6336,11 @@ bool StreamReader::Rewind()
 {
     if (error) [[unlikely]]
         return false;
+
+    if (decoder) [[unlikely]] {
+        LogError("Cannot rewind stream with decoder");
+        return false;
+    }
 
     switch (source.type) {
         case SourceType::Memory: { source.u.memory.pos = 0; } break;
@@ -6353,14 +6356,6 @@ bool StreamReader::Rewind()
             error = true;
             return false;
         } break;
-    }
-
-    if (decompressor) {
-        RG_ASSERT(compression_type != CompressionType::None);
-        delete decompressor;
-
-        if (!InitDecompressor(compression_type))
-            return false;
     }
 
     source.eof = false;
@@ -6392,14 +6387,10 @@ Size StreamReader::Read(Span<uint8_t> out_buf)
         return -1;
 
     Size read_len = 0;
-    if (decompressor) {
-        RG_ASSERT(compression_type != CompressionType::None);
-
-        read_len = decompressor->Read(out_buf.len, out_buf.ptr);
+    if (decoder) {
+        read_len = decoder->Read(out_buf.len, out_buf.ptr);
         error |= (read_len < 0);
     } else {
-        RG_ASSERT(compression_type == CompressionType::None);
-
         read_len = ReadRaw(out_buf.len, out_buf.ptr);
         eof = source.eof;
     }
@@ -6437,7 +6428,7 @@ Size StreamReader::ReadAll(Size max_len, HeapArray<uint8_t> *out_buf)
     // For some files (such as in /proc), the file size is reported as 0 even though there
     // is content inside, because these files are generated on demand. So we need to take
     // the slow path for apparently empty files.
-    if (compression_type == CompressionType::None && ComputeRawLen() > 0) {
+    if (!decoder && ComputeRawLen() > 0) {
         if (raw_len > max_len) {
             LogError("File '%1' is too large (limit = %2)", filename, FmtDiskSize(max_len));
             return -1;
@@ -6526,11 +6517,10 @@ bool StreamReader::InitDecompressor(CompressionType type)
             return false;
         }
 
-        decompressor = func(this, type);
-        RG_ASSERT(decompressor);
+        decoder = func(this, type);
+        RG_ASSERT(decoder);
     }
 
-    compression_type = type;
     return true;
 }
 
@@ -6810,10 +6800,8 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
     if (error) [[unlikely]]
         return false;
 
-    if (compressor) {
-        RG_ASSERT(compression_type != CompressionType::None);
-
-        error |= !compressor->Write(buf);
+    if (encoder) {
+        error |= !encoder->Write(buf);
         return !error;
     } else {
         return WriteRaw(buf);
@@ -6825,9 +6813,9 @@ bool StreamWriter::Close(bool implicit)
     RG_ASSERT(implicit || this != &stdout_st);
     RG_ASSERT(implicit || this != &stderr_st);
 
-    if (compressor) {
-        error = error || !compressor->Finalize();
-        delete compressor;
+    if (encoder) {
+        error = error || !encoder->Finalize();
+        delete encoder;
     }
 
     switch (dest.type) {
@@ -6886,7 +6874,6 @@ bool StreamWriter::Close(bool implicit)
 
     filename = nullptr;
     error = true;
-    compression_type = CompressionType::None;
     dest.type = DestinationType::Memory;
     str_alloc.ReleaseAll();
 
@@ -6904,12 +6891,9 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
             return false;
         }
 
-        compressor = func(this, type, speed);
-        RG_ASSERT(compressor);
+        encoder = func(this, type, speed);
+        RG_ASSERT(encoder);
     }
-
-    compression_type = type;
-    compression_speed = speed;
 
     return true;
 }

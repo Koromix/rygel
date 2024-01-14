@@ -4304,8 +4304,8 @@ enum class CompressionSpeed {
     Fast
 };
 
-class StreamDecompressor;
-class StreamCompressor;
+class StreamDecoder;
+class StreamEncoder;
 
 class StreamReader {
     RG_DELETE_COPY(StreamReader)
@@ -4343,8 +4343,7 @@ class StreamReader {
         bool eof = false;
     } source;
 
-    CompressionType compression_type = CompressionType::None;
-    StreamDecompressor *decompressor = nullptr;
+    StreamDecoder *decoder = nullptr;
 
     int64_t raw_len = -1;
     Size raw_read = 0;
@@ -4381,7 +4380,6 @@ public:
     bool Rewind();
 
     const char *GetFileName() const { return filename; }
-    CompressionType GetCompressionType() const { return compression_type; }
     int64_t GetReadLimit() { return read_max; }
     bool IsValid() const { return filename && !error; }
     bool IsEOF() const { return eof; }
@@ -4409,7 +4407,7 @@ private:
 
     Size ReadRaw(Size max_len, void *out_buf);
 
-    friend class StreamDecompressor;
+    friend class StreamDecoder;
 };
 
 static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<uint8_t> out_buf)
@@ -4456,13 +4454,13 @@ static inline Size ReadFile(const char *filename, Size max_len, HeapArray<char> 
     return st.ReadAll(max_len, out_buf);
 }
 
-class StreamDecompressor {
+class StreamDecoder {
 protected:
     StreamReader *reader;
 
 public:
-    StreamDecompressor(StreamReader *reader) : reader(reader) {}
-    virtual ~StreamDecompressor() {}
+    StreamDecoder(StreamReader *reader) : reader(reader) {}
+    virtual ~StreamDecoder() {}
 
     virtual Size Read(Size max_len, void *out_buf) = 0;
 
@@ -4476,7 +4474,7 @@ protected:
     void SetEOF(bool eof) { reader->eof = eof; }
 };
 
-typedef StreamDecompressor *CreateDecompressorFunc(StreamReader *reader, CompressionType type);
+typedef StreamDecoder *CreateDecompressorFunc(StreamReader *reader, CompressionType type);
 
 class StreamDecompressorHelper {
 public:
@@ -4484,9 +4482,9 @@ public:
 };
 
 #define RG_REGISTER_DECOMPRESSOR(Type, Cls) \
-    static StreamDecompressor *RG_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader, CompressionType type) \
+    static StreamDecoder *RG_UNIQUE_NAME(CreateDecompressor)(StreamReader *reader, CompressionType type) \
     { \
-        StreamDecompressor *decompressor = new Cls(reader, type); \
+        StreamDecoder *decompressor = new Cls(reader, type); \
         return decompressor; \
     } \
     static StreamDecompressorHelper RG_UNIQUE_NAME(CreateDecompressorHelper)((Type), RG_UNIQUE_NAME(CreateDecompressor))
@@ -4559,10 +4557,7 @@ class StreamWriter {
 
         bool vt100;
     } dest;
-
-    CompressionType compression_type = CompressionType::None;
-    CompressionSpeed compression_speed = CompressionSpeed::Default;
-    StreamCompressor *compressor = nullptr;
+    StreamEncoder *encoder = nullptr;
 
     int64_t raw_written = 0;
 
@@ -4614,8 +4609,6 @@ public:
     bool Flush();
 
     const char *GetFileName() const { return filename; }
-    CompressionType GetCompressionType() const { return compression_type; }
-    CompressionSpeed GetCompressionSpeed() const { return compression_speed; }
     bool IsVt100() const { return dest.vt100; }
     bool IsValid() const { return filename && !error; }
 
@@ -4636,7 +4629,7 @@ private:
 
     bool WriteRaw(Span<const uint8_t> buf);
 
-    friend class StreamCompressor;
+    friend class StreamEncoder;
 };
 
 static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
@@ -4654,13 +4647,13 @@ static inline bool WriteFile(Span<const char> buf, const char *filename, unsigne
     return st.Close();
 }
 
-class StreamCompressor {
+class StreamEncoder {
 protected:
     StreamWriter *writer;
 
 public:
-    StreamCompressor(StreamWriter *writer) : writer(writer) {}
-    virtual ~StreamCompressor() {}
+    StreamEncoder(StreamWriter *writer) : writer(writer) {}
+    virtual ~StreamEncoder() {}
 
     virtual bool Write(Span<const uint8_t> buf) = 0;
     virtual bool Finalize() = 0;
@@ -4672,7 +4665,7 @@ protected:
     bool WriteRaw(Span<const uint8_t> buf) { return writer->WriteRaw(buf); }
 };
 
-typedef StreamCompressor *CreateCompressorFunc(StreamWriter *writer, CompressionType type, CompressionSpeed speed);
+typedef StreamEncoder *CreateCompressorFunc(StreamWriter *writer, CompressionType type, CompressionSpeed speed);
 
 class StreamCompressorHelper {
 public:
@@ -4680,9 +4673,9 @@ public:
 };
 
 #define RG_REGISTER_COMPRESSOR(Type, Cls) \
-    static StreamCompressor *RG_UNIQUE_NAME(CreateCompressor)(StreamWriter *writer, CompressionType type, CompressionSpeed speed) \
+    static StreamEncoder *RG_UNIQUE_NAME(CreateCompressor)(StreamWriter *writer, CompressionType type, CompressionSpeed speed) \
     { \
-        StreamCompressor *compressor = new Cls(writer, type, speed); \
+        StreamEncoder *compressor = new Cls(writer, type, speed); \
         return compressor; \
     } \
     static StreamCompressorHelper RG_UNIQUE_NAME(CreateCompressorHelper)((Type), RG_UNIQUE_NAME(CreateCompressor))

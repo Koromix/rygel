@@ -26,7 +26,7 @@
 
 namespace RG {
 
-class MinizDecompressor: public StreamDecompressor {
+class MinizDecompressor: public StreamDecoder {
     tinfl_decompressor inflator;
     bool done = false;
 
@@ -52,7 +52,7 @@ public:
 };
 
 MinizDecompressor::MinizDecompressor(StreamReader *reader, CompressionType type)
-    : StreamDecompressor(reader)
+    : StreamDecoder(reader)
 {
     static_assert(RG_SIZE(out_buf) >= TINFL_LZ_DICT_SIZE);
 
@@ -215,7 +215,7 @@ truncated_error:
     return -1;
 }
 
-class MinizCompressor: public StreamCompressor {
+class MinizCompressor: public StreamEncoder {
     tdefl_compressor deflator;
 
     // Gzip support
@@ -238,7 +238,7 @@ private:
 };
 
 MinizCompressor::MinizCompressor(StreamWriter *writer, CompressionType type, CompressionSpeed speed)
-    : StreamCompressor(writer)
+    : StreamEncoder(writer)
 {
     is_gzip = (type == CompressionType::Gzip);
 

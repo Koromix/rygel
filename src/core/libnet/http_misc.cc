@@ -209,7 +209,6 @@ bool http_JsonPageBuilder::Init(http_IO *io)
 {
     RG_ASSERT(!this->io);
 
-    CompressionType encoding;
     if (!io->NegociateEncoding(CompressionType::Brotli, CompressionType::Gzip, &encoding))
         return false;
     if (!st.Open(&buf, nullptr, encoding))
@@ -221,8 +220,6 @@ bool http_JsonPageBuilder::Init(http_IO *io)
 
 void http_JsonPageBuilder::Finish()
 {
-    CompressionType compression_type = st.GetCompressionType();
-
     Flush();
 
     bool success = st.Close();
@@ -234,7 +231,7 @@ void http_JsonPageBuilder::Finish()
     buf.Leak();
 
     io->AttachResponse(200, response);
-    io->AddEncodingHeader(compression_type);
+    io->AddEncodingHeader(encoding);
     io->AddHeader("Content-Type", "application/json");
 }
 

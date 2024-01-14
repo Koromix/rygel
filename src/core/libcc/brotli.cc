@@ -26,7 +26,7 @@
 
 namespace RG {
 
-class BrotliDecompressor: public StreamDecompressor {
+class BrotliDecompressor: public StreamDecoder {
     BrotliDecoderState *state = nullptr;
     bool done = false;
 
@@ -44,7 +44,7 @@ public:
 };
 
 BrotliDecompressor::BrotliDecompressor(StreamReader *reader, CompressionType)
-    : StreamDecompressor(reader)
+    : StreamDecoder(reader)
 {
     state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
     if (!state)
@@ -101,7 +101,7 @@ Size BrotliDecompressor::Read(Size max_len, void *user_buf)
     RG_UNREACHABLE();
 }
 
-class BrotliCompressor: public StreamCompressor {
+class BrotliCompressor: public StreamEncoder {
     BrotliEncoderStateStruct *state = nullptr;
 
 public:
@@ -113,7 +113,7 @@ public:
 };
 
 BrotliCompressor::BrotliCompressor(StreamWriter *writer, CompressionType, CompressionSpeed speed)
-    : StreamCompressor(writer)
+    : StreamEncoder(writer)
 {
     state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
     if (!state)
