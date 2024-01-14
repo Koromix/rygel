@@ -4410,19 +4410,9 @@ private:
     friend class StreamDecoder;
 };
 
-static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<uint8_t> out_buf)
-{
-    StreamReader st(filename, compression_type);
-    return st.Read(out_buf);
-}
 static inline Size ReadFile(const char *filename, Span<uint8_t> out_buf)
 {
     StreamReader st(filename);
-    return st.Read(out_buf);
-}
-static inline Size ReadFile(const char *filename, CompressionType compression_type, Span<char> out_buf)
-{
-    StreamReader st(filename, compression_type);
     return st.Read(out_buf);
 }
 static inline Size ReadFile(const char *filename, Span<char> out_buf)
@@ -4430,22 +4420,9 @@ static inline Size ReadFile(const char *filename, Span<char> out_buf)
     StreamReader st(filename);
     return st.Read(out_buf);
 }
-
-static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
-                            HeapArray<uint8_t> *out_buf)
-{
-    StreamReader st(filename, compression_type);
-    return st.ReadAll(max_len, out_buf);
-}
 static inline Size ReadFile(const char *filename, Size max_len, HeapArray<uint8_t> *out_buf)
 {
     StreamReader st(filename);
-    return st.ReadAll(max_len, out_buf);
-}
-static inline Size ReadFile(const char *filename, Size max_len, CompressionType compression_type,
-                            HeapArray<char> *out_buf)
-{
-    StreamReader st(filename, compression_type);
     return st.ReadAll(max_len, out_buf);
 }
 static inline Size ReadFile(const char *filename, Size max_len, HeapArray<char> *out_buf)
@@ -4633,17 +4610,15 @@ private:
     friend class StreamEncoder;
 };
 
-static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0,
-                             CompressionType compression_type = CompressionType::None)
+static inline bool WriteFile(Span<const uint8_t> buf, const char *filename, unsigned int flags = 0)
 {
-    StreamWriter st(filename, flags, compression_type);
+    StreamWriter st(filename, flags);
     st.Write(buf);
     return st.Close();
 }
-static inline bool WriteFile(Span<const char> buf, const char *filename, unsigned int flags = 0,
-                             CompressionType compression_type = CompressionType::None)
+static inline bool WriteFile(Span<const char> buf, const char *filename, unsigned int flags = 0)
 {
-    StreamWriter st(filename, flags, compression_type);
+    StreamWriter st(filename, flags);
     st.Write(buf);
     return st.Close();
 }
