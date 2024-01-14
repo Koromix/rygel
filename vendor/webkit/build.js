@@ -56,7 +56,7 @@ function main() {
 
     // Copy library files
     {
-        let lib_dir = '../lib/' + platform + '@' + architecture;
+        let lib_dir = '../lib/' + platform + '/' + architecture;
 
         if (fs.existsSync(lib_dir))
             fs.rmSync(lib_dir, { recursive: true, force: true });
