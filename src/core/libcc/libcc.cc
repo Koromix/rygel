@@ -6825,10 +6825,8 @@ bool StreamWriter::Close(bool implicit)
     RG_ASSERT(implicit || this != &stdout_st);
     RG_ASSERT(implicit || this != &stderr_st);
 
-    if (compressor && !error) {
-        RG_ASSERT(compression_type != CompressionType::None);
-        error |= !compressor->Finalize();
-
+    if (compressor) {
+        error = error || !compressor->Finalize();
         delete compressor;
     }
 
