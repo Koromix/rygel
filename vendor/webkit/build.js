@@ -1,4 +1,4 @@
-#!/bin/env node
+#!/usr/bin/env node
 
 const COMMIT = 'WebKit-7616.1.14.11.1';
 
