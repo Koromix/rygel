@@ -1607,6 +1607,7 @@ export {
     Util,
     Log,
     Net,
+    NetworkError,
 
     Mutex,
 
