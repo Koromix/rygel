@@ -2950,11 +2950,11 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
                 LogError("Empty password");
                 valid = false;
             }
-            if (email && !strchr(email, '@')) {
+            if (email && email[0] && !strchr(email, '@')) {
                 LogError("Invalid email address format");
                 valid = false;
             }
-            if (phone && phone[0] != '+') {
+            if (phone && phone[0] && phone[0] != '+') {
                 LogError("Invalid phone number format (prefix is mandatory)");
                 valid = false;
             }
