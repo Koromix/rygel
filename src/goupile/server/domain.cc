@@ -723,7 +723,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                 complete = false;
                 continue;
             }
-            if (!instance->SyncViews(config.view_directory)) {
+            if (instance->master == instance && !instance->SyncViews(config.view_directory)) {
                 complete = false;
                 continue;
             }

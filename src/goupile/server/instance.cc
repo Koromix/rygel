@@ -173,6 +173,8 @@ bool InstanceHolder::Checkpoint()
 
 bool InstanceHolder::SyncViews(const char *directory)
 {
+    RG_ASSERT(master == this);
+
     BlockAllocator temp_alloc;
     bool logged = false;
 
