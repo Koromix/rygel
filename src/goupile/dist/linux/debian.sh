@@ -5,7 +5,7 @@ PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="Programmable electronic data capture application"
 PKG_DEPENDENCIES="python3"
 PKG_LICENSE=AGPL-3.0-or-later
-PKG_ARCHITECTURES="amd64 arm64"
+PKG_ARCHITECTURES="amd64"
 
 SCRIPT_PATH=src/goupile/dist/linux/debian.sh
 VERSION_TARGET=goupile

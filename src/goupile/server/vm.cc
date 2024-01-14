@@ -11,8 +11,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#ifdef HAVE_JSCORE
-
 #include "src/core/libcc/libcc.hh"
 #include "vm.hh"
 #include "src/core/libwrap/jscore.hh"
@@ -308,5 +306,3 @@ int RunVM(Span<const char *> arguments)
 }
 
 }
-
-#endif
