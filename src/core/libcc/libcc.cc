@@ -6629,15 +6629,6 @@ void LineReader::PushLogFilter()
     });
 }
 
-#ifdef LZ4_VERSION_MAJOR
-struct LZ4CompressContext {
-    LZ4F_cctx *encoder;
-    LZ4F_preferences_t prefs = {};
-
-    HeapArray<uint8_t> buf;
-};
-#endif
-
 bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
