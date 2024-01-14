@@ -193,7 +193,7 @@ static bool SearchWord(const char *word)
     return false;
 }
 
-static bool CheckComplexity(Span<const char> password)
+static bool CheckComplexity(Span<const char> password, unsigned int flags)
 {
     RG_ASSERT(password.len >= MinLength);
 
@@ -278,24 +278,32 @@ static bool CheckComplexity(Span<const char> password)
     }
 
     // Help user!
-    {
-        if (chars.PopCount() < 8) {
-            LogError("Password has less than 8 unique characters");
-            return false;
+    if (chars.PopCount() < 8) {
+        LogError("Password has less than 8 unique characters");
+        return false;
+    }
+    if (flags & (int)pwd_CheckFlag::Classes) {
+        if (password.len < 16) {
+            if (PopCount(classes) < 3) {
+                LogError("Passwords less than 16 characters must include symbols");
+                return false;
+            }
+        } else {
+            if (PopCount(classes) < 2) {
+                LogError("Passwords must contain at least two character classes");
+                return false;
+            }
         }
-
-        bool simple = PopCount(classes) < (password.len < 16 ? 3 : 2) || score < 32;
-
-        if (simple) {
-            LogError("Password is not safe (use more characters, more words, or more special characters)");
-            return false;
-        }
+    }
+    if ((flags & (int)pwd_CheckFlag::Score) && score < 32) {
+        LogError("Password is not complex enough (score %1 of %2)", score, 32);
+        return false;
     }
 
     return true;
 }
 
-bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blacklist)
+bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blacklist, unsigned int flags)
 {
     // Simplify it (casing, accents)
     LocalArray<char, 513> buf;
@@ -334,7 +342,7 @@ bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blackl
     }
 
     // Check complexity
-    if (!CheckComplexity(password))
+    if (!CheckComplexity(password, flags))
         return false;
 
     return true;
