@@ -63,11 +63,12 @@ static HashTable<EventInfo::Key, EventInfo *> events_map;
 
 bool SessionInfo::IsAdmin() const
 {
+    if (!is_admin)
+        return false;
+
     if (change_password)
         return false;
     if (confirm != SessionConfirm::None)
-        return false;
-    if (!admin_until)
         return false;
 
     return true;
@@ -75,7 +76,7 @@ bool SessionInfo::IsAdmin() const
 
 bool SessionInfo::IsRoot() const
 {
-    return IsAdmin() && admin_root;
+    return is_root && IsAdmin();
 }
 
 bool SessionInfo::HasPermission(const InstanceHolder *instance, UserPermission perm) const
@@ -154,7 +155,7 @@ SessionStamp *SessionInfo::GetStamp(const InstanceHolder *instance) const
 
 void SessionInfo::InvalidateStamps()
 {
-    if (admin_until && !admin_root) {
+    if (is_admin && !is_root) {
         sq_Statement stmt;
         if (!gp_domain.db.Prepare(R"(SELECT IIF(p.permissions IS NOT NULL, 1, 0) AS admin
                                      FROM dom_users u
@@ -166,6 +167,7 @@ void SessionInfo::InvalidateStamps()
         sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
 
         if (!stmt.Step()) {
+            is_admin = false;
             admin_until = 0;
         }
     }
@@ -298,15 +300,15 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                     RG_ASSERT(!stamp->develop.load());
                 }
 
-                json.Key("root"); json.Bool(session->admin_root);
+                json.Key("root"); json.Bool(session->is_root);
             } else {
                 json.Key("authorized"); json.Bool(false);
             }
         } else {
-            bool authorized = (session->admin_until && session->admin_until > GetMonotonicTime());
+            bool authorized = (session->is_admin && session->admin_until > GetMonotonicTime());
 
             json.Key("authorized"); json.Bool(authorized);
-            json.Key("root"); json.Bool(session->admin_root);
+            json.Key("root"); json.Bool(session->is_root);
         }
     }
     json.EndObject();
@@ -366,7 +368,9 @@ RetainPtr<const SessionInfo> GetAdminSession(InstanceHolder *instance, const htt
 
     if (!session)
         return nullptr;
-    if (!session->admin_until || session->admin_until <= GetMonotonicTime())
+    if (!session->is_admin)
+        return nullptr;
+    if (session->admin_until <= GetMonotonicTime())
         return nullptr;
 
     return session;
@@ -454,9 +458,9 @@ static bool CheckPasswordComplexity(const SessionInfo &session, const char *pass
     PasswordComplexity treshold;
     unsigned int flags = 0;
 
-    if (session.IsRoot()) {
+    if (session.is_root) {
         treshold = gp_domain.config.root_password;
-    } else if (session.IsAdmin()) {
+    } else if (session.is_admin) {
         treshold = gp_domain.config.admin_password;
     } else {
         treshold = gp_domain.config.user_password;
@@ -520,16 +524,19 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 
             if (!instance->slaves.len) {
                 if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                    u.root, 0 AS admin,
+                                                    u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
                                                     u.local_key, u.confirm, u.secret, p.permissions
                                              FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
+                                             LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                                             a.permissions & ?3)
                                              WHERE u.username = ?1 AND i.instance = ?2 AND
                                                    p.permissions > 0)", &stmt))
                     return;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+                sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
                 stmt.Run();
             }
@@ -538,28 +545,31 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 instance = master;
 
                 if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                    u.root, 0 AS admin,
+                                                    u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
                                                     u.local_key, u.confirm, u.secret
                                              FROM dom_users u
                                              INNER JOIN dom_permissions p ON (p.userid = u.userid)
                                              INNER JOIN dom_instances i ON (i.instance = p.instance)
+                                             LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                                             a.permissions & ?3)
                                              WHERE u.username = ?1 AND i.master = ?2 AND
                                                    p.permissions > 0)", &stmt))
                     return;
                 sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
                 sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+                sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
                 stmt.Run();
             }
         } else {
             if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                u.root, IIF(p.permissions IS NOT NULL, 1, 0) AS admin,
+                                                u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
                                                 u.local_key, u.confirm, u.secret
                                          FROM dom_users u
-                                         LEFT JOIN dom_permissions p ON (p.userid = u.userid AND
-                                                                         p.permissions & ?2)
+                                         LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                                         a.permissions & ?2)
                                          WHERE u.username = ?1 AND (u.root = 1 OR
-                                                                    p.permissions IS NOT NULL))", &stmt))
+                                                                    a.permissions IS NOT NULL))", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
             sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
@@ -572,7 +582,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
             bool change_password = (sqlite3_column_int(stmt, 2) == 1);
             bool root = (sqlite3_column_int(stmt, 3) == 1);
-            bool admin = (sqlite3_column_int(stmt, 4) == 1);
+            bool admin = root || (sqlite3_column_int(stmt, 4) == 1);
             const char *local_key = (const char *)sqlite3_column_text(stmt, 5);
             const char *confirm = (const char *)sqlite3_column_text(stmt, 6);
             const char *secret = (const char *)sqlite3_column_text(stmt, 7);
@@ -615,12 +625,14 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 }
 
                 if (session) [[likely]] {
-                    session->change_password = change_password || !CheckPasswordComplexity(*session, password);
+                    session->is_root = root;
+                    session->is_admin = admin;
 
                     if (!instance && (root || admin)) {
                         session->admin_until = GetMonotonicTime() + 1200 * 1000;
                     }
-                    session->admin_root = root;
+
+                    session->change_password = change_password || !CheckPasswordComplexity(*session, password);
 
                     sessions.Open(request, io, session);
                     WriteProfileJson(session.GetRaw(), instance, request, io);

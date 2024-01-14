@@ -2971,7 +2971,7 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
             io->AttachError(403);
             return;
         }
-        if (userid == session->userid && set_root && root != session->admin_root) {
+        if (userid == session->userid && set_root && root != session->is_root) {
             LogError("You cannot change your root privileges");
             io->AttachError(403);
             return;
