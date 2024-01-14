@@ -590,9 +590,10 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                     LogError("Invalid confirmation method '%1'", confirm);
                     return;
                 }
-                session->change_password = change_password;
 
                 if (session) [[likely]] {
+                    session->change_password = change_password;
+
                     if (!instance && (root || admin)) {
                         session->admin_until = GetMonotonicTime() + 1200 * 1000;
                     }
