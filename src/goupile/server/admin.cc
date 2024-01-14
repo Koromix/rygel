@@ -59,6 +59,10 @@ PublicKey = %2
 # AutoZone = Local
 # RetentionDays = 7
 
+[Defaults]
+# DefaultUser =
+# DefaultPassword =
+
 [SMS]
 # Provider = Twilio
 # AuthID = <AuthID>
