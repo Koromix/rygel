@@ -63,6 +63,11 @@ PublicKey = %2
 # DefaultUser =
 # DefaultPassword =
 
+[Security]
+# UserPassword = Moderate
+# AdminPassword = Hard
+# RootPassword = Hard
+
 [SMS]
 # Provider = Twilio
 # AuthID = <AuthID>

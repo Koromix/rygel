@@ -208,6 +208,26 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
                     }
                 } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Security") {
+                do {
+                    PasswordComplexity *ptr = nullptr;
+
+                    if (prop.key == "UserPassword") {
+                        ptr = &config.user_password;
+                    } else if (prop.key == "AdminPassword") {
+                        ptr = &config.admin_password;
+                    } else if (prop.key == "RootPassword") {
+                        ptr = &config.root_password;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+
+                    if (ptr && !OptionToEnumI(PasswordComplexityNames, prop.value, ptr)) {
+                        LogError("Unknown password complexity setting '%1'", prop.value);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
             } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "RequireHost") {

@@ -23,6 +23,17 @@ namespace RG {
 extern const int DomainVersion;
 extern const int MaxInstancesPerDomain;
 
+enum class PasswordComplexity {
+    Easy,
+    Moderate,
+    Hard
+};
+static const char *const PasswordComplexityNames[] = {
+    "Easy",
+    "Moderate",
+    "Hard"
+};
+
 struct DomainConfig {
     const char *config_filename = nullptr;
     const char *database_filename = nullptr;
@@ -43,6 +54,10 @@ struct DomainConfig {
     int archive_hour = 0;
     TimeMode archive_zone = TimeMode::Local;
     int archive_retention = 7;
+
+    PasswordComplexity user_password = PasswordComplexity::Moderate;
+    PasswordComplexity admin_password = PasswordComplexity::Hard;
+    PasswordComplexity root_password = PasswordComplexity::Hard;
 
     const char *default_username = nullptr;
     const char *default_password = nullptr;

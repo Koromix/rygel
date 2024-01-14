@@ -449,6 +449,29 @@ static int CountEvents(const char *where, const char *who)
     return event ? event->count : 0;
 }
 
+static bool CheckPasswordComplexity(const SessionInfo &session, const char *password)
+{
+    PasswordComplexity treshold;
+    unsigned int flags = 0;
+
+    if (session.IsRoot()) {
+        treshold = gp_domain.config.root_password;
+    } else if (session.IsAdmin()) {
+        treshold = gp_domain.config.admin_password;
+    } else {
+        treshold = gp_domain.config.user_password;
+    }
+
+    switch (treshold) {
+        case PasswordComplexity::Easy: { flags = UINT_MAX & ~(int)pwd_CheckFlag::Classes & ~(int)pwd_CheckFlag::Score; } break;
+        case PasswordComplexity::Moderate: { flags = UINT_MAX & ~(int)pwd_CheckFlag::Score; } break;
+        case PasswordComplexity::Hard: { flags = UINT_MAX; } break;
+    }
+    RG_ASSERT(flags);
+
+    return pwd_CheckPassword(password, session.username, flags);
+}
+
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     io->RunAsync([=]() mutable {
@@ -592,7 +615,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 }
 
                 if (session) [[likely]] {
-                    session->change_password = change_password;
+                    session->change_password = change_password || !CheckPasswordComplexity(*session, password);
 
                     if (!instance && (root || admin)) {
                         session->admin_until = GetMonotonicTime() + 1200 * 1000;
@@ -1201,8 +1224,8 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
         }
         RG_ASSERT(old_password || session->change_password);
 
-        // Check password strength
-        if (!pwd_CheckPassword(new_password, session->username)) {
+        // Complex enough?
+        if (!CheckPasswordComplexity(*session, new_password)) {
             io->AttachError(422);
             return;
         }
