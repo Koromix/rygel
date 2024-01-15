@@ -4,6 +4,12 @@
 
 ### Koffi 2.7
 
+#### Koffi 2.7.2 (2024-01-15)
+
+- Add missing TypeScript declaration for `koffi.free()`
+- Fix TypeScript declaration of `koffi.encode()`
+- Try to improve compatibility with webpack
+
 #### Koffi 2.7.1 (2024-01-02)
 
 - Support C-like `int[3]` syntax for [fixed array types](input.md#fixed-size-c-arrays)
