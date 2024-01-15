@@ -1,5 +1,12 @@
 # Changelog
 
+## Goupile 3.2.1
+
+- Fix missing code for record deletion
+- Improve selection of visible data columns
+- Handle modification time on the server
+- Build with JavaScriptCore
+
 ## Goupile 3.2
 
 - Add configurable password complexity checks to goupile
