@@ -39,6 +39,7 @@ function ApplicationBuilder(app) {
 
     let current_menu = null;
     let current_store = null;
+    let used_stores = new Set;
 
     let options_stack = [
         {
@@ -112,6 +113,8 @@ function ApplicationBuilder(app) {
         };
 
         app.pages.push(page);
+        if (current_store != null)
+            used_stores.add(current_store);
 
         if (current_menu != null) {
             item.chain = [...current_menu.chain, item];
@@ -147,6 +150,14 @@ function ApplicationBuilder(app) {
         let prev_options = options_stack;
 
         try {
+            options_stack = [expandOptions(options)];
+
+            let store = {
+                key: key,
+                title: title,
+                url: null
+            };
+
             current_menu = {
                 key: key,
                 title: title,
@@ -157,18 +168,11 @@ function ApplicationBuilder(app) {
 
                 page: null
             };
-            current_menu.chain.push(current_menu);
-            current_store = key;
-
-            options_stack = [expandOptions(options)];
-
-            let store = {
-                key: key,
-                title: title,
-                url: null
-            };
 
             app.stores.push(store);
+
+            current_store = store.key;
+            current_menu.chain.push(current_menu);
 
             if (typeof func == 'function') {
                 func();
@@ -188,6 +192,9 @@ function ApplicationBuilder(app) {
 
             store.url = current_menu.url;
         } finally {
+            if (!used_stores.has(current_store))
+                app.stores = app.stores.filter(store => store.key != current_store);
+
             current_menu = prev_menu;
             current_store = prev_store;
             options_stack = prev_options;

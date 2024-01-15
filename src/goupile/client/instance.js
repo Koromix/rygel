@@ -641,7 +641,7 @@ function renderData() {
 
 async function runExportDialog(e) {
     // XXX: Restrict to current thread
-    let stores = app.stores.slice(1).map(store => store.key);
+    let stores = app.stores.map(store => store.key);
 
     let dialog = route.page.options.export_dialog;
     let filter = route.page.options.export_filter;
@@ -1405,9 +1405,6 @@ async function run(push_history = true) {
 
         // Load data rows (if needed)
         if (UI.isPanelActive('data')) {
-            let stores = app.stores.slice();
-            let store0 = stores.shift();
-
             if (data_threads == null) {
                 let threads = await Net.get(`${ENV.urls.instance}api/records/list`);
 
@@ -1454,7 +1451,7 @@ async function run(push_history = true) {
             if (data_tags != null)
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
-            data_columns = stores.map(store => {
+            data_columns = app.stores.map(store => {
                 let col = {
                     store: store.key,
                     title: store.title,
