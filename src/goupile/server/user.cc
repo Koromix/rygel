@@ -157,10 +157,10 @@ void SessionInfo::InvalidateStamps()
 {
     if (is_admin && !is_root) {
         sq_Statement stmt;
-        if (!gp_domain.db.Prepare(R"(SELECT IIF(p.permissions IS NOT NULL, 1, 0) AS admin
+        if (!gp_domain.db.Prepare(R"(SELECT IIF(a.permissions IS NOT NULL, 1, 0) AS admin
                                      FROM dom_users u
-                                     INNER JOIN dom_permissions p ON (p.userid = u.userid AND
-                                                                      p.permissions & ?2)
+                                     INNER JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                                      a.permissions & ?2)
                                      WHERE u.userid = ?1)", &stmt))
             return;
         sqlite3_bind_int64(stmt, 1, userid);
