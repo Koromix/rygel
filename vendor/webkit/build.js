@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
-const COMMIT = 'WebKit-7616.1.14.11.1';
+const WEBKIT = 'WebKit-7617.1.17.10.10';
+const ICU = 'release-74-1';
 
 const fs = require('fs');
+const os = require('os');
 const { spawnSync } = require('child_process');
 
 main()
@@ -27,46 +29,126 @@ function main() {
         }
     }
 
-    // Clone repository
+    // Cleanup
+    if (fs.existsSync('icu'))
+        fs.rmSync('icu', { recursive: true, force: true });
     if (fs.existsSync('webkit'))
         fs.rmSync('webkit', { recursive: true, force: true });
-    run('git', ['clone', '--branch', COMMIT, '--depth', '1', 'https://github.com/WebKit/WebKit.git', 'webkit'])
+
+    // Clone ICU repository
+    run('.', 'git', ['clone', '--branch', ICU, '--depth', '1', 'https://github.com/unicode-org/icu.git', 'icu'])
     fs.rmSync('webkit/.git', { recursive: true, force: true });
 
+    // Clone WebKit repository
+    run('.', 'git', ['clone', '--branch', WEBKIT, '--depth', '1', 'https://github.com/WebKit/WebKit.git', 'webkit'])
+    fs.rmSync('webkit/.git', { recursive: true, force: true });
+
+    build_icu(platform, architecture);
+    build_webkit(platform, architecture);
+}
+
+function build_icu(platform, architecture) {
     // Apply patch files
     for (let basename of fs.readdirSync('../_patches')) {
-        if (!basename.startsWith('webkit_'))
+        if (!basename.startsWith('icu_'))
             continue;
 
         let filename = '../_patches/' + basename;
         run('git', ['apply', filename]);
     }
 
-    // Build JSCore
+    // Build ICU
     {
-        if (fs.existsSync('build'))
-            fs.rmSync('build', { recursive: true, force: true });
-        fs.mkdirSync('build', { mode: 0o755 });
+        if (fs.existsSync('icu/build'))
+            fs.rmSync('icu/build', { recursive: true, force: true });
+        fs.mkdirSync('icu/build', { mode: 0o755 });
 
-        process.chdir('build');
-
-        run('cmake', ['-G', 'Ninja', '-DPORT=JSCOnly', '-DCMAKE_BUILD_TYPE=Release', '-DDEVELOPER_MODE=OFF', '-DENABLE_FTL_JIT=ON', '-DENABLE_STATIC_JSC=ON', '-DUSE_THIN_ARCHIVES=OFF', '../webkit']);
-        run('ninja');
+        run('icu/build', '../icu4c/source/runConfigureICU', [
+            'Linux',
+            '--enable-shared', '--enable-static'
+        ]);
+        run('icu/build', 'make', ['-j' + (os.cpus().length + 1)]);
     }
 
     // Copy library files
     {
-        let lib_dir = '../lib/' + platform + '/' + architecture;
+        let src_dir = 'icu/build/lib';
+        let lib_dir = 'lib/' + platform + '/' + architecture;
 
-        if (fs.existsSync(lib_dir))
-            fs.rmSync(lib_dir, { recursive: true, force: true });
         fs.mkdirSync(lib_dir, { recursive: true, mode: 0o755 });
 
-        for (let basename of fs.readdirSync('lib')) {
+        fs.copyFileSync(src_dir + '/libicudata.a', lib_dir + '/libicudata.a');
+        fs.copyFileSync(src_dir + '/libicui18n.a', lib_dir + '/libicui18n.a');
+        fs.copyFileSync(src_dir + '/libicuuc.a', lib_dir + '/libicuuc.a');
+    }
+
+    // Regroup header files
+    {
+        let source_dirs = ['icu/icu4c/source/common/unicode', 'icu/icu4c/source/i18n/unicode'];
+        let include_dir = 'icu/build/include/unicode';
+
+        if (fs.existsSync(include_dir))
+            fs.rmSync(include_dir, { recursive: true, force: true });
+        fs.mkdirSync(include_dir, { recursive: true, mode: 0o755 });
+
+        for (let src_dir of source_dirs) {
+            for (let basename of fs.readdirSync(src_dir)) {
+                if (!basename.endsWith('.h'))
+                    continue;
+
+                let src_filename = src_dir + '/' + basename;
+                let dest_filename = include_dir + '/' + basename;
+
+                fs.copyFileSync(src_filename, dest_filename);
+            }
+        }
+    }
+}
+
+function build_webkit(platform, architecture) {
+    // Apply patch files
+    for (let basename of fs.readdirSync('../_patches')) {
+        if (!basename.startsWith('webkit_'))
+            continue;
+
+        let filename = '../_patches/' + basename;
+        run('.', 'git', ['apply', filename]);
+    }
+
+    // Build JSCore
+    {
+        if (fs.existsSync('webkit/build'))
+            fs.rmSync('webkit/build', { recursive: true, force: true });
+        fs.mkdirSync('webkit/build', { mode: 0o755 });
+
+        run('webkit/build', 'cmake', [
+            '-G', 'Ninja',
+            '-DPORT=JSCOnly',
+            '-DICU_INCLUDE_DIR=../../icu/build/include',
+            '-DICU_DATA_LIBRARY_RELEASE=../../icu/build/lib/libicudata.a',
+            '-DICU_I18N_LIBRARY_RELEASE=../../icu/build/lib/libicui18n.a',
+            '-DICU_UC_LIBRARY_RELEASE=../../icu/build/lib/libicuuc.a',
+            '-DCMAKE_CXX_FLAGS=-DU_STATIC_IMPLEMENTATION',
+            '-DCMAKE_BUILD_TYPE=Release',
+            '-DDEVELOPER_MODE=OFF', '-DENABLE_FTL_JIT=ON',
+            '-DENABLE_STATIC_JSC=ON', '-DUSE_THIN_ARCHIVES=OFF',
+            '..'
+        ]);
+        run('webkit/build', 'ninja');
+    }
+
+    // Copy library files
+    {
+        let src_dir = 'webkit/build/lib'
+        let lib_dir = 'lib/' + platform + '/' + architecture;
+
+        fs.mkdirSync(lib_dir, { recursive: true, mode: 0o755 });
+
+        for (let basename of fs.readdirSync(src_dir)) {
             if (!basename.endsWith('.a'))
                 continue;
 
-            let src_filename = 'lib/' + basename;
+            let src_filename = src_dir + '/' + basename;
             let dest_filename = lib_dir + '/' + basename;
 
             fs.copyFileSync(src_filename, dest_filename);
@@ -75,16 +157,19 @@ function main() {
 
     // Copy and patch header files
     {
-        if (fs.existsSync('../include/JavaScriptCore'))
-            fs.rmSync('../include/JavaScriptCore', { recursive: true, force: true });
-        fs.mkdirSync('../include/JavaScriptCore', { recursive: true, mode: 0o755 });
+        let src_dir = 'webkit/build/JavaScriptCore/Headers/JavaScriptCore';
+        let include_dir = 'include/JavaScriptCore'
 
-        for (let basename of fs.readdirSync('JavaScriptCore/Headers/JavaScriptCore')) {
+        if (fs.existsSync(include_dir))
+            fs.rmSync(include_dir, { recursive: true, force: true });
+        fs.mkdirSync(include_dir, { recursive: true, mode: 0o755 });
+
+        for (let basename of fs.readdirSync(src_dir)) {
             if (!basename.endsWith('.h'))
                 continue;
 
-            let src_filename = 'JavaScriptCore/Headers/JavaScriptCore/' + basename;
-            let dest_filename = '../include/JavaScriptCore/' + basename;
+            let src_filename = src_dir + '/' + basename;
+            let dest_filename = include_dir + '/' + basename;
 
             let header = fs.readFileSync(src_filename, { encoding: 'utf8' });
             let patched = header.replace(/<JavaScriptCore\/([A-Za-z0-9_\.]+)>/g, '"$1"');
@@ -94,8 +179,8 @@ function main() {
     }
 }
 
-function run(cmd, args) {
-    let proc = spawnSync(cmd, args, { stdio: 'inherit' });
+function run(cwd, cmd, args = []) {
+    let proc = spawnSync(cmd, args, { cwd: cwd, stdio: 'inherit' });
     if (proc.status !== 0)
-        throw new Error('Command failed');
+        throw new Error(`Command failed: ${cmd}`);
 }

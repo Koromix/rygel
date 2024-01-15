@@ -1,0 +1,14 @@
+diff --git a/vendor/webkit/webkit/Source/WTF/wtf/CMakeLists.txt b/vendor/webkit/webkit/Source/WTF/wtf/CMakeLists.txt
+--- a/vendor/webkit/webkit/Source/WTF/wtf/CMakeLists.txt
++++ b/vendor/webkit/webkit/Source/WTF/wtf/CMakeLists.txt
+@@ -598,9 +598,9 @@
+ 
+ set(WTF_LIBRARIES
+     ${CMAKE_DL_LIBS}
+-    ICU::data
+     ICU::i18n
+     ICU::uc
++    ICU::data
+ )
+ 
+ if (NOT USE_SYSTEM_MALLOC)
