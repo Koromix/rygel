@@ -1,5 +1,11 @@
 # Changelog
 
+## Goupile 3.2.2
+
+- Fix support for repeated sections and notes
+- Fix undefined variable error while exporting
+- Fix minor deadlock issues
+
 ## Goupile 3.2.1
 
 - Fix missing code for record deletion
