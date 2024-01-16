@@ -172,7 +172,7 @@ function MagicData(raw = {}, annotations = null) {
             let value = obj[key];
 
             if (Util.isPodObject(value)) {
-                let [ret, valid] = exportAnnotations(value, min_note_id);
+                let [ret, valid] = exportAnnotations(value);
 
                 if (valid) {
                     annotations.children[key] = ret;
