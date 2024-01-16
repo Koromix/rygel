@@ -18,6 +18,7 @@ import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 import { exportRecords } from './data_export.js';
+import { DataRemote } from './data_remote.js';
 import { ApplicationInfo, ApplicationBuilder } from './instance_app.js';
 import { InstancePublisher } from './instance_publish.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
@@ -41,6 +42,8 @@ let route = {
 let main_works = true;
 let head_length = Number.MAX_SAFE_INTEGER;
 let page_div = document.createElement('div');
+
+let records = new DataRemote;
 
 let form_thread = null;
 let form_entry = null;
@@ -642,16 +645,11 @@ function renderData() {
 function runDeleteRecordDialog(e, record) {
     return UI.confirm(e, `Voulez-vous vraiment supprimer l'enregistrement '${record.sequence}' ?`,
                          'Supprimer', async () => {
-        await deleteRecord(record.tid);
+        await records.delete(record.tid);
 
-        // Reload list
         data_threads = null;
-
-        if (route.tid == record.tid) {
-            await loadRecord(null, null, route.page);
-            route.tid = null;
-            route.anchor = null;
-        }
+        if (route.tid == record.tid)
+            await open(null, null, route.page);
 
         go();
     });
@@ -817,13 +815,8 @@ function addAutomaticActions(builder, model) {
                 form_builder.triggerErrors();
             await saveRecord();
 
-            // Reload list
             data_threads = null;
-
-            // Reload thread
-            await loadRecord(form_thread.tid, null, route.page);
-            route.tid = form_thread.tid;
-            route.anchor = null;
+            await open(form_thread.tid, null, route.page);
 
             go();
         });
@@ -836,15 +829,14 @@ function addAutomaticActions(builder, model) {
                 if (form_state.hasChanged())
                     await UI.confirm(e, html`Cette action <b>annulera les modifications en cours</b>, souhaitez-vous continuer ?`, label, () => {});
 
-                await changeLock(form_thread.tid, !form_thread.locked);
+                if (!form_thread.locked) {
+                    await records.lock(form_thread.tid);
+                } else {
+                    await records.unlock(form_thread.tid);
+                }
 
-                // Reload list
                 data_threads = null;
-
-                // Reload thread
-                await loadRecord(form_thread.tid, null, route.page);
-                route.tid = form_thread.tid;
-                route.anchor = null;
+                await open(form_thread.tid, null, route.page);
 
                 go();
             });
@@ -856,9 +848,7 @@ function addAutomaticActions(builder, model) {
                 await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                        'Oublier', () => {});
 
-                // Reload thread
-                await loadRecord(route.tid, null, route.page);
-
+                await open(route.tid, route.anchor, route.page);
                 go();
             });
         }
@@ -1357,7 +1347,9 @@ async function go(e, url = null, options = {}) {
                 }
             }
 
-            await loadRecord(new_route.tid, new_route.anchor, new_route.page);
+            await mutex.chain(() => open(new_route.tid, new_route.anchor, new_route.page));
+        } else {
+            route = new_route;
         }
 
         // Show form automatically?
@@ -1372,9 +1364,6 @@ async function go(e, url = null, options = {}) {
                 UI.togglePanel('view', true);
             }
         }
-
-        // We're set!
-        route = new_route;
 
         await mutex.chain(() => run(options.push_history));
     });
@@ -1646,157 +1635,139 @@ function throwScriptError(err) {
     throw new Error(msg);
 }
 
-async function loadRecord(tid, anchor, page) {
-    let new_thread = null;
-    let new_entry = null;
-    let new_data = null;
-    let new_state = null;
+async function open(tid, anchor, page) {
+    await mutex.run(async () => {
+        let new_thread = null;
+        let new_entry = null;
+        let new_data = null;
+        let new_state = null;
 
-    // Load or create thread
-    if (tid != null) {
-        let url = Util.pasteURL(`${ENV.urls.instance}api/records/get`, {
-            tid: tid,
-            anchor: anchor
-        });
-
-        new_thread = await Net.get(url);
-    } else {
-        new_thread = {
-            tid: Util.makeULID(),
-            saved: false,
-            locked: false,
-            entries: {}
-        };
-    }
-
-    // Initialize entry data
-    if (page.store != null) {
-        new_entry = new_thread.entries[page.store];
-
-        if (new_entry == null) {
-            let now = (new Date).valueOf();
-
-            new_entry = {
-                store: page.store,
-                eid: Util.makeULID(),
-                deleted: false,
-                anchor: -1,
-                ctime: now,
-                mtime: now,
-                sequence: null,
-                tags: []
+        // Load or create thread
+        if (tid != null) {
+            new_thread = await records.load(tid, anchor);
+        } else {
+            new_thread = {
+                tid: Util.makeULID(),
+                saved: false,
+                locked: false,
+                entries: {}
             };
-
-            new_thread.entries[page.store] = new_entry;
         }
 
-        new_data = new MagicData(new_entry.data, new_entry.meta);
-        new_state = new FormState(new_data);
-    } else {
-        new_data = new MagicData;
-        new_state = new FormState(new_data);
-    }
+        // Initialize entry data
+        if (page.store != null) {
+            new_entry = new_thread.entries[page.store];
 
-    // Copy UI state if needed
-    if (form_state != null && page == route.page) {
-        new_state.state_tabs = form_state.state_tabs;
-        new_state.state_sections = form_state.state_sections;
+            if (new_entry == null) {
+                let now = (new Date).valueOf();
 
-        /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
-            new_state.take_delayed = form_state.take_delayed; */
-    }
+                new_entry = {
+                    store: page.store,
+                    eid: Util.makeULID(),
+                    deleted: false,
+                    anchor: -1,
+                    ctime: now,
+                    mtime: now,
+                    sequence: null,
+                    tags: []
+                };
 
-    // Run after each change
-    new_state.changeHandler = async () => {
-        await run();
-
-        // Highlight might need to change (conditions, etc.)
-        if (UI.isPanelActive('editor'))
-            syncFormHighlight(false);
-    };
-
-    // Handle annotation form
-    new_state.annotateHandler = (e, intf) => {
-        return UI.dialog(e, intf.label, {}, (d, resolve, reject) => {
-            let note = form_data.openNote(intf.key.root, 'status', {});
-            let status = note[intf.key.name];
-
-            if (status == null) {
-                status = {};
-                note[intf.key.name] = status;
+                new_thread.entries[page.store] = new_entry;
             }
 
-            let locked = d.values.hasOwnProperty('locked') ? d.values.locked : status.locked;
-            let statuses = getFillingStatuses(intf);
+            new_data = new MagicData(new_entry.data, new_entry.meta);
+            new_state = new FormState(new_data);
+        } else {
+            new_data = new MagicData;
+            new_state = new FormState(new_data);
+        }
 
-            d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: locked });
-            d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: locked });
+        // Copy UI state if needed
+        if (form_state != null && page == route.page) {
+            new_state.state_tabs = form_state.state_tabs;
+            new_state.state_sections = form_state.state_sections;
 
-            if (goupile.hasPermission('data_audit'))
-                d.binary('locked', 'Validation finale', { value: status.locked });
+            /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
+                new_state.take_delayed = form_state.take_delayed; */
+        }
 
-            d.action('Appliquer', { disabled: !d.isValid() }, async () => {
-                status.filling = d.values.filling;
-                status.comment = d.values.comment;
-                status.locked = d.values.locked;
+        new_state.changeHandler = async () => {
+            await run();
 
-                form_state.markChange();
+            // Highlight might need to change (conditions, etc.)
+            if (UI.isPanelActive('editor'))
+                syncFormHighlight(false);
+        };
+        new_state.annotateHandler = runAnnotationDialog;
 
-                resolve();
-            });
+        form_thread = new_thread;
+        form_entry = new_entry;
+        form_data = new_data;
+        form_state = new_state;
+
+        form_model = null;
+        form_builder = null;
+        form_meta = null;
+
+        route.tid = tid;
+        route.anchor = anchor;
+        route.page = page;
+        route.menu = page.menu;
+    });
+}
+
+function runAnnotationDialog(e, intf) {
+    return UI.dialog(e, intf.label, {}, (d, resolve, reject) => {
+        let note = form_data.openNote(intf.key.root, 'status', {});
+        let status = note[intf.key.name];
+
+        if (status == null) {
+            status = {};
+            note[intf.key.name] = status;
+        }
+
+        let locked = d.values.hasOwnProperty('locked') ? d.values.locked : status.locked;
+        let statuses = getFillingStatuses(intf);
+
+        d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: locked });
+        d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: locked });
+
+        if (goupile.hasPermission('data_audit'))
+            d.binary('locked', 'Validation finale', { value: status.locked });
+
+        d.action('Appliquer', { disabled: !d.isValid() }, async () => {
+            status.filling = d.values.filling;
+            status.comment = d.values.comment;
+            status.locked = d.values.locked;
+
+            form_state.markChange();
+
+            resolve();
         });
-    };
-
-    form_thread = new_thread;
-    form_entry = new_entry;
-    form_data = new_data;
-    form_state = new_state;
-
-    form_model = null;
-    form_builder = null;
-    form_meta = null;
+    });
 }
 
 async function saveRecord() {
     await mutex.run(async () => {
+        let entry = Object.assign({}, form_entry);
+
+        entry.data = JSON.parse(JSON.stringify(form_data.raw, (k, v) => v != null ? v : null));
+        entry.meta = form_data.exportNotes();
+
         // Gather global list of tags for this record entry
-        let tags = new Set;
-        for (let intf of form_model.variables) {
-            if (Array.isArray(intf.options.tags)) {
-                for (let tag of intf.options.tags)
-                    tags.add(tag.key);
+        {
+            let tags = new Set;
+            for (let intf of form_model.variables) {
+                if (Array.isArray(intf.options.tags)) {
+                    for (let tag of intf.options.tags)
+                        tags.add(tag.key);
+                }
             }
+            entry.tags = Array.from(tags);
         }
-        tags = Array.from(tags);
 
-        // Transform undefined into null
-        let data = JSON.parse(JSON.stringify(form_data.raw, (k, v) => v != null ? v : null));
-
-        await Net.post(ENV.urls.instance + 'api/records/save', {
-            tid: form_thread.tid,
-            fragment: {
-                fs: ENV.version,
-                eid: form_entry.eid,
-                store: form_entry.store,
-                anchor: form_entry.anchor,
-                data: data,
-                meta: form_data.exportNotes(),
-                tags: tags,
-                constraints: form_meta.constraints
-            }
-        });
+        await records.save(form_thread.tid, entry, ENV.version, form_meta.constraints);
     });
-}
-
-async function deleteRecord(tid) {
-    await mutex.run(async () => {
-        await Net.post(ENV.urls.instance + 'api/records/delete', { tid: tid });
-    });
-}
-
-async function changeLock(tid, lock) {
-    let url = ENV.urls.instance + `api/records/${lock ? 'lock' : 'unlock'}`;
-    await Net.post(url, { tid: tid });
 }
 
 export {
