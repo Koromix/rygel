@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+
+set -e
 
 script=$1
 name=$(printf "%s" "$script" | sha256sum | cut -d ' ' -f 1)

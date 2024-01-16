@@ -1,5 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
 
+set -e
 cd $(dirname $0)
 
 SRC=$(ls -1 ../felix/*.cc ../core/libcc/libcc.cc ../core/libcc/miniz.cc ../core/libwrap/json.cc \

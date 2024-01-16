@@ -1,4 +1,6 @@
-#!/bin/sh -e
+#!/bin/sh
+
+set -e
 
 PKG_NAME=rekord
 PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
