@@ -82,9 +82,6 @@ async function init(fallback) {
 
     await initApp(fallback);
     initUI();
-
-    if (profile.develop)
-        uploadFsChanges();
 }
 
 async function initApp(fallback) {
@@ -183,7 +180,8 @@ function hasUnsavedData() {
 
 async function runTasks(online) {
     await mutex.run(async() => {
-        // Nothing to do for now
+        if (profile.develop)
+            await uploadFsChanges();
     });
 }
 
@@ -642,14 +640,16 @@ function renderData() {
     `;
 }
 
-function runDeleteRecordDialog(e, record) {
-    return UI.confirm(e, `Voulez-vous vraiment supprimer l'enregistrement '${record.sequence}' ?`,
+function runDeleteRecordDialog(e, row) {
+    return UI.confirm(e, `Voulez-vous vraiment supprimer l'enregistrement '${row.sequence}' ?`,
                          'Supprimer', async () => {
-        await records.delete(record.tid);
+        await mutex.run(async () => {
+            await records.delete(row.tid);
 
-        data_threads = null;
-        if (route.tid == record.tid)
-            await open(null, null, route.page);
+            data_threads = null;
+            if (route.tid == row.tid)
+                await openRecord(null, null, route.page);
+        });
 
         go();
     });
@@ -813,10 +813,12 @@ function addAutomaticActions(builder, model) {
         builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: color }, async () => {
             if (!force)
                 form_builder.triggerErrors();
-            await saveRecord();
 
-            data_threads = null;
-            await open(form_thread.tid, null, route.page);
+            await mutex.run(async () => {
+                await saveRecord(form_thread.tid, form_entry, form_data, form_meta.constraints);
+                await openRecord(form_thread.tid, null, route.page);
+                data_threads = null;
+            });
 
             go();
         });
@@ -835,8 +837,10 @@ function addAutomaticActions(builder, model) {
                     await records.unlock(form_thread.tid);
                 }
 
-                data_threads = null;
-                await open(form_thread.tid, null, route.page);
+                await mutex.run(async () => { 
+                    await openRecord(form_thread.tid, null, route.page);
+                    data_threads = null;
+                });
 
                 go();
             });
@@ -848,7 +852,10 @@ function addAutomaticActions(builder, model) {
                 await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                        'Oublier', () => {});
 
-                await open(route.tid, route.anchor, route.page);
+                await mutex.run(async () => { 
+                    await openRecord(route.tid, route.anchor, route.page);
+                });
+
                 go();
             });
         }
@@ -1325,7 +1332,7 @@ async function go(e, url = null, options = {}) {
                             d.action('Enregistrer', {}, async e => {
                                 try {
                                     form_builder.triggerErrors();
-                                    await mutex.chain(saveRecord);
+                                    await saveRecord(form_thread.tid, form_entry, form_data, form_meta.constraints);
                                 } catch (err) {
                                     reject(err);
                                 }
@@ -1347,7 +1354,7 @@ async function go(e, url = null, options = {}) {
                 }
             }
 
-            await mutex.chain(() => open(new_route.tid, new_route.anchor, new_route.page));
+            await openRecord(new_route.tid, new_route.anchor, new_route.page);
         } else {
             route = new_route;
         }
@@ -1635,85 +1642,84 @@ function throwScriptError(err) {
     throw new Error(msg);
 }
 
-async function open(tid, anchor, page) {
-    await mutex.run(async () => {
-        let new_thread = null;
-        let new_entry = null;
-        let new_data = null;
-        let new_state = null;
+// Call with mutex locked
+async function openRecord(tid, anchor, page) {
+    let new_thread = null;
+    let new_entry = null;
+    let new_data = null;
+    let new_state = null;
 
-        // Load or create thread
-        if (tid != null) {
-            new_thread = await records.load(tid, anchor);
-        } else {
-            new_thread = {
-                tid: Util.makeULID(),
-                saved: false,
-                locked: false,
-                entries: {}
-            };
-        }
-
-        // Initialize entry data
-        if (page.store != null) {
-            new_entry = new_thread.entries[page.store];
-
-            if (new_entry == null) {
-                let now = (new Date).valueOf();
-
-                new_entry = {
-                    store: page.store,
-                    eid: Util.makeULID(),
-                    deleted: false,
-                    anchor: -1,
-                    ctime: now,
-                    mtime: now,
-                    sequence: null,
-                    tags: []
-                };
-
-                new_thread.entries[page.store] = new_entry;
-            }
-
-            new_data = new MagicData(new_entry.data, new_entry.meta);
-            new_state = new FormState(new_data);
-        } else {
-            new_data = new MagicData;
-            new_state = new FormState(new_data);
-        }
-
-        // Copy UI state if needed
-        if (form_state != null && page == route.page) {
-            new_state.state_tabs = form_state.state_tabs;
-            new_state.state_sections = form_state.state_sections;
-
-            /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
-                new_state.take_delayed = form_state.take_delayed; */
-        }
-
-        new_state.changeHandler = async () => {
-            await run();
-
-            // Highlight might need to change (conditions, etc.)
-            if (UI.isPanelActive('editor'))
-                syncFormHighlight(false);
+    // Load or create thread
+    if (tid != null) {
+        new_thread = await records.load(tid, anchor);
+    } else {
+        new_thread = {
+            tid: Util.makeULID(),
+            saved: false,
+            locked: false,
+            entries: {}
         };
-        new_state.annotateHandler = runAnnotationDialog;
+    }
 
-        form_thread = new_thread;
-        form_entry = new_entry;
-        form_data = new_data;
-        form_state = new_state;
+    // Initialize entry data
+    if (page.store != null) {
+        new_entry = new_thread.entries[page.store];
 
-        form_model = null;
-        form_builder = null;
-        form_meta = null;
+        if (new_entry == null) {
+            let now = (new Date).valueOf();
 
-        route.tid = tid;
-        route.anchor = anchor;
-        route.page = page;
-        route.menu = page.menu;
-    });
+            new_entry = {
+                store: page.store,
+                eid: Util.makeULID(),
+                deleted: false,
+                anchor: -1,
+                ctime: now,
+                mtime: now,
+                sequence: null,
+                tags: []
+            };
+
+            new_thread.entries[page.store] = new_entry;
+        }
+
+        new_data = new MagicData(new_entry.data, new_entry.meta);
+        new_state = new FormState(new_data);
+    } else {
+        new_data = new MagicData;
+        new_state = new FormState(new_data);
+    }
+
+    // Copy UI state if needed
+    if (form_state != null && page == route.page) {
+        new_state.state_tabs = form_state.state_tabs;
+        new_state.state_sections = form_state.state_sections;
+
+        /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
+            new_state.take_delayed = form_state.take_delayed; */
+    }
+
+    new_state.changeHandler = async () => {
+        await run();
+
+        // Highlight might need to change (conditions, etc.)
+        if (UI.isPanelActive('editor'))
+            syncFormHighlight(false);
+    };
+    new_state.annotateHandler = runAnnotationDialog;
+
+    form_thread = new_thread;
+    form_entry = new_entry;
+    form_data = new_data;
+    form_state = new_state;
+
+    form_model = null;
+    form_builder = null;
+    form_meta = null;
+
+    route.tid = tid;
+    route.anchor = anchor;
+    route.page = page;
+    route.menu = page.menu;
 }
 
 function runAnnotationDialog(e, intf) {
@@ -1747,27 +1753,26 @@ function runAnnotationDialog(e, intf) {
     });
 }
 
-async function saveRecord() {
-    await mutex.run(async () => {
-        let entry = Object.assign({}, form_entry);
+// Call with mutex locked
+async function saveRecord(tid, entry, data, constraints) {
+    entry = Object.assign({}, entry);
 
-        entry.data = JSON.parse(JSON.stringify(form_data.raw, (k, v) => v != null ? v : null));
-        entry.meta = form_data.exportNotes();
+    entry.data = JSON.parse(JSON.stringify(data.raw, (k, v) => v != null ? v : null));
+    entry.meta = data.exportNotes();
 
-        // Gather global list of tags for this record entry
-        {
-            let tags = new Set;
-            for (let intf of form_model.variables) {
-                if (Array.isArray(intf.options.tags)) {
-                    for (let tag of intf.options.tags)
-                        tags.add(tag.key);
-                }
+    // Gather global list of tags for this record entry
+    {
+        let tags = new Set;
+        for (let intf of form_model.variables) {
+            if (Array.isArray(intf.options.tags)) {
+                for (let tag of intf.options.tags)
+                    tags.add(tag.key);
             }
-            entry.tags = Array.from(tags);
         }
+        entry.tags = Array.from(tags);
+    }
 
-        await records.save(form_thread.tid, entry, ENV.version, form_meta.constraints);
-    });
+    await records.save(tid, entry, ENV.version, constraints);
 }
 
 export {
