@@ -485,6 +485,159 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
     });
 }
 
+void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+{
+    if (instance->config.sync_mode == SyncMode::Offline) {
+        LogError("Records API is disabled in Offline mode");
+        io->AttachError(403);
+        return;
+    }
+
+    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->AttachError(401);
+        return;
+    }
+    if (!stamp || !stamp->HasPermission(UserPermission::DataDelete)) {
+        LogError("User is not allowed to delete data");
+        io->AttachError(403);
+        return;
+    }
+
+    io->RunAsync([=]() {
+        char tid[27];
+        {
+            StreamReader st;
+            if (!io->OpenForRead(Kibibytes(64), &st))
+                return;
+            json_Parser parser(&st, &io->allocator);
+
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
+
+                if (key == "tid") {
+                    Span<const char> str = nullptr;
+
+                    if (parser.ParseString(&str)) {
+                        if (!CheckULID(str)) {
+                            io->AttachError(422);
+                            return;
+                        }
+
+                        CopyString(str, tid);
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unexpected key '%1'", key);
+                    io->AttachError(422);
+                    return;
+                }
+            }
+            if (!parser.IsValid()) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        // Check missing or invalid values
+        {
+            bool valid = true;
+
+            if (!tid[0]) {
+                LogError("Missing or empty 'tid' value");
+                valid = false;
+            }
+
+            if (!valid) {
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        bool success = instance->db->Transaction([&]() {
+            int64_t now = GetUnixTime();
+
+            // Get existing thread entries
+            sq_Statement stmt;
+            if (!instance->db->Prepare(R"(SELECT t.locked, IIF(c.userid IS NOT NULL, 1, 0) AS claim,
+                                                 e.rowid, e.eid, e.anchor, e.tags
+                                          FROM rec_threads t
+                                          LEFT JOIN ins_claims c ON (c.userid = ?1 AND c.tid = t.tid)
+                                          INNER JOIN rec_entries e ON (e.tid = t.tid)
+                                          WHERE t.tid = ?2 AND e.deleted = 0)", &stmt))
+                return false;
+            sqlite3_bind_int64(stmt, 1, -session->userid);
+            sqlite3_bind_text(stmt, 2, tid, -1, SQLITE_STATIC);
+
+            // Check for lock and claim (if needed)
+            if (stmt.Step()) {
+                bool locked = sqlite3_column_int(stmt, 0);
+                bool claim = sqlite3_column_int(stmt, 1);
+
+                if (!stamp->HasPermission(UserPermission::DataLoad) && !claim) {
+                    LogError("Record does not exist");
+                    io->AttachError(404);
+                    return false;
+                }
+
+                if (locked) {
+                    LogError("This record is locked");
+                    io->AttachError(403);
+                    return false;
+                }
+            } else if (stmt.IsValid()) {
+                LogError("Record does not exist");
+                io->AttachError(404);
+                return false;
+            } else {
+                return false;
+            }
+
+            // Delete individual entries
+            do {
+                int64_t e = sqlite3_column_int64(stmt, 2);
+                const char *eid = (const char *)sqlite3_column_text(stmt, 3);
+                int64_t prev_anchor = sqlite3_column_int64(stmt, 4);
+                const char *tags = (const char *)sqlite3_column_text(stmt, 5);
+
+                int64_t new_anchor;
+                {
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
+                                                                             mtime, fs, data, meta, tags)
+                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                                                  RETURNING anchor)",
+                                                  &stmt, prev_anchor, tid,
+                                                  eid, session->userid, session->username, now, nullptr,
+                                                  nullptr, nullptr, tags))
+                        return false;
+                    if (!stmt.GetSingleValue(&new_anchor))
+                        return false;
+                }
+
+                if (!instance->db->Run("UPDATE rec_entries SET deleted = 1, anchor = ?2 WHERE rowid = ?1",
+                                       e, new_anchor))
+                    return false;
+
+                if (!instance->db->Run("DELETE FROM seq_constraints WHERE eid = ?1", eid))
+                    return false;
+            } while (stmt.Step());
+            if (!stmt.IsValid())
+                return false;
+
+            return true;
+        });
+        if (!success)
+            return;
+
+        io->AttachText(200, "{}", "application/json");
+    });
+}
+
 static void HandleLock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io, bool lock)
 {
     if (instance->config.sync_mode == SyncMode::Offline) {

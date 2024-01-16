@@ -23,7 +23,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 114;
+const int InstanceVersion = 115;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -2171,9 +2171,41 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 114: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX rec_fragments_t;
+                    DROP INDEX rec_fragments_r;
+
+                    ALTER TABLE rec_fragments RENAME TO rec_fragments_BAK;
+
+                    CREATE TABLE rec_fragments (
+                        anchor INTEGER PRIMARY KEY AUTOINCREMENT,
+                        previous INTEGER REFERENCES rec_fragments (anchor),
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        userid INTEGER NOT NULL,
+                        username TEXT NOT NULL,
+                        mtime INTEGER NOT NULL,
+                        fs INTEGER REFERENCES fs_versions (version),
+                        data TEXT,
+                        meta TEXT,
+                        tags TEXT
+                    );
+                    CREATE INDEX rec_fragments_t ON rec_fragments (tid);
+                    CREATE INDEX rec_fragments_r ON rec_fragments (eid);
+
+                    INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, data, meta, tags)
+                        SELECT anchor, previous, tid, eid, userid, username, mtime, fs, data, meta, tags FROM rec_fragments_BAK;
+
+                    DROP TABLE rec_fragments_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 114);
+            static_assert(InstanceVersion == 115);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

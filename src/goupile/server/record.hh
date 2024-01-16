@@ -28,6 +28,7 @@ void HandleExportData(InstanceHolder *instance, const http_RequestInfo &request,
 void HandleExportMeta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 
 void HandleRecordLock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
 void HandleRecordUnlock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);

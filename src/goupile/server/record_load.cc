@@ -84,9 +84,8 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(SELECT t.rowid AS t, t.tid, t.locked,
-                                 e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence, e.tags AS tags,
-                                 IIF(?6 = 1, e.data, NULL) AS data,
-                                 IIF(?7 = 1, e.meta, NULL) AS meta
+                                 e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence,
+                                 e.tags AS tags, IIF(?6 = 1, e.data, NULL) AS data, IIF(?7 = 1, e.meta, NULL) AS meta
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
                           WHERE 1=1)").len;
@@ -110,33 +109,34 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY t.rowid, e.store").len;
     } else {
         RG_ASSERT(!filter.use_claims);
-        RG_ASSERT(filter.allow_deleted);
 
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data, meta, tags) AS (
                               SELECT 1, eid, anchor, mtime, data, meta, tags
                                   FROM rec_fragments
                                   WHERE (tid = ?1 OR ?1 IS NULL) AND
-                                        anchor <= ?3 AND previous IS NULL AND
-                                        data IS NOT NULL
+                                        anchor <= ?3 AND previous IS NULL
                               UNION ALL
                               SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
                                   IIF(?6 = 1, json_patch(rec.data, f.data), NULL) AS data,
                                   IIF(?7 = 1, json_patch(rec.meta, f.meta), NULL) AS meta,
                                   f.tags
                                   FROM rec_fragments f, rec
-                                  WHERE f.anchor <= ?3 AND f.previous = rec.anchor AND
-                                                           f.data IS NOT NULL
+                                  WHERE f.anchor <= ?3 AND f.previous = rec.anchor
                               ORDER BY anchor
                           )
                           SELECT t.rowid AS t, t.tid, t.locked,
-                                 e.rowid AS e, e.eid, e.deleted, rec.anchor, e.ctime, rec.mtime,
-                                 e.store, e.sequence, rec.tags, rec.data, rec.meta
+                                 e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
+                                 rec.anchor, e.ctime, rec.mtime, e.store, e.sequence,
+                                 rec.tags, rec.data, rec.meta
                               FROM rec
                               INNER JOIN rec_entries e ON (e.eid = rec.eid)
                               INNER JOIN rec_threads t ON (t.tid = e.tid)
                               WHERE 1+1)").len;
 
+        if (!filter.allow_deleted) {
+            sql.len += Fmt(sql.TakeAvailable(), " AND rec.data IS NOT NULL").len;
+        }
         if (filter.start_t >= 0) {
             sql.len += Fmt(sql.TakeAvailable(), " AND t.rowid >= ?4").len;
         }
@@ -263,22 +263,37 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     int64_t anchor = -1;
-    if (const char *str = request.GetQueryValue("anchor"); str) {
-        if (!stamp->HasPermission(UserPermission::DataLoad) ||
-                !stamp->HasPermission(UserPermission::DataAudit)) {
-            LogError("User is not allowed to access historical data");
-            io->AttachError(403);
+    bool allow_deleted = false;
+    {
+        if (const char *str = request.GetQueryValue("anchor"); str) {
+            if (!ParseInt(str, &anchor)) {
+                io->AttachError(422);
+                return;
+            }
+            if (anchor <= 0) {
+                LogError("Anchor must be a positive number");
+                io->AttachError(422);
+                return;
+            }
+        }
+
+        if (const char *str = request.GetQueryValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
+            io->AttachError(422);
             return;
         }
 
-        if (!ParseInt(str, &anchor)) {
-            io->AttachError(422);
-            return;
-        }
-        if (anchor <= 0) {
-            LogError("Anchor must be a positive number");
-            io->AttachError(422);
-            return;
+        if (!stamp->HasPermission(UserPermission::DataLoad) ||
+                !stamp->HasPermission(UserPermission::DataAudit)) {
+            if (anchor >= 0) {
+                LogError("User is not allowed to access historical data");
+                io->AttachError(403);
+                return;
+            }
+            if (allow_deleted) {
+                LogError("User is not allowed to access deleted data");
+                io->AttachError(403);
+                return;
+            }
         }
     }
 
@@ -292,7 +307,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
         RecordFilter filter = {};
 
         filter.audit_anchor = anchor;
-        filter.allow_deleted = stamp->HasPermission(UserPermission::DataAudit);
+        filter.allow_deleted = allow_deleted;
         filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
 
         if (!walker.Prepare(instance, session->userid, filter))
@@ -363,6 +378,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
 
     const char *tid = nullptr;
     int64_t anchor = -1;
+    bool allow_deleted = false;
     {
         tid = request.GetQueryValue("tid");
         if (!tid) {
@@ -372,13 +388,6 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
         }
 
         if (const char *str = request.GetQueryValue("anchor"); str) {
-            if (!stamp->HasPermission(UserPermission::DataLoad) ||
-                    !stamp->HasPermission(UserPermission::DataAudit)) {
-                LogError("User is not allowed to access historical data");
-                io->AttachError(403);
-                return;
-            }
-
             if (!ParseInt(str, &anchor)) {
                 io->AttachError(422);
                 return;
@@ -386,6 +395,25 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             if (anchor <= 0) {
                 LogError("Anchor must be a positive number");
                 io->AttachError(422);
+                return;
+            }
+        }
+
+        if (const char *str = request.GetQueryValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
+            io->AttachError(422);
+            return;
+        }
+
+        if (!stamp->HasPermission(UserPermission::DataLoad) ||
+                !stamp->HasPermission(UserPermission::DataAudit)) {
+            if (anchor >= 0) {
+                LogError("User is not allowed to access historical data");
+                io->AttachError(403);
+                return;
+            }
+            if (allow_deleted) {
+                LogError("User is not allowed to access deleted data");
+                io->AttachError(403);
                 return;
             }
         }
@@ -397,7 +425,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
 
         filter.single_tid = tid;
         filter.audit_anchor = anchor;
-        filter.allow_deleted = stamp->HasPermission(UserPermission::DataAudit);
+        filter.allow_deleted = allow_deleted;
         filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
         filter.read_data = true;
         filter.read_meta = true;

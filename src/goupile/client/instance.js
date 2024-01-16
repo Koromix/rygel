@@ -615,7 +615,7 @@ function renderData() {
                                 })}
                                 ${row.locked ? html`<th>🔒</th>` : ''}
                                 ${goupile.hasPermission('data_delete') && !row.locked ?
-                                    html`<th><a @click=${UI.wrap(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
+                                    html`<th><a @click=${UI.wrap(e => runDeleteRecordDialog(e, row))}>✕</a></th>` : ''}
                             </tr>
                         `;
                     })}
@@ -637,6 +637,24 @@ function renderData() {
             ` : ''}
         </div>
     `;
+}
+
+function runDeleteRecordDialog(e, record) {
+    return UI.confirm(e, `Voulez-vous vraiment supprimer l'enregistrement '${record.sequence}' ?`,
+                         'Supprimer', async () => {
+        await deleteRecord(record.tid);
+
+        // Reload list
+        data_threads = null;
+
+        if (route.tid == record.tid) {
+            await loadRecord(null, null, route.page);
+            route.tid = null;
+            route.anchor = null;
+        }
+
+        go();
+    });
 }
 
 async function runExportDialog(e) {
@@ -1768,6 +1786,12 @@ async function saveRecord() {
                 constraints: form_meta.constraints
             }
         });
+    });
+}
+
+async function deleteRecord(tid) {
+    await mutex.run(async () => {
+        await Net.post(ENV.urls.instance + 'api/records/delete', { tid: tid });
     });
 }
 
