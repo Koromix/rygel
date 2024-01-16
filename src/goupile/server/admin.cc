@@ -1589,8 +1589,6 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                         parser.ParseBool(&config.data_remote);
                         change_data_remote = true;
                     }
-                } else if (key == "backup_key") {
-                    parser.SkipNull() || parser.ParseString(&config.backup_key);
                 } else if (key == "token_key") {
                     parser.SkipNull() || parser.ParseString(&config.token_key);
                 } else if (key == "auto_key") {
@@ -1678,7 +1676,6 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             if (instance->master == instance) {
                 success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
                 success &= !change_data_remote || instance->db->Run(sql, "DataRemote", 0 + config.data_remote);
-                success &= !config.backup_key || instance->db->Run(sql, "BackupKey", config.backup_key);
                 success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
                 success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
                 success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
@@ -1774,9 +1771,6 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
             json.Key("name"); json.String(instance->config.name);
             json.Key("use_offline"); json.Bool(instance->config.use_offline);
             json.Key("data_remote"); json.Bool(instance->config.data_remote);
-            if (instance->config.backup_key) {
-                json.Key("backup_key"); json.String(instance->config.backup_key);
-            }
             if (instance->config.token_key) {
                 json.Key("token_key"); json.String(instance->config.token_key);
             }

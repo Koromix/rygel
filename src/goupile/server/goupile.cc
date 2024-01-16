@@ -617,9 +617,6 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     if (master->config.auto_key) {
                         json.Key("auto_key"); json.String(master->config.auto_key);
                     }
-                    if (master->config.backup_key) {
-                        json.Key("backup_key"); json.String(master->config.backup_key);
-                    }
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
                     if (master->config.use_offline) {

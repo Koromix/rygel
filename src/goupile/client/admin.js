@@ -507,10 +507,6 @@ function runConfigureInstanceDialog(e, instance) {
                 d.tab('Avancé', () => {
                     d.boolean('*data_remote', 'Données en ligne', { value: instance.config.data_remote });
 
-                    if (d.values.data_remote === 0)
-                        d.text('backup_key', 'Clé d\'archivage', { value: instance.config.backup_key });
-                    if (d.values.backup_key != null && !checkCryptoKey(d.values.backup_key))
-                        d.error('backup_key', 'Format de clé non valide');
                     d.text('token_key', 'Session par token', { value: instance.config.token_key });
                     if (d.values.token_key != null && !checkCryptoKey(d.values.token_key))
                         d.error('token_key', 'Format de clé non valide');
@@ -530,7 +526,6 @@ function runConfigureInstanceDialog(e, instance) {
                         name: d.values.name,
                         use_offline: d.values.use_offline,
                         data_remote: d.values.data_remote,
-                        backup_key: d.values.backup_key,
                         token_key: d.values.token_key,
                         auto_key: d.values.auto_key,
                         allow_guests: d.values.allow_guests,

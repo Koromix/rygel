@@ -23,7 +23,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 116;
+const int InstanceVersion = 117;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -91,8 +91,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                         LogError("Malformed TokenKey value");
                         valid = false;
                     }
-                } else if (TestStr(setting, "BackupKey")) {
-                    config.backup_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "AutoKey")) {
                     config.auto_key = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "AllowGuests")) {
@@ -143,10 +141,6 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
         if (config.max_file_size <= 0) {
             LogError("Maximum file size must be >= 0");
             valid = false;
-        }
-        if (config.backup_key && config.data_remote) {
-            LogError("Ignoring non-NULL BackupKey in online mode");
-            config.backup_key = nullptr;
         }
 
         if (!valid)
@@ -2208,9 +2202,17 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 116: {
+                bool success = db->RunMany(R"(
+                    DELETE FROM fs_settings WHERE key = 'BackupKey';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 116);
+            static_assert(InstanceVersion == 117);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
