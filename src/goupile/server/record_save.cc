@@ -464,9 +464,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             }
 
             // Create thread if needed
-            if (!instance->db->Run(R"(INSERT INTO rec_threads (tid, stores) VALUES (?1, json_object(?2, ?3))
-                                      ON CONFLICT DO UPDATE SET stores = json_patch(stores, excluded.stores))",
-                                   tid, fragment.store, !fragment.data.len))
+            if (!instance->db->Run("INSERT INTO rec_threads (tid) VALUES (?1) ON CONFLICT DO NOTHING", tid))
                 return false;
 
             // Update entry and fragment tags
