@@ -30,7 +30,7 @@ function FormState(data = null) {
     this.annotateHandler = null;
 
     // Internal widget state
-    this.meta_objects = new WeakMap;
+    this.meta_map = new WeakMap;
     this.click_events = new Set;
 
     // Semi-public UI state
@@ -120,12 +120,15 @@ function FormBuilder(state, model) {
     })();
 
     let data = state.data;
-    let root_ptr = state.values;
+
+    let default_root = state.values;
+    let default_ptr = default_root;
+
+    let intf_map = new WeakMap;
 
     data.clearNotes('errors');
     data.clearNotes('variables');
 
-    let variables_map = {};
     let options_stack = [{
         deploy: true,
         untoggle: true,
@@ -194,13 +197,22 @@ function FormBuilder(state, model) {
         }
     };
 
-    this.find = key => variables_map[key];
+    this.find = key => {
+        key = decodeKey(key);
+        return key.variables.get(key.name);
+    };
     this.value = (key, default_value = undefined) => {
-        let intf = variables_map[key];
+        let intf = self.find(key);
         return (intf && !intf.missing) ? intf.value : default_value;
     };
-    this.missing = key => variables_map[key].missing;
-    this.error = (key, msg, delay = false) => variables_map[key].error(msg, delay);
+    this.missing = key => {
+        let intf = self.find(key);
+        return intf.missing;
+    };
+    this.error = (key, msg, delay = false) => {
+        let intf = self.find(key);
+        intf.error(msg, delay);
+    };
 
     this.text = function(key, label, options = {}) {
         options = expandOptions(options);
@@ -274,7 +286,7 @@ function FormBuilder(state, model) {
     };
 
     function handleTextInput(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         updateValue(key, e.target.value || undefined);
@@ -362,7 +374,7 @@ function FormBuilder(state, model) {
     };
 
     function handleNumberChange(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
@@ -498,7 +510,7 @@ function FormBuilder(state, model) {
     }
 
     function handleSliderChange(e, key) {
-        if (!isModifiable(variables_map[key])) {
+        if (!isModifiable(key)) {
             e.target.value = e.target.dataset.value;
             return;
         }
@@ -521,7 +533,7 @@ function FormBuilder(state, model) {
     }
 
     function handleSliderClick(e, key, value, min, max) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         return UI.dialog(e, null, {}, (d, resolve, reject) => {
@@ -569,7 +581,7 @@ function FormBuilder(state, model) {
     };
 
     function handleEnumChange(e, key, allow_untoggle) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         let json = e.target.dataset.value;
@@ -635,7 +647,7 @@ function FormBuilder(state, model) {
     };
 
     function handleEnumDropChange(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         updateValue(key, Util.strToValue(e.target.value));
@@ -687,7 +699,7 @@ function FormBuilder(state, model) {
     };
 
     function handleEnumRadioChange(e, key, already_checked) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         if (already_checked) {
@@ -739,7 +751,7 @@ function FormBuilder(state, model) {
     };
 
     function handleMultiChange(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         e.target.classList.toggle('active');
@@ -822,7 +834,7 @@ function FormBuilder(state, model) {
     };
 
     function handleMultiCheckChange(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         let els = e.target.parentNode.querySelectorAll('input');
@@ -933,7 +945,7 @@ function FormBuilder(state, model) {
     };
 
     function handleDateInput(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         if (has_input_date) {
@@ -996,7 +1008,7 @@ function FormBuilder(state, model) {
     };
 
     function handleMonthInput(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         if (has_input_month) {
@@ -1058,7 +1070,7 @@ function FormBuilder(state, model) {
     };
 
     function handleTimeInput(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         if (has_input_date) {
@@ -1128,7 +1140,7 @@ function FormBuilder(state, model) {
     };
 
     function handleFileInput(e, key) {
-        if (!isModifiable(variables_map[key]))
+        if (!isModifiable(key))
             return;
 
         key.meta.file_lists.set(key.name, e.target.files);
@@ -1463,26 +1475,28 @@ instead of:
     page.repeat("var", () => { /* Do stuff here */ });`);
         }
 
-        if (!Util.isPodObject(key.root[key.name]))
-            key.root[key.name] = {};
+        if (key.variables.has(key.name))
+            throw new Error(`Variable '${key}' already exists`);
+        if (!Util.isPodObject(key.ptr[key.name]))
+            key.ptr[key.name] = {};
 
-        let values = key.root[key.name];
+        let values = key.ptr[key.name];
 
         let widgets = [];
         let render = intf => widgets.map(intf => intf.render());
 
         let intf = makeWidget('repeat', null, null, render, options);
-        Object.assign(intf, {
-            length: null,
-            add: () => handleRepeatAdd(values, intf.length),
-            remove: idx => handleRepeatRemove(values, idx)
-        });
+        fillVariableInfo(intf, key, values);
         addWidget(intf);
 
-        if (!isModifiable(intf)) {
-            intf.add = null;
-            intf.remove = null;
-        }
+        Object.assign(intf, {
+            length: null,
+            add: isModifiable(key) ? () => handleRepeatAdd(values, intf.length) : null,
+            remove: isModifiable(key) ? idx => handleRepeatRemove(values, idx) : null
+        });
+
+        let prev_root = default_root;
+        let prev_ptr = default_ptr;
 
         for (let i = 0;; i++) {
             if (!values.hasOwnProperty(i)) {
@@ -1491,12 +1505,14 @@ instead of:
             }
 
             try {
-                root_ptr = values[i];
+                default_root = values;
+                default_ptr = values[i];
 
                 let remove = intf.remove ? (() => intf.remove(i)) : null;
                 captureWidgets(widgets, 'repeat', () => func(values[i], i, remove), options);
             } finally {
-                root_ptr = values;
+                default_root = prev_root;
+                default_ptr = prev_ptr;
             }
         }
 
@@ -1647,16 +1663,16 @@ instead of:
     };
     this.restart = this.refresh;
 
-    function decodeKey(key, options) {
+    function decodeKey(key, options = {}) {
         // Normalize key
         if (!Array.isArray(key))
             key = [null, key];
-        if (key[0] == null)
-            key[0] = root_ptr;
-        if (key.length != 2)
+        if (key.length < 2 || key.length > 3)
             throw new Error('Invalid key type');
 
-        let [root, name] = key;
+        let root = key[0] ?? default_root;
+        let ptr = (key.length >= 3 ? key[1] : key[0]) ?? default_ptr;
+        let name = (key.length >= 3 ? key[2] : key[1]);
 
         // Decode option shortcuts
         for (;;) {
@@ -1673,7 +1689,7 @@ instead of:
             if (name < 0 || !Number.isInteger(name))
                 throw new Error('Number keys must be positive integers');
 
-            key[i] = name.toString();
+            name = name.toString();
         } else if (typeof name == 'string') {
             if (name === '')
                 throw new Error('Empty keys are not allowed');
@@ -1682,10 +1698,11 @@ instead of:
             if (name.startsWith('__'))
                 throw new Error('Keys must not start with \'__\'');
         } else {
-            throw new Error('foobar');
+            throw new Error('Invalid key name, must be string or number');
         }
 
-        let meta = state.meta_objects.get(root);
+        let meta = state.meta_map.get(ptr);
+        let variables = intf_map.get(ptr);
 
         // Prepare state objects
         if (meta == null) {
@@ -1697,12 +1714,18 @@ instead of:
                 just_changed: new Set
             };
 
-            state.meta_objects.set(root, meta);
+            state.meta_map.set(ptr, meta);
+        }
+        if (variables == null) {
+            variables = new Map;
+            intf_map.set(ptr, variables);
         }
 
         key = {
             root: root,
+            ptr: ptr,
             meta: meta,
+            variables: variables,
             name: name,
             toString: () => name
         };
@@ -1837,7 +1860,7 @@ instead of:
     }
 
     function fillVariableInfo(intf, key, value, props = null, multi = false) {
-        if (variables_map[key])
+        if (key.variables.has(key.name))
             throw new Error(`Variable '${key}' already exists`);
 
         key.meta.just_changed.delete(key.name);
@@ -1856,7 +1879,7 @@ instead of:
                     intf.errors.push(msg);
                     model.errors++;
 
-                    let note = data.getNote(key.root, 'errors', []);
+                    let note = data.openNote(key.ptr, 'errors', []);
                     note.push({ key: key.name, message: msg });
                 }
 
@@ -1867,8 +1890,8 @@ instead of:
         });
 
         let variable = {
-            label: intf.label,
-            type: intf.type
+            type: intf.type,
+            label: intf.label
         };
 
         if (props != null) {
@@ -1887,9 +1910,9 @@ instead of:
         }
 
         model.variables.push(intf);
-        variables_map[key] = intf;
+        key.variables.set(key.name, intf);
 
-        let note = data.getNote(key.root, 'variables', {});
+        let note = data.openNote(key.root, 'variables', {});
         note[key.name] = variable;
 
         return intf;
@@ -1953,7 +1976,7 @@ instead of:
     }
 
     function readValue(key, options, func) {
-        let ptr = key.root;
+        let ptr = key.ptr;
 
         if (!ptr.hasOwnProperty(key.name)) {
             let value = normalizeValue(func, options.value);
@@ -1987,7 +2010,7 @@ instead of:
     }
 
     function updateValue(key, value, refresh = true) {
-        let ptr = key.root;
+        let ptr = key.ptr;
         if (value === ptr[key.name])
             return;
         ptr[key.name] = value;
@@ -2003,6 +2026,9 @@ instead of:
     }
 
     function isModifiable(intf) {
+        if (intf.ptr != null)
+            intf = intf.variables.get(intf.name);
+
         if (intf.options.disabled)
             return false;
         if (intf.options.readonly)

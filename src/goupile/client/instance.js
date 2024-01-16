@@ -869,7 +869,7 @@ function addAutomaticTags(variables) {
     for (let intf of variables) {
         let tags = [];
 
-        let note = form_data.getNote(intf.key.root, 'status', {});
+        let note = form_data.openNote(intf.key.root, 'status', {});
         let status = note[intf.key.name] ?? {};
 
         if (form_thread.locked)
@@ -1718,7 +1718,7 @@ async function loadRecord(tid, anchor, page) {
     // Handle annotation form
     new_state.annotateHandler = (e, intf) => {
         return UI.dialog(e, intf.label, {}, (d, resolve, reject) => {
-            let note = form_data.getNote(intf.key.root, 'status', {});
+            let note = form_data.openNote(intf.key.root, 'status', {});
             let status = note[intf.key.name];
 
             if (status == null) {

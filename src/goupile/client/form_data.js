@@ -118,7 +118,7 @@ function MagicData(raw = {}, annotations = null) {
         return meta.proxy;
     }
 
-    this.getNote = function(obj, kind, default_value) {
+    this.openNote = function(obj, kind, default_value) {
         if (obj == null)
             [obj, kind] = [root, obj];
 
