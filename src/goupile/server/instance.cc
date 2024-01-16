@@ -23,7 +23,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 115;
+const int InstanceVersion = 116;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -73,11 +73,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             if (sqlite3_column_type(stmt, 1) != SQLITE_NULL) {
                 if (TestStr(setting, "UseOffline")) {
                     valid &= ParseBool(value, &config.use_offline);
-                } else if (TestStr(setting, "SyncMode")) {
-                    if (!OptionToEnumI(SyncModeNames, value, &config.sync_mode)) {
-                        LogError("Unknown sync mode '%1'", value);
-                        valid = false;
-                    }
+                } else if (TestStr(setting, "DataRemote")) {
+                    valid &= ParseBool(value, &config.data_remote);
                 } else if (TestStr(setting, "MaxFileSize")) {
                     valid &= ParseSize(value, &config.max_file_size);
                 } else if (TestStr(setting, "TokenKey")) {
@@ -147,8 +144,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             LogError("Maximum file size must be >= 0");
             valid = false;
         }
-        if (config.backup_key && config.sync_mode != SyncMode::Offline) {
-            LogError("Ignoring non-NULL BackupKey in this sync mode");
+        if (config.backup_key && config.data_remote) {
+            LogError("Ignoring non-NULL BackupKey in online mode");
             config.backup_key = nullptr;
         }
 
@@ -647,7 +644,7 @@ bool MigrateInstance(sq_Database *db)
                     success &= db->Run(sql, "Application.ClientKey", nullptr);
                     success &= db->Run(sql, "Application.UseOffline", 0 + fake2.use_offline);
                     success &= db->Run(sql, "Application.MaxFileSize", fake2.max_file_size);
-                    success &= db->Run(sql, "Application.SyncMode", SyncModeNames[(int)fake2.sync_mode]);
+                    success &= db->Run(sql, "Application.SyncMode", fake2.data_remote ? "Online" : "Offline");
                     success &= db->Run(sql, "Application.DemoUser", nullptr);
                     success &= db->Run(sql, "HTTP.SocketType", SocketTypeNames[(int)fake1.http.sock_type]);
                     success &= db->Run(sql, "HTTP.Port", fake1.http.port);
@@ -1043,7 +1040,7 @@ bool MigrateInstance(sq_Database *db)
             case 27: {
                 decltype(InstanceHolder::config) fake;
                 if (!db->Run("INSERT INTO fs_settings (key, value) VALUES ('SyncMode', ?1)",
-                             SyncModeNames[(int)fake.sync_mode]))
+                             fake.data_remote ? "Online" : "Offline"))
                     return false;
             } [[fallthrough]];
 
@@ -2203,9 +2200,17 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 115: {
+                bool success = db->RunMany(R"(
+                    UPDATE fs_settings SET key = 'DataRemote', value = IIF(value <> 'Offline', 1, 0) WHERE key = 'SyncMode';
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 115);
+            static_assert(InstanceVersion == 116);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

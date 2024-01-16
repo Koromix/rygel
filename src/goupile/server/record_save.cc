@@ -105,7 +105,7 @@ static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
 
 void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    if (instance->config.sync_mode == SyncMode::Offline) {
+    if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;
@@ -486,7 +486,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
 
 void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    if (instance->config.sync_mode == SyncMode::Offline) {
+    if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;
@@ -639,7 +639,7 @@ void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &reques
 
 static void HandleLock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io, bool lock)
 {
-    if (instance->config.sync_mode == SyncMode::Offline) {
+    if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;

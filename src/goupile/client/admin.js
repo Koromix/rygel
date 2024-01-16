@@ -505,13 +505,9 @@ function runConfigureInstanceDialog(e, instance) {
                 });
 
                 d.tab('Avancé', () => {
-                    d.enumDrop('*sync_mode', 'Mode de synchronisation', [
-                        ['online', 'En ligne'],
-                        ['mirror', 'Miroir'],
-                        ['offline', 'Hors ligne']
-                    ], { value: instance.config.sync_mode });
+                    d.boolean('*data_remote', 'Données en ligne', { value: instance.config.data_remote });
 
-                    if (d.values.sync_mode == 'offline')
+                    if (d.values.data_remote === 0)
                         d.text('backup_key', 'Clé d\'archivage', { value: instance.config.backup_key });
                     if (d.values.backup_key != null && !checkCryptoKey(d.values.backup_key))
                         d.error('backup_key', 'Format de clé non valide');
@@ -533,7 +529,7 @@ function runConfigureInstanceDialog(e, instance) {
                         instance: instance.key,
                         name: d.values.name,
                         use_offline: d.values.use_offline,
-                        sync_mode: d.values.sync_mode,
+                        data_remote: d.values.data_remote,
                         backup_key: d.values.backup_key,
                         token_key: d.values.token_key,
                         auto_key: d.values.auto_key,

@@ -242,7 +242,7 @@ static void JsonRawOrNull(Span<const char> str, json_Writer *json)
 
 void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    if (instance->config.sync_mode == SyncMode::Offline) {
+    if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;
@@ -356,7 +356,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
 
 void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    if (instance->config.sync_mode == SyncMode::Offline) {
+    if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;
@@ -488,7 +488,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
 
 void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    if (instance->config.sync_mode == SyncMode::Offline) {
+    if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;
@@ -559,7 +559,7 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
 
 void RunExport(InstanceHolder *instance, bool data, bool meta, const http_RequestInfo &request, http_IO *io)
 {
-    if (instance->config.sync_mode == SyncMode::Offline) {
+    if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->AttachError(403);
         return;

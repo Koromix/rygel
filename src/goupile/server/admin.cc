@@ -1561,7 +1561,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
         const char *instance_key = nullptr;
         decltype(InstanceHolder::config) config;
         bool change_use_offline = false;
-        bool change_sync_mode = false;
+        bool change_data_remote = false;
         bool change_allow_guests = false;
         int64_t fs_version = -1;
         {
@@ -1584,22 +1584,10 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
                         parser.ParseBool(&config.use_offline);
                         change_use_offline = true;
                     }
-                } else if (key == "sync_mode") {
+                } else if (key == "data_remote") {
                     if (!parser.SkipNull()) {
-                        Span<const char> str = {};
-
-                        if (parser.ParseString(&str)) {
-                            char mode[128];
-                            json_ConvertFromJsonName(str, mode);
-
-                            if (!OptionToEnumI(SyncModeNames, mode, &config.sync_mode)) {
-                                LogError("Invalid sync mode '%1'", str);
-                                io->AttachError(422);
-                                return;
-                            }
-                        }
-
-                        change_sync_mode = true;
+                        parser.ParseBool(&config.data_remote);
+                        change_data_remote = true;
                     }
                 } else if (key == "backup_key") {
                     parser.SkipNull() || parser.ParseString(&config.backup_key);
@@ -1689,7 +1677,7 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
             success &= !config.name || instance->db->Run(sql, "Name", config.name);
             if (instance->master == instance) {
                 success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
-                success &= !change_sync_mode || instance->db->Run(sql, "SyncMode", SyncModeNames[(int)config.sync_mode]);
+                success &= !change_data_remote || instance->db->Run(sql, "DataRemote", 0 + config.data_remote);
                 success &= !config.backup_key || instance->db->Run(sql, "BackupKey", config.backup_key);
                 success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
                 success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
@@ -1754,7 +1742,6 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     http_JsonPageBuilder json;
     if (!json.Init(io))
         return;
-    char buf[128];
 
     // Check allowed instances
     HashSet<const char *> allowed_masters;
@@ -1786,10 +1773,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         json.Key("config"); json.StartObject();
             json.Key("name"); json.String(instance->config.name);
             json.Key("use_offline"); json.Bool(instance->config.use_offline);
-            {
-                Span<const char> str = json_ConvertToJsonName(SyncModeNames[(int)instance->config.sync_mode], buf);
-                json.Key("sync_mode"); json.String(str.ptr, (size_t)str.len);
-            }
+            json.Key("data_remote"); json.Bool(instance->config.data_remote);
             if (instance->config.backup_key) {
                 json.Key("backup_key"); json.String(instance->config.backup_key);
             }

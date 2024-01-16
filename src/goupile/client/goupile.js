@@ -152,7 +152,7 @@ async function start() {
 async function registerSW() {
     try {
         if (navigator.serviceWorker != null) {
-            if (ENV.cache_offline) {
+            if (ENV.use_offline) {
                 let registration = await navigator.serviceWorker.register(`${ENV.urls.base}sw.js`);
                 let progress = new Log.Entry;
 
@@ -190,7 +190,7 @@ async function registerSW() {
             }
         }
     } catch (err) {
-        if (ENV.cache_offline) {
+        if (ENV.use_offline) {
             console.log(err);
             console.log("Service worker API is not available");
         }
@@ -257,7 +257,7 @@ async function syncProfile() {
         let new_profile = await Net.get(`${ENV.urls.instance}api/session/profile`);
         await updateProfile(new_profile, true);
     } catch (err) {
-        if (ENV.cache_offline) {
+        if (ENV.use_offline) {
             if (!(err instanceof NetworkError))
                 Log.error(err);
         } else {
@@ -382,7 +382,7 @@ async function runLoginScreen(e, initial) {
     } while (!new_profile.authorized);
 
     // Save for offline login
-    if (ENV.cache_offline && new_profile.permissions.misc_offline) {
+    if (ENV.use_offline && new_profile.permissions.misc_offline) {
         let db = await openLocalDB();
 
         let salt = nacl.randomBytes(24);
@@ -646,7 +646,7 @@ async function login(username, password) {
     let online = Net.isOnline();
 
     try {
-        if (online || !ENV.cache_offline) {
+        if (online || !ENV.use_offline) {
             let new_profile = await loginOnline(username, password);
             return new_profile;
         } else {
@@ -656,7 +656,7 @@ async function login(username, password) {
             return new_profile;
         }
     } catch (err) {
-        if ((err instanceof NetworkError) && online && ENV.cache_offline) {
+        if ((err instanceof NetworkError) && online && ENV.use_offline) {
             let new_profile = await loginOffline(username, password);
             return new_profile;
         } else {
