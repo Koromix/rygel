@@ -30,7 +30,7 @@ function FormState(data = null) {
     this.annotateHandler = null;
 
     // Internal widget state
-    this.meta_map = new WeakMap;
+    this.retain_map = new WeakMap;
     this.click_events = new Set;
 
     // Semi-public UI state
@@ -182,12 +182,12 @@ function FormBuilder(state, model) {
             for (let variable of model.variables) {
                 let key = variable.key;
 
-                if (!cleared_set.has(key.meta)) {
-                    key.meta.take_delayed.clear();
-                    cleared_set.add(key.meta);
+                if (!cleared_set.has(key.retain)) {
+                    key.retain.take_delayed.clear();
+                    cleared_set.add(key.retain);
                 }
 
-                key.meta.take_delayed.add(key.name);
+                key.retain.take_delayed.add(key.name);
             }
 
             self.restart();
@@ -367,7 +367,7 @@ function FormBuilder(state, model) {
 
         validateMinMax(intf);
 
-        if (key.meta.invalid_numbers.has(key.name))
+        if (key.retain.invalid_numbers.has(key.name))
             intf.error('Nombre invalide (décimales ?)');
 
         return intf;
@@ -380,11 +380,11 @@ function FormBuilder(state, model) {
         // Hack to accept incomplete values, mainly in the case of a '-' being typed first,
         // in which case we don't want to clear the field immediately.
         if (e.target.validity && !e.target.validity.valid) {
-            key.meta.invalid_numbers.add(key.name);
+            key.retain.invalid_numbers.add(key.name);
             self.restart();
             return;
         }
-        if (key.meta.invalid_numbers.delete(key.name))
+        if (key.retain.invalid_numbers.delete(key.name))
             self.restart();
 
         let value = parseFloat(e.target.value);
@@ -1129,7 +1129,7 @@ function FormBuilder(state, model) {
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
                    @input=${e => handleFileInput(e, key)}
-                   ${set_files(key.meta.file_lists.get(key.name))} />
+                   ${set_files(key.retain.file_lists.get(key.name))} />
         `);
 
         let intf = makeWidget('file', makeID(key), label, render, options);
@@ -1143,7 +1143,7 @@ function FormBuilder(state, model) {
         if (!isModifiable(key))
             return;
 
-        key.meta.file_lists.set(key.name, e.target.files);
+        key.retain.file_lists.set(key.name, e.target.files);
         updateValue(key, e.target.files[0] || undefined);
     }
 
@@ -1701,20 +1701,19 @@ instead of:
             throw new Error('Invalid key name, must be string or number');
         }
 
-        let meta = state.meta_map.get(ptr);
+        let retain = state.retain_map.get(ptr);
         let variables = intf_map.get(ptr);
 
         // Prepare state objects
-        if (meta == null) {
-            meta = {
+        if (retain == null) {
+            retain = {
                 file_lists: new Map,
                 invalid_numbers: new Set,
                 take_delayed: new Set,
                 follow_default: new Set,
                 just_changed: new Set
             };
-
-            state.meta_map.set(ptr, meta);
+            state.retain_map.set(ptr, retain);
         }
         if (variables == null) {
             variables = new Map;
@@ -1724,7 +1723,7 @@ instead of:
         key = {
             root: root,
             ptr: ptr,
-            meta: meta,
+            retain: retain,
             variables: variables,
             name: name,
             toString: () => name
@@ -1863,17 +1862,17 @@ instead of:
         if (key.variables.has(key.name))
             throw new Error(`Variable '${key}' already exists`);
 
-        key.meta.just_changed.delete(key.name);
+        key.retain.just_changed.delete(key.name);
 
         Object.assign(intf, {
             key: key,
             value: value,
 
             missing: !intf.options.disabled && value == null,
-            changed: key.meta.just_changed.has(key.name),
+            changed: key.retain.just_changed.has(key.name),
 
             error: (msg, delay = false) => {
-                if (!delay || key.meta.take_delayed.has(key.name)) {
+                if (!delay || key.retain.take_delayed.has(key.name)) {
                     msg = msg || '';
 
                     intf.errors.push(msg);
@@ -1982,10 +1981,10 @@ instead of:
             let value = normalizeValue(func, options.value);
 
             ptr[key.name] = value;
-            key.meta.follow_default.add(key.name);
+            key.retain.follow_default.add(key.name);
 
             return value;
-        } else if (options.value != null && key.meta.follow_default.has(key.name)) {
+        } else if (options.value != null && key.retain.follow_default.has(key.name)) {
             let value = normalizeValue(func, options.value);
 
             ptr[key.name] = value;
@@ -2015,9 +2014,9 @@ instead of:
             return;
         ptr[key.name] = value;
 
-        key.meta.take_delayed.delete(key.name);
-        key.meta.follow_default.delete(key.name);
-        key.meta.just_changed.add(key.name);
+        key.retain.take_delayed.delete(key.name);
+        key.retain.follow_default.delete(key.name);
+        key.retain.just_changed.add(key.name);
 
         if (refresh) {
             state.markInteraction();
