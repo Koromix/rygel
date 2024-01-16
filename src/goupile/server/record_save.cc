@@ -30,7 +30,6 @@ struct RecordFragment {
     char eid[27] = {};
     const char *store = nullptr;
     int64_t anchor = -1;
-    int64_t mtime = -1;
     bool has_data = false;
     Span<const char> data = {};
     Span<const char> meta = {};
@@ -177,8 +176,6 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             parser.ParseString(&fragment.store);
                         } else if (key == "anchor") {
                             parser.ParseInt(&fragment.anchor);
-                        } else if (key == "mtime") {
-                            parser.ParseInt(&fragment.mtime);
                         } else if (key == "data") {
                             switch (parser.PeekToken()) {
                                 case json_TokenType::Null: {
@@ -285,7 +282,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                 LogError("Missing or empty 'tid' value");
                 valid = false;
             }
-            if (fragment.fs < 0 || !fragment.eid[0] || !fragment.store || fragment.mtime < 0 || !fragment.has_data) {
+            if (fragment.fs < 0 || !fragment.eid[0] || !fragment.store || !fragment.has_data) {
                 LogError("Missing fragment fields");
                 valid = false;
             }
@@ -297,6 +294,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         }
 
         bool success = instance->db->Transaction([&]() {
+            int64_t now = GetUnixTime();
+
             // Get existing entry and check for lock or mismatch
             int64_t prev_anchor;
             {
@@ -414,7 +413,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
                                               RETURNING anchor)",
                                               &stmt, prev_anchor > 0 ? sq_Binding(prev_anchor) : sq_Binding(), tid,
-                                              fragment.eid, session->userid, session->username, fragment.mtime, fragment.fs,
+                                              fragment.eid, session->userid, session->username, now, fragment.fs,
                                               fragment.data, fragment.meta, TagsToJson(fragment.tags, &io->allocator)))
                     return false;
                 if (!stmt.GetSingleValue(&new_anchor))
@@ -435,7 +434,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                                                                         meta = excluded.meta,
                                                                         tags = excluded.tags
                                               RETURNING rowid)",
-                                           &stmt, tid, fragment.eid, new_anchor, fragment.mtime, fragment.store,
+                                           &stmt, tid, fragment.eid, new_anchor, now, fragment.store,
                                            0 + !fragment.data.len, fragment.data, fragment.meta,
                                            TagsToJson(fragment.tags, &io->allocator)))
                     return false;

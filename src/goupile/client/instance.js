@@ -1779,7 +1779,6 @@ async function saveRecord() {
                 eid: form_entry.eid,
                 store: form_entry.store,
                 anchor: form_entry.anchor,
-                mtime: (new Date).valueOf(),
                 data: data,
                 meta: form_data.exportNotes(),
                 tags: tags,
