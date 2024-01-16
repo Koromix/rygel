@@ -16,8 +16,6 @@ function MetaModel() {
 }
 
 function MetaInterface(data, model) {
-    let constraints = [];
-
     this.constrain = function(key, types) {
         if (key.startsWith('__'))
             throw new Error('Keys must not start with \'__\'');
