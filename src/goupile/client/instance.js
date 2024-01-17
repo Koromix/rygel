@@ -29,8 +29,8 @@ import './instance.css';
 
 let app = null;
 
-// Explicit mutex to serialize (global) state-changing functions
-let mutex = new Mutex;
+// Explicit mutexes to serialize (global) state-changing functions
+let data_mutex = new Mutex;
 
 let route = {
     tid: null,
@@ -179,10 +179,8 @@ function hasUnsavedData() {
 }
 
 async function runTasks(online) {
-    await mutex.run(async() => {
-        if (profile.develop)
-            await uploadFsChanges();
-    });
+    if (profile.develop)
+        await uploadFsChanges();
 }
 
 function renderMenu() {
@@ -643,7 +641,7 @@ function renderData() {
 function runDeleteRecordDialog(e, row) {
     return UI.confirm(e, `Voulez-vous vraiment supprimer l'enregistrement '${row.sequence}' ?`,
                          'Supprimer', async () => {
-        await mutex.run(async () => {
+        await data_mutex.run(async () => {
             await records.delete(row.tid);
 
             data_threads = null;
@@ -814,7 +812,7 @@ function addAutomaticActions(builder, model) {
             if (!force)
                 form_builder.triggerErrors();
 
-            await mutex.run(async () => {
+            await data_mutex.run(async () => {
                 await saveRecord(form_thread.tid, form_entry, form_data, form_meta.constraints);
                 await openRecord(form_thread.tid, null, route.page);
                 data_threads = null;
@@ -837,7 +835,7 @@ function addAutomaticActions(builder, model) {
                     await records.unlock(form_thread.tid);
                 }
 
-                await mutex.run(async () => { 
+                await data_mutex.run(async () => { 
                     await openRecord(form_thread.tid, null, route.page);
                     data_threads = null;
                 });
@@ -852,7 +850,7 @@ function addAutomaticActions(builder, model) {
                 await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                        'Oublier', () => {});
 
-                await mutex.run(async () => { 
+                await data_mutex.run(async () => { 
                     await openRecord(route.tid, route.anchor, route.page);
                 });
 
@@ -1019,45 +1017,43 @@ async function handleFileChange(filename) {
     run();
 }
 
-async function uploadFsChanges() {
-    await mutex.run(async () => {
-        let progress = Log.progress('Envoi des modifications');
+const uploadFsChanges = Util.serialize(async function () {
+    let progress = Log.progress('Envoi des modifications');
 
-        try {
-            let db = await goupile.openLocalDB();
+    try {
+        let db = await goupile.openLocalDB();
 
-            let range = IDBKeyRange.bound(profile.userid + '/',
-                                          profile.userid + '`', false, true);
-            let changes = await db.loadAll('changes', range);
+        let range = IDBKeyRange.bound(profile.userid + '/',
+                                      profile.userid + '`', false, true);
+        let changes = await db.loadAll('changes', range);
 
-            for (let file of changes) {
-                let url = Util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
+        for (let file of changes) {
+            let url = Util.pasteURL(`${ENV.urls.base}files/${file.filename}`, { sha256: file.sha256 });
 
-                let response = await Net.fetch(url, {
-                    method: 'PUT',
-                    body: file.blob,
-                    timeout: null
-                });
-                if (!response.ok && response.status !== 409) {
-                    let err = await Net.readError(response);
-                    throw new Error(err)
-                }
-
-                let key = `${profile.userid}/${file.filename}`;
-                await db.delete('changes', key);
+            let response = await Net.fetch(url, {
+                method: 'PUT',
+                body: file.blob,
+                timeout: null
+            });
+            if (!response.ok && response.status !== 409) {
+                let err = await Net.readError(response);
+                throw new Error(err)
             }
 
-            progress.close();
-        } catch (err) {
-            progress.close();
-            Log.error(err);
+            let key = `${profile.userid}/${file.filename}`;
+            await db.delete('changes', key);
         }
 
-        if (fs_timer != null)
-            clearTimeout(fs_timer);
-        fs_timer = null;
-    });
-}
+        progress.close();
+    } catch (err) {
+        progress.close();
+        Log.error(err);
+    }
+
+    if (fs_timer != null)
+        clearTimeout(fs_timer);
+    fs_timer = null;
+});
 
 function syncFormScroll() {
     if (!UI.isPanelActive('editor') || !UI.isPanelActive('view'))
@@ -1240,9 +1236,9 @@ async function runPublishDialog(e) {
 }
 
 async function go(e, url = null, options = {}) {
-    await mutex.run(async () => {
-        options = Object.assign({ push_history: true }, options);
+    options = Object.assign({ push_history: true }, options);
 
+    await data_mutex.run(async () => {
         let new_route = Object.assign({}, route);
         let explicit_panels = false;
 
@@ -1349,7 +1345,7 @@ async function go(e, url = null, options = {}) {
 
                     // If we're popping state, this will fuck up navigation history but we can't
                     // refuse popstate events. History mess is better than data loss.
-                    await mutex.chain(run);
+                    options.push_history = false;
                     return;
                 }
             }
@@ -1371,9 +1367,9 @@ async function go(e, url = null, options = {}) {
                 UI.togglePanel('view', true);
             }
         }
-
-        await mutex.chain(() => run(options.push_history));
     });
+
+    await run(options.push_history);
 }
 
 function contextualizeURL(url, thread) {
@@ -1388,9 +1384,9 @@ function contextualizeURL(url, thread) {
 }
 
 async function run(push_history = true) {
-    await mutex.run(async () => {
-        let filename = route.page.filename;
+    let filename = route.page.filename;
 
+    await data_mutex.run(async () => {
         // Fetch and build page code for page panel
         {
             let buffer = await fetchCode(filename);
@@ -1476,25 +1472,25 @@ async function run(push_history = true) {
                 return col;
             });
         }
-
-        // Update URL and title
-        {
-            let url = contextualizeURL(route.page.url, form_thread);
-            let panels = UI.getPanels().join('|');
-
-            if (!profile.develop && panels == 'view')
-                panels = null;
-
-            url = Util.pasteURL(url, { p: panels });
-            goupile.syncHistory(url, push_history);
-
-            document.title = `${route.page.title} — ${ENV.title}`;
-        }
-
-        // Don't mess with the editor when render accidently triggers a scroll event!
-        ignore_page_scroll = performance.now();
-        UI.draw();
     });
+
+    // Update URL and title
+    {
+        let url = contextualizeURL(route.page.url, form_thread);
+        let panels = UI.getPanels().join('|');
+
+        if (!profile.develop && panels == 'view')
+            panels = null;
+
+        url = Util.pasteURL(url, { p: panels });
+        goupile.syncHistory(url, push_history);
+
+        document.title = `${route.page.title} — ${ENV.title}`;
+    }
+
+    // Don't mess with the editor when render accidently triggers a scroll event!
+    ignore_page_scroll = performance.now();
+    UI.draw();
 }
 
 async function fetchCode(filename) {
@@ -1642,7 +1638,7 @@ function throwScriptError(err) {
     throw new Error(msg);
 }
 
-// Call with mutex locked
+// Call with data_mutex locked
 async function openRecord(tid, anchor, page) {
     let new_thread = null;
     let new_entry = null;
@@ -1753,7 +1749,7 @@ function runAnnotationDialog(e, intf) {
     });
 }
 
-// Call with mutex locked
+// Call with data_mutex locked
 async function saveRecord(tid, entry, data, constraints) {
     entry = Object.assign({}, entry);
 
