@@ -1,5 +1,9 @@
 # Changelog
 
+## Goupile 3.2.3
+
+- Fix UI deadlock in develop mode
+
 ## Goupile 3.2.2
 
 - Fix support for repeated sections and notes
