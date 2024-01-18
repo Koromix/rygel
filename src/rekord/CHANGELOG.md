@@ -1,5 +1,9 @@
 # Changelog
 
+## Rekord 0.12
+
+- Combine repository ID and url to secure cache ID
+
 ## Rekord 0.11.1
 
 - Use case-insensitive test for rekord CLI output format name
