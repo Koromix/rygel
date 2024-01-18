@@ -240,11 +240,15 @@ function renderMenu() {
             ${show_menu && !menu_is_wide ? Util.map(route.menu.chain[0].children, item => {
                 if (item.children.length) {
                     let active = route.menu.chain.includes(item);
+                    let status = makeStatusText(item, form_thread);
 
                     return html`
                         <div id="ins_drop" class="drop">
                             <button title=${item.title} class=${active ? 'active' : ''}
-                                    @click=${UI.deployMenu}>${item.title}</button>
+                                    @click=${UI.deployMenu}>
+                                ${item.title}
+                                ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
+                            </button>
                             <div>${Util.map(item.children, item => renderDropItem(item))}</div>
                         </div>
                     `;
@@ -254,9 +258,14 @@ function renderMenu() {
             }) : ''}
             ${show_menu && menu_is_wide ? route.menu.chain.map(item => {
                 if (item.children.length) {
+                    let status = makeStatusText(item, form_thread);
+
                     return html`
                         <div id="ins_drop" class="drop">
-                            <button title=${item.title} @click=${UI.deployMenu}>${item.title}</button>
+                            <button title=${item.title} @click=${UI.deployMenu}>
+                                ${item.title}
+                                ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
+                            </button>
                             <div>${Util.map(item.children, child => renderDropItem(child))}</div>
                         </div>
                     `;
@@ -340,6 +349,57 @@ function isMenuWide(menu) {
     return false;
 }
 
+function renderDropItem(item) {
+    let active = route.menu.chain.includes(item);
+    let url = contextualizeURL(item.url, form_thread);
+    let status = makeStatusText(item, form_thread);
+
+    return html`
+        <button class=${active ? 'active' : ''}
+                @click=${UI.wrap(e => active ? togglePanels(null, true) : go(e, url))}>
+            <div style="flex: 1;">${item.title}</div>
+            ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
+       </button>
+    `;
+}
+
+function makeStatusText(item, thread) {
+    let status = computeStatus(item, thread);
+
+    if (status.complete) {
+        return '✓\uFE0E';
+    } else if (status.filled) {
+        let text = status.filled + '/' + status.total;
+        return html`${text}`;
+    } else {
+        return '';
+    }
+}
+
+function computeStatus(item, thread) {
+    if (item.children.length) {
+        let filled = item.children.reduce((acc, child) => acc + computeStatus(child, thread).complete, 0);
+
+        let status = {
+            filled: filled,
+            total: item.children.length,
+            complete: filled == item.children.length
+        };
+
+        return status;
+    } else {
+        let complete = (thread.entries[item.page.store]?.anchor >= 0);
+
+        let status = {
+            filled: 0 + complete,
+            total: 1,
+            complete: complete
+        };
+
+        return status;
+    }
+}
+
 async function generateExportKey(e) {
     let export_key = await Net.post(`${ENV.urls.instance}api/change/export_key`);
 
@@ -349,18 +409,6 @@ async function generateExportKey(e) {
             readonly: true
         });
     });
-}
-
-function renderDropItem(item) {
-    let active = route.menu.chain.includes(item);
-    let url = contextualizeURL(item.url, form_thread);
-
-    return html`
-        <button class=${active ? 'active' : ''}
-                @click=${UI.wrap(e => active ? togglePanels(null, true) : go(e, url))}>
-            <div style="flex: 1;">${item.title}</div>
-       </button>
-    `;
 }
 
 async function togglePanels(left, right) {
@@ -760,8 +808,10 @@ async function renderPage() {
     return html`
         <div class="print" @scroll=${syncEditorScroll}}>
             <div id="ins_page">
-                <div id="ins_menu">${show_menu ? Util.mapRange(1 - menu_is_wide, route.menu.chain.length,
-                                                               idx => renderPageMenu(route.menu.chain[idx])) : ''}</div>
+                <div id="ins_menu">
+                    ${show_menu ? Util.mapRange(1 - menu_is_wide, route.menu.chain.length,
+                                                idx => renderPageMenu(route.menu.chain[idx])) : ''}
+                </div>
 
                 <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
                     ${page_div}
@@ -906,20 +956,22 @@ function addAutomaticTags(variables) {
     }
 }
 
-function renderPageMenu(menu) {
-    if (!menu.children.length)
+function renderPageMenu(item) {
+    if (!item.children.length)
         return '';
 
     return html`
-        <h1>${menu.title}</h1>
+        <h1>${item.title}</h1>
         <ul>
-            ${Util.map(menu.children, item => {
+            ${Util.map(item.children, item => {
                 let active = route.menu.chain.includes(item);
                 let url = contextualizeURL(item.url, form_thread);
+                let status = makeStatusText(item, form_thread);
 
                 return html`
                     <li><a class=${active ? 'active' : ''} href=${url}>
                         <div style="flex: 1;">${item.title}</div>
+                        <span style="font-size: 0.9em;">${status}</span>
                     </a></li>
                 `;
             })}

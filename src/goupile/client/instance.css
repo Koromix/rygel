@@ -92,6 +92,7 @@ html.mobile #ins_drop > button { max-width: 200px; }
 #ins_menu li > * { padding: 0 5px; }
 #ins_menu ul a {
     display: flex;
+    align-items: center;
     flex: 1;
     margin-left: 3px;
     padding: 1px calc(5px + var(--widget_rounding) / 4);
@@ -185,6 +186,17 @@ html:not(.small) #ui_panels > div:not(:only-child) #ins_tasks {
 html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
 
 /* -------------------- Misc -------------------- */
+
+.ins_status {
+    display: inline-block;
+    margin-top: 2px;
+    padding: 0px 4px 1px 4px;
+    border-radius: 4px;
+    background: white;
+    color: black;
+    font-size: 0.8em;
+    white-space: nowrap;
+}
 
 #ins_develop {
     display: block;
