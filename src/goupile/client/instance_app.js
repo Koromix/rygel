@@ -180,13 +180,16 @@ function ApplicationBuilder(app) {
                 self.page(key, func || title);
             }
 
-            if (prev_menu != null && current_menu.children.length) {
-                if (current_menu.children.length > 1) {
-                    prev_menu.children.push(current_menu);
+            if (prev_menu != null) {
+                let simplify = (current_menu.children.length == 1) &&
+                               (typeof func != 'function');
+
+                if (simplify) {
+                    let child0 = current_menu.children[0];
+                    child0.chain.splice(child0.chain.length - 2, 1);
+                    prev_menu.children.push(child0);
                 } else {
-                    let item0 = current_menu.children[0];
-                    item0.chain.splice(item0.chain.length - 2, 1);
-                    prev_menu.children.push(item0);
+                    prev_menu.children.push(current_menu);
                 }
             }
 
