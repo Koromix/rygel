@@ -186,22 +186,6 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
 
 /* -------------------- Misc -------------------- */
 
-html.mobile #ui_top .ins_hid { display: none; }
-.ins_hid > .historical {
-    font-size: 0.5em;
-    padding: 1px 3px;
-    border-radius: 2px;
-    background: #db0a0a;
-}
-
-.ins_note {
-    padding: 0px 2px;
-    border-radius: 2px;
-    font-size: 0.6em;
-    background: red;
-    color: white;
-}
-
 #ins_develop {
     display: block;
     position: sticky;
