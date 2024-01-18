@@ -222,8 +222,9 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
     #ins_develop:hover { filter: opacity(20%); }
 }
 
-#ins_data td:not(.active).saved a { color: #21936e; }
-#ins_data td.saved a::before {
+#ins_data td:not(.active).partial a { color: #21936e; }
+#ins_data td:not(.active).complete a { color: #21936e; }
+#ins_data td.complete a::before {
     padding-right: 8px;
     font-size: 0.9em;
     font-weight: bold;

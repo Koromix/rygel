@@ -39,7 +39,6 @@ function ApplicationBuilder(app) {
 
     let current_menu = null;
     let current_store = null;
-    let used_stores = new Set;
 
     let options_stack = [
         {
@@ -109,12 +108,11 @@ function ApplicationBuilder(app) {
             chain: null,
             children: [],
 
+            store: page.store,
             page: page
         };
 
         app.pages.push(page);
-        if (current_store != null)
-            used_stores.add(current_store);
 
         if (current_menu != null) {
             item.chain = [...current_menu.chain, item];
@@ -152,10 +150,12 @@ function ApplicationBuilder(app) {
         try {
             options_stack = [expandOptions(options)];
 
-            let store = {
+            current_store = {
                 key: key,
                 title: title,
-                url: null
+                url: null,
+
+                menu: null
             };
 
             current_menu = {
@@ -166,12 +166,11 @@ function ApplicationBuilder(app) {
                 chain: (current_menu != null) ? current_menu.chain.slice() : [],
                 children: [],
 
+                store: current_store,
                 page: null
             };
 
-            app.stores.push(store);
-
-            current_store = store.key;
+            app.stores.push(current_store);
             current_menu.chain.push(current_menu);
 
             if (typeof func == 'function') {
@@ -187,17 +186,19 @@ function ApplicationBuilder(app) {
                 if (simplify) {
                     let child0 = current_menu.children[0];
                     child0.chain.splice(child0.chain.length - 2, 1);
+
                     prev_menu.children.push(child0);
+                    current_store.menu = child0;
                 } else {
                     prev_menu.children.push(current_menu);
+                    current_store.menu = current_menu;
                 }
+            } else {
+                current_store.menu = current_menu;
             }
 
-            store.url = current_menu.url;
+            current_store.url = current_menu.url;
         } finally {
-            if (!used_stores.has(current_store))
-                app.stores = app.stores.filter(store => store.key != current_store);
-
             current_menu = prev_menu;
             current_store = prev_store;
             options_stack = prev_options;

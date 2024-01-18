@@ -184,8 +184,9 @@ async function runTasks(online) {
 }
 
 function renderMenu() {
-    let show_menu = (profile.lock == null && (route.menu.chain.length > 2 || route.menu.chain[0].children.length > 1));
-    let menu_is_wide = isMenuWide(route.menu);
+    let show_menu = (profile.lock == null && (route.page.menu.chain.length > 2 ||
+                                              route.page.menu.chain[0].children.length > 1));
+    let menu_is_wide = isMenuWide(route.page.menu);
     let show_title = !show_menu;
 
     if (!UI.isPanelActive('editor') && !UI.isPanelActive('view'))
@@ -237,9 +238,9 @@ function renderMenu() {
             ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
 
-            ${show_menu && !menu_is_wide ? Util.map(route.menu.chain[0].children, item => {
+            ${show_menu && !menu_is_wide ? Util.map(route.page.menu.chain[0].children, item => {
                 if (item.children.length) {
-                    let active = route.menu.chain.includes(item);
+                    let active = route.page.menu.chain.includes(item);
                     let status = makeStatusText(item, form_thread);
 
                     return html`
@@ -256,7 +257,7 @@ function renderMenu() {
                     return renderDropItem(item);
                 }
             }) : ''}
-            ${show_menu && menu_is_wide ? route.menu.chain.map(item => {
+            ${show_menu && menu_is_wide ? route.page.menu.chain.map(item => {
                 if (item.children.length) {
                     let status = makeStatusText(item, form_thread);
 
@@ -350,7 +351,7 @@ function isMenuWide(menu) {
 }
 
 function renderDropItem(item) {
-    let active = route.menu.chain.includes(item);
+    let active = route.page.menu.chain.includes(item);
     let url = contextualizeURL(item.url, form_thread);
     let status = makeStatusText(item, form_thread);
 
@@ -364,7 +365,7 @@ function renderDropItem(item) {
 }
 
 function makeStatusText(item, thread) {
-    let status = computeStatus(item, thread);
+    let status = computeStatus(item, thread, false);
 
     if (status.complete) {
         return '✓\uFE0E';
@@ -376,19 +377,24 @@ function makeStatusText(item, thread) {
     }
 }
 
-function computeStatus(item, thread) {
+function computeStatus(item, thread, recurse) {
     if (item.children.length) {
-        let filled = item.children.reduce((acc, child) => acc + computeStatus(child, thread).complete, 0);
-
         let status = {
-            filled: filled,
-            total: item.children.length,
-            complete: filled == item.children.length
+            filled: 0,
+            total: 0,
+            complete: false
         };
+
+        for (let child of item.children) {
+            let ret = computeStatus(child, thread, recurse);
+            status.filled += recurse ? ret.filled : ret.complete;
+            status.total += recurse ? ret.total : 1;
+        }
+        status.complete = (status.filled == status.total);
 
         return status;
     } else {
-        let complete = (thread.entries[item.page.store]?.anchor >= 0);
+        let complete = (thread.entries[item.page.store?.key]?.anchor >= 0);
 
         let status = {
             filled: 0 + complete,
@@ -628,11 +634,11 @@ function renderData() {
                         <th>Création</th>
                         ${data_columns.map(col => {
                             let stats = `${col.count} / ${data_rows.length}`;
-                            let title = `${col.title}\nDisponible : ${stats} ${data_rows.length > 1 ? 'lignes' : 'ligne'}`;
+                            let title = `${col.item.title}\nDisponible : ${stats} ${data_rows.length > 1 ? 'lignes' : 'ligne'}`;
 
                             return html`
                                 <th title=${title}>
-                                    ${col.title}<br/>
+                                    ${col.item.title}<br/>
                                     <span style="font-size: 0.7em; font-weight: normal;">${stats}</span>
                                 </th>
                             `;
@@ -650,27 +656,19 @@ function renderData() {
                                 <td class=${cls} title=${row.sequence}>${row.sequence != null ? row.sequence : 'NA'}</td>
                                 <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
                                 ${data_columns.map(col => {
-                                    let entry = row.entries[col.store];
-                                    let url = col.url + `/${row.tid}`;
+                                    let status = computeStatus(col.item, row, true);
+                                    let url = col.item.url + `/${row.tid}`;
+                                    let highlight = active && route.page.menu.chain.includes(col.item);
 
-                                    if (entry != null) {
-                                        let tags = app.tags.filter(tag => entry.tags.includes(tag.key));
-
-                                        let tooltip = 'Créé : ' + entry.ctime.toLocaleString() +
-                                                      (entry.mtime.getTime() != entry.ctime.getTime() ? '\nModifié : ' + entry.mtime.toLocaleString() : '');
-
-                                        if (tags.length)
-                                            tooltip += '\n\nTags : ' + tags.map(tag => tag.label).join(', ');
-
-                                        return html`
-                                            <td class=${active && route.page.key == col.store ? 'saved active' : 'saved'} title=${tooltip}>
-                                                <a href=${url}>${entry.mtime.toLocaleDateString()}</a>
-                                                ${tags.map(tag => html` <span style=${'color: ' + tag.color + ';'}>⏺\uFE0E</span>`)}
-                                            </td>
-                                        `;
+                                    if (status.complete) {
+                                        return html`<td class=${highlight ? 'complete active' : 'complete'}
+                                                        title=${col.item.title}><a href=${url}>Complet</a></td>`;
+                                    } else if (status.filled) {
+                                        return html`<td class=${highlight ? 'partial active' : 'partial'}
+                                                        title=${col.item.title}><a href=${url}>${status.filled} / ${status.total}</a></td>`;
                                     } else {
-                                        return html`<td class=${active && route.page.key == col.store ? 'missing active' : 'missing'}
-                                                        title=${col.title}><a href=${url}>Afficher</a></td>`;
+                                        return html`<td class=${highlight ? 'missing active' : 'missing'}
+                                                        title=${col.item.title}><a href=${url}>Afficher</a></td>`;
                                     }
                                 })}
                                 ${row.locked ? html`<th>🔒</th>` : ''}
@@ -796,8 +794,9 @@ async function renderPage() {
             error_entries.page.error(err, profile.develop ? -1 : Log.defaultTimeout);
     }
 
-    let show_menu = (profile.lock == null && (route.menu.chain.length > 2 || route.menu.chain[0].children.length > 1));
-    let menu_is_wide = isMenuWide(route.menu);
+    let show_menu = (profile.lock == null && (route.page.menu.chain.length > 2 ||
+                                              route.page.menu.chain[0].children.length > 1));
+    let menu_is_wide = isMenuWide(route.page.menu);
 
     // Quick access to page sections
     let page_sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
@@ -809,8 +808,8 @@ async function renderPage() {
         <div class="print" @scroll=${syncEditorScroll}}>
             <div id="ins_page">
                 <div id="ins_menu">
-                    ${show_menu ? Util.mapRange(1 - menu_is_wide, route.menu.chain.length,
-                                                idx => renderPageMenu(route.menu.chain[idx])) : ''}
+                    ${show_menu ? Util.mapRange(1 - menu_is_wide, route.page.menu.chain.length,
+                                                idx => renderPageMenu(route.page.menu.chain[idx])) : ''}
                 </div>
 
                 <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
@@ -964,7 +963,7 @@ function renderPageMenu(item) {
         <h1>${item.title}</h1>
         <ul>
             ${Util.map(item.children, item => {
-                let active = route.menu.chain.includes(item);
+                let active = route.page.menu.chain.includes(item);
                 let url = contextualizeURL(item.url, form_thread);
                 let status = makeStatusText(item, form_thread);
 
@@ -1337,7 +1336,6 @@ async function go(e, url = null, options = {}) {
                 Log.error(`La page '${key}' n'existe pas`);
                 new_route.page = app.homepage;
             }
-            new_route.menu = new_route.page.menu;
 
             let [tid, anchor] = what ? what.split('@') : [null, null];
 
@@ -1523,19 +1521,21 @@ async function run(push_history = true) {
             }
 
             data_rows = data_threads;
+            data_columns = [];
+
             if (data_tags != null)
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
-            data_columns = app.stores.map(store => {
+            for (let item of app.stores[0].menu.children) {
+                let store = item.store;
+
                 let col = {
-                    store: store.key,
-                    title: store.title,
-                    url: store.url,
+                    item: item,
                     count: data_rows.reduce((acc, row) => acc + (row.entries[store.key] != null), 0)
                 };
 
-                return col;
-            });
+                data_columns.push(col);
+            }
         }
     });
 
@@ -1724,13 +1724,13 @@ async function openRecord(tid, anchor, page) {
 
     // Initialize entry data
     if (page.store != null) {
-        new_entry = new_thread.entries[page.store];
+        new_entry = new_thread.entries[page.store.key];
 
         if (new_entry == null) {
             let now = (new Date).valueOf();
 
             new_entry = {
-                store: page.store,
+                store: page.store.key,
                 eid: Util.makeULID(),
                 deleted: false,
                 anchor: -1,
@@ -1740,7 +1740,7 @@ async function openRecord(tid, anchor, page) {
                 tags: []
             };
 
-            new_thread.entries[page.store] = new_entry;
+            new_thread.entries[page.store.key] = new_entry;
         }
 
         new_data = new MagicData(new_entry.data, new_entry.meta);
@@ -1780,7 +1780,6 @@ async function openRecord(tid, anchor, page) {
     route.tid = tid;
     route.anchor = anchor;
     route.page = page;
-    route.menu = page.menu;
 }
 
 function runAnnotationDialog(e, intf) {
