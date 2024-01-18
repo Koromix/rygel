@@ -185,8 +185,8 @@ async function runTasks(online) {
 
 function renderMenu() {
     let show_menu = (profile.lock == null && (route.menu.chain.length > 2 || route.menu.chain[0].children.length > 1));
+    let menu_is_wide = isMenuWide(route.menu);
     let show_title = !show_menu;
-    let menu_is_wide = (show_menu && route.menu.chain[0].children.length > 3);
 
     if (!UI.isPanelActive('editor') && !UI.isPanelActive('view'))
         show_menu = false;
@@ -325,6 +325,19 @@ function renderMenu() {
                              style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
         </nav>
     `;
+}
+
+function isMenuWide(menu) {
+    let root = menu.chain[0];
+
+    if (root.children.length > 3)
+        return true;
+    for (let child of root.children) {
+        if (child.children.length)
+            return true;
+    }
+
+    return false;
 }
 
 async function generateExportKey(e) {
@@ -736,7 +749,7 @@ async function renderPage() {
     }
 
     let show_menu = (profile.lock == null && (route.menu.chain.length > 2 || route.menu.chain[0].children.length > 1));
-    let menu_is_wide = (show_menu && route.menu.chain[0].children.length > 3);
+    let menu_is_wide = isMenuWide(route.menu);
 
     // Quick access to page sections
     let page_sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
