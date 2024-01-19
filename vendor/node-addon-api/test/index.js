@@ -60,6 +60,7 @@ function loadTestModules (currentDirectory = __dirname, pre = '') {
           file === 'binding.gyp' ||
           file === 'build' ||
           file === 'common' ||
+          file === 'child_processes' ||
           file === 'napi_child.js' ||
           file === 'testUtil.js' ||
           file === 'thunking_manual.cc' ||
@@ -135,6 +136,10 @@ if (majorNodeVersion < 12 && !filterConditionsProvided) {
 if (napiVersion < 8 && !filterConditionsProvided) {
   testModules.splice(testModules.indexOf('object/object_freeze_seal'), 1);
   testModules.splice(testModules.indexOf('type_taggable'), 1);
+}
+
+if (napiVersion < 9 && !filterConditionsProvided) {
+  testModules.splice(testModules.indexOf('env_misc'), 1);
 }
 
 (async function () {

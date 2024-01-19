@@ -26,6 +26,7 @@
         'dataview/dataview.cc',
         'dataview/dataview_read_write.cc',
         'env_cleanup.cc',
+        'env_misc.cc',
         'error.cc',
         'error_handling_for_primitives.cc',
         'external.cc',
@@ -54,6 +55,7 @@
         'run_script.cc',
         'symbol.cc',
         'threadsafe_function/threadsafe_function_ctx.cc',
+        'threadsafe_function/threadsafe_function_exception.cc',
         'threadsafe_function/threadsafe_function_existing_tsfn.cc',
         'threadsafe_function/threadsafe_function_ptr.cc',
         'threadsafe_function/threadsafe_function_sum.cc',
@@ -61,6 +63,7 @@
         'threadsafe_function/threadsafe_function.cc',
         'type_taggable.cc',
         'typed_threadsafe_function/typed_threadsafe_function_ctx.cc',
+        'typed_threadsafe_function/typed_threadsafe_function_exception.cc',
         'typed_threadsafe_function/typed_threadsafe_function_existing_tsfn.cc',
         'typed_threadsafe_function/typed_threadsafe_function_ptr.cc',
         'typed_threadsafe_function/typed_threadsafe_function_sum.cc',
@@ -94,41 +97,40 @@
   'targets': [
     {
       'target_name': 'binding',
-      'includes': ['../except.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api_except'],
       'sources': ['>@(build_sources)']
     },
     {
       'target_name': 'binding_noexcept',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api'],
       'sources': ['>@(build_sources)']
     },
     {
       'target_name': 'binding_noexcept_maybe',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api_maybe'],
       'sources': ['>@(build_sources)'],
-      'defines': ['NODE_ADDON_API_ENABLE_MAYBE']
     },
     {
       'target_name': 'binding_swallowexcept',
-      'includes': ['../except.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api_except'],
       'sources': [ '>@(build_sources_swallowexcept)'],
       'defines': ['NODE_API_SWALLOW_UNTHROWABLE_EXCEPTIONS']
     },
     {
       'target_name': 'binding_swallowexcept_noexcept',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api'],
       'sources': ['>@(build_sources_swallowexcept)'],
       'defines': ['NODE_API_SWALLOW_UNTHROWABLE_EXCEPTIONS']
     },
     {
       'target_name': 'binding_type_check',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api'],
       'sources': ['>@(build_sources_type_check)'],
       'defines': ['NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS']
     },
     {
       'target_name': 'binding_custom_namespace',
-      'includes': ['../noexcept.gypi'],
+      'dependencies': ['../node_addon_api.gyp:node_addon_api'],
       'sources': ['>@(build_sources)'],
       'defines': ['NAPI_CPP_CUSTOM_NAMESPACE=cstm']
     },

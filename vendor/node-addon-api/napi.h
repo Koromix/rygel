@@ -367,6 +367,10 @@ class Env {
     } * data;
   };
 #endif  // NAPI_VERSION > 2
+
+#if NAPI_VERSION > 8
+  const char* GetModuleFileName() const;
+#endif  // NAPI_VERSION > 8
 };
 
 /// A JavaScript value of unknown type.
@@ -1531,11 +1535,6 @@ class Buffer : public Uint8Array {
   T* Data() const;
 
  private:
-  mutable size_t _length;
-  mutable T* _data;
-
-  Buffer(napi_env env, napi_value value, size_t length, T* data);
-  void EnsureInfo() const;
 };
 
 /// Holds a counted reference to a value; initially a weak reference unless
@@ -1852,6 +1851,17 @@ class RangeError : public Error {
   RangeError();
   RangeError(napi_env env, napi_value value);
 };
+
+#if NAPI_VERSION > 8
+class SyntaxError : public Error {
+ public:
+  static SyntaxError New(napi_env env, const char* message);
+  static SyntaxError New(napi_env env, const std::string& message);
+
+  SyntaxError();
+  SyntaxError(napi_env env, napi_value value);
+};
+#endif  // NAPI_VERSION > 8
 
 class CallbackInfo {
  public:

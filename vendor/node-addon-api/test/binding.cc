@@ -50,12 +50,14 @@ Object InitPromise(Env env);
 Object InitRunScript(Env env);
 #if (NAPI_VERSION > 3)
 Object InitThreadSafeFunctionCtx(Env env);
+Object InitThreadSafeFunctionException(Env env);
 Object InitThreadSafeFunctionExistingTsfn(Env env);
 Object InitThreadSafeFunctionPtr(Env env);
 Object InitThreadSafeFunctionSum(Env env);
 Object InitThreadSafeFunctionUnref(Env env);
 Object InitThreadSafeFunction(Env env);
 Object InitTypedThreadSafeFunctionCtx(Env env);
+Object InitTypedThreadSafeFunctionException(Env env);
 Object InitTypedThreadSafeFunctionExistingTsfn(Env env);
 Object InitTypedThreadSafeFunctionPtr(Env env);
 Object InitTypedThreadSafeFunctionSum(Env env);
@@ -78,7 +80,9 @@ Object InitThunkingManual(Env env);
 Object InitObjectFreezeSeal(Env env);
 Object InitTypeTaggable(Env env);
 #endif
-
+#if (NAPI_VERSION > 8)
+Object InitEnvMiscellaneous(Env env);
+#endif
 #if defined(NODE_ADDON_API_ENABLE_MAYBE)
 Object InitMaybeCheck(Env env);
 #endif
@@ -137,6 +141,8 @@ Object Init(Env env, Object exports) {
   exports.Set("symbol", InitSymbol(env));
 #if (NAPI_VERSION > 3)
   exports.Set("threadsafe_function_ctx", InitThreadSafeFunctionCtx(env));
+  exports.Set("threadsafe_function_exception",
+              InitThreadSafeFunctionException(env));
   exports.Set("threadsafe_function_existing_tsfn",
               InitThreadSafeFunctionExistingTsfn(env));
   exports.Set("threadsafe_function_ptr", InitThreadSafeFunctionPtr(env));
@@ -145,6 +151,8 @@ Object Init(Env env, Object exports) {
   exports.Set("threadsafe_function", InitThreadSafeFunction(env));
   exports.Set("typed_threadsafe_function_ctx",
               InitTypedThreadSafeFunctionCtx(env));
+  exports.Set("typed_threadsafe_function_exception",
+              InitTypedThreadSafeFunctionException(env));
   exports.Set("typed_threadsafe_function_existing_tsfn",
               InitTypedThreadSafeFunctionExistingTsfn(env));
   exports.Set("typed_threadsafe_function_ptr",
@@ -170,6 +178,9 @@ Object Init(Env env, Object exports) {
 #if (NAPI_VERSION > 7)
   exports.Set("object_freeze_seal", InitObjectFreezeSeal(env));
   exports.Set("type_taggable", InitTypeTaggable(env));
+#endif
+#if (NAPI_VERSION > 8)
+  exports.Set("env_misc", InitEnvMiscellaneous(env));
 #endif
 
 #if defined(NODE_ADDON_API_ENABLE_MAYBE)

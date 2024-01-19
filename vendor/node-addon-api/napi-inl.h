@@ -31,22 +31,22 @@ namespace details {
 // Node.js releases. Only necessary when they are used in napi.h and napi-inl.h.
 constexpr int napi_no_external_buffers_allowed = 22;
 
+template <typename FreeType>
+inline void default_finalizer(napi_env /*env*/, void* data, void* /*hint*/) {
+  delete static_cast<FreeType*>(data);
+}
+
 // Attach a data item to an object and delete it when the object gets
 // garbage-collected.
 // TODO: Replace this code with `napi_add_finalizer()` whenever it becomes
 // available on all supported versions of Node.js.
-template <typename FreeType>
+template <typename FreeType,
+          napi_finalize finalizer = default_finalizer<FreeType>>
 inline napi_status AttachData(napi_env env,
                               napi_value obj,
                               FreeType* data,
-                              napi_finalize finalizer = nullptr,
                               void* hint = nullptr) {
   napi_status status;
-  if (finalizer == nullptr) {
-    finalizer = [](napi_env /*env*/, void* data, void* /*hint*/) {
-      delete static_cast<FreeType*>(data);
-    };
-  }
 #if (NAPI_VERSION < 5)
   napi_value symbol, external;
   status = napi_create_symbol(env, nullptr, &symbol);
@@ -263,10 +263,12 @@ struct ThreadSafeFinalize {
 template <typename ContextType, typename DataType, typename CallJs, CallJs call>
 inline typename std::enable_if<call != static_cast<CallJs>(nullptr)>::type
 CallJsWrapper(napi_env env, napi_value jsCallback, void* context, void* data) {
-  call(env,
-       Function(env, jsCallback),
-       static_cast<ContextType*>(context),
-       static_cast<DataType*>(data));
+  details::WrapVoidCallback([&]() {
+    call(env,
+         Function(env, jsCallback),
+         static_cast<ContextType*>(context),
+         static_cast<DataType*>(data));
+  });
 }
 
 template <typename ContextType, typename DataType, typename CallJs, CallJs call>
@@ -275,9 +277,11 @@ CallJsWrapper(napi_env env,
               napi_value jsCallback,
               void* /*context*/,
               void* /*data*/) {
-  if (jsCallback != nullptr) {
-    Function(env, jsCallback).Call(0, nullptr);
-  }
+  details::WrapVoidCallback([&]() {
+    if (jsCallback != nullptr) {
+      Function(env, jsCallback).Call(0, nullptr);
+    }
+  });
 }
 
 #if NAPI_VERSION > 4
@@ -572,6 +576,14 @@ void Env::DefaultFiniWithHint(Env, DataType* data, HintType*) {
 }
 #endif  // NAPI_VERSION > 5
 
+#if NAPI_VERSION > 8
+inline const char* Env::GetModuleFileName() const {
+  const char* result;
+  napi_status status = node_api_get_module_file_name(_env, &result);
+  NAPI_THROW_IF_FAILED(*this, status, nullptr);
+  return result;
+}
+#endif  // NAPI_VERSION > 8
 ////////////////////////////////////////////////////////////////////////////////
 // Value class
 ////////////////////////////////////////////////////////////////////////////////
@@ -1624,11 +1636,8 @@ inline void Object::AddFinalizer(Finalizer finalizeCallback, T* data) const {
       new details::FinalizeData<T, Finalizer>(
           {std::move(finalizeCallback), nullptr});
   napi_status status =
-      details::AttachData(_env,
-                          *this,
-                          data,
-                          details::FinalizeData<T, Finalizer>::Wrapper,
-                          finalizeData);
+      details::AttachData<T, details::FinalizeData<T, Finalizer>::Wrapper>(
+          _env, *this, data, finalizeData);
   if (status != napi_ok) {
     delete finalizeData;
     NAPI_THROW_IF_FAILED_VOID(_env, status);
@@ -1642,12 +1651,9 @@ inline void Object::AddFinalizer(Finalizer finalizeCallback,
   details::FinalizeData<T, Finalizer, Hint>* finalizeData =
       new details::FinalizeData<T, Finalizer, Hint>(
           {std::move(finalizeCallback), finalizeHint});
-  napi_status status = details::AttachData(
-      _env,
-      *this,
-      data,
-      details::FinalizeData<T, Finalizer, Hint>::WrapperWithHint,
-      finalizeData);
+  napi_status status = details::
+      AttachData<T, details::FinalizeData<T, Finalizer, Hint>::WrapperWithHint>(
+          _env, *this, data, finalizeData);
   if (status != napi_ok) {
     delete finalizeData;
     NAPI_THROW_IF_FAILED_VOID(_env, status);
@@ -2623,7 +2629,7 @@ inline Buffer<T> Buffer<T>::New(napi_env env, size_t length) {
   napi_status status =
       napi_create_buffer(env, length * sizeof(T), &data, &value);
   NAPI_THROW_IF_FAILED(env, status, Buffer<T>());
-  return Buffer(env, value, length, static_cast<T*>(data));
+  return Buffer(env, value);
 }
 
 #ifndef NODE_API_NO_EXTERNAL_BUFFERS_ALLOWED
@@ -2633,7 +2639,7 @@ inline Buffer<T> Buffer<T>::New(napi_env env, T* data, size_t length) {
   napi_status status = napi_create_external_buffer(
       env, length * sizeof(T), data, nullptr, nullptr, &value);
   NAPI_THROW_IF_FAILED(env, status, Buffer<T>());
-  return Buffer(env, value, length, data);
+  return Buffer(env, value);
 }
 
 template <typename T>
@@ -2657,7 +2663,7 @@ inline Buffer<T> Buffer<T>::New(napi_env env,
     delete finalizeData;
     NAPI_THROW_IF_FAILED(env, status, Buffer());
   }
-  return Buffer(env, value, length, data);
+  return Buffer(env, value);
 }
 
 template <typename T>
@@ -2682,7 +2688,7 @@ inline Buffer<T> Buffer<T>::New(napi_env env,
     delete finalizeData;
     NAPI_THROW_IF_FAILED(env, status, Buffer());
   }
-  return Buffer(env, value, length, data);
+  return Buffer(env, value);
 }
 #endif  // NODE_API_NO_EXTERNAL_BUFFERS_ALLOWED
 
@@ -2699,7 +2705,7 @@ inline Buffer<T> Buffer<T>::NewOrCopy(napi_env env, T* data, size_t length) {
 #ifndef NODE_API_NO_EXTERNAL_BUFFERS_ALLOWED
   }
   NAPI_THROW_IF_FAILED(env, status, Buffer<T>());
-  return Buffer(env, value, length, data);
+  return Buffer(env, value);
 #endif  // NODE_API_NO_EXTERNAL_BUFFERS_ALLOWED
 }
 
@@ -2733,7 +2739,7 @@ inline Buffer<T> Buffer<T>::NewOrCopy(napi_env env,
     delete finalizeData;
     NAPI_THROW_IF_FAILED(env, status, Buffer());
   }
-  return Buffer(env, value, length, data);
+  return Buffer(env, value);
 #endif  // NODE_API_NO_EXTERNAL_BUFFERS_ALLOWED
 }
 
@@ -2769,7 +2775,7 @@ inline Buffer<T> Buffer<T>::NewOrCopy(napi_env env,
     delete finalizeData;
     NAPI_THROW_IF_FAILED(env, status, Buffer());
   }
-  return Buffer(env, value, length, data);
+  return Buffer(env, value);
 #endif
 }
 
@@ -2793,42 +2799,20 @@ inline void Buffer<T>::CheckCast(napi_env env, napi_value value) {
 }
 
 template <typename T>
-inline Buffer<T>::Buffer() : Uint8Array(), _length(0), _data(nullptr) {}
+inline Buffer<T>::Buffer() : Uint8Array() {}
 
 template <typename T>
 inline Buffer<T>::Buffer(napi_env env, napi_value value)
-    : Uint8Array(env, value), _length(0), _data(nullptr) {}
-
-template <typename T>
-inline Buffer<T>::Buffer(napi_env env, napi_value value, size_t length, T* data)
-    : Uint8Array(env, value), _length(length), _data(data) {}
+    : Uint8Array(env, value) {}
 
 template <typename T>
 inline size_t Buffer<T>::Length() const {
-  EnsureInfo();
-  return _length;
+  return ByteLength() / sizeof(T);
 }
 
 template <typename T>
 inline T* Buffer<T>::Data() const {
-  EnsureInfo();
-  return _data;
-}
-
-template <typename T>
-inline void Buffer<T>::EnsureInfo() const {
-  // The Buffer instance may have been constructed from a napi_value whose
-  // length/data are not yet known. Fetch and cache these values just once,
-  // since they can never change during the lifetime of the Buffer.
-  if (_data == nullptr) {
-    size_t byteLength;
-    void* voidData;
-    napi_status status =
-        napi_get_buffer_info(_env, _value, &voidData, &byteLength);
-    NAPI_THROW_IF_FAILED_VOID(_env, status);
-    _length = byteLength / sizeof(T);
-    _data = static_cast<T*>(voidData);
-  }
+  return reinterpret_cast<T*>(const_cast<uint8_t*>(Uint8Array::Data()));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -3156,6 +3140,23 @@ inline RangeError::RangeError() : Error() {}
 
 inline RangeError::RangeError(napi_env env, napi_value value)
     : Error(env, value) {}
+
+#if NAPI_VERSION > 8
+inline SyntaxError SyntaxError::New(napi_env env, const char* message) {
+  return Error::New<SyntaxError>(
+      env, message, std::strlen(message), node_api_create_syntax_error);
+}
+
+inline SyntaxError SyntaxError::New(napi_env env, const std::string& message) {
+  return Error::New<SyntaxError>(
+      env, message.c_str(), message.size(), node_api_create_syntax_error);
+}
+
+inline SyntaxError::SyntaxError() : Error() {}
+
+inline SyntaxError::SyntaxError(napi_env env, napi_value value)
+    : Error(env, value) {}
+#endif  // NAPI_VERSION > 8
 
 ////////////////////////////////////////////////////////////////////////////////
 // Reference<T> class
@@ -6110,13 +6111,15 @@ inline void ThreadSafeFunction::CallJS(napi_env env,
     return;
   }
 
-  if (data != nullptr) {
-    auto* callbackWrapper = static_cast<CallbackWrapper*>(data);
-    (*callbackWrapper)(env, Function(env, jsCallback));
-    delete callbackWrapper;
-  } else if (jsCallback != nullptr) {
-    Function(env, jsCallback).Call({});
-  }
+  details::WrapVoidCallback([&]() {
+    if (data != nullptr) {
+      auto* callbackWrapper = static_cast<CallbackWrapper*>(data);
+      (*callbackWrapper)(env, Function(env, jsCallback));
+      delete callbackWrapper;
+    } else if (jsCallback != nullptr) {
+      Function(env, jsCallback).Call({});
+    }
+  });
 }
 
 ////////////////////////////////////////////////////////////////////////////////
