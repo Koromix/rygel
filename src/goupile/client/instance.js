@@ -286,7 +286,7 @@ function renderMenu() {
 
             ${!goupile.isLocked() && profile.instances == null ?
                 html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                             @click=${e => go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
+                             @click=${UI.wrap(e => go(e, ENV.urls.instance))}>${ENV.title}</button>` : ''}
             ${!goupile.isLocked() && profile.instances != null ? html`
                 <div class="drop right" @click=${UI.deployMenu}>
                     <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
@@ -295,7 +295,7 @@ function renderMenu() {
                         ${profile.instances.slice().sort(Util.makeComparator(instance => instance.name))
                                            .map(instance =>
                             html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
-                                         @click=${e => go(e, instance.url)}>${instance.name}</button>`)}
+                                         @click=${UI.wrap(e => go(e, instance.url))}>${instance.name}</button>`)}
                     </div>
                 </div>
             ` : ''}

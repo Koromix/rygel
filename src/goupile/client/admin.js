@@ -46,7 +46,7 @@ function renderMenu() {
     return html`
         <nav class="ui_toolbar" id="ui_top" style="z-index: 999999;">
             <button class="icon" style="background-position-y: calc(-714px + 1.2em);"
-                    @click=${e => go(e, '/admin/')}>Admin</button>
+                    @click=${UI.wrap(e => go(e, '/admin/'))}>Admin</button>
             <button class=${'icon' + (UI.isPanelActive('instances') ? ' active' : '')}
                     style="background-position-y: calc(-362px + 1.2em);"
                     @click=${UI.wrap(e => togglePanel('instances'))}>Projets</button>
