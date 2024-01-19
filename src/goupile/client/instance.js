@@ -60,6 +60,9 @@ let code_buffers = new LruMap(32);
 let code_builds = new LruMap(4);
 let fs_timer = null;
 
+let error_entry = new Log.Entry;
+let error_map = new LruMap(8);
+
 let editor_el;
 let editor_ace;
 let editor_filename;
@@ -67,11 +70,6 @@ let editor_filename;
 let ignore_editor_change = false;
 let ignore_editor_scroll = 0;
 let ignore_page_scroll = 0;
-
-let error_entries = {
-    app: new Log.Entry,
-    page: new Log.Entry
-};
 
 async function init(fallback) {
     if (profile.develop) {
@@ -99,11 +97,9 @@ async function initApp(fallback) {
 
             new_app.homepage = new_app.pages[0];
             app = Util.deepFreeze(new_app);
-
-            error_entries.app.error(err, -1);
-        } else {
-            throw err;
         }
+
+        triggerError('main.js', err);
     }
 
     if (app.head != null) {
@@ -135,7 +131,7 @@ async function runMainScript() {
         if (!new_app.pages.length)
             throw new Error('Main script does not define any page');
 
-        error_entries.app.close();
+        triggerError('main.js', null);
         main_works = true;
     } catch (err) {
         main_works = false;
@@ -469,7 +465,8 @@ function renderEditor() {
                     <button ?disabled=${!main_works || !fileHasChanged('main.js')}
                             @click=${e => { window.location.href = window.location.href; }}>Appliquer</button>
                 ` : ''}
-                <button @click=${UI.wrap(runPublishDialog)}>Publier</button>
+                <button ?disabled=${!main_works || fileHasChanged('main.js')}
+                        @click=${UI.wrap(runPublishDialog)}>Publier</button>
             </div>
 
             ${editor_el}
@@ -555,7 +552,7 @@ async function runHistoryDialog(e, filename) {
             try {
                 await runMainScript();
             } catch (err) {
-                error_entries.app.error(err, -1);
+                triggerError('main.js', err);
             }
         }
         run();
@@ -845,14 +842,14 @@ async function renderPage() {
         form_builder = builder;
         form_meta = meta;
 
-        error_entries.page.close();
+        triggerError(route.page.filename, null);
     } catch (err) {
         if (!page_div.children.length)
             render('Impossible de générer la page à cause d\'une erreur', page_div);
         page_div.classList.add('disabled');
 
         if (err != null)
-            error_entries.page.error(err, profile.develop ? -1 : Log.defaultTimeout);
+            triggerError(route.page.filename, err);
     }
 
     let show_menu = (profile.lock == null && (route.page.menu.chain.length > 2 ||
@@ -1145,8 +1142,10 @@ async function handleFileChange(filename) {
     try {
         func = await buildScript(buffer.code, ['app', 'form', 'meta', 'values']);
         code_builds.set(buffer.sha256, func);
+
+        triggerError(filename, null);
     } catch (err) {
-        error_entries.page.error(err, profile.develop ? -1 : Log.defaultTimeout);
+        triggerError(filename, err);
     }
 
     if (fs_timer != null)
@@ -1157,7 +1156,7 @@ async function handleFileChange(filename) {
         try {
             await runMainScript();
         } catch (err) {
-            error_entries.app.error(err, -1);
+            triggerError('main.js', err);
         }
     }
     run();
@@ -1540,10 +1539,7 @@ async function run(push_history = true) {
                     func = await buildScript(buffer.code, ['app', 'form', 'meta', 'values']);
                     code_builds.set(buffer.sha256, func);
                 } catch (err) {
-                    if (!profile.develop)
-                        throw err;
-
-                    error_entries.page.error(err, -1);
+                    triggerError(route.page.filename, err);
                 }
             }
         }
@@ -1554,6 +1550,14 @@ async function run(push_history = true) {
                 editor_filename = 'main.js'
             } else if (editor_filename !== 'main.js') {
                 editor_filename = route.page.filename;
+            }
+
+            let err = error_map.get(editor_filename);
+
+            if (err != null) {
+                error_entry.error(err, -1);
+            } else {
+                error_entry.close();
             }
 
             await syncEditor();
@@ -1723,6 +1727,21 @@ function fileHasChanged(filename) {
         return changed;
     } else {
         return false;
+    }
+}
+
+function triggerError(filename, err) {
+    if (err != null) {
+        if (!profile.develop)
+            throw err;
+
+        if (filename == editor_filename)
+            error_entry.error(err, -1);
+        error_map.set(filename, err);
+    } else {
+        if (filename == editor_filename)
+            error_entry.close();
+        error_map.delete(filename);
     }
 }
 
