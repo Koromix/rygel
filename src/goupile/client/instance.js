@@ -71,33 +71,33 @@ let ignore_editor_change = false;
 let ignore_editor_scroll = 0;
 let ignore_page_scroll = 0;
 
-async function init(fallback) {
+async function init() {
     if (profile.develop) {
         ENV.urls.files = `${ENV.urls.base}files/0/`;
         ENV.version = 0;
     }
 
-    await initApp(fallback);
+    await initApp();
     initUI();
 }
 
-async function initApp(fallback) {
+async function initApp() {
     try {
         let new_app = await runMainScript();
 
         new_app.homepage = new_app.pages[0];
         app = Util.deepFreeze(new_app);
     } catch (err) {
-        if (fallback) {
-            let new_app = new ApplicationInfo(profile);
-            let builder = new ApplicationBuilder(new_app);
+        let new_app = new ApplicationInfo(profile);
+        let builder = new ApplicationBuilder(new_app);
 
-            // For simplicity, a lot of code assumes at least one page exists
-            builder.form('default', 'Défaut', 'Page par défaut');
+        // For simplicity, a lot of code assumes at least one page exists
+        builder.form('default', 'Défaut', 'Page par défaut');
 
-            new_app.homepage = new_app.pages[0];
-            app = Util.deepFreeze(new_app);
-        }
+        new_app.homepage = new_app.pages[0];
+        app = Util.deepFreeze(new_app);
+
+        editor_filename = 'main.js';
 
         triggerError('main.js', err);
     }
@@ -326,7 +326,6 @@ function renderMenu() {
                             <button @click=${e => window.open('/admin/')}>Administration</button>
                             <hr/>
                         ` : ''}
-                        ${profile.userid < 0 ? html`<button @click=${UI.wrap(goupile.logout)}>Changer de compte</button>` : ''}
                         <button @click=${UI.wrap(goupile.logout)}>${profile.userid ? 'Se déconnecter' : 'Se connecter'}</button>
                     </div>
                 </div>
@@ -465,7 +464,7 @@ function renderEditor() {
                     <button ?disabled=${!main_works || !fileHasChanged('main.js')}
                             @click=${e => { window.location.href = window.location.href; }}>Appliquer</button>
                 ` : ''}
-                <button ?disabled=${!main_works || fileHasChanged('main.js')}
+                <button
                         @click=${UI.wrap(runPublishDialog)}>Publier</button>
             </div>
 

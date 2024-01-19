@@ -109,12 +109,9 @@ async function start() {
             url = new URL(instance.url, window.location.href);
     }
 
-    // Fallback mode (for developers)?
-    let fallback = profile.develop && !!url.searchParams.get('fallback');
-
     // Run controller now
     try {
-        await controller.init(fallback);
+        await controller.init();
         await initTasks();
 
         if (url.hash)
@@ -124,8 +121,8 @@ async function start() {
     } catch (err) {
         Log.error(err);
 
-        // Switch to dev mode for developers
         if (hasPermission('build_code')) {
+            // Switch to dev mode for developers
             if (!profile.develop) {
                 try {
                     await changeDevelopMode(true);
@@ -133,19 +130,12 @@ async function start() {
                     Log.error(err);
                 }
             }
+        } else {
+            await runLoginScreen(null, true);
 
-            if (!fallback) {
-                let reload = Util.pasteURL(url.pathname, { fallback: 1 });
-
-                window.onbeforeunload = null;
-                window.location.href = reload;
-
-                return;
-            }
+            window.onbeforeunload = null;
+            window.location.href = window.location.href;
         }
-
-        // Now try home page... If that fails too, show error to user
-        await controller.go(null, ENV.urls.base);
     }
 };
 
@@ -389,7 +379,7 @@ async function runPasswordScreen(e, initial) {
                 <div id="gp_title">${ENV.title}</div>
                 <br/>
             `);
-            d.text('*username', 'Nom d\'utilisateur', { value: profile.username });
+            d.text('*username', 'Nom d\'utilisateur');
         } else {
             d.output(html`Veuillez <b>confirmer votre identité</b> pour continuer.`);
             d.calc('*username', 'Nom d\'utilisateur', profile.username);
@@ -486,7 +476,7 @@ async function runConfirmIdentity(e) {
 
     if (profile.type === 'key') {
         await Net.post(`${ENV.urls.instance}api/session/key`, { key: profile.username });
-    } else if (profile.userid > 0) {
+    } else if (profile.type == 'login') {
         confirm_promise = runLoginScreen(e, false);
         confirm_promise.finally(() => confirm_promise = null);
 
