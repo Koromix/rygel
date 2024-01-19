@@ -35,13 +35,15 @@ html.instance {
 #ins_tiles {
     box-sizing: border-box;
     display: flex;
+    width: 100%;
     height: 100%;
+    border: 12px solid white;
     padding-top: 6px;
     flex-direction: row;
     flex-wrap: wrap;
     align-content: center;
     justify-content: center;
-    gap: 20px;
+    gap: 12px;
 }
 
 #ins_page {
