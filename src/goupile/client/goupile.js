@@ -257,12 +257,7 @@ async function syncProfile() {
         let new_profile = await Net.get(`${ENV.urls.instance}api/session/profile`);
         await updateProfile(new_profile, true);
     } catch (err) {
-        if (ENV.use_offline) {
-            if (!(err instanceof NetworkError))
-                Log.error(err);
-        } else {
-            throw err;
-        }
+        throw err;
     }
 
     // Client-side lock?
@@ -380,21 +375,6 @@ async function runLoginScreen(e, initial) {
             Log.error(err);
         }
     } while (!new_profile.authorized);
-
-    // Save for offline login
-    if (ENV.use_offline && new_profile.permissions.misc_offline) {
-        let db = await openLocalDB();
-
-        let salt = nacl.randomBytes(24);
-        let key = await deriveKey(password, salt);
-        let enc = await encryptSecretBox(new_profile, key);
-
-        await db.saveWithKey('profiles', new_profile.username, {
-            salt: Base64.toBase64(salt),
-            errors: 0,
-            profile: enc
-        });
-    }
 
     await updateProfile(new_profile);
 }
@@ -643,26 +623,8 @@ function runUnlockDialog(e) {
 };
 
 async function login(username, password) {
-    let online = Net.isOnline();
-
-    try {
-        if (online || !ENV.use_offline) {
-            let new_profile = await loginOnline(username, password);
-            return new_profile;
-        } else {
-            online = false;
-
-            let new_profile = await loginOffline(username, password);
-            return new_profile;
-        }
-    } catch (err) {
-        if ((err instanceof NetworkError) && online && ENV.use_offline) {
-            let new_profile = await loginOffline(username, password);
-            return new_profile;
-        } else {
-            throw err;
-        }
-    }
+    let new_profile = await loginOnline(username, password);
+    return new_profile;
 }
 
 async function loginOnline(username, password) {
