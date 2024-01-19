@@ -1239,6 +1239,13 @@ function FormBuilder(state, model) {
     this.section = function(label, func, options = {}) {
         options = expandOptions(options);
 
+        if (typeof label == 'function') {
+            if (Util.isPodObject(func))
+                options = func;
+            func = label;
+            label = null;
+        }
+
         if (typeof label === 'string' && options.anchor == null && !section_depth) {
             let anchor = label;
 
