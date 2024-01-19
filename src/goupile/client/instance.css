@@ -32,12 +32,22 @@ html.instance {
 
 /* -------------------- Layout -------------------- */
 
-#ins_tiles {
+#ins_page {
     box-sizing: border-box;
     display: flex;
+    margin: 0;
+    padding-top: 6px;
     width: 100%;
     border: 12px solid white;
-    padding-top: 6px;
+    flex-direction: row;
+    justify-content: center;
+}
+
+#ins_tiles {
+    width: 100%;
+    max-width: 1080px;
+    box-sizing: border-box;
+    display: flex;
     flex-direction: column;
 }
 #ins_tiles > div {
@@ -51,18 +61,9 @@ html.instance {
 #ins_tiles > div + div {
     margin-top: 12px;
     padding-top: 12px;
+    border-top: 1px solid #dfdfdf;
 }
 
-#ins_page {
-    box-sizing: border-box;
-    display: flex;
-    margin: 0;
-    padding-top: 6px;
-    width: 100%;
-    border: 12px solid white;
-    flex-direction: row;
-    justify-content: center;
-}
 #ins_content {
     width: 100%;
     max-width: 1080px;
@@ -221,8 +222,8 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
 .ins_tile {
     display: flex;
     box-sizing: border-box;
-    width: 200px;
-    height: 200px;
+    width: 160px;
+    height: 160px;
     padding: 12px;
     flex-direction: column;
     align-items: center;
@@ -230,7 +231,7 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
     gap: 10px;
     background: #dfdfdf;
     cursor: pointer;
-    font-size: 1.2em;
+    font-size: 1.1em;
 }
 .ins_tile.small {
     width: 100px;

@@ -763,43 +763,54 @@ function toggleTagFilter(tag) {
 }
 
 async function renderTiles() {
-    let items = route.page.menu.children;
+    let show_menu = (profile.lock == null && (route.page.menu.chain.length > 2 ||
+                                              route.page.menu.chain[0].children.length > 1));
+    let menu_is_wide = isMenuWide(route.page.menu);
 
     return html`
         <div class="print">
-            <div id="ins_tiles">
-                ${route.page.menu.chain.map(menu => html`
-                    <div>
-                        ${menu.children.map(item => {
-                            let url = contextualizeURL(item.url, form_thread);
-                            let status = computeStatus(item, form_thread, true);
+            <div id="ins_page">
+                <div id="ins_menu">
+                    ${show_menu ? Util.mapRange(1 - menu_is_wide, route.page.menu.chain.length,
+                                                idx => renderPageMenu(route.page.menu.chain[idx])) : ''}
+                </div>
 
-                            let cls = 'ins_tile';
-                            let text = null;
+                <div id="ins_tiles">
+                    ${route.page.menu.chain.map(menu => html`
+                        <div>
+                            ${menu.children.map(item => {
+                                let url = contextualizeURL(item.url, form_thread);
+                                let status = computeStatus(item, form_thread, true);
 
-                            if (route.page.menu.chain.includes(item))
-                                cls += ' active';
-                            if (menu != route.page.menu)
-                                cls += ' small';
-                            if (status.complete) {
-                                cls += ' complete';
-                                text = 'Complet';
-                            } else if (status.filled) {
-                                cls += ' partial';
-                                text = Math.floor(100 * status.filled / status.total) + '%';
-                            } else {
-                                text = 'Non rempli';
-                            }
+                                let cls = 'ins_tile';
+                                let text = null;
 
-                            return html`
-                                <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
-                                    <div class="title">${item.title}</div>
-                                    <div class="status">${text}</div>
-                                </div>
-                            `;
-                        })}
-                    </div>
-                `)}
+                                if (route.page.menu.chain.includes(item))
+                                    cls += ' active';
+                                if (menu != route.page.menu)
+                                    cls += ' small';
+                                if (status.complete) {
+                                    cls += ' complete';
+                                    text = 'Complet';
+                                } else if (status.filled) {
+                                    cls += ' partial';
+                                    text = Math.floor(100 * status.filled / status.total) + '%';
+                                } else {
+                                    text = 'Non rempli';
+                                }
+
+                                return html`
+                                    <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                                        <div class="title">${item.title}</div>
+                                        <div class="status">${text}</div>
+                                    </div>
+                                `;
+                            })}
+                        </div>
+                    `)}
+                </div>
+
+                <div id="ins_actions"></div>
             </div>
         </div>
     `;
