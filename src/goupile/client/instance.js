@@ -156,7 +156,7 @@ function initUI() {
         if (route.page.filename != null) {
             return renderPage();
         } else {
-            return renderForm();
+            return renderTiles();
         }
     });
 
@@ -762,36 +762,44 @@ function toggleTagFilter(tag) {
      return go();
 }
 
-async function renderForm() {
+async function renderTiles() {
     let items = route.page.menu.children;
 
     return html`
         <div class="print">
             <div id="ins_tiles">
-                ${items.map(item => {
-                    let url = contextualizeURL(item.url, form_thread);
-                    let status = computeStatus(item, form_thread, true);
+                ${route.page.menu.chain.map(menu => html`
+                    <div>
+                        ${menu.children.map(item => {
+                            let url = contextualizeURL(item.url, form_thread);
+                            let status = computeStatus(item, form_thread, true);
 
-                    let cls = 'ins_tile';
-                    let text = null;
+                            let cls = 'ins_tile';
+                            let text = null;
 
-                    if (status.complete) {
-                        cls += ' complete';
-                        text = 'Complet';
-                    } else if (status.filled) {
-                        cls += ' partial';
-                        text = Math.floor(100 * status.filled / status.total) + '%';
-                    } else {
-                        text = 'Non rempli';
-                    }
+                            if (route.page.menu.chain.includes(item))
+                                cls += ' active';
+                            if (menu != route.page.menu)
+                                cls += ' small';
+                            if (status.complete) {
+                                cls += ' complete';
+                                text = 'Complet';
+                            } else if (status.filled) {
+                                cls += ' partial';
+                                text = Math.floor(100 * status.filled / status.total) + '%';
+                            } else {
+                                text = 'Non rempli';
+                            }
 
-                    return html`
-                        <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
-                            <div class="title">${item.title}</div>
-                            <div class="status">${text}</div>
-                        </div>
-                    `;
-                })}
+                            return html`
+                                <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                                    <div class="title">${item.title}</div>
+                                    <div class="status">${text}</div>
+                                </div>
+                            `;
+                        })}
+                    </div>
+                `)}
             </div>
         </div>
     `;
