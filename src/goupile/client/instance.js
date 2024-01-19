@@ -924,13 +924,34 @@ function addAutomaticActions(builder, model) {
             if (!force)
                 form_builder.triggerErrors();
 
+            let redirect = route.page.options.sequence && (form_entry.anchor < 0);
+
             await data_mutex.run(async () => {
                 await saveRecord(form_thread.tid, form_entry, form_data, form_meta.constraints);
                 await openRecord(form_thread.tid, null, route.page);
                 data_threads = null;
             });
 
-            go();
+            // Redirect?
+            {
+                let url = null;
+
+                if (redirect) {
+                    for (let i = route.page.menu.chain.length - 2; i >= 0; i--) {
+                        let item = route.page.menu.chain[i];
+                        let status = computeStatus(item, form_thread);
+
+                        if (item.url != route.page.menu.url) {
+                            url = contextualizeURL(item.url, form_thread);
+
+                            if (!status.complete)
+                                break;
+                        }
+                    }
+                }
+
+                go(null, url);
+            }
         });
 
         if (can_lock) {

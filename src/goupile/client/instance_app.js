@@ -44,6 +44,7 @@ function ApplicationBuilder(app) {
         {
             warn_unsaved: true,
             has_lock: false,
+            sequence: false,
 
             export_dialog: null,
             export_filter: null
@@ -56,6 +57,7 @@ function ApplicationBuilder(app) {
 
         warnUnsaved: makeOptionProperty('warn_unsaved'),
         hasLock: makeOptionProperty('has_lock'),
+        sequence: makeOptionProperty('sequence'),
 
         exportDialog: makeOptionProperty('export_dialog'),
         exportFilter: makeOptionProperty('export_filter')
