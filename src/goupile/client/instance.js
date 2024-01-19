@@ -418,7 +418,8 @@ async function generateExportKey(e) {
 }
 
 async function togglePanels(left, right) {
-    UI.togglePanel(0, left);
+    if (left != null)
+        UI.togglePanel(0, left);
 
     if (typeof right == 'string') {
         UI.togglePanel(right, true);
