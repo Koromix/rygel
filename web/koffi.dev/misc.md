@@ -69,7 +69,7 @@ You can alias a type with `koffi.alias(name, type)`. Aliased types are completel
 For synchronous/normal calls, Koffi uses two preallocated memory blocks:
 
 - One to construct the C stack and assign registers, subsequently used by the platform-specific assembly code (1 MiB by default)
-- One to allocate strings and big objects/structs (2 MiB by default)
+- One to allocate strings and objects/structs (2 MiB by default)
 
 Unless very big strings or objects (at least more than one page of memory) are used, Koffi does not directly allocate any extra memory during calls or callbacks. However, please note that the JS engine (V8) might.
 
