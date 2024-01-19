@@ -35,8 +35,7 @@ let data_mutex = new Mutex;
 let route = {
     tid: null,
     anchor: null,
-    page: null,
-    menu: null
+    page: null
 };
 
 let main_works = true;
