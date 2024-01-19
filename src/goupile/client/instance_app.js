@@ -92,7 +92,7 @@ function ApplicationBuilder(app) {
         let page = {
             key: key,
             title: title,
-            filename: `pages/${key}.js`,
+            filename: options.filename ?? `pages/${key}.js`,
             url: ENV.urls.instance + key,
 
             menu: null,
