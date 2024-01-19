@@ -152,7 +152,13 @@ function initUI() {
         UI.createPanel('editor', 0, renderEditor);
     if (app.panels.data)
         UI.createPanel('data', app.panels.editor ? 1 : 0, renderData);
-    UI.createPanel('view', 1, renderPage);
+    UI.createPanel('view', 1, () => {
+        if (route.page.filename != null) {
+            return renderPage();
+        } else {
+            return renderForm();
+        }
+    });
 
     if (app.panels.editor) {
         UI.setPanels(['editor', 'view']);
@@ -356,7 +362,7 @@ function renderDropItem(item) {
 
     return html`
         <button class=${active ? 'active' : ''}
-                @click=${UI.wrap(e => active ? togglePanels(null, true) : go(e, url))}>
+                @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
             <div style="flex: 1;">${item.title}</div>
             ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
        </button>
@@ -393,7 +399,7 @@ function computeStatus(item, thread, recurse) {
 
         return status;
     } else {
-        let complete = (thread.entries[item.page.store?.key]?.anchor >= 0);
+        let complete = (thread.entries[item.store?.key]?.anchor >= 0);
 
         let status = {
             filled: 0 + complete,
@@ -479,11 +485,13 @@ function getEditorTabs() {
         filename: 'main.js',
         active: false
     });
-    tabs.push({
-        title: 'Formulaire',
-        filename: route.page.filename,
-        active: false
-    });
+    if (route.page.filename != null) {
+        tabs.push({
+            title: 'Formulaire',
+            filename: route.page.filename,
+            active: false
+        });
+    }
 
     for (let tab of tabs)
         tab.active = (editor_filename == tab.filename);
@@ -754,14 +762,48 @@ function toggleTagFilter(tag) {
      return go();
 }
 
-async function renderPage() {
-    let buffer = code_buffers.get(route.page.filename);
+async function renderForm() {
+    let items = route.page.menu.children;
 
+    return html`
+        <div class="print">
+            <div id="ins_tiles">
+                ${items.map(item => {
+                    let url = contextualizeURL(item.url, form_thread);
+                    let status = computeStatus(item, form_thread, true);
+
+                    let cls = 'ins_tile';
+                    let text = null;
+
+                    if (status.complete) {
+                        cls += ' complete';
+                        text = 'Complet';
+                    } else if (status.filled) {
+                        cls += ' partial';
+                        text = Math.floor(100 * status.filled / status.total) + '%';
+                    } else {
+                        text = 'Non rempli';
+                    }
+
+                    return html`
+                        <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                            <div class="title">${item.title}</div>
+                            <div class="status">${text}</div>
+                        </div>
+                    `;
+                })}
+            </div>
+        </div>
+    `;
+}
+
+async function renderPage() {
     let model = new FormModel;
     let builder = new FormBuilder(form_state, model);
     let meta = new MetaModel;
 
     try {
+        let buffer = code_buffers.get(route.page.filename);
         let func = code_builds.get(buffer.sha256);
 
         if (func == null)
@@ -812,7 +854,7 @@ async function renderPage() {
                                                 idx => renderPageMenu(route.page.menu.chain[idx])) : ''}
                 </div>
 
-                <form id="ins_form" autocomplete="off" @submit=${e => e.preventDefault()}>
+                <form id="ins_content" autocomplete="off" @submit=${e => e.preventDefault()}>
                     ${page_div}
                 </form>
 
@@ -1447,12 +1489,10 @@ function contextualizeURL(url, thread) {
 }
 
 async function run(push_history = true) {
-    let filename = route.page.filename;
-
     await data_mutex.run(async () => {
         // Fetch and build page code for page panel
-        {
-            let buffer = await fetchCode(filename);
+        if (route.page.filename != null) {
+            let buffer = await fetchCode(route.page.filename);
             let func = code_builds.get(buffer.sha256);
 
             if (func == null) {
@@ -1470,8 +1510,11 @@ async function run(push_history = true) {
 
         // Sync editor (if needed)
         if (UI.isPanelActive('editor')) {
-            if (editor_filename !== 'main.js')
-                editor_filename = filename;
+            if (route.page.filename == null) {
+                editor_filename = 'main.js'
+            } else if (editor_filename !== 'main.js') {
+                editor_filename = route.page.filename;
+            }
 
             await syncEditor();
         }

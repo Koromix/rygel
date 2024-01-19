@@ -32,18 +32,29 @@ html.instance {
 
 /* -------------------- Layout -------------------- */
 
+#ins_tiles {
+    box-sizing: border-box;
+    display: flex;
+    height: 100%;
+    padding-top: 6px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-content: center;
+    justify-content: center;
+    gap: 20px;
+}
+
 #ins_page {
     box-sizing: border-box;
+    display: flex;
     margin: 0;
     padding-top: 6px;
     width: 100%;
     border: 12px solid white;
-    display: flex;
     flex-direction: row;
     justify-content: center;
 }
-
-#ins_form {
+#ins_content {
     width: 100%;
     max-width: 1080px;
 }
@@ -53,6 +64,17 @@ html.mobile #ins_page { padding-top: 0; }
 /* -------------------- Main menu -------------------- */
 
 #ui_top.locked { filter: invert(100%); }
+
+.ins_status {
+    display: inline-block;
+    margin-top: 2px;
+    padding: 0px 4px 1px 4px;
+    border-radius: 4px;
+    background: white;
+    color: black;
+    font-size: 0.8em;
+    white-space: nowrap;
+}
 
 html.small #ins_drop > button { max-width: 300px; }
 html.mobile #ins_drop > button { max-width: 200px; }
@@ -185,18 +207,45 @@ html:not(.small) #ui_panels > div:not(:only-child) #ins_tasks {
 }
 html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
 
-/* -------------------- Misc -------------------- */
+/* -------------------- Data -------------------- */
 
-.ins_status {
-    display: inline-block;
-    margin-top: 2px;
-    padding: 0px 4px 1px 4px;
-    border-radius: 4px;
-    background: white;
-    color: black;
-    font-size: 0.8em;
-    white-space: nowrap;
+.ins_tile {
+    display: flex;
+    box-sizing: border-box;
+    width: 200px;
+    height: 200px;
+    padding: 12px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #dfdfdf;
+    cursor: pointer;
+    font-size: 1.2em;
 }
+.ins_tile.partial {
+    background: #346bb8;
+    color: white;
+}
+.ins_tile.complete {
+    background: #298a6a;
+    color: white;
+}
+.ins_tile > .title {
+    font-weight: bold;
+    text-align: center;
+}
+
+#ins_data td:not(.active).partial a { color: #346bb8; }
+#ins_data td:not(.active).complete a { color: #298a6a; }
+#ins_data td.complete a::before {
+    padding-right: 8px;
+    font-size: 0.9em;
+    font-weight: bold;
+    content: '✓\FE0E';
+}
+
+/* -------------------- Misc -------------------- */
 
 #ins_develop {
     display: block;
@@ -220,15 +269,6 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
 }
 @media (hover: hover) {
     #ins_develop:hover { filter: opacity(20%); }
-}
-
-#ins_data td:not(.active).partial a { color: #21936e; }
-#ins_data td:not(.active).complete a { color: #21936e; }
-#ins_data td.complete a::before {
-    padding-right: 8px;
-    font-size: 0.9em;
-    font-weight: bold;
-    content: '✓\FE0E';
 }
 
 .ins_highlight {

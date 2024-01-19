@@ -88,45 +88,37 @@ function ApplicationBuilder(app) {
         title = title || key;
         options = expandOptions(options);
 
-        let page = {
-            key: key,
-            title: title,
-            filename: options.filename ?? `pages/${key}.js`,
-            url: ENV.urls.instance + key,
-
-            menu: null,
-            store: current_store,
-
-            options: options
-        };
-
         let item = {
             key: key,
             title: title,
-            url: page.url,
+            url: ENV.urls.instance + key,
 
             chain: null,
             children: [],
 
-            store: page.store,
-            page: page
+            store: current_store,
+        };
+
+        let page = {
+            key: key,
+            title: title,
+            filename: options.filename ?? `pages/${key}.js`,
+            url: item.url,
+
+            menu: item,
+            store: current_store,
+
+            options: options
         };
 
         app.pages.push(page);
 
         if (current_menu != null) {
             item.chain = [...current_menu.chain, item];
-
-            for (let item of current_menu.chain) {
-                if (item.url == null)
-                    item.url = page.url;
-            }
-
             current_menu.children.push(item);
         } else {
             item.chain = [item];
         }
-        page.menu = item;
 
         return page;
     };
@@ -138,9 +130,13 @@ function ApplicationBuilder(app) {
 
         title = title || key;
 
-        if (options == null && typeof func == 'object') {
-            options = func;
-            func = null;
+        if (options == null) {
+            if (typeof func == 'object') {
+                options = func;
+                func = null;
+            } else {
+                options = {};
+            }
         }
 
         let prev_store = current_store;
@@ -153,7 +149,7 @@ function ApplicationBuilder(app) {
             current_store = {
                 key: key,
                 title: title,
-                url: null,
+                url: ENV.urls.instance + key,
 
                 menu: null
             };
@@ -161,7 +157,7 @@ function ApplicationBuilder(app) {
             current_menu = {
                 key: key,
                 title: title,
-                url: null,
+                url: current_store.url,
 
                 chain: (current_menu != null) ? current_menu.chain.slice() : [],
                 children: [],
@@ -174,6 +170,23 @@ function ApplicationBuilder(app) {
             current_menu.chain.push(current_menu);
 
             if (typeof func == 'function') {
+                if (app.pages.some(page => page.key == key))
+                    throw new Error(`Page key '${key}' is already used`);
+
+                let page = {
+                    key: key,
+                    title: title,
+                    filename: options.filename,
+                    url: ENV.urls.instance + key,
+
+                    menu: current_menu,
+                    store: current_store,
+
+                    options: options
+                };
+
+                app.pages.push(page);
+
                 func();
             } else {
                 self.page(key, func || title);
