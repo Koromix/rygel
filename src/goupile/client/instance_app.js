@@ -210,7 +210,10 @@ function ApplicationBuilder(app) {
                 current_store.menu = current_menu;
             }
 
-            current_store.url = current_menu.url;
+            if (current_menu.children.length == 1) {
+                current_menu.url = current_menu.children[0].url;
+                current_store.url = current_menu.url;
+            }
         } finally {
             current_menu = prev_menu;
             current_store = prev_store;
