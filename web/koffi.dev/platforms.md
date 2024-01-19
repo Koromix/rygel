@@ -2,13 +2,7 @@
 
 ## Node.js
 
-Koffi requires a recent [Node.js](https://nodejs.org/) version with [N-API](https://nodejs.org/api/n-api.html) version 8 support:
-
-- Node < 12.22.0 is not supported
-- _Node 12.x_: Node 12.22.0 or newer
-- _Node 14.x_: Node 14.17.0 or newer
-- _Node 15.x_: Node 15.12.0 or newer
-- Node 16.0.0 or later versions
+Koffi requires _Node.js 16.0_ or a more recent version.
 
 Use [NVM](https://github.com/nvm-sh/nvm) to install more recent Node versions on older Linux distributions.
 
