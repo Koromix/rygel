@@ -2,11 +2,11 @@
 
 ## Node.js
 
-Koffi requires _Node.js 16.0_ or a more recent version.
+Koffi requires _Node.js 16_ or a more recent version.
 
-Use [NVM](https://github.com/nvm-sh/nvm) to install more recent Node versions on older Linux distributions.
+Use [NVM](https://github.com/nvm-sh/nvm) to install recent Node versions on old Linux distributions.
 
-## Supported platforms
+## Platforms
 
 The following combinations of OS and architectures __are officially supported and tested__ at the moment:
 
