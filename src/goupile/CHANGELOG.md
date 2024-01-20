@@ -1,5 +1,19 @@
 # Changelog
 
+## Goupile 3.3
+
+- Show completion tiles for groups of forms
+- Show first-level columns and stats in data table
+- Show basic record status in menus
+- Support basic form sequence configuration
+- Reintroduce support for page filename option
+- Keep explicitly defined single-child menu relations
+- Fix missing menu items in some cases
+- Fix panel blink when clicking on current page menu item
+- Drop broken offline login code for now
+- Fix crash when requesting '/manifest.json'
+- Improve main.js fallback code when guest sessions are enabled
+
 ## Goupile 3.2.3
 
 - Fix UI deadlock in develop mode
