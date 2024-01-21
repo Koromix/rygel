@@ -1,5 +1,9 @@
 # Changelog
 
+## Rekord 0.13
+
+- Rename `rekord log` command to `rekord snapshots`
+
 ## Rekord 0.12
 
 - Combine repository ID and url to secure cache ID
