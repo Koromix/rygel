@@ -197,7 +197,6 @@ bool GitVersioneer::Prepare(const char *root_directory)
                     return false;
 
                 ref_map.Set(head, hash);
-                hash_map.Set(hash, head);
             }
 
         }
@@ -296,15 +295,19 @@ const char *GitVersioneer::Version(Span<const char> key)
         Size idx = 0;
 
         while (idx < max_delta_count) {
-            const char *tag = hash_map.FindValue(commits[idx], nullptr);
+            HeapArray<const char *> *tags = hash_map.Find(commits[idx]);
 
-            if (tag && StartsWith(tag, prefix) && tag[prefix.len]) {
-                if (idx) {
-                    const char *version = Fmt(&str_alloc, "%1-%2_%3", tag + prefix.len, idx, id).ptr;
-                    return version;
-                } else {
-                    const char *version = DuplicateString(tag + prefix.len, &str_alloc).ptr;
-                    return version;
+            if (tags) {
+                for (const char *tag: *tags) {
+                    if (tag && StartsWith(tag, prefix) && tag[prefix.len]) {
+                        if (idx) {
+                            const char *version = Fmt(&str_alloc, "%1-%2_%3", tag + prefix.len, idx, id).ptr;
+                            return version;
+                        } else {
+                            const char *version = DuplicateString(tag + prefix.len, &str_alloc).ptr;
+                            return version;
+                        }
+                    }
                 }
             }
 
@@ -405,7 +408,9 @@ bool GitVersioneer::CacheTagInfo(Span<const char> tag, Span<const char> id)
     Span<const char> prefix = SplitStr(copy.Take(10, copy.len - 10), '/');
 
     ref_map.Set(copy.ptr, hash);
-    hash_map.Set(hash, copy.ptr);
+
+    HeapArray<const char *> *tags = hash_map.TrySet(hash, {});
+    tags->Append(copy.ptr);
 
     int64_t *ptr = prefix_map.TrySet(prefix, INT64_MAX);
     *ptr = std::min(*ptr, date - max_delta_date);

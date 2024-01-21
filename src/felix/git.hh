@@ -38,7 +38,7 @@ class GitVersioneer {
 
     // Prepared stuff
     HashMap<const char *, GitHash> ref_map;
-    HashMap<GitHash, const char *> hash_map;
+    HashMap<GitHash, HeapArray<const char *>> hash_map;
     HashMap<Span<const char>, int64_t> prefix_map;
     HeapArray<const char *> idx_filenames;
     HeapArray<const char *> pack_filenames;
