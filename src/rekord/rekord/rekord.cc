@@ -32,7 +32,7 @@ int RunListUsers(Span<const char *> arguments);
 int RunPut(Span<const char *> arguments);
 int RunGet(Span<const char *> arguments);
 
-int RunLog(Span<const char *> arguments);
+int RunSnapshots(Span<const char *> arguments);
 int RunList(Span<const char *> arguments);
 
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
@@ -75,7 +75,7 @@ Snapshot commands:
     %!..+get%!0                          Get and decrypt snapshot, directory or file
 
 Exploration commands:
-    %!..+log%!0                          List known snapshots
+    %!..+snapshots%!0                    List known snapshots
     %!..+list%!0                         List snapshot or directory children
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
@@ -162,8 +162,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunPut(arguments);
     } else if (TestStr(cmd, "get")) {
         return RunGet(arguments);
-    } else if (TestStr(cmd, "log")) {
-        return RunLog(arguments);
+    } else if (TestStr(cmd, "snapshots")) {
+        return RunSnapshots(arguments);
     } else if (TestStr(cmd, "list")) {
         return RunList(arguments);
     } else {

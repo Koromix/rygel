@@ -19,7 +19,7 @@
 
 namespace RG {
 
-int RunLog(Span<const char *> arguments)
+int RunSnapshots(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -30,7 +30,7 @@ int RunLog(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 log [-R <repo>]%!0
+R"(Usage: %!..+%1 snapshots [-R <repo>]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file

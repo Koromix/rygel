@@ -169,7 +169,7 @@ The command will give you the snapshot hash once it finishes. You can retrieve t
 
 ```sh
 export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord log
+rekord snapshots
 ```
 
 The output looks something like this:
