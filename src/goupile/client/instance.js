@@ -464,7 +464,7 @@ function renderEditor() {
                     <button ?disabled=${!main_works || !fileHasChanged('main.js')}
                             @click=${e => { window.location.href = window.location.href; }}>Appliquer</button>
                 ` : ''}
-                <button
+                <button ?disabled=${!main_works}
                         @click=${UI.wrap(runPublishDialog)}>Publier</button>
             </div>
 
