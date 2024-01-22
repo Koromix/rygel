@@ -50,7 +50,7 @@ switch ($method) {
                 if (is_string($item["png"]) && !preg_match("/^[a-z0-9]{64}$/", $item["png"])) {
                     $png = base64_decode($item["png"]);
 
-                    $sha256 = hash("sha256", $item["pnfg"]);
+                    $sha256 = hash("sha256", $item["png"]);
                     $filename = __DIR__ . '/../data/' . $sha256 . '.png';
 
                     file_put_contents($filename, $png);
