@@ -1,5 +1,10 @@
 # Changelog
 
+## Goupile 3.3.1
+
+- Add hover effect to tiles
+- Disable Publish button if main script does not work
+
 ## Goupile 3.3
 
 - Show completion tiles for groups of forms
