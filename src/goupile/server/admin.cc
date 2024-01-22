@@ -43,6 +43,7 @@ namespace RG {
 static const char *DefaultConfig =
 R"([Domain]
 Title = %1
+# DemoMode = Off
 
 [Data]
 # RootDirectory = .
@@ -1034,6 +1035,65 @@ Options:
     }
 
     return 0;
+}
+
+void HandleDemo(const http_RequestInfo &request, http_IO *io)
+{
+    RG_ASSERT(gp_domain.config.demo_mode);
+
+    char name[17];
+    Fmt(name, "%1", FmtRandom(RG_SIZE(name) - 1));
+
+    int64_t userid = -1;
+
+    bool success = gp_domain.db.Transaction([&]() {
+        // Create user
+        {
+            char hash[PasswordHashBytes];
+            if (!HashPassword(name, hash))
+                return false;
+
+            // Create local key
+            char local_key[45];
+            {
+                uint8_t buf[32];
+                FillRandomSafe(buf);
+                sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+            }
+
+            // Create user
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare(R"(INSERT INTO dom_users (username, change_password, root, local_key)
+                                         VALUES (?1, 0, 0, ?2)
+                                         RETURNING userid)",
+                                      &stmt, name, local_key))
+                return false;
+            if (!stmt.GetSingleValue(&userid))
+                return false;
+        }
+
+        // Create instance
+        {
+            int error;
+            if (!CreateInstance(&gp_domain, name, name, userid, true, &error)) {
+                io->AttachError(error);
+                return false;
+            }
+        }
+
+        return true;
+    });
+    if (!success)
+        return;
+
+    if (!gp_domain.SyncInstance(name))
+        return;
+    if (!LoginUserAuto(userid, request, io))
+        return;
+
+    const char *redirect = Fmt(&io->allocator, "/%1/", name).ptr;
+    io->AddHeader("Location", redirect);
+    io->AttachNothing(302);
 }
 
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)

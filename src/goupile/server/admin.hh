@@ -24,6 +24,8 @@ int RunKeys(Span<const char *> arguments);
 
 int RunUnseal(Span<const char *> arguments);
 
+void HandleDemo(const http_RequestInfo &request, http_IO *io);
+
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io);
 void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io);
 void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io);

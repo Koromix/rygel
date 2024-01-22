@@ -41,6 +41,7 @@ class DomainConfig:
     name = None
     archive_key = None
     port = None
+    demo_mode = False
 
 @dataclass
 class ServiceStatus:
@@ -125,6 +126,8 @@ def load_domains(path):
         domain.name = name
         domain.archive_key = decode_key(section['ArchiveKey'])
         domain.port = decode_port(section['Port'])
+        if 'DemoMode' in section:
+            domain.demo_mode = decode_bool(section['DemoMode'])
 
         if domain.name in used_names:
             raise ValueError(f'Name "{domain.name}" used multiple times')
@@ -138,20 +141,30 @@ def load_domains(path):
 
     return domains
 
-def decode_key(str):
-    key = base64.b64decode(str)
+def decode_key(s):
+    key = base64.b64decode(s)
     if len(key) != 32:
-        raise ValueError(f'Malformed archive key "{str}"');
+        raise ValueError(f'Malformed archive key "{s}"');
     return key
 
 def decode_port(port):
     if port.isnumeric():
         if int(port) <= 0 or int(port) > 65535:
-            raise ValueError(f'Invalid TCP port "{str}"')
+            raise ValueError(f'Invalid TCP port "{port}"')
     else:
         if not port.startswith('/'):
             raise ValueError(f'Use absolute path for UNIX socket')
     return port
+
+def decode_bool(s):
+    s = s.lower()
+
+    if s in ('y', 'yes', 't', 'true', 'on', '1'):
+        return True
+    elif s in ('n', 'no', 'f', 'false', 'off', '0'):
+        return False
+    else:
+        raise ValueError(f'Invalid truth value "{str}"')
 
 def sync_domains(path, domains, template):
     os.makedirs(path, mode = 0o755, exist_ok = True)
@@ -165,6 +178,7 @@ def sync_domains(path, domains, template):
         data = list(config['Data'].items())
 
         config['Domain']['Title'] = domain.name
+        config['Domain']['DemoMode'] = 'On' if domain.demo_mode else 'Off'
         for key, value in data:
             config.remove_option('Data', key)
             config['Data'][key] = value

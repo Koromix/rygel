@@ -17,7 +17,7 @@
 
 namespace RG {
 
-const int DomainVersion = 104;
+const int DomainVersion = 105;
 
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
@@ -96,6 +96,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                 do {
                     if (prop.key == "Title") {
                         config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "DemoMode") {
+                        valid &= ParseBool(prop.value, &config.demo_mode);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -1650,9 +1652,52 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 104: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE dom_users RENAME TO dom_users_BAK;
+                    ALTER TABLE dom_permissions RENAME TO dom_permissions_BAK;
+                    DROP INDEX dom_users_u;
+                    DROP INDEX dom_permissions_ui;
+                    DROP INDEX dom_permissions_e;
+
+                    CREATE TABLE dom_users (
+                        userid INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL,
+                        password_hash TEXT,
+                        change_password INTEGER CHECK (change_password IN (0, 1)) NOT NULL,
+                        root INTEGER CHECK (root IN (0, 1)) NOT NULL,
+                        local_key TEXT NOT NULL,
+                        confirm TEXT,
+                        secret TEXT,
+                        email TEXT,
+                        phone TEXT
+                    );
+                    CREATE UNIQUE INDEX dom_users_u ON dom_users (username);
+
+                    CREATE TABLE dom_permissions (
+                        userid INTEGER NOT NULL REFERENCES dom_users (userid) ON DELETE CASCADE,
+                        instance TEXT NOT NULL REFERENCES dom_instances (instance) ON DELETE CASCADE,
+                        permissions INTEGER NOT NULL,
+                        export_key TEXT
+                    );
+                    CREATE UNIQUE INDEX dom_permissions_ui ON dom_permissions (userid, instance);
+                    CREATE UNIQUE INDEX dom_permissions_e ON dom_permissions (export_key);
+
+                    INSERT INTO dom_users (userid, username, password_hash, change_password, root, local_key, confirm, secret, email, phone)
+                        SELECT userid, username, password_hash, change_password, root, local_key, confirm, secret, email, phone FROM dom_users_BAK;
+                    INSERT INTO dom_permissions (userid, instance, permissions, export_key)
+                        SELECT userid, instance, permissions, export_key FROM dom_permissions_BAK;
+
+                    DROP TABLE dom_permissions_BAK;
+                    DROP TABLE dom_users_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DomainVersion == 104);
+            static_assert(DomainVersion == 105);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

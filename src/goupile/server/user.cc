@@ -192,16 +192,6 @@ void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t per
     stamps_map.Set(stamp);
 }
 
-void InvalidateUserStamps(int64_t userid)
-{
-    // Deal with real sessions
-    sessions.ApplyAll([&](SessionInfo *session) {
-        if (session->userid == userid) {
-            session->InvalidateStamps();
-        }
-    });
-}
-
 static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *instance,
                              const http_RequestInfo &, http_IO *io)
 {
@@ -336,6 +326,49 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     CopyString(username, MakeSpan((char *)session->username, username_bytes));
 
     return ptr;
+}
+
+bool LoginUserAuto(int64_t userid, const http_RequestInfo &request, http_IO *io)
+{
+    RG_ASSERT(userid > 0);
+
+    sq_Statement stmt;
+    if (!gp_domain.db.Prepare(R"(SELECT username, local_key, change_password
+                                 FROM dom_users
+                                 WHERE userid = ?1)", &stmt))
+        return false;
+    sqlite3_bind_int64(stmt, 1, userid);
+
+    if (!stmt.Step()) {
+        if (stmt.IsValid()) {
+            LogError("User ID %1 does not exist");
+            io->AttachError(404);
+        }
+        return false;
+    }
+
+    const char *username = (const char *)sqlite3_column_text(stmt, 0);
+    const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
+    bool change_password = sqlite3_column_int(stmt, 2);
+
+    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Login, userid, username, local_key);
+    if (!session.IsValid())
+        return false;
+    session->change_password = change_password;
+
+    sessions.Open(request, io, session);
+
+    return true;
+}
+
+void InvalidateUserStamps(int64_t userid)
+{
+    // Deal with real sessions
+    sessions.ApplyAll([&](SessionInfo *session) {
+        if (session->userid == userid) {
+            session->InvalidateStamps();
+        }
+    });
 }
 
 RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -593,7 +626,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 return;
             }
 
-            if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
+            if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
                 int64_t time = GetUnixTime();
 
                 if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
@@ -1264,7 +1297,7 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
             if (old_password) {
-                if (crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
+                if (!password_hash || crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
                     // Enforce constant delay if authentification fails
                     int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
                     WaitDelay(safety_delay);
@@ -1280,7 +1313,7 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
                     return;
                 }
             } else {
-                if (crypto_pwhash_str_verify(password_hash, new_password, strlen(new_password)) == 0) {
+                if (password_hash && crypto_pwhash_str_verify(password_hash, new_password, strlen(new_password)) == 0) {
                     LogError("You cannot reuse the same password");
                     io->AttachError(422);
                     return;
@@ -1440,7 +1473,6 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
 
         // Authenticate with password
         {
-
             sq_Statement stmt;
             if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
                                          WHERE userid = ?1)", &stmt))
@@ -1457,7 +1489,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
 
             const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
-            if (crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
+            if (!password_hash || crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
                 // Enforce constant delay if authentification fails
                 int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
                 WaitDelay(safety_delay);

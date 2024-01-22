@@ -112,6 +112,8 @@ public:
     void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions);
 };
 
+bool LoginUserAuto(int64_t userid, const http_RequestInfo &request, http_IO *io);
+
 void InvalidateUserStamps(int64_t userid);
 
 RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
