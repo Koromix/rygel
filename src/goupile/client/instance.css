@@ -233,20 +233,21 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
     cursor: pointer;
     font-size: 1.1em;
 }
+.ins_tile:hover { filter: brightness(80%) contrast(120%); }
 .ins_tile.small {
     width: 100px;
     height: 100px;
     font-size: 0.8em;
 }
 .ins_tile.active {
-    outline: 3px dashed #24579d;
+    outline: 3px dashed var(--page_color);
 }
 .ins_tile.partial {
-    background: #346bb8;
+    background: var(--page_color_n1);
     color: white;
 }
 .ins_tile.complete {
-    background: #298a6a;
+    background: var(--many_color_n1);
     color: white;
 }
 .ins_tile > .title {
