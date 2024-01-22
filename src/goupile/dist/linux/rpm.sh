@@ -51,4 +51,4 @@ fi' >> ${RPM_DIR}/${PKG_NAME}.spec
 }
 
 cd "$(dirname $0)/../../../.."
-. deploy/rpm/package/package.sh
+. deploy/package/rpm/package.sh

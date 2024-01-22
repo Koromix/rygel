@@ -14,9 +14,9 @@ if [ "$1" = "" -o "$1" = "package" ]; then
     mkdir -p ${DEBIAN_DIR} ${ROOT_DIR}
     mkdir -p ${CLIENT_DIR}/upper ${CLIENT_DIR}/work
 
-    install -D -m0755 deploy/debian/package/rules ${DEBIAN_DIR}/rules
-    install -D -m0644 deploy/debian/package/compat ${DEBIAN_DIR}/compat
-    install -D -m0644 deploy/debian/package/format ${DEBIAN_DIR}/source/format
+    install -D -m0755 deploy/package/debian/rules ${DEBIAN_DIR}/rules
+    install -D -m0644 deploy/package/debian/compat ${DEBIAN_DIR}/compat
+    install -D -m0644 deploy/package/debian/format ${DEBIAN_DIR}/source/format
 
     echo "\
 Source: ${PKG_NAME}

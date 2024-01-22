@@ -32,4 +32,4 @@ build() {
 }
 
 cd "$(dirname $0)/../../../.."
-. deploy/rpm/package/package.sh
+. deploy/package/rpm/package.sh

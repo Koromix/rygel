@@ -33,4 +33,4 @@ build() {
 }
 
 cd "$(dirname $0)/../../../.."
-. deploy/debian/package/package.sh
+. deploy/package/debian/package.sh
