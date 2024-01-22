@@ -13,9 +13,6 @@
         <div class="title">Psychiatre</div>
         <div class="mission">Référente médicale</div>
     </div>
-</div>
-
-<div class="team">
     <div>
         <div class="name">Dr Maéva MAGNAT</div>
         <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
@@ -33,6 +30,9 @@
         <div class="mission">Animatrice du réseau</div>
         <div class="mission">Suivi et évaluation de la mise en place du dispositif</div>
     </div>
+</div>
+
+<div class="team">
     <div>
         <div class="name">Jeanne DANEL</div>
         <img src="{{ ASSET static/equipe/jeanne_danel.jpg }}" alt="" />
@@ -42,8 +42,8 @@
         <div class="mission">Consultations</div>
     </div>
     <div>
-        <div class="name">Dr Briac BATAILLEY</div>
-        <img src="{{ ASSET static/equipe/briac_batailley.jpg }}" alt="" />
+        <div class="name">Dr Elie UZAN</div>
+        <img src="{{ ASSET static/equipe/elie_uzan.jpg }}" alt="" />
         <div class="title">Psychiatre</div>
         <div class="mission">Consultations dépressions résistantes</div>
         <div class="mission">Télé-expertise</div>
@@ -65,23 +65,26 @@
     </div>
 </div>
 
-# Centres affiliés
-
 <div class="team">
     <div>
         <div class="name">Dr Valentin COUESNON</div>
         <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
-        <div class="title">Psychiatre (Arras)</div>
-        <div class="mission">Centre de recours du Nord</div>
+        <div class="title">Psychiatre</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
         <div class="mission">Activité d'ECT</div>
     </div>
     <div>
         <div class="name">Dr Jehan ALLYBOKUS</div>
         <img src="{{ ASSET static/equipe/jehan_allybokus.jpg }}" alt="" />
-        <div class="title">Psychiatre (Valenciennes)</div>
-        <div class="mission">Centre de recours du Nord</div>
+        <div class="title">Psychiatre</div>
         <div class="mission">Consultations troubles de l'humeur résistantes</div>
-        <div class="mission">Relance de l'activité d'ECT</div>
+        <div class="mission">Activité d'ECT</div>
+    </div>
+    <div>
+        <div class="name">Dr Tristan GAGGIOLI</div>
+        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <div class="title">Psychiatre</div>
+        <div class="mission">Consultations troubles de l'humeur résistantes</div>
+        <div class="mission">Activité d'ECT</div>
     </div>
 </div>
