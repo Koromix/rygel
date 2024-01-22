@@ -610,6 +610,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
                     json.EndObject();
                     json.Key("title"); json.String(master->title);
+                    json.Key("demo"); json.Bool(gp_domain.config.demo_mode);
                     json.Key("version"); json.Int64(fs_version);
                     json.Key("buster"); json.String(master_etag);
                     json.Key("use_offline"); json.Bool(master->config.use_offline);
@@ -617,6 +618,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     if (master->config.auto_key) {
                         json.Key("auto_key"); json.String(master->config.auto_key);
                     }
+                    json.Key("demo"); json.Bool(gp_domain.config.demo_mode);
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
                     if (master->config.use_offline) {
