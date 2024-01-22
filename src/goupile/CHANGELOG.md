@@ -1,5 +1,10 @@
 # Changelog
 
+## Goupile 3.3.2
+
+- Add demo mode to Goupile
+- Show username on password change dialog
+
 ## Goupile 3.3.1
 
 - Add hover effect to tiles
