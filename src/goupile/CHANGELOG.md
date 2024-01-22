@@ -1,5 +1,10 @@
 # Changelog
 
+## Goupile 3.3.3
+
+- Warn user about demo mode
+- Fix HTTP property being set from Defaults section
+
 ## Goupile 3.3.2
 
 - Add demo mode to Goupile
