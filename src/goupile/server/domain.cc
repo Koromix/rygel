@@ -207,7 +207,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                     } else if (prop.key == "DefaultPassword") {
                         config.default_password = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
-                        valid &= config.http.SetProperty(prop.key, prop.value, root_directory);
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
                     }
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Security") {
