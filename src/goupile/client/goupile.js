@@ -503,6 +503,7 @@ function runChangePassword(e, forced) {
             `);
         }
 
+        d.calc('username', 'Nom d\'utilisateur', profile.username);
         if (!forced)
             d.password('*old_password', 'Ancien mot de passe');
         d.password('*new_password', 'Nouveau mot de passe');
