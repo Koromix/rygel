@@ -396,6 +396,7 @@ html.mobile .ui_table.fixed { table-layout: auto; }
 @media (hover: hover) {
     #ui_log > div:hover { filter: opacity(40%); }
 }
+#ui_log > div.warning { background: #ff6600; }
 #ui_log > div.error { background: #db0a0a; }
 #ui_log > div.success { background: #2d8261; }
 

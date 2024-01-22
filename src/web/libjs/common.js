@@ -619,6 +619,7 @@ const Log = new function() {
                 case 'info':
                 case 'success':
                 case 'progress': { console.log(entry.msg); } break;
+                case 'warning':
                 case 'error': { console.error(entry.msg); } break;
             }
         }
@@ -667,6 +668,7 @@ const Log = new function() {
         this.debug = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'debug', msg, timeout); };
         this.info = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'info', msg, timeout); };
         this.success = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'success', msg, timeout); };
+        this.warning = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'warning', msg, timeout); }; 
         this.error = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'error', msg, timeout); };
 
         this.progress = function(action, value = null, max = null) {
@@ -684,6 +686,7 @@ const Log = new function() {
     this.debug = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).debug(msg, timeout); };
     this.info = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).info(msg, timeout); };
     this.success = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).success(msg, timeout); };
+    this.warning = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).warning(msg, timeout); };
     this.error = function(msg, timeout = Log.defaultTimeout) { return (new self.Entry).error(msg, timeout); };
     this.progress = function(action, value = null, max = null) { return (new self.Entry).progress(action, value, max); };
 };

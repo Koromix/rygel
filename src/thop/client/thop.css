@@ -257,8 +257,9 @@ button { cursor: pointer; }
 @media (hover: hover) {
     #th_log > div:hover { filter: opacity(40%); }
 }
-#th_log > div.success { background: #016a27; }
+#th_log > div.warning { background: #ff6600; }
 #th_log > div.error { background: #db0a0a; }
+#th_log > div.success { background: #016a27; }
 
 .th_log_close {
     float: right;
