@@ -709,27 +709,28 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
-    if (!quiet) {
-        LogInfo("Computing versions...");
-    }
-    if (GitVersioneer::IsAvailable()) {
-        GitVersioneer versioneer;
-
-        if (!versioneer.Prepare("."))
-            return 1;
-
-        for (Size i = 0; i < enabled_targets.len; i++) {
-            EnabledTarget *it = &enabled_targets[i];
-
-            if (it->target->type != TargetType::Executable)
-                continue;
-
-            // Continue even if versioning fails
-            const char *version = versioneer.Version(it->target->version_tag);
-            it->version = version ? DuplicateString(version, &temp_alloc).ptr : nullptr;
+    if (TestFile(".git")) {
+        if (!quiet) {
+            LogInfo("Computing versions...");
         }
-    } else {
-        LogWarning("Built without git versioning support");
+        if (GitVersioneer::IsAvailable()) {
+            GitVersioneer versioneer;
+
+            if (versioneer.Prepare(".")) {
+                for (Size i = 0; i < enabled_targets.len; i++) {
+                    EnabledTarget *it = &enabled_targets[i];
+
+                    if (it->target->type != TargetType::Executable)
+                        continue;
+
+                    // Continue even if versioning fails
+                    const char *version = versioneer.Version(it->target->version_tag);
+                    it->version = version ? DuplicateString(version, &temp_alloc).ptr : nullptr;
+                }
+            }
+        } else {
+            LogWarning("Built without git versioning support");
+        }
     }
 
     // We're ready to output stuff

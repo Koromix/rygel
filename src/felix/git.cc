@@ -174,7 +174,7 @@ bool GitVersioneer::Prepare(const char *root_directory)
     }
 
     // First, read packed references
-    {
+    if (TestFile(packed_filename)) {
         StreamReader st(packed_filename);
         LineReader reader(&st);
 
@@ -236,7 +236,7 @@ bool GitVersioneer::Prepare(const char *root_directory)
     }
 
     // Find HEAD commit
-    {
+    if (TestFile(head_filename)) {
         LocalArray<char, 512> buf;
         buf.len = ReadFile(head_filename, buf.data);
         if (buf.len < 0)
@@ -260,7 +260,7 @@ bool GitVersioneer::Prepare(const char *root_directory)
                 const GitHash *hash = ref_map.Find(ref);
 
                 if (!hash) {
-                    LogError("Cannot resolve reference '%1'", ref);
+                    LogError("Current branch does not seem to contain any commit");
                     return false;
                 }
 
