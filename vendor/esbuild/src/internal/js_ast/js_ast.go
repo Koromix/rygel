@@ -449,6 +449,7 @@ func (*EImportIdentifier) isExpr()     {}
 func (*EPrivateIdentifier) isExpr()    {}
 func (*ENameOfSymbol) isExpr()         {}
 func (*EJSXElement) isExpr()           {}
+func (*EJSXText) isExpr()              {}
 func (*EMissing) isExpr()              {}
 func (*ENumber) isExpr()               {}
 func (*EBigInt) isExpr()               {}
@@ -624,12 +625,17 @@ type EDot struct {
 	// unwrapped if the resulting value is unused. Unwrapping means discarding
 	// the call target but keeping any arguments with side effects.
 	CallCanBeUnwrappedIfUnused bool
+
+	// Symbol values are known to not have side effects when used as property
+	// names in class declarations and object literals.
+	IsSymbolInstance bool
 }
 
 func (a *EDot) HasSameFlagsAs(b *EDot) bool {
 	return a.OptionalChain == b.OptionalChain &&
 		a.CanBeRemovedIfUnused == b.CanBeRemovedIfUnused &&
-		a.CallCanBeUnwrappedIfUnused == b.CallCanBeUnwrappedIfUnused
+		a.CallCanBeUnwrappedIfUnused == b.CallCanBeUnwrappedIfUnused &&
+		a.IsSymbolInstance == b.IsSymbolInstance
 }
 
 type EIndex struct {
@@ -646,12 +652,17 @@ type EIndex struct {
 	// unwrapped if the resulting value is unused. Unwrapping means discarding
 	// the call target but keeping any arguments with side effects.
 	CallCanBeUnwrappedIfUnused bool
+
+	// Symbol values are known to not have side effects when used as property
+	// names in class declarations and object literals.
+	IsSymbolInstance bool
 }
 
 func (a *EIndex) HasSameFlagsAs(b *EIndex) bool {
 	return a.OptionalChain == b.OptionalChain &&
 		a.CanBeRemovedIfUnused == b.CanBeRemovedIfUnused &&
-		a.CallCanBeUnwrappedIfUnused == b.CallCanBeUnwrappedIfUnused
+		a.CallCanBeUnwrappedIfUnused == b.CallCanBeUnwrappedIfUnused &&
+		a.IsSymbolInstance == b.IsSymbolInstance
 }
 
 type EArrow struct {
@@ -758,6 +769,16 @@ type EJSXElement struct {
 
 	CloseLoc        logger.Loc
 	IsTagSingleLine bool
+}
+
+// The JSX specification doesn't say how JSX text is supposed to be interpreted
+// so our "preserve" JSX transform should reproduce the original source code
+// verbatim. One reason why this matters is because there is no canonical way
+// to interpret JSX text (Babel and TypeScript differ in what newlines mean).
+// Another reason is that some people want to do custom things such as this:
+// https://github.com/evanw/esbuild/issues/3605
+type EJSXText struct {
+	Raw string
 }
 
 type ENumber struct{ Value float64 }

@@ -5043,7 +5043,23 @@ func (p *parser) parseJSXElement(loc logger.Loc) js_ast.Expr {
 						if p.lexer.PreviousBackslashQuoteInJSX.Loc.Start > stringLoc.Start {
 							previousStringWithBackslashLoc = stringLoc
 						}
-						value = js_ast.Expr{Loc: stringLoc, Data: &js_ast.EString{Value: p.lexer.StringLiteral()}}
+						if p.options.jsx.Preserve {
+							value = js_ast.Expr{Loc: stringLoc, Data: &js_ast.EJSXText{Raw: p.lexer.Raw()}}
+						} else {
+							value = js_ast.Expr{Loc: stringLoc, Data: &js_ast.EString{Value: p.lexer.StringLiteral()}}
+						}
+						p.lexer.NextInsideJSXElement()
+					} else if p.lexer.Token == js_lexer.TLessThan {
+						// This may be removed in the future: https://github.com/facebook/jsx/issues/53
+						loc := p.lexer.Loc()
+						p.lexer.NextInsideJSXElement()
+						flags |= js_ast.PropertyWasShorthand
+						value = p.parseJSXElement(loc)
+
+						// The call to parseJSXElement() above doesn't consume the last
+						// TGreaterThan because the caller knows what Next() function to call.
+						// Use NextJSXElementChild() here since the next token is inside a JSX
+						// element.
 						p.lexer.NextInsideJSXElement()
 					} else {
 						// Use Expect() not ExpectInsideJSXElement() so we can parse expression tokens
@@ -5188,7 +5204,11 @@ func (p *parser) parseJSXElement(loc logger.Loc) js_ast.Expr {
 	for {
 		switch p.lexer.Token {
 		case js_lexer.TStringLiteral:
-			nullableChildren = append(nullableChildren, js_ast.Expr{Loc: p.lexer.Loc(), Data: &js_ast.EString{Value: p.lexer.StringLiteral()}})
+			if p.options.jsx.Preserve {
+				nullableChildren = append(nullableChildren, js_ast.Expr{Loc: p.lexer.Loc(), Data: &js_ast.EJSXText{Raw: p.lexer.Raw()}})
+			} else {
+				nullableChildren = append(nullableChildren, js_ast.Expr{Loc: p.lexer.Loc(), Data: &js_ast.EString{Value: p.lexer.StringLiteral()}})
+			}
 			p.lexer.NextJSXElementChild()
 
 		case js_lexer.TOpenBrace:
@@ -5198,7 +5218,7 @@ func (p *parser) parseJSXElement(loc logger.Loc) js_ast.Expr {
 			// The expression is optional, and may be absent
 			if p.lexer.Token == js_lexer.TCloseBrace {
 				// Save comments even for absent expressions
-				nullableChildren = append(nullableChildren, js_ast.Expr{Loc: p.saveExprCommentsHere()})
+				nullableChildren = append(nullableChildren, js_ast.Expr{Loc: p.saveExprCommentsHere(), Data: nil})
 			} else {
 				if p.lexer.Token == js_lexer.TDotDotDot {
 					// TypeScript preserves "..." before JSX child expressions here.
@@ -8732,34 +8752,40 @@ func (p *parser) mangleStmts(stmts []js_ast.Stmt, kind stmtsKind) []js_ast.Stmt 
 				// by now since they are scoped to this block which we just finished
 				// visiting.
 				if prevS, ok := result[len(result)-1].Data.(*js_ast.SLocal); ok && prevS.Kind != js_ast.LocalVar {
-					// The variable must be initialized, since we will be substituting
-					// the value into the usage.
-					if last := prevS.Decls[len(prevS.Decls)-1]; last.ValueOrNil.Data != nil {
-						// The binding must be an identifier that is only used once.
-						// Ignore destructuring bindings since that's not the simple case.
-						// Destructuring bindings could potentially execute side-effecting
-						// code which would invalidate reordering.
-						if id, ok := last.Binding.Data.(*js_ast.BIdentifier); ok {
-							// Don't do this if "__name" was called on this symbol. In that
-							// case there is actually more than one use even though it says
-							// there is only one. The "__name" use isn't counted so that
-							// tree shaking still works when names are kept.
-							if symbol := p.symbols[id.Ref.InnerIndex]; symbol.UseCountEstimate == 1 && !symbol.Flags.Has(ast.DidKeepName) {
-								// Try to substitute the identifier with the initializer. This will
-								// fail if something with side effects is in between the declaration
-								// and the usage.
-								if p.substituteSingleUseSymbolInStmt(stmt, id.Ref, last.ValueOrNil) {
-									// Remove the previous declaration, since the substitution was
-									// successful.
-									if len(prevS.Decls) == 1 {
-										result = result[:len(result)-1]
-									} else {
-										prevS.Decls = prevS.Decls[:len(prevS.Decls)-1]
-									}
+					last := prevS.Decls[len(prevS.Decls)-1]
 
-									// Loop back to try again
-									continue
+					// The binding must be an identifier that is only used once.
+					// Ignore destructuring bindings since that's not the simple case.
+					// Destructuring bindings could potentially execute side-effecting
+					// code which would invalidate reordering.
+					if id, ok := last.Binding.Data.(*js_ast.BIdentifier); ok {
+						// Don't do this if "__name" was called on this symbol. In that
+						// case there is actually more than one use even though it says
+						// there is only one. The "__name" use isn't counted so that
+						// tree shaking still works when names are kept.
+						if symbol := p.symbols[id.Ref.InnerIndex]; symbol.UseCountEstimate == 1 && !symbol.Flags.Has(ast.DidKeepName) {
+							replacement := last.ValueOrNil
+
+							// The variable must be initialized, since we will be substituting
+							// the value into the usage.
+							if replacement.Data == nil {
+								replacement = js_ast.Expr{Loc: last.Binding.Loc, Data: js_ast.EUndefinedShared}
+							}
+
+							// Try to substitute the identifier with the initializer. This will
+							// fail if something with side effects is in between the declaration
+							// and the usage.
+							if p.substituteSingleUseSymbolInStmt(stmt, id.Ref, replacement) {
+								// Remove the previous declaration, since the substitution was
+								// successful.
+								if len(prevS.Decls) == 1 {
+									result = result[:len(result)-1]
+								} else {
+									prevS.Decls = prevS.Decls[:len(prevS.Decls)-1]
 								}
+
+								// Loop back to try again
+								continue
 							}
 						}
 					}
@@ -9437,10 +9463,9 @@ func (p *parser) substituteSingleUseSymbolInExpr(
 			if value, status := p.substituteSingleUseSymbolInExpr(part.Value, ref, replacement, replacementCanBeRemoved); status != substituteContinue {
 				e.Parts[i].Value = value
 
-				// If we substituted a string or number, merge it into the template
-				switch value.Data.(type) {
-				case *js_ast.EString, *js_ast.ENumber:
-					expr = js_ast.InlineStringsAndNumbersIntoTemplate(expr.Loc, e)
+				// If we substituted a primitive, merge it into the template
+				if js_ast.IsPrimitiveLiteral(value.Data) {
+					expr = js_ast.InlinePrimitivesIntoTemplate(expr.Loc, e)
 				}
 				return expr, status
 			}
@@ -9454,7 +9479,7 @@ func (p *parser) substituteSingleUseSymbolInExpr(
 	}
 
 	// We can always reorder past primitive values
-	if js_ast.IsPrimitiveLiteral(expr.Data) {
+	if js_ast.IsPrimitiveLiteral(expr.Data) || js_ast.IsPrimitiveLiteral(replacement.Data) {
 		return expr, substituteContinue
 	}
 
@@ -12673,7 +12698,7 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 	// it doesn't affect these mitigations by ensuring that the mitigations are not
 	// applied in those cases (e.g. by adding an additional conditional check).
 	switch e := expr.Data.(type) {
-	case *js_ast.ENull, *js_ast.ESuper, *js_ast.EBoolean, *js_ast.EBigInt, *js_ast.EUndefined:
+	case *js_ast.ENull, *js_ast.ESuper, *js_ast.EBoolean, *js_ast.EBigInt, *js_ast.EUndefined, *js_ast.EJSXText:
 
 	case *js_ast.ENameOfSymbol:
 		e.Ref = p.symbolForMangledProp(p.loadNameFromRef(e.Ref))
@@ -12875,13 +12900,13 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 				}
 
 				// Copy the side effect flags over in case this expression is unused
-				if data.CanBeRemovedIfUnused {
+				if data.Flags.Has(config.CanBeRemovedIfUnused) {
 					e.CanBeRemovedIfUnused = true
 				}
-				if data.CallCanBeUnwrappedIfUnused && !p.options.ignoreDCEAnnotations {
+				if data.Flags.Has(config.CallCanBeUnwrappedIfUnused) && !p.options.ignoreDCEAnnotations {
 					e.CallCanBeUnwrappedIfUnused = true
 				}
-				if data.MethodCallsMustBeReplacedWithUndefined {
+				if data.Flags.Has(config.MethodCallsMustBeReplacedWithUndefined) {
 					methodCallMustBeReplacedWithUndefined = true
 				}
 			}
@@ -13081,7 +13106,7 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 						propName := helpers.UTF16ToString(str.Value)
 						switch propName {
 						case "key":
-							if property.Flags.Has(js_ast.PropertyWasShorthand) {
+							if boolean, ok := property.ValueOrNil.Data.(*js_ast.EBoolean); ok && boolean.Value && property.Flags.Has(js_ast.PropertyWasShorthand) {
 								r := js_lexer.RangeOfIdentifier(p.source, property.Loc)
 								msg := logger.Msg{
 									Kind:  logger.Error,
@@ -13268,7 +13293,7 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 		// it may no longer be a template literal after this point (it may turn into
 		// a plain string literal instead).
 		if p.shouldFoldTypeScriptConstantExpressions || p.options.minifySyntax {
-			expr = js_ast.InlineStringsAndNumbersIntoTemplate(expr.Loc, e)
+			expr = js_ast.InlinePrimitivesIntoTemplate(expr.Loc, e)
 		}
 
 		shouldLowerTemplateLiteral := p.options.unsupportedJSFeatures.Has(compat.TemplateLiteral)
@@ -13401,11 +13426,14 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 					}
 
 					// Copy the side effect flags over in case this expression is unused
-					if define.Data.CanBeRemovedIfUnused {
+					if define.Data.Flags.Has(config.CanBeRemovedIfUnused) {
 						e.CanBeRemovedIfUnused = true
 					}
-					if define.Data.CallCanBeUnwrappedIfUnused && !p.options.ignoreDCEAnnotations {
+					if define.Data.Flags.Has(config.CallCanBeUnwrappedIfUnused) && !p.options.ignoreDCEAnnotations {
 						e.CallCanBeUnwrappedIfUnused = true
+					}
+					if define.Data.Flags.Has(config.IsSymbolInstance) {
+						e.IsSymbolInstance = true
 					}
 					break
 				}
@@ -13524,11 +13552,14 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 						}
 
 						// Copy the side effect flags over in case this expression is unused
-						if define.Data.CanBeRemovedIfUnused {
+						if define.Data.Flags.Has(config.CanBeRemovedIfUnused) {
 							e.CanBeRemovedIfUnused = true
 						}
-						if define.Data.CallCanBeUnwrappedIfUnused && !p.options.ignoreDCEAnnotations {
+						if define.Data.Flags.Has(config.CallCanBeUnwrappedIfUnused) && !p.options.ignoreDCEAnnotations {
 							e.CallCanBeUnwrappedIfUnused = true
+						}
+						if define.Data.Flags.Has(config.IsSymbolInstance) {
+							e.IsSymbolInstance = true
 						}
 						break
 					}

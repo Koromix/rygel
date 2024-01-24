@@ -279,6 +279,10 @@ func TestTSTypes(t *testing.T) {
 	expectPrintedTS(t, "type Foo = Bar extends [infer T extends string] ? T : null", "")
 	expectPrintedTS(t, "type Foo = {} extends infer T extends {} ? A<T> : never", "")
 	expectPrintedTS(t, "type Foo = {} extends (infer T extends {}) ? A<T> : never", "")
+	expectPrintedTS(t, "type Foo<T> = T extends { a: infer U extends number } | { b: infer U extends number } ? U : never", "")
+	expectPrintedTS(t, "type Foo<T> = T extends { a: infer U extends number } & { b: infer U extends number } ? U : never", "")
+	expectPrintedTS(t, "type Foo<T> = T extends { a: infer U extends number } | infer U extends number ? U : never", "")
+	expectPrintedTS(t, "type Foo<T> = T extends { a: infer U extends number } & infer U extends number ? U : never", "")
 	expectPrintedTS(t, "let x: A extends B<infer C extends D> ? D : never", "let x;\n")
 	expectPrintedTS(t, "let x: A extends B<infer C extends D ? infer C : never> ? D : never", "let x;\n")
 	expectPrintedTS(t, "let x: ([e1, e2, ...es]: any) => any", "let x;\n")
@@ -2417,6 +2421,45 @@ class A extends B {
     else
       __super(2);
   }
+}
+`)
+
+	expectPrintedAssignSemanticsTS(t, "class A extends B { #x; y; constructor() { super() } }",
+		`class A extends B {
+  #x;
+  constructor() {
+    super();
+  }
+}
+`)
+
+	expectPrintedAssignSemanticsTS(t, "class A extends B { #x = 1; y; constructor() { super() } }",
+		`class A extends B {
+  #x = 1;
+  constructor() {
+    super();
+  }
+}
+`)
+
+	expectPrintedAssignSemanticsTS(t, "class A extends B { #x; y = 1; constructor() { super() } }",
+		`class A extends B {
+  constructor() {
+    super();
+    this.y = 1;
+  }
+  #x;
+}
+`)
+
+	expectPrintedAssignSemanticsTS(t, "class A extends B { #x = 1; y = 2; constructor() { super() } }",
+		`class A extends B {
+  constructor() {
+    super();
+    this.#x = 1;
+    this.y = 2;
+  }
+  #x;
 }
 `)
 }
