@@ -179,10 +179,11 @@ def sync_domains(path, domains, template):
 
         config['Domain']['Title'] = domain.name
         config['Domain']['DemoMode'] = 'On' if domain.demo_mode else 'Off'
-        for key, value in data:
-            config.remove_option('Data', key)
-            config['Data'][key] = value
         config['Data']['RootDirectory'] = root_directory
+        config['Data']['UseSnapshots'] = 'Off' if domain.demo_mode else 'On'
+        for key, value in data:
+            if not key in config['Data']:
+                config['Data'][key] = value
         config['Archives']['PublicKey'] = base64.b64encode(domain.archive_key).decode('UTF-8')
         if domain.port.isnumeric():
             config['HTTP']['SocketType'] = 'Dual'
