@@ -137,6 +137,8 @@ bool LoadConfig(StreamReader *st, DomainConfig *out_config)
                         }
                     } else if (prop.key == "SynchronousFull") {
                         valid &= ParseBool(prop.value, &config.sync_full);
+                    } else if (prop.key == "UseSnapshots") {
+                        valid &= ParseBool(prop.value, &config.use_snapshots);
                     } else if (prop.key == "AutoCreate") {
                         valid &= ParseBool(prop.value, &config.auto_create);
                     } else if (prop.key == "AutoMigrate") {
@@ -519,7 +521,8 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
 
     // Delay this so that the SQLite background thread does not run when domain is opened,
     // which prevents unshare() from working on Linux.
-    if (!db.UsesSnapshot() && !db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
+    if (config.use_snapshots && !db.UsesSnapshot() &&
+            !db.SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay))
         return false;
 
     int64_t prev_unique = next_unique;
@@ -715,7 +718,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                 complete = false;
                 continue;
             }
-            if (!db->SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay)) {
+            if (config.use_snapshots && !db->SetSnapshotDirectory(config.snapshot_directory, FullSnapshotDelay)) {
                 complete = false;
                 continue;
             }
