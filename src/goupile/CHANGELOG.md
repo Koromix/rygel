@@ -1,5 +1,10 @@
 # Changelog
 
+## Goupile 3.3.4
+
+- Add option to disable SQLite snapshots
+- Disable SQLite snapshots in demo domains
+
 ## Goupile 3.3.3
 
 - Warn user about demo mode
