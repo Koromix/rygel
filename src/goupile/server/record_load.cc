@@ -574,6 +574,7 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
             return;
         }
     } else if (!instance->slaves.len) {
+        const InstanceHolder *master = instance->master;
         const char *export_key = request.GetHeaderValue("X-Export-Key");
 
         if (!export_key) {
@@ -586,7 +587,7 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
         if (!gp_domain.db.Prepare(R"(SELECT permissions FROM dom_permissions
                                      WHERE instance = ?1 AND export_key = ?2)", &stmt))
             return;
-        sqlite3_bind_text(stmt, 1, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 1, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
         sqlite3_bind_text(stmt, 2, export_key, -1, SQLITE_STATIC);
 
         uint32_t permissions = stmt.Step() ? (uint32_t)sqlite3_column_int(stmt, 0) : 0;
