@@ -31,6 +31,7 @@ struct Config {
 
     bool set_etag = true;
     int64_t max_age = 0;
+    bool verbose = false;
 
     BlockAllocator str_alloc;
 
@@ -130,10 +131,18 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
         const char *client_etag = request.GetHeaderValue("If-None-Match");
 
         if (client_etag && TestStr(client_etag, etag)) {
+            if (config.verbose) {
+                LogInfo("Serving file '%1' (cache)", filename);
+            }
+
             MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
             io->AttachResponse(304, response);
             return;
         }
+    }
+
+    if (config.verbose) {
+        LogInfo("Serving file '%1'", filename);
     }
 
     // Send the file
@@ -182,6 +191,10 @@ R"(<!DOCTYPE html>
     </body>
 </html>
 )";
+
+    if (config.verbose) {
+        LogInfo("Serving index for '%1'", dirname);
+    }
 
     io->RunAsync([=]() {
         HeapArray<Span<const char>> names;
@@ -349,7 +362,9 @@ Options:
                                  %!D..(default: %2)%!0
 
     %!..+-p, --port <port>%!0            Change web server port
-                                 %!D..(default: %4)%!0)",
+                                 %!D..(default: %4)%!0
+
+    %!..+-v, --verbose%!0                Log served requests)",
                 FelixTarget, config_filename, config.root_directory, config.http.port);
     };
 
@@ -394,6 +409,8 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
+            } else if (opt.Test("-v", "--verbose")) {
+                config.verbose = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
