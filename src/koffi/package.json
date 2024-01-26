@@ -44,7 +44,6 @@
   },
   "cnoke": {
     "output": "build/koffi/{{ platform }}_{{ arch }}",
-    "node": 16,
     "napi": 8,
     "require": "./index.js"
   }
