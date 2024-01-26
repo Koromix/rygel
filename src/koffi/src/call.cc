@@ -1269,7 +1269,7 @@ void CallData::PopOutArguments()
                 RG_ASSERT(array.IsArray());
                 RG_ASSERT(array.Length() == 1);
 
-                Size len = WideStringLength((const char16_t *)out.ptr, out.max_len);
+                Size len = NullTerminatedLength((const char16_t *)out.ptr, out.max_len);
                 Napi::String str = Napi::String::New(env, (const char16_t *)out.ptr, len);
 
                 array.Set(0u, str);

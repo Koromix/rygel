@@ -779,17 +779,6 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
     }
 }
 
-Size WideStringLength(const char16_t *str16, Size max)
-{
-    Size len = 0;
-
-    while (len < max && str16[len]) {
-        len++;
-    }
-
-    return len;
-}
-
 Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -873,7 +862,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         case PrimitiveKind::Int16: {
             if (type->hint == ArrayHint::String) {
                 const char16_t *ptr = (const char16_t *)origin;
-                Size count = WideStringLength(ptr, len);
+                Size count = NullTerminatedLength(ptr, len);
 
                 Napi::String str = Napi::String::New(env, ptr, count);
                 return str;
@@ -1186,7 +1175,12 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
                 } break;
                 case PrimitiveKind::Int16: 
                 case PrimitiveKind::UInt16: {
-                    Size count = WideStringLength((const char16_t *)ptr, RG_SIZE_MAX);
+                    Size count = NullTerminatedLength((const char16_t *)ptr, RG_SIZE_MAX);
+                    type = MakeArrayType(instance, type, count);
+                } break;
+
+                case PrimitiveKind::Pointer: {
+                    Size count = NullTerminatedLength((const void **)ptr, RG_SIZE_MAX);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
