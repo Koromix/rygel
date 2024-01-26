@@ -387,7 +387,7 @@ Supported compiler features:)");
         Print(fp, R"(
 Felix can also run the following special commands:
     %!..+build%!0                        Build C and C++ projects %!D..(default)%!0)");
-#ifndef _WIN32
+#ifdef __APPLE__
         Print(fp, R"(
     %!..+macify%!0                       Create macOS bundle app from binary)");
 #endif

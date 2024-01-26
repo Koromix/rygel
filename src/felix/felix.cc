@@ -62,7 +62,7 @@ int Main(int argc, char **argv)
 
     if (TestStr(cmd, "build")) {
         return RunBuild(arguments);
-#ifndef _WIN32
+#ifdef __APPLE__
     } else if (TestStr(cmd, "macify")) {
         return RunMacify(arguments);
 #endif

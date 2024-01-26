@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#ifndef _WIN32
+#ifdef __APPLE__
 
 #include "src/core/libcc/libcc.hh"
 #include "compiler.hh"

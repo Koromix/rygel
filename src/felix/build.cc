@@ -468,6 +468,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             target_filename = link_filename;
         }
 
+#ifdef __APPLE__
         // Bundle macOS GUI apps
         if (build.compiler->platform == HostPlatform::macOS && target.qt_components.len) {
             const char *bundle_filename = Fmt(&str_alloc, "%1.app", target_filename).ptr;
@@ -492,6 +493,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
             target_filename = bundle_filename;
         }
+#endif
 
         target_filenames.Set(target.name, target_filename);
     }
