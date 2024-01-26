@@ -217,7 +217,8 @@ static bool ChangeFileOwner(const char *filename, uid_t uid, gid_t gid)
 #endif
 
 static bool CreateInstance(DomainHolder *domain, const char *instance_key,
-                           const char *name, int64_t default_userid, bool demo, int *out_error)
+                           const char *name, int64_t assign_userid, uint32_t permissions,
+                           bool demo, int *out_error)
 {
     BlockAllocator temp_alloc;
 
@@ -383,10 +384,9 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
             return false;
         }
 
-        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
         if (!domain->db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
                                VALUES (?1, ?2, ?3))",
-                            default_userid, instance_key, permissions))
+                            assign_userid, instance_key, permissions))
             return false;
 
         return true;
@@ -685,8 +685,10 @@ retry_pwd:
 
     // Create default instance
     {
+        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
+
         int dummy;
-        if (demo && !CreateInstance(&domain, demo, demo, 1, true, &dummy))
+        if (demo && !CreateInstance(&domain, demo, demo, 1, permissions, true, &dummy))
             return 1;
     }
 
@@ -1075,8 +1077,18 @@ void HandleDemo(const http_RequestInfo &request, http_IO *io)
 
         // Create instance
         {
+            uint32_t permissions = (int)UserPermission::BuildCode |
+                                   (int)UserPermission::BuildPublish |
+                                   (int)UserPermission::DataLoad |
+                                   (int)UserPermission::DataNew |
+                                   (int)UserPermission::DataEdit |
+                                   (int)UserPermission::DataDelete |
+                                   (int)UserPermission::DataAudit |
+                                   (int)UserPermission::DataAnnotate |
+                                   (int)UserPermission::DataExport;
+
             int error;
-            if (!CreateInstance(&gp_domain, name, name, userid, true, &error)) {
+            if (!CreateInstance(&gp_domain, name, name, userid, permissions, true, &error)) {
                 io->AttachError(error);
                 return false;
             }
@@ -1211,8 +1223,10 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
                                   instance_key))
                 return false;
 
+            uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
+
             int error;
-            if (!CreateInstance(&gp_domain, instance_key, name, session->userid, demo, &error)) {
+            if (!CreateInstance(&gp_domain, instance_key, name, session->userid, permissions, demo, &error)) {
                 io->AttachError(error);
                 return false;
             }
