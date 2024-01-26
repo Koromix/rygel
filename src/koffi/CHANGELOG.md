@@ -4,6 +4,10 @@
 
 ### Koffi 2.7
 
+#### Koffi 2.7.3 (2024-01-26)
+
+- Support decoding NULL terminated arrays
+
 #### Koffi 2.7.2 (2024-01-15)
 
 - Add missing TypeScript declaration for `koffi.free()`
