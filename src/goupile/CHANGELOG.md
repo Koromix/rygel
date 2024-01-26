@@ -1,5 +1,10 @@
 # Changelog
 
+## Goupile 3.3.5
+
+- Reduce permissions for demo users
+- Assign export keys to master instance
+
 ## Goupile 3.3.4
 
 - Add option to disable SQLite snapshots
