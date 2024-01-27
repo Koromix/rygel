@@ -4,7 +4,7 @@
 
 ### Introspection
 
-*New in Koffi 2.0: `koffi.resolve()`, new in Koffi 2.2: `koffi.offsetof()`*
+*New in Koffi 2.0: `koffi.resolve()`, new in Koffi 2.2: `koffi.offsetof()`, new in Koffi 2.8: `koffi.type()`*
 
 ```{note}
 The value returned by `introspect()` has **changed in version 2.0 and in version 2.2**.
@@ -46,7 +46,11 @@ Koffi also exposes a few more utility functions to get a subset of this informat
 - `koffi.sizeof(type)` to get the size of a type
 - `koffi.alignof(type)` to get the alignment of a type
 - `koffi.offsetof(type, member_name)` to get the offset of a record member
-- `koffi.resolve(type)` to get the resolved type object from a type string
+- `koffi.type(type)` to get the resolved type object from a type string
+
+```{note}
+The function `koffi.type()` was introduced in Koffi 2.8 to replace `koffi.resolve()`, which is now deprecated.
+```
 
 Just like before, you can refer to primitive types by their name or through `koffi.types`:
 

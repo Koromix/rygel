@@ -2283,7 +2283,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("sizeof", Napi::Function::New(env, GetTypeSize));
     exports.Set("alignof", Napi::Function::New(env, GetTypeAlign));
     exports.Set("offsetof", Napi::Function::New(env, GetMemberOffset));
-    exports.Set("resolve", Napi::Function::New(env, GetResolvedType));
+    exports.Set("type", Napi::Function::New(env, GetResolvedType));
     exports.Set("introspect", Napi::Function::New(env, GetTypeDefinition));
 
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary));

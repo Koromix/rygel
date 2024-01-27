@@ -141,7 +141,8 @@ declare module 'koffi' {
     export function sizeof(type: TypeSpec): number;
     export function alignof(type: TypeSpec): number;
     export function offsetof(type: TypeSpec): number;
-    export function resolve(type: TypeSpec): IKoffiCType;
+    export function type(type: TypeSpec): IKoffiCType;
+    /** @deprecated */ export function resolve(type: TypeSpec): IKoffiCType;
     export function introspect(type: TypeSpec): TypeInfo;
 
     export function alias(name: string, type: TypeSpec): IKoffiCType;

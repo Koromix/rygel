@@ -104,7 +104,8 @@ module.exports = {
 
     // Deprecated functions
     handle: util.deprecate(native.opaque, 'The koffi.handle() function was deprecated in Koffi 2.1, use koffi.opaque() instead', 'KOFFI001'),
-    callback: util.deprecate(native.proto, 'The koffi.callback() function was deprecated in Koffi 2.4, use koffi.proto() instead', 'KOFFI002')
+    callback: util.deprecate(native.proto, 'The koffi.callback() function was deprecated in Koffi 2.4, use koffi.proto() instead', 'KOFFI002'),
+    resolve: util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 2.8, use koffi.type() instead', 'KOFFI007')
 };
 
 let load = module.exports.load;
@@ -112,6 +113,7 @@ let load = module.exports.load;
 module.exports.load = (...args) => {
     let lib = load(...args);
 
+    // Deprecated methods
     lib.cdecl = util.deprecate((...args) => lib.func('__cdecl', ...args), 'The koffi.stdcall() function was deprecated in Koffi 2.7, use koffi.func(...) instead', 'KOFFI003');
     lib.stdcall = util.deprecate((...args) => lib.func('__stdcall', ...args), 'The koffi.stdcall() function was deprecated in Koffi 2.7, use koffi.func("__stdcall", ...) instead', 'KOFFI004');
     lib.fastcall = util.deprecate((...args) => lib.func('__fastcall', ...args), 'The koffi.fastcall() function was deprecated in Koffi 2.7, use koffi.func("__fastcall", ...) instead', 'KOFFI005');
