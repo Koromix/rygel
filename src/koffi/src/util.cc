@@ -46,7 +46,7 @@ Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
 
         napi_property_attributes attr = (napi_property_attributes)(napi_writable | napi_enumerable);
         Napi::ClassPropertyDescriptor<UnionObject> prop = InstanceAccessor(member.name, &UnionObject::Getter,
-                                                                          &UnionObject::Setter, attr, (void *)i);
+                                                                           &UnionObject::Setter, attr, (void *)i);
 
         properties.push_back(prop);
     }
