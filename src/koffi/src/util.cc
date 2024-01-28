@@ -1804,6 +1804,13 @@ static bool CanUseFastCall(const FunctionInfo *func)
 
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 {
+    static const char *const DirectionNames[] = {
+        nullptr,
+        "Input",
+        "Output",
+        "Input/Output"
+    };
+
     Napi::Function wrapper;
 
     // Pick appropriate wrapper
@@ -1851,7 +1858,14 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 
         for (Size i = 0; i < func->parameters.len; i++) {
             const ParameterInfo &param = func->parameters[i];
-            arguments.Set((uint32_t)i, WrapType(env, param.type));
+            K_ASSERT(param.directions >= 1 && param.directions <= 3);
+
+            Napi::Object obj = Napi::Object::New(env);
+
+            obj.Set("type", WrapType(env, param.type));
+            obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
+
+            arguments.Set((uint32_t)i, obj);
         }
 
         wrapper.Set("info", meta);
