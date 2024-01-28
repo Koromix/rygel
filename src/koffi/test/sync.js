@@ -428,8 +428,8 @@ async function test() {
     {
         let disposed = koffi.stats().disposed;
 
-        let ret = koffi.introspect(Concat16.info.result);
-        assert.ok(ret.disposable);
+        assert.ok(Concat16.info.result.disposable);
+        assert.ok(koffi.introspect(Concat16.info.result));
 
         let str = Concat16('Hello ', 'World!');
         assert.equal(str, 'Hello World!');

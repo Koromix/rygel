@@ -32,6 +32,19 @@ extern const int TypeInfoMarker;
 extern const int CastMarker;
 extern const int UnionObjectMarker;
 
+class TypeObject: public Napi::ObjectWrap<TypeObject> {
+    const TypeInfo *type;
+
+    mutable Napi::Object members;
+
+public:
+    static Napi::Function InitClass(Napi::Env env);
+
+    TypeObject(const Napi::CallbackInfo &info);
+
+    const TypeInfo *GetType() { return type; }
+};
+
 class UnionObject: public Napi::ObjectWrap<UnionObject> {
     const TypeInfo *type;
 
@@ -93,7 +106,7 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
-Napi::External<TypeInfo> WrapType(Napi::Env env, InstanceData *instance, const TypeInfo *type);
+Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo *type);
 
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);

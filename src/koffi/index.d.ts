@@ -32,8 +32,6 @@ declare module 'koffi' {
                          'Prototype' | 'Callback';
     type ArrayHint = 'Array' | 'Typed' | 'String';
 
-    type TypeSpec = string | IKoffiCType;
-    type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
     type TypeInfo = {
         name: string;
         primitive: PrimitiveKind;
@@ -42,16 +40,19 @@ declare module 'koffi' {
         disposable: boolean;
         length?: number;
         hint?: ArrayHint;
-        ref?: IKoffiCType;
-        members?: Record<string, { name: string, type: IKoffiCType, offset: number }>;
+        ref?: TypeInfo;
+        members?: Record<string, { name: string, type: TypeInfo, offset: number }>;
     };
+    type TypeSpec = string | TypeInfo | IKoffiCType;
+    type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
+
     type KoffiFunction = {
         (...args: any[]) : any;
         async: (...args: any[]) => any;
         info: {
             name: string,
-            arguments: IKoffiCType[],
-            result: IKoffiCType
+            arguments: TypeInfo[],
+            result: TypeInfo
         };
     };
 
@@ -59,8 +60,8 @@ declare module 'koffi' {
        async: (...args: [...Parameters<T>, (err: any, result: ReturnType<T>) => void]) => void;
        info: {
           name: string;
-          arguments: IKoffiCType[];
-          result: IKoffiCType;
+          arguments: TypeInfo[];
+          result: TypeInfo;
        };
     };
 
@@ -83,43 +84,43 @@ declare module 'koffi' {
         unload(): void;
     }
 
-    export function struct(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-    export function struct(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-    export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-    export function pack(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    export function struct(name: string, def: Record<string, TypeSpecWithAlignment>): TypeInfo;
+    export function struct(def: Record<string, TypeSpecWithAlignment>): TypeInfo;
+    export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): TypeInfo;
+    export function pack(def: Record<string, TypeSpecWithAlignment>): TypeInfo;
 
-    export function union(name: string, def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
-    export function union(def: Record<string, TypeSpecWithAlignment>): IKoffiCType;
+    export function union(name: string, def: Record<string, TypeSpecWithAlignment>): TypeInfo;
+    export function union(def: Record<string, TypeSpecWithAlignment>): TypeInfo;
 
     export class Union {
         constructor(type: TypeSpec);
         [s: string]: any;
     }
 
-    export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): IKoffiCType;
+    export function array(ref: TypeSpec, len: number, hint?: ArrayHint | null): TypeInfo;
 
-    export function opaque(name: string): IKoffiCType;
-    export function opaque(): IKoffiCType;
-    /** @deprecated */ export function handle(name: string): IKoffiCType;
-    /** @deprecated */ export function handle(): IKoffiCType;
+    export function opaque(name: string): TypeInfo;
+    export function opaque(): TypeInfo;
+    /** @deprecated */ export function handle(name: string): TypeInfo;
+    /** @deprecated */ export function handle(): TypeInfo;
 
-    export function pointer(ref: TypeSpec): IKoffiCType;
-    export function pointer(ref: TypeSpec, asteriskCount?: number): IKoffiCType;
-    export function pointer(name: string, ref: TypeSpec, asteriskCount?: number): IKoffiCType;
+    export function pointer(ref: TypeSpec): TypeInfo;
+    export function pointer(ref: TypeSpec, asteriskCount?: number): TypeInfo;
+    export function pointer(name: string, ref: TypeSpec, asteriskCount?: number): TypeInfo;
 
     export function out(type: TypeSpec): IKoffiCType;
     export function inout(type: TypeSpec): IKoffiCType;
 
-    export function disposable(type: TypeSpec): IKoffiCType;
-    export function disposable(name: string, type: TypeSpec): IKoffiCType;
-    export function disposable(name: string, type: TypeSpec, freeFunction: Function): IKoffiCType;
+    export function disposable(type: TypeSpec): TypeInfo;
+    export function disposable(name: string, type: TypeSpec): TypeInfo;
+    export function disposable(name: string, type: TypeSpec, freeFunction: Function): TypeInfo;
 
-    export function proto(definition: string): IKoffiCType;
-    export function proto(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
-    export function proto(convention: string, name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
-    /** @deprecated */ export function callback(definition: string): IKoffiCType;
-    /** @deprecated */ export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
-    /** @deprecated */ export function callback(convention: string, name: string, result: TypeSpec, arguments: TypeSpec[]): IKoffiCType;
+    export function proto(definition: string): TypeInfo;
+    export function proto(name: string, result: TypeSpec, arguments: TypeSpec[]): TypeInfo;
+    export function proto(convention: string, name: string, result: TypeSpec, arguments: TypeSpec[]): TypeInfo;
+    /** @deprecated */ export function callback(definition: string): TypeInfo;
+    /** @deprecated */ export function callback(name: string, result: TypeSpec, arguments: TypeSpec[]): TypeInfo;
+    /** @deprecated */ export function callback(convention: string, name: string, result: TypeSpec, arguments: TypeSpec[]): TypeInfo;
 
     export function register(callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
     export function register(thisValue: any, callback: Function, type: TypeSpec): IKoffiRegisteredCallback;
@@ -141,11 +142,11 @@ declare module 'koffi' {
     export function sizeof(type: TypeSpec): number;
     export function alignof(type: TypeSpec): number;
     export function offsetof(type: TypeSpec): number;
-    export function type(type: TypeSpec): IKoffiCType;
-    /** @deprecated */ export function resolve(type: TypeSpec): IKoffiCType;
-    export function introspect(type: TypeSpec): TypeInfo;
+    export function type(type: TypeSpec): TypeInfo;
+    /** @deprecated */ export function resolve(type: TypeSpec): TypeInfo;
+    /** @deprecated */ export function introspect(type: TypeSpec): TypeInfo;
 
-    export function alias(name: string, type: TypeSpec): IKoffiCType;
+    export function alias(name: string, type: TypeSpec): TypeInfo;
 
     export function config(): Record<string, unknown>;
     export function config(cfg: Record<string, unknown>): Record<string, unknown>;
@@ -165,5 +166,5 @@ declare module 'koffi' {
         errno: Record<string, number>
     };
 
-    export const types: Record<string, IKoffiCType>;
+    export const types: Record<string, TypeInfo>;
 }

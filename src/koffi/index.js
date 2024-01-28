@@ -105,7 +105,8 @@ module.exports = {
     // Deprecated functions
     handle: util.deprecate(native.opaque, 'The koffi.handle() function was deprecated in Koffi 2.1, use koffi.opaque() instead', 'KOFFI001'),
     callback: util.deprecate(native.proto, 'The koffi.callback() function was deprecated in Koffi 2.4, use koffi.proto() instead', 'KOFFI002'),
-    resolve: util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 2.8, use koffi.type() instead', 'KOFFI007')
+    resolve: util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 2.8, use koffi.type() instead', 'KOFFI007'),
+    introspect: util.deprecate(native.type, 'The koffi.introspect() function was deprecated in Koffi 2.8, use koffi.type() instead', 'KOFFI008')
 };
 
 let load = module.exports.load;

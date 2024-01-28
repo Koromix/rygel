@@ -337,7 +337,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     type->flags &= ~(int)TypeFlag::IsIncomplete;
     err_guard.Disable();
 
-    return WrapType(env, instance, type);
+    return FinalizeType(env, instance, type);
 }
 
 static Napi::Value CreatePaddedStructType(const Napi::CallbackInfo &info)
@@ -478,7 +478,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     Napi::Function constructor = UnionObject::InitClass(env, type);
     type->construct.Reset(constructor, 1);
 
-    return WrapType(env, instance, type);
+    return FinalizeType(env, instance, type);
 }
 
 Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
@@ -545,7 +545,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     }
     err_guard.Disable();
 
-    return WrapType(env, instance, type);
+    return FinalizeType(env, instance, type);
 }
 
 static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
@@ -597,6 +597,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
 
         memcpy((void *)copy, type, RG_SIZE(*type));
         copy->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
+        memset(&copy->defn, 0, RG_SIZE(copy->defn));
 
         bool inserted;
         instance->types_map.TrySet(copy->name, copy, &inserted);
@@ -611,7 +612,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         type = copy;
     }
 
-    return WrapType(env, instance, type);
+    return FinalizeType(env, instance, type);
 }
 
 static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int directions)
@@ -640,7 +641,10 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     // Embed direction in unused pointer bits
     const TypeInfo *marked = (const TypeInfo *)((uint8_t *)type + directions - 1);
 
-    return WrapType(env, instance, marked);
+    Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)marked);
+    SetValueTag(instance, external, &TypeInfoMarker);
+
+    return external;
 }
 
 static Napi::Value MarkIn(const Napi::CallbackInfo &info)
@@ -731,6 +735,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
 
     memcpy((void *)type, (const void *)src, RG_SIZE(*src));
     type->members.allocator = GetNullAllocator();
+    memset(&type->defn, 0, RG_SIZE(type->defn));
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
                        : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
@@ -750,7 +755,7 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     }
     err_guard.Disable();
 
-    return WrapType(env, instance, type);
+    return FinalizeType(env, instance, type);
 }
 
 static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **out_ptr)
@@ -877,7 +882,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         type = MakeArrayType(instance, ref, len);
     }
 
-    return WrapType(env, instance, type);
+    return FinalizeType(env, instance, type);
 }
 
 static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *out_func)
@@ -1020,7 +1025,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     instance->types_map.Set(type->name, type);
 
-    return WrapType(env, instance, type);
+    return FinalizeType(env, instance, type);
 }
 
 static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
@@ -1055,7 +1060,7 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
         }
     }
 
-    return WrapType(env, instance, type);
+    return FinalizeType(env, instance, type);
 }
 
 static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
@@ -1138,88 +1143,7 @@ static Napi::Value GetResolvedType(const Napi::CallbackInfo &info)
     if (!type)
         return env.Null();
 
-    return WrapType(env, instance, type);
-}
-
-static Napi::Value GetTypeDefinition(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
-    }
-
-    const TypeInfo *type = ResolveType(info[0]);
-    if (!type)
-        return env.Null();
-
-    if (type->defn.IsEmpty()) {
-        Napi::Object defn = Napi::Object::New(env);
-
-        defn.Set("name", Napi::String::New(env, type->name));
-        defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
-        defn.Set("size", Napi::Number::New(env, (double)type->size));
-        defn.Set("alignment", Napi::Number::New(env, (double)type->align));
-        defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
-
-        switch (type->primitive) {
-            case PrimitiveKind::Void:
-            case PrimitiveKind::Bool:
-            case PrimitiveKind::Int8:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16:
-            case PrimitiveKind::Int16S:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::UInt16S:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::Int32S:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::UInt32S:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::Int64S:
-            case PrimitiveKind::UInt64:
-            case PrimitiveKind::UInt64S:
-            case PrimitiveKind::String:
-            case PrimitiveKind::String16:
-            case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64:
-            case PrimitiveKind::Prototype:
-            case PrimitiveKind::Callback: {} break;
-
-            case PrimitiveKind::Array: {
-                uint32_t len = type->size / type->ref.type->size;
-                defn.Set("length", Napi::Number::New(env, (double)len));
-                defn.Set("hint", ArrayHintNames[(int)type->hint]);
-            } [[fallthrough]];
-            case PrimitiveKind::Pointer: {
-                Napi::Value value = WrapType(env, instance, type->ref.type);
-                defn.Set("ref", value);
-            } break;
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union: {
-                Napi::Object members = Napi::Object::New(env);
-
-                for (const RecordMember &member: type->members) {
-                    Napi::Object obj = Napi::Object::New(env);
-
-                    obj.Set("name", member.name);
-                    obj.Set("type", WrapType(env, instance, member.type));
-                    obj.Set("offset", member.offset);
-
-                    members.Set(member.name, obj);
-                }
-
-                defn.Set("members", members);
-            } break;
-        }
-
-        defn.Freeze();
-        type->defn.Reset(defn, 1);
-    }
-
-    return type->defn.Value();
+    return FinalizeType(env, instance, type);
 }
 
 static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, Size heap_size)
@@ -2119,7 +2043,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
         type->ref.marker = marker;
     }
 
-    Napi::Value wrapper = WrapType(env, instance, type);
+    Napi::Value wrapper = FinalizeType(env, instance, type);
 
     for (const char *name: names) {
         bool inserted;
@@ -2213,8 +2137,6 @@ static Napi::Object InitBaseTypes(Napi::Env env)
     instance->char_type = instance->types_map.FindValue("char", nullptr);
     instance->char16_type = instance->types_map.FindValue("char16", nullptr);
 
-    instance->active_symbol = Napi::Symbol::New(env, "active");
-
     types.Freeze();
 
     return types;
@@ -2267,6 +2189,10 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     env.SetInstanceData(instance);
 
+    Napi::Function construct_type = TypeObject::InitClass(env);
+    instance->construct_type.Reset(construct_type, 1);
+    instance->active_symbol = Napi::Symbol::New(env, "active");
+
     exports.Set("config", Napi::Function::New(env, GetSetConfig));
     exports.Set("stats", Napi::Function::New(env, GetStats));
 
@@ -2284,7 +2210,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("alignof", Napi::Function::New(env, GetTypeAlign));
     exports.Set("offsetof", Napi::Function::New(env, GetMemberOffset));
     exports.Set("type", Napi::Function::New(env, GetResolvedType));
-    exports.Set("introspect", Napi::Function::New(env, GetTypeDefinition));
 
     exports.Set("load", Napi::Function::New(env, LoadSharedLibrary));
 
