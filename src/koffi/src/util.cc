@@ -1610,6 +1610,13 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
+    static const char *const DirectionNames[] = {
+        nullptr,
+        "Input",
+        "Output",
+        "Input/Output"
+    };
+
     Napi::Function wrapper;
     if (func->variadic) {
         Napi::Function::Callback call = TranslateVariadicCall;
@@ -1639,7 +1646,12 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
 
         for (Size i = 0; i < func->parameters.len; i++) {
             const ParameterInfo &param = func->parameters[i];
-            arguments.Set((uint32_t)i, FinalizeType(env, instance, param.type));
+            Napi::Object obj = Napi::Object::New(env);
+
+            obj.Set("type", FinalizeType(env, instance, param.type));
+            obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
+
+            arguments.Set((uint32_t)i, obj);
         }
 
         meta.Freeze();
