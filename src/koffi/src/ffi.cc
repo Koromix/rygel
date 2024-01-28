@@ -475,7 +475,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     err_guard.Disable();
 
     // Union constructor
-    Napi::Function constructor = MagicUnion::InitClass(env, type);
+    Napi::Function constructor = UnionObject::InitClass(env, type);
     type->construct.Reset(constructor, 1);
 
     return WrapType(env, instance, type);
@@ -504,7 +504,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
     }
 
     Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-    SetValueTag(instance, wrapper, &MagicUnionMarker);
+    SetValueTag(instance, wrapper, &UnionObjectMarker);
 
     return wrapper;
 }
@@ -762,7 +762,7 @@ static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **o
         return true;
     } else if (value.IsExternal() && !CheckValueTag(instance, value, &TypeInfoMarker) &&
                                      !CheckValueTag(instance, value, &CastMarker) &&
-                                     !CheckValueTag(instance, value, &MagicUnionMarker)) {
+                                     !CheckValueTag(instance, value, &UnionObjectMarker)) {
         Napi::External<void> external = value.As<Napi::External<void>>();
         void *ptr = external.Data();
 

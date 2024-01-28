@@ -360,8 +360,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     if (type->primitive == PrimitiveKind::Record) {
         members = type->members;
     } else if (type->primitive == PrimitiveKind::Union) {
-        if (CheckValueTag(instance, obj, &MagicUnionMarker)) {
-            MagicUnion *u = MagicUnion::Unwrap(obj);
+        if (CheckValueTag(instance, obj, &UnionObjectMarker)) {
+            UnionObject *u = UnionObject::Unwrap(obj);
             const uint8_t *raw = u->GetRaw();
 
             if (u->GetType() != type) [[unlikely]] {
@@ -1049,7 +1049,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 ptr = AllocHeap(type->ref.type->size, 16);
 
                 if (type->ref.type->primitive == PrimitiveKind::Union &&
-                        (directions & 2) && !CheckValueTag(instance, obj, &MagicUnionMarker)) [[unlikely]] {
+                        (directions & 2) && !CheckValueTag(instance, obj, &UnionObjectMarker)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
                     return false;
                 }
@@ -1278,8 +1278,8 @@ void CallData::PopOutArguments()
             case OutArgument::Kind::Object: {
                 Napi::Object obj = value.As<Napi::Object>();
 
-                if (CheckValueTag(instance, value, &MagicUnionMarker)) {
-                    MagicUnion *u = MagicUnion::Unwrap(obj);
+                if (CheckValueTag(instance, value, &UnionObjectMarker)) {
+                    UnionObject *u = UnionObject::Unwrap(obj);
                     u->SetRaw(out.ptr);
                 } else {
                     DecodeObject(obj, out.ptr, out.type);

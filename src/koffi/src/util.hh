@@ -30,9 +30,9 @@ namespace RG {
 
 extern const int TypeInfoMarker;
 extern const int CastMarker;
-extern const int MagicUnionMarker;
+extern const int UnionObjectMarker;
 
-class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
+class UnionObject: public Napi::ObjectWrap<UnionObject> {
     const TypeInfo *type;
 
     napi_value active_symbol;
@@ -43,7 +43,7 @@ class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
 public:
     static Napi::Function InitClass(Napi::Env env, const TypeInfo *type);
 
-    MagicUnion(const Napi::CallbackInfo &info);
+    UnionObject(const Napi::CallbackInfo &info);
 
     const TypeInfo *GetType() { return type; }
     const RecordMember *GetMember() const { return (active_idx >= 0) ? &type->members[active_idx] : nullptr; }
