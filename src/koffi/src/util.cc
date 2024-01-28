@@ -1546,6 +1546,7 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
             arguments.Set((uint32_t)i, WrapType(env, instance, param.type));
         }
 
+        meta.Freeze();
         wrapper.Set("info", meta);
     }
 
