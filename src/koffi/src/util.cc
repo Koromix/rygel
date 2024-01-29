@@ -51,6 +51,7 @@ Napi::Function TypeObject::InitClass(Napi::Env env)
         InstanceAccessor("hint", &TypeObject::GetHint, nullptr, napi_enumerable),
         InstanceAccessor("ref", &TypeObject::GetRef, nullptr, napi_enumerable),
         InstanceAccessor("members", &TypeObject::GetMembers, nullptr, napi_enumerable),
+        InstanceAccessor("proto", &TypeObject::GetProto, nullptr, napi_enumerable)
     });
 
     return constructor;
@@ -73,15 +74,15 @@ Napi::Value TypeObject::Inspect(const Napi::CallbackInfo &info)
     Napi::Object defn = Value();
     Napi::Object obj = Napi::Object::New(env);
 
-    Napi::Array props = defn.GetPropertyNames();
-    uint32_t len = props.Length();
+    Napi::Array keys = defn.GetPropertyNames();
+    uint32_t len = keys.Length();
 
     for (uint32_t i = 0; i < len; i++) {
-        Napi::String prop = ((Napi::Value)props[i]).As<Napi::String>();
-        Napi::Value value = defn.Get(prop);
+        Napi::Value key = keys[i];
+        Napi::Value value = defn.Get(key);
 
         if (!value.IsUndefined()) {
-            obj.Set(prop, value);
+            obj.Set(key, value);
         }
     }
 
@@ -143,6 +144,16 @@ Napi::Value TypeObject::GetMembers(const Napi::CallbackInfo &info)
     members.Freeze();
 
     return members;
+}
+
+Napi::Value TypeObject::GetProto(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (type->primitive != PrimitiveKind::Prototype && type->primitive != PrimitiveKind::Callback) [[unlikely]]
+        return env.Undefined();
+
+    return DescribeFunction(env, type->ref.proto);
 }
 
 Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
@@ -1643,7 +1654,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
     return true;
 }
 
-Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
+Napi::Object DescribeFunction(Napi::Env env, const FunctionInfo *func)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
@@ -1654,6 +1665,30 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
         "Input/Output"
     };
 
+    Napi::Object meta = Napi::Object::New(env);
+    Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
+
+    meta.Set("name", Napi::String::New(env, func->name));
+    meta.Set("arguments", arguments);
+    meta.Set("result", FinalizeType(env, instance, func->ret.type));
+
+    for (Size i = 0; i < func->parameters.len; i++) {
+        const ParameterInfo &param = func->parameters[i];
+        Napi::Object obj = Napi::Object::New(env);
+
+        obj.Set("type", FinalizeType(env, instance, param.type));
+        obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
+
+        arguments.Set((uint32_t)i, obj);
+    }
+
+    meta.Freeze();
+
+    return meta;
+}
+
+Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
+{
     Napi::Function wrapper;
     if (func->variadic) {
         Napi::Function::Callback call = TranslateVariadicCall;
@@ -1672,29 +1707,8 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
         wrapper.Set("async", async);
     }
 
-    // Create info object
-    {
-        Napi::Object meta = Napi::Object::New(env);
-        Napi::Array arguments = Napi::Array::New(env, func->parameters.len);
-
-        meta.Set("name", Napi::String::New(env, func->name));
-        meta.Set("arguments", arguments);
-        meta.Set("result", FinalizeType(env, instance, func->ret.type));
-
-        for (Size i = 0; i < func->parameters.len; i++) {
-            const ParameterInfo &param = func->parameters[i];
-            Napi::Object obj = Napi::Object::New(env);
-
-            obj.Set("type", FinalizeType(env, instance, param.type));
-            obj.Set("direction", Napi::String::New(env, DirectionNames[param.directions]));
-
-            arguments.Set((uint32_t)i, obj);
-        }
-
-        meta.Freeze();
-
-        wrapper.Set("info", meta);
-    }
+    Napi::Object meta = DescribeFunction(env, func);
+    wrapper.Set("info", meta);
 
     return wrapper;
 }

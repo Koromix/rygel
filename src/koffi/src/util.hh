@@ -57,6 +57,7 @@ public:
     Napi::Value GetHint(const Napi::CallbackInfo &info);
     Napi::Value GetRef(const Napi::CallbackInfo &info);
     Napi::Value GetMembers(const Napi::CallbackInfo &info);
+    Napi::Value GetProto(const Napi::CallbackInfo &info);
 };
 
 class UnionObject: public Napi::ObjectWrap<UnionObject> {
@@ -238,6 +239,7 @@ static inline Napi::Array GetOwnPropertyNames(Napi::Object obj)
     return Napi::Array(env, result);
 }
 
+Napi::Object DescribeFunction(Napi::Env env, const FunctionInfo *func);
 Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func);
 
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);

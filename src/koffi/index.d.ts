@@ -32,6 +32,12 @@ declare module 'koffi' {
                          'Prototype' | 'Callback';
     type ArrayHint = 'Array' | 'Typed' | 'String';
 
+    type PrototypeInfo = {
+        name: string;
+        arguments: TypeInfo[];
+        result: TypeInfo
+    };
+
     type TypeInfo = {
         name: string;
         primitive: PrimitiveKind;
@@ -42,6 +48,7 @@ declare module 'koffi' {
         hint?: ArrayHint;
         ref?: TypeInfo;
         members?: Record<string, { name: string, type: TypeInfo, offset: number }>;
+        proto?: PrototypeInfo
     };
     type TypeSpec = string | TypeInfo | IKoffiCType;
     type TypeSpecWithAlignment = TypeSpec | [number, TypeSpec];
@@ -49,20 +56,12 @@ declare module 'koffi' {
     type KoffiFunction = {
         (...args: any[]) : any;
         async: (...args: any[]) => any;
-        info: {
-            name: string,
-            arguments: TypeInfo[],
-            result: TypeInfo
-        };
+        info: PrototypeInfo;
     };
 
     export type KoffiFunc<T extends (...args: any) => any> = T & {
        async: (...args: [...Parameters<T>, (err: any, result: ReturnType<T>) => void]) => void;
-       info: {
-          name: string;
-          arguments: TypeInfo[];
-          result: TypeInfo;
-       };
+       info: PrototypeInfo;
     };
 
     export interface IKoffiLib {
