@@ -71,22 +71,26 @@ Napi::Value TypeObject::Inspect(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    Napi::Object defn = Value();
-    Napi::Object obj = Napi::Object::New(env);
+    if (inspect_ref.IsEmpty()) {
+        Napi::Object defn = Value();
+        Napi::Object obj = Napi::Object::New(env);
 
-    Napi::Array keys = defn.GetPropertyNames();
-    uint32_t len = keys.Length();
+        Napi::Array keys = defn.GetPropertyNames();
+        uint32_t len = keys.Length();
 
-    for (uint32_t i = 0; i < len; i++) {
-        Napi::Value key = keys[i];
-        Napi::Value value = defn.Get(key);
+        for (uint32_t i = 0; i < len; i++) {
+            Napi::Value key = keys[i];
+            Napi::Value value = defn.Get(key);
 
-        if (!value.IsUndefined()) {
-            obj.Set(key, value);
+            if (!value.IsUndefined()) {
+                obj.Set(key, value);
+            }
         }
+
+        inspect_ref.Reset(obj, 1);
     }
 
-    return obj;
+    return inspect_ref.Value();
 }
 
 Napi::Value TypeObject::GetLength(const Napi::CallbackInfo &info)

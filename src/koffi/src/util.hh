@@ -36,7 +36,7 @@ extern const int UnionObjectMarker;
 class TypeObject: public Napi::ObjectWrap<TypeObject> {
     const TypeInfo *type;
 
-    mutable Napi::Object members;
+    mutable Napi::ObjectReference inspect_ref;
 
 public:
     static Napi::Function InitClass(Napi::Env env);
