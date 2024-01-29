@@ -30,6 +30,7 @@ namespace RG {
 
 // Value does not matter, the tag system uses memory addresses
 const int TypeInfoMarker = 0xDEADBEEF;
+const int DirectionMarker = 0xDEADBEEF;
 const int CastMarker = 0xDEADBEEF;
 const int UnionObjectMarker = 0xDEADBEEF;
 
@@ -161,29 +162,29 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
 
         return type;
     } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
-        if (value.IsExternal()) {
-            Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
+        RG_ASSERT(value.IsObject());
 
-            const TypeInfo *raw = external.Data();
-            const TypeInfo *type = AlignDown(raw, 4);
-            RG_ASSERT(type);
+        Napi::Object obj = value.As<Napi::Object>();
+        TypeObject *defn = TypeObject::Unwrap(obj);
 
-            if (out_directions) {
-                Size delta = (uint8_t *)raw - (uint8_t *)type;
-                *out_directions = 1 + (int)delta;
-            }
-            return type;
-        } else {
-            RG_ASSERT(value.IsObject());
-
-            Napi::Object obj = value.As<Napi::Object>();
-            TypeObject *defn = TypeObject::Unwrap(obj);
-
-            if (out_directions) {
-                *out_directions = 1;
-            }
-            return defn->GetType();
+        if (out_directions) {
+            *out_directions = 1;
         }
+        return defn->GetType();
+    } else if (CheckValueTag(instance, value, &DirectionMarker)) {
+        RG_ASSERT(value.IsExternal());
+
+        Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
+
+        const TypeInfo *raw = external.Data();
+        const TypeInfo *type = AlignDown(raw, 4);
+        RG_ASSERT(type);
+
+        if (out_directions) {
+            Size delta = (uint8_t *)raw - (uint8_t *)type;
+            *out_directions = 1 + (int)delta;
+        }
+        return type;
     } else {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
         return nullptr;

@@ -29,6 +29,7 @@
 namespace RG {
 
 extern const int TypeInfoMarker;
+extern const int DirectionMarker;
 extern const int CastMarker;
 extern const int UnionObjectMarker;
 
