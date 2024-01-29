@@ -36,7 +36,23 @@ const int UnionObjectMarker = 0xDEADBEEF;
 
 Napi::Function TypeObject::InitClass(Napi::Env env)
 {
-    Napi::Function constructor = DefineClass(env, "Type", {});
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    Napi::Function constructor = DefineClass(env, "Type", {
+        InstanceMethod(instance->custom_inspect, &TypeObject::Inspect, napi_default),
+
+        InstanceAccessor("name", &TypeObject::GetName, nullptr, napi_enumerable),
+        InstanceAccessor("primitive", &TypeObject::GetPrimitive, nullptr, napi_enumerable),
+        InstanceAccessor("size", &TypeObject::GetSize, nullptr, napi_enumerable),
+        InstanceAccessor("alignment", &TypeObject::GetAlignment, nullptr, napi_enumerable),
+        InstanceAccessor("disposable", &TypeObject::GetDisposable, nullptr, napi_enumerable),
+
+        InstanceAccessor("length", &TypeObject::GetLength, nullptr, napi_enumerable),
+        InstanceAccessor("hint", &TypeObject::GetHint, nullptr, napi_enumerable),
+        InstanceAccessor("ref", &TypeObject::GetRef, nullptr, napi_enumerable),
+        InstanceAccessor("members", &TypeObject::GetMembers, nullptr, napi_enumerable),
+    });
+
     return constructor;
 }
 
@@ -48,6 +64,85 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
 
     Napi::External<TypeInfo> external = info[0u].As<Napi::External<TypeInfo>>();
     type = external.Data();
+}
+
+Napi::Value TypeObject::Inspect(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    Napi::Object defn = Value();
+    Napi::Object obj = Napi::Object::New(env);
+
+    Napi::Array props = defn.GetPropertyNames();
+    uint32_t len = props.Length();
+
+    for (uint32_t i = 0; i < len; i++) {
+        Napi::String prop = ((Napi::Value)props[i]).As<Napi::String>();
+        Napi::Value value = defn.Get(prop);
+
+        if (!value.IsUndefined()) {
+            obj.Set(prop, value);
+        }
+    }
+
+    return obj;
+}
+
+Napi::Value TypeObject::GetLength(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (type->primitive != PrimitiveKind::Array) [[unlikely]]
+        return env.Undefined();
+
+    uint32_t len = type->size / type->ref.type->size;
+    return Napi::Number::New(env, (double)len);
+}
+
+Napi::Value TypeObject::GetHint(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (type->primitive != PrimitiveKind::Array) [[unlikely]]
+        return env.Undefined();
+
+    return Napi::String::New(env, ArrayHintNames[(int)type->hint]);
+}
+
+Napi::Value TypeObject::GetRef(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (type->primitive != PrimitiveKind::Pointer && type->primitive != PrimitiveKind::Array) [[unlikely]]
+        return env.Undefined();
+
+    return FinalizeType(env, instance, type->ref.type);
+}
+
+Napi::Value TypeObject::GetMembers(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (type->primitive != PrimitiveKind::Record && type->primitive != PrimitiveKind::Union) [[unlikely]]
+        return env.Undefined();
+
+    Napi::Object members = Napi::Object::New(env);
+
+    for (const RecordMember &member: type->members) {
+        Napi::Object obj = Napi::Object::New(env);
+
+        obj.Set("name", member.name);
+        obj.Set("type", FinalizeType(env, instance, member.type));
+        obj.Set("offset", member.offset);
+
+        members.Set(member.name, obj);
+    }
+
+    members.Freeze();
+
+    return members;
 }
 
 Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
@@ -502,68 +597,9 @@ Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo 
 
         Napi::Object defn = instance->construct_type.New({ external });
 
-        defn.Set("name", Napi::String::New(env, type->name));
-        defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
-        defn.Set("size", Napi::Number::New(env, (double)type->size));
-        defn.Set("alignment", Napi::Number::New(env, (double)type->align));
-        defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
-
-        // Assign before to avoid possible recursion crash
         type->defn.Reset(defn, 1);
-
-        switch (type->primitive) {
-            case PrimitiveKind::Void:
-            case PrimitiveKind::Bool:
-            case PrimitiveKind::Int8:
-            case PrimitiveKind::UInt8:
-            case PrimitiveKind::Int16:
-            case PrimitiveKind::Int16S:
-            case PrimitiveKind::UInt16:
-            case PrimitiveKind::UInt16S:
-            case PrimitiveKind::Int32:
-            case PrimitiveKind::Int32S:
-            case PrimitiveKind::UInt32:
-            case PrimitiveKind::UInt32S:
-            case PrimitiveKind::Int64:
-            case PrimitiveKind::Int64S:
-            case PrimitiveKind::UInt64:
-            case PrimitiveKind::UInt64S:
-            case PrimitiveKind::String:
-            case PrimitiveKind::String16:
-            case PrimitiveKind::Float32:
-            case PrimitiveKind::Float64:
-            case PrimitiveKind::Prototype:
-            case PrimitiveKind::Callback: {} break;
-
-            case PrimitiveKind::Array: {
-                uint32_t len = type->size / type->ref.type->size;
-                defn.Set("length", Napi::Number::New(env, (double)len));
-                defn.Set("hint", ArrayHintNames[(int)type->hint]);
-            } [[fallthrough]];
-            case PrimitiveKind::Pointer: {
-                Napi::Value value = FinalizeType(env, instance, type->ref.type);
-                defn.Set("ref", value);
-            } break;
-            case PrimitiveKind::Record:
-            case PrimitiveKind::Union: {
-                Napi::Object members = Napi::Object::New(env);
-
-                for (const RecordMember &member: type->members) {
-                    Napi::Object obj = Napi::Object::New(env);
-
-                    obj.Set("name", member.name);
-                    obj.Set("type", FinalizeType(env, instance, member.type));
-                    obj.Set("offset", member.offset);
-
-                    members.Set(member.name, obj);
-                }
-
-                members.Freeze();
-                defn.Set("members", members);
-            } break;
-        }
-
         defn.Freeze();
+
         SetValueTag(instance, defn, &TypeInfoMarker);
     }
 
@@ -1656,6 +1692,7 @@ Napi::Function WrapFunction(Napi::Env env, const FunctionInfo *func)
         }
 
         meta.Freeze();
+
         wrapper.Set("info", meta);
     }
 
