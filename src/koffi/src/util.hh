@@ -35,6 +35,7 @@ namespace K {
 #endif
 
 extern const napi_type_tag TypeInfoMarker;
+extern const napi_type_tag DirectionMarker;
 extern const napi_type_tag UnionClassMarker;
 extern const napi_type_tag CastMarker;
 

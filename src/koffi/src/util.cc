@@ -12,6 +12,7 @@ namespace K {
 
 // Value does not matter, the tag system uses memory addresses
 const napi_type_tag TypeInfoMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
+const napi_type_tag DirectionMarker = { 0xf9c306238b480580, 0xc2e168524a0823f5 };
 const napi_type_tag UnionClassMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
@@ -213,7 +214,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
     } else {
         napi_valuetype kind = GetKindOf(env, value);
 
-        if (kind == napi_external && CheckValueTag(env, value, &TypeInfoMarker)) {
+        if (kind == napi_external && CheckValueTag(env, value, &DirectionMarker)) {
             Napi::External<TypeInfo> external = Napi::External<TypeInfo>(env, value);
             const TypeInfo *raw = external.Data();
 

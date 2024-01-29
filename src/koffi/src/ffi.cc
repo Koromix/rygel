@@ -737,7 +737,7 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     const TypeInfo *marked = (const TypeInfo *)((uint8_t *)type + directions - 1);
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)marked);
-    SetValueTag(env, external, &TypeInfoMarker);
+    SetValueTag(env, external, &DirectionMarker);
 
     return external;
 }
