@@ -11,6 +11,7 @@
 // with contributions from Lénárd Szolnoki
 // with contributions from Jan Pharago
 // with contributions from Maya Warrier
+// with contributions from Taha Khokhar
 //
 //
 // Licensed under the Apache License, Version 2.0, or the
@@ -138,7 +139,11 @@
 #include <cstring>
 #include <type_traits>
 #include <system_error>
-
+#ifdef __has_include
+  #if __has_include(<stdfloat>)
+    #include <stdfloat>
+  #endif
+#endif
 
 namespace fast_float {
 
@@ -318,7 +323,14 @@ fastfloat_really_inline constexpr bool cpp20_and_in_constexpr() {
 
 template <typename T>
 fastfloat_really_inline constexpr bool is_supported_float_type() {
-  return std::is_same<T, float>::value || std::is_same<T, double>::value;
+  return std::is_same<T, float>::value || std::is_same<T, double>::value
+#if __STDCPP_FLOAT32_T__
+    || std::is_same<T, std::float32_t>::value
+#endif
+#if __STDCPP_FLOAT64_T__
+    || std::is_same<T, std::float64_t>::value
+#endif
+  ;
 }
 
 template <typename UC>
@@ -414,10 +426,10 @@ uint64_t umul128_generic(uint64_t ab, uint64_t cd, uint64_t *hi) {
   uint64_t ad = emulu((uint32_t)(ab >> 32), (uint32_t)cd);
   uint64_t bd = emulu((uint32_t)ab, (uint32_t)cd);
   uint64_t adbc = ad + emulu((uint32_t)ab, (uint32_t)(cd >> 32));
-  uint64_t adbc_carry = !!(adbc < ad);
+  uint64_t adbc_carry = (uint64_t)(adbc < ad);
   uint64_t lo = bd + (adbc << 32);
   *hi = emulu((uint32_t)(ab >> 32), (uint32_t)(cd >> 32)) + (adbc >> 32) +
-        (adbc_carry << 32) + !!(lo < bd);
+        (adbc_carry << 32) + (uint64_t)(lo < bd);
   return lo;
 }
 
@@ -1375,8 +1387,7 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
 
 template <typename T, typename UC>
 fastfloat_really_inline FASTFLOAT_CONSTEXPR20
-from_chars_result_t<UC> parse_int_string(UC const* p, UC const* pend, T& value, int base)
-{
+from_chars_result_t<UC> parse_int_string(UC const* p, UC const* pend, T& value, int base) {
   from_chars_result_t<UC> answer;
   
   UC const* const first = p;
@@ -1396,9 +1407,11 @@ from_chars_result_t<UC> parse_int_string(UC const* p, UC const* pend, T& value, 
   }
 
   UC const* const start_num = p;
-  while (*p == UC('0')) { 
+
+  while (p!= pend && *p == UC('0')) {
     ++p; 
   }
+
   const bool has_leading_zeros = p > start_num;
 
   UC const* const start_digits = p;
@@ -1461,8 +1474,8 @@ from_chars_result_t<UC> parse_int_string(UC const* p, UC const* pend, T& value, 
     // this weird workaround is required because:
     // - converting unsigned to signed when its value is greater than signed max is UB pre-C++23.
     // - reinterpret_casting (~i + 1) would work, but it is not constexpr
-    // this is always optimized into a neg instruction.
-    value = T(-std::numeric_limits<T>::max() - T(i - std::numeric_limits<T>::max()));
+    // this is always optimized into a neg instruction (note: T is an integer type)
+    value = T(-std::numeric_limits<T>::max() - T(i - uint64_t(std::numeric_limits<T>::max())));
 #ifdef FASTFLOAT_VISUAL_STUDIO
 #pragma warning(pop)
 #endif
@@ -3415,7 +3428,6 @@ adjusted_mantissa digit_comp(parsed_number_string_t<UC>& num, adjusted_mantissa 
 #include <cstring>
 #include <limits>
 #include <system_error>
-
 namespace fast_float {
 
 
@@ -3538,11 +3550,59 @@ fastfloat_really_inline bool rounds_to_nearest() noexcept {
 
 } // namespace detail
 
+template <typename T>
+struct from_chars_caller
+{
+  template <typename UC>
+  FASTFLOAT_CONSTEXPR20
+  static from_chars_result_t<UC> call(UC const * first, UC const * last,
+                                      T &value, parse_options_t<UC> options)  noexcept {
+    return from_chars_advanced(first, last, value, options);
+  }
+};
+
+#if __STDCPP_FLOAT32_T__ == 1
+template <>
+struct from_chars_caller<std::float32_t>
+{
+  template <typename UC>
+  FASTFLOAT_CONSTEXPR20
+  static from_chars_result_t<UC> call(UC const * first, UC const * last,
+                                      std::float32_t &value, parse_options_t<UC> options) noexcept{
+    // if std::float32_t is defined, and we are in C++23 mode; macro set for float32; 
+    // set value to float due to equivalence between float and float32_t
+    float val;
+    auto ret = from_chars_advanced(first, last, val, options);
+    value = val;
+    return ret;
+  }
+};
+#endif
+
+#if __STDCPP_FLOAT64_T__ == 1
+template <>
+struct from_chars_caller<std::float64_t>
+{
+  template <typename UC>
+  FASTFLOAT_CONSTEXPR20
+  static from_chars_result_t<UC> call(UC const * first, UC const * last,
+                                      std::float64_t &value, parse_options_t<UC> options) noexcept{
+    // if std::float64_t is defined, and we are in C++23 mode; macro set for float64;
+    // set value as double due to equivalence between double and float64_t
+    double val;
+    auto ret = from_chars_advanced(first, last, val, options);
+    value = val;
+    return ret;
+  }
+};
+#endif
+
+
 template<typename T, typename UC, typename>
 FASTFLOAT_CONSTEXPR20
 from_chars_result_t<UC> from_chars(UC const * first, UC const * last,
                              T &value, chars_format fmt /*= chars_format::general*/)  noexcept  {
-  return from_chars_advanced(first, last, value, parse_options_t<UC>{fmt});
+  return from_chars_caller<T>::call(first, last, value, parse_options_t<UC>(fmt));
 }
 
 template<typename T, typename UC>
@@ -3550,7 +3610,7 @@ FASTFLOAT_CONSTEXPR20
 from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
                                       T &value, parse_options_t<UC> options)  noexcept  {
 
-  static_assert (is_supported_float_type<T>(), "only float and double are supported");
+  static_assert (is_supported_float_type<T>(), "only some floating-point types are supported");
   static_assert (is_supported_char_type<UC>(), "only char, wchar_t, char16_t and char32_t are supported");
 
   from_chars_result_t<UC> answer;
@@ -3637,8 +3697,7 @@ from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
 
 template <typename T, typename UC, typename>
 FASTFLOAT_CONSTEXPR20
-from_chars_result_t<UC> from_chars(UC const* first, UC const* last, T& value, int base) noexcept
-{
+from_chars_result_t<UC> from_chars(UC const* first, UC const* last, T& value, int base) noexcept {
   static_assert (is_supported_char_type<UC>(), "only char, wchar_t, char16_t and char32_t are supported");
 
   from_chars_result_t<UC> answer;
