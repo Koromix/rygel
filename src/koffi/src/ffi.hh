@@ -277,9 +277,7 @@ struct InstanceData {
     const TypeInfo *char_type;
     const TypeInfo *char16_type;
 
-    Napi::Symbol custom_inspect;
     Napi::Symbol active_symbol;
-
     Napi::FunctionReference construct_type;
 
     std::mutex memories_mutex;

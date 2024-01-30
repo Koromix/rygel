@@ -44,20 +44,6 @@ public:
     TypeObject(const Napi::CallbackInfo &info);
 
     const TypeInfo *GetType() const { return type; }
-
-    Napi::Value Inspect(const Napi::CallbackInfo &info);
-
-    Napi::Value GetName(const Napi::CallbackInfo &info) { return Napi::String::New(info.Env(), type->name); }
-    Napi::Value GetPrimitive(const Napi::CallbackInfo &info) { return Napi::String::New(info.Env(), PrimitiveKindNames[(int)type->primitive]); }
-    Napi::Value GetSize(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), (double)type->size); }
-    Napi::Value GetAlignment(const Napi::CallbackInfo &info) { return Napi::Number::New(info.Env(), (double)type->align); }
-    Napi::Value GetDisposable(const Napi::CallbackInfo &info) { return Napi::Boolean::New(info.Env(), !!type->dispose); }
-
-    Napi::Value GetLength(const Napi::CallbackInfo &info);
-    Napi::Value GetHint(const Napi::CallbackInfo &info);
-    Napi::Value GetRef(const Napi::CallbackInfo &info);
-    Napi::Value GetMembers(const Napi::CallbackInfo &info);
-    Napi::Value GetProto(const Napi::CallbackInfo &info);
 };
 
 class UnionObject: public Napi::ObjectWrap<UnionObject> {

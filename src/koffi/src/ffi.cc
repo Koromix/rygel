@@ -2189,7 +2189,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     env.SetInstanceData(instance);
 
-    instance->custom_inspect = Napi::Symbol::For(env, "nodejs.util.inspect.custom");
     instance->active_symbol = Napi::Symbol::New(env, "active");
 
     Napi::Function construct_type = TypeObject::InitClass(env);
