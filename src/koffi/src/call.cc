@@ -633,9 +633,8 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     ptr = ReserveTrampoline(member.type->ref.proto, func);
                     if (!ptr) [[unlikely]]
                         return false;
-                } else if (CheckValueTag(instance, value, member.type->ref.marker)) {
-                    Napi::External<void> external = value.As<Napi::External<void>>();
-                    ptr = external.Data();
+                } else if (CheckPointerType(instance, value, member.type)) {
+                    ptr = UnwrapPointer(env, instance, value);
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
@@ -874,9 +873,8 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
                     ptr = ReserveTrampoline(ref->ref.proto, func);
                     if (!ptr) [[unlikely]]
                         return false;
-                } else if (CheckValueTag(instance, value, ref->ref.marker)) {
-                    Napi::External<void> external = value.As<Napi::External<void>>();
-                    ptr = external.Data();
+                } else if (CheckPointerType(instance, value, ref)) {
+                    ptr = UnwrapPointer(env, instance, value);
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
@@ -982,25 +980,16 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             return true;
         } break;
 
-        case napi_external: {
-            RG_ASSERT(type->primitive == PrimitiveKind::Pointer);
-
-            if (!CheckValueTag(instance, value, type->ref.marker) &&
-                    !CheckValueTag(instance, value, instance->void_type) &&
-                    type->ref.type != instance->void_type) [[unlikely]]
-                goto unexpected;
-
-            *out_ptr = value.As<Napi::External<uint8_t>>().Data();
-            return true;
-        } break;
-
         case napi_object: {
             uint8_t *ptr = nullptr;
 
             OutArgument::Kind out_kind;
             Size out_max_len = -1;
 
-            if (value.IsArray()) {
+            if (CheckPointerType(instance, value, type) ||
+                    (CheckValueTag(instance, value, &PointerMarker) && type->ref.type == instance->void_type)) {
+                ptr = (uint8_t *)UnwrapPointer(env, instance, value);
+            } else if (value.IsArray()) {
                 Napi::Array array = value.As<Napi::Array>();
                 Size len = PushIndirectString(array, type->ref.type, &ptr);
 

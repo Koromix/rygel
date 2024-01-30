@@ -709,12 +709,11 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
             InstanceData *instance = env.GetInstanceData<InstanceData>();
             const Napi::FunctionReference &ref = type->dispose_ref;
 
-            Napi::External<void> external = Napi::External<void>::New(env, (void *)ptr);
-            SetValueTag(instance, external, type->ref.marker);
+            Napi::Value wrapper = WrapPointer(env, instance, type, (void *)ptr);
 
             Napi::Value self = env.Null();
             napi_value args[] = {
-                external
+                wrapper
             };
 
             ref.Call(self, RG_LEN(args), args);
@@ -765,16 +764,13 @@ static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **o
     if (IsNullOrUndefined(value)) {
         *out_ptr = 0;
         return true;
-    } else if (value.IsExternal() && !CheckValueTag(instance, value, &TypeInfoMarker) &&
-                                     !CheckValueTag(instance, value, &CastMarker) &&
-                                     !CheckValueTag(instance, value, &UnionObjectMarker)) {
-        Napi::External<void> external = value.As<Napi::External<void>>();
-        void *ptr = external.Data();
+    } else if (CheckValueTag(instance, value, &PointerMarker)) {
+        void *ptr = UnwrapPointer(env, instance, value);
 
         *out_ptr = ptr;
         return true;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected external pointer", GetValueType(instance, value));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
         return false;
     }
 }
@@ -1550,6 +1546,7 @@ static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(info[1]);
     if (!type)
         return env.Null();
+    type = MakePointerType(instance, type);
 
 #ifdef _WIN32
     void *ptr = (void *)GetProcAddress((HMODULE)lib->module, name.c_str());
@@ -1561,10 +1558,9 @@ static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(instance, external, &type);
+    Napi::Value wrapper = WrapPointer(env, instance, type, ptr);
 
-    return external;
+    return wrapper;
 }
 
 static Napi::Value UnloadLibrary(const Napi::CallbackInfo &info)
@@ -1725,14 +1721,12 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     trampoline->generation = -1;
 
     void *ptr = GetTrampoline(idx, type->ref.proto);
-
-    Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(instance, external, type->ref.marker);
+    Napi::Value wrapper = WrapPointer(env, instance, type, ptr);
 
     // Cache index for fast unregistration
     instance->trampolines_map.Set(ptr, idx);
 
-    return external;
+    return wrapper;
 }
 
 static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
@@ -1744,17 +1738,17 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
-    if (!info[0].IsExternal()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for id, expected registered callback", GetValueType(instance, info[0]));
+
+    PointerObject *obj = CheckValueTag(instance, info[0], &PointerMarker) ? PointerObject::Unwrap(info[0].As<Napi::Object>()) : nullptr;
+
+    if (!obj || obj->GetType()->primitive != PrimitiveKind::Callback) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected registered callback", GetValueType(instance, info[0]));
         return env.Null();
     }
 
-    Napi::External<void> external = info[0].As<Napi::External<void>>();
-    void *ptr = external.Data();
-
     int16_t idx;
     {
-        int16_t *it = instance->trampolines_map.Find(ptr);
+        int16_t *it = instance->trampolines_map.Find(obj->GetPointer());
 
         if (!it) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Could not find matching registered callback");
@@ -1843,25 +1837,6 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
         Napi::Value ret = Decode(value, offset, type);
         return ret;
     }
-}
-
-static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
-        return env.Null();
-    }
-
-    void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr))
-        return env.Null();
-
-    uint64_t ptr64 = (uint64_t)(uintptr_t)ptr;
-    Napi::BigInt bigint = Napi::BigInt::New(env, ptr64);
-
-    return bigint;
 }
 
 static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
@@ -2040,7 +2015,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
         const TypeInfo *marker = instance->types_map.FindValue(ref, nullptr);
         RG_ASSERT(marker);
 
-        type->ref.marker = marker;
+        type->ref.type = marker;
     }
 
     Napi::Value wrapper = FinalizeType(env, instance, type);
@@ -2189,10 +2164,13 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     env.SetInstanceData(instance);
 
+    instance->custom_inspect = Napi::Symbol::For(env, "nodejs.util.inspect.custom");
     instance->active_symbol = Napi::Symbol::New(env, "active");
 
     Napi::Function construct_type = TypeObject::InitClass(env);
+    Napi::Function construct_ptr = PointerObject::InitClass(env);
     instance->construct_type.Reset(construct_type, 1);
+    instance->construct_ptr.Reset(construct_ptr, 1);
 
     exports.Set("config", Napi::Function::New(env, GetSetConfig));
     exports.Set("stats", Napi::Function::New(env, GetStats));
@@ -2226,7 +2204,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     exports.Set("as", Napi::Function::New(env, CastValue));
     exports.Set("decode", Napi::Function::New(env, DecodeValue));
-    exports.Set("address", Napi::Function::New(env, GetPointerAddress));
     exports.Set("call", Napi::Function::New(env, CallPointerSync));
     exports.Set("encode", Napi::Function::New(env, EncodeValue));
 

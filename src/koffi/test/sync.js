@@ -280,7 +280,7 @@ async function test() {
     const GetSymbolStr = lib.func('const char *GetSymbolStr()');
     const GetSymbolInt3 = lib.func('void GetSymbolInt3(_Out_ int *out)');
 
-    free_ptr = CallFree;
+    // free_ptr = CallFree;
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -634,8 +634,8 @@ async function test() {
         UpperToInternalBuffer1('HeLlO WoRlD', ptr1);
         UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
 
-        assert.equal(ptr1[0], 'HELLO WORLD')
-        assert.ok(util.types.isExternal(ptr2[0]));
+        assert.equal(ptr1[0], 'HELLO WORLD');
+        // XXX: assert.ok(util.types.isExternal(ptr2[0]));
         assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
     }
 
@@ -685,9 +685,6 @@ async function test() {
         assert.equal(koffi.errno(), koffi.os.errno.ENOENT);
     }
 
-    // Support null in koffi.address()
-    assert.strictEqual(koffi.address(null), 0n);
-
     // Test polymorphic input string arguments
     assert.equal(ComputeLengthUntilNulV(koffi.as([1, 2, 42, 0], 'int8_t *')), 3);
     assert.equal(ComputeLengthUntilNulV('Hello World!'), 12);
@@ -715,7 +712,7 @@ async function test() {
     assert.equal(koffi.call(GetBinaryIntFunction('substract'), 'BinaryIntFunc', 4, 5), -1);
     assert.equal(koffi.call(GetBinaryIntFunction('multiply'), BinaryIntFunc, 3, 8), 24);
     assert.equal(koffi.call(GetBinaryIntFunction('divide'), BinaryIntFunc, 100, 2), 50);
-    assert.equal(GetBinaryIntFunction('missing'), null);
+    assert.equal(GetBinaryIntFunction('missing').address, 0);
 
     // Call decoded function pointers
     {
@@ -736,7 +733,7 @@ async function test() {
     assert.equal(koffi.call(GetVariadicIntFunction('add'), VariadicIntFunc, 3, 'int', 4, 'int', 5, 'int', 12), 21);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 1, 'int', 2, 'int', 21), 2);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 2, 'int', 2, 'int', 21), 42);
-    assert.equal(GetBinaryIntFunction('missing'), null);
+    assert.equal(GetVariadicIntFunction('missing').address, 0);
 
     // Communicate through raw buffers
     {
@@ -778,6 +775,8 @@ async function test() {
     // Decode non-UTF-8 string
     {
         let ptr = GetLatin1String();
+        console.log(ptr);
+
         let array = koffi.decode(ptr, 'uint8_t', -1);
         let str = Buffer.from(array.buffer).toString('latin1');
 

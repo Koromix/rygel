@@ -30,6 +30,7 @@ namespace RG {
 
 extern const int TypeInfoMarker;
 extern const int DirectionMarker;
+extern const int PointerMarker;
 extern const int CastMarker;
 extern const int UnionObjectMarker;
 
@@ -44,6 +45,24 @@ public:
     TypeObject(const Napi::CallbackInfo &info);
 
     const TypeInfo *GetType() const { return type; }
+};
+
+class PointerObject: public Napi::ObjectWrap<PointerObject> {
+    void *ptr;
+    const TypeInfo *type;
+
+public:
+    static Napi::Function InitClass(Napi::Env env);
+
+    PointerObject(const Napi::CallbackInfo &info);
+
+    void *GetPointer() const { return ptr; }
+    const TypeInfo *GetType() const { return type; }
+
+    Napi::Value Inspect(const Napi::CallbackInfo &info);
+
+    Napi::Value GetAddress(const Napi::CallbackInfo &info);
+    Napi::Value GetType(const Napi::CallbackInfo &info);
 };
 
 class UnionObject: public Napi::ObjectWrap<UnionObject> {
@@ -118,6 +137,10 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
 void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
+
+bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *type);
+Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeInfo *type, void *ptr);
+void *UnwrapPointer(Napi::Env env, const InstanceData *instance, Napi::Value value);
 
 static inline bool IsNullOrUndefined(Napi::Value value)
 {

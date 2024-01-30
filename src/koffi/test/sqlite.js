@@ -113,10 +113,8 @@ async function test() {
         }
         assert.equal(sqlite3_step(stmt), SQLITE_DONE);
 
-        let stmt_raw = koffi.address(stmt);
-
-        assert.equal(typeof stmt_raw, 'bigint');
-        assert.equal(sqlite3_finalize(stmt_raw), 0);
+        assert.equal(typeof stmt.address, 'bigint');
+        assert.equal(sqlite3_finalize(stmt.address), 0);
     } finally {
         sqlite3_close_v2(db);
         fs.unlinkSync(filename);

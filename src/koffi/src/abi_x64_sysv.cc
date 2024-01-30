@@ -402,8 +402,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     ptr = ReserveTrampoline(param.type->ref.proto, func);
                     if (!ptr) [[unlikely]]
                         return false;
-                } else if (CheckValueTag(instance, value, param.type->ref.marker)) {
-                    ptr = value.As<Napi::External<void>>().Data();
+                } else if (CheckPointerType(instance, value, param.type)) {
+                    ptr = UnwrapPointer(env, instance, value);
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
@@ -514,14 +514,8 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
-            if (result.ptr) {
-                Napi::External<void> external = Napi::External<void>::New(env, result.ptr);
-                SetValueTag(instance, external, func->ret.type->ref.marker);
-
-                return external;
-            } else {
-                return env.Null();
-            }
+            Napi::Value wrapper = WrapPointer(env, instance, func->ret.type, result.ptr);
+            return wrapper;
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
@@ -695,14 +689,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
             case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                if (ptr2) {
-                    Napi::External<void> external = Napi::External<void>::New(env, ptr2);
-                    SetValueTag(instance, external, param.type->ref.marker);
-
-                    arguments.Append(external);
-                } else {
-                    arguments.Append(env.Null());
-                }
+                Napi::Value wrapper = WrapPointer(env, instance, param.type, ptr2);
+                arguments.Append(wrapper);
 
                 if (param.type->dispose) {
                     param.type->dispose(env, param.type, ptr2);
@@ -839,8 +827,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
         case PrimitiveKind::Pointer: {
             uint8_t *ptr;
 
-            if (CheckValueTag(instance, value, type->ref.marker)) {
-                ptr = value.As<Napi::External<uint8_t>>().Data();
+            if (CheckPointerType(instance, value, type)) {
+                ptr = (uint8_t *)UnwrapPointer(env, instance, value);
             } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
                                            type->ref.type->primitive == PrimitiveKind::Union)) {
                 Napi::Object obj = value.As<Napi::Object>();
@@ -923,8 +911,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
                 ptr = ReserveTrampoline(type->ref.proto, func2);
                 if (!ptr) [[unlikely]]
                     return;
-            } else if (CheckValueTag(instance, value, type->ref.marker)) {
-                ptr = value.As<Napi::External<void>>().Data();
+            } else if (CheckPointerType(instance, value, type)) {
+                ptr = UnwrapPointer(env, instance, value);
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {
