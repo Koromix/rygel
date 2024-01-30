@@ -128,10 +128,10 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
 
 Napi::Function PointerObject::InitClass(Napi::Env env)
 {
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
+    Napi::Symbol symbol = Napi::Symbol::For(env, "nodejs.util.inspect.custom");
 
     Napi::Function constructor = DefineClass(env, "Pointer", {
-        InstanceMethod(instance->custom_inspect, &PointerObject::Inspect, napi_default),
+        InstanceMethod(symbol, &PointerObject::Inspect, napi_default),
 
         InstanceAccessor("address", &PointerObject::GetAddress, nullptr, napi_enumerable),
         InstanceAccessor("type", &PointerObject::GetType, nullptr, napi_enumerable)
@@ -214,32 +214,34 @@ UnionObject::UnionObject(const Napi::CallbackInfo &info)
     : Napi::ObjectWrap<UnionObject>(info), type((const TypeInfo *)info.Data())
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    active_symbol = instance->active_symbol;
+    active_symbol = Napi::Persistent(Napi::Symbol::For(env, "koffi.active"));
 }
 
 void UnionObject::SetRaw(const uint8_t *ptr)
 {
+    Napi::Env env = Env();
+    Napi::Object self = Value();
+
     raw.RemoveFrom(0);
     raw.Append(MakeSpan(ptr, type->size));
 
-    Value().Set(active_symbol, Env().Undefined());
+    self.Set(active_symbol.Value(), env.Undefined());
     active_idx = -1;
 }
 
 Napi::Value UnionObject::Getter(const Napi::CallbackInfo &info)
 {
+    Napi::Env env = Env();
+    Napi::Object self = Value();
+
     Size idx = (Size)info.Data();
     const RecordMember &member = type->members[idx];
 
     Napi::Value value;
 
     if (idx == active_idx) {
-        value = Value().Get(active_symbol);
+        value = self.Get(active_symbol.Value());
     } else {
-        Napi::Env env = info.Env();
-
         if (!raw.len) [[unlikely]] {
             ThrowError<Napi::Error>(env, "Cannont convert %1 union value", active_idx < 0 ? "empty" : "assigned");
             return env.Null();
@@ -247,7 +249,7 @@ Napi::Value UnionObject::Getter(const Napi::CallbackInfo &info)
 
         value = Decode(env, raw.ptr, member.type);
 
-        Value().Set(active_symbol, value);
+        self.Set(active_symbol.Value(), value);
         active_idx = idx;
     }
 
@@ -257,9 +259,10 @@ Napi::Value UnionObject::Getter(const Napi::CallbackInfo &info)
 
 void UnionObject::Setter(const Napi::CallbackInfo &info, const Napi::Value &value)
 {
+    Napi::Object self = Value();
     Size idx = (Size)info.Data();
 
-    Value().Set(active_symbol, value);
+    self.Set(active_symbol.Value(), value);
     active_idx = idx;
 
     raw.Clear();

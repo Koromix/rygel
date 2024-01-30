@@ -2164,13 +2164,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     env.SetInstanceData(instance);
 
-    instance->custom_inspect = Napi::Symbol::For(env, "nodejs.util.inspect.custom");
-    instance->active_symbol = Napi::Symbol::New(env, "active");
-
-    Napi::Function construct_type = TypeObject::InitClass(env);
-    Napi::Function construct_ptr = PointerObject::InitClass(env);
-    instance->construct_type.Reset(construct_type, 1);
-    instance->construct_ptr.Reset(construct_ptr, 1);
+    instance->construct_type = Napi::Persistent(TypeObject::InitClass(env));
+    instance->construct_ptr = Napi::Persistent(PointerObject::InitClass(env));
 
     exports.Set("config", Napi::Function::New(env, GetSetConfig));
     exports.Set("stats", Napi::Function::New(env, GetStats));

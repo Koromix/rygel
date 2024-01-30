@@ -68,7 +68,7 @@ public:
 class UnionObject: public Napi::ObjectWrap<UnionObject> {
     const TypeInfo *type;
 
-    napi_value active_symbol;
+    Napi::Reference<Napi::Symbol> active_symbol;
     Size active_idx = -1;
 
     HeapArray<uint8_t> raw;
