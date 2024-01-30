@@ -1650,7 +1650,7 @@ var supportedModes = {
     Jack: ["jack"],
     Jade: ["jade|pug"],
     Java: ["java"],
-    JavaScript: ["js|jsm|jsx|cjs|mjs"],
+    JavaScript: ["js|jsm|cjs|mjs"],
     JEXL: ["jexl"],
     JSON: ["json"],
     JSON5: ["json5"],
@@ -1762,7 +1762,8 @@ var supportedModes = {
     XML: ["xml|rdf|rss|wsdl|xslt|atom|mathml|mml|xul|xbl|xaml"],
     XQuery: ["xq"],
     YAML: ["yaml|yml"],
-    Zeek: ["zeek|bro"]
+    Zeek: ["zeek|bro"],
+    Zig: ["zig"]
 };
 var nameOverrides = {
     ObjectiveC: "Objective-C",
@@ -4336,7 +4337,7 @@ var AcePopup = /** @class */ (function () {
                 el.setAttribute("aria-activedescendant", ariaId);
                 selected.setAttribute("role", optionAriaRole);
                 selected.setAttribute("aria-roledescription", nls("item"));
-                selected.setAttribute("aria-label", popup.getData(row).value);
+                selected.setAttribute("aria-label", popup.getData(row).caption || popup.getData(row).value);
                 selected.setAttribute("aria-setsize", popup.data.length);
                 selected.setAttribute("aria-posinset", row + 1);
                 selected.setAttribute("aria-describedby", "doc-tooltip");
@@ -5814,13 +5815,7 @@ var Autocomplete = /** @class */ (function () {
     Autocomplete.prototype.$onPopupChange = function (hide) {
         if (this.inlineRenderer && this.inlineEnabled) {
             var completion = hide ? null : this.popup.getData(this.popup.getRow());
-            var prefix = util.getCompletionPrefix(this.editor);
-            if (!this.inlineRenderer.show(this.editor, completion, prefix)) {
-                this.inlineRenderer.hide();
-            }
-            else {
-                this.$seen(completion);
-            }
+            this.$updateGhostText(completion);
             if (this.popup.isMouseOver && this.setSelectOnHover) {
                 this.tooltipTimer.call(null, null);
                 return;
@@ -5831,6 +5826,18 @@ var Autocomplete = /** @class */ (function () {
         else {
             this.popupTimer.call(null, null);
             this.tooltipTimer.call(null, null);
+        }
+    };
+    Autocomplete.prototype.$updateGhostText = function (completion) {
+        var row = this.base.row;
+        var column = this.base.column;
+        var cursorColumn = this.editor.getCursorPosition().column;
+        var prefix = this.editor.session.getLine(row).slice(column, cursorColumn);
+        if (!this.inlineRenderer.show(this.editor, completion, prefix)) {
+            this.inlineRenderer.hide();
+        }
+        else {
+            this.$seen(completion);
         }
     };
     Autocomplete.prototype.$onPopupRender = function () {
@@ -5936,6 +5943,11 @@ var Autocomplete = /** @class */ (function () {
         this.popup.setRow(this.autoSelect ? newRow : -1);
         if (newRow === oldRow && previousSelectedItem !== this.completions.filtered[newRow])
             this.$onPopupChange();
+        var inlineEnabled = this.inlineRenderer && this.inlineEnabled;
+        if (newRow === oldRow && inlineEnabled) {
+            var completion = this.popup.getData(this.popup.getRow());
+            this.$updateGhostText(completion);
+        }
         if (!keepPopupPosition) {
             this.popup.setTheme(editor.getTheme());
             this.popup.setFontSize(editor.getFontSize());
@@ -6067,6 +6079,7 @@ var Autocomplete = /** @class */ (function () {
             this.base = this.editor.session.doc.createAnchor(pos.row, pos.column);
             this.base.$insertRight = true;
             this.completions = new FilteredList(options.matches);
+            this.getCompletionProvider().completions = this.completions;
             return this.openPopup(this.editor, "", keepPopupPosition);
         }
         var session = this.editor.getSession();
