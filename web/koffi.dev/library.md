@@ -27,6 +27,8 @@ You can explicitly unload a library by calling `lib.unload()`. Any attempt to fi
 On some platforms (such as with the [musl C library on Linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html#Unloading-libraries)), shared libraries cannot be unloaded, so the library will remain loaded and memory mapped after the call to `lib.unload()`.
 ```
 
+## Import functions
+
 Use the object returned by `koffi.load()` to load C functions from the library. To do so, you can use two syntaxes:
 
 - The classic syntax, inspired by node-ffi
@@ -41,7 +43,7 @@ const printf = lib.func('printf', 'int', ['str', '...']);
 const atoi = lib.func('atoi', 'int', ['str']);
 ```
 
-Koffi automatically tries mangled names for non-standard x86 calling conventions. See the section on [calling conventions](#calling-conventions) for more information on this subject.
+Koffi automatically tries mangled names for non-standard x86 calling conventions. See the section on [calling conventions](functions.md#calling-conventions) for more information on this subject.
 
 ### C-like prototypes
 

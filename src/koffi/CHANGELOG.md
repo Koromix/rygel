@@ -34,7 +34,7 @@
 #### Koffi 2.6.11 (2023-12-05)
 
 - Speed up resolving simple and often used type names
-- Fix use of optional length argument with [koffi.encode()](variables.md#encode-to-c-memory)
+- Fix use of optional length argument with [koffi.encode()](memory.md#encode-to-c-memory)
 
 #### Koffi 2.6.10 (2023-11-29)
 
@@ -81,9 +81,9 @@ Pre-built binaries don't work correctly in Koffi 2.6.2, skip this version.
 
 **New features:**
 
-- Use [koffi.symbol()](variables.md#variable-definitions) to make pointers to exported variables (or other symbols)
-- Use [koffi.encode()](variables.md#encode-to-c-memory) to explictly encode data from JS to C memory
-- Use shared library [lazy-loading](functions.md#loading-options) (RTLD_LAZY) on POSIX platforms
+- Use [koffi.symbol()](library.md#import-variables) to make pointers to exported variables (or other symbols)
+- Use [koffi.encode()](memory.md#encode-to-c-memory) to explictly encode data from JS to C memory
+- Use shared library [lazy-loading](library.md#load-library) (RTLD_LAZY) on POSIX platforms
 
 **Other changes:**
 
