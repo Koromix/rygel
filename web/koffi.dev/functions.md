@@ -1,84 +1,5 @@
 # Function calls
 
-## Loading libraries
-
-To declare functions, start by loading the shared library with `koffi.load(filename)`.
-
-```js
-// ES6 syntax: import koffi from 'koffi';
-const koffi = require('koffi');
-
-const lib = koffi.load('/path/to/shared/library'); // File extension depends on platforms: .so, .dll, .dylib, etc.
-```
-
-This library will be automatically unloaded once all references to it are gone (including all the functions that use it, as described below).
-
-Starting with *Koffi 2.3.20*, you can explicitly unload a library by calling `lib.unload()`. Any attempt to find or call a function from this library after unloading it will crash.
-
-```{note}
-On some platforms (such as with the [musl C library on Linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html#Unloading-libraries)), shared libraries cannot be unloaded, so the library will remain loaded and memory mapped after the call to `lib.unload()`.
-```
-
-## Loading options
-
-The `load` function can take an optional object argument, with the following options:
-
-```js
-const options = {
-    lazy: true // Use RTLD_LAZY (lazy-binding) on POSIX platforms (by default, use RTLD_NOW)
-};
-
-const lib = koffi.load('/path/to/shared/library.so', options);
-```
-
-More options may be added if needed.
-
-## Function definitions
-
-### Definition syntax
-
-Use the object returned by `koffi.load()` to load C functions from the library. To do so, you can use two syntaxes:
-
-- The classic syntax, inspired by node-ffi
-- C-like prototypes
-
-#### Classic syntax
-
-To declare a function, you need to specify its non-mangled name, its return type, and its parameters. Use an ellipsis as the last parameter for variadic functions.
-
-```js
-const printf = lib.func('printf', 'int', ['str', '...']);
-const atoi = lib.func('atoi', 'int', ['str']);
-```
-
-Koffi automatically tries mangled names for non-standard x86 calling conventions. See the section on [calling conventions](#calling-conventions) for more information on this subject.
-
-#### C-like prototypes
-
-If you prefer, you can declare functions using simple C-like prototype strings, as shown below:
-
-```js
-const printf = lib.func('int printf(const char *fmt, ...)');
-const atoi = lib.func('int atoi(str)'); // The parameter name is not used by Koffi, and optional
-```
-
-You can use `()` or `(void)` for functions that take no argument.
-
-### Variadic functions
-
-Variadic functions are declared with an ellipsis as the last argument.
-
-In order to call a variadic function, you must provide two Javascript arguments for each additional C parameter, the first one is the expected type and the second one is the value.
-
-```js
-const printf = lib.func('printf', 'int', ['str', '...']);
-
-// The variadic arguments are: 6 (int), 8.5 (double), 'THE END' (const char *)
-printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END');
-```
-
-On x86 platforms, only the Cdecl convention can be used for variadic functions.
-
 ### Calling conventions
 
 By default, calling a C function happens synchronously.
@@ -162,6 +83,21 @@ Asynchronous functions run on worker threads. You need to deal with thread safet
 
 Callbacks must be called from the main thread, or more precisely from the same thread as the V8 intepreter. Calling a callback from another thread is undefined behavior, and will likely lead to a crash or a big mess. You've been warned!
 ```
+
+## Variadic functions
+
+Variadic functions are declared with an ellipsis as the last argument.
+
+In order to call a variadic function, you must provide two Javascript arguments for each additional C parameter, the first one is the expected type and the second one is the value.
+
+```js
+const printf = lib.func('printf', 'int', ['str', '...']);
+
+// The variadic arguments are: 6 (int), 8.5 (double), 'THE END' (const char *)
+printf('Integer %d, double %g, str %s', 'int', 6, 'double', 8.5, 'str', 'THE END');
+```
+
+On x86 platforms, only the Cdecl convention can be used for variadic functions.
 
 ## Function pointers
 

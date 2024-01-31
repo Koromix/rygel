@@ -71,22 +71,3 @@ console.log(koffi.decode(my_string, 'const char *')) // Prints "Hello World!"
 When encoding strings (either directly or embedded in arrays or structs), the memory will be bound to the raw pointer value and managed by Koffi. You can assign to the same string again and again without any leak or risk of use-after-free.
 
 There is also an optional ending `length` argument that you can use to encode an array. For example, here is how you can encode an array with 3 float values: `koffi.encode(symbol, 'float', [1, 2, 3], 3)`. This is equivalent to `koffi.encode(symbol, koffi.array('float', 3), [1, 2, 3])`.
-
-## Exported symbols
-
-To find an exported symbol and declare a variable, use `lib.symbol(name, type)`. You need to specify its name and its type.
-
-```c
-int my_int = 42;
-const char *my_string = NULL;
-```
-
-```js
-const my_int = lib.symbol('my_int', 'int');
-const my_string = lib.symbol('my_string', 'const char *');
-```
-
-You cannot directly manipulate these variables, use:
-
-- [koffi.decode()](#decode-to-js-values) to read their value
-- [koffi.encode()](#encode-to-c-memory) to change their value

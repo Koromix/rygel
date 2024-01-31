@@ -25,6 +25,7 @@ Table of contents
 
    platforms
    start
+   library
    functions
    input
    pointers
