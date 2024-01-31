@@ -101,4 +101,4 @@ console.log(vec1); // { x: 3, y: 2, z: 1 }
 console.log(vec2); // { x: 1, y: 2, z: 3 }
 ```
 
-See [decoding variables](variables.md#decode-to-js-values) for more information about the decode function.
+See [decoding variables](memory.md#decode-to-js-values) for more information about the decode function.
