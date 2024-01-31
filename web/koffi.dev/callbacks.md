@@ -1,14 +1,6 @@
 # Javascript callbacks
 
-*Changed in Koffi 2.4*
-
-```{note}
-The function `koffi.proto()` was introduced in Koffi 2.4, it was called `koffi.callback()` in earlier versions.
-```
-
 ## Callback types
-
-*Changed in Koffi 2.7*
 
 In order to pass a JS function to a C function expecting a callback, you must first create a callback type with the expected return type and parameters. The syntax is similar to the one used to load functions from a shared library.
 
@@ -36,21 +28,9 @@ const EnumWindowsProc = koffi.proto('__stdcall', 'EnumWindowsProc', 'bool', ['HW
 
 ```{warning}
 You have to make sure you **get the calling convention right** (such as specifying __stdcall for a Windows API callback), or your code will crash on Windows 32-bit.
-
-Before Koffi 2.7, it was *impossible to use an alternative callback calling convention with the classic syntax*. Use a prototype string or *upgrade to Koffi 2.7* to solve this limitation.
 ```
 
 Once your callback type is declared, you can use a pointer to it in struct definitions, as function parameters and/or return types, or to call/decode function pointers.
-
-```{note}
-Callbacks **have changed in version 2.0**.
-
-In Koffi 1.x, callbacks were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer.
-
-Now, you must use them through a pointer: `void CallIt(CallbackType func)` in Koffi 1.x becomes `void CallIt(CallbackType *func)` in version 2.0 and newer.
-
-Consult the [migration guide](migration.md) for more information.
-```
 
 ## Transient and registered callbacks
 

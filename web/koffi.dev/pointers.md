@@ -39,8 +39,6 @@ console.log(pos);
 
 ### Opaque pointers
 
-*New in Koffi 2.0*
-
 Some C libraries use handles, which behave as pointers to opaque structs. An example of this is the HANDLE type in the Win32 API. If you want to reproduce this behavior, you can define a **named pointer type** to an opaque type, like so:
 
 ```js
@@ -133,8 +131,6 @@ console.log(total); // Prints 14
 By default, just like for objects, array arguments are copied from JS to C but not vice-versa. You can however change the direction as documented in the section on [output parameters](output.md).
 
 ## Disposable types
-
-*New in Koffi 2.0*
 
 Disposable types allow you to register a function that will automatically called after each C to JS conversion performed by Koffi. This can be used to avoid leaking heap-allocated strings, for example.
 

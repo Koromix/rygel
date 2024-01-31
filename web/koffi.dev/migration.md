@@ -63,10 +63,6 @@ console.log(ret);
 
 Koffi 1.x only supported [transient callbacks](callbacks.md#javascript-callbacks), you must use Koffi 2.x for registered callbacks.
 
-```{note}
-The function `koffi.proto()` was introduced in Koffi 2.4, it was called `koffi.callback()` in earlier versions.
-```
-
 ### Opaque type changes
 
 In Koffi 1.x, opaque handles were defined in a way that made them usable directly as parameter and return types, obscuring the underlying pointer. Now, in Koffi 2.0, you must use them through a pointer, and use an array for output parameters.

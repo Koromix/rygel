@@ -21,8 +21,6 @@ On some platforms (such as with the [musl C library on Linux](https://wiki.musl-
 
 ## Loading options
 
-*New in Koffi 2.6*
-
 The `load` function can take an optional object argument, with the following options:
 
 ```js
@@ -83,8 +81,6 @@ On x86 platforms, only the Cdecl convention can be used for variadic functions.
 
 ### Calling conventions
 
-*Changed in Koffi 2.7*
-
 By default, calling a C function happens synchronously.
 
 Most architectures only support one procedure call standard per process. The 32-bit x86 platform is an exception to this, and Koffi supports several x86 conventions:
@@ -97,12 +93,6 @@ Most architectures only support one procedure call standard per process. The 32-
  **Thiscall** | `koffi.func('__thiscall', name, ret, params)` | __thiscall     | Rarely used, uses ECX for first parameter
 
 You can safely use these on non-x86 platforms, they are simply ignored.
-
-```{note}
-Support for specifying the convention as the first argument of the classic form was introduced in Koffi 2.7.
-
-In earlier versions, you had to use `koffi.stdcall()` and similar functions. These functions are still supported but deprecated, and will be removed in Koffi 3.0.
-```
 
 Below you can find a small example showing how to use a non-default calling convention, with the two syntaxes:
 
@@ -174,8 +164,6 @@ Callbacks must be called from the main thread, or more precisely from the same t
 ```
 
 ## Function pointers
-
-*New in Koffi 2.4*
 
 You can call a function pointer in two ways:
 

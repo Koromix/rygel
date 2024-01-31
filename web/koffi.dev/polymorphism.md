@@ -2,8 +2,6 @@
 
 ## Input polymorphism
 
-*New in Koffi 2.1*
-
 Many C functions use `void *` parameters in order to pass polymorphic objects and arrays, meaning that the data format changes can change depending on one other argument, or on some kind of struct tag member.
 
 Koffi provides two features to deal with this:
@@ -64,8 +62,6 @@ console.log('PNG header:', hdr);
 ```
 
 ## Output buffers
-
-*New in Koffi 2.3*
 
 You can use buffers and typed arrays for output (and input/output) pointer parameters. Simply pass the buffer as an argument and the native function will receive a pointer to its contents.
 

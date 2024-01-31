@@ -4,8 +4,6 @@
 
 ### Native modules
 
-*Simplified in Koffi 2.5.9*
-
 Koffi uses native modules to work. The NPM package contains binaries for various platforms and architectures, and the appropriate module is selected at runtime.
 
 In theory, the **packagers/bundlers should be able to find all native modules** because they are explictly listed in the Javascript file (as static strings) and package them somehow.
@@ -39,8 +37,6 @@ MyApp.exe
 ```
 
 ### Indirect loader
-
-*New in Koffi 2.6.2*
 
 Some bundlers (such as vite) don't like when require is used with native modules.
 

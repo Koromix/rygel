@@ -132,8 +132,6 @@ sqlite3_close_v2(db);
 
 ### String buffer example
 
-*New in Koffi 2.2*
-
 This example calls a C function to concatenate two strings to a pre-allocated string buffer. Since JS strings are immutable, you must pass an array with a single string instead.
 
 ```c
