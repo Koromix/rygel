@@ -989,6 +989,9 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             if (CheckPointerType(instance, value, type) ||
                     (CheckValueTag(instance, value, &PointerMarker) && type->ref.type == instance->void_type)) {
                 ptr = (uint8_t *)UnwrapPointer(env, instance, value);
+
+                directions = 1;
+                out_kind = OutArgument::Kind::Array; // Whatever, just avoid unitialized warning
             } else if (value.IsArray()) {
                 Napi::Array array = value.As<Napi::Array>();
                 Size len = PushIndirectString(array, type->ref.type, &ptr);
@@ -1073,9 +1076,6 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
         case napi_string: {
             RG_ASSERT(type->primitive == PrimitiveKind::Pointer);
-
-            if (directions & 2) [[unlikely]]
-                goto unexpected;
 
             if (type->ref.type == instance->void_type) {
                 PushStringValue(value, (const char **)out_ptr);
