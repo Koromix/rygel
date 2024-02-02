@@ -19,7 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "vendor/raylib/src/raylib.h"
 
 namespace RG {

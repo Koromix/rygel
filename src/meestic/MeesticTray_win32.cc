@@ -13,7 +13,7 @@
 
 #ifdef _WIN32
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "config.hh"
 #include "light.hh"
 

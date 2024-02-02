@@ -13,7 +13,7 @@
 
 #ifdef __APPLE__
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "compiler.hh"
 #include "locate.hh"
 #include "vendor/pugixml/src/pugixml.hpp"

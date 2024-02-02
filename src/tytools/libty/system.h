@@ -12,7 +12,7 @@
 #define TY_SYSTEM_H
 
 #include "common.h"
-#include "src/core/libhs/platform.h"
+#include "src/tytools/libhs/platform.h"
 #include <sys/types.h>
 
 _HS_BEGIN_C

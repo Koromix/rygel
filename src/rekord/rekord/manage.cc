@@ -11,10 +11,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "src/core/libcc/libcc.hh"
-#include "src/core/libwrap/json.hh"
+#include "src/core/base/base.hh"
+#include "src/core/wrap/json.hh"
 #include "rekord.hh"
-#include "src/core/libpasswd/libpasswd.hh"
+#include "src/core/password/password.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/pugixml/src/pugixml.hpp"
 #include <iostream> // for pugixml

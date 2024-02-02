@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "src/core/libhs/common.h"
+#include "src/tytools/libhs/common.h"
 #include "config.h"
 
 _HS_BEGIN_C

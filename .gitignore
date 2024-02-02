@@ -24,6 +24,10 @@ package-lock.json
 /src/koffi/**/dist/
 /web/**/dist/
 
+/src/drd/drdR/R/
+/src/drd/drdR/src/
+/src/drd/drdR_*
+
 /src/napka/data/*
 !/src/napka/data/.gitkeep
 /src/napka/tmp/*.js

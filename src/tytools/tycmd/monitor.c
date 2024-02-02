@@ -16,8 +16,8 @@
 #else
     #include <unistd.h>
 #endif
-#include "src/core/libhs/device.h"
-#include "src/core/libhs/serial.h"
+#include "src/tytools/libhs/device.h"
+#include "src/tytools/libhs/serial.h"
 #include "src/tytools/libty/system.h"
 #include "main.h"
 

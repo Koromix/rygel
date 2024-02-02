@@ -14,9 +14,9 @@
 #include "common.h"
 #include "board.h"
 #include "class_priv.h"
-#include "src/core/libhs/array.h"
-#include "src/core/libhs/device.h"
-#include "src/core/libhs/htable.h"
+#include "src/tytools/libhs/array.h"
+#include "src/tytools/libhs/device.h"
+#include "src/tytools/libhs/htable.h"
 #include "task.h"
 #include "thread.h"
 

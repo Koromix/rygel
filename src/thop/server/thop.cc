@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "thop.hh"
 #include "config.hh"
 #include "structure.hh"
@@ -19,7 +19,7 @@
 #include "mco_casemix.hh"
 #include "mco_info.hh"
 #include "user.hh"
-#include "src/core/libnet/libnet.hh"
+#include "src/core/network/network.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {

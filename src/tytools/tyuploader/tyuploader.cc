@@ -12,7 +12,7 @@
 #include <QMessageBox>
 #include <QTranslator>
 
-#include "src/core/libhs/common.h"
+#include "src/tytools/libhs/common.h"
 #include "src/tytools/libty/common.h"
 #include "src/tytools/libty/class.h"
 #include "src/tytools/tycommander/log_dialog.hpp"

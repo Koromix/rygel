@@ -21,7 +21,7 @@
 
 #if defined(__aarch64__) || defined(_M_ARM64)
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

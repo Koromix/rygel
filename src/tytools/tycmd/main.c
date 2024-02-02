@@ -12,7 +12,7 @@
     #include <signal.h>
     #include <sys/wait.h>
 #endif
-#include "src/core/libhs/common.h"
+#include "src/tytools/libhs/common.h"
 #include "src/tytools/libty/system.h"
 #include "main.h"
 

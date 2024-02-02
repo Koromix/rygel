@@ -11,10 +11,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "vm.hh"
-#include "src/core/libwrap/jscore.hh"
-#include "src/core/libwrap/json.hh"
+#include "src/core/wrap/jscore.hh"
+#include "src/core/wrap/json.hh"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"
 

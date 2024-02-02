@@ -11,11 +11,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "instance.hh"
 #include "record.hh"
 #include "user.hh"
-#include "src/core/libwrap/json.hh"
+#include "src/core/wrap/json.hh"
 
 namespace RG {
 

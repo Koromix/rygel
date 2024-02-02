@@ -19,7 +19,7 @@
     #include <stdlib.h>
 #endif
 
-#include "src/core/libhs/common.h"
+#include "src/tytools/libhs/common.h"
 #include "src/tytools/libty/class.h"
 #include "tycommander.hpp"
 #include "board.hpp"

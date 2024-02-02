@@ -80,9 +80,9 @@ bundle_drdR <- function(project_dir, version, build_dir) {
     copy_files(c('src/drd/drdR/drdR.R',
                  'src/drd/drdR/drdR_mco.R'), 'R')
     copy_files(list_files('src/drd/libdrd'), 'src/drd/libdrd')
-    copy_files(list_files('src/core/libcc'), 'src/core/libcc')
-    copy_files(c('src/core/libwrap/Rcc.cc',
-                 'src/core/libwrap/Rcc.hh'), 'src/core/libwrap')
+    copy_files(list_files('src/core/base'), 'src/core/base')
+    copy_files(c('src/core/wrap/Rcc.cc',
+                 'src/core/wrap/Rcc.hh'), 'src/core/wrap')
     copy_files(list_files('vendor/miniz'), 'vendor/miniz')
     copy_files('vendor/dragonbox/include/dragonbox/dragonbox.h', 'vendor/dragonbox/include/dragonbox')
 

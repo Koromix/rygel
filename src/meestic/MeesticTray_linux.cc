@@ -13,10 +13,10 @@
 
 #ifdef __linux__
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "config.hh"
 #include "light.hh"
-#include "src/core/libwrap/json.hh"
+#include "src/core/wrap/json.hh"
 #include "vendor/basu/src/systemd/sd-bus.h"
 #include "vendor/stb/stb_image.h"
 #include "vendor/stb/stb_image_resize.h"

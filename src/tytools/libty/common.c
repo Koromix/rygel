@@ -14,7 +14,7 @@
     #include <windows.h>
 #endif
 #include <stdarg.h>
-#include "src/core/libhs/common.h"
+#include "src/tytools/libhs/common.h"
 #include "system.h"
 #include "task.h"
 

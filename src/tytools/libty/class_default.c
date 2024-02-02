@@ -10,7 +10,7 @@
 
 #include "common.h"
 #include "class_priv.h"
-#include "src/core/libhs/device.h"
+#include "src/tytools/libhs/device.h"
 
 extern const struct _ty_class_vtable _ty_teensy_class_vtable;
 extern const struct _ty_class_vtable _ty_generic_class_vtable;

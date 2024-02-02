@@ -13,9 +13,9 @@
 
 #pragma once
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "types.hh"
-#include "src/core/libsqlite/libsqlite.hh"
+#include "src/core/sqlite/sqlite.hh"
 
 namespace RG {
 

@@ -11,8 +11,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "src/core/libcc/libcc.hh"
-#include "src/core/libsqlite/libsqlite.hh"
+#include "src/core/base/base.hh"
+#include "src/core/sqlite/snapshot.hh"
+#include "src/core/sqlite/sqlite.hh"
 
 namespace RG {
 

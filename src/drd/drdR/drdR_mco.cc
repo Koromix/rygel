@@ -11,9 +11,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "../libdrd/libdrd.hh"
-#include "src/core/libwrap/Rcc.hh"
+#include "src/core/wrap/Rcc.hh"
 
 namespace RG {
 

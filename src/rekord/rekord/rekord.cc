@@ -11,8 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "src/core/libcc/libcc.hh"
-#include "src/core/libnet/curl.hh"
+#include "src/core/base/base.hh"
+#include "src/core/network/curl.hh"
 #include "rekord.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #ifndef _WIN32

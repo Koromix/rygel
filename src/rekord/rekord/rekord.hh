@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "src/rekord/librekord/librekord.hh"
 
 namespace RG {

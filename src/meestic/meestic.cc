@@ -11,12 +11,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "config.hh"
 #include "light.hh"
-#include "src/core/libhs/libhs.h"
-#include "src/core/libsandbox/libsandbox.hh"
-#include "src/core/libwrap/json.hh"
+#include "src/tytools/libhs/libhs.h"
+#include "src/core/sandbox/sandbox.hh"
+#include "src/core/wrap/json.hh"
 
 #ifdef __linux__
     #include <sys/types.h>

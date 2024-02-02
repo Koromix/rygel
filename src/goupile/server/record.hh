@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "src/core/libcc/libcc.hh"
-#include "src/core/libnet/libnet.hh"
+#include "src/core/base/base.hh"
+#include "src/core/network/network.hh"
 
 namespace RG {
 

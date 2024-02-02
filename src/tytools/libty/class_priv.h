@@ -14,7 +14,7 @@
 #include "common.h"
 #include "board.h"
 #include "class.h"
-#include "src/core/libhs/match.h"
+#include "src/tytools/libhs/match.h"
 
 _HS_BEGIN_C
 

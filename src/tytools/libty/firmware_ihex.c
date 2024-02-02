@@ -9,7 +9,7 @@
    See the LICENSE file for more details. */
 
 #include "common.h"
-#include "src/core/libhs/array.h"
+#include "src/tytools/libhs/array.h"
 #include "firmware.h"
 
 struct parser_context {

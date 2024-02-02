@@ -23,7 +23,7 @@
 // Based on FastCDC
 // Adapted from https://github.com/ronomon/deduplication/blob/master/binding.cc
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "splitter.hh"
 
 namespace RG {

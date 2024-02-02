@@ -10,8 +10,8 @@
 
 #include "common.h"
 #include "class_priv.h"
-#include "src/core/libhs/array.h"
-#include "src/core/libhs/device.h"
+#include "src/tytools/libhs/array.h"
+#include "src/tytools/libhs/device.h"
 #include "ini.h"
 #include "system.h"
 

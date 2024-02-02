@@ -9,8 +9,8 @@
    See the LICENSE file for more details. */
 
 #include "common.h"
-#include "src/core/libhs/device.h"
-#include "src/core/libhs/serial.h"
+#include "src/tytools/libhs/device.h"
+#include "src/tytools/libhs/serial.h"
 #include "board.h"
 #include "board_priv.h"
 #include "class_priv.h"

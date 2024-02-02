@@ -13,7 +13,7 @@
     #include <sys/stat.h>
 #endif
 #include <time.h>
-#include "src/core/libhs/device.h"
+#include "src/tytools/libhs/device.h"
 #include "board_priv.h"
 #include "class_priv.h"
 #include "firmware.h"

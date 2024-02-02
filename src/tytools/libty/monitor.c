@@ -9,9 +9,9 @@
    See the LICENSE file for more details. */
 
 #include "common.h"
-#include "src/core/libhs/device.h"
-#include "src/core/libhs/array.h"
-#include "src/core/libhs/monitor.h"
+#include "src/tytools/libhs/device.h"
+#include "src/tytools/libhs/array.h"
+#include "src/tytools/libhs/monitor.h"
 #include "board_priv.h"
 #include "class_priv.h"
 #include "monitor.h"

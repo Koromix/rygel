@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "vendor/lz4/lib/lz4frame.h"
 
 namespace RG {

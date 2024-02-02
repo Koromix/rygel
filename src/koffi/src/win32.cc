@@ -21,6 +21,7 @@
 
 #ifdef _WIN32
 
+#include "src/core/base/base.hh"
 #include "util.hh"
 #include "win32.hh"
 

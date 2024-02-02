@@ -21,7 +21,7 @@
 
 #if __riscv_xlen == 64
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

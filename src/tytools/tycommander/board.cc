@@ -18,8 +18,8 @@
 #include <QTextCursor>
 
 #include "board.hpp"
-#include "src/core/libhs/device.h"
-#include "src/core/libhs/serial.h"
+#include "src/tytools/libhs/device.h"
+#include "src/tytools/libhs/serial.h"
 #include "src/tytools/libty/class.h"
 #include "database.hpp"
 #include "monitor.hpp"

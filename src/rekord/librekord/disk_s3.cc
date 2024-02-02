@@ -11,9 +11,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "disk.hh"
-#include "src/core/libnet/s3.hh"
+#include "src/core/network/s3.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {

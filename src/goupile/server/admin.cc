@@ -11,15 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "admin.hh"
 #include "domain.hh"
 #include "file.hh"
 #include "goupile.hh"
 #include "instance.hh"
 #include "user.hh"
-#include "src/core/libpasswd/libpasswd.hh"
-#include "src/core/libwrap/json.hh"
+#include "src/core/password/password.hh"
+#include "src/core/wrap/json.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"

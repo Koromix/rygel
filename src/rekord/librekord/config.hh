@@ -13,9 +13,9 @@
 
 #pragma once
 
-#include "src/core/libcc/libcc.hh"
-#include "src/core/libnet/s3.hh"
-#include "src/core/libnet/ssh.hh"
+#include "src/core/base/base.hh"
+#include "src/core/network/s3.hh"
+#include "src/core/network/ssh.hh"
 
 namespace RG {
 

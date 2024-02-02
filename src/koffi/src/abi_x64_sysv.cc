@@ -21,7 +21,7 @@
 
 #if defined(__x86_64__) && !defined(_WIN32)
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"

@@ -15,7 +15,7 @@
 #include "database.hpp"
 #include "descriptor_notifier.hpp"
 #include "monitor.hpp"
-#include "src/core/libhs/platform.h"
+#include "src/tytools/libhs/platform.h"
 #include "src/tytools/libty/task.h"
 
 using namespace std;

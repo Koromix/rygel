@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#include "src/core/libcc/libcc.hh"
+#include "src/core/base/base.hh"
 #include "admin.hh"
 #include "domain.hh"
 #include "file.hh"
@@ -21,8 +21,8 @@
 #include "record.hh"
 #include "user.hh"
 #include "vm.hh"
-#include "src/core/libnet/libnet.hh"
-#include "src/core/libsandbox/libsandbox.hh"
+#include "src/core/network/network.hh"
+#include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #ifndef _WIN32
     #include <sys/time.h>
