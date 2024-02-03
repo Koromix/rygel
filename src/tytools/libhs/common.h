@@ -57,7 +57,7 @@ typedef struct hs_match_spec hs_match_spec;
  */
 #define HS_VERSION_STRING "0.9.0"
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
     #define _HS_POSSIBLY_UNUSED __attribute__((__unused__))
     #define _HS_THREAD_LOCAL __thread
     #define _HS_ALIGN_OF(type)  __alignof__(type)
@@ -73,7 +73,11 @@ typedef struct hs_match_spec hs_match_spec;
     #define _HS_ALIGN_OF(type) __alignof(type)
 
     #define _HS_PRINTF_FORMAT(fmt, first)
+#else
+    #error "This compiler is not supported"
+#endif
 
+#ifdef _MSC_VER
     // HAVE_SSIZE_T is used this way by other projects
     #ifndef HAVE_SSIZE_T
         #define HAVE_SSIZE_T
@@ -86,8 +90,6 @@ typedef long ssize_t;
 
     #define strcasecmp _stricmp
     #define strncasecmp _strnicmp
-#else
-    #error "This compiler is not supported"
 #endif
 
 #define _HS_CONCAT_HELPER(a, b) a ## b
