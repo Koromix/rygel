@@ -25,7 +25,7 @@
 
 namespace RG {
 
-TEST_FUNCTION("libcc/TestFormatDouble")
+TEST_FUNCTION("base/TestFormatDouble")
 {
     char buf[512];
 
@@ -72,7 +72,7 @@ TEST_FUNCTION("libcc/TestFormatDouble")
     TEST_STR(Fmt(buf, "%1", FmtDouble(10.2, 0, 0)), "10");
 }
 
-TEST_FUNCTION("libcc/TestFormatSize")
+TEST_FUNCTION("base/TestFormatSize")
 {
     char buf[512];
 
@@ -109,7 +109,7 @@ TEST_FUNCTION("libcc/TestFormatSize")
     TEST_STR(Fmt(buf, "%1", FmtDiskSize(10000000000000)), "10000.0 GB");
 }
 
-TEST_FUNCTION("libcc/TestMatchPathName")
+TEST_FUNCTION("base/TestMatchPathName")
 {
 #define CHECK_PATH_SPEC(Pattern, Path, Expected) \
         TEST_EQ(MatchPathName((Path), (Pattern)), (Expected))
@@ -198,7 +198,7 @@ TEST_FUNCTION("libcc/TestMatchPathName")
 #undef CHECK_PATH_SPEC
 }
 
-TEST_FUNCTION("libcc/TestFastRandom")
+TEST_FUNCTION("base/TestFastRandom")
 {
     for (int i = 0; i < 2; i++) {
         FastRandom rng(42);
@@ -253,7 +253,7 @@ TEST_FUNCTION("libcc/TestFastRandom")
     }
 }
 
-TEST_FUNCTION("libcc/TestGetRandomIntSafe")
+TEST_FUNCTION("base/TestGetRandomIntSafe")
 {
     static const int iterations = 100;
     static const int upper = 2000;
@@ -286,7 +286,7 @@ TEST_FUNCTION("libcc/TestGetRandomIntSafe")
     TEST_EX(varied, "GetRandomIntSafe() values look well distributed");
 }
 
-TEST_FUNCTION("libcc/TestOptionParser")
+TEST_FUNCTION("base/TestOptionParser")
 {
     // Empty
 
@@ -557,7 +557,7 @@ TEST_FUNCTION("libcc/TestOptionParser")
     }
 }
 
-TEST_FUNCTION("libcc/TestPathCheck")
+TEST_FUNCTION("base/TestPathCheck")
 {
     TEST_EQ(PathIsAbsolute("foo"), false);
     TEST_EQ(PathIsAbsolute(""), false);
@@ -597,7 +597,7 @@ TEST_FUNCTION("libcc/TestPathCheck")
 #endif
 }
 
-BENCHMARK_FUNCTION("libcc/BenchFmt")
+BENCHMARK_FUNCTION("base/BenchFmt")
 {
     static const int iterations = 1600000;
 
@@ -642,28 +642,28 @@ BENCHMARK_FUNCTION("libcc/BenchFmt")
         fmt::format_to(buf, FMT_COMPILE("{}:{}:{}:{}:{}:{}%\n"), 1234, 42, -313.3, "str", (void *)1000, 'X');
     });
 
-    RunBenchmark("libcc Fmt", iterations, [&]() {
+    RunBenchmark("base Fmt", iterations, [&]() {
         LocalArray<char, 1024> buf;
         buf.len = Fmt(buf.data, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X').len;
     });
 
-    RunBenchmark("libcc Fmt (allocator)", iterations, [&]() {
+    RunBenchmark("base Fmt (allocator)", iterations, [&]() {
         LinkedAllocator temp_alloc;
         Fmt(&temp_alloc, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
-    RunBenchmark("libcc Fmt (heap)", iterations, [&]() {
+    RunBenchmark("base Fmt (heap)", iterations, [&]() {
         HeapArray<char> buf;
         Fmt(&buf, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
         buf.RemoveFrom(0);
     });
 
-    RunBenchmark("libcc Print", iterations, [&]() {
+    RunBenchmark("base Print", iterations, [&]() {
         Print(fp, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 }
 
-BENCHMARK_FUNCTION("libcc/BenchMatchPathName")
+BENCHMARK_FUNCTION("base/BenchMatchPathName")
 {
     static const int iterations = 3000000;
 
@@ -682,7 +682,7 @@ BENCHMARK_FUNCTION("libcc/BenchMatchPathName")
     });
 }
 
-BENCHMARK_FUNCTION("libcc/BenchRandom")
+BENCHMARK_FUNCTION("base/BenchRandom")
 {
     static const int iterations = 10000000;
 
