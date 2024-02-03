@@ -37,7 +37,7 @@ struct BenchmarkInfo {
     static const TestInfo VarName((Path), FuncName); \
      \
     static void FuncName(Size *out_total, Size *out_failures)
-#define TEST_FUNCTION(Path) TEST_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(test_), (Path))
+#define TEST_FUNCTION(Path) TEST_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(test_), "test/" Path)
 
 #define TEST_EX(Condition, ...) \
     do { \
@@ -79,11 +79,11 @@ struct BenchmarkInfo {
     static const BenchmarkInfo VarName((Path), FuncName); \
      \
     static void FuncName()
-#define BENCHMARK_FUNCTION(Path) BENCHMARK_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(bench_), (Path))
+#define BENCHMARK_FUNCTION(Path) BENCHMARK_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(bench_), "bench/" Path)
 
 static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void()> func)
 {
-    Print("  %!..+%1%!0", FmtArg(name).Pad(32));
+    Print("  %!..+%1%!0", FmtArg(name).Pad(34));
 
     int64_t time = GetMonotonicTime();
     int64_t clock = GetClockCounter();
@@ -98,7 +98,7 @@ static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<v
     time = GetMonotonicTime() - time;
     clock = GetClockCounter() - clock;
 
-    PrintLn(" %!B..%1 ms%!0 (%2 cycles per iteration)", time, clock / iterations);
+    PrintLn(" %!c..%1 ms%!0 (%2 cycles per iteration)", time, clock / iterations);
 }
 
 }

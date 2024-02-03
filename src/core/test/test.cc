@@ -75,7 +75,7 @@ int Main(int argc, char **argv)
         const TestInfo &test = *tests[i];
 
         if (!pattern || MatchPathSpec(test.path, pattern)) {
-            Print(stderr, "Test: %!y..%1%!0", FmtArg(test.path).Pad(28));
+            Print(stderr, "%!y..%1%!0", FmtArg(test.path).Pad(36));
 
             Size total = 0;
             Size failures = 0;
@@ -111,7 +111,7 @@ int Main(int argc, char **argv)
 #endif
 
         if (enable) {
-            PrintLn(stderr, "Benchmark: %!y..%1%!0", bench.path);
+            PrintLn(stderr, "%!m..%1%!0", bench.path);
             bench.func();
             PrintLn(stderr);
 
