@@ -500,7 +500,7 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
     RG_UNREACHABLE();
 }
 
-void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, BackRegisters *out_reg)
+void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg)
 {
     if (env.IsExceptionPending()) [[unlikely]]
         return;
@@ -728,11 +728,11 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, 
 
     // Make the call
     napi_value ret;
-    if (async) {
-        ret = (napi_value)func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
-    } else {
+    if (switch_stack) {
         ret = CallSwitchStack(&func, (size_t)arguments.len, arguments.data, old_sp, &mem->stack,
                               [](Napi::Function *func, size_t argc, napi_value *argv) { return (napi_value)func->Call(argv[0], argc - 1, argv + 1); });
+    } else {
+        ret = (napi_value)func.Call(arguments[0], arguments.len - 1, arguments.data + 1);
     }
     Napi::Value value(env, ret);
 

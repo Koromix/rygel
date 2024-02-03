@@ -107,8 +107,8 @@ public:
 
 #undef INLINE_IF_UNITY
 
-    void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool async, BackRegisters *out_reg);
-    void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool dispose_call, BackRegisters *out_reg);
+    void Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_stack, BackRegisters *out_reg);
+    void RelaySafe(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool outside_call, BackRegisters *out_reg);
     static void RelayAsync(napi_env, napi_value, void *, void *udata);
 
     void DumpForward(const FunctionInfo *func) const;
