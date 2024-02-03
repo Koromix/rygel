@@ -684,7 +684,7 @@ BENCHMARK_FUNCTION("base/BenchMatchPathName")
 
 BENCHMARK_FUNCTION("base/BenchRandom")
 {
-    static const int iterations = 10000000;
+    static const int iterations = 50000000;
 
     FastRandom rng(42);
     RunBenchmark("FastRandom::GetInt", iterations, [&]() {
@@ -693,6 +693,10 @@ BENCHMARK_FUNCTION("base/BenchRandom")
 
     RunBenchmark("GetRandomIntSafe", iterations, [&]() {
         GetRandomIntSafe(1, 24097);
+    });
+
+    RunBenchmark("GetRandomIntFast", iterations, [&]() {
+        GetRandomIntFast(1, 24097);
     });
 }
 
