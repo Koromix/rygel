@@ -352,6 +352,5 @@ Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info);
 Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info);
 
 bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
-CallData *GetThreadCall();
 
 }

@@ -1983,11 +1983,6 @@ bool InitAsyncBroker(Napi::Env env, InstanceData *instance)
     return true;
 }
 
-CallData *GetThreadCall()
-{
-    return exec_call;
-}
-
 static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initializer_list<const char *> names,
                                   PrimitiveKind primitive, int32_t size, int16_t align, const char *ref = nullptr)
 {
