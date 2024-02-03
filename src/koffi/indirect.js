@@ -21,7 +21,6 @@
 
 'use strict';
 
-const util = require('util');
 const fs = require('fs');
 const { get_napi_version, determine_arch } = require('../cnoke/src/tools.js');
 const pkg = require('./package.json');
@@ -76,26 +75,4 @@ if (native == null)
 if (native.version != pkg.version)
     throw new Error('Mismatched native Koffi modules');
 
-module.exports = {
-    ...native,
-
-    // Deprecated functions
-    handle: util.deprecate(native.opaque, 'The koffi.handle() function was deprecated in Koffi 2.1, use koffi.opaque() instead', 'KOFFI001'),
-    callback: util.deprecate(native.proto, 'The koffi.callback() function was deprecated in Koffi 2.4, use koffi.proto() instead', 'KOFFI002'),
-    resolve: util.deprecate(native.type, 'The koffi.resolve() function was deprecated in Koffi 2.8, use koffi.type() instead', 'KOFFI007'),
-    introspect: util.deprecate(native.type, 'The koffi.introspect() function was deprecated in Koffi 2.8, use koffi.type() instead', 'KOFFI008')
-};
-
-let load = module.exports.load;
-
-module.exports.load = (...args) => {
-    let lib = load(...args);
-
-    // Deprecated methods
-    lib.cdecl = util.deprecate((...args) => lib.func('__cdecl', ...args), 'The koffi.stdcall() function was deprecated in Koffi 2.7, use koffi.func(...) instead', 'KOFFI003');
-    lib.stdcall = util.deprecate((...args) => lib.func('__stdcall', ...args), 'The koffi.stdcall() function was deprecated in Koffi 2.7, use koffi.func("__stdcall", ...) instead', 'KOFFI004');
-    lib.fastcall = util.deprecate((...args) => lib.func('__fastcall', ...args), 'The koffi.fastcall() function was deprecated in Koffi 2.7, use koffi.func("__fastcall", ...) instead', 'KOFFI005');
-    lib.thiscall = util.deprecate((...args) => lib.func('__thiscall', ...args), 'The koffi.thiscall() function was deprecated in Koffi 2.7, use koffi.func("__thiscall", ...) instead', 'KOFFI006');
-
-    return lib;
-};
+module.exports = native;
