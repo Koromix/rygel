@@ -48,10 +48,6 @@
 #endif
 
 #include <napi.h>
-#if NODE_WANT_INTERNALS
-    #include <env-inl.h>
-    #include <js_native_api_v8.h>
-#endif
 
 namespace RG {
 
