@@ -28,22 +28,6 @@ const path = require('path');
 const zlib = require('zlib');
 
 async function download_http(url, dest) {
-    if (Array.isArray(url)) {
-        let urls = url;
-
-        for (let url of urls) {
-            try {
-                await download_http(url, dest);
-                return;
-            } catch (err) {
-                if (err.code != 404)
-                    throw err;
-            }
-        }
-
-        throw new Error('All URLs returned error 404');
-    }
-
     console.log('>> Downloading ' + url);
 
     let [tmp_name, file] = open_temporary_stream(dest);

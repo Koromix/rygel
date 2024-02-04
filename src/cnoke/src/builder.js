@@ -102,15 +102,13 @@ function Builder(config = {}) {
 
         // Download Node headers
         {
-            let basename = `node-v${runtime_version}-headers.tar.gz`;
-            let urls = [
-                `https://nodejs.org/dist/v${runtime_version}/${basename}`,
-                // `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${basename}`
-            ];
             let destname = `${cache_dir}/${basename}`;
 
-            if (!fs.existsSync(destname))
-                await tools.download_http(urls, destname);
+            if (!fs.existsSync(destname)) {
+                let url = `https://nodejs.org/dist/v${runtime_version}/node-v${runtime_version}-headers.tar.gz`;
+                await tools.download_http(url, destname);
+            }
+
             await tools.extract_targz(destname, work_dir + '/headers', 1);
         }
 
@@ -130,11 +128,8 @@ function Builder(config = {}) {
             let destname = `${cache_dir}/node_v${runtime_version}_${arch}.lib`;
 
             if (!fs.existsSync(destname)) {
-                let urls = [
-                    `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`,
-                    // `https://unofficial-builds.nodejs.org/download/release/v${runtime_version}/${dirname}/node.lib`
-                ];
-                await tools.download_http(urls, destname);
+                let url = `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`;
+                await tools.download_http(url, destname);
             }
 
             fs.copyFileSync(destname, work_dir + '/node.lib');
