@@ -269,6 +269,7 @@ struct InstanceData {
     BucketArray<TypeInfo> types;
     HashMap<const char *, const TypeInfo *> types_map;
     BucketArray<FunctionInfo> callbacks;
+    Size base_types_len;
 
     bool debug;
     uint64_t tag_lower;
