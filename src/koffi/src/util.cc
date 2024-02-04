@@ -1433,7 +1433,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
         case PrimitiveKind::Callback: {
             void *ptr2 = *(void **)ptr;
 
-            Napi::Value wrapper = WrapPointer(env, instance, instance->void_type, ptr2);
+            Napi::Value wrapper = WrapPointer(env, instance, type, ptr2);
             return wrapper;
         } break;
         case PrimitiveKind::Record:
