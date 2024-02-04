@@ -22,6 +22,8 @@
 cmake_minimum_required(VERSION 3.6)
 project(koffi_test C CXX)
 
+find_package(CNoke)
+
 # ---- Vendor libraries ----
 
 include (../cmake/raylib.cmake)
@@ -42,6 +44,7 @@ set_target_properties(async PROPERTIES PREFIX "")
 
 add_library(callbacks SHARED callbacks.c)
 set_target_properties(callbacks PROPERTIES PREFIX "")
+target_link_node(callbacks)
 
 add_library(union SHARED union.c)
 set_target_properties(union PROPERTIES PREFIX "")

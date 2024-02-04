@@ -64,6 +64,7 @@ const StructCallbacks = koffi.struct('StructCallbacks', {
     third: 'IntCallback *'
 });
 const RepeatCallback = koffi.proto('void RepeatCallback(int *repeat, const char **str)');
+const IdleCallback = koffi.proto('void IdleCallback(void)');
 
 main();
 
@@ -98,6 +99,8 @@ async function test() {
     const CallMeChar = lib.func('int CallMeChar(CharCallback *func)');
     const GetMinusOne1 = lib.func('int8_t GetMinusOne1(void)');
     const FmtRepeat = lib.func('str_free FmtRepeat(RepeatCallback *cb)');
+    const SetIdle = lib.func('void SetIdle(void *env, IdleCallback *cb)');
+    const TriggerIdle = lib.func('void TriggerIdle(void)');
 
     free_ptr = CallFree;
 
@@ -329,5 +332,20 @@ async function test() {
             koffi.encode(count, 'int', 3);
             koffi.encode(str, 'const char *', 'Hello');
         }), 'HelloHelloHello');
+    }
+
+    // Run callback from event loop, on main thread
+    {
+        let called = false;
+        let cb = koffi.register((idx, c) => { called = true; }, 'IdleCallback *');
+
+        SetIdle(koffi.node.env, cb);
+        TriggerIdle();
+
+        assert.equal(called, false);
+        await new Promise((resolve, reject) => setTimeout(resolve, 100));
+        assert.equal(called, true);
+
+        SetIdle(koffi.node.env, null);
     }
 }
