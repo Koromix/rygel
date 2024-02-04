@@ -2117,44 +2117,44 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     instance->construct_type = Napi::Persistent(TypeObject::InitClass(env));
     instance->construct_ptr = Napi::Persistent(PointerObject::InitClass(env));
 
-    exports.Set("config", Napi::Function::New(env, GetSetConfig));
-    exports.Set("stats", Napi::Function::New(env, GetStats));
+    exports.Set("config", Napi::Function::New(env, GetSetConfig, "config"));
+    exports.Set("stats", Napi::Function::New(env, GetStats, "stats"));
 
-    exports.Set("struct", Napi::Function::New(env, CreatePaddedStructType));
-    exports.Set("pack", Napi::Function::New(env, CreatePackedStructType));
-    exports.Set("union", Napi::Function::New(env, CreateUnionType));
-    exports.Set("Union", Napi::Function::New(env, InstantiateUnion));
-    exports.Set("opaque", Napi::Function::New(env, CreateOpaqueType));
-    exports.Set("pointer", Napi::Function::New(env, CreatePointerType));
-    exports.Set("array", Napi::Function::New(env, CreateArrayType));
-    exports.Set("proto", Napi::Function::New(env, CreateFunctionType));
-    exports.Set("alias", Napi::Function::New(env, CreateTypeAlias));
+    exports.Set("struct", Napi::Function::New(env, CreatePaddedStructType, "struct"));
+    exports.Set("pack", Napi::Function::New(env, CreatePackedStructType, "pack"));
+    exports.Set("union", Napi::Function::New(env, CreateUnionType, "union"));
+    exports.Set("Union", Napi::Function::New(env, InstantiateUnion, "Union"));
+    exports.Set("opaque", Napi::Function::New(env, CreateOpaqueType, "opaque"));
+    exports.Set("pointer", Napi::Function::New(env, CreatePointerType, "pointer"));
+    exports.Set("array", Napi::Function::New(env, CreateArrayType, "array"));
+    exports.Set("proto", Napi::Function::New(env, CreateFunctionType, "proto"));
+    exports.Set("alias", Napi::Function::New(env, CreateTypeAlias, "alias"));
 
-    exports.Set("sizeof", Napi::Function::New(env, GetTypeSize));
-    exports.Set("alignof", Napi::Function::New(env, GetTypeAlign));
-    exports.Set("offsetof", Napi::Function::New(env, GetMemberOffset));
-    exports.Set("type", Napi::Function::New(env, GetResolvedType));
+    exports.Set("sizeof", Napi::Function::New(env, GetTypeSize, "sizeof"));
+    exports.Set("alignof", Napi::Function::New(env, GetTypeAlign, "alignof"));
+    exports.Set("offsetof", Napi::Function::New(env, GetMemberOffset, "offsetof"));
+    exports.Set("type", Napi::Function::New(env, GetResolvedType, "type"));
 
-    exports.Set("load", Napi::Function::New(env, LoadSharedLibrary));
+    exports.Set("load", Napi::Function::New(env, LoadSharedLibrary, "load"));
 
-    exports.Set("in", Napi::Function::New(env, MarkIn));
-    exports.Set("out", Napi::Function::New(env, MarkOut));
-    exports.Set("inout", Napi::Function::New(env, MarkInOut));
+    exports.Set("in", Napi::Function::New(env, MarkIn, "in"));
+    exports.Set("out", Napi::Function::New(env, MarkOut, "out"));
+    exports.Set("inout", Napi::Function::New(env, MarkInOut, "inout"));
 
-    exports.Set("disposable", Napi::Function::New(env, CreateDisposableType));
-    exports.Set("free", Napi::Function::New(env, CallFree));
+    exports.Set("disposable", Napi::Function::New(env, CreateDisposableType, "disposable"));
+    exports.Set("free", Napi::Function::New(env, CallFree, "free"));
 
-    exports.Set("register", Napi::Function::New(env, RegisterCallback));
-    exports.Set("unregister", Napi::Function::New(env, UnregisterCallback));
+    exports.Set("register", Napi::Function::New(env, RegisterCallback, "register"));
+    exports.Set("unregister", Napi::Function::New(env, UnregisterCallback, "unregister"));
 
-    exports.Set("as", Napi::Function::New(env, CastValue));
-    exports.Set("decode", Napi::Function::New(env, DecodeValue));
-    exports.Set("call", Napi::Function::New(env, CallPointerSync));
-    exports.Set("encode", Napi::Function::New(env, EncodeValue));
+    exports.Set("as", Napi::Function::New(env, CastValue, "as"));
+    exports.Set("decode", Napi::Function::New(env, DecodeValue, "decode"));
+    exports.Set("call", Napi::Function::New(env, CallPointerSync, "call"));
+    exports.Set("encode", Napi::Function::New(env, EncodeValue, "encode"));
 
-    exports.Set("reset", Napi::Function::New(env, ResetKoffi));
+    exports.Set("reset", Napi::Function::New(env, ResetKoffi, "reset"));
 
-    exports.Set("errno", Napi::Function::New(env, GetOrSetErrNo));
+    exports.Set("errno", Napi::Function::New(env, GetOrSetErrNo, "errno"));
 
     // Export useful OS info
     {
