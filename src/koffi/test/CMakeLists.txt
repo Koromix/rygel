@@ -22,7 +22,7 @@
 cmake_minimum_required(VERSION 3.6)
 project(koffi_test C CXX)
 
-# ---- Vendor lLibraries ----
+# ---- Vendor libraries ----
 
 include (../cmake/raylib.cmake)
 include (../cmake/sqlite.cmake)

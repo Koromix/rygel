@@ -21,12 +21,11 @@
 
 cmake_minimum_required(VERSION 3.6)
 cmake_policy(SET CMP0091 NEW)
-
 project(koffi C CXX ASM)
 
-include(CheckCXXCompilerFlag)
-
 find_package(CNoke)
+
+include(CheckCXXCompilerFlag)
 
 set(CMAKE_CXX_STANDARD 20)
 if(MSVC)
