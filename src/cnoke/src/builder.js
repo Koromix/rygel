@@ -261,43 +261,20 @@ function Builder(config = {}) {
         if (pkg.cnoke.prebuild != null) {
             fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
 
-            let url = expand_path(pkg.cnoke.prebuild);
-            let basename = path.basename(url);
+            let archive_filename = expand_path(pkg.cnoke.prebuild);
 
-            try {
-                let archive_filename = null;
+            if (!tools.path_is_absolute(archive_filename))
+                archive_filename = path.join(package_dir, archive_filename);
 
-                if (url.startsWith('file:/')) {
-                    if (url.startsWith('file://localhost/')) {
-                        url = url.substr(16);
-                    } else {
-                        let offset = 6;
-                        while (offset < 9 && url[offset] == '/')
-                            offset++;
-                        url = url.substr(offset - 1);
-                    }
-
-                    if (process.platform == 'win32' && url.match(/^\/[a-zA-Z]+:[\\\/]/))
-                        url = url.substr(1);
+            if (fs.existsSync(archive_filename)) {
+                try {
+                    console.log('>> Extracting prebuilt binaries...');
+                    await tools.extract_targz(archive_filename, build_dir, 1);
+                } catch (err) {
+                    console.error('Failed to find prebuilt binary for your platform, building manually');
                 }
-
-                if (url.match(/^[a-z]+:\/\//)) {
-                    archive_filename = build_dir + '/' + basename;
-                    await tools.download_http(url, archive_filename);
-                } else {
-                    archive_filename = url;
-
-                    if (!tools.path_is_absolute(archive_filename))
-                        archive_filename = path.join(package_dir, archive_filename);
-
-                    if (!fs.existsSync(archive_filename))
-                        throw new Error('Cannot find local prebuilt archive');
-                }
-
-                console.log('>> Extracting prebuilt binaries...');
-                await tools.extract_targz(archive_filename, build_dir, 1);
-            } catch (err) {
-                console.error('Failed to find prebuilt binary for your platform, building manually');
+            } else {
+                console.error('Cannot find local prebuilt archive');
             }
         }
 
