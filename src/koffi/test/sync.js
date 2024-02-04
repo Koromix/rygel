@@ -180,10 +180,10 @@ async function test() {
     const GetMinusOne8 = lib.func('int64_t GetMinusOne8(void *dummy)');
     const FillPack1 = lib.func('FillPack1', 'void', ['int', koffi.out(koffi.pointer(Pack1))]);
     const RetPack1 = lib.func('RetPack1', Pack1, ['int']);
-    const AddPack1 = lib.fastcall('AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
+    const AddPack1 = lib.func('__fastcall', 'AddPack1', 'void', ['int', koffi.inout(koffi.pointer(Pack1))]);
     const FillPack2 = lib.func('FillPack2', 'void', ['int', 'int', koffi.out(koffi.pointer(Pack2))]);
     const RetPack2 = lib.func('RetPack2', Pack2, ['int', 'int']);
-    const AddPack2 = lib.fastcall('AddPack2', 'void', ['int', 'int', koffi.inout(koffi.pointer(Pack2))]);
+    const AddPack2 = lib.func('__fastcall', 'AddPack2', 'void', ['int', 'int', koffi.inout(koffi.pointer(Pack2))]);
     const FillPack3 = lib.func('FillPack3', 'void', ['int', 'int', 'int', koffi.out(koffi.pointer(Pack3))]);
     const RetPack3 = lib.func('RetPack3', Pack3, ['int', 'int', 'int']);
     const AddPack3 = lib.func('__fastcall', 'AddPack3', 'void', ['int', 'int', 'int', koffi.inout(koffi.pointer(Pack3))]);
@@ -207,7 +207,7 @@ async function test() {
     const MakePackedBFG = lib.func('AliasBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const MakePolymorphBFG = lib.func('void MakePolymorphBFG(int type, int x, double y, const char *str, _Out_ void *p)');
     const ReturnBigString = process.platform == 'win32' ?
-                            lib.stdcall(1, koffi.disposable('str', CallFree), ['str']) :
+                            lib.func('__stdcall', 1, koffi.disposable('str', CallFree), ['str']) :
                             lib.func('const char *! __stdcall ReturnBigString(const char *str)');
     const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
     const Concat16 = lib.func('str16_free Concat16(const char16_t *str1, const char16_t *str2)');
@@ -429,7 +429,7 @@ async function test() {
         let disposed = koffi.stats().disposed;
 
         assert.ok(Concat16.info.result.disposable);
-        assert.ok(koffi.introspect(Concat16.info.result));
+        assert.ok(koffi.type(Concat16.info.result).disposable);
 
         let str = Concat16('Hello ', 'World!');
         assert.equal(str, 'Hello World!');
@@ -775,7 +775,6 @@ async function test() {
     // Decode non-UTF-8 string
     {
         let ptr = GetLatin1String();
-        console.log(ptr);
 
         let array = koffi.decode(ptr, 'uint8_t', -1);
         let str = Buffer.from(array.buffer).toString('latin1');
