@@ -2299,11 +2299,11 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     exports.Set("errno", Napi::Function::New(env, GetOrSetErrNo));
 
-    Napi::Object os = Napi::Object::New(env);
-    exports.Set("os", os);
-
-    // Init constants mapping
+    // Export useful OS info
     {
+        Napi::Object os = Napi::Object::New(env);
+        exports.Set("os", os);
+
         Napi::Object codes = Napi::Object::New(env);
 
         for (const ErrnoCodeInfo &info: ErrnoCodes) {
@@ -2323,6 +2323,17 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     Napi::Object types = InitBaseTypes(env);
     exports.Set("types", types);
+
+    // Expose internal Node stuff
+    {
+        Napi::Object node = Napi::Object::New(env);
+        exports.Set("node", node);
+
+        Napi::External<void> external = Napi::External<void>::New(env, (napi_env)env);
+        SetValueTag(instance, external, instance->void_type);
+
+        node.Set("env", external);
+    }
 
     exports.Set("version", Napi::String::New(env, RG_STRINGIFY(VERSION)));
 
