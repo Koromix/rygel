@@ -986,8 +986,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             OutArgument::Kind out_kind;
             Size out_max_len = -1;
 
-            if (CheckPointerType(instance, value, type) ||
-                    (CheckValueTag(instance, value, &PointerMarker) && type->ref.type == instance->void_type)) {
+            if (CheckPointerType(instance, value, type)) {
                 ptr = (uint8_t *)UnwrapPointer(env, instance, value);
 
                 directions = 1;

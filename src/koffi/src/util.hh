@@ -136,7 +136,7 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value);
 void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 
-bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *type);
+bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *expect);
 Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeInfo *type, void *ptr);
 void *UnwrapPointer(Napi::Env env, const InstanceData *instance, Napi::Value value);
 

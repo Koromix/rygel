@@ -777,15 +777,22 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *
     return match;
 }
 
-bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *type)
+bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *expect)
 {
     if (!CheckValueTag(instance, value, &PointerMarker))
         return false;
 
     PointerObject *obj = PointerObject::Unwrap(value.As<Napi::Object>());
-    bool match = (obj->GetType() == type);
+    const TypeInfo *type = obj->GetType();
 
-    return match;
+    if (type == expect)
+        return true;
+    if (type->primitive == PrimitiveKind::Pointer && type->ref.type == instance->void_type)
+        return true;
+    if (expect->primitive == PrimitiveKind::Pointer && expect->ref.type == instance->void_type)
+        return true;
+
+    return false;
 }
 
 Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeInfo *type, void *ptr)
