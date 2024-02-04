@@ -4,6 +4,13 @@
 
 ### Koffi 2.7
 
+#### Koffi 2.7.4 (2024-02-04)
+
+- Support callbacks happening on main thread but outside JS call (such as during event loop)
+- Improve stability after `koffi.reset()`
+- Expose internal Node/NAPI `env` pointer
+- Name main Koffi API functions
+
 #### Koffi 2.7.3 (2024-01-26)
 
 - Support decoding NULL terminated arrays
