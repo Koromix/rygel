@@ -19,6 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <inttypes.h>
@@ -39,6 +40,8 @@
     #include <errno.h>
     #include <pthread.h>
 #endif
+#include <node_api.h>
+#include <uv.h>
 
 #ifdef _WIN32
     #define EXPORT __declspec(dllexport)
@@ -86,6 +89,12 @@ typedef struct StructCallbacks {
     IntCallback *third;
 } StructCallbacks;
 typedef void RepeatCallback(int *repeat, const char **str);
+typedef void IdleCallback(void);
+
+static IntCallback *indirect_cb;
+
+static uv_loop_t *idle_loop;
+static uv_async_t idle_async;
 
 EXPORT void CallFree(void *ptr)
 {
@@ -159,16 +168,14 @@ EXPORT int ApplyStruct(int x, StructCallbacks callbacks)
     return x;
 }
 
-static IntCallback *callback;
-
 EXPORT void SetIndirect(IntCallback *cb)
 {
-    callback = cb;
+    indirect_cb = cb;
 }
 
 EXPORT int CallIndirect(int x)
 {
-    return callback(x);
+    return indirect_cb(x);
 }
 
 #ifdef _WIN32
@@ -224,7 +231,7 @@ EXPORT int CallThreaded(IntCallback *func, int x)
 {
     CallContext ctx;
 
-    ctx.callback = func ? func : callback;
+    ctx.callback = func ? func : indirect_cb;
     ctx.ptr = &x;
 
     pthread_t thread;
@@ -293,4 +300,33 @@ EXPORT const char *FmtRepeat(RepeatCallback *cb)
     copy[total - 1] = 0;
 
     return copy;
+}
+
+static void RunIdle(uv_async_t *handle)
+{
+    IdleCallback *cb = (IdleCallback *)handle->data;
+    cb();
+}
+
+EXPORT void SetIdle(napi_env env, IdleCallback *cb)
+{
+    if (!idle_loop) {
+        napi_status status = napi_get_uv_event_loop(env, &idle_loop);
+        assert(status == napi_ok);
+    }
+
+    uv_unref((uv_handle_t *)&idle_async);
+
+    if (cb) {
+        int ret = uv_async_init(idle_loop, &idle_async, RunIdle);
+        assert(!ret);
+
+        idle_async.data = cb;
+    }
+}
+
+EXPORT void TriggerIdle(void)
+{
+    int ret = uv_async_send(&idle_async);
+    assert(!ret);
 }
