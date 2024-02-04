@@ -66,7 +66,7 @@ async function download_http(url, dest) {
                     try {
                         fs.renameSync(file.path, dest);
                     } catch (err) {
-                        if (err.code != 'EBUSY')
+                        if (!fs.existsSync(dest))
                             reject(err);
                     }
 
