@@ -23,6 +23,7 @@
 
 const fs = require('fs');
 const { get_napi_version, determine_arch } = require('../cnoke/src/tools.js');
+const { wrap } = require('./src/wrap.js');
 const pkg = require('./package.json');
 
 if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
@@ -98,4 +99,4 @@ if (native == null)
 if (native.version != pkg.version)
     throw new Error('Mismatched native Koffi modules');
 
-module.exports = native;
+module.exports = wrap(native);

@@ -134,7 +134,9 @@ Napi::Function PointerObject::InitClass(Napi::Env env)
         InstanceMethod(symbol, &PointerObject::Inspect, napi_default),
 
         InstanceAccessor("address", &PointerObject::GetAddress, nullptr, napi_enumerable),
-        InstanceAccessor("type", &PointerObject::GetType, nullptr, napi_enumerable)
+        InstanceAccessor("type", &PointerObject::GetType, nullptr, napi_enumerable),
+
+        InstanceMethod("call", &PointerObject::Call, napi_enumerable)
     });
 
     return constructor;
@@ -186,6 +188,21 @@ Napi::Value PointerObject::GetType(const Napi::CallbackInfo &info)
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     return FinalizeType(env, instance, type);
+}
+
+Napi::Value PointerObject::Call(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (type->primitive != PrimitiveKind::Callback) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Cannot call non-function pointer");
+        return env.Null();
+    }
+
+    const FunctionInfo *proto = type->ref.proto;
+
+    return proto->variadic ? TranslateVariadicCall(proto, ptr, info)
+                           : TranslateNormalCall(proto, ptr, info);
 }
 
 Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
@@ -1475,12 +1492,6 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 
             func->name = "<anonymous>";
             func->native = (void *)ptr;
-
-            // Fix back parameter offset
-            for (ParameterInfo &param: func->parameters) {
-                param.offset -= 2;
-            }
-            func->required_parameters -= 2;
 
             Napi::Function wrapper = WrapFunction(env, func);
             return wrapper;

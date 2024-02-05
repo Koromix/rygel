@@ -61,6 +61,7 @@ public:
 
     Napi::Value GetAddress(const Napi::CallbackInfo &info);
     Napi::Value GetType(const Napi::CallbackInfo &info);
+    Napi::Value Call(const Napi::CallbackInfo &info);
 };
 
 class UnionObject: public Napi::ObjectWrap<UnionObject> {

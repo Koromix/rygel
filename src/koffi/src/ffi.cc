@@ -794,36 +794,27 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
     return FinalizeType(env, instance, type);
 }
 
-static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **out_ptr)
-{
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (IsNullOrUndefined(value)) {
-        *out_ptr = 0;
-        return true;
-    } else if (CheckValueTag(instance, value, &PointerMarker)) {
-        void *ptr = UnwrapPointer(env, instance, value);
-
-        *out_ptr = ptr;
-        return true;
-    } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
-        return false;
-    }
-}
-
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
         return env.Null();
     }
 
+    Napi::Value value = info[0];
     void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr))
+
+    if (CheckValueTag(instance, value, &PointerMarker)) {
+        ptr = UnwrapPointer(env, instance, value);
+    } else if (IsNullOrUndefined(value)) {
+        ptr = nullptr;
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
         return env.Null();
+    }
 
     free(ptr);
 
@@ -1001,8 +992,6 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *o
         out_func->parameters.Append(param);
     }
 
-    out_func->required_parameters = (int8_t)out_func->parameters.len;
-
     return true;
 }
 
@@ -1033,12 +1022,6 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     if (!AnalyseFunction(env, instance, func))
         return env.Null();
-
-    // Adjust parameter offsets for koffi.call()
-    for (ParameterInfo &param: func->parameters) {
-        param.offset += 2;
-    }
-    func->required_parameters += 2;
 
     // We cannot fail after this check
     if (instance->types_map.Find(func->name)) {
@@ -1251,7 +1234,7 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() < (uint32_t)func->required_parameters) [[unlikely]] {
+    if (info.Length() < (uint32_t)func->parameters.len) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len, info.Length());
         return env.Null();
     }
@@ -1299,16 +1282,16 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
         copy.parameters.Leak();
     };
 
-    if (info.Length() < (uint32_t)copy.required_parameters) [[unlikely]] {
+    if (info.Length() < (uint32_t)copy.parameters.len) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments or more, got %2", copy.parameters.len, info.Length());
         return env.Null();
     }
-    if ((info.Length() - copy.required_parameters) % 2) [[unlikely]] {
+    if ((info.Length() - copy.parameters.len) % 2) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Missing value argument for variadic call");
         return env.Null();
     }
 
-    for (Size i = copy.required_parameters; i < (Size)info.Length(); i += 2) {
+    for (Size i = copy.parameters.len; i < (Size)info.Length(); i += 2) {
         ParameterInfo param = {};
 
         param.type = ResolveType(info[(uint32_t)i], &param.directions);
@@ -1429,12 +1412,12 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
-    if (info.Length() <= (uint32_t)func->required_parameters) {
+    if (info.Length() <= (uint32_t)func->parameters.len) {
         ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", func->parameters.len + 1, info.Length());
         return env.Null();
     }
 
-    Napi::Function callback = info[(uint32_t)func->required_parameters].As<Napi::Function>();
+    Napi::Function callback = info[(uint32_t)func->parameters.len].As<Napi::Function>();
 
     if (!callback.IsFunction()) {
         ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
@@ -1876,34 +1859,6 @@ static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
     }
 }
 
-static Napi::Value CallPointerSync(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (info.Length() < 2) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected 2 or more arguments, got %1", info.Length());
-        return env.Null();
-    }
-
-    void *ptr = nullptr;
-    if (!GetExternalPointer(env, info[0], &ptr)) [[unlikely]]
-        return env.Null();
-
-    const TypeInfo *type = ResolveType(info[1]);
-    if (!type) [[unlikely]]
-        return env.Null();
-    if (type->primitive != PrimitiveKind::Prototype) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for type, expected function type", GetValueType(instance, info[1]));
-        return env.Null();
-    }
-
-    const FunctionInfo *proto = type->ref.proto;
-
-    return proto->variadic ? TranslateVariadicCall(proto, ptr, info)
-                           : TranslateNormalCall(proto, ptr, info);
-}
-
 static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -2191,7 +2146,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     exports.Set("as", Napi::Function::New(env, CastValue, "as"));
     exports.Set("decode", Napi::Function::New(env, DecodeValue, "decode"));
-    exports.Set("call", Napi::Function::New(env, CallPointerSync, "call"));
     exports.Set("encode", Napi::Function::New(env, EncodeValue, "encode"));
 
     exports.Set("reset", Napi::Function::New(env, ResetKoffi, "reset"));
