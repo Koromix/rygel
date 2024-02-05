@@ -3,58 +3,18 @@
     #define COOKIE_SUPPORT 1
     #define DAUTH_SUPPORT 1
     #define HAS_FD_SETSIZE_OVERRIDABLE 1
-    #define HAS_SIGNED_SOCKET 1
-    #define HAVE_ACCEPT4 1
-    #define HAVE_ARPA_INET_H 1
     #define HAVE_BUILTIN_TYPE_BOOL 1
     #define HAVE_CALLOC 1
-    #define HAVE_CLOCK_GETTIME 1
     #define HAVE_C_ALIGNOF 1
     #define HAVE_C_VARARRAYS 1
-    #define HAVE_DECL_CTL_HW 0
-    #define HAVE_DECL_HW_AVAILCPU 0
-    #define HAVE_DECL_HW_NCPU 0
-    #define HAVE_DECL_HW_NCPUONLINE 0
-    #define HAVE_DECL__SC_CRAY_NCPU 0
-    #define HAVE_DECL__SC_NPROCESSORS_CONF 1
-    #define HAVE_DECL__SC_NPROCESSORS_ONLN 1
-    #define HAVE_DECL__SC_NPROC_ONLN 0
-    #define HAVE_DLFCN_H 1
-    #define HAVE_ENDIAN_H 1
     #define HAVE_ERRNO_H 1
     #define HAVE_FCNTL_H 1
-    #define HAVE_FEATURES_H 1
-    #define HAVE_FORK 1
-    #define HAVE_FSEEKO 1
-    #define HAVE_GETPID 1
-    #define HAVE_GETTIMEOFDAY 1
-    #define HAVE_GMTIME_R 1
     #define HAVE_INTTYPES_H 1
     #define HAVE_LIMITS_H 1
-    #define HAVE_MACHINE_ENDIAN_H 1
-    #define HAVE_MACHINE_PARAM_H 1
-    #define HAVE_MAGIC_OPEN 1
-    #define HAVE_MEMMEM 1
     #define HAVE_MESSAGES 1
-    #define HAVE_NANOSLEEP 1
-    #define HAVE_NETDB_H 1
-    #define HAVE_NETINET_IN_H 1
-    #define HAVE_NETINET_IN_SYSTM_H 1
-    #define HAVE_NETINET_IP_H 1
-    #define HAVE_NETINET_IP_ICMP_H 1
-    #define HAVE_NETINET_TCP_H 1
-    #define HAVE_NET_IF_H 1
     #define HAVE_POSTPROCESSOR 1
-    #define HAVE_PREAD 1
-    #define HAVE_PTHREAD_H 1
-    #define HAVE_PTHREAD_SIGMASK 1
-    #define HAVE_RANDOM 1
-    #define HAVE_SCHED_H 1
     #define HAVE_SDKDDKVER_H 1
-    #define HAVE_SENDMSG 1
-    #define HAVE_SIGNAL_H 1
     #define HAVE_SNPRINTF 1
-    #define HAVE_SOCK_NONBLOCK 1
     #define HAVE_STDALIGN_H 1
     #define HAVE_STDBOOL_H 1
     #define HAVE_STDDEF_H 1
@@ -63,51 +23,34 @@
     #define HAVE_STDLIB_H 1
     #define HAVE_STRINGS_H 1
     #define HAVE_STRING_H 1
-    #define HAVE_SYSCONF 1
-    #define HAVE_SYS_CPUSET_H 1
-    #define HAVE_SYS_IOCTL_H 1
-    #define HAVE_SYS_MMAN_H 1
-    #define HAVE_SYS_MSG_H 1
-    #define HAVE_SYS_PARAM_H 1
-    #define HAVE_SYS_SELECT_H 1
-    #define HAVE_SYS_SOCKET_H 1
     #define HAVE_SYS_STAT_H 1
-    #define HAVE_SYS_TIME_H 1
     #define HAVE_SYS_TYPES_H 1
-    #define HAVE_SYS_UIO_H 1
     #define HAVE_TIME_H 1
-    #define HAVE_UNISTD_H 1
-    #define HAVE_USLEEP 1
-    #define HAVE_WAITPID 1
     #define HAVE_WINDOWS_H 1
     #define HAVE_WINSOCK2_H 1
-    #define HAVE_WRITEV 1
     #define HAVE_WS2TCPIP_H 1
     #define HAVE___FUNC__ 1
     #define INLINE_FUNC 1
-    #define LT_OBJDIR ".libs/"
     #define MHD_DAUTH_DEF_MAX_NC_ 1000
     #define MHD_DAUTH_DEF_TIMEOUT_ 90
     #define MHD_FAVOR_FAST_CODE 1
-    #define MHD_HAVE_LIBMAGIC 1
     #define MHD_HAVE___BUILTIN_BSWAP32 1
     #define MHD_HAVE___BUILTIN_BSWAP64 1
     #define MHD_MD5_SUPPORT 1
     #define MHD_NO_THREAD_NAMES 1
-    #define MHD_PLUGIN_INSTALL_PREFIX "/mingw64/lib/libmicrohttpd"
     #define MHD_SHA256_SUPPORT 1
     #define MHD_SHA512_256_SUPPORT 1
-    #define MHD_SYS_FD_SETSIZE_ 1024
-    #define MHD_USE_PAGESIZE_MACRO 1
-    #define MHD_USE_PAGESIZE_MACRO_STATIC 1
-    #define MHD_USE_SYS_TSEARCH 1
     #define MHD_USE_W32_THREADS 1
     #define MINGW 1
-    #define SIZEOF_INT 4
-    #define SIZEOF_INT64_T 8
+    #if defined(_M_X64) || defined(_M_AMD64) || defined(_M_ARM64) || defined(_WIN64)
     #define SIZEOF_SIZE_T 8
-    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+    #else  /* ! _WIN64 */
+    #define SIZEOF_SIZE_T 4
+    #endif /* ! _WIN64 */
+    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
+    #define SIZEOF_INT64_T 8
     #define SIZEOF_UINT64_T 8
+    #define SIZEOF_INT 4
     #define SIZEOF_UNSIGNED_INT 4
     #define SIZEOF_UNSIGNED_LONG_LONG 8
     #define STDC_HEADERS 1
