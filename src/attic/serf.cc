@@ -291,7 +291,9 @@ R"(<!DOCTYPE html>
             Span<const char> key = TrimStr(expr);
 
             if (key == "TITLE") {
-                Span<const char> title = Fmt(&io->allocator, "%1/", SplitStrReverseAny(dirname, RG_PATH_SEPARATORS));
+                Span<const char> stripped = TrimStrRight(request.url, "/");
+                Span<const char> title = Fmt(&io->allocator, "%1/", SplitStrReverseAny(stripped, RG_PATH_SEPARATORS));
+
                 WriteContent(title, writer);
             } else if (key == "NAV") {
                 bool root = TestStr(request.url, "/");
