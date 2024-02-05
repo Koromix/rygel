@@ -3142,10 +3142,10 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
 #ifdef RG_DEBUG
     const char *DebugLogContext(const char *filename, int line);
 
-    #define LogDebug(...) Log(LogLevel::Debug, DebugLogContext(__FILE__, __LINE__),  __VA_ARGS__)
-    #define LogInfo(...) Log(LogLevel::Info, nullptr, __VA_ARGS__)
-    #define LogWarning(...) Log(LogLevel::Warning, DebugLogContext(__FILE__, __LINE__), __VA_ARGS__)
-    #define LogError(...) Log(LogLevel::Error, DebugLogContext(__FILE__, __LINE__), __VA_ARGS__)
+    #define LogDebug(...) Log(LogLevel::Debug, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
+    #define LogInfo(...) Log(LogLevel::Info, nullptr __VA_OPT__(,) __VA_ARGS__)
+    #define LogWarning(...) Log(LogLevel::Warning, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
+    #define LogError(...) Log(LogLevel::Error, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
 #else
     template <typename... Args>
     static inline void LogDebug(Args...) {}
