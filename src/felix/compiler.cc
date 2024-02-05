@@ -2298,7 +2298,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
 
-        if (IdentifyCompiler(spec.cc, "mingw-w64") && !IdentifyCompiler(spec.cc, "w64-mingw32")) {
+        if (IdentifyCompiler(spec.cc, "mingw-w64") || IdentifyCompiler(spec.cc, "w64-mingw32")) {
             return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
         } else {
             LogError("Only MinGW-w64 can be used for Windows cross-compilation at the moment");
