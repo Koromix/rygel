@@ -87,119 +87,164 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@ENABLE_HTTPS_TRUE@am__append_1 = https
-@HEAVY_TESTS_TRUE@am__append_2 = \
+@USE_COVERAGE_TRUE@am__append_1 = -fprofile-arcs -ftest-coverage
+@ENABLE_HTTPS_TRUE@am__append_2 = https
+@HEAVY_TESTS_TRUE@am__append_3 = \
 @HEAVY_TESTS_TRUE@  test_add_conn_cleanup \
 @HEAVY_TESTS_TRUE@  test_add_conn_cleanup_nolisten \
 @HEAVY_TESTS_TRUE@  test_timeout \
 @HEAVY_TESTS_TRUE@  $(EMPTY_ITEM)
 
-@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_3 = \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_4 = \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  perf_get_concurrent11 \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  $(EMPTY_ITEM)
 
-@HAVE_POSIX_THREADS_TRUE@am__append_4 = \
+@HAVE_POSIX_THREADS_TRUE@am__append_5 = \
 @HAVE_POSIX_THREADS_TRUE@  test_get_wait \
 @HAVE_POSIX_THREADS_TRUE@  test_get_wait11 \
-@HAVE_POSIX_THREADS_TRUE@  test_quiesce \
 @HAVE_POSIX_THREADS_TRUE@  $(EMPTY_ITEM)
 
-@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_5 = \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_6 = \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  test_concurrent_stop \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  test_quiesce \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  $(EMPTY_ITEM)
 
-@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__append_6 = \
+@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__append_7 = \
 @HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@  test_quiesce_stream
-
-@ENABLE_DAUTH_TRUE@am__append_7 = \
-@ENABLE_DAUTH_TRUE@  test_digestauth \
-@ENABLE_DAUTH_TRUE@  test_digestauth_sha256 \
-@ENABLE_DAUTH_TRUE@  test_digestauth_with_arguments
 
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__append_8 = \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@  perf_get_concurrent
 
-@HAVE_CURL_TRUE@check_PROGRAMS = test_get$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_iovec$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_sendfile$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_close$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_close10$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_keep_alive$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_keep_alive10$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_delete$(EXEEXT) test_patch$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put$(EXEEXT) test_add_conn$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_add_conn_nolisten$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_process_headers$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_process_arguments$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_parse_cookies$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_toolarge_method$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_toolarge_url$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_toolarge_request_header_name$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_toolarge_request_header_value$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_toolarge_request_headers$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_toolarge_reply_header_name$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_toolarge_reply_header_value$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_toolarge_reply_headers$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_tricky_url$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_tricky_header2$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_large_put$(EXEEXT) test_get11$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_iovec11$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_sendfile11$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_patch11$(EXEEXT) test_put11$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_large_put11$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_large_put_inc11$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_close$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_string$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_close_string$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_empty$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_close_empty$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_string_empty$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_close_string_empty$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_sized$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_close_sized$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_empty_sized$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_close_empty_sized$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_forced$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_close_forced$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_empty_forced$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_chunked_close_empty_forced$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_chunked$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_callback$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_header_fold$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_header_fold$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_large_header_fold$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_header_fold_last$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_header_fold_large$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_get_header_double_fold$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_header_double_fold$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_large_header_double_fold$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_header_double_fold_last$(EXEEXT) \
-@HAVE_CURL_TRUE@	test_put_header_double_fold_large$(EXEEXT) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_1) $(am__EXEEXT_2) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_3) $(am__EXEEXT_4) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_5) $(am__EXEEXT_14) \
-@HAVE_CURL_TRUE@	$(am__EXEEXT_15)
-@HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@am__append_9 = \
-@HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@  perf_get
+@RUN_LIBCURL_TESTS_TRUE@check_PROGRAMS = test_get$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_head$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_head10$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_iovec$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_sendfile$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_close$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_close10$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_keep_alive$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_keep_alive10$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_delete$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_patch$(EXEEXT) test_put$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_add_conn$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_add_conn_nolisten$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_process_headers$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_process_arguments$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_toolarge_method$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_toolarge_url$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_toolarge_request_header_name$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_toolarge_request_header_value$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_toolarge_request_headers$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_toolarge_reply_header_name$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_toolarge_reply_header_value$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_toolarge_reply_headers$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_tricky_url$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_tricky_header2$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_large_put$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get11$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_iovec11$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_sendfile11$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_patch11$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put11$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_large_put11$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_large_put_inc11$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_broken_len10$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_broken_len$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_close$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_string$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_close_string$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_empty$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_close_empty$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_string_empty$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_close_string_empty$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_sized$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_close_sized$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_empty_sized$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_close_empty_sized$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_forced$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_close_forced$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_empty_forced$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_chunked_close_empty_forced$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_chunked$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_callback$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_header_fold$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_header_fold$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_large_header_fold$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_header_fold_last$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_header_fold_large$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_get_header_double_fold$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_header_double_fold$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_large_header_double_fold$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_header_double_fold_last$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	test_put_header_double_fold_large$(EXEEXT) \
+@RUN_LIBCURL_TESTS_TRUE@	$(am__EXEEXT_1) $(am__EXEEXT_2) \
+@RUN_LIBCURL_TESTS_TRUE@	$(am__EXEEXT_3) $(am__EXEEXT_4) \
+@RUN_LIBCURL_TESTS_TRUE@	$(am__EXEEXT_5) $(am__EXEEXT_6) \
+@RUN_LIBCURL_TESTS_TRUE@	$(am__EXEEXT_7) $(am__EXEEXT_8) \
+@RUN_LIBCURL_TESTS_TRUE@	$(am__EXEEXT_18) $(am__EXEEXT_19)
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_9 = \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_parse_cookies_discp_p2 \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_parse_cookies_discp_p1 \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_parse_cookies_discp_zero \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_parse_cookies_discp_n2 \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_parse_cookies_discp_n3
 
-@ENABLE_BAUTH_TRUE@@HAVE_CURL_TRUE@am__append_10 = \
-@ENABLE_BAUTH_TRUE@@HAVE_CURL_TRUE@  test_basicauth
+@HEAVY_TESTS_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_10 = \
+@HEAVY_TESTS_TRUE@@RUN_LIBCURL_TESTS_TRUE@  perf_get
 
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__append_11 = \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_postform \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post_loop \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post11 \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_postform11 \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@  test_post_loop11
+@ENABLE_BAUTH_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_11 = \
+@ENABLE_BAUTH_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_basicauth test_basicauth_preauth \
+@ENABLE_BAUTH_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_basicauth_oldapi test_basicauth_preauth_oldapi
 
-@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@am__append_12 = test_get_response_cleanup
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__append_13 = \
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_12 = \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_post \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_postform \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_post_loop \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_post11 \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_postform11 \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_post_loop11
 
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__append_14 = \
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_13 = \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth_with_arguments \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth_concurrent
+
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_14 = \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth_sha256
+
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_15 = \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth_emu_ext \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth_emu_ext_oldapi \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2 \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_rfc2069 \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_rfc2069_userdigest \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_oldapi1 \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_oldapi2 \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_userhash \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_userdigest \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_oldapi1_userdigest \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_oldapi2_userdigest \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_userhash_userdigest \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_bind_all \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_bind_uri \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_oldapi1_bind_all \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_oldapi1_bind_uri
+
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_16 = \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_sha256 \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_sha256_userhash \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_oldapi2_sha256 \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_sha256_userdigest \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_oldapi2_sha256_userdigest \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@  test_digestauth2_sha256_userhash_userdigest
+
+@HAVE_CURL_BINARY_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__append_17 = test_get_response_cleanup
+@RUN_LIBCURL_TESTS_TRUE@@USE_POSIX_THREADS_TRUE@am__append_18 = \
+@RUN_LIBCURL_TESTS_TRUE@@USE_POSIX_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
+
+@RUN_LIBCURL_TESTS_TRUE@@USE_W32_THREADS_TRUE@am__append_19 = \
+@RUN_LIBCURL_TESTS_TRUE@@USE_W32_THREADS_TRUE@  $(THREAD_ONLY_TESTS)
 
 subdir = src/testcurl
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -213,22 +258,26 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/ax_have_epoll.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/ax_require_defined.m4 \
-	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/gettext.m4 \
-	$(top_srcdir)/m4/host-cpu-c-abi.m4 $(top_srcdir)/m4/iconv.m4 \
-	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
-	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
-	$(top_srcdir)/m4/libcurl.m4 $(top_srcdir)/m4/libgcrypt.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/libcurl.m4 \
+	$(top_srcdir)/m4/libgcrypt.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/mhd_append_flag_to_var.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_cflag.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_cflags.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_ldflag.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_ldflags.m4 \
+	$(top_srcdir)/m4/mhd_check_cc_cflag.m4 \
 	$(top_srcdir)/m4/mhd_check_func.m4 \
+	$(top_srcdir)/m4/mhd_check_func_gettimeofday.m4 \
 	$(top_srcdir)/m4/mhd_check_link_run.m4 \
+	$(top_srcdir)/m4/mhd_find_add_cc_cflag.m4 \
+	$(top_srcdir)/m4/mhd_find_add_cc_cflag_ifelse.m4 \
 	$(top_srcdir)/m4/mhd_find_lib.m4 \
 	$(top_srcdir)/m4/mhd_norm_expd.m4 \
+	$(top_srcdir)/m4/mhd_prepend_flag_to_var.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
-	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
-	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/pkg.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -238,41 +287,71 @@ CONFIG_HEADER = $(top_builddir)/MHD_config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__EXEEXT_1 =
-@HAVE_CURL_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_2 = perf_get$(EXEEXT)
-@ENABLE_BAUTH_TRUE@@HAVE_CURL_TRUE@am__EXEEXT_3 =  \
-@ENABLE_BAUTH_TRUE@@HAVE_CURL_TRUE@	test_basicauth$(EXEEXT)
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_4 =  \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post$(EXEEXT) \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_postform$(EXEEXT) \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post_loop$(EXEEXT) \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post11$(EXEEXT) \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_postform11$(EXEEXT) \
-@HAVE_CURL_TRUE@@HAVE_POSTPROCESSOR_TRUE@	test_post_loop11$(EXEEXT)
-@HAVE_CURL_BINARY_TRUE@@HAVE_CURL_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_5 = test_get_response_cleanup$(EXEEXT)
-@HEAVY_TESTS_TRUE@am__EXEEXT_6 = test_add_conn_cleanup$(EXEEXT) \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_2 = test_parse_cookies_discp_p2$(EXEEXT) \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_parse_cookies_discp_p1$(EXEEXT) \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_parse_cookies_discp_zero$(EXEEXT) \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_parse_cookies_discp_n2$(EXEEXT) \
+@ENABLE_COOKIE_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_parse_cookies_discp_n3$(EXEEXT)
+@HEAVY_TESTS_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_3 =  \
+@HEAVY_TESTS_TRUE@@RUN_LIBCURL_TESTS_TRUE@	perf_get$(EXEEXT)
+@ENABLE_BAUTH_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_4 = test_basicauth$(EXEEXT) \
+@ENABLE_BAUTH_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_basicauth_preauth$(EXEEXT) \
+@ENABLE_BAUTH_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_basicauth_oldapi$(EXEEXT) \
+@ENABLE_BAUTH_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_basicauth_preauth_oldapi$(EXEEXT)
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_5 = test_post$(EXEEXT) \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_postform$(EXEEXT) \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_post_loop$(EXEEXT) \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_post11$(EXEEXT) \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_postform11$(EXEEXT) \
+@HAVE_POSTPROCESSOR_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_post_loop11$(EXEEXT)
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_6 = test_digestauth_emu_ext$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth_emu_ext_oldapi$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_rfc2069$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_rfc2069_userdigest$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_oldapi1$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_oldapi2$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_userhash$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_userdigest$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_oldapi1_userdigest$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_oldapi2_userdigest$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_userhash_userdigest$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_bind_all$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_bind_uri$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_oldapi1_bind_all$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_oldapi1_bind_uri$(EXEEXT)
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_7 = test_digestauth2_sha256$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_sha256_userhash$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_oldapi2_sha256$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_sha256_userdigest$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_oldapi2_sha256_userdigest$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth2_sha256_userhash_userdigest$(EXEEXT)
+@HAVE_CURL_BINARY_TRUE@@HAVE_FORK_WAITPID_TRUE@@HEAVY_TESTS_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_8 = test_get_response_cleanup$(EXEEXT)
+@HEAVY_TESTS_TRUE@am__EXEEXT_9 = test_add_conn_cleanup$(EXEEXT) \
 @HEAVY_TESTS_TRUE@	test_add_conn_cleanup_nolisten$(EXEEXT) \
 @HEAVY_TESTS_TRUE@	test_timeout$(EXEEXT) $(am__EXEEXT_1)
-@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_7 = perf_get_concurrent11$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_10 = perf_get_concurrent11$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@	$(am__EXEEXT_1)
-@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_8 = test_get_wait$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_11 = test_get_wait$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@	test_get_wait11$(EXEEXT) \
-@HAVE_POSIX_THREADS_TRUE@	test_quiesce$(EXEEXT) $(am__EXEEXT_1)
-@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_9 = test_concurrent_stop$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@	$(am__EXEEXT_1)
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_12 = test_concurrent_stop$(EXEEXT) \
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@	test_quiesce$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@	$(am__EXEEXT_1)
-@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_10 = test_quiesce_stream$(EXEEXT)
-@ENABLE_DAUTH_TRUE@am__EXEEXT_11 = test_digestauth$(EXEEXT) \
-@ENABLE_DAUTH_TRUE@	test_digestauth_sha256$(EXEEXT) \
-@ENABLE_DAUTH_TRUE@	test_digestauth_with_arguments$(EXEEXT)
-@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_12 = perf_get_concurrent$(EXEEXT)
-am__EXEEXT_13 = test_urlparse$(EXEEXT) test_long_header$(EXEEXT) \
+@HAVE_CURL_BINARY_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_13 = test_quiesce_stream$(EXEEXT)
+@HAVE_POSIX_THREADS_TRUE@@HEAVY_TESTS_TRUE@am__EXEEXT_14 = perf_get_concurrent$(EXEEXT)
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_15 = test_digestauth$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth_with_arguments$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@@ENABLE_MD5_TRUE@@RUN_LIBCURL_TESTS_TRUE@	test_digestauth_concurrent$(EXEEXT)
+@ENABLE_DAUTH_TRUE@@ENABLE_SHA256_TRUE@@RUN_LIBCURL_TESTS_TRUE@am__EXEEXT_16 = test_digestauth_sha256$(EXEEXT)
+am__EXEEXT_17 = test_urlparse$(EXEEXT) test_long_header$(EXEEXT) \
 	test_long_header11$(EXEEXT) test_iplimit11$(EXEEXT) \
-	test_termination$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_6) \
-	$(am__EXEEXT_7) $(am__EXEEXT_8) $(am__EXEEXT_9) \
-	$(am__EXEEXT_10) $(am__EXEEXT_11) $(am__EXEEXT_12)
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_14 =  \
-@HAVE_CURL_TRUE@@USE_POSIX_THREADS_TRUE@	$(am__EXEEXT_13)
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_15 =  \
-@HAVE_CURL_TRUE@@USE_W32_THREADS_TRUE@	$(am__EXEEXT_13)
+	test_termination$(EXEEXT) $(am__EXEEXT_1) $(am__EXEEXT_9) \
+	$(am__EXEEXT_10) $(am__EXEEXT_11) $(am__EXEEXT_12) \
+	$(am__EXEEXT_13) $(am__EXEEXT_14) $(am__EXEEXT_15) \
+	$(am__EXEEXT_16)
+@RUN_LIBCURL_TESTS_TRUE@@USE_POSIX_THREADS_TRUE@am__EXEEXT_18 = $(am__EXEEXT_17)
+@RUN_LIBCURL_TESTS_TRUE@@USE_W32_THREADS_TRUE@am__EXEEXT_19 = $(am__EXEEXT_17)
 am_perf_get_OBJECTS = perf_get.$(OBJEXT)
 perf_get_OBJECTS = $(am_perf_get_OBJECTS)
 perf_get_LDADD = $(LDADD)
@@ -342,6 +421,22 @@ test_basicauth_OBJECTS = $(am_test_basicauth_OBJECTS)
 test_basicauth_LDADD = $(LDADD)
 test_basicauth_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_basicauth_oldapi_OBJECTS = test_basicauth.$(OBJEXT)
+test_basicauth_oldapi_OBJECTS = $(am_test_basicauth_oldapi_OBJECTS)
+test_basicauth_oldapi_LDADD = $(LDADD)
+test_basicauth_oldapi_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_basicauth_preauth_OBJECTS = test_basicauth.$(OBJEXT)
+test_basicauth_preauth_OBJECTS = $(am_test_basicauth_preauth_OBJECTS)
+test_basicauth_preauth_LDADD = $(LDADD)
+test_basicauth_preauth_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_basicauth_preauth_oldapi_OBJECTS = test_basicauth.$(OBJEXT)
+test_basicauth_preauth_oldapi_OBJECTS =  \
+	$(am_test_basicauth_preauth_oldapi_OBJECTS)
+test_basicauth_preauth_oldapi_LDADD = $(LDADD)
+test_basicauth_preauth_oldapi_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_callback_OBJECTS = test_callback.$(OBJEXT)
 test_callback_OBJECTS = $(am_test_callback_OBJECTS)
 test_callback_LDADD = $(LDADD)
@@ -364,6 +459,159 @@ test_delete_DEPENDENCIES =  \
 am_test_digestauth_OBJECTS = test_digestauth.$(OBJEXT)
 test_digestauth_OBJECTS = $(am_test_digestauth_OBJECTS)
 test_digestauth_DEPENDENCIES = $(am__DEPENDENCIES_2)
+am_test_digestauth2_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_OBJECTS = $(am_test_digestauth2_OBJECTS)
+test_digestauth2_LDADD = $(LDADD)
+test_digestauth2_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_bind_all_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_bind_all_OBJECTS =  \
+	$(am_test_digestauth2_bind_all_OBJECTS)
+test_digestauth2_bind_all_LDADD = $(LDADD)
+test_digestauth2_bind_all_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_bind_uri_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_bind_uri_OBJECTS =  \
+	$(am_test_digestauth2_bind_uri_OBJECTS)
+test_digestauth2_bind_uri_LDADD = $(LDADD)
+test_digestauth2_bind_uri_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_oldapi1_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_oldapi1_OBJECTS =  \
+	$(am_test_digestauth2_oldapi1_OBJECTS)
+test_digestauth2_oldapi1_LDADD = $(LDADD)
+test_digestauth2_oldapi1_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_oldapi1_bind_all_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_oldapi1_bind_all_OBJECTS =  \
+	$(am_test_digestauth2_oldapi1_bind_all_OBJECTS)
+test_digestauth2_oldapi1_bind_all_LDADD = $(LDADD)
+test_digestauth2_oldapi1_bind_all_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_oldapi1_bind_uri_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_oldapi1_bind_uri_OBJECTS =  \
+	$(am_test_digestauth2_oldapi1_bind_uri_OBJECTS)
+test_digestauth2_oldapi1_bind_uri_LDADD = $(LDADD)
+test_digestauth2_oldapi1_bind_uri_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_oldapi1_userdigest_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_oldapi1_userdigest_OBJECTS =  \
+	$(am_test_digestauth2_oldapi1_userdigest_OBJECTS)
+test_digestauth2_oldapi1_userdigest_LDADD = $(LDADD)
+test_digestauth2_oldapi1_userdigest_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_oldapi2_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_oldapi2_OBJECTS =  \
+	$(am_test_digestauth2_oldapi2_OBJECTS)
+test_digestauth2_oldapi2_LDADD = $(LDADD)
+test_digestauth2_oldapi2_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_oldapi2_sha256_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_oldapi2_sha256_OBJECTS =  \
+	$(am_test_digestauth2_oldapi2_sha256_OBJECTS)
+test_digestauth2_oldapi2_sha256_LDADD = $(LDADD)
+test_digestauth2_oldapi2_sha256_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_oldapi2_sha256_userdigest_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_oldapi2_sha256_userdigest_OBJECTS =  \
+	$(am_test_digestauth2_oldapi2_sha256_userdigest_OBJECTS)
+test_digestauth2_oldapi2_sha256_userdigest_LDADD = $(LDADD)
+test_digestauth2_oldapi2_sha256_userdigest_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_oldapi2_userdigest_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_oldapi2_userdigest_OBJECTS =  \
+	$(am_test_digestauth2_oldapi2_userdigest_OBJECTS)
+test_digestauth2_oldapi2_userdigest_LDADD = $(LDADD)
+test_digestauth2_oldapi2_userdigest_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_rfc2069_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_rfc2069_OBJECTS =  \
+	$(am_test_digestauth2_rfc2069_OBJECTS)
+test_digestauth2_rfc2069_LDADD = $(LDADD)
+test_digestauth2_rfc2069_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_rfc2069_userdigest_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_rfc2069_userdigest_OBJECTS =  \
+	$(am_test_digestauth2_rfc2069_userdigest_OBJECTS)
+test_digestauth2_rfc2069_userdigest_LDADD = $(LDADD)
+test_digestauth2_rfc2069_userdigest_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_sha256_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_sha256_OBJECTS =  \
+	$(am_test_digestauth2_sha256_OBJECTS)
+test_digestauth2_sha256_LDADD = $(LDADD)
+test_digestauth2_sha256_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_sha256_userdigest_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_sha256_userdigest_OBJECTS =  \
+	$(am_test_digestauth2_sha256_userdigest_OBJECTS)
+test_digestauth2_sha256_userdigest_LDADD = $(LDADD)
+test_digestauth2_sha256_userdigest_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_sha256_userhash_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_sha256_userhash_OBJECTS =  \
+	$(am_test_digestauth2_sha256_userhash_OBJECTS)
+test_digestauth2_sha256_userhash_LDADD = $(LDADD)
+test_digestauth2_sha256_userhash_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_sha256_userhash_userdigest_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_sha256_userhash_userdigest_OBJECTS =  \
+	$(am_test_digestauth2_sha256_userhash_userdigest_OBJECTS)
+test_digestauth2_sha256_userhash_userdigest_LDADD = $(LDADD)
+test_digestauth2_sha256_userhash_userdigest_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_userdigest_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_userdigest_OBJECTS =  \
+	$(am_test_digestauth2_userdigest_OBJECTS)
+test_digestauth2_userdigest_LDADD = $(LDADD)
+test_digestauth2_userdigest_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_userhash_OBJECTS = test_digestauth2.$(OBJEXT)
+test_digestauth2_userhash_OBJECTS =  \
+	$(am_test_digestauth2_userhash_OBJECTS)
+test_digestauth2_userhash_LDADD = $(LDADD)
+test_digestauth2_userhash_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth2_userhash_userdigest_OBJECTS =  \
+	test_digestauth2.$(OBJEXT)
+test_digestauth2_userhash_userdigest_OBJECTS =  \
+	$(am_test_digestauth2_userhash_userdigest_OBJECTS)
+test_digestauth2_userhash_userdigest_LDADD = $(LDADD)
+test_digestauth2_userhash_userdigest_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth_concurrent_OBJECTS = test_digestauth_concurrent-test_digestauth_concurrent.$(OBJEXT)
+test_digestauth_concurrent_OBJECTS =  \
+	$(am_test_digestauth_concurrent_OBJECTS)
+test_digestauth_concurrent_DEPENDENCIES = $(am__DEPENDENCIES_2) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2)
+test_digestauth_concurrent_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
+	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
+	$(test_digestauth_concurrent_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
+	$(LDFLAGS) -o $@
+am_test_digestauth_emu_ext_OBJECTS =  \
+	test_digestauth_emu_ext.$(OBJEXT)
+test_digestauth_emu_ext_OBJECTS =  \
+	$(am_test_digestauth_emu_ext_OBJECTS)
+test_digestauth_emu_ext_LDADD = $(LDADD)
+test_digestauth_emu_ext_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_digestauth_emu_ext_oldapi_OBJECTS =  \
+	test_digestauth_emu_ext.$(OBJEXT)
+test_digestauth_emu_ext_oldapi_OBJECTS =  \
+	$(am_test_digestauth_emu_ext_oldapi_OBJECTS)
+test_digestauth_emu_ext_oldapi_LDADD = $(LDADD)
+test_digestauth_emu_ext_oldapi_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_digestauth_sha256_OBJECTS = test_digestauth_sha256.$(OBJEXT)
 test_digestauth_sha256_OBJECTS = $(am_test_digestauth_sha256_OBJECTS)
 test_digestauth_sha256_DEPENDENCIES = $(am__DEPENDENCIES_2)
@@ -524,6 +772,7 @@ am_test_get_response_cleanup_OBJECTS =  \
 	test_get_response_cleanup.$(OBJEXT)
 test_get_response_cleanup_OBJECTS =  \
 	$(am_test_get_response_cleanup_OBJECTS)
+test_get_response_cleanup_LDADD = $(LDADD)
 test_get_response_cleanup_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_get_sendfile_OBJECTS = test_get_sendfile.$(OBJEXT)
@@ -539,18 +788,28 @@ test_get_sendfile11_DEPENDENCIES =  \
 am_test_get_wait_OBJECTS = test_get_wait-test_get_wait.$(OBJEXT)
 test_get_wait_OBJECTS = $(am_test_get_wait_OBJECTS)
 test_get_wait_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(test_get_response_cleanup_LDADD)
+	$(am__DEPENDENCIES_2)
 test_get_wait_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(test_get_wait_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 am_test_get_wait11_OBJECTS = test_get_wait11-test_get_wait.$(OBJEXT)
 test_get_wait11_OBJECTS = $(am_test_get_wait11_OBJECTS)
 test_get_wait11_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(test_get_response_cleanup_LDADD)
+	$(am__DEPENDENCIES_2)
 test_get_wait11_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(test_get_wait11_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) \
 	-o $@
+am_test_head_OBJECTS = test_head.$(OBJEXT)
+test_head_OBJECTS = $(am_test_head_OBJECTS)
+test_head_LDADD = $(LDADD)
+test_head_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_head10_OBJECTS = test_head.$(OBJEXT)
+test_head10_OBJECTS = $(am_test_head10_OBJECTS)
+test_head10_LDADD = $(LDADD)
+test_head10_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_iplimit11_OBJECTS = test_iplimit.$(OBJEXT)
 test_iplimit11_OBJECTS = $(am_test_iplimit11_OBJECTS)
 test_iplimit11_LDADD = $(LDADD)
@@ -581,10 +840,37 @@ test_long_header11_OBJECTS = $(am_test_long_header11_OBJECTS)
 test_long_header11_LDADD = $(LDADD)
 test_long_header11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
-am_test_parse_cookies_OBJECTS = test_parse_cookies.$(OBJEXT)
-test_parse_cookies_OBJECTS = $(am_test_parse_cookies_OBJECTS)
-test_parse_cookies_LDADD = $(LDADD)
-test_parse_cookies_DEPENDENCIES =  \
+am__objects_2 = test_parse_cookies.$(OBJEXT)
+am_test_parse_cookies_discp_n2_OBJECTS = $(am__objects_2)
+test_parse_cookies_discp_n2_OBJECTS =  \
+	$(am_test_parse_cookies_discp_n2_OBJECTS)
+test_parse_cookies_discp_n2_LDADD = $(LDADD)
+test_parse_cookies_discp_n2_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_parse_cookies_discp_n3_OBJECTS = $(am__objects_2)
+test_parse_cookies_discp_n3_OBJECTS =  \
+	$(am_test_parse_cookies_discp_n3_OBJECTS)
+test_parse_cookies_discp_n3_LDADD = $(LDADD)
+test_parse_cookies_discp_n3_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_parse_cookies_discp_p1_OBJECTS = $(am__objects_2)
+test_parse_cookies_discp_p1_OBJECTS =  \
+	$(am_test_parse_cookies_discp_p1_OBJECTS)
+test_parse_cookies_discp_p1_LDADD = $(LDADD)
+test_parse_cookies_discp_p1_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_parse_cookies_discp_p2_OBJECTS = $(am__objects_2)
+test_parse_cookies_discp_p2_OBJECTS =  \
+	$(am_test_parse_cookies_discp_p2_OBJECTS)
+test_parse_cookies_discp_p2_LDADD = $(LDADD)
+test_parse_cookies_discp_p2_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_parse_cookies_discp_zero_OBJECTS =  \
+	test_parse_cookies.$(OBJEXT)
+test_parse_cookies_discp_zero_OBJECTS =  \
+	$(am_test_parse_cookies_discp_zero_OBJECTS)
+test_parse_cookies_discp_zero_LDADD = $(LDADD)
+test_parse_cookies_discp_zero_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_patch_OBJECTS = test_patch.$(OBJEXT)
 test_patch_OBJECTS = $(am_test_patch_OBJECTS)
@@ -618,10 +904,10 @@ test_post_loop11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_postform_OBJECTS = test_postform.$(OBJEXT)
 test_postform_OBJECTS = $(am_test_postform_OBJECTS)
-test_postform_DEPENDENCIES = $(test_get_response_cleanup_LDADD)
+test_postform_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_test_postform11_OBJECTS = test_postform.$(OBJEXT)
 test_postform11_OBJECTS = $(am_test_postform11_OBJECTS)
-test_postform11_DEPENDENCIES = $(test_get_response_cleanup_LDADD)
+test_postform11_DEPENDENCIES = $(am__DEPENDENCIES_2)
 am_test_process_arguments_OBJECTS = test_process_arguments.$(OBJEXT)
 test_process_arguments_OBJECTS = $(am_test_process_arguments_OBJECTS)
 test_process_arguments_LDADD = $(LDADD)
@@ -642,6 +928,17 @@ test_put11_OBJECTS = $(am_test_put11_OBJECTS)
 test_put11_LDADD = $(LDADD)
 test_put11_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_test_put_broken_len_OBJECTS = test_put_broken_len.$(OBJEXT)
+test_put_broken_len_OBJECTS = $(am_test_put_broken_len_OBJECTS)
+test_put_broken_len_LDADD = $(LDADD)
+test_put_broken_len_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am__objects_3 = test_put_broken_len.$(OBJEXT)
+am_test_put_broken_len10_OBJECTS = $(am__objects_3)
+test_put_broken_len10_OBJECTS = $(am_test_put_broken_len10_OBJECTS)
+test_put_broken_len10_LDADD = $(LDADD)
+test_put_broken_len10_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_test_put_chunked_OBJECTS = test_put_chunked.$(OBJEXT)
 test_put_chunked_OBJECTS = $(am_test_put_chunked_OBJECTS)
 test_put_chunked_LDADD = $(LDADD)
@@ -653,14 +950,14 @@ test_put_header_double_fold_OBJECTS =  \
 test_put_header_double_fold_LDADD = $(LDADD)
 test_put_header_double_fold_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
-am__objects_2 = $(am__objects_1)
-am_test_put_header_double_fold_large_OBJECTS = $(am__objects_2)
+am__objects_4 = $(am__objects_1)
+am_test_put_header_double_fold_large_OBJECTS = $(am__objects_4)
 test_put_header_double_fold_large_OBJECTS =  \
 	$(am_test_put_header_double_fold_large_OBJECTS)
 test_put_header_double_fold_large_LDADD = $(LDADD)
 test_put_header_double_fold_large_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
-am_test_put_header_double_fold_last_OBJECTS = $(am__objects_2)
+am_test_put_header_double_fold_last_OBJECTS = $(am__objects_4)
 test_put_header_double_fold_last_OBJECTS =  \
 	$(am_test_put_header_double_fold_last_OBJECTS)
 test_put_header_double_fold_last_LDADD = $(LDADD)
@@ -683,7 +980,7 @@ test_put_header_fold_last_OBJECTS =  \
 test_put_header_fold_last_LDADD = $(LDADD)
 test_put_header_fold_last_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
-am_test_put_large_header_double_fold_OBJECTS = $(am__objects_2)
+am_test_put_large_header_double_fold_OBJECTS = $(am__objects_4)
 test_put_large_header_double_fold_OBJECTS =  \
 	$(am_test_put_large_header_double_fold_OBJECTS)
 test_put_large_header_double_fold_LDADD = $(LDADD)
@@ -698,7 +995,7 @@ test_put_large_header_fold_DEPENDENCIES =  \
 am_test_quiesce_OBJECTS = test_quiesce-test_quiesce.$(OBJEXT)
 test_quiesce_OBJECTS = $(am_test_quiesce_OBJECTS)
 test_quiesce_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(test_get_response_cleanup_LDADD)
+	$(am__DEPENDENCIES_2)
 test_quiesce_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CCLD) $(test_quiesce_CFLAGS) \
 	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
@@ -706,7 +1003,7 @@ am_test_quiesce_stream_OBJECTS =  \
 	test_quiesce_stream-test_quiesce_stream.$(OBJEXT)
 test_quiesce_stream_OBJECTS = $(am_test_quiesce_stream_OBJECTS)
 test_quiesce_stream_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(test_get_response_cleanup_LDADD)
+	$(am__DEPENDENCIES_2)
 test_quiesce_stream_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC \
 	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CCLD) \
 	$(test_quiesce_stream_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) \
@@ -809,6 +1106,9 @@ am__depfiles_remade = ./$(DEPDIR)/perf_get.Po \
 	./$(DEPDIR)/test_basicauth.Po ./$(DEPDIR)/test_callback.Po \
 	./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po \
 	./$(DEPDIR)/test_delete.Po ./$(DEPDIR)/test_digestauth.Po \
+	./$(DEPDIR)/test_digestauth2.Po \
+	./$(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Po \
+	./$(DEPDIR)/test_digestauth_emu_ext.Po \
 	./$(DEPDIR)/test_digestauth_sha256.Po \
 	./$(DEPDIR)/test_digestauth_with_arguments.Po \
 	./$(DEPDIR)/test_get.Po ./$(DEPDIR)/test_get_chunked.Po \
@@ -818,13 +1118,14 @@ am__depfiles_remade = ./$(DEPDIR)/perf_get.Po \
 	./$(DEPDIR)/test_get_sendfile.Po \
 	./$(DEPDIR)/test_get_wait-test_get_wait.Po \
 	./$(DEPDIR)/test_get_wait11-test_get_wait.Po \
-	./$(DEPDIR)/test_iplimit.Po ./$(DEPDIR)/test_large_put.Po \
-	./$(DEPDIR)/test_long_header.Po \
+	./$(DEPDIR)/test_head.Po ./$(DEPDIR)/test_iplimit.Po \
+	./$(DEPDIR)/test_large_put.Po ./$(DEPDIR)/test_long_header.Po \
 	./$(DEPDIR)/test_parse_cookies.Po ./$(DEPDIR)/test_patch.Po \
 	./$(DEPDIR)/test_post.Po ./$(DEPDIR)/test_post_loop.Po \
 	./$(DEPDIR)/test_postform.Po \
 	./$(DEPDIR)/test_process_arguments.Po \
 	./$(DEPDIR)/test_process_headers.Po ./$(DEPDIR)/test_put.Po \
+	./$(DEPDIR)/test_put_broken_len.Po \
 	./$(DEPDIR)/test_put_chunked.Po \
 	./$(DEPDIR)/test_put_header_fold.Po \
 	./$(DEPDIR)/test_quiesce-test_quiesce.Po \
@@ -856,8 +1157,34 @@ SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(test_add_conn_cleanup_SOURCES) \
 	$(test_add_conn_cleanup_nolisten_SOURCES) \
 	$(test_add_conn_nolisten_SOURCES) $(test_basicauth_SOURCES) \
+	$(test_basicauth_oldapi_SOURCES) \
+	$(test_basicauth_preauth_SOURCES) \
+	$(test_basicauth_preauth_oldapi_SOURCES) \
 	$(test_callback_SOURCES) $(test_concurrent_stop_SOURCES) \
 	$(test_delete_SOURCES) $(test_digestauth_SOURCES) \
+	$(test_digestauth2_SOURCES) \
+	$(test_digestauth2_bind_all_SOURCES) \
+	$(test_digestauth2_bind_uri_SOURCES) \
+	$(test_digestauth2_oldapi1_SOURCES) \
+	$(test_digestauth2_oldapi1_bind_all_SOURCES) \
+	$(test_digestauth2_oldapi1_bind_uri_SOURCES) \
+	$(test_digestauth2_oldapi1_userdigest_SOURCES) \
+	$(test_digestauth2_oldapi2_SOURCES) \
+	$(test_digestauth2_oldapi2_sha256_SOURCES) \
+	$(test_digestauth2_oldapi2_sha256_userdigest_SOURCES) \
+	$(test_digestauth2_oldapi2_userdigest_SOURCES) \
+	$(test_digestauth2_rfc2069_SOURCES) \
+	$(test_digestauth2_rfc2069_userdigest_SOURCES) \
+	$(test_digestauth2_sha256_SOURCES) \
+	$(test_digestauth2_sha256_userdigest_SOURCES) \
+	$(test_digestauth2_sha256_userhash_SOURCES) \
+	$(test_digestauth2_sha256_userhash_userdigest_SOURCES) \
+	$(test_digestauth2_userdigest_SOURCES) \
+	$(test_digestauth2_userhash_SOURCES) \
+	$(test_digestauth2_userhash_userdigest_SOURCES) \
+	$(test_digestauth_concurrent_SOURCES) \
+	$(test_digestauth_emu_ext_SOURCES) \
+	$(test_digestauth_emu_ext_oldapi_SOURCES) \
 	$(test_digestauth_sha256_SOURCES) \
 	$(test_digestauth_with_arguments_SOURCES) $(test_get_SOURCES) \
 	$(test_get11_SOURCES) $(test_get_chunked_SOURCES) \
@@ -884,16 +1211,22 @@ SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(test_get_response_cleanup_SOURCES) \
 	$(test_get_sendfile_SOURCES) $(test_get_sendfile11_SOURCES) \
 	$(test_get_wait_SOURCES) $(test_get_wait11_SOURCES) \
+	$(test_head_SOURCES) $(test_head10_SOURCES) \
 	$(test_iplimit11_SOURCES) $(test_large_put_SOURCES) \
 	$(test_large_put11_SOURCES) $(test_large_put_inc11_SOURCES) \
 	$(test_long_header_SOURCES) $(test_long_header11_SOURCES) \
-	$(test_parse_cookies_SOURCES) $(test_patch_SOURCES) \
+	$(test_parse_cookies_discp_n2_SOURCES) \
+	$(test_parse_cookies_discp_n3_SOURCES) \
+	$(test_parse_cookies_discp_p1_SOURCES) \
+	$(test_parse_cookies_discp_p2_SOURCES) \
+	$(test_parse_cookies_discp_zero_SOURCES) $(test_patch_SOURCES) \
 	$(test_patch11_SOURCES) $(test_post_SOURCES) \
 	$(test_post11_SOURCES) $(test_post_loop_SOURCES) \
 	$(test_post_loop11_SOURCES) $(test_postform_SOURCES) \
 	$(test_postform11_SOURCES) $(test_process_arguments_SOURCES) \
 	$(test_process_headers_SOURCES) $(test_put_SOURCES) \
-	$(test_put11_SOURCES) $(test_put_chunked_SOURCES) \
+	$(test_put11_SOURCES) $(test_put_broken_len_SOURCES) \
+	$(test_put_broken_len10_SOURCES) $(test_put_chunked_SOURCES) \
 	$(test_put_header_double_fold_SOURCES) \
 	$(test_put_header_double_fold_large_SOURCES) \
 	$(test_put_header_double_fold_last_SOURCES) \
@@ -917,8 +1250,34 @@ DIST_SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(test_add_conn_cleanup_SOURCES) \
 	$(test_add_conn_cleanup_nolisten_SOURCES) \
 	$(test_add_conn_nolisten_SOURCES) $(test_basicauth_SOURCES) \
+	$(test_basicauth_oldapi_SOURCES) \
+	$(test_basicauth_preauth_SOURCES) \
+	$(test_basicauth_preauth_oldapi_SOURCES) \
 	$(test_callback_SOURCES) $(test_concurrent_stop_SOURCES) \
 	$(test_delete_SOURCES) $(test_digestauth_SOURCES) \
+	$(test_digestauth2_SOURCES) \
+	$(test_digestauth2_bind_all_SOURCES) \
+	$(test_digestauth2_bind_uri_SOURCES) \
+	$(test_digestauth2_oldapi1_SOURCES) \
+	$(test_digestauth2_oldapi1_bind_all_SOURCES) \
+	$(test_digestauth2_oldapi1_bind_uri_SOURCES) \
+	$(test_digestauth2_oldapi1_userdigest_SOURCES) \
+	$(test_digestauth2_oldapi2_SOURCES) \
+	$(test_digestauth2_oldapi2_sha256_SOURCES) \
+	$(test_digestauth2_oldapi2_sha256_userdigest_SOURCES) \
+	$(test_digestauth2_oldapi2_userdigest_SOURCES) \
+	$(test_digestauth2_rfc2069_SOURCES) \
+	$(test_digestauth2_rfc2069_userdigest_SOURCES) \
+	$(test_digestauth2_sha256_SOURCES) \
+	$(test_digestauth2_sha256_userdigest_SOURCES) \
+	$(test_digestauth2_sha256_userhash_SOURCES) \
+	$(test_digestauth2_sha256_userhash_userdigest_SOURCES) \
+	$(test_digestauth2_userdigest_SOURCES) \
+	$(test_digestauth2_userhash_SOURCES) \
+	$(test_digestauth2_userhash_userdigest_SOURCES) \
+	$(test_digestauth_concurrent_SOURCES) \
+	$(test_digestauth_emu_ext_SOURCES) \
+	$(test_digestauth_emu_ext_oldapi_SOURCES) \
 	$(test_digestauth_sha256_SOURCES) \
 	$(test_digestauth_with_arguments_SOURCES) $(test_get_SOURCES) \
 	$(test_get11_SOURCES) $(test_get_chunked_SOURCES) \
@@ -945,16 +1304,22 @@ DIST_SOURCES = $(perf_get_SOURCES) $(perf_get_concurrent_SOURCES) \
 	$(test_get_response_cleanup_SOURCES) \
 	$(test_get_sendfile_SOURCES) $(test_get_sendfile11_SOURCES) \
 	$(test_get_wait_SOURCES) $(test_get_wait11_SOURCES) \
+	$(test_head_SOURCES) $(test_head10_SOURCES) \
 	$(test_iplimit11_SOURCES) $(test_large_put_SOURCES) \
 	$(test_large_put11_SOURCES) $(test_large_put_inc11_SOURCES) \
 	$(test_long_header_SOURCES) $(test_long_header11_SOURCES) \
-	$(test_parse_cookies_SOURCES) $(test_patch_SOURCES) \
+	$(test_parse_cookies_discp_n2_SOURCES) \
+	$(test_parse_cookies_discp_n3_SOURCES) \
+	$(test_parse_cookies_discp_p1_SOURCES) \
+	$(test_parse_cookies_discp_p2_SOURCES) \
+	$(test_parse_cookies_discp_zero_SOURCES) $(test_patch_SOURCES) \
 	$(test_patch11_SOURCES) $(test_post_SOURCES) \
 	$(test_post11_SOURCES) $(test_post_loop_SOURCES) \
 	$(test_post_loop11_SOURCES) $(test_postform_SOURCES) \
 	$(test_postform11_SOURCES) $(test_process_arguments_SOURCES) \
 	$(test_process_headers_SOURCES) $(test_put_SOURCES) \
-	$(test_put11_SOURCES) $(test_put_chunked_SOURCES) \
+	$(test_put11_SOURCES) $(test_put_broken_len_SOURCES) \
+	$(test_put_broken_len10_SOURCES) $(test_put_chunked_SOURCES) \
 	$(test_put_header_double_fold_SOURCES) \
 	$(test_put_header_double_fold_large_SOURCES) \
 	$(test_put_header_double_fold_last_SOURCES) \
@@ -1250,7 +1615,6 @@ AMTAR = @AMTAR@
 AM_ASAN_OPTIONS = @AM_ASAN_OPTIONS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AM_LSAN_OPTIONS = @AM_LSAN_OPTIONS@
-AM_TESTS_ENVIRONMENT = @AM_TESTS_ENVIRONMENT@
 AM_UBSAN_OPTIONS = @AM_UBSAN_OPTIONS@
 AR = @AR@
 AS = @AS@
@@ -1261,8 +1625,10 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CFLAGS_ac = @CFLAGS_ac@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CPPFLAGS_ac = @CPPFLAGS_ac@
 CPU_COUNT = @CPU_COUNT@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -1281,9 +1647,6 @@ ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 FILECMD = @FILECMD@
-GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
-GMSGFMT = @GMSGFMT@
-GMSGFMT_015 = @GMSGFMT_015@
 GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
 GNUTLS_CPPFLAGS = @GNUTLS_CPPFLAGS@
 GNUTLS_LDFLAGS = @GNUTLS_LDFLAGS@
@@ -1291,24 +1654,20 @@ GNUTLS_LIBS = @GNUTLS_LIBS@
 GREP = @GREP@
 HAVE_CURL_BINARY = @HAVE_CURL_BINARY@
 HAVE_MAKEINFO_BINARY = @HAVE_MAKEINFO_BINARY@
-HEAVY_TESTS_NOTPARALLEL = @HEAVY_TESTS_NOTPARALLEL@
 HIDDEN_VISIBILITY_CFLAGS = @HIDDEN_VISIBILITY_CFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
-INTLLIBS = @INTLLIBS@
-INTL_MACOSX_LIBS = @INTL_MACOSX_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LDFLAGS_ac = @LDFLAGS_ac@
 LIBCURL = @LIBCURL@
 LIBCURL_CPPFLAGS = @LIBCURL_CPPFLAGS@
 LIBGCRYPT_CFLAGS = @LIBGCRYPT_CFLAGS@
 LIBGCRYPT_CONFIG = @LIBGCRYPT_CONFIG@
 LIBGCRYPT_LIBS = @LIBGCRYPT_LIBS@
-LIBICONV = @LIBICONV@
-LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -1317,12 +1676,11 @@ LIB_VERSION_CURRENT = @LIB_VERSION_CURRENT@
 LIB_VERSION_REVISION = @LIB_VERSION_REVISION@
 LIPO = @LIPO@
 LN_S = @LN_S@
-LTLIBICONV = @LTLIBICONV@
-LTLIBINTL = @LTLIBINTL@
 LTLIBOBJS = @LTLIBOBJS@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
+MHD_AUX_DIR = @MHD_AUX_DIR@
 MHD_LIBDEPS = @MHD_LIBDEPS@
 MHD_LIBDEPS_PKGCFG = @MHD_LIBDEPS_PKGCFG@
 MHD_LIB_CFLAGS = @MHD_LIB_CFLAGS@
@@ -1336,9 +1694,6 @@ MHD_TLS_LIB_CPPFLAGS = @MHD_TLS_LIB_CPPFLAGS@
 MHD_TLS_LIB_LDFLAGS = @MHD_TLS_LIB_LDFLAGS@
 MHD_W32_DLL_SUFF = @MHD_W32_DLL_SUFF@
 MKDIR_P = @MKDIR_P@
-MSGFMT = @MSGFMT@
-MSGMERGE = @MSGMERGE@
-MSGMERGE_FOR_MSGFMT_OPTION = @MSGMERGE_FOR_MSGFMT_OPTION@
 MS_LIB_TOOL = @MS_LIB_TOOL@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -1360,7 +1715,6 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
-POSUB = @POSUB@
 PTHREAD_CC = @PTHREAD_CC@
 PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
 PTHREAD_CXX = @PTHREAD_CXX@
@@ -1370,13 +1724,12 @@ RC = @RC@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCAT = @SOCAT@
 STRIP = @STRIP@
-USE_NLS = @USE_NLS@
+TESTS_ENVIRONMENT_ac = @TESTS_ENVIRONMENT_ac@
 VERSION = @VERSION@
 W32CRT = @W32CRT@
-XGETTEXT = @XGETTEXT@
-XGETTEXT_015 = @XGETTEXT_015@
-XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
+ZZUF = @ZZUF@
 _libcurl_config = @_libcurl_config@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -1404,8 +1757,6 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-have_socat = @have_socat@
-have_zzuf = @have_zzuf@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -1439,41 +1790,49 @@ top_srcdir = @top_srcdir@
 
 # This Makefile.am is in the public domain
 EMPTY_ITEM = 
-SUBDIRS = . $(am__append_1)
-@USE_COVERAGE_TRUE@AM_CFLAGS = -fprofile-arcs -ftest-coverage
+SUBDIRS = . $(am__append_2)
 AM_CPPFLAGS = \
--DMHD_CPU_COUNT=$(CPU_COUNT) \
--I$(top_srcdir) \
--I$(top_srcdir)/src/microhttpd \
--I$(top_srcdir)/src/include \
-$(LIBCURL_CPPFLAGS)
+  -I$(top_srcdir)/src/include \
+  -I$(top_srcdir)/src/microhttpd \
+  -DMHD_CPU_COUNT=$(CPU_COUNT) \
+  $(CPPFLAGS_ac) $(LIBCURL_CPPFLAGS)
 
+AM_CFLAGS = $(CFLAGS_ac) @LIBGCRYPT_CFLAGS@ $(am__append_1)
+AM_LDFLAGS = $(LDFLAGS_ac)
+AM_TESTS_ENVIRONMENT = $(TESTS_ENVIRONMENT_ac)
 LDADD = \
   $(top_builddir)/src/microhttpd/libmicrohttpd.la \
   @LIBCURL@
 
 THREAD_ONLY_TESTS = test_urlparse test_long_header test_long_header11 \
-	test_iplimit11 test_termination $(EMPTY_ITEM) $(am__append_2) \
-	$(am__append_3) $(am__append_4) $(am__append_5) \
-	$(am__append_6) $(am__append_7) $(am__append_8)
-@HAVE_CURL_TRUE@TESTS = $(check_PROGRAMS)
+	test_iplimit11 test_termination $(EMPTY_ITEM) $(am__append_3) \
+	$(am__append_4) $(am__append_5) $(am__append_6) \
+	$(am__append_7) $(am__append_8) $(am__append_13) \
+	$(am__append_14)
+@RUN_LIBCURL_TESTS_TRUE@TESTS = $(check_PROGRAMS)
 test_concurrent_stop_SOURCES = \
   test_concurrent_stop.c
 
 test_concurrent_stop_CFLAGS = \
-  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS)
 
 test_concurrent_stop_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
 
 test_get_SOURCES = \
-  test_get.c
+  test_get.c mhd_has_in_name.h mhd_has_param.h
+
+test_head_SOURCES = \
+  test_head.c mhd_has_in_name.h mhd_has_param.h
+
+test_head10_SOURCES = \
+  test_head.c mhd_has_in_name.h mhd_has_param.h
 
 test_quiesce_SOURCES = \
-  test_quiesce.c
+  test_quiesce.c mhd_has_param.h mhd_has_in_name.h
 
 test_quiesce_CFLAGS = \
-  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS)
 
 test_quiesce_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
@@ -1482,7 +1841,7 @@ test_quiesce_stream_SOURCES = \
   test_quiesce_stream.c
 
 test_quiesce_stream_CFLAGS = \
-  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS)
 
 test_quiesce_stream_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
@@ -1492,29 +1851,38 @@ test_callback_SOURCES = \
 
 perf_get_SOURCES = \
   perf_get.c \
-  gauger.h mhd_has_in_name.h
+  mhd_has_in_name.h
 
 perf_get_concurrent_SOURCES = \
   perf_get_concurrent.c \
-  gauger.h mhd_has_in_name.h
+  mhd_has_in_name.h
 
 perf_get_concurrent_CFLAGS = \
-  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS)
 
 perf_get_concurrent_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
 
 perf_get_concurrent11_SOURCES = \
   perf_get_concurrent.c \
-  gauger.h mhd_has_in_name.h
+  mhd_has_in_name.h
 
 perf_get_concurrent11_CFLAGS = \
-  $(PTHREAD_CFLAGS) $(AM_CFLAGS)
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS)
 
 perf_get_concurrent11_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
 
 test_basicauth_SOURCES = \
+  test_basicauth.c
+
+test_basicauth_preauth_SOURCES = \
+  test_basicauth.c
+
+test_basicauth_oldapi_SOURCES = \
+  test_basicauth.c
+
+test_basicauth_preauth_oldapi_SOURCES = \
   test_basicauth.c
 
 test_digestauth_SOURCES = \
@@ -1534,6 +1902,81 @@ test_digestauth_with_arguments_SOURCES = \
 
 test_digestauth_with_arguments_LDADD = \
   @LIBGCRYPT_LIBS@ $(LDADD)
+
+test_digestauth_concurrent_SOURCES = \
+  test_digestauth_concurrent.c
+
+test_digestauth_concurrent_CFLAGS = \
+  $(AM_CFLAGS) $(PTHREAD_CFLAGS)
+
+test_digestauth_concurrent_LDADD = \
+  @LIBGCRYPT_LIBS@ $(LDADD) $(PTHREAD_LIBS) $(LDADD)
+
+test_digestauth_emu_ext_SOURCES = \
+  test_digestauth_emu_ext.c
+
+test_digestauth_emu_ext_oldapi_SOURCES = \
+  test_digestauth_emu_ext.c
+
+test_digestauth2_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_rfc2069_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_rfc2069_userdigest_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_oldapi1_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_oldapi2_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_userhash_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_sha256_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_oldapi2_sha256_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_sha256_userhash_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_userdigest_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_oldapi1_userdigest_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_oldapi2_userdigest_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_userhash_userdigest_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_sha256_userdigest_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_oldapi2_sha256_userdigest_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_sha256_userhash_userdigest_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_bind_all_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_bind_uri_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_oldapi1_bind_all_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
+
+test_digestauth2_oldapi1_bind_uri_SOURCES = \
+  test_digestauth2.c mhd_has_param.h mhd_has_in_name.h
 
 test_get_iovec_SOURCES = \
   test_get_iovec.c mhd_has_in_name.h
@@ -1567,56 +2010,53 @@ test_urlparse_SOURCES = \
 test_get_response_cleanup_SOURCES = \
   test_get_response_cleanup.c mhd_has_in_name.h
 
-test_get_response_cleanup_LDADD = \
-  $(top_builddir)/src/microhttpd/libmicrohttpd.la
-
 test_get_chunked_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_close_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_string_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_close_string_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_empty_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_close_empty_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_string_empty_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_close_string_empty_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_sized_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_close_sized_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_empty_sized_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_close_empty_sized_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_forced_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_close_forced_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_empty_forced_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_get_chunked_close_empty_forced_SOURCES = \
-  test_get_chunked.c
+  test_get_chunked.c mhd_has_in_name.h
 
 test_post_SOURCES = \
   test_post.c mhd_has_in_name.h
@@ -1624,8 +2064,20 @@ test_post_SOURCES = \
 test_process_headers_SOURCES = \
   test_process_headers.c mhd_has_in_name.h
 
-test_parse_cookies_SOURCES = \
-  test_parse_cookies.c mhd_has_in_name.h
+test_parse_cookies_discp_zero_SOURCES = \
+  test_parse_cookies.c mhd_has_in_name.h mhd_has_param.h
+
+test_parse_cookies_discp_p2_SOURCES = \
+  $(test_parse_cookies_discp_zero_SOURCES)
+
+test_parse_cookies_discp_p1_SOURCES = \
+  $(test_parse_cookies_discp_zero_SOURCES)
+
+test_parse_cookies_discp_n2_SOURCES = \
+  $(test_parse_cookies_discp_zero_SOURCES)
+
+test_parse_cookies_discp_n3_SOURCES = \
+  $(test_parse_cookies_discp_zero_SOURCES)
 
 test_process_arguments_SOURCES = \
   test_process_arguments.c mhd_has_in_name.h
@@ -1655,7 +2107,7 @@ test_put_chunked_SOURCES = \
   test_put_chunked.c
 
 test_add_conn_SOURCES = \
-  test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
+  test_add_conn.c mhd_has_in_name.h mhd_has_param.h
 
 test_add_conn_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
@@ -1664,7 +2116,7 @@ test_add_conn_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
 
 test_add_conn_nolisten_SOURCES = \
-  test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
+  test_add_conn.c mhd_has_in_name.h mhd_has_param.h
 
 test_add_conn_nolisten_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
@@ -1673,7 +2125,7 @@ test_add_conn_nolisten_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
 
 test_add_conn_cleanup_SOURCES = \
-  test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
+  test_add_conn.c mhd_has_in_name.h mhd_has_param.h
 
 test_add_conn_cleanup_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
@@ -1682,7 +2134,7 @@ test_add_conn_cleanup_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
 
 test_add_conn_cleanup_nolisten_SOURCES = \
-  test_add_conn.c $(top_srcdir)/src/microhttpd/test_helpers.h
+  test_add_conn.c mhd_has_in_name.h mhd_has_param.h
 
 test_add_conn_cleanup_nolisten_CFLAGS = \
   $(PTHREAD_CFLAGS) $(AM_CFLAGS)
@@ -1691,7 +2143,7 @@ test_add_conn_cleanup_nolisten_LDADD = \
   $(PTHREAD_LIBS) $(LDADD)
 
 test_get11_SOURCES = \
-  test_get.c
+  test_get.c mhd_has_in_name.h mhd_has_param.h
 
 test_get_iovec11_SOURCES = \
   test_get_iovec.c mhd_has_in_name.h
@@ -1700,16 +2152,16 @@ test_get_sendfile11_SOURCES = \
   test_get_sendfile.c mhd_has_in_name.h
 
 test_get_close_SOURCES = \
-  test_get_close_keep_alive.c $(top_srcdir)/src/microhttpd/test_helpers.h
+  test_get_close_keep_alive.c mhd_has_in_name.h mhd_has_param.h
 
 test_get_close10_SOURCES = \
-  test_get_close_keep_alive.c $(top_srcdir)/src/microhttpd/test_helpers.h
+  test_get_close_keep_alive.c mhd_has_in_name.h mhd_has_param.h
 
 test_get_keep_alive_SOURCES = \
-  test_get_close_keep_alive.c $(top_srcdir)/src/microhttpd/test_helpers.h
+  test_get_close_keep_alive.c mhd_has_in_name.h mhd_has_param.h
 
 test_get_keep_alive10_SOURCES = \
-  test_get_close_keep_alive.c $(top_srcdir)/src/microhttpd/test_helpers.h
+  test_get_close_keep_alive.c mhd_has_in_name.h mhd_has_param.h
 
 test_post11_SOURCES = \
   test_post.c mhd_has_in_name.h
@@ -1727,13 +2179,13 @@ test_put11_SOURCES = \
   test_put.c mhd_has_in_name.h
 
 test_large_put_SOURCES = \
-  test_large_put.c
+  test_large_put.c mhd_has_in_name.h mhd_has_param.h
 
 test_large_put11_SOURCES = \
-  test_large_put.c
+  test_large_put.c mhd_has_in_name.h mhd_has_param.h
 
 test_large_put_inc11_SOURCES = \
-  test_large_put.c
+  test_large_put.c mhd_has_in_name.h mhd_has_param.h
 
 test_long_header_SOURCES = \
   test_long_header.c mhd_has_in_name.h
@@ -1751,37 +2203,41 @@ test_timeout_SOURCES = \
   test_timeout.c mhd_has_in_name.h
 
 test_toolarge_method_SOURCES = \
-  test_toolarge.c ../microhttpd/test_helpers.h
+  test_toolarge.c mhd_has_in_name.h mhd_has_param.h
 
 test_toolarge_url_SOURCES = \
-  test_toolarge.c ../microhttpd/test_helpers.h
+  test_toolarge.c mhd_has_in_name.h mhd_has_param.h
 
 test_toolarge_request_header_name_SOURCES = \
-  test_toolarge.c ../microhttpd/test_helpers.h
+  test_toolarge.c mhd_has_in_name.h mhd_has_param.h
 
 test_toolarge_request_header_value_SOURCES = \
-  test_toolarge.c ../microhttpd/test_helpers.h
+  test_toolarge.c mhd_has_in_name.h mhd_has_param.h
 
 test_toolarge_request_headers_SOURCES = \
-  test_toolarge.c ../microhttpd/test_helpers.h
+  test_toolarge.c mhd_has_in_name.h mhd_has_param.h
 
 test_toolarge_reply_header_name_SOURCES = \
-  test_toolarge.c ../microhttpd/test_helpers.h
+  test_toolarge.c mhd_has_in_name.h mhd_has_param.h
 
 test_toolarge_reply_header_value_SOURCES = \
-  test_toolarge.c ../microhttpd/test_helpers.h
+  test_toolarge.c mhd_has_in_name.h mhd_has_param.h
 
 test_toolarge_reply_headers_SOURCES = \
-  test_toolarge.c ../microhttpd/test_helpers.h
+  test_toolarge.c mhd_has_in_name.h mhd_has_param.h
 
 test_tricky_url_SOURCES = \
-  test_tricky.c ../microhttpd/test_helpers.h
+  test_tricky.c mhd_has_in_name.h mhd_has_param.h
 
 test_tricky_header2_SOURCES = \
-  test_tricky.c ../microhttpd/test_helpers.h
+  test_tricky.c mhd_has_in_name.h mhd_has_param.h
 
+test_put_broken_len_SOURCES = \
+  test_put_broken_len.c mhd_has_in_name.h mhd_has_param.h
+
+test_put_broken_len10_SOURCES = $(test_put_broken_len_SOURCES)
 test_put_header_fold_SOURCES = \
-  test_put_header_fold.c ../microhttpd/test_helpers.h
+  test_put_header_fold.c mhd_has_in_name.h mhd_has_param.h
 
 test_put_large_header_fold_SOURCES = $(test_put_header_fold_SOURCES)
 test_get_header_fold_SOURCES = $(test_put_header_fold_SOURCES)
@@ -1867,6 +2323,18 @@ test_basicauth$(EXEEXT): $(test_basicauth_OBJECTS) $(test_basicauth_DEPENDENCIES
 	@rm -f test_basicauth$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_basicauth_OBJECTS) $(test_basicauth_LDADD) $(LIBS)
 
+test_basicauth_oldapi$(EXEEXT): $(test_basicauth_oldapi_OBJECTS) $(test_basicauth_oldapi_DEPENDENCIES) $(EXTRA_test_basicauth_oldapi_DEPENDENCIES) 
+	@rm -f test_basicauth_oldapi$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_basicauth_oldapi_OBJECTS) $(test_basicauth_oldapi_LDADD) $(LIBS)
+
+test_basicauth_preauth$(EXEEXT): $(test_basicauth_preauth_OBJECTS) $(test_basicauth_preauth_DEPENDENCIES) $(EXTRA_test_basicauth_preauth_DEPENDENCIES) 
+	@rm -f test_basicauth_preauth$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_basicauth_preauth_OBJECTS) $(test_basicauth_preauth_LDADD) $(LIBS)
+
+test_basicauth_preauth_oldapi$(EXEEXT): $(test_basicauth_preauth_oldapi_OBJECTS) $(test_basicauth_preauth_oldapi_DEPENDENCIES) $(EXTRA_test_basicauth_preauth_oldapi_DEPENDENCIES) 
+	@rm -f test_basicauth_preauth_oldapi$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_basicauth_preauth_oldapi_OBJECTS) $(test_basicauth_preauth_oldapi_LDADD) $(LIBS)
+
 test_callback$(EXEEXT): $(test_callback_OBJECTS) $(test_callback_DEPENDENCIES) $(EXTRA_test_callback_DEPENDENCIES) 
 	@rm -f test_callback$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_callback_OBJECTS) $(test_callback_LDADD) $(LIBS)
@@ -1882,6 +2350,98 @@ test_delete$(EXEEXT): $(test_delete_OBJECTS) $(test_delete_DEPENDENCIES) $(EXTRA
 test_digestauth$(EXEEXT): $(test_digestauth_OBJECTS) $(test_digestauth_DEPENDENCIES) $(EXTRA_test_digestauth_DEPENDENCIES) 
 	@rm -f test_digestauth$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_digestauth_OBJECTS) $(test_digestauth_LDADD) $(LIBS)
+
+test_digestauth2$(EXEEXT): $(test_digestauth2_OBJECTS) $(test_digestauth2_DEPENDENCIES) $(EXTRA_test_digestauth2_DEPENDENCIES) 
+	@rm -f test_digestauth2$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_OBJECTS) $(test_digestauth2_LDADD) $(LIBS)
+
+test_digestauth2_bind_all$(EXEEXT): $(test_digestauth2_bind_all_OBJECTS) $(test_digestauth2_bind_all_DEPENDENCIES) $(EXTRA_test_digestauth2_bind_all_DEPENDENCIES) 
+	@rm -f test_digestauth2_bind_all$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_bind_all_OBJECTS) $(test_digestauth2_bind_all_LDADD) $(LIBS)
+
+test_digestauth2_bind_uri$(EXEEXT): $(test_digestauth2_bind_uri_OBJECTS) $(test_digestauth2_bind_uri_DEPENDENCIES) $(EXTRA_test_digestauth2_bind_uri_DEPENDENCIES) 
+	@rm -f test_digestauth2_bind_uri$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_bind_uri_OBJECTS) $(test_digestauth2_bind_uri_LDADD) $(LIBS)
+
+test_digestauth2_oldapi1$(EXEEXT): $(test_digestauth2_oldapi1_OBJECTS) $(test_digestauth2_oldapi1_DEPENDENCIES) $(EXTRA_test_digestauth2_oldapi1_DEPENDENCIES) 
+	@rm -f test_digestauth2_oldapi1$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_oldapi1_OBJECTS) $(test_digestauth2_oldapi1_LDADD) $(LIBS)
+
+test_digestauth2_oldapi1_bind_all$(EXEEXT): $(test_digestauth2_oldapi1_bind_all_OBJECTS) $(test_digestauth2_oldapi1_bind_all_DEPENDENCIES) $(EXTRA_test_digestauth2_oldapi1_bind_all_DEPENDENCIES) 
+	@rm -f test_digestauth2_oldapi1_bind_all$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_oldapi1_bind_all_OBJECTS) $(test_digestauth2_oldapi1_bind_all_LDADD) $(LIBS)
+
+test_digestauth2_oldapi1_bind_uri$(EXEEXT): $(test_digestauth2_oldapi1_bind_uri_OBJECTS) $(test_digestauth2_oldapi1_bind_uri_DEPENDENCIES) $(EXTRA_test_digestauth2_oldapi1_bind_uri_DEPENDENCIES) 
+	@rm -f test_digestauth2_oldapi1_bind_uri$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_oldapi1_bind_uri_OBJECTS) $(test_digestauth2_oldapi1_bind_uri_LDADD) $(LIBS)
+
+test_digestauth2_oldapi1_userdigest$(EXEEXT): $(test_digestauth2_oldapi1_userdigest_OBJECTS) $(test_digestauth2_oldapi1_userdigest_DEPENDENCIES) $(EXTRA_test_digestauth2_oldapi1_userdigest_DEPENDENCIES) 
+	@rm -f test_digestauth2_oldapi1_userdigest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_oldapi1_userdigest_OBJECTS) $(test_digestauth2_oldapi1_userdigest_LDADD) $(LIBS)
+
+test_digestauth2_oldapi2$(EXEEXT): $(test_digestauth2_oldapi2_OBJECTS) $(test_digestauth2_oldapi2_DEPENDENCIES) $(EXTRA_test_digestauth2_oldapi2_DEPENDENCIES) 
+	@rm -f test_digestauth2_oldapi2$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_oldapi2_OBJECTS) $(test_digestauth2_oldapi2_LDADD) $(LIBS)
+
+test_digestauth2_oldapi2_sha256$(EXEEXT): $(test_digestauth2_oldapi2_sha256_OBJECTS) $(test_digestauth2_oldapi2_sha256_DEPENDENCIES) $(EXTRA_test_digestauth2_oldapi2_sha256_DEPENDENCIES) 
+	@rm -f test_digestauth2_oldapi2_sha256$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_oldapi2_sha256_OBJECTS) $(test_digestauth2_oldapi2_sha256_LDADD) $(LIBS)
+
+test_digestauth2_oldapi2_sha256_userdigest$(EXEEXT): $(test_digestauth2_oldapi2_sha256_userdigest_OBJECTS) $(test_digestauth2_oldapi2_sha256_userdigest_DEPENDENCIES) $(EXTRA_test_digestauth2_oldapi2_sha256_userdigest_DEPENDENCIES) 
+	@rm -f test_digestauth2_oldapi2_sha256_userdigest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_oldapi2_sha256_userdigest_OBJECTS) $(test_digestauth2_oldapi2_sha256_userdigest_LDADD) $(LIBS)
+
+test_digestauth2_oldapi2_userdigest$(EXEEXT): $(test_digestauth2_oldapi2_userdigest_OBJECTS) $(test_digestauth2_oldapi2_userdigest_DEPENDENCIES) $(EXTRA_test_digestauth2_oldapi2_userdigest_DEPENDENCIES) 
+	@rm -f test_digestauth2_oldapi2_userdigest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_oldapi2_userdigest_OBJECTS) $(test_digestauth2_oldapi2_userdigest_LDADD) $(LIBS)
+
+test_digestauth2_rfc2069$(EXEEXT): $(test_digestauth2_rfc2069_OBJECTS) $(test_digestauth2_rfc2069_DEPENDENCIES) $(EXTRA_test_digestauth2_rfc2069_DEPENDENCIES) 
+	@rm -f test_digestauth2_rfc2069$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_rfc2069_OBJECTS) $(test_digestauth2_rfc2069_LDADD) $(LIBS)
+
+test_digestauth2_rfc2069_userdigest$(EXEEXT): $(test_digestauth2_rfc2069_userdigest_OBJECTS) $(test_digestauth2_rfc2069_userdigest_DEPENDENCIES) $(EXTRA_test_digestauth2_rfc2069_userdigest_DEPENDENCIES) 
+	@rm -f test_digestauth2_rfc2069_userdigest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_rfc2069_userdigest_OBJECTS) $(test_digestauth2_rfc2069_userdigest_LDADD) $(LIBS)
+
+test_digestauth2_sha256$(EXEEXT): $(test_digestauth2_sha256_OBJECTS) $(test_digestauth2_sha256_DEPENDENCIES) $(EXTRA_test_digestauth2_sha256_DEPENDENCIES) 
+	@rm -f test_digestauth2_sha256$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_sha256_OBJECTS) $(test_digestauth2_sha256_LDADD) $(LIBS)
+
+test_digestauth2_sha256_userdigest$(EXEEXT): $(test_digestauth2_sha256_userdigest_OBJECTS) $(test_digestauth2_sha256_userdigest_DEPENDENCIES) $(EXTRA_test_digestauth2_sha256_userdigest_DEPENDENCIES) 
+	@rm -f test_digestauth2_sha256_userdigest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_sha256_userdigest_OBJECTS) $(test_digestauth2_sha256_userdigest_LDADD) $(LIBS)
+
+test_digestauth2_sha256_userhash$(EXEEXT): $(test_digestauth2_sha256_userhash_OBJECTS) $(test_digestauth2_sha256_userhash_DEPENDENCIES) $(EXTRA_test_digestauth2_sha256_userhash_DEPENDENCIES) 
+	@rm -f test_digestauth2_sha256_userhash$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_sha256_userhash_OBJECTS) $(test_digestauth2_sha256_userhash_LDADD) $(LIBS)
+
+test_digestauth2_sha256_userhash_userdigest$(EXEEXT): $(test_digestauth2_sha256_userhash_userdigest_OBJECTS) $(test_digestauth2_sha256_userhash_userdigest_DEPENDENCIES) $(EXTRA_test_digestauth2_sha256_userhash_userdigest_DEPENDENCIES) 
+	@rm -f test_digestauth2_sha256_userhash_userdigest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_sha256_userhash_userdigest_OBJECTS) $(test_digestauth2_sha256_userhash_userdigest_LDADD) $(LIBS)
+
+test_digestauth2_userdigest$(EXEEXT): $(test_digestauth2_userdigest_OBJECTS) $(test_digestauth2_userdigest_DEPENDENCIES) $(EXTRA_test_digestauth2_userdigest_DEPENDENCIES) 
+	@rm -f test_digestauth2_userdigest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_userdigest_OBJECTS) $(test_digestauth2_userdigest_LDADD) $(LIBS)
+
+test_digestauth2_userhash$(EXEEXT): $(test_digestauth2_userhash_OBJECTS) $(test_digestauth2_userhash_DEPENDENCIES) $(EXTRA_test_digestauth2_userhash_DEPENDENCIES) 
+	@rm -f test_digestauth2_userhash$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_userhash_OBJECTS) $(test_digestauth2_userhash_LDADD) $(LIBS)
+
+test_digestauth2_userhash_userdigest$(EXEEXT): $(test_digestauth2_userhash_userdigest_OBJECTS) $(test_digestauth2_userhash_userdigest_DEPENDENCIES) $(EXTRA_test_digestauth2_userhash_userdigest_DEPENDENCIES) 
+	@rm -f test_digestauth2_userhash_userdigest$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth2_userhash_userdigest_OBJECTS) $(test_digestauth2_userhash_userdigest_LDADD) $(LIBS)
+
+test_digestauth_concurrent$(EXEEXT): $(test_digestauth_concurrent_OBJECTS) $(test_digestauth_concurrent_DEPENDENCIES) $(EXTRA_test_digestauth_concurrent_DEPENDENCIES) 
+	@rm -f test_digestauth_concurrent$(EXEEXT)
+	$(AM_V_CCLD)$(test_digestauth_concurrent_LINK) $(test_digestauth_concurrent_OBJECTS) $(test_digestauth_concurrent_LDADD) $(LIBS)
+
+test_digestauth_emu_ext$(EXEEXT): $(test_digestauth_emu_ext_OBJECTS) $(test_digestauth_emu_ext_DEPENDENCIES) $(EXTRA_test_digestauth_emu_ext_DEPENDENCIES) 
+	@rm -f test_digestauth_emu_ext$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth_emu_ext_OBJECTS) $(test_digestauth_emu_ext_LDADD) $(LIBS)
+
+test_digestauth_emu_ext_oldapi$(EXEEXT): $(test_digestauth_emu_ext_oldapi_OBJECTS) $(test_digestauth_emu_ext_oldapi_DEPENDENCIES) $(EXTRA_test_digestauth_emu_ext_oldapi_DEPENDENCIES) 
+	@rm -f test_digestauth_emu_ext_oldapi$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_digestauth_emu_ext_oldapi_OBJECTS) $(test_digestauth_emu_ext_oldapi_LDADD) $(LIBS)
 
 test_digestauth_sha256$(EXEEXT): $(test_digestauth_sha256_OBJECTS) $(test_digestauth_sha256_DEPENDENCIES) $(EXTRA_test_digestauth_sha256_DEPENDENCIES) 
 	@rm -f test_digestauth_sha256$(EXEEXT)
@@ -2015,6 +2575,14 @@ test_get_wait11$(EXEEXT): $(test_get_wait11_OBJECTS) $(test_get_wait11_DEPENDENC
 	@rm -f test_get_wait11$(EXEEXT)
 	$(AM_V_CCLD)$(test_get_wait11_LINK) $(test_get_wait11_OBJECTS) $(test_get_wait11_LDADD) $(LIBS)
 
+test_head$(EXEEXT): $(test_head_OBJECTS) $(test_head_DEPENDENCIES) $(EXTRA_test_head_DEPENDENCIES) 
+	@rm -f test_head$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_head_OBJECTS) $(test_head_LDADD) $(LIBS)
+
+test_head10$(EXEEXT): $(test_head10_OBJECTS) $(test_head10_DEPENDENCIES) $(EXTRA_test_head10_DEPENDENCIES) 
+	@rm -f test_head10$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_head10_OBJECTS) $(test_head10_LDADD) $(LIBS)
+
 test_iplimit11$(EXEEXT): $(test_iplimit11_OBJECTS) $(test_iplimit11_DEPENDENCIES) $(EXTRA_test_iplimit11_DEPENDENCIES) 
 	@rm -f test_iplimit11$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_iplimit11_OBJECTS) $(test_iplimit11_LDADD) $(LIBS)
@@ -2039,9 +2607,25 @@ test_long_header11$(EXEEXT): $(test_long_header11_OBJECTS) $(test_long_header11_
 	@rm -f test_long_header11$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_long_header11_OBJECTS) $(test_long_header11_LDADD) $(LIBS)
 
-test_parse_cookies$(EXEEXT): $(test_parse_cookies_OBJECTS) $(test_parse_cookies_DEPENDENCIES) $(EXTRA_test_parse_cookies_DEPENDENCIES) 
-	@rm -f test_parse_cookies$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(test_parse_cookies_OBJECTS) $(test_parse_cookies_LDADD) $(LIBS)
+test_parse_cookies_discp_n2$(EXEEXT): $(test_parse_cookies_discp_n2_OBJECTS) $(test_parse_cookies_discp_n2_DEPENDENCIES) $(EXTRA_test_parse_cookies_discp_n2_DEPENDENCIES) 
+	@rm -f test_parse_cookies_discp_n2$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_parse_cookies_discp_n2_OBJECTS) $(test_parse_cookies_discp_n2_LDADD) $(LIBS)
+
+test_parse_cookies_discp_n3$(EXEEXT): $(test_parse_cookies_discp_n3_OBJECTS) $(test_parse_cookies_discp_n3_DEPENDENCIES) $(EXTRA_test_parse_cookies_discp_n3_DEPENDENCIES) 
+	@rm -f test_parse_cookies_discp_n3$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_parse_cookies_discp_n3_OBJECTS) $(test_parse_cookies_discp_n3_LDADD) $(LIBS)
+
+test_parse_cookies_discp_p1$(EXEEXT): $(test_parse_cookies_discp_p1_OBJECTS) $(test_parse_cookies_discp_p1_DEPENDENCIES) $(EXTRA_test_parse_cookies_discp_p1_DEPENDENCIES) 
+	@rm -f test_parse_cookies_discp_p1$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_parse_cookies_discp_p1_OBJECTS) $(test_parse_cookies_discp_p1_LDADD) $(LIBS)
+
+test_parse_cookies_discp_p2$(EXEEXT): $(test_parse_cookies_discp_p2_OBJECTS) $(test_parse_cookies_discp_p2_DEPENDENCIES) $(EXTRA_test_parse_cookies_discp_p2_DEPENDENCIES) 
+	@rm -f test_parse_cookies_discp_p2$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_parse_cookies_discp_p2_OBJECTS) $(test_parse_cookies_discp_p2_LDADD) $(LIBS)
+
+test_parse_cookies_discp_zero$(EXEEXT): $(test_parse_cookies_discp_zero_OBJECTS) $(test_parse_cookies_discp_zero_DEPENDENCIES) $(EXTRA_test_parse_cookies_discp_zero_DEPENDENCIES) 
+	@rm -f test_parse_cookies_discp_zero$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_parse_cookies_discp_zero_OBJECTS) $(test_parse_cookies_discp_zero_LDADD) $(LIBS)
 
 test_patch$(EXEEXT): $(test_patch_OBJECTS) $(test_patch_DEPENDENCIES) $(EXTRA_test_patch_DEPENDENCIES) 
 	@rm -f test_patch$(EXEEXT)
@@ -2090,6 +2674,14 @@ test_put$(EXEEXT): $(test_put_OBJECTS) $(test_put_DEPENDENCIES) $(EXTRA_test_put
 test_put11$(EXEEXT): $(test_put11_OBJECTS) $(test_put11_DEPENDENCIES) $(EXTRA_test_put11_DEPENDENCIES) 
 	@rm -f test_put11$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(test_put11_OBJECTS) $(test_put11_LDADD) $(LIBS)
+
+test_put_broken_len$(EXEEXT): $(test_put_broken_len_OBJECTS) $(test_put_broken_len_DEPENDENCIES) $(EXTRA_test_put_broken_len_DEPENDENCIES) 
+	@rm -f test_put_broken_len$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_broken_len_OBJECTS) $(test_put_broken_len_LDADD) $(LIBS)
+
+test_put_broken_len10$(EXEEXT): $(test_put_broken_len10_OBJECTS) $(test_put_broken_len10_DEPENDENCIES) $(EXTRA_test_put_broken_len10_DEPENDENCIES) 
+	@rm -f test_put_broken_len10$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(test_put_broken_len10_OBJECTS) $(test_put_broken_len10_LDADD) $(LIBS)
 
 test_put_chunked$(EXEEXT): $(test_put_chunked_OBJECTS) $(test_put_chunked_DEPENDENCIES) $(EXTRA_test_put_chunked_DEPENDENCIES) 
 	@rm -f test_put_chunked$(EXEEXT)
@@ -2205,6 +2797,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_delete.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_digestauth.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_digestauth2.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_digestauth_emu_ext.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_digestauth_sha256.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_digestauth_with_arguments.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get.Po@am__quote@ # am--include-marker
@@ -2215,6 +2810,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_sendfile.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_wait-test_get_wait.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_get_wait11-test_get_wait.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_head.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_iplimit.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_large_put.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_long_header.Po@am__quote@ # am--include-marker
@@ -2226,6 +2822,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_process_arguments.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_process_headers.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_put.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_put_broken_len.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_put_chunked.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_put_header_fold.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test_quiesce-test_quiesce.Po@am__quote@ # am--include-marker
@@ -2363,6 +2960,20 @@ test_concurrent_stop-test_concurrent_stop.obj: test_concurrent_stop.c
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_concurrent_stop.c' object='test_concurrent_stop-test_concurrent_stop.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_concurrent_stop_CFLAGS) $(CFLAGS) -c -o test_concurrent_stop-test_concurrent_stop.obj `if test -f 'test_concurrent_stop.c'; then $(CYGPATH_W) 'test_concurrent_stop.c'; else $(CYGPATH_W) '$(srcdir)/test_concurrent_stop.c'; fi`
+
+test_digestauth_concurrent-test_digestauth_concurrent.o: test_digestauth_concurrent.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_digestauth_concurrent_CFLAGS) $(CFLAGS) -MT test_digestauth_concurrent-test_digestauth_concurrent.o -MD -MP -MF $(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Tpo -c -o test_digestauth_concurrent-test_digestauth_concurrent.o `test -f 'test_digestauth_concurrent.c' || echo '$(srcdir)/'`test_digestauth_concurrent.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Tpo $(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_digestauth_concurrent.c' object='test_digestauth_concurrent-test_digestauth_concurrent.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_digestauth_concurrent_CFLAGS) $(CFLAGS) -c -o test_digestauth_concurrent-test_digestauth_concurrent.o `test -f 'test_digestauth_concurrent.c' || echo '$(srcdir)/'`test_digestauth_concurrent.c
+
+test_digestauth_concurrent-test_digestauth_concurrent.obj: test_digestauth_concurrent.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_digestauth_concurrent_CFLAGS) $(CFLAGS) -MT test_digestauth_concurrent-test_digestauth_concurrent.obj -MD -MP -MF $(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Tpo -c -o test_digestauth_concurrent-test_digestauth_concurrent.obj `if test -f 'test_digestauth_concurrent.c'; then $(CYGPATH_W) 'test_digestauth_concurrent.c'; else $(CYGPATH_W) '$(srcdir)/test_digestauth_concurrent.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Tpo $(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='test_digestauth_concurrent.c' object='test_digestauth_concurrent-test_digestauth_concurrent.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_digestauth_concurrent_CFLAGS) $(CFLAGS) -c -o test_digestauth_concurrent-test_digestauth_concurrent.obj `if test -f 'test_digestauth_concurrent.c'; then $(CYGPATH_W) 'test_digestauth_concurrent.c'; else $(CYGPATH_W) '$(srcdir)/test_digestauth_concurrent.c'; fi`
 
 test_get_wait-test_get_wait.o: test_get_wait.c
 @am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(test_get_wait_CFLAGS) $(CFLAGS) -MT test_get_wait-test_get_wait.o -MD -MP -MF $(DEPDIR)/test_get_wait-test_get_wait.Tpo -c -o test_get_wait-test_get_wait.o `test -f 'test_get_wait.c' || echo '$(srcdir)/'`test_get_wait.c
@@ -2673,6 +3284,20 @@ test_get.log: test_get$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_head.log: test_head$(EXEEXT)
+	@p='test_head$(EXEEXT)'; \
+	b='test_head'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_head10.log: test_head10$(EXEEXT)
+	@p='test_head10$(EXEEXT)'; \
+	b='test_head10'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 test_get_iovec.log: test_get_iovec$(EXEEXT)
 	@p='test_get_iovec$(EXEEXT)'; \
 	b='test_get_iovec'; \
@@ -2760,13 +3385,6 @@ test_process_headers.log: test_process_headers$(EXEEXT)
 test_process_arguments.log: test_process_arguments$(EXEEXT)
 	@p='test_process_arguments$(EXEEXT)'; \
 	b='test_process_arguments'; \
-	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
-	--log-file $$b.log --trs-file $$b.trs \
-	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
-	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test_parse_cookies.log: test_parse_cookies$(EXEEXT)
-	@p='test_parse_cookies$(EXEEXT)'; \
-	b='test_parse_cookies'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -2893,6 +3511,20 @@ test_large_put11.log: test_large_put11$(EXEEXT)
 test_large_put_inc11.log: test_large_put_inc11$(EXEEXT)
 	@p='test_large_put_inc11$(EXEEXT)'; \
 	b='test_large_put_inc11'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_broken_len10.log: test_put_broken_len10$(EXEEXT)
+	@p='test_put_broken_len10$(EXEEXT)'; \
+	b='test_put_broken_len10'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_put_broken_len.log: test_put_broken_len$(EXEEXT)
+	@p='test_put_broken_len$(EXEEXT)'; \
+	b='test_put_broken_len'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3093,6 +3725,41 @@ test_put_header_double_fold_large.log: test_put_header_double_fold_large$(EXEEXT
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_parse_cookies_discp_p2.log: test_parse_cookies_discp_p2$(EXEEXT)
+	@p='test_parse_cookies_discp_p2$(EXEEXT)'; \
+	b='test_parse_cookies_discp_p2'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_parse_cookies_discp_p1.log: test_parse_cookies_discp_p1$(EXEEXT)
+	@p='test_parse_cookies_discp_p1$(EXEEXT)'; \
+	b='test_parse_cookies_discp_p1'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_parse_cookies_discp_zero.log: test_parse_cookies_discp_zero$(EXEEXT)
+	@p='test_parse_cookies_discp_zero$(EXEEXT)'; \
+	b='test_parse_cookies_discp_zero'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_parse_cookies_discp_n2.log: test_parse_cookies_discp_n2$(EXEEXT)
+	@p='test_parse_cookies_discp_n2$(EXEEXT)'; \
+	b='test_parse_cookies_discp_n2'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_parse_cookies_discp_n3.log: test_parse_cookies_discp_n3$(EXEEXT)
+	@p='test_parse_cookies_discp_n3$(EXEEXT)'; \
+	b='test_parse_cookies_discp_n3'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 perf_get.log: perf_get$(EXEEXT)
 	@p='perf_get$(EXEEXT)'; \
 	b='perf_get'; \
@@ -3103,6 +3770,27 @@ perf_get.log: perf_get$(EXEEXT)
 test_basicauth.log: test_basicauth$(EXEEXT)
 	@p='test_basicauth$(EXEEXT)'; \
 	b='test_basicauth'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_basicauth_preauth.log: test_basicauth_preauth$(EXEEXT)
+	@p='test_basicauth_preauth$(EXEEXT)'; \
+	b='test_basicauth_preauth'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_basicauth_oldapi.log: test_basicauth_oldapi$(EXEEXT)
+	@p='test_basicauth_oldapi$(EXEEXT)'; \
+	b='test_basicauth_oldapi'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_basicauth_preauth_oldapi.log: test_basicauth_preauth_oldapi$(EXEEXT)
+	@p='test_basicauth_preauth_oldapi$(EXEEXT)'; \
+	b='test_basicauth_preauth_oldapi'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3145,6 +3833,160 @@ test_postform11.log: test_postform11$(EXEEXT)
 test_post_loop11.log: test_post_loop11$(EXEEXT)
 	@p='test_post_loop11$(EXEEXT)'; \
 	b='test_post_loop11'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth_emu_ext.log: test_digestauth_emu_ext$(EXEEXT)
+	@p='test_digestauth_emu_ext$(EXEEXT)'; \
+	b='test_digestauth_emu_ext'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth_emu_ext_oldapi.log: test_digestauth_emu_ext_oldapi$(EXEEXT)
+	@p='test_digestauth_emu_ext_oldapi$(EXEEXT)'; \
+	b='test_digestauth_emu_ext_oldapi'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2.log: test_digestauth2$(EXEEXT)
+	@p='test_digestauth2$(EXEEXT)'; \
+	b='test_digestauth2'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_rfc2069.log: test_digestauth2_rfc2069$(EXEEXT)
+	@p='test_digestauth2_rfc2069$(EXEEXT)'; \
+	b='test_digestauth2_rfc2069'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_rfc2069_userdigest.log: test_digestauth2_rfc2069_userdigest$(EXEEXT)
+	@p='test_digestauth2_rfc2069_userdigest$(EXEEXT)'; \
+	b='test_digestauth2_rfc2069_userdigest'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_oldapi1.log: test_digestauth2_oldapi1$(EXEEXT)
+	@p='test_digestauth2_oldapi1$(EXEEXT)'; \
+	b='test_digestauth2_oldapi1'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_oldapi2.log: test_digestauth2_oldapi2$(EXEEXT)
+	@p='test_digestauth2_oldapi2$(EXEEXT)'; \
+	b='test_digestauth2_oldapi2'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_userhash.log: test_digestauth2_userhash$(EXEEXT)
+	@p='test_digestauth2_userhash$(EXEEXT)'; \
+	b='test_digestauth2_userhash'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_userdigest.log: test_digestauth2_userdigest$(EXEEXT)
+	@p='test_digestauth2_userdigest$(EXEEXT)'; \
+	b='test_digestauth2_userdigest'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_oldapi1_userdigest.log: test_digestauth2_oldapi1_userdigest$(EXEEXT)
+	@p='test_digestauth2_oldapi1_userdigest$(EXEEXT)'; \
+	b='test_digestauth2_oldapi1_userdigest'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_oldapi2_userdigest.log: test_digestauth2_oldapi2_userdigest$(EXEEXT)
+	@p='test_digestauth2_oldapi2_userdigest$(EXEEXT)'; \
+	b='test_digestauth2_oldapi2_userdigest'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_userhash_userdigest.log: test_digestauth2_userhash_userdigest$(EXEEXT)
+	@p='test_digestauth2_userhash_userdigest$(EXEEXT)'; \
+	b='test_digestauth2_userhash_userdigest'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_bind_all.log: test_digestauth2_bind_all$(EXEEXT)
+	@p='test_digestauth2_bind_all$(EXEEXT)'; \
+	b='test_digestauth2_bind_all'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_bind_uri.log: test_digestauth2_bind_uri$(EXEEXT)
+	@p='test_digestauth2_bind_uri$(EXEEXT)'; \
+	b='test_digestauth2_bind_uri'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_oldapi1_bind_all.log: test_digestauth2_oldapi1_bind_all$(EXEEXT)
+	@p='test_digestauth2_oldapi1_bind_all$(EXEEXT)'; \
+	b='test_digestauth2_oldapi1_bind_all'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_oldapi1_bind_uri.log: test_digestauth2_oldapi1_bind_uri$(EXEEXT)
+	@p='test_digestauth2_oldapi1_bind_uri$(EXEEXT)'; \
+	b='test_digestauth2_oldapi1_bind_uri'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_sha256.log: test_digestauth2_sha256$(EXEEXT)
+	@p='test_digestauth2_sha256$(EXEEXT)'; \
+	b='test_digestauth2_sha256'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_sha256_userhash.log: test_digestauth2_sha256_userhash$(EXEEXT)
+	@p='test_digestauth2_sha256_userhash$(EXEEXT)'; \
+	b='test_digestauth2_sha256_userhash'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_oldapi2_sha256.log: test_digestauth2_oldapi2_sha256$(EXEEXT)
+	@p='test_digestauth2_oldapi2_sha256$(EXEEXT)'; \
+	b='test_digestauth2_oldapi2_sha256'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_sha256_userdigest.log: test_digestauth2_sha256_userdigest$(EXEEXT)
+	@p='test_digestauth2_sha256_userdigest$(EXEEXT)'; \
+	b='test_digestauth2_sha256_userdigest'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_oldapi2_sha256_userdigest.log: test_digestauth2_oldapi2_sha256_userdigest$(EXEEXT)
+	@p='test_digestauth2_oldapi2_sha256_userdigest$(EXEEXT)'; \
+	b='test_digestauth2_oldapi2_sha256_userdigest'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth2_sha256_userhash_userdigest.log: test_digestauth2_sha256_userhash_userdigest$(EXEEXT)
+	@p='test_digestauth2_sha256_userhash_userdigest$(EXEEXT)'; \
+	b='test_digestauth2_sha256_userhash_userdigest'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3233,16 +4075,16 @@ test_get_wait11.log: test_get_wait11$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test_quiesce.log: test_quiesce$(EXEEXT)
-	@p='test_quiesce$(EXEEXT)'; \
-	b='test_quiesce'; \
+test_concurrent_stop.log: test_concurrent_stop$(EXEEXT)
+	@p='test_concurrent_stop$(EXEEXT)'; \
+	b='test_concurrent_stop'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test_concurrent_stop.log: test_concurrent_stop$(EXEEXT)
-	@p='test_concurrent_stop$(EXEEXT)'; \
-	b='test_concurrent_stop'; \
+test_quiesce.log: test_quiesce$(EXEEXT)
+	@p='test_quiesce$(EXEEXT)'; \
+	b='test_quiesce'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3254,16 +4096,16 @@ test_quiesce_stream.log: test_quiesce_stream$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test_digestauth.log: test_digestauth$(EXEEXT)
-	@p='test_digestauth$(EXEEXT)'; \
-	b='test_digestauth'; \
+perf_get_concurrent.log: perf_get_concurrent$(EXEEXT)
+	@p='perf_get_concurrent$(EXEEXT)'; \
+	b='perf_get_concurrent'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-test_digestauth_sha256.log: test_digestauth_sha256$(EXEEXT)
-	@p='test_digestauth_sha256$(EXEEXT)'; \
-	b='test_digestauth_sha256'; \
+test_digestauth.log: test_digestauth$(EXEEXT)
+	@p='test_digestauth$(EXEEXT)'; \
+	b='test_digestauth'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3275,9 +4117,16 @@ test_digestauth_with_arguments.log: test_digestauth_with_arguments$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
-perf_get_concurrent.log: perf_get_concurrent$(EXEEXT)
-	@p='perf_get_concurrent$(EXEEXT)'; \
-	b='perf_get_concurrent'; \
+test_digestauth_concurrent.log: test_digestauth_concurrent$(EXEEXT)
+	@p='test_digestauth_concurrent$(EXEEXT)'; \
+	b='test_digestauth_concurrent'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+test_digestauth_sha256.log: test_digestauth_sha256$(EXEEXT)
+	@p='test_digestauth_sha256$(EXEEXT)'; \
+	b='test_digestauth_sha256'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -3412,6 +4261,9 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po
 	-rm -f ./$(DEPDIR)/test_delete.Po
 	-rm -f ./$(DEPDIR)/test_digestauth.Po
+	-rm -f ./$(DEPDIR)/test_digestauth2.Po
+	-rm -f ./$(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Po
+	-rm -f ./$(DEPDIR)/test_digestauth_emu_ext.Po
 	-rm -f ./$(DEPDIR)/test_digestauth_sha256.Po
 	-rm -f ./$(DEPDIR)/test_digestauth_with_arguments.Po
 	-rm -f ./$(DEPDIR)/test_get.Po
@@ -3422,6 +4274,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/test_get_sendfile.Po
 	-rm -f ./$(DEPDIR)/test_get_wait-test_get_wait.Po
 	-rm -f ./$(DEPDIR)/test_get_wait11-test_get_wait.Po
+	-rm -f ./$(DEPDIR)/test_head.Po
 	-rm -f ./$(DEPDIR)/test_iplimit.Po
 	-rm -f ./$(DEPDIR)/test_large_put.Po
 	-rm -f ./$(DEPDIR)/test_long_header.Po
@@ -3433,6 +4286,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/test_process_arguments.Po
 	-rm -f ./$(DEPDIR)/test_process_headers.Po
 	-rm -f ./$(DEPDIR)/test_put.Po
+	-rm -f ./$(DEPDIR)/test_put_broken_len.Po
 	-rm -f ./$(DEPDIR)/test_put_chunked.Po
 	-rm -f ./$(DEPDIR)/test_put_header_fold.Po
 	-rm -f ./$(DEPDIR)/test_quiesce-test_quiesce.Po
@@ -3499,6 +4353,9 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/test_concurrent_stop-test_concurrent_stop.Po
 	-rm -f ./$(DEPDIR)/test_delete.Po
 	-rm -f ./$(DEPDIR)/test_digestauth.Po
+	-rm -f ./$(DEPDIR)/test_digestauth2.Po
+	-rm -f ./$(DEPDIR)/test_digestauth_concurrent-test_digestauth_concurrent.Po
+	-rm -f ./$(DEPDIR)/test_digestauth_emu_ext.Po
 	-rm -f ./$(DEPDIR)/test_digestauth_sha256.Po
 	-rm -f ./$(DEPDIR)/test_digestauth_with_arguments.Po
 	-rm -f ./$(DEPDIR)/test_get.Po
@@ -3509,6 +4366,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/test_get_sendfile.Po
 	-rm -f ./$(DEPDIR)/test_get_wait-test_get_wait.Po
 	-rm -f ./$(DEPDIR)/test_get_wait11-test_get_wait.Po
+	-rm -f ./$(DEPDIR)/test_head.Po
 	-rm -f ./$(DEPDIR)/test_iplimit.Po
 	-rm -f ./$(DEPDIR)/test_large_put.Po
 	-rm -f ./$(DEPDIR)/test_long_header.Po
@@ -3520,6 +4378,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/test_process_arguments.Po
 	-rm -f ./$(DEPDIR)/test_process_headers.Po
 	-rm -f ./$(DEPDIR)/test_put.Po
+	-rm -f ./$(DEPDIR)/test_put_broken_len.Po
 	-rm -f ./$(DEPDIR)/test_put_chunked.Po
 	-rm -f ./$(DEPDIR)/test_put_header_fold.Po
 	-rm -f ./$(DEPDIR)/test_quiesce-test_quiesce.Po
@@ -3568,6 +4427,10 @@ uninstall-am:
 
 
 @HEAVY_TESTS_NOTPARALLEL@
+
+$(top_builddir)/src/microhttpd/libmicrohttpd.la: $(top_builddir)/src/microhttpd/Makefile
+	@echo ' cd $(top_builddir)/src/microhttpd && $(MAKE) $(AM_MAKEFLAGS) libmicrohttpd.la'; \
+	$(am__cd) $(top_builddir)/src/microhttpd && $(MAKE) $(AM_MAKEFLAGS) libmicrohttpd.la
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

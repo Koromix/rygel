@@ -100,22 +100,26 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/ax_have_epoll.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/ax_require_defined.m4 \
-	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/gettext.m4 \
-	$(top_srcdir)/m4/host-cpu-c-abi.m4 $(top_srcdir)/m4/iconv.m4 \
-	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
-	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
-	$(top_srcdir)/m4/libcurl.m4 $(top_srcdir)/m4/libgcrypt.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/libcurl.m4 \
+	$(top_srcdir)/m4/libgcrypt.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/mhd_append_flag_to_var.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_cflag.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_cflags.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_ldflag.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_ldflags.m4 \
+	$(top_srcdir)/m4/mhd_check_cc_cflag.m4 \
 	$(top_srcdir)/m4/mhd_check_func.m4 \
+	$(top_srcdir)/m4/mhd_check_func_gettimeofday.m4 \
 	$(top_srcdir)/m4/mhd_check_link_run.m4 \
+	$(top_srcdir)/m4/mhd_find_add_cc_cflag.m4 \
+	$(top_srcdir)/m4/mhd_find_add_cc_cflag_ifelse.m4 \
 	$(top_srcdir)/m4/mhd_find_lib.m4 \
 	$(top_srcdir)/m4/mhd_norm_expd.m4 \
+	$(top_srcdir)/m4/mhd_prepend_flag_to_var.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
-	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
-	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/pkg.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -224,7 +228,7 @@ am__uninstall_files_from_dir = { \
   }
 man3dir = $(mandir)/man3
 NROFF = nroff
-MANS = $(man_MANS)
+MANS = $(dist_man_MANS)
 RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
 am__recursive_targets = \
@@ -251,7 +255,7 @@ am__define_uniq_tagged_files = \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
 DIST_SUBDIRS = . doxygen examples
-am__DIST_COMMON = $(srcdir)/Makefile.in \
+am__DIST_COMMON = $(dist_man_MANS) $(srcdir)/Makefile.in \
 	$(top_srcdir)/build-aux/mdate-sh \
 	$(top_srcdir)/build-aux/texinfo.tex
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -285,7 +289,6 @@ AMTAR = @AMTAR@
 AM_ASAN_OPTIONS = @AM_ASAN_OPTIONS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AM_LSAN_OPTIONS = @AM_LSAN_OPTIONS@
-AM_TESTS_ENVIRONMENT = @AM_TESTS_ENVIRONMENT@
 AM_UBSAN_OPTIONS = @AM_UBSAN_OPTIONS@
 AR = @AR@
 AS = @AS@
@@ -296,8 +299,10 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CFLAGS_ac = @CFLAGS_ac@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CPPFLAGS_ac = @CPPFLAGS_ac@
 CPU_COUNT = @CPU_COUNT@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -316,9 +321,6 @@ ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 FILECMD = @FILECMD@
-GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
-GMSGFMT = @GMSGFMT@
-GMSGFMT_015 = @GMSGFMT_015@
 GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
 GNUTLS_CPPFLAGS = @GNUTLS_CPPFLAGS@
 GNUTLS_LDFLAGS = @GNUTLS_LDFLAGS@
@@ -326,24 +328,20 @@ GNUTLS_LIBS = @GNUTLS_LIBS@
 GREP = @GREP@
 HAVE_CURL_BINARY = @HAVE_CURL_BINARY@
 HAVE_MAKEINFO_BINARY = @HAVE_MAKEINFO_BINARY@
-HEAVY_TESTS_NOTPARALLEL = @HEAVY_TESTS_NOTPARALLEL@
 HIDDEN_VISIBILITY_CFLAGS = @HIDDEN_VISIBILITY_CFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
-INTLLIBS = @INTLLIBS@
-INTL_MACOSX_LIBS = @INTL_MACOSX_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LDFLAGS_ac = @LDFLAGS_ac@
 LIBCURL = @LIBCURL@
 LIBCURL_CPPFLAGS = @LIBCURL_CPPFLAGS@
 LIBGCRYPT_CFLAGS = @LIBGCRYPT_CFLAGS@
 LIBGCRYPT_CONFIG = @LIBGCRYPT_CONFIG@
 LIBGCRYPT_LIBS = @LIBGCRYPT_LIBS@
-LIBICONV = @LIBICONV@
-LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -352,12 +350,11 @@ LIB_VERSION_CURRENT = @LIB_VERSION_CURRENT@
 LIB_VERSION_REVISION = @LIB_VERSION_REVISION@
 LIPO = @LIPO@
 LN_S = @LN_S@
-LTLIBICONV = @LTLIBICONV@
-LTLIBINTL = @LTLIBINTL@
 LTLIBOBJS = @LTLIBOBJS@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
+MHD_AUX_DIR = @MHD_AUX_DIR@
 MHD_LIBDEPS = @MHD_LIBDEPS@
 MHD_LIBDEPS_PKGCFG = @MHD_LIBDEPS_PKGCFG@
 MHD_LIB_CFLAGS = @MHD_LIB_CFLAGS@
@@ -371,9 +368,6 @@ MHD_TLS_LIB_CPPFLAGS = @MHD_TLS_LIB_CPPFLAGS@
 MHD_TLS_LIB_LDFLAGS = @MHD_TLS_LIB_LDFLAGS@
 MHD_W32_DLL_SUFF = @MHD_W32_DLL_SUFF@
 MKDIR_P = @MKDIR_P@
-MSGFMT = @MSGFMT@
-MSGMERGE = @MSGMERGE@
-MSGMERGE_FOR_MSGFMT_OPTION = @MSGMERGE_FOR_MSGFMT_OPTION@
 MS_LIB_TOOL = @MS_LIB_TOOL@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -395,7 +389,6 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
-POSUB = @POSUB@
 PTHREAD_CC = @PTHREAD_CC@
 PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
 PTHREAD_CXX = @PTHREAD_CXX@
@@ -405,13 +398,12 @@ RC = @RC@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCAT = @SOCAT@
 STRIP = @STRIP@
-USE_NLS = @USE_NLS@
+TESTS_ENVIRONMENT_ac = @TESTS_ENVIRONMENT_ac@
 VERSION = @VERSION@
 W32CRT = @W32CRT@
-XGETTEXT = @XGETTEXT@
-XGETTEXT_015 = @XGETTEXT_015@
-XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
+ZZUF = @ZZUF@
 _libcurl_config = @_libcurl_config@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -439,8 +431,6 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-have_socat = @have_socat@
-have_zzuf = @have_zzuf@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -473,7 +463,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 
 # This Makefile.am is in the public domain
-man_MANS = libmicrohttpd.3
+dist_man_MANS = libmicrohttpd.3
 SUBDIRS = . doxygen $(am__append_1)
 DISTCLEANFILES = \
   libmicrohttpd.cps \
@@ -486,6 +476,12 @@ info_TEXINFOS = \
   libmicrohttpd-tutorial.texi
 
 microhttpd_TEXINFOS = \
+  lgpl.texi \
+  ecos.texi \
+  gpl-2.0.texi \
+  fdl-1.3.texi
+
+microhttpd_tutorial_TEXINFOS = \
   chapters/basicauthentication.inc \
   chapters/bibliography.inc \
   chapters/exploringrequests.inc \
@@ -496,14 +492,10 @@ microhttpd_TEXINFOS = \
   chapters/responseheaders.inc \
   chapters/tlsauthentication.inc \
   chapters/sessions.inc \
-  fdl-1.3.texi \
-  gpl-2.0.texi \
-  lgpl.texi \
-  ecos.texi
+  chapters/websocket.inc
 
 EXTRA_DIST = \
-  $(man_MANS) \
-  $(microhttpd_TEXINFOS) \
+  $(microhttpd_TEXINFOS) $(microhttpd_tutorial_TEXINFOS) \
   libmicrohttpd_performance_data.png \
   libmicrohttpd_performance_data.eps
 
@@ -718,10 +710,10 @@ maintainer-clean-aminfo:
 	  echo " rm -f $$i $$i-[0-9] $$i-[0-9][0-9] $$i_i[0-9] $$i_i[0-9][0-9]"; \
 	  rm -f $$i $$i-[0-9] $$i-[0-9][0-9] $$i_i[0-9] $$i_i[0-9][0-9]; \
 	done
-install-man3: $(man_MANS)
+install-man3: $(dist_man_MANS)
 	@$(NORMAL_INSTALL)
 	@list1=''; \
-	list2='$(man_MANS)'; \
+	list2='$(dist_man_MANS)'; \
 	test -n "$(man3dir)" \
 	  && test -n "`echo $$list1$$list2`" \
 	  || exit 0; \
@@ -756,7 +748,7 @@ uninstall-man3:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man3dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(dist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.3[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^3][0-9a-z]*$$,3,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
@@ -1150,14 +1142,14 @@ install-info-local:
 	@echo " $(MKDIR_P) '$(DESTDIR)$(infodir)'"; \
 	$(MKDIR_P) "$(DESTDIR)$(infodir)" || exit 1; \
 	echo " $(INSTALL_DATA) libmicrohttpd_performance_data.png '$(DESTDIR)$(infodir)'"; \
-	$(INSTALL_DATA) $(srcdir)/libmicrohttpd_performance_data.png "$(DESTDIR)$(infodir)" || exit 1;
+	$(INSTALL_DATA) '$(srcdir)/libmicrohttpd_performance_data.png' "$(DESTDIR)$(infodir)" || exit 1;
 
 install-html-local:
 	@if test -n "$(htmldir)"; then \
 	  echo " $(MKDIR_P) '$(DESTDIR)$(htmldir)/libmicrohttpd.html'"; \
 	  $(MKDIR_P) "$(DESTDIR)$(htmldir)/libmicrohttpd.html" || exit 1; \
 	  echo " $(INSTALL_DATA) libmicrohttpd_performance_data.png '$(DESTDIR)$(htmldir)/libmicrohttpd.html'"; \
-	  $(INSTALL_DATA) $(srcdir)/libmicrohttpd_performance_data.png "$(DESTDIR)$(htmldir)/libmicrohttpd.html" || exit 1; \
+	  $(INSTALL_DATA) '$(srcdir)/libmicrohttpd_performance_data.png' "$(DESTDIR)$(htmldir)/libmicrohttpd.html" || exit 1; \
 	else : ; fi
 
 uninstall-local:
@@ -1166,7 +1158,11 @@ uninstall-local:
 	  rm -f "$(DESTDIR)$(infodir)/libmicrohttpd_performance_data.png" \
 	else : ; fi
 
-# end of 'if BUILD_DOC'
+update-stamp:
+	@rm -f '$(srcdir)/stamp-vti' '$(srcdir)/version.texi' && \
+	  $(MAKE) $(AM_MAKEFLAGS) '$(srcdir)/version.texi'
+
+.PHONY: update-stamp
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

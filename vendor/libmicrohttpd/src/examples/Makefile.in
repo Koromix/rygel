@@ -116,7 +116,8 @@ noinst_PROGRAMS = benchmark$(EXEEXT) benchmark_https$(EXEEXT) \
 @HAVE_POSIX_THREADS_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__append_6 = demo
 @ENABLE_HTTPS_TRUE@@HAVE_POSIX_THREADS_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__append_7 = demo_https
 @ENABLE_DAUTH_TRUE@am__append_8 = \
-@ENABLE_DAUTH_TRUE@ digest_auth_example
+@ENABLE_DAUTH_TRUE@ digest_auth_example \
+@ENABLE_DAUTH_TRUE@ digest_auth_example_adv
 
 @ENABLE_BAUTH_TRUE@am__append_9 = \
 @ENABLE_BAUTH_TRUE@ authorization_example
@@ -146,22 +147,26 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/ax_have_epoll.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/ax_require_defined.m4 \
-	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/gettext.m4 \
-	$(top_srcdir)/m4/host-cpu-c-abi.m4 $(top_srcdir)/m4/iconv.m4 \
-	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
-	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
-	$(top_srcdir)/m4/libcurl.m4 $(top_srcdir)/m4/libgcrypt.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/libcurl.m4 \
+	$(top_srcdir)/m4/libgcrypt.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/mhd_append_flag_to_var.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_cflag.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_cflags.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_ldflag.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_ldflags.m4 \
+	$(top_srcdir)/m4/mhd_check_cc_cflag.m4 \
 	$(top_srcdir)/m4/mhd_check_func.m4 \
+	$(top_srcdir)/m4/mhd_check_func_gettimeofday.m4 \
 	$(top_srcdir)/m4/mhd_check_link_run.m4 \
+	$(top_srcdir)/m4/mhd_find_add_cc_cflag.m4 \
+	$(top_srcdir)/m4/mhd_find_add_cc_cflag_ifelse.m4 \
 	$(top_srcdir)/m4/mhd_find_lib.m4 \
 	$(top_srcdir)/m4/mhd_norm_expd.m4 \
+	$(top_srcdir)/m4/mhd_prepend_flag_to_var.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
-	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
-	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/pkg.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -178,7 +183,8 @@ CONFIG_CLEAN_VPATH_FILES =
 @HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_4 = post_example$(EXEEXT)
 @HAVE_POSIX_THREADS_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_5 = demo$(EXEEXT)
 @ENABLE_HTTPS_TRUE@@HAVE_POSIX_THREADS_TRUE@@HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_6 = demo_https$(EXEEXT)
-@ENABLE_DAUTH_TRUE@am__EXEEXT_7 = digest_auth_example$(EXEEXT)
+@ENABLE_DAUTH_TRUE@am__EXEEXT_7 = digest_auth_example$(EXEEXT) \
+@ENABLE_DAUTH_TRUE@	digest_auth_example_adv$(EXEEXT)
 @ENABLE_BAUTH_TRUE@am__EXEEXT_8 = authorization_example$(EXEEXT)
 @ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@am__EXEEXT_9 = upgrade_example$(EXEEXT) \
 @ENABLE_UPGRADE_TRUE@@HAVE_POSIX_THREADS_TRUE@	websocket_threaded_example$(EXEEXT)
@@ -225,6 +231,12 @@ demo_https_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CC $(AM_LIBTOOLFLAGS) \
 am_digest_auth_example_OBJECTS = digest_auth_example.$(OBJEXT)
 digest_auth_example_OBJECTS = $(am_digest_auth_example_OBJECTS)
 digest_auth_example_DEPENDENCIES =  \
+	$(top_builddir)/src/microhttpd/libmicrohttpd.la
+am_digest_auth_example_adv_OBJECTS =  \
+	digest_auth_example_adv.$(OBJEXT)
+digest_auth_example_adv_OBJECTS =  \
+	$(am_digest_auth_example_adv_OBJECTS)
+digest_auth_example_adv_DEPENDENCIES =  \
 	$(top_builddir)/src/microhttpd/libmicrohttpd.la
 am_dual_stack_example_OBJECTS = dual_stack_example.$(OBJEXT)
 dual_stack_example_OBJECTS = $(am_dual_stack_example_OBJECTS)
@@ -351,6 +363,7 @@ am__depfiles_remade = ./$(DEPDIR)/authorization_example.Po \
 	./$(DEPDIR)/chunked_example.Po ./$(DEPDIR)/demo-demo.Po \
 	./$(DEPDIR)/demo_https-demo_https.Po \
 	./$(DEPDIR)/digest_auth_example.Po \
+	./$(DEPDIR)/digest_auth_example_adv.Po \
 	./$(DEPDIR)/dual_stack_example.Po \
 	./$(DEPDIR)/fileserver_example.Po \
 	./$(DEPDIR)/fileserver_example_dirs.Po \
@@ -391,8 +404,9 @@ am__v_CCLD_1 =
 SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(benchmark_https_SOURCES) $(chunked_example_SOURCES) \
 	$(demo_SOURCES) $(demo_https_SOURCES) \
-	$(digest_auth_example_SOURCES) $(dual_stack_example_SOURCES) \
-	$(fileserver_example_SOURCES) \
+	$(digest_auth_example_SOURCES) \
+	$(digest_auth_example_adv_SOURCES) \
+	$(dual_stack_example_SOURCES) $(fileserver_example_SOURCES) \
 	$(fileserver_example_dirs_SOURCES) \
 	$(fileserver_example_external_select_SOURCES) \
 	$(http_chunked_compression_SOURCES) \
@@ -409,8 +423,9 @@ SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 DIST_SOURCES = $(authorization_example_SOURCES) $(benchmark_SOURCES) \
 	$(benchmark_https_SOURCES) $(chunked_example_SOURCES) \
 	$(demo_SOURCES) $(demo_https_SOURCES) \
-	$(digest_auth_example_SOURCES) $(dual_stack_example_SOURCES) \
-	$(fileserver_example_SOURCES) \
+	$(digest_auth_example_SOURCES) \
+	$(digest_auth_example_adv_SOURCES) \
+	$(dual_stack_example_SOURCES) $(fileserver_example_SOURCES) \
 	$(fileserver_example_dirs_SOURCES) \
 	$(fileserver_example_external_select_SOURCES) \
 	$(http_chunked_compression_SOURCES) \
@@ -496,7 +511,6 @@ AMTAR = @AMTAR@
 AM_ASAN_OPTIONS = @AM_ASAN_OPTIONS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AM_LSAN_OPTIONS = @AM_LSAN_OPTIONS@
-AM_TESTS_ENVIRONMENT = @AM_TESTS_ENVIRONMENT@
 AM_UBSAN_OPTIONS = @AM_UBSAN_OPTIONS@
 AR = @AR@
 AS = @AS@
@@ -507,8 +521,10 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CFLAGS_ac = @CFLAGS_ac@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CPPFLAGS_ac = @CPPFLAGS_ac@
 CPU_COUNT = @CPU_COUNT@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -527,9 +543,6 @@ ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 FILECMD = @FILECMD@
-GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
-GMSGFMT = @GMSGFMT@
-GMSGFMT_015 = @GMSGFMT_015@
 GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
 GNUTLS_CPPFLAGS = @GNUTLS_CPPFLAGS@
 GNUTLS_LDFLAGS = @GNUTLS_LDFLAGS@
@@ -537,24 +550,20 @@ GNUTLS_LIBS = @GNUTLS_LIBS@
 GREP = @GREP@
 HAVE_CURL_BINARY = @HAVE_CURL_BINARY@
 HAVE_MAKEINFO_BINARY = @HAVE_MAKEINFO_BINARY@
-HEAVY_TESTS_NOTPARALLEL = @HEAVY_TESTS_NOTPARALLEL@
 HIDDEN_VISIBILITY_CFLAGS = @HIDDEN_VISIBILITY_CFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
-INTLLIBS = @INTLLIBS@
-INTL_MACOSX_LIBS = @INTL_MACOSX_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LDFLAGS_ac = @LDFLAGS_ac@
 LIBCURL = @LIBCURL@
 LIBCURL_CPPFLAGS = @LIBCURL_CPPFLAGS@
 LIBGCRYPT_CFLAGS = @LIBGCRYPT_CFLAGS@
 LIBGCRYPT_CONFIG = @LIBGCRYPT_CONFIG@
 LIBGCRYPT_LIBS = @LIBGCRYPT_LIBS@
-LIBICONV = @LIBICONV@
-LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -563,12 +572,11 @@ LIB_VERSION_CURRENT = @LIB_VERSION_CURRENT@
 LIB_VERSION_REVISION = @LIB_VERSION_REVISION@
 LIPO = @LIPO@
 LN_S = @LN_S@
-LTLIBICONV = @LTLIBICONV@
-LTLIBINTL = @LTLIBINTL@
 LTLIBOBJS = @LTLIBOBJS@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
+MHD_AUX_DIR = @MHD_AUX_DIR@
 MHD_LIBDEPS = @MHD_LIBDEPS@
 MHD_LIBDEPS_PKGCFG = @MHD_LIBDEPS_PKGCFG@
 MHD_LIB_CFLAGS = @MHD_LIB_CFLAGS@
@@ -582,9 +590,6 @@ MHD_TLS_LIB_CPPFLAGS = @MHD_TLS_LIB_CPPFLAGS@
 MHD_TLS_LIB_LDFLAGS = @MHD_TLS_LIB_LDFLAGS@
 MHD_W32_DLL_SUFF = @MHD_W32_DLL_SUFF@
 MKDIR_P = @MKDIR_P@
-MSGFMT = @MSGFMT@
-MSGMERGE = @MSGMERGE@
-MSGMERGE_FOR_MSGFMT_OPTION = @MSGMERGE_FOR_MSGFMT_OPTION@
 MS_LIB_TOOL = @MS_LIB_TOOL@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -606,7 +611,6 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
-POSUB = @POSUB@
 PTHREAD_CC = @PTHREAD_CC@
 PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
 PTHREAD_CXX = @PTHREAD_CXX@
@@ -616,13 +620,12 @@ RC = @RC@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCAT = @SOCAT@
 STRIP = @STRIP@
-USE_NLS = @USE_NLS@
+TESTS_ENVIRONMENT_ac = @TESTS_ENVIRONMENT_ac@
 VERSION = @VERSION@
 W32CRT = @W32CRT@
-XGETTEXT = @XGETTEXT@
-XGETTEXT_015 = @XGETTEXT_015@
-XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
+ZZUF = @ZZUF@
 _libcurl_config = @_libcurl_config@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -650,8 +653,6 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-have_socat = @have_socat@
-have_zzuf = @have_zzuf@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -687,10 +688,14 @@ top_srcdir = @top_srcdir@
 SUBDIRS = .
 AM_CPPFLAGS = \
   -I$(top_srcdir)/src/include \
+  $(CPPFLAGS_ac) \
   -DDATA_DIR=\"$(top_srcdir)/src/datadir/\"
 
-AM_CFLAGS = @LIBGCRYPT_CFLAGS@ $(am__append_1) $(am__append_12)
+AM_CFLAGS = $(CFLAGS_ac) @LIBGCRYPT_CFLAGS@ $(am__append_1) \
+	$(am__append_12)
+AM_LDFLAGS = $(LDFLAGS_ac)
 MHD_CPU_COUNT_DEF = -DMHD_CPU_COUNT=$(CPU_COUNT)
+AM_TESTS_ENVIRONMENT = $(TESTS_ENVIRONMENT_ac)
 EXTRA_DIST = msgs_i18n.c
 noinst_EXTRA_DIST = msgs_i18n.c
 minimal_example_SOURCES = \
@@ -829,6 +834,12 @@ digest_auth_example_SOURCES = \
 digest_auth_example_LDADD = \
  $(top_builddir)/src/microhttpd/libmicrohttpd.la
 
+digest_auth_example_adv_SOURCES = \
+ digest_auth_example_adv.c
+
+digest_auth_example_adv_LDADD = \
+ $(top_builddir)/src/microhttpd/libmicrohttpd.la
+
 refuse_post_example_SOURCES = \
  refuse_post_example.c
 
@@ -951,6 +962,10 @@ digest_auth_example$(EXEEXT): $(digest_auth_example_OBJECTS) $(digest_auth_examp
 	@rm -f digest_auth_example$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(digest_auth_example_OBJECTS) $(digest_auth_example_LDADD) $(LIBS)
 
+digest_auth_example_adv$(EXEEXT): $(digest_auth_example_adv_OBJECTS) $(digest_auth_example_adv_DEPENDENCIES) $(EXTRA_digest_auth_example_adv_DEPENDENCIES) 
+	@rm -f digest_auth_example_adv$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(digest_auth_example_adv_OBJECTS) $(digest_auth_example_adv_LDADD) $(LIBS)
+
 dual_stack_example$(EXEEXT): $(dual_stack_example_OBJECTS) $(dual_stack_example_DEPENDENCIES) $(EXTRA_dual_stack_example_DEPENDENCIES) 
 	@rm -f dual_stack_example$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(dual_stack_example_OBJECTS) $(dual_stack_example_LDADD) $(LIBS)
@@ -1040,6 +1055,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/demo-demo.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/demo_https-demo_https.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/digest_auth_example.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/digest_auth_example_adv.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dual_stack_example.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fileserver_example.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fileserver_example_dirs.Po@am__quote@ # am--include-marker
@@ -1412,6 +1428,7 @@ distclean: distclean-recursive
 	-rm -f ./$(DEPDIR)/demo-demo.Po
 	-rm -f ./$(DEPDIR)/demo_https-demo_https.Po
 	-rm -f ./$(DEPDIR)/digest_auth_example.Po
+	-rm -f ./$(DEPDIR)/digest_auth_example_adv.Po
 	-rm -f ./$(DEPDIR)/dual_stack_example.Po
 	-rm -f ./$(DEPDIR)/fileserver_example.Po
 	-rm -f ./$(DEPDIR)/fileserver_example_dirs.Po
@@ -1483,6 +1500,7 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f ./$(DEPDIR)/demo-demo.Po
 	-rm -f ./$(DEPDIR)/demo_https-demo_https.Po
 	-rm -f ./$(DEPDIR)/digest_auth_example.Po
+	-rm -f ./$(DEPDIR)/digest_auth_example_adv.Po
 	-rm -f ./$(DEPDIR)/dual_stack_example.Po
 	-rm -f ./$(DEPDIR)/fileserver_example.Po
 	-rm -f ./$(DEPDIR)/fileserver_example_dirs.Po
@@ -1539,6 +1557,10 @@ uninstall-am:
 
 .PRECIOUS: Makefile
 
+
+$(top_builddir)/src/microhttpd/libmicrohttpd.la: $(top_builddir)/src/microhttpd/Makefile
+	@echo ' cd $(top_builddir)/src/microhttpd && $(MAKE) $(AM_MAKEFLAGS) libmicrohttpd.la'; \
+	$(am__cd) $(top_builddir)/src/microhttpd && $(MAKE) $(AM_MAKEFLAGS) libmicrohttpd.la
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

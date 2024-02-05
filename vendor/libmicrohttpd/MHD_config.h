@@ -1,204 +1,61 @@
-#define PACKAGE "libmicrohttpd"
-#define PACKAGE_BUGREPORT "libmicrohttpd@gnu.org"
-#define PACKAGE_NAME "GNU Libmicrohttpd"
-#define PACKAGE_STRING "GNU Libmicrohttpd 0.9.76"
-#define PACKAGE_TARNAME "libmicrohttpd"
-#define PACKAGE_URL "http://www.gnu.org/software/libmicrohttpd/"
-#define PACKAGE_VERSION "0.9.76"
-#define VERSION "0.9.76"
-
 #if defined(__MINGW32__)
     #define BAUTH_SUPPORT 1
+    #define COOKIE_SUPPORT 1
     #define DAUTH_SUPPORT 1
-    #define HAVE_ASSERT 1
-    #define HAVE_C_VARARRAYS 1
-    #define HAVE_CALLOC 1
-    #define HAVE_CLOCK_GETTIME 1
-    #define HAVE_ERRNO_H 1
-    #define HAVE_FCNTL_H 1
-    #define HAVE_FSEEKO 1
-    #define HAVE_GETTIMEOFDAY 1
-    #define HAVE_INET6 1
-    #define HAVE_INTTYPES_H 1
-    #define HAVE_LIMITS_H 1
-    #define HAVE_LSEEK64 1
-    #define HAVE_MEMORY_H 1
-    #define HAVE_MESSAGES 1
-    #define HAVE_NANOSLEEP 1
-    #define HAVE_POSTPROCESSOR 1
-    #define HAVE_PTHREAD_H 1
-    #define HAVE_PTHREAD_PRIO_INHERIT 1
-    #define HAVE_RAND 1
-    #define HAVE_REAL_BOOL 1
-    #define HAVE_SDKDDKVER_H 1
-    #define HAVE_SEARCH_H 1
-    #define HAVE_SNPRINTF 1
-    #define HAVE_STDBOOL_H 1
-    #define HAVE_STDDEF_H 1
-    #define HAVE_STDINT_H 1
-    #define HAVE_STDIO_H 1
-    #define HAVE_STDLIB_H 1
-    #define HAVE_STRINGS_H 1
-    #define HAVE_STRING_H 1
-    #define HAVE_SYS_PARAM_H 1
-    #define HAVE_SYS_STAT_H 1
-    #define HAVE_SYS_TIME_H 1
-    #define HAVE_SYS_TYPES_H 1
-    #define HAVE_TIME_H 1
-    #define HAVE_TSEARCH 1
-    #define HAVE_UNISTD_H 1
-    #define HAVE_USLEEP 1
-    #define HAVE_W32_GMTIME_S 1
-    #define HAVE_WINDOWS_H 1
-    #define HAVE_WINSOCK2_H 1
-    #define HAVE_WS2TCPIP_H 1
-    #define HAVE___FUNCTION__ 1
-    #define HAVE___FUNC__ 1
-    #define INLINE_FUNC 1
-    #define LT_OBJDIR ".libs/"
-    #define MHD_HAVE___BUILTIN_BSWAP32 1
-    #define MHD_HAVE___BUILTIN_BSWAP64 1
-    #define MHD_NO_THREAD_NAMES 1
-    #define MHD_USE_W32_THREADS 1
-    #define MINGW 1
-    #define STDC_HEADERS 1
-    #define UPGRADE_SUPPORT 1
-    #define WINDOWS 1
-    #define _FILE_OFFSET_BITS 64
-    #define _GNU_SOURCE 1
-    #define _MHD_EXTERN __attribute__((visibility("default"))) __declspec(dllexport) extern
-    #define _MHD_ITC_SOCKETPAIR 1
-    #define _MHD_static_inline static inline __attribute__((always_inline))
-    #define _MHD_NORETURN __attribute__((noreturn))
-    #define _XOPEN_SOURCE 1
-    #define _XOPEN_SOURCE_EXTENDED 1
-    #define FUNC_ATTR_NOSANITIZE_WORKS 1
-    #define FUNC_ATTR_PTRCOMPARE_WOKRS 1
-    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-        #define SIZEOF_SIZE_T 8
-    #else
-        #define SIZEOF_SIZE_T 4
-    #endif
-    #ifdef _USE_32BIT_TIME_T
-        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
-    #else
-        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
-    #endif
-    #define SIZEOF_UINT64_T 8
-    #define SIZEOF_UNSIGNED_INT 4
-    #define SIZEOF_UNSIGNED_LONG_LONG 8
-#elif defined(_MSC_VER)
-    #define WINDOWS 1
-    #define MSVC 1
-    #define INLINE_FUNC 1
-    #define BAUTH_SUPPORT 1
-    #define DAUTH_SUPPORT 1
-    #define HAVE_POSTPROCESSOR 1
-    #define HAVE_MESSAGES 1
-    #define UPGRADE_SUPPORT 1
-    #define HAVE_INET6 1
-    #define _MHD_ITC_SOCKETPAIR 1
-    #define MHD_USE_W32_THREADS 1
-    #ifndef _WIN32_WINNT
-        #define _WIN32_WINNT 0x0501
-    #endif /* _WIN32_WINNT */
-    #if _WIN32_WINNT >= 0x0600
-        #define HAVE_POLL 1
-    #endif /* _WIN32_WINNT >= 0x0600 */
-    #define HAVE_WINSOCK2_H 1
-    #define HAVE_WS2TCPIP_H 1
-    #define HAVE___LSEEKI64 1
-    #define HAVE_W32_GMTIME_S 1
-    #define HAVE_ASSERT 1
-    #define HAVE_CALLOC 1
-    #define HAVE_SNPRINTF 1
-    #define HAVE_INTTYPES_H 1
-    #define HAVE_ERRNO_H 1
-    #define HAVE_FCNTL_H 1
-    #define HAVE_INTTYPES_H 1
-    #define HAVE_LIMITS_H 1
-    #define HAVE_MEMORY_H 1
-    #define HAVE_SDKDDKVER_H 1
-    #define HAVE_STDINT_H 1
-    #define HAVE_STDIO_H 1
-    #define HAVE_STDLIB_H 1
-    #define HAVE_STRINGS_H 1
-    #define HAVE_STRING_H 1
-    #define HAVE_SYS_STAT_H 1
-    #define HAVE_SYS_TYPES_H 1
-    #define HAVE_TIME_H 1
-    #define HAVE_STDDEF_H 1
-    #define HAVE_STDBOOL_H 1
-    #define HAVE_WINDOWS_H 1
-    #define HAVE___FUNCTION__ 1
-    #define HAVE___FUNC__ 1
-    #define _GNU_SOURCE  1
-    #define STDC_HEADERS 1
-    #define __STDC_NO_VLA__ 1
-    #define _MHD_static_inline static __forceinline
-    #define _MHD_NORETURN __declspec(noreturn)
-    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-        #define SIZEOF_SIZE_T 8
-    #else
-        #define SIZEOF_SIZE_T 4
-    #endif
-    #ifdef _USE_32BIT_TIME_T
-        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
-    #else
-        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
-    #endif
-    #define SIZEOF_UINT64_T 8
-    #define SIZEOF_UNSIGNED_INT 4
-    #define SIZEOF_UNSIGNED_LONG_LONG 8
-#elif defined(__APPLE__)
-    #define BAUTH_SUPPORT 1
-    #define DAUTH_SUPPORT 1
+    #define HAS_FD_SETSIZE_OVERRIDABLE 1
+    #define HAS_SIGNED_SOCKET 1
+    #define HAVE_ACCEPT4 1
     #define HAVE_ARPA_INET_H 1
-    #define HAVE_ASSERT 1
-    #define HAVE_C_VARARRAYS 1
+    #define HAVE_BUILTIN_TYPE_BOOL 1
     #define HAVE_CALLOC 1
     #define HAVE_CLOCK_GETTIME 1
-    #define HAVE_CLOCK_GET_TIME 1
-    #define HAVE_DARWIN_SENDFILE 1
-    #define HAVE_DECL_GETSOCKNAME 1
+    #define HAVE_C_ALIGNOF 1
+    #define HAVE_C_VARARRAYS 1
+    #define HAVE_DECL_CTL_HW 0
+    #define HAVE_DECL_HW_AVAILCPU 0
+    #define HAVE_DECL_HW_NCPU 0
+    #define HAVE_DECL_HW_NCPUONLINE 0
+    #define HAVE_DECL__SC_CRAY_NCPU 0
+    #define HAVE_DECL__SC_NPROCESSORS_CONF 1
+    #define HAVE_DECL__SC_NPROCESSORS_ONLN 1
+    #define HAVE_DECL__SC_NPROC_ONLN 0
     #define HAVE_DLFCN_H 1
+    #define HAVE_ENDIAN_H 1
     #define HAVE_ERRNO_H 1
     #define HAVE_FCNTL_H 1
+    #define HAVE_FEATURES_H 1
     #define HAVE_FORK 1
     #define HAVE_FSEEKO 1
-    #define HAVE_GETSOCKNAME 1
+    #define HAVE_GETPID 1
     #define HAVE_GETTIMEOFDAY 1
     #define HAVE_GMTIME_R 1
-    #define HAVE_INET6 1
     #define HAVE_INTTYPES_H 1
     #define HAVE_LIMITS_H 1
     #define HAVE_MACHINE_ENDIAN_H 1
     #define HAVE_MACHINE_PARAM_H 1
+    #define HAVE_MAGIC_OPEN 1
     #define HAVE_MEMMEM 1
-    #define HAVE_MEMORY_H 1
     #define HAVE_MESSAGES 1
     #define HAVE_NANOSLEEP 1
     #define HAVE_NETDB_H 1
     #define HAVE_NETINET_IN_H 1
+    #define HAVE_NETINET_IN_SYSTM_H 1
     #define HAVE_NETINET_IP_H 1
+    #define HAVE_NETINET_IP_ICMP_H 1
     #define HAVE_NETINET_TCP_H 1
     #define HAVE_NET_IF_H 1
-    #define HAVE_POLL 1
-    #define HAVE_POLL_H 1
     #define HAVE_POSTPROCESSOR 1
     #define HAVE_PREAD 1
     #define HAVE_PTHREAD_H 1
-    #define HAVE_PTHREAD_PRIO_INHERIT 1
-    #define HAVE_PTHREAD_SETNAME_NP_DARWIN 1
     #define HAVE_PTHREAD_SIGMASK 1
-    #define HAVE_RAND 1
     #define HAVE_RANDOM 1
-    #define HAVE_REAL_BOOL 1
-    #define HAVE_SEARCH_H 1
+    #define HAVE_SCHED_H 1
+    #define HAVE_SDKDDKVER_H 1
     #define HAVE_SENDMSG 1
     #define HAVE_SIGNAL_H 1
     #define HAVE_SNPRINTF 1
-    #define HAVE_SOCKADDR_IN_SIN_LEN 1
+    #define HAVE_SOCK_NONBLOCK 1
+    #define HAVE_STDALIGN_H 1
     #define HAVE_STDBOOL_H 1
     #define HAVE_STDDEF_H 1
     #define HAVE_STDINT_H 1
@@ -206,6 +63,8 @@
     #define HAVE_STDLIB_H 1
     #define HAVE_STRINGS_H 1
     #define HAVE_STRING_H 1
+    #define HAVE_SYSCONF 1
+    #define HAVE_SYS_CPUSET_H 1
     #define HAVE_SYS_IOCTL_H 1
     #define HAVE_SYS_MMAN_H 1
     #define HAVE_SYS_MSG_H 1
@@ -213,84 +72,204 @@
     #define HAVE_SYS_SELECT_H 1
     #define HAVE_SYS_SOCKET_H 1
     #define HAVE_SYS_STAT_H 1
-    #define HAVE_SYS_SYSCTL_H 1
     #define HAVE_SYS_TIME_H 1
     #define HAVE_SYS_TYPES_H 1
-    #define HAVE_SYSCTL 1
-    #define HAVE_SYSCONF 1
+    #define HAVE_SYS_UIO_H 1
     #define HAVE_TIME_H 1
-    #define HAVE_TSEARCH 1
     #define HAVE_UNISTD_H 1
     #define HAVE_USLEEP 1
     #define HAVE_WAITPID 1
+    #define HAVE_WINDOWS_H 1
+    #define HAVE_WINSOCK2_H 1
     #define HAVE_WRITEV 1
-    #define HAVE___FUNCTION__ 1
+    #define HAVE_WS2TCPIP_H 1
     #define HAVE___FUNC__ 1
     #define INLINE_FUNC 1
-    #define OSX 1
     #define LT_OBJDIR ".libs/"
+    #define MHD_DAUTH_DEF_MAX_NC_ 1000
+    #define MHD_DAUTH_DEF_TIMEOUT_ 90
+    #define MHD_FAVOR_FAST_CODE 1
+    #define MHD_HAVE_LIBMAGIC 1
     #define MHD_HAVE___BUILTIN_BSWAP32 1
     #define MHD_HAVE___BUILTIN_BSWAP64 1
-    #define MHD_USE_GETSOCKNAME 1
-    #define MHD_USE_POSIX_THREADS 1
-    #define STDC_HEADERS 1
-    #define UPGRADE_SUPPORT 1
-    #define _DARWIN_C_SOURCE 1
-    #ifndef _DARWIN_USE_64_BIT_INODE
-    # define _DARWIN_USE_64_BIT_INODE 1
-    #endif
-    #define _GNU_SOURCE 1
-    #define _MHD_EXTERN __attribute__((visibility("default"))) extern
-    #define _MHD_ITC_PIPE 1
-    #define _MHD_static_inline static inline __attribute__((always_inline))
-    #define _MHD_NORETURN __attribute__((noreturn))
-    #define FUNC_ATTR_NOSANITIZE_WORKS 1
-    #define FUNC_ATTR_PTRCOMPARE_WOKRS 1
-    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-        #define SIZEOF_SIZE_T 8
-        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
-    #else
-        #define SIZEOF_SIZE_T 4
-        #if _TIME_BITS == 64
-            #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
-        #else
-            #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
-        #endif
-    #endif
+    #define MHD_MD5_SUPPORT 1
+    #define MHD_NO_THREAD_NAMES 1
+    #define MHD_PLUGIN_INSTALL_PREFIX "/mingw64/lib/libmicrohttpd"
+    #define MHD_SHA256_SUPPORT 1
+    #define MHD_SHA512_256_SUPPORT 1
+    #define MHD_SYS_FD_SETSIZE_ 1024
+    #define MHD_USE_PAGESIZE_MACRO 1
+    #define MHD_USE_PAGESIZE_MACRO_STATIC 1
+    #define MHD_USE_SYS_TSEARCH 1
+    #define MHD_USE_W32_THREADS 1
+    #define MINGW 1
+    #define SIZEOF_INT 4
+    #define SIZEOF_INT64_T 8
+    #define SIZEOF_SIZE_T 8
+    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
     #define SIZEOF_UINT64_T 8
     #define SIZEOF_UNSIGNED_INT 4
     #define SIZEOF_UNSIGNED_LONG_LONG 8
-#elif defined(__linux__)
+    #define STDC_HEADERS 1
+    #define UPGRADE_SUPPORT 1
+    #define WINDOWS 1
+    #if defined AC_APPLE_UNIVERSAL_BUILD
+    # if defined __BIG_ENDIAN__
+    #  define WORDS_BIGENDIAN 1
+    # endif
+    #else
+    # ifndef WORDS_BIGENDIAN
+    # endif
+    #endif
+    #define _MHD_EXTERN __attribute__((visibility("default"))) __declspec(dllexport) extern
+    #define _MHD_ITC_SOCKETPAIR 1
+    #define _MHD_NORETURN _Noreturn
+    #define _MHD_static_inline static inline __attribute__((always_inline))
+#elif defined(_MSC_VER)
+    #define WINDOWS 1
+    #define MSVC 1
+    #ifndef __clang__
+    #ifndef __STDC_NO_VLA__
+    #define __STDC_NO_VLA__ 1
+    #endif /* ! __STDC_NO_VLA__ */
+    #else
+    #define HAVE_C_VARARRAYS 1
+    #endif
+    #define INLINE_FUNC 1
+    #define _MHD_static_inline static __forceinline
+    #ifdef __clang__
+    #define MHD_HAVE___BUILTIN_BSWAP32 1
+    #define MHD_HAVE___BUILTIN_BSWAP64 1
+    #endif /* __clang__ */
+    #if defined(_M_X64) || defined(_M_AMD64) || defined(_M_ARM64) || defined(_WIN64)
+    #define SIZEOF_SIZE_T 8
+    #else  /* ! _WIN64 */
+    #define SIZEOF_SIZE_T 4
+    #endif /* ! _WIN64 */
+    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
+    #define SIZEOF_INT64_T 8
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_INT 4
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
+    #if defined(_STDC_VERSION__) && (__STDC_VERSION__ + 0) >= 201112L
+    #define _MHD_NORETURN _Noreturn
+    #else  /* before C11 */
+    #define _MHD_NORETURN __declspec(noreturn)
+    #endif /* before C11 */
     #define BAUTH_SUPPORT 1
     #define DAUTH_SUPPORT 1
+    #define MHD_DAUTH_DEF_MAX_NC_ 1000
+    #define MHD_DAUTH_DEF_TIMEOUT_ 90
+    #define MHD_MD5_SUPPORT 1
+    #define MHD_SHA256_SUPPORT 1
+    #define MHD_SHA512_256_SUPPORT 1
+    #define HAVE_POSTPROCESSOR 1
+    #define HAVE_MESSAGES 1
+    #define UPGRADE_SUPPORT 1
+    #define COOKIE_SUPPORT 1
+    #define HAVE_INET6 1
+    #define HAS_FD_SETSIZE_OVERRIDABLE 1
+    #if 0 /* Do not define the macro to keep maintability simple if system value is updated */
+    #  define MHD_SYS_FD_SETSIZE_ 64
+    #endif
+    #define _MHD_ITC_SOCKETPAIR 1
+    #define MHD_USE_W32_THREADS 1
+    #ifndef _WIN32_WINNT
+    #define _WIN32_WINNT 0x0600
+    #endif /* _WIN32_WINNT */
+    #if _WIN32_WINNT >= 0x0600
+    #define HAVE_POLL 1
+    #endif /* _WIN32_WINNT >= 0x0600 */
+    #define HAVE_WINSOCK2_H 1
+    #define HAVE_WS2TCPIP_H 1
+    #define HAVE___LSEEKI64 1
+    #define HAVE_W32_GMTIME_S 1
+    #define HAVE_CALLOC 1
+    #define HAVE_ASSERT 1
+    #define HAVE_LIMITS_H 1
+    #define HAVE_STDDEF_H 1
+    #define HAVE_STDLIB_H 1
+    #define HAVE_STRING_H 1
+    #define HAVE_SYS_STAT_H   1
+    #define HAVE_TIME_H       1
+    #define HAVE_SNPRINTF 1
+    #define HAVE_INTTYPES_H 1
+    #define HAVE_STDBOOL_H 1
+    #define HAVE_REAL_BOOL 1
+    #define HAVE_BUILTIN_TYPE_BOOL 1
+    #define HAVE_GETSOCKNAME 1
+    #define MHD_USE_GETSOCKNAME 1
+    #define HAVE___FUNC__ 1
+    #if defined(_STDC_VERSION__) && (__STDC_VERSION__ + 0) >= 201112L
+    #define HAVE_C_ALIGNOF 1
+    #define HAVE_STDALIGN_H 1
+    #endif /* C11 */
+    #define HAVE_RAND 1
+    #define HAVE_ERRNO_H 1
+    #define HAVE_FCNTL_H 1
+    #define HAVE_LOCALE_H 1
+    #define HAVE_MATH_H 1
+    #define HAVE_SDKDDKVER_H 1
+    #define HAVE_MEMORY_H 1
+    #define HAVE_STDINT_H 1
+    #define HAVE_STDIO_H 1
+    #define HAVE_STRINGS_H 1
+    #define HAVE_SYS_TYPES_H 1
+    #define HAVE_WINDOWS_H 1
+    #define _GNU_SOURCE  1
+    #define STDC_HEADERS 1
+#elif defined(__linux__)
+    #define BAUTH_SUPPORT 1
+    #define COOKIE_SUPPORT 1
+    #define DAUTH_SUPPORT 1
     #define EPOLL_SUPPORT 1
+    #define HAS_SIGNED_SOCKET 1
     #define HAVE_ACCEPT4 1
     #define HAVE_ARPA_INET_H 1
-    #define HAVE_ASSERT 1
-    #define HAVE_C_VARARRAYS 1
+    #define HAVE_BUILTIN_TYPE_BOOL 1
     #define HAVE_CALLOC 1
     #define HAVE_CLOCK_GETTIME 1
+    #define HAVE_CPU_COUNT 1
+    #define HAVE_CPU_COUNT_S 1
+    #define HAVE_C_ALIGNOF 1
+    #define HAVE_C_VARARRAYS 1
+    #define HAVE_DECL_CPU_SETSIZE 1
+    #define HAVE_DECL_CTL_HW 0
+    #define HAVE_DECL_HW_AVAILCPU 0
+    #define HAVE_DECL_HW_NCPU 0
+    #define HAVE_DECL_HW_NCPUONLINE 0
+    #define HAVE_DECL__SC_CRAY_NCPU 0
+    #define HAVE_DECL__SC_NPROCESSORS_CONF 1
+    #define HAVE_DECL__SC_NPROCESSORS_ONLN 1
+    #define HAVE_DECL__SC_NPROC_ONLN 0
     #define HAVE_DLFCN_H 1
     #define HAVE_ENDIAN_H 1
     #define HAVE_EPOLL_CREATE1 1
     #define HAVE_ERRNO_H 1
     #define HAVE_FCNTL_H 1
+    #define HAVE_FEATURES_H 1
     #define HAVE_FORK 1
     #define HAVE_FSEEKO 1
+    #define HAVE_GCRYPT_H 1
+    #define HAVE_GETPID 1
     #define HAVE_GETTIMEOFDAY 1
     #define HAVE_GMTIME_R 1
     #define HAVE_INET6 1
     #define HAVE_INTTYPES_H 1
+    #define HAVE_LIBCURL 1
     #define HAVE_LIMITS_H 1
+    #define HAVE_LINUX_SENDFILE 1
     #define HAVE_LISTEN_SHUTDOWN 1
     #define HAVE_LSEEK64 1
     #define HAVE_MEMMEM 1
-    #define HAVE_MEMORY_H 1
     #define HAVE_MESSAGES 1
     #define HAVE_NANOSLEEP 1
     #define HAVE_NETDB_H 1
     #define HAVE_NETINET_IN_H 1
+    #define HAVE_NETINET_IN_SYSTM_H 1
     #define HAVE_NETINET_IP_H 1
+    #define HAVE_NETINET_IP_ICMP_H 1
     #define HAVE_NETINET_TCP_H 1
     #define HAVE_NET_IF_H 1
     #define HAVE_POLL 1
@@ -302,116 +281,10 @@
     #define HAVE_PTHREAD_PRIO_INHERIT 1
     #define HAVE_PTHREAD_SETNAME_NP_GNU 1
     #define HAVE_PTHREAD_SIGMASK 1
-    #define HAVE_RAND 1
     #define HAVE_RANDOM 1
-    #define HAVE_REAL_BOOL 1
-    #define HAVE_SEARCH_H 1
-    #define HAVE_SENDMSG 1
+    #define HAVE_SCHED_GETAFFINITY 1
+    #define HAVE_SCHED_H 1
     #define HAVE_SENDFILE64 1
-    #define HAVE_SIGNAL_H 1
-    #define HAVE_SNPRINTF 1
-    #define HAVE_SOCK_NONBLOCK 1
-    #define HAVE_STDBOOL_H 1
-    #define HAVE_STDDEF_H 1
-    #define HAVE_STDINT_H 1
-    #define HAVE_STDIO_H 1
-    #define HAVE_STDLIB_H 1
-    #define HAVE_STRINGS_H 1
-    #define HAVE_STRING_H 1
-    #define HAVE_SYS_EVENTFD_H 1
-    #define HAVE_SYS_IOCTL_H 1
-    #define HAVE_SYS_MMAN_H 1
-    #define HAVE_SYS_MSG_H 1
-    #define HAVE_SYS_PARAM_H 1
-    #define HAVE_SYS_SELECT_H 1
-    #define HAVE_SYS_SOCKET_H 1
-    #define HAVE_SYS_STAT_H 1
-    #define HAVE_SYS_SYSCTL_H 1
-    #define HAVE_SYS_TIME_H 1
-    #define HAVE_SYS_TYPES_H 1
-    #define HAVE_SYSCTL 1
-    #define HAVE_SYSCONF 1
-    #define HAVE_TIME_H 1
-    #define HAVE_TSEARCH 1
-    #define HAVE_UNISTD_H 1
-    #define HAVE_USLEEP 1
-    #define HAVE_WAITPID 1
-    #define HAVE_WRITEV 1
-    #define HAVE___FUNCTION__ 1
-    #define HAVE___FUNC__ 1
-    #define INLINE_FUNC 1
-    #define LINUX 1
-    #define LT_OBJDIR ".libs/"
-    #define MHD_HAVE___BUILTIN_BSWAP32 1
-    #define MHD_HAVE___BUILTIN_BSWAP64 1
-    #define MHD_USE_POSIX_THREADS 1
-    #define STDC_HEADERS 1
-    #define UPGRADE_SUPPORT 1
-    #define _GNU_SOURCE 1
-    #define _MHD_EXTERN __attribute__((visibility("default"))) extern
-    #define _MHD_ITC_EVENTFD 1
-    #define _MHD_static_inline static inline __attribute__((always_inline))
-    #define _MHD_NORETURN __attribute__((noreturn))
-    #define _XOPEN_SOURCE 700
-    #define FUNC_ATTR_NOSANITIZE_WORKS 1
-    #define FUNC_ATTR_PTRCOMPARE_WOKRS 1
-    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-        #define SIZEOF_SIZE_T 8
-        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
-    #else
-        #define SIZEOF_SIZE_T 4
-        #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
-    #endif
-    #define SIZEOF_UINT64_T 8
-    #define SIZEOF_UNSIGNED_INT 4
-    #define SIZEOF_UNSIGNED_LONG_LONG 8
-#elif defined(__OpenBSD__)
-    #define BAUTH_SUPPORT 1
-    #define DAUTH_SUPPORT 1
-    #define HAVE_ACCEPT4 1
-    #define HAVE_ARPA_INET_H 1
-    #define HAVE_CALLOC 1
-    #define HAVE_CLOCK_GETTIME 1
-    #define HAVE_C_ALIGNOF 1
-    #define HAVE_C_VARARRAYS 1
-    #define HAVE_DLFCN_H 1
-    #define HAVE_ENDIAN_H 1
-    #define HAVE_ERRNO_H 1
-    #define HAVE_FCNTL_H 1
-    #define HAVE_FORK 1
-    #define HAVE_FSEEKO 1
-    #define HAVE_GETSOCKNAME 1
-    #define HAVE_GETTIMEOFDAY 1
-    #define HAVE_GMTIME_R 1
-    #define HAVE_INET6 1
-    #define HAVE_INTTYPES_H 1
-    #define HAVE_LIMITS_H 1
-    #define HAVE_LISTEN_SHUTDOWN 1
-    #define HAVE_MACHINE_ENDIAN_H 1
-    #define HAVE_MACHINE_PARAM_H 1
-    #define HAVE_MEMMEM 1
-    #define HAVE_MESSAGES 1
-    #define HAVE_NANOSLEEP 1
-    #define HAVE_NETDB_H 1
-    #define HAVE_NETINET_ICMP_VAR_H 1
-    #define HAVE_NETINET_IN_H 1
-    #define HAVE_NETINET_IP_H 1
-    #define HAVE_NETINET_IP_ICMP_H 1
-    #define HAVE_NETINET_TCP_H 1
-    #define HAVE_NET_IF_H 1
-    #define HAVE_PIPE2_FUNC 1
-    #define HAVE_POLL 1
-    #define HAVE_POLL_H 1
-    #define HAVE_POSTPROCESSOR 1
-    #define HAVE_PREAD 1
-    #define HAVE_PTHREAD_H 1
-    #define HAVE_PTHREAD_NP_H 1
-    #define HAVE_PTHREAD_PRIO_INHERIT 1
-    #define HAVE_PTHREAD_SET_NAME_NP_FREEBSD 1
-    #define HAVE_PTHREAD_SIGMASK 1
-    #define HAVE_RANDOM 1
-    #define HAVE_REAL_BOOL 1
-    #define HAVE_SEARCH_H 1
     #define HAVE_SENDMSG 1
     #define HAVE_SIGNAL_H 1
     #define HAVE_SNPRINTF 1
@@ -424,12 +297,161 @@
     #define HAVE_STDLIB_H 1
     #define HAVE_STRINGS_H 1
     #define HAVE_STRING_H 1
+    #define HAVE_SYSCONF 1
+    #define HAVE_SYS_IOCTL_H 1
+    #define HAVE_SYS_MMAN_H 1
+    #define HAVE_SYS_MSG_H 1
+    #define HAVE_SYS_PARAM_H 1
+    #define HAVE_SYS_SELECT_H 1
+    #define HAVE_SYS_SOCKET_H 1
+    #define HAVE_SYS_STAT_H 1
+    #define HAVE_SYS_TIME_H 1
+    #define HAVE_SYS_TYPES_H 1
+    #define HAVE_SYS_UIO_H 1
+    #define HAVE_TIMESPEC_GET 1
+    #define HAVE_TIME_H 1
+    #define HAVE_UNISTD_H 1
+    #define HAVE_USLEEP 1
+    #define HAVE_WAITPID 1
+    #define HAVE_WRITEV 1
+    #define HAVE_ZLIB_H 1
+    #define HAVE___FUNC__ 1
+    #define INLINE_FUNC 1
+    #define LIBCURL_FEATURE_ASYNCHDNS 1
+    #define LIBCURL_FEATURE_IDN 1
+    #define LIBCURL_FEATURE_IPV6 1
+    #define LIBCURL_FEATURE_LIBZ 1
+    #define LIBCURL_FEATURE_NTLM 1
+    #define LIBCURL_FEATURE_SSL 1
+    #define LIBCURL_PROTOCOL_DICT 1
+    #define LIBCURL_PROTOCOL_FILE 1
+    #define LIBCURL_PROTOCOL_FTP 1
+    #define LIBCURL_PROTOCOL_FTPS 1
+    #define LIBCURL_PROTOCOL_HTTP 1
+    #define LIBCURL_PROTOCOL_HTTPS 1
+    #define LIBCURL_PROTOCOL_IMAP 1
+    #define LIBCURL_PROTOCOL_LDAP 1
+    #define LIBCURL_PROTOCOL_POP3 1
+    #define LIBCURL_PROTOCOL_RTSP 1
+    #define LIBCURL_PROTOCOL_SMTP 1
+    #define LIBCURL_PROTOCOL_TELNET 1
+    #define LIBCURL_PROTOCOL_TFTP 1
+    #define LINUX 1
+    #define LT_OBJDIR ".libs/"
+    #define MHD_DAUTH_DEF_MAX_NC_ 1000
+    #define MHD_DAUTH_DEF_TIMEOUT_ 90
+    #define MHD_FAVOR_FAST_CODE 1
+    #define MHD_HAVE___BUILTIN_BSWAP32 1
+    #define MHD_HAVE___BUILTIN_BSWAP64 1
+    #define MHD_MD5_SUPPORT 1
+    #define MHD_PLUGIN_INSTALL_PREFIX "/usr/local/lib/libmicrohttpd"
+    #define MHD_SHA256_SUPPORT 1
+    #define MHD_SHA512_256_SUPPORT 1
+    #define MHD_SYS_FD_SETSIZE_ 1024
+    #define MHD_USE_GETSOCKNAME 1
+    #define MHD_USE_POSIX_THREADS 1
+    #define MHD_USE_SYS_TSEARCH 1
+    #define SIZEOF_INT 4
+    #define SIZEOF_INT64_T 8
+    #define SIZEOF_SIZE_T 8
+    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
+    #define STDC_HEADERS 1
+    #define UPGRADE_SUPPORT 1
+    #define USE_IPV6_TESTING 1
+    #if defined AC_APPLE_UNIVERSAL_BUILD
+    # if defined __BIG_ENDIAN__
+    #  define WORDS_BIGENDIAN 1
+    # endif
+    #else
+    # ifndef WORDS_BIGENDIAN
+    # endif
+    #endif
+    #define _MHD_EXTERN __attribute__((visibility("default"))) extern
+    #define _MHD_ITC_EVENTFD 1
+    #define _MHD_NORETURN _Noreturn
+    #define _MHD_static_inline static inline __attribute__((always_inline))
+#elif defined(__APPLE__)
+    #define BAUTH_SUPPORT 1
+    #define COOKIE_SUPPORT 1
+    #define DAUTH_SUPPORT 1
+    #define HAS_FD_SETSIZE_OVERRIDABLE 1
+    #define HAS_SIGNED_SOCKET 1
+    #define HAVE_ARPA_INET_H 1
+    #define HAVE_BUILTIN_TYPE_BOOL 1
+    #define HAVE_CALLOC 1
+    #define HAVE_CLOCK_GETTIME 1
+    #define HAVE_CLOCK_GET_TIME 1
+    #define HAVE_C_ALIGNOF 1
+    #define HAVE_C_VARARRAYS 1
+    #define HAVE_DARWIN_SENDFILE 1
+    #define HAVE_DECL_CTL_HW 1
+    #define HAVE_DECL_CTL_NET 1
+    #define HAVE_DECL_HW_AVAILCPU 1
+    #define HAVE_DECL_HW_NCPU 1
+    #define HAVE_DECL_HW_NCPUONLINE 0
+    #define HAVE_DECL_ICMPCTL_ICMPLIM 1
+    #define HAVE_DECL_IPPROTO_ICMP 1
+    #define HAVE_DECL_PF_INET 1
+    #define HAVE_DECL__SC_CRAY_NCPU 0
+    #define HAVE_DECL__SC_NPROCESSORS_CONF 1
+    #define HAVE_DECL__SC_NPROCESSORS_ONLN 1
+    #define HAVE_DECL__SC_NPROC_ONLN 0
+    #define HAVE_DLFCN_H 1
+    #define HAVE_ERRNO_H 1
+    #define HAVE_FCNTL_H 1
+    #define HAVE_FORK 1
+    #define HAVE_FSEEKO 1
+    #define HAVE_GETPID 1
+    #define HAVE_GETTIMEOFDAY 1
+    #define HAVE_GMTIME_R 1
+    #define HAVE_INET6 1
+    #define HAVE_INTTYPES_H 1
+    #define HAVE_LIBCURL 1
+    #define HAVE_LIMITS_H 1
+    #define HAVE_MACHINE_ENDIAN_H 1
+    #define HAVE_MACHINE_PARAM_H 1
+    #define HAVE_MEMMEM 1
+    #define HAVE_MESSAGES 1
+    #define HAVE_NANOSLEEP 1
+    #define HAVE_NETDB_H 1
+    #define HAVE_NETINET_ICMP_VAR_H 1
+    #define HAVE_NETINET_IN_H 1
+    #define HAVE_NETINET_IN_SYSTM_H 1
+    #define HAVE_NETINET_IP_H 1
+    #define HAVE_NETINET_IP_ICMP_H 1
+    #define HAVE_NETINET_TCP_H 1
+    #define HAVE_NET_IF_H 1
+    #define HAVE_POLL 1
+    #define HAVE_POLL_H 1
+    #define HAVE_POSTPROCESSOR 1
+    #define HAVE_PREAD 1
+    #define HAVE_PTHREAD_H 1
+    #define HAVE_PTHREAD_PRIO_INHERIT 1
+    #define HAVE_PTHREAD_SETNAME_NP_DARWIN 1
+    #define HAVE_PTHREAD_SIGMASK 1
+    #define HAVE_RANDOM 1
+    #define HAVE_SCHED_H 1
+    #define HAVE_SENDMSG 1
+    #define HAVE_SIGNAL_H 1
+    #define HAVE_SNPRINTF 1
+    #define HAVE_STDALIGN_H 1
+    #define HAVE_STDBOOL_H 1
+    #define HAVE_STDDEF_H 1
+    #define HAVE_STDINT_H 1
+    #define HAVE_STDIO_H 1
+    #define HAVE_STDLIB_H 1
+    #define HAVE_STRINGS_H 1
+    #define HAVE_STRING_H 1
     #define HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN 1
     #define HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
+    #define HAVE_STRUCT_SOCKADDR_SA_LEN 1
     #define HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN 1
     #define HAVE_SYSCONF 1
     #define HAVE_SYSCTL 1
-    #define HAVE_SYS_ENDIAN_H 1
+    #define HAVE_SYSCTLBYNAME 1
     #define HAVE_SYS_IOCTL_H 1
     #define HAVE_SYS_MMAN_H 1
     #define HAVE_SYS_MSG_H 1
@@ -440,10 +462,9 @@
     #define HAVE_SYS_SYSCTL_H 1
     #define HAVE_SYS_TIME_H 1
     #define HAVE_SYS_TYPES_H 1
+    #define HAVE_SYS_UIO_H 1
     #define HAVE_TIMESPEC_GET 1
     #define HAVE_TIME_H 1
-    #define HAVE_TSEARCH 1
-    #define HAVE_TWALK 1
     #define HAVE_UNISTD_H 1
     #define HAVE_USLEEP 1
     #define HAVE_WAITPID 1
@@ -451,53 +472,264 @@
     #define HAVE_ZLIB_H 1
     #define HAVE___FUNC__ 1
     #define INLINE_FUNC 1
-    #define OPENBSD 1
-    #define SOMEBSD 1
+    #define LIBCURL_FEATURE_ASYNCHDNS 1
+    #define LIBCURL_FEATURE_IPV6 1
+    #define LIBCURL_FEATURE_LIBZ 1
+    #define LIBCURL_FEATURE_NTLM 1
+    #define LIBCURL_FEATURE_SSL 1
+    #define LIBCURL_PROTOCOL_DICT 1
+    #define LIBCURL_PROTOCOL_FILE 1
+    #define LIBCURL_PROTOCOL_FTP 1
+    #define LIBCURL_PROTOCOL_FTPS 1
+    #define LIBCURL_PROTOCOL_HTTP 1
+    #define LIBCURL_PROTOCOL_HTTPS 1
+    #define LIBCURL_PROTOCOL_IMAP 1
+    #define LIBCURL_PROTOCOL_LDAP 1
+    #define LIBCURL_PROTOCOL_POP3 1
+    #define LIBCURL_PROTOCOL_RTSP 1
+    #define LIBCURL_PROTOCOL_SMTP 1
+    #define LIBCURL_PROTOCOL_TELNET 1
+    #define LIBCURL_PROTOCOL_TFTP 1
     #define LT_OBJDIR ".libs/"
+    #define MHD_DAUTH_DEF_MAX_NC_ 1000
+    #define MHD_DAUTH_DEF_TIMEOUT_ 90
+    #define MHD_FAVOR_FAST_CODE 1
     #define MHD_HAVE___BUILTIN_BSWAP32 1
     #define MHD_HAVE___BUILTIN_BSWAP64 1
+    #define MHD_MD5_SUPPORT 1
+    #define MHD_PLUGIN_INSTALL_PREFIX "/usr/local/lib/libmicrohttpd"
+    #define MHD_SHA256_SUPPORT 1
+    #define MHD_SHA512_256_SUPPORT 1
+    #define MHD_SYS_FD_SETSIZE_ 1024
     #define MHD_USE_GETSOCKNAME 1
-    #define MHD_USE_PAGE_SIZE_MACRO 1
-    #define MHD_USE_PAGE_SIZE_MACRO_STATIC 1
     #define MHD_USE_POSIX_THREADS 1
+    #define MHD_USE_SYS_TSEARCH 1
+    #define OSX 1
+    #define SIZEOF_INT 4
+    #define SIZEOF_INT64_T 8
+    #define SIZEOF_SIZE_T 8
+    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
     #define STDC_HEADERS 1
     #define UPGRADE_SUPPORT 1
-    #define _BSD_SOURCE 1
-    #define _GNU_SOURCE 1
+    #define USE_IPV6_TESTING 1
+    #if defined AC_APPLE_UNIVERSAL_BUILD
+    # if defined __BIG_ENDIAN__
+    #  define WORDS_BIGENDIAN 1
+    # endif
+    #else
+    # ifndef WORDS_BIGENDIAN
+    # endif
+    #endif
     #define _MHD_EXTERN __attribute__((visibility("default"))) extern
     #define _MHD_ITC_PIPE 1
     #define _MHD_NORETURN _Noreturn
     #define _MHD_static_inline static inline __attribute__((always_inline))
-    #define _XOPEN_SOURCE 700
-    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-        #define SIZEOF_SIZE_T 8
-    #else
-        #define SIZEOF_SIZE_T 4
-    #endif
-    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
-    #define SIZEOF_UINT64_T 8
-    #define SIZEOF_UNSIGNED_INT 4
-    #define SIZEOF_UNSIGNED_LONG_LONG 8
 #elif defined(__FreeBSD__)
     #define BAUTH_SUPPORT 1
+    #define COOKIE_SUPPORT 1
     #define DAUTH_SUPPORT 1
+    #define FREEBSD 1
+    #define HAS_FD_SETSIZE_OVERRIDABLE 1
+    #define HAS_SIGNED_SOCKET 1
     #define HAVE_ACCEPT4 1
     #define HAVE_ARPA_INET_H 1
+    #define HAVE_BUILTIN_TYPE_BOOL 1
     #define HAVE_CALLOC 1
     #define HAVE_CLOCK_GETTIME 1
+    #define HAVE_CPUSET_GETAFFINITY 1
+    #define HAVE_CPU_COUNT 1
     #define HAVE_C_ALIGNOF 1
     #define HAVE_C_VARARRAYS 1
+    #define HAVE_DECL_CTL_HW 1
+    #define HAVE_DECL_CTL_NET 1
+    #define HAVE_DECL_HW_AVAILCPU 0
+    #define HAVE_DECL_HW_NCPU 1
+    #define HAVE_DECL_HW_NCPUONLINE 0
+    #define HAVE_DECL_ICMPCTL_ICMPLIM 1
+    #define HAVE_DECL_IPPROTO_ICMP 1
+    #define HAVE_DECL_PF_INET 1
+    #define HAVE_DECL__SC_CRAY_NCPU 0
+    #define HAVE_DECL__SC_NPROCESSORS_CONF 1
+    #define HAVE_DECL__SC_NPROCESSORS_ONLN 1
+    #define HAVE_DECL__SC_NPROC_ONLN 0
     #define HAVE_DLFCN_H 1
     #define HAVE_ERRNO_H 1
     #define HAVE_FCNTL_H 1
     #define HAVE_FORK 1
     #define HAVE_FREEBSD_SENDFILE 1
     #define HAVE_FSEEKO 1
-    #define HAVE_GETSOCKNAME 1
+    #define HAVE_GETPID 1
     #define HAVE_GETTIMEOFDAY 1
     #define HAVE_GMTIME_R 1
     #define HAVE_INET6 1
     #define HAVE_INTTYPES_H 1
+    #define HAVE_LIBCURL 1
+    #define HAVE_LIMITS_H 1
+    #define HAVE_LISTEN_SHUTDOWN 1
+    #define HAVE_MACHINE_ENDIAN_H 1
+    #define HAVE_MACHINE_PARAM_H 1
+    #define HAVE_MAGIC_OPEN 1
+    #define HAVE_MEMMEM 1
+    #define HAVE_MESSAGES 1
+    #define HAVE_NANOSLEEP 1
+    #define HAVE_NETDB_H 1
+    #define HAVE_NETINET_ICMP_VAR_H 1
+    #define HAVE_NETINET_IN_H 1
+    #define HAVE_NETINET_IN_SYSTM_H 1
+    #define HAVE_NETINET_IP_H 1
+    #define HAVE_NETINET_IP_ICMP_H 1
+    #define HAVE_NETINET_TCP_H 1
+    #define HAVE_NET_IF_H 1
+    #define HAVE_POLL 1
+    #define HAVE_POLL_H 1
+    #define HAVE_POSTPROCESSOR 1
+    #define HAVE_PREAD 1
+    #define HAVE_PTHREAD_H 1
+    #define HAVE_PTHREAD_NP_H 1
+    #define HAVE_PTHREAD_PRIO_INHERIT 1
+    #define HAVE_PTHREAD_SETNAME_NP_GNU 1
+    #define HAVE_PTHREAD_SIGMASK 1
+    #define HAVE_RANDOM 1
+    #define HAVE_SCHED_H 1
+    #define HAVE_SENDMSG 1
+    #define HAVE_SIGNAL_H 1
+    #define HAVE_SNPRINTF 1
+    #define HAVE_SOCK_NONBLOCK 1
+    #define HAVE_STDALIGN_H 1
+    #define HAVE_STDBOOL_H 1
+    #define HAVE_STDDEF_H 1
+    #define HAVE_STDINT_H 1
+    #define HAVE_STDIO_H 1
+    #define HAVE_STDLIB_H 1
+    #define HAVE_STRINGS_H 1
+    #define HAVE_STRING_H 1
+    #define HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN 1
+    #define HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
+    #define HAVE_STRUCT_SOCKADDR_SA_LEN 1
+    #define HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN 1
+    #define HAVE_SYSCONF 1
+    #define HAVE_SYSCTL 1
+    #define HAVE_SYSCTLBYNAME 1
+    #define HAVE_SYS_CPUSET_H 1
+    #define HAVE_SYS_ENDIAN_H 1
+    #define HAVE_SYS_IOCTL_H 1
+    #define HAVE_SYS_MMAN_H 1
+    #define HAVE_SYS_MSG_H 1
+    #define HAVE_SYS_PARAM_H 1
+    #define HAVE_SYS_SELECT_H 1
+    #define HAVE_SYS_SOCKET_H 1
+    #define HAVE_SYS_STAT_H 1
+    #define HAVE_SYS_SYSCTL_H 1
+    #define HAVE_SYS_TIME_H 1
+    #define HAVE_SYS_TYPES_H 1
+    #define HAVE_SYS_UIO_H 1
+    #define HAVE_SYS__CPUSET_H 1
+    #define HAVE_TIMESPEC_GET 1
+    #define HAVE_TIME_H 1
+    #define HAVE_UNISTD_H 1
+    #define HAVE_USLEEP 1
+    #define HAVE_WAITPID 1
+    #define HAVE_WRITEV 1
+    #define HAVE_ZLIB_H 1
+    #define HAVE___FUNC__ 1
+    #define INLINE_FUNC 1
+    #define LIBCURL_FEATURE_ASYNCHDNS 1
+    #define LIBCURL_FEATURE_IPV6 1
+    #define LIBCURL_FEATURE_LIBZ 1
+    #define LIBCURL_FEATURE_NTLM 1
+    #define LIBCURL_FEATURE_SSL 1
+    #define LIBCURL_PROTOCOL_DICT 1
+    #define LIBCURL_PROTOCOL_FILE 1
+    #define LIBCURL_PROTOCOL_FTP 1
+    #define LIBCURL_PROTOCOL_FTPS 1
+    #define LIBCURL_PROTOCOL_HTTP 1
+    #define LIBCURL_PROTOCOL_HTTPS 1
+    #define LIBCURL_PROTOCOL_IMAP 1
+    #define LIBCURL_PROTOCOL_POP3 1
+    #define LIBCURL_PROTOCOL_RTSP 1
+    #define LIBCURL_PROTOCOL_SMTP 1
+    #define LIBCURL_PROTOCOL_TELNET 1
+    #define LIBCURL_PROTOCOL_TFTP 1
+    #define LT_OBJDIR ".libs/"
+    #define MHD_DAUTH_DEF_MAX_NC_ 1000
+    #define MHD_DAUTH_DEF_TIMEOUT_ 90
+    #define MHD_FAVOR_FAST_CODE 1
+    #define MHD_HAVE_LIBMAGIC 1
+    #define MHD_HAVE___BUILTIN_BSWAP32 1
+    #define MHD_HAVE___BUILTIN_BSWAP64 1
+    #define MHD_MD5_SUPPORT 1
+    #define MHD_PLUGIN_INSTALL_PREFIX "/usr/local/lib/libmicrohttpd"
+    #define MHD_SHA256_SUPPORT 1
+    #define MHD_SHA512_256_SUPPORT 1
+    #define MHD_SYS_FD_SETSIZE_ 1024
+    #define MHD_USE_GETSOCKNAME 1
+    #define MHD_USE_PAGE_SIZE_MACRO 1
+    #define MHD_USE_PAGE_SIZE_MACRO_STATIC 1
+    #define MHD_USE_POSIX_THREADS 1
+    #define MHD_USE_SYS_TSEARCH 1
+    #define SIZEOF_INT 4
+    #define SIZEOF_INT64_T 8
+    #define SIZEOF_SIZE_T 8
+    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
+    #define SOMEBSD 1
+    #define STDC_HEADERS 1
+    #define UPGRADE_SUPPORT 1
+    #define USE_IPV6_TESTING 1
+    #if defined AC_APPLE_UNIVERSAL_BUILD
+    # if defined __BIG_ENDIAN__
+    #  define WORDS_BIGENDIAN 1
+    # endif
+    #else
+    # ifndef WORDS_BIGENDIAN
+    # endif
+    #endif
+    #define _MHD_EXTERN __attribute__((visibility("default"))) extern
+    #define _MHD_ITC_EVENTFD 1
+    #define _MHD_NORETURN _Noreturn
+    #define _MHD_static_inline static inline __attribute__((always_inline))
+#elif defined(__OpenBSD__)
+    #define BAUTH_SUPPORT 1
+    #define COOKIE_SUPPORT 1
+    #define DAUTH_SUPPORT 1
+    #define HAS_FD_SETSIZE_OVERRIDABLE 1
+    #define HAS_SIGNED_SOCKET 1
+    #define HAVE_ACCEPT4 1
+    #define HAVE_ARPA_INET_H 1
+    #define HAVE_BUILTIN_TYPE_BOOL 1
+    #define HAVE_CALLOC 1
+    #define HAVE_CLOCK_GETTIME 1
+    #define HAVE_C_ALIGNOF 1
+    #define HAVE_C_VARARRAYS 1
+    #define HAVE_DECL_CTL_HW 1
+    #define HAVE_DECL_CTL_NET 1
+    #define HAVE_DECL_HW_AVAILCPU 0
+    #define HAVE_DECL_HW_NCPU 1
+    #define HAVE_DECL_HW_NCPUONLINE 1
+    #define HAVE_DECL_ICMPCTL_ICMPLIM 0
+    #define HAVE_DECL_IPPROTO_ICMP 1
+    #define HAVE_DECL_PF_INET 1
+    #define HAVE_DECL__SC_CRAY_NCPU 0
+    #define HAVE_DECL__SC_NPROCESSORS_CONF 1
+    #define HAVE_DECL__SC_NPROCESSORS_ONLN 1
+    #define HAVE_DECL__SC_NPROC_ONLN 0
+    #define HAVE_DLFCN_H 1
+    #define HAVE_ENDIAN_H 1
+    #define HAVE_ERRNO_H 1
+    #define HAVE_FCNTL_H 1
+    #define HAVE_FORK 1
+    #define HAVE_FSEEKO 1
+    #define HAVE_GETPID 1
+    #define HAVE_GETTIMEOFDAY 1
+    #define HAVE_GMTIME_R 1
+    #define HAVE_INET6 1
+    #define HAVE_INTTYPES_H 1
+    #define HAVE_LIBCURL 1
     #define HAVE_LIMITS_H 1
     #define HAVE_LISTEN_SHUTDOWN 1
     #define HAVE_MACHINE_ENDIAN_H 1
@@ -508,6 +740,7 @@
     #define HAVE_NETDB_H 1
     #define HAVE_NETINET_ICMP_VAR_H 1
     #define HAVE_NETINET_IN_H 1
+    #define HAVE_NETINET_IN_SYSTM_H 1
     #define HAVE_NETINET_IP_H 1
     #define HAVE_NETINET_IP_ICMP_H 1
     #define HAVE_NETINET_TCP_H 1
@@ -523,8 +756,7 @@
     #define HAVE_PTHREAD_SET_NAME_NP_FREEBSD 1
     #define HAVE_PTHREAD_SIGMASK 1
     #define HAVE_RANDOM 1
-    #define HAVE_REAL_BOOL 1
-    #define HAVE_SEARCH_H 1
+    #define HAVE_SCHED_H 1
     #define HAVE_SENDMSG 1
     #define HAVE_SIGNAL_H 1
     #define HAVE_SNPRINTF 1
@@ -539,10 +771,10 @@
     #define HAVE_STRING_H 1
     #define HAVE_STRUCT_SOCKADDR_IN6_SIN6_LEN 1
     #define HAVE_STRUCT_SOCKADDR_IN_SIN_LEN 1
+    #define HAVE_STRUCT_SOCKADDR_SA_LEN 1
     #define HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN 1
     #define HAVE_SYSCONF 1
     #define HAVE_SYSCTL 1
-    #define HAVE_SYSCTLBYNAME 1
     #define HAVE_SYS_ENDIAN_H 1
     #define HAVE_SYS_IOCTL_H 1
     #define HAVE_SYS_MMAN_H 1
@@ -554,10 +786,9 @@
     #define HAVE_SYS_SYSCTL_H 1
     #define HAVE_SYS_TIME_H 1
     #define HAVE_SYS_TYPES_H 1
+    #define HAVE_SYS_UIO_H 1
     #define HAVE_TIMESPEC_GET 1
     #define HAVE_TIME_H 1
-    #define HAVE_TSEARCH 1
-    #define HAVE_TWALK 1
     #define HAVE_UNISTD_H 1
     #define HAVE_USLEEP 1
     #define HAVE_WAITPID 1
@@ -565,41 +796,61 @@
     #define HAVE_ZLIB_H 1
     #define HAVE___FUNC__ 1
     #define INLINE_FUNC 1
-    #define FREEBSD 1
-    #define SOMEBSD 1
-    #define __BSD_VISIBLE 1
+    #define LIBCURL_FEATURE_ASYNCHDNS 1
+    #define LIBCURL_FEATURE_IPV6 1
+    #define LIBCURL_FEATURE_LIBZ 1
+    #define LIBCURL_FEATURE_NTLM 1
+    #define LIBCURL_FEATURE_SSL 1
+    #define LIBCURL_PROTOCOL_DICT 1
+    #define LIBCURL_PROTOCOL_FILE 1
+    #define LIBCURL_PROTOCOL_FTP 1
+    #define LIBCURL_PROTOCOL_FTPS 1
+    #define LIBCURL_PROTOCOL_HTTP 1
+    #define LIBCURL_PROTOCOL_HTTPS 1
+    #define LIBCURL_PROTOCOL_IMAP 1
+    #define LIBCURL_PROTOCOL_POP3 1
+    #define LIBCURL_PROTOCOL_RTSP 1
+    #define LIBCURL_PROTOCOL_SMTP 1
+    #define LIBCURL_PROTOCOL_TELNET 1
+    #define LIBCURL_PROTOCOL_TFTP 1
     #define LT_OBJDIR ".libs/"
+    #define MHD_DAUTH_DEF_MAX_NC_ 1000
+    #define MHD_DAUTH_DEF_TIMEOUT_ 90
+    #define MHD_FAVOR_FAST_CODE 1
     #define MHD_HAVE___BUILTIN_BSWAP32 1
     #define MHD_HAVE___BUILTIN_BSWAP64 1
+    #define MHD_MD5_SUPPORT 1
+    #define MHD_PLUGIN_INSTALL_PREFIX "/usr/local/lib/libmicrohttpd"
+    #define MHD_SHA256_SUPPORT 1
+    #define MHD_SHA512_256_SUPPORT 1
+    #define MHD_SYS_FD_SETSIZE_ 1024
     #define MHD_USE_GETSOCKNAME 1
     #define MHD_USE_PAGE_SIZE_MACRO 1
     #define MHD_USE_PAGE_SIZE_MACRO_STATIC 1
     #define MHD_USE_POSIX_THREADS 1
+    #define MHD_USE_SYS_TSEARCH 1
+    #define OPENBSD 1
+    #define SIZEOF_INT 4
+    #define SIZEOF_INT64_T 8
+    #define SIZEOF_SIZE_T 8
+    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 8
+    #define SIZEOF_UINT64_T 8
+    #define SIZEOF_UNSIGNED_INT 4
+    #define SIZEOF_UNSIGNED_LONG_LONG 8
+    #define SOMEBSD 1
     #define STDC_HEADERS 1
     #define UPGRADE_SUPPORT 1
-    #define _GNU_SOURCE 1
+    #define USE_IPV6_TESTING 1
+    #if defined AC_APPLE_UNIVERSAL_BUILD
+    # if defined __BIG_ENDIAN__
+    #  define WORDS_BIGENDIAN 1
+    # endif
+    #else
+    # ifndef WORDS_BIGENDIAN
+    # endif
+    #endif
     #define _MHD_EXTERN __attribute__((visibility("default"))) extern
     #define _MHD_ITC_PIPE 1
     #define _MHD_NORETURN _Noreturn
     #define _MHD_static_inline static inline __attribute__((always_inline))
-    #define _XOPEN_SOURCE 700
-    #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__)
-        #define SIZEOF_SIZE_T 8
-    #else
-        #define SIZEOF_SIZE_T 4
-    #endif
-    #define SIZEOF_STRUCT_TIMEVAL_TV_SEC 4
-    #define SIZEOF_UINT64_T 8
-    #define SIZEOF_UNSIGNED_INT 4
-    #define SIZEOF_UNSIGNED_LONG_LONG 8
-#else
-    #error "Custom MHD_config.h not suited for this platform"
-#endif
-
-#if defined(__clang__)
-    #if __has_feature(address_sanitizer)
-        #define MHD_ASAN_ACTIVE 1
-    #endif
-#elif defined(__SANITIZE_ADDRESS__)
-    #define MHD_ASAN_ACTIVE 1
 #endif

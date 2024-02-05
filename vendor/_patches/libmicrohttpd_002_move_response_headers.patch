@@ -1,9 +1,9 @@
-diff --git b/vendor/libmicrohttpd/src/include/microhttpd.h a/vendor/libmicrohttpd/src/include/microhttpd.h
-index 1d62f2ccf..06536f2c7 100644
---- b/vendor/libmicrohttpd/src/include/microhttpd.h
-+++ a/vendor/libmicrohttpd/src/include/microhttpd.h
-@@ -3709,6 +3709,18 @@ MHD_create_response_from_iovec (const struct MHD_IoVec *iov,
-                                 void *cls);
+diff --git a/vendor/libmicrohttpd/src/include/microhttpd.h b/vendor/libmicrohttpd/src/include/microhttpd.h
+index b14575753..49d30be59 100644
+--- a/vendor/libmicrohttpd/src/include/microhttpd.h
++++ b/vendor/libmicrohttpd/src/include/microhttpd.h
+@@ -4328,6 +4328,18 @@ _MHD_EXTERN struct MHD_Response *
+ MHD_create_response_empty (enum MHD_ResponseFlags flags);
  
  
 +/**
@@ -21,11 +21,11 @@ index 1d62f2ccf..06536f2c7 100644
  /**
   * Enumeration for actions MHD should perform on the underlying socket
   * of the upgrade.  This API is not finalized, and in particular
-diff --git b/vendor/libmicrohttpd/src/microhttpd/response.c a/vendor/libmicrohttpd/src/microhttpd/response.c
-index ca3639f49..ed3da6378 100644
---- b/vendor/libmicrohttpd/src/microhttpd/response.c
-+++ a/vendor/libmicrohttpd/src/microhttpd/response.c
-@@ -1536,6 +1536,36 @@ MHD_create_response_from_iovec (const struct MHD_IoVec *iov,
+diff --git a/vendor/libmicrohttpd/src/microhttpd/response.c b/vendor/libmicrohttpd/src/microhttpd/response.c
+index ed1326ab6..7ee5dfd33 100644
+--- a/vendor/libmicrohttpd/src/microhttpd/response.c
++++ b/vendor/libmicrohttpd/src/microhttpd/response.c
+@@ -1845,6 +1845,36 @@ MHD_create_response_empty (enum MHD_ResponseFlags flags)
  }
  
  

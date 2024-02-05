@@ -6,15 +6,15 @@
 /* Define to 1 if libmicrohttpd is compiled with Basic Auth support. */
 #undef BAUTH_SUPPORT
 
+/* Define to 1 if libmicrohttpd is compiled with HTTP cookie parsing support.
+   */
+#undef COOKIE_SUPPORT
+
 /* This is a Cygwin system */
 #undef CYGWIN
 
 /* Define to 1 if libmicrohttpd is compiled with Digest Auth support. */
 #undef DAUTH_SUPPORT
-
-/* Define to 1 if translation of program messages to the user's native
-   language is requested. */
-#undef ENABLE_NLS
 
 /* Define to 1 to enable epoll support */
 #undef EPOLL_SUPPORT
@@ -26,13 +26,26 @@
    pointers compare */
 #undef FUNC_ATTR_NOSANITIZE_WORKS
 
-/* Define to '1' if
-   '__attribute__((no_sanitize("pointer-compare","pointer-subtract")))' works
+/* Define to '1' if '__attribute__((no_sanitize("pointer-compare")))' works */
+#undef FUNC_ATTR_PTRCOMPARE_WORKS
+
+/* Define to '1' if '__attribute__((no_sanitize("pointer-subtract")))' works
    */
-#undef FUNC_ATTR_PTRCOMPARE_WOKRS
+#undef FUNC_ATTR_PTRSUBTRACT_WORKS
+
+/* Define to '1' if cast to 'uintptr_t' works for safely processing
+   user-poisoned pointer */
+#undef FUNC_PTRCOMPARE_CAST_WORKAROUND_WORKS
 
 /* Define to `1' if host machine runs on GNU Hurd. */
 #undef GNU_HURD
+
+/* Define to 1 if your system allow overriding the value of FD_SETSIZE macro
+   */
+#undef HAS_FD_SETSIZE_OVERRIDABLE
+
+/* Define to 1 if your socket type is signed */
+#undef HAS_SIGNED_SOCKET
 
 /* Define to 1 if you have the 'accept4' function. */
 #undef HAVE_ACCEPT4
@@ -52,19 +65,20 @@
 /* Define to 1 if you have the usable `calloc' function. */
 #undef HAVE_CALLOC
 
-/* Define to 1 if you have the Mac OS X function
-   CFLocaleCopyPreferredLanguages in the CoreFoundation framework. */
-#undef HAVE_CFLOCALECOPYPREFERREDLANGUAGES
-
-/* Define to 1 if you have the Mac OS X function CFPreferencesCopyAppValue in
-   the CoreFoundation framework. */
-#undef HAVE_CFPREFERENCESCOPYAPPVALUE
-
 /* Define to '1' if you have clock_gettime() function */
 #undef HAVE_CLOCK_GETTIME
 
 /* Define to 1 if you have the 'clock_get_time' function. */
 #undef HAVE_CLOCK_GET_TIME
+
+/* Define to 1 if you have the 'cpuset_getaffinity' function. */
+#undef HAVE_CPUSET_GETAFFINITY
+
+/* Define to 1 if you have the 'CPU_COUNT' function. */
+#undef HAVE_CPU_COUNT
+
+/* Define to 1 if you have the 'CPU_COUNT_S' function. */
+#undef HAVE_CPU_COUNT_S
 
 /* Define to 1 if your compiler supports 'alignof()' */
 #undef HAVE_C_ALIGNOF
@@ -75,13 +89,29 @@
 /* Define to 1 if you have Darwin-style sendfile(2). */
 #undef HAVE_DARWIN_SENDFILE
 
-/* Define if the GNU dcgettext() function is already present or preinstalled.
+/* Define to 1 if you have the declaration of `CPU_SETSIZE', and to 0 if you
+   don't. */
+#undef HAVE_DECL_CPU_SETSIZE
+
+/* Define to 1 if you have the declaration of `CTL_HW', and to 0 if you don't.
    */
-#undef HAVE_DCGETTEXT
+#undef HAVE_DECL_CTL_HW
 
 /* Define to 1 if you have the declaration of `CTL_NET', and to 0 if you
    don't. */
 #undef HAVE_DECL_CTL_NET
+
+/* Define to 1 if you have the declaration of `HW_AVAILCPU', and to 0 if you
+   don't. */
+#undef HAVE_DECL_HW_AVAILCPU
+
+/* Define to 1 if you have the declaration of `HW_NCPU', and to 0 if you
+   don't. */
+#undef HAVE_DECL_HW_NCPU
+
+/* Define to 1 if you have the declaration of `HW_NCPUONLINE', and to 0 if you
+   don't. */
+#undef HAVE_DECL_HW_NCPUONLINE
 
 /* Define to 1 if you have the declaration of `ICMPCTL_ICMPLIM', and to 0 if
    you don't. */
@@ -94,6 +124,22 @@
 /* Define to 1 if you have the declaration of `PF_INET', and to 0 if you
    don't. */
 #undef HAVE_DECL_PF_INET
+
+/* Define to 1 if you have the declaration of `_SC_CRAY_NCPU', and to 0 if you
+   don't. */
+#undef HAVE_DECL__SC_CRAY_NCPU
+
+/* Define to 1 if you have the declaration of `_SC_NPROCESSORS_CONF', and to 0
+   if you don't. */
+#undef HAVE_DECL__SC_NPROCESSORS_CONF
+
+/* Define to 1 if you have the declaration of `_SC_NPROCESSORS_ONLN', and to 0
+   if you don't. */
+#undef HAVE_DECL__SC_NPROCESSORS_ONLN
+
+/* Define to 1 if you have the declaration of `_SC_NPROC_ONLN', and to 0 if
+   you don't. */
+#undef HAVE_DECL__SC_NPROC_ONLN
 
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
@@ -110,6 +156,9 @@
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 
+/* Define to 1 if you have the <features.h> header file. */
+#undef HAVE_FEATURES_H
+
 /* Define to 1 if you have the usable `fork' function. */
 #undef HAVE_FORK
 
@@ -125,8 +174,8 @@
 /* Define to 1 if you have the 'gethrtime' function. */
 #undef HAVE_GETHRTIME
 
-/* Define if the GNU gettext() function is already present or preinstalled. */
-#undef HAVE_GETTEXT
+/* Define to 1 if you have the 'getpid' function. */
+#undef HAVE_GETPID
 
 /* Define to 1 if you have the 'gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
@@ -139,9 +188,6 @@
 
 /* Define to 1 if you have the <gnutls/gnutls.h> header file. */
 #undef HAVE_GNUTLS_GNUTLS_H
-
-/* Define if you have the iconv() function and it works. */
-#undef HAVE_ICONV
 
 /* Define to '1' if you have IPv6 headers */
 #undef HAVE_INET6
@@ -227,6 +273,9 @@
 /* Define to 1 if you have the 'pread64' function. */
 #undef HAVE_PREAD64
 
+/* Define to 1 if you have the 'pstat_getdynamic' function. */
+#undef HAVE_PSTAT_GETDYNAMIC
+
 /* Define if you have IBM i form (or Solaris form) of
    pthread_attr_setname_np(3) function. */
 #undef HAVE_PTHREAD_ATTR_SETNAME_NP_IBMI
@@ -268,6 +317,15 @@
 
 /* Define to 1 if you have the <sanitizer/asan_interface.h> header file. */
 #undef HAVE_SANITIZER_ASAN_INTERFACE_H
+
+/* Define to 1 if you have the 'sched_getaffinity' function. */
+#undef HAVE_SCHED_GETAFFINITY
+
+/* Define to 1 if you have the 'sched_getaffinity_np' function. */
+#undef HAVE_SCHED_GETAFFINITY_NP
+
+/* Define to 1 if you have the <sched.h> header file. */
+#undef HAVE_SCHED_H
 
 /* Define to 1 if you have the <sdkddkver.h> header file. */
 #undef HAVE_SDKDDKVER_H
@@ -324,6 +382,9 @@
 /* Define to 1 if `sin_len' is a member of `struct sockaddr_in'. */
 #undef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
 
+/* Define to 1 if `sa_len' is a member of `struct sockaddr'. */
+#undef HAVE_STRUCT_SOCKADDR_SA_LEN
+
 /* Define to 1 if `ss_len' is a member of `struct sockaddr_storage'. */
 #undef HAVE_STRUCT_SOCKADDR_STORAGE_SS_LEN
 
@@ -338,6 +399,9 @@
 
 /* Define to 1 if you have the <sys/byteorder.h> header file. */
 #undef HAVE_SYS_BYTEORDER_H
+
+/* Define to 1 if you have the <sys/cpuset.h> header file. */
+#undef HAVE_SYS_CPUSET_H
 
 /* Define to 1 if you have the <sys/endian.h> header file. */
 #undef HAVE_SYS_ENDIAN_H
@@ -360,6 +424,9 @@
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H
 
+/* Define to 1 if you have the <sys/pstat.h> header file. */
+#undef HAVE_SYS_PSTAT_H
+
 /* Define to 1 if you have the <sys/select.h> header file. */
 #undef HAVE_SYS_SELECT_H
 
@@ -381,6 +448,9 @@
 /* Define to 1 if you have the <sys/uio.h> header file. */
 #undef HAVE_SYS_UIO_H
 
+/* Define to 1 if you have the <sys/_cpuset.h> header file. */
+#undef HAVE_SYS__CPUSET_H
+
 /* Define to 1 if you have the 'timespec_get' function. */
 #undef HAVE_TIMESPEC_GET
 
@@ -392,6 +462,12 @@
 
 /* Define to 1 if you have the 'usleep' function. */
 #undef HAVE_USLEEP
+
+/* Define to 1 if you have the 'vxCpuEnabledGet' function. */
+#undef HAVE_VXCPUENABLEDGET
+
+/* Define to 1 if you have the <vxCpuLib.h> header file. */
+#undef HAVE_VXCPULIB_H
 
 /* Define to 1 if you have the `gmtime_s' function in W32 form. */
 #undef HAVE_W32_GMTIME_S
@@ -416,6 +492,12 @@
 
 /* Define to 1 if you have the <zlib.h> header file. */
 #undef HAVE_ZLIB_H
+
+/* Define to 1 if you have the '__asan_address_is_poisoned' function. */
+#undef HAVE___ASAN_ADDRESS_IS_POISONED
+
+/* Define to 1 if you have the '__asan_region_is_poisoned' function. */
+#undef HAVE___ASAN_REGION_IS_POISONED
 
 /* Define to 1 if your compiler supports __FUNCTION__ magic-macro. */
 #undef HAVE___FUNCTION__
@@ -507,6 +589,22 @@
 /* Define to '1' if user memory poison is used */
 #undef MHD_ASAN_POISON_ACTIVE
 
+/* The default HTTP Digest Auth default maximum nc (nonce count) value */
+#undef MHD_DAUTH_DEF_MAX_NC_
+
+/* The default HTTP Digest Auth default nonce timeout value (in seconds) */
+#undef MHD_DAUTH_DEF_TIMEOUT_
+
+/* Define to '1' to use fast (and larger) code version */
+#undef MHD_FAVOR_FAST_CODE
+
+/* Define to '1' to use compact code version */
+#undef MHD_FAVOR_SMALL_CODE
+
+/* Define to '1' if CPU_COUNT_S() function expects max CPU number as 'size'
+   parameter */
+#undef MHD_FUNC_CPU_COUNT_S_GETS_CPUS
+
 /* Define to 1 if you have suitable libmagic. */
 #undef MHD_HAVE_LIBMAGIC
 
@@ -519,23 +617,32 @@
 /* Define to `1' if HTTPS require initialisation of libgcrypt */
 #undef MHD_HTTPS_REQUIRE_GCRYPT
 
+/* Define to 1 if libmicrohttpd is compiled with MD5 hashing support. */
+#undef MHD_MD5_SUPPORT
+
+/* Define to 1 if libmicrohttpd is compiled with MD5 hashing by TLS library.
+   */
+#undef MHD_MD5_TLSLIB
+
 /* Define to 1 to disable setting name on generated threads */
 #undef MHD_NO_THREAD_NAMES
 
 /* tls plugins */
 #undef MHD_PLUGIN_INSTALL_PREFIX
 
-/* gnuTLS lib version - used in conjunction with cURL */
-#undef MHD_REQ_CURL_GNUTLS_VERSION
+/* Define to 1 if libmicrohttpd is compiled with SHA-256 hashing support. */
+#undef MHD_SHA256_SUPPORT
 
-/* NSS lib version - used in conjunction with cURL */
-#undef MHD_REQ_CURL_NSS_VERSION
+/* Define to 1 if libmicrohttpd is compiled with SHA-256 hashing by TLS
+   library. */
+#undef MHD_SHA256_TLSLIB
 
-/* required cURL SSL version to run tests */
-#undef MHD_REQ_CURL_OPENSSL_VERSION
+/* Define to 1 if libmicrohttpd is compiled with SHA-512/256 hashing support.
+   */
+#undef MHD_SHA512_256_SUPPORT
 
-/* required cURL version to run tests */
-#undef MHD_REQ_CURL_VERSION
+/* Define to system default value of FD_SETSIZE macro */
+#undef MHD_SYS_FD_SETSIZE_
 
 /* Define if you have usable `getsockname' function. */
 #undef MHD_USE_GETSOCKNAME
@@ -564,9 +671,6 @@
 
 /* This is a MinGW system */
 #undef MINGW
-
-/* Define to disable usage of debug asserts. */
-#undef NDEBUG
 
 /* This is a NetBSD system */
 #undef NETBSD
@@ -607,6 +711,12 @@
 /* Define to necessary symbol if this constant uses a non-standard name on
    your system. */
 #undef PTHREAD_CREATE_JOINABLE
+
+/* The size of `int', as computed by sizeof. */
+#undef SIZEOF_INT
+
+/* The size of `int64_t', as computed by sizeof. */
+#undef SIZEOF_INT64_T
 
 /* The size of `size_t', as computed by sizeof. */
 #undef SIZEOF_SIZE_T
@@ -659,23 +769,8 @@
 # endif
 #endif
 
-/* Define to 1 if it is required by headers to expose additional symbols */
-#undef _ALL_SOURCE
-
-/* Define to 1 if it is required by headers to expose additional symbols */
-#undef _BSD_SOURCE
-
-/* Define to 1 if it is required by headers to expose additional symbols */
-#undef _DARWIN_C_SOURCE
-
-/* Define to use debug asserts. */
-#undef _DEBUG
-
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
-
-/* Define to 1 to enable GNU-related header features */
-#undef _GNU_SOURCE
 
 /* Define to 1 to make fseeko visible on some hosts (e.g. glibc 2.2). */
 #undef _LARGEFILE_SOURCE
@@ -683,7 +778,7 @@
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
 
-/* defines how to decorate public symbols while building */
+/* defines how to decorate public symbols while building the library */
 #undef _MHD_EXTERN
 
 /* Define to 1 to enable "heavy" test paths. */
@@ -701,35 +796,14 @@
 /* Define to supported 'noreturn' function declaration */
 #undef _MHD_NORETURN
 
+/* Define to 1 to enable "very heavy" test paths. */
+#undef _MHD_VHEAVY_TESTS
+
 /* Define to prefix which will be used with MHD static inline functions. */
 #undef _MHD_static_inline
 
-/* Define to 1 if it is required by headers to expose additional symbols */
-#undef _NETBSD_SOURCE
-
 /* Need with solaris or errno does not work */
 #undef _REENTRANT
-
-/* Define to 1 if it is required by headers to expose additional symbols */
-#undef _TANDEM_SOURCE
-
-/* Define to maximum value supported by system headers */
-#undef _XOPEN_SOURCE
-
-/* Define to 1 if _XOPEN_SOURCE is defined to value less than 500 and system
-   headers require this symbol */
-#undef _XOPEN_SOURCE_EXTENDED
-
-/* Define to maximum value supported by system headers if _XOPEN_SOURCE is
-   defined to value less than 500 and headers do not support
-   _XOPEN_SOURCE_EXTENDED */
-#undef _XOPEN_VERSION
-
-/* Define to 1 if it is required by headers to expose additional symbols */
-#undef __BSD_VISIBLE
-
-/* Define to 1 if it is required by headers to expose additional symbols */
-#undef __EXTENSIONS__
 
 /* Define to 1 if C does not support variable-length arrays, and if the
    compiler does not already define this. */

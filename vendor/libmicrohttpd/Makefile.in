@@ -88,8 +88,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@HAVE_PO_TRUE@am__append_1 = po
-@BUILD_DOC_TRUE@am__append_2 = doc
+@BUILD_DOC_TRUE@am__append_1 = doc
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
@@ -102,22 +101,26 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ac_define_dir.m4 \
 	$(top_srcdir)/m4/ax_have_epoll.m4 \
 	$(top_srcdir)/m4/ax_pthread.m4 \
 	$(top_srcdir)/m4/ax_require_defined.m4 \
-	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/gettext.m4 \
-	$(top_srcdir)/m4/host-cpu-c-abi.m4 $(top_srcdir)/m4/iconv.m4 \
-	$(top_srcdir)/m4/intlmacosx.m4 $(top_srcdir)/m4/lib-ld.m4 \
-	$(top_srcdir)/m4/lib-link.m4 $(top_srcdir)/m4/lib-prefix.m4 \
-	$(top_srcdir)/m4/libcurl.m4 $(top_srcdir)/m4/libgcrypt.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/c_backported.m4 $(top_srcdir)/m4/libcurl.m4 \
+	$(top_srcdir)/m4/libgcrypt.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
+	$(top_srcdir)/m4/mhd_append_flag_to_var.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_cflag.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_cflags.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_ldflag.m4 \
+	$(top_srcdir)/m4/mhd_check_add_cc_ldflags.m4 \
+	$(top_srcdir)/m4/mhd_check_cc_cflag.m4 \
 	$(top_srcdir)/m4/mhd_check_func.m4 \
+	$(top_srcdir)/m4/mhd_check_func_gettimeofday.m4 \
 	$(top_srcdir)/m4/mhd_check_link_run.m4 \
+	$(top_srcdir)/m4/mhd_find_add_cc_cflag.m4 \
+	$(top_srcdir)/m4/mhd_find_add_cc_cflag_ifelse.m4 \
 	$(top_srcdir)/m4/mhd_find_lib.m4 \
 	$(top_srcdir)/m4/mhd_norm_expd.m4 \
+	$(top_srcdir)/m4/mhd_prepend_flag_to_var.m4 \
 	$(top_srcdir)/m4/mhd_shutdown_socket_trigger.m4 \
-	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/nls.m4 \
-	$(top_srcdir)/m4/pkg.m4 $(top_srcdir)/m4/po.m4 \
-	$(top_srcdir)/m4/progtest.m4 $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/mhd_sys_extentions.m4 $(top_srcdir)/m4/pkg.m4 \
 	$(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
@@ -127,7 +130,7 @@ am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
 CONFIG_HEADER = MHD_config.h
-CONFIG_CLEAN_FILES = libmicrohttpd.pc \
+CONFIG_CLEAN_FILES = po/po-configure.ac libmicrohttpd.pc \
 	w32/common/microhttpd_dll_res_vc.rc
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
@@ -212,21 +215,21 @@ am__define_uniq_tagged_files = \
   unique=`for i in $$list; do \
     if test -f "$$i"; then echo $$i; else echo $(srcdir)/$$i; fi; \
   done | $(am__uniquify_input)`
-DIST_SUBDIRS = contrib m4 src . po doc
+DIST_SUBDIRS = contrib m4 src . doc
 am__DIST_COMMON = $(srcdir)/MHD_config.h.in $(srcdir)/Makefile.in \
 	$(srcdir)/libmicrohttpd.pc.in $(top_srcdir)/build-aux/compile \
 	$(top_srcdir)/build-aux/config.guess \
-	$(top_srcdir)/build-aux/config.rpath \
 	$(top_srcdir)/build-aux/config.sub \
 	$(top_srcdir)/build-aux/install-sh \
 	$(top_srcdir)/build-aux/ltmain.sh \
 	$(top_srcdir)/build-aux/missing \
-	$(top_srcdir)/w32/common/microhttpd_dll_res_vc.rc.in ABOUT-NLS \
-	AUTHORS COPYING ChangeLog INSTALL NEWS README \
-	build-aux/compile build-aux/config.guess \
-	build-aux/config.rpath build-aux/config.sub build-aux/depcomp \
-	build-aux/install-sh build-aux/ltmain.sh build-aux/mdate-sh \
-	build-aux/missing build-aux/texinfo.tex
+	$(top_srcdir)/po/po-configure.ac.in \
+	$(top_srcdir)/w32/common/microhttpd_dll_res_vc.rc.in AUTHORS \
+	COPYING ChangeLog INSTALL NEWS README build-aux/compile \
+	build-aux/config.guess build-aux/config.rpath \
+	build-aux/config.sub build-aux/depcomp build-aux/install-sh \
+	build-aux/ltmain.sh build-aux/mdate-sh build-aux/missing \
+	build-aux/texinfo.tex
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 distdir = $(PACKAGE)-$(VERSION)
 top_distdir = $(distdir)
@@ -276,7 +279,6 @@ AMTAR = @AMTAR@
 AM_ASAN_OPTIONS = @AM_ASAN_OPTIONS@
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AM_LSAN_OPTIONS = @AM_LSAN_OPTIONS@
-AM_TESTS_ENVIRONMENT = @AM_TESTS_ENVIRONMENT@
 AM_UBSAN_OPTIONS = @AM_UBSAN_OPTIONS@
 AR = @AR@
 AS = @AS@
@@ -287,8 +289,10 @@ AWK = @AWK@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CFLAGS = @CFLAGS@
+CFLAGS_ac = @CFLAGS_ac@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
+CPPFLAGS_ac = @CPPFLAGS_ac@
 CPU_COUNT = @CPU_COUNT@
 CSCOPE = @CSCOPE@
 CTAGS = @CTAGS@
@@ -307,9 +311,6 @@ ETAGS = @ETAGS@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
 FILECMD = @FILECMD@
-GETTEXT_MACRO_VERSION = @GETTEXT_MACRO_VERSION@
-GMSGFMT = @GMSGFMT@
-GMSGFMT_015 = @GMSGFMT_015@
 GNUTLS_CFLAGS = @GNUTLS_CFLAGS@
 GNUTLS_CPPFLAGS = @GNUTLS_CPPFLAGS@
 GNUTLS_LDFLAGS = @GNUTLS_LDFLAGS@
@@ -317,24 +318,20 @@ GNUTLS_LIBS = @GNUTLS_LIBS@
 GREP = @GREP@
 HAVE_CURL_BINARY = @HAVE_CURL_BINARY@
 HAVE_MAKEINFO_BINARY = @HAVE_MAKEINFO_BINARY@
-HEAVY_TESTS_NOTPARALLEL = @HEAVY_TESTS_NOTPARALLEL@
 HIDDEN_VISIBILITY_CFLAGS = @HIDDEN_VISIBILITY_CFLAGS@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
-INTLLIBS = @INTLLIBS@
-INTL_MACOSX_LIBS = @INTL_MACOSX_LIBS@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
+LDFLAGS_ac = @LDFLAGS_ac@
 LIBCURL = @LIBCURL@
 LIBCURL_CPPFLAGS = @LIBCURL_CPPFLAGS@
 LIBGCRYPT_CFLAGS = @LIBGCRYPT_CFLAGS@
 LIBGCRYPT_CONFIG = @LIBGCRYPT_CONFIG@
 LIBGCRYPT_LIBS = @LIBGCRYPT_LIBS@
-LIBICONV = @LIBICONV@
-LIBINTL = @LIBINTL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
@@ -343,12 +340,11 @@ LIB_VERSION_CURRENT = @LIB_VERSION_CURRENT@
 LIB_VERSION_REVISION = @LIB_VERSION_REVISION@
 LIPO = @LIPO@
 LN_S = @LN_S@
-LTLIBICONV = @LTLIBICONV@
-LTLIBINTL = @LTLIBINTL@
 LTLIBOBJS = @LTLIBOBJS@
 LT_SYS_LIBRARY_PATH = @LT_SYS_LIBRARY_PATH@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
+MHD_AUX_DIR = @MHD_AUX_DIR@
 MHD_LIBDEPS = @MHD_LIBDEPS@
 MHD_LIBDEPS_PKGCFG = @MHD_LIBDEPS_PKGCFG@
 MHD_LIB_CFLAGS = @MHD_LIB_CFLAGS@
@@ -362,9 +358,6 @@ MHD_TLS_LIB_CPPFLAGS = @MHD_TLS_LIB_CPPFLAGS@
 MHD_TLS_LIB_LDFLAGS = @MHD_TLS_LIB_LDFLAGS@
 MHD_W32_DLL_SUFF = @MHD_W32_DLL_SUFF@
 MKDIR_P = @MKDIR_P@
-MSGFMT = @MSGFMT@
-MSGMERGE = @MSGMERGE@
-MSGMERGE_FOR_MSGFMT_OPTION = @MSGMERGE_FOR_MSGFMT_OPTION@
 MS_LIB_TOOL = @MS_LIB_TOOL@
 NM = @NM@
 NMEDIT = @NMEDIT@
@@ -386,7 +379,6 @@ PATH_SEPARATOR = @PATH_SEPARATOR@
 PKG_CONFIG = @PKG_CONFIG@
 PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
 PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
-POSUB = @POSUB@
 PTHREAD_CC = @PTHREAD_CC@
 PTHREAD_CFLAGS = @PTHREAD_CFLAGS@
 PTHREAD_CXX = @PTHREAD_CXX@
@@ -396,13 +388,12 @@ RC = @RC@
 SED = @SED@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
+SOCAT = @SOCAT@
 STRIP = @STRIP@
-USE_NLS = @USE_NLS@
+TESTS_ENVIRONMENT_ac = @TESTS_ENVIRONMENT_ac@
 VERSION = @VERSION@
 W32CRT = @W32CRT@
-XGETTEXT = @XGETTEXT@
-XGETTEXT_015 = @XGETTEXT_015@
-XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
+ZZUF = @ZZUF@
 _libcurl_config = @_libcurl_config@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
@@ -430,8 +421,6 @@ datarootdir = @datarootdir@
 docdir = @docdir@
 dvidir = @dvidir@
 exec_prefix = @exec_prefix@
-have_socat = @have_socat@
-have_zzuf = @have_zzuf@
 host = @host@
 host_alias = @host_alias@
 host_cpu = @host_cpu@
@@ -465,7 +454,7 @@ top_srcdir = @top_srcdir@
 
 # This Makefile.am is in the public domain
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = contrib m4 src . $(am__append_1) $(am__append_2)
+SUBDIRS = contrib m4 src . $(am__append_1)
 W32COMMON = w32/common/gen_dll_res.ps1 w32/common/microhttpd_dll_res_vc.rc.in w32/common/microhttpd_dll_res_vc.rc \
   w32/common/MHD_config.h w32/common/vs_dirs.props \
   w32/common/common-build-settings.props w32/common/libmicrohttpd-build-settings.props \
@@ -504,13 +493,202 @@ W32VSAV = w32/VS-Any-Version/libmicrohttpd.vcxproj w32/VS-Any-Version/libmicroht
   w32/VS-Any-Version/simplepost.vcxproj w32/VS-Any-Version/largepost.vcxproj \
   w32/VS-Any-Version/libmicrohttpd.sln
 
-EXTRA_DIST = \
-  acinclude.m4 \
-  libmicrohttpd.pc.in \
-  $(W32COMMON) $(W32VS2013) $(W32VS2015) $(W32VS2017) $(W32VS2019) $(W32VS2022) $(W32VSAV)
-
+EXTRA_DIST = libmicrohttpd.pc.in $(W32COMMON) $(W32VS2013) \
+	$(W32VS2015) $(W32VS2017) $(W32VS2019) $(W32VS2022) $(W32VSAV) \
+	pre-dist-hook-dummy $(top_srcdir)/$(MHD_AUX_DIR)/config.rpath \
+	$(srcdir_po)/$(MHD_AUX_DIR)/install-sh $(PO_ALL_FILES) \
+	$(PO_ACLOCAL_M4) $(srcdir_po)/po-configure.ac.in \
+	$(srcdir_po)/configure.ac $(top_srcdir)/po-configure \
+	$(srcdir_po)/stamp-m.in $(APIM_TMSTMP) $(APIM_TRIGGER)
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = libmicrohttpd.pc
+MOSTLYCLEANFILES = pre-dist-hook-dummy
+DISTCLEANFILES = config.main.log po-config.log po/stamp-m
+MAINTAINERCLEANFILES = m4/c_backported.m4 $(srcdir_po)/configure.ac
+
+# Works with old automake versions (<1.12.2) as "false"
+MHD_V = $(AM_V_P) false
+srcdir_po = $(top_srcdir)/po
+PO_ACLOCAL_M4 = $(srcdir_po)/aclocal.m4
+PO_MAIN_FILES = $(srcdir_po)/Makefile.in.in $(srcdir_po)/remove-potcdate.sin \
+  $(srcdir_po)/quot.sed $(srcdir_po)/boldquot.sed \
+  $(srcdir_po)/en@quot.header $(srcdir_po)/en@boldquot.header \
+  $(srcdir_po)/insert-header.sin $(srcdir_po)/Rules-quot
+
+PO_EXTRA_FILES = $(srcdir_po)/Makevars.template
+PO_ROOT_FILES = $(srcdir_po)/ABOUT-NLS
+PO_M4_FILES = $(srcdir_po)/m4/gettext.m4 $(srcdir_po)/m4/host-cpu-c-abi.m4 \
+  $(srcdir_po)/m4/iconv.m4 $(srcdir_po)/m4/intlmacosx.m4 \
+  $(srcdir_po)/m4/lib-ld.m4 $(srcdir_po)/m4/lib-link.m4 \
+  $(srcdir_po)/m4/lib-prefix.m4 $(srcdir_po)/m4/nls.m4 \
+  $(srcdir_po)/m4/po.m4 $(srcdir_po)/m4/progtest.m4
+
+PO_AUX_FILES = $(srcdir_po)/$(MHD_AUX_DIR)/config.rpath
+
+# All autopoint-created files
+PO_ALL_FILES = $(PO_MAIN_FILES) $(PO_EXTRA_FILES) $(PO_ROOT_FILES) \
+  $(PO_M4_FILES) $(PO_AUX_FILES)
+
+am__po_aclocal_m4_deps = $(PO_M4_FILES) $(srcdir_po)/configure.ac
+am__po_configure_deps = $(am__po_aclocal_m4_deps) $(PO_ACLOCAL_M4)
+AUTOPOINT = autopoint
+AUTOPOINT_FLAGS = 
+APIM_LOCK_BASE = autopoint-updating-lock
+APIM_TMSTMP_BASE = autopoint-timestamp
+APIM_TMSTMP_TMP_BASE = $(APIM_TMSTMP_BASE)-tmp
+APIM_TRIGGER_BASE = autopoint-trigger
+APIM_LOCK = $(srcdir_po)/$(APIM_LOCK_BASE)
+APIM_TMSTMP = $(srcdir_po)/$(APIM_TMSTMP_BASE)
+APIM_TMSTMP_TMP = $(srcdir_po)/$(APIM_TMSTMP_TMP_BASE)
+APIM_TRIGGER = $(srcdir_po)/$(APIM_TRIGGER_BASE)
+# Run 'autopoint' even if no file missing
+FORCE_AUTOPOINT_CHECK = no
+LOCK_TIMEOUT_VALUE = 120
+sleep_with_timeout = \
+    sleep 1; \
+    sec_waiting=`expr ${sec_waiting} + 1`; \
+    if test $${sec_waiting} -gt '$(LOCK_TIMEOUT_VALUE)'; then \
+        echo "Waiting timeout" 1>&2; \
+        rmdir "$${lock_name}" ; \
+        exit 1; \
+    fi
+
+wait_for_unlock = \
+    test -n "$${lock_name}" || lock_name='$(APIM_LOCK)'; \
+    if test -d "$${lock_name}"; then \
+        { $(MHD_V) && \
+            echo "Autopoint files are being updated in parallel thread, wait"; } || : ; \
+        sec_waiting=0; \
+        while test -d "$${lock_name}"; do \
+            $(sleep_with_timeout) ; \
+        done; \
+    fi
+
+apim_prepare = \
+    $(am__cd) '$(srcdir_po)' || exit 1; \
+    lock_name='$(APIM_LOCK_BASE)'; \
+    { trap "rm -rf $(APIM_TMSTMP_BASE) $(APIM_TMSTMP_TMP_BASE) $${lock_name} po" HUP ABRT INT TERM 2>/dev/null && \
+    trap "rm -rf $(APIM_TMSTMP_BASE) $(APIM_TMSTMP_TMP_BASE) $${lock_name} po" PIPE 2>/dev/null ; } || \
+    trap "rm -rf $(APIM_TMSTMP_BASE) $(APIM_TMSTMP_TMP_BASE) $${lock_name} po" 1 2 13 15; \
+    lock_held='false'; \
+    sec_waiting=0; \
+    while : ; do \
+        if mkdir "$${lock_name}" 2>/dev/null; then lock_held=':' ; else : ; fi; \
+        $${lock_held} && break || : ; \
+        test 'xyes' = 'x$(FORCE_AUTOPOINT_CHECK)' || break ; \
+        $(sleep_with_timeout) ; \
+    done; \
+    if $${lock_held} ; then \
+        rm -f '$(APIM_TMSTMP_BASE)' '$(APIM_TMSTMP_TMP_BASE)' || exit 1; \
+        echo 'timestamp' > '$(APIM_TMSTMP_TMP_BASE)' || exit 1; \
+        if test 'xyes' = 'x$(FORCE_AUTOPOINT_CHECK)'; then \
+            call_autopoint=':'; check_all='false'; \
+        else \
+            call_autopoint='false'; check_all=':'; \
+        fi; \
+        if $(MHD_V) ; then apim_echo='echo' ; else apim_echo=':'; fi ;\
+        $$apim_echo "Sync autopoint files"; \
+        files_missing='false'; \
+        $(MKDIR_P) 'po'; \
+        $(MKDIR_P) '$(MHD_AUX_DIR)'; \
+        main_f_names=`for f in $(PO_MAIN_FILES) $(PO_EXTRA_FILES); do echo "$$f"; done | $(SED) -e 's|^.*/||'`; \
+        root_f_names=`for f in $(PO_ROOT_FILES); do echo "$$f"; done | $(SED) -e 's|^.*/||'`; \
+        m4_f_names=`for f in $(PO_M4_FILES); do echo "$$f"; done | $(SED) -e 's|^.*/||'`; \
+        aux_f_names=`for f in $(PO_AUX_FILES); do echo "$$f"; done | $(SED) -e 's|^.*/||'`; \
+        for f in $${main_f_names}; do \
+            if test -f "$$f"; then \
+                 cp -f "$$f" "po/$$f" ; \
+            else \
+                $$apim_echo "Missing $(srcdir_po)/$$f" ; \
+                files_missing=':' ; \
+            fi; \
+        done; \
+        if $${check_all} ; then \
+            for f in $${root_f_names}; do \
+                if test -f "./$$f"; then : ; \
+                else \
+                    $$apim_echo "Missing $(srcdir_po)/$$f" ; \
+                    files_missing=':' ; \
+                fi; \
+            done; \
+            for f in $${m4_f_names}; do \
+                if test -f "m4/$$f"; then : ; \
+                else \
+                    $$apim_echo "Missing $(srcdir_po)/m4/$$f" ; \
+                    files_missing=':' ; \
+                fi; \
+            done; \
+            for f in $${aux_f_names}; do \
+                if test -f "$(MHD_AUX_DIR)/$$f"; then : ;\
+                else \
+                    $$apim_echo "Missing $(srcdir_po)/$(MHD_AUX_DIR)/$$f" ; \
+                    files_missing=':' ; \
+                fi; \
+            done; \
+        fi; \
+        if $${files_missing} ; then \
+            call_autopoint=':' ; \
+            $$apim_echo "Some files are missing, call autopoint to restore them" ; \
+        elif $${call_autopoint}; then $$apim_echo "Check and update autopoint files" ; \
+        fi; \
+        rc_code=0; \
+        if $${call_autopoint} ; then \
+            echo '  cd $(srcdir_po) && $(AUTOPOINT) $(AUTOPOINT_FLAGS)'; \
+            '$(AUTOPOINT)' $(AUTOPOINT_FLAGS) || rc_code=1; \
+        fi; \
+        if test "$${rc_code}" = "0"; then \
+            $$apim_echo "Re-sync autopoint files back"; \
+            for f in $${aux_f_names}; do \
+                if test -f "$(MHD_AUX_DIR)/$$f"; then \
+                    touch -f "$(MHD_AUX_DIR)/$$f" && \
+                    cp -f "$(MHD_AUX_DIR)/$$f" "../$(MHD_AUX_DIR)/$$f"; \
+                else \
+                    $$apim_echo "Still missing $(srcdir_po)/$(MHD_AUX_DIR)/$$f" 1>&2 ; \
+                    rc_code=1; \
+                fi; \
+            done; \
+            for f in $${m4_f_names}; do \
+                if test -f "m4/$$f"; then \
+                    touch "m4/$$f"; \
+                else \
+                    $$apim_echo "Still missing $(srcdir_po)/m4/$$f" 1>&2 ; \
+                    rc_code=1; \
+                fi; \
+            done; \
+            for f in $${root_f_names}; do \
+                if test -f "./$$f"; then \
+                    touch "./$$f"; \
+                else \
+                    $$apim_echo "Still missing $(srcdir_po)/$$f" 1>&2 ; \
+                    rc_code=1; \
+                fi; \
+            done; \
+            for f in $${main_f_names}; do \
+                if test -f "po/$$f"; then \
+                    cp -f "po/$$f" "$$f"; \
+                else \
+                    $$apim_echo "Still missing $(srcdir_po)/$$f" 1>&2 ; \
+                    rc_code=1; \
+                fi; \
+            done; \
+        fi; \
+        if test $${rc_code} = 0; then \
+            cp -fp '$(APIM_TMSTMP_TMP_BASE)' '$(APIM_TMSTMP_BASE)' ; \
+            touch -r '$(APIM_TMSTMP_TMP_BASE)' '$(APIM_TMSTMP_BASE)' ; \
+            $$apim_echo "All autopoint files have been synced"; \
+            rm -f '$(APIM_TMSTMP_TMP_BASE)'; \
+        else \
+            rm -f '$(APIM_TMSTMP_BASE)' '$(APIM_TMSTMP_TMP_BASE)'; \
+        fi; \
+        rm -fr 'po'; \
+        rmdir "$${lock_name}"; \
+        exit $${rc_code} ; \
+    else \
+        $(wait_for_unlock) ; \
+        test -f '$(APIM_TMSTMP_BASE)' || exit 1; \
+    fi; \
+    :
+
 all: MHD_config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 
@@ -563,6 +741,8 @@ $(srcdir)/MHD_config.h.in:  $(am__configure_deps)
 
 distclean-hdr:
 	-rm -f MHD_config.h stamp-h1
+po/po-configure.ac: $(top_builddir)/config.status $(top_srcdir)/po/po-configure.ac.in
+	cd $(top_builddir) && $(SHELL) ./config.status $@
 libmicrohttpd.pc: $(top_builddir)/config.status $(srcdir)/libmicrohttpd.pc.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
 w32/common/microhttpd_dll_res_vc.rc: $(top_builddir)/config.status $(top_srcdir)/w32/common/microhttpd_dll_res_vc.rc.in
@@ -942,16 +1122,19 @@ install-strip:
 	    "INSTALL_PROGRAM_ENV=STRIPPROG='$(STRIP)'" install; \
 	fi
 mostlyclean-generic:
+	-test -z "$(MOSTLYCLEANFILES)" || rm -f $(MOSTLYCLEANFILES)
 
 clean-generic:
 
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-test -z "$(DISTCLEANFILES)" || rm -f $(DISTCLEANFILES)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+	-test -z "$(MAINTAINERCLEANFILES)" || rm -f $(MAINTAINERCLEANFILES)
 clean: clean-recursive
 
 clean-am: clean-generic clean-libtool mostlyclean-am
@@ -960,7 +1143,7 @@ distclean: distclean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -f Makefile
 distclean-am: clean-am distclean-generic distclean-hdr \
-	distclean-libtool distclean-tags
+	distclean-libtool distclean-local distclean-tags
 
 dvi: dvi-recursive
 
@@ -1006,11 +1189,13 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f $(am__CONFIG_DISTCLEAN_FILES)
 	-rm -rf $(top_srcdir)/autom4te.cache
 	-rm -f Makefile
-maintainer-clean-am: distclean-am maintainer-clean-generic
+maintainer-clean-am: distclean-am maintainer-clean-generic \
+	maintainer-clean-local
 
 mostlyclean: mostlyclean-recursive
 
-mostlyclean-am: mostlyclean-generic mostlyclean-libtool
+mostlyclean-am: mostlyclean-generic mostlyclean-libtool \
+	mostlyclean-local
 
 pdf: pdf-recursive
 
@@ -1030,22 +1215,29 @@ uninstall-am: uninstall-pkgconfigDATA
 	dist-all dist-bzip2 dist-gzip dist-hook dist-lzip dist-shar \
 	dist-tarZ dist-xz dist-zip dist-zstd distcheck distclean \
 	distclean-generic distclean-hdr distclean-libtool \
-	distclean-tags distcleancheck distdir distuninstallcheck dvi \
-	dvi-am html html-am info info-am install install-am \
-	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-html install-html-am \
-	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-pkgconfigDATA install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic mostlyclean-libtool pdf pdf-am \
-	ps ps-am tags tags-am uninstall uninstall-am \
+	distclean-local distclean-tags distcleancheck distdir \
+	distuninstallcheck dvi dvi-am html html-am info info-am \
+	install install-am install-data install-data-am install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-pkgconfigDATA install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installdirs installdirs-am maintainer-clean \
+	maintainer-clean-generic maintainer-clean-local mostlyclean \
+	mostlyclean-generic mostlyclean-libtool mostlyclean-local pdf \
+	pdf-am ps ps-am tags tags-am uninstall uninstall-am \
 	uninstall-pkgconfigDATA
 
 .PRECIOUS: Makefile
 
 
-dist-hook:
+pre-dist-hook-dummy: pre-dist-hook Makefile
+	@echo "dummy" > $@
+
+dist-hook: dist-po
+	@chmod u+w '$(distdir)/pre-dist-hook-dummy' && \
+	  rm -f '$(distdir)/pre-dist-hook-dummy'
+	@rm -f pre-dist-hook-dummy
 	@if test -w '$(distdir)/m4/c_backported.m4'; then \
 	  echo "Use empty m4/c_backported.m4 for dist target"; \
 	  touch -r '$(distdir)/m4/c_backported.m4' '$(distdir)/m4/c_backported.m4-tmst' && \
@@ -1060,7 +1252,7 @@ dist-custm: distdir
 	@test -n "$(ARC_CMD)" || \
 	  { echo 'The valid archive command must be defined by "ARC_CMD".' >&2; false; }
 	@test -n "$(ARC_EXT)" || \
-	  { echo 'The archive file extention must be set by "ARC_EXT".' >&2; false; }
+	  { echo 'The archive file extension must be set by "ARC_EXT".' >&2; false; }
 	-rm -f '$(distdir).$(ARC_EXT)'
 	tardir=$(distdir) && $(am__tar) | $(ARC_CMD) >$(distdir).$(ARC_EXT)
 	$(am__post_remove_distdir)
@@ -1069,11 +1261,150 @@ dist-custm2: distdir
 	@test -n "$(ARC_CMD)" || \
 	  { echo 'The valid archive command must be defined by "ARC_CMD".' >&2; false; }
 	@test -n "$(ARC_EXT)" || \
-	  { echo 'The archive file extention must be set by "ARC_EXT".' >&2; false; }
+	  { echo 'The archive file extension must be set by "ARC_EXT".' >&2; false; }
 	-rm -f '$(distdir).$(ARC_EXT)'
 	tardir=$(distdir) && $(am__tar) >$(distdir).tar && $(ARC_CMD) $(distdir).tar
 	rm -f $(distdir).tar
 	$(am__post_remove_distdir)
+
+pre-dist-hook: pre-dist-hook-doc
+	@echo "Preparing to make dist"
+
+pre-dist-hook-doc:
+	@echo "Preparing to make dist in doc"
+	@if test -w '$(top_srcdir)/doc' ; then \
+	  $(am__cd) doc && $(MAKE) $(AM_MAKEFLAGS) update-stamp; \
+	else \
+	  echo "Source tree is read-only, skipping force doc update"; \
+	fi;
+
+.PHONY: pre-dist-hook pre-dist-hook-doc
+
+distclean-local: distclean-po
+
+maintainer-clean-local: maintainer-clean-po
+
+$(PO_ACLOCAL_M4): $(am__po_aclocal_m4_deps)
+	@{ $(MHD_V) && echo "Building $@" ; } || true
+	@echo "cd $(srcdir_po) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)" && \
+	  $(am__cd) '$(srcdir_po)' && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
+
+# Do update po/configure.ac only if template files updated
+$(srcdir_po)/configure.ac: $(srcdir_po)/po-configure.ac.in $(top_srcdir)/configure.ac
+	@{ $(MHD_V) && echo "Building $@" ; } || true
+	@$(MAKE) $(AM_MAKEFLAGS) po/po-configure.ac
+	@cp -f po/po-configure.ac '$@'
+
+$(top_srcdir)/po-configure: $(srcdir_po)/configure.ac $(PO_ACLOCAL_M4) $(PO_AUX_FILES) $(srcdir_po)/$(MHD_AUX_DIR)/install-sh
+	@{ $(MHD_V) && echo "Building $@" ; } || true
+	@echo "cd $(srcdir_po) && $(AUTOCONF)" && \
+	  ( $(am__cd) '$(srcdir_po)' && $(AUTOCONF) )
+	mv -f '$(srcdir_po)/configure' '$@'
+	-chmod a-x '$@'
+
+$(srcdir_po)/stamp-m.in:
+	@: > '$@'
+
+po-config.status: $(top_srcdir)/po-configure $(top_srcdir)/$(MHD_AUX_DIR)/install-sh $(top_srcdir)/$(MHD_AUX_DIR)/config.rpath
+	@if test -f config.log; then \
+	  mv -f config.log config.main.log; \
+	else \
+	  true; \
+	fi
+	@SHELL@ '$(top_srcdir)/po-configure' $(ac_configure_args) --silent --no-create --no-recursion --disable-option-checking
+	@mv -f config.log po-config.log
+	@if test -f config.main.log; then \
+	  mv -f config.main.log config.log; \
+	else \
+	  true; \
+	fi
+
+po/Makefile: $(srcdir_po)/Makefile.in.in $(srcdir_po)/Makevars po-config.status $(srcdir_po)/POTFILES.in $(srcdir_po)/stamp-m.in
+	@: && @SHELL@ ./po-config.status po/stamp-m po/Makefile.in po-directories
+
+dist-po: po/Makefile $(PO_MAIN_FILES)
+	@dir1="po"; dir2="$(distdir)/po"; \
+	$(am__relativize); \
+	rel_distsubdir=$$reldir; \
+	echo "cd po && $(MAKE) $(AM_MAKEFLAGS) distdir='$$rel_distsubdir' distdir" && \
+	$(am__cd) po && $(MAKE) $(AM_MAKEFLAGS) distdir="$$rel_distsubdir" distdir
+
+$(srcdir_po)/POTFILES.in: $(top_srcdir)/src/microhttpd/Makefile.am
+	@echo "cd $(top_builddir)/src/microhttpd && $(MAKE) $(AM_MAKEFLAGS) update-po-POTFILES.in" && \
+	$(am__cd) '$(top_builddir)/src/microhttpd' && $(MAKE) $(AM_MAKEFLAGS) update-po-POTFILES.in
+
+mostlyclean-local: mostlyclean-autopoint-update
+mostlyclean-autopoint-update:
+	-test -d '$(APIM_LOCK)' && rm -rf '$(APIM_LOCK)'
+	-test -d '$(srcdir_po)/po' && rm -rf '$(srcdir_po)/po'
+	rm -f '$(APIM_TMSTMP_TMP)'
+
+$(APIM_TRIGGER):
+	@echo "autopoint files rebuild trigger" > "$@"
+
+$(APIM_TMSTMP): $(srcdir_po)/configure.ac $(APIM_TRIGGER)
+	@ $(apim_prepare)
+
+.DELETE_ON_ERROR: $(APIM_TMSTMP)
+
+$(PO_ALL_FILES): $(APIM_TMSTMP) $(srcdir_po)/configure.ac
+	@ ( $(apim_prepare) )
+	@test -f '$@'
+
+prepare-autopoint: $(srcdir_po)/configure.ac
+	@ ( $(apim_prepare) )
+	@test -f '$(APIM_TMSTMP)'
+
+check-prepare-autopoint: $(srcdir_po)/$(MHD_AUX_DIR)/install-sh $(APIM_TMSTMP)
+	@echo "Check all autopoint files"; \
+	    files_missing='false'; \
+	    for f in $(PO_ALL_FILES); do \
+	        if test -f "$$f"; then : ; \
+	        else \
+	            echo "Missing $$f" ; \
+	            files_missing=':' ; \
+	        fi; \
+	    done; \
+	    if $${files_missing}; then \
+	        $(MAKE) $(AM_MAKEFLAGS) prepare-autopoint || exit 1; \
+	    else \
+	        exit 0; \
+	    fi
+
+# This could be used to update autopoint files for git or for 'dist' target
+update-autopoint-force:
+	$(MAKE) $(AM_MAKEFLAGS) 'FORCE_AUTOPOINT_CHECK=yes' 'AUTOPOINT_FLAGS=$(AUTOPOINT_FLAGS) -f' prepare-autopoint
+
+autopoint-files-all: $(APIM_TRIGGER) $(APIM_TMSTMP) $(PO_MAIN_FILES) $(PO_EXTRA_FILES) $(PO_M4_FILES) $(PO_AUX_FILES) $(srcdir_po)/$(MHD_AUX_DIR)/install-sh
+
+$(top_srcdir)/$(MHD_AUX_DIR)/config.rpath: $(srcdir_po)/$(MHD_AUX_DIR)/config.rpath
+	cp -f '$(srcdir_po)/$(MHD_AUX_DIR)/config.rpath' '$@'
+
+$(srcdir_po)/$(MHD_AUX_DIR)/install-sh: $(top_srcdir)/$(MHD_AUX_DIR)/install-sh
+	$(MKDIR_P) '$(srcdir_po)/$(MHD_AUX_DIR)'
+	cp -f '$(top_srcdir)/$(MHD_AUX_DIR)/install-sh' '$@'
+
+.PHONY: mostlyclean-autopoint-update prepare-autopoint update-autopoint-force check-prepare-autopoint autopoint-files-all
+
+distclean-po:
+	@( if test -f po/Makefile; then \
+	   $(am__cd) po && $(MAKE) $(AM_MAKEFLAGS) distclean; \
+	else \
+	  true; \
+	fi )
+	-rm -f po-config.status po/Makefile po/stamp-m
+	-rm -f po/POTFILES po/remove-potcdate.sed po/Makefile.in
+
+maintainer-clean-po:
+	@( if test -f po/Makefile; then \
+	  $(am__cd) po && $(MAKE) $(AM_MAKEFLAGS) maintainer-clean; \
+	else \
+	  true; \
+	fi )
+	-rm -f po/$(PACKAGE_TARNAME).pot
+	-rm -rf $(srcdir_po)/autom4te.cache
+
+.PHONY: distclean-po maintainer-clean-po
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
