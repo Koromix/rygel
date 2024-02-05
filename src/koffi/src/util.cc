@@ -179,7 +179,7 @@ Napi::Value PointerObject::Inspect(const Napi::CallbackInfo &info)
 Napi::Value PointerObject::GetAddress(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    return Napi::BigInt::New(env, (uint64_t)ptr);
+    return ptr ? Napi::BigInt::New(env, (uint64_t)ptr) : env.Null();
 }
 
 Napi::Value PointerObject::GetType(const Napi::CallbackInfo &info)

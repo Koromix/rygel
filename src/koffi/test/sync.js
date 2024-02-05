@@ -712,7 +712,7 @@ async function test() {
     assert.equal(koffi.call(GetBinaryIntFunction('substract'), 'BinaryIntFunc', 4, 5), -1);
     assert.equal(GetBinaryIntFunction('multiply').call(3, 8), 24);
     assert.equal(GetBinaryIntFunction('divide').call(100, 2), 50);
-    assert.equal(GetBinaryIntFunction('missing').address, 0);
+    assert.equal(GetBinaryIntFunction('missing').address, null);
 
     // Call decoded function pointers
     {
@@ -733,7 +733,7 @@ async function test() {
     assert.equal(koffi.call(GetVariadicIntFunction('add'), VariadicIntFunc, 3, 'int', 4, 'int', 5, 'int', 12), 21);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 1, 'int', 2, 'int', 21), 2);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 2, 'int', 2, 'int', 21), 42);
-    assert.equal(GetVariadicIntFunction('missing').address, 0);
+    assert.equal(GetVariadicIntFunction('missing').address, null);
 
     // Communicate through raw buffers
     {
@@ -840,7 +840,7 @@ async function test() {
         }
 
         check_pointer(new koffi.Pointer(18n, 'BinaryIntFunc *'), 18n, 'BinaryIntFunc *');
-        check_pointer(new koffi.Pointer(null, 'BinaryIntFunc *'), 0n, 'BinaryIntFunc *');
+        check_pointer(new koffi.Pointer(null, 'BinaryIntFunc *'), null, 'BinaryIntFunc *');
         assert.ok(GetBinaryIntFunction('divide').address > 0n);
         assert.equal(GetBinaryIntFunction('divide').type.name, 'BinaryIntFunc *');
     }
