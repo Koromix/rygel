@@ -135,7 +135,7 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
                 LogInfo("Serving file '%1' (cache)", filename);
             }
 
-            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
             io->AttachResponse(304, response);
             return;
         }

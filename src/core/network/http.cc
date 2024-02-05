@@ -685,7 +685,7 @@ void http_IO::ResetResponse()
     code = -1;
 
     MHD_destroy_response(response);
-    response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+    response = MHD_create_response_empty((MHD_ResponseFlags)0);
 }
 
 void http_IO::AttachResponse(int new_code, MHD_Response *new_response)

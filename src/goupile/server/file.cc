@@ -158,7 +158,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
 
         if (client_etag && TestStr(client_etag, sha256)) {
-            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
             io->AttachResponse(304, response);
             return true;
         }

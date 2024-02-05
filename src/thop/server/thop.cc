@@ -382,7 +382,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     {
         const char *etag = request.GetHeaderValue("If-None-Match");
         if (etag && TestStr(etag, thop_etag)) {
-            MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+            MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
             io->AttachResponse(304, response);
             return;
         }

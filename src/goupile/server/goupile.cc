@@ -270,7 +270,7 @@ static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *et
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
     if (client_etag && TestStr(client_etag, etag)) {
-        MHD_Response *response = MHD_create_response_from_buffer(0, nullptr, MHD_RESPMEM_PERSISTENT);
+        MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
         io->AttachResponse(304, response);
     } else {
         const char *mimetype = GetMimeType(GetPathExtension(asset.name));
