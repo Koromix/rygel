@@ -185,9 +185,56 @@ R"(<!DOCTYPE html>
     <head>
         <meta charset="UTF-8"/>
         <title>{{ TITLE }}</title>
+        <style>
+            html { height: 100%; }
+            body {
+                display: flex;
+                width: 1000px;
+                max-width: calc(100% - 50px);
+                padding: 0;
+                margin: 0 auto;
+                justify-content: center;
+                color: #383838;
+                line-height: 1.5;
+                flex-direction: column;
+            }
+
+            nav {
+                padding: 1em;
+            }
+            main {
+                flex: 1;
+                margin-bottom: 25px;
+                padding: 1em;
+                background: #f6f6f6;
+            }
+
+            a {
+                text-decoration: none;
+                font-weight: normal;
+                color: #24579d;
+            }
+            a:hover { text-decoration: underline; }
+
+            ul {
+                padding-left: 1em;
+                color: #24579d;
+            }
+            li > a { color: inherit; }
+            li.directory {
+                color: #383838;
+                list-style-type: disc;
+            }
+            li.file { list-style-type: circle; }
+        </style>
     </head>
     <body>
-{{ CONTENT }}
+        <nav>
+{{ NAV }}
+        </nav>
+        <main>
+{{ MAIN }}
+        </main>
     </body>
 </html>
 )";
@@ -246,20 +293,23 @@ R"(<!DOCTYPE html>
             if (key == "TITLE") {
                 Span<const char> title = Fmt(&io->allocator, "%1/", SplitStrReverseAny(dirname, RG_PATH_SEPARATORS));
                 WriteContent(title, writer);
-            } else if (key == "CONTENT") {
-                if (!TestStr(request.url, "/")) {
-                    writer->Write("        <a href=\"..\">Go back</a>");
-                }
+            } else if (key == "NAV") {
+                bool root = TestStr(request.url, "/");
 
+                PrintLn(writer, "        <a href=\"..\"%1>(go back)</a>", root ? " style=\"visibility: hidden;\"" : "");
+                PrintLn(writer, "        %1", request.url);
+            } else if (key == "MAIN") {
                 if (names.len) {
                     writer->Write("        <ul>\n");
                     for (Span<const char> name: names) {
-                        writer->Write("            <li><a href=\""); WriteURL(name, writer); writer->Write("\">");
+                        const char *cls = EndsWith(name, "/") ? "directory" : "file";
+
+                        Print(writer, "            <li class=\"%1\"><a href=\"", cls); WriteURL(name, writer); writer->Write("\">");
                         WriteContent(name, writer); writer->Write("</a></li>\n");
                     }
                     writer->Write("        </ul>");
                 } else {
-                    writer->Write("<p>Empty directory</p>");
+                    writer->Write("Empty directory");
                 }
             } else {
                 Print(writer, "{{%1}}", expr);
