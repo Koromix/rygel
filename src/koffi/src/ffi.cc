@@ -611,6 +611,47 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     return FinalizeType(env, instance, type);
 }
 
+Napi::Value InstantiatePointer(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (!info.IsConstructCall()) {
+        ThrowError<Napi::TypeError>(env, "This function is a constructor and must be called with new");
+        return env.Null();
+    }
+    if (info.Length() < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    Napi::Value value = info[0];
+    void *ptr = nullptr;
+
+    if (CheckValueTag(instance, value, &PointerMarker)) {
+        ptr = UnwrapPointer(env, instance, value);
+    } else if (IsNullOrUndefined(value)) {
+        ptr = nullptr;
+    } else if (value.IsNumber() || value.IsBigInt()) {
+        uint64_t u = GetNumber<uint64_t>(value);
+        ptr = (void *)u;
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[1]);
+    if (!type)
+        return env.Null();
+    if (type->primitive != PrimitiveKind::Pointer && type->primitive != PrimitiveKind::Callback) {
+        ThrowError<Napi::TypeError>(env, "Expected pointer type, got %1", PrimitiveKindNames[(int)type->primitive]);
+        return env.Null();
+    }
+
+    Napi::Value wrapper = WrapPointer(env, instance, type, ptr);
+    return wrapper;
+}
+
 static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int directions)
 {
     RG_ASSERT(directions >= 1 && directions <= 3);
@@ -2126,6 +2167,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("Union", Napi::Function::New(env, InstantiateUnion, "Union"));
     exports.Set("opaque", Napi::Function::New(env, CreateOpaqueType, "opaque"));
     exports.Set("pointer", Napi::Function::New(env, CreatePointerType, "pointer"));
+    exports.Set("Pointer", Napi::Function::New(env, InstantiatePointer, "Pointer"));
     exports.Set("array", Napi::Function::New(env, CreateArrayType, "array"));
     exports.Set("proto", Napi::Function::New(env, CreateFunctionType, "proto"));
     exports.Set("alias", Napi::Function::New(env, CreateTypeAlias, "alias"));

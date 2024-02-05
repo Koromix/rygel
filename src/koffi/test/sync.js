@@ -832,5 +832,18 @@ async function test() {
     assert.throws(() => lib.func('void WhoKnows(const char *ptr, int[5] arg)'), /Array types decay to pointers/);
     assert.throws(() => lib.func('void NoBody(const char *ptr, int arg[5])'), /Array types decay to pointers/);
 
+    // Test Pointer constructor
+    {
+        function check_pointer(ptr, address, type) {
+            assert.equal(ptr.address, address);
+            assert.equal(ptr.type.name, type);
+        }
+
+        check_pointer(new koffi.Pointer(18n, 'BinaryIntFunc *'), 18n, 'BinaryIntFunc *');
+        check_pointer(new koffi.Pointer(null, 'BinaryIntFunc *'), 0n, 'BinaryIntFunc *');
+        assert.ok(GetBinaryIntFunction('divide').address > 0n);
+        assert.equal(GetBinaryIntFunction('divide').type.name, 'BinaryIntFunc *');
+    }
+
     lib.unload();
 }
