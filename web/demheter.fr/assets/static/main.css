@@ -263,6 +263,7 @@ footer {
     align-items: center;
     justify-content: center;
 }
+footer > img { filter: saturate(0%) brightness(0); }
 
 @media screen and (max-width: 1300px) {
     #side menu {
