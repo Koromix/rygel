@@ -59,7 +59,6 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
     defn.Set("primitive", PrimitiveKindNames[(int)type->primitive]);
     defn.Set("size", Napi::Number::New(env, (double)type->size));
     defn.Set("alignment", Napi::Number::New(env, (double)type->align));
-    defn.Set("disposable", Napi::Boolean::New(env, !!type->dispose));
 
     // Assign before to avoid possible recursion crash
     type->defn.Reset(defn, 1);
@@ -381,7 +380,6 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
 
     // Each item can be > 0 for array or 0 for a pointer
     LocalArray<Size, 8> arrays;
-    uint8_t disposables = 0;
 
     // Consume parameter direction qualifier
     if (out_directions) {
@@ -444,9 +442,6 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
             }
 
             arrays.Append(0);
-        } else if (after[0] == '!') {
-            after = after.Take(1, after.len - 1);
-            disposables |= (1u << arrays.len);
         } else if (after[0] == '[') {
             after = after.Take(1, after.len - 1);
 
@@ -512,26 +507,6 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
     }
 
     for (int i = 0;; i++) {
-        if (disposables & (1u << i)) {
-            if (type->primitive != PrimitiveKind::Pointer &&
-                    type->primitive != PrimitiveKind::String &&
-                    type->primitive != PrimitiveKind::String16) [[unlikely]] {
-                ThrowError<Napi::Error>(env, "Cannot create disposable type for non-pointer");
-                return nullptr;
-            }
-
-            TypeInfo *copy = instance->types.AppendDefault();
-
-            memcpy((void *)copy, (const void *)type, RG_SIZE(*type));
-            copy->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
-            copy->members.allocator = GetNullAllocator();
-            memset(&copy->defn, 0, RG_SIZE(copy->defn));
-
-            copy->dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
-
-            type = copy;
-        }
-
         if (i >= arrays.len)
             break;
         Size len = arrays[i];
@@ -948,18 +923,10 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
             case PrimitiveKind::String: {
                 const char *str = *(const char **)src;
                 obj.Set(member.name, str ? Napi::String::New(env, str) : env.Null());
-
-                if (member.type->dispose) {
-                    member.type->dispose(env, member.type, str);
-                }
             } break;
             case PrimitiveKind::String16: {
                 const char16_t *str16 = *(const char16_t **)src;
                 obj.Set(member.name, str16 ? Napi::String::New(env, str16) : env.Null());
-
-                if (member.type->dispose) {
-                    member.type->dispose(env, member.type, str16);
-                }
             } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
@@ -967,10 +934,6 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
 
                 Napi::Value wrapper = WrapPointer(env, instance, member.type, ptr2);
                 obj.Set(member.name, wrapper);
-
-                if (member.type->dispose) {
-                    member.type->dispose(env, member.type, ptr2);
-                }
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
@@ -1249,20 +1212,12 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
             POP_ARRAY({
                 const char *str = *(const char **)src;
                 array.Set(i, str ? Napi::String::New(env, str) : env.Null());
-
-                if (ref->dispose) {
-                    ref->dispose(env, ref, str);
-                }
             });
         } break;
         case PrimitiveKind::String16: {
             POP_ARRAY({
                 const char16_t *str16 = *(const char16_t **)src;
                 array.Set(i, str16 ? Napi::String::New(env, str16) : env.Null());
-
-                if (ref->dispose) {
-                    ref->dispose(env, ref, str16);
-                }
             });
         } break;
         case PrimitiveKind::Pointer:
@@ -1272,10 +1227,6 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
 
                 Napi::Value wrapper = WrapPointer(env, instance, ref, ptr2);
                 array.Set(i, wrapper);
-
-                if (ref->dispose) {
-                    ref->dispose(env, ref, ptr2);
-                }
             });
         } break;
         case PrimitiveKind::Record:

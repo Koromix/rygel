@@ -101,8 +101,6 @@ struct RecordMember;
 struct FunctionInfo;
 class CallData;
 
-typedef void DisposeFunc (Napi::Env env, const TypeInfo *type, const void *ptr);
-
 enum class TypeFlag {
     IsIncomplete = 1 << 0,
     HasTypedArray = 1 << 1,
@@ -127,9 +125,6 @@ struct TypeInfo {
     int32_t size;
     int16_t align;
     uint16_t flags;
-
-    DisposeFunc *dispose;
-    Napi::FunctionReference dispose_ref;
 
     HeapArray<RecordMember> members; // Record only
     union {

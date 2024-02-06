@@ -687,95 +687,6 @@ static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
     return EncodePointerDirection(info, 3);
 }
 
-static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (info.Length() < 1) {
-        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
-        return env.Null();
-    }
-
-    bool named = (info.Length() >= 2 && !info[1].IsFunction());
-
-    if (named && !info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
-        return env.Null();
-    }
-
-    Napi::String name = info[0].As<Napi::String>();
-
-    const TypeInfo *src = ResolveType(info[named]);
-    if (!src)
-        return env.Null();
-    if (src->primitive != PrimitiveKind::Pointer &&
-            src->primitive != PrimitiveKind::String &&
-            src->primitive != PrimitiveKind::String16) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", src->name);
-        return env.Null();
-    }
-    if (src->dispose) {
-        ThrowError<Napi::TypeError>(env, "Cannot use disposable type '%1' to create new disposable", src->name);
-        return env.Null();
-    }
-
-    DisposeFunc *dispose;
-    Napi::Function dispose_func;
-    if (info.Length() >= 2u + named && !IsNullOrUndefined(info[1 + named])) {
-        Napi::Function func = info[1 + named].As<Napi::Function>();
-
-        if (!func.IsFunction()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, func));
-            return env.Null();
-        }
-
-        dispose = [](Napi::Env env, const TypeInfo *type, const void *ptr) {
-            InstanceData *instance = env.GetInstanceData<InstanceData>();
-            const Napi::FunctionReference &ref = type->dispose_ref;
-
-            Napi::Value wrapper = WrapPointer(env, instance, type, (void *)ptr);
-
-            Napi::Value self = env.Null();
-            napi_value args[] = {
-                wrapper
-            };
-
-            ref.Call(self, RG_LEN(args), args);
-        };
-        dispose_func = func;
-    } else {
-        dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
-    }
-
-    TypeInfo *type = instance->types.AppendDefault();
-    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
-
-    memcpy((void *)type, (const void *)src, RG_SIZE(*src));
-    type->members.allocator = GetNullAllocator();
-    memset(&type->defn, 0, RG_SIZE(type->defn));
-
-    type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
-
-    type->dispose = dispose;
-    type->dispose_ref = Napi::Persistent(dispose_func);
-
-    // If the insert succeeds, we cannot fail anymore
-    if (named) {
-        bool inserted;
-        instance->types_map.TrySet(type->name, type, &inserted);
-
-        if (!inserted) {
-            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
-            return env.Null();
-        }
-    }
-    err_guard.Disable();
-
-    return FinalizeType(env, instance, type);
-}
-
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -2116,7 +2027,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("out", Napi::Function::New(env, MarkOut, "out"));
     exports.Set("inout", Napi::Function::New(env, MarkInOut, "inout"));
 
-    exports.Set("disposable", Napi::Function::New(env, CreateDisposableType, "disposable"));
     exports.Set("free", Napi::Function::New(env, CallFree, "free"));
 
     exports.Set("register", Napi::Function::New(env, RegisterCallback, "register"));

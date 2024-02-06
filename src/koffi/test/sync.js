@@ -29,9 +29,6 @@ const util = require('util');
 // not (probably not) match the one used by Node.js!
 let free_ptr = koffi.free;
 
-const StrFree = koffi.disposable('str_free', koffi.types.str, ptr => free_ptr(ptr));
-const Str16Free = koffi.disposable('str16_free', 'str16', ptr => free_ptr(ptr));
-
 const Pack1 = koffi.struct('Pack1', {
     a: 'int'
 });
@@ -207,12 +204,12 @@ async function test() {
     const MakePackedBFG = lib.func('AliasBFG __fastcall MakePackedBFG(int x, double y, _Out_ PackedBFG *p, const char *str)');
     const MakePolymorphBFG = lib.func('void MakePolymorphBFG(int type, int x, double y, const char *str, _Out_ void *p)');
     const ReturnBigString = process.platform == 'win32' ?
-                            lib.func('__stdcall', 1, koffi.disposable('str', CallFree), ['str']) :
-                            lib.func('const char *! __stdcall ReturnBigString(const char *str)');
-    const PrintFmt = lib.func('str_free PrintFmt(const char *fmt, ...)');
-    const Concat16 = lib.func('str16_free Concat16(const char16_t *str1, const char16_t *str2)');
-    const Concat16Out1 = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const str16_free *)');
-    const Concat16Out2 = lib.func('Concat16Out', 'void', [koffi.pointer('char16_t'), koffi.pointer('char16_t'), koffi.out(koffi.pointer(Str16Free))]);
+                            lib.func('__stdcall', 1, 'str', ['str']) :
+                            lib.func('str __stdcall ReturnBigString(const char *str)');
+    const PrintFmt = lib.func('const char *PrintFmt(const char *fmt, ...)');
+    const Concat16 = lib.func('const char16_t *Concat16(const char16_t *str1, const char16_t *str2)');
+    const Concat16Out1 = lib.func('void Concat16Out(const char16_t *str1, const char16_t *str2, _Out_ const string16 *)');
+    const Concat16Out2 = lib.func('Concat16Out', 'void', [koffi.pointer('char16_t'), koffi.pointer('char16_t'), koffi.out(koffi.pointer('char16_t', 2))]);
     const ReturnFixedStr = lib.func('FixedString ReturnFixedStr(FixedString str)');
     const ReturnFixedStr2 = lib.func('FixedString2 ReturnFixedStr(FixedString2 str)');
     const ReturnFixedWide = lib.func('FixedWide ReturnFixedWide(FixedWide str)');
@@ -422,9 +419,6 @@ async function test() {
 
     // UTF-16LE strings
     {
-        assert.ok(Concat16.info.result.disposable);
-        assert.ok(koffi.type(Concat16.info.result).disposable);
-
         let str = Concat16('Hello ', 'World!');
         assert.equal(str, 'Hello World!');
     }
@@ -816,8 +810,6 @@ async function test() {
 
     // Check various array type errors
     assert.throws(() => lib.func('int[3] WhoCares()'), /Array types decay to pointers/);
-    assert.throws(() => koffi.struct('JohnDoe', { a: 'int[3]!' }), /Cannot create disposable type for non-pointer/);
-    assert.throws(() => koffi.struct('JaneDoe', { a: 'int!' }), /Cannot create disposable type for non-pointer/);
     assert.throws(() => lib.func('void WhoKnows(const char *ptr, int[5] arg)'), /Array types decay to pointers/);
     assert.throws(() => lib.func('void NoBody(const char *ptr, int arg[5])'), /Array types decay to pointers/);
 

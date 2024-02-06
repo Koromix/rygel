@@ -644,13 +644,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 
 Napi::Value CallData::Complete(const FunctionInfo *func)
 {
-    RG_DEFER {
-       PopOutArguments();
-
-        if (func->ret.type->dispose) {
-            func->ret.type->dispose(env, func->ret.type, result.ptr);
-        }
-    };
+    RG_DEFER { PopOutArguments(); };
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void: return env.Undefined();
@@ -1009,10 +1003,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 Napi::Value arg = str ? Napi::String::New(env, str) : env.Null();
                 arguments.Append(arg);
-
-                if (param.type->dispose) {
-                    param.type->dispose(env, param.type, str);
-                }
             } break;
             case PrimitiveKind::String16: {
 #ifdef __APPLE__
@@ -1023,10 +1013,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
                 arguments.Append(arg);
-
-                if (param.type->dispose) {
-                    param.type->dispose(env, param.type, str16);
-                }
             } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
@@ -1038,10 +1024,6 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
                 Napi::Value wrapper = WrapPointer(env, instance, param.type, ptr2);
                 arguments.Append(wrapper);
-
-                if (param.type->dispose) {
-                    param.type->dispose(env, param.type, ptr2);
-                }
             } break;
             case PrimitiveKind::Record:
             case PrimitiveKind::Union: {
