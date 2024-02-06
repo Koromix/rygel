@@ -41,8 +41,8 @@ function main() {
 
     let lib = koffi.load(process.platform == 'win32' ? 'msvcrt.dll' : null);
 
-    const srand = lib.cdecl('srand', 'void', ['uint']);
-    const rand = lib.cdecl('rand', 'int', []);
+    const srand = lib.func('srand', 'void', ['uint']);
+    const rand = lib.func('rand', 'int', []);
 
     srand(42);
 
