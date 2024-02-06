@@ -1,0 +1,802 @@
+[
+    {
+        "sector": "02G04",
+        "address": "22, rue Saint-Martin - 02000 Laon"
+    },
+    {
+        "sector": "02G06",
+        "address": "5, rue Arnaud Bisson - 02100 Saint-Quentin"
+    },
+    {
+        "sector": "02G07",
+        "address": "5, rue Arnaud Bisson - 02100 Saint-Quentin"
+    },
+    {
+        "sector": "02G03",
+        "address": "36, avenue de la République - 02400 Château-Thierry"
+    },
+    {
+        "sector": "02G02",
+        "address": "29, boulevard Jeanne-d'Arc - 02200 Soissons"
+    },
+    {
+        "sector": "02G02",
+        "address": "3 bis, rue de la République - 02600 Villers-Cotterêts"
+    },
+    {
+        "sector": "02G05",
+        "address": "CHG. 93, rue des anciens combattants AFN TOM - 02300 Chauny"
+    },
+    {
+        "sector": "02G01",
+        "address": "108, avenue des Champs Élysées - 02500 Hirson"
+    },
+    {
+        "sector": "59G35",
+        "address": "181, rue Gauthier - 59400 Cambrai"
+    },
+    {
+        "sector": "59G36",
+        "address": "181, rue Gauthier - 59400 Cambrai"
+    },
+    {
+        "sector": "59G37",
+        "address": "4, rue du marché aux chevaux - 59360 Le Cateau-Cambrésis"
+    },
+    {
+        "sector": "59G25",
+        "address": "187, route de Douai - 59165 Auberchicourt"
+    },
+    {
+        "sector": "59G28",
+        "address": "91, rue Wagon - 59500 Douai"
+    },
+    {
+        "sector": "59G25",
+        "address": "55, rue de la Poterne - 59310 Orchies"
+    },
+    {
+        "sector": "59G27",
+        "address": "52, place du 11 novembre - 59286 Roost-Warendin"
+    },
+    {
+        "sector": "59G25",
+        "address": "21, rue Gambetta - BP 19 - 59490 Somain"
+    },
+    {
+        "sector": "59G01",
+        "address": "108, rue Félix Coquelle - 59240 Dunkerque"
+    },
+    {
+        "sector": "59G02",
+        "address": "4, rue Monseigneur Marquis - 59240 Dunkerque"
+    },
+    {
+        "sector": "59G03",
+        "address": "9, rue Saint-Sébastien - 59140 Dunkerque"
+    },
+    {
+        "sector": "59G04",
+        "address": "rue George Sand - 59760 Grande-Synthe"
+    },
+    {
+        "sector": "59G04",
+        "address": "49, rue Carnot - BP 55 - 59820 Gravelines"
+    },
+    {
+        "sector": "59G07",
+        "address": "Avenue Aristide Briand - 59280 Armentières"
+    },
+    {
+        "sector": "59G06",
+        "address": "34, rue de Cassel - 59270 Bailleul"
+    },
+    {
+        "sector": "59G05",
+        "address": "Rue du commissariat - Résidence Hollebecque - 59190 Hazebrouck"
+    },
+    {
+        "sector": "59G06",
+        "address": "101, rue des prêtres - Le Cerisier - 59660 Merville"
+    },
+    {
+        "sector": "59G21",
+        "address": "286, rue Kléber - 59155 Faches-Thumesnil"
+    },
+    {
+        "sector": "59G08",
+        "address": "80, rue Auguste Potié - 59320 Haubourdin"
+    },
+    {
+        "sector": "59G21",
+        "address": "43, rue Faidherbe - 59260 Hellemmes"
+    },
+    {
+        "sector": "59G19",
+        "address": "119, rue du Général de Gaulle - 59110 La Madeleine"
+    },
+    {
+        "sector": "59G20",
+        "address": ""
+    },
+    {
+        "sector": "59G22",
+        "address": "9-11, rue du Barbier Maës - 59000 Lille"
+    },
+    {
+        "sector": "59G23",
+        "address": "172, rue de Wazemmes - 59000 Lille"
+    },
+    {
+        "sector": "59G24",
+        "address": "239, rue du Faubourg de Roubaix - 59000 Lille"
+    },
+    {
+        "sector": "59G10",
+        "address": "74, rue Nationale - 59710 Pont-à-Marcq"
+    },
+    {
+        "sector": "59G09",
+        "address": "Téléphone :"
+    },
+    {
+        "sector": "59G11",
+        "address": "8, allée de la Créativité - 59650 Villeneuve-d’Ascq"
+    },
+    {
+        "sector": "59G18",
+        "address": "2, Grand'Place - 59560 Comines"
+    },
+    {
+        "sector": "59G18",
+        "address": "180, rue de Lille - 59250 Halluin"
+    },
+    {
+        "sector": "59G12",
+        "address": "74, avenue de la Fosse aux Chênes - 59100 Roubaix"
+    },
+    {
+        "sector": "59G13",
+        "address": "554, rue de Lannoy - 59100 Roubaix"
+    },
+    {
+        "sector": "59G14",
+        "address": "33, rue de Lille - 59100 Roubaix"
+    },
+    {
+        "sector": "59G16",
+        "address": "420, rue de l'Yser - 59200 Tourcoing"
+    },
+    {
+        "sector": "59G16",
+        "address": "7, rue Saint-Vincent de Paul - 59200 Tourcoing"
+    },
+    {
+        "sector": "59G15",
+        "address": "91, rue du Dr V. Leplat - 59150 Wattrelos"
+    },
+    {
+        "sector": "59G38",
+        "address": "13, résidence Matisse - Place du marché - 59620 Aulnoye-Aymeries"
+    },
+    {
+        "sector": "59G41",
+        "address": "Rue de l'Hôpital - BP 29 - 59611 Fourmies cedex"
+    },
+    {
+        "sector": "59G39",
+        "address": "142, rue Gambetta - 59330 Hautmont"
+    },
+    {
+        "sector": "59G40",
+        "address": "276, rue Hector Despret - 59460 Jeumont"
+    },
+    {
+        "sector": "59G38",
+        "address": "12, faubourg Fauroeulx - 59530 Le Quesnoy"
+    },
+    {
+        "sector": "59G39",
+        "address": "45, route de Mons - 59600 Maubeuge"
+    },
+    {
+        "sector": "59G31",
+        "address": "203, bis rue Jean Jaurès - 59850 Bruay-sur-l’Escaut"
+    },
+    {
+        "sector": "59G30",
+        "address": "11, rue Notre-Dame - 59163 Condé-sur-l’Escaut"
+    },
+    {
+        "sector": "59G33",
+        "address": "12, boulevard du Président Kennedy - 59220 Denain"
+    },
+    {
+        "sector": "59G34",
+        "address": "89, rue Rémy Duquesnoy - 59220 Denain"
+    },
+    {
+        "sector": "59G30",
+        "address": "272, rue Jean Jaurès - 59264 Onnaing"
+    },
+    {
+        "sector": "59G29",
+        "address": "21, rue du Bruille - 59230 Saint-Amand-les-Eaux"
+    },
+    {
+        "sector": "59G32",
+        "address": "72, boulevard Froissart - 59300 Valenciennes"
+    },
+    {
+        "sector": "60G01",
+        "address": "26, rue du Pont Arcole - 60000 Beauvais"
+    },
+    {
+        "sector": "60G04",
+        "address": "28, rue de la République - 60120 Breteuil"
+    },
+    {
+        "sector": "60G02",
+        "address": "34, rue Pierre Budin - 60240 Chaumont-en-Vexin"
+    },
+    {
+        "sector": "60G04",
+        "address": "9, place Barbier - 60210 Grandvilliers"
+    },
+    {
+        "sector": "60G02",
+        "address": "1, rue Henri Barbusse - 60110 Méru"
+    },
+    {
+        "sector": "60G07",
+        "address": "7A, avenue de l'Europe - 60200 Compiègne"
+    },
+    {
+        "sector": "60G08",
+        "address": "Avenue Alsace-Lorraine - 60400 Noyon"
+    },
+    {
+        "sector": "60G10",
+        "address": "142, place Carnot - 60230 Chambly"
+    },
+    {
+        "sector": "60G09",
+        "address": "32, avenue Maréchal Joffre - 60500 Chantilly"
+    },
+    {
+        "sector": "60G03",
+        "address": "38, rue Frédéric Raboisson - 60600 Clermont"
+    },
+    {
+        "sector": "60G03",
+        "address": "5, place Camille Sellier - 60600 Clermont"
+    },
+    {
+        "sector": "60G05",
+        "address": "2, rue Victor Hugo - 60100 Creil"
+    },
+    {
+        "sector": "60G06",
+        "address": "26, avenue de Senlis - 60800 Crépy-en-Valois"
+    },
+    {
+        "sector": "60G03",
+        "address": "1 bis, ruelle Paradis - 60140 Liancourt"
+    },
+    {
+        "sector": "60G10",
+        "address": "1, rue Robert Trin - 60160 Montataire"
+    },
+    {
+        "sector": "60G09",
+        "address": "7 ter, rue d’Halatte - 60130 Pont-Sainte-Maxence"
+    },
+    {
+        "sector": "60G03",
+        "address": "16, rue Aristide Briand - 60130 Saint-Just-en-Chaussée"
+    },
+    {
+        "sector": "60G06",
+        "address": "7, avenue Foch - 60300 Senlis"
+    },
+    {
+        "sector": "62G18",
+        "address": "36, rue d'Achicourt - 62000 Arras"
+    },
+    {
+        "sector": "62G19",
+        "address": "36, rue d'Achicourt - 62000 Arras"
+    },
+    {
+        "sector": "62G20",
+        "address": "44 bis, rue de la République - 62450 Bapaume"
+    },
+    {
+        "sector": "62G08",
+        "address": "rue d'Hesdin - 62130 Gauchin-Verloingt"
+    },
+    {
+        "sector": "62G07",
+        "address": "1, avenue Carnot - 62120 Aire-sur-la-Lys"
+    },
+    {
+        "sector": "62G06",
+        "address": "3, rue de l'Arsenal - 62500 Saint-Omer"
+    },
+    {
+        "sector": "62G07",
+        "address": "3, rue de l'Arsenal - 62500 Saint-Omer"
+    },
+    {
+        "sector": "62G09",
+        "address": "2, rue Pasteur - 62260 Auchel"
+    },
+    {
+        "sector": "62G10",
+        "address": "195, boulevard Basly - 62400 Béthune"
+    },
+    {
+        "sector": "62G11",
+        "address": "522, rue Louis Dussart - 62700 Bruay-la-Buissière"
+    },
+    {
+        "sector": "62G13",
+        "address": "Boulevard Lamendin - 62160 Bully-les-Mines"
+    },
+    {
+        "sector": "62G14",
+        "address": "46, route de La Bassée - 62300 Lens"
+    },
+    {
+        "sector": "62G13",
+        "address": "Polyclinique de Riaumont – Entrée consultations – Porte 2 – Rue Carnot - 62800 Liévin"
+    },
+    {
+        "sector": "62G09",
+        "address": "1, rue des remparts - 62190 Lillers"
+    },
+    {
+        "sector": "62G12",
+        "address": "20 rue de Sailly - 62290 Nœux-les-Mines"
+    },
+    {
+        "sector": "62G03",
+        "address": "3, place Navarin - 62200 Boulogne-sur-Mer"
+    },
+    {
+        "sector": "62G04",
+        "address": "39, rue Edmond Hédouin - 62200 Boulogne-sur-Mer"
+    },
+    {
+        "sector": "62G02",
+        "address": "64, rue verte - 62100 Calais"
+    },
+    {
+        "sector": "62G01",
+        "address": "64, rue verte - 62100 Calais"
+    },
+    {
+        "sector": "62G15",
+        "address": "3, rue des déportés - 62210 Avion"
+    },
+    {
+        "sector": "62G16",
+        "address": "Rue Florent Évrard - 62220 Carvin"
+    },
+    {
+        "sector": "62G17",
+        "address": "145, rue Salengro - 62110 Hénin-Beaumont"
+    },
+    {
+        "sector": "62G05",
+        "address": "Centre Hospitalier - Route départementale 140 - 62180 Rang-du-Fliers"
+    },
+    {
+        "sector": "80G06",
+        "address": "3, rue de l'Hôtel Dieu - 80100 Abbeville"
+    },
+    {
+        "sector": "80G01",
+        "address": "64, bis rue du Vivier - 80000 Amiens"
+    },
+    {
+        "sector": "80G02",
+        "address": "6, rue du Quai - 80800 Corbie"
+    },
+    {
+        "sector": "80G04",
+        "address": "Route de Saint-Pol - 80600 Doullens"
+    },
+    {
+        "sector": "80G01",
+        "address": "12, rue d'Airaines - 80640 Hornoy-le-Bourg"
+    },
+    {
+        "sector": "80G03",
+        "address": "7, rue du chemin vert - 80500 Montdidier"
+    },
+    {
+        "sector": "80G05",
+        "address": "Rue Tien-Tsin - 80300 Albert"
+    },
+    {
+        "sector": "80G05",
+        "address": "15, place de l'Hôtel de ville - 80400 Ham"
+    },
+    {
+        "sector": "80G05",
+        "address": "1, bis, rue Ambroise Paré - 80200 Péronne"
+    },
+    {
+        "sector": "80G07",
+        "address": "17, rue Jules Vallès - 80130 Friville-Escarbotin"
+    },
+    {
+        "sector": "02I01",
+        "address": "14, rue Léon Erst - 02110 Bohain-en-Vermandois"
+    },
+    {
+        "sector": "02I01",
+        "address": "179, rue Chantraine - 02120 Guise"
+    },
+    {
+        "sector": "02I01",
+        "address": "8, rue de Lyon - 02100 Saint-Quentin"
+    },
+    {
+        "sector": "02I02",
+        "address": "76, Grande Rue - 02400 Château-Thierry"
+    },
+    {
+        "sector": "02I02",
+        "address": "24, avenue Charles-de-Gaulle - 02200 Soissons"
+    },
+    {
+        "sector": "02I03",
+        "address": "18, avenue Victor Hugo - 02300 Chauny"
+    },
+    {
+        "sector": "02I03",
+        "address": "128, avenue Charles de Gaulle - 02500 Hirson"
+    },
+    {
+        "sector": "02I03",
+        "address": "10, place du Général Leclerc - 02000 Laon"
+    },
+    {
+        "sector": "59I11",
+        "address": "44, boulevard Faidherbe - 59400 Cambrai"
+    },
+    {
+        "sector": "59I11",
+        "address": "129, rue de la République - 59540 Caudry"
+    },
+    {
+        "sector": "59I11",
+        "address": "4, rue du marché aux chevaux - 59360 Le Cateau-Cambrésis"
+    },
+    {
+        "sector": "59I08",
+        "address": "Site CH Dechy Route de Cambrai- 59580 Aniche"
+    },
+    {
+        "sector": "59I08",
+        "address": "201, rue d'Arras - 59500 Douai"
+    },
+    {
+        "sector": "59I08",
+        "address": "20, bis avenue de la Libération - 59310 Orchies"
+    },
+    {
+        "sector": "59I01",
+        "address": "4, rue de l'hôtel de ville - 59380 Bergues"
+    },
+    {
+        "sector": "59I01",
+        "address": "50, avenue des Bains - 59140 Dunkerque"
+    },
+    {
+        "sector": "59I01",
+        "address": "11, rue des Arbress - 59140 Dunkerque"
+    },
+    {
+        "sector": "59I01",
+        "address": "13, rue Denis Papin - 59760 Grande-Synthe"
+    },
+    {
+        "sector": "59I01",
+        "address": "3 H, route du Pont de Pierre - 59820 Gravelines"
+    },
+    {
+        "sector": "59I03",
+        "address": "10 bis, place du marché aux toiles - 59280 Armentières"
+    },
+    {
+        "sector": "59I02",
+        "address": "6, place Plichon - 59270 Bailleul"
+    },
+    {
+        "sector": "59I03",
+        "address": "4, rue Arthur Dennetière - 59250 Halluin"
+    },
+    {
+        "sector": "59I02",
+        "address": "46, rue du rivage - 59190 Hazebrouck"
+    },
+    {
+        "sector": "59I02",
+        "address": "87, rue du général De Gaulle - 59660 Merville"
+    },
+    {
+        "sector": "59I05",
+        "address": "84, rue Auguste Potié - 59320 Haubourdin"
+    },
+    {
+        "sector": "59I06",
+        "address": "55, avenue Saint-Maur - 59110 La Madeleine"
+    },
+    {
+        "sector": "59I04",
+        "address": "7, rue du Nouveau Siècle - 59800 Lille"
+    },
+    {
+        "sector": "59I05",
+        "address": "41, rue Van Hende - 59000 Lille"
+    },
+    {
+        "sector": "59I04",
+        "address": "13, Cour Godart - 59160 Lomme"
+    },
+    {
+        "sector": "59I06",
+        "address": "92, rue du Général De Gaulle - 59370 Mons-en-Barœul"
+    },
+    {
+        "sector": "59I06",
+        "address": "72, rue nationale - 59710 Pont-à-Marcq"
+    },
+    {
+        "sector": "59I06",
+        "address": "1, rue des Comices - 59650 Villeneuve-d’Ascq"
+    },
+    {
+        "sector": "59I07",
+        "address": "55, rue de Lille - 59100 Roubaix"
+    },
+    {
+        "sector": "59I07",
+        "address": "86, rue Pellart - 59100 Roubaix"
+    },
+    {
+        "sector": "59I13",
+        "address": "304, avenue Alfred Motte - 59100 Roubaix"
+    },
+    {
+        "sector": "59I03",
+        "address": "75, rue Nationale - 59200 Tourcoing"
+    },
+    {
+        "sector": "59I03",
+        "address": "70 Rue du Chêne Houpline - 59200 Tourcoing"
+    },
+    {
+        "sector": "59I13",
+        "address": "56, rue du Dr V. Leplat - 59150 Wattrelos"
+    },
+    {
+        "sector": "59I12",
+        "address": "4, place du Marché - 59620 Aulnoye-Aymeries"
+    },
+    {
+        "sector": "59I12",
+        "address": "18, rue Sencier - 59611 Fourmies cedex"
+    },
+    {
+        "sector": "59I12",
+        "address": "24, boulevard Pasteur - BP 249 - 59607 Maubeuge cedex"
+    },
+    {
+        "sector": "59I09",
+        "address": "80, route de Bonsecours - 59163 Condé-sur-l’Escaut"
+    },
+    {
+        "sector": "59I10",
+        "address": "74, rue Jean Jaurès - 59220 Denain"
+    },
+    {
+        "sector": "59I09",
+        "address": "56, rue de Rivoli - 59230 Saint-Amand-les-Eaux"
+    },
+    {
+        "sector": "59I09",
+        "address": "Avenue Désandrouin - 59300 Valenciennes"
+    },
+    {
+        "sector": "59I10",
+        "address": "3, rue du Fort Minique - 59300 Valenciennes"
+    },
+    {
+        "sector": "60I01",
+        "address": "15, avenue Gambetta - 60600 Clermont"
+    },
+    {
+        "sector": "60I01",
+        "address": "114, rue de Paris - 60200 Compiègne"
+    },
+    {
+        "sector": "60I01",
+        "address": "23, boulevard Sarrazin - 60400 Noyon"
+    },
+    {
+        "sector": "60I02",
+        "address": "2, avenue du 8 mai 1945 – Q. Argentine - 60000 Beauvais"
+    },
+    {
+        "sector": "60I02",
+        "address": "67, rue de Paris - 60120 Breteuil"
+    },
+    {
+        "sector": "60I03",
+        "address": "24, avenue de la Rainette - 60100 Creil"
+    },
+    {
+        "sector": "60I03",
+        "address": "16 bis, rue Alphone Cardin - 60800 Crépy-en-Valois"
+    },
+    {
+        "sector": "60I03",
+        "address": "33, rue Blanche - 60270 Gouvieux"
+    },
+    {
+        "sector": "60I02",
+        "address": "77, rue Louis Bloquet - 60110 Méru"
+    },
+    {
+        "sector": "60I03",
+        "address": "15, avenue de Beauval - 60300 Senlis"
+    },
+    {
+        "sector": "62I07",
+        "address": "6, voie Bossuet, résidence Saint-Pol - 62000 Arras"
+    },
+    {
+        "sector": "62I08",
+        "address": "25B, rue du 19 mars 1962 - 62770 Auchy-les-Hesdin"
+    },
+    {
+        "sector": "62I07",
+        "address": "44 bis, rue de la République - 62450 Bapaume"
+    },
+    {
+        "sector": "62I08",
+        "address": "17, rue Gabriel Péri - 62600 Berck"
+    },
+    {
+        "sector": "62I07",
+        "address": "140, rue des cheminots - 62490 Vitry-en-Artois"
+    },
+    {
+        "sector": "62I03",
+        "address": "42, boulevard Foch - 62120 Aire-sur-la-Lys"
+    },
+    {
+        "sector": "62I03",
+        "address": "30, rue Séraphin Cordier - 62260 Auchel"
+    },
+    {
+        "sector": "62I03",
+        "address": "2, rue des remparts - 62190 Lillers"
+    },
+    {
+        "sector": "62I03",
+        "address": "6, rue de l'ancien rivage - 62500 Saint-Omer"
+    },
+    {
+        "sector": "62I03",
+        "address": "EPSM Val-de-Lys - Artois - 62350 Saint-Venant"
+    },
+    {
+        "sector": "62I04",
+        "address": "147, rue Buridan - 62400 Béthune"
+    },
+    {
+        "sector": "62I04",
+        "address": "122, rue d'Alsace - 62700 Bruay-la-Buissière"
+    },
+    {
+        "sector": "62I05",
+        "address": "Service Lebovici - CH Lens - 99, route de la Bassée (Entrée rue Auguste Lefebvre) - 62307 Lens cedex"
+    },
+    {
+        "sector": "62I05",
+        "address": "9, rue Léon Blum - 62800 Liévin"
+    },
+    {
+        "sector": "62I04",
+        "address": "1, place du château d'eau - 62290 Nœux-les-Mines"
+    },
+    {
+        "sector": "62I02",
+        "address": "163, rue du chemin vert - 62200 Boulogne-sur-Mer"
+    },
+    {
+        "sector": "62I02",
+        "address": "Rue Claude - 62240 Desvres"
+    },
+    {
+        "sector": "62I08",
+        "address": "40, rue du Mont Levin - 62630 Étaples"
+    },
+    {
+        "sector": "62I02",
+        "address": "120, rue Carnot - 62480 Le Portel"
+    },
+    {
+        "sector": "62I02",
+        "address": "18, rue Maquétra - 62280 Saint-Martin-Boulogne"
+    },
+    {
+        "sector": "62I01",
+        "address": "11, rue de Valmy - 62100 Calais"
+    },
+    {
+        "sector": "62I06",
+        "address": "97, rue Salvador Allende - 62220 Carvin"
+    },
+    {
+        "sector": "62I06",
+        "address": "Impasse Pantigny - 62141 Évin-Malmaison"
+    },
+    {
+        "sector": "62I06",
+        "address": "Rue Émile Zola - 62440 Harnes"
+    },
+    {
+        "sector": "62I06",
+        "address": "303, chemin de Jérusalem - 62110 Hénin-Beaumont"
+    },
+    {
+        "sector": "80I04",
+        "address": "3, rue de l'Hôtel Dieu - 80100 Abbeville"
+    },
+    {
+        "sector": "80I04",
+        "address": "23, rue Pasteur - 80130 Friville-Escarbotin"
+    },
+    {
+        "sector": "80I01",
+        "address": "2 bis, place au Feurre - 80000 Amiens"
+    },
+    {
+        "sector": "80I02",
+        "address": "275, rue Jules Barni - 80000 Amiens"
+    },
+    {
+        "sector": "80I02",
+        "address": "6, rue du Quai - 80800 Corbie"
+    },
+    {
+        "sector": "80I01",
+        "address": "CH, route de Routequeue - 80600 Doullens"
+    },
+    {
+        "sector": "80I01",
+        "address": "CCAS. Rue Ambroise Croizat - 80420 Flixecourt"
+    },
+    {
+        "sector": "80I02",
+        "address": "18, rue Blondel - 80640 Hornoy-le-Bourg"
+    },
+    {
+        "sector": "80I03",
+        "address": "Rue Tien-Tsin - 80300 Albert"
+    },
+    {
+        "sector": "80I03",
+        "address": "7, rue des Chanoines (2e étage) - 80200 Péronne"
+    },
+    {
+        "sector": "80I03",
+        "address": "1, rue du Moulinet - 80700 Roye"
+    }
+]

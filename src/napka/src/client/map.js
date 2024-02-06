@@ -347,7 +347,7 @@ async function handleClick(markers) {
                 `
             });
         }
-    } else {
+    } else if (provider.renderEntry != null) {
         let marker = markers[0];
         let entry = isConnected() ? Object.assign({}, marker.entry) : marker.entry;
 
