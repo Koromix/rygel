@@ -102,7 +102,7 @@ function Builder(config = {}) {
 
         // Download Node headers
         {
-            let destname = `${cache_dir}/${basename}`;
+            let destname = `${cache_dir}/node-v${runtime_version}-headers.tar.gz`;
 
             if (!fs.existsSync(destname)) {
                 let url = `https://nodejs.org/dist/v${runtime_version}/node-v${runtime_version}-headers.tar.gz`;
