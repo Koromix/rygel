@@ -1208,18 +1208,8 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
                 array.Set(i, NewBigInt(env, v));
             });
         } break;
-        case PrimitiveKind::String: {
-            POP_ARRAY({
-                const char *str = *(const char **)src;
-                array.Set(i, str ? Napi::String::New(env, str) : env.Null());
-            });
-        } break;
-        case PrimitiveKind::String16: {
-            POP_ARRAY({
-                const char16_t *str16 = *(const char16_t **)src;
-                array.Set(i, str16 ? Napi::String::New(env, str16) : env.Null());
-            });
-        } break;
+        case PrimitiveKind::String:
+        case PrimitiveKind::String16:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
             POP_ARRAY({

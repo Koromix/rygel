@@ -181,20 +181,6 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
         if (len < 0) [[unlikely]]
             return false;
 
-        // Create array type
-        TypeInfo *type;
-        {
-            type = AllocateOne<TypeInfo>(&call_alloc, (int)AllocFlag::Zero);
-
-            type->name = "<temporary>";
-
-            type->primitive = PrimitiveKind::Array;
-            type->align = 1;
-            type->size = (int32_t)len;
-            type->ref.type = instance->char_type;
-            type->hint = ArrayHint::String;
-        }
-
         // Prepare output argument
         {
             OutArgument *out = out_arguments.AppendDefault();
@@ -204,7 +190,7 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
 
             out->kind = OutArgument::Kind::Array;
             out->ptr = (const uint8_t *)*out_str;
-            out->type = type;
+            out->type = MakeTemporaryArrayType(instance->char_type, len, ArrayHint::String);
         }
 
         return true;
@@ -283,20 +269,6 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
         if (len < 0) [[unlikely]]
             return false;
 
-        // Create array type
-        TypeInfo *type;
-        {
-            type = AllocateOne<TypeInfo>(&call_alloc, (int)AllocFlag::Zero);
-
-            type->name = "<temporary>";
-
-            type->primitive = PrimitiveKind::Array;
-            type->align = 1;
-            type->size = (int32_t)(len * 2);
-            type->ref.type = instance->char16_type;
-            type->hint = ArrayHint::String;
-        }
-
         // Prepare output argument
         {
             OutArgument *out = out_arguments.AppendDefault();
@@ -306,7 +278,7 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
 
             out->kind = OutArgument::Kind::Array;
             out->ptr = (const uint8_t *)*out_str16;
-            out->type = type;
+            out->type = MakeTemporaryArrayType(instance->char16_type, len, ArrayHint::String);
         }
 
         return true;
@@ -984,6 +956,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             uint8_t *ptr = nullptr;
 
             OutArgument::Kind out_kind;
+            const TypeInfo *out_type = type->ref.type;
             Size out_max_len = -1;
 
             if (CheckPointerType(instance, value, type)) {
@@ -993,15 +966,26 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 out_kind = OutArgument::Kind::Array; // Whatever, just avoid unitialized warning
             } else if (value.IsArray()) {
                 Napi::Array array = value.As<Napi::Array>();
-                Size len = PushIndirectString(array, type->ref.type, &ptr);
+                bool string1 = (array.Length() == 1 && ((Napi::Value)array[0u]).IsString());
 
-                if (len >= 0) {
-                    if (!type->ref.type->size && type->ref.type != instance->void_type) [[unlikely]] {
-                        ThrowError<Napi::TypeError>(env, "Cannot pass [string] value to %1", type->name);
+                if (string1 && (type->ref.type->primitive == PrimitiveKind::Int8 ||
+                                type->ref.type == instance->void_type)) {
+                    Size len = PushStringValue(array[0u], (const char **)&ptr);
+
+                    if (len < 0) [[unlikely]]
                         return false;
-                    }
 
-                    out_kind = (type->ref.type->size == 2) ? OutArgument::Kind::String16 : OutArgument::Kind::String;
+                    out_kind = OutArgument::Kind::Array;
+                    out_type = MakeTemporaryArrayType(instance->char_type, len, ArrayHint::String);
+                    out_max_len = len;
+                } else if (string1 && type->ref.type->primitive == PrimitiveKind::Int16) {
+                    Size len = PushString16Value(array[0u], (const char16_t **)&ptr);
+
+                    if (len < 0) [[unlikely]]
+                        return false;
+
+                    out_kind = OutArgument::Kind::Array;
+                    out_type = MakeTemporaryArrayType(instance->char16_type, len, ArrayHint::String);
                     out_max_len = len;
                 } else {
                     if (!type->ref.type->size) [[unlikely]] {
@@ -1065,7 +1049,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
                 out->kind = out_kind;
                 out->ptr = ptr;
-                out->type = type->ref.type;
+                out->type = out_type;
                 out->max_len = out_max_len;
             }
 
@@ -1132,27 +1116,6 @@ unexpected:
     return false;
 }
 
-Size CallData::PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr)
-{
-    if (array.Length() != 1)
-        return -1;
-
-    Napi::Value value = array[0u];
-
-    if (!value.IsString())
-        return -1;
-
-    if (ref == instance->void_type) {
-        return PushStringValue(value, (const char **)out_ptr);
-    } else if (ref->primitive == PrimitiveKind::Int8) {
-        return PushStringValue(value, (const char **)out_ptr);
-    } else if (ref->primitive == PrimitiveKind::Int16) {
-        return PushString16Value(value, (const char16_t **)out_ptr);
-    } else {
-        return -1;
-    }
-}
-
 void *CallData::ReserveTrampoline(const FunctionInfo *proto, Napi::Function func)
 {
     if (!InitAsyncBroker(env, instance)) [[unlikely]]
@@ -1206,6 +1169,20 @@ void CallData::DumpForward(const FunctionInfo *func) const
 
     DumpMemory("Stack", stack);
     DumpMemory("Heap", heap);
+}
+
+const TypeInfo *CallData::MakeTemporaryArrayType(const TypeInfo *ref, Size len, ArrayHint hint)
+{
+    TypeInfo *type = AllocateOne<TypeInfo>(&call_alloc, (int)AllocFlag::Zero);
+
+    type->name = "<temporary>";
+    type->primitive = PrimitiveKind::Array;
+    type->align = 1;
+    type->size = (int32_t)(ref->size * len);
+    type->ref.type = ref;
+    type->hint = hint;
+
+    return type;
 }
 
 static inline Napi::Value GetReferenceValue(Napi::Env env, napi_ref ref)

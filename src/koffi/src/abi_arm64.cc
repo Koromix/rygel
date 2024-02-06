@@ -663,8 +663,8 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::Int64S: return NewBigInt(env, ReverseBytes(result.i64));
         case PrimitiveKind::UInt64: return NewBigInt(env, result.u64);
         case PrimitiveKind::UInt64S: return NewBigInt(env, ReverseBytes(result.u64));
-        case PrimitiveKind::String: return result.ptr ? Napi::String::New(env, (const char *)result.ptr) : env.Null();
-        case PrimitiveKind::String16: return result.ptr ? Napi::String::New(env, (const char16_t *)result.ptr) : env.Null();
+        case PrimitiveKind::String:
+        case PrimitiveKind::String16:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
             Napi::Value wrapper = WrapPointer(env, instance, func->ret.type, result.ptr);

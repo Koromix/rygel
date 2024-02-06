@@ -107,9 +107,9 @@ async function test() {
             assert.equal(sqlite3_step(stmt), SQLITE_ROW);
 
             assert.equal(sqlite3_column_int(stmt, 0), i + 1);
-            assert.equal(sqlite3_column_text(stmt, 1), it[0]);
+            check_text(sqlite3_column_text(stmt, 1), it[0]);
             assert.equal(sqlite3_column_int(stmt, 2), it[1]);
-            assert.equal(sqlite3_column_text(stmt, 3), it[2]);
+            check_text(sqlite3_column_text(stmt, 3), it[2]);
         }
         assert.equal(sqlite3_step(stmt), SQLITE_DONE);
 
@@ -145,4 +145,9 @@ async function create_temporary_file(prefix) {
                 throw err;
         }
     }
+}
+
+function check_text(ptr, expect) {
+    let str = koffi.decode(ptr, 'char', -1);
+    assert.equal(str, expect);
 }

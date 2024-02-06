@@ -325,10 +325,13 @@ async function test() {
 
     // Test callback encoding with a string
     {
-        assert.equal(FmtRepeat((count, str) => {
+        let ptr = FmtRepeat((count, str) => {
             koffi.encode(count, 'int', 3);
             koffi.encode(str, 'const char *', 'Hello');
-        }), 'HelloHelloHello');
+        });
+        let str = koffi.decode(ptr, 'char', -1);
+
+        assert.equal(str, 'HelloHelloHello');
     }
 
     // Run callback from event loop, on main thread

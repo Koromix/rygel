@@ -258,6 +258,7 @@ async function test() {
     const ComputeLengthUntilNulV = lib.func('int ComputeLengthUntilNul(void *ptr)');
     const ComputeLengthUntilNulB = lib.func('int ComputeLengthUntilNul(int8_t *ptr)');
     const ComputeLengthUntilNulWide = lib.func('int ComputeLengthUntilNulWide(int16_t *ptr)');
+    const ReverseStringChar = lib.func('void ReverseStringVoid(_Inout_ char *ptr)');
     const ReverseStringVoid = lib.func('void ReverseStringVoid(_Inout_ void *ptr)');
     const ReverseString16Void = lib.func('void ReverseString16Void(_Inout_ void *ptr)');
     const GetBinaryIntFunction = lib.func('BinaryIntFunc *GetBinaryIntFunction(const char *name)');
@@ -373,9 +374,9 @@ async function test() {
         assert.equal(ConcatenateToInt1(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
         assert.equal(ConcatenateToInt4(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
         assert.equal(ConcatenateToInt8(5, 6, 1, 2, 3, 9, 4, 4, 0, 6, 8, 7), 561239440687);
-        assert.equal(ConcatenateToStr1(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
-        assert.equal(ConcatenateToStr4(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
-        assert.equal(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
+        check_text(ConcatenateToStr1(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
+        check_text(ConcatenateToStr4(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
+        check_text(ConcatenateToStr8(5, 6, 1, 2, 3, 9, 4, 4, { i: 0, j: 6, k: 8 }, 7), '561239440687');
     }
 
     // Big struct
@@ -408,19 +409,19 @@ async function test() {
     // Big string
     {
         let str = 'fooBAR!'.repeat(1024 * 1024);
-        assert.equal(ReturnBigString(str), str);
+        check_text(ReturnBigString(str), str);
     }
 
     // Variadic
     {
         let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'str', 'BAR');
-        assert.equal(str, 'foo 200 1.5 BAR');
+        check_text(str, 'foo 200 1.5 BAR');
     }
 
     // UTF-16LE strings
     {
-        let str = Concat16('Hello ', 'World!');
-        assert.equal(str, 'Hello World!');
+        let ptr = Concat16('Hello ', 'World!');
+        check_text16(ptr, 'Hello World!');
     }
 
     // Test output disposable type parsed with '!'
@@ -428,10 +429,10 @@ async function test() {
         let ptr = [null];
 
         Concat16Out1('Hello ', 'World...', ptr);
-        assert.equal(ptr[0], 'Hello World...');
+        check_text16(ptr[0], 'Hello World...');
 
         Concat16Out2('Hello ', 'World...', ptr);
-        assert.equal(ptr[0], 'Hello World...');
+        check_text16(ptr[0], 'Hello World...');
     }
 
     // String to/from fixed-size buffers
@@ -510,10 +511,10 @@ async function test() {
 
     // Test struct strings
     {
-        assert.equal(ThroughStr({ str: 'Hello', str16: null }), 'Hello');
-        assert.equal(ThroughStr({ str: null, str16: 'Hello' }), null);
-        assert.equal(ThroughStr16({ str: null, str16: 'World!' }), 'World!');
-        assert.equal(ThroughStr16({ str: 'World!', str16: null }), null);
+        check_text(ThroughStr({ str: 'Hello', str16: null }), 'Hello');
+        check_text(ThroughStr({ str: null, str16: 'Hello' }), null);
+        check_text16(ThroughStr16({ str: null, str16: 'World!' }), 'World!');
+        check_text16(ThroughStr16({ str: 'World!', str16: null }), null);
     }
 
     // Transparent typed arrays for void pointers
@@ -615,11 +616,11 @@ async function test() {
         let ptr2 = [null];
 
         UpperToInternalBuffer1('HeLlO WoRlD', ptr1);
-        UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
+        check_text(ptr1[0], 'HELLO WORLD');
 
-        assert.equal(ptr1[0], 'HELLO WORLD');
-        // XXX: assert.ok(util.types.isExternal(ptr2[0]));
-        assert.equal(koffi.decode(ptr2[0], 'char', -1), 'BONJOUR MONDE');
+        UpperToInternalBuffer2('BoNjOuR MoNdE', ptr2);
+        check_text(ptr2[0], 'BONJOUR MONDE');
+        check_text(ptr1[0], 'BONJOUR MONDE');
     }
 
     // Use raw buffers for struct output
@@ -680,14 +681,17 @@ async function test() {
     {
         let ptr = ['Hello World!'];
 
-        ReverseStringVoid(ptr);
+        ReverseStringChar(ptr);
         assert.equal(ptr[0], '!dlroW olleH');
 
-        ReverseStringVoid(koffi.as(ptr, 'char *'));
+        ReverseStringVoid(ptr);
         assert.equal(ptr[0], 'Hello World!');
 
-        ReverseString16Void(koffi.as(ptr, 'char16_t *'))
+        ReverseStringVoid(koffi.as(ptr, 'char *'));
         assert.equal(ptr[0], '!dlroW olleH');
+
+        ReverseString16Void(koffi.as(ptr, 'char16_t *'))
+        assert.equal(ptr[0], 'Hello World!');
     }
 
     // Call function pointers directly
@@ -772,8 +776,8 @@ async function test() {
     assert.equal(BoolToMask12(false, true, true, false, false, false, false, true, false, false, true, true), 0b011000010011);
     assert.equal(IfElseInt(true, 42, 24), 42);
     assert.equal(IfElseInt(false, 42, 24), 24);
-    assert.equal(IfElseStr("foo", "bar", true), "foo");
-    assert.equal(IfElseStr("FIRST", "SECOND", false), "SECOND");
+    check_text(IfElseStr("foo", "bar", true), "foo");
+    check_text(IfElseStr("FIRST", "SECOND", false), "SECOND");
 
     // Encode variables
     {
@@ -783,7 +787,7 @@ async function test() {
         koffi.encode(sym_int3, 'int', [4, 2, 42], 3);
 
         assert.equal(GetSymbolInt(), 12);
-        assert.equal(GetSymbolStr(), 'I can encode!');
+        check_text(GetSymbolStr(), 'I can encode!');
 
         let out3 = [0, 0, 0];
         GetSymbolInt3(out3);
@@ -827,4 +831,14 @@ async function test() {
     }
 
     lib.unload();
+}
+
+function check_text(ptr, expect) {
+    let str = koffi.decode(ptr, 'char', -1);
+    assert.equal(str, expect);
+}
+
+function check_text16(ptr, expect) {
+    let str = koffi.decode(ptr, 'char16', -1);
+    assert.equal(str, expect);
 }

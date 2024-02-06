@@ -122,7 +122,6 @@ public:
     bool PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin);
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
     bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
-    Size PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr);
 
     void *ReserveTrampoline(const FunctionInfo *proto, Napi::Function func);
 
@@ -133,6 +132,8 @@ private:
     bool AllocStack(Size size, Size align, T **out_ptr);
     template <typename T = uint8_t>
     T *AllocHeap(Size size, Size align);
+
+    const TypeInfo *MakeTemporaryArrayType(const TypeInfo *ref, Size len, ArrayHint hint);
 
     void PopOutArguments();
 };
