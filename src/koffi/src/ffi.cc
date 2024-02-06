@@ -182,18 +182,6 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
     return obj;
 }
 
-static Napi::Value GetStats(const Napi::CallbackInfo &info)
-{
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    Napi::Object obj = Napi::Object::New(env);
-
-    obj.Set("disposed", instance->stats.disposed);
-
-    return obj;
-}
-
 static inline bool CheckAlignment(int64_t align)
 {
     bool valid = (align > 0) && (align <= 8 && !(align & (align - 1)));
@@ -754,16 +742,10 @@ static Napi::Value CreateDisposableType(const Napi::CallbackInfo &info)
             };
 
             ref.Call(self, RG_LEN(args), args);
-            instance->stats.disposed++;
         };
         dispose_func = func;
     } else {
-        dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) {
-            InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-            free((void *)ptr);
-            instance->stats.disposed++;
-        };
+        dispose = [](Napi::Env env, const TypeInfo *, const void *ptr) { free((void *)ptr); };
     }
 
     TypeInfo *type = instance->types.AppendDefault();
@@ -2114,7 +2096,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     instance->construct_ptr = Napi::Persistent(PointerObject::InitClass(env));
 
     exports.Set("config", Napi::Function::New(env, GetSetConfig, "config"));
-    exports.Set("stats", Napi::Function::New(env, GetStats, "stats"));
 
     exports.Set("struct", Napi::Function::New(env, CreatePaddedStructType, "struct"));
     exports.Set("pack", Napi::Function::New(env, CreatePackedStructType, "pack"));
