@@ -25,10 +25,6 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const util = require('util');
 
-// We need to change this on Windows because the DLL CRT might
-// not (probably not) match the one used by Node.js!
-let free_ptr = koffi.free;
-
 const Pack1 = koffi.struct('Pack1', {
     a: 'int'
 });
@@ -278,8 +274,6 @@ async function test() {
     const GetSymbolStr = lib.func('const char *GetSymbolStr()');
     const GetSymbolInt3 = lib.func('void GetSymbolInt3(_Out_ int *out)');
 
-    // free_ptr = CallFree;
-
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
     assert.equal(GetMinusOne2(), -1);
@@ -409,19 +403,26 @@ async function test() {
     // Big string
     {
         let str = 'fooBAR!'.repeat(1024 * 1024);
-        check_text(ReturnBigString(str), str);
+        let ptr = ReturnBigString(str);
+
+        check_text(ptr, str);
+        CallFree(ptr);
     }
 
     // Variadic
     {
-        let str = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'str', 'BAR');
-        check_text(str, 'foo 200 1.5 BAR');
+        let ptr = PrintFmt('foo %d %g %s', 'int', 200, 'double', 1.5, 'str', 'BAR');
+
+        check_text(ptr, 'foo 200 1.5 BAR');
+        CallFree(ptr);
     }
 
     // UTF-16LE strings
     {
         let ptr = Concat16('Hello ', 'World!');
+
         check_text16(ptr, 'Hello World!');
+        CallFree(ptr);
     }
 
     // Test output disposable type parsed with '!'
@@ -430,9 +431,11 @@ async function test() {
 
         Concat16Out1('Hello ', 'World...', ptr);
         check_text16(ptr[0], 'Hello World...');
+        CallFree(ptr[0]);
 
         Concat16Out2('Hello ', 'World...', ptr);
         check_text16(ptr[0], 'Hello World...');
+        CallFree(ptr[0]);
     }
 
     // String to/from fixed-size buffers

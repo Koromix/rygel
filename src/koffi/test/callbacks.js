@@ -25,10 +25,6 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const util = require('util');
 
-// We need to change this on Windows because the DLL CRT might
-// not (probably not) match the one used by Node.js!
-let free_ptr = koffi.free;
-
 const BFG = koffi.struct('BFG', {
     a: 'int8_t',
     e: [8, 'short'],
@@ -98,8 +94,6 @@ async function test() {
     const FmtRepeat = lib.func('const char *FmtRepeat(RepeatCallback *cb)');
     const SetIdle = lib.func('void SetIdle(void *env, IdleCallback *cb)');
     const TriggerIdle = lib.func('void TriggerIdle(void)');
-
-    free_ptr = CallFree;
 
     // Start with test of callback inside async function to make sure the async broker is registered,
     // and avoid regression (see issue #74).
@@ -267,6 +261,8 @@ async function test() {
             return str1.localeCompare(str2);
         }, 'SortCallback *'));
 
+        array = array.map(str => koffi.decode(str, 'char', -1));
+
         assert.deepEqual(array, ['123', 'bar', 'foo', 'foobar']);
     }
 
@@ -329,9 +325,9 @@ async function test() {
             koffi.encode(count, 'int', 3);
             koffi.encode(str, 'const char *', 'Hello');
         });
-        let str = koffi.decode(ptr, 'char', -1);
 
-        assert.equal(str, 'HelloHelloHello');
+        check_text(ptr, 'HelloHelloHello');
+        CallFree(ptr);
     }
 
     // Run callback from event loop, on main thread
@@ -348,4 +344,9 @@ async function test() {
 
         SetIdle(koffi.node.env, null);
     }
+}
+
+function check_text(ptr, expect) {
+    let str = koffi.decode(ptr, 'char', -1);
+    assert.equal(str, expect);
 }
