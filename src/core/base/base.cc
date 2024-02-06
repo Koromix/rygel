@@ -4436,7 +4436,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         // Try to read
         if (out_revents & POLLERR) {
             break;
-        } else if (out_revents & POLLIN) {
+        } else if (out_revents & (POLLIN | POLLHUP)) {
             RG_ASSERT(out_func.IsValid());
 
             uint8_t read_buf[4096];
@@ -4445,15 +4445,12 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             if (read_len > 0) {
                 out_func(MakeSpan(read_buf, read_len));
             } else if (!read_len) {
-                // Does this happen? Should trigger POLLHUP instead, but who knows
+                // EOF
                 break;
             } else {
                 LogError("Failed to read process output: %1", strerror(errno));
                 break;
             }
-        } else if (out_revents & POLLHUP) {
-            // Only deal with this once POLLIN goes down to avoid truncated output
-            break;
         }
 
         if (term_revents) {
