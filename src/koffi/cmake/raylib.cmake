@@ -50,6 +50,10 @@ if(WIN32)
     target_link_libraries(raylib PRIVATE winmm)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_compile_definitions(raylib PRIVATE _GNU_SOURCE)
+endif()
+
 if(CMAKE_SYSTEM_NAME MATCHES "BSD")
     target_include_directories(raylib PRIVATE /usr/local/include)
 endif()
