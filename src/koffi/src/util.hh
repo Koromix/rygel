@@ -91,6 +91,9 @@ private:
 template <typename T, typename... Args>
 void ThrowError(Napi::Env env, const char *msg, Args... args)
 {
+    if (env.IsExceptionPending()) [[unlikely]]
+        return;
+
     char buf[1024];
     Fmt(buf, msg, args...);
 
