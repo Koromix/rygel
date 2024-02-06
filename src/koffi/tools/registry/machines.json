@@ -138,7 +138,7 @@
         "qemu": {
             "binary": "qemu-system-x86_64",
             "arguments": ["-m", "1G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-amd64", "-initrd", "initrd.img-5.10.0-12-amd64", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22204-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:14"],
-            "version": 4,
+            "version": 5,
 
             "disk": "disk.qcow2",
 
@@ -155,14 +155,14 @@
             "Linux x64": {
                 "arch": "x64",
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js --prefer-clang"
+                "build": "CC=clang-17 CXX=clang++-17 node ../cnoke/cnoke.js"
             }
         },
 
         "tests": {
             "Linux x64": {
                 "directory": "/home/debian/luigi",
-                "build": "node ../cnoke/cnoke.js -d test --prefer-clang",
+                "build": "CC=clang-17 CXX=clang++-17 node ../cnoke/cnoke.js -d test",
                 "commands": {
                     "Test Sync": "node test/sync.js",
                     "Test Union": "node test/union.js",
