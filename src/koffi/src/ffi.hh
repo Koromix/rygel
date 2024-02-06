@@ -344,8 +344,11 @@ static_assert(MaxTrampolines <= INT16_MAX);
 extern SharedData shared;
 
 Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info);
+Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info);
 Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info);
+Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info);
 Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info);
+Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info);
 
 bool InitAsyncBroker(Napi::Env env, InstanceData *instance);
 

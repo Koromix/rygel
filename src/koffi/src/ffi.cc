@@ -1210,8 +1210,13 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     return mem;
 }
 
-static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
-                                       const Napi::CallbackInfo &info)
+Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
+{
+    FunctionInfo *func = (FunctionInfo *)info.Data();
+    return TranslateNormalCall(func, func->native, info);
+}
+
+Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1242,14 +1247,13 @@ static Napi::Value TranslateNormalCall(const FunctionInfo *func, void *native,
     return call.Complete(func);
 }
 
-Napi::Value TranslateNormalCall(const Napi::CallbackInfo &info)
+Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
 {
     FunctionInfo *func = (FunctionInfo *)info.Data();
-    return TranslateNormalCall(func, func->native, info);
+    return TranslateVariadicCall(func, func->native, info);
 }
 
-static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
-                                         const Napi::CallbackInfo &info)
+Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -1323,12 +1327,6 @@ static Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native,
     return call.Complete(&copy);
 }
 
-Napi::Value TranslateVariadicCall(const Napi::CallbackInfo &info)
-{
-    FunctionInfo *func = (FunctionInfo *)info.Data();
-    return TranslateVariadicCall(func, func->native, info);
-}
-
 class AsyncCall: public Napi::AsyncWorker {
     Napi::Env env;
 
@@ -1386,8 +1384,13 @@ void AsyncCall::OnOK()
     callback.Call(self, RG_LEN(args), args);
 }
 
-static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
-                                      const Napi::CallbackInfo &info)
+Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
+{
+    FunctionInfo *func = (FunctionInfo *)info.Data();
+    return TranslateAsyncCall(func, func->native, info);
+}
+
+Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, const Napi::CallbackInfo &info)
 {
     RG_ASSERT(!func->variadic);
 
@@ -1419,12 +1422,6 @@ static Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native,
     async->Queue();
 
     return env.Undefined();
-}
-
-Napi::Value TranslateAsyncCall(const Napi::CallbackInfo &info)
-{
-    FunctionInfo *func = (FunctionInfo *)info.Data();
-    return TranslateAsyncCall(func, func->native, info);
 }
 
 extern "C" void RelayCallback(Size idx, uint8_t *own_sp, uint8_t *caller_sp, BackRegisters *out_reg)
