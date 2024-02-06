@@ -686,7 +686,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
 
     switch (ref->primitive) {
         case PrimitiveKind::Void: {
-            ThrowError<Napi::TypeError>(env, "Ambigous parameter type %1, use koffi.as(value, type)", type->name); \
+            ThrowError<Napi::TypeError>(env, "Ambiguous parameter type %1, use koffi.as(value, type)", type->name); \
             return false;
         } break;
 
