@@ -312,8 +312,8 @@ function TileMap(runner) {
         } else if (!mouse_state.left) {
             state.grab = null;
         }
-        if (mouse_state.left == -1 && target?.clickable && state.grab == null)
-            handle_click(target.markers);
+        if (mouse_state.left == -1 && target != null && state.grab == null)
+            handle_click(target.markers, target.clickable);
 
         // Adjust cursor style
         if (state.grab != null) {

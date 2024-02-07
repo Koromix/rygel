@@ -326,11 +326,14 @@ export function refreshMap() {
     runner.busy();
 }
 
-async function handleClick(markers) {
+async function handleClick(markers, clickable) {
     if (markers.length > 1) {
         let zoomed = map.reveal(markers, true);
 
         if (!zoomed) {
+            if (!clickable)
+                return;
+
             await UI.dialog({
                 run: (render, close) => html`
                     <div class="title">
@@ -348,6 +351,9 @@ async function handleClick(markers) {
             });
         }
     } else if (provider.renderEntry != null) {
+        if (!clickable)
+            return;
+
         let marker = markers[0];
         let entry = isConnected() ? Object.assign({}, marker.entry) : marker.entry;
 

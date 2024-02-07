@@ -123,8 +123,8 @@ function ProvenanceProvider() {
 
     this.styleCluster = function(element) {
         element.priority = element.markers.length;
-        // element.text = '';
         element.size = 16 + 12 * Math.log(element.markers.length);
+        element.clickable = false;
     };
 
     function field(entry, key, view = null) {
