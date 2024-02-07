@@ -97,7 +97,10 @@ a:hover { color: var(--color, #0d114a); }
     margin-top: 4px;
 }
 
-#filters { display: flex; }
+#filters {
+    display: flex;
+    padding: 0 10px;
+}
 #filters > fieldset {
     position: relative;
     padding: 0;
