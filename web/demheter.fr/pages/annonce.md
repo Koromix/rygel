@@ -74,5 +74,4 @@ Le médecin peut en effet jouer le **rôle d’intermédiaire** entre la personn
 
 <style>
     .links { text-transform: uppercase; }
-    .quotes { font-size: 0.9em; }
 </style>
