@@ -1,5 +1,3 @@
-# L'équipe DEMHETER
-
 <div class="team">
     <div>
         <div class="name">Pr Ali AMAD</div>

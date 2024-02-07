@@ -1,5 +1,3 @@
-# Nos partenaires
-
 <div class="partners">
      <a href="https://www.hauts-de-france.ars.sante.fr/" target="_blank"><img src="{{ ASSET static/partners/arshdf.png }}" alt="ARS HdF" /></a>
      <a href="https://www.clubhousefrance.org/" target="_blank"><img src="{{ ASSET static/partners/clubhouse.png }}" alt="Clubhouse France" /></a>

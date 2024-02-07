@@ -87,11 +87,11 @@ a:hover { color: var(--color, black); }
 }
 #top li > a:hover, #top li.active > a {
     margin-bottom: -1px;
-    border-bottom: 2px solid #ff6600;
+    border-bottom: 2px solid #ec9d36;
 }
 #top li > a.active { font-weight: bold; }
 #top li > div { display: none; }
-.nojs #top li:hover, #top li.active { border-left-color: #ff6600; }
+.nojs #top li:hover, #top li.active { border-left-color: #ec9d36; }
 .nojs #top li:hover > a, #top li.active > a {
     margin-bottom: 1px;
     border-bottom: none;
@@ -105,8 +105,8 @@ a:hover { color: var(--color, black); }
     display: flex;
     flex-direction: column;
     background: white;
-    border-left: 2px solid #ff6600;
-    border-bottom: 2px solid #ff6600;
+    border-left: 2px solid #ec9d36;
+    border-bottom: 2px solid #ec9d36;
 }
 #top li > div > a { margin-top: 3px; }
 #top li > div > a.active { font-weight: bold; }
@@ -173,9 +173,12 @@ main img { max-width: 100%; }
 
 h1 {
     margin: 0 0 0.5em 0;
-    font-size: 2em;
+    font-size: 1.6em;
     text-transform: uppercase;
     font-weight: normal;
+    color: #ec9d36;
+    border-bottom: 1px solid #ccc;
+    font-weight: bold;
 }
 h2 {
     margin: 0 0 1em 0;

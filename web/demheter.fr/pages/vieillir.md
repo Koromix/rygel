@@ -19,7 +19,7 @@ L’équipe médicale de DEMHETER apporte ici **quelques éléments de réponse*
 <div class="quotes">
     <div class="content">
         <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
-        <div>« Quels sont les effets des traitements pris sur le long terme sur l'espérance de vie ? »</div>
+        <div>« Quels sont les effets des traitements pris sur le long terme sur l'espérance de vie ? »</div>
     </div>
 </div>
 
@@ -32,7 +32,7 @@ Suivre un traitement permet de réduire ce risque et d’améliorer la qualité 
 <div class="quotes">
     <div class="content">
         <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
-        <div>« Quels sont les effets des traitements pris sur le long terme sur le métabolisme ? »</div>
+        <div>« Quels sont les effets des traitements pris sur le long terme sur le métabolisme ? »</div>
     </div>
 </div>
 
@@ -47,7 +47,7 @@ Concernant le **lithium**, il est nécessaire de réaliser un bilan sanguin rég
 <div class="quotes">
     <div class="content">
         <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
-        <div>« Existe-t-il un lien entre la prise de traitements, comme les neuroleptiques, et les troubles de la mémoire/maladie d'Alzheimer ? »</div>
+        <div>« Existe-t-il un lien entre la prise de traitements, comme les neuroleptiques, et les troubles de la mémoire/maladie d'Alzheimer ? »</div>
     </div>
 </div>
 
@@ -64,7 +64,7 @@ La prise de **traitements anticholinergiques** peut temporairement entraîner de
 <div class="quotes">
     <div class="content">
         <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
-        <div>« La perte de libido peut-elle être accentuée par la prise de traitements sur le long terme ? »</div>
+        <div>« La perte de libido peut-elle être accentuée par la prise de traitements sur le long terme ? »</div>
     </div>
 </div>
 
@@ -79,7 +79,7 @@ Les **troubles de l’humeur, l’âge et les maladies cardiovasculaires** peuve
 <div class="quotes">
     <div class="content">
         <img src="{{ ASSET static/clubhouse/question.png }}" alt="" />
-        <div>« Avec l'âge, les troubles de l'humeur peuvent-ils se stabiliser ou au contraire le risque de rechute est-il plus important ?”</div>
+        <div>« Avec l'âge, les troubles de l'humeur peuvent-ils se stabiliser ou au contraire le risque de rechute est-il plus important ? »</div>
     </div>
 </div>
 
