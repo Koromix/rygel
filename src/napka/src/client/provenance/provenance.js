@@ -49,9 +49,20 @@ function ProvenanceProvider() {
 
                 <div class="group">
                     <label>
-                        <input type="checkbox" data-filter="this.type == 'demheter'"
-                               checked/> DEMHETER
-                        <img src="static/icons/demheter.png" width="24" height="24" alt="" />
+                        <input type="checkbox" data-filter="this.profession == 'Psychiatre'"
+                               checked/> Psychiatres
+                    </label>
+                    <label>
+                        <input type="checkbox" data-filter="this.profession == 'Psychiatre libéral'"
+                               checked/> Psychiatres libéraux
+                    </label>
+                    <label>
+                        <input type="checkbox" data-filter="this.profession == 'Médecin généraliste'"
+                               checked/> Médecins généralistes
+                    </label>
+                    <label>
+                        <input type="checkbox" data-filter="this.profession == 'Autre'"
+                               checked/> Autres
                     </label>
                 </div>
             </div>

@@ -153,6 +153,9 @@ function transformDemheter(row) {
         profession: row.Fonction
     };
 
+    if (!(['Psychiatre', 'Psychiatre libéral', 'Médecin généraliste']).includes(entry.profession))
+        entry.profession = 'Autre';
+
     entry.version = crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex');
 
     return entry;
