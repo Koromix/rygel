@@ -275,8 +275,7 @@ function TileMap(runner) {
                     y: element.y - viewport.y1,
                 };
 
-                if (element.clickable &&
-                        distance(pos, mouse_state) < adaptMarkerSize(element.size, state.zoom) / 2) {
+                if (distance(pos, mouse_state) < adaptMarkerSize(element.size, state.zoom) / 2) {
                     target = element;
                     break;
                 }
@@ -313,7 +312,7 @@ function TileMap(runner) {
         } else if (!mouse_state.left) {
             state.grab = null;
         }
-        if (mouse_state.left == -1 && target != null && state.grab == null)
+        if (mouse_state.left == -1 && target?.clickable && state.grab == null)
             handle_click(target.markers);
 
         // Adjust cursor style
