@@ -74,7 +74,7 @@ function ProvenanceProvider() {
                         tooltip: entry.name,
                         priority: 1,
                         circle: '#24579d',
-                        size: 32
+                        size: 8
                     };
 
                     marker.entry = entry;
@@ -100,6 +100,8 @@ function ProvenanceProvider() {
 
     this.styleCluster = function(element) {
         element.priority = element.markers.length;
+        // element.text = '';
+        element.size = 8 + 14 * Math.log(element.markers.length);
     };
 
     function field(entry, key, view = null) {

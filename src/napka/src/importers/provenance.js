@@ -60,7 +60,7 @@ async function run() {
     // Create map and layers if needed
     db.transaction(() => {
         let map_id = db.prepare(`INSERT INTO maps (name, title, mail)
-                                     VALUES ('provenance', 'Provenance', 'demheter@chu-lille.fr')
+                                     VALUES ('provenance', 'Adressages', 'niels.martignene@protonmail.com')
                                      ON CONFLICT DO UPDATE SET title = excluded.title,
                                                                mail = excluded.mail
                                      RETURNING id`).pluck().get();
@@ -140,25 +140,15 @@ async function run() {
 }
 
 function transformDemheter(row) {
-    let address = null;
-
-    let secteur = secteurs.find(it => it.sector == row.Origine);
-
-    if (secteur != null) {
-        address = secteur.address;
-    } else if (row.Adresse) {
-        address = row.Adresse;
-    } else {
-        address = row.Origine;
-    }
+    let secteur = secteurs[row.Origine];
 
     let entry = {
         import: '' + row.ID,
         version: null,
         hide: 0,
 
-        name: row.Origine,
-        address: address,
+        name: row.Origine + ' (' + secteur.map(it => it.name).join(', ') + ')',
+        address: secteur[0].address,
 
         profession: row.Fonction
     };
