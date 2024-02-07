@@ -289,7 +289,7 @@ function TileMap(runner) {
             if (tooltips.length) {
                 render_tooltip = {
                     target: target,
-                    text: Array.from(new Set(tooltips)).join('\n')
+                    text: Array.from(new Set(tooltips)).sort().join('\n')
                 };
             } else {
                 render_tooltip = null;
