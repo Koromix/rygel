@@ -3597,6 +3597,37 @@ static inline Span<const char> SplitStrReverseAny(const char *str, const char *s
                                                   Span<const char> *out_remainder = nullptr)
     { return SplitStrReverseAny(MakeSpan(str, strlen(str)), split_chars, out_remainder); }
 
+static inline Span<char> TrimStrLeft(Span<char> str, char trim_char)
+{
+    while (str.len && str[0] == trim_char && str[0]) {
+        str.ptr++;
+        str.len--;
+    }
+
+    return str;
+}
+static inline Span<char> TrimStrRight(Span<char> str, char trim_char)
+{
+    while (str.len && str[str.len - 1] == trim_char && str[str.len - 1]) {
+        str.len--;
+    }
+
+    return str;
+}
+static inline Span<char> TrimStr(Span<char> str, char trim_char)
+{
+    str = TrimStrRight(str, trim_char);
+    str = TrimStrLeft(str, trim_char);
+
+    return str;
+}
+static inline Span<const char> TrimStrLeft(Span<const char> str, char trim_char)
+    { return TrimStrLeft(MakeSpan((char *)str.ptr, str.len), trim_char); }
+static inline Span<const char> TrimStrRight(Span<const char> str, char trim_char)
+    { return TrimStrRight(MakeSpan((char *)str.ptr, str.len), trim_char); }
+static inline Span<const char> TrimStr(Span<const char> str,char trim_char)
+    { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_char); }
+
 static inline Span<char> TrimStrLeft(Span<char> str, const char *trim_chars = " \t\r\n")
 {
     while (str.len && strchr(trim_chars, str[0]) && str[0]) {
