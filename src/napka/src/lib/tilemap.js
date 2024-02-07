@@ -512,7 +512,7 @@ function TileMap(runner) {
                     if (img != null)
                         ctx.drawImage(img, pos.x - width / 2, pos.y - height / 2, width, height);
                 } else if (element.circle != null) {
-                    let radius = adaptMarkerSize(element.size / 2, state.zoom);
+                    let radius = adaptMarkerSize(element.size / 2, anim_zoom);
 
                     ctx.beginPath();
                     ctx.arc(pos.x, pos.y, radius, 0, 2 * Math.PI, false);
@@ -522,6 +522,7 @@ function TileMap(runner) {
                 }
 
                 if (element.text) {
+                    let target = 0.75 * adaptMarkerSize(element.size, anim_zoom);
                     let size = Math.floor(element.size / 2) + 1;
                     let width = null;
 
@@ -529,7 +530,7 @@ function TileMap(runner) {
                     do {
                         ctx.font = (--size) + 'px Open Sans';
                         width = ctx.measureText(element.text).width;
-                    } while (width > 0.75 * element.size);
+                    } while (width > target);
 
                     ctx.fillStyle = 'white';
                     ctx.fillText(element.text, pos.x - width / 2, pos.y + size / 3);
