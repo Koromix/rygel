@@ -145,8 +145,10 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
     Span<char> id = AllocateSpan<char>(alloc, text.len + 1);
 
     Size offset = 0;
-    Size len = 0;
     bool skip_special = false;
+
+    // Reset length
+    id.len = 0;
 
     while (offset < text.len) {
         int32_t uc;
@@ -154,10 +156,10 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
 
         if (bytes == 1) {
             if (IsAsciiAlphaOrDigit((char)uc)) {
-                id[len++] = LowerAscii((char)uc);
+                id[id.len++] = LowerAscii((char)uc);
                 skip_special = false;
             } else if (!skip_special) {
-                id[len++] = replace_char;
+                id[id.len++] = replace_char;
                 skip_special = true;
             }
         } else if (bytes > 1) {
@@ -170,8 +172,8 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
                 ptr = text.ptr + offset;
             }
 
-            memcpy_safe(id.ptr + len, ptr, (size_t)expand);
-            len += expand;
+            memcpy_safe(id.end(), ptr, (size_t)expand);
+            id.len += expand;
 
             skip_special = false;
         } else {
@@ -182,13 +184,11 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
         offset += bytes;
     }
 
-    while (len > 1 && id[len - 1] == replace_char) {
-        len--;
-    }
-    if (!len)
+    id = TrimStr(id, replace_char);
+    if (!id.len)
         return nullptr;
 
-    id.ptr[len] = 0;
+    id.ptr[id.len] = 0;
 
     return id.ptr;
 }
