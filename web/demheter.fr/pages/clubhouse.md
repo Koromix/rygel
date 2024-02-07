@@ -12,7 +12,7 @@
 
 Les contenus de cet onglet ont été élaborés avec les **membres du Clubhouse de Lille** lors d'ateliers dédiés.
 
-<div style="text-align: center;">
+<div class="shelf">
     <a href="https://www.clubhousefrance.org/" target="_blank"><img src="{{ ASSET static/partners/clubhouse.png }}" alt="Clubhouse France" /></a>
 </div>
 
