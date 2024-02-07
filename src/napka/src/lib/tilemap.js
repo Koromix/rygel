@@ -824,7 +824,7 @@ function TileMap(runner) {
 function clusterize(items) {
     items = items.slice().sort((item1, item2) => item1.x - item2.x);
 
-    let max_delta = Math.max(...items.map(item => item.size));
+    let max_delta = Math.max(...items.map(item => item.size)) * 2;
     let clusters = [];
 
     for (let i = 0; i < items.length;) {
@@ -837,7 +837,7 @@ function clusterize(items) {
             let accumulator = {
                 x: item.x,
                 y: item.y
-            }
+            };
             let center = Object.assign({}, accumulator);
 
             for (let j = i + 1; j < items.length; j++) {
@@ -852,7 +852,7 @@ function clusterize(items) {
                 }
 
                 let dist = distance(center, other);
-                let treshold = Math.min(item.size, other.size) / 2;
+                let treshold = Math.min(item.size, other.size) / 1.8;
 
                 if (dist < treshold) {
                     cluster.push(other);
