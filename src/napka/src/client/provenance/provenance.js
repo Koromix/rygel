@@ -81,11 +81,11 @@ function ProvenanceProvider() {
                     let marker = {
                         latitude: entry.address.latitude,
                         longitude: entry.address.longitude,
-                        cluster: '#24579d',
+                        cluster: getSectorColor(entry.name),
                         tooltip: entry.name,
                         priority: 1,
-                        circle: '#24579d',
-                        size: 8
+                        circle: getSectorColor(entry.name),
+                        size: 16
                     };
 
                     marker.entry = entry;
@@ -109,10 +109,22 @@ function ProvenanceProvider() {
         return markers;
     };
 
+    function getSectorColor(sector) {
+        let prefix = sector.substr(0, 2);
+
+        switch (prefix) {
+            case '59': return '#ee8c53';
+            case '62': return '#e6b34a';
+            case '02': return '#55beb5';
+            case '60': return '#8fa1cb';
+            case '80': return '#7cc367';
+        }
+    }
+
     this.styleCluster = function(element) {
         element.priority = element.markers.length;
         // element.text = '';
-        element.size = 8 + 14 * Math.log(element.markers.length);
+        element.size = 16 + 12 * Math.log(element.markers.length);
     };
 
     function field(entry, key, view = null) {
