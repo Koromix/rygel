@@ -312,7 +312,7 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
     cmark_gfm_core_extensions_ensure_registered();
 
     // Prepare markdown parser
-    cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT);
+    cmark_parser *parser = cmark_parser_new(CMARK_OPT_DEFAULT | CMARK_OPT_FOOTNOTES);
     RG_DEFER { cmark_parser_free(parser); };
 
     // Enable syntax extensions
