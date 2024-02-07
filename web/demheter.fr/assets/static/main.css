@@ -503,3 +503,53 @@ footer > img { filter: saturate(0%) brightness(0); }
     text-align: center;
 }
 .buttons > a:hover { background: #3d7879; }
+
+.links {
+    margin: 1em;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.links > a {
+    display: block;
+    width: 80%;
+    min-width: 250px;
+    background: #4b9596;
+    color: white;
+    padding: 0.6em 1em;
+    text-decoration: none;
+    text-align: center;
+}
+.links > a:hover { background: var(--hover, #3d7879) !important; }
+
+.quotes {
+    margin: 2em auto;
+    max-width: 90%;
+    width: 600px;
+    font-size: 0.8em;
+    font-style: italic;
+}
+.quotes > .intro { padding: 6px; }
+.quotes > .content {;
+    position: relative;
+    padding: 1em;
+    text-align: justify;
+    border-radius: 12px;
+    background: #4d9290;
+    color: white;
+}
+.quotes > .content > img {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    margin-right: 1em;
+    object-fit: contain;
+}
+.quotes > .content > div { margin-left: calc(48px + 1.5em); }
+.quotes > .content > div + div { margin-top: 2em; }
+.quotes p:last-child {
+    margin-top: 2px;
+    font-size: 1.1em;
+}

@@ -1,3 +1,11 @@
+<div class="tel_3114">
+    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" style="float: left;" alt="" />
+    <div>
+        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
+        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
+    </div>
+</div>
+
 # Présentation
 
 ## Conception
@@ -31,7 +39,7 @@ L'équipe de DEMHETER remercie la Directrice du Clubhouse de Lille, **Nathalie L
             <p style="text-align: center;"><b>« Viellir avec un trouble de l'humeur »</b>
         </div>
     </div>
-    <div style="background: #3d8ebc;">
+    <div style="background: #316e90;">
         <div class="title">3ème atelier</div>
         <div class="content">
             <p>Cet atelier est dédié à la thématique :
@@ -60,3 +68,11 @@ L'équipe de DEMHETER remercie la Directrice du Clubhouse de Lille, **Nathalie L
     }
     .workshops .content { font-size: 0.8em; }
 </style>
+
+# Travaux
+
+<div class="links">
+    <a href="/consulter">La peur de consulter un professionnel de santé</a>
+    <a href="/annonce">L'importance de l'annonce diagnostique</a>
+    <a href="/vieillir">Vieillir avec un trouble de l'humeur</a>
+</div>
