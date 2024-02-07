@@ -45,7 +45,9 @@ Dans ces conditions, **deux écueils possibles** : le refus du diagnostic ou la 
 
 À l’inverse, un diagnostic annoncé et expliqué par le médecin permet à la personne de **mieux accueillir** cette annonce.
 
-# ...pour accepter son trouble
+# ... pour accepter son trouble
+
+<img src="{{ ASSET static/clubhouse/people1.png }}" class="inline" width="116" height="133" alt="" />
 
 L’accès à un diagnostic clair permet non seulement de répondre **au besoin de savoir** de la personne mais lui donne aussi la possibilité, si elle le souhaite, d’annoncer et d’expliquer son trouble à ses proches.
 
@@ -72,4 +74,5 @@ Le médecin peut en effet jouer le **rôle d’intermédiaire** entre la personn
 
 <style>
     .links { text-transform: uppercase; }
+    .quotes { font-size: 0.9em; }
 </style>

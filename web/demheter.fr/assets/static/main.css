@@ -531,7 +531,6 @@ footer > img { filter: saturate(0%) brightness(0); }
     margin: 2em auto;
     max-width: 90%;
     width: 600px;
-    font-size: 0.8em;
     font-style: italic;
 }
 .quotes > .intro { padding: 6px; }
@@ -540,7 +539,7 @@ footer > img { filter: saturate(0%) brightness(0); }
     padding: 1em;
     text-align: justify;
     border-radius: 12px;
-    background: #4d9290;
+    background: #3c8ebb;
     color: white;
 }
 .quotes > .content > img {
@@ -555,4 +554,17 @@ footer > img { filter: saturate(0%) brightness(0); }
 .quotes p:last-child {
     margin-top: 2px;
     font-size: 1.1em;
+}
+
+.inline {
+    float: left;
+    margin: 8px 3.5% 8px 12px;
+}
+.inline.right {
+    float: right;
+    margin: 8px 12px 8px 3.5%;
+}
+
+@media screen and (max-width: 960px) {
+    .inline { display: none; }
 }
