@@ -49,7 +49,7 @@ if [ "$1" = "configure" ]; then
         systemctl stop goupile >/dev/null 2>&1 || true
     fi
     if [ -d /run/systemd/system ]; then
-        /lib/goupile/manage.py sync
+        /usr/lib/goupile/manage.py sync
     fi
 fi
 
