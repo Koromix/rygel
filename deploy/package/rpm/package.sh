@@ -24,7 +24,6 @@ Version: ${VERSION}
 Release: ${RELEASE}
 Summary: ${PKG_DESCRIPTION}
 License: ${PKG_LICENSE}
-BuildRequires: systemd-rpm-macros
 
 %description
 ${PKG_DESCRIPTION}
