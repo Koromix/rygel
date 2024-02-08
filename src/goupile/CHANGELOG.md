@@ -1,5 +1,9 @@
 # Changelog
 
+## Goupile 3.3.6
+
+- Improve data migration from goupile2
+
 ## Goupile 3.3.5
 
 - Reduce permissions for demo users
