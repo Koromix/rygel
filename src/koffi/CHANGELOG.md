@@ -1,8 +1,51 @@
 # Changelog
 
-## Version history
+## Koffi 3
+
+### Koffi 3.0
+
+#### Koffi 3.0.0 (in development)
+
+**Major changes:**
+
+- Stop automatic conversion of string pointers to JS strings
+- Drop disposable types, which were mainly useful to handle heap-allocated strings
+
+**Other changes:**
+
+- Replace use of externals with proper type objects:
+  * Access type information directly on type variables without `koffi.introspect`
+- Replace use of externals with proper pointer objects:
+  * Get pointer type with `pointer.type`
+  * Get pointer address with `pointer.address`
+  * Make or cast pointers with `new koffi.Pointer(address, type)`
+
+**Newly deprecated functions:**
+
+- Deprecate `koffi.resolve()` function, replace with `koffi.type()` method
+- Deprecate `koffi.address()` function, replace with `pointer.address` property
+- Deprecate `koffi.call()` function, replace with `pointer.call()` method
+- Deprecate `koffi.decode()` function, replace with `pointer.read()` method
+- Deprecate `koffi.encode()` function, replace with `pointer.write()` method
+
+**Removed deprecated functions:**
+
+- Drop koffi.cdecl/stdcall/fastcall/thiscall() functions in favor of new [syntax for calling convention](functions.md#calling-conventions)
+- Remove `koffi.callback()` long replaced with `koffi.proto()`
+- Remove `koffi.handle()` long replaced with `koffi.opaque()`
+
+Consult the [migration guide](migration.md) for more information.
+
+## Koffi 2
 
 ### Koffi 2.7
+
+#### Koffi 2.7.4 (2024-02-04)
+
+- Support callbacks happening on main thread but outside JS call (such as during event loop)
+- Improve stability after `koffi.reset()`
+- Expose internal Node/NAPI `env` pointer
+- Name main Koffi API functions
 
 #### Koffi 2.7.3 (2024-01-26)
 
@@ -467,6 +510,8 @@ Pre-built binaries don't work correctly in Koffi 2.5.13 to 2.5.15, skip those ve
 - Support all types in `koffi.introspect(type)`
 
 Consult the [migration guide](migration.md) for more information.
+
+## Koffi 1
 
 ### Koffi 1.3
 
