@@ -32,7 +32,7 @@ apt install goupile
 
 For other distributions, you can [build the code from source](#build-from-source) as documented below.
 
-## Linux (RPM)
+### Linux (RPM)
 
 A signed RPM repository is provided, and should work with RHEL and Fedora.
 
