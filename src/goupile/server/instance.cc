@@ -23,7 +23,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 117;
+const int InstanceVersion = 118;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -294,6 +294,8 @@ bool MigrateInstance(sq_Database *db)
     int version;
     if (!db->GetUserVersion(&version))
         return false;
+    if (version >= 60 && version < 100)
+        version = 100;
 
     if (version > InstanceVersion) {
         LogError("Schema of '%1' is too recent (%2, expected %3)", filename, version, InstanceVersion);
@@ -1863,7 +1865,8 @@ bool MigrateInstance(sq_Database *db)
                         username TEXT NOT NULL,
                         mtime INTEGER NOT NULL,
                         fs INTEGER NOT NULL REFERENCES fs_versions (version),
-                        data BLOB
+                        data BLOB,
+                        page TEXT
                     );
                     CREATE INDEX rec_fragments_t ON rec_fragments (tid);
                     CREATE INDEX rec_fragments_r ON rec_fragments (eid);
@@ -1879,11 +1882,11 @@ bool MigrateInstance(sq_Database *db)
                     INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store, context, sequence, hid, data)
                         SELECT root_ulid, ulid, anchor, -1, -1, form, IIF(ulid <> root_ulid, parent_ulid || '/', '') || form,
                                sequence, hid, '{}' FROM rec_entries_BAK;
-                    INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, data)
+                    INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, data, page)
                         SELECT f.anchor, p.anchor, e.root_ulid, f.ulid, f.userid,
                                f.username, CAST(strftime('%s', f.mtime) AS INTEGER) * 1000 +
                                            MOD(CAST(strftime('%f', f.mtime) AS REAL) * 1000, 1000),
-                               f.fs, IIF(f.type = 'save', json_object(f.page, json_patch('{}', f.json)), NULL) FROM rec_fragments_BAK f
+                               f.fs, IIF(f.type = 'save', json_patch('{}', f.json), NULL), f.page FROM rec_fragments_BAK f
                         INNER JOIN rec_entries_BAK e ON (e.ulid = f.ulid)
                         LEFT JOIN rec_fragments_BAK p ON (p.ulid = f.ulid AND p.version = f.version - 1);
                     INSERT INTO ins_claims (userid, tid)
@@ -1935,7 +1938,8 @@ bool MigrateInstance(sq_Database *db)
                         username TEXT NOT NULL,
                         mtime INTEGER NOT NULL,
                         fs INTEGER NOT NULL REFERENCES fs_versions (version),
-                        data BLOB
+                        data BLOB,
+                        page TEXT
                     );
                     CREATE INDEX rec_fragments_t ON rec_fragments (tid);
                     CREATE INDEX rec_fragments_r ON rec_fragments (eid);
@@ -2012,7 +2016,8 @@ bool MigrateInstance(sq_Database *db)
                         username TEXT NOT NULL,
                         mtime INTEGER NOT NULL,
                         fs INTEGER NOT NULL REFERENCES fs_versions (version),
-                        data BLOB
+                        data BLOB,
+                        page TEXT
                     );
                     CREATE INDEX rec_fragments_t ON rec_fragments (tid);
                     CREATE INDEX rec_fragments_r ON rec_fragments (eid);
@@ -2182,13 +2187,14 @@ bool MigrateInstance(sq_Database *db)
                         fs INTEGER REFERENCES fs_versions (version),
                         data TEXT,
                         meta TEXT,
-                        tags TEXT
+                        tags TEXT,
+                        page TEXT
                     );
                     CREATE INDEX rec_fragments_t ON rec_fragments (tid);
                     CREATE INDEX rec_fragments_r ON rec_fragments (eid);
 
-                    INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, data, meta, tags)
-                        SELECT anchor, previous, tid, eid, userid, username, mtime, fs, data, meta, tags FROM rec_fragments_BAK;
+                    INSERT INTO rec_fragments (anchor, previous, tid, eid, userid, username, mtime, fs, data, meta, tags, page)
+                        SELECT anchor, previous, tid, eid, userid, username, mtime, fs, data, meta, tags, page FROM rec_fragments_BAK;
 
                     DROP TABLE rec_fragments_BAK;
                 )");
@@ -2210,9 +2216,21 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 117: {
+                bool success = db->RunMany(R"(
+                    UPDATE rec_fragments SET meta = '{ "children": {}, "notes": { "variables": {} } }' WHERE meta IS NULL;
+                    UPDATE rec_fragments SET tags = '[]' WHERE tags IS NULL;
+
+                    UPDATE rec_entries SET meta = '{ "children": {}, "notes": { "variables": {} } }' WHERE meta IS NULL;
+                    UPDATE rec_entries SET tags = '[]' WHERE tags IS NULL;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 117);
+            static_assert(InstanceVersion == 118);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
