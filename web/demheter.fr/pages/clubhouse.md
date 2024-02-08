@@ -16,7 +16,14 @@ Les contenus de cet onglet ont été élaborés avec les **membres du Clubhouse 
     <a href="https://www.clubhousefrance.org/" target="_blank"><img src="{{ ASSET static/partners/clubhouse.png }}" alt="Clubhouse France" /></a>
 </div>
 
-L'équipe de DEMHETER remercie la Directrice du Clubhouse de Lille, **Nathalie LANCIAL**, d'avoir accepté d'organiser ces ateliers au sein du Clubhouse, les chargés d'insertion et de co-gestion du Clubhouse **Jade BEUSCART et Pierre Loyens** et bien sûr les **membres du Clubhouse de Lille** pour leurs précieuses contributions.
+L'**UNAFAM et la FNAPSY** ont également contribué à ces ateliers.
+
+<div class="partners">
+     <a href="https://www.unafam.org/" target="_blank"><img src="{{ ASSET static/partners/unafam.png }}" alt="UNAFAM" /></a>
+     <a href="https://www.fnapsy.org/" target="_blank"><img src="{{ ASSET static/partners/fnapsy.png }}" alt="F2RSM psy HdF" /></a>
+</div>
+
+L'équipe de DEMHETER remercie la Directrice du Clubhouse de Lille, **Nathalie LANCIAL**, d'avoir accepté d'organiser ces ateliers au sein du Clubhouse, les chargés d'insertion et de co-gestion du Clubhouse **Jade BEUSCART et Pierre Loyens** et bien sûr les **membres du Clubhouse de Lille** pour leurs précieuses contributions. Nous remercions également **Laurence TROUILLER et Pierre COUBELLE** pour leur participation. 
 
 ## Ateliers
 

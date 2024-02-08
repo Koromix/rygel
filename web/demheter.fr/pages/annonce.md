@@ -27,7 +27,7 @@ L’annonce du diagnostic pour les personnes concernées par un trouble psychiqu
 
 Certains membres du Clubhouse de Lille soulignent avoir été confrontés à une **période d’« errance diagnostique »** due à l’absence d’un diagnostic clairement annoncé par leur médecin.
 
-« Combien de personnes découvrent leur diagnostic en lisant le courrier de la <abbr title="Maison Départementale des Personnes Handicapées">MDPH</abbr> ? » regrette un membre du Clubhouse. Sans les explications d’un médecin, les **personnes se retrouvent seules** face à un diagnostic souvent porteur d’angoisses et d’incompréhensions.
+Sans les explications d’un médecin, les **personnes se retrouvent seules** face à un diagnostic souvent porteur d’angoisses et d’incompréhensions.
 
 <div class="quotes">
     <div class="intro">Ils témoignent...</div>
