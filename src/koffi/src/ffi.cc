@@ -628,6 +628,11 @@ Napi::Value InstantiatePointer(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
+    if (!ptr) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Cannot make null Pointer object");
+        return env.Null();
+    }
+
     const TypeInfo *type = ResolveType(info[1]);
     if (!type)
         return env.Null();

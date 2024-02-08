@@ -515,9 +515,9 @@ async function test() {
     // Test struct strings
     {
         check_text(ThroughStr({ str: 'Hello', str16: null }), 'Hello');
-        check_text(ThroughStr({ str: null, str16: 'Hello' }), null);
+        assert.equal(ThroughStr({ str: null, str16: 'Hello' }), null);
         check_text16(ThroughStr16({ str: null, str16: 'World!' }), 'World!');
-        check_text16(ThroughStr16({ str: 'World!', str16: null }), null);
+        assert.equal(ThroughStr16({ str: 'World!', str16: null }), null);
     }
 
     // Transparent typed arrays for void pointers
@@ -702,7 +702,7 @@ async function test() {
     assert.equal(koffi.call(GetBinaryIntFunction('substract'), 'BinaryIntFunc', 4, 5), -1);
     assert.equal(GetBinaryIntFunction('multiply').call(3, 8), 24);
     assert.equal(GetBinaryIntFunction('divide').call(100, 2), 50);
-    assert.equal(GetBinaryIntFunction('missing').address, null);
+    assert.equal(GetBinaryIntFunction('missing'), null);
     assert.equal(koffi.address(GetBinaryIntFunction('missing')), null);
     assert.ok(koffi.address(GetBinaryIntFunction('divide')) > 0n);
 
@@ -725,7 +725,7 @@ async function test() {
     assert.equal(koffi.call(GetVariadicIntFunction('add'), VariadicIntFunc, 3, 'int', 4, 'int', 5, 'int', 12), 21);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 1, 'int', 2, 'int', 21), 2);
     assert.equal(koffi.call(GetVariadicIntFunction('multiply'), VariadicIntFunc, 2, 'int', 2, 'int', 21), 42);
-    assert.equal(GetVariadicIntFunction('missing').address, null);
+    assert.equal(GetVariadicIntFunction('missing'), null);
 
     // Communicate through raw buffers
     {
@@ -830,7 +830,7 @@ async function test() {
         }
 
         check_pointer(new koffi.Pointer(18n, 'BinaryIntFunc *'), 18n, 'BinaryIntFunc *');
-        check_pointer(new koffi.Pointer(null, 'BinaryIntFunc *'), null, 'BinaryIntFunc *');
+        assert.throws(() => new koffi.Pointer(null, 'BinaryIntFunc *'), /Cannot make null Pointer object/);
         assert.ok(GetBinaryIntFunction('divide').address > 0n);
         assert.equal(GetBinaryIntFunction('divide').type.name, 'BinaryIntFunc *');
     }

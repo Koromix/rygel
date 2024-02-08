@@ -784,11 +784,15 @@ bool CheckPointerType(const InstanceData *instance, Napi::Value value, const Typ
 
 Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeInfo *type, void *ptr)
 {
-    Napi::External<void> external1 = Napi::External<void>::New(env, ptr);
-    Napi::External<TypeInfo> external2 = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
+    if (ptr) {
+        Napi::External<void> external1 = Napi::External<void>::New(env, ptr);
+        Napi::External<TypeInfo> external2 = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
 
-    Napi::Value wrapper = instance->construct_ptr.New({ external1, external2 });
-    return wrapper;
+        Napi::Value wrapper = instance->construct_ptr.New({ external1, external2 });
+        return wrapper;
+    } else {
+        return env.Null();
+    }
 }
 
 void *UnwrapPointer(Napi::Env env, const InstanceData *instance, Napi::Value value)
