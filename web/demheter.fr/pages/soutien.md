@@ -39,6 +39,10 @@ L'association [Clubhouse France](https://www.clubhousefrance.org/) est une assoc
 
 La [FNAPSY](https://www.fnapsy.org/) (Fédération Nationale des Associations d'usages en Psychiatrie) propose sur son site un [annuaire des associations d'usages](https://www.fnapsy.org/?page=8) que vous pouvez consulter.
 
+<div class="shelf">
+    <a href="https://www.fnapsy.org/" target="_blank"><img src="{{ ASSET static/partners/fnapsy.png }}" alt="FNAPSY" /></a>
+</div>
+
 D'autres annuaires sont disponibles, notamment :
 
 - [Site de l’association Etoile Bipolaire](http://etoilebipolaire.nordblogs.com/)
