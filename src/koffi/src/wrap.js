@@ -28,7 +28,11 @@ function wrap(native) {
         call: util.deprecate((ptr, type, ...args) => {
             ptr = new native.Pointer(ptr, native.pointer(type));
             return ptr.call(...args);
-        }, 'The koffi.call() function is deprecated, use pointer.call() method instead', 'KOFFI009')
+        }, 'The koffi.call() function is deprecated, use pointer.call() method instead', 'KOFFI009'),
+        address: util.deprecate(ptr => ptr?.address ?? null, 'The koffi.address() function is deprecated, use pointer.address property instead', 'KOFFI010'),
+
+        resolve: util.deprecate(native.type, 'The koffi.resolve() function is deprecated, use koffi.type() instead', 'KOFFI010'),
+        introspect: util.deprecate(native.type, 'The koffi.introspect() function is deprecated, use koffi.type() instead', 'KOFFI011')
     };
 
     return obj;

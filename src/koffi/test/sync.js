@@ -703,6 +703,8 @@ async function test() {
     assert.equal(GetBinaryIntFunction('multiply').call(3, 8), 24);
     assert.equal(GetBinaryIntFunction('divide').call(100, 2), 50);
     assert.equal(GetBinaryIntFunction('missing').address, null);
+    assert.equal(koffi.address(GetBinaryIntFunction('missing')), null);
+    assert.ok(koffi.address(GetBinaryIntFunction('divide')) > 0n);
 
     // Call decoded function pointers
     {
