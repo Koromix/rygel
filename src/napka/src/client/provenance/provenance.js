@@ -142,7 +142,7 @@ export async function main() {
 
     let latitude = 50.44;
     let longitude = 2.5;
-    let zoom = (window.innerWidth <= 580) ? 7 : 8;
+    let zoom = 7;
 
     await start(provider, {
         latitude: latitude,
