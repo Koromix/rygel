@@ -5403,6 +5403,9 @@ int OpenIPSocket(SocketType type, int port, SocketMode mode)
         return -1;
     }
     RG_DEFER_N(err_guard) { closesocket(fd); };
+
+    int exclusive = 1;
+    setsockopt(fd, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&exclusive, sizeof(exclusive));
 #else
     int fd = socket(family, flags, 0);
     if (fd < 0) {
@@ -5411,8 +5414,8 @@ int OpenIPSocket(SocketType type, int port, SocketMode mode)
     }
     RG_DEFER_N(err_guard) { close(fd); };
 
-    int reuseport = 1;
-    setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, &reuseport, sizeof(reuseport));
+    int reuse = 1;
+    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
 #endif
 
     if (type == SocketType::IPv4) {
