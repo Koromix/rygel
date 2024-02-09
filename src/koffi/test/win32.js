@@ -49,7 +49,7 @@ async function test() {
 
     let kernel32 = koffi.load('kernel32.dll');
 
-    const DivideBySafe = lib.cdecl('DivideBySafe', 'int', ['int', 'int']);
+    const DivideBySafe = lib.func('DivideBySafe', 'int', ['int', 'int']);
     const CallThrough1 = lib.func('int CallThrough(CallThroughFunc1 *func, int value)');
     const CallThrough2 = lib.func('int CallThrough(CallThroughFunc2 *func, int value)');
 

@@ -197,7 +197,7 @@ EXPORT int CallThreaded(IntCallback *func, int x)
 {
     CallContext ctx;
 
-    ctx.callback = func ? func : callback;
+    ctx.callback = func ? func : indirect_cb;
     ctx.ptr = &x;
 
     HANDLE h = CreateThread(NULL, 0, CallThreadedFunc, &ctx, 0, NULL);
