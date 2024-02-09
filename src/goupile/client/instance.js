@@ -926,6 +926,11 @@ function addAutomaticActions(builder, model) {
         let label = force ? '+Forcer l\'enregistrement' : '+Enregistrer';
         let color = force ? null : '#2d8261';
 
+        let is_new = (form_entry.anchor < 0);
+
+        if (is_new && route.page.options.sequence)
+            label = '+Continuer';
+
         let can_save = form_thread.locked || !form_state.hasChanged();
         let can_lock = form_thread.saved && route.page.options.has_lock &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
@@ -933,8 +938,6 @@ function addAutomaticActions(builder, model) {
         builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: color }, async () => {
             if (!force)
                 form_builder.triggerErrors();
-
-            let redirect = route.page.options.sequence && (form_entry.anchor < 0);
 
             await data_mutex.run(async () => {
                 await saveRecord(form_thread.tid, form_entry, form_data, form_meta.constraints);
@@ -944,9 +947,10 @@ function addAutomaticActions(builder, model) {
 
             // Redirect?
             {
+                let redirect = route.page.options.sequence;
                 let url = null;
 
-                if (redirect) {
+                if (redirect === true) {
                     for (let i = route.page.menu.chain.length - 2; i >= 0; i--) {
                         let item = route.page.menu.chain[i];
                         let status = computeStatus(item, form_thread);
@@ -958,6 +962,25 @@ function addAutomaticActions(builder, model) {
                                 break;
                         }
                     }
+
+                    if (is_new && route.page.menu.chain.length > 1) {
+                        let parent = route.page.menu.chain[route.page.menu.chain.length - 2];
+                        let idx = parent.children.indexOf(route.page.menu);
+
+                        if (idx >= 0 && idx < parent.children.length - 1) {
+                            let next = parent.children[idx + 1];
+
+                            while (next.children.length)
+                                next = next.children[0];
+
+                            url = contextualizeURL(next.url, form_thread);
+                        }
+                    }
+                } else if (typeof redirect == 'string') {
+                    let page = app.pages.find(page => page.key == redirect);
+
+                    if (page != null)
+                        url = contextualizeURL(page.url, form_thread);
                 }
 
                 go(null, url);
