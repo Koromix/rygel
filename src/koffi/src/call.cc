@@ -209,8 +209,7 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
 
         return true;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-        return false;
+        return PushPointer(value, instance->str_type, directions, (void **)out_str);
     }
 }
 
@@ -311,8 +310,7 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
 
         return true;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-        return false;
+        return PushPointer(value, instance->str16_type, directions, (void **)out_str16);
     }
 }
 
@@ -983,7 +981,9 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         } break;
 
         case napi_external: {
-            RG_ASSERT(type->primitive == PrimitiveKind::Pointer);
+            RG_ASSERT(type->primitive == PrimitiveKind::Pointer ||
+                      type->primitive == PrimitiveKind::String ||
+                      type->primitive == PrimitiveKind::String16);
 
             if (!CheckValueTag(instance, value, type->ref.marker) &&
                     !CheckValueTag(instance, value, instance->void_type) &&
