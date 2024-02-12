@@ -30,7 +30,7 @@ const koffi = require('koffi');
 const user32 = koffi.load('user32.dll');
 
 const DWORD = koffi.alias('DWORD', 'uint32_t');
-const HANDLE = koffi.pointer(koffi.opaque('HANDLE'));
+const HANDLE = koffi.pointer('HANDLE', koffi.opaque());
 const HWND = koffi.alias('HWND', HANDLE);
 
 const FindWindowEx = user32.func('HWND __stdcall FindWindowExW(HWND hWndParent, HWND hWndChildAfter, const char16_t *lpszClass, const char16_t *lpszWindow)');
