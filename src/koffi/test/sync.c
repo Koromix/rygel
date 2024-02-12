@@ -19,6 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+#include <assert.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -187,6 +188,9 @@ typedef struct BufferInfo {
 EXPORT int sym_int = 0;
 EXPORT const char *sym_str = NULL;
 EXPORT int sym_int3[3] = { 0, 0, 0 };
+
+static char16_t *write_ptr;
+static int write_max;
 
 EXPORT void CallFree(void *ptr)
 {
@@ -960,4 +964,24 @@ EXPORT int GetSymbolInt3(int out[3])
     out[0] = sym_int3[0];
     out[1] = sym_int3[1];
     out[2] = sym_int3[2];
+}
+
+EXPORT void WriteConfigure(char16_t *buf, int max)
+{
+    assert(max > 0);
+
+    write_ptr = buf;
+    write_max = max - 1;
+}
+
+EXPORT void WriteString(const char16_t *str)
+{
+    int len = 0;
+
+    while (str[len] && len < write_max) {
+        write_ptr[len] = str[len];
+        len++;
+    }
+
+    write_ptr[len] = 0;
 }

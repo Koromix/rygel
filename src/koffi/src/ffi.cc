@@ -770,6 +770,61 @@ static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **o
     }
 }
 
+static Napi::Value CallMalloc(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 2) {
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+    if (!info[1].IsNumber()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+    const TypeInfo *type = ResolveType(info[0]);
+    if (!type)
+        return env.Null();
+    const TypeInfo *ref = type->ref.type;
+
+    if (type->primitive != PrimitiveKind::Pointer &&
+            type->primitive != PrimitiveKind::String &&
+            type->primitive != PrimitiveKind::String16) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected data pointer or string type", type->name);
+        return env.Null();
+    }
+    if (!ref->size) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Cannot allocate memory for zero-sized type %1", type->ref.type->name);
+        return env.Null();
+    }
+
+    int32_t len = info[1].As<Napi::Number>();
+
+    if (len <= 0) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Size must be greater than 0");
+        return env.Null();
+    }
+    if (len > INT32_MAX / ref->size) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Cannot allocate more than %1 objects of type %2", INT32_MAX / ref->size, ref->name);
+        return env.Null();
+    }
+
+    Size size = (Size)(len * ref->size);
+    void *ptr = malloc((size_t)size);
+
+    if (!ptr) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Failed to allocate %1 of memory", FmtMemSize((Size)size));
+        return env.Null();
+    }
+
+    Napi::External<void> external = Napi::External<void>::New(env, ptr);
+    SetValueTag(instance, external, ref);
+
+    return external;
+}
+
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -2241,6 +2296,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("inout", Napi::Function::New(env, MarkInOut, "inout"));
 
     exports.Set("disposable", Napi::Function::New(env, CreateDisposableType, "disposable"));
+    exports.Set("malloc", Napi::Function::New(env, CallMalloc, "malloc"));
     exports.Set("free", Napi::Function::New(env, CallFree, "free"));
 
     exports.Set("register", Napi::Function::New(env, RegisterCallback, "register"));

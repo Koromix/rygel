@@ -279,6 +279,8 @@ async function test() {
     const GetSymbolInt = lib.func('int GetSymbolInt()');
     const GetSymbolStr = lib.func('const char *GetSymbolStr()');
     const GetSymbolInt3 = lib.func('void GetSymbolInt3(_Out_ int *out)');
+    const WriteConfigure = lib.func('void WriteConfigure(char16_t *buf, int size)');
+    const WriteString = lib.func('void WriteString(const char16_t *str)');
 
     free_ptr = CallFree;
 
@@ -833,6 +835,21 @@ async function test() {
     assert.throws(() => koffi.struct('JaneDoe', { a: 'int!' }), /Cannot create disposable type for non-pointer/);
     assert.throws(() => lib.func('void WhoKnows(const char *ptr, int[5] arg)'), /Array types decay to pointers/);
     assert.throws(() => lib.func('void NoBody(const char *ptr, int arg[5])'), /Array types decay to pointers/);
+
+    // Allocate buffer and write in later call
+    {
+        let ptr = koffi.malloc('char16_t *', 9);
+
+        WriteConfigure(ptr, 9);
+
+        WriteString('Hello');
+        assert.equal(koffi.decode(ptr, 'char16_t', -1), 'Hello');
+
+        WriteString('Hello World!');
+        assert.equal(koffi.decode(ptr, 'char16_t', -1), 'Hello Wo');
+
+        koffi.free(ptr);
+    }
 
     lib.unload();
 }
