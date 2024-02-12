@@ -88,7 +88,7 @@ AddInt(sum, 6);
 console.log(sum[0]); // Prints 42
 ```
 
-### Array pointers (dynamic arrays)
+### Dynamic arrays
 
 In C, dynamically-sized arrays are usually passed around as pointers. The length is either passed as an additional argument, or inferred from the array content itself, for example with a terminating sentinel value (such as a NULL pointers in the case of an array of strings).
 
@@ -131,6 +131,69 @@ console.log(total); // Prints 14
 ```
 
 By default, just like for objects, array arguments are copied from JS to C but not vice-versa. You can however change the direction as documented in the section on [output parameters](output.md).
+
+## Handling void pointers
+
+*New in Koffi 2.1*
+
+Many C functions use `void *` parameters in order to pass polymorphic objects and arrays, meaning that the data format changes can change depending on one other argument, or on some kind of struct tag member.
+
+Koffi provides two features to deal with this:
+
+- You can use `koffi.as(value, type)` to tell Koffi what kind of type is actually expected, as shown in the example below.
+- Buffers and typed JS arrays can be used as values in place everywhere a pointer is expected. See [dynamic arrays](#dynamic-arrays) for more information, for input or output.
+
+The example below shows the use of `koffi.as()` to read the header of a PNG file with `fread()` directly to a JS object.
+
+```js
+// ES6 syntax: import koffi from 'koffi';
+const koffi = require('koffi');
+
+const lib = koffi.load('libc.so.6');
+
+const FILE = koffi.opaque('FILE');
+
+const PngHeader = koffi.pack('PngHeader', {
+    signature: koffi.array('uint8_t', 8),
+    ihdr: koffi.pack({
+        length: 'uint32_be_t',
+        chunk: koffi.array('char', 4),
+        width: 'uint32_be_t',
+        height: 'uint32_be_t',
+        depth: 'uint8_t',
+        color: 'uint8_t',
+        compression: 'uint8_t',
+        filter: 'uint8_t',
+        interlace: 'uint8_t',
+        crc: 'uint32_be_t'
+    })
+});
+
+const fopen = lib.func('FILE *fopen(const char *path, const char *mode)');
+const fclose = lib.func('int fclose(FILE *fp)');
+const fread = lib.func('size_t fread(_Out_ void *ptr, size_t size, size_t nmemb, FILE *fp)');
+
+let filename = process.argv[2];
+if (filename == null)
+    throw new Error('Usage: node png.js <image.png>');
+
+let hdr = {};
+{
+    let fp = fopen(filename, 'rb');
+    if (!fp)
+        throw new Error(`Failed to open '${filename}'`);
+
+    try {
+        let len = fread(koffi.as(hdr, 'PngHeader *'), 1, koffi.sizeof(PngHeader), fp);
+        if (len < koffi.sizeof(PngHeader))
+            throw new Error('Failed to read PNG header');
+    } finally {
+        fclose(fp);
+    }
+}
+
+console.log('PNG header:', hdr);
+```
 
 ## Disposable types
 

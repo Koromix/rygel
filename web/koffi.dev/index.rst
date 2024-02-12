@@ -29,7 +29,6 @@ Table of contents
    input
    pointers
    output
-   polymorphism
    unions
    variables
    callbacks
