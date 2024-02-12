@@ -838,7 +838,7 @@ async function test() {
 
     // Allocate buffer and write in later call
     {
-        let ptr = koffi.malloc('char16_t *', 9);
+        let ptr = koffi.alloc('char16_t', 9);
 
         WriteConfigure(ptr, 9);
 

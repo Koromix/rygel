@@ -770,7 +770,7 @@ static inline bool GetExternalPointer(Napi::Env env, Napi::Value value, void **o
     }
 }
 
-static Napi::Value CallMalloc(const Napi::CallbackInfo &info)
+static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -787,16 +787,9 @@ static Napi::Value CallMalloc(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(info[0]);
     if (!type)
         return env.Null();
-    const TypeInfo *ref = type->ref.type;
 
-    if (type->primitive != PrimitiveKind::Pointer &&
-            type->primitive != PrimitiveKind::String &&
-            type->primitive != PrimitiveKind::String16) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected data pointer or string type", type->name);
-        return env.Null();
-    }
-    if (!ref->size) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Cannot allocate memory for zero-sized type %1", type->ref.type->name);
+    if (!type->size) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Cannot allocate memory for zero-sized type %1", type->name);
         return env.Null();
     }
 
@@ -806,21 +799,22 @@ static Napi::Value CallMalloc(const Napi::CallbackInfo &info)
         ThrowError<Napi::Error>(env, "Size must be greater than 0");
         return env.Null();
     }
-    if (len > INT32_MAX / ref->size) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "Cannot allocate more than %1 objects of type %2", INT32_MAX / ref->size, ref->name);
+    if (len > INT32_MAX / type->size) [[unlikely]] {
+        ThrowError<Napi::Error>(env, "Cannot allocate more than %1 objects of type %2", INT32_MAX / type->size, type->name);
         return env.Null();
     }
 
-    Size size = (Size)(len * ref->size);
-    void *ptr = malloc((size_t)size);
+    void *ptr = calloc((size_t)len, (size_t)type->size);
 
     if (!ptr) [[unlikely]] {
+        Size size = (Size)(len * type->size);
+
         ThrowError<Napi::Error>(env, "Failed to allocate %1 of memory", FmtMemSize((Size)size));
         return env.Null();
     }
 
     Napi::External<void> external = Napi::External<void>::New(env, ptr);
-    SetValueTag(instance, external, ref);
+    SetValueTag(instance, external, type);
 
     return external;
 }
@@ -2296,7 +2290,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("inout", Napi::Function::New(env, MarkInOut, "inout"));
 
     exports.Set("disposable", Napi::Function::New(env, CreateDisposableType, "disposable"));
-    exports.Set("malloc", Napi::Function::New(env, CallMalloc, "malloc"));
+    exports.Set("alloc", Napi::Function::New(env, CallAlloc, "alloc"));
     exports.Set("free", Napi::Function::New(env, CallFree, "free"));
 
     exports.Set("register", Napi::Function::New(env, RegisterCallback, "register"));
