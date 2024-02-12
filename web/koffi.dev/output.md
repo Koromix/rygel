@@ -168,6 +168,16 @@ console.log(out[0]);
 
 ## Output buffers
 
+In most cases, you can use buffers and typed arrays to provide output buffers. This works as long as the buffer only gets used while the native C function is being called. See [transient pointers](#transient-pointers) below for an example.
+
+```{warning}
+It is unsafe to keep the pointer around in the native code, or to change the contents outside of the function call where it is provided.
+
+If you need to provide a pointer that will be kept around, allocate memory with [koffi.alloc()](#stable-pointers) instead.
+```
+
+### Transient pointers
+
 *New in Koffi 2.3*
 
 You can use buffers and typed arrays for output (and input/output) pointer parameters. Simply pass the buffer as an argument and the native function will receive a pointer to its contents.
@@ -209,3 +219,57 @@ console.log(vec2); // { x: 1, y: 2, z: 3 }
 ```
 
 See [decoding variables](variables.md#decode-to-js-values) for more information about the decode function.
+
+### Stable pointers
+
+*New in Koffi 2.8*
+
+In some cases, the native code may need to change the output buffer at a later time, maybe during a later call or from another thread.
+
+In this case, it is **not safe to use buffers or typed arrays**! 
+
+However, you can use `koffi.alloc(type, len)` to allocate memory and get a pointer that won't move, and can be safely used at any time by the native code. Use [koffi.decode()](variables.md#decode-to-js-values) to read data from the pointer when needed.
+
+The example below sets up some memory to be used as an output buffer where a concatenation function appends a string on each call.
+
+```c
+#include <assert.h>
+#include <stddef.h>
+
+static char *buf_ptr;
+static size_t buf_len;
+static size_t buf_size;
+
+void reset_buffer(char *buf, size_t size)
+{
+    assert(size > 1);
+
+    buf_ptr = buf;
+    buf_len = 0;
+    buf_size = size - 1; // Keep space for trailing NUL
+
+    buf_ptr[0] = 0;
+}
+
+void append_str(const char *str)
+{
+    for (size_t i = 0; str[i] && buf_len < buf_size; i++, buf_len++) {
+        buf_ptr[buf_len] = str[i];
+    }
+    buf_ptr[buf_len] = 0;
+}
+```
+
+```js
+const reset_buffer = lib.func('void reset_buffer(char *buf, size_t size)');
+const append_str = lib.func('void append_str(const char *str)');
+
+let output = koffi.alloc('char', 64);
+reset_buffer(output, 64);
+
+append_str('Hello');
+console.log(koffi.decode(output, 'char', -1)); // Prints Hello
+
+append_str(' World!');
+console.log(koffi.decode(output, 'char', -1)); // Prints Hello World!
+```
