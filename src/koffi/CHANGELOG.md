@@ -2,6 +2,13 @@
 
 ## Version history
 
+### Koffi 2.8
+
+#### Koffi 2.8.0 (2024-02-12)
+
+- Support pushing pointers for string arguments
+- Add `koffi.alloc()` for [stable pointers](output.md#stable-pointers)
+
 ### Koffi 2.7
 
 #### Koffi 2.7.4 (2024-02-04)
