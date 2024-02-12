@@ -270,6 +270,8 @@ struct InstanceData {
     const TypeInfo *void_type;
     const TypeInfo *char_type;
     const TypeInfo *char16_type;
+    const TypeInfo *str_type;
+    const TypeInfo *str16_type;
 
     Napi::FunctionReference construct_type;
     Napi::FunctionReference construct_ptr;

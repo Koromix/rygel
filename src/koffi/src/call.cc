@@ -195,8 +195,7 @@ bool CallData::PushString(Napi::Value value, int directions, const char **out_st
 
         return true;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-        return false;
+        return PushPointer(value, instance->str_type, directions, (void **)out_str);
     }
 }
 
@@ -283,8 +282,7 @@ bool CallData::PushString16(Napi::Value value, int directions, const char16_t **
 
         return true;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected string", GetValueType(instance, value));
-        return false;
+        return PushPointer(value, instance->str16_type, directions, (void **)out_str16);
     }
 }
 

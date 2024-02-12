@@ -2116,6 +2116,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         instance->void_type = instance->types_map.FindValue("void", nullptr);
         instance->char_type = instance->types_map.FindValue("char", nullptr);
         instance->char16_type = instance->types_map.FindValue("char16", nullptr);
+        instance->str_type = instance->types_map.FindValue("char *", nullptr);
+        instance->str16_type = instance->types_map.FindValue("char16_t *", nullptr);
 
         instance->base_types_len = instance->types.len;
     }
