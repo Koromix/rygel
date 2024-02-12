@@ -1,6 +1,6 @@
 # Overview
 
-Rekord is a **multi-platform backup tool**, with the following features:
+Rekkord is a **multi-platform backup tool**, with the following features:
 
 - Write-only passwords / keys (using asymmetic encryption)
 - Data deduplication based on content-defined chunking
@@ -36,7 +36,7 @@ Once this is done, refresh the repository cache and install the package:
 
 ```sh
 apt update
-apt install rekord
+apt install rekkord
 ```
 
 For other distributions, you can [build the code from source](#build-from-source) as documented below.
@@ -62,7 +62,7 @@ gpgkey=file:///etc/pki/rpm-gpg/koromix-repo.asc" > /etc/yum.repos.d/koromix.repo
 Once this is done, install the package with this command:
 
 ```sh
-dnf install rekord
+dnf install rekkord
 ```
 
 For other distributions, you can [build the code from source](#build-from-source) as documented below.
@@ -78,7 +78,7 @@ To create a repository in a local directory, create an INI file (name it how you
 URL = /path/to/repository
 ```
 
-Once this is done, use [rekord init](#initialize-repository) to create the repository.
+Once this is done, use [rekkord init](#initialize-repository) to create the repository.
 
 ## S3 storage
 
@@ -95,7 +95,7 @@ SecretKey = <AWS secret key>
 
 You can omit the `SecretKey` value, in which case a prompt will ask you the access key.
 
-Once this is done, use [rekord init](#initialize-repository) to create the repository.
+Once this is done, use [rekkord init](#initialize-repository) to create the repository.
 
 ## SFTP server
 
@@ -123,7 +123,7 @@ KeyFile = /home/bar/.ssh/id_ed25519
 Fingerprint = SHA256:Y9pmJfkaok8t0dFJrfi8/LLUNhOYwAZGHUNGsYAiJUM
 ```
 
-Once this is done, use [rekord init](#initialize-repository) to create the repository.
+Once this is done, use [rekkord init](#initialize-repository) to create the repository.
 
 # Commands
 
@@ -132,10 +132,10 @@ Once this is done, use [rekord init](#initialize-repository) to create the repos
 Once you have configured your repository, through a configuration file or with environment variables, you can initialize it with the following command:
 
 ```sh
-export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord init
+export REKKORD_CONFIG_FILE = /path/to/config.ini
+rekkord init
 
-# Alternative: rekord init -C /path/to/config.ini
+# Alternative: rekkord init -C /path/to/config.ini
 ```
 
 This command will initialize the repository with a random 256-bit master key.
@@ -144,12 +144,12 @@ The command will give you this **master key** in base64 form. You should **store
 
 The **write-only key** (public key) is derived from this master key (secret key).
 
-Rekord repositories support multiple user accounts. A **user account named default** is created when the repository is initialized. The master key and the write-key are each encrypted and stored in the repository with two account passwords:
+Rekkord repositories support multiple user accounts. A **user account named default** is created when the repository is initialized. The master key and the write-key are each encrypted and stored in the repository with two account passwords:
 
 - *Master password*, which allows writing and reading from the repository
 - *Write-only password*, which can be used to create snapshots but cannot be used to list or restore existing snapshots
 
-You will need one or the other to use other rekord commands. Please store these passwords securely.
+You will need one or the other to use other rekkord commands. Please store these passwords securely.
 
 However, if you lose them, you will still be able to reset any account (including the default one) **as long as you have the master key**. As mentioned previously, this one, you must not lose or leak!
 
@@ -160,17 +160,17 @@ Each snapshot has a unique hash (which is actually a BLAKE3 hash in hexadecimal 
 You need to give snapshots a name (or use `--anonymous` to skip this). This name does not have to be unique and only exists to help you categorize snapshots.
 
 ```sh
-export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord put -n <NAME> <PATHS...>
+export REKKORD_CONFIG_FILE = /path/to/config.ini
+rekkord put -n <NAME> <PATHS...>
 ```
 
-The command will give you the snapshot hash once it finishes. You can retrieve the hash later with [rekord list](#list-snapshots).
+The command will give you the snapshot hash once it finishes. You can retrieve the hash later with [rekkord list](#list-snapshots).
 
 ## List snapshots
 
 ```sh
-export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord snapshots
+export REKKORD_CONFIG_FILE = /path/to/config.ini
+rekkord snapshots
 ```
 
 The output looks something like this:
@@ -187,11 +187,11 @@ Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 
 ## Explore snapshot
 
-You can list the directories and files in a snapshot with the `rekord list` command. You need to know the unique [snapshot hash](#list-snapshots) for this.
+You can list the directories and files in a snapshot with the `rekkord list` command. You need to know the unique [snapshot hash](#list-snapshots) for this.
 
 ```sh
-export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord list <hash>
+export REKKORD_CONFIG_FILE = /path/to/config.ini
+rekkord list <hash>
 ```
 
 The output looks something like this:
@@ -203,7 +203,7 @@ The output looks something like this:
   [D] opt/                                                        (0755) [2023-10-05 17:03:38 +0200] 
 ```
 
-You can recursively list the content with `rekord list <hash> --recurse` flag:
+You can recursively list the content with `rekkord list <hash> --recurse` flag:
 
 ```
 # <type> <name>                                                   <mode> <date>                      <size>
@@ -221,10 +221,10 @@ You can recursively list the content with `rekord list <hash> --recurse` flag:
       [F] agnos.toml                                              (0644) [2023-10-02 12:38:28 +0200] 1.893 kB
       [D] accounts/                                               (0750) [2023-09-21 16:53:55 +0200] 
         [F] main.key                                              (0644) [2023-09-21 16:53:56 +0200] 3.243 kB
-    [D] rekord/                                                   (0755) [2023-12-13 15:38:23 +0100] 
+    [D] rekkord/                                                   (0755) [2023-12-13 15:38:23 +0100] 
       [F] ENV                                                     (0600) [2023-10-05 17:03:45 +0200] 186 B
-      [F] rekord.sh                                               (0755) [2023-12-13 15:37:58 +0100] 102 B
-      [F] rekord.deb                                              (0644) [2023-12-11 20:45:18 +0100] 5.348 MB
+      [F] rekkord.sh                                               (0755) [2023-12-13 15:37:58 +0100] 102 B
+      [F] rekkord.deb                                              (0644) [2023-12-11 20:45:18 +0100] 5.348 MB
     [D] wireguard/                                                (0755) [2023-09-21 14:28:46 +0200] 
       [D] safe/                                                   (0755) [2023-09-21 15:59:39 +0200] 
         [F] docker-compose.yml                                    (0644) [2023-09-21 14:28:47 +0200] 408 B
@@ -261,11 +261,11 @@ Use `--format JSON` or `--format XML` to get the file tree in a JSON or XML form
 
 ## Restore snapshot
 
-Use the `rekord get` command to restore the files from a snapshot onto the local filesystem. You need to know the unique [snapshot hash](#list-snapshots) for this.
+Use the `rekkord get` command to restore the files from a snapshot onto the local filesystem. You need to know the unique [snapshot hash](#list-snapshots) for this.
 
 ```sh
-export REKORD_CONFIG_FILE = /path/to/config.ini
-rekord get <hash> -O <path>
+export REKKORD_CONFIG_FILE = /path/to/config.ini
+rekkord get <hash> -O <path>
 ```
 
 # Build from source
@@ -279,18 +279,18 @@ cd rygel
 
 ## Windows
 
-In order to build Rekord on Windows, clone the repository and run these commands from the root directory in a _Visual Studio command prompt_ (x64 or x86, as you prefer):
+In order to build Rekkord on Windows, clone the repository and run these commands from the root directory in a _Visual Studio command prompt_ (x64 or x86, as you prefer):
 
 ```batch
 bootstrap.bat
-felix -pFast rekord
+felix -pFast rekkord
 ```
 
 After that, the binary will be available in the `bin/Fast` directory.
 
 ## Linux / macOS
 
-In order to build Rekord on Linux, clone the repository and run these commands from the root directory:
+In order to build Rekkord on Linux, clone the repository and run these commands from the root directory:
 
 ```sh
 # Install required dependencies on Debian or Ubuntu:
@@ -298,7 +298,7 @@ sudo apt install build-essential
 
 # Build binaries
 ./bootstrap.sh
-./felix -pFast rekord
+./felix -pFast rekkord
 ```
 
 After that, the binary will be available in the `bin/Fast` directory.

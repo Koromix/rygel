@@ -13,7 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/wrap/json.hh"
-#include "rekord.hh"
+#include "rekkord.hh"
 #include "src/core/password/password.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/pugixml/src/pugixml.hpp"

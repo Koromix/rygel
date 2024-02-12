@@ -13,7 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/network/curl.hh"
-#include "rekord.hh"
+#include "rekkord.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #ifndef _WIN32
     #include <sys/time.h>
@@ -39,7 +39,7 @@ bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
     OptionParser opt(arguments, OptionMode::Skip);
 
-    const char *config_filename = getenv("REKORD_CONFIG_FILE");
+    const char *config_filename = getenv("REKKORD_CONFIG_FILE");
 
     while (opt.Next()) {
         if (opt.Test("-C", "--config_file", OptionType::Value)) {

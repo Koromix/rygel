@@ -91,8 +91,16 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     // Open local cache
     {
         uint8_t id[32];
-        if (!ReadSecret("rekord", id))
-            return false;
+        if (!ReadSecret("rekkord", id)) {
+            if (ReadSecret("rekord", id)) {
+                LogWarning("Migrating old rekord repository");
+                if (!WriteSecret("rekkord", id, true))
+                    return false;
+                DeleteRaw("rekord");
+            } else {
+                return false;
+            }
+        }
         OpenCache(id);
     }
 
@@ -119,8 +127,16 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
     // Open local cache
     {
         uint8_t id[32];
-        if (!ReadSecret("rekord", id))
-            return false;
+        if (!ReadSecret("rekkord", id)) {
+            if (ReadSecret("rekord", id)) {
+                LogWarning("Migrating old rekord repository");
+                if (!WriteSecret("rekkord", id, true))
+                    return false;
+                DeleteRaw("rekord");
+            } else {
+                return false;
+            }
+        }
         OpenCache(id);
     }
 
@@ -167,7 +183,7 @@ bool rk_Disk::ChangeID()
     uint8_t id[32];
     randombytes_buf(id, RG_SIZE(id));
 
-    if (!WriteSecret("rekord", id, true))
+    if (!WriteSecret("rekkord", id, true))
         return false;
 
     cache_db.Close();
@@ -621,12 +637,12 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
     RG_DEFER_N(err_guard) {
         Lock();
 
-        DeleteRaw("rekord");
+        DeleteRaw("rekkord");
         DeleteRaw("keys/default/full");
         DeleteRaw("keys/default/write");
     };
 
-    if (TestRaw("rekord")) {
+    if (TestRaw("rekkord")) {
         LogError("Repository '%1' looks already initialized", url);
         return false;
     }
@@ -639,9 +655,9 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
         uint8_t id[32];
         randombytes_buf(id, RG_SIZE(id));
 
-        if (!WriteSecret("rekord", id, false))
+        if (!WriteSecret("rekkord", id, false))
             return false;
-        names.Append("rekord");
+        names.Append("rekkord");
 
         OpenCache(id);
     }
@@ -857,7 +873,7 @@ bool rk_Disk::OpenCache(Span<const uint8_t> id)
         crypto_hash_sha256_final(&state, cache_id);
     }
 
-    const char *cache_dir = GetUserCachePath("rekord", &str_alloc);
+    const char *cache_dir = GetUserCachePath("rekkord", &str_alloc);
     if (!cache_dir) {
         LogError("Cannot find user cache path");
         return false;

@@ -13,7 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/wrap/json.hh"
-#include "rekord.hh"
+#include "rekkord.hh"
 #include "vendor/pugixml/src/pugixml.hpp"
 #include <iostream> // for pugixml
 

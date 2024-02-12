@@ -29,11 +29,11 @@ Koffi is a **fast and easy-to-use JS to C FFI module** for [Node.js](https://nod
 
 Find out more on the [page dedicated to Koffi](koffi).
 
-## Rekord
+## Rekkord
 
-Rekord is a multi-platform **backup tool with deduplication and asymmetric encryption**, with support for local and remote storage back-ends.
+Rekkord is a multi-platform **backup tool with deduplication and asymmetric encryption**, with support for local and remote storage back-ends.
 
-Find out more on the [page dedicated to Rekord](rekord).
+Find out more on the [page dedicated to Rekkord](rekkord).
 
 ## TyTools
 

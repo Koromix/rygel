@@ -5,9 +5,9 @@ cd %~dp0
 cd ..\..\..\..
 
 start bootstrap.bat
-felix.exe -pFast rekord
+felix.exe -pFast rekkord
 
-for /f "tokens=2 delims= " %%i in ('bin\Fast\rekord.exe --version') do (
+for /f "tokens=2 delims= " %%i in ('bin\Fast\rekkord.exe --version') do (
     set RAW_VERSION=%%i
     goto out
 )
@@ -23,13 +23,13 @@ if "%part%"=="" (
     set VERSION=%version%.%part%
 )
 
-set PACKAGE_DIR=bin\Packages\rekord\windows
+set PACKAGE_DIR=bin\Packages\rekkord\windows
 mkdir %PACKAGE_DIR%
 
-copy bin\Fast\rekord.exe %PACKAGE_DIR%\rekord.exe
-copy src\rekord\README.md %PACKAGE_DIR%\README.md
+copy bin\Fast\rekkord.exe %PACKAGE_DIR%\rekkord.exe
+copy src\rekkord\README.md %PACKAGE_DIR%\README.md
 
 cd %PACKAGE_DIR%
 
 REM Create ZIP file
-tar.exe -a -c -f ..\..\rekord_%VERSION%_win64.zip README.md rekord.exe
+tar.exe -a -c -f ..\..\rekkord_%VERSION%_win64.zip README.md rekkord.exe

@@ -12,7 +12,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "rekord.hh"
+#include "rekkord.hh"
 
 namespace RG {
 
