@@ -373,7 +373,7 @@ The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS s
 
 ### Dynamic arrays (pointers)
 
-In C, dynamically-sized arrays are usually passed around as pointers. Read more about [array pointers](pointers.md#array-pointers-dynamic-arrays) in the relevant section.
+In C, dynamically-sized arrays are usually passed around as pointers. Read more about [array pointers](pointers.md#dynamic-arrays) in the relevant section.
 
 ## Union types
 

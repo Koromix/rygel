@@ -692,7 +692,7 @@ static Napi::Value MarkInOut(const Napi::CallbackInfo &info)
     return EncodePointerDirection(info, 3);
 }
 
-static Napi::Value CallMalloc(const Napi::CallbackInfo &info)
+static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
     InstanceData *instance = env.GetInstanceData<InstanceData>();
@@ -706,19 +706,12 @@ static Napi::Value CallMalloc(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[0]);
-    if (!type)
+    const TypeInfo *ref = ResolveType(info[0]);
+    if (!ref)
         return env.Null();
-    const TypeInfo *ref = type->ref.type;
 
-    if (type->primitive != PrimitiveKind::Pointer &&
-            type->primitive != PrimitiveKind::String &&
-            type->primitive != PrimitiveKind::String16) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected data pointer or string type", type->name);
-        return env.Null();
-    }
     if (!ref->size) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Cannot allocate memory for zero-sized type %1", type->ref.type->name);
+        ThrowError<Napi::TypeError>(env, "Cannot allocate memory for zero-sized type %1", ref->name);
         return env.Null();
     }
 
@@ -733,14 +726,16 @@ static Napi::Value CallMalloc(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    Size size = (Size)(len * ref->size);
-    void *ptr = malloc((size_t)size);
+    void *ptr = calloc((size_t)len, (size_t)ref->size);
 
     if (!ptr) [[unlikely]] {
+        Size size = (Size)(len * ref->size);
+
         ThrowError<Napi::Error>(env, "Failed to allocate %1 of memory", FmtMemSize((Size)size));
         return env.Null();
     }
 
+    const TypeInfo *type = MakePointerType(instance, ref);
     Napi::Value wrapper = WrapPointer(env, instance, type, ptr);
 
     return wrapper;
@@ -2086,7 +2081,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("out", Napi::Function::New(env, MarkOut, "out"));
     exports.Set("inout", Napi::Function::New(env, MarkInOut, "inout"));
 
-    exports.Set("malloc", Napi::Function::New(env, CallMalloc, "malloc"));
+    exports.Set("alloc", Napi::Function::New(env, CallAlloc, "alloc"));
     exports.Set("free", Napi::Function::New(env, CallFree, "free"));
 
     exports.Set("register", Napi::Function::New(env, RegisterCallback, "register"));
