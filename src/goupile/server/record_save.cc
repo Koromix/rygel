@@ -127,6 +127,17 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
+    if (!session->userid) {
+        session = MigrateGuestSession(*session, instance, request, io);
+        if (!session)
+            return;
+        stamp = session->GetStamp(instance);
+        if (!stamp)
+            return;
+
+        RG_ASSERT(session->userid < 0);
+    }
+
     io->RunAsync([=]() {
         char tid[27];
         RecordFragment fragment = {};
