@@ -66,7 +66,11 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     const char *write_filename = Fmt(&str_alloc, "keys/%1/write", username).ptr;
 
     if (!TestRaw(write_filename)) {
-        LogError("User '%1' does not exist", username);
+        if (TestRaw("rekkord") || TestRaw("rekord")) {
+            LogError("User '%1' does not exist", username);
+        } else {
+            LogError("Repository '%1' is not initialized or not valid", url);
+        }
         return false;
     }
 
