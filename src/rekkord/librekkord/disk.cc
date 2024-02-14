@@ -65,13 +65,42 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     const char *full_filename = Fmt(&str_alloc, "keys/%1/full", username).ptr;
     const char *write_filename = Fmt(&str_alloc, "keys/%1/write", username).ptr;
 
-    if (!TestRaw(write_filename)) {
-        if (TestRaw("rekkord") || TestRaw("rekord")) {
+    // Is it a valid repository?
+    switch (TestRaw("rekkord")) {
+        case StatResult::Success: {} break;
+        case StatResult::MissingPath: {
+            switch (TestRaw("rekord")) {
+                case StatResult::Success: {
+                    LogWarning("Migrating old rekkord repository");
+
+                    uint8_t id[32];
+                    if (!ReadSecret("rekord", id))
+                        return false;
+                    if (!WriteSecret("rekkord", id, false))
+                        return false;
+                    DeleteRaw("rekord");
+                } break;
+                case StatResult::MissingPath: {
+                    LogError("Repository '%1' is not initialized or not valid", url);
+                    return false;
+                } break;
+                case StatResult::AccessDenied:
+                case StatResult::OtherError: return false;
+            }
+        } break;
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return false;
+    }
+
+    // Does user exist?
+    switch (TestRaw(write_filename)) {
+        case StatResult::Success: {} break;
+        case StatResult::MissingPath: {
             LogError("User '%1' does not exist", username);
-        } else {
-            LogError("Repository '%1' is not initialized or not valid", url);
-        }
-        return false;
+            return false;
+        } break;
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return false;
     }
 
     // Open disk and determine mode
@@ -95,16 +124,8 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     // Open local cache
     {
         uint8_t id[32];
-        if (!ReadSecret("rekkord", id)) {
-            if (ReadSecret("rekord", id)) {
-                LogWarning("Migrating old rekord repository");
-                if (!WriteSecret("rekkord", id, true))
-                    return false;
-                DeleteRaw("rekord");
-            } else {
-                return false;
-            }
-        }
+        if (!ReadSecret("rekkord", id))
+            return false;
         OpenCache(id);
     }
 
@@ -218,8 +239,24 @@ bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *w
     const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
     const char *write_filename = Fmt(&temp_alloc, "%1/write", directory).ptr;
 
-    bool exists = (full_pwd && TestRaw(full_filename)) ||
-                  (write_pwd && TestRaw(write_filename));
+    bool exists = false;
+
+    if (full_pwd) {
+        switch (TestRaw(full_filename)) {
+            case StatResult::Success: { exists = true; } break;
+            case StatResult::MissingPath: {} break;
+            case StatResult::AccessDenied:
+            case StatResult::OtherError: return false;
+        }
+    }
+    if (write_pwd) {
+        switch (TestRaw(write_filename)) {
+            case StatResult::Success: { exists = true; } break;
+            case StatResult::MissingPath: {} break;
+            case StatResult::AccessDenied:
+            case StatResult::OtherError: return false;
+        }
+    }
 
     if (exists) {
         if (force) {
@@ -256,7 +293,20 @@ bool rk_Disk::DeleteUser(const char *username)
     const char *full_filename = Fmt(&temp_alloc, "%1/full", directory).ptr;
     const char *write_filename = Fmt(&temp_alloc, "%1/write", directory).ptr;
 
-    bool exists = TestRaw(full_filename) || TestRaw(write_filename);
+    bool exists = false;
+
+    switch (TestRaw(full_filename)) {
+        case StatResult::Success: { exists = true; } break;
+        case StatResult::MissingPath: {} break;
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return false;
+    }
+    switch (TestRaw(write_filename)) {
+        case StatResult::Success: { exists = true; } break;
+        case StatResult::MissingPath: {} break;
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return false;
+    }
 
     if (!exists) {
         LogError("User '%1' does not exist", username);
@@ -440,9 +490,10 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     path.len = Fmt(path.data, "blobs/%1/%2", GetPrefix3(hash), hash).len;
 
     switch (TestFast(path.data)) {
-        case TestResult::Exists: return 0;
-        case TestResult::Missing: {} break;
-        case TestResult::FatalError: return -1;
+        case StatResult::Success: return 0;
+        case StatResult::MissingPath: {} break;
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return -1;
     }
 
     Size written = WriteRaw(path.data, [&](FunctionRef<bool(Span<const uint8_t>)> func) {
@@ -646,9 +697,14 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
         DeleteRaw("keys/default/write");
     };
 
-    if (TestRaw("rekkord")) {
-        LogError("Repository '%1' looks already initialized", url);
-        return false;
+    switch (TestRaw("rekkord")) {
+        case StatResult::Success: {
+            LogError("Repository '%1' looks already initialized", url);
+            return false;
+        } break;
+        case StatResult::MissingPath: {} break;
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return false;
     }
 
     // Generate random key pair
@@ -691,16 +747,16 @@ bool rk_Disk::PutCache(const char *key)
     return success;
 }
 
-rk_Disk::TestResult rk_Disk::TestFast(const char *path)
+StatResult rk_Disk::TestFast(const char *path)
 {
     if (!cache_db.IsValid())
-        return TestRaw(path) ? TestResult::Exists : TestResult::Missing;
+        return TestRaw(path);
 
     bool should_exist;
     {
         sq_Statement stmt;
         if (!cache_db.Prepare("SELECT rowid FROM objects WHERE key = ?1", &stmt))
-            return TestResult::FatalError;
+            return StatResult::OtherError;
         sqlite3_bind_text(stmt, 1, path, -1, SQLITE_STATIC);
 
         should_exist = stmt.Step();
@@ -708,7 +764,14 @@ rk_Disk::TestResult rk_Disk::TestFast(const char *path)
 
     // Probabilistic check
     if (GetRandomIntSafe(0, 100) < 2) {
-        bool really_exists = TestRaw(path);
+        bool really_exists = false;
+
+        switch (TestRaw(path)) {
+            case StatResult::Success: { really_exists = true; } break;
+            case StatResult::MissingPath: { really_exists = false; } break;
+            case StatResult::AccessDenied: return StatResult::AccessDenied;
+            case StatResult::OtherError: return StatResult::OtherError;
+        }
 
         if (really_exists && !should_exist) {
             std::unique_lock<std::mutex> lock(cache_mutex, std::try_to_lock);
@@ -718,18 +781,18 @@ rk_Disk::TestResult rk_Disk::TestFast(const char *path)
                 cache_misses = 0;
             }
 
-            return really_exists ? TestResult::Exists : TestResult::Missing;
+            return really_exists ? StatResult::Success : StatResult::MissingPath;
         } else if (should_exist && !really_exists) {
             ClearCache();
 
             LogError("The local cache database was mismatched and could have resulted in missing data in the backup.");
             LogError("You must start over to fix this situation.");
 
-            return TestResult::FatalError;
+            return StatResult::OtherError;
         }
     }
 
-    return should_exist ? TestResult::Exists : TestResult::Missing;
+    return should_exist ? StatResult::Success : StatResult::MissingPath;
 }
 
 static bool DeriveKey(const char *pwd, const uint8_t salt[16], uint8_t out_key[32])
@@ -852,8 +915,14 @@ bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
 
 Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite)
 {
-    if (!overwrite && TestRaw(path))
-        return 0;
+    if (!overwrite) {
+        switch (TestRaw(path)) {
+            case StatResult::Success: return 0;
+            case StatResult::MissingPath: {} break;
+            case StatResult::AccessDenied:
+            case StatResult::OtherError: return -1;
+        }
+    }
 
     Size written = WriteRaw(path, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });
     return written;

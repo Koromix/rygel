@@ -33,10 +33,10 @@ struct ConnectionData {
     sftp_session sftp = nullptr;
 };
 
-#define GET_CONNECTION(VarName) \
+#define GET_CONNECTION(VarName, ErrorValue) \
     ConnectionData *VarName = ReserveConnection(); \
     if (!(VarName)) \
-        return false; \
+        return (ErrorValue); \
     RG_DEFER { ReleaseConnection(VarName); };
 
 static RG_THREAD_LOCAL ConnectionData *thread_conn;
@@ -71,7 +71,7 @@ public:
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
-    bool TestRaw(const char *path) override;
+    StatResult TestRaw(const char *path) override;
 
 private:
     ConnectionData *ReserveConnection();
@@ -214,7 +214,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
             const char *path = Fmt(&temp_alloc, "%1/blobs/%2", config.path, FmtHex(i).Pad0(-3)).ptr;
 
             async.Run([=, this]() {
-                GET_CONNECTION(conn);
+                GET_CONNECTION(conn, false);
 
                 if (sftp_mkdir(conn->sftp, path, 0755) < 0) {
                     LogError("Cannot create directory '%1': %2", path, ssh_get_error(conn->ssh));
@@ -239,7 +239,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
 
 bool SftpDisk::CreateDirectory(const char *path)
 {
-    GET_CONNECTION(conn);
+    GET_CONNECTION(conn, false);
 
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -255,7 +255,7 @@ bool SftpDisk::CreateDirectory(const char *path)
 
 bool SftpDisk::DeleteDirectory(const char *path)
 {
-    GET_CONNECTION(conn);
+    GET_CONNECTION(conn, false);
 
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -271,7 +271,7 @@ bool SftpDisk::DeleteDirectory(const char *path)
 
 Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
 {
-    GET_CONNECTION(conn);
+    GET_CONNECTION(conn, false);
 
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -309,7 +309,7 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
 
 Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
 {
-    GET_CONNECTION(conn);
+    GET_CONNECTION(conn, false);
 
     RG_DEFER_NC(out_guard, len = out_buf->len) { out_buf->RemoveFrom(len); };
 
@@ -353,7 +353,7 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
 
 Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
 {
-    GET_CONNECTION(conn);
+    GET_CONNECTION(conn, false);
 
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -442,7 +442,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
 
 bool SftpDisk::DeleteRaw(const char *path)
 {
-    GET_CONNECTION(conn);
+    GET_CONNECTION(conn, false);
 
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -469,7 +469,7 @@ bool SftpDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> fun
 
 bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
 {
-    GET_CONNECTION(conn);
+    GET_CONNECTION(conn, false);
 
     path = path ? path : "";
 
@@ -532,9 +532,9 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
     return true;
 }
 
-bool SftpDisk::TestRaw(const char *path)
+StatResult SftpDisk::TestRaw(const char *path)
 {
-    GET_CONNECTION(conn);
+    GET_CONNECTION(conn, StatResult::OtherError);
 
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
@@ -542,12 +542,27 @@ bool SftpDisk::TestRaw(const char *path)
     sftp_attributes attr = sftp_stat(conn->sftp, filename.data);
     RG_DEFER { sftp_attributes_free(attr); };
 
-    if (!attr && sftp_get_error(conn->sftp) != SSH_FX_NO_SUCH_FILE) {
-        LogError("Failed to stat file '%1': %2 (%3)", filename, ssh_get_error(conn->ssh));
+    if (!attr) {
+        int err = sftp_get_error(conn->sftp);
+
+        switch (err) {
+            case SSH_FX_NO_SUCH_FILE: return StatResult::MissingPath;
+            case SSH_FX_PERMISSION_DENIED: {
+                LogError("Failed to stat file '%1': permission denied", filename);
+                return StatResult::AccessDenied;
+            } break;
+            default: {
+                LogError("Failed to stat file '%1': %2", filename, ssh_get_error(conn->ssh));
+                return StatResult::OtherError;
+            } break;
+        }
+    }
+    if (attr->type != SSH_FILEXFER_TYPE_REGULAR) {
+        LogError("Path '%1' is not a file", filename);
+        return StatResult::OtherError;
     }
 
-    bool exists = !!attr;
-    return exists;
+    return StatResult::Success;
 }
 
 ConnectionData *SftpDisk::ReserveConnection()

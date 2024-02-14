@@ -36,7 +36,7 @@ public:
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
-    bool TestRaw(const char *path) override;
+    StatResult TestRaw(const char *path) override;
 };
 
 LocalDisk::LocalDisk(const char *path, int threads)
@@ -272,13 +272,20 @@ bool LocalDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> fu
     return true;
 }
 
-bool LocalDisk::TestRaw(const char *path)
+StatResult LocalDisk::TestRaw(const char *path)
 {
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
-    bool exists = TestFile(filename.data, FileType::File);
-    return exists;
+    FileInfo file_info;
+    StatResult ret = StatFile(filename.data, (int)StatFlag::IgnoreMissing, &file_info);
+
+    if (ret == StatResult::Success && file_info.type != FileType::File) {
+        LogError("Path '%1' is not a file", filename);
+        return StatResult::OtherError;
+    }
+
+    return ret;
 }
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads)

@@ -543,13 +543,13 @@ Size s3_Session::GetObject(Span<const char> key, Size max_len, HeapArray<uint8_t
     return ctx.total_len;
 }
 
-bool s3_Session::HasObject(Span<const char> key)
+StatResult s3_Session::HasObject(Span<const char> key)
 {
     BlockAllocator temp_alloc;
 
     CURL *curl = InitConnection();
     if (!curl)
-        return false;
+        return StatResult::OtherError;
     RG_DEFER { curl_easy_cleanup(curl); };
 
     Span<const char> path;
@@ -576,8 +576,18 @@ bool s3_Session::HasObject(Span<const char> key)
         return curl_Perform(curl, nullptr);
     });
 
-    bool exists = (status == 200);
-    return exists;
+    switch (status) {
+        case 200: return StatResult::Success;
+        case 404: return StatResult::MissingPath;
+        case 403: {
+            LogError("Failed to stat object '%1': permission denied", key);
+            return StatResult::AccessDenied;
+        } break;
+        default: {
+            LogError("Failed to stat object '%1': error %2", key, status);
+            return StatResult::OtherError;
+        } break;
+    }
 }
 
 bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const char *mimetype)

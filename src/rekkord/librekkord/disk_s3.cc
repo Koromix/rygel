@@ -37,7 +37,7 @@ public:
     bool DeleteRaw(const char *path) override;
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
-    bool TestRaw(const char *path) override;
+    StatResult TestRaw(const char *path) override;
 };
 
 S3Disk::S3Disk(const s3_Config &config, int threads)
@@ -121,7 +121,7 @@ bool S3Disk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
     return s3.ListObjects(prefix, func);
 }
 
-bool S3Disk::TestRaw(const char *path)
+StatResult S3Disk::TestRaw(const char *path)
 {
     return s3.HasObject(path);
 }

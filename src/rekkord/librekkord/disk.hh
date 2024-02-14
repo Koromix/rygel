@@ -72,12 +72,6 @@ protected:
     BlockAllocator str_alloc;
 
 public:
-    enum class TestResult {
-        Exists = 1,
-        Missing = 0,
-        FatalError = -1
-    };
-
     virtual ~rk_Disk() = default;
 
     virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
@@ -131,10 +125,10 @@ protected:
     bool PutCache(const char *key);
 
     virtual bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) = 0;
-    virtual bool TestRaw(const char *path) = 0;
+    virtual StatResult TestRaw(const char *path) = 0;
 
 private:
-    TestResult TestFast(const char *path);
+    StatResult TestFast(const char *path);
 
     bool WriteKey(const char *path, const char *pwd, const uint8_t payload[32]);
     bool ReadKey(const char *path, const char *pwd, uint8_t *out_payload, bool *out_error);
