@@ -208,7 +208,7 @@ FLASHMEM void usb_init(void)
 }
 
 
-FLASHMEM void _reboot_Teensyduino_(void)
+FLASHMEM __attribute__((noinline)) void _reboot_Teensyduino_(void)
 {
 	if (!(HW_OCOTP_CFG5 & 0x02)) {
 		asm("bkpt #251"); // run bootloader
@@ -670,6 +670,19 @@ static void endpoint0_setup(uint64_t setupdata)
 			endpoint0_buffer[1] = 44100 >> 8;
 			endpoint0_buffer[2] = 0;
 			endpoint0_transmit(endpoint0_buffer, 3, 0);
+			return;
+		}
+		break;
+#endif
+#if defined(MULTITOUCH_INTERFACE)
+	  case 0x01A1:
+		if (setup.wValue == 0x0300 && setup.wIndex == MULTITOUCH_INTERFACE) {
+			endpoint0_buffer[0] = MULTITOUCH_FINGERS;
+			endpoint0_transmit(endpoint0_buffer, 1, 0);
+			return;
+		} else if (setup.wValue == 0x0100 && setup.wIndex == MULTITOUCH_INTERFACE) {
+			memset(endpoint0_buffer, 0, 8);
+			endpoint0_transmit(endpoint0_buffer, 8, 0);
 			return;
 		}
 		break;
