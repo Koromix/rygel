@@ -1,5 +1,10 @@
 # Changelog
 
+## Rekkord 0.15
+
+- Improve error message for uninitialized repository
+- Better handle transient repository errors
+
 ## Rekkord 0.14
 
 - Rename `rekord` project to `rekkord`
