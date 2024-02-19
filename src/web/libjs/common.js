@@ -380,7 +380,7 @@ const Util = new function() {
     };
 
     this.parseEvalErrorLine = function(err) {
-        if (err instanceof SyntaxError) {
+        if (err instanceof SyntaxError && err.lineNumber != null) {
             // At least Firefox seems to do well in this case, it's better than nothing
             return err.lineNumber - 2;
         } else if (err.stack) {
