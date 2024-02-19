@@ -29,8 +29,6 @@ namespace RG {
 // XXX: Use compact and RO-only data structure made for big dictionaries
 // XXX: Add proper names to dictionary, and automatically manage plurals
 
-static const Size MinLength = 8;
-
 static int32_t DecodeUtf8Unsafe(const char *str);
 
 static const HashMap<int32_t, const char *> replacements = {
@@ -195,14 +193,14 @@ static bool SearchWord(const char *word)
 
 static bool CheckComplexity(Span<const char> password, unsigned int flags)
 {
-    RG_ASSERT(password.len >= MinLength);
+    RG_ASSERT(password.len >= pwd_MinLength);
 
     int score = 0;
 
     Bitset<256> chars;
     uint32_t classes = 0;
 
-    static_assert(MinLength > 2);
+    static_assert(pwd_MinLength > 2);
 
     if (password[0] == ' ' || password[password.len - 1] == ' ') {
         LogError("Password must not start or end with space");
@@ -312,12 +310,15 @@ bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blackl
         return false;
     password = buf;
 
-    // Minimal length
+    // Length limits
     if (!password.len) {
         LogError("Password is empty");
         return false;
-    } else if (password.len < MinLength) {
+    } else if (password.len < pwd_MinLength) {
         LogError("Password is too short");
+        return false;
+    } else if (password.len >= pwd_MaxLength) {
+        LogError("Password is too long");
         return false;
     }
 

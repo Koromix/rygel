@@ -43,6 +43,9 @@ enum class pwd_GenerateFlag {
     Check = 1 << 8
 };
 
+static const Size pwd_MinLength = 8;
+static const Size pwd_MaxLength = 256;
+
 bool pwd_CheckPassword(Span<const char> password, Span<const char *const> blacklist, unsigned int flags = UINT_MAX);
 static inline bool pwd_CheckPassword(Span<const char> password, unsigned int flags = UINT_MAX)
     { return pwd_CheckPassword(password, {}, flags); }

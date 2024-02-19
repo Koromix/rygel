@@ -487,7 +487,7 @@ static int CountEvents(const char *where, const char *who)
     return event ? event->count : 0;
 }
 
-static bool CheckPasswordComplexity(const SessionInfo &session, const char *password)
+static bool CheckPasswordComplexity(const SessionInfo &session, Span<const char> password)
 {
     PasswordComplexity treshold;
     unsigned int flags = 0;
@@ -514,7 +514,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 {
     io->RunAsync([=]() mutable {
         const char *username = nullptr;
-        const char *password = nullptr;
+        Span<const char> password = {};
         {
             StreamReader st;
             if (!io->OpenForRead(Kibibytes(1), &st))
@@ -543,8 +543,13 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
         }
 
         // Check for missing values
-        if (!username || !password) {
+        if (!username || !password.ptr) {
             LogError("Missing 'username' or 'password' parameter");
+            io->AttachError(422);
+            return;
+        }
+        if (password.len > pwd_MaxLength) {
+            LogError("Excessive password length");
             io->AttachError(422);
             return;
         }
@@ -627,7 +632,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                 return;
             }
 
-            if (password_hash && crypto_pwhash_str_verify(password_hash, password, strlen(password)) == 0) {
+            if (password_hash && crypto_pwhash_str_verify(password_hash, password.ptr, (size_t)password.len) == 0) {
                 int64_t time = GetUnixTime();
 
                 if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
