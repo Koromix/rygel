@@ -82,7 +82,7 @@ find_package(CNoke)
 add_node_addon(NAME hello SOURCES hello.cc)
 ```
 
-You can find out more [in the NPM repository](https://www.npmjs.com/package/cnoke).
+You can find out more [in the GitHub repository](https://github.com/Koromix/rygel/tree/master/src/cnoke).
 
 # DRD
 
