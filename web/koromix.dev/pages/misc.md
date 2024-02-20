@@ -6,12 +6,6 @@ It's a single Java file, the documentation is included at the top of the file.
 
 You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/master/SaneBB.java).
 
-# Blikk
-
-Blikk is an **embeddable beginner-friendly programming language** with static types, fast compilation.
-
-You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/blikk).
-
 # Serf
 
 Serf is a **small HTTP server made for local testing**. It can serve static files and you can customize the headers with a simple config file.
@@ -55,34 +49,6 @@ It will transparently forward standard streams (stdin, stdout, stderr) and repor
 It is mainly useful for automated test systems, do not install it on production machines because it is a security risk. SeatSH only makes sure that the user connected to the SSH matches the one on the active console session, nothing more.
 
 You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#seatsh).
-
-# CNoke
-
-CNoke is a **Javascript NPM package designed to build native Node addons based on CMake**, without any dependency. It can be used as an alternative to CMake.js.
-
-Install it like this:
-
-```sh
-npm install cnoke
-```
-
-It obviously requires [CMake](http://www.cmake.org/download/) and a proper C/C++ toolchain:
-
-- *Windows*: Visual C++ Build Tools or a recent version of Visual C++ will do (the free Community version works well)
-- *POSIX (Linux, macOS, etc.)*: Clang or GCC, and Make (Ninja is preferred if available)
-
-Once everything is in place, get started with your addon with the CMakeLists.txt template:
-
-```cmake
-cmake_minimum_required(VERSION 3.11)
-project(hello C CXX)
-
-find_package(CNoke)
-
-add_node_addon(NAME hello SOURCES hello.cc)
-```
-
-You can find out more [in the GitHub repository](https://github.com/Koromix/rygel/tree/master/src/cnoke).
 
 # DRD
 
