@@ -381,7 +381,7 @@
   "<body>HTTP request has invalid character in footer.</body>" \
   "</html>"
 #else
-#define ERR_RSP_INVALID_CHR_IN_HEADER ""
+#define ERR_RSP_INVALID_CHR_IN_FOOTER ""
 #endif
 
 /**
@@ -394,7 +394,7 @@
   "<body>HTTP request header line has no colon character.</body>" \
   "</html>"
 #else
-#define ERR_RSP_INVALID_CHR_IN_HEADER ""
+#define ERR_RSP_HEADER_WITHOUT_COLON ""
 #endif
 
 /**
@@ -2210,7 +2210,8 @@ setup_reply_properties (struct MHD_Connection *connection)
   c->rp.props.use_reply_body_headers = (use_rp_body >= RP_BODY_HEADERS_ONLY);
 
 #ifdef UPGRADE_SUPPORT
-  mhd_assert ((NULL == r->upgrade_handler) || (RP_BODY_NONE == use_rp_body));
+  mhd_assert ( (NULL == r->upgrade_handler) ||
+               (RP_BODY_NONE == use_rp_body) );
 #endif /* UPGRADE_SUPPORT */
 
   if (c->rp.props.use_reply_body_headers)
@@ -2237,7 +2238,8 @@ setup_reply_properties (struct MHD_Connection *connection)
     else
       use_chunked = false;
 
-    if ( (MHD_SIZE_UNKNOWN == r->total_size) && ! use_chunked)
+    if ( (MHD_SIZE_UNKNOWN == r->total_size) &&
+         (! use_chunked) )
     {
       /* End of the stream is indicated by closure */
       c->keepalive = MHD_CONN_MUST_CLOSE;
@@ -2262,10 +2264,11 @@ check_connection_reply (struct MHD_Connection *connection)
 {
   struct MHD_Connection *const c = connection; /**< a short alias */
   struct MHD_Response *const r = c->rp.response;  /**< a short alias */
-  mhd_assert (c->rp.props.set);
 
+  mhd_assert (c->rp.props.set);
 #ifdef HAVE_MESSAGES
-  if ((! c->rp.props.use_reply_body_headers) && (0 != r->total_size))
+  if ( (! c->rp.props.use_reply_body_headers) &&
+       (0 != r->total_size) )
   {
     MHD_DLOG (c->daemon,
               _ ("This reply with response code %u cannot use reply body. "
@@ -2477,7 +2480,6 @@ build_header_response (struct MHD_Connection *connection)
   mhd_assert (NULL != r);
 
   /* ** Adjust response properties ** */
-
   setup_reply_properties (c);
 
   mhd_assert (c->rp.props.set);
@@ -4187,24 +4189,28 @@ parse_cookie_header (struct MHD_Connection *connection)
 #endif /* HAVE_MESSAGES */
     break;
   case MHD_PARSE_COOKIE_MALFORMED:
-#ifdef HAVE_MESSAGES
     if (saved_tail != connection->rq.headers_received_tail)
     {
-      if (allow_partially_correct_cookie)
-        MHD_DLOG (connection->daemon,
-                  _ ("The Cookie header has been only partially parsed as it "
-                     "contains malformed data.\n"));
-      else
+      if (! allow_partially_correct_cookie)
       {
         /* Remove extracted values from partially broken cookie */
         /* Memory remains allocated until the end of the request processing */
         connection->rq.headers_received_tail = saved_tail;
         saved_tail->next = NULL;
+#ifdef HAVE_MESSAGES
         MHD_DLOG (connection->daemon,
                   _ ("The Cookie header has been ignored as it contains "
                      "malformed data.\n"));
+#endif /* HAVE_MESSAGES */
       }
+#ifdef HAVE_MESSAGES
+      else
+        MHD_DLOG (connection->daemon,
+                  _ ("The Cookie header has been only partially parsed as it "
+                     "contains malformed data.\n"));
+#endif /* HAVE_MESSAGES */
     }
+#ifdef HAVE_MESSAGES
     else
       MHD_DLOG (connection->daemon,
                 _ ("The Cookie header has malformed data.\n"));
@@ -7880,8 +7886,7 @@ MHD_queue_response (struct MHD_Connection *connection,
     return MHD_NO; /* Wrong connection state */
 
   if (daemon->shutdown)
-    return MHD_YES; /* If daemon was shut down in parallel,
-                     * response will be aborted now or on later stage. */
+    return MHD_NO;
 
 #ifdef UPGRADE_SUPPORT
   if (NULL != response->upgrade_handler)

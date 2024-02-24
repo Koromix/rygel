@@ -23,7 +23,7 @@
 #
 AC_PREREQ([2.64])
 LT_PREREQ([2.4.0])
-AC_INIT([GNU libmicrohttpd],[1.0.0],[libmicrohttpd@gnu.org])
+AC_INIT([GNU libmicrohttpd],[1.0.1],[libmicrohttpd@gnu.org])
 AC_CONFIG_AUX_DIR([build-aux])
 MHD_AUX_DIR='build-aux' # Must be set to the same value as in the previous line
 AC_CONFIG_HEADERS([MHD_config.h])
@@ -31,7 +31,7 @@ AC_CONFIG_MACRO_DIR([m4])
 m4_pattern_forbid([^_?MHD_[A-Z_]+_CC_])dnl
 
 LIB_VERSION_CURRENT=74
-LIB_VERSION_REVISION=0
+LIB_VERSION_REVISION=1
 LIB_VERSION_AGE=62
 AC_SUBST([LIB_VERSION_CURRENT])
 AC_SUBST([LIB_VERSION_REVISION])
@@ -3586,17 +3586,19 @@ AS_IF([[test "x$found_sendfile" = "xno" && test "x$enable_sendfile" = "xyes"]],
   [AC_MSG_ERROR([[sendfile() usage was requested by configure parameter, but no usable sendfile() function is detected]])]
 )
 
-# optional: have error messages ?
-AC_MSG_CHECKING([[whether to generate error messages]])
+# optional: enable error and informational messages
+AC_MSG_CHECKING([[whether to generate text messages]])
 AC_ARG_ENABLE([messages],
    [AS_HELP_STRING([--disable-messages],
-               [disable MHD error messages])],
+               [disable error, warning messages and text bodies for ]
+               [automatic HTTP responses (to reduce the binary size)])],
    [enable_messages=${enableval}],
    [enable_messages=yes])
 AS_IF([[test "x$enable_messages" = "xyes"]],
-  [ AC_DEFINE([HAVE_MESSAGES],[1],[Define to 1 to enable support for error messages.]) ],
+  [ AC_DEFINE([HAVE_MESSAGES],[1],[Define to 1 to enable support for text messages.]) ],
   [[ enable_messages=no ]])
 AC_MSG_RESULT([[$enable_messages]])
+AM_CONDITIONAL([HAVE_MESSAGES], [test "x$enable_messages" != "xno"])
 
 
 # optional: have postprocessor?
@@ -6062,6 +6064,7 @@ AS_IF([test "x$enable_bauth" != "xyes" || \
    test "x${USE_THREADS}" = "xnone" || \
    test "x$enable_httpupgrade" != "xyes" || \
    test "x$enable_cookie" != "xyes" || \
+   test "x$enable_httpupgrade" != "xyes" || \
    test "x$enable_postprocessor" != "xyes"],
    [AC_MSG_WARN([This will be a custom build with missing symbols. Do NOT use this build in a distribution. Building with these kinds of configure options is only for custom builds for embedded systems.])]
 )

@@ -28,12 +28,12 @@ noinst_PROGRAMS = \
 if ENABLE_BAUTH
 noinst_PROGRAMS += \
   basicauthentication
-endif
-
 if ENABLE_HTTPS
 noinst_PROGRAMS += \
   tlsauthentication
 endif
+endif
+
 if HAVE_POSTPROCESSOR
 noinst_PROGRAMS += simplepost largepost sessions 
 endif

@@ -22,6 +22,8 @@
  * @brief  Wrapper for MD5 calculation performed by TLS library
  * @author Karlson2k (Evgeny Grin)
  */
+
+#include <gnutls/crypto.h>
 #include "md5_ext.h"
 #include "mhd_assert.h"
 

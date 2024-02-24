@@ -7030,7 +7030,20 @@ parse_options_va (struct MHD_Daemon *daemon,
           daemon->dauth_def_max_nc = val;
       }
       break;
-#endif
+#else  /* ! DAUTH_SUPPORT */
+    case MHD_OPTION_DIGEST_AUTH_RANDOM:
+    case MHD_OPTION_DIGEST_AUTH_RANDOM_COPY:
+    case MHD_OPTION_NONCE_NC_SIZE:
+    case MHD_OPTION_DIGEST_AUTH_NONCE_BIND_TYPE:
+    case MHD_OPTION_DIGEST_AUTH_DEFAULT_NONCE_TIMEOUT:
+    case MHD_OPTION_DIGEST_AUTH_DEFAULT_MAX_NC:
+#ifdef HAVE_MESSAGES
+      MHD_DLOG (daemon,
+                _ ("Digest Auth is disabled for this build " \
+                   "of GNU libmicrohttpd.\n"));
+#endif /* HAVE_MESSAGES */
+      return MHD_NO;
+#endif /* ! DAUTH_SUPPORT */
     case MHD_OPTION_LISTEN_SOCKET:
       params->listen_fd = va_arg (ap,
                                   MHD_socket);
@@ -7049,10 +7062,10 @@ parse_options_va (struct MHD_Daemon *daemon,
                      "printed by the standard MHD logger.\n"));
 
 #else
-      va_arg (ap,
-              VfprintfFunctionPointerType);
-      va_arg (ap,
-              void *);
+      (void) va_arg (ap,
+                     VfprintfFunctionPointerType);
+      (void) va_arg (ap,
+                     void *);
 #endif
       break;
 #if defined(MHD_USE_POSIX_THREADS) || defined(MHD_USE_W32_THREADS)

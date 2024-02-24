@@ -295,8 +295,10 @@ endif
 endif
 
 if HAVE_ANYAUTH
+if HAVE_MESSAGES
 check_PROGRAMS += \
   test_auth_parse
+endif
 endif
 if ENABLE_DAUTH
 check_PROGRAMS += \

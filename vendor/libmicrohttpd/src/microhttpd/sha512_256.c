@@ -475,6 +475,10 @@ MHD_SHA512_256_update (struct Sha512_256Ctx *ctx,
            equals (count % SHA512_256_BLOCK_SIZE) for this block size. */
   bytes_have = (unsigned int) (ctx->count & (SHA512_256_BLOCK_SIZE - 1));
   ctx->count += length;
+#if SIZEOF_SIZE_T > 7
+  if (length > ctx->count)
+    ctx->count_bits_hi += 1U << 3; /* Value wrap */
+#endif /* SIZEOF_SIZE_T > 7 */
   count_hi = ctx->count >> 61;
   if (0 != count_hi)
   {

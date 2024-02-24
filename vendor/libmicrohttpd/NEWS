@@ -1,9 +1,18 @@
+Fri 23 Feb 2024 21:00:00 UZT
+Released GNU libmicrohttpd 1.0.1.
+
+    This is a correction release.
+    This release mainly fixes and improves builds with non-default configure
+    parameters.
+
+    -- Evgeny Grin (Karlson2k)
+
 Thu 01 Feb 2024 15:00:00 CET
 Released GNU libmicrohttpd 1.0.0.
 
     This is the first non-bugfix release since version 0.9.75 and the first
-    ever stable release of GNU libmicrohttpd. Is is a huge with new features
-    and fixes.
+    ever stable release of GNU libmicrohttpd. It is a huge one with new
+    features and fixes.
 
     The major changes:
     * Rewritten parsing of clients' requests, fully aligned with current

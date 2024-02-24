@@ -3545,9 +3545,10 @@ queue_auth_required_response3_inner (struct MHD_Connection *connection,
 #endif /* HAVE_MESSAGES */
     return MHD_NO;
   }
-  malgo3 &=
-    (enum MHD_DigestAuthMultiQOP)
-    (~((enum MHD_DigestAuthMultiQOP) MHD_DIGEST_AUTH_ALGO3_NON_SESSION));
+  malgo3 =
+    (enum MHD_DigestAuthMultiAlgo3)
+    (malgo3
+     & (~((enum MHD_DigestAuthMultiAlgo3) MHD_DIGEST_AUTH_ALGO3_NON_SESSION)));
 #ifdef MHD_MD5_SUPPORT
   if (0 != (((unsigned int) malgo3) & MHD_DIGEST_BASE_ALGO_MD5))
     s_algo = MHD_DIGEST_AUTH_ALGO3_MD5;
@@ -3580,8 +3581,10 @@ queue_auth_required_response3_inner (struct MHD_Connection *connection,
 
   if (MHD_DIGEST_AUTH_MULT_QOP_AUTH_INT == mqop)
     MHD_PANIC (_ ("Wrong 'mqop' value, API violation"));
-  mqop &= (enum MHD_DigestAuthMultiQOP)
-          (~((enum MHD_DigestAuthMultiQOP) MHD_DIGEST_AUTH_QOP_AUTH_INT));
+
+  mqop = (enum MHD_DigestAuthMultiQOP)
+         (mqop
+          & (~((enum MHD_DigestAuthMultiQOP) MHD_DIGEST_AUTH_QOP_AUTH_INT)));
 
   if (! digest_init_one_time (da, get_base_digest_algo (s_algo)))
     MHD_PANIC (_ ("Wrong 'algo' value, API violation"));

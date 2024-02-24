@@ -1,3 +1,18 @@
+Fri 23 Feb 2024 21:00:00 UZT
+    Releasing GNU libmicrohttpd 1.0.1 -EG
+
+February 2024
+    Fixed builds without messages. -JP & CG
+    Fixed builds with external MD5 calculation.
+    Fixed SHA-512/256 code for hypothetical extra large sizes.
+    Fixed response handling during daemon shutdown.
+    Fixed code logic for builds without messages.
+    Reduced the binary size for builds without messages by removing
+    the strings with filenames used for panic reports.
+    Fixed tests and examples for builds without messages and for builds
+    without basic auth.
+    Fixed some compiler warnings. -EG
+
 Thu 01 Feb 2024 15:00:00 CET
     Releasing GNU libmicrohttpd 1.0.0 -EG
 

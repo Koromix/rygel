@@ -75,7 +75,7 @@ extern void *mhd_panic_cls;
  *
  * @param msg error message (const char *)
  */
-#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, __FILE__, __LINE__, NULL); \
+#define MHD_PANIC(msg) do { mhd_panic (mhd_panic_cls, NULL, __LINE__, NULL); \
                             BUILTIN_NOT_REACHED; } while (0)
 #endif
 

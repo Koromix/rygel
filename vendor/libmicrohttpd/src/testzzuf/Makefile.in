@@ -835,7 +835,7 @@ TESTS = $(check_PROGRAMS)
 dist_check_SCRIPTS = zzuf_test_runner.sh zzuf_socat_test_runner.sh
 LOG_COMPILER = @SHELL@ "$(srcdir)/$(TEST_RUNNER_SCRIPT)"
 @VHEAVY_TESTS_TRUE@check_SCRIPTS = warn_vheavy_use
-tests_common_sources = mhd_debug_funcs.h mhd_debug_funcs.c 
+tests_common_sources = mhd_debug_funcs.h mhd_debug_funcs.c
 test_get_SOURCES = \
   test_get.c $(tests_common_sources)
 

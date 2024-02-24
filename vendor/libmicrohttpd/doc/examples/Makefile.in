@@ -95,8 +95,8 @@ noinst_PROGRAMS = hellobrowser$(EXEEXT) logging$(EXEEXT) \
 @ENABLE_BAUTH_TRUE@am__append_2 = \
 @ENABLE_BAUTH_TRUE@  basicauthentication
 
-@ENABLE_HTTPS_TRUE@am__append_3 = \
-@ENABLE_HTTPS_TRUE@  tlsauthentication
+@ENABLE_BAUTH_TRUE@@ENABLE_HTTPS_TRUE@am__append_3 = \
+@ENABLE_BAUTH_TRUE@@ENABLE_HTTPS_TRUE@  tlsauthentication
 
 @HAVE_POSTPROCESSOR_TRUE@am__append_4 = simplepost largepost sessions 
 @HAVE_W32_TRUE@am__append_5 = -DWINDOWS
@@ -142,7 +142,7 @@ CONFIG_HEADER = $(top_builddir)/MHD_config.h
 CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 @ENABLE_BAUTH_TRUE@am__EXEEXT_1 = basicauthentication$(EXEEXT)
-@ENABLE_HTTPS_TRUE@am__EXEEXT_2 = tlsauthentication$(EXEEXT)
+@ENABLE_BAUTH_TRUE@@ENABLE_HTTPS_TRUE@am__EXEEXT_2 = tlsauthentication$(EXEEXT)
 @HAVE_POSTPROCESSOR_TRUE@am__EXEEXT_3 = simplepost$(EXEEXT) \
 @HAVE_POSTPROCESSOR_TRUE@	largepost$(EXEEXT) sessions$(EXEEXT)
 @HAVE_EXPERIMENTAL_TRUE@am__EXEEXT_4 = websocket$(EXEEXT)
