@@ -11,9 +11,11 @@ video tutorials.
  - Takuro Ashie
  - ashishgamedev
  - David Avedissian
+ - Luca Bacci
  - Keith Bauer
  - John Bartholomew
  - Coşku Baş
+ - Bayemite
  - Niklas Behrens
  - Andrew Belt
  - Nevyn Bengtsson
@@ -32,7 +34,9 @@ video tutorials.
  - David Carlier
  - Arturo Castro
  - Chi-kwan Chan
+ - Victor Chernyakin
  - TheChocolateOre
+ - Ali Chraghi
  - Joseph Chua
  - Ian Clarkson
  - Michał Cichoń
@@ -45,6 +49,7 @@ video tutorials.
  - Bailey Cosier
  - Noel Cower
  - CuriouserThing
+ - Bill Currie
  - Jason Daly
  - danhambleton
  - Jarrod Davis
@@ -60,7 +65,7 @@ video tutorials.
  - Robin Eklind
  - Jan Ekström
  - Siavash Eliasi
- - TheExileFox
+ - Ahmad Fatoum
  - Nikita Fediuchin
  - Felipe Ferreira
  - Michael Fogleman
@@ -96,6 +101,7 @@ video tutorials.
  - Warren Hu
  - Charles Huber
  - Brent Huisman
+ - Florian Hülsmann
  - illustris
  - InKryption
  - IntellectualKitty
@@ -118,6 +124,7 @@ video tutorials.
  - Rokas Kupstys
  - Konstantin Käfer
  - Eric Larson
+ - Guillaume Lebrun
  - Francis Lecavalier
  - Jong Won Lee
  - Robin Leffmann
@@ -129,6 +136,7 @@ video tutorials.
  - lo-v-ol
  - Eyal Lotem
  - Aaron Loucks
+ - Ned Loynd
  - Luflosi
  - lukect
  - Tristam MacDonald
@@ -146,6 +154,7 @@ video tutorials.
  - Jonathan Mercier
  - Marcel Metz
  - Liam Middlebrook
+ - mightgoyardstill
  - Ave Milia
  - Icyllis Milica
  - Jonathan Miller
@@ -159,20 +168,28 @@ video tutorials.
  - Jon Morton
  - Pierre Moulon
  - Martins Mozeiko
+ - Pascal Muetschard
  - James Murphy
  - Julian Møller
+ - Julius Häger
+ - Nat!
+ - NateIsStalling
  - ndogxj
  - F. Nedelec
+ - n3rdopolis
  - Kristian Nielsen
  - Joel Niemelä
+ - Victor Nova
  - Kamil Nowakowski
  - onox
  - Denis Ovod
  - Ozzy
  - Andri Pálsson
+ - luz paz
  - Peoro
  - Braden Pellett
  - Christopher Pelloux
+ - Michael Pennington
  - Arturo J. Pérez
  - Vladimir Perminov
  - Olivier Perret
@@ -185,25 +202,31 @@ video tutorials.
  - Stanislav Podgorskiy
  - Konstantin Podsvirov
  - Nathan Poirier
+ - Pokechu22
  - Alexandre Pretyman
  - Pablo Prietz
  - przemekmirek
  - pthom
  - Martin Pulec
  - Guillaume Racicot
+ - Juan Ramos
  - Christian Rauch
  - Philip Rideout
  - Eddie Ringle
  - Max Risuhin
  - Joe Roback
  - Jorge Rodriguez
+ - Jari Ronkainen
  - Luca Rood
  - Ed Ropple
  - Aleksey Rybalkin
  - Mikko Rytkönen
  - Riku Salminen
+ - Yoshinori Sano
  - Brandon Schaefer
  - Sebastian Schuberth
+ - Scr3amer
+ - Jan Schuerkamp
  - Christian Sdunek
  - Matt Sealey
  - Steve Sexton
@@ -214,9 +237,11 @@ video tutorials.
  - Dmitri Shuralyov
  - Joao da Silva
  - Daniel Sieger
+ - Daljit Singh
  - Michael Skec
  - Daniel Skorupski
  - Slemmie
+ - Anthony Smith
  - Bradley Smith
  - Cliff Smolinsky
  - Patrick Snape
@@ -231,6 +256,8 @@ video tutorials.
  - Paul Sultana
  - Nathan Sweet
  - TTK-Bandit
+ - Nuno Teixeira
+ - Jared Tiala
  - Sergey Tikhomirov
  - Arthur Tombs
  - TronicLabs
@@ -250,12 +277,14 @@ video tutorials.
  - Patrick Walton
  - Jim Wang
  - Xo Wang
+ - Andre Weissflog
  - Jay Weisskopf
  - Frank Wille
+ - Andy Williams
+ - Joel Winarske
  - Richard A. Wilkes
  - Tatsuya Yatagawa
  - Ryogo Yoshimura
- - Rácz Zalán
  - Lukas Zanner
  - Andrey Zholos
  - Aihui Zhu
