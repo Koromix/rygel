@@ -322,11 +322,8 @@ Options:
         username = Prompt("Username: ", &temp_alloc);
         if (!username)
             return 1;
-        if (!username[0]) {
-            LogError("Username cannot be empty");
-            return 1;
-        }
     }
+    username = username[0] ? username : nullptr;
     if (!issuer) {
         issuer = Prompt("Issuer: ", &temp_alloc);
         if (!issuer)

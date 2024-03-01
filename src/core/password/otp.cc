@@ -150,7 +150,9 @@ const char *pwd_GenerateHotpUrl(const char *label, const char *username, const c
         return nullptr;
 
     Fmt(&buf, "otpauth://totp/"); EncodeUrlSafe(label, &buf);
-    Fmt(&buf, ":"); EncodeUrlSafe(username, &buf);
+    if (username) {
+        Fmt(&buf, ":"); EncodeUrlSafe(username, &buf);
+    }
     Fmt(&buf, "?algorithm=%1&secret=%2&digits=%3", pwd_HotpAlgorithmNames[(int)algo], secret, digits);
     if (issuer) {
         Fmt(&buf, "&issuer="); EncodeUrlSafe(issuer, &buf);
