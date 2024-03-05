@@ -48,6 +48,7 @@ struct TargetConfig {
     HeapArray<const char *> definitions;
     HeapArray<const char *> export_definitions;
     HeapArray<const char *> include_directories;
+    HeapArray<const char *> export_directories;
     HeapArray<const char *> include_files;
     HeapArray<const char *> libraries;
 
@@ -299,6 +300,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         }
                     } else if (prop.key == "IncludeDirectory") {
                         AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.include_directories);
+                    } else if (prop.key == "ExportDirectory") {
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.export_directories);
                     } else if (prop.key == "ForceInclude") {
                         AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.include_files);
                     } else if (prop.key == "PrecompileC") {
@@ -420,6 +423,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     std::swap(target->definitions, target_config->definitions);
     std::swap(target->export_definitions, target_config->export_definitions);
     std::swap(target->include_directories, target_config->include_directories);
+    std::swap(target->export_directories, target_config->export_directories);
     std::swap(target->include_files, target_config->include_files);
     std::swap(target->libraries, target_config->libraries);
     std::swap(target->qt_components, target_config->qt_components);
@@ -464,6 +468,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 
         for (const TargetInfo *import: target->imports) {
             target->definitions.Append(import->export_definitions);
+            target->include_directories.Append(import->export_directories);
             target->libraries.Append(import->libraries);
             target->pchs.Append(import->pchs);
             target->sources.Append(import->sources);
