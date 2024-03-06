@@ -16,7 +16,6 @@
 #include "disk.hh"
 #include "lz4.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
-#include "vendor/re2/re2/re2.h"
 
 namespace RG {
 
@@ -200,6 +199,14 @@ static bool CheckUserName(Span<const char> username)
     return true;
 }
 
+static bool IsUserName(Span<const char> username)
+{
+    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+    RG_DEFER_N(log_guard) { PopLogFilter(); };
+
+    return CheckUserName(username);
+}
+
 bool rk_Disk::ChangeID()
 {
     RG_ASSERT(url);
@@ -329,36 +336,48 @@ bool rk_Disk::DeleteUser(const char *username)
 
 bool rk_Disk::ListUsers(Allocator *alloc, HeapArray<rk_UserInfo> *out_users)
 {
+    BlockAllocator temp_alloc;
+
     RG_DEFER_NC(out_guard, len = out_users->len) { out_users->RemoveFrom(len); };
 
-    RE2 pattern("keys/([a-zA-Z0-9\\.\\-_]+)/(write|full)");
     HashMap<const char *, Size> known_map;
 
     bool success = ListRaw("keys", [&](const char *filename) {
-        std::string username;
-        std::string mode;
+        Span<const char> remain = filename;
 
-        if (RE2::FullMatch(filename, pattern, &username, &mode)) {
-            bool inserted;
-            auto bucket = known_map.TrySetDefault(username.c_str(), &inserted);
+        if (!StartsWith(remain, "keys/"))
+            return true;
+        remain = remain.Take(5, remain.len - 5);
 
-            rk_UserInfo *user = nullptr;
+        Span<const char> username = SplitStr(remain, '/', &remain);
+        Span<const char> mode = remain;
 
-            if (inserted) {
-                bucket->key = DuplicateString(bucket->key, alloc).ptr;
-                bucket->value = out_users->len;
+        if (!IsUserName(username))
+            return true;
+        if (mode != "write" && mode != "full")
+            return true;
 
-                user = out_users->AppendDefault();
+        username = DuplicateString(username, &temp_alloc);
 
-                user->username = bucket->key;
-                user->mode = rk_DiskMode::WriteOnly;
-            } else {
-                user = &(*out_users)[bucket->value];
-            }
+        bool inserted;
+        auto bucket = known_map.TrySetDefault(username.ptr, &inserted);
 
-            if (mode != "write") {
-                user->mode = rk_DiskMode::Full;
-            }
+        rk_UserInfo *user = nullptr;
+
+        if (inserted) {
+            bucket->key = DuplicateString(bucket->key, alloc).ptr;
+            bucket->value = out_users->len;
+
+            user = out_users->AppendDefault();
+
+            user->username = bucket->key;
+            user->mode = rk_DiskMode::WriteOnly;
+        } else {
+            user = &(*out_users)[bucket->value];
+        }
+
+        if (mode != "write") {
+            user->mode = rk_DiskMode::Full;
         }
 
         return true;

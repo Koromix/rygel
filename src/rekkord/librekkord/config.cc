@@ -12,7 +12,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "vendor/re2/re2/re2.h"
 #include "config.hh"
 
 namespace RG {
@@ -101,14 +100,45 @@ static bool LooksLikeS3(Span<const char> str)
     return ret;
 }
 
+static bool LooksLikeUserName(Span<const char> str)
+{
+    const auto test_char = [](char c) { return (c >= 'a' && c <= 'z') || IsAsciiDigit(c) || c == '_' || c == '.' || c == '-'; };
+
+    if (!str.len)
+        return false;
+    if (!std::all_of(str.begin(), str.end(), test_char))
+        return false;
+
+    return true;
+}
+
+static bool LooksLikeHost(Span<const char> str)
+{
+    if (!str.len)
+        return false;
+    if (memchr(str.ptr, '/', (size_t)str.len))
+        return false;
+
+    return true;
+}
+
 static bool LooksLikeSSH(Span<const char> str)
 {
     if (StartsWith(str, "ssh://"))
         return true;
 
-    re2::StringPiece sp(str.ptr, (size_t)str.len);
-    if (RE2::PartialMatch(sp, "^[a-zA-Z0-9\\._\\-]+@[^/]+:?"))
-        return true;
+    // Test for user@host pattern
+    {
+        Span<const char> remain = str;
+
+        Span<const char> username = SplitStr(remain, '@', &remain);
+        Span<const char> host = SplitStr(remain, ':', &remain);
+        Span<const char> path = remain;
+
+        if (host.ptr > username.end() && path.ptr > host.end() &&
+                LooksLikeUserName(username) && LooksLikeHost(host))
+            return true;
+    }
 
     return false;
 }
