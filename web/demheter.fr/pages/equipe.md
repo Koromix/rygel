@@ -56,7 +56,7 @@
     </div>
     <div>
         <div class="name">Dr Niels MARTIGNENE</div>
-        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <img src="{{ ASSET static/equipe/niels_martignene.jpg }}" alt="" />
         <div class="title">Médecin de santé publique</div>
         <div class="mission">Site internet</div>
         <div class="mission">Suivi des données des patients adressés dans le dispositif</div>
