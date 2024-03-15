@@ -1,22 +1,22 @@
 diff --git a/vendor/sqlite3/sqlite3mc.c b/vendor/sqlite3/sqlite3mc.c
-index 41cf5bff2..71d0b72b4 100644
+index 50347641e..009717623 100644
 --- a/vendor/sqlite3/sqlite3mc.c
 +++ b/vendor/sqlite3/sqlite3mc.c
-@@ -268093,12 +268093,9 @@ void RijndaelDecrypt(Rijndael* rijndael, UINT8 a[16], UINT8 b[16]);
- #define AES_HARDWARE_NI    1
- #define AES_HARDWARE_NEON  2
+@@ -273440,12 +273440,8 @@ void RijndaelDecrypt(Rijndael* rijndael, UINT8 a[16], UINT8 b[16]);
+ 
+ #ifndef SQLITE3MC_OMIT_AES_HARDWARE_SUPPORT
  
 -#if defined __ARM_FEATURE_CRYPTO
 -#define HAS_AES_HARDWARE AES_HARDWARE_NEON
 -
- 
+-
  /* --- CLang --- */
 -#elif defined(__clang__)
 +#if defined(__clang__)
  
  #if __has_attribute(target) && __has_include(<wmmintrin.h>) && (defined(__x86_64__) || defined(__i386))
  #define HAS_AES_HARDWARE AES_HARDWARE_NI
-@@ -268181,6 +268178,9 @@ toUint32FromLE(const void* buffer)
+@@ -273536,6 +273532,9 @@ toUint32FromLE(const void* buffer)
  
  #include <cpuid.h>
  
@@ -26,7 +26,7 @@ index 41cf5bff2..71d0b72b4 100644
  static int
  aesHardwareCheck()
  {
-@@ -268195,6 +268195,9 @@ aesHardwareCheck()
+@@ -273550,6 +273549,9 @@ aesHardwareCheck()
  
  #include <intrin.h>
  
@@ -36,7 +36,7 @@ index 41cf5bff2..71d0b72b4 100644
  static int
  aesHardwareCheck()
  {
-@@ -268208,7 +268211,7 @@ aesHardwareCheck()
+@@ -273563,7 +273565,7 @@ aesHardwareCheck()
  #include <wmmintrin.h>
  #include <smmintrin.h>
  
@@ -45,7 +45,7 @@ index 41cf5bff2..71d0b72b4 100644
  aesGenKeyEncryptInternal(const unsigned char* userKey, const int bits, __m128i* keyData)
  {
    int rc = 0;
-@@ -268261,7 +268264,7 @@ aesGenKeyEncryptInternal(const unsigned char* userKey, const int bits, __m128i*
+@@ -273616,7 +273618,7 @@ aesGenKeyEncryptInternal(const unsigned char* userKey, const int bits, __m128i*
    return rc;
  }
  
@@ -54,7 +54,7 @@ index 41cf5bff2..71d0b72b4 100644
  aesGenKeyEncrypt(const unsigned char* userKey, const int bits, unsigned char* keyData)
  {
    int numberOfRounds = (bits == 128) ? 10 : (bits == 192) ? 12 : (bits == 256) ? 14 : 0;
-@@ -268283,7 +268286,7 @@ aesGenKeyEncrypt(const unsigned char* userKey, const int bits, unsigned char* ke
+@@ -273638,7 +273640,7 @@ aesGenKeyEncrypt(const unsigned char* userKey, const int bits, unsigned char* ke
    return rc;
  }
  
@@ -63,7 +63,7 @@ index 41cf5bff2..71d0b72b4 100644
  aesGenKeyDecrypt(const unsigned char* userKey, const int bits, unsigned char* keyData)
  {
    int numberOfRounds = (bits == 128) ? 10 : (bits == 192) ? 12 : (bits == 256) ? 14 : 0;
-@@ -268317,7 +268320,7 @@ aesGenKeyDecrypt(const unsigned char* userKey, const int bits, unsigned char* ke
+@@ -273672,7 +273674,7 @@ aesGenKeyDecrypt(const unsigned char* userKey, const int bits, unsigned char* ke
  ** AES CBC CTS Encryption
  */
  
@@ -72,7 +72,7 @@ index 41cf5bff2..71d0b72b4 100644
  aesEncryptCBC(const unsigned char* in,
                unsigned char* out,
                unsigned char ivec[16],
-@@ -268384,7 +268387,7 @@ aesEncryptCBC(const unsigned char* in,
+@@ -273739,7 +273741,7 @@ aesEncryptCBC(const unsigned char* in,
  /*
  ** AES CBC CTS decryption
  */
@@ -81,7 +81,7 @@ index 41cf5bff2..71d0b72b4 100644
  aesDecryptCBC(const unsigned char* in,
                unsigned char* out,
                unsigned char ivec[16],
-@@ -268474,18 +268477,7 @@ aesDecryptCBC(const unsigned char* in,
+@@ -273829,18 +273831,7 @@ aesDecryptCBC(const unsigned char* in,
  #elif HAS_AES_HARDWARE == AES_HARDWARE_NEON
  /* --- Implementation for AES-NEON --- */
  
