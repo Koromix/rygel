@@ -91,4 +91,7 @@ bool rk_Log(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_sna
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
              Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
+// Read objects
+const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc);
+
 }

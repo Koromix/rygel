@@ -927,4 +927,20 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
     return true;
 }
 
+const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc)
+{
+    rk_BlobType type;
+    HeapArray<uint8_t> blob;
+    if (!disk->ReadBlob(hash, &type, &blob))
+        return nullptr;
+
+    if (type != rk_BlobType::Link) {
+        LogError("Expected symbolic link for '%1'", hash);
+        return nullptr;
+    }
+
+    const char *target = DuplicateString(blob.As<const char>(), alloc).ptr;
+    return target;
+}
+
 }

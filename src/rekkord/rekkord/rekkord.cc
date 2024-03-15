@@ -35,6 +35,8 @@ int RunGet(Span<const char *> arguments);
 int RunSnapshots(Span<const char *> arguments);
 int RunList(Span<const char *> arguments);
 
+int RunMount(Span<const char *> arguments);
+
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
     OptionParser opt(arguments, OptionMode::Skip);
@@ -77,6 +79,7 @@ Snapshot commands:
 Exploration commands:
     %!..+snapshots%!0                    List known snapshots
     %!..+list%!0                         List snapshot or directory children
+    %!..+mount%!0                        Mount repository readonly as user filesystem
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -166,6 +169,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunSnapshots(arguments);
     } else if (TestStr(cmd, "list")) {
         return RunList(arguments);
+    } else if (TestStr(cmd, "mount")) {
+        return RunMount(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
