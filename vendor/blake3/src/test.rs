@@ -695,16 +695,10 @@ fn test_zeroize() {
 fn test_update_reader() -> Result<(), std::io::Error> {
     // This is a brief test, since update_reader() is mostly a wrapper around update(), which already
     // has substantial testing.
-    use std::io::prelude::*;
     let mut input = vec![0; 1_000_000];
     paint_test_input(&mut input);
-    let mut tempfile = tempfile::NamedTempFile::new()?;
-    tempfile.write_all(&input)?;
-    tempfile.flush()?;
     assert_eq!(
-        crate::Hasher::new()
-            .update_reader(std::fs::File::open(tempfile.path())?)?
-            .finalize(),
+        crate::Hasher::new().update_reader(&input[..])?.finalize(),
         crate::hash(&input),
     );
     Ok(())
@@ -749,6 +743,8 @@ fn test_update_reader_interrupted() -> std::io::Result<()> {
 
 #[test]
 #[cfg(feature = "mmap")]
+// NamedTempFile isn't Miri-compatible
+#[cfg(not(miri))]
 fn test_mmap() -> Result<(), std::io::Error> {
     // This is a brief test, since update_mmap() is mostly a wrapper around update(), which already
     // has substantial testing.
@@ -789,6 +785,8 @@ fn test_mmap_virtual_file() -> Result<(), std::io::Error> {
 #[test]
 #[cfg(feature = "mmap")]
 #[cfg(feature = "rayon")]
+// NamedTempFile isn't Miri-compatible
+#[cfg(not(miri))]
 fn test_mmap_rayon() -> Result<(), std::io::Error> {
     // This is a brief test, since update_mmap_rayon() is mostly a wrapper around update_rayon(),
     // which already has substantial testing.
@@ -819,4 +817,22 @@ fn test_serde() {
     );
     let hash2: crate::Hash = serde_json::from_str(&json).unwrap();
     assert_eq!(hash, hash2);
+}
+
+// `cargo +nightly miri test` currently works, but it takes forever, because some of our test
+// inputs are quite large. Most of our unsafe code is platform specific and incompatible with Miri
+// anyway, but we'd like it to be possible for callers to run their own tests under Miri, assuming
+// they don't use incompatible features like Rayon or mmap. This test should get reasonable
+// coverage of our public API without using any large inputs, so we can run it in CI and catch
+// obvious breaks. (For example, constant_time_eq is not compatible with Miri.)
+#[test]
+fn test_miri_smoketest() {
+    let mut hasher = crate::Hasher::new_derive_key("Miri smoketest");
+    hasher.update(b"foo");
+    #[cfg(feature = "std")]
+    hasher.update_reader(&b"bar"[..]).unwrap();
+    assert_eq!(hasher.finalize(), hasher.finalize());
+    let mut reader = hasher.finalize_xof();
+    reader.set_position(999999);
+    reader.fill(&mut [0]);
 }
