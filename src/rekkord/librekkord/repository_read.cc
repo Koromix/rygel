@@ -827,7 +827,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                 case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
 
                 case rk_ObjectType::Directory: {
-                    if (settings.max_depth < 0 || depth <= settings.max_depth) {
+                    if (settings.max_depth < 0 || depth < settings.max_depth) {
                         RecurseContext *ctx = &contexts[i];
 
                         if (!RecurseEntries(entry_blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
