@@ -242,6 +242,10 @@ static void *DoInit(fuse_conn_info *, fuse_config *cfg)
     cfg->kernel_cache = 1;
     cfg->nullpath_ok = 1;
 
+    cfg->entry_timeout = 3600.0;
+    cfg->attr_timeout = 3600.0;
+    cfg->negative_timeout = 3600.0;
+
     return nullptr;
 }
 
@@ -320,13 +324,11 @@ static int DoReadDir(const char *, void *buf, fuse_fill_dir_t filler,
 {
     const CacheEntry *entry = (const CacheEntry *)fi->fh;
 
-    // XXX: (fuse_fill_dir_flags)FUSE_FILL_DIR_PLUS?
-
     offset++;
 
 #define FILL(Name, StPtr) \
         do { \
-            int ret = filler(buf, (Name), (StPtr), offset++, (fuse_fill_dir_flags)0); \
+            int ret = filler(buf, (Name), (StPtr), offset++, (fuse_fill_dir_flags)FUSE_FILL_DIR_PLUS); \
             if (ret) \
                 return ret; \
         } while (false)
