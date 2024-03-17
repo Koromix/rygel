@@ -54,7 +54,7 @@ class PutContext {
 public:
     PutContext(rk_Disk *disk);
 
-    PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash);
+    PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_len = nullptr);
 
     int64_t GetLen() const { return stat_len; }
@@ -82,7 +82,7 @@ PutContext::PutContext(rk_Disk *disk)
     memcpy(&salt64, salt.ptr, RG_SIZE(salt64));
 }
 
-PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash)
+PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs)
 {
     BlockAllocator temp_alloc;
 
@@ -97,6 +97,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         bool failed = false;
 
         std::atomic_int64_t total_len { 0 };
+        int64_t subdirs = 0;
 
         rk_Hash hash = {};
     };
@@ -110,7 +111,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         PendingDirectory *pending0 = pending_directories.AppendDefault();
         pending0->dirname = src_dirname;
 
-        for (Size i = 0 ; i < pending_directories.len; i++) {
+        for (Size i = 0; i < pending_directories.len; i++) {
             PendingDirectory *pending = &pending_directories[i];
 
             EnumResult ret = EnumerateDirectory(pending->dirname, nullptr, -1,
@@ -141,6 +142,8 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 ptr->parent_idx = i;
                                 ptr->parent_entry = (const uint8_t *)entry - pending->blob.ptr;
                                 ptr->dirname = filename;
+
+                                pending->subdirs++;
                             } break;
 
                             case FileType::File: {
@@ -324,6 +327,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 entry->hash = pending->hash;
                 if (!pending->failed) {
                     entry->flags |= LittleEndian((int16_t)rk_RawFile::Flags::Readable);
+                    entry->size = LittleEndian(pending->subdirs);
                 }
 
                 parent->total_len += pending->total_len;
@@ -384,10 +388,12 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
     if (!async.Sync())
         return PutResult::Error;
 
-    rk_Hash dir_hash = pending_directories[0].hash;
     RG_ASSERT(pending_directories[0].parent_idx < 0);
 
-    *out_hash = dir_hash;
+    *out_hash = pending_directories[0].hash;
+    if (out_subdirs) {
+        *out_subdirs = pending_directories[0].subdirs;
+    }
     return PutResult::Success;
 }
 
@@ -592,8 +598,10 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             case FileType::Directory: {
                 entry->kind = (int16_t)rk_RawFile::Kind::Directory;
 
-                if (put.PutDirectory(filename, settings.follow_symlinks, &entry->hash) != PutResult::Success)
+                int64_t subdirs = 0;
+                if (put.PutDirectory(filename, settings.follow_symlinks, &entry->hash, &subdirs) != PutResult::Success)
                     return false;
+                entry->size = LittleEndian(subdirs);
 
                 entry->flags |= LittleEndian((int16_t)rk_RawFile::Flags::Readable);
             } break;

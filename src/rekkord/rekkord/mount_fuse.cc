@@ -71,7 +71,7 @@ static void CopyAttributes(const rk_ObjectInfo &obj, CacheEntry *out_entry)
         case rk_ObjectType::Directory:
         case rk_ObjectType::Snapshot: {
             out_entry->st.st_mode = S_IFDIR | obj.mode;
-            out_entry->st.st_nlink = (nlink_t)2;
+            out_entry->st.st_nlink = (nlink_t)(2 + obj.size);
         } break;
 
         case rk_ObjectType::Link: {
@@ -165,6 +165,7 @@ static bool InitRoot(const rk_Hash &hash)
         }
 
         entry->hash = obj.hash;
+        entry->st.st_nlink = (nlink_t)(2 + obj.size);
     }
 
     // Fix up fake nodes
