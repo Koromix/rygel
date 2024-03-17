@@ -505,8 +505,10 @@ Options:
     }
     LogInfo();
 
+    LogInfo("Mounting %1 to '%2'...", hash, mountpoint);
     if (!InitRoot(hash))
         return 1;
+    LogInfo("Ready");
 
     // Run fuse main
     {
