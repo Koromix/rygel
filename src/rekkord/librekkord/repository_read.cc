@@ -943,4 +943,149 @@ const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc)
     return target;
 }
 
+class FileReader: public rk_FileReader {
+    struct Chunk {
+        int64_t offset;
+        int64_t len;
+        rk_Hash hash;
+    };
+
+    rk_Disk *disk;
+    HeapArray<Chunk> chunks;
+
+    Size buf_idx = -1;
+    HeapArray<uint8_t> buf;
+
+public:
+    FileReader(rk_Disk *disk) : disk(disk) {}
+
+    bool Init(const rk_Hash &hash, Span<const uint8_t> blob);
+    Size Read(int64_t offset, Span<uint8_t> out_buf) override;
+};
+
+class ChunkReader: public rk_FileReader {
+    HeapArray<uint8_t> chunk;
+
+public:
+    ChunkReader(HeapArray<uint8_t> &blob);
+
+    Size Read(int64_t offset, Span<uint8_t> out_buf) override;
+};
+
+bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
+{
+    if (blob.len % RG_SIZE(rk_RawChunk) != RG_SIZE(int64_t)) {
+        LogError("Malformed file blob '%1'", hash);
+        return false;
+    }
+    blob.len -= RG_SIZE(int64_t);
+
+    for (Size offset = 0; offset < blob.len; offset += RG_SIZE(rk_RawChunk)) {
+        Chunk chunk = {};
+
+        rk_RawChunk entry = {};
+        memcpy(&entry, blob.ptr + offset, RG_SIZE(entry));
+
+        chunk.offset = LittleEndian(entry.offset);
+        chunk.len = LittleEndian(entry.len);
+        chunk.hash = entry.hash;
+
+        chunks.Append(chunk);
+    }
+
+    return true;
+}
+
+Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
+{
+    Size total_len = 0;
+
+    for (Size i = 0; out_buf.len && i < chunks.len; i++) {
+        const Chunk &chunk = chunks[i];
+
+        if (chunk.offset + chunk.len < offset)
+            continue;
+
+        Size copy_offset = offset - chunk.offset;
+        Size copy_len = std::min(chunk.len - copy_offset, out_buf.len);
+
+        if (buf_idx != i) {
+            buf.RemoveFrom(0);
+
+            rk_BlobType type;
+            if (!disk->ReadBlob(chunk.hash, &type, &buf))
+                return false;
+
+            if (type != rk_BlobType::Chunk) [[unlikely]] {
+                LogError("Blob '%1' is not a Chunk", chunk.hash);
+                return false;
+            }
+            if (buf.len != chunk.len) [[unlikely]] {
+                LogError("Chunk size mismatch for '%1'", chunk.hash);
+                return false;
+            }
+
+            buf_idx = i;
+        }
+
+        memcpy_safe(out_buf.ptr, buf.ptr + copy_offset, (size_t)copy_len);
+
+        offset += copy_len;
+        out_buf.ptr += copy_len;
+        out_buf.len -= copy_len;
+        total_len += copy_len;
+
+        if (!out_buf.len)
+            break;
+    }
+
+    return total_len;
+}
+
+ChunkReader::ChunkReader(HeapArray<uint8_t> &blob)
+{
+    std::swap(chunk, blob);
+}
+
+Size ChunkReader::Read(int64_t offset, Span<uint8_t> out_buf)
+{
+    Size copy_offset = (Size)std::min(offset, (int64_t)chunk.len);
+    Size copy_len = std::min(chunk.len - copy_offset, out_buf.len);
+
+    memcpy_safe(out_buf.ptr, chunk.ptr + copy_offset, (size_t)copy_len);
+
+    return copy_len;
+}
+
+std::unique_ptr<rk_FileReader> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash)
+{
+    rk_BlobType type;
+    HeapArray<uint8_t> blob;
+    if (!disk->ReadBlob(hash, &type, &blob))
+        return nullptr;
+
+    switch (type) {
+        case rk_BlobType::File: {
+            std::unique_ptr<FileReader> reader = std::make_unique<FileReader>(disk);
+            if (!reader->Init(hash, blob))
+                return nullptr;
+            return reader;
+        } break;
+
+        case rk_BlobType::Chunk: {
+            std::unique_ptr<ChunkReader> reader = std::make_unique<ChunkReader>(blob);
+            return reader;
+        } break;
+
+        case rk_BlobType::Directory:
+        case rk_BlobType::Snapshot:
+        case rk_BlobType::Link: {
+            LogError("Expected file for '%1'", hash);
+            return nullptr;
+        } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
 }

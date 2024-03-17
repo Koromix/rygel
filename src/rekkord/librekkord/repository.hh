@@ -80,6 +80,12 @@ struct rk_ObjectInfo {
     const char *target; // for symbolic links
 };
 
+class rk_FileReader {
+public:
+    virtual ~rk_FileReader() {}
+    virtual Size Read(int64_t offset, Span<uint8_t> out_buf) = 0;
+};
+
 // Snapshot commands
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
             rk_Hash *out_hash, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
@@ -91,7 +97,10 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
              Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
-// Read objects
+// Symbolic links
 const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc);
+
+// Files
+std::unique_ptr<rk_FileReader> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash);
 
 }

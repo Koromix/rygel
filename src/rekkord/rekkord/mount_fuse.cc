@@ -350,18 +350,45 @@ static int DoReadDir(const char *, void *buf, fuse_fill_dir_t filler,
 
 static int DoOpen(const char *path, fuse_file_info *fi)
 {
-    return -ENOENT;
-}
+    const CacheEntry *entry;
+    if (!ResolveEntry(path, &entry))
+        return -EIO;
+    if (!entry)
+        return -ENOENT;
+    RG_DEFER { entry->Unref(); };
 
-static int DoRelease(const char *path, fuse_file_info *fi)
-{
+    if (!S_ISREG(entry->st.st_mode))
+        return -EINVAL;
+    if ((fi->flags & O_ACCMODE) != O_RDONLY)
+        return -EACCES;
+
+    std::unique_ptr<rk_FileReader> reader = rk_OpenFile(disk.get(), entry->hash);
+    if (!reader)
+        return -EIO;
+
+    fi->fh = (uintptr_t)reader.release();
     return 0;
 }
 
-static int DoRead(const char *path, char *buf, size_t size, off_t offset, fuse_file_info *fi)
+static int DoRelease(const char *, fuse_file_info *fi)
 {
-    RG_ASSERT(false);
-    return -ENOTSUP;
+    rk_FileReader *reader = (rk_FileReader *)fi->fh;
+    delete reader;
+
+    return 0;
+}
+
+static int DoRead(const char *, char *buf, size_t size, off_t offset, fuse_file_info *fi)
+{
+    rk_FileReader *reader = (rk_FileReader *)fi->fh;
+
+    Span<uint8_t> dest = MakeSpan((uint8_t *)buf, (Size)size);
+    Size read = reader->Read(offset, dest);
+
+    if (read < 0)
+        return -EIO;
+
+    return (int)read;
 }
 
 #pragma GCC diagnostic push
