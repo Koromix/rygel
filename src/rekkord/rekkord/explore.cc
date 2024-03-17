@@ -107,7 +107,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     LogInfo();
 
     HeapArray<rk_SnapshotInfo> snapshots;
-    if (!rk_Log(disk.get(), &temp_alloc, &snapshots))
+    if (!rk_Snapshots(disk.get(), &temp_alloc, &snapshots))
         return 1;
 
     switch (format) {

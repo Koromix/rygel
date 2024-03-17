@@ -87,7 +87,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings,
             const char *dest_path, int64_t *out_len = nullptr);
 
 // Exploration commands
-bool rk_Log(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
+bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
              Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
