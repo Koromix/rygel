@@ -323,11 +323,6 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     }
     entries.len -= RG_SIZE(int64_t);
 
-    // Get total length from end of stream
-    int64_t dir_len = 0;
-    memcpy(&dir_len, entries.end(), RG_SIZE(dir_len));
-    dir_len = LittleEndian(dir_len);
-
     struct SharedContext {
         BlockAllocator temp_alloc;
 
@@ -748,11 +743,6 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         return false;
     }
     entries.len -= RG_SIZE(int64_t);
-
-    // Get total length from end of stream
-    int64_t dir_len = 0;
-    memcpy(&dir_len, entries.end(), RG_SIZE(dir_len));
-    dir_len = LittleEndian(dir_len);
 
     HeapArray<EntryInfo> decoded;
     for (Size offset = 0; offset < entries.len;) {
