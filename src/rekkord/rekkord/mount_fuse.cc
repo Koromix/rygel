@@ -531,16 +531,4 @@ Options:
 
 }
 
-#else
-
-namespace RG {
-
-int RunMount(Span<const char *>)
-{
-    LogError("Mount is not supported on this platform");
-    return 1;
-}
-
-}
-
 #endif

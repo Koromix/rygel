@@ -177,6 +177,16 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     }
 }
 
+#if !defined(__linux__) && !defined(__FreeBSD__) && !defined(__OpenBSD__)
+
+int RunMount(Span<const char *>)
+{
+    LogError("Mount is not supported on this platform");
+    return 1;
+}
+
+#endif
+
 }
 
 // C++ namespaces are stupid
