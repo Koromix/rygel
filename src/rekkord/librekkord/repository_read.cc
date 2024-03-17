@@ -943,6 +943,7 @@ class FileReader: public rk_FileReader {
     rk_Disk *disk;
     HeapArray<Chunk> chunks;
 
+    std::mutex buf_mutex;
     Size buf_idx = -1;
     HeapArray<uint8_t> buf;
 
@@ -999,26 +1000,31 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
         Size copy_offset = offset - chunk.offset;
         Size copy_len = std::min(chunk.len - copy_offset, out_buf.len);
 
-        if (buf_idx != i) {
-            buf.RemoveFrom(0);
+        // Load blob and copy
+        {
+            std::lock_guard<std::mutex> lock(buf_mutex);
 
-            rk_BlobType type;
-            if (!disk->ReadBlob(chunk.hash, &type, &buf))
-                return false;
+            if (buf_idx != i) {
+                buf.RemoveFrom(0);
 
-            if (type != rk_BlobType::Chunk) [[unlikely]] {
-                LogError("Blob '%1' is not a Chunk", chunk.hash);
-                return false;
+                rk_BlobType type;
+                if (!disk->ReadBlob(chunk.hash, &type, &buf))
+                    return false;
+
+                if (type != rk_BlobType::Chunk) [[unlikely]] {
+                    LogError("Blob '%1' is not a Chunk", chunk.hash);
+                    return false;
+                }
+                if (buf.len != chunk.len) [[unlikely]] {
+                    LogError("Chunk size mismatch for '%1'", chunk.hash);
+                    return false;
+                }
+
+                buf_idx = i;
             }
-            if (buf.len != chunk.len) [[unlikely]] {
-                LogError("Chunk size mismatch for '%1'", chunk.hash);
-                return false;
-            }
 
-            buf_idx = i;
+            memcpy_safe(out_buf.ptr, buf.ptr + copy_offset, (size_t)copy_len);
         }
-
-        memcpy_safe(out_buf.ptr, buf.ptr + copy_offset, (size_t)copy_len);
 
         offset += copy_len;
         out_buf.ptr += copy_len;
