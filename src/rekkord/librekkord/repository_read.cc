@@ -1027,7 +1027,7 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
             continue;
 
         Size copy_offset = offset - chunk.offset;
-        Size copy_len = std::min(chunk.len - copy_offset, out_buf.len);
+        Size copy_len = (Size)std::min(chunk.len - copy_offset, (int64_t)out_buf.len);
 
         // Load blob and copy
         {
