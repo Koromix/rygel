@@ -25,7 +25,7 @@ struct CacheEntry {
 
     const char *name;
     rk_Hash hash;
-    struct stat st;
+    struct stat sb;
 
     struct {
         std::mutex mutex;
@@ -64,56 +64,56 @@ static void CopyAttributes(const rk_ObjectInfo &obj, CacheEntry *out_entry)
 {
     switch (obj.type) {
         case rk_ObjectType::File: {
-            out_entry->st.st_mode = S_IFREG | (obj.mode & ~S_IFMT);
-            out_entry->st.st_size = (off_t)obj.size;
+            out_entry->sb.st_mode = S_IFREG | (obj.mode & ~S_IFMT);
+            out_entry->sb.st_size = (off_t)obj.size;
         } break;
 
         case rk_ObjectType::Directory:
         case rk_ObjectType::Snapshot: {
-            out_entry->st.st_mode = S_IFDIR | (obj.mode & ~S_IFMT);
-            out_entry->st.st_nlink = (nlink_t)(2 + obj.size);
+            out_entry->sb.st_mode = S_IFDIR | (obj.mode & ~S_IFMT);
+            out_entry->sb.st_nlink = (nlink_t)(2 + obj.size);
         } break;
 
         case rk_ObjectType::Link: {
-            out_entry->st.st_mode = S_IFLNK | (obj.mode & ~S_IFMT);
+            out_entry->sb.st_mode = S_IFLNK | (obj.mode & ~S_IFMT);
         } break;
 
         case rk_ObjectType::Unknown: { RG_UNREACHABLE(); } break;
     }
 
-    out_entry->st.st_uid = obj.uid;
-    out_entry->st.st_gid = obj.gid;
+    out_entry->sb.st_uid = obj.uid;
+    out_entry->sb.st_gid = obj.gid;
 
 #if defined(__linux__)
-    out_entry->st.st_mtim.tv_sec = obj.mtime / 1000;
-    out_entry->st.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->st.st_ctim.tv_sec = obj.btime / 1000;
-    out_entry->st.st_ctim.tv_nsec = (obj.btime % 1000) * 1000000;
-    out_entry->st.st_atim = out_entry->st.st_mtim;
+    out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
+    out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
+    out_entry->sb.st_ctim.tv_sec = obj.btime / 1000;
+    out_entry->sb.st_ctim.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_atim = out_entry->sb.st_mtim;
 #elif defined(__APPLE__)
-    out_entry->st.st_mtimespec.tv_sec = obj.mtime / 1000;
-    out_entry->st.st_mtimespec.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->st.st_birthtimespec.tv_sec = obj.btime / 1000;
-    out_entry->st.st_birthtimespec.tv_nsec = (obj.btime % 1000) * 1000000;
-    out_entry->st.st_atimespec = out_entry->st.st_mtimespec;
+    out_entry->sb.st_mtimespec.tv_sec = obj.mtime / 1000;
+    out_entry->sb.st_mtimespec.tv_nsec = (obj.mtime % 1000) * 1000000;
+    out_entry->sb.st_birthtimespec.tv_sec = obj.btime / 1000;
+    out_entry->sb.st_birthtimespec.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_atimespec = out_entry->sb.st_mtimespec;
 #elif defined(__OpenBSD__)
-    out_entry->st.st_mtim.tv_sec = obj.mtime / 1000;
-    out_entry->st.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->st.__st_birthtim.tv_sec = obj.btime / 1000;
-    out_entry->st.__st_birthtim.tv_nsec = (obj.btime % 1000) * 1000000;
-    out_entry->st.st_atim = out_entry->st.st_mtim;
+    out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
+    out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
+    out_entry->sb.__st_birthtim.tv_sec = obj.btime / 1000;
+    out_entry->sb.__st_birthtim.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_atim = out_entry->sb.st_mtim;
 #elif defined(__FreeBSD__)
-    out_entry->st.st_mtim.tv_sec = obj.mtime / 1000;
-    out_entry->st.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->st.st_birthtim.tv_sec = obj.btime / 1000;
-    out_entry->st.st_birthtim.tv_nsec = (obj.btime % 1000) * 1000000;
-    out_entry->st.st_atim = out_entry->st.st_mtim;
+    out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
+    out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
+    out_entry->sb.st_birthtim.tv_sec = obj.btime / 1000;
+    out_entry->sb.st_birthtim.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_atim = out_entry->sb.st_mtim;
 #else
-    out_entry->st.st_mtim.tv_sec = obj.mtime / 1000;
-    out_entry->st.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
-    out_entry->st.st_ctim.tv_sec = obj.btime / 1000;
-    out_entry->st.st_ctim.tv_nsec = (obj.btime % 1000) * 1000000;
-    out_entry->st.st_atim = out_entry->st.st_mtim;
+    out_entry->sb.st_mtim.tv_sec = obj.mtime / 1000;
+    out_entry->sb.st_mtim.tv_nsec = (obj.mtime % 1000) * 1000000;
+    out_entry->sb.st_ctim.tv_sec = obj.btime / 1000;
+    out_entry->sb.st_ctim.tv_nsec = (obj.btime % 1000) * 1000000;
+    out_entry->sb.st_atim = out_entry->sb.st_mtim;
 #endif
 }
 
@@ -125,8 +125,8 @@ static bool InitRoot(const rk_Hash &hash)
 
     root.parent = &root;
     root.name = "";
-    root.st.st_mode = S_IFDIR | 0755;
-    root.st.st_nlink = 2;
+    root.sb.st_mode = S_IFDIR | 0755;
+    root.sb.st_nlink = 2;
     root.directory.ready = true;
     root.refcount = 1;
     entries.Append(&root);
@@ -154,27 +154,27 @@ static bool InitRoot(const rk_Hash &hash)
                 child->parent = entry;
                 child->name = DuplicateString(part, &entry->directory.str_alloc).ptr;
                 CopyAttributes(obj, child);
-                child->st.st_nlink = 2;
+                child->sb.st_nlink = 2;
                 child->refcount = 1;
                 entries.Append(child);
 
-                entry->st.st_nlink++;
+                entry->sb.st_nlink++;
             }
 
             entry = child;
         }
 
         entry->hash = obj.hash;
-        entry->st.st_nlink = (nlink_t)(2 + obj.size);
+        entry->sb.st_nlink = (nlink_t)(2 + obj.size);
     }
 
     // Fix up fake nodes
     for (CacheEntry *entry: entries) {
         if (entry->directory.ready) {
             entry->hash = {};
-            entry->st.st_mode = S_IFDIR | 0755;
-            entry->st.st_uid = getuid();
-            entry->st.st_gid = getgid();
+            entry->sb.st_mode = S_IFDIR | 0755;
+            entry->sb.st_uid = getuid();
+            entry->sb.st_gid = getgid();
         }
     }
 
@@ -259,7 +259,7 @@ static int DoGetAttr(const char *path, struct stat *stbuf, fuse_file_info *)
         return -ENOENT;
     RG_DEFER { entry->Unref(); };
 
-    memcpy(stbuf, &entry->st, RG_SIZE(entry->st));
+    memcpy(stbuf, &entry->sb, RG_SIZE(entry->sb));
     return 0;
 }
 
@@ -281,18 +281,18 @@ static int DoAccess(const char *path, int mask)
     gid_t gid = getgid();
 
     if (mask & R_OK) {
-        bool read = (uid == entry->st.st_uid && (entry->st.st_mode & S_IRUSR)) ||
-                    (gid == entry->st.st_gid && (entry->st.st_mode & S_IRGRP)) ||
-                    (entry->st.st_mode & S_IROTH);
+        bool read = (uid == entry->sb.st_uid && (entry->sb.st_mode & S_IRUSR)) ||
+                    (gid == entry->sb.st_gid && (entry->sb.st_mode & S_IRGRP)) ||
+                    (entry->sb.st_mode & S_IROTH);
 
         if (!read)
             return -EACCES;
     }
 
     if (mask & X_OK) {
-        bool execute = (uid == entry->st.st_uid && (entry->st.st_mode & S_IXUSR)) ||
-                       (gid == entry->st.st_gid && (entry->st.st_mode & S_IXGRP)) ||
-                       (entry->st.st_mode & S_IXOTH);
+        bool execute = (uid == entry->sb.st_uid && (entry->sb.st_mode & S_IXUSR)) ||
+                       (gid == entry->sb.st_gid && (entry->sb.st_mode & S_IXGRP)) ||
+                       (entry->sb.st_mode & S_IXOTH);
 
         if (!execute)
             return -EACCES;
@@ -312,7 +312,7 @@ static int DoReadLink(const char *path, char *buf, size_t size)
         return -ENOENT;
     RG_DEFER_N(err_guard) { entry->Unref(); };
 
-    if (!S_ISLNK(entry->st.st_mode))
+    if (!S_ISLNK(entry->sb.st_mode))
         return -ENOENT;
 
     if (!entry->link.ready) {
@@ -337,7 +337,7 @@ static int DoOpenDir(const char *path, fuse_file_info *fi)
         return -ENOENT;
     RG_DEFER_N(err_guard) { entry->Unref(); };
 
-    if (!S_ISDIR(entry->st.st_mode))
+    if (!S_ISDIR(entry->sb.st_mode))
         return -ENOTDIR;
     if (!CacheDirectoryChildren(entry))
         return -EIO;
@@ -364,11 +364,11 @@ static int DoReadDir(const char *, void *buf, fuse_fill_dir_t filler,
 #define FILL(Name, StPtr) \
         filler(buf, (Name), (StPtr), 0, (fuse_fill_dir_flags)FUSE_FILL_DIR_PLUS)
 
-    FILL(".", &entry->st);
-    FILL("..", &entry->parent->st);
+    FILL(".", &entry->sb);
+    FILL("..", &entry->parent->sb);
 
     for (const CacheEntry &child: entry->directory.children) {
-        FILL(child.name, &child.st);
+        FILL(child.name, &child.sb);
     }
 
 #undef FILL
@@ -385,7 +385,7 @@ static int DoOpen(const char *path, fuse_file_info *fi)
         return -ENOENT;
     RG_DEFER { entry->Unref(); };
 
-    if (!S_ISREG(entry->st.st_mode))
+    if (!S_ISREG(entry->sb.st_mode))
         return -EINVAL;
     if ((fi->flags & O_ACCMODE) != O_RDONLY)
         return -EACCES;
