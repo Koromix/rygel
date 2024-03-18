@@ -61,6 +61,12 @@ struct EntryInfo {
     const char *filename;
 };
 
+struct FileChunk {
+    int64_t offset;
+    int64_t len;
+    rk_Hash hash;
+};
+
 class GetContext {
     rk_Disk *disk;
     bool chown;
@@ -496,29 +502,41 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
 
             Async async(&tasks);
 
+            // Check coherence
+            Size prev_end = 0;
+
             // Write unencrypted file
             for (Size offset = 0; offset < file_blob.len; offset += RG_SIZE(rk_RawChunk)) {
+                FileChunk chunk = {};
+
+                rk_RawChunk entry = {};
+                memcpy(&entry, file_blob.ptr + offset, RG_SIZE(entry));
+
+                chunk.offset = LittleEndian(entry.offset);
+                chunk.len = LittleEndian(entry.len);
+                chunk.hash = entry.hash;
+
+                if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
+                    LogError("Malformed file blob '%1'", hash);
+                    return false;
+                }
+                prev_end = chunk.offset + chunk.len;
+
                 async.Run([=, this]() {
-                    rk_RawChunk entry = {};
-
-                    memcpy(&entry, file_blob.ptr + offset, RG_SIZE(entry));
-                    entry.offset = LittleEndian(entry.offset);
-                    entry.len = LittleEndian(entry.len);
-
                     rk_BlobType type;
                     HeapArray<uint8_t> buf;
-                    if (!disk->ReadBlob(entry.hash, &type, &buf))
+                    if (!disk->ReadBlob(chunk.hash, &type, &buf))
                         return false;
 
                     if (type != rk_BlobType::Chunk) [[unlikely]] {
-                        LogError("Blob '%1' is not a Chunk", entry.hash);
+                        LogError("Blob '%1' is not a Chunk", chunk.hash);
                         return false;
                     }
-                    if (buf.len != entry.len) [[unlikely]] {
-                        LogError("Chunk size mismatch for '%1'", entry.hash);
+                    if (buf.len != chunk.len) [[unlikely]] {
+                        LogError("Chunk size mismatch for '%1'", chunk.hash);
                         return false;
                     }
-                    if (!WriteAt(fd, dest_filename, entry.offset, buf)) {
+                    if (!WriteAt(fd, dest_filename, chunk.offset, buf)) {
                         LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
                         return false;
                     }
@@ -531,7 +549,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 return -1;
 
             // Check actual file size
-            if (file_blob.len) {
+            if (file_blob.len >= RG_SIZE(rk_RawChunk) + RG_SIZE(int64_t)) {
                 const rk_RawChunk *entry = (const rk_RawChunk *)(file_blob.end() - RG_SIZE(rk_RawChunk));
                 int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
@@ -934,14 +952,8 @@ const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc)
 }
 
 class FileReader: public rk_FileReader {
-    struct Chunk {
-        int64_t offset;
-        int64_t len;
-        rk_Hash hash;
-    };
-
     rk_Disk *disk;
-    HeapArray<Chunk> chunks;
+    HeapArray<FileChunk> chunks;
 
     std::mutex buf_mutex;
     Size buf_idx = -1;
@@ -971,8 +983,16 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
     }
     blob.len -= RG_SIZE(int64_t);
 
+    // Get file length from end of stream
+    int64_t file_len = -1;
+    memcpy(&file_len, blob.end(), RG_SIZE(file_len));
+    file_len = LittleEndian(file_len);
+
+    // Check coherence
+    Size prev_end = 0;
+
     for (Size offset = 0; offset < blob.len; offset += RG_SIZE(rk_RawChunk)) {
-        Chunk chunk = {};
+        FileChunk chunk = {};
 
         rk_RawChunk entry = {};
         memcpy(&entry, blob.ptr + offset, RG_SIZE(entry));
@@ -981,7 +1001,24 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
         chunk.len = LittleEndian(entry.len);
         chunk.hash = entry.hash;
 
+        if (prev_end > chunk.offset || chunk.len < 0) [[unlikely]] {
+            LogError("Malformed file blob '%1'", hash);
+            return false;
+        }
+        prev_end = chunk.offset + chunk.len;
+
         chunks.Append(chunk);
+    }
+
+    // Check actual file size
+    if (blob.len >= RG_SIZE(rk_RawChunk) + RG_SIZE(int64_t)) {
+        const rk_RawChunk *entry = (const rk_RawChunk *)(blob.end() - RG_SIZE(rk_RawChunk));
+        int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
+
+        if (len != file_len) [[unlikely]] {
+            LogError("File size mismatch for '%1'", entry->hash);
+            return -1;
+        }
     }
 
     return true;
@@ -992,7 +1029,7 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
     Size total_len = 0;
 
     for (Size i = 0; out_buf.len && i < chunks.len; i++) {
-        const Chunk &chunk = chunks[i];
+        const FileChunk &chunk = chunks[i];
 
         if (chunk.offset + chunk.len < offset)
             continue;
