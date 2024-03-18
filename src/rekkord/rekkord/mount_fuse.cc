@@ -321,28 +321,17 @@ static int DoReleaseDir(const char *, fuse_file_info *fi)
 }
 
 static int DoReadDir(const char *, void *buf, fuse_fill_dir_t filler,
-                     off_t offset, fuse_file_info *fi, fuse_readdir_flags)
+                     off_t, fuse_file_info *fi, fuse_readdir_flags)
 {
     const CacheEntry *entry = (const CacheEntry *)fi->fh;
 
-    offset++;
-
 #define FILL(Name, StPtr) \
-        do { \
-            int ret = filler(buf, (Name), (StPtr), offset++, (fuse_fill_dir_flags)FUSE_FILL_DIR_PLUS); \
-            if (ret) \
-                return ret; \
-        } while (false)
+        filler(buf, (Name), (StPtr), 0, (fuse_fill_dir_flags)FUSE_FILL_DIR_PLUS)
 
-    if (offset == 1) {
-        FILL(".", &entry->st);
-    }
-    if (offset == 2) {
-        FILL("..", &entry->parent->st);
-    }
+    FILL(".", &entry->st);
+    FILL("..", &entry->parent->st);
 
-    for (Size i = (Size)offset - 3; i < entry->directory.children.len; i++) {
-        const CacheEntry &child = entry->directory.children[i];
+    for (const CacheEntry &child: entry->directory.children) {
         FILL(child.name, &child.st);
     }
 
