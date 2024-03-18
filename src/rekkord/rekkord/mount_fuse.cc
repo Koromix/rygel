@@ -185,6 +185,8 @@ static bool InitRoot(const rk_Hash &hash)
 
 static bool CacheDirectoryChildren(CacheEntry *entry)
 {
+    RG_ASSERT(S_ISDIR(entry->sb.st_mode));
+
     std::lock_guard lock(entry->directory.mutex);
 
     if (!entry->directory.ready) {
@@ -215,26 +217,31 @@ static bool CacheDirectoryChildren(CacheEntry *entry)
     return true;
 }
 
-static bool ResolveEntry(const char *path, CacheEntry **out_ptr)
+static int ResolveEntry(const char *path, CacheEntry **out_ptr)
 {
     RG_ASSERT(path[0] == '/');
 
     Span<const char> remain = path + 1;
     CacheEntry *entry = &root;
 
-    while (remain.len && entry) {
+    while (remain.len) {
+        if (!S_ISDIR(entry->sb.st_mode))
+            return -ENOTDIR;
         if (!CacheDirectoryChildren(entry))
-            return false;
+            return -EIO;
 
         Span<const char> part = SplitStr(remain, '/', &remain);
         entry = FindChild(*entry, part);
+
+        if (!entry)
+            return -ENOENT;
     }
 
     *out_ptr = entry;
-    return true;
+    return 0;
 }
 
-static bool ResolveEntry(const char *path, const CacheEntry **out_ptr)
+static int ResolveEntry(const char *path, const CacheEntry **out_ptr)
 {
     // Work around const craziness
     return ResolveEntry(path, (CacheEntry **)out_ptr);
@@ -255,10 +262,10 @@ static void *DoInit(fuse_conn_info *, fuse_config *cfg)
 static int DoGetAttr(const char *path, struct stat *stbuf, fuse_file_info *)
 {
     const CacheEntry *entry;
-    if (!ResolveEntry(path, &entry))
-        return -EIO;
-    if (!entry)
-        return -ENOENT;
+    if (int error = ResolveEntry(path, &entry); error < 0) {
+        memset(stbuf, 0, RG_SIZE(*stbuf));
+        return error;
+    }
     RG_DEFER { entry->Unref(); };
 
     memcpy(stbuf, &entry->sb, RG_SIZE(entry->sb));
@@ -268,10 +275,8 @@ static int DoGetAttr(const char *path, struct stat *stbuf, fuse_file_info *)
 static int DoAccess(const char *path, int mask)
 {
     const CacheEntry *entry;
-    if (!ResolveEntry(path, &entry))
-        return -EIO;
-    if (!entry)
-        return -ENOENT;
+    if (int error = ResolveEntry(path, &entry); error < 0)
+        return error;
     RG_DEFER { entry->Unref(); };
 
     if (mask == F_OK)
@@ -308,10 +313,8 @@ static int DoReadLink(const char *path, char *buf, size_t size)
     RG_ASSERT(size >= 1);
 
     CacheEntry *entry;
-    if (!ResolveEntry(path, &entry))
-        return -EIO;
-    if (!entry)
-        return -ENOENT;
+    if (int error = ResolveEntry(path, &entry); error < 0)
+        return error;
     RG_DEFER_N(err_guard) { entry->Unref(); };
 
     if (!S_ISLNK(entry->sb.st_mode))
@@ -333,10 +336,8 @@ static int DoReadLink(const char *path, char *buf, size_t size)
 static int DoOpenDir(const char *path, fuse_file_info *fi)
 {
     CacheEntry *entry;
-    if (!ResolveEntry(path, &entry))
-        return -EIO;
-    if (!entry)
-        return -ENOENT;
+    if (int error = ResolveEntry(path, &entry); error < 0)
+        return error;
     RG_DEFER_N(err_guard) { entry->Unref(); };
 
     if (!S_ISDIR(entry->sb.st_mode))
@@ -381,10 +382,8 @@ static int DoReadDir(const char *, void *buf, fuse_fill_dir_t filler,
 static int DoOpen(const char *path, fuse_file_info *fi)
 {
     const CacheEntry *entry;
-    if (!ResolveEntry(path, &entry))
-        return -EIO;
-    if (!entry)
-        return -ENOENT;
+    if (int error = ResolveEntry(path, &entry); error < 0)
+        return error;
     RG_DEFER { entry->Unref(); };
 
     if (!S_ISREG(entry->sb.st_mode))
