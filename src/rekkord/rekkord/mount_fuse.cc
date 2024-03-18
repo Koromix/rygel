@@ -263,6 +263,44 @@ static int DoGetAttr(const char *path, struct stat *stbuf, fuse_file_info *)
     return 0;
 }
 
+static int DoAccess(const char *path, int mask)
+{
+    const CacheEntry *entry;
+    if (!ResolveEntry(path, &entry))
+        return -EIO;
+    if (!entry)
+        return -ENOENT;
+    RG_DEFER { entry->Unref(); };
+
+    if (mask == F_OK)
+        return 0;
+    if (mask & W_OK)
+        return -EACCES;
+
+    uid_t uid = getuid();
+    gid_t gid = getgid();
+
+    if (mask & R_OK) {
+        bool read = (uid == entry->st.st_uid && (entry->st.st_mode & S_IRUSR)) ||
+                    (gid == entry->st.st_gid && (entry->st.st_mode & S_IRGRP)) ||
+                    (entry->st.st_mode & S_IROTH);
+
+        if (!read)
+            return -EACCES;
+    }
+
+    if (mask & X_OK) {
+        bool execute = (uid == entry->st.st_uid && (entry->st.st_mode & S_IXUSR)) ||
+                       (gid == entry->st.st_gid && (entry->st.st_mode & S_IXGRP)) ||
+                       (entry->st.st_mode & S_IXOTH);
+
+        if (!execute)
+            return -EACCES;
+    }
+
+    return 0;
+}
+
 static int DoReadLink(const char *path, char *buf, size_t size)
 {
     RG_ASSERT(size >= 1);
@@ -393,7 +431,8 @@ static const struct fuse_operations FuseOperations = {
     .opendir = DoOpenDir,
     .readdir = DoReadDir,
     .releasedir = DoReleaseDir,
-    .init = DoInit
+    .init = DoInit,
+    .access = DoAccess
 };
 
 #pragma GCC diagnostic pop
