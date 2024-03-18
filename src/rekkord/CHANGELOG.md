@@ -1,5 +1,13 @@
 # Changelog
 
+## Rekkord 0.16
+
+- Add FUSE support with `rekkord mount`
+- Rename put/get commands to save/restore
+- Store number of subdirectories in directory entries (causes transient repository size expansion)
+- Reduce unnecesary traffic while listing tree content
+- Reduce binary size
+
 ## Rekkord 0.15
 
 - Improve error message for uninitialized repository
