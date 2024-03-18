@@ -403,12 +403,22 @@ static const struct fuse_operations FuseOperations = {
 
 int RunMount(Span<const char *> arguments)
 {
+    static const char *const FuseOptions[] = {
+        "default_permissions",
+        "allow_root",
+        "allow_other",
+        "auto_unmount"
+    };
+
+    BlockAllocator temp_alloc;
+
     // Options
     rk_Config config;
     const char *mountpoint = nullptr;
     rk_Hash hash = {};
     bool foreground = false;
     bool debug = false;
+    HeapArray<const char *> fuse_options;
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
@@ -425,7 +435,10 @@ Options:
                                  %!D..(default: automatic)%!0
 
     %!..+-f, --foreground%!0             Run mount process in foreground
-        %!..+--debug%!0                  Debug FUSE calls)", FelixTarget);
+        %!..+--debug%!0                  Debug FUSE calls
+    %!..+-o, --option <option>%!0        Set additional FUSE options (see below)
+
+Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -459,6 +472,21 @@ Options:
                 foreground = true;
             } else if (opt.Test("--debug")) {
                 debug = true;
+            } else if (opt.Test("-o", "--option", OptionType::Value)) {
+                Span<const char> remain = opt.current_value;
+
+                while (remain.len) {
+                    Span<const char> part = TrimStr(SplitStrAny(remain, " ,", &remain));
+
+                    if (!std::find_if(std::begin(FuseOptions), std::end(FuseOptions),
+                                      [&](const char *opt) { return TestStr(part, opt); })) {
+                        LogError("FUSE option '%1' is not supported", opt.current_value);
+                        return 1;
+                    }
+
+                    const char *copy = DuplicateString(part, &temp_alloc).ptr;
+                    fuse_options.Append(copy);
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -511,6 +539,10 @@ Options:
         }
         if (debug) {
             argv.Append("-d");
+        }
+        for (const char *opt: fuse_options) {
+            argv.Append("-o");
+            argv.Append(opt);
         }
         argv.Append(mountpoint);
 
