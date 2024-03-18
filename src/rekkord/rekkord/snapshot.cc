@@ -16,7 +16,7 @@
 
 namespace RG {
 
-int RunPut(Span<const char *> arguments)
+int RunSave(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -28,7 +28,7 @@ int RunPut(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 put [-R <repo>] <filename> ...%!0
+R"(Usage: %!..+%1 save [-R <repo>] <filename> ...%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -136,7 +136,7 @@ Options:
     return 0;
 }
 
-int RunGet(Span<const char *> arguments)
+int RunRestore(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -148,7 +148,7 @@ int RunGet(Span<const char *> arguments)
 
     const auto print_usage = [=](FILE *fp) {
         PrintLn(fp,
-R"(Usage: %!..+%1 get [-R <repo>] <hash> -O <path>%!0
+R"(Usage: %!..+%1 restore [-R <repo>] <hash> -O <path>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file

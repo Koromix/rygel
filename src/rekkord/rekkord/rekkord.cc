@@ -29,8 +29,8 @@ int RunAddUser(Span<const char *> arguments);
 int RunDeleteUser(Span<const char *> arguments);
 int RunListUsers(Span<const char *> arguments);
 
-int RunPut(Span<const char *> arguments);
-int RunGet(Span<const char *> arguments);
+int RunSave(Span<const char *> arguments);
+int RunRestore(Span<const char *> arguments);
 
 int RunSnapshots(Span<const char *> arguments);
 int RunList(Span<const char *> arguments);
@@ -73,8 +73,8 @@ Management commands:
     %!..+list_users%!0                   List repository users
 
 Snapshot commands:
-    %!..+put%!0                          Store directory or file and make snapshot
-    %!..+get%!0                          Get and decrypt snapshot, directory or file
+    %!..+save%!0                         Store directory or file and make snapshot
+    %!..+restore%!0                      Get and decrypt snapshot, directory or file
 
 Exploration commands:
     %!..+snapshots%!0                    List known snapshots
@@ -161,10 +161,10 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunDeleteUser(arguments);
     } else if (TestStr(cmd, "list_users")) {
         return RunListUsers(arguments);
-    } else if (TestStr(cmd, "put")) {
-        return RunPut(arguments);
-    } else if (TestStr(cmd, "get")) {
-        return RunGet(arguments);
+    } else if (TestStr(cmd, "save")) {
+        return RunSave(arguments);
+    } else if (TestStr(cmd, "restore")) {
+        return RunRestore(arguments);
     } else if (TestStr(cmd, "snapshots")) {
         return RunSnapshots(arguments);
     } else if (TestStr(cmd, "list")) {

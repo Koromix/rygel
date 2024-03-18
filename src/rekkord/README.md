@@ -161,7 +161,7 @@ You need to give snapshots a name (or use `--anonymous` to skip this). This name
 
 ```sh
 export REKKORD_CONFIG_FILE = /path/to/config.ini
-rekkord put -n <NAME> <PATHS...>
+rekkord save -n <NAME> <PATHS...>
 ```
 
 The command will give you the snapshot hash once it finishes. You can retrieve the hash later with [rekkord list](#list-snapshots).
@@ -261,11 +261,11 @@ Use `--format JSON` or `--format XML` to get the file tree in a JSON or XML form
 
 ## Restore snapshot
 
-Use the `rekkord get` command to restore the files from a snapshot onto the local filesystem. You need to know the unique [snapshot hash](#list-snapshots) for this.
+Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You need to know the unique [snapshot hash](#list-snapshots) for this.
 
 ```sh
 export REKKORD_CONFIG_FILE = /path/to/config.ini
-rekkord get <hash> -O <path>
+rekkord restore <hash> -O <path>
 ```
 
 # Build from source
