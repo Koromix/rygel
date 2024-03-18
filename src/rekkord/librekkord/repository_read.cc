@@ -810,33 +810,24 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->size = entry.size;
         obj->readable = (entry.flags & (int)rk_RawFile::Flags::Readable);
 
-        rk_BlobType expect_type;
-        if (entry.kind == (int)rk_RawFile::Kind::Directory) {
-            expect_type = rk_BlobType::Directory;
-        } else if (entry.kind == (int)rk_RawFile::Kind::Link) {
-            expect_type = rk_BlobType::Link;
-        } else {
-            continue;
-        }
+        switch (obj->type) {
+            case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
 
-        async.Run([=, &contexts, this]() {
-            rk_BlobType entry_type;
-            HeapArray<uint8_t> entry_blob;
-
-            if (!disk->ReadBlob(entry.hash, &entry_type, &entry_blob))
-                return false;
-
-            if (entry_type != expect_type) {
-                LogError("Blob '%1' is not a %2", entry.hash, rk_BlobTypeNames[(int)expect_type]);
-                return false;
-            }
-
-            switch (obj->type) {
-                case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
-
-                case rk_ObjectType::Directory: {
-                    if (settings.max_depth < 0 || depth < settings.max_depth) {
+            case rk_ObjectType::Directory: {
+                if (settings.max_depth < 0 || depth < settings.max_depth) {
+                    async.Run([=, &contexts, this]() {
                         RecurseContext *ctx = &contexts[i];
+
+                        rk_BlobType entry_type;
+                        HeapArray<uint8_t> entry_blob;
+
+                        if (!disk->ReadBlob(entry.hash, &entry_type, &entry_blob))
+                            return false;
+
+                        if (entry_type != rk_BlobType::Directory) {
+                            LogError("Blob '%1' is not a Directory", entry.hash);
+                            return false;
+                        }
 
                         if (!RecurseEntries(entry_blob, false, depth + 1, &ctx->str_alloc, &ctx->children))
                             return false;
@@ -844,15 +835,16 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                         for (const rk_ObjectInfo &child: ctx->children) {
                             obj->children += (child.depth == depth + 1);
                         }
-                    }
-                } break;
-                case rk_ObjectType::File: {} break;
-                case rk_ObjectType::Link: { obj->target = DuplicateString(entry_blob.As<const char>(), alloc).ptr; } break;
-                case rk_ObjectType::Unknown: {} break;
-            }
 
-            return true;
-        });
+                        return true;
+                    });
+                }
+            } break;
+
+            case rk_ObjectType::File:
+            case rk_ObjectType::Link:
+            case rk_ObjectType::Unknown: {} break;
+        }
     }
 
     if (!async.Sync())

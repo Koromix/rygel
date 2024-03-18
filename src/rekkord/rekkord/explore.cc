@@ -252,7 +252,7 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
             case rk_ObjectType::Snapshot:
             case rk_ObjectType::Directory: { json->Key("children"); json->StartArray(); } break;
             case rk_ObjectType::File: { json->Key("size"); json->Int64(obj.size); } break;
-            case rk_ObjectType::Link: { json->Key("target"); json->String(obj.target); } break;
+            case rk_ObjectType::Link:
             case rk_ObjectType::Unknown: {} break;
         }
     }
@@ -289,7 +289,7 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
             case rk_ObjectType::Snapshot:
             case rk_ObjectType::Directory: {} break;
             case rk_ObjectType::File: { element.append_attribute("size") = obj.size; } break;
-            case rk_ObjectType::Link: { element.append_attribute("target") = obj.target; } break;
+            case rk_ObjectType::Link:
             case rk_ObjectType::Unknown: {} break;
         }
     }

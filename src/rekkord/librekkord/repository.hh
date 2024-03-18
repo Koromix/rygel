@@ -77,7 +77,6 @@ struct rk_ObjectInfo {
 
     int64_t stored; // for snapshots
     Size children; // for snapshots and directories
-    const char *target; // for symbolic links
 };
 
 class rk_FileReader {
