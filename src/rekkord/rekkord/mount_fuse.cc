@@ -252,8 +252,6 @@ static void *DoInit(fuse_conn_info *, fuse_config *cfg)
 
 static int DoGetAttr(const char *path, struct stat *stbuf, fuse_file_info *)
 {
-    RG_ASSERT(path[0] == '/');
-
     const CacheEntry *entry;
     if (!ResolveEntry(path, &entry))
         return -EIO;
