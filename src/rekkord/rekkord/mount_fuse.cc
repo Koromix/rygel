@@ -64,18 +64,18 @@ static void CopyAttributes(const rk_ObjectInfo &obj, CacheEntry *out_entry)
 {
     switch (obj.type) {
         case rk_ObjectType::File: {
-            out_entry->st.st_mode = S_IFREG | obj.mode;
+            out_entry->st.st_mode = S_IFREG | (obj.mode & ~S_IFMT);
             out_entry->st.st_size = (off_t)obj.size;
         } break;
 
         case rk_ObjectType::Directory:
         case rk_ObjectType::Snapshot: {
-            out_entry->st.st_mode = S_IFDIR | obj.mode;
+            out_entry->st.st_mode = S_IFDIR | (obj.mode & ~S_IFMT);
             out_entry->st.st_nlink = (nlink_t)(2 + obj.size);
         } break;
 
         case rk_ObjectType::Link: {
-            out_entry->st.st_mode = S_IFLNK | obj.mode;
+            out_entry->st.st_mode = S_IFLNK | (obj.mode & ~S_IFMT);
         } break;
 
         case rk_ObjectType::Unknown: { RG_UNREACHABLE(); } break;
