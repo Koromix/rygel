@@ -68,24 +68,8 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     switch (TestRaw("rekkord")) {
         case StatResult::Success: {} break;
         case StatResult::MissingPath: {
-            switch (TestRaw("rekord")) {
-                case StatResult::Success: {
-                    LogWarning("Migrating old rekkord repository");
-
-                    uint8_t id[32];
-                    if (!ReadSecret("rekord", id))
-                        return false;
-                    if (!WriteSecret("rekkord", id, false))
-                        return false;
-                    DeleteRaw("rekord");
-                } break;
-                case StatResult::MissingPath: {
-                    LogError("Repository '%1' is not initialized or not valid", url);
-                    return false;
-                } break;
-                case StatResult::AccessDenied:
-                case StatResult::OtherError: return false;
-            }
+            LogError("Repository '%1' is not initialized or not valid", url);
+            return false;
         } break;
         case StatResult::AccessDenied:
         case StatResult::OtherError: return false;
@@ -151,16 +135,8 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
     // Open local cache
     {
         uint8_t id[32];
-        if (!ReadSecret("rekkord", id)) {
-            if (ReadSecret("rekord", id)) {
-                LogWarning("Migrating old rekord repository");
-                if (!WriteSecret("rekkord", id, true))
-                    return false;
-                DeleteRaw("rekord");
-            } else {
-                return false;
-            }
-        }
+        if (!ReadSecret("rekkord", id))
+            return false;
         OpenCache(id);
     }
 
