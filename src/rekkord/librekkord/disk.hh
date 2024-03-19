@@ -138,6 +138,8 @@ private:
 
     Size WriteDirect(const char *path, Span<const uint8_t> buf, bool overwrite);
 
+    bool CheckRepository();
+
     bool OpenCache(Span<const uint8_t> id);
     void ClearCache();
     bool RebuildCache();

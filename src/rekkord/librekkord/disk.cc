@@ -64,16 +64,8 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
     const char *full_filename = Fmt(&str_alloc, "keys/%1/full", username).ptr;
     const char *write_filename = Fmt(&str_alloc, "keys/%1/write", username).ptr;
 
-    // Is it a valid repository?
-    switch (TestRaw("rekkord")) {
-        case StatResult::Success: {} break;
-        case StatResult::MissingPath: {
-            LogError("Repository '%1' is not initialized or not valid", url);
-            return false;
-        } break;
-        case StatResult::AccessDenied:
-        case StatResult::OtherError: return false;
-    }
+    if (!CheckRepository())
+        return false;
 
     // Does user exist?
     switch (TestRaw(write_filename)) {
@@ -127,6 +119,9 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
         LogError("Malformed master key");
         return false;
     }
+
+    if (!CheckRepository())
+        return false;
 
     mode = rk_DiskMode::Full;
     memcpy(skey, key.ptr, key.len);
@@ -921,6 +916,21 @@ Size rk_Disk::WriteDirect(const char *path, Span<const uint8_t> buf, bool overwr
 
     Size written = WriteRaw(path, [&](FunctionRef<bool(Span<const uint8_t>)> func) { return func(buf); });
     return written;
+}
+
+bool rk_Disk::CheckRepository()
+{
+    switch (TestRaw("rekkord")) {
+        case StatResult::Success: return true;
+        case StatResult::MissingPath: {
+            LogError("Repository '%1' is not initialized or not valid", url);
+            return false;
+        } break;
+        case StatResult::AccessDenied:
+        case StatResult::OtherError: return false;
+    }
+
+    RG_UNREACHABLE();
 }
 
 bool rk_Disk::OpenCache(Span<const uint8_t> id)
