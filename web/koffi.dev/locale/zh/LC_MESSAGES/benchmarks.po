@@ -1,0 +1,440 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: 2023-08-26 16:45+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
+"Language: zh\n"
+"Language-Team: zh <zh@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../benchmarks.md:1
+msgid "Benchmarks"
+msgstr "基准测试"
+
+#: ../../benchmarks.md:3
+msgid "Overview"
+msgstr "总览"
+
+#: ../../benchmarks.md:5
+msgid ""
+"Here is a quick overview of the execution time of Koffi calls on three "
+"benchmarks, where it is compared to a theoretical ideal FFI "
+"implementation (approximated with pre-compiled static N-API glue code):"
+msgstr ""
+"这里是Koffi在三个基准测试中的执行时间的概览, 对比的是理论上的理想FFI实现(以预编译的静态N-API胶水代码作为近似):"
+
+#: ../../benchmarks.md:7
+msgid "The first benchmark is based on `rand()` calls"
+msgstr "第一个基准测试是基于调用`rand()`"
+
+#: ../../benchmarks.md:8
+msgid "The second benchmark is based on `atoi()` calls"
+msgstr "第二个基准测试是基于调用`atoi()`"
+
+#: ../../benchmarks.md:9
+msgid "The third benchmark is based on [Raylib](https://www.raylib.com/)"
+msgstr "第三个基准测试是基于[Raylib](https://www.raylib.com/)"
+
+#: ../../benchmarks.md:18
+msgid ""
+"These results are detailed and explained below, and compared to node-ffi"
+"/node-ffi-napi."
+msgstr "下面有这些结果的详细信息和解释, 以及和node-ffi/node-ffi-napi的对比."
+
+#: ../../benchmarks.md:20
+msgid "Linux x86_64"
+msgstr "Linux x86_64"
+
+#: ../../benchmarks.md:22
+msgid ""
+"The results presented below were measured on my x86_64 Linux machine "
+"(Intel® Core™ i5-4460)."
+msgstr ""
+"下面展示的结果是在我(@Koromix)的x86_64 Linux设备(Intel® Core™ i5-4460)上测试的."
+
+#: ../../benchmarks.md:24 ../../benchmarks.md:70
+msgid "rand results"
+msgstr "rand结果"
+
+#: ../../benchmarks.md:26 ../../benchmarks.md:72
+msgid ""
+"This test is based around repeated calls to a simple standard C function "
+"atoi, and has three implementations:"
+msgstr ""
+#  "这个测试时基于持续调用一个简单的C函数atoi"
+
+#: ../../benchmarks.md:28 ../../benchmarks.md:74
+msgid ""
+"the first one is the reference, it calls atoi through an N-API module, "
+"and is close to the theoretical limit of a perfect (no overhead) Node.js "
+"> C FFI implementation (pre-compiled static glue code)"
+msgstr ""
+"第一个是参考, 它通过一个N-API模块调用rand, 和理论上的最优(无开销)Node.js > C FFI实现(预编译静态胶水代码)接近."
+
+#: ../../benchmarks.md:29 ../../benchmarks.md:75
+msgid "the second one calls atoi through Koffi"
+msgstr "第二个是通过Koffi调用atoi"
+
+#: ../../benchmarks.md:30 ../../benchmarks.md:76
+msgid "the third one uses the official Node.js FFI implementation, node-ffi-napi"
+msgstr "第三个是使用官方的Node.js FFI实现, node-ffi-napi"
+
+#: ../../benchmarks.md
+msgid "Benchmark"
+msgstr "测试"
+
+#: ../../benchmarks.md
+msgid "Iteration time"
+msgstr "平均时间"
+
+#: ../../benchmarks.md
+msgid "Relative performance"
+msgstr "相对性能"
+
+#: ../../benchmarks.md
+msgid "Overhead"
+msgstr "开销"
+
+#: ../../benchmarks.md
+msgid "rand_napi"
+msgstr "rand_napi"
+
+#: ../../benchmarks.md
+msgid "842 ns"
+msgstr "842 ns"
+
+#: ../../benchmarks.md
+msgid "x1.00"
+msgstr "x1.00"
+
+#: ../../benchmarks.md
+msgid "(ref)"
+msgstr "(参考基准)"
+
+#: ../../benchmarks.md
+msgid "rand_koffi"
+msgstr "rand_koffi"
+
+#: ../../benchmarks.md
+msgid "1114 ns"
+msgstr "1114 ns"
+
+#: ../../benchmarks.md
+msgid "x0.76"
+msgstr "x0.76"
+
+#: ../../benchmarks.md
+msgid "+32%"
+msgstr "+32%"
+
+#: ../../benchmarks.md
+msgid "rand_node_ffi"
+msgstr "rand_node_ffi"
+
+#: ../../benchmarks.md
+msgid "44845 ns"
+msgstr "44845 ns"
+
+#: ../../benchmarks.md
+msgid "x0.02"
+msgstr "x0.02"
+
+#: ../../benchmarks.md
+msgid "+5224%"
+msgstr "+5224%"
+
+#: ../../benchmarks.md:38 ../../benchmarks.md:84
+msgid ""
+"Because rand is a pretty small function, the FFI overhead is clearly "
+"visible."
+msgstr ""
+"由于rand是一个相当小的函数, FFI的额外开销清晰可见."
+
+#: ../../benchmarks.md:40 ../../benchmarks.md:86
+msgid "atoi results"
+msgstr "atoi结果"
+
+#: ../../benchmarks.md:42 ../../benchmarks.md:88
+msgid ""
+"This test is similar to the rand one, but it is based on atoi, which "
+"takes a string parameter. Javascript (V8) to C string conversion is "
+"relatively slow and heavy."
+msgstr ""
+"这个测试和rand的相似, 但是是基于接受一个字符串参数的atoi. Javascript (V8)到C字符串的转换是相对慢和重的."
+
+#: ../../benchmarks.md
+msgid "atoi_napi"
+msgstr "atoi_napi"
+
+#: ../../benchmarks.md
+msgid "921 ns"
+msgstr "921 ns"
+
+#: ../../benchmarks.md
+msgid "atoi_koffi"
+msgstr "atoi_koffi"
+
+#: ../../benchmarks.md
+msgid "1357 ns"
+msgstr "1357 ns"
+
+#: ../../benchmarks.md
+msgid "x0.68"
+msgstr "x0.68"
+
+#: ../../benchmarks.md
+msgid "+47%"
+msgstr "+47%"
+
+#: ../../benchmarks.md
+msgid "atoi_node_ffi"
+msgstr "atoi_node_ffi"
+
+#: ../../benchmarks.md
+msgid "152550 ns"
+msgstr "152550 ns"
+
+#: ../../benchmarks.md
+msgid "x0.006"
+msgstr "x0.006"
+
+#: ../../benchmarks.md
+msgid "+16472%"
+msgstr "+16472%"
+
+#: ../../benchmarks.md:50 ../../benchmarks.md:98
+msgid ""
+"Because atoi is a pretty small function, the FFI overhead is clearly "
+"visible."
+msgstr ""
+"由于atoi是一个相当小的函数, FFI的额外开销清晰可见."
+
+#: ../../benchmarks.md:52 ../../benchmarks.md:100
+msgid "Raylib results"
+msgstr "Raylib结果"
+
+#: ../../benchmarks.md:54 ../../benchmarks.md:102
+msgid ""
+"This benchmark uses the CPU-based image drawing functions in Raylib. The "
+"calls are much heavier than in the atoi benchmark, thus the FFI overhead "
+"is reduced. In this implementation, Koffi is compared to:"
+msgstr ""
+"这个基准测试使用了Raylib中的基于CPU的图像绘制函数. 调用本身要重于atoi的测试, 因此FFI的额外开销减少了. "
+"这这里, Koffi比较的对象是:"
+
+#: ../../benchmarks.md:56
+msgid "Baseline: Full C++ version of the code (no JS)"
+msgstr "基准: 纯粹的C++版的代码(无JS)"
+
+#: ../../benchmarks.md:57
+msgid ""
+"[node-raylib](https://github.com/RobLoach/node-raylib): This is a native "
+"wrapper implemented with N-API"
+msgstr ""
+"[node-raylib](https://github.com/RobLoach/node-raylib): 这是使用N-API实现的原生封装"
+
+#: ../../benchmarks.md
+msgid "raylib_cc"
+msgstr "raylib_cc"
+
+#: ../../benchmarks.md
+msgid "215.7 µs"
+msgstr "215.7 µs"
+
+#: ../../benchmarks.md
+msgid "x1.20"
+msgstr "x1.20"
+
+#: ../../benchmarks.md
+msgid "-17%"
+msgstr "-17%"
+
+#: ../../benchmarks.md
+msgid "raylib_node_raylib"
+msgstr "raylib_node_raylib"
+
+#: ../../benchmarks.md
+msgid "258.9 µs"
+msgstr "258.9 µs"
+
+#: ../../benchmarks.md
+msgid "raylib_koffi"
+msgstr "raylib_koffi"
+
+#: ../../benchmarks.md
+msgid "311.6 µs"
+msgstr "311.6 µs"
+
+#: ../../benchmarks.md
+msgid "x0.83"
+msgstr "x0.83"
+
+#: ../../benchmarks.md
+msgid "+20%"
+msgstr "+20%"
+
+#: ../../benchmarks.md
+msgid "raylib_node_ffi"
+msgstr "raylib_node_ffi"
+
+#: ../../benchmarks.md
+msgid "928.4 µs"
+msgstr "928.4 µs"
+
+#: ../../benchmarks.md
+msgid "x0.28"
+msgstr "x0.28"
+
+#: ../../benchmarks.md
+msgid "+259%"
+msgstr "+259%"
+
+#: ../../benchmarks.md:66
+msgid "Windows x86_64"
+msgstr "Windows x86_64"
+
+#: ../../benchmarks.md:68
+msgid ""
+"The results presented below were measured on my x86_64 Windows machine "
+"(Intel® Core™ i5-4460)."
+msgstr ""
+"下面展示的结果是在我(@Koromix)的x86_64 Windows设备(Intel® Core™ i5-4460)上测试的."
+
+#: ../../benchmarks.md
+msgid "964 ns"
+msgstr "964 ns"
+
+#: ../../benchmarks.md
+msgid "1274 ns"
+msgstr "1274 ns"
+
+#: ../../benchmarks.md
+msgid "42300 ns"
+msgstr "42300 ns"
+
+#: ../../benchmarks.md
+msgid "+4289%"
+msgstr "+4289%"
+
+#: ../../benchmarks.md:90
+msgid ""
+"The results below were measured on my x86_64 Windows machine (Intel® "
+"Core™ i5-4460):"
+msgstr ""
+# seems to be a duplicated error
+
+#: ../../benchmarks.md
+msgid "1415 ns"
+msgstr "1415 ns"
+
+#: ../../benchmarks.md
+msgid "2193 ns"
+msgstr "2193 ns"
+
+#: ../../benchmarks.md
+msgid "x0.65"
+msgstr "x0.65"
+
+#: ../../benchmarks.md
+msgid "+55%"
+msgstr "+55%"
+
+#: ../../benchmarks.md
+msgid "168300 ns"
+msgstr "168300 ns"
+
+#: ../../benchmarks.md
+msgid "x0.008"
+msgstr "x0.008"
+
+#: ../../benchmarks.md
+msgid "+11792%"
+msgstr "+11792%"
+
+#: ../../benchmarks.md:104
+msgid ""
+"[node-raylib](https://github.com/RobLoach/node-raylib) (baseline): This "
+"is a native wrapper implemented with N-API"
+msgstr ""
+"[node-raylib](https://github.com/RobLoach/node-raylib) (基准): 这是使用N-API实现的原生封装"
+
+#: ../../benchmarks.md:105
+msgid "raylib_cc: C++ implementation of the benchmark, without any Javascript"
+msgstr "raylib_cc: C++实现的测试, 不含任何Javascript"
+
+#: ../../benchmarks.md
+msgid "211.8 µs"
+msgstr "211.8 µs"
+
+#: ../../benchmarks.md
+msgid "x1.25"
+msgstr "x1.25"
+
+#: ../../benchmarks.md
+msgid "-20%"
+msgstr "-20%"
+
+#: ../../benchmarks.md
+msgid "264.4 µs"
+msgstr "264.4 µs"
+
+#: ../../benchmarks.md
+msgid "318.9 µs"
+msgstr "318.9 µs"
+
+#: ../../benchmarks.md
+msgid "+21%"
+msgstr "+21%"
+
+#: ../../benchmarks.md
+msgid "1146.2 µs"
+msgstr "1146.2 µs"
+
+#: ../../benchmarks.md
+msgid "x0.23"
+msgstr "x0.23"
+
+#: ../../benchmarks.md
+msgid "+334%"
+msgstr "+334%"
+
+#: ../../benchmarks.md:114
+msgid ""
+"Please note that in order to get fair numbers for raylib_node_raylib, it "
+"was recompiled with clang-cl before running the benchmark with the "
+"following commands:"
+msgstr ""
+"注意, 为了获得公平的数据, raylib_node_raylib在测试前使用了下列命令重新用clang-cl编译:"
+
+#: ../../benchmarks.md:122
+msgid "Running benchmarks"
+msgstr "运行基准测试"
+
+#: ../../benchmarks.md:124
+msgid ""
+"Open a console, go to `koffi/benchmark` and run `../../cnoke/cnoke.js` "
+"(or `node ..\\..\\cnoke\\cnoke.js` on Windows) before doing anything "
+"else."
+msgstr ""
+"在做其它事之前, 先打开一个终端, 前往`koffi/benchmark`并执行`../../cnoke/cnoke.js`(或在Windows上以`node ..\\..\\cnoke\\cnoke.js`)"
+
+#: ../../benchmarks.md:126
+msgid "Please note that all benchmark results are made with Clang-built binaries."
+msgstr "请注意所有测试结果都是基于Clang编译的二进制."
+
+#: ../../benchmarks.md:133
+msgid "Once everything is built and ready, run:"
+msgstr "所有东西构建好之后, 执行:"
+

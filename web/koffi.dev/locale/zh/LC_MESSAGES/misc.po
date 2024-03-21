@@ -1,0 +1,309 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: 2023-08-26 14:43+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
+"Language: zh\n"
+"Language-Team: zh <zh@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../misc.md:1
+msgid "Miscellaneous"
+msgstr "杂项"
+
+#: ../../misc.md:3
+msgid "Types"
+msgstr "类型"
+
+#: ../../misc.md:5
+msgid "Introspection"
+msgstr "反射"
+
+#: ../../misc.md:7
+msgid ""
+"*New in Koffi 2.0: `koffi.resolve()`, new in Koffi 2.2: "
+"`koffi.offsetof()`*"
+msgstr ""
+"*引入自Koffi 2.0: `koffi.resolve()`, 引入自Koffi 2.2: `koffi.offsetof()`*"
+
+#: ../../misc.md:10
+msgid ""
+"The value returned by `introspect()` has **changed in version 2.0 and in "
+"version 2.2**."
+msgstr ""
+"`introspect()`返回的值在**版本2.0和2.2变更了**"
+
+#: ../../misc.md:12
+msgid ""
+"In Koffi 1.x, it could only be used with struct types and returned the "
+"object passed to koffi.struct() with the member names and types."
+msgstr ""
+"在Koffi 1.x中, 它只能被用于结构体类型且返回传入`koffi.struct()`的含有成员名称和类型的对象."
+
+#: ../../misc.md:14
+msgid ""
+"Starting in Koffi 2.2, each record member is exposed as an object "
+"containing the name, the type and the offset within the record."
+msgstr ""
+"自从Koffi 2.2起, 结构中的每个成员都有一个含有名称, 类型以及偏移的对象."
+
+#: ../../misc.md:16
+msgid "Consult the [migration guide](migration.md) for more information."
+msgstr "查看[迁移指南](migration.md)来获取更多信息."
+
+#: ../../misc.md:19
+msgid ""
+"Use `koffi.introspect(type)` to get detailed information about a type: "
+"name, primitive, size, alignment, members (record types), reference type "
+"(array, pointer) and length (array)."
+msgstr ""
+"使用`koffi.introspect(type)`来获取一个类型的细节信息: "
+"名称, 原始类型, 大小, 对齐, 成员(结构), 引用类型(数组, 指针)和长度(数组)."
+
+#: ../../misc.md:44
+msgid ""
+"Koffi also exposes a few more utility functions to get a subset of this "
+"information:"
+msgstr ""
+"Koffi也额外提供了一些实用函数来获取这些信息的一个子集:"
+
+#: ../../misc.md:46
+msgid "`koffi.sizeof(type)` to get the size of a type"
+msgstr "使用`koffi.sizeof(type)`来获取类型的大小"
+
+#: ../../misc.md:47
+msgid "`koffi.alignof(type)` to get the alignment of a type"
+msgstr "使用`koffi.alignof(type)`来获取类型的对齐"
+
+#: ../../misc.md:48
+msgid "`koffi.offsetof(type, member_name)` to get the offset of a record member"
+msgstr "使用`koffi.offsetof(type, member_name)`来获取结构成员的偏移"
+
+#: ../../misc.md:49
+msgid "`koffi.resolve(type)` to get the resolved type object from a type string"
+msgstr "使用`koffi.resolve(type)`来从一个类型字符串解析出类型对象."
+
+#: ../../misc.md:51
+msgid ""
+"Just like before, you can refer to primitive types by their name or "
+"through `koffi.types`:"
+msgstr ""
+"就像以往一样, 你可以通过名称或`koffi.types`来引用原生类型."
+
+#: ../../misc.md:59
+msgid "Aliases"
+msgstr "别名"
+
+#: ../../misc.md:61
+msgid "*New in Koffi 2.0*"
+msgstr "*Koffi 2.0引入*"
+
+#: ../../misc.md:63
+msgid ""
+"You can alias a type with `koffi.alias(name, type)`. Aliased types are "
+"completely equivalent."
+msgstr ""
+"你可以使用`koffi.alias(name, type)`来为一个类型创建别名. 别名类型和目标类型完全一样."
+
+#: ../../misc.md:65
+msgid "Settings"
+msgstr "设置"
+
+#: ../../misc.md:67
+msgid "Memory usage"
+msgstr "内存使用情况"
+
+#: ../../misc.md:69
+msgid "For synchronous/normal calls, Koffi uses two preallocated memory blocks:"
+msgstr "对于同步/普通调用, Koffi使用两块预分配的内存块:"
+
+#: ../../misc.md:71
+msgid ""
+"One to construct the C stack and assign registers, subsequently used by "
+"the platform-specific assembly code (1 MiB by default)"
+msgstr ""
+"一个用于构造C堆栈和为寄存器赋值, 最终被平台汇编使用(默认1MiB)"
+
+#: ../../misc.md:72
+msgid "One to allocate strings and big objects/structs (2 MiB by default)"
+msgstr "一个用于分配字符串和大对象/结构体(默认2MiB)"
+
+#: ../../misc.md:74
+msgid ""
+"Unless very big strings or objects (at least more than one page of "
+"memory) are used, Koffi does not directly allocate any extra memory "
+"during calls or callbacks. However, please note that the JS engine (V8) "
+"might."
+msgstr ""
+"除非使用了非常大的字符串或对象(至少超过一页大), Koffi不会在调用或回调时直接分配任何额外的内存. "
+"然而, 请注意JS引擎(V8)可能会."
+
+#: ../../misc.md:76
+msgid ""
+"The size (in bytes) of these preallocated blocks can be changed. Use "
+"`koffi.config()` to get an object with the settings, and "
+"`koffi.config(obj)` to apply new settings."
+msgstr ""
+"可以更改这些预分配块的大小(字节). 使用`koffi.config()`来获取包含这些设置的对象, 然后使用`koffi.config(obj)`来应用新设置."
+
+#: ../../misc.md:83
+msgid ""
+"The same is true for asynchronous calls. When an asynchronous call is "
+"made, Koffi will allocate new blocks unless there is an unused (resident)"
+" set of blocks still available. Once the asynchronous call is finished, "
+"these blocks are freed if there are more than `resident_async_pools` sets"
+" of blocks left around."
+msgstr ""
+"对于异步调用来说也是一样的. 当异步调用发起后, 除非有未使用(驻留)的块可用, Koffi会分配新的块. "
+"一旦异步调用完成, 超过`resident_async_pools`数量的块会被释放."
+
+#: ../../misc.md:85
+msgid "There cannot be more than `max_async_calls` running at the same time."
+msgstr "异步调用同时只能执行`max_async_calls`个."
+
+#: ../../misc.md:87
+msgid "Default settings"
+msgstr "默认设置"
+
+#: ../../misc.md:9
+msgid "Setting"
+msgstr "设置"
+
+#: ../../misc.md:9
+msgid "Default"
+msgstr "默认值"
+
+#: ../../misc.md:9
+msgid "Description"
+msgstr "介绍"
+
+#: ../../misc.md:9
+msgid "sync_stack_size"
+msgstr "sync_stack_size"
+
+#: ../../misc.md:9
+msgid "1 MiB"
+msgstr "1 MiB"
+
+#: ../../misc.md:9
+msgid "Stack size for synchronous calls"
+msgstr "同步调用的栈大小"
+
+#: ../../misc.md:9
+msgid "sync_heap_size"
+msgstr "sync_heap_size"
+
+#: ../../misc.md:9
+msgid "2 MiB"
+msgstr "2 MiB"
+
+#: ../../misc.md:9
+msgid "Heap size for synchronous calls"
+msgstr "同步调用的堆大小"
+
+#: ../../misc.md:9
+msgid "async_stack_size"
+msgstr "async_stack_size"
+
+#: ../../misc.md:9
+msgid "256 kiB"
+msgstr "256 kiB"
+
+#: ../../misc.md:9
+msgid "Stack size for asynchronous calls"
+msgstr "异步调用的栈大小"
+
+#: ../../misc.md:9
+msgid "async_heap_size"
+msgstr "async_heap_size"
+
+#: ../../misc.md:9
+msgid "512 kiB"
+msgstr "512 kiB"
+
+#: ../../misc.md:9
+msgid "Heap size for asynchronous calls"
+msgstr "异步调用的堆大小"
+
+#: ../../misc.md:9
+msgid "resident_async_pools"
+msgstr "resident_async_pools"
+
+#: ../../misc.md:9
+msgid "2"
+msgstr "2"
+
+#: ../../misc.md:9
+msgid "Number of resident pools for asynchronous calls"
+msgstr "用于异步调用驻留的块池的数量"
+
+#: ../../misc.md:9
+msgid "max_async_calls"
+msgstr "max_async_calls"
+
+#: ../../misc.md:9
+msgid "64"
+msgstr "64"
+
+#: ../../misc.md:9
+msgid "Maximum number of ongoing asynchronous calls"
+msgstr "最大可以通知执行异步调用的数量"
+
+#: ../../misc.md:9
+msgid "max_type_size"
+msgstr "max_type_size"
+
+#: ../../misc.md:9
+msgid "64 MiB"
+msgstr "64 MiB"
+
+#: ../../misc.md:9
+msgid "Maximum size of Koffi types (for arrays and structs)"
+msgstr "Koffi类型最大的大小(对于数组和结构体)"
+
+#: ../../misc.md:99
+msgid "Usage statistics"
+msgstr "使用情况统计"
+
+#: ../../misc.md:101
+msgid "*New in Koffi 2.3.2*"
+msgstr "*Koffi 2.3.2引入*"
+
+#: ../../misc.md:103
+msgid "You can use `koffi.stats()` to get a few statistics related to Koffi."
+msgstr "你可以使用`koffi.stats()`来获取一些Koffi相关的统计信息."
+
+#: ../../misc.md:105
+msgid "POSIX error codes"
+msgstr "POSIX错误码"
+
+#: ../../misc.md:107
+msgid "*New in Koffi 2.3.14*"
+msgstr "*Koffi 2.3.14引入*"
+
+#: ../../misc.md:109
+msgid ""
+"You can use `koffi.errno()` to the current errno value, and "
+"`koffi.errno(value)` to change it."
+msgstr ""
+"你可以使用`koffi.errno()`来获取当前errno的值, 以及`koffi.errno(value)`来改变它."
+
+#: ../../misc.md:111
+msgid ""
+"The standard POSIX error codes are available in `koffi.os.errno`, as in "
+"the example below:"
+msgstr ""
+"标准POSIX错误码可以从`koffi.os.errno`获得, 如下面的例子所示:"
+

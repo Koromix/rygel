@@ -1,0 +1,410 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: 2023-08-25 19:25+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
+"Language: zh\n"
+"Language-Team: zh <zh@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../functions.md:1
+msgid "Function calls"
+msgstr "调用函数"
+
+#: ../../functions.md:3
+msgid "Loading libraries"
+msgstr "加载库"
+
+#: ../../functions.md:5
+msgid ""
+"To declare functions, start by loading the shared library with "
+"`koffi.load(filename)`."
+msgstr ""
+"要定义导入函数, 先通过`koffi.load(filename)`来加载动态链接库."
+
+#: ../../functions.md:14
+msgid ""
+"This library will be automatically unloaded once all references to it are"
+" gone (including all the functions that use it, as described below)."
+msgstr ""
+"这个库会在所有引用(包含所有使用它的函数, 如下所述)结束后被自动卸载"
+
+#: ../../functions.md:16
+msgid ""
+"Starting with *Koffi 2.3.20*, you can explicitly unload a library by "
+"calling `lib.unload()`. Any attempt to find or call a function from this "
+"library after unloading it will crash."
+msgstr ""
+"从`Koffi 2.3.20`起, 你可以通过调用`lib.unload()`来显式卸载一个库. 凡是在卸载尝试之后去查找或调用其中的函数都会导致程序崩溃."
+
+#: ../../functions.md:19
+msgid ""
+"On some platforms (such as with the [musl C library on "
+"Linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html"
+"#Unloading-libraries)), shared libraries cannot be unloaded, so the "
+"library will remain loaded and memory mapped after the call to "
+"`lib.unload()`."
+msgstr ""
+"某些平台(例如[使用musl C库的linux](https://wiki.musl-libc.org/functional-differences-from-glibc.html"
+"#Unloading-libraries)), 动态链接库无法被卸载, 因此在调用`lib.unload()`后库仍然会被保持加载且映射到内存中."
+
+#: ../../functions.md:22
+msgid "Function definitions"
+msgstr "定义函数"
+
+#: ../../functions.md:24
+msgid "Definition syntax"
+msgstr "定义格式"
+
+#: ../../functions.md:26
+msgid ""
+"Use the object returned by `koffi.load()` to load C functions from the "
+"library. To do so, you can use two syntaxes:"
+msgstr ""
+"使用`koffi.load()`返回的对象来从库中加载C函数. 你可以使用两种语法来实现:"
+
+#: ../../functions.md:28
+msgid "The classic syntax, inspired by node-ffi"
+msgstr "经典语法, 灵感来自node-ffi"
+
+#: ../../functions.md:29 ../../functions.md:42
+msgid "C-like prototypes"
+msgstr "C风格的原型"
+
+#: ../../functions.md:31
+msgid "Classic syntax"
+msgstr "经典语法"
+
+#: ../../functions.md:33
+msgid ""
+"To declare a function, you need to specify its non-mangled name, its "
+"return type, and its parameters. Use an ellipsis as the last parameter "
+"for variadic functions."
+msgstr ""
+"要声明一个函数, 你需要指定它未修饰的名称, 它的返回类型以及它的参数. 对于可变参数函数, 使用省略号作为最后一个参数."
+
+#: ../../functions.md:40
+msgid ""
+"Koffi automatically tries mangled names for non-standard x86 calling "
+"conventions. See the section on [calling conventions](#calling-"
+"conventions) for more information on this subject."
+msgstr ""
+"对于非标准x86调用协定, Koffi会自动尝试修饰名称. 参见[调用协定]节以获取更多该方面的信息."
+
+#: ../../functions.md:44
+msgid ""
+"If you prefer, you can declare functions using simple C-like prototype "
+"strings, as shown below:"
+msgstr ""
+"如果你喜欢, 你也可以使用简单的C风格原型字符串来声明函数, 如下所示:"
+
+#: ../../functions.md:51
+msgid "You can use `()` or `(void)` for functions that take no argument."
+msgstr "对于不接受参数的函数, 你可以使用`()`或`(void)`."
+
+#: ../../functions.md:53
+msgid "Variadic functions"
+msgstr "可变参数函数"
+
+#: ../../functions.md:55
+msgid "Variadic functions are declared with an ellipsis as the last argument."
+msgstr "通过将省略号作为最后一个参数来声明可变参数函数"
+
+#: ../../functions.md:57
+msgid ""
+"In order to call a variadic function, you must provide two Javascript "
+"arguments for each additional C parameter, the first one is the expected "
+"type and the second one is the value."
+msgstr ""
+"要调用一个可变参数函数, 你必须为每个额外的C参数提供两个Javascript参数, 前者是预期的类型, 后者是值."
+
+#: ../../functions.md:66
+msgid ""
+"On x86 platforms, only the Cdecl convention can be used for variadic "
+"functions."
+msgstr ""
+"对于x86平台, 只有Cdecl调用协定支持变长参数函数."
+
+#: ../../functions.md:68
+msgid "Calling conventions"
+msgstr "调用协定"
+
+#: ../../functions.md:70
+msgid "By default, calling a C function happens synchronously."
+msgstr "默认情况下, 调用一个C函数是同步的."
+
+#: ../../functions.md:72
+msgid ""
+"Most architectures only support one procedure call standard per process. "
+"The 32-bit x86 platform is an exception to this, and Koffi supports "
+"several x86 conventions:"
+msgstr ""
+"大部分架构对于每个进程仅支持一种函数调用标准. "
+"32位x86平台是一个例外, 且Koffi支持若干种x86调用协定:"
+
+#: ../../functions.md:18
+msgid "Convention"
+msgstr "调用协定"
+
+#: ../../functions.md:18
+msgid "Classic form"
+msgstr "经典风格"
+
+#: ../../functions.md:18
+msgid "Prototype form"
+msgstr "原型风格"
+
+#: ../../functions.md:18
+msgid "Description"
+msgstr "描述"
+
+#: ../../functions.md:18
+msgid "**Cdecl**"
+msgstr "**Cdecl**"
+
+#: ../../functions.md:18
+msgid "`koffi.cdecl` or `koffi.func`"
+msgstr "`koffi.cdecl`或`koffi.func`"
+
+#: ../../functions.md:18
+msgid "_(default)_"
+msgstr "_(默认)_"
+
+#: ../../functions.md:18
+msgid "This is the default convention, and the only one on other platforms"
+msgstr "这是默认的调用协定, 以及其它平台上唯一的一种."
+
+#: ../../functions.md:18
+msgid "**Stdcall**"
+msgstr "**Stdcall**"
+
+#: ../../functions.md:18
+msgid "`koffi.stdcall`"
+msgstr "`koffi.stdcall`"
+
+#: ../../functions.md:18
+msgid "__stdcall"
+msgstr "__stdcall"
+
+#: ../../functions.md:18
+msgid "This convention is used extensively within the Win32 API"
+msgstr "这个调用协定在Win32 API中广泛使用"
+
+#: ../../functions.md:18
+msgid "**Fastcall**"
+msgstr "**Fastcall**"
+
+#: ../../functions.md:18
+msgid "`koffi.fastcall`"
+msgstr "`koffi.fastcall`"
+
+#: ../../functions.md:18
+msgid "__fastcall"
+msgstr "__fastcall"
+
+#: ../../functions.md:18
+msgid "Rarely used, uses ECX and EDX for first two parameters"
+msgstr "很少使用, 将前两个参数存入ECX和EDX"
+
+#: ../../functions.md:18
+msgid "**Thiscall**"
+msgstr "**Thiscall**"
+
+#: ../../functions.md:18
+msgid "`koffi.thiscall`"
+msgstr "`koffi.thiscall`"
+
+#: ../../functions.md:18
+msgid "__thiscall"
+msgstr "__thiscall"
+
+#: ../../functions.md:18
+msgid "Rarely used, uses ECX for first parameter"
+msgstr "很少使用, 将第一个参数存入ECX"
+
+#: ../../functions.md:81
+msgid "You can safely use these on non-x86 platforms, they are simply ignored."
+msgstr "你可以安全的在非x86平台中使用这些, 它们会被忽略."
+
+#: ../../functions.md:83
+msgid ""
+"Below you can find a small example showing how to use a non-default "
+"calling convention, with the two syntaxes:"
+msgstr ""
+"下面你可以看到一个简单的例子, 展示了两种语法下如何使用非默认的调用协定:"
+
+#: ../../functions.md:96
+msgid "Call types"
+msgstr "调用类型"
+
+#: ../../functions.md:98
+msgid "Synchronous calls"
+msgstr "同步调用"
+
+#: ../../functions.md:100
+msgid ""
+"Once a native function has been declared, you can simply call it as you "
+"would any other JS function."
+msgstr ""
+"当一个原生函数被声明, 你可以简单地像其它JS函数一样调用它."
+
+#: ../../functions.md:109
+msgid ""
+"For [variadic functions](functions.md#variadic-functions), you msut "
+"specificy the type and the value for each additional argument."
+msgstr ""
+"对于[可变参数函数](functions.md#variadic-functions), 你必须为每个额外的参数提供类型和值."
+
+#: ../../functions.md:118
+msgid "Asynchronous calls"
+msgstr "异步调用"
+
+#: ../../functions.md:120
+msgid ""
+"You can issue asynchronous calls by calling the function through its "
+"async member. In this case, you need to provide a callback function as "
+"the last argument, with `(err, res)` parameters."
+msgstr "你可以通过调用函数的async成员来发起异步调用. 这种情况下, 你需要提供一个回调函数作为最后一个参数, 参数为`(err, res)`."
+
+#: ../../functions.md:140
+msgid ""
+"These calls are executed by worker threads. It is **your responsibility "
+"to deal with data sharing issues** in the native code that may be caused "
+"by multi-threading."
+msgstr ""
+"这些调用会在worker线程中执行. 你**有责任处理**原生代码中可能由多线程引起的数据共享问题。"
+
+#: ../../functions.md:142
+msgid ""
+"You can easily convert this callback-style async function to a promise-"
+"based version with `util.promisify()` from the Node.js standard library."
+msgstr ""
+"你可以简单的通过Node.js标准库中的`util.promisify()`来将这个回调风格的一部函数转换为promise风格."
+
+#: ../../functions.md:144
+msgid "Variadic functions cannot be called asynchronously."
+msgstr "可变参数函数不能被异步调用."
+
+#: ../../functions.md:147
+msgid ""
+"Asynchronous functions run on worker threads. You need to deal with "
+"thread safety issues if you share data between threads."
+msgstr ""
+"异步函数在worker线程中执行. 如果你在线程中共享数据, 你需要解决引发的线程安全问题."
+
+#: ../../functions.md:149
+msgid ""
+"Callbacks must be called from the main thread, or more precisely from the"
+" same thread as the V8 intepreter. Calling a callback from another thread"
+" is undefined behavior, and will likely lead to a crash or a big mess. "
+"You've been warned!"
+msgstr ""
+"回调必须在主线程中被调用, 准确来讲和V8解释器同一个线程. 从另一个线程中调用回调是未定义行为, "
+"并且大概率会导致程序崩溃或混乱. 你已经被警告了!"
+
+#: ../../functions.md:152
+msgid "Function pointers"
+msgstr "函数指针"
+
+#: ../../functions.md:154
+msgid "*New in Koffi 2.4*"
+msgstr "*Koffi 2.4引入*"
+
+#: ../../functions.md:156
+msgid "You can call a function pointer in two ways:"
+msgstr "你可以通过两种方式调用一个函数指针:"
+
+#: ../../functions.md:158
+msgid "Directly call the function pointer with `koffi.call(ptr, type, ...)`"
+msgstr "通过`koffi.call(ptr, type, ...)`直接调用一个函数指针"
+
+#: ../../functions.md:159
+msgid ""
+"Decode the function pointer to an actual function with `koffi.decode(ptr,"
+" type)`"
+msgstr ""
+"通过`koffi.decode(ptr, type)`将函数指针解码成一个实际的函数"
+
+#: ../../functions.md:161
+msgid ""
+"The example below shows how to call an `int (*)(int, int)` C function "
+"pointer both ways, based on the following native C library:"
+msgstr ""
+"下面的例子展示了如何用两种方式调用一个`int (*)(int, int)`C函数, 基于下面的原生C库:"
+
+#: ../../functions.md:181
+msgid "Call pointer directly"
+msgstr "直接调用指针"
+
+#: ../../functions.md:183
+msgid ""
+"Use `koffi.call(ptr, type, ...)` to call a function pointer. The first "
+"two arguments are the pointer itself and the type of the function you are"
+" trying to call (declared with `koffi.proto()` as shown below), and the "
+"remaining arguments are used for the call."
+msgstr ""
+"使用`koffi.call(ptr, type, ...)`来调用一个函数指针. 前两个参数是函数指针和函数的类型"
+"(如下所示, 通过`koffi.proto()`定义), 其它参数则被用于调用本身."
+
+#: ../../functions.md:200
+msgid "Decode pointer to function"
+msgstr "解码指针为函数"
+
+#: ../../functions.md:202
+msgid ""
+"Use `koffi.decode(ptr, type)` to get back a JS function, which you can "
+"then use like any other Koffi function."
+msgstr ""
+"使用`koffi.decode(ptr, type)`来获得一个JS函数, 你可以像其他Koffi函数一样使用它."
+
+#: ../../functions.md:204
+msgid ""
+"This method also allows you to perform an [asynchronous call"
+"](#asynchronous-calls) with the async member of the decoded function."
+msgstr ""
+"这个方法也允许你通过解码得到的函数的async成员来发起一个[异步调用](#asynchronous-calls)."
+
+#: ../../functions.md:221
+msgid "Conversion of parameters"
+msgstr "参数转换"
+
+#: ../../functions.md:223
+msgid ""
+"By default, Koffi will only forward and translate arguments from "
+"Javascript to C. However, many C functions use pointer arguments for "
+"output values, or input/output values."
+msgstr ""
+"默认情况下, Koffi只会从Javascript向C转发并翻译参数. 然而, 许多C函数使用指针参数来输出值, 或同时输入输出值."
+
+#: ../../functions.md:225
+msgid "Among other thing, in the the following pages you will learn more about:"
+msgstr "除此之外, 你可以从下列页面了解更多:"
+
+#: ../../functions.md:227
+msgid "How Koffi translates [input parameters](input.md) to C"
+msgstr "Koffi如何向C翻译[输入参数](input.md)"
+
+#: ../../functions.md:228
+msgid "How you can [define and use pointers](pointers.md)"
+msgstr "如何[定义和使用指针](pointers.md)"
+
+#: ../../functions.md:229
+msgid "How to deal with [output parameters](output.md)"
+msgstr "如何处理[输出参数](output.md)"
+
+#: ../../functions.md:230
+msgid "如何使用[多态API](polymorphism.md)"
+msgstr ""
+

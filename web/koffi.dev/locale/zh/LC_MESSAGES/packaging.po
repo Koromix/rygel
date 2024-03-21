@@ -1,0 +1,141 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: 2023-08-26 16:10+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
+"Language: zh\n"
+"Language-Team: zh <zh@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../packaging.md:1
+msgid "Bundlers and Koffi"
+msgstr "打包工具和Koffi"
+
+#: ../../packaging.md:3
+msgid "Bundling and native modules"
+msgstr "打包原生模块"
+
+#: ../../packaging.md:5
+msgid "*Simplified in Koffi 2.5.9*"
+msgstr "*自Koffi 2.5.9起简化了*"
+
+#: ../../packaging.md:7
+msgid ""
+"Koffi uses native modules to work. The NPM package contains binaries for "
+"various platforms and architectures, and the appropriate module is "
+"selected at runtime."
+msgstr ""
+"Koffi需要原生模块来工作. NPM包中含有不同平台和架构的二进制, 会在运行时中选择合适的模块."
+
+#: ../../packaging.md:9
+msgid ""
+"In theory, the **packagers/bundlers should be able to find all native "
+"modules** because they are explictly listed in the Javascript file (as "
+"static strings) and package them somehow."
+msgstr ""
+"理论上, 由于它们都被显式地列在Javascript文件中(以静态字符串), **打包工具应当能直接找到所有原生模块**并以某种方式打包它们."
+
+#: ../../packaging.md:11
+msgid ""
+"If that is not the case, you can manually arrange to copy the "
+"`node_modules/koffi/build/koffi` directory next to your bundled script."
+msgstr ""
+"如果没有成功, 你可以手动将`node_modules/koffi/build/koffi`复制到你打包后的脚本旁."
+
+#: ../../packaging.md:13
+msgid "Here is an example that would work:"
+msgstr "下面是一个应当能工作的例子:"
+
+#: ../../packaging.md:25
+msgid ""
+"When running in Electron, Koffi will also try to find the native module "
+"in `process.resourcesPath`. For an Electron app you could do something "
+"like this"
+msgstr ""
+"当在Electron中运行时, Koffi也会尝试在`process.resourcesPath`中寻找原生模块. 对于一个Electron程序, 你可以像下面这样"
+
+#: ../../packaging.md:39
+msgid "Packaging examples"
+msgstr "打包示例"
+
+#: ../../packaging.md:41
+msgid "Electron with electron-builder"
+msgstr "Electron和electron-builder"
+
+#: ../../packaging.md:43
+msgid "Packaging with electron-builder should work as-is."
+msgstr "使用electron-builder打包应该直接就能工作."
+
+#: ../../packaging.md:45
+msgid ""
+"Take a look at the full [working example in the "
+"repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples"
+"/electron-builder)."
+msgstr ""
+"参见完整的[可以工作的仓库](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-builder)"
+
+#: ../../packaging.md:47
+msgid "Electron Forge"
+msgstr "Electron Forge"
+
+#: ../../packaging.md:49
+msgid ""
+"Packaging with Electron Force should work as-is, even when using webpack "
+"as configured initially when you run:"
+msgstr ""
+"使用Electron Forge打包应该直接就能工作, 即使是按照如下使用webpack作为初始模板配置:"
+
+#: ../../packaging.md:55
+msgid ""
+"Take a look at the full [working example in the "
+"repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples"
+"/electron-forge)."
+msgstr ""
+"参见完整的[可以工作的仓库](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/electron-forge)"
+
+#: ../../packaging.md:57
+msgid "NW.js"
+msgstr "NW.jg"
+
+#: ../../packaging.md:59
+msgid "Packagers such as nw-builder should work as-is."
+msgstr "nw-builder打包应该直接就能工作."
+
+#: ../../packaging.md:61
+msgid ""
+"You can find a full [working example in the "
+"repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/nwjs)."
+msgstr ""
+"参见完整的[可以工作的仓库](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/nwjs)"
+
+#: ../../packaging.md:63
+msgid "Node.js and esbuild"
+msgstr "Node.js和esbuild"
+
+#: ../../packaging.md:65
+msgid ""
+"You can easily tell esbuild to copy the native files with the copy loader"
+" and things should just work. Use something like:"
+msgstr ""
+"你可以简单的让esbuild使用copy loader复制原生文件然后就能工作. 使用如下方式:"
+
+#: ../../packaging.md:71
+msgid ""
+"You can find a full [working example in the "
+"repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples"
+"/node-esbuild)."
+msgstr ""
+"参见完整的[可以工作的仓库](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/node-esbuild)"
+

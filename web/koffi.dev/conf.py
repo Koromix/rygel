@@ -117,3 +117,7 @@ rediraffe_redirects = {
     "parameters.md": "input.md",
     "variables.md": "memory.md"
 }
+
+# --- Localization -------------------------------------------------
+
+locale_dirs = ['locale/']

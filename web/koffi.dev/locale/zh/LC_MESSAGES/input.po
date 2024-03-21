@@ -1,0 +1,591 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: 2023-08-25 20:00+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
+"Language: zh\n"
+"Language-Team: zh <zh@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../input.md:1
+msgid "Input parameters"
+msgstr "输入参数"
+
+#: ../../input.md:3
+msgid "Primitive types"
+msgstr "原始类型"
+
+#: ../../input.md:5
+msgid "Standard types"
+msgstr "标准类型"
+
+#: ../../input.md:7
+msgid ""
+"While the C standard allows for variation in the size of most integer "
+"types, Koffi enforces the same definition for most primitive types, "
+"listed below:"
+msgstr ""
+"虽然C标准允许大部分整数的大小不固定, 但Koffi强制要求大部分原始类型保持相同的定义, 如下表所列:"
+
+#: ../../input.md
+msgid "C type"
+msgstr "C类型"
+
+#: ../../input.md
+msgid "JS type"
+msgstr "JS类型"
+
+#: ../../input.md
+msgid "Bytes"
+msgstr "字节数"
+
+#: ../../input.md
+msgid "Signedness"
+msgstr "有无符号"
+
+#: ../../input.md
+msgid "Note"
+msgstr "注释"
+
+#: ../../input.md
+msgid "void"
+msgstr "void"
+
+#: ../../input.md
+msgid "Undefined"
+msgstr "Undefined"
+
+#: ../../input.md
+msgid "0"
+msgstr "0"
+
+#: ../../input.md
+msgid "Only valid as a return type"
+msgstr "仅当作为返回类型是合法"
+
+#: ../../input.md
+msgid "int8, int8_t"
+msgstr "int8, int8_t"
+
+#: ../../input.md
+msgid "Number (integer)"
+msgstr "Number (integer)"
+
+#: ../../input.md
+msgid "1"
+msgstr "1"
+
+#: ../../input.md
+msgid "Signed"
+msgstr "有符合"
+
+#: ../../input.md
+msgid "uint8, uint8_t"
+msgstr "uint8, uint8_t"
+
+#: ../../input.md
+msgid "Unsigned"
+msgstr "无符号"
+
+#: ../../input.md
+msgid "char"
+msgstr "char"
+
+#: ../../input.md
+msgid "uchar, unsigned char"
+msgstr "uchar, unsigned char"
+
+#: ../../input.md
+msgid "char16, char16_t"
+msgstr "char16, char16_t"
+
+#: ../../input.md
+msgid "2"
+msgstr "2"
+
+#: ../../input.md
+msgid "int16, int16_t"
+msgstr "int16, int16_t"
+
+#: ../../input.md
+msgid "uint16, uint16_t"
+msgstr "uint16, uint16_t"
+
+#: ../../input.md
+msgid "short"
+msgstr "short"
+
+#: ../../input.md
+msgid "ushort, unsigned short"
+msgstr "ushort, unsigned short"
+
+#: ../../input.md
+msgid "int32, int32_t"
+msgstr "int32, int32_t"
+
+#: ../../input.md
+msgid "4"
+msgstr "4"
+
+#: ../../input.md
+msgid "uint32, uint32_t"
+msgstr "uint32, uint32_t"
+
+#: ../../input.md
+msgid "int"
+msgstr "int"
+
+#: ../../input.md
+msgid "uint, unsigned int"
+msgstr "uint, unsigned int"
+
+#: ../../input.md
+msgid "int64, int64_t"
+msgstr "int64, int64_t"
+
+#: ../../input.md
+msgid "8"
+msgstr "8"
+
+#: ../../input.md
+msgid "uint64, uint64_t"
+msgstr "uint64, uint64_t"
+
+#: ../../input.md
+msgid "longlong, long long"
+msgstr "longlong, long long"
+
+#: ../../input.md
+msgid "ulonglong, unsigned long long"
+msgstr "ulonglong, unsigned long long"
+
+#: ../../input.md
+msgid "float32"
+msgstr "float32"
+
+#: ../../input.md
+msgid "Number (float)"
+msgstr "Number (float)"
+
+#: ../../input.md
+msgid "float64"
+msgstr "float64"
+
+#: ../../input.md
+msgid "float"
+msgstr "float"
+
+#: ../../input.md
+msgid "double"
+msgstr "double"
+
+#: ../../input.md:34
+msgid ""
+"Koffi also accepts BigInt values when converting from JS to C integers. "
+"If the value exceeds the range of the C type, Koffi will convert the "
+"number to an undefined value. In the reverse direction, BigInt values are"
+" automatically used when needed for big 64-bit integers."
+msgstr ""
+"Koffi接受在从JS向C转换时使用BigInt. 如果值超过了C类型的范围, Koffi会将数值转换为undefined. "
+"反过来, 会为大的64为整数自动使用BigInt."
+
+#: ../../input.md:36
+msgid ""
+"Koffi defines a few more types that can change size depending on the OS "
+"and the architecture:"
+msgstr ""
+"Koffi定义了一些额外类型, 它们的大小基于系统和架构:"
+
+#: ../../input.md
+msgid "bool"
+msgstr "bool"
+
+#: ../../input.md
+msgid "Boolean"
+msgstr "Boolean"
+
+#: ../../input.md
+msgid "Usually one byte"
+msgstr "通常是1字节"
+
+#: ../../input.md
+msgid "long"
+msgstr "long"
+
+#: ../../input.md
+msgid "4 or 8 bytes depending on platform (LP64, LLP64)"
+msgstr "4或8字节, 基于平台(LP64, LLP64)"
+
+#: ../../input.md
+msgid "ulong"
+msgstr "ulong"
+
+#: ../../input.md
+msgid "unsigned long"
+msgstr "unsigned long"
+
+#: ../../input.md
+msgid "intptr"
+msgstr "intptr"
+
+#: ../../input.md
+msgid "4 or 8 bytes depending on register width"
+msgstr "4或8字节, 基于寄存器位宽"
+
+#: ../../input.md
+msgid "intptr_t"
+msgstr "intptr_t"
+
+#: ../../input.md
+msgid "uintptr"
+msgstr "uintptr"
+
+#: ../../input.md
+msgid "uintptr_t"
+msgstr "uintptr_t"
+
+#: ../../input.md
+msgid "str, string"
+msgstr "str, string"
+
+#: ../../input.md
+msgid "String"
+msgstr "String"
+
+#: ../../input.md
+msgid "JS strings are converted to and from UTF-8"
+msgstr "JS字符串会按照UTF8双向转换"
+
+#: ../../input.md
+msgid "str16, string16"
+msgstr "str16, string16"
+
+#: ../../input.md
+msgid "JS strings are converted to and from UTF-16 (LE)"
+msgstr "JS字符串会按照UTF16双向转换"
+
+#: ../../input.md:51
+msgid ""
+"Primitive types can be specified by name (in a string) or through "
+"`koffi.types`:"
+msgstr ""
+"原始类型可以通过名称(字符串)或通过`koffi.types`来指定:"
+
+#: ../../input.md:59
+msgid "Endian-sensitive types"
+msgstr "字节顺序敏感类型"
+
+#: ../../input.md:61
+msgid "*New in Koffi 2.1*"
+msgstr "*Koffi 2.1引入*"
+
+#: ../../input.md:63
+msgid ""
+"Koffi defines a bunch of endian-sensitive types, which can be used when "
+"dealing with binary data (network payloads, binary file formats, etc.)."
+msgstr ""
+"Koffi定义了一些字节顺序敏感的类型, 可以用来处理二进制数据(网络载荷, 二进制文件格式等)."
+
+#: ../../input.md
+msgid "Endianness"
+msgstr "字节顺序"
+
+#: ../../input.md
+msgid "int16_le, int16_le_t"
+msgstr "int16_le, int16_le_t"
+
+#: ../../input.md
+msgid "Little Endian"
+msgstr "小端底"
+
+#: ../../input.md
+msgid "int16_be, int16_be_t"
+msgstr "int16_be, int16_be_t"
+
+#: ../../input.md
+msgid "Big Endian"
+msgstr "大端底"
+
+#: ../../input.md
+msgid "uint16_le, uint16_le_t"
+msgstr "uint16_le, uint16_le_t"
+
+#: ../../input.md
+msgid "uint16_be, uint16_be_t"
+msgstr "uint16_be, uint16_be_t"
+
+#: ../../input.md
+msgid "int32_le, int32_le_t"
+msgstr "int32_le, int32_le_t"
+
+#: ../../input.md
+msgid "int32_be, int32_be_t"
+msgstr "int32_be, int32_be_t"
+
+#: ../../input.md
+msgid "uint32_le, uint32_le_t"
+msgstr "uint32_le, uint32_le_t"
+
+#: ../../input.md
+msgid "uint32_be, uint32_be_t"
+msgstr "uint32_be, uint32_be_t"
+
+#: ../../input.md
+msgid "int64_le, int64_le_t"
+msgstr "int64_le, int64_le_t"
+
+#: ../../input.md
+msgid "int64_be, int64_be_t"
+msgstr "int64_be, int64_be_t"
+
+#: ../../input.md
+msgid "uint64_le, uint64_le_t"
+msgstr "uint64_le, uint64_le_t"
+
+#: ../../input.md
+msgid "uint64_be, uint64_be_t"
+msgstr "uint64_be, uint64_be_t"
+
+#: ../../input.md:80
+msgid "Struct types"
+msgstr "结构体类型"
+
+#: ../../input.md:82
+msgid "Struct definition"
+msgstr "结构体定义"
+
+#: ../../input.md:84
+msgid "Koffi converts JS objects to C structs, and vice-versa."
+msgstr "Koffi将JS对象转换成结构体, 反之亦然."
+
+#: ../../input.md:86
+msgid ""
+"Unlike function declarations, as of now there is only one way to create a"
+" struct type, with the `koffi.struct()` function. This function takes two"
+" arguments: the first one is the name of the type, and the second one is "
+"an object containing the struct member names and types. You can omit the "
+"first argument to declare an anonymous struct."
+msgstr ""
+"不同于函数声明, 现阶段只有一种方法来创建结构体类型, 即通过`koffi.struct()`函数. 这个函数接受两个参数: "
+"前者是类型的名称, 后者是一个包含结构体成员名称和类型的对象. 你可以省略第一个参数来声明一个匿名结构体."
+
+#: ../../input.md:88
+msgid ""
+"The following example illustrates how to declare the same struct in C and"
+" in JS with Koffi:"
+msgstr ""
+"下列例子展示了如何在C和用Koffi在JS中声明相同的结构体: "
+
+#: ../../input.md:114
+msgid ""
+"Koffi automatically follows the platform C ABI regarding alignment and "
+"padding. However, you can override these rules if needed with:"
+msgstr ""
+"Koffi自动遵从平台C ABI中的对齐和填充规则. 然而, 如果需要的话你也可以覆盖这些规则: "
+
+#: ../../input.md:116
+msgid ""
+"Pack all members without padding with `koffi.pack()` (instead of "
+"`koffi.struct()`)"
+msgstr ""
+"使用`koffi.pack()`来使结构体无填充(替代`koffi.struct()`)"
+
+#: ../../input.md:117
+msgid "Change alignment of a specific member as shown below"
+msgstr "按照如下方法更改某个特定成员的对齐规则"
+
+#: ../../input.md:133
+msgid ""
+"Once a struct is declared, you can use it by name (with a string, like "
+"you can do for primitive types) or through the value returned by the call"
+" to `koffi.struct()`. Only the latter is possible when declaring an "
+"anonymous struct."
+msgstr ""
+"当一个结构体被声明后, 你可以通过它的名字(字符串, 和原生类型类似)或调用`koffi.struct()`返回的值. 当定义匿名结构体时只有后者可用."
+
+#: ../../input.md:141
+msgid "Opaque types"
+msgstr "不透明类型"
+
+#: ../../input.md:143
+msgid ""
+"Many C libraries use some kind of object-oriented API, with a pair of "
+"functions dedicated to create and delete objects. An obvious example of "
+"this can be found in stdio.h, with the opaque `FILE *` pointer. You can "
+"open and close files with `fopen()` and `fclose()`, and manipule the "
+"opaque pointer with other functions such as `fread()` or `ftell()`."
+msgstr ""
+"许多C库使用了某种面向对象的API, 包含用于创建和销毁对象的函数. stdio.h中不透明的`FILE *`指针就是一个显而易见的例子. "
+"你可以通过`fopen()`和`fclose()`来打开和关闭文件, 以及通过其它函数如`fread()`或`ftell()`来操作这个不透明指针."
+
+#: ../../input.md:145
+msgid ""
+"In Koffi, you can manage this with opaque types. Declare the opaque type "
+"with `koffi.opaque(name)`, and use a pointer to this type either as a "
+"return type or some kind of [output parameter](output.md) (with a double "
+"pointer)."
+msgstr ""
+"在Koffi中, 你可以通过不透明类型来实现. 通过`koffi.opaque(name)`来声明一个不透明的类型, "
+"然后使用这个类型的指针来作为返回类型或是某种[输出参数](output.md)(通过二级指针)"
+
+#: ../../input.md:148
+msgid "Opaque types **have changed in version 2.0, and again in version 2.1**."
+msgstr "不透明类型**在版本2.0中更改了, 在版本2.1又更改了**."
+
+#: ../../input.md:150
+msgid ""
+"In Koffi 1.x, opaque handles were defined in a way that made them usable "
+"directly as parameter and return types, obscuring the underlying pointer."
+msgstr ""
+"在Koffi 1.x中, 不透明句柄被声明为可以直接作为参数和返回类型中使用, 隐藏了底层的指针."
+
+#: ../../input.md:152
+msgid ""
+"Now, you must use them through a pointer, and use an array for output "
+"parameters. This is shown in the example below (look for the call to "
+"`ConcatNewOut` in the JS part), and is described in the section on "
+"[output parameters](output.md)."
+msgstr ""
+"现在, 你必须通过指针来使用它们, 以及使用数组来作为输出参数. 下面的例子展示了这一点(关注JS部分中调用`ConcatNewOut`的部分), "
+"在[输出参数](output.md)节中有详细介绍."
+
+#: ../../input.md:154
+msgid ""
+"In addition to this, you should use `koffi.opaque()` (introduced in Koffi"
+" 2.1) instead of `koffi.handle()` which is deprecated, and will be "
+"removed eventually in Koffi 3.0."
+msgstr ""
+"除此之外, 你应该使用`koffi.opaque()`(Koffi 2.1引入)而非已经弃用, 将在Koffi 3.0中被移除的`koffi.handle()`."
+
+#: ../../input.md:156
+msgid "Consult the [migration guide](migration.md) for more information."
+msgstr "查看[迁移指南](migration.md)来获取更多信息."
+
+#: ../../input.md:159
+msgid ""
+"The full example below implements an iterative string builder "
+"(concatenator) in C, and uses it from Javascript to output a mix of Hello"
+" World and FizzBuzz. The builder is hidden behind an opaque type, and is "
+"created and destroyed using a pair of C functions: `ConcatNew` (or "
+"`ConcatNewOut`) and `ConcatFree`."
+msgstr ""
+"下面完整的例子在C中实现了一个迭代字符串的构造器(串接器), 然后在Javascript中使用它来混合Hello World和FizzBuzz. "
+"构造器隐藏在一个不透明类型后, 通过一对C函数来创建和销毁: `ConcatNew`(或`ConcatNewOut`)和`ConcatFree`."
+
+#: ../../input.md:335
+msgid "Array types"
+msgstr "数组类型"
+
+#: ../../input.md:337
+msgid "Fixed-size C arrays"
+msgstr "定长C数组"
+
+#: ../../input.md:339
+msgid ""
+"Fixed-size arrays are declared with `koffi.array(type, length)`. Just "
+"like in C, they cannot be passed as functions parameters (they degenerate"
+" to pointers), or returned by value. You can however embed them in struct"
+" types."
+msgstr ""
+"定长数组通过`koffi.array(type, length)`来声明. 和C类似, 它们不能作为函数参数(它们被退化为了指针)或按值返回. 然而你可以将它们嵌入到结构体中."
+
+#: ../../input.md:341
+msgid ""
+"Koffi applies the following conversion rules when passing arrays to/from "
+"C:"
+msgstr ""
+"当和C来回传递数组时, Koffi按照下列规则来转换:"
+
+#: ../../input.md:343
+msgid ""
+"**JS to C**: Koffi can take a normal Array (e.g. `[1, 2]`) or a "
+"TypedArray of the correct type (e.g. `Uint8Array` for an array of "
+"`uint8_t` numbers)"
+msgstr ""
+"**JS到C**: Koffi可以接受一个普通的Array(例如`[1, 2]`)或一个正确类型的TypedArray(例如`Uint8Array`给`uint8_t`数组)"
+
+#: ../../input.md:344
+msgid ""
+"**C to JS** (return value, output parameters, callbacks): Koffi will use "
+"a TypedArray if possible. But you can change this behavior when you "
+"create the array type with the optional hint argument: "
+"`koffi.array('uint8_t', 64, 'Array')`. For non-number types, such as "
+"arrays of strings or structs, Koffi creates normal arrays."
+msgstr ""
+"**C到JS**(返回值, 输出参数, 回调): Koffi会尽量使用一个TypedArray. 但是你可以在创建数组类型时通过一个提示参数来改变这个行为: "
+"`koffi.array('uint8_t', 64, 'Array')`. 对于非数字类型, 例如字符串或结构体数组, Koffi会构造普通数组."
+
+#: ../../input.md:346
+msgid "See the example below:"
+msgstr "查看下面的例子:"
+
+#: ../../input.md:370
+msgid "Fixed-size string buffers"
+msgstr "定长字符串缓冲"
+
+#: ../../input.md:372
+msgid ""
+"Koffi can also convert JS strings to fixed-sized arrays in the following "
+"cases:"
+msgstr ""
+"Koffi也可以在下列情况中将JS字符串转换成定长数组:"
+
+#: ../../input.md:374
+msgid ""
+"**char arrays** are filled with the UTF-8 encoded string, truncated if "
+"needed. The buffer is always NUL-terminated."
+msgstr ""
+"**char数组**会填充UTF-8编码的字符串, 如果需要会截断. 缓冲总是以NUL结尾."
+
+#: ../../input.md:375
+msgid ""
+"**char16 (or char16_t) arrays** are filled with the UTF-16 encoded "
+"string, truncated if needed. The buffer is always NUL-terminated."
+msgstr ""
+"**char16(或char16_t)数组**会填充UTF-16编码的字符串, 如果需要会截断. 缓冲总是以NUL结尾."
+
+#: ../../input.md:377
+msgid ""
+"The reverse case is also true, Koffi can convert a C fixed-size buffer to"
+" a JS string. This happens by default for char, char16 and char16_t "
+"arrays, but you can also explicitly ask for this with the `String` array "
+"hint (e.g. `koffi.array('char', 8, 'String')`)."
+msgstr ""
+"相反的情况也是如此, Koffi会将C的定长缓冲转换成一个JS字符串. 默认会对char, char16和char16_t生效, 但你也可以通过`String`数组提示来显示要求(例如 `koffi.array('char', 8, 'String')`)."
+
+#: ../../input.md:379
+msgid "Dynamic arrays (pointers)"
+msgstr "动态数组(指针)"
+
+#: ../../input.md:381
+msgid ""
+"In C, dynamically-sized arrays are usually passed around as pointers. "
+"Read more about [array pointers](pointers.md#array-pointers-dynamic-"
+"arrays) in the relevant section."
+msgstr ""
+"在C中, 变长数组通常以指针形式传递. 在相关节中阅读更多关于[数组指针](pointers.md#array-pointers-dynamic-"
+"arrays)的信息."
+
+#: ../../input.md:383
+msgid "Union types"
+msgstr "联合类型"
+
+#: ../../input.md:385
+msgid ""
+"The declaration and use of [unions types](unions.md) will be explained in"
+" a later section, they are only briefly mentioned here if you need them."
+msgstr ""
+"如果需要, 在后续节中会介绍如何声明和使用[联合类型](unions.md), 这里只是简要提及."
+

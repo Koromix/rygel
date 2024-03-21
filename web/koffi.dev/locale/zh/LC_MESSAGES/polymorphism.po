@@ -1,0 +1,97 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) 2022, Niels Martignène
+# This file is distributed under the same license as the Koffi package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Koffi 2.5.15\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2023-08-25 15:00+0800\n"
+"PO-Revision-Date: 2023-08-26 01:38+0800\n"
+"Last-Translator: nekosu <liao.hy@outlook.com>\n"
+"Language: zh\n"
+"Language-Team: zh <zh@li.org>\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.12.1\n"
+
+#: ../../polymorphism.md:1
+msgid "Polymorphic arguments"
+msgstr "多态参数"
+
+#: ../../polymorphism.md:3
+msgid "Input polymorphism"
+msgstr "输入多态"
+
+#: ../../polymorphism.md:5
+msgid "*New in Koffi 2.1*"
+msgstr "*Koffi 2.1引入*"
+
+#: ../../polymorphism.md:7
+msgid ""
+"Many C functions use `void *` parameters in order to pass polymorphic "
+"objects and arrays, meaning that the data format changes can change "
+"depending on one other argument, or on some kind of struct tag member."
+msgstr ""
+"许多C函数使用`void *`参数来传入多态的对象或数组, 意味着数据格式会随着某个其它参数, 或是某种类型的结构体标签成员变化而变化."
+
+#: ../../polymorphism.md:9
+msgid "Koffi provides two features to deal with this:"
+msgstr "Koffi提供了两个功能来处理这种情况:"
+
+#: ../../polymorphism.md:11
+msgid ""
+"Buffers and typed JS arrays can be used as values in place everywhere a "
+"pointer is expected. See [dynamic arrays](pointers.md#array-pointers-"
+"dynamic-arrays) for more information, for input or output."
+msgstr ""
+"Buffer和TypedArray可以用在任何需要指针的地方. 参见[动态数组](pointers.md#array-pointers-dynamic-arrays)以获取更多信息, 包括输入和输出."
+
+#: ../../polymorphism.md:12
+msgid ""
+"You can use `koffi.as(value, type)` to tell Koffi what kind of type is "
+"actually expected."
+msgstr ""
+"你可以使用`koffi.as(value, type)`来告诉Koffi到底应当是什么类型."
+
+#: ../../polymorphism.md:14
+msgid ""
+"The example below shows the use of `koffi.as()` to read the header of a "
+"PNG file with `fread()`."
+msgstr ""
+"下面的例子展示了使用`fread()`和`koffi.as()`来读取一个PNG文件的文件头."
+
+#: ../../polymorphism.md:66
+msgid "Output buffers"
+msgstr "输出Buffer"
+
+#: ../../polymorphism.md:68
+msgid "*New in Koffi 2.3*"
+msgstr "*Koffi 2.3引入*"
+
+#: ../../polymorphism.md:70
+msgid ""
+"You can use buffers and typed arrays for output (and input/output) "
+"pointer parameters. Simply pass the buffer as an argument and the native "
+"function will receive a pointer to its contents."
+msgstr ""
+"你可以使用Buffer和TypedArray作为输出(以及输入/输出)指针参数. "
+"简单的传入Buffer作为参数然后原生函数就会接收到一个指向其内容的指针."
+
+#: ../../polymorphism.md:72
+msgid ""
+"Once the native function returns, you can decode the content with "
+"`koffi.decode(value, type)` as in the following example:"
+msgstr ""
+"一旦原生函数返回, 你可以通过`koffi.decode(value, type)`来像如下示例解码内容:"
+
+#: ../../polymorphism.md:108
+msgid ""
+"See [pointer arguments](callbacks.md#decoding-pointer-arguments) for "
+"another example with the decode function."
+msgstr ""
+"参见[指针参数](callbacks.md#decoding-pointer-arguments)以获取其它关于解码函数的示例."
