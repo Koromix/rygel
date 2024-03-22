@@ -58,6 +58,8 @@ export async function start(prov, options = {}) {
     map.onClick = handleClick;
     if (provider.styleCluster != null)
         map.styleCluster = provider.styleCluster;
+    if (provider.clusterTreshold != null)
+        map.clusterTreshold = provider.clusterTreshold;
     map.setMarkers('entries', map_markers);
     map.move(options.latitude, options.longitude, options.zoom);
 

@@ -30,6 +30,8 @@ function Cn2rProvider() {
 
     let icons = {};
 
+    this.clusterTreshold = 3;
+
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
             Net.get('api/entries/etablissements'),

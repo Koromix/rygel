@@ -28,6 +28,7 @@ function TileMap(runner) {
 
     let handle_click = (markers) => {};
     let style_cluster = (element) => {};
+    let cluster_treshold = 1.8;
 
     const DEFAULT_ZOOM = 7;
     const MAX_FETCHERS = 8;
@@ -61,6 +62,7 @@ function TileMap(runner) {
 
         onClick: { get: () => handle_click, set: func => { handle_click = func; }, enumerable: true },
 
+        clusterTreshold: { get:() => cluster_treshold, set: treshold => { cluster_treshold = treshold; }, enumerable: true },
         styleCluster: { get: () => style_cluster, set: func => { style_cluster = func; }, enumerable: true }
     });
 
@@ -102,12 +104,12 @@ function TileMap(runner) {
         let pos2 = null;
 
         let items0 = markers.map(marker => markerToItem(marker, state.zoom));
-        let cluster0 = clusterize(items0);
+        let cluster0 = clusterize(items0, cluster_treshold);
 
         // Looping is a bit dumb but it's easy and it works
         while (zoom > tiles.min_zoom) {
             let items = markers.map(marker => markerToItem(marker, zoom - 1));
-            let cluster = clusterize(items);
+            let cluster = clusterize(items, cluster_treshold);
 
             let min = {
                 x: Math.min(...items.map(item => item.x - item.size)),
@@ -171,7 +173,7 @@ function TileMap(runner) {
         let items = [];
         for (let group of Object.values(marker_groups))
             items.push(...group.map(marker => markerToItem(marker, state.zoom)));
-        let clusters = clusterize(items);
+        let clusters = clusterize(items, cluster_treshold);
 
         let viewport = getViewport();
 
@@ -821,7 +823,7 @@ function TileMap(runner) {
     }
 }
 
-function clusterize(items) {
+function clusterize(items, treshold) {
     items = items.slice().sort((item1, item2) => item1.x - item2.x);
 
     let max_delta = Math.max(...items.map(item => item.size)) * 2;
@@ -852,9 +854,9 @@ function clusterize(items) {
                 }
 
                 let dist = distance(center, other);
-                let treshold = Math.min(item.size, other.size) / 1.8;
+                let treshold_adj = Math.min(item.size, other.size) / treshold;
 
-                if (dist < treshold) {
+                if (dist < treshold_adj) {
                     cluster.push(other);
 
                     accumulator.x += other.x;
