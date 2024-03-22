@@ -346,7 +346,7 @@ async function handleClick(markers, clickable) {
 
                     <div @click=${handlePopupClick}>
                         ${markers.map(marker => html`
-                            <a @click=${UI.wrap(e => { handleClick([marker]); close(); })}>${marker.entry.name}</a><br>
+                            <a @click=${UI.wrap(e => { handleClick([marker], true); close(); })}>${marker.entry.name}</a><br>
                         `)}
                     </div>
                 `
