@@ -269,13 +269,10 @@ ssh_session ssh_Connect(const ssh_Config &config)
                 if (config.fingerprint && TestStr(base64, config.fingerprint))
                     break;
 
-                LogInfo("The server is unknown. Do you trust the host key?");
-
-                char prompt[512];
-                Fmt(prompt, "Do you trust the server (public key hash: %1)", base64);
+                LogInfo("The server is unknown, public key hash: %!..+%1%!0", base64);
 
                 bool trust = false;
-                if (!PromptYN(prompt, &trust))
+                if (!PromptYN("Do you trust the host key?", &trust))
                     return nullptr;
                 if (!trust) {
                     LogError("Cannot trust server, refusing to continue");
