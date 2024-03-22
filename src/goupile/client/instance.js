@@ -242,42 +242,8 @@ function renderMenu() {
             ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
 
-            ${show_menu && !menu_is_wide ? Util.map(route.page.menu.chain[0].children, item => {
-                if (item.children.length) {
-                    let active = route.page.menu.chain.includes(item);
-                    let status = makeStatusText(item, form_thread);
-
-                    return html`
-                        <div id="ins_drop" class="drop">
-                            <button title=${item.title} class=${active ? 'active' : ''}
-                                    @click=${UI.deployMenu}>
-                                ${item.title}
-                                ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
-                            </button>
-                            <div>${Util.map(item.children, item => renderDropItem(item))}</div>
-                        </div>
-                    `;
-                } else {
-                    return renderDropItem(item);
-                }
-            }) : ''}
-            ${show_menu && menu_is_wide ? route.page.menu.chain.map(item => {
-                if (item.children.length) {
-                    let status = makeStatusText(item, form_thread);
-
-                    return html`
-                        <div id="ins_drop" class="drop">
-                            <button title=${item.title} @click=${UI.deployMenu}>
-                                ${item.title}
-                                ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
-                            </button>
-                            <div>${Util.map(item.children, child => renderDropItem(child))}</div>
-                        </div>
-                    `;
-                } else {
-                    return renderDropItem(item);
-                }
-            }) : ''}
+            ${show_menu && !menu_is_wide ? Util.map(route.page.menu.chain[0].children, item => renderDropItem(item)) : ''}
+            ${show_menu && menu_is_wide ? route.page.menu.chain.map(renderDropItem) : ''}
             ${show_title ? html`<button title=${route.page.title} class="active">
                 ${form_thread.locked ? '🔒' : ''}
                 ${route.page.title}
@@ -354,7 +320,7 @@ function isMenuWide(menu) {
 }
 
 function renderDropItem(item) {
-    let active = route.page.menu.chain.includes(item);
+    let active = (route.page.menu == item);
     let url = contextualizeURL(item.url, form_thread);
     let status = makeStatusText(item, form_thread);
 
