@@ -419,7 +419,7 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
                     FmtRandom(dangerous, DangerousChars),
                     FmtRandom(all, all_chars.data));
 
-            FastRandomInt rng;
+            FastRandomRNG<size_t> rng;
             std::shuffle(out_password.begin(), out_password.end() - 1, rng);
 
             if ((flags & (int)pwd_GenerateFlag::Check) && !pwd_CheckPassword(out_password.ptr))

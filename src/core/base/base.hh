@@ -4201,20 +4201,22 @@ private:
     uint64_t Next();
 };
 
-template <int Min = 0, int Max = INT_MAX>
-class FastRandomInt {
-    static_assert(Min >= 0);
-    static_assert(Max > Min);
-
+template <typename T>
+class FastRandomRNG {
     FastRandom rng;
 
 public:
-    typedef int result_type;
+    typedef T result_type;
 
-    static constexpr int min() { return Min; }
-    static constexpr int max() { return Max; }
+    static constexpr T min() { return std::numeric_limits<T>::min(); }
+    static constexpr T max() { return std::numeric_limits<T>::max(); }
 
-    int operator()() { return rng.GetInt(Min, Max); }
+    T operator()()
+    {
+        T value;
+        rng.Fill(&value, RG_SIZE(value));
+        return value;
+    }
 };
 
 int GetRandomIntFast(int min, int max);
