@@ -1,5 +1,17 @@
 # Changelog
 
+## Goupile 3.4
+
+### Goupile 3.4.0
+
+- Simplify goupile top menu
+- Change automatic form page with separate levels and tiles
+- Improve goupile task menu on small screens
+- Refuse excessive password lengths
+- Fix export key error when guest sessions are enabled
+- Automatically create session when guest saves data
+- Improve page redirection in sequence mode
+
 ## Goupile 3.3.6
 
 - Improve data migration from goupile2
