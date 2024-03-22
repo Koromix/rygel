@@ -276,10 +276,7 @@ function renderMenu() {
                             @click=${UI.deployMenu}>${profile.type !== 'auto' ? profile.username : ''}</button>
                     <div>
                         ${profile.type === 'auto' && profile.userid ? html`
-                            <button style="text-align: center;">
-                                ${profile.username}<br/>
-                                <span style="font-size: 0.8em; font-style: italic; color: #555;">Identifiant temporaire</span>
-                            </button>
+                            <button style="text-align: center;">${profile.username}</button>
                             <hr/>
                         ` : ''}
                         ${profile.type === 'login' ? html`
@@ -1963,6 +1960,9 @@ async function saveRecord(tid, entry, data, constraints) {
     }
 
     await records.save(tid, entry, ENV.version, constraints);
+
+    if (!profile.userid)
+        await goupile.syncProfile();
 }
 
 export {

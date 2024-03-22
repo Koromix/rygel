@@ -973,6 +973,7 @@ export {
     profile,
 
     start,
+    syncProfile,
 
     runChangePasswordDialog,
     runResetTOTP,
