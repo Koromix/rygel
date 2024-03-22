@@ -891,15 +891,6 @@ async function renderPage() {
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
                     <div style="flex: 1;"></div>
 
-                    ${model.actions.some(action => !action.options.always) ? html`
-                        <div class="drop up right">
-                            <button @click=${UI.deployMenu}>Actions</button>
-                            <div>
-                                ${model.actions.map(action => action.render())}
-                            </div>
-                        </div>
-                        <hr/>
-                    ` : ''}
                     ${Util.mapRange(0, model.actions.length, idx => {
                         let action = model.actions[model.actions.length - idx - 1];
 
@@ -910,6 +901,17 @@ async function renderPage() {
 
                         return action.render();
                     })}
+                    ${model.actions.some(action => !action.options.always) ? html`
+                        <hr/>
+                        <div class="drop up right">
+                            <button @click=${UI.deployMenu}>Autres actions</button>
+                            <div>
+                                ${model.actions.map(action => action.render())}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div style="flex: 1;"></div>
                 </nav>
             ` : ''}
         </div>
@@ -1010,9 +1012,9 @@ function addAutomaticActions(builder, model) {
             });
         }
 
-        if (form_state.hasChanged()) {
+        if (!is_new && form_state.hasChanged()) {
             builder.action('-');
-            builder.action('Oublier', { color: '#db0a0a', always: form_entry.anchor >= 0 }, async e => {
+            builder.action('Oublier les modifications', { color: '#db0a0a' }, async e => {
                 await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                        'Oublier', () => {});
 
