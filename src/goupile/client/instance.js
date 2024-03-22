@@ -155,7 +155,7 @@ function initUI() {
         if (route.page.filename != null) {
             return renderPage();
         } else {
-            return renderTiles();
+            return renderForm();
         }
     });
 
@@ -334,19 +334,19 @@ function renderDropItem(item) {
 }
 
 function makeStatusText(item, thread) {
-    let status = computeStatus(item, thread, false);
+    let status = computeStatus(item, thread);
 
     if (status.complete) {
         return '✓\uFE0E';
     } else if (status.filled) {
-        let text = status.filled + '/' + status.total;
-        return html`${text}`;
+        let progress = Math.floor(100 * status.filled / status.total);
+        return html`${progress}%`;
     } else {
         return '';
     }
 }
 
-function computeStatus(item, thread, recurse) {
+function computeStatus(item, thread) {
     if (item.children.length) {
         let status = {
             filled: 0,
@@ -355,9 +355,10 @@ function computeStatus(item, thread, recurse) {
         };
 
         for (let child of item.children) {
-            let ret = computeStatus(child, thread, recurse);
-            status.filled += recurse ? ret.filled : ret.complete;
-            status.total += recurse ? ret.total : 1;
+            let ret = computeStatus(child, thread);
+
+            status.filled += ret.filled;
+            status.total += ret.total;
         }
         status.complete = (status.filled == status.total);
 
@@ -629,7 +630,7 @@ function renderData() {
                                 <td class=${cls} title=${row.sequence}>${row.sequence != null ? row.sequence : 'NA'}</td>
                                 <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
                                 ${data_columns.map(col => {
-                                    let status = computeStatus(col.item, row, true);
+                                    let status = computeStatus(col.item, row);
                                     let url = col.item.url + `/${row.tid}`;
                                     let highlight = active && route.page.menu.chain.includes(col.item);
 
@@ -637,8 +638,10 @@ function renderData() {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
                                                         title=${col.item.title}><a href=${url}>Complet</a></td>`;
                                     } else if (status.filled) {
+                                        let progress = Math.floor(100 * status.filled / status.total);
+
                                         return html`<td class=${highlight ? 'partial active' : 'partial'}
-                                                        title=${col.item.title}><a href=${url}>${status.filled} / ${status.total}</a></td>`;
+                                                        title=${col.item.title}><a href=${url}>${progress}%</a></td>`;
                                     } else {
                                         return html`<td class=${highlight ? 'missing active' : 'missing'}
                                                         title=${col.item.title}><a href=${url}>Afficher</a></td>`;
@@ -727,7 +730,7 @@ function toggleTagFilter(tag) {
      return go();
 }
 
-async function renderTiles() {
+async function renderForm() {
     let show_menu = (profile.lock == null && (route.page.menu.chain.length > 2 ||
                                               route.page.menu.chain[0].children.length > 1));
     let menu_is_wide = isMenuWide(route.page.menu);
@@ -740,39 +743,71 @@ async function renderTiles() {
                                                 idx => renderPageMenu(route.page.menu.chain[idx])) : ''}
                 </div>
 
-                <div id="ins_tiles">
-                    ${route.page.menu.chain.map(menu => html`
-                        <div>
-                            ${menu.children.map(item => {
-                                let url = contextualizeURL(item.url, form_thread);
-                                let status = computeStatus(item, form_thread, true);
+                <div id="ins_form">
+                    <div id="ins_levels">
+                        ${route.page.menu.chain.map(item => {
+                            let url = contextualizeURL(item.url, form_thread);
+                            let status = computeStatus(item, form_thread);
 
-                                let cls = 'ins_tile';
-                                let text = null;
+                            let cls = 'ins_level';
 
-                                if (route.page.menu.chain.includes(item))
-                                    cls += ' active';
-                                if (menu != route.page.menu)
-                                    cls += ' small';
-                                if (status.complete) {
-                                    cls += ' complete';
-                                    text = 'Complet';
-                                } else if (status.filled) {
-                                    cls += ' partial';
-                                    text = Math.floor(100 * status.filled / status.total) + '%';
-                                } else {
-                                    text = 'Non rempli';
-                                }
+                            if (status.complete) {
+                                cls += ' complete';
+                                text = 'Rempli';
+                            } else if (status.filled) {
+                                let progress = Math.floor(100 * status.filled / status.total);
 
-                                return html`
-                                    <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
-                                        <div class="title">${item.title}</div>
-                                        <div class="status">${text}</div>
+                                text = html`
+                                    <div class="ins_progress" style=${'--progress: ' + progress}>
+                                        <div></div>
+                                        <span>${progress}%</span>
                                     </div>
                                 `;
-                            })}
-                        </div>
-                    `)}
+                            } else {
+                                text = 'Non rempli';
+                            }
+
+                            return html`
+                                <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                                    <div class="title">${item.title}</div>
+                                    <div class="status">${text}</div>
+                                </div>
+                            `;
+                        })}
+                    </div>
+
+                    <div id="ins_tiles">
+                        ${route.page.menu.children.map(item => {
+                            let url = contextualizeURL(item.url, form_thread);
+                            let status = computeStatus(item, form_thread);
+
+                            let cls = 'ins_tile';
+                            let text = null;
+
+                            if (status.complete) {
+                                cls += ' complete';
+                                text = 'Rempli';
+                            } else if (status.filled) {
+                                let progress = Math.floor(100 * status.filled / status.total);
+
+                                text = html`
+                                    <div class="ins_progress" style=${'--progress: ' + progress}>
+                                        <div></div>
+                                        <span>${progress}%</span>
+                                    </div>
+                                `;
+                            } else {
+                                text = 'Non rempli';
+                            }
+
+                            return html`
+                                <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                                    <div class="title">${item.title}</div>
+                                    <div class="status">${text}</div>
+                                </div>
+                            `;
+                        })}
+                    </div>
                 </div>
 
                 <div id="ins_actions"></div>
