@@ -134,7 +134,9 @@ async function run() {
     // Update missing statuses
     {
         let finesses = sqlite3('src/importers/finess.db', { readonly: true, fileMustExist: true });
-        let rows = db.prepare(`SELECT e.id, json_extract(e.main, '$.finess') AS finess FROM entries e
+        let rows = db.prepare(`SELECT e.id, json_extract(e.main, '$.finess') AS finess,
+                                            json_extract(e.main, '$.etab_statut') AS statut
+                                   FROM entries e
                                    INNER JOIN layers l ON (l.id = e.layer_id)
                                    INNER JOIN maps m ON (m.id = l.map_id)
                                    WHERE m.name = 'cn2r' AND l.name = 'etablissements'`).all();
@@ -149,65 +151,10 @@ async function run() {
                 default: { statut = 'Etablissement privé à but lucratif'; } break;
             }
 
-            db.prepare(`UPDATE entries SET main = json_insert(main, '$.etab_statut', ?) WHERE id = ?`).run(statut, row.id);
+            if (statut != row.statut)
+                db.prepare(`UPDATE entries SET main = json_insert(main, '$.etab_statut', ?) WHERE id = ?`).run(statut, row.id);
         }
     }
-
-    // Reparse schedules and fix mess
-    db.transaction(() => {
-        let rows = db.prepare(`SELECT e.id, json_extract(e.main, '$.rdv_horaires') AS rdv_horaires,
-                                            json_extract(e.main, '$.rdv_horaires_str') AS rdv_horaires_str FROM entries e
-                                   INNER JOIN layers l ON (l.id = e.layer_id)
-                                   INNER JOIN maps m ON (m.id = l.map_id)
-                                   WHERE m.name = 'cn2r' AND l.name = 'etablissements'`).all();
-
-        for (let row of rows) {
-            if (row.rdv_horaires_str != null) {
-                let obj = {
-                    text: row.rdv_horaires_str,
-                    schedule: Array.isArray(row.rdv_horaires) ? row.rdv_horaires : parse.parseSchedule(row.rdv_horaires_str)
-                };
-
-                db.prepare(`UPDATE entries SET main = json_set(main, '$.rdv_horaires', json(?)) WHERE id = ?`).run(JSON.stringify(obj), row.id);
-            } else if (row.rdv_horaires != null && row.rdv_horaires.startsWith('{')) {
-                let obj = JSON.parse(row.rdv_horaires);
-
-                if (obj.text != null) {
-                    if (obj.schedule == null) {
-                        obj.schedule = parse.parseSchedule(obj.text);
-                        db.prepare(`UPDATE entries SET main = json_set(main, '$.rdv_horaires', json(?)) WHERE id = ?`).run(JSON.stringify(obj), row.id);
-                    }
-                } else {
-                    db.prepare(`UPDATE entries SET main = json_set(main, '$.rdv_horaires', NULL) WHERE id = ?`).run(row.id);
-                }
-            } else {
-                db.prepare(`UPDATE entries SET main = json_set(main, '$.rdv_horaires', NULL) WHERE id = ?`).run(row.id);
-            }
-
-            db.prepare(`UPDATE entries SET main = json_remove(main, '$.rdv_horaires_str') WHERE id = ?`).run(row.id);
-        }
-    })();
-
-    // Clean up various existing fields
-    db.transaction(() => {
-        let rows = db.prepare(`SELECT e.id, e.main FROM entries e
-                                   INNER JOIN layers l ON (l.id = e.layer_id)
-                                   INNER JOIN maps m ON (m.id = l.map_id)
-                                   WHERE m.name = 'cn2r' AND l.name = 'etablissements'`).all();
-
-        for (let row of rows) {
-            let main = JSON.parse(row.main);
-
-            main.etab_web = parse.cleanURL(main.etab_web);
-            main.rdv_fixe = parse.cleanPhoneNumber(main.rdv_fixe);
-            main.rdv_portable = parse.cleanPhoneNumber(main.rdv_portable);
-            main.rdv_mail = parse.cleanMail(main.rdv_mail);
-            main.rdv_web = parse.cleanURL(main.rdv_web);
-            main.engag_mail = parse.cleanMail(main.engag_mail);
-
-            db.prepare(`UPDATE entries SET main = ? WHERE id = ?`).run(JSON.stringify(main), row.id);
-        }
-    })();
 
     db.close();
 }
