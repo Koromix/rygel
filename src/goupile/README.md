@@ -34,7 +34,7 @@ For other distributions, you can [build the code from source](#build-from-source
 
 ### Linux (RPM)
 
-A signed RPM repository is provided, and should work with RHEL and Fedora.
+A signed RPM repository is provided, and should work with RHEL, Fedora and Rocky Linux (9+).
 
 Execute the following commands (as root) to add the repository to your system:
 
