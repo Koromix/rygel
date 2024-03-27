@@ -7,7 +7,7 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 - Data compression with LZ4
 - Local and remote storage back-ends: local directory, S3 storage, SFTP servers
 
-> [!WARNING]  
+> [!WARNING]
 > This software has not been stabilized yet and **must not be used as your primary backup** tool. You've been warned!
 
 # Install
@@ -281,7 +281,7 @@ cd rygel
 
 In order to build Rekkord on Windows, clone the repository and run these commands from the root directory in a _Visual Studio command prompt_ (x64 or x86, as you prefer):
 
-```batch
+```sh
 bootstrap.bat
 felix -pFast rekkord
 ```
