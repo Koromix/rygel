@@ -1,14 +1,21 @@
-You can find these instructions on the [official web page](http://koromix.dev/tytools).
-
 # Overview
 
-TyTools is a collection of **independent tools** and you only need one executable to use any of them. The Qt-based GUI tools are statically compiled to make that possible.
+TyTools is a collection of independent tools to manage, flash and communicate with **[Teensy](https://www.pjrc.com/teensy/) microcontrollers**.
+
+<p style="text-align: center;">
+    <a href="{{ ASSET static/tytools/tycommander.webp }}" target="_blank">
+        <img src="{{ ASSET static/tytools/tycommander.webp }}" width="677"
+             style="max-width: 90vw; object-fit: scale-down;" alt="Screenshot of TyCommander" />
+    </a>
+</p>
 
 Tool        | Type                      | Description
 ----------- | ------------------------- | ----------------------------------------------------
 TyCommander | Qt GUI (static)           | Upload, monitor and communicate with multiple boards
 TyUploader  | Qt GUI (static)           | Simple firmware / sketch uploader
 tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boards
+
+Each tool is **independent** and you only need the one executable to use it. The Qt-based GUI tools are statically compiled to make that possible.
 
 # Install
 
@@ -88,24 +95,29 @@ You can learn about the various commands using `tycmd help`. Get specific help f
 
 `tycmd list` lists plugged Teensy devices. Here is how it looks:
 
-    add 34130@usb-1-2 Teensy 3.1
-    add 29460@usb-4-2 Teensy
-    add 32250@usb-4-3 Teensy 3.0
-
+```
+add 34130@usb-1-2 Teensy 3.1
+add 29460@usb-4-2 Teensy
+add 32250@usb-4-3 Teensy 3.0
+```
 
 Use `--verbose` if you want detailed information about available devices:
 
-    add 32250@usb-4-3 Teensy 3.0
-      + capabilities:
-        - upload
-        - reset
-      + interfaces:
-        - HalfKay Bootloader: /dev/hidraw2
+```
+add 32250@usb-4-3 Teensy 3.0
+  + capabilities:
+    - upload
+    - reset
+  + interfaces:
+    - HalfKay Bootloader: /dev/hidraw2
+```
 
 If you need to read structured information in your scripts, you can set the output to JSON with `--output json`:
 
-    {"action": "add", "tag": "714230@usb-6-3", "serial": 714230, "location": "usb-6-3", "model": "Teensy", "capabilities": ["reboot", "serial"], "interfaces": [["Seremu", "/dev/hidraw4"]]}
-    {"action": "add", "tag": "1126140@usb-6-2", "serial": 1126140, "location": "usb-6-2", "model": "Teensy LC", "capabilities": ["upload", "reset"], "interfaces": [["HalfKay Bootloader", "/dev/hidraw3"]]}
+```json
+{"action": "add", "tag": "714230@usb-6-3", "serial": 714230, "location": "usb-6-3", "model": "Teensy", "capabilities": ["reboot", "serial"], "interfaces": [["Seremu", "/dev/hidraw4"]]}
+{"action": "add", "tag": "1126140@usb-6-2", "serial": 1126140, "location": "usb-6-2", "model": "Teensy LC", "capabilities": ["upload", "reset"], "interfaces": [["HalfKay Bootloader", "/dev/hidraw3"]]}
+```
 
 You can also watch device changes with `--watch`, both in plain and JSON mode.
 
