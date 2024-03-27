@@ -61,7 +61,7 @@ body {
 }
 #top li > a:hover {
     margin-bottom: -1px;
-    border-bottom: 2px solid #e97713;
+    border-bottom: 2px solid #ff6600;
 }
 #top li > a.active { font-weight: bold; }
 
@@ -123,7 +123,7 @@ h3 {
 }
 
 a {
-    color: #e97713;
+    color: #ff6600;
     cursor: pointer;
     text-decoration: none;
 }
