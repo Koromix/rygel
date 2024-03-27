@@ -8,7 +8,8 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 - Local and remote storage back-ends: local directory, S3 storage, SFTP servers
 
 > [!CAUTION]
-> This software has not been stabilized yet and **must not be used as your primary backup** tool. You've been warned!
+> This software has not been stabilized yet and **must not be used as your primary backup** tool.
+> You've been warned!
 
 # Install
 
@@ -140,7 +141,11 @@ rekkord init
 
 This command will initialize the repository with a random 256-bit master key.
 
-The command will give you this **master key** in base64 form. You should **store it in a secure place**, it can be used to reset user accounts and passwords (see below). However, if it leaks, everyone will be able to decrypt your snapshots.
+The command will give you this **master key** in base64 form.
+
+> [!IMPORTANT]
+> You should **store it in a secure place**, it can be used to reset user accounts and passwords (see below).
+> However, if it leaks, everyone will be able to decrypt your snapshots!
 
 The **write-only key** (public key) is derived from this master key (secret key).
 
@@ -151,7 +156,9 @@ Rekkord repositories support multiple user accounts. A **user account named defa
 
 You will need one or the other to use other rekkord commands. Please store these passwords securely.
 
-However, if you lose them, you will still be able to reset any account (including the default one) **as long as you have the master key**. As mentioned previously, this one, you must not lose or leak!
+> [!IMPORTANT]
+> You can reset any account or password (including the default one) **as long as you have the master key**.
+> As mentioned previously, this one, you must not lose or leak!
 
 ## Create snapshots
 
