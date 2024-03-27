@@ -7,7 +7,7 @@ Rekkord is a **multi-platform backup tool**, with the following features:
 - Data compression with LZ4
 - Local and remote storage back-ends: local directory, S3 storage, SFTP servers
 
-> [!WARNING]
+> [!CAUTION]
 > This software has not been stabilized yet and **must not be used as your primary backup** tool. You've been warned!
 
 # Install
