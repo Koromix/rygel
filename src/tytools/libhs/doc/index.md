@@ -32,5 +32,5 @@ Look at [Sean Barrett's excellent stb libraries](https://github.com/nothings/stb
 
 In order to use the library you can:
 
-- [look at the examples](https://github.com/Koromix/tytools/tree/master/src/libhs/examples)
+- [look at the examples](https://github.com/Koromix/rygel/tree/master/src/tytools/libhs/examples)
 - [consult the reference documentation](modules.html)

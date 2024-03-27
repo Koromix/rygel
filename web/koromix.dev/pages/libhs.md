@@ -10,7 +10,7 @@ libhs is a C library to **enumerate and interact with USB HID and USB serial dev
 
 # Build
 
-Just [download libhs.h from the GitHub repository](https://github.com/Koromix/libraries). This file provides both the interface and the implementation. To instantiate the implementation, `#define HS_IMPLEMENTATION` in *ONE* source file, before including libhs.h.
+Just [download libhs.h](https://github.com/Koromix/libraries) from the GitHub repository. This file provides both the interface and the implementation. To instantiate the implementation, `#define HS_IMPLEMENTATION` in *ONE* source file, before including libhs.h.
 
 libhs depends on **a few OS-provided libraries** that you need to link:
 
@@ -21,7 +21,7 @@ Windows (MinGW-w64) | Link `-luser32 -ladvapi32 -lsetupapi -lhid`
 OSX (Clang)         | Link _CoreFoundation and IOKit_
 Linux (GCC)         | Link `-ludev`
 
-This library is developed as part of the TyTools project where you can find the original [libhs source code](https://github.com/Koromix/tytools/tree/master/src/libhs). The amalgamated header file is automatically produced by CMake scripts.
+This library is developed as part of the TyTools project where you can find the original [libhs source code](https://github.com/Koromix/rygel/tree/master/src/tytools/libhs). The amalgamated header file is automatically produced by CMake scripts.
 
 Look at [Sean Barrett's excellent stb libraries](https://github.com/nothings/stb) for the reasoning behind this mode of distribution.
 
@@ -31,7 +31,7 @@ You can clone the code and report bugs on the [TyTools GitHub repository](https:
 
 # Examples
 
-You can find a few complete [working examples in the GitHub repository](https://github.com/Koromix/tytools/tree/master/src/libhs/examples).
+You can find a few complete [working examples](https://github.com/Koromix/rygel/tree/master/src/tytools/libhs/examples) in the GitHub repository.
 
 The following code uses libhs to enumerate serial and HID devices:
 
