@@ -3,7 +3,6 @@
 /tmp/
 /felix
 /felix.exe
-/.vs/
 /*.sublime-*
 /rygel.*
 
@@ -15,10 +14,11 @@ RcppExports.*
 *.vault
 FelixBuild.ini.user
 *.log
+*.vcxproj.user
+.vs/
 
 __pycache__/
-
-node_modules
+node_modules/
 package-lock.json
 
 /src/koffi/**/dist/
@@ -27,6 +27,8 @@ package-lock.json
 /src/drd/drdR/R/
 /src/drd/drdR/src/
 /src/drd/drdR_*
+
+/src/tytools/libhs/bin/
 
 /src/napka/data/*
 !/src/napka/data/.gitkeep

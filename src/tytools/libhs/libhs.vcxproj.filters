@@ -39,13 +39,16 @@
     <ClCompile Include="hid_win32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="monitor.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="monitor_win32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="filter.c">
+    <ClCompile Include="array.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="match.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="monitor_common.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
