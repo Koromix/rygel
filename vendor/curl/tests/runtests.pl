@@ -796,6 +796,7 @@ sub checksystemfeatures {
     $feature{"headers-api"} = 1;
     $feature{"xattr"} = 1;
     $feature{"large-time"} = 1;
+    $feature{"sha512-256"} = 1;
 
     # make each protocol an enabled "feature"
     for my $p (@protocols) {
@@ -1235,6 +1236,8 @@ sub singletest_check {
             # text mode when running on windows: fix line endings
             s/\r\n/\n/g for @validstdout;
             s/\n/\r\n/g for @validstdout;
+            s/\r\n/\n/g for @actual;
+            s/\n/\r\n/g for @actual;
         }
 
         if($hash{'nonewline'}) {
@@ -2214,6 +2217,10 @@ while(@ARGV) {
     elsif ($ARGV[0] eq "-g") {
         # run this test with gdb
         $gdbthis=1;
+    }
+    elsif ($ARGV[0] eq "-gl") {
+        # run this test with lldb
+        $gdbthis=2;
     }
     elsif ($ARGV[0] eq "-gw") {
         # run this test with windowed gdb

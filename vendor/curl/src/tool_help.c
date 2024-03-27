@@ -73,6 +73,11 @@ static const struct category_descriptors categories[] = {
   {NULL, NULL, CURLHELP_HIDDEN}
 };
 
+#ifdef _WIN32
+#define BORDER 78
+#else
+#define BORDER 79
+#endif
 
 static void print_category(curlhelp_t category)
 {
@@ -91,12 +96,21 @@ static void print_category(curlhelp_t category)
     if(len > longdesc)
       longdesc = len;
   }
-  if(longopt + longdesc > 80)
-    longopt = 80 - longdesc;
-
+  if(longopt + longdesc >= BORDER) {
+    longdesc -= 3;
+    longopt = BORDER -1 - longdesc;
+  }
   for(i = 0; helptext[i].opt; ++i)
     if(helptext[i].categories & category) {
-      printf(" %-*s %s\n", (int)longopt, helptext[i].opt, helptext[i].desc);
+      int opt = (int)longopt;
+      size_t desclen = strlen(helptext[i].desc);
+      if(opt + desclen >= (BORDER -1)) {
+        if(desclen < (BORDER -1))
+          opt = (BORDER -2) - (int)desclen;
+        else
+          opt = 0;
+      }
+      printf(" %-*s  %s\n", opt, helptext[i].opt, helptext[i].desc);
     }
 }
 
@@ -173,12 +187,30 @@ void tool_version_info(void)
   printf("Release-Date: %s\n", LIBCURL_TIMESTAMP);
 #endif
   if(built_in_protos[0]) {
+    const char *insert = NULL;
+    /* we have ipfs and ipns support if libcurl has http support */
+    for(builtin = built_in_protos; *builtin; ++builtin) {
+      if(insert) {
+        /* update insertion so ipfs will be printed in alphabetical order */
+        if(strcmp(*builtin, "ipfs") < 0)
+          insert = *builtin;
+        else
+          break;
+      }
+      else if(!strcmp(*builtin, "http")) {
+        insert = *builtin;
+      }
+    }
     printf("Protocols:");
     for(builtin = built_in_protos; *builtin; ++builtin) {
       /* Special case: do not list rtmp?* protocols.
          They may only appear together with "rtmp" */
       if(!curl_strnequal(*builtin, "rtmp", 4) || !builtin[0][4])
         printf(" %s", *builtin);
+      if(insert && insert == *builtin) {
+        printf(" ipfs ipns");
+        insert = NULL;
+      }
     }
     puts(""); /* newline */
   }

@@ -20,7 +20,7 @@
  1.1 TFO support on Windows
  1.2 Consult %APPDATA% also for .netrc
  1.3 struct lifreq
- 1.4 alt-svc sharing
+ 1.4 Better and more sharing
  1.5 get rid of PATH_MAX
  1.6 native IDN support on macOS
  1.8 CURLOPT_RESOLVE for any port number
@@ -126,6 +126,7 @@
  13.12 Reduce CA certificate bundle reparsing
  13.13 Make sure we forbid TLS 1.3 post-handshake authentication
  13.14 Support the clienthello extension
+ 13.15 Select signature algorithms
 
  14. GnuTLS
  14.2 check connection
@@ -176,7 +177,6 @@
  18.29 --retry and transfer timeouts
 
  19. Build
- 19.1 roffit
  19.2 Enable PIE and RELRO by default
  19.3 Do not use GNU libtool on OpenBSD
  19.4 Package curl for Windows in a signed installer
@@ -195,6 +195,9 @@
 
  21. MQTT
  21.1 Support rate-limiting
+
+ 22. TFTP
+ 22.1 TFTP doesn't convert LF to CRLF for mode=netascii
 
 ==============================================================================
 
@@ -889,7 +892,9 @@
 
  Some TLS related options to the command line tool and libcurl are only
  provided for the server and not for HTTPS proxies. --proxy-tls-max,
- --proxy-tlsv1.3, --proxy-curves and a few more.a
+ --proxy-tlsv1.3, --proxy-curves and a few more.
+ For more Documentation on this see:
+ https://curl.se/libcurl/c/tls-options.html
 
  https://github.com/curl/curl/issues/12286
 
@@ -918,6 +923,14 @@
 
  https://datatracker.ietf.org/doc/html/rfc7685
  https://github.com/curl/curl/issues/2299
+
+13.15 Select signature algorithms
+
+ Consider adding an option or a way for users to select TLS signature
+ algorithm. The signature algorithms set by a client are used directly in the
+ supported signature algorithm in the client hello message.
+
+ https://github.com/curl/curl/issues/12982
 
 14. GnuTLS
 
@@ -1113,7 +1126,7 @@
  slow, potentially with a (random) wait between transfers. There is also a
  proposed set of standard HTTP headers to let servers let the client adapt to
  its rate limits:
- https://www.ietf.org/id/draft-polli-ratelimit-headers-02.html
+ https://datatracker.ietf.org/doc/draft-ietf-httpapi-ratelimit-headers/
 
  See https://github.com/curl/curl/issues/5406
 
@@ -1277,13 +1290,7 @@
  https://qa.mandriva.com/show_bug.cgi?id=22565
 
 
-
 19. Build
-
-19.1 roffit
-
- Consider extending 'roffit' to produce decent ASCII output, and use that
- instead of (g)nroff when building src/tool_hugehelp.c
 
 19.2 Enable PIE and RELRO by default
 
@@ -1392,3 +1399,14 @@
 
  The rate-limiting logic is done in the PERFORMING state in multi.c but MQTT
  is not (yet) implemented to use that.
+
+22. TFTP
+
+22.1 TFTP doesn't convert LF to CRLF for mode=netascii
+
+ RFC 3617 defines that an TFTP transfer can be done using "netascii"
+ mode. curl does not support extracting that mode from the URL nor does it treat
+ such transfers specifically. It should probably do LF to CRLF translations
+ for them.
+
+ See https://github.com/curl/curl/issues/12655

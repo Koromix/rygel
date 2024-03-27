@@ -41,7 +41,6 @@
 #include "vtls/gtls.h"
 #elif defined(USE_WOLFSSL)
 #include <ngtcp2/ngtcp2_crypto_wolfssl.h>
-#include "vtls/wolfssl.h"
 #endif
 
 #include "urldata.h"
@@ -59,8 +58,10 @@
 #include "http1.h"
 #include "select.h"
 #include "inet_pton.h"
+#include "transfer.h"
 #include "vquic.h"
 #include "vquic_int.h"
+#include "vquic-tls.h"
 #include "vtls/keylog.h"
 #include "vtls/vtls.h"
 #include "curl_ngtcp2.h"
@@ -72,9 +73,6 @@
 #include "curl_memory.h"
 #include "memdebug.h"
 
-
-#define H3_ALPN_H3_29 "\x5h3-29"
-#define H3_ALPN_H3 "\x2h3"
 
 #define QUIC_MAX_STREAMS (256*1024)
 #define QUIC_MAX_DATA (1*1024*1024)
@@ -101,25 +99,6 @@
           (H3_STREAM_WINDOW_SIZE / H3_STREAM_CHUNK_SIZE)
 
 
-#ifdef USE_OPENSSL
-#define QUIC_CIPHERS                                                          \
-  "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_"               \
-  "POLY1305_SHA256:TLS_AES_128_CCM_SHA256"
-#define QUIC_GROUPS "P-256:X25519:P-384:P-521"
-#elif defined(USE_GNUTLS)
-#define QUIC_PRIORITY \
-  "NORMAL:-VERS-ALL:+VERS-TLS1.3:-CIPHER-ALL:+AES-128-GCM:+AES-256-GCM:" \
-  "+CHACHA20-POLY1305:+AES-128-CCM:-GROUP-ALL:+GROUP-SECP256R1:" \
-  "+GROUP-X25519:+GROUP-SECP384R1:+GROUP-SECP521R1:" \
-  "%DISABLE_TLS13_COMPAT_MODE"
-#elif defined(USE_WOLFSSL)
-#define QUIC_CIPHERS                                                          \
-  "TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_"               \
-  "POLY1305_SHA256:TLS_AES_128_CCM_SHA256"
-#define QUIC_GROUPS "P-256:P-384:P-521"
-#endif
-
-
 /*
  * Store ngtcp2 version info in this buffer.
  */
@@ -134,6 +113,7 @@ void Curl_ngtcp2_ver(char *p, size_t len)
 struct cf_ngtcp2_ctx {
   struct cf_quic_ctx q;
   struct ssl_peer peer;
+  struct quic_tls_ctx tls;
   ngtcp2_path connected_path;
   ngtcp2_conn *qconn;
   ngtcp2_cid dcid;
@@ -143,30 +123,16 @@ struct cf_ngtcp2_ctx {
   ngtcp2_transport_params transport_params;
   ngtcp2_ccerr last_error;
   ngtcp2_crypto_conn_ref conn_ref;
-#ifdef USE_OPENSSL
-  SSL_CTX *sslctx;
-  SSL *ssl;
-#elif defined(USE_GNUTLS)
-  struct gtls_instance *gtls;
-#elif defined(USE_WOLFSSL)
-  WOLFSSL_CTX *sslctx;
-  WOLFSSL *ssl;
-#endif
   struct cf_call_data call_data;
   nghttp3_conn *h3conn;
   nghttp3_settings h3settings;
   struct curltime started_at;        /* time the current attempt started */
   struct curltime handshake_at;      /* time connect handshake finished */
-  struct curltime first_byte_at;     /* when first byte was recvd */
   struct curltime reconnect_at;      /* time the next attempt should start */
   struct bufc_pool stream_bufcp;     /* chunk pool for streams */
   size_t max_stream_window;          /* max flow window for one stream */
   uint64_t max_idle_ms;              /* max idle time for QUIC connection */
   int qlogfd;
-  BIT(got_first_byte);               /* if first byte was received */
-#ifdef USE_OPENSSL
-  BIT(x509_store_setup);             /* if x509 store has been set up */
-#endif
 };
 
 /* How to access `call_data` from a cf_ngtcp2 filter */
@@ -180,11 +146,9 @@ struct cf_ngtcp2_ctx {
 struct h3_stream_ctx {
   int64_t id; /* HTTP/3 protocol identifier */
   struct bufq sendbuf;   /* h3 request body */
-  struct bufq recvbuf;   /* h3 response body */
   struct h1_req_parser h1; /* h1 request parsing */
   size_t sendbuf_len_in_flight; /* sendbuf amount "in flight" */
   size_t upload_blocked_len; /* the amount written last and EGAINed */
-  size_t recv_buf_nonflow; /* buffered bytes, not counting for flow control */
   uint64_t error3; /* HTTP/3 stream error code */
   curl_off_t upload_left; /* number of request bytes left to upload */
   int status_code; /* HTTP status code */
@@ -225,11 +189,6 @@ static CURLcode h3_data_setup(struct Curl_cfilter *cf,
   Curl_bufq_initp(&stream->sendbuf, &ctx->stream_bufcp,
                   H3_STREAM_SEND_CHUNKS, BUFQ_OPT_NONE);
   stream->sendbuf_len_in_flight = 0;
-  /* on recv, we need a flexible buffer limit since we also write
-   * headers to it that are not counted against the nghttp3 flow limits. */
-  Curl_bufq_initp(&stream->recvbuf, &ctx->stream_bufcp,
-                  H3_STREAM_RECV_CHUNKS, BUFQ_OPT_SOFT_LIMIT);
-  stream->recv_buf_nonflow = 0;
   Curl_h1_req_parse_init(&stream->h1, H1_PARSE_DEFAULT_MAX_LINE_LEN);
 
   H3_STREAM_LCTX(data) = stream;
@@ -254,7 +213,6 @@ static void h3_data_done(struct Curl_cfilter *cf, struct Curl_easy *data)
     }
 
     Curl_bufq_free(&stream->sendbuf);
-    Curl_bufq_free(&stream->recvbuf);
     Curl_h1_req_parse_free(&stream->h1);
     free(stream);
     H3_STREAM_LCTX(data) = NULL;
@@ -292,8 +250,8 @@ static void h3_drain_stream(struct Curl_cfilter *cf,
   bits = CURL_CSELECT_IN;
   if(stream && stream->upload_left && !stream->send_closed)
     bits |= CURL_CSELECT_OUT;
-  if(data->state.dselect_bits != bits) {
-    data->state.dselect_bits = bits;
+  if(data->state.select_bits != bits) {
+    data->state.select_bits = bits;
     Curl_expire(data, 0, EXPIRE_RUN_NOW);
   }
 }
@@ -413,423 +371,13 @@ static void quic_settings(struct cf_ngtcp2_ctx *ctx,
   }
 }
 
-#ifdef USE_OPENSSL
-static void keylog_callback(const SSL *ssl, const char *line)
-{
-  (void)ssl;
-  Curl_tls_keylog_write_line(line);
-}
-#elif defined(USE_GNUTLS)
-static int keylog_callback(gnutls_session_t session, const char *label,
-                    const gnutls_datum_t *secret)
-{
-  gnutls_datum_t crandom;
-  gnutls_datum_t srandom;
-
-  gnutls_session_get_random(session, &crandom, &srandom);
-  if(crandom.size != 32) {
-    return -1;
-  }
-
-  Curl_tls_keylog_write(label, crandom.data, secret->data, secret->size);
-  return 0;
-}
-#elif defined(USE_WOLFSSL)
-#if defined(HAVE_SECRET_CALLBACK)
-static void keylog_callback(const WOLFSSL *ssl, const char *line)
-{
-  (void)ssl;
-  Curl_tls_keylog_write_line(line);
-}
-#endif
-#endif
-
 static int init_ngh3_conn(struct Curl_cfilter *cf);
-
-#ifdef USE_OPENSSL
-static CURLcode quic_ssl_ctx(SSL_CTX **pssl_ctx,
-                             struct Curl_cfilter *cf, struct Curl_easy *data)
-{
-  struct cf_ngtcp2_ctx *ctx = cf->ctx;
-  struct ssl_primary_config *conn_config;
-  CURLcode result = CURLE_FAILED_INIT;
-
-  SSL_CTX *ssl_ctx = SSL_CTX_new(TLS_method());
-  if(!ssl_ctx) {
-    result = CURLE_OUT_OF_MEMORY;
-    goto out;
-  }
-  conn_config = Curl_ssl_cf_get_primary_config(cf);
-  if(!conn_config) {
-    result = CURLE_FAILED_INIT;
-    goto out;
-  }
-
-#if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
-  if(ngtcp2_crypto_boringssl_configure_client_context(ssl_ctx) != 0) {
-    failf(data, "ngtcp2_crypto_boringssl_configure_client_context failed");
-    goto out;
-  }
-#else
-  if(ngtcp2_crypto_quictls_configure_client_context(ssl_ctx) != 0) {
-    failf(data, "ngtcp2_crypto_quictls_configure_client_context failed");
-    goto out;
-  }
-#endif
-
-  SSL_CTX_set_default_verify_paths(ssl_ctx);
-
-  {
-    const char *curves = conn_config->curves ?
-      conn_config->curves : QUIC_GROUPS;
-    if(!SSL_CTX_set1_curves_list(ssl_ctx, curves)) {
-      failf(data, "failed setting curves list for QUIC: '%s'", curves);
-      return CURLE_SSL_CIPHER;
-    }
-  }
-
-#ifndef OPENSSL_IS_BORINGSSL
-  {
-    const char *ciphers13 = conn_config->cipher_list13 ?
-      conn_config->cipher_list13 : QUIC_CIPHERS;
-    if(SSL_CTX_set_ciphersuites(ssl_ctx, ciphers13) != 1) {
-      failf(data, "failed setting QUIC cipher suite: %s", ciphers13);
-      return CURLE_SSL_CIPHER;
-    }
-    infof(data, "QUIC cipher selection: %s", ciphers13);
-  }
-#endif
-
-  /* Open the file if a TLS or QUIC backend has not done this before. */
-  Curl_tls_keylog_open();
-  if(Curl_tls_keylog_enabled()) {
-    SSL_CTX_set_keylog_callback(ssl_ctx, keylog_callback);
-  }
-
-  /* OpenSSL always tries to verify the peer, this only says whether it should
-   * fail to connect if the verification fails, or if it should continue
-   * anyway. In the latter case the result of the verification is checked with
-   * SSL_get_verify_result() below. */
-  SSL_CTX_set_verify(ssl_ctx, conn_config->verifypeer ?
-                     SSL_VERIFY_PEER : SSL_VERIFY_NONE, NULL);
-
-  /* give application a chance to interfere with SSL set up. */
-  if(data->set.ssl.fsslctx) {
-    /* When a user callback is installed to modify the SSL_CTX,
-     * we need to do the full initialization before calling it.
-     * See: #11800 */
-    if(!ctx->x509_store_setup) {
-      result = Curl_ssl_setup_x509_store(cf, data, ssl_ctx);
-      if(result)
-        goto out;
-      ctx->x509_store_setup = TRUE;
-    }
-    Curl_set_in_callback(data, true);
-    result = (*data->set.ssl.fsslctx)(data, ssl_ctx,
-                                      data->set.ssl.fsslctxp);
-    Curl_set_in_callback(data, false);
-    if(result) {
-      failf(data, "error signaled by ssl ctx callback");
-      goto out;
-    }
-  }
-  result = CURLE_OK;
-
-out:
-  *pssl_ctx = result? NULL : ssl_ctx;
-  if(result && ssl_ctx)
-    SSL_CTX_free(ssl_ctx);
-  return result;
-}
-
-static CURLcode quic_set_client_cert(struct Curl_cfilter *cf,
-                                     struct Curl_easy *data)
-{
-  struct cf_ngtcp2_ctx *ctx = cf->ctx;
-  SSL_CTX *ssl_ctx = ctx->sslctx;
-  const struct ssl_config_data *ssl_config;
-
-  ssl_config = Curl_ssl_cf_get_config(cf, data);
-  DEBUGASSERT(ssl_config);
-
-  if(ssl_config->primary.clientcert || ssl_config->primary.cert_blob
-     || ssl_config->cert_type) {
-    return Curl_ossl_set_client_cert(
-        data, ssl_ctx, ssl_config->primary.clientcert,
-        ssl_config->primary.cert_blob, ssl_config->cert_type,
-        ssl_config->key, ssl_config->key_blob,
-        ssl_config->key_type, ssl_config->key_passwd);
-  }
-
-  return CURLE_OK;
-}
-
-/** SSL callbacks ***/
-
-static CURLcode quic_init_ssl(struct Curl_cfilter *cf,
-                              struct Curl_easy *data)
-{
-  struct cf_ngtcp2_ctx *ctx = cf->ctx;
-  const uint8_t *alpn = NULL;
-  size_t alpnlen = 0;
-
-  DEBUGASSERT(!ctx->ssl);
-  ctx->ssl = SSL_new(ctx->sslctx);
-
-  SSL_set_app_data(ctx->ssl, &ctx->conn_ref);
-  SSL_set_connect_state(ctx->ssl);
-  SSL_set_quic_use_legacy_codepoint(ctx->ssl, 0);
-
-  alpn = (const uint8_t *)H3_ALPN_H3_29 H3_ALPN_H3;
-  alpnlen = sizeof(H3_ALPN_H3_29) - 1 + sizeof(H3_ALPN_H3) - 1;
-  if(alpn)
-    SSL_set_alpn_protos(ctx->ssl, alpn, (int)alpnlen);
-
-  /* set SNI */
-  if(ctx->peer.sni) {
-    if(!SSL_set_tlsext_host_name(ctx->ssl, ctx->peer.sni)) {
-      failf(data, "Failed set SNI");
-      SSL_free(ctx->ssl);
-      ctx->ssl = NULL;
-      return CURLE_QUIC_CONNECT_ERROR;
-    }
-  }
-  return CURLE_OK;
-}
-#elif defined(USE_GNUTLS)
-static CURLcode quic_init_ssl(struct Curl_cfilter *cf,
-                              struct Curl_easy *data)
-{
-  struct cf_ngtcp2_ctx *ctx = cf->ctx;
-  struct ssl_primary_config *conn_config;
-  CURLcode result;
-  gnutls_datum_t alpn[2];
-  /* this will need some attention when HTTPS proxy over QUIC get fixed */
-  long * const pverifyresult = &data->set.ssl.certverifyresult;
-  int rc;
-
-  conn_config = Curl_ssl_cf_get_primary_config(cf);
-  if(!conn_config)
-    return CURLE_FAILED_INIT;
-
-  DEBUGASSERT(ctx->gtls == NULL);
-  ctx->gtls = calloc(1, sizeof(*(ctx->gtls)));
-  if(!ctx->gtls)
-    return CURLE_OUT_OF_MEMORY;
-
-  result = gtls_client_init(data, conn_config, &data->set.ssl,
-                            &ctx->peer, ctx->gtls, pverifyresult);
-  if(result)
-    return result;
-
-  gnutls_session_set_ptr(ctx->gtls->session, &ctx->conn_ref);
-
-  if(ngtcp2_crypto_gnutls_configure_client_session(ctx->gtls->session) != 0) {
-    CURL_TRC_CF(data, cf,
-                "ngtcp2_crypto_gnutls_configure_client_session failed\n");
-    return CURLE_QUIC_CONNECT_ERROR;
-  }
-
-  rc = gnutls_priority_set_direct(ctx->gtls->session, QUIC_PRIORITY, NULL);
-  if(rc < 0) {
-    CURL_TRC_CF(data, cf, "gnutls_priority_set_direct failed: %s\n",
-                gnutls_strerror(rc));
-    return CURLE_QUIC_CONNECT_ERROR;
-  }
-
-  /* Open the file if a TLS or QUIC backend has not done this before. */
-  Curl_tls_keylog_open();
-  if(Curl_tls_keylog_enabled()) {
-    gnutls_session_set_keylog_function(ctx->gtls->session, keylog_callback);
-  }
-
-  /* strip the first byte (the length) from NGHTTP3_ALPN_H3 */
-  alpn[0].data = (unsigned char *)H3_ALPN_H3_29 + 1;
-  alpn[0].size = sizeof(H3_ALPN_H3_29) - 2;
-  alpn[1].data = (unsigned char *)H3_ALPN_H3 + 1;
-  alpn[1].size = sizeof(H3_ALPN_H3) - 2;
-
-  gnutls_alpn_set_protocols(ctx->gtls->session,
-                            alpn, 2, GNUTLS_ALPN_MANDATORY);
-  return CURLE_OK;
-}
-#elif defined(USE_WOLFSSL)
-
-static CURLcode quic_ssl_ctx(WOLFSSL_CTX **pssl_ctx,
-                             struct Curl_cfilter *cf, struct Curl_easy *data)
-{
-  CURLcode result = CURLE_FAILED_INIT;
-  struct ssl_primary_config *conn_config;
-  WOLFSSL_CTX *ssl_ctx = NULL;
-
-  conn_config = Curl_ssl_cf_get_primary_config(cf);
-  if(!conn_config) {
-    result = CURLE_FAILED_INIT;
-    goto out;
-  }
-
-  ssl_ctx = wolfSSL_CTX_new(wolfTLSv1_3_client_method());
-  if(!ssl_ctx) {
-    result = CURLE_OUT_OF_MEMORY;
-    goto out;
-  }
-
-  if(ngtcp2_crypto_wolfssl_configure_client_context(ssl_ctx) != 0) {
-    failf(data, "ngtcp2_crypto_wolfssl_configure_client_context failed");
-    result = CURLE_FAILED_INIT;
-    goto out;
-  }
-
-  wolfSSL_CTX_set_default_verify_paths(ssl_ctx);
-
-  if(wolfSSL_CTX_set_cipher_list(ssl_ctx, conn_config->cipher_list13 ?
-                                 conn_config->cipher_list13 :
-                                 QUIC_CIPHERS) != 1) {
-    char error_buffer[256];
-    ERR_error_string_n(ERR_get_error(), error_buffer, sizeof(error_buffer));
-    failf(data, "wolfSSL failed to set ciphers: %s", error_buffer);
-    goto out;
-  }
-
-  if(wolfSSL_CTX_set1_groups_list(ssl_ctx, conn_config->curves ?
-                                  conn_config->curves :
-                                  (char *)QUIC_GROUPS) != 1) {
-    failf(data, "wolfSSL failed to set curves");
-    goto out;
-  }
-
-  /* Open the file if a TLS or QUIC backend has not done this before. */
-  Curl_tls_keylog_open();
-  if(Curl_tls_keylog_enabled()) {
-#if defined(HAVE_SECRET_CALLBACK)
-    wolfSSL_CTX_set_keylog_callback(ssl_ctx, keylog_callback);
-#else
-    failf(data, "wolfSSL was built without keylog callback");
-    goto out;
-#endif
-  }
-
-  if(conn_config->verifypeer) {
-    const char * const ssl_cafile = conn_config->CAfile;
-    const char * const ssl_capath = conn_config->CApath;
-
-    wolfSSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_PEER, NULL);
-    if(ssl_cafile || ssl_capath) {
-      /* tell wolfSSL where to find CA certificates that are used to verify
-         the server's certificate. */
-      int rc =
-        wolfSSL_CTX_load_verify_locations_ex(ssl_ctx, ssl_cafile, ssl_capath,
-                                             WOLFSSL_LOAD_FLAG_IGNORE_ERR);
-      if(SSL_SUCCESS != rc) {
-        /* Fail if we insist on successfully verifying the server. */
-        failf(data, "error setting certificate verify locations:"
-              "  CAfile: %s CApath: %s",
-              ssl_cafile ? ssl_cafile : "none",
-              ssl_capath ? ssl_capath : "none");
-        goto out;
-      }
-      infof(data, " CAfile: %s", ssl_cafile ? ssl_cafile : "none");
-      infof(data, " CApath: %s", ssl_capath ? ssl_capath : "none");
-    }
-#ifdef CURL_CA_FALLBACK
-    else {
-      /* verifying the peer without any CA certificates won't work so
-         use wolfssl's built-in default as fallback */
-      wolfSSL_CTX_set_default_verify_paths(ssl_ctx);
-    }
-#endif
-  }
-  else {
-    wolfSSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, NULL);
-  }
-
-  /* give application a chance to interfere with SSL set up. */
-  if(data->set.ssl.fsslctx) {
-    Curl_set_in_callback(data, true);
-    result = (*data->set.ssl.fsslctx)(data, ssl_ctx,
-                                      data->set.ssl.fsslctxp);
-    Curl_set_in_callback(data, false);
-    if(result) {
-      failf(data, "error signaled by ssl ctx callback");
-      goto out;
-    }
-  }
-  result = CURLE_OK;
-
-out:
-  *pssl_ctx = result? NULL : ssl_ctx;
-  if(result && ssl_ctx)
-    SSL_CTX_free(ssl_ctx);
-  return result;
-}
-
-/** SSL callbacks ***/
-
-static CURLcode quic_init_ssl(struct Curl_cfilter *cf,
-                              struct Curl_easy *data)
-{
-  struct cf_ngtcp2_ctx *ctx = cf->ctx;
-  const uint8_t *alpn = NULL;
-  size_t alpnlen = 0;
-  /* this will need some attention when HTTPS proxy over QUIC get fixed */
-  const char * const hostname = cf->conn->host.name;
-
-  (void)data;
-  DEBUGASSERT(!ctx->ssl);
-  ctx->ssl = wolfSSL_new(ctx->sslctx);
-
-  wolfSSL_set_app_data(ctx->ssl, &ctx->conn_ref);
-  wolfSSL_set_connect_state(ctx->ssl);
-  wolfSSL_set_quic_use_legacy_codepoint(ctx->ssl, 0);
-
-  alpn = (const uint8_t *)H3_ALPN_H3_29 H3_ALPN_H3;
-  alpnlen = sizeof(H3_ALPN_H3_29) - 1 + sizeof(H3_ALPN_H3) - 1;
-  if(alpn)
-    wolfSSL_set_alpn_protos(ctx->ssl, alpn, (int)alpnlen);
-
-  /* set SNI */
-  wolfSSL_UseSNI(ctx->ssl, WOLFSSL_SNI_HOST_NAME,
-                 hostname, (unsigned short)strlen(hostname));
-
-  return CURLE_OK;
-}
-#endif /* defined(USE_WOLFSSL) */
 
 static int cb_handshake_completed(ngtcp2_conn *tconn, void *user_data)
 {
   (void)user_data;
   (void)tconn;
   return 0;
-}
-
-static void report_consumed_data(struct Curl_cfilter *cf,
-                                 struct Curl_easy *data,
-                                 size_t consumed)
-{
-  struct h3_stream_ctx *stream = H3_STREAM_CTX(data);
-  struct cf_ngtcp2_ctx *ctx = cf->ctx;
-
-  if(!stream)
-    return;
-  /* the HTTP/1.1 response headers are written to the buffer, but
-   * consuming those does not count against flow control. */
-  if(stream->recv_buf_nonflow) {
-    if(consumed >= stream->recv_buf_nonflow) {
-      consumed -= stream->recv_buf_nonflow;
-      stream->recv_buf_nonflow = 0;
-    }
-    else {
-      stream->recv_buf_nonflow -= consumed;
-      consumed = 0;
-    }
-  }
-  if(consumed > 0) {
-    CURL_TRC_CF(data, cf, "[%" PRId64 "] ACK %zu bytes of DATA",
-                stream->id, consumed);
-    ngtcp2_conn_extend_max_stream_offset(ctx->qconn, stream->id,
-                                         consumed);
-    ngtcp2_conn_extend_max_offset(ctx->qconn, consumed);
-  }
 }
 
 static int cb_recv_stream_data(ngtcp2_conn *tconn, uint32_t flags,
@@ -1157,18 +705,22 @@ static void cf_ngtcp2_adjust_pollset(struct Curl_cfilter *cf,
                                       struct easy_pollset *ps)
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
-  bool want_recv = CURL_WANT_RECV(data);
-  bool want_send = CURL_WANT_SEND(data);
+  bool want_recv, want_send;
 
-  if(ctx->qconn && (want_recv || want_send)) {
+  if(!ctx->qconn)
+    return;
+
+  Curl_pollset_check(data, ps, ctx->q.sockfd, &want_recv, &want_send);
+  if(want_recv || want_send) {
     struct h3_stream_ctx *stream = H3_STREAM_CTX(data);
     struct cf_call_data save;
     bool c_exhaust, s_exhaust;
 
     CF_DATA_SAVE(save, cf, data);
-    c_exhaust = !ngtcp2_conn_get_cwnd_left(ctx->qconn) ||
-                !ngtcp2_conn_get_max_data_left(ctx->qconn);
-    s_exhaust = stream && stream->id >= 0 && stream->quic_flow_blocked;
+    c_exhaust = want_send && (!ngtcp2_conn_get_cwnd_left(ctx->qconn) ||
+                !ngtcp2_conn_get_max_data_left(ctx->qconn));
+    s_exhaust = want_send && stream && stream->id >= 0 &&
+                stream->quic_flow_blocked;
     want_recv = (want_recv || c_exhaust || s_exhaust);
     want_send = (!s_exhaust && want_send) ||
                  !Curl_bufq_is_empty(&ctx->q.sendbuf);
@@ -1207,46 +759,18 @@ static int cb_h3_stream_close(nghttp3_conn *conn, int64_t stream_id,
   return 0;
 }
 
-/*
- * write_resp_raw() copies response data in raw format to the `data`'s
-  * receive buffer. If not enough space is available, it appends to the
- * `data`'s overflow buffer.
- */
-static CURLcode write_resp_raw(struct Curl_cfilter *cf,
-                               struct Curl_easy *data,
-                               const void *mem, size_t memlen,
-                               bool flow)
+static CURLcode write_resp_hds(struct Curl_easy *data,
+                               const char *buf, size_t blen)
 {
-  struct h3_stream_ctx *stream = H3_STREAM_CTX(data);
-  CURLcode result = CURLE_OK;
-  ssize_t nwritten;
-
-  (void)cf;
-  if(!stream) {
-    return CURLE_RECV_ERROR;
-  }
-  nwritten = Curl_bufq_write(&stream->recvbuf, mem, memlen, &result);
-  if(nwritten < 0) {
-    return result;
-  }
-
-  if(!flow)
-    stream->recv_buf_nonflow += (size_t)nwritten;
-
-  if((size_t)nwritten < memlen) {
-    /* This MUST not happen. Our recbuf is dimensioned to hold the
-     * full max_stream_window and then some for this very reason. */
-    DEBUGASSERT(0);
-    return CURLE_RECV_ERROR;
-  }
-  return result;
+  return Curl_xfer_write_resp(data, (char *)buf, blen, FALSE);
 }
 
 static int cb_h3_recv_data(nghttp3_conn *conn, int64_t stream3_id,
-                           const uint8_t *buf, size_t buflen,
+                           const uint8_t *buf, size_t blen,
                            void *user_data, void *stream_user_data)
 {
   struct Curl_cfilter *cf = user_data;
+  struct cf_ngtcp2_ctx *ctx = cf->ctx;
   struct Curl_easy *data = stream_user_data;
   struct h3_stream_ctx *stream = H3_STREAM_CTX(data);
   CURLcode result;
@@ -1257,14 +781,19 @@ static int cb_h3_recv_data(nghttp3_conn *conn, int64_t stream3_id,
   if(!stream)
     return NGHTTP3_ERR_CALLBACK_FAILURE;
 
-  result = write_resp_raw(cf, data, buf, buflen, TRUE);
+  result = Curl_xfer_write_resp(data, (char *)buf, blen, FALSE);
   if(result) {
     CURL_TRC_CF(data, cf, "[%" PRId64 "] DATA len=%zu, ERROR receiving %d",
-                stream->id, buflen, result);
+                stream->id, blen, result);
     return NGHTTP3_ERR_CALLBACK_FAILURE;
   }
-  CURL_TRC_CF(data, cf, "[%" PRId64 "] DATA len=%zu", stream->id, buflen);
-  h3_drain_stream(cf, data);
+  if(blen) {
+    CURL_TRC_CF(data, cf, "[%" PRId64 "] ACK %zu bytes of DATA",
+                stream->id, blen);
+    ngtcp2_conn_extend_max_stream_offset(ctx->qconn, stream->id, blen);
+    ngtcp2_conn_extend_max_offset(ctx->qconn, blen);
+  }
+  CURL_TRC_CF(data, cf, "[%" PRId64 "] DATA len=%zu", stream->id, blen);
   return 0;
 }
 
@@ -1299,7 +828,7 @@ static int cb_h3_end_headers(nghttp3_conn *conn, int64_t stream_id,
   if(!stream)
     return 0;
   /* add a CRLF only if we've received some headers */
-  result = write_resp_raw(cf, data, "\r\n", 2, FALSE);
+  result = write_resp_hds(data, "\r\n", 2);
   if(result) {
     return -1;
   }
@@ -1345,7 +874,7 @@ static int cb_h3_recv_header(nghttp3_conn *conn, int64_t stream_id,
     ncopy = msnprintf(line, sizeof(line), "HTTP/3 %03d \r\n",
                       stream->status_code);
     CURL_TRC_CF(data, cf, "[%" PRId64 "] status: %s", stream_id, line);
-    result = write_resp_raw(cf, data, line, ncopy, FALSE);
+    result = write_resp_hds(data, line, ncopy);
     if(result) {
       return -1;
     }
@@ -1355,19 +884,19 @@ static int cb_h3_recv_header(nghttp3_conn *conn, int64_t stream_id,
     CURL_TRC_CF(data, cf, "[%" PRId64 "] header: %.*s: %.*s",
                 stream_id, (int)h3name.len, h3name.base,
                 (int)h3val.len, h3val.base);
-    result = write_resp_raw(cf, data, h3name.base, h3name.len, FALSE);
+    result = write_resp_hds(data, (const char *)h3name.base, h3name.len);
     if(result) {
       return -1;
     }
-    result = write_resp_raw(cf, data, ": ", 2, FALSE);
+    result = write_resp_hds(data, ": ", 2);
     if(result) {
       return -1;
     }
-    result = write_resp_raw(cf, data, h3val.base, h3val.len, FALSE);
+    result = write_resp_hds(data, (const char *)h3val.base, h3val.len);
     if(result) {
       return -1;
     }
-    result = write_resp_raw(cf, data, "\r\n", 2, FALSE);
+    result = write_resp_hds(data, "\r\n", 2);
     if(result) {
       return -1;
     }
@@ -1503,7 +1032,7 @@ static ssize_t recv_closed_stream(struct Curl_cfilter *cf,
   if(stream->reset) {
     failf(data,
           "HTTP/3 stream %" PRId64 " reset by server", stream->id);
-    *err = stream->resp_hds_complete? CURLE_PARTIAL_FILE : CURLE_HTTP3;
+    *err = data->req.bytecount? CURLE_PARTIAL_FILE : CURLE_HTTP3;
     goto out;
   }
   else if(!stream->resp_hds_complete) {
@@ -1523,7 +1052,7 @@ out:
 
 /* incoming data frames on the h3 stream */
 static ssize_t cf_ngtcp2_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
-                              char *buf, size_t len, CURLcode *err)
+                              char *buf, size_t blen, CURLcode *err)
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
   struct h3_stream_ctx *stream = H3_STREAM_CTX(data);
@@ -1532,6 +1061,7 @@ static ssize_t cf_ngtcp2_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
   struct pkt_io_ctx pktx;
 
   (void)ctx;
+  (void)buf;
 
   CF_DATA_SAVE(save, cf, data);
   DEBUGASSERT(cf->connected);
@@ -1547,46 +1077,18 @@ static ssize_t cf_ngtcp2_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
     goto out;
   }
 
-  if(!Curl_bufq_is_empty(&stream->recvbuf)) {
-    nread = Curl_bufq_read(&stream->recvbuf,
-                           (unsigned char *)buf, len, err);
-    if(nread < 0) {
-      CURL_TRC_CF(data, cf, "[%" PRId64 "] read recvbuf(len=%zu) "
-                  "-> %zd, %d", stream->id, len, nread, *err);
-      goto out;
-    }
-    report_consumed_data(cf, data, nread);
-  }
-
   if(cf_progress_ingress(cf, data, &pktx)) {
     *err = CURLE_RECV_ERROR;
     nread = -1;
     goto out;
   }
 
-  /* recvbuf had nothing before, maybe after progressing ingress? */
-  if(nread < 0 && !Curl_bufq_is_empty(&stream->recvbuf)) {
-    nread = Curl_bufq_read(&stream->recvbuf,
-                           (unsigned char *)buf, len, err);
-    if(nread < 0) {
-      CURL_TRC_CF(data, cf, "[%" PRId64 "] read recvbuf(len=%zu) "
-                  "-> %zd, %d", stream->id, len, nread, *err);
-      goto out;
-    }
-    report_consumed_data(cf, data, nread);
+  if(stream->closed) {
+    nread = recv_closed_stream(cf, data, stream, err);
+    goto out;
   }
-
-  if(nread > 0) {
-    h3_drain_stream(cf, data);
-  }
-  else {
-    if(stream->closed) {
-      nread = recv_closed_stream(cf, data, stream, err);
-      goto out;
-    }
-    *err = CURLE_AGAIN;
-    nread = -1;
-  }
+  *err = CURLE_AGAIN;
+  nread = -1;
 
 out:
   if(cf_progress_egress(cf, data, &pktx)) {
@@ -1600,8 +1102,8 @@ out:
       nread = -1;
     }
   }
-  CURL_TRC_CF(data, cf, "[%" PRId64 "] cf_recv(len=%zu) -> %zd, %d",
-              stream? stream->id : -1, len, nread, *err);
+  CURL_TRC_CF(data, cf, "[%" PRId64 "] cf_recv(blen=%zu) -> %zd, %d",
+              stream? stream->id : -1, blen, nread, *err);
   CF_DATA_RESTORE(cf, save);
   return nread;
 }
@@ -1894,6 +1396,8 @@ static ssize_t cf_ngtcp2_send(struct Curl_cfilter *cf, struct Curl_easy *data,
       sent = (ssize_t)len;
       goto out;
     }
+    CURL_TRC_CF(data, cf, "[%" PRId64 "] send_body(len=%zu) "
+                "-> stream closed", stream->id, len);
     *err = CURLE_HTTP3;
     sent = -1;
     goto out;
@@ -1944,49 +1448,12 @@ static CURLcode qng_verify_peer(struct Curl_cfilter *cf,
                                 struct Curl_easy *data)
 {
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
-  struct ssl_primary_config *conn_config;
-  CURLcode result = CURLE_OK;
-
-  conn_config = Curl_ssl_cf_get_primary_config(cf);
-  if(!conn_config)
-    return CURLE_FAILED_INIT;
 
   cf->conn->bits.multiplex = TRUE; /* at least potentially multiplexed */
   cf->conn->httpversion = 30;
   cf->conn->bundle->multiuse = BUNDLE_MULTIPLEX;
 
-  if(conn_config->verifyhost) {
-#ifdef USE_OPENSSL
-    X509 *server_cert;
-    server_cert = SSL_get1_peer_certificate(ctx->ssl);
-    if(!server_cert) {
-      return CURLE_PEER_FAILED_VERIFICATION;
-    }
-    result = Curl_ossl_verifyhost(data, cf->conn, &ctx->peer, server_cert);
-    X509_free(server_cert);
-    if(result)
-      return result;
-#elif defined(USE_GNUTLS)
-    result = Curl_gtls_verifyserver(data, ctx->gtls->session,
-                                    conn_config, &data->set.ssl, &ctx->peer,
-                                    data->set.str[STRING_SSL_PINNEDPUBLICKEY]);
-    if(result)
-      return result;
-#elif defined(USE_WOLFSSL)
-    if(!ctx->peer.sni ||
-       wolfSSL_check_domain_name(ctx->ssl, ctx->peer.sni) == SSL_FAILURE)
-      return CURLE_PEER_FAILED_VERIFICATION;
-#endif
-    infof(data, "Verified certificate just fine");
-  }
-  else
-    infof(data, "Skipped certificate verification");
-#ifdef USE_OPENSSL
-  if(data->set.ssl.certinfo)
-    /* asked to gather certificate info */
-    (void)Curl_ossl_certchain(data, ctx->ssl);
-#endif
-  return result;
+  return Curl_vquic_tls_verify_peer(&ctx->tls, cf, data, &ctx->peer);
 }
 
 static CURLcode recv_pkt(const unsigned char *pkt, size_t pktlen,
@@ -2039,7 +1506,6 @@ static CURLcode cf_progress_ingress(struct Curl_cfilter *cf,
   struct cf_ngtcp2_ctx *ctx = cf->ctx;
   struct pkt_io_ctx local_pktx;
   size_t pkts_chunk = 128, i;
-  size_t pkts_max = 10 * pkts_chunk;
   CURLcode result = CURLE_OK;
 
   if(!pktx) {
@@ -2050,26 +1516,17 @@ static CURLcode cf_progress_ingress(struct Curl_cfilter *cf,
     pktx_update_time(pktx, cf);
   }
 
-#ifdef USE_OPENSSL
-  if(!ctx->x509_store_setup) {
-    result = Curl_ssl_setup_x509_store(cf, data, ctx->sslctx);
-    if(result)
-      return result;
-    ctx->x509_store_setup = TRUE;
-  }
-#endif
+  result = Curl_vquic_tls_before_recv(&ctx->tls, cf, data);
+  if(result)
+    return result;
 
-  for(i = 0; i < pkts_max; i += pkts_chunk) {
+  for(i = 0; i < 4; ++i) {
+    if(i)
+      pktx_update_time(pktx, cf);
     pktx->pkt_count = 0;
     result = vquic_recv_packets(cf, data, &ctx->q, pkts_chunk,
                                 recv_pkt, pktx);
-    if(result) /* error */
-      break;
-    if(pktx->pkt_count < pkts_chunk) /* got less than we could */
-      break;
-    /* give egress a chance before we receive more */
-    result = cf_progress_egress(cf, data, pktx);
-    if(result) /* error */
+    if(result || !pktx->pkt_count) /* error or got nothing */
       break;
   }
   return result;
@@ -2220,7 +1677,7 @@ static CURLcode cf_progress_egress(struct Curl_cfilter *cf,
   }
 
   /* In UDP, there is a maximum theoretical packet paload length and
-   * a minimum payload length that is "guarantueed" to work.
+   * a minimum payload length that is "guaranteed" to work.
    * To detect if this minimum payload can be increased, ngtcp2 sends
    * now and then a packet payload larger than the minimum. It that
    * is ACKed by the peer, both parties know that it works and
@@ -2308,9 +1765,9 @@ out:
 static bool cf_ngtcp2_data_pending(struct Curl_cfilter *cf,
                                    const struct Curl_easy *data)
 {
-  const struct h3_stream_ctx *stream = H3_STREAM_CTX(data);
   (void)cf;
-  return stream && !Curl_bufq_is_empty(&stream->recvbuf);
+  (void)data;
+  return FALSE;
 }
 
 static CURLcode h3_data_pause(struct Curl_cfilter *cf,
@@ -2382,25 +1839,7 @@ static void cf_ngtcp2_ctx_clear(struct cf_ngtcp2_ctx *ctx)
   if(ctx->qlogfd != -1) {
     close(ctx->qlogfd);
   }
-#ifdef USE_OPENSSL
-  if(ctx->ssl)
-    SSL_free(ctx->ssl);
-  if(ctx->sslctx)
-    SSL_CTX_free(ctx->sslctx);
-#elif defined(USE_GNUTLS)
-  if(ctx->gtls) {
-    if(ctx->gtls->cred)
-      gnutls_certificate_free_credentials(ctx->gtls->cred);
-    if(ctx->gtls->session)
-      gnutls_deinit(ctx->gtls->session);
-    free(ctx->gtls);
-  }
-#elif defined(USE_WOLFSSL)
-  if(ctx->ssl)
-    wolfSSL_free(ctx->ssl);
-  if(ctx->sslctx)
-    wolfSSL_CTX_free(ctx->sslctx);
-#endif
+  Curl_vquic_tls_cleanup(&ctx->tls);
   vquic_ctx_free(&ctx->q);
   if(ctx->h3conn)
     nghttp3_conn_del(ctx->h3conn);
@@ -2459,6 +1898,37 @@ static void cf_ngtcp2_destroy(struct Curl_cfilter *cf, struct Curl_easy *data)
   (void)save;
 }
 
+static CURLcode tls_ctx_setup(struct quic_tls_ctx *ctx,
+                              struct Curl_cfilter *cf,
+                              struct Curl_easy *data)
+{
+  (void)cf;
+#ifdef USE_OPENSSL
+#if defined(OPENSSL_IS_BORINGSSL) || defined(OPENSSL_IS_AWSLC)
+  if(ngtcp2_crypto_boringssl_configure_client_context(ctx->ssl_ctx) != 0) {
+    failf(data, "ngtcp2_crypto_boringssl_configure_client_context failed");
+    return CURLE_FAILED_INIT;
+  }
+#else
+  if(ngtcp2_crypto_quictls_configure_client_context(ctx->ssl_ctx) != 0) {
+    failf(data, "ngtcp2_crypto_quictls_configure_client_context failed");
+    return CURLE_FAILED_INIT;
+  }
+#endif /* !OPENSSL_IS_BORINGSSL && !OPENSSL_IS_AWSLC */
+#elif defined(USE_GNUTLS)
+  if(ngtcp2_crypto_gnutls_configure_client_session(ctx->gtls->session) != 0) {
+    failf(data, "ngtcp2_crypto_gnutls_configure_client_session failed");
+    return CURLE_FAILED_INIT;
+  }
+#elif defined(USE_WOLFSSL)
+  if(ngtcp2_crypto_wolfssl_configure_client_context(ctx->ssl_ctx) != 0) {
+    failf(data, "ngtcp2_crypto_wolfssl_configure_client_context failed");
+    return CURLE_FAILED_INIT;
+  }
+#endif
+  return CURLE_OK;
+}
+
 /*
  * Might be called twice for happy eyeballs.
  */
@@ -2483,21 +1953,10 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
   if(result)
     return result;
 
-#ifdef USE_OPENSSL
-  result = quic_ssl_ctx(&ctx->sslctx, cf, data);
-  if(result)
-    return result;
-
-  result = quic_set_client_cert(cf, data);
-  if(result)
-    return result;
-#elif defined(USE_WOLFSSL)
-  result = quic_ssl_ctx(&ctx->sslctx, cf, data);
-  if(result)
-    return result;
-#endif
-
-  result = quic_init_ssl(cf, data);
+#define H3_ALPN "\x2h3\x5h3-29"
+  result = Curl_vquic_tls_init(&ctx->tls, cf, data, &ctx->peer,
+                               H3_ALPN, sizeof(H3_ALPN) - 1,
+                               tls_ctx_setup, &ctx->conn_ref);
   if(result)
     return result;
 
@@ -2519,8 +1978,7 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
   if(result)
     return result;
 
-  Curl_cf_socket_peek(cf->next, data, &ctx->q.sockfd,
-                      &sockaddr, NULL, NULL, NULL, NULL);
+  Curl_cf_socket_peek(cf->next, data, &ctx->q.sockfd, &sockaddr, NULL);
   if(!sockaddr)
     return CURLE_QUIC_CONNECT_ERROR;
   ctx->q.local_addrlen = sizeof(ctx->q.local_addr);
@@ -2544,9 +2002,9 @@ static CURLcode cf_connect_start(struct Curl_cfilter *cf,
     return CURLE_QUIC_CONNECT_ERROR;
 
 #ifdef USE_GNUTLS
-  ngtcp2_conn_set_tls_native_handle(ctx->qconn, ctx->gtls->session);
+  ngtcp2_conn_set_tls_native_handle(ctx->qconn, ctx->tls.gtls->session);
 #else
-  ngtcp2_conn_set_tls_native_handle(ctx->qconn, ctx->ssl);
+  ngtcp2_conn_set_tls_native_handle(ctx->qconn, ctx->tls.ssl);
 #endif
 
   ngtcp2_ccerr_default(&ctx->last_error);
@@ -2635,13 +2093,11 @@ out:
 
 #ifndef CURL_DISABLE_VERBOSE_STRINGS
   if(result) {
-    const char *r_ip = NULL;
-    int r_port = 0;
+    struct ip_quadruple ip;
 
-    Curl_cf_socket_peek(cf->next, data, NULL, NULL,
-                        &r_ip, &r_port, NULL, NULL);
+    Curl_cf_socket_peek(cf->next, data, NULL, NULL, &ip);
     infof(data, "QUIC connect to %s port %u failed: %s",
-          r_ip, r_port, curl_easy_strerror(result));
+          ip.remote_ip, ip.remote_port, curl_easy_strerror(result));
   }
 #endif
   if(!result && ctx->qconn) {
@@ -2677,8 +2133,8 @@ static CURLcode cf_ngtcp2_query(struct Curl_cfilter *cf,
     return CURLE_OK;
   }
   case CF_QUERY_CONNECT_REPLY_MS:
-    if(ctx->got_first_byte) {
-      timediff_t ms = Curl_timediff(ctx->first_byte_at, ctx->started_at);
+    if(ctx->q.got_first_byte) {
+      timediff_t ms = Curl_timediff(ctx->q.first_byte_at, ctx->started_at);
       *pres1 = (ms < INT_MAX)? (int)ms : INT_MAX;
     }
     else
@@ -2686,8 +2142,8 @@ static CURLcode cf_ngtcp2_query(struct Curl_cfilter *cf,
     return CURLE_OK;
   case CF_QUERY_TIMER_CONNECT: {
     struct curltime *when = pres2;
-    if(ctx->got_first_byte)
-      *when = ctx->first_byte_at;
+    if(ctx->q.got_first_byte)
+      *when = ctx->q.first_byte_at;
     return CURLE_OK;
   }
   case CF_QUERY_TIMER_APPCONNECT: {

@@ -59,6 +59,7 @@
 #include "file.h"
 #include "speedcheck.h"
 #include "getinfo.h"
+#include "multiif.h"
 #include "transfer.h"
 #include "url.h"
 #include "parsedate.h" /* for the week day and month names */
@@ -113,7 +114,7 @@ const struct Curl_handler Curl_handler_file = {
   ZERO_NULL,                            /* domore_getsock */
   ZERO_NULL,                            /* perform_getsock */
   file_disconnect,                      /* disconnect */
-  ZERO_NULL,                            /* readwrite */
+  ZERO_NULL,                            /* write_resp */
   ZERO_NULL,                            /* connection_check */
   ZERO_NULL,                            /* attach connection */
   0,                                    /* defport */
@@ -290,16 +291,17 @@ static CURLcode file_upload(struct Curl_easy *data)
   int fd;
   int mode;
   CURLcode result = CURLE_OK;
-  char *buf = data->state.buffer;
+  char *xfer_ulbuf;
+  size_t xfer_ulblen;
   curl_off_t bytecount = 0;
   struct_stat file_stat;
-  const char *buf2;
+  const char *sendbuf;
+  bool eos = FALSE;
 
   /*
    * Since FILE: doesn't do the full init, we need to provide some extra
    * assignments here.
    */
-  data->req.upload_fromhere = buf;
 
   if(!dir)
     return CURLE_FILE_COULDNT_READ_FILE; /* fix: better error code */
@@ -338,11 +340,16 @@ static CURLcode file_upload(struct Curl_easy *data)
     data->state.resume_from = (curl_off_t)file_stat.st_size;
   }
 
-  while(!result) {
+  result = Curl_multi_xfer_ulbuf_borrow(data, &xfer_ulbuf, &xfer_ulblen);
+  if(result)
+    goto out;
+
+  while(!result && !eos) {
     size_t nread;
     ssize_t nwrite;
     size_t readcount;
-    result = Curl_fillreadbuffer(data, data->set.buffer_size, &readcount);
+
+    result = Curl_client_read(data, xfer_ulbuf, xfer_ulblen, &readcount, &eos);
     if(result)
       break;
 
@@ -356,19 +363,19 @@ static CURLcode file_upload(struct Curl_easy *data)
       if((curl_off_t)nread <= data->state.resume_from) {
         data->state.resume_from -= nread;
         nread = 0;
-        buf2 = buf;
+        sendbuf = xfer_ulbuf;
       }
       else {
-        buf2 = buf + data->state.resume_from;
+        sendbuf = xfer_ulbuf + data->state.resume_from;
         nread -= (size_t)data->state.resume_from;
         data->state.resume_from = 0;
       }
     }
     else
-      buf2 = buf;
+      sendbuf = xfer_ulbuf;
 
     /* write the data to the target */
-    nwrite = write(fd, buf2, nread);
+    nwrite = write(fd, sendbuf, nread);
     if((size_t)nwrite != nread) {
       result = CURLE_SEND_ERROR;
       break;
@@ -386,7 +393,9 @@ static CURLcode file_upload(struct Curl_easy *data)
   if(!result && Curl_pgrsUpdate(data))
     result = CURLE_ABORTED_BY_CALLBACK;
 
+out:
   close(fd);
+  Curl_multi_xfer_ulbuf_release(data, xfer_ulbuf);
 
   return result;
 }
@@ -413,13 +422,12 @@ static CURLcode file_do(struct Curl_easy *data, bool *done)
   curl_off_t expected_size = -1;
   bool size_known;
   bool fstated = FALSE;
-  char *buf = data->state.buffer;
   int fd;
   struct FILEPROTO *file;
+  char *xfer_buf;
+  size_t xfer_blen;
 
   *done = TRUE; /* unconditionally */
-
-  Curl_pgrsStartNow(data);
 
   if(data->state.upload)
     return file_upload(data);
@@ -540,7 +548,9 @@ static CURLcode file_do(struct Curl_easy *data, bool *done)
       return CURLE_BAD_DOWNLOAD_RESUME;
   }
 
-  Curl_pgrsTime(data, TIMER_STARTTRANSFER);
+  result = Curl_multi_xfer_buf_borrow(data, &xfer_buf, &xfer_blen);
+  if(result)
+    goto out;
 
   while(!result) {
     ssize_t nread;
@@ -548,16 +558,16 @@ static CURLcode file_do(struct Curl_easy *data, bool *done)
     size_t bytestoread;
 
     if(size_known) {
-      bytestoread = (expected_size < data->set.buffer_size) ?
-        curlx_sotouz(expected_size) : (size_t)data->set.buffer_size;
+      bytestoread = (expected_size < (curl_off_t)(xfer_blen-1)) ?
+        curlx_sotouz(expected_size) : (xfer_blen-1);
     }
     else
-      bytestoread = data->set.buffer_size-1;
+      bytestoread = xfer_blen-1;
 
-    nread = read(fd, buf, bytestoread);
+    nread = read(fd, xfer_buf, bytestoread);
 
     if(nread > 0)
-      buf[nread] = 0;
+      xfer_buf[nread] = 0;
 
     if(nread <= 0 || (size_known && (expected_size == 0)))
       break;
@@ -565,18 +575,22 @@ static CURLcode file_do(struct Curl_easy *data, bool *done)
     if(size_known)
       expected_size -= nread;
 
-    result = Curl_client_write(data, CLIENTWRITE_BODY, buf, nread);
+    result = Curl_client_write(data, CLIENTWRITE_BODY, xfer_buf, nread);
     if(result)
-      return result;
+      goto out;
 
     if(Curl_pgrsUpdate(data))
       result = CURLE_ABORTED_BY_CALLBACK;
     else
       result = Curl_speedcheck(data, Curl_now());
+    if(result)
+      goto out;
   }
   if(Curl_pgrsUpdate(data))
     result = CURLE_ABORTED_BY_CALLBACK;
 
+out:
+  Curl_multi_xfer_buf_release(data, xfer_buf);
   return result;
 }
 

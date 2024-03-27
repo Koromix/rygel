@@ -7,6 +7,7 @@
  *
  * Copyright (C) Jacob Hoffman-Andrews,
  * <github@hoffman-andrews.com>
+ * Copyright (C) kpcyrd, <kpcyrd@archlinux.org>
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution. The terms
@@ -85,6 +86,7 @@ static int
 read_cb(void *userdata, uint8_t *buf, uintptr_t len, uintptr_t *out_n)
 {
   struct io_ctx *io_ctx = userdata;
+  struct ssl_connect_data *const connssl = io_ctx->cf->ctx;
   CURLcode result;
   int ret = 0;
   ssize_t nread = Curl_conn_cf_recv(io_ctx->cf->next, io_ctx->data,
@@ -96,6 +98,8 @@ read_cb(void *userdata, uint8_t *buf, uintptr_t len, uintptr_t *out_n)
     else
       ret = EINVAL;
   }
+  else if(nread == 0)
+    connssl->peer_closed = TRUE;
   *out_n = (int)nread;
   return ret;
 }
@@ -156,7 +160,7 @@ static ssize_t tls_recv_more(struct Curl_cfilter *cf,
     size_t errorlen;
     rustls_error(rresult, errorbuf, sizeof(errorbuf), &errorlen);
     failf(data, "rustls_connection_process_new_packets: %.*s",
-      errorlen, errorbuf);
+      (int)errorlen, errorbuf);
     *err = map_error(rresult);
     return -1;
   }
@@ -225,7 +229,7 @@ cr_recv(struct Curl_cfilter *cf, struct Curl_easy *data,
       char errorbuf[255];
       size_t errorlen;
       rustls_error(rresult, errorbuf, sizeof(errorbuf), &errorlen);
-      failf(data, "rustls_connection_read: %.*s", errorlen, errorbuf);
+      failf(data, "rustls_connection_read: %.*s", (int)errorlen, errorbuf);
       *err = CURLE_READ_ERROR;
       nread = -1;
       goto out;
@@ -291,7 +295,7 @@ cr_send(struct Curl_cfilter *cf, struct Curl_easy *data,
   DEBUGASSERT(backend);
   rconn = backend->conn;
 
-  CURL_TRC_CF(data, cf, "cf_send: %ld plain bytes", plainlen);
+  CURL_TRC_CF(data, cf, "cf_send: %zu plain bytes", plainlen);
 
   io_ctx.cf = cf;
   io_ctx.data = data;
@@ -301,7 +305,7 @@ cr_send(struct Curl_cfilter *cf, struct Curl_easy *data,
                                       &plainwritten);
     if(rresult != RUSTLS_RESULT_OK) {
       rustls_error(rresult, errorbuf, sizeof(errorbuf), &errorlen);
-      failf(data, "rustls_connection_write: %.*s", errorlen, errorbuf);
+      failf(data, "rustls_connection_write: %.*s", (int)errorlen, errorbuf);
       *err = CURLE_WRITE_ERROR;
       return -1;
     }
@@ -342,7 +346,7 @@ cr_send(struct Curl_cfilter *cf, struct Curl_easy *data,
 
 /* A server certificate verify callback for rustls that always returns
    RUSTLS_RESULT_OK, or in other words disable certificate verification. */
-static enum rustls_result
+static uint32_t
 cr_verify_none(void *userdata UNUSED_PARAM,
                const rustls_verify_server_cert_params *params UNUSED_PARAM)
 {
@@ -373,7 +377,10 @@ cr_init_backend(struct Curl_cfilter *cf, struct Curl_easy *data,
   struct ssl_primary_config *conn_config = Curl_ssl_cf_get_primary_config(cf);
   struct rustls_connection *rconn = NULL;
   struct rustls_client_config_builder *config_builder = NULL;
-  struct rustls_root_cert_store *roots = NULL;
+  const struct rustls_root_cert_store *roots = NULL;
+  struct rustls_root_cert_store_builder *roots_builder = NULL;
+  struct rustls_web_pki_server_cert_verifier_builder *verifier_builder = NULL;
+  struct rustls_server_cert_verifier *server_cert_verifier = NULL;
   const struct curl_blob *ca_info_blob = conn_config->ca_info_blob;
   const char * const ssl_cafile =
     /* CURLOPT_CAINFO_BLOB overrides CURLOPT_CAINFO */
@@ -414,38 +421,60 @@ cr_init_backend(struct Curl_cfilter *cf, struct Curl_easy *data,
       hostname = "example.invalid";
     }
   }
-  else if(ca_info_blob) {
-    roots = rustls_root_cert_store_new();
+  else if(ca_info_blob || ssl_cafile) {
+    roots_builder = rustls_root_cert_store_builder_new();
 
-    /* Enable strict parsing only if verification isn't disabled. */
-    result = rustls_root_cert_store_add_pem(roots, ca_info_blob->data,
-                                            ca_info_blob->len, verifypeer);
-    if(result != RUSTLS_RESULT_OK) {
-      failf(data, "rustls: failed to parse trusted certificates from blob");
-      rustls_root_cert_store_free(roots);
-      rustls_client_config_free(
-        rustls_client_config_builder_build(config_builder));
-      return CURLE_SSL_CACERT_BADFILE;
+    if(ca_info_blob) {
+      /* Enable strict parsing only if verification isn't disabled. */
+      result = rustls_root_cert_store_builder_add_pem(roots_builder,
+                                                      ca_info_blob->data,
+                                                      ca_info_blob->len,
+                                                      verifypeer);
+      if(result != RUSTLS_RESULT_OK) {
+        failf(data, "rustls: failed to parse trusted certificates from blob");
+        rustls_root_cert_store_builder_free(roots_builder);
+        rustls_client_config_free(
+          rustls_client_config_builder_build(config_builder));
+        return CURLE_SSL_CACERT_BADFILE;
+      }
+    }
+    else if(ssl_cafile) {
+      /* Enable strict parsing only if verification isn't disabled. */
+      result = rustls_root_cert_store_builder_load_roots_from_file(
+        roots_builder, ssl_cafile, verifypeer);
+      if(result != RUSTLS_RESULT_OK) {
+        failf(data, "rustls: failed to load trusted certificates");
+        rustls_root_cert_store_builder_free(roots_builder);
+        rustls_client_config_free(
+          rustls_client_config_builder_build(config_builder));
+        return CURLE_SSL_CACERT_BADFILE;
+      }
     }
 
-    result = rustls_client_config_builder_use_roots(config_builder, roots);
-    rustls_root_cert_store_free(roots);
+    result = rustls_root_cert_store_builder_build(roots_builder, &roots);
+    rustls_root_cert_store_builder_free(roots_builder);
     if(result != RUSTLS_RESULT_OK) {
       failf(data, "rustls: failed to load trusted certificates");
       rustls_client_config_free(
         rustls_client_config_builder_build(config_builder));
       return CURLE_SSL_CACERT_BADFILE;
     }
-  }
-  else if(ssl_cafile) {
-    result = rustls_client_config_builder_load_roots_from_file(
-      config_builder, ssl_cafile);
+
+    verifier_builder = rustls_web_pki_server_cert_verifier_builder_new(roots);
+
+    result = rustls_web_pki_server_cert_verifier_builder_build(
+      verifier_builder, &server_cert_verifier);
+    rustls_web_pki_server_cert_verifier_builder_free(verifier_builder);
     if(result != RUSTLS_RESULT_OK) {
       failf(data, "rustls: failed to load trusted certificates");
+      rustls_server_cert_verifier_free(server_cert_verifier);
       rustls_client_config_free(
         rustls_client_config_builder_build(config_builder));
       return CURLE_SSL_CACERT_BADFILE;
     }
+
+    rustls_client_config_builder_set_server_verifier(config_builder,
+                                                     server_cert_verifier);
   }
 
   backend->config = rustls_client_config_builder_build(config_builder);
@@ -459,7 +488,7 @@ cr_init_backend(struct Curl_cfilter *cf, struct Curl_easy *data,
   }
   if(result != RUSTLS_RESULT_OK) {
     rustls_error(result, errorbuf, sizeof(errorbuf), &errorlen);
-    failf(data, "rustls_client_connection_new: %.*s", errorlen, errorbuf);
+    failf(data, "rustls_client_connection_new: %.*s", (int)errorlen, errorbuf);
     return CURLE_COULDNT_CONNECT;
   }
   rustls_connection_set_userdata(rconn, backend);
@@ -563,8 +592,8 @@ cr_connect_common(struct Curl_cfilter *cf,
       return CURLE_SSL_CONNECT_ERROR;
     }
     if(blocking && 0 == what) {
-      failf(data, "rustls connection timeout after %d ms",
-        socket_check_timeout);
+      failf(data, "rustls connection timeout after %"
+        CURL_FORMAT_TIMEDIFF_T " ms", socket_check_timeout);
       return CURLE_OPERATION_TIMEDOUT;
     }
     if(0 == what) {
@@ -671,7 +700,7 @@ cr_close(struct Curl_cfilter *cf, struct Curl_easy *data)
 
   DEBUGASSERT(backend);
 
-  if(backend->conn) {
+  if(backend->conn && !connssl->peer_closed) {
     rustls_connection_send_close_notify(backend->conn);
     n = cr_send(cf, data, NULL, 0, &tmperr);
     if(n < 0) {

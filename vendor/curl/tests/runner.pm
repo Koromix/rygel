@@ -115,7 +115,7 @@ our $DBGCURL=$CURL; #"../src/.libs/curl";  # alternative for debugging
 our $valgrind_logfile="--log-file";  # the option name for valgrind >=3
 our $valgrind_tool="--tool=memcheck";
 our $gdb = checktestcmd("gdb");
-our $gdbthis;      # run test case with gdb debugger
+our $gdbthis = 0;  # run test case with debugger (gdb or lldb)
 our $gdbxwin;      # use windowed gdb when using gdb
 
 # torture test variables
@@ -648,15 +648,15 @@ sub singletest_setenv {
     my @setenv = getpart("client", "setenv");
     foreach my $s (@setenv) {
         chomp $s;
-        if($s =~ /([^=]*)=(.*)/) {
+        if($s =~ /([^=]*)(.*)/) {
             my ($var, $content) = ($1, $2);
             # remember current setting, to restore it once test runs
             $oldenv{$var} = ($ENV{$var})?"$ENV{$var}":'notset';
-            # set new value
-            if(!$content) {
-                delete $ENV{$var} if($ENV{$var});
-            }
-            else {
+
+            if($content =~ /^=(.*)/) {
+                # assign it
+                $content = $1;
+
                 if($var =~ /^LD_PRELOAD/) {
                     if(exe_ext('TOOL') && (exe_ext('TOOL') eq '.exe')) {
                         logmsg "Skipping LD_PRELOAD due to lack of OS support\n" if($verbose);
@@ -670,6 +670,11 @@ sub singletest_setenv {
                 $ENV{$var} = "$content";
                 logmsg "setenv $var = $content\n" if($verbose);
             }
+            else {
+                # remove it
+                delete $ENV{$var} if($ENV{$var});
+            }
+
         }
     }
     if($proxy_address) {
@@ -945,9 +950,16 @@ sub singletest_run {
     if($gdbthis) {
         my $gdbinit = "$TESTDIR/gdbinit$testnum";
         open(my $gdbcmd, ">", "$LOGDIR/gdbcmd") || die "Failure writing gdb file";
-        print $gdbcmd "set args $cmdargs\n";
-        print $gdbcmd "show args\n";
-        print $gdbcmd "source $gdbinit\n" if -e $gdbinit;
+        if($gdbthis == 1) {
+            # gdb mode
+            print $gdbcmd "set args $cmdargs\n";
+            print $gdbcmd "show args\n";
+            print $gdbcmd "source $gdbinit\n" if -e $gdbinit;
+        }
+        else {
+            # lldb mode
+            print $gdbcmd "set args $cmdargs\n";
+        }
         close($gdbcmd) || die "Failure writing gdb file";
     }
 
@@ -963,9 +975,16 @@ sub singletest_run {
                           $testnum,
                           "$gdb --directory $LIBDIR " . shell_quote($DBGCURL) . " -x $LOGDIR/gdbcmd");
     }
-    elsif($gdbthis) {
+    elsif($gdbthis == 1) {
+        # gdb
         my $GDBW = ($gdbxwin) ? "-w" : "";
         runclient("$gdb --directory $LIBDIR " . shell_quote($DBGCURL) . " $GDBW -x $LOGDIR/gdbcmd");
+        $cmdres=0; # makes it always continue after a debugged run
+    }
+    elsif($gdbthis == 2) {
+        # $gdb is "lldb"
+        print "runs lldb -- $CURL $cmdargs\n";
+        runclient("lldb -- $CURL $cmdargs");
         $cmdres=0; # makes it always continue after a debugged run
     }
     else {

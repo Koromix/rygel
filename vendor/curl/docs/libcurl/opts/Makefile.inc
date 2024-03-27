@@ -65,6 +65,7 @@ man_MANS =                                      \
   CURLINFO_PROXY_ERROR.3                        \
   CURLINFO_PROXY_SSL_VERIFYRESULT.3             \
   CURLINFO_PROXYAUTH_AVAIL.3                    \
+  CURLINFO_QUEUE_TIME_T.3                       \
   CURLINFO_REDIRECT_COUNT.3                     \
   CURLINFO_REDIRECT_TIME.3                      \
   CURLINFO_REDIRECT_TIME_T.3                    \
@@ -94,6 +95,7 @@ man_MANS =                                      \
   CURLINFO_TLS_SSL_PTR.3                        \
   CURLINFO_TOTAL_TIME.3                         \
   CURLINFO_TOTAL_TIME_T.3                       \
+  CURLINFO_USED_PROXY.3                         \
   CURLINFO_XFER_ID.3                            \
   CURLMOPT_CHUNK_LENGTH_PENALTY_SIZE.3          \
   CURLMOPT_CONTENT_LENGTH_PENALTY_SIZE.3        \
@@ -332,6 +334,7 @@ man_MANS =                                      \
   CURLOPT_SEEKDATA.3                            \
   CURLOPT_SEEKFUNCTION.3                        \
   CURLOPT_SERVER_RESPONSE_TIMEOUT.3             \
+  CURLOPT_SERVER_RESPONSE_TIMEOUT_MS.3          \
   CURLOPT_SERVICE_NAME.3                        \
   CURLOPT_SHARE.3                               \
   CURLOPT_SOCKOPTDATA.3                         \

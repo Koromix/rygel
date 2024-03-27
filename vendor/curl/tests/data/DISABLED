@@ -77,10 +77,13 @@
 1533
 1540
 1591
+1598
 1943
 2301
 2302
 2305
+# response body seem not to be handled by hyper
+2307
 %endif
 2043
 # The CRL test (313) doesn't work with rustls because rustls doesn't support

@@ -412,7 +412,7 @@ sub sysread_or_die {
 sub startsf {
     my @mainsockfcmd = ("./server/sockfilt".exe_ext('SRV'),
         "--ipv$ipvnum",
-	"--port", $port,
+        "--port", $port,
         "--pidfile", $mainsockf_pidfile,
         "--portfile", $portfile,
         "--logfile", $mainsockf_logfile);
@@ -672,7 +672,7 @@ sub protocolsetup {
 
 # Perform the disconnecgt handshake with sockfilt on the secondary connection
 # (the only connection we actively disconnect).
-# This involves waiting for the disconnect acknowledgmeent after the DISC
+# This involves waiting for the disconnect acknowledgment after the DISC
 # command, while throwing away anything else that might come in before
 # that.
 sub disc_handshake {
@@ -2258,6 +2258,7 @@ sub SIZE_ftp {
     my $size = $data[0];
 
     if($size) {
+        $size += 0; # make it a number
         if($size > -1) {
             sendcontrol "213 $size\r\n";
         }

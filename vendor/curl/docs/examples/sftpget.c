@@ -34,10 +34,10 @@
 #undef DISABLE_SSH_AGENT
 
 /*
- * This is an example showing how to get a single file from an SFTP server.
- * It delays the actual destination file creation until the first write
- * callback so that it will not create an empty file in case the remote file
- * does not exist or something else fails.
+ * This is an example showing how to get a single file from an SFTP server. It
+ * delays the actual destination file creation until the first write callback
+ * so that it does not create an empty file in case the remote file does not
+ * exist or something else fails.
  */
 
 struct FtpFile {
@@ -53,7 +53,7 @@ static size_t my_fwrite(void *buffer, size_t size, size_t nmemb,
     /* open file for writing */
     out->stream = fopen(out->filename, "wb");
     if(!out->stream)
-      return -1; /* failure, cannot open file to write */
+      return 0; /* failure, cannot open file to write */
   }
   return fwrite(buffer, size, nmemb, out->stream);
 }

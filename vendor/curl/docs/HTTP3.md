@@ -15,6 +15,8 @@ QUIC libraries we are using:
 
 [quiche](https://github.com/cloudflare/quiche) - **EXPERIMENTAL**
 
+[OpenSSL 3.2+ QUIC](https://github.com/openssl/openssl) - **EXPERIMENTAL**
+
 [msh3](https://github.com/nibanks/msh3) (with [msquic](https://github.com/microsoft/msquic)) - **EXPERIMENTAL**
 
 ## Experimental
@@ -23,19 +25,19 @@ HTTP/3 support in curl is considered **EXPERIMENTAL** until further notice
 when built to use *quiche* or *msh3*. Only the *ngtcp2* backend is not
 experimental.
 
-Further development and tweaking of the HTTP/3 support in curl will happen in
-the master branch using pull-requests, just like ordinary changes.
+Further development and tweaking of the HTTP/3 support in curl happens in the
+master branch using pull-requests, just like ordinary changes.
 
 To fix before we remove the experimental label:
 
  - the used QUIC library needs to consider itself non-beta
- - it's fine to "leave" individual backends as experimental if necessary
+ - it is fine to "leave" individual backends as experimental if necessary
 
 # ngtcp2 version
 
 Building curl with ngtcp2 involves 3 components: `ngtcp2` itself, `nghttp3` and a QUIC supporting TLS library. The supported TLS libraries are covered below.
 
- * `ngtcp2`: v1.1.0
+ * `ngtcp2`: v1.2.0
  * `nghttp3`: v1.1.0
 
 ## Build with quictls
@@ -56,6 +58,7 @@ Build nghttp3
      % cd ..
      % git clone -b v1.1.0 https://github.com/ngtcp2/nghttp3
      % cd nghttp3
+     % git submodule update --init
      % autoreconf -fi
      % ./configure --prefix=<somewhere2> --enable-lib-only
      % make
@@ -64,7 +67,7 @@ Build nghttp3
 Build ngtcp2
 
      % cd ..
-     % git clone -b v1.1.0 https://github.com/ngtcp2/ngtcp2
+     % git clone -b v1.2.0 https://github.com/ngtcp2/ngtcp2
      % cd ngtcp2
      % autoreconf -fi
      % ./configure PKG_CONFIG_PATH=<somewhere1>/lib/pkgconfig:<somewhere2>/lib/pkgconfig LDFLAGS="-Wl,-rpath,<somewhere1>/lib" --prefix=<somewhere3> --enable-lib-only
@@ -99,6 +102,7 @@ Build nghttp3
      % cd ..
      % git clone -b v1.1.0 https://github.com/ngtcp2/nghttp3
      % cd nghttp3
+     % git submodule update --init
      % autoreconf -fi
      % ./configure --prefix=<somewhere2> --enable-lib-only
      % make
@@ -107,7 +111,7 @@ Build nghttp3
 Build ngtcp2
 
      % cd ..
-     % git clone -b v1.1.0 https://github.com/ngtcp2/ngtcp2
+     % git clone -b v1.2.0 https://github.com/ngtcp2/ngtcp2
      % cd ngtcp2
      % autoreconf -fi
      % ./configure PKG_CONFIG_PATH=<somewhere1>/lib/pkgconfig:<somewhere2>/lib/pkgconfig LDFLAGS="-Wl,-rpath,<somewhere1>/lib" --prefix=<somewhere3> --enable-lib-only --with-gnutls
@@ -140,6 +144,7 @@ Build nghttp3
      % cd ..
      % git clone -b v1.1.0 https://github.com/ngtcp2/nghttp3
      % cd nghttp3
+     % git submodule update --init
      % autoreconf -fi
      % ./configure --prefix=<somewhere2> --enable-lib-only
      % make
@@ -148,7 +153,7 @@ Build nghttp3
 Build ngtcp2
 
      % cd ..
-     % git clone -b v1.1.0 https://github.com/ngtcp2/ngtcp2
+     % git clone -b v1.2.0 https://github.com/ngtcp2/ngtcp2
      % cd ngtcp2
      % autoreconf -fi
      % ./configure PKG_CONFIG_PATH=<somewhere1>/lib/pkgconfig:<somewhere2>/lib/pkgconfig LDFLAGS="-Wl,-rpath,<somewhere1>/lib" --prefix=<somewhere3> --enable-lib-only --with-wolfssl
@@ -175,7 +180,7 @@ Since the quiche build manages its dependencies, curl can be built against the l
 
 Build quiche and BoringSSL:
 
-     % git clone --recursive https://github.com/cloudflare/quiche
+     % git clone --recursive -b 0.20.0 https://github.com/cloudflare/quiche
      % cd quiche
      % cargo build --package quiche --release --features ffi,pkg-config-meta,qlog
      % mkdir quiche/deps/boringssl/src/lib
@@ -191,7 +196,54 @@ Build curl:
      % make
      % make install
 
- If `make install` results in `Permission denied` error, you will need to prepend it with `sudo`.
+ If `make install` results in `Permission denied` error, you need to prepend
+ it with `sudo`.
+
+# OpenSSL version
+
+QUIC support is **EXPERIMENTAL**
+
+Build OpenSSL 3.2.0
+
+     % cd ..
+     % git clone -b openssl-3.2.0 https://github.com/openssl/openssl
+     % cd openssl
+     % ./config enable-tls1_3 --prefix=<somewhere> --libdir=<somewhere>/lib
+     % make
+     % make install
+
+Build nghttp3
+
+     % cd ..
+     % git clone -b v1.1.0 https://github.com/ngtcp2/nghttp3
+     % cd nghttp3
+     % git submodule update --init
+     % autoreconf -fi
+     % ./configure --prefix=<somewhere2> --enable-lib-only
+     % make
+     % make install
+
+Build curl:
+
+     % cd ..
+     % git clone https://github.com/curl/curl
+     % cd curl
+     % autoreconf -fi
+     % LDFLAGS="-Wl,-rpath,<somewhere>/lib" ./configure --with-openssl=<somewhere> --with-openssl-quic --with-nghttp3=<somewhere2> 
+     % make
+     % make install
+
+You can build curl with cmake:
+
+     % cd ..
+     % git clone https://github.com/curl/curl
+     % cd curl
+     % cmake . -B build -DCURL_USE_OPENSSL=ON -DUSE_OPENSSL_QUIC=ON
+     % cmake --build build
+     % cmake --install build
+
+ If `make install` results in `Permission denied` error, you need to prepend
+ it with `sudo`.
 
 # msh3 (msquic) version
 
@@ -232,11 +284,10 @@ Build msh3:
      % cmake --build . --config Release
      % cmake --install . --config Release
 
-**Note** - On Windows, Schannel will be used for TLS support by default. If
-you with to use (the quictls fork of) OpenSSL, specify the
-`-DQUIC_TLS=openssl` option to the generate command above. Also note that
-OpenSSL brings with it an additional set of build dependencies not specified
-here.
+**Note** - On Windows, Schannel is used for TLS support by default. If you
+with to use (the quictls fork of) OpenSSL, specify the `-DQUIC_TLS=openssl`
+option to the generate command above. Also note that OpenSSL brings with it an
+additional set of build dependencies not specified here.
 
 Build curl (in [Visual Studio Command
 prompt](../winbuild/README.md#open-a-command-prompt)):
@@ -273,10 +324,10 @@ See this [list of public HTTP/3 servers](https://bagder.github.io/HTTP3-test/)
 
 ### HTTPS eyeballing
 
-With option `--http3` curl will attempt earlier HTTP versions as well should
-the connect attempt via HTTP/3 not succeed "fast enough". This strategy is
-similar to IPv4/6 happy eyeballing where the alternate address family is used
-in parallel after a short delay.
+With option `--http3` curl attempts earlier HTTP versions as well should the
+connect attempt via HTTP/3 not succeed "fast enough". This strategy is similar
+to IPv4/6 happy eyeballing where the alternate address family is used in
+parallel after a short delay.
 
 The IPv4/6 eyeballing has a default of 200ms and you may override that via
 `--happy-eyeballs-timeout-ms value`. Since HTTP/3 is still relatively new, we
@@ -295,8 +346,8 @@ So, without you specifying anything, the hard timeout is 200ms and the soft is 1
    in less than 100ms.
  * When QUIC is not supported (or UDP does not work for this network path), no
    reply is seen and the HTTP/2 TLS+TCP connection starts 100ms later.
- * In the worst case, UDP replies start before 100ms, but drag on. This will
-   start the TLS+TCP connection after 200ms.
+ * In the worst case, UDP replies start before 100ms, but drag on. This starts
+   the TLS+TCP connection after 200ms.
  * When the QUIC handshake fails, the TLS+TCP connection is attempted right
    away. For example, when the QUIC server presents the wrong certificate.
 
@@ -304,10 +355,10 @@ The whole transfer only fails, when **both** QUIC and TLS+TCP fail to
 handshake or time out.
 
 Note that all this happens in addition to IP version happy eyeballing. If the
-name resolution for the server gives more than one IP address, curl will try
-all those until one succeeds - just as with all other protocols. And if those
-IP addresses contain both IPv6 and IPv4, those attempts will happen, delayed,
-in parallel (the actual eyeballing).
+name resolution for the server gives more than one IP address, curl tries all
+those until one succeeds - just as with all other protocols. If those IP
+addresses contain both IPv6 and IPv4, those attempts happen, delayed, in
+parallel (the actual eyeballing).
 
 ## Known Bugs
 

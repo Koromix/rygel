@@ -127,13 +127,14 @@ EXTRA_DIST = CHANGES COPYING maketgz Makefile.dist curl-config.in            \
  $(VC_DIST) $(WINBUILD_DIST) $(PLAN9_DIST) lib/libcurl.vers.in buildconf.bat \
  libcurl.def
 
-CLEANFILES = $(VC14_LIBVCXPROJ) \
- $(VC14_SRCVCXPROJ) $(VC14_10_LIBVCXPROJ) $(VC14_10_SRCVCXPROJ)              \
+CLEANFILES = $(VC14_LIBVCXPROJ) $(VC14_SRCVCXPROJ) \
+ $(VC14_10_LIBVCXPROJ) $(VC14_10_SRCVCXPROJ)       \
+ $(VC14_20_LIBVCXPROJ) $(VC14_20_SRCVCXPROJ)       \
  $(VC14_30_LIBVCXPROJ) $(VC14_30_SRCVCXPROJ)
 
 bin_SCRIPTS = curl-config
 
-SUBDIRS = lib src
+SUBDIRS = lib docs src scripts
 DIST_SUBDIRS = $(SUBDIRS) tests packages scripts include docs
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -151,12 +152,6 @@ dist-hook:
 	  strip=`echo $$file | sed -e s/^$(srcdir)// -e s/\.dist//`; \
 	  cp -p $$file $(distdir)$$strip; \
 	done)
-
-html:
-	cd docs && $(MAKE) html
-
-pdf:
-	cd docs && $(MAKE) pdf
 
 check: test examples check-docs
 
@@ -246,10 +241,16 @@ cygwinbin:
 	$(MAKE) -C packages/Win32/cygwin cygwinbin
 
 # We extend the standard install with a custom hook:
+if BUILD_DOCS
 install-data-hook:
 	(cd include && $(MAKE) install)
 	(cd docs && $(MAKE) install)
 	(cd docs/libcurl && $(MAKE) install)
+else
+install-data-hook:
+	(cd include && $(MAKE) install)
+	(cd docs && $(MAKE) install)
+endif
 
 # We extend the standard uninstall with a custom hook:
 uninstall-hook:
@@ -509,7 +510,8 @@ function gen_element(type, dir, file)\
 		-v src_rc="$$win32_src_rc" \
 		-v src_x_srcs="$$sorted_src_x_srcs" \
 		-v src_x_hdrs="$$sorted_src_x_hdrs" \
-		"$$awk_code" $(srcdir)/$(VC14_20_SRCTMPL) > $(VC14_20_SRCVCXPROJ) || { exit 1; };) \
+		"$$awk_code" $(srcdir)/$(VC14_20_SRCTMPL) > $(VC14_20_SRCVCXPROJ) || { exit 1; }; \
+	\
 	echo "generating '$(VC14_30_LIBVCXPROJ)'"; \
 	awk -v proj_type=vcxproj \
 		-v lib_srcs="$$sorted_lib_srcs" \

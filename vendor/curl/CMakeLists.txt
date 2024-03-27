@@ -21,24 +21,7 @@
 # SPDX-License-Identifier: curl
 #
 ###########################################################################
-# curl/libcurl CMake script
 # by Tetetest and Sukender (Benoit Neil)
-
-# TODO:
-# The output .so file lacks the soname number which we currently have within the lib/Makefile.am file
-# Add full (4 or 5 libs) SSL support
-# Add INSTALL target (EXTRA_DIST variables in Makefile.am may be moved to Makefile.inc so that CMake/CPack is aware of what's to include).
-# Check on all possible platforms
-# Test with as many configurations possible (With or without any option)
-# Create scripts that help keeping the CMake build system up to date (to reduce maintenance). According to Tetetest:
-#  - lists of headers that 'configure' checks for;
-#  - curl-specific tests (the ones that are in m4/curl-*.m4 files);
-#  - (most obvious thing:) curl version numbers.
-# Add documentation subproject
-#
-# To check:
-# (From Daniel Stenberg) The cmake build selected to run gcc with -fPIC on my box while the plain configure script did not.
-# (From Daniel Stenberg) The gcc command line use neither -g nor any -O options. As a developer, I also treasure our configure scripts's --enable-debug option that sets a long range of "picky" compiler options.
 
 # Note: By default this CMake build script detects the version of some
 # dependencies using `check_symbol_exists`.  Those checks do not work
@@ -105,7 +88,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 option(BUILD_STATIC_LIBS "Build static libraries" OFF)
 option(BUILD_STATIC_CURL "Build curl executable with static libcurl" OFF)
 option(ENABLE_ARES "Set to ON to enable c-ares support" OFF)
-option(CURL_DISABLE_INSTALL "Set to ON to disable instalation targets" OFF)
+option(CURL_DISABLE_INSTALL "Set to ON to disable installation targets" OFF)
 
 if(WIN32)
   option(CURL_STATIC_CRT "Set to ON to build libcurl with static CRT on Windows (/MT)." OFF)
@@ -321,18 +304,18 @@ if(ENABLE_IPV6 AND NOT WIN32)
   endif()
 endif()
 
-if(USE_MANUAL)
-    #nroff is currently only used when USE_MANUAL is set, so we can prevent the warning of no *NROFF if USE_MANUAL is OFF (or not defined), by not even looking for NROFF..
-    curl_nroff_check()
-endif()
 find_package(Perl)
 
-cmake_dependent_option(ENABLE_MANUAL "to provide the built-in manual"
-    ON "NROFF_USEFUL;PERL_FOUND"
-    OFF)
+option(BUILD_LIBCURL_DOCS "to build libcurl man pages" ON)
+option(ENABLE_CURL_MANUAL "to build the man page for curl and enable its -M/--manual option" ON)
 
-if(ENABLE_MANUAL)
-  set(USE_MANUAL ON)
+if(ENABLE_CURL_MANUAL OR BUILD_LIBCURL_DOCS)
+  if(PERL_FOUND)
+    set(HAVE_MANUAL_TOOLS ON)
+  endif()
+  if(NOT HAVE_MANUAL_TOOLS)
+    message(WARNING "Perl not found. Will not build manuals.")
+  endif()
 endif()
 
 if(CURL_STATIC_CRT)
@@ -368,9 +351,6 @@ include(CheckCSourceCompiles)
 
 # On windows preload settings
 if(WIN32)
-  set(HAVE_WINDOWS_H 1)
-  set(HAVE_WS2TCPIP_H 1)
-  set(HAVE_WINSOCK2_H 1)
   include(${CMAKE_CURRENT_SOURCE_DIR}/CMake/Platforms/WindowsCache.cmake)
 endif()
 
@@ -412,8 +392,7 @@ if(APPLE)
 endif()
 if(WIN32)
   cmake_dependent_option(CURL_USE_SCHANNEL "Enable Windows native SSL/TLS" OFF CURL_ENABLE_SSL OFF)
-  cmake_dependent_option(CURL_WINDOWS_SSPI "Use windows libraries to allow NTLM authentication without OpenSSL" ON
-    CURL_USE_SCHANNEL OFF)
+  option(CURL_WINDOWS_SSPI "Enable SSPI on Windows" ${CURL_USE_SCHANNEL})
 endif()
 cmake_dependent_option(CURL_USE_MBEDTLS "Enable mbedTLS for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
 cmake_dependent_option(CURL_USE_BEARSSL "Enable BearSSL for SSL/TLS" OFF CURL_ENABLE_SSL OFF)
@@ -736,6 +715,29 @@ if(USE_MSH3)
   list(APPEND CURL_LIBS ${MSH3_LIBRARIES})
 endif()
 
+option(USE_OPENSSL_QUIC "Use openssl and nghttp3 libraries for HTTP/3 support" OFF)
+if(USE_OPENSSL_QUIC)
+  if(USE_NGTCP2 OR USE_QUICHE OR USE_MSH3)
+    message(FATAL_ERROR "Only one HTTP/3 backend can be selected!")
+  endif()
+  find_package(OpenSSL 3.2.0 REQUIRED)
+
+  find_package(NGHTTP3 REQUIRED)
+  set(USE_NGHTTP3 ON)
+  include_directories(${NGHTTP3_INCLUDE_DIRS})
+  list(APPEND CURL_LIBS ${NGHTTP3_LIBRARIES})
+endif()
+
+if(USE_MBEDTLS OR
+   USE_BEARSSL OR
+   USE_SECTRANSP)
+  message(WARNING "A selected TLS library does not support TLS 1.3.")
+endif()
+
+if(CURL_WITH_MULTI_SSL AND (USE_NGTCP2 OR USE_QUICHE OR USE_MSH3 OR USE_OPENSSL_QUIC))
+  message(FATAL_ERROR "MultiSSL cannot be enabled with HTTP/3 and vice versa.")
+endif()
+
 if(NOT CURL_DISABLE_SRP AND (HAVE_GNUTLS_SRP OR HAVE_OPENSSL_SRP))
   set(USE_TLS_SRP 1)
 endif()
@@ -787,7 +789,7 @@ if(NOT CURL_DISABLE_LDAP)
       endif()
       set(NEED_LBER_H ON)
       set(_HEADER_LIST)
-      if(HAVE_WINDOWS_H)
+      if(WIN32)
         list(APPEND _HEADER_LIST "windows.h")
       endif()
       if(HAVE_SYS_TYPES_H)
@@ -927,10 +929,8 @@ if(CURL_USE_GSSAPI)
     check_include_file_concat("gssapi/gssapi_generic.h" HAVE_GSSAPI_GSSAPI_GENERIC_H)
     check_include_file_concat("gssapi/gssapi_krb5.h" HAVE_GSSAPI_GSSAPI_KRB5_H)
 
-    if(GSS_FLAVOUR STREQUAL "Heimdal")
-      set(HAVE_GSSHEIMDAL ON)
-    else() # MIT
-      set(HAVE_GSSMIT ON)
+    if(NOT GSS_FLAVOUR STREQUAL "Heimdal")
+      # MIT
       set(_INCLUDE_LIST "")
       if(HAVE_GSSAPI_GSSAPI_H)
         list(APPEND _INCLUDE_LIST "gssapi/gssapi.h")
@@ -1070,9 +1070,9 @@ endif()
 
 # Check for header files
 if(WIN32)
-  check_include_file_concat("winsock2.h"     HAVE_WINSOCK2_H)
-  check_include_file_concat("ws2tcpip.h"     HAVE_WS2TCPIP_H)
-  check_include_file_concat("windows.h"      HAVE_WINDOWS_H)
+  set(CURL_INCLUDES ${CURL_INCLUDES} "winsock2.h")
+  set(CURL_INCLUDES ${CURL_INCLUDES} "ws2tcpip.h")
+  set(CURL_INCLUDES ${CURL_INCLUDES} "windows.h")
 endif()
 
 if(WIN32)
@@ -1266,7 +1266,7 @@ set(HAVE_SA_FAMILY_T            ${HAVE_SIZEOF_SA_FAMILY_T})
 set(CMAKE_EXTRA_INCLUDE_FILES   "")
 
 if(WIN32)
-  set(CMAKE_EXTRA_INCLUDE_FILES   "ws2def.h")
+  set(CMAKE_EXTRA_INCLUDE_FILES   "winsock2.h")
   check_type_size("ADDRESS_FAMILY"    SIZEOF_ADDRESS_FAMILY)
   set(HAVE_ADDRESS_FAMILY         ${HAVE_SIZEOF_ADDRESS_FAMILY})
   set(CMAKE_EXTRA_INCLUDE_FILES   "")
@@ -1406,15 +1406,6 @@ if(CMAKE_COMPILER_IS_GNUCC AND APPLE)
   endif()
 endif()
 
-# TODO test which of these headers are required
-if(WIN32)
-  set(CURL_PULL_WS2TCPIP_H ${HAVE_WS2TCPIP_H})
-else()
-  set(CURL_PULL_SYS_TYPES_H ${HAVE_SYS_TYPES_H})
-  set(CURL_PULL_SYS_SOCKET_H ${HAVE_SYS_SOCKET_H})
-  set(CURL_PULL_SYS_POLL_H ${HAVE_SYS_POLL_H})
-endif()
-
 include(CMake/OtherTests.cmake)
 
 add_definitions(-DHAVE_CONFIG_H)
@@ -1504,7 +1495,7 @@ set(generated_dir "${CMAKE_CURRENT_BINARY_DIR}/generated")
 set(project_config "${generated_dir}/${PROJECT_NAME}Config.cmake")
 set(version_config "${generated_dir}/${PROJECT_NAME}ConfigVersion.cmake")
 
-if(USE_MANUAL)
+if(HAVE_MANUAL_TOOLS)
   add_subdirectory(docs)
 endif()
 
@@ -1533,7 +1524,6 @@ if(NOT CURL_DISABLE_INSTALL)
   endmacro()
 
   # NTLM support requires crypto function adaptions from various SSL libs
-  # TODO alternative SSL libs tests for SSP1, GnuTLS, NSS
   if(NOT (CURL_DISABLE_NTLM) AND
       (USE_OPENSSL OR USE_MBEDTLS OR USE_DARWINSSL OR USE_WIN32_CRYPTO OR USE_GNUTLS))
     set(use_curl_ntlm_core ON)
@@ -1551,28 +1541,22 @@ if(NOT CURL_DISABLE_INSTALL)
   _add_if("IDN"           HAVE_LIBIDN2 OR USE_WIN32_IDN)
   _add_if("Largefile"     (SIZEOF_CURL_OFF_T GREATER 4) AND
                           ((SIZEOF_OFF_T GREATER 4) OR USE_WIN32_LARGE_FILES))
-  # TODO SSP1 (Schannel) check is missing
   _add_if("SSPI"          USE_WINDOWS_SSPI)
   _add_if("GSS-API"       HAVE_GSSAPI)
   _add_if("alt-svc"       NOT CURL_DISABLE_ALTSVC)
   _add_if("HSTS"          NOT CURL_DISABLE_HSTS)
-  # TODO SSP1 missing for SPNEGO
   _add_if("SPNEGO"        NOT CURL_DISABLE_NEGOTIATE_AUTH AND
                           (HAVE_GSSAPI OR USE_WINDOWS_SSPI))
   _add_if("Kerberos"      NOT CURL_DISABLE_KERBEROS_AUTH AND
                           (HAVE_GSSAPI OR USE_WINDOWS_SSPI))
-  # NTLM support requires crypto function adaptions from various SSL libs
-  # TODO alternative SSL libs tests for SSP1, GnuTLS, NSS
   _add_if("NTLM"          NOT (CURL_DISABLE_NTLM) AND
                           (use_curl_ntlm_core OR USE_WINDOWS_SSPI))
-  # TODO missing option (autoconf: --enable-ntlm-wb)
   _add_if("NTLM_WB"       NOT (CURL_DISABLE_NTLM) AND
                           (use_curl_ntlm_core OR USE_WINDOWS_SSPI) AND
                           NOT CURL_DISABLE_HTTP AND NTLM_WB_ENABLED)
   _add_if("TLS-SRP"       USE_TLS_SRP)
-  # TODO option --with-nghttp2 tests for nghttp2 lib and nghttp2/nghttp2.h header
   _add_if("HTTP2"         USE_NGHTTP2)
-  _add_if("HTTP3"         USE_NGTCP2 OR USE_QUICHE)
+  _add_if("HTTP3"         USE_NGTCP2 OR USE_QUICHE OR USE_OPENSSL_QUIC)
   _add_if("MultiSSL"      CURL_WITH_MULTI_SSL)
   # TODO wolfSSL only support this from v5.0.0 onwards
   _add_if("HTTPS-proxy"   SSL_ENABLED AND (USE_OPENSSL OR USE_GNUTLS
@@ -1589,6 +1573,8 @@ if(NOT CURL_DISABLE_INSTALL)
   # Clear list and try to detect available protocols
   set(_items)
   _add_if("HTTP"          NOT CURL_DISABLE_HTTP)
+  _add_if("IPFS"          NOT CURL_DISABLE_HTTP)
+  _add_if("IPNS"          NOT CURL_DISABLE_HTTP)
   _add_if("HTTPS"         NOT CURL_DISABLE_HTTP AND SSL_ENABLED)
   _add_if("FTP"           NOT CURL_DISABLE_FTP)
   _add_if("FTPS"          NOT CURL_DISABLE_FTP AND SSL_ENABLED)
@@ -1655,6 +1641,30 @@ if(NOT CURL_DISABLE_INSTALL)
   set(LDFLAGS                 "${CMAKE_SHARED_LINKER_FLAGS}")
   set(LIBCURL_LIBS            "")
   set(libdir                  "${CMAKE_INSTALL_PREFIX}/lib")
+
+  # For processing full path libraries into -L and -l ld options,
+  # the directories that go with the -L option are cached, so they
+  # only get added once per such directory.
+  set(_libcurl_libs_dirs)
+  # To avoid getting unnecessary -L options for known system directories,
+  # _libcurl_libs_dirs is seeded with them.
+  foreach(_libdir ${CMAKE_SYSTEM_PREFIX_PATH})
+    if(_libdir MATCHES "/$")
+      set(_libdir "${_libdir}lib")
+    else()
+      set(_libdir "${_libdir}/lib")
+    endif()
+    if(IS_DIRECTORY "${_libdir}")
+      list(APPEND _libcurl_libs_dirs "${_libdir}")
+    endif()
+    if(DEFINED CMAKE_LIBRARY_ARCHITECTURE)
+      set(_libdir "${_libdir}/${CMAKE_LIBRARY_ARCHITECTURE}")
+      if(IS_DIRECTORY "${_libdir}")
+        list(APPEND _libcurl_libs_dirs "${_libdir}")
+      endif()
+    endif()
+  endforeach()
+
   foreach(_lib ${CMAKE_C_IMPLICIT_LINK_LIBRARIES} ${CURL_LIBS})
     if(TARGET "${_lib}")
       set(_libname "${_lib}")
@@ -1670,8 +1680,24 @@ if(NOT CURL_DISABLE_INSTALL)
         continue()
       endif()
     endif()
-    if(_lib MATCHES ".*/.*" OR _lib MATCHES "^-")
+    if(_lib MATCHES "^-")
       set(LIBCURL_LIBS          "${LIBCURL_LIBS} ${_lib}")
+    elseif(_lib MATCHES ".*/.*")
+      # This gets a bit more complex, because we want to specify the
+      # directory separately, and only once per directory
+      string(REGEX REPLACE "^(.*)/[^/]*$" "\\1" _libdir "${_lib}")
+      string(REGEX REPLACE "^.*/([^/.]*).*$" "\\1" _libname "${_lib}")
+      if(_libname MATCHES "^lib")
+        list(FIND _libcurl_libs_dirs "${_libdir}" _libdir_index)
+        if(_libdir_index LESS 0)
+          list(APPEND _libcurl_libs_dirs "${_libdir}")
+          set(LIBCURL_LIBS          "${LIBCURL_LIBS} -L${_libdir}")
+        endif()
+        string(REGEX REPLACE "^lib" "" _libname "${_libname}")
+        set(LIBCURL_LIBS          "${LIBCURL_LIBS} -l${_libname}")
+      else()
+        set(LIBCURL_LIBS          "${LIBCURL_LIBS} ${_lib}")
+      endif()
     else()
       set(LIBCURL_LIBS          "${LIBCURL_LIBS} -l${_lib}")
     endif()

@@ -137,7 +137,7 @@ static void _ldap_free_urldesc(LDAPURLDesc *ludp);
                             _ldap_trace x; \
                           } while(0)
 
-  static void _ldap_trace(const char *fmt, ...);
+  static void _ldap_trace(const char *fmt, ...) CURL_PRINTF(1, 2);
 #else
   #define LDAP_TRACE(x)   Curl_nop_stmt
 #endif
@@ -177,7 +177,7 @@ const struct Curl_handler Curl_handler_ldap = {
   ZERO_NULL,                            /* domore_getsock */
   ZERO_NULL,                            /* perform_getsock */
   ZERO_NULL,                            /* disconnect */
-  ZERO_NULL,                            /* readwrite */
+  ZERO_NULL,                            /* write_resp */
   ZERO_NULL,                            /* connection_check */
   ZERO_NULL,                            /* attach connection */
   PORT_LDAP,                            /* defport */
@@ -205,7 +205,7 @@ const struct Curl_handler Curl_handler_ldaps = {
   ZERO_NULL,                            /* domore_getsock */
   ZERO_NULL,                            /* perform_getsock */
   ZERO_NULL,                            /* disconnect */
-  ZERO_NULL,                            /* readwrite */
+  ZERO_NULL,                            /* write_resp */
   ZERO_NULL,                            /* connection_check */
   ZERO_NULL,                            /* attach connection */
   PORT_LDAPS,                           /* defport */
@@ -371,7 +371,7 @@ static CURLcode ldap_do(struct Curl_easy *data, bool *done)
 #ifdef HAVE_LDAP_SSL
 #ifdef USE_WIN32_LDAP
     /* Win32 LDAP SDK doesn't support insecure mode without CA! */
-    server = ldap_sslinit(host, conn->port, 1);
+    server = ldap_sslinit(host, conn->primary.remote_port, 1);
     ldap_set_option(server, LDAP_OPT_SSL, LDAP_OPT_ON);
 #else
     int ldap_option;
@@ -417,10 +417,10 @@ static CURLcode ldap_do(struct Curl_easy *data, bool *done)
       result = CURLE_SSL_CERTPROBLEM;
       goto quit;
     }
-    server = ldapssl_init(host, conn->port, 1);
+    server = ldapssl_init(host, conn->primary.remote_port, 1);
     if(!server) {
       failf(data, "LDAP local: Cannot connect to %s:%u",
-            conn->host.dispname, conn->port);
+            conn->host.dispname, conn->primary.remote_port);
       result = CURLE_COULDNT_CONNECT;
       goto quit;
     }
@@ -458,10 +458,10 @@ static CURLcode ldap_do(struct Curl_easy *data, bool *done)
       result = CURLE_SSL_CERTPROBLEM;
       goto quit;
     }
-    server = ldap_init(host, conn->port);
+    server = ldap_init(host, conn->primary.remote_port);
     if(!server) {
       failf(data, "LDAP local: Cannot connect to %s:%u",
-            conn->host.dispname, conn->port);
+            conn->host.dispname, conn->primary.remote_port);
       result = CURLE_COULDNT_CONNECT;
       goto quit;
     }
@@ -499,10 +499,10 @@ static CURLcode ldap_do(struct Curl_easy *data, bool *done)
     goto quit;
   }
   else {
-    server = ldap_init(host, conn->port);
+    server = ldap_init(host, conn->primary.remote_port);
     if(!server) {
       failf(data, "LDAP local: Cannot connect to %s:%u",
-            conn->host.dispname, conn->port);
+            conn->host.dispname, conn->primary.remote_port);
       result = CURLE_COULDNT_CONNECT;
       goto quit;
     }
@@ -749,7 +749,7 @@ quit:
   FREE_ON_WINLDAP(host);
 
   /* no data to transfer */
-  Curl_setup_transfer(data, -1, -1, FALSE, -1);
+  Curl_xfer_setup(data, -1, -1, FALSE, -1);
   connclose(conn, "LDAP connection always disable reuse");
 
   return result;

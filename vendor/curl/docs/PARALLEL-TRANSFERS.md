@@ -5,9 +5,9 @@ parallel.
 
 ## -Z, --parallel
 
-When this command line option is used, curl will perform the transfers given
-to it at the same time. It will do up to `--parallel-max` concurrent
-transfers, with a default value of 50.
+When this command line option is used, curl performs the transfers given to it
+at the same time. It does up to `--parallel-max` concurrent transfers, with a
+default value of 50.
 
 ## Progress meter
 
@@ -38,9 +38,9 @@ Example:
 ## Behavior differences
 
 Connections are shared fine between different easy handles, but the
-"authentication contexts" are not. So for example doing HTTP Digest auth with
-one handle for a particular transfer and then continue on with another handle
-that reuses the same connection, the second handle cannot send the necessary
+"authentication contexts" are not. For example doing HTTP Digest auth with one
+handle for a particular transfer and then continue on with another handle that
+reuses the same connection, the second handle cannot send the necessary
 Authorization header at once since the context is only kept in the original
 easy handle.
 

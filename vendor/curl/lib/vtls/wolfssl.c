@@ -232,7 +232,6 @@ static const struct group_name_map gnm[] = {
 static int wolfssl_bio_cf_create(WOLFSSL_BIO *bio)
 {
   wolfSSL_BIO_set_shutdown(bio, 1);
-  wolfSSL_BIO_set_init(bio, 1);
   wolfSSL_BIO_set_data(bio, NULL);
   return 1;
 }
@@ -321,6 +320,8 @@ static int wolfssl_bio_cf_in_read(WOLFSSL_BIO *bio, char *buf, int blen)
   wolfSSL_BIO_clear_retry_flags(bio);
   if(nread < 0 && CURLE_AGAIN == result)
     BIO_set_retry_read(bio);
+  else if(nread == 0)
+    connssl->peer_closed = TRUE;
   return (int)nread;
 }
 
@@ -583,12 +584,25 @@ wolfssl_connect_step1(struct Curl_cfilter *cf, struct Curl_easy *data)
   if(ssl_config->primary.clientcert && ssl_config->key) {
     int file_type = do_file_type(ssl_config->cert_type);
 
-    if(wolfSSL_CTX_use_certificate_file(backend->ctx,
-                                        ssl_config->primary.clientcert,
-                                        file_type) != 1) {
-      failf(data, "unable to use client certificate (no key or wrong pass"
-            " phrase?)");
-      return CURLE_SSL_CONNECT_ERROR;
+    if(file_type == WOLFSSL_FILETYPE_PEM) {
+      if(wolfSSL_CTX_use_certificate_chain_file(backend->ctx,
+                                                ssl_config->primary.clientcert)
+         != 1) {
+        failf(data, "unable to use client certificate");
+        return CURLE_SSL_CONNECT_ERROR;
+      }
+    }
+    else if(file_type == WOLFSSL_FILETYPE_ASN1) {
+      if(wolfSSL_CTX_use_certificate_file(backend->ctx,
+                                          ssl_config->primary.clientcert,
+                                          file_type) != 1) {
+        failf(data, "unable to use client certificate");
+        return CURLE_SSL_CONNECT_ERROR;
+      }
+    }
+    else {
+      failf(data, "unknown cert type");
+      return CURLE_BAD_FUNCTION_ARGUMENT;
     }
 
     file_type = do_file_type(ssl_config->key_type);
@@ -1046,7 +1060,8 @@ static void wolfssl_close(struct Curl_cfilter *cf, struct Curl_easy *data)
     /* Maybe the server has already sent a close notify alert.
        Read it to avoid an RST on the TCP connection. */
     (void)wolfSSL_read(backend->handle, buf, (int)sizeof(buf));
-    (void)wolfSSL_shutdown(backend->handle);
+    if(!connssl->peer_closed)
+      (void)wolfSSL_shutdown(backend->handle);
     wolfSSL_free(backend->handle);
     backend->handle = NULL;
   }
@@ -1084,9 +1099,7 @@ static ssize_t wolfssl_recv(struct Curl_cfilter *cf,
       *curlcode = CURLE_OK;
       return 0;
     case SSL_ERROR_NONE:
-      /* FALLTHROUGH */
     case SSL_ERROR_WANT_READ:
-      /* FALLTHROUGH */
     case SSL_ERROR_WANT_WRITE:
       /* there's data pending, re-invoke wolfSSL_read() */
       CURL_TRC_CF(data, cf, "wolfssl_recv(len=%zu) -> AGAIN", blen);

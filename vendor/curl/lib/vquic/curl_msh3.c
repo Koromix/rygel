@@ -204,8 +204,8 @@ static void drain_stream_from_other_thread(struct Curl_easy *data,
   bits = CURL_CSELECT_IN;
   if(stream && !stream->upload_done)
     bits |= CURL_CSELECT_OUT;
-  if(data->state.dselect_bits != bits) {
-    data->state.dselect_bits = bits;
+  if(data->state.select_bits != bits) {
+    data->state.select_bits = bits;
     /* cannot expire from other thread */
   }
 }
@@ -220,8 +220,8 @@ static void drain_stream(struct Curl_cfilter *cf,
   bits = CURL_CSELECT_IN;
   if(stream && !stream->upload_done)
     bits |= CURL_CSELECT_OUT;
-  if(data->state.dselect_bits != bits) {
-    data->state.dselect_bits = bits;
+  if(data->state.select_bits != bits) {
+    data->state.select_bits = bits;
     Curl_expire(data, 0, EXPIRE_RUN_NOW);
   }
 }
@@ -722,23 +722,6 @@ static bool cf_msh3_data_pending(struct Curl_cfilter *cf,
   return pending;
 }
 
-static void cf_msh3_active(struct Curl_cfilter *cf, struct Curl_easy *data)
-{
-  struct cf_msh3_ctx *ctx = cf->ctx;
-
-  /* use this socket from now on */
-  cf->conn->sock[cf->sockindex] = ctx->sock[SP_LOCAL];
-  /* the first socket info gets set at conn and data */
-  if(cf->sockindex == FIRSTSOCKET) {
-    cf->conn->remote_addr = &ctx->addr;
-  #ifdef ENABLE_IPV6
-    cf->conn->bits.ipv6 = (ctx->addr.family == AF_INET6)? TRUE : FALSE;
-  #endif
-    Curl_persistconninfo(data, cf->conn, ctx->l_ip, ctx->l_port);
-  }
-  ctx->active = TRUE;
-}
-
 static CURLcode h3_data_pause(struct Curl_cfilter *cf,
                               struct Curl_easy *data,
                               bool pause)
@@ -784,10 +767,6 @@ static CURLcode cf_msh3_data_event(struct Curl_cfilter *cf,
         }
       }
     }
-    break;
-  case CF_CTRL_CONN_INFO_UPDATE:
-    CURL_TRC_CF(data, cf, "req: update info");
-    cf_msh3_active(cf, data);
     break;
   default:
     break;

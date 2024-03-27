@@ -63,6 +63,33 @@ struct getout *new_getout(struct OperationConfig *config)
   return node;
 }
 
+#define ISCRLF(x) (((x) == '\r') || ((x) == '\n') || ((x) == '\0'))
+
+/* memcrlf() has two modes. Both operate on a given memory area with
+   a specified size.
+
+   countcrlf FALSE - return number of bytes from the start that DO NOT include
+   any CR or LF or NULL
+
+   countcrlf TRUE - return number of bytes from the start that are ONLY CR or
+   LF or NULL.
+
+*/
+static size_t memcrlf(char *orig,
+                      bool countcrlf, /* TRUE if we count CRLF, FALSE
+                                         if we count non-CRLF */
+                      size_t max)
+{
+  char *ptr = orig;
+  size_t total = max;
+  for(ptr = orig; max; max--, ptr++) {
+    bool crlf = ISCRLF(*ptr);
+    if(countcrlf ^ crlf)
+      return ptr - orig;
+  }
+  return total; /* no delimiter found */
+}
+
 #define MAX_FILE2STRING (256*1024*1024) /* big enough ? */
 
 ParameterError file2string(char **bufp, FILE *file)
@@ -71,24 +98,34 @@ ParameterError file2string(char **bufp, FILE *file)
   DEBUGASSERT(MAX_FILE2STRING < INT_MAX); /* needs to fit in an int later */
   curlx_dyn_init(&dyn, MAX_FILE2STRING);
   if(file) {
-    char buffer[256];
+    do {
+      char buffer[4096];
+      char *ptr;
+      size_t nread = fread(buffer, 1, sizeof(buffer), file);
+      if(ferror(file)) {
+        curlx_dyn_free(&dyn);
+        *bufp = NULL;
+        return PARAM_READ_ERROR;
+      }
+      ptr = buffer;
+      while(nread) {
+        size_t nlen = memcrlf(ptr, FALSE, nread);
+        if(curlx_dyn_addn(&dyn, ptr, nlen))
+          return PARAM_NO_MEM;
+        nread -= nlen;
 
-    while(fgets(buffer, sizeof(buffer), file)) {
-      char *ptr = strchr(buffer, '\r');
-      if(ptr)
-        *ptr = '\0';
-      ptr = strchr(buffer, '\n');
-      if(ptr)
-        *ptr = '\0';
-      if(curlx_dyn_add(&dyn, buffer))
-        return PARAM_NO_MEM;
-    }
+        if(nread) {
+          ptr += nlen;
+          nlen = memcrlf(ptr, TRUE, nread);
+          ptr += nlen;
+          nread -= nlen;
+        }
+      }
+    } while(!feof(file));
   }
   *bufp = curlx_dyn_ptr(&dyn);
   return PARAM_OK;
 }
-
-#define MAX_FILE2MEMORY (1024*1024*1024) /* big enough ? */
 
 ParameterError file2memory(char **bufp, size_t *size, FILE *file)
 {
@@ -134,6 +171,8 @@ static ParameterError getnum(long *val, const char *str, int base)
   if(str) {
     char *endptr = NULL;
     long num;
+    if(!str[0])
+      return PARAM_BLANK_STRING;
     errno = 0;
     num = strtol(str, &endptr, base);
     if(errno == ERANGE)
@@ -408,7 +447,7 @@ ParameterError proto2num(struct OperationConfig *config,
           break;
         case set:
           protoset[0] = NULL;
-          /* FALLTHROUGH */
+          FALLTHROUGH();
         case allow:
           protoset_set(protoset, p);
           break;

@@ -58,14 +58,7 @@ void Curl_debug(struct Curl_easy *data, curl_infotype type,
  * Output a failure message on registered callbacks for transfer.
  */
 void Curl_failf(struct Curl_easy *data,
-#if defined(__GNUC__) && !defined(printf) &&                    \
-  defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L) && \
-  !defined(__MINGW32__)
-                       const char *fmt, ...)
-                       __attribute__((format(printf, 2, 3)));
-#else
-                       const char *fmt, ...);
-#endif
+                const char *fmt, ...) CURL_PRINTF(2, 3);
 
 #define failf Curl_failf
 
@@ -93,41 +86,41 @@ void Curl_failf(struct Curl_easy *data,
 #ifndef CURL_DISABLE_VERBOSE_STRINGS
 /* informational messages enabled */
 
-#define Curl_trc_is_verbose(data)    ((data) && (data)->set.verbose)
+struct curl_trc_feat {
+  const char *name;
+  int log_level;
+};
+
+#define Curl_trc_is_verbose(data) \
+            ((data) && (data)->set.verbose && \
+            (!(data)->state.feat || \
+             ((data)->state.feat->log_level >= CURL_LOG_LVL_INFO)))
 #define Curl_trc_cf_is_verbose(cf, data) \
-                            ((data) && (data)->set.verbose && \
-                            (cf) && (cf)->cft->log_level >= CURL_LOG_LVL_INFO)
+            (Curl_trc_is_verbose(data) && \
+            (cf) && (cf)->cft->log_level >= CURL_LOG_LVL_INFO)
+#define Curl_trc_ft_is_verbose(data, ft) \
+                            (Curl_trc_is_verbose(data) && \
+                            (ft)->log_level >= CURL_LOG_LVL_INFO)
 
 /**
  * Output an informational message when transfer's verbose logging is enabled.
  */
 void Curl_infof(struct Curl_easy *data,
-#if defined(__GNUC__) && !defined(printf) && defined(CURL_HAVE_C99) &&  \
-  !defined(__MINGW32__)
-                       const char *fmt, ...)
-                       __attribute__((format(printf, 2, 3)));
-#else
-                       const char *fmt, ...);
-#endif
+                const char *fmt, ...) CURL_PRINTF(2, 3);
 
 /**
  * Output an informational message when both transfer's verbose logging
  * and connection filters verbose logging are enabled.
  */
 void Curl_trc_cf_infof(struct Curl_easy *data, struct Curl_cfilter *cf,
-#if defined(__GNUC__) && !defined(printf) && defined(CURL_HAVE_C99) && \
-  !defined(__MINGW32__)
-                      const char *fmt, ...)
-                      __attribute__((format(printf, 3, 4)));
-#else
-                      const char *fmt, ...);
-#endif
+                       const char *fmt, ...) CURL_PRINTF(3, 4);
 
 #else /* defined(CURL_DISABLE_VERBOSE_STRINGS) */
 /* All informational messages are not compiled in for size savings */
 
 #define Curl_trc_is_verbose(d)        ((void)(d), FALSE)
 #define Curl_trc_cf_is_verbose(x,y)   ((void)(x), (void)(y), FALSE)
+#define Curl_trc_ft_is_verbose(x,y)   ((void)(x), (void)(y), FALSE)
 
 static void Curl_infof(struct Curl_easy *data, const char *fmt, ...)
 {

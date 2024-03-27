@@ -117,8 +117,6 @@ static CURLcode hsts_create(struct hsts *h,
                             bool subdomains,
                             curl_off_t expires)
 {
-  struct stsentry *sts;
-  char *duphost;
   size_t hlen;
   DEBUGASSERT(h);
   DEBUGASSERT(hostname);
@@ -127,24 +125,23 @@ static CURLcode hsts_create(struct hsts *h,
   if(hlen && (hostname[hlen - 1] == '.'))
     /* strip off any trailing dot */
     --hlen;
-  if(!hlen)
-    /* no host name left */
-    return CURLE_BAD_FUNCTION_ARGUMENT;
+  if(hlen) {
+    char *duphost;
+    struct stsentry *sts = hsts_entry();
+    if(!sts)
+      return CURLE_OUT_OF_MEMORY;
 
-  sts = hsts_entry();
-  if(!sts)
-    return CURLE_OUT_OF_MEMORY;
+    duphost = Curl_memdup0(hostname, hlen);
+    if(!duphost) {
+      free(sts);
+      return CURLE_OUT_OF_MEMORY;
+    }
 
-  duphost = Curl_strndup(hostname, hlen);
-  if(!duphost) {
-    free(sts);
-    return CURLE_OUT_OF_MEMORY;
+    sts->host = duphost;
+    sts->expires = expires;
+    sts->includeSubDomains = subdomains;
+    Curl_llist_insert_next(&h->list, h->list.tail, sts, &sts->node);
   }
-
-  sts->host = duphost;
-  sts->expires = expires;
-  sts->includeSubDomains = subdomains;
-  Curl_llist_insert_next(&h->list, h->list.tail, sts, &sts->node);
   return CURLE_OK;
 }
 
@@ -481,6 +478,7 @@ static CURLcode hsts_pull(struct Curl_easy *data, struct hsts *h)
       if(sc == CURLSTS_OK) {
         time_t expires;
         CURLcode result;
+        DEBUGASSERT(e.name[0]);
         if(!e.name[0])
           /* bail out if no name was stored */
           return CURLE_BAD_FUNCTION_ARGUMENT;
@@ -513,7 +511,6 @@ static CURLcode hsts_pull(struct Curl_easy *data, struct hsts *h)
 static CURLcode hsts_load(struct hsts *h, const char *file)
 {
   CURLcode result = CURLE_OK;
-  char *line = NULL;
   FILE *fp;
 
   /* we need a private copy of the file name so that the hsts cache file
@@ -525,11 +522,10 @@ static CURLcode hsts_load(struct hsts *h, const char *file)
 
   fp = fopen(file, FOPEN_READTEXT);
   if(fp) {
-    line = malloc(MAX_HSTS_LINE);
-    if(!line)
-      goto fail;
-    while(Curl_get_line(line, MAX_HSTS_LINE, fp)) {
-      char *lineptr = line;
+    struct dynbuf buf;
+    Curl_dyn_init(&buf, MAX_HSTS_LINE);
+    while(Curl_get_line(&buf, fp)) {
+      char *lineptr = Curl_dyn_ptr(&buf);
       while(*lineptr && ISBLANK(*lineptr))
         lineptr++;
       if(*lineptr == '#')
@@ -538,15 +534,10 @@ static CURLcode hsts_load(struct hsts *h, const char *file)
 
       hsts_add(h, lineptr);
     }
-    free(line); /* free the line buffer */
+    Curl_dyn_free(&buf); /* free the line buffer */
     fclose(fp);
   }
   return result;
-
-fail:
-  Curl_safefree(h->filename);
-  fclose(fp);
-  return CURLE_OUT_OF_MEMORY;
 }
 
 /*

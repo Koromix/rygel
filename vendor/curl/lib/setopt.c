@@ -51,7 +51,7 @@
 #include "altsvc.h"
 #include "hsts.h"
 #include "tftp.h"
-
+#include "strdup.h"
 /* The last 3 #include files should be in this order */
 #include "curl_printf.h"
 #include "curl_memory.h"
@@ -155,6 +155,12 @@ static CURLcode setstropt_userpwd(char *option, char **userp, char **passwdp)
 
 static CURLcode protocol2num(const char *str, curl_prot_t *val)
 {
+  /*
+   * We are asked to cherry-pick protocols, so play it safe and disallow all
+   * protocols to start with, and re-add the wanted ones back in.
+   */
+  *val = 0;
+
   if(!str)
     return CURLE_BAD_FUNCTION_ARGUMENT;
 
@@ -162,8 +168,6 @@ static CURLcode protocol2num(const char *str, curl_prot_t *val)
     *val = ~(curl_prot_t) 0;
     return CURLE_OK;
   }
-
-  *val = 0;
 
   do {
     const char *token = str;
@@ -366,6 +370,17 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     else
       return CURLE_BAD_FUNCTION_ARGUMENT;
     break;
+  case CURLOPT_SERVER_RESPONSE_TIMEOUT_MS:
+    /*
+     * Option that specifies how quickly a server response must be obtained
+     * before it is considered failure. For pingpong protocols.
+     */
+    arg = va_arg(param, long);
+    if((arg >= 0) && (arg <= INT_MAX))
+      data->set.server_response_timeout = (unsigned int)arg;
+    else
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    break;
 #ifndef CURL_DISABLE_TFTP
   case CURLOPT_TFTP_NO_OPTIONS:
     /*
@@ -497,26 +512,17 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
           (data->set.postfieldsize > (curl_off_t)((size_t)-1))))
         result = CURLE_OUT_OF_MEMORY;
       else {
-        char *p;
-
-        (void) Curl_setstropt(&data->set.str[STRING_COPYPOSTFIELDS], NULL);
-
         /* Allocate even when size == 0. This satisfies the need of possible
-           later address compare to detect the COPYPOSTFIELDS mode, and
-           to mark that postfields is used rather than read function or
-           form data.
+           later address compare to detect the COPYPOSTFIELDS mode, and to
+           mark that postfields is used rather than read function or form
+           data.
         */
-        p = malloc((size_t)(data->set.postfieldsize?
-                            data->set.postfieldsize:1));
-
+        char *p = Curl_memdup0(argptr, (size_t)data->set.postfieldsize);
+        (void) Curl_setstropt(&data->set.str[STRING_COPYPOSTFIELDS], NULL);
         if(!p)
           result = CURLE_OUT_OF_MEMORY;
-        else {
-          if(data->set.postfieldsize)
-            memcpy(p, argptr, (size_t)data->set.postfieldsize);
-
+        else
           data->set.str[STRING_COPYPOSTFIELDS] = p;
-        }
       }
     }
 
@@ -670,6 +676,7 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     data->set.opt_no_body = FALSE; /* this is implied */
     Curl_mime_cleanpart(data->state.formp);
     Curl_safefree(data->state.formp);
+    data->state.mimepost = NULL;
     break;
 #endif
 
@@ -977,6 +984,7 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
 #ifndef CURL_DISABLE_FORM_API
       Curl_mime_cleanpart(data->state.formp);
       Curl_safefree(data->state.formp);
+      data->state.mimepost = NULL;
 #endif
     }
     break;
@@ -2206,9 +2214,6 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
      * The application kindly asks for a differently sized receive buffer.
      * If it seems reasonable, we'll use it.
      */
-    if(data->state.buffer)
-      return CURLE_BAD_FUNCTION_ARGUMENT;
-
     arg = va_arg(param, long);
 
     if(arg > READBUFFER_MAX)
@@ -2234,7 +2239,6 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
       arg = UPLOADBUFFER_MIN;
 
     data->set.upload_buffer_size = (unsigned int)arg;
-    Curl_safefree(data->state.ulbuf); /* force a realloc next opportunity */
     break;
 
   case CURLOPT_NOSIGNAL:
@@ -2653,22 +2657,18 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
     break;
 
   case CURLOPT_PROTOCOLS_STR: {
-    curl_prot_t prot;
     argptr = va_arg(param, char *);
-    result = protocol2num(argptr, &prot);
+    result = protocol2num(argptr, &data->set.allowed_protocols);
     if(result)
       return result;
-    data->set.allowed_protocols = prot;
     break;
   }
 
   case CURLOPT_REDIR_PROTOCOLS_STR: {
-    curl_prot_t prot;
     argptr = va_arg(param, char *);
-    result = protocol2num(argptr, &prot);
+    result = protocol2num(argptr, &data->set.redir_protocols);
     if(result)
       return result;
-    data->set.redir_protocols = prot;
     break;
   }
 
@@ -2863,13 +2863,13 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
 #endif
   case CURLOPT_TLSAUTH_TYPE:
     argptr = va_arg(param, char *);
-    if(argptr && !strncasecompare(argptr, "SRP", strlen("SRP")))
+    if(argptr && !strcasecompare(argptr, "SRP"))
       return CURLE_BAD_FUNCTION_ARGUMENT;
     break;
 #ifndef CURL_DISABLE_PROXY
   case CURLOPT_PROXY_TLSAUTH_TYPE:
     argptr = va_arg(param, char *);
-    if(argptr || !strncasecompare(argptr, "SRP", strlen("SRP")))
+    if(argptr && !strcasecompare(argptr, "SRP"))
       return CURLE_BAD_FUNCTION_ARGUMENT;
     break;
 #endif
@@ -3109,6 +3109,10 @@ CURLcode Curl_vsetopt(struct Curl_easy *data, CURLoption option, va_list param)
         return CURLE_OUT_OF_MEMORY;
     }
     arg = va_arg(param, long);
+    if(!arg) {
+      DEBUGF(infof(data, "bad CURLOPT_ALTSVC_CTRL input"));
+      return CURLE_BAD_FUNCTION_ARGUMENT;
+    }
     result = Curl_altsvc_ctrl(data->asi, arg);
     if(result)
       return result;
@@ -3163,5 +3167,9 @@ CURLcode curl_easy_setopt(struct Curl_easy *data, CURLoption tag, ...)
   result = Curl_vsetopt(data, tag, arg);
 
   va_end(arg);
+#ifdef DEBUGBUILD
+  if(result == CURLE_BAD_FUNCTION_ARGUMENT)
+    infof(data, "setopt arg 0x%x returned CURLE_BAD_FUNCTION_ARGUMENT", tag);
+#endif
   return result;
 }
