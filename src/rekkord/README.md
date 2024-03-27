@@ -268,6 +268,22 @@ export REKKORD_CONFIG_FILE = /path/to/config.ini
 rekkord restore <hash> -O <path>
 ```
 
+## Mount snapshot
+
+You can also use `rekkord mount <hash> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem.
+
+```sh
+export REKKORD_CONFIG_FILE = /path/to/config.ini
+rekkord mount <hash> <mountpoint>
+```
+
+This mode has several limitations for now:
+
+- Only Linux is supported for now, though support for FreeBSD, OpenBSD and Windows will soon come.
+- Performance (for listing directories and reading files) is slower than with the dedicated commands.
+
+But the goal is to reach performance similar to other commands once Rekkord 1.0 is released.
+
 # Build from source
 
 Start by cloning the [git repository](https://github.com/Koromix/rygel):
