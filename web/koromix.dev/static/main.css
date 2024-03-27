@@ -168,7 +168,7 @@ pre {
 
 .alert {
     margin: 2em 1em 1em 1em;
-    padding: 0.5em 1em;
+    padding: 0.8em 1em;
     background: #fcfcfc;
     border-left: 3px solid var(--color);
 }
