@@ -133,10 +133,10 @@ static const char *SectionToPageName(Span<const char> section, Allocator *alloc)
 {
     Span<const char> basename = SplitStrReverseAny(section, RG_PATH_SEPARATORS);
 
-    // Strip extension
-    SplitStrReverse(basename, '.', &basename);
+    Span<const char> simple;
+    SplitStrReverse(basename, '.', &simple);
 
-    const char *name = DuplicateString(basename, alloc).ptr;
+    const char *name = DuplicateString(simple.len ? simple : basename, alloc).ptr;
     return name;
 }
 
@@ -622,7 +622,9 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             page.description = "";
 
             do {
-                if (prop.key == "Title") {
+                if (prop.key == "SourceFile") {
+                    page.src_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
+                } else if (prop.key == "Title") {
                     page.title = DuplicateString(prop.value, &temp_alloc).ptr;
                 } else if (prop.key == "Menu") {
                     page.menu = DuplicateString(prop.value, &temp_alloc).ptr;
