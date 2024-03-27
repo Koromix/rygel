@@ -175,7 +175,7 @@ rekkord snapshots
 
 The output looks something like this:
 
-```
+```text
 # <hash>                                                           <name>                   <date>
 
 DA24E2C01C2AF6ACADF94FED087FD2695DF1E5352FA5474E091DABE38A104641   webserver1               [2023-11-26 06:09:57 +0100]
@@ -196,7 +196,7 @@ rekkord list <hash>
 
 The output looks something like this:
 
-```
+```text
 # <type> <name>                                                   <mode> <date>                      <size>
 
 [S] vpn/opt                                                              [2023-12-15 06:18:10 +0100] 
@@ -205,7 +205,7 @@ The output looks something like this:
 
 You can recursively list the content with `rekkord list <hash> --recurse` flag:
 
-```
+```text
 # <type> <name>                                                   <mode> <date>                      <size>
 
 [S] vpn/opt                                                              [2023-12-15 06:18:10 +0100] 
