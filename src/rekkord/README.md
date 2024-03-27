@@ -133,7 +133,7 @@ Once this is done, use [rekkord init](#initialize-repository) to create the repo
 Once you have configured your repository, through a configuration file or with environment variables, you can initialize it with the following command:
 
 ```sh
-export REKKORD_CONFIG_FILE = /path/to/config.ini
+export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord init
 
 # Alternative: rekkord init -C /path/to/config.ini
@@ -167,7 +167,7 @@ Each snapshot has a unique hash (which is actually a BLAKE3 hash in hexadecimal 
 You need to give snapshots a name (or use `--anonymous` to skip this). This name does not have to be unique and only exists to help you categorize snapshots.
 
 ```sh
-export REKKORD_CONFIG_FILE = /path/to/config.ini
+export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord save -n <NAME> <PATHS...>
 ```
 
@@ -176,7 +176,7 @@ The command will give you the snapshot hash once it finishes. You can retrieve t
 ## List snapshots
 
 ```sh
-export REKKORD_CONFIG_FILE = /path/to/config.ini
+export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord snapshots
 ```
 
@@ -197,7 +197,7 @@ Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 You can list the directories and files in a snapshot with the `rekkord list` command. You need to know the unique [snapshot hash](#list-snapshots) for this.
 
 ```sh
-export REKKORD_CONFIG_FILE = /path/to/config.ini
+export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord list <HASH>
 ```
 
@@ -271,7 +271,7 @@ Use `--format JSON` or `--format XML` to get the file tree in a JSON or XML form
 Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You need to know the unique [snapshot hash](#list-snapshots) for this.
 
 ```sh
-export REKKORD_CONFIG_FILE = /path/to/config.ini
+export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord restore <HASH> -O <PATH>
 ```
 
@@ -280,7 +280,7 @@ rekkord restore <HASH> -O <PATH>
 You can also use `rekkord mount <hash> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem.
 
 ```sh
-export REKKORD_CONFIG_FILE = /path/to/config.ini
+export REKKORD_CONFIG_FILE=/path/to/config.ini
 rekkord mount <HASH> <MOUNTPOINT>
 ```
 
