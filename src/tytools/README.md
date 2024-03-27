@@ -95,7 +95,7 @@ You can learn about the various commands using `tycmd help`. Get specific help f
 
 `tycmd list` lists plugged Teensy devices. Here is how it looks:
 
-```
+```text
 add 34130@usb-1-2 Teensy 3.1
 add 29460@usb-4-2 Teensy
 add 32250@usb-4-3 Teensy 3.0
@@ -103,7 +103,7 @@ add 32250@usb-4-3 Teensy 3.0
 
 Use `--verbose` if you want detailed information about available devices:
 
-```
+```text
 add 32250@usb-4-3 Teensy 3.0
   + capabilities:
     - upload

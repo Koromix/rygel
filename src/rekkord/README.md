@@ -198,7 +198,7 @@ You can list the directories and files in a snapshot with the `rekkord list` com
 
 ```sh
 export REKKORD_CONFIG_FILE = /path/to/config.ini
-rekkord list <hash>
+rekkord list <HASH>
 ```
 
 The output looks something like this:
@@ -272,7 +272,7 @@ Use the `rekkord restore` command to restore the files from a snapshot onto the 
 
 ```sh
 export REKKORD_CONFIG_FILE = /path/to/config.ini
-rekkord restore <hash> -O <path>
+rekkord restore <HASH> -O <PATH>
 ```
 
 ## Mount snapshot
@@ -281,7 +281,7 @@ You can also use `rekkord mount <hash> <mountpoint>` to mount a snapshot or a di
 
 ```sh
 export REKKORD_CONFIG_FILE = /path/to/config.ini
-rekkord mount <hash> <mountpoint>
+rekkord mount <HASH> <MOUNTPOINT>
 ```
 
 This mode has several limitations for now:
