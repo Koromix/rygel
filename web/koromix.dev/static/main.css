@@ -167,7 +167,7 @@ pre {
 .nojs pre { padding: 6px; }
 
 .alert {
-    margin: 2em 1em 1em 1em;
+    margin: 1.8em 1em 1.4em 1em;
     padding: 0.8em 1em;
     background: #fcfcfc;
     border-left: 3px solid var(--color);
@@ -264,6 +264,11 @@ pre {
     }
 
     pre { margin: 1em 0; }
+
+    .alert {
+        margin-left: 0.4em;
+        margin-right: 0.4em;
+    }
 
     #me > img { display: none; }
 }
