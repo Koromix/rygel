@@ -166,6 +166,21 @@ pre {
 }
 .nojs pre { padding: 6px; }
 
+.alert {
+    margin: 2em 1em 1em 1em;
+    padding: 0.5em 1em;
+    background: #fcfcfc;
+    border-left: 3px solid var(--color);
+}
+.alert > .title {
+    font-weight: bold;
+    color: var(--color);
+}
+.alert.note { --color: #316dca; }
+.alert.tip { --color: #347d39; }
+.alert.important { --color: #8256d0; }
+.alert.warning { --color: #966600; }
+.alert.caution { --color: #c93c37; }
 
 #me {
     display: flex;

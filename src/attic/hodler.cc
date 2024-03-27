@@ -391,6 +391,7 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                     PageSection sec = {};
 
                     const char *literal = cmark_node_get_literal(child);
+                    RG_ASSERT(literal);
 
                     Span<const char> toc;
                     Span<const char> title = SplitStr(literal, '^', &toc);
@@ -418,6 +419,64 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                         cmark_node_set_literal(frag, Fmt(alloc, "<a id=\"%1\"></a>", sec.id).ptr);
                     }
                     cmark_node_prepend_child(node, frag);
+                }
+            }
+
+            // Support GitHub-like alerts
+            if (event == CMARK_EVENT_EXIT && type == CMARK_NODE_BLOCK_QUOTE) {
+                cmark_node *child0 = cmark_node_first_child(node);
+                cmark_node *child = child0;
+
+                if (cmark_node_get_type(child) == CMARK_NODE_PARAGRAPH) {
+                    child = cmark_node_first_child(child);
+                }
+
+                if (cmark_node_get_type(child) == CMARK_NODE_TEXT) {
+                    const char *literal = cmark_node_get_literal(child);
+                    RG_ASSERT(literal);
+
+                    const char *cls = nullptr;
+                    const char *type = nullptr;
+
+                    if (TestStr(literal, "[!NOTE]")) {
+                        cls = "note";
+                        type = "Note";
+                    } else if (TestStr(literal, "[!TIP]")) {
+                        cls = "tip";
+                        type = "Tip";
+                    } else if (TestStr(literal, "[!IMPORTANT]")) {
+                        cls = "important";
+                        type = "⚠\uFE0E Important";
+                    } else if (TestStr(literal, "[!WARNING]")) {
+                        cls = "warning";
+                        type = "⚠\uFE0E Warning";
+                    } else if (TestStr(literal, "[!CAUTION]")) {
+                        cls = "caution";
+                        type = "⚠\uFE0E Caution";
+                    }
+
+                    if (cls) {
+                        RG_DEFER {
+                            cmark_node_free(node);
+                            cmark_node_free(child);
+                        };
+
+                        const char *tag = Fmt(alloc, "<div class=\"alert %1\">", cls).ptr;
+                        const char *before = Fmt(alloc, "<div class=\"title\">%1</div>", type).ptr;
+
+                        cmark_node *block = cmark_node_new(CMARK_NODE_CUSTOM_BLOCK);
+                        cmark_node *title = cmark_node_new(CMARK_NODE_HTML_INLINE);
+
+                        cmark_node_set_on_enter(block, tag);
+                        cmark_node_set_on_exit(block, "</div>");
+                        cmark_node_set_literal(title, before);
+
+                        cmark_node_replace(node, block);
+
+                        cmark_node_unlink(child0);
+                        cmark_node_append_child(block, title);
+                        cmark_node_append_child(block, child0);
+                    }
                 }
             }
         }
