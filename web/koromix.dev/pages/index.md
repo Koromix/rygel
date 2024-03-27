@@ -42,7 +42,7 @@ TyTools is a collection of independent tools to manage, flash and communicate wi
 Tool        | Type                      | Description
 ----------- | ------------------------- | ----------------------------------------------------
 TyCommander | Qt GUI (static)           | Upload, monitor and communicate with multiple boards
-TyUpdater   | Qt GUI (static)           | Simple firmware / sketch uploader
+TyUploader  | Qt GUI (static)           | Simple firmware / sketch uploader
 tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boards
 
 Find out more on the [page dedicated to TyTools](tytools).
