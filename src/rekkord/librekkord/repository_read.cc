@@ -14,6 +14,7 @@
 #include "src/core/base/base.hh"
 #include "disk.hh"
 #include "repository.hh"
+#include "priv_repository.hh"
 
 #ifdef _WIN32
     #ifndef NOMINMAX
@@ -263,7 +264,7 @@ static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t
 static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_separators,
                         Allocator *alloc, EntryInfo *out_entry)
 {
-    rk_RawFile *ptr = (rk_RawFile *)(entries.ptr + offset);
+    RawFile *ptr = (RawFile *)(entries.ptr + offset);
 
     if (entries.len - offset < RG_SIZE(*ptr)) {
         LogError("Malformed entry in directory blob");
@@ -285,10 +286,10 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     entry.size = LittleEndian(ptr->size);
 
     // Sanity checks
-    if (entry.kind != (int8_t)rk_RawFile::Kind::Directory &&
-            entry.kind != (int8_t)rk_RawFile::Kind::File &&
-            entry.kind != (int8_t)rk_RawFile::Kind::Link &&
-            entry.kind != (int8_t)rk_RawFile::Kind::Unknown) {
+    if (entry.kind != (int8_t)RawFile::Kind::Directory &&
+            entry.kind != (int8_t)RawFile::Kind::File &&
+            entry.kind != (int8_t)RawFile::Kind::Link &&
+            entry.kind != (int8_t)RawFile::Kind::Unknown) {
         LogError("Unknown object kind 0x%1", FmtHex((unsigned int)entry.kind));
         return -1;
     }
@@ -367,9 +368,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             return false;
         offset += skip;
 
-        if (entry.kind == (int)rk_RawFile::Kind::Unknown)
+        if (entry.kind == (int)RawFile::Kind::Unknown)
             continue;
-        if (!(entry.flags & (int)rk_RawFile::Flags::Readable))
+        if (!(entry.flags & (int)RawFile::Flags::Readable))
             continue;
 
         if (flags & (int)ExtractFlag::FlattenName) {
@@ -388,7 +389,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                 return false;
 
             switch (entry.kind) {
-                case (int)rk_RawFile::Kind::Directory: {
+                case (int)RawFile::Kind::Directory: {
                     if (entry_type != rk_BlobType::Directory) {
                         LogError("Blob '%1' is not a Directory", entry.hash);
                         return false;
@@ -400,7 +401,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                 } break;
 
-                case (int)rk_RawFile::Kind::File: {
+                case (int)RawFile::Kind::File: {
                     if (entry_type != rk_BlobType::File && entry_type != rk_BlobType::Chunk) {
                         LogError("Blob '%1' is not a File", entry.hash);
                         return false;
@@ -418,7 +419,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     SetFileMetaData(fd, entry.filename, entry.mtime, entry.btime, entry.mode);
                 } break;
 
-                case (int)rk_RawFile::Kind::Link: {
+                case (int)RawFile::Kind::Link: {
                     if (entry_type != rk_BlobType::Link) {
                         LogError("Blob '%1' is not a Link", entry.hash);
                         return false;
@@ -483,7 +484,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     int64_t file_len = -1;
     switch (type) {
         case rk_BlobType::File: {
-            if (file_blob.len % RG_SIZE(rk_RawChunk) != RG_SIZE(int64_t)) {
+            if (file_blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
                 LogError("Malformed file blob '%1'", hash);
                 return -1;
             }
@@ -506,10 +507,10 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
             Size prev_end = 0;
 
             // Write unencrypted file
-            for (Size offset = 0; offset < file_blob.len; offset += RG_SIZE(rk_RawChunk)) {
+            for (Size offset = 0; offset < file_blob.len; offset += RG_SIZE(RawChunk)) {
                 FileChunk chunk = {};
 
-                rk_RawChunk entry = {};
+                RawChunk entry = {};
                 memcpy(&entry, file_blob.ptr + offset, RG_SIZE(entry));
 
                 chunk.offset = LittleEndian(entry.offset);
@@ -549,8 +550,8 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 return -1;
 
             // Check actual file size
-            if (file_blob.len >= RG_SIZE(rk_RawChunk) + RG_SIZE(int64_t)) {
-                const rk_RawChunk *entry = (const rk_RawChunk *)(file_blob.end() - RG_SIZE(rk_RawChunk));
+            if (file_blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
+                const RawChunk *entry = (const RawChunk *)(file_blob.end() - RG_SIZE(RawChunk));
                 int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
                 if (len != file_len) [[unlikely]] {
@@ -645,12 +646,12 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             }
 
             // There must be at least one entry
-            if (blob.len <= RG_SIZE(rk_SnapshotHeader)) {
+            if (blob.len <= RG_SIZE(SnapshotHeader)) {
                 LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
 
-            Span<uint8_t> entries = blob.Take(RG_SIZE(rk_SnapshotHeader), blob.len - RG_SIZE(rk_SnapshotHeader));
+            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader), blob.len - RG_SIZE(SnapshotHeader));
             unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
             if (!get.ExtractEntries(entries, flags, dest_path))
@@ -702,13 +703,13 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
                     LogError("Blob '%1' is not a Snapshot (ignoring)", hash);
                     return true;
                 }
-                if (blob.len <= RG_SIZE(rk_SnapshotHeader)) {
+                if (blob.len <= RG_SIZE(SnapshotHeader)) {
                     LogError("Malformed snapshot blob '%1' (ignoring)", hash);
                     return true;
                 }
 
                 std::lock_guard lock(mutex);
-                const rk_SnapshotHeader *header = (const rk_SnapshotHeader *)blob.ptr;
+                const SnapshotHeader *header = (const SnapshotHeader *)blob.ptr;
 
                 snapshot.hash = hash;
                 snapshot.name = header->name[0] ? DuplicateString(header->name, alloc).ptr : nullptr;
@@ -794,10 +795,10 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->hash = entry.hash;
         obj->depth = depth;
         switch (entry.kind) {
-            case (int)rk_RawFile::Kind::Directory: { obj->type = rk_ObjectType::Directory; } break;
-            case (int)rk_RawFile::Kind::File: { obj->type = rk_ObjectType::File; } break;
-            case (int)rk_RawFile::Kind::Link: { obj->type = rk_ObjectType::Link; } break;
-            case (int)rk_RawFile::Kind::Unknown: { obj->type = rk_ObjectType::Unknown; } break;
+            case (int)RawFile::Kind::Directory: { obj->type = rk_ObjectType::Directory; } break;
+            case (int)RawFile::Kind::File: { obj->type = rk_ObjectType::File; } break;
+            case (int)RawFile::Kind::Link: { obj->type = rk_ObjectType::Link; } break;
+            case (int)RawFile::Kind::Unknown: { obj->type = rk_ObjectType::Unknown; } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
@@ -808,7 +809,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         obj->uid = entry.uid;
         obj->gid = entry.gid;
         obj->size = entry.size;
-        obj->readable = (entry.flags & (int)rk_RawFile::Flags::Readable);
+        obj->readable = (entry.flags & (int)RawFile::Flags::Readable);
 
         switch (obj->type) {
             case rk_ObjectType::Snapshot: { RG_UNREACHABLE(); } break;
@@ -883,12 +884,12 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
 
         case rk_BlobType::Snapshot: {
             // There must be at least one entry
-            if (blob.len <= RG_SIZE(rk_SnapshotHeader)) {
+            if (blob.len <= RG_SIZE(SnapshotHeader)) {
                 LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
 
-            const rk_SnapshotHeader *header = (const rk_SnapshotHeader *)blob.ptr;
+            const SnapshotHeader *header = (const SnapshotHeader *)blob.ptr;
             rk_ObjectInfo *obj = out_objects->AppendDefault();
 
             obj->hash = hash;
@@ -901,7 +902,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
 
             obj->stored = header->stored;
 
-            Span<uint8_t> entries = blob.Take(RG_SIZE(rk_SnapshotHeader), blob.len - RG_SIZE(rk_SnapshotHeader));
+            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader), blob.len - RG_SIZE(SnapshotHeader));
 
             if (!tree.RecurseEntries(entries, true, 1, alloc, out_objects))
                 return false;
@@ -969,7 +970,7 @@ public:
 
 bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
 {
-    if (blob.len % RG_SIZE(rk_RawChunk) != RG_SIZE(int64_t)) {
+    if (blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
         LogError("Malformed file blob '%1'", hash);
         return false;
     }
@@ -983,10 +984,10 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
     // Check coherence
     Size prev_end = 0;
 
-    for (Size offset = 0; offset < blob.len; offset += RG_SIZE(rk_RawChunk)) {
+    for (Size offset = 0; offset < blob.len; offset += RG_SIZE(RawChunk)) {
         FileChunk chunk = {};
 
-        rk_RawChunk entry = {};
+        RawChunk entry = {};
         memcpy(&entry, blob.ptr + offset, RG_SIZE(entry));
 
         chunk.offset = LittleEndian(entry.offset);
@@ -1003,8 +1004,8 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
     }
 
     // Check actual file size
-    if (blob.len >= RG_SIZE(rk_RawChunk) + RG_SIZE(int64_t)) {
-        const rk_RawChunk *entry = (const rk_RawChunk *)(blob.end() - RG_SIZE(rk_RawChunk));
+    if (blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
+        const RawChunk *entry = (const RawChunk *)(blob.end() - RG_SIZE(RawChunk));
         int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
         if (len != file_len) [[unlikely]] {

@@ -13,7 +13,6 @@
 
 #pragma once
 
-#include "types.hh"
 #include "config.hh"
 #include "disk.hh"
 #include "lz4.hh"

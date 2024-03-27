@@ -14,27 +14,22 @@
 #pragma once
 
 #include "src/core/base/base.hh"
+#include "disk.hh"
 
 namespace RG {
 
-struct rk_Hash {
-    uint8_t hash[32];
-    operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
-};
-static_assert(RG_SIZE(rk_Hash) == 32);
-
 #pragma pack(push, 1)
-struct rk_SnapshotHeader {
+struct SnapshotHeader {
     char name[512];
     int64_t time; // Little Endian
     int64_t len; // Little Endian
     int64_t stored; // Little Endian
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(rk_SnapshotHeader) == 536);
+static_assert(RG_SIZE(SnapshotHeader) == 536);
 
 #pragma pack(push, 1)
-struct rk_RawFile {
+struct RawFile {
     enum class Flags {
         Stated = 1 << 0,
         Readable = 1 << 1
@@ -59,23 +54,21 @@ struct rk_RawFile {
     uint32_t mode; // Little Endian
     int64_t size; // Little Endian
 
-    inline Size GetSize() { return RG_SIZE(rk_RawFile) + name_len + extended_len; }
+    inline Size GetSize() { return RG_SIZE(RawFile) + name_len + extended_len; }
 
-    inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(rk_RawFile), name_len); }
-    inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(rk_RawFile), name_len); }
+    inline Span<char> GetName() { return MakeSpan((char *)this + RG_SIZE(RawFile), name_len); }
+    inline Span<const char> GetName() const { return MakeSpan((const char *)this + RG_SIZE(RawFile), name_len); }
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(rk_RawFile) == 76);
+static_assert(RG_SIZE(RawFile) == 76);
 
 #pragma pack(push, 1)
-struct rk_RawChunk {
+struct RawChunk {
     int64_t offset; // Little Endian
     int32_t len;    // Little Endian
     rk_Hash hash;
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(rk_RawChunk) == 44);
-
-bool rk_ParseHash(const char *str, rk_Hash *out_hash);
+static_assert(RG_SIZE(RawChunk) == 44);
 
 }

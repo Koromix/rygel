@@ -14,7 +14,6 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "types.hh"
 #include "src/core/sqlite/sqlite.hh"
 
 namespace RG {
@@ -22,6 +21,12 @@ namespace RG {
 struct rk_Config;
 struct s3_Config;
 struct ssh_Config;
+
+struct rk_Hash {
+    uint8_t hash[32];
+    operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
+};
+static_assert(RG_SIZE(rk_Hash) == 32);
 
 enum class rk_DiskMode {
     Secure,
@@ -150,5 +155,7 @@ std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate);
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads = -1);
 std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, int threads = -1);
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, int threads = -1);
+
+bool rk_ParseHash(const char *str, rk_Hash *out_hash);
 
 }

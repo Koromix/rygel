@@ -14,7 +14,6 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "types.hh"
 
 namespace RG {
 

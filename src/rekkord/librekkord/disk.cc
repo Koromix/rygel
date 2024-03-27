@@ -15,44 +15,19 @@
 #include "config.hh"
 #include "disk.hh"
 #include "lz4.hh"
+#include "priv_disk.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
 static_assert(crypto_box_PUBLICKEYBYTES == 32);
 static_assert(crypto_box_SECRETKEYBYTES == 32);
-static_assert(crypto_secretbox_KEYBYTES == 32);
+static_assert(crypto_box_SEALBYTES == 32 + 16);
+static_assert(crypto_secretstream_xchacha20poly1305_HEADERBYTES == 24);
 static_assert(crypto_secretstream_xchacha20poly1305_KEYBYTES == 32);
-
-#pragma pack(push, 1)
-struct KeyData {
-    uint8_t salt[16];
-    uint8_t nonce[crypto_secretbox_NONCEBYTES];
-    uint8_t cypher[crypto_secretbox_MACBYTES + 32];
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-struct SecretData {
-    int8_t version;
-    uint8_t nonce[crypto_secretbox_NONCEBYTES];
-    uint8_t cypher[crypto_secretbox_MACBYTES + 2048];
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-struct BlobIntro {
-    int8_t version;
-    int8_t type;
-    uint8_t ekey[crypto_secretstream_xchacha20poly1305_KEYBYTES + crypto_box_SEALBYTES];
-    uint8_t header[crypto_secretstream_xchacha20poly1305_HEADERBYTES];
-};
-#pragma pack(pop)
-
-static const int SecretVersion = 1;
-static const int CacheVersion = 3;
-static const int BlobVersion = 7;
-static const Size BlobSplit = Kibibytes(32);
+static_assert(crypto_secretbox_KEYBYTES == 32);
+static_assert(crypto_secretbox_NONCEBYTES == 24);
+static_assert(crypto_secretbox_MACBYTES == 16);
 
 bool rk_Disk::Authenticate(const char *username, const char *pwd)
 {
@@ -1081,6 +1056,36 @@ std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate)
     }
 
     RG_UNREACHABLE();
+}
+
+static inline int ParseHexadecimalChar(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else {
+        return -1;
+    }
+}
+
+bool rk_ParseHash(const char *str, rk_Hash *out_hash)
+{
+    for (Size i = 0, j = 0; str[j]; i++, j += 2) {
+        int high = ParseHexadecimalChar(str[j]);
+        int low = (high >= 0) ? ParseHexadecimalChar(str[j + 1]) : -1;
+
+        if (low < 0) {
+            LogError("Malformed hash string '%1'", str);
+            return false;
+        }
+
+        out_hash->hash[i] = (uint8_t)((high << 4) | low);
+    }
+
+    return true;
 }
 
 }
