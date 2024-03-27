@@ -179,7 +179,7 @@ felix -pFast tycommander tycommanderc
 felix -pFast tyuploader
 ```
 
-If you want to build debug binaries instead, just use `./felix <target>`.
+If you want to build debug binaries instead, just use: `./felix <target>`
 
 ## Build on macOS
 
@@ -199,7 +199,7 @@ Once Qt is ready, you can build TyTools by executing the following commands in t
 ./felix -pFast tyuploader
 ```
 
-If you want to build debug binaries instead, just use `./felix <target>`.
+If you want to build debug binaries instead, just use: `./felix <target>`
 
 ## Build on Linux
 
@@ -230,7 +230,7 @@ Open the project directory in a terminal and execute:
 ./felix -pFast tyuploader
 ```
 
-If you want to build debug binaries instead, just use `./felix <target>`.
+If you want to build debug binaries instead, just use: `./felix <target>`
 
 # License
 
