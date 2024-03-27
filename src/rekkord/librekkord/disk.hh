@@ -104,6 +104,7 @@ public:
     int GetThreads() const { return threads; }
 
     bool ChangeID();
+    bool RebuildCache();
 
     bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
     bool DeleteUser(const char *username);
@@ -147,7 +148,6 @@ private:
 
     bool OpenCache(Span<const uint8_t> id);
     void ClearCache();
-    bool RebuildCache();
 };
 
 std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate);

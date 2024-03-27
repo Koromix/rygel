@@ -25,6 +25,7 @@ namespace RG {
 int RunInit(Span<const char *> arguments);
 int RunExportKey(Span<const char *> arguments);
 int RunChangeID(Span<const char *> arguments);
+int RunRebuildCache(Span<const char *> arguments);
 int RunAddUser(Span<const char *> arguments);
 int RunDeleteUser(Span<const char *> arguments);
 int RunListUsers(Span<const char *> arguments);
@@ -67,6 +68,7 @@ Management commands:
 
     %!..+export_key%!0                   Export master repository key
     %!..+change_id%!0                    Change repository cache ID
+    %!..+rebuild_cache%!0                Rebuild local repository cache
 
     %!..+add_user%!0                     Add user
     %!..+delete_user%!0                  Delete user
@@ -155,6 +157,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunExportKey(arguments);
     } else if (TestStr(cmd, "change_id")) {
         return RunChangeID(arguments);
+    } else if (TestStr(cmd, "rebuild_cache")) {
+        return RunRebuildCache(arguments);
     } else if (TestStr(cmd, "add_user")) {
         return RunAddUser(arguments);
     } else if (TestStr(cmd, "delete_user")) {

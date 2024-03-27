@@ -170,6 +170,33 @@ bool rk_Disk::ChangeID()
     return true;
 }
 
+bool rk_Disk::RebuildCache()
+{
+    if (!cache_db.IsValid()) {
+        LogError("Cache is not open");
+        return false;
+    }
+
+    BlockAllocator temp_alloc;
+
+    if (!cache_db.Run("DELETE FROM objects"))
+        return false;
+    if (!cache_db.Run("DELETE FROM stats"))
+        return false;
+
+    bool success = ListRaw(nullptr, [&](const char *path) {
+        if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                             ON CONFLICT (key) DO NOTHING)", path))
+            return false;
+
+        return true;
+    });
+    if (!success)
+        return false;
+
+    return true;
+}
+
 bool rk_Disk::InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force)
 {
     RG_ASSERT(url);
@@ -1014,31 +1041,6 @@ void rk_Disk::ClearCache()
 
         return true;
     });
-}
-
-bool rk_Disk::RebuildCache()
-{
-    if (!cache_db.IsValid())
-        return true;
-
-    BlockAllocator temp_alloc;
-
-    if (!cache_db.Run("DELETE FROM objects"))
-        return false;
-    if (!cache_db.Run("DELETE FROM stats"))
-        return false;
-
-    bool success = ListRaw(nullptr, [&](const char *path) {
-        if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                             ON CONFLICT (key) DO NOTHING)", path))
-            return false;
-
-        return true;
-    });
-    if (!success)
-        return false;
-
-    return true;
 }
 
 std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate)
