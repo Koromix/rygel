@@ -14,7 +14,10 @@
 @import url('../../../vendor/opensans/OpenSans.css');
 @import url('../../../vendor/highlight.js/styles/base16/tomorrow.css');
 
-html { scroll-padding-top: 80px; }
+html {
+    height: 100%;
+    scroll-padding-top: 80px;
+}
 
 body {
     margin: 0;
@@ -238,6 +241,8 @@ pre {
 }
 
 @media screen and (max-width: 960px) {
+    html { scroll-padding-top: 80px; }
+
     #top menu {
         padding-left: 60px;
         flex-direction: column;
