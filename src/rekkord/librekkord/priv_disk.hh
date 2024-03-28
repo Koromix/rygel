@@ -44,7 +44,7 @@ struct BlobIntro {
 #pragma pack(pop)
 
 static const int SecretVersion = 1;
-static const int CacheVersion = 3;
+static const int CacheVersion = 4;
 static const int BlobVersion = 7;
 static const Size BlobSplit = Kibibytes(32);
 

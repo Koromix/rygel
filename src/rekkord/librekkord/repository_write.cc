@@ -205,7 +205,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         // Skip file analysis if metadata is unchanged
                         {
                             sq_Statement stmt;
-                            if (!db->Prepare("SELECT mtime, mode, size, hash FROM stats WHERE path = ?1", &stmt)) {
+                            if (!db->Prepare("SELECT mtime, btime, mode, size, hash FROM stats WHERE path = ?1", &stmt)) {
                                 success = false;
                                 break;
                             }
@@ -213,14 +213,16 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                             if (stmt.Step()) {
                                 int64_t mtime = sqlite3_column_int64(stmt, 0);
-                                uint32_t mode = (uint32_t)sqlite3_column_int64(stmt, 1);
-                                int64_t size = sqlite3_column_int64(stmt, 2);
-                                Span<const uint8_t> hash = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 3),
-                                                                    sqlite3_column_bytes(stmt, 3));
+                                int64_t btime = sqlite3_column_int64(stmt, 1);
+                                uint32_t mode = (uint32_t)sqlite3_column_int64(stmt, 2);
+                                int64_t size = sqlite3_column_int64(stmt, 3);
+                                Span<const uint8_t> hash = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 4),
+                                                                    sqlite3_column_bytes(stmt, 4));
 
-                                if (hash.len == RG_SIZE(rk_Hash) && mtime == LittleEndian(entry->mtime) &&
-                                                                    mode == LittleEndian(entry->mode) &&
-                                                                    size == LittleEndian(entry->size)) {
+                                if (hash.len == RG_SIZE(rk_Hash) && mtime == entry->mtime &&
+                                                                    btime == entry->btime &&
+                                                                    mode == entry->mode &&
+                                                                    size == entry->size) {
                                     memcpy(&entry->hash, hash.ptr, RG_SIZE(rk_Hash));
 
                                     entry->flags |= LittleEndian((int16_t)RawFile::Flags::Readable);
@@ -366,13 +368,14 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
                     if ((flags & (int)RawFile::Flags::Readable) &&
                             entry->kind == (int16_t)RawFile::Kind::File) {
-                        if (!db->Run(R"(INSERT INTO stats (path, mtime, mode, size, hash)
-                                            VALUES (?1, ?2, ?3, ?4, ?5)
+                        if (!db->Run(R"(INSERT INTO stats (path, mtime, btime, mode, size, hash)
+                                            VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                                             ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
+                                                                             btime = excluded.btime,
                                                                              mode = excluded.mode,
                                                                              size = excluded.size,
                                                                              hash = excluded.hash)",
-                                     filename, entry->mtime, entry->mode, entry->size,
+                                     filename, entry->mtime, entry->btime, entry->mode, entry->size,
                                      MakeSpan((const uint8_t *)&entry->hash, RG_SIZE(entry->hash))))
                             return false;
                     }

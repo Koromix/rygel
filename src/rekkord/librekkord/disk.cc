@@ -1011,9 +1011,27 @@ bool rk_Disk::OpenCache(Span<const uint8_t> id)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 3: {
+                    bool success = cache_db.RunMany(R"(
+                        DROP TABLE stats;
+
+                        CREATE TABLE stats (
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            btime INEGER NOT NULL,
+                            mode INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            hash BLOB NOT NULL
+                        );
+                        CREATE UNIQUE INDEX stats_p ON stats (path);
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(CacheVersion == 3);
+                static_assert(CacheVersion == 4);
             }
 
             if (!cache_db.SetUserVersion(CacheVersion))
