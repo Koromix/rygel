@@ -54,6 +54,7 @@ body {
 #top li { list-style-type: none; }
 #top li > a {
     display: block;
+    background: transparent;
     color: #383838;
     text-decoration: none;
     border-bottom: 1px solid #383838;
@@ -61,7 +62,7 @@ body {
 }
 #top li > a:hover {
     margin-bottom: -1px;
-    border-bottom: 2px solid #ff6600;
+    border-bottom: 2px solid #383838;
 }
 #top li > a.active { font-weight: bold; }
 
@@ -82,7 +83,10 @@ body {
     display: block;
     padding: 1px;
     color: #383838;
+    background: transparent;
+    text-decoration: none;
 }
+#side a:hover { text-decoration: underline; }
 #side a.active { font-weight: bold; }
 #side a.lv1 { padding-left: 12px; }
 #side a.lv2 { padding-left: 27px; }
@@ -123,11 +127,15 @@ h3 {
 }
 
 a {
-    color: #ff6600;
+    color: inherit;
     cursor: pointer;
     text-decoration: none;
 }
-a:hover { text-decoration: underline; }
+a:not(:has(> img)) { text-decoration: underline; }
+a:not(:has(> img)):hover {
+    background: #383838;
+    color: white;
+}
 
 table {
     margin: 1em auto;
