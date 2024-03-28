@@ -14,6 +14,7 @@
 import * as hljs from '../../../vendor/highlight.js/highlight.js';
 
 function init() {
+    initMenu();
     initSide();
     initScroll();
 
@@ -21,6 +22,31 @@ function init() {
     document.body.classList.add('js');
 
     hljs.highlightAll();
+}
+
+function initMenu() {
+    let items = document.querySelectorAll('nav#top li');
+
+    document.body.addEventListener('click', e => {
+        if (e.target.tagName == 'DIV' && findParent(e.target, el => el.id == 'top'))
+            return;
+
+        // Expand top menu categories
+        {
+            let target = findParent(e.target, el => el.tagName == 'LI');
+
+            for (let item of items) {
+                if (item == target) {
+                    item.classList.toggle('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            }
+        }
+
+        if (e.target.tagName == 'A' && e.target.getAttribute('href') == '#')
+            e.preventDefault();
+    });
 }
 
 function initSide() {
@@ -105,6 +131,12 @@ function initScroll() {
         let top = document.querySelector('nav#top');
         top.classList.toggle('border', window.pageYOffset >= 20);
     }
+}
+
+function findParent(el, func) {
+    while (el && !func(el))
+        el = el.parentElement;
+    return el;
 }
 
 function deploy() {

@@ -33,9 +33,9 @@ body {
     position: sticky;
     top: 0;
     background: white;
-    z-index: 1;
+    z-index: 9;
     border-bottom: 2px solid white;
-    transition: border-bottom-color 0.2s ease;
+    transition: border-bottom-color 0.4s ease;
 }
 #top.border { border-bottom-color: #383838; }
 #top menu {
@@ -47,26 +47,57 @@ body {
     box-sizing: border-box;
     margin: 0 auto;
     padding: 16px 16px 24px 16px;
-    overflow: hidden;
+    overflow: visible;
     z-index: 1;
     display: flex;
     align-items: center;
-    gap: 20px;
-    overflow: visible;
+    gap: 10px;
 }
-#top li { list-style-type: none; }
-#top li > a {
-    display: block;
+#top li {
+    position: relative;
+    list-style-type: none;
+    padding-left: 8px;
+    border-left: 2px solid rgba(0, 0, 0, 0);
+}
+#top li a {
     color: #383838;
     text-decoration: none;
+}
+#top li > div a.category {
+    cursor: default;
+    pointer-events: none;
+}
+#top li > a {
+    display: block;
     border-bottom: 1px solid #383838;
     text-transform: uppercase;
 }
-#top li > a:hover {
+#top li > a:hover, #top li.active > a {
     margin-bottom: -1px;
     border-bottom: 2px solid #6aa051;
 }
 #top li > a.active { font-weight: bold; }
+#top li > div { display: none; }
+.nojs #top li:hover, #top li.active { border-left-color: #6aa051; }
+.nojs #top li:hover > a, #top li.active > a {
+    margin-bottom: 1px;
+    border-bottom: none;
+}
+.nojs #top li:hover > div, #top li.active > div {
+    position: absolute;
+    margin-top: 0px;
+    margin-left: -10px;
+    width: 220px;
+    padding: 12px 1em 10px 1em;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border-left: 2px solid #6aa051;
+    border-bottom: 2px solid #6aa051;
+}
+#top li > div > a { margin-top: 3px; }
+#top li > div > a.active { font-weight: bold; }
+#top li > div > a:hover { text-decoration: underline; }
 
 #logo {
     height: 70%;
@@ -79,7 +110,6 @@ body {
     height: 100%;
     object-fit: contain;
 }
-#top.border #logo { filter: saturate(0%) brightness(0); }
 
 #side menu {
     margin: 0;
@@ -257,19 +287,21 @@ pre {
         align-items: start;
         z-index: 8;
     }
-    #top li > a {
+    #top li a {
         font-size: 1.1em;
-        height: 1.6em;
+        line-height: 1.6em;
+    }
+    #top li > a:hover, #top li.active > a { margin-bottom: -2px; }
+    #top li > a {
         display: none;
         border-bottom: none;
     }
-    #top li > a:hover { margin-bottom: -2px; }
-    .js #top li > a:not(.active) { display: none; }
     #top.active menu {
         height: auto;
         gap: 4px;
     }
     #top.active li > a { display: block !important; }
+    #top li.active > div { position: static; }
 
     #logo {
         height: 100%;
