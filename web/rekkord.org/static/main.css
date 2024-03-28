@@ -79,6 +79,7 @@ body {
     height: 100%;
     object-fit: contain;
 }
+#top.border #logo { filter: saturate(0%) brightness(0); }
 
 #side menu {
     margin: 0;
