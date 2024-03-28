@@ -31,8 +31,8 @@ struct FileHash {
 };
 
 struct AssetCopy {
-    const char *dest_directory;
-    const char *src_directory;
+    const char *dest_filename;
+    const char *src_filename;
     HeapArray<const char *> ignore;
 };
 
@@ -763,11 +763,11 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 if (prop.value == "Copy") {
                     AssetCopy *copy = copies.AppendDefault();
 
-                    copy->dest_directory = NormalizePath(prop.section, &temp_alloc).ptr;
+                    copy->dest_filename = NormalizePath(prop.section, &temp_alloc).ptr;
 
                     while (ini.NextInSection(&prop)) {
                         if (prop.key == "From") {
-                            copy->src_directory = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
+                            copy->src_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
                         } else if (prop.key == "Ignore") {
                             while (prop.value.len) {
                                 Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
@@ -783,8 +783,8 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                         }
                     }
 
-                    if (!copy->src_directory) {
-                        LogError("Missing copy source directory");
+                    if (!copy->src_filename) {
+                        LogError("Missing copy source filename");
                         valid = false;
                     }
                 } else if (prop.value == "Bundle") {
@@ -822,8 +822,8 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
     if (!copies.len) {
         AssetCopy copy = {};
 
-        copy.dest_directory = ".";
-        copy.src_directory = Fmt(&temp_alloc, "%1%/assets", source_dir).ptr;
+        copy.dest_filename = ".";
+        copy.src_filename = Fmt(&temp_alloc, "%1%/assets", source_dir).ptr;
 
         copies.Append(copy);
     }
@@ -842,8 +842,29 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
         Async async;
 
         HeapArray<const char *> src_filenames;
-        if (!EnumerateFiles(copy.src_directory, nullptr, 3, 1024, &temp_alloc, &src_filenames))
-            return false;
+        {
+            FileInfo file_info;
+            if (StatFile(copy.src_filename, &file_info) != StatResult::Success)
+                return false;
+
+            switch (file_info.type) {
+                case FileType::Directory: {
+                    if (!EnumerateFiles(copy.src_filename, nullptr, 3, 1024, &temp_alloc, &src_filenames))
+                        return false;
+                } break;
+                case FileType::File: {
+                    src_filenames.Append(copy.src_filename);
+                } break;
+
+                case FileType::Link:
+                case FileType::Device:
+                case FileType::Pipe:
+                case FileType::Socket: {
+                    LogError("Cannot copy '%1' with unexpected file type '%2'", copy.src_filename, FileTypeNames[(int)file_info.type]);
+                    return false;
+                } break;
+            }
+        }
 
         // Remove ignored patterns
         src_filenames.RemoveFrom(std::remove_if(src_filenames.begin(), src_filenames.end(),
@@ -852,12 +873,12 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                                [&](const char *pattern) { return MatchPathSpec(filename, pattern); });
         }) - src_filenames.begin());
 
-        Size prefix_len = strlen(copy.src_directory);
+        Size prefix_len = strlen(copy.src_filename);
 
         for (const char *src_filename: src_filenames) {
             const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
 
-            const char *url = NormalizePath(basename, copy.dest_directory, &temp_alloc).ptr;
+            const char *url = NormalizePath(basename, copy.dest_filename, &temp_alloc).ptr;
             const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_dir, url).ptr;
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
