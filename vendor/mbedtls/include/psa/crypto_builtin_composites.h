@@ -7,34 +7,31 @@
  * \note This file may not be included directly. Applications must
  * include psa/crypto.h.
  *
- * \note This header and its content is not part of the Mbed TLS API and
+ * \note This header and its content are not part of the Mbed TLS API and
  * applications must not depend on it. Its main purpose is to define the
  * multi-part state objects of the Mbed TLS software-based PSA drivers. The
- * definition of these objects are then used by crypto_struct.h to define the
+ * definitions of these objects are then used by crypto_struct.h to define the
  * implementation-defined types of PSA multi-part state objects.
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 #ifndef PSA_CRYPTO_BUILTIN_COMPOSITES_H
 #define PSA_CRYPTO_BUILTIN_COMPOSITES_H
-#include "../mbedtls/private_access.h"
+#include "mbedtls/private_access.h"
 
 #include <psa/crypto_driver_common.h>
+
+#include "mbedtls/cmac.h"
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_GCM)
+#include "mbedtls/gcm.h"
+#endif
+#if defined(MBEDTLS_PSA_BUILTIN_ALG_CCM)
+#include "mbedtls/ccm.h"
+#endif
+#include "mbedtls/chachapoly.h"
 
 /*
  * MAC multi-part operation definitions.
@@ -56,8 +53,6 @@ typedef struct {
 
 #define MBEDTLS_PSA_HMAC_OPERATION_INIT { 0, PSA_HASH_OPERATION_INIT, { 0 } }
 #endif /* MBEDTLS_PSA_BUILTIN_ALG_HMAC */
-
-#include "../mbedtls/cmac.h"
 
 typedef struct {
     psa_algorithm_t MBEDTLS_PRIVATE(alg);
@@ -107,7 +102,7 @@ typedef struct {
 
 #define MBEDTLS_PSA_AEAD_OPERATION_INIT { 0, 0, 0, 0, { 0 } }
 
-#include "../mbedtls/ecdsa.h"
+#include "mbedtls/ecdsa.h"
 
 /* Context structure for the Mbed TLS interruptible sign hash implementation. */
 typedef struct {
@@ -182,7 +177,7 @@ typedef struct {
 
 /* EC-JPAKE operation definitions */
 
-#include "../mbedtls/ecjpake.h"
+#include "mbedtls/ecjpake.h"
 
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_JPAKE)
 #define MBEDTLS_PSA_BUILTIN_PAKE  1
@@ -199,7 +194,7 @@ typedef struct {
     uint8_t *MBEDTLS_PRIVATE(password);
     size_t MBEDTLS_PRIVATE(password_len);
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_JPAKE)
-    uint8_t MBEDTLS_PRIVATE(role);
+    mbedtls_ecjpake_role MBEDTLS_PRIVATE(role);
     uint8_t MBEDTLS_PRIVATE(buffer[MBEDTLS_PSA_JPAKE_BUFFER_SIZE]);
     size_t MBEDTLS_PRIVATE(buffer_length);
     size_t MBEDTLS_PRIVATE(buffer_offset);

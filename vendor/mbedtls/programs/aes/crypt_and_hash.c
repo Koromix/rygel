@@ -3,19 +3,7 @@
  *          security.
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 /* Enable definition of fileno() even when compiling with -std=c99. Must be
@@ -88,6 +76,9 @@ int main(int argc, char *argv[])
     const mbedtls_md_info_t *md_info;
     mbedtls_cipher_context_t cipher_ctx;
     mbedtls_md_context_t md_ctx;
+    mbedtls_cipher_mode_t cipher_mode;
+    unsigned int cipher_block_size;
+    unsigned char md_size;
 #if defined(_WIN32_WCE)
     long filesize, offset;
 #elif defined(_WIN32)
@@ -112,7 +103,11 @@ int main(int argc, char *argv[])
         list = mbedtls_cipher_list();
         while (*list) {
             cipher_info = mbedtls_cipher_info_from_type(*list);
-            mbedtls_printf("  %s\n", mbedtls_cipher_info_get_name(cipher_info));
+            const char *name = mbedtls_cipher_info_get_name(cipher_info);
+
+            if (name) {
+                mbedtls_printf("  %s\n", mbedtls_cipher_info_get_name(cipher_info));
+            }
             list++;
         }
 
@@ -235,6 +230,9 @@ int main(int argc, char *argv[])
         goto exit;
     }
 
+    md_size = mbedtls_md_get_size(md_info);
+    cipher_block_size = mbedtls_cipher_get_block_size(&cipher_ctx);
+
     if (mode == MODE_ENCRYPT) {
         /*
          * Generate the initialization vector as:
@@ -329,9 +327,9 @@ int main(int argc, char *argv[])
         /*
          * Encrypt and write the ciphertext.
          */
-        for (offset = 0; offset < filesize; offset += mbedtls_cipher_get_block_size(&cipher_ctx)) {
-            ilen = ((unsigned int) filesize - offset > mbedtls_cipher_get_block_size(&cipher_ctx)) ?
-                   mbedtls_cipher_get_block_size(&cipher_ctx) : (unsigned int) (filesize - offset);
+        for (offset = 0; offset < filesize; offset += cipher_block_size) {
+            ilen = ((unsigned int) filesize - offset > cipher_block_size) ?
+                   cipher_block_size : (unsigned int) (filesize - offset);
 
             if (fread(buffer, 1, ilen, fin) != ilen) {
                 mbedtls_fprintf(stderr, "fread(%ld bytes) failed\n", (long) ilen);
@@ -376,8 +374,8 @@ int main(int argc, char *argv[])
             goto exit;
         }
 
-        if (fwrite(digest, 1, mbedtls_md_get_size(md_info), fout) != mbedtls_md_get_size(md_info)) {
-            mbedtls_fprintf(stderr, "fwrite(%d bytes) failed\n", mbedtls_md_get_size(md_info));
+        if (fwrite(digest, 1, md_size, fout) != md_size) {
+            mbedtls_fprintf(stderr, "fwrite(%d bytes) failed\n", md_size);
             goto exit;
         }
     }
@@ -392,12 +390,12 @@ int main(int argc, char *argv[])
          *      N*16 .. (N+1)*16 - 1    Encrypted Block #N
          *  (N+1)*16 .. (N+1)*16 + n    Hash(ciphertext)
          */
-        if (filesize < 16 + mbedtls_md_get_size(md_info)) {
+        if (filesize < 16 + md_size) {
             mbedtls_fprintf(stderr, "File too short to be encrypted.\n");
             goto exit;
         }
 
-        if (mbedtls_cipher_get_block_size(&cipher_ctx) == 0) {
+        if (cipher_block_size == 0) {
             mbedtls_fprintf(stderr, "Invalid cipher block size: 0. \n");
             goto exit;
         }
@@ -405,18 +403,21 @@ int main(int argc, char *argv[])
         /*
          * Check the file size.
          */
-        if (mbedtls_cipher_info_get_mode(cipher_info) != MBEDTLS_MODE_GCM &&
-            ((filesize - mbedtls_md_get_size(md_info)) %
-             mbedtls_cipher_get_block_size(&cipher_ctx)) != 0) {
+        cipher_mode = mbedtls_cipher_info_get_mode(cipher_info);
+        if (cipher_mode != MBEDTLS_MODE_GCM &&
+            cipher_mode != MBEDTLS_MODE_CTR &&
+            cipher_mode != MBEDTLS_MODE_CFB &&
+            cipher_mode != MBEDTLS_MODE_OFB &&
+            ((filesize - md_size) % cipher_block_size) != 0) {
             mbedtls_fprintf(stderr, "File content not a multiple of the block size (%u).\n",
-                            mbedtls_cipher_get_block_size(&cipher_ctx));
+                            cipher_block_size);
             goto exit;
         }
 
         /*
          * Subtract the IV + HMAC length.
          */
-        filesize -= (16 + mbedtls_md_get_size(md_info));
+        filesize -= (16 + md_size);
 
         /*
          * Read the IV and original filesize modulo 16.
@@ -480,13 +481,13 @@ int main(int argc, char *argv[])
         /*
          * Decrypt and write the plaintext.
          */
-        for (offset = 0; offset < filesize; offset += mbedtls_cipher_get_block_size(&cipher_ctx)) {
-            ilen = ((unsigned int) filesize - offset > mbedtls_cipher_get_block_size(&cipher_ctx)) ?
-                   mbedtls_cipher_get_block_size(&cipher_ctx) : (unsigned int) (filesize - offset);
+        for (offset = 0; offset < filesize; offset += cipher_block_size) {
+            ilen = ((unsigned int) filesize - offset > cipher_block_size) ?
+                   cipher_block_size : (unsigned int) (filesize - offset);
 
             if (fread(buffer, 1, ilen, fin) != ilen) {
                 mbedtls_fprintf(stderr, "fread(%u bytes) failed\n",
-                                mbedtls_cipher_get_block_size(&cipher_ctx));
+                                cipher_block_size);
                 goto exit;
             }
 
@@ -514,14 +515,14 @@ int main(int argc, char *argv[])
             goto exit;
         }
 
-        if (fread(buffer, 1, mbedtls_md_get_size(md_info), fin) != mbedtls_md_get_size(md_info)) {
-            mbedtls_fprintf(stderr, "fread(%d bytes) failed\n", mbedtls_md_get_size(md_info));
+        if (fread(buffer, 1, md_size, fin) != md_size) {
+            mbedtls_fprintf(stderr, "fread(%d bytes) failed\n", md_size);
             goto exit;
         }
 
         /* Use constant-time buffer comparison */
         diff = 0;
-        for (i = 0; i < mbedtls_md_get_size(md_info); i++) {
+        for (i = 0; i < md_size; i++) {
             diff |= digest[i] ^ buffer[i];
         }
 

@@ -32,19 +32,7 @@
 
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 /* First include Mbed TLS headers to get the Mbed TLS configuration and
@@ -62,13 +50,13 @@
 #include <psa/crypto.h>
 
 /* If the build options we need are not enabled, compile a placeholder. */
-#if !defined(MBEDTLS_SHA256_C) || !defined(MBEDTLS_MD_C) ||      \
+#if !defined(PSA_WANT_ALG_SHA_256) || !defined(MBEDTLS_MD_C) ||      \
     !defined(MBEDTLS_AES_C) || !defined(MBEDTLS_CCM_C) ||        \
     !defined(MBEDTLS_PSA_CRYPTO_C) || !defined(MBEDTLS_FS_IO) || \
     defined(MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER)
 int main(void)
 {
-    printf("MBEDTLS_SHA256_C and/or MBEDTLS_MD_C and/or "
+    printf("PSA_WANT_ALG_SHA_256 and/or MBEDTLS_MD_C and/or "
            "MBEDTLS_AES_C and/or MBEDTLS_CCM_C and/or "
            "MBEDTLS_PSA_CRYPTO_C and/or MBEDTLS_FS_IO "
            "not defined and/or MBEDTLS_PSA_CRYPTO_KEY_ID_ENCODES_OWNER "
@@ -698,6 +686,6 @@ usage_failure:
     usage();
     return EXIT_FAILURE;
 }
-#endif /* MBEDTLS_SHA256_C && MBEDTLS_MD_C &&
+#endif /* PSA_WANT_ALG_SHA_256 && MBEDTLS_MD_C &&
           MBEDTLS_AES_C && MBEDTLS_CCM_C &&
           MBEDTLS_PSA_CRYPTO_C && MBEDTLS_FS_IO */

@@ -2,28 +2,18 @@
  * Test driver for AEAD entry points.
  */
 /*  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 #include <test/helpers.h>
 
-#if defined(MBEDTLS_PSA_CRYPTO_DRIVERS) && defined(PSA_CRYPTO_DRIVER_TEST)
+#if defined(PSA_CRYPTO_DRIVER_TEST)
 #include "psa_crypto_aead.h"
 #include "psa_crypto_core.h"
 
 #include "test/drivers/aead.h"
+
+#include "mbedtls/constant_time.h"
 
 #if defined(MBEDTLS_TEST_LIBTESTDRIVER1)
 #include "libtestdriver1/library/psa_crypto_aead.h"
@@ -431,7 +421,7 @@ psa_status_t mbedtls_test_transparent_aead_verify(
 
         if (mbedtls_test_driver_aead_hooks.driver_status == PSA_SUCCESS) {
             if (tag_length != check_tag_length ||
-                mbedtls_psa_safer_memcmp(tag, check_tag, tag_length)
+                mbedtls_ct_memcmp(tag, check_tag, tag_length)
                 != 0) {
                 mbedtls_test_driver_aead_hooks.driver_status =
                     PSA_ERROR_INVALID_SIGNATURE;
@@ -469,4 +459,4 @@ psa_status_t mbedtls_test_transparent_aead_abort(
     return mbedtls_test_driver_aead_hooks.driver_status;
 }
 
-#endif /* MBEDTLS_PSA_CRYPTO_DRIVERS && PSA_CRYPTO_DRIVER_TEST */
+#endif /* PSA_CRYPTO_DRIVER_TEST */

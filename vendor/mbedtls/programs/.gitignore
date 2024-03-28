@@ -5,13 +5,6 @@
 *.sln
 *.vcxproj
 
-# Generated source files
-/psa/psa_constant_names_generated.c
-/test/query_config.c
-
-*.o
-*.exe
-
 aes/crypt_and_hash
 cipher/cipher_aead_demo
 hash/generic_sum
@@ -45,6 +38,7 @@ psa/crypto_examples
 psa/hmac_demo
 psa/key_ladder_demo
 psa/psa_constant_names
+psa/psa_hash
 random/gen_entropy
 random/gen_random_ctr_drbg
 ssl/dtls_client
@@ -63,6 +57,7 @@ test/cpp_dummy_build
 test/cpp_dummy_build.cpp
 test/dlopen
 test/ecp-bench
+test/metatest
 test/query_compile_time_config
 test/query_included_headers
 test/selftest
@@ -78,5 +73,11 @@ x509/crl_app
 x509/load_roots
 x509/req_app
 
-# Generated data files
-pkey/keyfile.key
+####START_COMMENTED_GENERATED_FILES###
+## Generated source files
+#/psa/psa_constant_names_generated.c
+#/test/query_config.c
+#
+## Generated data files
+#pkey/keyfile.key
+####END_COMMENTED_GENERATED_FILES###

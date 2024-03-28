@@ -2,22 +2,8 @@
  *  Self-test demonstration program
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
-
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
 
 #include "mbedtls/build_info.h"
 
@@ -33,6 +19,7 @@
 #include "mbedtls/sha1.h"
 #include "mbedtls/sha256.h"
 #include "mbedtls/sha512.h"
+#include "mbedtls/sha3.h"
 #include "mbedtls/des.h"
 #include "mbedtls/aes.h"
 #include "mbedtls/camellia.h"
@@ -72,23 +59,53 @@ static int calloc_self_test(int verbose)
     void *empty2 = mbedtls_calloc(0, 1);
     void *buffer1 = mbedtls_calloc(1, 1);
     void *buffer2 = mbedtls_calloc(1, 1);
+    unsigned int buffer_3_size = 256;
+    unsigned int buffer_4_size = 4097; /* Allocate more than the usual page size */
+    unsigned char *buffer3 = mbedtls_calloc(buffer_3_size, 1);
+    unsigned char *buffer4 = mbedtls_calloc(buffer_4_size, 1);
 
     if (empty1 == NULL && empty2 == NULL) {
         if (verbose) {
-            mbedtls_printf("  CALLOC(0): passed (NULL)\n");
+            mbedtls_printf("  CALLOC(0,1): passed (NULL)\n");
         }
     } else if (empty1 == NULL || empty2 == NULL) {
         if (verbose) {
-            mbedtls_printf("  CALLOC(0): failed (mix of NULL and non-NULL)\n");
+            mbedtls_printf("  CALLOC(0,1): failed (mix of NULL and non-NULL)\n");
         }
         ++failures;
     } else if (empty1 == empty2) {
         if (verbose) {
-            mbedtls_printf("  CALLOC(0): passed (same non-null)\n");
+            mbedtls_printf("  CALLOC(0,1): passed (same non-null)\n");
         }
+        empty2 = NULL;
     } else {
         if (verbose) {
-            mbedtls_printf("  CALLOC(0): passed (distinct non-null)\n");
+            mbedtls_printf("  CALLOC(0,1): passed (distinct non-null)\n");
+        }
+    }
+
+    mbedtls_free(empty1);
+    mbedtls_free(empty2);
+
+    empty1 = mbedtls_calloc(1, 0);
+    empty2 = mbedtls_calloc(1, 0);
+    if (empty1 == NULL && empty2 == NULL) {
+        if (verbose) {
+            mbedtls_printf("  CALLOC(1,0): passed (NULL)\n");
+        }
+    } else if (empty1 == NULL || empty2 == NULL) {
+        if (verbose) {
+            mbedtls_printf("  CALLOC(1,0): failed (mix of NULL and non-NULL)\n");
+        }
+        ++failures;
+    } else if (empty1 == empty2) {
+        if (verbose) {
+            mbedtls_printf("  CALLOC(1,0): passed (same non-null)\n");
+        }
+        empty2 = NULL;
+    } else {
+        if (verbose) {
+            mbedtls_printf("  CALLOC(1,0): passed (distinct non-null)\n");
         }
     }
 
@@ -102,6 +119,7 @@ static int calloc_self_test(int verbose)
             mbedtls_printf("  CALLOC(1): failed (same buffer twice)\n");
         }
         ++failures;
+        buffer2 = NULL;
     } else {
         if (verbose) {
             mbedtls_printf("  CALLOC(1): passed\n");
@@ -121,6 +139,28 @@ static int calloc_self_test(int verbose)
         }
     }
 
+    for (unsigned int i = 0; i < buffer_3_size; i++) {
+        if (buffer3[i] != 0) {
+            ++failures;
+            if (verbose) {
+                mbedtls_printf("  CALLOC(%u): failed (memory not initialized to 0)\n",
+                               buffer_3_size);
+            }
+            break;
+        }
+    }
+
+    for (unsigned int i = 0; i < buffer_4_size; i++) {
+        if (buffer4[i] != 0) {
+            ++failures;
+            if (verbose) {
+                mbedtls_printf("  CALLOC(%u): failed (memory not initialized to 0)\n",
+                               buffer_4_size);
+            }
+            break;
+        }
+    }
+
     if (verbose) {
         mbedtls_printf("\n");
     }
@@ -128,6 +168,8 @@ static int calloc_self_test(int verbose)
     mbedtls_free(empty2);
     mbedtls_free(buffer1);
     mbedtls_free(buffer2);
+    mbedtls_free(buffer3);
+    mbedtls_free(buffer4);
     return failures;
 }
 #endif /* MBEDTLS_SELF_TEST */
@@ -250,6 +292,9 @@ const selftest_t selftests[] =
 #endif
 #if defined(MBEDTLS_SHA512_C)
     { "sha512", mbedtls_sha512_self_test },
+#endif
+#if defined(MBEDTLS_SHA3_C)
+    { "sha3", mbedtls_sha3_self_test },
 #endif
 #if defined(MBEDTLS_DES_C)
     { "des", mbedtls_des_self_test },

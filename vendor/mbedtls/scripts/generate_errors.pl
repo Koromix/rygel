@@ -6,19 +6,7 @@
 # or generate_errors.pl include_dir data_dir error_file
 #
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 
 use strict;
 use warnings;
@@ -49,7 +37,7 @@ my @low_level_modules = qw( AES ARIA ASN1 BASE64 BIGNUM
                             CAMELLIA CCM CHACHA20 CHACHAPOLY CMAC CTR_DRBG DES
                             ENTROPY ERROR GCM HKDF HMAC_DRBG LMS MD5
                             NET OID PADLOCK PBKDF2 PLATFORM POLY1305 RIPEMD160
-                            SHA1 SHA256 SHA512 THREADING );
+                            SHA1 SHA256 SHA512 SHA3 THREADING );
 my @high_level_modules = qw( CIPHER DHM ECP MD
                              PEM PK PKCS12 PKCS5
                              RSA SSL X509 PKCS7 );

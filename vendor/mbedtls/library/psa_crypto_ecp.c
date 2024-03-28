@@ -3,19 +3,7 @@
  */
 /*
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 #include "common.h"
@@ -26,7 +14,7 @@
 #include "psa_crypto_core.h"
 #include "psa_crypto_ecp.h"
 #include "psa_crypto_random_impl.h"
-#include "hash_info.h"
+#include "mbedtls/psa_util.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -37,11 +25,68 @@
 #include <mbedtls/ecp.h>
 #include <mbedtls/error.h>
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) || \
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_BASIC) || \
+    defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_IMPORT) || \
+    defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_EXPORT) || \
     defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) || \
     defined(MBEDTLS_PSA_BUILTIN_ALG_ECDH)
+/* Helper function to verify if the provided EC's family and key bit size are valid.
+ *
+ * Note: "bits" parameter is used both as input and output and it might be updated
+ *       in case provided input value is not multiple of 8 ("sloppy" bits).
+ */
+static int check_ecc_parameters(psa_ecc_family_t family, size_t *bits)
+{
+    switch (family) {
+        case PSA_ECC_FAMILY_SECP_R1:
+            switch (*bits) {
+                case 192:
+                case 224:
+                case 256:
+                case 384:
+                case 521:
+                    return PSA_SUCCESS;
+                case 528:
+                    *bits = 521;
+                    return PSA_SUCCESS;
+            }
+            break;
+
+        case PSA_ECC_FAMILY_BRAINPOOL_P_R1:
+            switch (*bits) {
+                case 256:
+                case 384:
+                case 512:
+                    return PSA_SUCCESS;
+            }
+            break;
+
+        case PSA_ECC_FAMILY_MONTGOMERY:
+            switch (*bits) {
+                case 448:
+                case 255:
+                    return PSA_SUCCESS;
+                case 256:
+                    *bits = 255;
+                    return PSA_SUCCESS;
+            }
+            break;
+
+        case PSA_ECC_FAMILY_SECP_K1:
+            switch (*bits) {
+                case 192:
+                /* secp224k1 is not and will not be supported in PSA (#3541). */
+                case 256:
+                    return PSA_SUCCESS;
+            }
+            break;
+    }
+
+    return PSA_ERROR_INVALID_ARGUMENT;
+}
+
 psa_status_t mbedtls_psa_ecp_load_representation(
     psa_key_type_t type, size_t curve_bits,
     const uint8_t *data, size_t data_length,
@@ -92,16 +137,15 @@ psa_status_t mbedtls_psa_ecp_load_representation(
     }
     mbedtls_ecp_keypair_init(ecp);
 
+    status = check_ecc_parameters(PSA_KEY_TYPE_ECC_GET_FAMILY(type), &curve_bits);
+    if (status != PSA_SUCCESS) {
+        goto exit;
+    }
+
     /* Load the group. */
-    grp_id = mbedtls_ecc_group_of_psa(PSA_KEY_TYPE_ECC_GET_FAMILY(type),
-                                      curve_bits, !explicit_bits);
+    grp_id = mbedtls_ecc_group_from_psa(PSA_KEY_TYPE_ECC_GET_FAMILY(type),
+                                        curve_bits);
     if (grp_id == MBEDTLS_ECP_DP_NONE) {
-        /* We can't distinguish between a nonsensical family/size combination
-         * (which would warrant PSA_ERROR_INVALID_ARGUMENT) and a
-         * well-regarded curve that Mbed TLS just doesn't know about (which
-         * would warrant PSA_ERROR_NOT_SUPPORTED). For uniformity with how
-         * curves that Mbed TLS knows about but for which support is disabled
-         * at build time, return NOT_SUPPORTED. */
         status = PSA_ERROR_NOT_SUPPORTED;
         goto exit;
     }
@@ -150,13 +194,16 @@ exit:
 
     return status;
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) ||
+#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_BASIC) ||
+        * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_IMPORT) ||
+        * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_EXPORT) ||
         * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY) ||
         * defined(MBEDTLS_PSA_BUILTIN_ALG_ECDSA) ||
         * defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA) ||
         * defined(MBEDTLS_PSA_BUILTIN_ALG_ECDH) */
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) || \
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_IMPORT) || \
+    defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_EXPORT) || \
     defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY)
 
 psa_status_t mbedtls_psa_ecp_import_key(
@@ -169,8 +216,8 @@ psa_status_t mbedtls_psa_ecp_import_key(
     mbedtls_ecp_keypair *ecp = NULL;
 
     /* Parse input */
-    status = mbedtls_psa_ecp_load_representation(attributes->core.type,
-                                                 attributes->core.bits,
+    status = mbedtls_psa_ecp_load_representation(attributes->type,
+                                                 attributes->bits,
                                                  data,
                                                  data_length,
                                                  &ecp);
@@ -178,7 +225,7 @@ psa_status_t mbedtls_psa_ecp_import_key(
         goto exit;
     }
 
-    if (PSA_KEY_TYPE_ECC_GET_FAMILY(attributes->core.type) ==
+    if (PSA_KEY_TYPE_ECC_GET_FAMILY(attributes->type) ==
         PSA_ECC_FAMILY_MONTGOMERY) {
         *bits = ecp->grp.nbits + 1;
     } else {
@@ -188,7 +235,7 @@ psa_status_t mbedtls_psa_ecp_import_key(
     /* Re-export the data to PSA export format. There is currently no support
      * for other input formats then the export format, so this is a 1-1
      * copy operation. */
-    status = mbedtls_psa_ecp_export_key(attributes->core.type,
+    status = mbedtls_psa_ecp_export_key(attributes->type,
                                         ecp,
                                         key_buffer,
                                         key_buffer_size,
@@ -234,20 +281,8 @@ psa_status_t mbedtls_psa_ecp_export_key(psa_key_type_t type,
 
         return status;
     } else {
-        if (data_size < PSA_BITS_TO_BYTES(ecp->grp.nbits)) {
-            return PSA_ERROR_BUFFER_TOO_SMALL;
-        }
-
         status = mbedtls_to_psa_error(
-            mbedtls_ecp_write_key(ecp,
-                                  data,
-                                  PSA_BITS_TO_BYTES(ecp->grp.nbits)));
-        if (status == PSA_SUCCESS) {
-            *data_length = PSA_BITS_TO_BYTES(ecp->grp.nbits);
-        } else {
-            memset(data, 0, data_size);
-        }
-
+            mbedtls_ecp_write_key_ext(ecp, data_length, data, data_size));
         return status;
     }
 }
@@ -261,7 +296,7 @@ psa_status_t mbedtls_psa_ecp_export_public_key(
     mbedtls_ecp_keypair *ecp = NULL;
 
     status = mbedtls_psa_ecp_load_representation(
-        attributes->core.type, attributes->core.bits,
+        attributes->type, attributes->bits,
         key_buffer, key_buffer_size, &ecp);
     if (status != PSA_SUCCESS) {
         return status;
@@ -269,7 +304,7 @@ psa_status_t mbedtls_psa_ecp_export_public_key(
 
     status = mbedtls_psa_ecp_export_key(
         PSA_KEY_TYPE_ECC_PUBLIC_KEY(
-            PSA_KEY_TYPE_ECC_GET_FAMILY(attributes->core.type)),
+            PSA_KEY_TYPE_ECC_GET_FAMILY(attributes->type)),
         ecp, data, data_size, data_length);
 
     mbedtls_ecp_keypair_free(ecp);
@@ -277,10 +312,11 @@ psa_status_t mbedtls_psa_ecp_export_public_key(
 
     return status;
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) ||
+#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_IMPORT) ||
+        * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_EXPORT) ||
         * defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_PUBLIC_KEY) */
 
-#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR)
+#if defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_GENERATE)
 psa_status_t mbedtls_psa_ecp_generate_key(
     const psa_key_attributes_t *attributes,
     uint8_t *key_buffer, size_t key_buffer_size, size_t *key_buffer_length)
@@ -289,17 +325,13 @@ psa_status_t mbedtls_psa_ecp_generate_key(
     int ret = MBEDTLS_ERR_ERROR_CORRUPTION_DETECTED;
 
     psa_ecc_family_t curve = PSA_KEY_TYPE_ECC_GET_FAMILY(
-        attributes->core.type);
+        attributes->type);
     mbedtls_ecp_group_id grp_id =
-        mbedtls_ecc_group_of_psa(curve, attributes->core.bits, 0);
+        mbedtls_ecc_group_from_psa(curve, attributes->bits);
 
     const mbedtls_ecp_curve_info *curve_info =
         mbedtls_ecp_curve_info_from_grp_id(grp_id);
     mbedtls_ecp_keypair ecp;
-
-    if (attributes->domain_parameters_size != 0) {
-        return PSA_ERROR_NOT_SUPPORTED;
-    }
 
     if (grp_id == MBEDTLS_ECP_DP_NONE || curve_info == NULL) {
         return PSA_ERROR_NOT_SUPPORTED;
@@ -315,17 +347,14 @@ psa_status_t mbedtls_psa_ecp_generate_key(
     }
 
     status = mbedtls_to_psa_error(
-        mbedtls_ecp_write_key(&ecp, key_buffer, key_buffer_size));
+        mbedtls_ecp_write_key_ext(&ecp, key_buffer_length,
+                                  key_buffer, key_buffer_size));
 
     mbedtls_ecp_keypair_free(&ecp);
 
-    if (status == PSA_SUCCESS) {
-        *key_buffer_length = key_buffer_size;
-    }
-
     return status;
 }
-#endif /* defined(MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR) */
+#endif /* MBEDTLS_PSA_BUILTIN_KEY_TYPE_ECC_KEY_PAIR_GENERATE */
 
 /****************************************************************/
 /* ECDSA sign/verify */
@@ -345,8 +374,8 @@ psa_status_t mbedtls_psa_ecdsa_sign_hash(
     size_t curve_bytes;
     mbedtls_mpi r, s;
 
-    status = mbedtls_psa_ecp_load_representation(attributes->core.type,
-                                                 attributes->core.bits,
+    status = mbedtls_psa_ecp_load_representation(attributes->type,
+                                                 attributes->bits,
                                                  key_buffer,
                                                  key_buffer_size,
                                                  &ecp);
@@ -366,7 +395,7 @@ psa_status_t mbedtls_psa_ecdsa_sign_hash(
     if (PSA_ALG_ECDSA_IS_DETERMINISTIC(alg)) {
 #if defined(MBEDTLS_PSA_BUILTIN_ALG_DETERMINISTIC_ECDSA)
         psa_algorithm_t hash_alg = PSA_ALG_SIGN_GET_HASH(alg);
-        mbedtls_md_type_t md_alg = mbedtls_hash_info_md_from_psa(hash_alg);
+        mbedtls_md_type_t md_alg = mbedtls_md_type_from_psa_alg(hash_alg);
         MBEDTLS_MPI_CHK(mbedtls_ecdsa_sign_det_ext(
                             &ecp->grp, &r, &s,
                             &ecp->d, hash,
@@ -432,8 +461,8 @@ psa_status_t mbedtls_psa_ecdsa_verify_hash(
 
     (void) alg;
 
-    status = mbedtls_psa_ecp_load_representation(attributes->core.type,
-                                                 attributes->core.bits,
+    status = mbedtls_psa_ecp_load_representation(attributes->type,
+                                                 attributes->bits,
                                                  key_buffer,
                                                  key_buffer_size,
                                                  &ecp);
@@ -497,14 +526,14 @@ psa_status_t mbedtls_psa_key_agreement_ecdh(
     size_t *shared_secret_length)
 {
     psa_status_t status;
-    if (!PSA_KEY_TYPE_IS_ECC_KEY_PAIR(attributes->core.type) ||
+    if (!PSA_KEY_TYPE_IS_ECC_KEY_PAIR(attributes->type) ||
         !PSA_ALG_IS_ECDH(alg)) {
         return PSA_ERROR_INVALID_ARGUMENT;
     }
     mbedtls_ecp_keypair *ecp = NULL;
     status = mbedtls_psa_ecp_load_representation(
-        attributes->core.type,
-        attributes->core.bits,
+        attributes->type,
+        attributes->bits,
         key_buffer,
         key_buffer_size,
         &ecp);

@@ -7,19 +7,8 @@ before changing how test data is constructed or validated.
 """
 
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import re
 import struct
@@ -27,6 +16,7 @@ from typing import Dict, List, Optional, Set, Union
 import unittest
 
 from . import c_build_helper
+from . import build_tree
 
 
 class Expr:
@@ -51,13 +41,16 @@ class Expr:
     def update_cache(self) -> None:
         """Update `value_cache` for expressions registered in `unknown_values`."""
         expressions = sorted(self.unknown_values)
+        includes = ['include']
+        if build_tree.looks_like_tf_psa_crypto_root('.'):
+            includes.append('drivers/builtin/include')
         values = c_build_helper.get_c_expression_values(
             'unsigned long', '%lu',
             expressions,
             header="""
             #include <psa/crypto.h>
             """,
-            include_path=['include']) #type: List[str]
+            include_path=includes) #type: List[str]
         for e, v in zip(expressions, values):
             self.value_cache[e] = int(v, 0)
         self.unknown_values.clear()

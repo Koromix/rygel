@@ -1,5 +1,6 @@
 set(libs
     ${mbedtls_target}
+    ${CMAKE_THREAD_LIBS_INIT}
 )
 
 # Set the project root directory if it's not already defined, as may happen if
@@ -118,8 +119,10 @@ if(GEN_FILES)
             --directory ${CMAKE_CURRENT_BINARY_DIR}/suites
         DEPENDS
             ${CMAKE_CURRENT_SOURCE_DIR}/../tests/scripts/generate_psa_tests.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/crypto_data_tests.py
             ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/crypto_knowledge.py
             ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/macro_collector.py
+            ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/psa_information.py
             ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/psa_storage.py
             ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/test_case.py
             ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/mbedtls_dev/test_data_generation.py
@@ -249,6 +252,8 @@ function(add_test_suite suite_name)
     target_include_directories(test_suite_${data_name}
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../library)
+    # Request C11, which is needed for memory poisoning tests
+    set_target_properties(test_suite_${data_name} PROPERTIES C_STANDARD 11)
 
     if(${data_name} MATCHES ${SKIP_TEST_SUITES_REGEX})
         message(STATUS "The test suite ${data_name} will not be executed.")

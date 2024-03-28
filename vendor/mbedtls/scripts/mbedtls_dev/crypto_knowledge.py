@@ -4,19 +4,8 @@ This module is entirely based on the PSA API.
 """
 
 # Copyright The Mbed TLS Contributors
-# SPDX-License-Identifier: Apache-2.0
+# SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
 #
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
 
 import enum
 import re
@@ -34,7 +23,7 @@ def short_expression(original: str, level: int = 0) -> str:
     unambiguous, but ad hoc way.
     """
     short = original
-    short = re.sub(r'\bPSA_(?:ALG|ECC_FAMILY|KEY_[A-Z]+)_', r'', short)
+    short = re.sub(r'\bPSA_(?:ALG|DH_FAMILY|ECC_FAMILY|KEY_[A-Z]+)_', r'', short)
     short = re.sub(r' +', r'', short)
     if level >= 1:
         short = re.sub(r'PUBLIC_KEY\b', r'PUB', short)
@@ -138,9 +127,12 @@ class KeyType:
         """Whether the key type is for public keys."""
         return self.name.endswith('_PUBLIC_KEY')
 
+    DH_KEY_SIZES = {
+        'PSA_DH_FAMILY_RFC7919': (2048, 3072, 4096, 6144, 8192),
+    } # type: Dict[str, Tuple[int, ...]]
     ECC_KEY_SIZES = {
-        'PSA_ECC_FAMILY_SECP_K1': (192, 224, 256),
-        'PSA_ECC_FAMILY_SECP_R1': (225, 256, 384, 521),
+        'PSA_ECC_FAMILY_SECP_K1': (192, 225, 256),
+        'PSA_ECC_FAMILY_SECP_R1': (224, 256, 384, 521),
         'PSA_ECC_FAMILY_SECP_R2': (160,),
         'PSA_ECC_FAMILY_SECT_K1': (163, 233, 239, 283, 409, 571),
         'PSA_ECC_FAMILY_SECT_R1': (163, 233, 283, 409, 571),
@@ -175,6 +167,9 @@ class KeyType:
         if self.private_type == 'PSA_KEY_TYPE_ECC_KEY_PAIR':
             assert self.params is not None
             return self.ECC_KEY_SIZES[self.params[0]]
+        if self.private_type == 'PSA_KEY_TYPE_DH_KEY_PAIR':
+            assert self.params is not None
+            return self.DH_KEY_SIZES[self.params[0]]
         return self.KEY_TYPE_SIZES[self.private_type]
 
     # "48657265006973206b6579a064617461"
@@ -261,6 +256,8 @@ class KeyType:
             if alg.head in {'PURE_EDDSA', 'EDDSA_PREHASH'} and \
                eccc == EllipticCurveCategory.TWISTED_EDWARDS:
                 return True
+        if self.head == 'DH' and alg.head == 'FFDH':
+            return True
         return False
 
 

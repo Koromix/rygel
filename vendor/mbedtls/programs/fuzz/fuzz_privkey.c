@@ -1,5 +1,3 @@
-#define MBEDTLS_ALLOW_PRIVATE_ACCESS
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,13 +28,20 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_entropy_init(&entropy);
+    mbedtls_pk_init(&pk);
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    psa_status_t status = psa_crypto_init();
+    if (status != PSA_SUCCESS) {
+        goto exit;
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     if (mbedtls_ctr_drbg_seed(&ctr_drbg, dummy_entropy, &entropy,
                               (const unsigned char *) pers, strlen(pers)) != 0) {
-        return 1;
+        goto exit;
     }
 
-    mbedtls_pk_init(&pk);
     ret = mbedtls_pk_parse_key(&pk, Data, Size, NULL, 0,
                                dummy_random, &ctr_drbg);
     if (ret == 0) {
@@ -66,7 +71,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         if (mbedtls_pk_get_type(&pk) == MBEDTLS_PK_ECKEY ||
             mbedtls_pk_get_type(&pk) == MBEDTLS_PK_ECKEY_DH) {
             mbedtls_ecp_keypair *ecp = mbedtls_pk_ec(pk);
-            mbedtls_ecp_group_id grp_id = ecp->grp.id;
+            mbedtls_ecp_group_id grp_id = mbedtls_ecp_keypair_get_group_id(ecp);
             const mbedtls_ecp_curve_info *curve_info =
                 mbedtls_ecp_curve_info_from_grp_id(grp_id);
 
@@ -83,7 +88,13 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
             abort();
         }
     }
+exit:
+    mbedtls_entropy_free(&entropy);
+    mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_pk_free(&pk);
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_psa_crypto_free();
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 #else
     (void) Data;
     (void) Size;

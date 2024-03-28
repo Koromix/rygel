@@ -1,68 +1,19 @@
-
-# To compile on SunOS: add "-lsocket -lnsl" to LDFLAGS
-
-CFLAGS	?= -O2
-WARNING_CFLAGS ?= -Wall -Wextra -Wformat=2 -Wno-format-nonliteral
-LDFLAGS ?=
+MBEDTLS_TEST_PATH = .
+include ../scripts/common.make
 
 # Set this to -v to see the details of failing test cases
 TEST_FLAGS ?= $(if $(filter-out 0 OFF Off off NO No no FALSE False false N n,$(CTEST_OUTPUT_ON_FAILURE)),-v,)
 
-default: all
-
-# Include public header files from ../include, test-specific header files
-# from ./include, and private header files (used by some invasive tests)
-# from ../library.
-LOCAL_CFLAGS = $(WARNING_CFLAGS) -I./include -I../include -I../library -D_FILE_OFFSET_BITS=64
-LOCAL_LDFLAGS = -L../library			\
-		-lmbedtls$(SHARED_SUFFIX)	\
-		-lmbedx509$(SHARED_SUFFIX)	\
-		-lmbedcrypto$(SHARED_SUFFIX)
-
-include ../3rdparty/Makefile.inc
-LOCAL_CFLAGS+=$(THIRDPARTY_INCLUDES)
+# Also include library headers, for the sake of invasive tests.
+LOCAL_CFLAGS += -I../library
 
 # Enable definition of various functions used throughout the testsuite
 # (gethostname, strdup, fileno...) even when compiling with -std=c99. Harmless
 # on non-POSIX platforms.
 LOCAL_CFLAGS += -D_POSIX_C_SOURCE=200809L
 
-ifndef SHARED
-MBEDLIBS=../library/libmbedcrypto.a ../library/libmbedx509.a ../library/libmbedtls.a
-else
-MBEDLIBS=../library/libmbedcrypto.$(DLEXT) ../library/libmbedx509.$(DLEXT) ../library/libmbedtls.$(DLEXT)
-endif
-
-ifdef DEBUG
-LOCAL_CFLAGS += -g3
-endif
-
 ifdef RECORD_PSA_STATUS_COVERAGE_LOG
 LOCAL_CFLAGS += -Werror -DRECORD_PSA_STATUS_COVERAGE_LOG
-endif
-
-# if we're running on Windows, build for Windows
-ifdef WINDOWS
-WINDOWS_BUILD=1
-endif
-
-ifdef WINDOWS_BUILD
-DLEXT=dll
-EXEXT=.exe
-LOCAL_LDFLAGS += -lws2_32
-ifdef SHARED
-SHARED_SUFFIX=.$(DLEXT)
-endif
-else
-DLEXT ?= so
-EXEXT=
-SHARED_SUFFIX=
-endif
-
-ifdef WINDOWS
-PYTHON ?= python
-else
-PYTHON ?= $(shell if type python3 >/dev/null 2>/dev/null; then echo python3; else echo python; fi)
 endif
 
 .PHONY: generated_files
@@ -97,7 +48,7 @@ generated_files: $(GENERATED_FILES)
 # Use an intermediate phony dependency so that parallel builds don't run
 # a separate instance of the recipe for each output file.
 .SECONDARY: generated_bignum_test_data generated_ecp_test_data generated_psa_test_data
-$(GENERATED_BIGNUM_DATA_FILES): generated_bignum_test_data
+$(GENERATED_BIGNUM_DATA_FILES): $(gen_file_dep) generated_bignum_test_data
 generated_bignum_test_data: scripts/generate_bignum_tests.py
 generated_bignum_test_data: ../scripts/mbedtls_dev/bignum_common.py
 generated_bignum_test_data: ../scripts/mbedtls_dev/bignum_core.py
@@ -109,7 +60,7 @@ generated_bignum_test_data:
 	echo "  Gen   $(GENERATED_BIGNUM_DATA_FILES)"
 	$(PYTHON) scripts/generate_bignum_tests.py
 
-$(GENERATED_ECP_DATA_FILES): generated_ecp_test_data
+$(GENERATED_ECP_DATA_FILES): $(gen_file_dep) generated_ecp_test_data
 generated_ecp_test_data: scripts/generate_ecp_tests.py
 generated_ecp_test_data: ../scripts/mbedtls_dev/bignum_common.py
 generated_ecp_test_data: ../scripts/mbedtls_dev/ecp.py
@@ -119,10 +70,12 @@ generated_ecp_test_data:
 	echo "  Gen   $(GENERATED_ECP_DATA_FILES)"
 	$(PYTHON) scripts/generate_ecp_tests.py
 
-$(GENERATED_PSA_DATA_FILES): generated_psa_test_data
+$(GENERATED_PSA_DATA_FILES): $(gen_file_dep) generated_psa_test_data
 generated_psa_test_data: scripts/generate_psa_tests.py
+generated_psa_test_data: ../scripts/mbedtls_dev/crypto_data_tests.py
 generated_psa_test_data: ../scripts/mbedtls_dev/crypto_knowledge.py
 generated_psa_test_data: ../scripts/mbedtls_dev/macro_collector.py
+generated_psa_test_data: ../scripts/mbedtls_dev/psa_information.py
 generated_psa_test_data: ../scripts/mbedtls_dev/psa_storage.py
 generated_psa_test_data: ../scripts/mbedtls_dev/test_case.py
 generated_psa_test_data: ../scripts/mbedtls_dev/test_data_generation.py
@@ -156,11 +109,6 @@ BINARIES := $(addsuffix $(EXEXT),$(APPS))
 .PHONY: all check test clean
 
 all: $(BINARIES)
-
-$(MBEDLIBS):
-	$(MAKE) -C ../library
-
-MBEDTLS_TEST_OBJS=$(patsubst %.c,%.o,$(wildcard src/*.c src/drivers/*.c src/test_helpers/*.c))
 
 mbedtls_test: $(MBEDTLS_TEST_OBJS)
 
@@ -216,7 +164,7 @@ c: $(C_FILES)
 
 $(BINARIES): %$(EXEXT): %.c $(MBEDLIBS) $(TEST_OBJS_DEPS) $(MBEDTLS_TEST_OBJS)
 	echo "  CC    $<"
-	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $< $(MBEDTLS_TEST_OBJS) $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
+	$(CC) $(LOCAL_CFLAGS) $(CFLAGS) $< $(LOCAL_LDFLAGS) $(LDFLAGS) -o $@
 
 clean:
 ifndef WINDOWS
@@ -235,13 +183,6 @@ else
 	if exist src/test_helpers/*.o del /Q /F src/test_helpers/*.o
 	if exist src/libmbed* del /Q /F src/libmed*
 	if exist include/test/instrument_record_status.h del /Q /F include/test/instrument_record_status.h
-endif
-
-neat: clean
-ifndef WINDOWS
-	rm -f $(GENERATED_FILES)
-else
-	for %f in ($(subst /,\,$(GENERATED_FILES))) if exist %f del /Q /F %f
 endif
 
 # Test suites caught by SKIP_TEST_SUITES are built but not executed.
@@ -267,6 +208,7 @@ define libtestdriver1_rewrite :=
 	s/\b(?=mbedtls_|psa_)/libtestdriver1_/g;
 endef
 
+libtestdriver1.a: export MBEDTLS_PATH := $(patsubst ../..//%,/%,../../$(MBEDTLS_PATH))
 libtestdriver1.a:
 	# Copy the library and fake a 3rdparty Makefile include.
 	rm -Rf ./libtestdriver1

@@ -2,39 +2,28 @@
  *  Public key-based signature verification program
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 #include "mbedtls/build_info.h"
 
 #include "mbedtls/platform.h"
+/* md.h is included this early since MD_CAN_XXX macros are defined there. */
+#include "mbedtls/md.h"
 
 #if !defined(MBEDTLS_BIGNUM_C) || !defined(MBEDTLS_MD_C) || \
-    !defined(MBEDTLS_SHA256_C) || !defined(MBEDTLS_PK_PARSE_C) ||   \
+    !defined(MBEDTLS_MD_CAN_SHA256) || !defined(MBEDTLS_PK_PARSE_C) ||   \
     !defined(MBEDTLS_FS_IO)
 int main(void)
 {
     mbedtls_printf("MBEDTLS_BIGNUM_C and/or MBEDTLS_MD_C and/or "
-                   "MBEDTLS_SHA256_C and/or MBEDTLS_PK_PARSE_C and/or "
+                   "MBEDTLS_MD_CAN_SHA256 and/or MBEDTLS_PK_PARSE_C and/or "
                    "MBEDTLS_FS_IO not defined.\n");
     mbedtls_exit(0);
 }
 #else
 
 #include "mbedtls/error.h"
-#include "mbedtls/md.h"
 #include "mbedtls/pk.h"
 
 #include <stdio.h>
@@ -53,6 +42,15 @@ int main(int argc, char *argv[])
     char filename[512];
 
     mbedtls_pk_init(&pk);
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    psa_status_t status = psa_crypto_init();
+    if (status != PSA_SUCCESS) {
+        mbedtls_fprintf(stderr, "Failed to initialize PSA Crypto implementation: %d\n",
+                        (int) status);
+        goto exit;
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     if (argc != 3) {
         mbedtls_printf("usage: mbedtls_pk_verify <key_file> <filename>\n");
@@ -113,6 +111,9 @@ int main(int argc, char *argv[])
 
 exit:
     mbedtls_pk_free(&pk);
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_psa_crypto_free();
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
 #if defined(MBEDTLS_ERROR_C)
     if (exit_code != MBEDTLS_EXIT_SUCCESS) {
@@ -123,5 +124,5 @@ exit:
 
     mbedtls_exit(exit_code);
 }
-#endif /* MBEDTLS_BIGNUM_C && MBEDTLS_SHA256_C &&
+#endif /* MBEDTLS_BIGNUM_C && MBEDTLS_MD_CAN_SHA256 &&
           MBEDTLS_PK_PARSE_C && MBEDTLS_FS_IO */

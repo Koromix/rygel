@@ -2,19 +2,7 @@
  *  Key reading application
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 #include "mbedtls/build_info.h"
@@ -65,6 +53,71 @@ int main(void)
 #else
 
 
+#if defined(MBEDTLS_ECP_C)
+static int show_ecp_key(const mbedtls_ecp_keypair *ecp, int has_private)
+{
+    int ret = 0;
+
+    const mbedtls_ecp_curve_info *curve_info =
+        mbedtls_ecp_curve_info_from_grp_id(
+            mbedtls_ecp_keypair_get_group_id(ecp));
+    mbedtls_printf("curve: %s\n", curve_info->name);
+
+    mbedtls_ecp_group grp;
+    mbedtls_ecp_group_init(&grp);
+    mbedtls_mpi D;
+    mbedtls_mpi_init(&D);
+    mbedtls_ecp_point pt;
+    mbedtls_ecp_point_init(&pt);
+    mbedtls_mpi X, Y;
+    mbedtls_mpi_init(&X); mbedtls_mpi_init(&Y);
+
+    MBEDTLS_MPI_CHK(mbedtls_ecp_export(ecp, &grp,
+                                       (has_private ? &D : NULL),
+                                       &pt));
+
+    unsigned char point_bin[MBEDTLS_ECP_MAX_PT_LEN];
+    size_t len = 0;
+    MBEDTLS_MPI_CHK(mbedtls_ecp_point_write_binary(
+                        &grp, &pt, MBEDTLS_ECP_PF_UNCOMPRESSED,
+                        &len, point_bin, sizeof(point_bin)));
+    switch (mbedtls_ecp_get_type(&grp)) {
+        case MBEDTLS_ECP_TYPE_SHORT_WEIERSTRASS:
+            if ((len & 1) == 0 || point_bin[0] != 0x04) {
+                /* Point in an unxepected format. This shouldn't happen. */
+                ret = -1;
+                goto cleanup;
+            }
+            MBEDTLS_MPI_CHK(
+                mbedtls_mpi_read_binary(&X, point_bin + 1, len / 2));
+            MBEDTLS_MPI_CHK(
+                mbedtls_mpi_read_binary(&Y, point_bin + 1 + len / 2, len / 2));
+            mbedtls_mpi_write_file("X_Q:   ", &X, 16, NULL);
+            mbedtls_mpi_write_file("Y_Q:   ", &Y, 16, NULL);
+            break;
+        case MBEDTLS_ECP_TYPE_MONTGOMERY:
+            MBEDTLS_MPI_CHK(mbedtls_mpi_read_binary(&X, point_bin, len));
+            mbedtls_mpi_write_file("X_Q:   ", &X, 16, NULL);
+            break;
+        default:
+            mbedtls_printf(
+                "This program does not yet support listing coordinates for this curve type.\n");
+            break;
+    }
+
+    if (has_private) {
+        mbedtls_mpi_write_file("D:     ", &D, 16, NULL);
+    }
+
+cleanup:
+    mbedtls_ecp_group_free(&grp);
+    mbedtls_mpi_free(&D);
+    mbedtls_ecp_point_free(&pt);
+    mbedtls_mpi_free(&X); mbedtls_mpi_free(&Y);
+    return ret;
+}
+#endif
+
 /*
  * global options
  */
@@ -98,6 +151,15 @@ int main(int argc, char *argv[])
 
     mbedtls_pk_init(&pk);
     memset(buf, 0, sizeof(buf));
+
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    psa_status_t status = psa_crypto_init();
+    if (status != PSA_SUCCESS) {
+        mbedtls_fprintf(stderr, "Failed to initialize PSA Crypto implementation: %d\n",
+                        (int) status);
+        goto cleanup;
+    }
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
 
     mbedtls_mpi_init(&N); mbedtls_mpi_init(&P); mbedtls_mpi_init(&Q);
     mbedtls_mpi_init(&D); mbedtls_mpi_init(&E); mbedtls_mpi_init(&DP);
@@ -222,17 +284,10 @@ usage:
 #endif
 #if defined(MBEDTLS_ECP_C)
         if (mbedtls_pk_get_type(&pk) == MBEDTLS_PK_ECKEY) {
-            mbedtls_ecp_keypair *ecp = mbedtls_pk_ec(pk);
-            MBEDTLS_MPI_CHK(mbedtls_mpi_write_file("Q(X): ",
-                                                   &ecp->MBEDTLS_PRIVATE(Q).MBEDTLS_PRIVATE(X), 16,
-                                                   NULL));
-            MBEDTLS_MPI_CHK(mbedtls_mpi_write_file("Q(Y): ",
-                                                   &ecp->MBEDTLS_PRIVATE(Q).MBEDTLS_PRIVATE(Y), 16,
-                                                   NULL));
-            MBEDTLS_MPI_CHK(mbedtls_mpi_write_file("Q(Z): ",
-                                                   &ecp->MBEDTLS_PRIVATE(Q).MBEDTLS_PRIVATE(Z), 16,
-                                                   NULL));
-            MBEDTLS_MPI_CHK(mbedtls_mpi_write_file("D   : ", &ecp->MBEDTLS_PRIVATE(d), 16, NULL));
+            if (show_ecp_key(mbedtls_pk_ec(pk), 1) != 0) {
+                mbedtls_printf(" failed\n  ! could not export ECC parameters\n\n");
+                goto cleanup;
+            }
         } else
 #endif
         {
@@ -272,16 +327,10 @@ usage:
 #endif
 #if defined(MBEDTLS_ECP_C)
         if (mbedtls_pk_get_type(&pk) == MBEDTLS_PK_ECKEY) {
-            mbedtls_ecp_keypair *ecp = mbedtls_pk_ec(pk);
-            MBEDTLS_MPI_CHK(mbedtls_mpi_write_file("Q(X): ",
-                                                   &ecp->MBEDTLS_PRIVATE(Q).MBEDTLS_PRIVATE(X), 16,
-                                                   NULL));
-            MBEDTLS_MPI_CHK(mbedtls_mpi_write_file("Q(Y): ",
-                                                   &ecp->MBEDTLS_PRIVATE(Q).MBEDTLS_PRIVATE(Y), 16,
-                                                   NULL));
-            MBEDTLS_MPI_CHK(mbedtls_mpi_write_file("Q(Z): ",
-                                                   &ecp->MBEDTLS_PRIVATE(Q).MBEDTLS_PRIVATE(Z), 16,
-                                                   NULL));
+            if (show_ecp_key(mbedtls_pk_ec(pk), 0) != 0) {
+                mbedtls_printf(" failed\n  ! could not export ECC parameters\n\n");
+                goto cleanup;
+            }
         } else
 #endif
         {
@@ -305,8 +354,10 @@ cleanup:
 
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
-
     mbedtls_pk_free(&pk);
+#if defined(MBEDTLS_USE_PSA_CRYPTO)
+    mbedtls_psa_crypto_free();
+#endif /* MBEDTLS_USE_PSA_CRYPTO */
     mbedtls_mpi_free(&N); mbedtls_mpi_free(&P); mbedtls_mpi_free(&Q);
     mbedtls_mpi_free(&D); mbedtls_mpi_free(&E); mbedtls_mpi_free(&DP);
     mbedtls_mpi_free(&DQ); mbedtls_mpi_free(&QP);

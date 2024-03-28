@@ -2,19 +2,7 @@
  *  Threading abstraction layer
  *
  *  Copyright The Mbed TLS Contributors
- *  SPDX-License-Identifier: Apache-2.0
- *
- *  Licensed under the Apache License, Version 2.0 (the "License"); you may
- *  not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *  http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ *  SPDX-License-Identifier: Apache-2.0 OR GPL-2.0-or-later
  */
 
 /*
@@ -68,28 +56,27 @@ static void threading_mutex_init_pthread(mbedtls_threading_mutex_t *mutex)
         return;
     }
 
-    /* A nonzero value of is_valid indicates a successfully initialized
-     * mutex. This is a workaround for not being able to return an error
-     * code for this function. The lock/unlock functions return an error
-     * if is_valid is nonzero. The Mbed TLS unit test code uses this field
-     * to distinguish more states of the mutex; see
-     * tests/src/threading_helpers for details. */
-    mutex->is_valid = pthread_mutex_init(&mutex->mutex, NULL) == 0;
+    /* One problem here is that calling lock on a pthread mutex without first
+     * having initialised it is undefined behaviour. Obviously we cannot check
+     * this here in a thread safe manner without a significant performance
+     * hit, so state transitions are checked in tests only via the state
+     * variable. Please make sure any new mutex that gets added is exercised in
+     * tests; see tests/src/threading_helpers.c for more details. */
+    (void) pthread_mutex_init(&mutex->mutex, NULL);
 }
 
 static void threading_mutex_free_pthread(mbedtls_threading_mutex_t *mutex)
 {
-    if (mutex == NULL || !mutex->is_valid) {
+    if (mutex == NULL) {
         return;
     }
 
     (void) pthread_mutex_destroy(&mutex->mutex);
-    mutex->is_valid = 0;
 }
 
 static int threading_mutex_lock_pthread(mbedtls_threading_mutex_t *mutex)
 {
-    if (mutex == NULL || !mutex->is_valid) {
+    if (mutex == NULL) {
         return MBEDTLS_ERR_THREADING_BAD_INPUT_DATA;
     }
 
@@ -102,7 +89,7 @@ static int threading_mutex_lock_pthread(mbedtls_threading_mutex_t *mutex)
 
 static int threading_mutex_unlock_pthread(mbedtls_threading_mutex_t *mutex)
 {
-    if (mutex == NULL || !mutex->is_valid) {
+    if (mutex == NULL) {
         return MBEDTLS_ERR_THREADING_BAD_INPUT_DATA;
     }
 
@@ -128,11 +115,10 @@ int (*mbedtls_mutex_unlock)(mbedtls_threading_mutex_t *) = threading_mutex_unloc
 #if defined(MBEDTLS_THREADING_WIN32)
 #include <windows.h>
 
-static void threading_mutex_init_win32(mbedtls_threading_mutex_t *mutex)
+static void threading_mutex_init_win32( mbedtls_threading_mutex_t *mutex )
 {
-    if (mutex == NULL) {
+    if( mutex == NULL )
         return;
-    }
 
     /* A nonzero value of is_valid indicates a successfully initialized
      * mutex. This is a workaround for not being able to return an error
@@ -140,44 +126,41 @@ static void threading_mutex_init_win32(mbedtls_threading_mutex_t *mutex)
      * if is_valid is nonzero. The Mbed TLS unit test code uses this field
      * to distinguish more states of the mutex; see
      * tests/src/threading_helpers for details. */
-    InitializeCriticalSection((CRITICAL_SECTION *)&mutex->cs);
+    InitializeCriticalSection( (CRITICAL_SECTION *)&mutex->cs );
     mutex->is_valid = 1;
 }
 
-static void threading_mutex_free_win32(mbedtls_threading_mutex_t *mutex)
+static void threading_mutex_free_win32( mbedtls_threading_mutex_t *mutex )
 {
-    if (mutex == NULL || !mutex->is_valid) {
+    if( mutex == NULL || !mutex->is_valid )
         return;
-    }
 
-    DeleteCriticalSection((CRITICAL_SECTION *)&mutex->cs);
+    DeleteCriticalSection( (CRITICAL_SECTION *)&mutex->cs );
     mutex->is_valid = 0;
 }
 
-static int threading_mutex_lock_win32(mbedtls_threading_mutex_t *mutex)
+static int threading_mutex_lock_win32( mbedtls_threading_mutex_t *mutex )
 {
-    if (mutex == NULL || !mutex->is_valid) {
-        return MBEDTLS_ERR_THREADING_BAD_INPUT_DATA;
-    }
+    if( mutex == NULL || ! mutex->is_valid )
+        return( MBEDTLS_ERR_THREADING_BAD_INPUT_DATA );
 
-    EnterCriticalSection((CRITICAL_SECTION *)&mutex->cs);
-    return 0;
+    EnterCriticalSection( (CRITICAL_SECTION *)&mutex->cs );
+    return( 0 );
 }
 
-static int threading_mutex_unlock_win32(mbedtls_threading_mutex_t *mutex)
+static int threading_mutex_unlock_win32( mbedtls_threading_mutex_t *mutex )
 {
-    if (mutex == NULL || !mutex->is_valid) {
-        return MBEDTLS_ERR_THREADING_BAD_INPUT_DATA;
-    }
+    if( mutex == NULL || ! mutex->is_valid )
+        return( MBEDTLS_ERR_THREADING_BAD_INPUT_DATA );
 
-    LeaveCriticalSection((CRITICAL_SECTION *)&mutex->cs);
-    return 0;
+    LeaveCriticalSection( (CRITICAL_SECTION *)&mutex->cs );
+    return( 0 );
 }
 
-void (*mbedtls_mutex_init)(mbedtls_threading_mutex_t *) = threading_mutex_init_win32;
-void (*mbedtls_mutex_free)(mbedtls_threading_mutex_t *) = threading_mutex_free_win32;
-int (*mbedtls_mutex_lock)(mbedtls_threading_mutex_t *) = threading_mutex_lock_win32;
-int (*mbedtls_mutex_unlock)(mbedtls_threading_mutex_t *) = threading_mutex_unlock_win32;
+void (*mbedtls_mutex_init)( mbedtls_threading_mutex_t * ) = threading_mutex_init_win32;
+void (*mbedtls_mutex_free)( mbedtls_threading_mutex_t * ) = threading_mutex_free_win32;
+int (*mbedtls_mutex_lock)( mbedtls_threading_mutex_t * ) = threading_mutex_lock_win32;
+int (*mbedtls_mutex_unlock)( mbedtls_threading_mutex_t * ) = threading_mutex_unlock_win32;
 
 /* We don't need to initialize mbedtls_threading_readdir_mutex and
    mbedtls_threading_gmtime_mutex because they are not used on Windows. */
@@ -220,6 +203,11 @@ void mbedtls_threading_set_alt(void (*mutex_init)(mbedtls_threading_mutex_t *),
 #if defined(THREADING_USE_GMTIME)
     mbedtls_mutex_init(&mbedtls_threading_gmtime_mutex);
 #endif
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+    mbedtls_mutex_init(&mbedtls_threading_key_slot_mutex);
+    mbedtls_mutex_init(&mbedtls_threading_psa_globaldata_mutex);
+    mbedtls_mutex_init(&mbedtls_threading_psa_rngdata_mutex);
+#endif
 }
 
 /*
@@ -232,6 +220,11 @@ void mbedtls_threading_free_alt(void)
 #endif
 #if defined(THREADING_USE_GMTIME)
     mbedtls_mutex_free(&mbedtls_threading_gmtime_mutex);
+#endif
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+    mbedtls_mutex_free(&mbedtls_threading_key_slot_mutex);
+    mbedtls_mutex_free(&mbedtls_threading_psa_globaldata_mutex);
+    mbedtls_mutex_free(&mbedtls_threading_psa_rngdata_mutex);
 #endif
 }
 #endif /* MBEDTLS_THREADING_ALT */
@@ -247,6 +240,11 @@ mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex MUTEX_INIT;
 #endif
 #if defined(THREADING_USE_GMTIME)
 mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex MUTEX_INIT;
+#endif
+#if defined(MBEDTLS_PSA_CRYPTO_C)
+mbedtls_threading_mutex_t mbedtls_threading_key_slot_mutex MUTEX_INIT;
+mbedtls_threading_mutex_t mbedtls_threading_psa_globaldata_mutex MUTEX_INIT;
+mbedtls_threading_mutex_t mbedtls_threading_psa_rngdata_mutex MUTEX_INIT;
 #endif
 
 #endif /* MBEDTLS_THREADING_C */
