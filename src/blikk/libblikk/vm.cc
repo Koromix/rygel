@@ -701,64 +701,64 @@ bool bk_VirtualMachine::Run()
 
 void bk_VirtualMachine::DumpInstruction(const bk_Instruction &inst, Size pc, Size bp) const
 {
-    Print(stderr, "%!D..[0x%1]%!0 %2%!..+%3%!0",
+    Print(StdErr, "%!D..[0x%1]%!0 %2%!..+%3%!0",
           FmtHex(pc).Pad0(-6), FmtArg("  ").Repeat((int)frames.len - 1), bk_OpcodeNames[(int)inst.code]);
 
     switch (inst.code) {
         case bk_Opcode::Push: {
             switch (inst.u1.primitive) {
                 case bk_PrimitiveKind::Null: { RG_UNREACHABLE(); } break;
-                case bk_PrimitiveKind::Boolean: { PrintLn(stderr, " %!Y..[Bool]%!0 %1 %!M..>%2%!0", inst.u2.b, stack.len); } break;
-                case bk_PrimitiveKind::Integer: { PrintLn(stderr, " %!Y..[Int]%!0 %1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
-                case bk_PrimitiveKind::Float: { PrintLn(stderr, " %!Y..[Float]%!0 %1 %!M..>%2%!0", FmtDouble(inst.u2.d, 1, INT_MAX), stack.len); } break;
-                case bk_PrimitiveKind::String: { PrintLn(stderr, " %!Y..[String]%!0 '%1' %!M..>%2%!0", inst.u2.str ? inst.u2.str : "", stack.len); } break;
-                case bk_PrimitiveKind::Type: { PrintLn(stderr, " %!Y..[Type]%!0 '%1' %!M..>%2%!0", inst.u2.type->signature, stack.len); } break;
-                case bk_PrimitiveKind::Function: { PrintLn(stderr, " %!Y..[Function]%!0 '%1' %!M..>%2%!0", inst.u2.func->prototype, stack.len); } break;
-                case bk_PrimitiveKind::Array: { PrintLn(stderr, " %!Y..[Array]%!0 %!M..>%1%!0", stack.len); } break;
-                case bk_PrimitiveKind::Record: { PrintLn(stderr, " %!Y..[Record]%!0 %!M..>%1%!0", stack.len); } break;
-                case bk_PrimitiveKind::Enum: { PrintLn(stderr, " %!Y..[Enum]%!0 %1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
-                case bk_PrimitiveKind::Opaque: { PrintLn(stderr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u2.opaque).Pad0(-RG_SIZE(void *) * 2), stack.len); } break;
+                case bk_PrimitiveKind::Boolean: { PrintLn(StdErr, " %!Y..[Bool]%!0 %1 %!M..>%2%!0", inst.u2.b, stack.len); } break;
+                case bk_PrimitiveKind::Integer: { PrintLn(StdErr, " %!Y..[Int]%!0 %1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
+                case bk_PrimitiveKind::Float: { PrintLn(StdErr, " %!Y..[Float]%!0 %1 %!M..>%2%!0", FmtDouble(inst.u2.d, 1, INT_MAX), stack.len); } break;
+                case bk_PrimitiveKind::String: { PrintLn(StdErr, " %!Y..[String]%!0 '%1' %!M..>%2%!0", inst.u2.str ? inst.u2.str : "", stack.len); } break;
+                case bk_PrimitiveKind::Type: { PrintLn(StdErr, " %!Y..[Type]%!0 '%1' %!M..>%2%!0", inst.u2.type->signature, stack.len); } break;
+                case bk_PrimitiveKind::Function: { PrintLn(StdErr, " %!Y..[Function]%!0 '%1' %!M..>%2%!0", inst.u2.func->prototype, stack.len); } break;
+                case bk_PrimitiveKind::Array: { PrintLn(StdErr, " %!Y..[Array]%!0 %!M..>%1%!0", stack.len); } break;
+                case bk_PrimitiveKind::Record: { PrintLn(StdErr, " %!Y..[Record]%!0 %!M..>%1%!0", stack.len); } break;
+                case bk_PrimitiveKind::Enum: { PrintLn(StdErr, " %!Y..[Enum]%!0 %1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
+                case bk_PrimitiveKind::Opaque: { PrintLn(StdErr, " %!Y..[Opaque]%!0 0x%1 %!M..>%2%!0", FmtArg(inst.u2.opaque).Pad0(-RG_SIZE(void *) * 2), stack.len); } break;
             }
         } break;
-        case bk_Opcode::Reserve: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
-        case bk_Opcode::Fetch: { PrintLn(stderr, " %!R..<%1%!0 |%2 %!M..>%3%!0", inst.u2.i, inst.u1.i, stack.len); } break;
-        case bk_Opcode::Pop: { PrintLn(stderr, " %1", inst.u2.i); } break;
+        case bk_Opcode::Reserve: { PrintLn(StdErr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
+        case bk_Opcode::Fetch: { PrintLn(StdErr, " %!R..<%1%!0 |%2 %!M..>%3%!0", inst.u2.i, inst.u1.i, stack.len); } break;
+        case bk_Opcode::Pop: { PrintLn(StdErr, " %1", inst.u2.i); } break;
 
-        case bk_Opcode::Lea: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", inst.u2.i, stack.len); } break;
-        case bk_Opcode::LeaLocal: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", bp + inst.u2.i, stack.len); } break;
-        case bk_Opcode::LeaRel: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", stack.len + inst.u2.i, stack.len); } break;
-        case bk_Opcode::Load: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", inst.u2.i, stack.len); } break;
-        case bk_Opcode::LoadLocal: { PrintLn(stderr, " %!R..@%1%!0 %!M..>%2%!0", bp + inst.u2.i, stack.len); } break;
-        case bk_Opcode::LoadIndirect: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len - 1); } break;
-        case bk_Opcode::LoadIndirectK: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
+        case bk_Opcode::Lea: { PrintLn(StdErr, " %!R..@%1%!0 %!M..>%2%!0", inst.u2.i, stack.len); } break;
+        case bk_Opcode::LeaLocal: { PrintLn(StdErr, " %!R..@%1%!0 %!M..>%2%!0", bp + inst.u2.i, stack.len); } break;
+        case bk_Opcode::LeaRel: { PrintLn(StdErr, " %!R..@%1%!0 %!M..>%2%!0", stack.len + inst.u2.i, stack.len); } break;
+        case bk_Opcode::Load: { PrintLn(StdErr, " %!R..@%1%!0 %!M..>%2%!0", inst.u2.i, stack.len); } break;
+        case bk_Opcode::LoadLocal: { PrintLn(StdErr, " %!R..@%1%!0 %!M..>%2%!0", bp + inst.u2.i, stack.len); } break;
+        case bk_Opcode::LoadIndirect: { PrintLn(StdErr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len - 1); } break;
+        case bk_Opcode::LoadIndirectK: { PrintLn(StdErr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len); } break;
         case bk_Opcode::Store:
-        case bk_Opcode::StoreK: { PrintLn(stderr, " %!M..>%1%!0", inst.u2.i); } break;
+        case bk_Opcode::StoreK: { PrintLn(StdErr, " %!M..>%1%!0", inst.u2.i); } break;
         case bk_Opcode::StoreLocal:
-        case bk_Opcode::StoreLocalK: { PrintLn(stderr, " %!M..>%1%!0", bp + inst.u2.i); } break;
+        case bk_Opcode::StoreLocalK: { PrintLn(StdErr, " %!M..>%1%!0", bp + inst.u2.i); } break;
         case bk_Opcode::StoreIndirect:
         case bk_Opcode::StoreIndirectK:
         case bk_Opcode::StoreRev:
-        case bk_Opcode::StoreRevK: { PrintLn(stderr, " |%1", inst.u2.i); } break;
-        case bk_Opcode::CheckIndex: { PrintLn(stderr, " < %1", inst.u2.i); } break;
+        case bk_Opcode::StoreRevK: { PrintLn(StdErr, " |%1", inst.u2.i); } break;
+        case bk_Opcode::CheckIndex: { PrintLn(StdErr, " < %1", inst.u2.i); } break;
 
         case bk_Opcode::Jump:
         case bk_Opcode::BranchIfTrue:
         case bk_Opcode::BranchIfFalse:
         case bk_Opcode::SkipIfTrue:
-        case bk_Opcode::SkipIfFalse: { PrintLn(stderr, " %!G..0x%1%!0", FmtHex(pc + inst.u2.i).Pad0(-6)); } break;
+        case bk_Opcode::SkipIfFalse: { PrintLn(StdErr, " %!G..0x%1%!0", FmtHex(pc + inst.u2.i).Pad0(-6)); } break;
 
-        case bk_Opcode::CallIndirect: { PrintLn(stderr, " %!R..@%1%!0", stack.len + inst.u2.i); } break;
+        case bk_Opcode::CallIndirect: { PrintLn(StdErr, " %!R..@%1%!0", stack.len + inst.u2.i); } break;
         case bk_Opcode::Call: {
             const bk_FunctionInfo *func = inst.u2.func;
-            PrintLn(stderr, " %!G..'%1'%!0", func->prototype);
+            PrintLn(StdErr, " %!G..'%1'%!0", func->prototype);
         } break;
-        case bk_Opcode::Return: { PrintLn(stderr, " %1", inst.u2.i); } break;
+        case bk_Opcode::Return: { PrintLn(StdErr, " %1", inst.u2.i); } break;
 
-        case bk_Opcode::InlineIf: { PrintLn(stderr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len - 2 * inst.u2.i - 1); } break;
+        case bk_Opcode::InlineIf: { PrintLn(StdErr, " |%1 %!M..>%2%!0", inst.u2.i, stack.len - 2 * inst.u2.i - 1); } break;
 
-        case bk_Opcode::End: { PrintLn(stderr, " (%1)", inst.u2.i); } break;
+        case bk_Opcode::End: { PrintLn(StdErr, " (%1)", inst.u2.i); } break;
 
-        default: { PrintLn(stderr); } break;
+        default: { PrintLn(StdErr); } break;
     }
 }
 

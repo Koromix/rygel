@@ -43,8 +43,8 @@ struct BenchmarkInfo {
     do { \
         (*out_total)++; \
         if (!(Condition)) { \
-            Print(stderr, "\n    %!D..[%1:%2]%!0 ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
-            Print(stderr, __VA_ARGS__); \
+            Print(StdErr, "\n    %!D..[%1:%2]%!0 ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
+            Print(StdErr, __VA_ARGS__); \
             (*out_failures)++; \
         } \
     } while (false)

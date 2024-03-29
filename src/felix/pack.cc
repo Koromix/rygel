@@ -382,7 +382,7 @@ bool PackAssets(Span<const PackAsset> assets, unsigned int flags, const char *ou
             return false;
         }
 
-        if (!c.Open(stdout, "<stdout>"))
+        if (!c.Open(STDOUT_FILENO, "<stdout>"))
             return false;
     }
 

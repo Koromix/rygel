@@ -325,11 +325,12 @@ int RunMcoClassify(Span<const char *> arguments)
     int torture = 0;
     HeapArray<const char *> filenames;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 mco_classify [options] stay_file ...%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 mco_classify [options] stay_file ...%!0
 )", FelixTarget);
-        PrintLn(fp, CommonOptions);
-        PrintLn(fp, R"(
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
 Classify options:
     %!..+-o, --option <options>%!0       Classifier options (see below)
     %!..+-d, --dispense <mode>%!0        Run dispensation algorithm (see below)
@@ -345,17 +346,17 @@ Classify options:
 
 Classifier options:)");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
-            PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
-        PrintLn(fp, R"(
+        PrintLn(st, R"(
 Dispensation modes:)");
         for (const OptionDesc &desc: mco_DispenseModeOptions) {
-            PrintLn(fp, "    %!..+%1%!0  Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0  Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
         }
-        PrintLn(fp, R"(
+        PrintLn(st, R"(
 Test options:)");
         for (const OptionDesc &desc: TestFlagOptions) {
-            PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
     };
 
@@ -365,7 +366,7 @@ Test options:)");
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-o", "--option", OptionType::Value)) {
                 const char *flags_str = opt.current_value;
@@ -577,11 +578,12 @@ int RunMcoDump(Span<const char *> arguments)
     bool dump = false;
     HeapArray<const char *> filenames;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 mco_dump [options] [filename] ...%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 mco_dump [options] [filename] ...%!0
 )", FelixTarget);
-        PrintLn(fp, CommonOptions);
-        PrintLn(fp, R"(
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
 Dump options:
     %!..+-d, --dump%!0                   Dump content of (readable) tables)");
     };
@@ -592,7 +594,7 @@ Dump options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-d", "--dump")) {
                 dump = true;
@@ -609,9 +611,9 @@ Dump options:
     if (!mco_LoadTableSet(drdc_config.table_directories, filenames, &table_set) ||
             !table_set.indexes.len)
         return 1;
-    mco_DumpTableSetHeaders(table_set, &stdout_st);
+    mco_DumpTableSetHeaders(table_set, StdOut);
     if (dump) {
-        mco_DumpTableSetContent(table_set, &stdout_st);
+        mco_DumpTableSetContent(table_set, StdOut);
     }
 
     return 0;
@@ -623,11 +625,12 @@ int RunMcoList(Span<const char *> arguments)
     LocalDate index_date = {};
     HeapArray<const char *> spec_strings;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 mco_list [options] list_name ...%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 mco_list [options] list_name ...%!0
 )", FelixTarget);
-        PrintLn(fp, CommonOptions);
-        PrintLn(fp, R"(
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
 List options:
     %!..+-d, --date <date>%!0            Use tables valid on specified date
                                  %!D..(default: most recent tables)%!0)");
@@ -639,7 +642,7 @@ List options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = LocalDate::Parse(opt.current_value);
@@ -712,11 +715,12 @@ int RunMcoMap(Span<const char *> arguments)
     // Options
     LocalDate index_date = {};
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 mco_map [options]%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 mco_map [options]%!0
 )", FelixTarget);
-        PrintLn(fp, CommonOptions);
-        PrintLn(fp, R"(
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
 Map options:
     %!..+-d, --date <date>%!0            Use tables valid on specified date
                                  %!D..(default: most recent tables)%!0)");
@@ -728,7 +732,7 @@ Map options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = LocalDate::Parse(opt.current_value);
@@ -782,11 +786,12 @@ int RunMcoPack(Span<const char *> arguments)
     const char *dest_filename = nullptr;
     HeapArray<const char *> filenames;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 mco_pack [options] stay_file ... -O output_file%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 mco_pack [options] stay_file ... -O output_file%!0
 )", FelixTarget);
-        PrintLn(fp, CommonOptions);
-        PrintLn(fp, R"(
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
 Pack options:
     %!..+-O, --output_file <file>%!0     Set output file)");
     };
@@ -797,7 +802,7 @@ Pack options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 dest_filename = opt.current_value;
@@ -842,10 +847,11 @@ int RunMcoShow(Span<const char *> arguments)
     LocalDate index_date = {};
     HeapArray<const char *> names;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 mco_show [options] name ...%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 mco_show [options] name ...%!0
 )", FelixTarget);
-        PrintLn(fp, CommonOptions);
+        PrintLn(st, CommonOptions);
     };
 
     // Parse arguments
@@ -854,7 +860,7 @@ int RunMcoShow(Span<const char *> arguments)
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
                 index_date = LocalDate::Parse(opt.current_value);
@@ -893,7 +899,7 @@ int RunMcoShow(Span<const char *> arguments)
             if (diag.IsValid()) {
                 Span<const mco_DiagnosisInfo> diagnoses = index->FindDiagnosis(diag);
                 if (diagnoses.len) {
-                    mco_DumpDiagnosisTable(diagnoses, index->exclusions, &stdout_st);
+                    mco_DumpDiagnosisTable(diagnoses, index->exclusions, StdOut);
                     continue;
                 }
             }
@@ -906,7 +912,7 @@ int RunMcoShow(Span<const char *> arguments)
             if (proc.IsValid()) {
                 Span<const mco_ProcedureInfo> procedures = index->FindProcedure(proc);
                 if (procedures.len) {
-                    mco_DumpProcedureTable(procedures, &stdout_st);
+                    mco_DumpProcedureTable(procedures, StdOut);
                     continue;
                 }
             }
@@ -919,11 +925,11 @@ int RunMcoShow(Span<const char *> arguments)
             if (ghm_root.IsValid()) {
                 const mco_GhmRootInfo *ghm_root_info = index->FindGhmRoot(ghm_root);
                 if (ghm_root_info) {
-                    mco_DumpGhmRootTable(*ghm_root_info, &stdout_st);
+                    mco_DumpGhmRootTable(*ghm_root_info, StdOut);
                     PrintLn();
 
                     Span<const mco_GhmToGhsInfo> compatible_ghs = index->FindCompatibleGhs(ghm_root);
-                    mco_DumpGhmToGhsTable(compatible_ghs, &stdout_st);
+                    mco_DumpGhmToGhsTable(compatible_ghs, StdOut);
 
                     continue;
                 }
@@ -940,18 +946,18 @@ int RunMcoShow(Span<const char *> arguments)
                     for (const mco_GhmToGhsInfo &ghm_to_ghs_info: index->ghs) {
                         if (ghm_to_ghs_info.Ghs(drd_Sector::Public) == ghs ||
                                 ghm_to_ghs_info.Ghs(drd_Sector::Private) == ghs) {
-                            mco_DumpGhmToGhsTable(ghm_to_ghs_info, &stdout_st);
+                            mco_DumpGhmToGhsTable(ghm_to_ghs_info, StdOut);
                         }
                     }
                     PrintLn();
 
                     if (pub_price_info) {
                         PrintLn("      Public:");
-                        mco_DumpGhsPriceTable(*pub_price_info, &stdout_st);
+                        mco_DumpGhsPriceTable(*pub_price_info, StdOut);
                     }
                     if (priv_price_info) {
                         PrintLn("      Private:");
-                        mco_DumpGhsPriceTable(*priv_price_info, &stdout_st);
+                        mco_DumpGhsPriceTable(*priv_price_info, StdOut);
                     }
 
                     continue;

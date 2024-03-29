@@ -315,8 +315,8 @@ int RunBuild(Span<const char *> arguments)
     Span<const char *> run_arguments = {};
     bool run_here = false;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 build [options] [target...]
        %1 build [options] --run target [arguments...]%!0
 
@@ -358,21 +358,21 @@ Options:
 Supported platforms:)", FelixTarget, jobs);
 
         for (const char *name: HostPlatformNames) {
-            PrintLn(fp, "    %!..+%1%!0", name);
+            PrintLn(st, "    %!..+%1%!0", name);
         }
 
-        PrintLn(fp, R"(
+        PrintLn(st, R"(
 Supported compilers:)");
 
         for (const SupportedCompiler &supported: SupportedCompilers) {
             if (supported.cc) {
-                PrintLn(fp, "    %!..+%1%!0 Binary: %2", FmtArg(supported.name).Pad(28), supported.cc);
+                PrintLn(st, "    %!..+%1%!0 Binary: %2", FmtArg(supported.name).Pad(28), supported.cc);
             } else {
-                PrintLn(fp, "    %!..+%1%!0", supported.name);
+                PrintLn(st, "    %!..+%1%!0", supported.name);
             }
         }
 
-        PrintLn(fp, R"(
+        PrintLn(st, R"(
 Use %!..+--host=<host>%!0 to specify a custom platform, such as: %!..+felix --host=Teensy35%!0.
 You can also use %!..+--host=:<binary>%!0 to specify a custom C compiler, such as: %!..+felix --host=:clang-11%!0.
 Felix will use the matching C++ compiler automatically. Finally, you can also use this option to
@@ -381,17 +381,17 @@ change the linker: %!..+felix --host=:clang-11:lld-11%!0 or %!..+felix --host=::
 Supported compiler features:)");
 
         for (const OptionDesc &desc: CompileFeatureOptions) {
-            PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
         }
 
-        Print(fp, R"(
+        Print(st, R"(
 Felix can also run the following special commands:
     %!..+build%!0                        Build C and C++ projects %!D..(default)%!0)");
 #ifdef __APPLE__
-        Print(fp, R"(
+        Print(st, R"(
     %!..+macify%!0                       Create macOS bundle app from binary)");
 #endif
-        PrintLn(fp, R"(
+        PrintLn(st, R"(
     %!..+pack%!0                         Pack assets to C source file and other formats
 
 For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget);
@@ -403,7 +403,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {

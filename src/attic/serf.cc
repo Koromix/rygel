@@ -405,8 +405,8 @@ int Main(int argc, char **argv)
     const char *config_filename = Fmt(&temp_alloc, "%1%/serf.ini", GetApplicationDirectory()).ptr;
     bool explicit_config = false;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, 
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st, 
 R"(Usage: %!..+%1 [options] [root]%!0
 
 Options:
@@ -433,7 +433,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 config_filename = opt.current_value;

@@ -603,11 +603,16 @@ BENCHMARK_FUNCTION("base/BenchFmt")
 
 #ifdef _WIN32
     FILE *fp = fopen("\\\\.\\NUL", "wb");
+    int fd = fileno(fp);
 #else
-    FILE *fp = OpenFile("/dev/null", (int)OpenFlag::Write);
+    int fd = OpenFile("/dev/null", (int)OpenFlag::Write);
+    FILE *fp = fdopen(fd, "wb");
 #endif
     RG_ASSERT(fp);
     RG_DEFER { fclose(fp); };
+
+    StreamWriter writer(fd, "/dev/null");
+    RG_ASSERT(writer.IsValid());
 
     RunBenchmark("printf", iterations, [&]() {
         fprintf(fp, "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
@@ -659,7 +664,7 @@ BENCHMARK_FUNCTION("base/BenchFmt")
     });
 
     RunBenchmark("base Print", iterations, [&]() {
-        Print(fp, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
+        Print(&writer, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 }
 

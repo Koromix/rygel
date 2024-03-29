@@ -216,7 +216,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
 #define RG_CRITICAL(Cond, ...) \
     do { \
         if (!(Cond)) [[unlikely]] { \
-            PrintLn(stderr, __VA_ARGS__); \
+            PrintLn(StdErr, __VA_ARGS__); \
             abort(); \
         } \
     } while (false)
@@ -2819,7 +2819,13 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode = TimeMode::Local);
 // Format
 // ------------------------------------------------------------------------
 
+class StreamReader;
 class StreamWriter;
+
+// For convenience, don't close them
+extern StreamReader *const StdIn;
+extern StreamWriter *const StdOut;
+extern StreamWriter *const StdErr;
 
 enum class FmtType {
     Str1,
@@ -3067,9 +3073,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf);
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out_buf);
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc);
 void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
-void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *out_fp);
 void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
-void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *out_fp);
 
 #define DEFINE_FMT_VARIANT(Name, Ret, Type) \
     static inline Ret Name(Type out, const char *fmt) \
@@ -3087,9 +3091,7 @@ DEFINE_FMT_VARIANT(Fmt, Span<char>, Span<char>)
 DEFINE_FMT_VARIANT(Fmt, Span<char>, HeapArray<char> *)
 DEFINE_FMT_VARIANT(Fmt, Span<char>, Allocator *)
 DEFINE_FMT_VARIANT(Print, void, StreamWriter *)
-DEFINE_FMT_VARIANT(Print, void, FILE *)
 DEFINE_FMT_VARIANT(PrintLn, void, StreamWriter *)
-DEFINE_FMT_VARIANT(PrintLn, void, FILE *)
 
 #undef DEFINE_FMT_VARIANT
 
@@ -3097,17 +3099,16 @@ DEFINE_FMT_VARIANT(PrintLn, void, FILE *)
 template <typename... Args>
 void Print(const char *fmt, Args... args)
 {
-    Print(stdout, fmt, args...);
+    Print(StdOut, fmt, args...);
 }
 template <typename... Args>
 void PrintLn(const char *fmt, Args... args)
 {
-    PrintLn(stdout, fmt, args...);
+    PrintLn(StdOut, fmt, args...);
 }
 
 // PrintLn variants without format strings
 void PrintLn(StreamWriter *out_st);
-void PrintLn(FILE *out_fp);
 void PrintLn();
 
 // ------------------------------------------------------------------------
@@ -4023,32 +4024,21 @@ enum class OpenResult {
     OtherError = 1 << 3
 };
 
-OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd);
-OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp);
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, int *out_fd);
 
-static inline OpenResult OpenDescriptor(const char *filename, unsigned int flags, int *out_fd)
-    { return OpenDescriptor(filename, flags, 0, out_fd); }
-static inline OpenResult OpenFile(const char *filename, unsigned int flags, FILE **out_fp)
-    { return OpenFile(filename, flags, 0, out_fp); }
-static inline int OpenDescriptor(const char *filename, unsigned int flags)
+static inline OpenResult OpenFile(const char *filename, unsigned int flags, int *out_fd)
+    { return OpenFile(filename, flags, 0, out_fd); }
+static inline int OpenFile(const char *filename, unsigned int flags)
 {
     int fd = -1;
-    if (OpenDescriptor(filename, flags, &fd) != OpenResult::Success)
+    if (OpenFile(filename, flags, &fd) != OpenResult::Success)
         return -1;
     return fd;
 }
-static inline FILE *OpenFile(const char *filename, unsigned int flags)
-{
-    FILE *fp;
-    if (OpenFile(filename, flags, &fp) != OpenResult::Success)
-        return nullptr;
-    return fp;
-}
 
 bool FlushFile(int fd, const char *filename);
-bool FlushFile(FILE *fp, const char *filename);
 
-bool FileIsVt100(FILE *fp);
+bool FileIsVt100(int fd);
 
 #ifdef _WIN32
 enum class PipeMode {
@@ -4173,7 +4163,7 @@ const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
                            LocalArray<const char *, 4> *out_possibilities = nullptr);
 
 const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
-                             Allocator *alloc, FILE **out_fp = nullptr);
+                             Allocator *alloc, int *out_fd = nullptr);
 const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
 
 // ------------------------------------------------------------------------
@@ -4363,7 +4353,7 @@ class StreamReader {
                 Size pos;
             } memory;
             struct {
-                FILE *fp;
+                int fd;
                 bool owned;
             } file;
             std::function<Size(Span<uint8_t> buf)> func;
@@ -4389,9 +4379,9 @@ public:
     StreamReader(Span<const uint8_t> buf, const char *filename = nullptr,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(buf, filename, compression_type); }
-    StreamReader(FILE *fp, const char *filename,
+    StreamReader(int fd, const char *filename,
                  CompressionType compression_type = CompressionType::None)
-        : StreamReader() { Open(fp, filename, compression_type); }
+        : StreamReader() { Open(fd, filename, compression_type); }
     StreamReader(const char *filename,
                  CompressionType compression_type = CompressionType::None)
         : StreamReader() { Open(filename, compression_type); }
@@ -4405,7 +4395,7 @@ public:
 
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
               CompressionType compression_type = CompressionType::None);
-    bool Open(FILE *fp, const char *filename,
+    bool Open(int fd, const char *filename,
               CompressionType compression_type = CompressionType::None);
     OpenResult Open(const char *filename, CompressionType compression_type = CompressionType::None);
     bool Open(const std::function<Size(Span<uint8_t>)> &func, const char *filename = nullptr,
@@ -4420,7 +4410,6 @@ public:
     bool IsValid() const { return filename && !error; }
     bool IsEOF() const { return eof; }
 
-    FILE *GetFile() const;
     int GetDescriptor() const;
 
     void SetReadLimit(int64_t limit) { read_max = limit; }
@@ -4554,7 +4543,7 @@ class StreamWriter {
                 Size start;
             } mem;
             struct {
-                FILE *fp;
+                int fd;
                 bool owned;
 
                 // Atomic write mode
@@ -4587,10 +4576,10 @@ public:
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
         : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
-    StreamWriter(FILE *fp, const char *filename,
+    StreamWriter(int fd, const char *filename,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(fp, filename, compression_type, compression_speed); }
+        : StreamWriter() { Open(fd, filename, compression_type, compression_speed); }
     StreamWriter(const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
@@ -4611,7 +4600,7 @@ public:
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default)
         { return Open((HeapArray<uint8_t> *)mem, filename, compression_type, compression_speed); }
-    bool Open(FILE *fp, const char *filename,
+    bool Open(int fd, const char *filename,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Open(const char *filename, unsigned int flags = 0,
@@ -4629,7 +4618,6 @@ public:
     bool IsVt100() const { return dest.vt100; }
     bool IsValid() const { return filename && !error; }
 
-    FILE *GetFile() const;
     int GetDescriptor() const;
 
     bool Write(Span<const uint8_t> buf);
@@ -4699,11 +4687,6 @@ bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer);
 
 bool IsCompressorAvailable(CompressionType compression_type);
 bool IsDecompressorAvailable(CompressionType compression_type);
-
-// For convenience, don't close them
-extern StreamReader stdin_st;
-extern StreamWriter stdout_st;
-extern StreamWriter stderr_st;
 
 // ------------------------------------------------------------------------
 // INI

@@ -560,7 +560,7 @@ public:
         }
 
         out_cmd->cache_len = buf.len;
-        if (FileIsVt100(stdout)) {
+        if (FileIsVt100(STDOUT_FILENO)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         } else {
             Fmt(&buf, " -fno-color-diagnostics");
@@ -736,7 +736,7 @@ public:
         }
 
         out_cmd->cache_len = buf.len;
-        if (FileIsVt100(stdout)) {
+        if (FileIsVt100(STDOUT_FILENO)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         } else {
             Fmt(&buf, " -fno-color-diagnostics");
@@ -1102,7 +1102,7 @@ public:
         }
 
         out_cmd->cache_len = buf.len;
-        if (FileIsVt100(stdout)) {
+        if (FileIsVt100(STDOUT_FILENO)) {
             Fmt(&buf, " -fdiagnostics-color=always");
         } else {
             Fmt(&buf, " -fdiagnostics-color=never");
@@ -1250,7 +1250,7 @@ public:
         }
 
         out_cmd->cache_len = buf.len;
-        if (FileIsVt100(stdout)) {
+        if (FileIsVt100(STDOUT_FILENO)) {
             Fmt(&buf, " -fdiagnostics-color=always");
         } else {
             Fmt(&buf, " -fdiagnostics-color=never");
@@ -1857,7 +1857,7 @@ public:
         }
 
         out_cmd->cache_len = buf.len;
-        if (FileIsVt100(stdout)) {
+        if (FileIsVt100(STDOUT_FILENO)) {
             Fmt(&buf, " -fdiagnostics-color=always");
         } else {
             Fmt(&buf, " -fdiagnostics-color=never");
@@ -1932,7 +1932,7 @@ public:
         }
 
         out_cmd->cache_len = buf.len;
-        if (FileIsVt100(stdout)) {
+        if (FileIsVt100(STDOUT_FILENO)) {
             Fmt(&buf, " -fdiagnostics-color=always");
         } else {
             Fmt(&buf, " -fdiagnostics-color=never");
@@ -2131,7 +2131,7 @@ public:
         }
 
         out_cmd->cache_len = buf.len;
-        if (FileIsVt100(stdout)) {
+        if (FileIsVt100(STDOUT_FILENO)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         } else {
             Fmt(&buf, " -fno-color-diagnostics");
@@ -2195,7 +2195,7 @@ public:
         }
 
         out_cmd->cache_len = buf.len;
-        if (FileIsVt100(stdout)) {
+        if (FileIsVt100(STDOUT_FILENO)) {
             Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
         } else {
             Fmt(&buf, " -fno-color-diagnostics");

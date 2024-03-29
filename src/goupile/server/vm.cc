@@ -105,8 +105,8 @@ static void DumpException(JSContextRef ctx, JSValueRef ex)
 {
     RG_ASSERT(ex);
 
-    js_PrintValue(ctx, ex, nullptr, &stderr_st);
-    PrintLn(stderr);
+    js_PrintValue(ctx, ex, nullptr, StdErr);
+    PrintLn(StdErr);
 }
 
 static JSValueRef CallMethod(JSContextRef ctx, JSObjectRef obj, const char *method,
@@ -135,8 +135,8 @@ int RunVM(Span<const char *> arguments)
     // Options
     const char *zip_filename = nullptr;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 vm <view_file>%!0)", FelixTarget);
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st, R"(Usage: %!..+%1 vm <view_file>%!0)", FelixTarget);
     };
 
     // Parse arguments
@@ -145,7 +145,7 @@ int RunVM(Span<const char *> arguments)
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else {
                 opt.LogUnknownError();
@@ -237,7 +237,7 @@ int RunVM(Span<const char *> arguments)
     Span<const char> profile = {};
     Span<const char> payload = {};
     {
-        json_Parser parser(&stdin_st, &temp_alloc);
+        json_Parser parser(StdIn, &temp_alloc);
 
         parser.ParseObject();
         while (parser.InObject()) {
@@ -299,7 +299,7 @@ int RunVM(Span<const char *> arguments)
     }
 
     // Return it back to the parent process
-    if (!js_PrintValue(ctx, transformed, nullptr, &stdout_st))
+    if (!js_PrintValue(ctx, transformed, nullptr, StdOut))
         return 1;
 
     return 0;

@@ -74,7 +74,7 @@ bool s3_Config::Complete()
 
         if (str) {
             access_key = DuplicateString(str, &str_alloc).ptr;
-        } else if (access_id && FileIsVt100(stderr)) {
+        } else if (access_id && FileIsVt100(STDERR_FILENO)) {
             access_key = Prompt("AWS secret key: ", nullptr, "*", &str_alloc);
             if (!access_key)
                 return false;

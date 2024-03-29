@@ -45,8 +45,8 @@ int RunInit(Span<const char *> arguments)
     bool random_full_pwd = true;
     bool random_write_pwd = true;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 init [-C <config>] [dir]%!0
 
 Options:
@@ -67,7 +67,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -157,8 +157,8 @@ int RunExportKey(Span<const char *> arguments)
     // Options
     rk_Config config;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 export_key [-C <config>]%!0
 
 Options:
@@ -178,7 +178,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -229,8 +229,8 @@ int RunChangeID(Span<const char *> arguments)
     // Options
     rk_Config config;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 change_id [-C <config>]%!0
 
 Options:
@@ -250,7 +250,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -293,8 +293,8 @@ int RunRebuildCache(Span<const char *> arguments)
     // Options
     rk_Config config;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 rebuild_cache [-C <config>]%!0
 
 Options:
@@ -314,7 +314,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -368,8 +368,8 @@ int RunAddUser(Span<const char *> arguments)
     bool force = false;
     const char *username = nullptr;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 add_user [-C <config>] <username>%!0
 
 Options:
@@ -400,7 +400,7 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -538,8 +538,8 @@ int RunDeleteUser(Span<const char *> arguments)
     const char *username = nullptr;
     bool force = false;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 delete_user [-C <config>] <username>%!0
 
 Options:
@@ -559,7 +559,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -620,8 +620,8 @@ int RunListUsers(Span<const char *> arguments)
     rk_Config config;
     OutputFormat format = OutputFormat::Plain;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 list_users [-C <config>]%!0
 
 Options:
@@ -644,7 +644,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -692,7 +692,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         } break;
 
         case OutputFormat::JSON: {
-            json_PrettyWriter json(&stdout_st);
+            json_PrettyWriter json(StdOut);
 
             json.StartArray();
             for (const rk_UserInfo &user: users) {

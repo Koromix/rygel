@@ -116,7 +116,7 @@ namespace RG {
 
 extern "C" void AssertMessage(const char *filename, int line, const char *cond)
 {
-    fprintf(stderr, "%s:%d: Assertion '%s' failed\n", filename, line, cond);
+    Print(StdErr, "%1:%2: Assertion '%3' failed\n", filename, line, cond);
 }
 
 // ------------------------------------------------------------------------
@@ -1719,11 +1719,11 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100
 
 #ifdef RG_DEBUG
     if (invalid_marker && unused_arguments) {
-        fprintf(stderr, "\nLog format string '%s' has invalid markers and unused arguments\n", fmt);
+        PrintLn(StdErr, "\nLog format string '%1' has invalid markers and unused arguments", fmt);
     } else if (unused_arguments) {
-        fprintf(stderr, "\nLog format string '%s' has unused arguments\n", fmt);
+        PrintLn(StdErr, "\nLog format string '%1' has unused arguments", fmt);
     } else if (invalid_marker) {
-        fprintf(stderr, "\nLog format string '%s' has invalid markers\n", fmt);
+        PrintLn(StdErr, "\nLog format string '%1' has invalid markers", fmt);
     }
 #endif
 }
@@ -1735,7 +1735,7 @@ static inline bool FormatBufferWithVt100()
     // VT-100 escape sequences if the standard output is a terminal, because the
     // string will probably end up there.
 
-    static bool use_vt100 = FileIsVt100(stdout) && FileIsVt100(stderr);
+    static bool use_vt100 = FileIsVt100(STDOUT_FILENO) && FileIsVt100(STDERR_FILENO);
     return use_vt100;
 }
 
@@ -1802,43 +1802,10 @@ void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
     st->Write(buf);
 }
 
-static void WriteStdComplete(Span<const char> buf, FILE *fp)
-{
-    while (buf.len) {
-        Size write_len = (Size)fwrite(buf.ptr, 1, (size_t)buf.len, fp);
-        if (!write_len) [[unlikely]]
-            break;
-        buf = buf.Take(write_len, buf.len - write_len);
-    }
-}
-
-void PrintFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
-{
-    LocalArray<char, RG_FMT_STRING_PRINT_BUFFER_SIZE> buf;
-    DoFormat(fmt, args, FileIsVt100(fp), [&](Span<const char> frag) {
-        if (frag.len > RG_LEN(buf.data) - buf.len) {
-            WriteStdComplete(buf, fp);
-            buf.len = 0;
-        }
-        if (frag.len >= RG_LEN(buf.data)) {
-            WriteStdComplete(frag, fp);
-        } else {
-            memcpy_safe(buf.data + buf.len, frag.ptr, (size_t)frag.len);
-            buf.len += frag.len;
-        }
-    });
-    WriteStdComplete(buf, fp);
-}
-
 void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *st)
 {
     PrintFmt(fmt, args, st);
     st->Write('\n');
-}
-void PrintLnFmt(const char *fmt, Span<const FmtArg> args, FILE *fp)
-{
-    PrintFmt(fmt, args, fp);
-    fputc('\n', fp);
 }
 
 // PrintLn variants without format strings
@@ -1846,13 +1813,9 @@ void PrintLn(StreamWriter *out_st)
 {
     out_st->Write('\n');
 }
-void PrintLn(FILE *out_fp)
-{
-    fputc('\n', out_fp);
-}
 void PrintLn()
 {
-    putchar('\n');
+    StdOut->Write('\n');
 }
 
 // ------------------------------------------------------------------------
@@ -2018,12 +1981,12 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
 {
     switch (level)  {
         case LogLevel::Debug:
-        case LogLevel::Info: { PrintLn(stderr, "%!D..%1%!0%2", ctx ? ctx : "", msg); } break;
-        case LogLevel::Warning: { PrintLn(stderr, "%!M..%1%!0%2", ctx ? ctx : "", msg); } break;
-        case LogLevel::Error: { PrintLn(stderr, "%!R..%1%!0%2", ctx ? ctx : "", msg); } break;
+        case LogLevel::Info: { PrintLn(StdErr, "%!D..%1%!0%2", ctx ? ctx : "", msg); } break;
+        case LogLevel::Warning: { PrintLn(StdErr, "%!M..%1%!0%2", ctx ? ctx : "", msg); } break;
+        case LogLevel::Error: { PrintLn(StdErr, "%!R..%1%!0%2", ctx ? ctx : "", msg); } break;
     }
 
-    fflush(stderr);
+    StdErr->Flush();
 }
 
 void PushLogFilter(const std::function<LogFilterFunc> &func)
@@ -3233,7 +3196,7 @@ static bool CheckForDumbTerm()
 
 #ifdef _WIN32
 
-OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
     RG_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
 
@@ -3350,41 +3313,6 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
     return OpenResult::Success;
 }
 
-OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp)
-{
-    char mode[16] = {};
-    switch (flags & ((int)OpenFlag::Read |
-                     (int)OpenFlag::Write |
-                     (int)OpenFlag::Append)) {
-        case (int)OpenFlag::Read: { CopyString("rbc", mode); } break;
-        case (int)OpenFlag::Write: { CopyString("wbc", mode); } break;
-        case (int)OpenFlag::Read | (int)OpenFlag::Write: { CopyString("w+bc", mode); } break;
-        case (int)OpenFlag::Append: { CopyString("abc", mode); } break;
-    }
-    RG_ASSERT(mode[0]);
-
-#if !defined(__GNUC__) || defined(__clang__)
-    // The N modifier does not work in MinGW builds (because of old msvcrt?)
-    strcat(mode, "N");
-#endif
-
-    int fd = -1;
-    OpenResult ret = OpenDescriptor(filename, flags, silent, &fd);
-    if (ret != OpenResult::Success)
-        return ret;
-
-    FILE *fp = _fdopen(fd, mode);
-    if (!fp) {
-        LogError("Cannot open '%1': %2", filename, strerror(errno));
-        _close(fd);
-
-        return OpenResult::OtherError;
-    }
-
-    *out_fp = fp;
-    return OpenResult::Success;
-}
-
 bool FlushFile(int fd, const char *filename)
 {
     RG_ASSERT(filename);
@@ -3399,32 +3327,20 @@ bool FlushFile(int fd, const char *filename)
     return true;
 }
 
-bool FlushFile(FILE *fp, const char *filename)
+bool FileIsVt100(int fd)
 {
-    RG_ASSERT(filename);
-
-    if (fflush(fp) != 0) {
-        LogError("Failed to sync '%1': %2", filename, strerror(errno));
-        return false;
-    }
-
-    return true;
-}
-
-bool FileIsVt100(FILE *fp)
-{
-    static RG_THREAD_LOCAL FILE *cache_fp;
+    static RG_THREAD_LOCAL int cache_fd = -1;
     static RG_THREAD_LOCAL bool cache_vt100;
 
     if (CheckForDumbTerm())
         return false;
 
     // Fast path, for repeated calls (such as Print in a loop)
-    if (fp == cache_fp)
+    if (fd == cache_fd)
         return cache_vt100;
 
-    if (fp == stdout || fp == stderr) {
-        HANDLE h = (HANDLE)_get_osfhandle(_fileno(fp));
+    if (fd == STDOUT_FILENO || fd == STDERR_FILENO) {
+        HANDLE h = (HANDLE)_get_osfhandle(fd);
 
         DWORD console_mode;
         if (GetConsoleMode(h, &console_mode)) {
@@ -3464,7 +3380,7 @@ bool FileIsVt100(FILE *fp)
         cache_vt100 = false;
     }
 
-    cache_fp = fp;
+    cache_fd = fd;
     return cache_vt100;
 }
 
@@ -3596,7 +3512,7 @@ error:
 
 #else
 
-OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
+OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
     RG_ASSERT(!(silent & ((int)OpenResult::Success | (int)OpenResult::OtherError)));
 
@@ -3646,36 +3562,6 @@ OpenResult OpenDescriptor(const char *filename, unsigned int flags, unsigned int
     return OpenResult::Success;
 }
 
-OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, FILE **out_fp)
-{
-    const char *mode = nullptr;
-    switch (flags & ((int)OpenFlag::Read |
-                     (int)OpenFlag::Write |
-                     (int)OpenFlag::Append)) {
-        case (int)OpenFlag::Read: { mode = "rbe"; } break;
-        case (int)OpenFlag::Write: { mode = "wbe"; } break;
-        case (int)OpenFlag::Read | (int)OpenFlag::Write: { mode = "w+be"; } break;
-        case (int)OpenFlag::Append: { mode = "abe"; } break;
-    }
-    RG_ASSERT(mode);
-
-    int fd = -1;
-    OpenResult ret = OpenDescriptor(filename, flags, silent, &fd);
-    if (ret != OpenResult::Success)
-        return ret;
-
-    FILE *fp = fdopen(fd, mode);
-    if (!fp) {
-        LogError("Cannot open '%1': %2", filename, strerror(errno));
-        close(fd);
-
-        return OpenResult::OtherError;
-    }
-
-    *out_fp = fp;
-    return OpenResult::Success;
-}
-
 bool FlushFile(int fd, const char *filename)
 {
     RG_ASSERT(filename);
@@ -3692,26 +3578,9 @@ bool FlushFile(int fd, const char *filename)
     return true;
 }
 
-bool FlushFile(FILE *fp, const char *filename)
+bool FileIsVt100(int fd)
 {
-    RG_ASSERT(filename);
-
-#ifdef __APPLE__
-    if ((fflush(fp) != 0 || fsync(fileno(fp)) < 0) &&
-            errno != EINVAL && errno != ENOTSUP) {
-#else
-    if ((fflush(fp) != 0 || fsync(fileno(fp)) < 0) && errno != EINVAL) {
-#endif
-        LogError("Failed to sync '%1': %2", filename, strerror(errno));
-        return false;
-    }
-
-    return true;
-}
-
-bool FileIsVt100(FILE *fp)
-{
-    static RG_THREAD_LOCAL FILE *cache_fp;
+    static RG_THREAD_LOCAL int cache_fd = -1;
     static RG_THREAD_LOCAL bool cache_vt100;
 
     if (CheckForDumbTerm())
@@ -3738,11 +3607,11 @@ bool FileIsVt100(FILE *fp)
 #endif
 
     // Fast path, for repeated calls (such as Print in a loop)
-    if (fp == cache_fp)
+    if (fd == cache_fd)
         return cache_vt100;
 
-    cache_fp = fp;
-    cache_vt100 = isatty(fileno(fp));
+    cache_fd = fd;
+    cache_vt100 = isatty(fd);
 
     return cache_vt100;
 }
@@ -4828,9 +4697,9 @@ void InitRG()
 {
 #ifdef _WIN32
     // Use binary standard I/O
-    _setmode(_fileno(stdin), _O_BINARY);
-    _setmode(_fileno(stdout), _O_BINARY);
-    _setmode(_fileno(stderr), _O_BINARY);
+    _setmode(STDIN_FILENO, _O_BINARY);
+    _setmode(STDOUT_FILENO, _O_BINARY);
+    _setmode(STDERR_FILENO, _O_BINARY);
 #else
     // Best effort
     setpgid(0, 0);
@@ -5090,19 +4959,19 @@ static const char *CreateUniquePath(Span<const char> directory, const char *pref
 }
 
 const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
-                             Allocator *alloc, FILE **out_fp)
+                             Allocator *alloc, int *out_fd)
 {
     return CreateUniquePath(directory, prefix, extension, alloc, [&](const char *path) {
         int flags = (int)OpenFlag::Read | (int)OpenFlag::Write |
                     (int)OpenFlag::Exclusive;
 
-        FILE *fp = OpenFile(path, flags);
+        int fd = OpenFile(path, flags);
 
-        if (fp) {
-            if (out_fp) {
-                *out_fp = fp;
+        if (fd >= 0) {
+            if (out_fd) {
+                *out_fd = fd;
             } else {
-                fclose(fp);
+                close(fd);
             }
 
             return true;
@@ -6191,9 +6060,13 @@ void Fiber::Toggle(int to, std::unique_lock<std::mutex> *lock)
 // Streams
 // ------------------------------------------------------------------------
 
-StreamReader stdin_st(stdin, "<stdin>");
-StreamWriter stdout_st(stdout, "<stdout>");
-StreamWriter stderr_st(stderr, "<stderr>");
+static StreamReader StdInStream(STDIN_FILENO, "<stdin>");
+static StreamWriter StdOutStream(STDOUT_FILENO, "<stdout>");
+static StreamWriter StdErrStream(STDERR_FILENO, "<stderr>");
+
+extern StreamReader *const StdIn = &StdInStream;
+extern StreamWriter *const StdOut = &StdOutStream;
+extern StreamWriter *const StdErr = &StdErrStream;
 
 static CreateDecompressorFunc *DecompressorFunctions[RG_LEN(CompressionTypeNames)];
 static CreateCompressorFunc *CompressorFunctions[RG_LEN(CompressionTypeNames)];
@@ -6231,7 +6104,7 @@ bool StreamReader::Open(Span<const uint8_t> buf, const char *filename,
     return true;
 }
 
-bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compression_type)
+bool StreamReader::Open(int fd, const char *filename, CompressionType compression_type)
 {
     Close(true);
 
@@ -6241,12 +6114,12 @@ bool StreamReader::Open(FILE *fp, const char *filename, CompressionType compress
     read_total = 0;
     read_max = -1;
 
-    RG_ASSERT(fp);
+    RG_ASSERT(fd >= 0);
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     source.type = SourceType::File;
-    source.u.file.fp = fp;
+    source.u.file.fd = fd;
     source.u.file.owned = false;
 
     if (!InitDecompressor(compression_type))
@@ -6271,7 +6144,7 @@ OpenResult StreamReader::Open(const char *filename, CompressionType compression_
 
     source.type = SourceType::File;
     {
-        OpenResult ret = OpenFile(filename, (int)OpenFlag::Read, &source.u.file.fp);
+        OpenResult ret = OpenFile(filename, (int)OpenFlag::Read, &source.u.file.fd);
         if (ret != OpenResult::Success)
             return ret;
     }
@@ -6309,7 +6182,7 @@ bool StreamReader::Open(const std::function<Size(Span<uint8_t>)> &func, const ch
 
 bool StreamReader::Close(bool implicit)
 {
-    RG_ASSERT(implicit || this != &stdin_st);
+    RG_ASSERT(implicit || this != StdIn);
 
     if (decoder) {
         delete decoder;
@@ -6319,11 +6192,11 @@ bool StreamReader::Close(bool implicit)
     switch (source.type) {
         case SourceType::Memory: { source.u.memory = {}; } break;
         case SourceType::File: {
-            if (source.u.file.owned && source.u.file.fp) {
-                fclose(source.u.file.fp);
+            if (source.u.file.owned && source.u.file.fd >= 0) {
+                close(source.u.file.fd);
             }
 
-            source.u.file.fp = nullptr;
+            source.u.file.fd = -1;
             source.u.file.owned = false;
         } break;
         case SourceType::Function: { source.u.func.~function(); } break;
@@ -6355,7 +6228,7 @@ bool StreamReader::Rewind()
     switch (source.type) {
         case SourceType::Memory: { source.u.memory.pos = 0; } break;
         case SourceType::File: {
-            if (fseek(source.u.file.fp, 0, SEEK_SET) < 0) {
+            if (lseek(source.u.file.fd, 0, SEEK_SET) < 0) {
                 LogError("Failed to rewind '%1': %2", filename, strerror(errno));
                 error = true;
                 return false;
@@ -6374,21 +6247,10 @@ bool StreamReader::Rewind()
     return true;
 }
 
-FILE *StreamReader::GetFile() const
-{
-    RG_ASSERT(source.type == SourceType::File);
-    return source.u.file.fp;
-}
-
 int StreamReader::GetDescriptor() const
 {
     RG_ASSERT(source.type == SourceType::File);
-
-#ifdef _WIN32
-    return _fileno(source.u.file.fp);
-#else
-    return fileno(source.u.file.fp);
-#endif
+    return source.u.file.fd;
 }
 
 Size StreamReader::Read(Span<uint8_t> out_buf)
@@ -6494,15 +6356,13 @@ int64_t StreamReader::ComputeRawLen()
 
         case SourceType::File: {
 #ifdef _WIN32
-            int fd = _fileno(source.u.file.fp);
             struct __stat64 sb;
-            if (_fstat64(fd, &sb) < 0)
+            if (_fstat64(source.u.file.fd, &sb) < 0)
                 return -1;
             raw_len = (int64_t)sb.st_size;
 #else
-            int fd = fileno(source.u.file.fp);
             struct stat sb;
-            if (fstat(fd, &sb) < 0 || S_ISFIFO(sb.st_mode) | S_ISSOCK(sb.st_mode))
+            if (fstat(source.u.file.fd, &sb) < 0 || S_ISFIFO(sb.st_mode) | S_ISSOCK(sb.st_mode))
                 return -1;
             raw_len = (int64_t)sb.st_size;
 #endif
@@ -6551,11 +6411,9 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
         } break;
 
         case SourceType::File: {
-            clearerr(source.u.file.fp);
-
 restart:
-            read_len = (Size)fread(out_buf, 1, (size_t)max_len, source.u.file.fp);
-            if (ferror(source.u.file.fp)) {
+            read_len = read(source.u.file.fd, out_buf, (size_t)max_len);
+            if (read_len < 0) {
                 if (errno == EINTR)
                     goto restart;
 
@@ -6563,7 +6421,7 @@ restart:
                 error = true;
                 return -1;
             }
-            source.eof = (bool)feof(source.u.file.fp);
+            source.eof = (read_len == 0);
         } break;
 
         case SourceType::Function: {
@@ -6670,7 +6528,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     return true;
 }
 
-bool StreamWriter::Open(FILE *fp, const char *filename,
+bool StreamWriter::Open(int fd, const char *filename,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
     Close(true);
@@ -6679,14 +6537,14 @@ bool StreamWriter::Open(FILE *fp, const char *filename,
     error = false;
     raw_written = 0;
 
-    RG_ASSERT(fp);
+    RG_ASSERT(fd >= 0);
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
     dest.type = DestinationType::File;
     memset_safe(&dest.u.file, 0, RG_SIZE(dest.u.file));
-    dest.u.file.fp = fp;
-    dest.vt100 = FileIsVt100(fp);
+    dest.u.file.fd = fd;
+    dest.vt100 = FileIsVt100(fd);
 
     if (!InitCompressor(compression_type, compression_speed))
         return false;
@@ -6714,16 +6572,15 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         Span<const char> directory = GetPathDirectory(filename);
 
         if (flags & (int)StreamWriterFlag::Exclusive) {
-            FILE *fp = OpenFile(filename, (int)OpenFlag::Write |
-                                          (int)OpenFlag::Exclusive);
-            if (!fp)
+            int fd = OpenFile(filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive);
+            if (fd < 0)
                 return false;
-            fclose(fp);
+            close(fd);
 
             dest.u.file.tmp_exclusive = true;
         }
 
-        dest.u.file.tmp_filename = CreateUniqueFile(directory, ".", ".tmp", &str_alloc, &dest.u.file.fp);
+        dest.u.file.tmp_filename = CreateUniqueFile(directory, ".", ".tmp", &str_alloc, &dest.u.file.fd);
         if (!dest.u.file.tmp_filename)
             return false;
         dest.u.file.owned = true;
@@ -6731,12 +6588,12 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         unsigned int open_flags = (int)OpenFlag::Write;
         open_flags |= (flags & (int)StreamWriterFlag::Exclusive) ? (int)OpenFlag::Exclusive : 0;
 
-        dest.u.file.fp = OpenFile(filename, open_flags);
-        if (!dest.u.file.fp)
+        dest.u.file.fd = OpenFile(filename, open_flags);
+        if (dest.u.file.fd < 0)
             return false;
         dest.u.file.owned = true;
     }
-    dest.vt100 = FileIsVt100(dest.u.file.fp);
+    dest.vt100 = FileIsVt100(dest.u.file.fd);
 
     if (!InitCompressor(compression_type, compression_speed))
         return false;
@@ -6775,7 +6632,7 @@ bool StreamWriter::Flush()
     switch (dest.type) {
         case DestinationType::Memory: return true;
         case DestinationType::File: {
-            if (!FlushFile(dest.u.file.fp, filename)) {
+            if (!FlushFile(dest.u.file.fd, filename)) {
                 error = true;
                 return false;
             }
@@ -6788,21 +6645,10 @@ bool StreamWriter::Flush()
     RG_UNREACHABLE();
 }
 
-FILE *StreamWriter::GetFile() const
-{
-    RG_ASSERT(dest.type == DestinationType::File);
-    return dest.u.file.fp;
-}
-
 int StreamWriter::GetDescriptor() const
 {
     RG_ASSERT(dest.type == DestinationType::File);
-
-#ifdef _WIN32
-    return _fileno(dest.u.file.fp);
-#else
-    return fileno(dest.u.file.fp);
-#endif
+    return dest.u.file.fd;
 }
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
@@ -6820,8 +6666,8 @@ bool StreamWriter::Write(Span<const uint8_t> buf)
 
 bool StreamWriter::Close(bool implicit)
 {
-    RG_ASSERT(implicit || this != &stdout_st);
-    RG_ASSERT(implicit || this != &stderr_st);
+    RG_ASSERT(implicit || this != StdOut);
+    RG_ASSERT(implicit || this != StdErr);
 
     if (encoder) {
         error = error || !encoder->Finalize();
@@ -6839,13 +6685,13 @@ bool StreamWriter::Close(bool implicit)
                     if (implicit) {
                         LogDebug("Deleting implicitly closed file '%1'", filename);
                         error = true;
-                    } else if (!FlushFile(dest.u.file.fp, filename)) {
+                    } else if (!FlushFile(dest.u.file.fd, filename)) {
                         error = true;
                     }
                 }
 
                 if (IsValid()) {
-                    fclose(dest.u.file.fp);
+                    close(dest.u.file.fd);
                     dest.u.file.owned = false;
 
                     unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
@@ -6861,8 +6707,9 @@ bool StreamWriter::Close(bool implicit)
                 }
             }
 
-            if (dest.u.file.owned && dest.u.file.fp) {
-                fclose(dest.u.file.fp);
+            if (dest.u.file.owned && dest.u.file.fd >= 0) {
+                close(dest.u.file.fd);
+                dest.u.file.owned = false;
             }
 
             // Try to clean up, though we can't do much if that fails (except log error)
@@ -6924,16 +6771,15 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
         case DestinationType::File: {
             while (buf.len) {
-                size_t write_len = fwrite(buf.ptr, 1, (size_t)buf.len, dest.u.file.fp);
+                Size write_len = write(dest.u.file.fd, buf.ptr, (size_t)buf.len);
 
-                if (ferror(dest.u.file.fp)) {
-                    if (errno == EINTR) {
-                        clearerr(dest.u.file.fp);
-                    } else {
-                        LogError("Failed to write to '%1': %2", filename, strerror(errno));
-                        error = true;
-                        return false;
-                    }
+                if (write_len < 0) {
+                    if (errno == EINTR)
+                        continue;
+
+                    LogError("Failed to write to '%1': %2", filename, strerror(errno));
+                    error = true;
+                    return false;
                 }
 
                 buf.ptr += write_len;
@@ -7542,7 +7388,7 @@ static bool EnableRawMode()
     static bool init_atexit = false;
 
     if (!input_is_raw) {
-        stdin_handle = (HANDLE)_get_osfhandle(_fileno(stdin));
+        stdin_handle = (HANDLE)_get_osfhandle(STDIN_FILENO);
 
         if (GetConsoleMode(stdin_handle, &input_orig_mode)) {
             input_is_raw = SetConsoleMode(stdin_handle, ENABLE_WINDOW_INPUT);
@@ -7608,9 +7454,9 @@ bool ConsolePrompter::Read(Span<const char> *out_str)
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
-    if (FileIsVt100(stderr) && EnableRawMode()) {
+    if (FileIsVt100(STDERR_FILENO) && EnableRawMode()) {
         RG_DEFER {
-            Print(stderr, "%!0");
+            Print(StdErr, "%!0");
             DisableRawMode();
         };
 
@@ -7628,9 +7474,9 @@ bool ConsolePrompter::ReadYN(bool *out_value)
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
 #endif
 
-    if (FileIsVt100(stderr) && EnableRawMode()) {
+    if (FileIsVt100(STDERR_FILENO) && EnableRawMode()) {
         RG_DEFER {
-            Print(stderr, "%!0");
+            Print(StdErr, "%!0");
             DisableRawMode();
         };
 
@@ -7660,7 +7506,7 @@ void ConsolePrompter::Commit()
 
 bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
 {
-    fflush(stderr);
+    StdErr->Flush();
 
     prompt_columns = ComputeWidth(prompt);
 
@@ -7802,8 +7648,8 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
 
                     RenderRaw();
                 } else {
-                    fputs("\r\n", stderr);
-                    fflush(stderr);
+                    StdErr->Write("\r\n");
+                    StdErr->Flush();
                     return false;
                 }
             } break;
@@ -7833,17 +7679,17 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
                 RenderRaw();
             } break;
             case 0xC: { // Ctrl-L
-                fputs("\x1B[2J\x1B[999A", stderr);
+                StdErr->Write("\x1B[2J\x1B[999A");
                 RenderRaw();
             } break;
 
             case '\r':
             case '\n': {
                 if (rows > y) {
-                    fprintf(stderr, "\x1B[%dB", rows - y);
+                    Print(StdErr, "\x1B[%1B", rows - y);
                 }
-                fputs("\r\n", stderr);
-                fflush(stderr);
+                StdErr->Write("\r\n");
+                StdErr->Flush();
                 y = rows + 1;
 
                 EnsureNulTermination();
@@ -7870,8 +7716,8 @@ bool ConsolePrompter::ReadRaw(Span<const char> *out_str)
                 str_offset += frag.len;
 
                 if (!mask && str_offset == str.len && uc < 128 && x + frag.len < columns) {
-                    fwrite(frag.data, 1, (size_t)frag.len, stderr);
-                    fflush(stderr);
+                    StdErr->Write(frag.data, frag.len);
+                    StdErr->Flush();
                     x += (int)frag.len;
                 } else {
                     RenderRaw();
@@ -7891,27 +7737,27 @@ bool ConsolePrompter::ReadRawYN(bool *out_value)
 {
     const char *yn = "[Y/N]";
 
-    fflush(stderr);
+    StdErr->Flush();
 
     prompt_columns = ComputeWidth(prompt) + ComputeWidth(yn) + 1;
 
     str.RemoveFrom(0);
     str_offset = 0;
     RenderRaw();
-    Print(stderr, "%!D..%1%!0 ", yn);
+    Print(StdErr, "%!D..%1%!0 ", yn);
 
     int32_t uc;
     while ((uc = ReadChar()) >= 0) {
         // Fix display if terminal is resized
         if (GetConsoleSize().x != columns) {
             RenderRaw();
-            Print(stderr, "%!D..[Y/N]%!0 ");
+            Print(StdErr, "%!D..[Y/N]%!0 ");
         }
 
         switch (uc) {
             case 0x3: { // Ctrl-C
-                fputs("\r\n", stderr);
-                fflush(stderr);
+                StdErr->Write("\r\n");
+                StdErr->Flush();
 
                 return false;
             } break;
@@ -7921,16 +7767,16 @@ bool ConsolePrompter::ReadRawYN(bool *out_value)
 
             case 'Y':
             case 'y': {
-                fputs("Y\n", stderr);
-                fflush(stderr);
+                StdErr->Write("Y\n");
+                StdErr->Flush();
 
                 *out_value = true;
                 return true;
             } break;
             case 'N':
             case 'n': {
-                fputs("N\n", stderr);
-                fflush(stderr);
+                StdErr->Write("N\n");
+                StdErr->Flush();
 
                 *out_value = false;
                 return true;
@@ -7947,8 +7793,11 @@ bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
 
     RenderBuffered();
 
-    int c;
-    while ((c = fgetc(stdin)) != EOF) {
+    do {
+        uint8_t c = 0;
+        if (StdIn->Read(1, &c) < 0)
+            return false;
+
         if (c == '\n') {
             EnsureNulTermination();
             if (out_str) {
@@ -7958,12 +7807,7 @@ bool ConsolePrompter::ReadBuffered(Span<const char> *out_str)
         } else if (c >= 32 || c == '\t') {
             str.Append((char)c);
         }
-    }
-
-    if (ferror(stdin)) {
-        LogError("Failed to read from standard input: %1", strerror(errno));
-        return false;
-    }
+    } while (!StdIn->IsEOF());
 
     // EOF
     return false;
@@ -7975,14 +7819,17 @@ bool ConsolePrompter::ReadBufferedYN(bool *out_value)
 
     prompt_columns = ComputeWidth(prompt) + ComputeWidth(yn) + 1;
 
-    for (;;) {
+    while (!StdIn->IsEOF()) {
         str.RemoveFrom(0);
         str_offset = 0;
         RenderBuffered();
-        Print(stderr, "%1 ", yn);
+        Print(StdErr, "%1 ", yn);
 
-        int c;
-        while ((c = fgetc(stdin)) != EOF) {
+        for (;;) {
+            uint8_t c = 0;
+            if (StdIn->Read(1, &c) < 0)
+                return false;
+
             if (c == '\n') {
                 if (TestStrI(str, "y") || TestStrI(str, "yes")) {
                     *out_value = true;
@@ -7997,14 +7844,10 @@ bool ConsolePrompter::ReadBufferedYN(bool *out_value)
                 str.Append((char)c);
             }
         }
-
-        if (ferror(stdin)) {
-            LogError("Failed to read from standard input: %1", strerror(errno));
-            return false;
-        } else if (feof(stdin)) {
-            return false;
-        }
     }
+
+    // EOF
+    return false;
 }
 
 void ConsolePrompter::ChangeEntry(Size new_idx)
@@ -8096,9 +7939,9 @@ void ConsolePrompter::RenderRaw()
     int mask_columns = mask ? ComputeWidth(mask) : 0;
 
     // Hide cursor during refresh
-    fprintf(stderr, "\x1B[?25l");
+    StdErr->Write("\x1B[?25l");
     if (y) {
-        fprintf(stderr, "\x1B[%dA", y);
+        Print(StdErr, "\x1B[%1A", y);
     }
 
     // Output prompt(s) and string lines
@@ -8106,7 +7949,7 @@ void ConsolePrompter::RenderRaw()
         Size i = 0;
         int x2 = prompt_columns;
 
-        Print(stderr, "\r%!0%1%!..+", prompt);
+        Print(StdErr, "\r%!0%1%!..+", prompt);
 
         for (;;) {
             if (i == str_offset) {
@@ -8121,39 +7964,39 @@ void ConsolePrompter::RenderRaw()
 
             if (x2 + width >= columns || str[i] == '\n') {
                 FmtArg prefix = FmtArg(str[i] == '\n' ? '.' : ' ').Repeat(prompt_columns - 1);
-                Print(stderr, "\x1B[0K\r\n%!D.+%1%!0 %!..+", prefix);
+                Print(StdErr, "\x1B[0K\r\n%!D.+%1%!0 %!..+", prefix);
 
                 x2 = prompt_columns;
                 rows++;
             }
             if (width > 0) {
                 if (mask) {
-                    fputs(mask, stderr);
+                    StdErr->Write(mask);
                 } else {
-                    fwrite(str.ptr + i, 1, (size_t)bytes, stderr);
+                    StdErr->Write(str.ptr + i, bytes);
                 }
             }
 
             x2 += width;
             i += bytes;
         }
-        fputs("\x1B[0K", stderr);
+        StdErr->Write("\x1B[0K");
     }
 
     // Clear remaining rows
     for (int i = rows; i < rows_with_extra; i++) {
-        fprintf(stderr, "\r\n\x1B[0K");
+        StdErr->Write("\r\n\x1B[0K");
     }
     rows_with_extra = std::max(rows_with_extra, rows);
 
     // Fix up cursor and show it
     if (rows_with_extra > y) {
-        fprintf(stderr, "\x1B[%dA", rows_with_extra - y);
+        Print(StdErr, "\x1B[%1A", rows_with_extra - y);
     }
-    fprintf(stderr, "\r\x1B[%dC", x);
-    fprintf(stderr, "\x1B[?25h");
+    Print(StdErr, "\r\x1B[%1C", x);
+    Print(StdErr, "\x1B[?25h");
 
-    fflush(stderr);
+    StdErr->Flush();
 }
 
 void ConsolePrompter::RenderBuffered()
@@ -8161,17 +8004,17 @@ void ConsolePrompter::RenderBuffered()
     Span<const char> remain = str;
     Span<const char> line = SplitStr(remain, '\n', &remain);
 
-    Print(stderr, "%1%2", prompt, line);
+    Print(StdErr, "%1%2", prompt, line);
     while (remain.len) {
         line = SplitStr(remain, '\n', &remain);
-        Print(stderr, "\n%1 %2", FmtArg('.').Repeat(prompt_columns - 1), line);
+        Print(StdErr, "\n%1 %2", FmtArg('.').Repeat(prompt_columns - 1), line);
     }
 }
 
 Vec2<int> ConsolePrompter::GetConsoleSize()
 {
 #ifdef _WIN32
-    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stderr));
+    HANDLE h = (HANDLE)_get_osfhandle(STDERR_FILENO);
 
     CONSOLE_SCREEN_BUFFER_INFO screen;
     if (GetConsoleScreenBufferInfo(h, &screen))
@@ -8195,7 +8038,7 @@ int32_t ConsolePrompter::ReadChar()
     }
 
 #ifdef _WIN32
-    HANDLE h = (HANDLE)_get_osfhandle(_fileno(stdin));
+    HANDLE h = (HANDLE)_get_osfhandle(STDIN_FILENO);
 
     for (;;) {
         INPUT_RECORD ev;
@@ -8286,18 +8129,26 @@ int32_t ConsolePrompter::ReadChar()
         }
     }
 #else
-    int32_t uc = fgetc(stdin);
-    if (uc < 0)
-        goto eof;
+    int32_t uc = 0;
+
+    {
+        uint8_t c = 0;
+        ssize_t read_len = read(STDIN_FILENO, &c, 1);
+        if (read_len < 0)
+            goto error;
+        if (!read_len)
+            return -1;
+        uc = c;
+    }
 
     if (uc >= 128) {
         Size bytes = CountUtf8Bytes((char)uc);
 
         LocalArray<char, 4> buf;
         buf.Append((char)uc);
-        buf.len += fread(buf.end(), 1, bytes - 1, stdin);
+        buf.len += read(STDIN_FILENO, buf.end(), bytes - 1);
         if (buf.len < 1)
-            goto eof;
+            return -1;
 
         if (buf.len != bytes)
             return 0;
@@ -8307,17 +8158,12 @@ int32_t ConsolePrompter::ReadChar()
 
     return uc;
 
-eof:
-    if (ferror(stdin)) {
-        if (errno == EINTR) {
-            // Could be SIGWINCH, give the user a chance to deal with it
-            return 0;
-        } else {
-            LogError("Failed to read from standard input: %1", strerror(errno));
-            return -1;
-        }
+error:
+    if (errno == EINTR) {
+        // Could be SIGWINCH, give the user a chance to deal with it
+        return 0;
     } else {
-        // EOF
+        LogError("Failed to read from standard input: %1", strerror(errno));
         return -1;
     }
 #endif

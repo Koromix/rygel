@@ -60,8 +60,9 @@ int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 <command> [args]%!0
 
 Management commands:
     %!..+init%!0                         Init new backup repository
@@ -87,8 +88,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     };
 
     if (argc < 2) {
-        print_usage(stderr);
-        PrintLn(stderr);
+        print_usage(StdErr);
+        PrintLn(StdErr);
         LogError("No command provided");
         return 1;
     }
@@ -142,7 +143,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
             cmd = arguments[0];
             arguments[0] = (cmd[0] == '-') ? cmd : "--help";
         } else {
-            print_usage(stdout);
+            print_usage(StdOut);
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {

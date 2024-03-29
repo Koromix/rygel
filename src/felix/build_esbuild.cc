@@ -103,7 +103,7 @@ bool Builder::PrepareEsbuild()
                 return false;
             } else if (exit_code) {
                 LogError("Failed to build esbuild %!..+(exit code %1)%!0", exit_code);
-                stderr_st.Write(output_buf);
+                StdErr->Write(output_buf);
 
                 return false;
             }
@@ -177,7 +177,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
             }
 
             cmd.cache_len = buf.len;
-            Fmt(&buf, " --color=%1", FileIsVt100(stdout) ? "true" : "false");
+            Fmt(&buf, " --color=%1", FileIsVt100(STDOUT_FILENO) ? "true" : "false");
             cmd.cmd_line = buf.TrimAndLeak(1);
 
             cmd.deps_mode = Command::DependencyMode::EsbuildMeta;

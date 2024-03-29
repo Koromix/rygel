@@ -196,8 +196,8 @@ int RunMacify(Span<const char *> arguments)
     const char *qmake_binary = nullptr;
     const char *binary_filename = nullptr;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 macify [options] <binary>%!0
 
 Options:
@@ -218,7 +218,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_bundle = opt.current_value;

@@ -44,7 +44,7 @@ bool rk_Config::Complete(bool require_auth)
 
         if (str) {
             password = DuplicateString(str, &str_alloc).ptr;
-        } else if (FileIsVt100(stderr)) {
+        } else if (FileIsVt100(STDERR_FILENO)) {
             password = Prompt("Repository password: ", nullptr, "*", &str_alloc);
             if (!password)
                 return false;

@@ -48,7 +48,7 @@ public:
         double d;
         Span<const char> str;
         Span<const uint8_t> blob;
-        Size zero_len;
+        int64_t zero_len;
     } u;
 
     sq_Binding() : type(Type::Null) {}
@@ -64,7 +64,7 @@ public:
     sq_Binding(Span<const char> str) : type(Type::String) { u.str = str; };
     sq_Binding(Span<const uint8_t> blob) : type(Type::Blob) { u.blob = blob; };
 
-    static sq_Binding Zeroblob(Size len)
+    static sq_Binding Zeroblob(int64_t len)
     {
         sq_Binding binding;
         binding.type = Type::Zero;

@@ -262,7 +262,7 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
             return false;
         } else if (exit_code) {
             LogError("Failed to run esbuild %!..+(exit code %1)%!0", exit_code);
-            stderr_st.Write(output_buf);
+            StdErr->Write(output_buf);
 
             return false;
         }
@@ -1011,8 +1011,9 @@ int Main(int argc, char *argv[])
     bool gzip = false;
     UrlFormat urls = UrlFormat::Pretty;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 [options] -O <output_dir>%!0
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 [options] -O <output_dir>%!0
 
 Options:
     %!..+-S, --source_dir <file>%!0      Set source directory
@@ -1039,7 +1040,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-S", "--source_dir", OptionType::Value)) {
                 source_dir = opt.current_value;

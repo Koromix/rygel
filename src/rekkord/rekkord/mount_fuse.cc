@@ -421,8 +421,8 @@ int RunMount(Span<const char *> arguments)
     bool debug = false;
     HeapArray<const char *> fuse_options;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 mount [-R <repo>] <hash> <mountpoint>%!0
 
 Options:
@@ -453,7 +453,7 @@ Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled

@@ -73,11 +73,12 @@ int Main(int argc, char **argv)
     // Global options
     const char *config_filename = "drdc.ini";
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 <command> [args]%!0
 )", FelixTarget);
-        PrintLn(fp, CommonOptions);
-        PrintLn(fp, R"(
+        PrintLn(st, CommonOptions);
+        PrintLn(st, R"(
 Commands:
     %!..+mco_classify%!0                 Classify MCO stays
     %!..+mco_dump%!0                     Dump available MCO tables and lists
@@ -91,8 +92,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     };
 
     if (argc < 2) {
-        print_usage(stderr);
-        PrintLn(stderr);
+        print_usage(StdErr);
+        PrintLn(StdErr);
         LogError("No command provided");
         return 1;
     }
@@ -106,7 +107,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
             cmd = arguments[0];
             arguments[0] = (cmd[0] == '-') ? cmd : "--help";
         } else {
-            print_usage(stdout);
+            print_usage(StdOut);
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {

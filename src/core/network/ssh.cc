@@ -70,7 +70,7 @@ bool ssh_Config::Complete()
 
             if (str) {
                 password = DuplicateString(str, &str_alloc).ptr;
-            } else if (username && FileIsVt100(stderr)) {
+            } else if (username && FileIsVt100(STDERR_FILENO)) {
                 password = Prompt("SSH password: ", nullptr, "*", &str_alloc);
                 if (!password)
                     return false;

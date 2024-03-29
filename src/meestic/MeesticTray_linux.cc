@@ -665,8 +665,8 @@ int Main(int argc, char **argv)
     // Options
     const char *socket_filename = "/run/meestic.sock";
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 [options]%!0
 
 Options:
@@ -688,7 +688,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-S", "--socket_file", OptionType::Value)) {
                 socket_filename = opt.current_value;

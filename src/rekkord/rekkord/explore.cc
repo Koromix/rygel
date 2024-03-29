@@ -28,8 +28,8 @@ int RunSnapshots(Span<const char *> arguments)
     OutputFormat format = OutputFormat::Plain;
     int verbose = 0;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 snapshots [-R <repo>]%!0
 
 Options:
@@ -58,7 +58,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -133,7 +133,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
         } break;
 
         case OutputFormat::JSON: {
-            json_PrettyWriter json(&stdout_st);
+            json_PrettyWriter json(StdOut);
 
             json.StartArray();
             for (const rk_SnapshotInfo &snapshot: snapshots) {
@@ -308,8 +308,8 @@ int RunList(Span<const char *> arguments)
     int verbose = 0;
     const char *name = nullptr;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 list [-R <repo>] <hash>%!0
 
 Options:
@@ -344,7 +344,7 @@ Available output formats: %!..+%3%!0)",
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 // Already handled
@@ -430,7 +430,7 @@ Available output formats: %!..+%3%!0)",
         } break;
 
         case OutputFormat::JSON: {
-            json_PrettyWriter json(&stdout_st);
+            json_PrettyWriter json(StdOut);
             int depth = 0;
 
             json.StartArray();

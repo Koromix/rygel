@@ -859,8 +859,9 @@ static int RunServe(Span<const char *> arguments)
     const char *config_filename = "goupile.ini";
     bool sandbox = false;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 [serve] [options]%!0
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 [serve] [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -886,7 +887,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {

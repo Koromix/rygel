@@ -103,8 +103,9 @@ int Main(int argc, char **argv)
     const char *filename_or_code = nullptr;
     Config config;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 [options] <file>
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 [options] <file>
        %1 [options] -c <code>
        %1 [options] -i%!0
 
@@ -133,7 +134,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-c", "--command")) {
                 if (mode == RunMode::Interactive) {

@@ -116,8 +116,8 @@ static int RunClient(int argc, char **argv)
     HeapArray<const char *> args;
     const char *work_dir = GetWorkingDirectory();
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 [options] <bin> [args...]%!0
 
 Options:
@@ -135,7 +135,7 @@ In order for this to work, you must first install the service from an elevated c
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-w", "--work_dir", OptionType::Value)) {
                 work_dir = opt.current_value;

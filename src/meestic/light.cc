@@ -34,16 +34,16 @@ static_assert(RG_SIZE(ControlPacket) == 65);
 
 static void DumpPacket(Span<const uint8_t> bytes)
 {
-    PrintLn(stderr, "Length = %1:", FmtMemSize(bytes.len));
+    PrintLn(StdErr, "Length = %1:", FmtMemSize(bytes.len));
 
     for (const uint8_t *ptr = bytes.begin(); ptr < bytes.end();) {
-        Print(stderr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),
+        Print(StdErr, "  [0x%1 %2 %3]  ", FmtArg(ptr).Pad0(-16),
                                           FmtArg((ptr - bytes.begin()) / sizeof(void *)).Pad(-4),
                                           FmtArg(ptr - bytes.begin()).Pad(-4));
         for (int i = 0; ptr < bytes.end() && i < (int)sizeof(void *); i++, ptr++) {
-            Print(stderr, " %1", FmtHex(*ptr).Pad0(-2));
+            Print(StdErr, " %1", FmtHex(*ptr).Pad0(-2));
         }
-        PrintLn(stderr);
+        PrintLn(StdErr);
     }
 }
 

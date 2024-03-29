@@ -1774,7 +1774,7 @@ void DumpMemory(const char *type, Span<const uint8_t> bytes)
             for (int i = 0; ptr < bytes.end() && i < (int)sizeof(void *); i++, ptr++) {
                 Print(stderr, " %1", FmtHex(*ptr).Pad0(-2));
             }
-            PrintLn(stderr);
+            PrintLn(StdErr);
         }
     }
 }

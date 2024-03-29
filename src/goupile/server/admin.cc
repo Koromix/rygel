@@ -460,8 +460,9 @@ int RunInit(Span<const char *> arguments)
     gid_t owner_gid = 0;
     const char *root_directory = nullptr;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 init [options] [directory]%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 init [options] [directory]%!0
 
 Options:
     %!..+-t, --title <title>%!0          Set domain title
@@ -477,7 +478,7 @@ Options:
         %!..+--demo [<name>]%!0          Create default instance)", FelixTarget);
 
 #ifndef _WIN32
-        PrintLn(fp, R"(
+        PrintLn(st, R"(
     %!..+-o, --owner <owner>%!0          Change directory and file owner)");
 #endif
     };
@@ -488,7 +489,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-t", "--title", OptionType::Value)) {
                 title = opt.current_value;
@@ -711,8 +712,9 @@ int RunMigrate(Span<const char *> arguments)
     // Options
     const char *config_filename = "goupile.ini";
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 migrate [options]%!0
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 migrate [options]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -725,7 +727,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
@@ -789,8 +791,9 @@ int RunKeys(Span<const char *> arguments)
     char archive_key[45] = {};
     bool random_key = true;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 keys%!0
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 keys%!0
 
 Options:
     %!..+-k, --decrypt_key [key]%!0      Use existing decryption key)", FelixTarget);
@@ -802,7 +805,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-k", "--decrypt_key", OptionType::OptionalValue)) {
                 if (opt.current_value) {
@@ -958,8 +961,9 @@ int RunUnseal(Span<const char *> arguments)
     const char *decrypt_key = nullptr;
     bool extract = true;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 unseal [options] <archive_file>%!0
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 unseal [options] <archive_file>%!0
 
 Options:
     %!..+-O, --output_file <file>%!0     Set output file
@@ -974,7 +978,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_filename = opt.current_value;
@@ -2514,15 +2518,15 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         {
             const char *src_filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
-            FILE *fp = nullptr;
-            extract_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fp);
+            int fd = -1;
+            extract_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fd);
             if (!extract_filename)
                 return;
             tmp_filenames.Append(extract_filename);
-            RG_DEFER { fclose(fp); };
+            RG_DEFER { close(fd); };
 
             StreamReader reader(src_filename);
-            StreamWriter writer(fp, extract_filename);
+            StreamWriter writer(fd, extract_filename);
             if (!reader.IsValid()) {
                 if (errno == ENOENT) {
                     LogError("Archive '%1' does not exist", basename);
@@ -2556,15 +2560,39 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
         // Extract and open archived main database (goupile.db)
         sq_Database main_db;
         {
-            FILE *fp = nullptr;
-            const char *main_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fp);
+            int fd = -1;
+            const char *main_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator, &fd);
             if (!main_filename)
                 return;
             tmp_filenames.Append(main_filename);
-            RG_DEFER { fclose(fp); };
+            RG_DEFER { close(fd); };
 
-            if (!mz_zip_reader_extract_file_to_cfile(&zip, "goupile.db", fp, 0)) {
-                LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
+            int success = mz_zip_reader_extract_file_to_callback(&zip, "goupile.db", [](void *udata, mz_uint64, const void *ptr, size_t len) {
+                RG_ASSERT(len <= RG_SIZE_MAX);
+
+                int fd = *(int *)udata;
+                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)len);
+
+                while (buf.len) {
+                    Size write_len = write(fd, buf.ptr, (size_t)buf.len);
+                    if (write_len < 0) {
+                        if (errno == EINTR)
+                            continue;
+
+                        LogError("Failed to write to disk: %1", strerror(errno));
+                        return (size_t)0;
+                    }
+
+                    buf.ptr += write_len;
+                    buf.len -= write_len;
+                }
+
+                return len;
+            }, &fd, 0);
+            if (!success) {
+                if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
+                    LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
+                }
                 return;
             }
 

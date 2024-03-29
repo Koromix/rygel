@@ -43,9 +43,9 @@ class GitVersioneer {
     HeapArray<const char *> idx_filenames;
     HeapArray<const char *> pack_filenames;
 
-    // FILE object cache
-    HeapArray<FILE *> idx_files;
-    HeapArray<FILE *> pack_files;
+    // Descriptor cache
+    HeapArray<int> idx_files;
+    HeapArray<int> pack_files;
 
     // Already known commit IDs
     HeapArray<GitHash> commits;
@@ -80,7 +80,7 @@ private:
 
     bool FindInIndexes(Size start_idx, const GitHash &hash, PackLocation *out_location);
     bool ReadPackAttributes(Size idx, int64_t offset, FunctionRef<bool(Span<const char> key, Span<const char> value)> func);
-    bool ReadPackObject(FILE *fp, int64_t offset, int *out_type, HeapArray<uint8_t> *out_obj);
+    bool ReadPackObject(int fd, int64_t offset, int *out_type, HeapArray<uint8_t> *out_obj);
 };
 
 }

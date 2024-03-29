@@ -338,7 +338,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
         ~SharedContext() {
             if (meta.filename) {
-                int fd = OpenDescriptor(meta.filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
+                int fd = OpenFile(meta.filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
+                if (fd < 0)
+                    return;
                 RG_DEFER { close(fd); };
 
                 // Set directory metadata
@@ -471,7 +473,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 log_guard.Disable();
             }
 
-            fd = OpenDescriptor(tmp_filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive);
+            fd = OpenFile(tmp_filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive);
 
             if (fd >= 0) [[likely]]
                 break;
@@ -584,7 +586,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     if (!RenameFile(tmp_filename, dest_filename, (int)RenameFlag::Overwrite))
         return -1;
 
-    fd = OpenDescriptor(dest_filename, (int)OpenFlag::Append);
+    fd = OpenFile(dest_filename, (int)OpenFlag::Append);
     if (fd < 0)
         return -1;
 

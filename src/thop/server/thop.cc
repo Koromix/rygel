@@ -461,8 +461,9 @@ int Main(int argc, char **argv)
     // Options
     const char *config_filename = "thop.ini";
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 [options] [stay_file ..]%!0
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 [options] [stay_file ..]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -500,7 +501,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {

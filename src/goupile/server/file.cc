@@ -461,13 +461,13 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     io->RunAsync([=]() {
         // Create temporary file
-        FILE *fp = nullptr;
+        int fd = -1;
         const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp",
-                                                    &io->allocator, &fp);
+                                                    &io->allocator, &fd);
         if (!tmp_filename)
             return;
         RG_DEFER {
-            fclose(fp);
+            close(fd);
             UnlinkFile(tmp_filename);
         };
 
@@ -478,7 +478,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         Size total_len = 0;
         char sha256[65];
         {
-            StreamWriter writer(fp, "<temp>", compression_type);
+            StreamWriter writer(fd, "<temp>", compression_type);
             StreamReader reader;
             if (!io->OpenForRead(instance->config.max_file_size, &reader))
                 return;
@@ -515,9 +515,14 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         // Copy and commit to database
         instance->db->Transaction([&]() {
-            Size file_len = ftell(fp);
-            if (fseek(fp, 0, SEEK_SET) < 0) {
-                LogError("fseek('<temp>') failed: %1", strerror(errno));
+#ifdef _WIN32
+            int64_t file_len = _lseeki64(fd, 0, SEEK_CUR);
+#else
+            int64_t file_len = lseek(fd, 0, SEEK_CUR);
+#endif
+
+            if (lseek(fd, 0, SEEK_SET) < 0) {
+                LogError("lseek('<temp>') failed: %1", strerror(errno));
                 return false;
             }
 
@@ -543,8 +548,8 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
             }
             RG_DEFER { sqlite3_blob_close(blob); };
 
-            StreamReader reader(fp, "<temp>");
-            Size read_len = 0;
+            StreamReader reader(fd, "<temp>");
+            int64_t read_len = 0;
 
             do {
                 LocalArray<uint8_t, 16384> buf;

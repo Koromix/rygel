@@ -373,10 +373,10 @@ bool sb_SandboxBuilder::Apply()
                         if (!EnsureDirectoryExists(dest))
                             return false;
 
-                        FILE *fp = OpenFile(dest, (int)OpenFlag::Write);
-                        if (!fp)
+                        int fd = OpenFile(dest, (int)OpenFlag::Write);
+                        if (fd < 0)
                             return false;
-                        fclose(fp);
+                        close(fd);
                     }
                 }
 

@@ -1344,7 +1344,7 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
 
         if (output.len) {
             std::lock_guard<std::mutex> out_lock(out_mutex);
-            stdout_st.Write(output);
+            StdOut->Write(output);
         }
 
         // Trigger dependent nodes
@@ -1373,10 +1373,10 @@ bool Builder::RunNode(Async *async, Node *node, bool verbose)
 
         if (!started) {
             // Error already issued by ExecuteCommandLine()
-            stderr_st.Write(output);
+            StdErr->Write(output);
         } else if (WaitForInterrupt(0) != WaitForResult::Interrupt) {
             LogError("%1 %!..+(exit code %2)%!0", node->text, exit_code);
-            stderr_st.Write(output);
+            StdErr->Write(output);
         }
 
         return false;

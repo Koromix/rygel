@@ -24,8 +24,9 @@ int Main(int argc, char **argv)
     const char *filename_or_code;
     bool is_code = false;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 [options] <file>
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 [options] <file>
        %1 [options] -c <code>%!0
 
 Options:
@@ -45,7 +46,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-c", "--command")) {
                 is_code = true;
@@ -74,7 +75,7 @@ Options:
         js_ExposeFunction(ctx, global, "print", [](JSContextRef ctx, JSObjectRef, JSObjectRef,
                                                    size_t argc, const JSValueRef *argv, JSValueRef *ex) {
             for (Size i = 0; i < (Size)argc; i++) {
-                if (!js_PrintValue(ctx, argv[i], ex, &stdout_st))
+                if (!js_PrintValue(ctx, argv[i], ex, StdOut))
                     return (JSValueRef)nullptr;
             }
             PrintLn();
@@ -101,15 +102,15 @@ Options:
         if (!ret) {
             RG_ASSERT(ex);
 
-            js_PrintValue(ctx, ex, nullptr, &stderr_st);
-            PrintLn(stderr);
+            js_PrintValue(ctx, ex, nullptr, StdErr);
+            PrintLn(StdErr);
 
             return 1;
         }
     }
 
     if (!js_IsNullOrUndefined(ctx, ret)) {
-        js_PrintValue(ctx, ret, nullptr, &stdout_st);
+        js_PrintValue(ctx, ret, nullptr, StdOut);
         PrintLn();
     }
 

@@ -27,8 +27,8 @@ int RunPack(Span<const char *> arguments)
     CompressionType compression_type = CompressionType::None;
     HeapArray<const char *> filenames;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 pack [options] <filename> ...%!0
 
 Options:
@@ -52,7 +52,7 @@ Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(in
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-f", "--flags", OptionType::Value)) {
                 const char *flags_str = opt.current_value;

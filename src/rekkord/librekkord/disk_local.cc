@@ -168,7 +168,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
     // Create temporary file
-    FILE *fp = nullptr;
+    int fd = -1;
     LocalArray<char, MaxPathSize + 128> tmp;
     {
         tmp.len = Fmt(tmp.data, "%1%/tmp%/", url).len;
@@ -177,7 +177,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
             Size len = Fmt(tmp.TakeAvailable(), "%1.tmp", FmtRandom(24)).len;
 
             OpenResult ret = OpenFile(tmp.data, (int)OpenFlag::Write | (int)OpenFlag::Exclusive,
-                                                (int)OpenResult::FileExists, &fp);
+                                                (int)OpenResult::FileExists, &fd);
 
             if (ret == OpenResult::Success) [[likely]] {
                 tmp.len += len;
@@ -187,15 +187,15 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
             }
         }
 
-        if (!fp) [[unlikely]] {
+        if (fd < 0) [[unlikely]] {
             LogError("Failed to create temporary file in '%1'", tmp);
             return -1;
         }
     }
-    RG_DEFER_N(file_guard) { fclose(fp); };
+    RG_DEFER_N(file_guard) { close(fd); };
     RG_DEFER_N(tmp_guard) { UnlinkFile(tmp.data); };
 
-    StreamWriter writer(fp, filename.data);
+    StreamWriter writer(fd, filename.data);
 
     // Write encrypted content
     if (!func([&](Span<const uint8_t> buf) { return writer.Write(buf); }))
@@ -204,7 +204,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
         return -1;
 
     // File is complete
-    fclose(fp);
+    close(fd);
     file_guard.Disable();
 
     // Atomic rename

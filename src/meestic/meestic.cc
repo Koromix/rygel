@@ -321,8 +321,8 @@ static int RunDaemon(Span<const char *> arguments)
     const char *socket_filename = "/run/meestic.sock";
     bool sandbox = true;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 daemon [options]%!0
 
 Options:
@@ -338,7 +338,7 @@ By default, the first of the following config files will be used:
                 FelixTarget, socket_filename);
 
         for (const char *filename: config_filenames) {
-            PrintLn(fp, "    %!..+%1%!0", filename);
+            PrintLn(st, "    %!..+%1%!0", filename);
         }
     };
 
@@ -348,7 +348,7 @@ By default, the first of the following config files will be used:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
@@ -505,8 +505,9 @@ static int RunSet(Span<const char *> arguments)
     // Options
     LightSettings settings;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 set [options...] [colors...]%!0
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 set [options...] [colors...]%!0
 
 Options:
     %!..+-m, --mode <mode>%!0            Set light mode (see below)
@@ -518,20 +519,20 @@ Options:
 
 Supported modes:)", FelixTarget, LightModeOptions[(int)settings.mode].name, settings.speed, settings.intensity);
         for (const OptionDesc &desc: LightModeOptions) {
-            PrintLn(fp, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
         };
-        PrintLn(fp, R"(
+        PrintLn(st, R"(
 A few predefined color names can be used (such as MsiBlue), or you can use
 hexadecimal RGB color codes. Don't forget the quotes or your shell may not
 like the hash character.
 
 Predefined color names:)");
         for (const PredefinedColor &color: PredefinedColors) {
-            PrintLn(fp, "    %!..+%1%!0  %!D..#%2%3%4%!0", FmtArg(color.name).Pad(27), FmtHex(color.rgb.red).Pad0(-2),
+            PrintLn(st, "    %!..+%1%!0  %!D..#%2%3%4%!0", FmtArg(color.name).Pad(27), FmtHex(color.rgb.red).Pad0(-2),
                                                                                        FmtHex(color.rgb.green).Pad0(-2),
                                                                                        FmtHex(color.rgb.blue).Pad0(-2));
         };
-        PrintLn(fp, R"(
+        PrintLn(st, R"(
 Examples:
     Disable lighting
     %!..+%1 -m Disabled%!0
@@ -563,7 +564,7 @@ Be careful, color names and most options are %!..+case-sensitive%!0.)", FelixTar
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
                 if (!OptionToEnum(LightModeOptions, opt.current_value, &settings.mode)) {

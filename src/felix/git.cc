@@ -91,20 +91,13 @@ static void DecodeHash(Span<const uint8_t> raw, char *out_id)
     out_id[j] = 0;
 }
 
-static inline void CloseSafe(FILE *fp)
-{
-    if (fp) {
-        fclose(fp);
-    }
-}
-
 GitVersioneer::~GitVersioneer()
 {
-    for (FILE *fp: idx_files) {
-        CloseSafe(fp);
+    for (int fd: idx_files) {
+        close(fd);
     }
-    for (FILE *fp: pack_files) {
-        CloseSafe(fp);
+    for (int fd: pack_files) {
+        close(fd);
     }
 }
 
@@ -166,8 +159,12 @@ bool GitVersioneer::Prepare(const char *root_directory)
             pack_filenames.Append(pack_filename);
         }
 
-        idx_files.AppendDefault(idx_filenames.len);
-        pack_files.AppendDefault(pack_filenames.len);
+        for (int i = 0; i < idx_filenames.len; i++) {
+            idx_files.Append(-1);
+        }
+        for (int i = 0; i < pack_filenames.len; i++) {
+            pack_files.Append(-1);
+        }
 
         Span<char> loose_filename = Fmt(&str_alloc, "%1%/_________________________________________", obj_directory);
         loose_filenames.Append(loose_filename);
@@ -482,12 +479,12 @@ bool GitVersioneer::ReadLooseAttributes(const char *filename, FunctionRef<bool(S
     return true;
 }
 
-static bool SeekFile(FILE *fp, int64_t offset)
+static bool SeekFile(int fd, int64_t offset)
 {
 #ifdef _WIN32
-    int ret = _fseeki64(fp, offset, SEEK_SET);
+    int ret = _lseeki64(fd, (int64_t)offset, SEEK_SET);
 #else
-    int ret = fseeko(fp, (off_t)offset, SEEK_SET);
+    int ret = lseek(fd, (off_t)offset, SEEK_SET);
 #endif
 
     if (ret < 0) {
@@ -498,15 +495,15 @@ static bool SeekFile(FILE *fp, int64_t offset)
     return true;
 }
 
-static bool ReadSection(FILE *fp, int64_t offset, Size len, void *out_ptr)
+static bool ReadSection(int fd, int64_t offset, Size len, void *out_ptr)
 {
-    if (!SeekFile(fp, offset))
+    if (!SeekFile(fd, offset))
         return false;
 
-    Size read = fread(out_ptr, 1, len, fp);
-    if (read < 0)
+    Size read_len = read(fd, out_ptr, (size_t)len);
+    if (read_len < 0)
         return false;
-    if (read < len) {
+    if (read_len < len) {
         LogError("Truncated data in IDX or PACK file %1 %2 %3", offset, len, read);
         return false;
     }
@@ -518,19 +515,19 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
 {
     for (Size i = 0; i < idx_filenames.len; i++) {
         Size idx = (start_idx + i) % idx_filenames.len;
-        FILE *fp = idx_files[idx];
+        int fd = idx_files[idx];
 
-        if (!fp) {
+        if (fd < 0) {
             const char *idx_filename = idx_filenames[idx];
 
-            fp = OpenFile(idx_filename, (int)OpenFlag::Read);
-            if (!fp) 
+            fd = OpenFile(idx_filename, (int)OpenFlag::Read);
+            if (fd < 0) 
                 return false;
-            idx_files[idx] = fp;
+            idx_files[idx] = fd;
         }
 
         IdxHeader header = {};
-        if (!ReadSection(fp, 0, RG_SIZE(header), &header))
+        if (!ReadSection(fd, 0, RG_SIZE(header), &header))
             return false;
         if (BigEndian(header.magic) != 0xFF744F63 || BigEndian(header.version) != 2) {
             LogError("Invalid or unsupported IDX file");
@@ -553,7 +550,7 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
 
             names.AppendDefault(to - from);
 
-            if (!ReadSection(fp, RG_SIZE(header) + from, names.len, names.ptr))
+            if (!ReadSection(fd, RG_SIZE(header) + from, names.len, names.ptr))
                 return false;
         }
 
@@ -571,7 +568,7 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
 
         // Read offset into PACK file
         int32_t offset2 = 0;
-        if (!ReadSection(fp, offset1, 4, &offset2))
+        if (!ReadSection(fd, offset1, 4, &offset2))
             return false;
         offset2 = BigEndian(offset2);
 
@@ -633,19 +630,19 @@ static Span<const uint8_t> ParseOffset(Span<const uint8_t> buf, int64_t *out_off
 
 bool GitVersioneer::ReadPackAttributes(Size idx, int64_t offset, FunctionRef<bool(Span<const char> key, Span<const char> value)> func)
 {
-    FILE *fp = pack_files[idx];
+    int fd = pack_files[idx];
 
-    if (!fp) {
+    if (fd < 0) {
         const char *pack_filename = pack_filenames[idx];
 
-        fp = OpenFile(pack_filename, (int)OpenFlag::Read);
-        if (!fp)
+        fd = OpenFile(pack_filename, (int)OpenFlag::Read);
+        if (fd < 0)
             return false;
-        pack_files[idx] = fp;
+        pack_files[idx] = fd;
 
         // Check PACK header
         PackHeader header = {};
-        if (!ReadSection(fp, 0, RG_SIZE(header), &header))
+        if (!ReadSection(fd, 0, RG_SIZE(header), &header))
             return false;
         if (BigEndian(header.magic) != 0x5041434B || BigEndian(header.version) != 2) {
             LogError("Invalid or unsupported PACK file");
@@ -661,7 +658,7 @@ bool GitVersioneer::ReadPackAttributes(Size idx, int64_t offset, FunctionRef<boo
     for (;;) {
         obj.RemoveFrom(0);
 
-        if (!ReadPackObject(fp, offset, &type, &obj))
+        if (!ReadPackObject(fd, offset, &type, &obj))
             return false;
 
         if (type != 6 && type != 7)
@@ -782,7 +779,7 @@ bool GitVersioneer::ReadPackAttributes(Size idx, int64_t offset, FunctionRef<boo
     }
 }
 
-bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, HeapArray<uint8_t> *out_obj)
+bool GitVersioneer::ReadPackObject(int fd, int64_t offset, int *out_type, HeapArray<uint8_t> *out_obj)
 {
     int64_t base = offset;
 
@@ -790,7 +787,7 @@ bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, Heap
     Size len = 0;
     {
         uint8_t chunk[6] = {};
-        if (!ReadSection(fp, offset, RG_SIZE(chunk), chunk))
+        if (!ReadSection(fd, offset, RG_SIZE(chunk), chunk))
             return false;
 
         type = (chunk[0] >> 4) & 0x7;
@@ -806,14 +803,14 @@ bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, Heap
         }
         offset += used;
 
-        if (used != RG_SIZE(chunk) && !SeekFile(fp, offset))
+        if (used != RG_SIZE(chunk) && !SeekFile(fd, offset))
             return false;
     }
 
     // Deal with delta encoding
     if (type == 6) { // OBJ_OFS_DELTA
         uint8_t chunk[6] = {};
-        if (!ReadSection(fp, offset, RG_SIZE(chunk), chunk))
+        if (!ReadSection(fd, offset, RG_SIZE(chunk), chunk))
             return false;
 
         int64_t negative = 0;
@@ -822,18 +819,18 @@ bool GitVersioneer::ReadPackObject(FILE *fp, int64_t offset, int *out_type, Heap
 
         out_obj->Append(MakeSpan((const uint8_t *)&negative, RG_SIZE(negative)));
 
-        if (!SeekFile(fp, offset))
+        if (!SeekFile(fd, offset))
             return false;
     } else if (type == 7) { // OBJ_REF_DELTA
         uint8_t hash[20];
-        if (!ReadSection(fp, offset, RG_SIZE(hash), hash))
+        if (!ReadSection(fd, offset, RG_SIZE(hash), hash))
             return false;
         offset += 20;
 
         out_obj->Append(hash);
     }
 
-    StreamReader reader(fp, "<pack>", CompressionType::Zlib);
+    StreamReader reader(fd, "<pack>", CompressionType::Zlib);
     {
         Size prev_len = out_obj->len;
         if (reader.ReadAll(Mebibytes(2), out_obj) < 0)

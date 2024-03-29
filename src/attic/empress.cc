@@ -30,8 +30,8 @@ static int RunCompress(Span<const char *> arguments)
     CompressionSpeed compression_speed = CompressionSpeed::Default;
     bool force = false;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 compress <source> [-O <destination>]
        %1 compress <sources...> [-D <destination>]%!0
 
@@ -54,7 +54,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_filename = opt.current_value;
@@ -207,8 +207,8 @@ static int RunDecompress(Span<const char *> arguments)
     CompressionType compression_type = CompressionType::None;
     bool force = false;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 decompress <source> [-O <destination>]
        %1 decompress <sources...> [-D <destination>]%!0
 
@@ -229,7 +229,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
                 output_filename = opt.current_value;
@@ -374,8 +374,9 @@ int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 <command> [args]%!0
 
 Commands:
     %!..+compress%!0                     Compress file
@@ -385,8 +386,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     };
 
     if (argc < 2) {
-        print_usage(stderr);
-        PrintLn(stderr);
+        print_usage(StdErr);
+        PrintLn(StdErr);
         LogError("No command provided");
         return 1;
     }
@@ -400,7 +401,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
             cmd = arguments[0];
             arguments[0] = (cmd[0] == '-') ? cmd : "--help";
         } else {
-            print_usage(stdout);
+            print_usage(StdOut);
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {

@@ -38,8 +38,8 @@ int Main(int argc, char **argv)
     // Options
     const char *pattern = nullptr;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp, R"(Usage: %1 [pattern])", FelixTarget);
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st, R"(Usage: %1 [pattern])", FelixTarget);
     };
 
     // Parse arguments
@@ -48,7 +48,7 @@ int Main(int argc, char **argv)
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else {
                 opt.LogUnknownError();
@@ -75,23 +75,23 @@ int Main(int argc, char **argv)
         const TestInfo &test = *tests[i];
 
         if (!pattern || MatchPathSpec(test.path, pattern)) {
-            Print(stderr, "%!y..%1%!0", FmtArg(test.path).Pad(36));
+            Print(StdErr, "%!y..%1%!0", FmtArg(test.path).Pad(36));
 
             Size total = 0;
             Size failures = 0;
             test.func(&total, &failures);
 
             if (failures) {
-                PrintLn(stderr, "\n    %!R..Failed%!0 (%1/%2)\n", failures, total);
+                PrintLn(StdErr, "\n    %!R..Failed%!0 (%1/%2)\n", failures, total);
             } else {
-                PrintLn(stderr, " %!G..Success%!0 (%1)", total);
+                PrintLn(StdErr, " %!G..Success%!0 (%1)", total);
             }
 
             matches++;
         }
     }
     if (matches) {
-        PrintLn(stderr);
+        PrintLn(StdErr);
     }
 
 #ifdef RG_DEBUG
@@ -111,9 +111,9 @@ int Main(int argc, char **argv)
 #endif
 
         if (enable) {
-            PrintLn(stderr, "%!m..%1%!0", bench.path);
+            PrintLn(StdErr, "%!m..%1%!0", bench.path);
             bench.func();
-            PrintLn(stderr);
+            PrintLn(StdErr);
 
             matches++;
         }

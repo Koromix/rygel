@@ -65,8 +65,8 @@ static int RunRestore(Span<const char *> arguments)
     bool force = false;
     int64_t at = -1;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 restore [options] <directory>%!0
 
 Options:
@@ -86,7 +86,7 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 dest_directory = opt.current_value;
@@ -180,8 +180,8 @@ static int RunList(Span<const char *> arguments)
     const char *src_filename = nullptr;
     int verbosity = 0;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 list [options] <directory>%!0
 
 Options:
@@ -194,7 +194,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-v", "--verbose")) {
                 verbosity++;
@@ -381,8 +381,8 @@ static int RunTorture(Span<const char *> arguments)
     bool force = false;
     const char *database_filename = nullptr;
 
-const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 torture [options] <database>%!0
 
 Options:
@@ -403,7 +403,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-S", "--snapshot_dir", OptionType::Value)) {
                 snapshot_directory = opt.current_value;
@@ -461,8 +461,9 @@ int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 <command> [args]%!0
 
 Commands:
     %!..+restore%!0                      Restore databases from SQLite snapshots
@@ -474,8 +475,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     };
 
     if (argc < 2) {
-        print_usage(stderr);
-        PrintLn(stderr);
+        print_usage(StdErr);
+        PrintLn(StdErr);
         LogError("No command provided");
         return 1;
     }
@@ -489,7 +490,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
             cmd = arguments[0];
             arguments[0] = (cmd[0] == '-') ? cmd : "--help";
         } else {
-            print_usage(stdout);
+            print_usage(StdOut);
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {

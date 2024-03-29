@@ -27,8 +27,8 @@ static int RunGeneratePassword(Span<const char *> arguments)
     const char *pattern = nullptr;
     bool check = true;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 generate_password [options]%!0
 
 Options:
@@ -63,7 +63,7 @@ Here are a few example patterns:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-l", "--length", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &length))
@@ -154,8 +154,8 @@ static int RunHashPassword(Span<const char *> arguments)
     bool confirm = true;
     bool check = true;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 hash_password [options]
        %1 hash_password -p <password>%!0
 
@@ -173,7 +173,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-p", "--password", OptionType::Value)) {
                 password = opt.current_value;
@@ -250,8 +250,8 @@ static int RunGenerateTOTP(Span<const char *> arguments)
     int digits = 6;
     const char *png_filename = nullptr;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 generate_totp [options]%!0
 
 Options:
@@ -276,7 +276,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-l", "--label", OptionType::Value)) {
                 label = opt.current_value;
@@ -371,8 +371,8 @@ static int RunComputeTOTP(Span<const char *> arguments)
     int digits = 6;
     int window = 0;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 compute_totp [options] <secret>%!0
 
 Options:
@@ -394,7 +394,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
                 if (!OptionToEnumI(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
@@ -465,8 +465,8 @@ static int RunCheckTOTP(Span<const char *> arguments)
     int window = 0;
     const char *code = nullptr;
 
-    const auto print_usage = [=](FILE *fp) {
-        PrintLn(fp,
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
 R"(Usage: %!..+%1 check_totp [options] <secret>%!0
 
 Options:
@@ -488,7 +488,7 @@ Options:
 
         while (opt.Next()) {
             if (opt.Test("--help")) {
-                print_usage(stdout);
+                print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
                 if (!OptionToEnumI(pwd_HotpAlgorithmNames, opt.current_value, &algorithm)) {
@@ -569,8 +569,9 @@ int Main(int argc, char **argv)
     // Options
     HeapArray<const char *> src_filenames;
 
-    const auto print_usage = [](FILE *fp) {
-        PrintLn(fp, R"(Usage: %!..+%1 <command> [args]%!0
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 <command> [args]%!0
 
 Commands:
     %!..+generate_password%!0            Generate random password
@@ -584,8 +585,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     };
 
     if (argc < 2) {
-        print_usage(stderr);
-        PrintLn(stderr);
+        print_usage(StdErr);
+        PrintLn(StdErr);
         LogError("No command provided");
         return 1;
     }
@@ -599,7 +600,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
             cmd = arguments[0];
             arguments[0] = (cmd[0] == '-') ? cmd : "--help";
         } else {
-            print_usage(stdout);
+            print_usage(StdOut);
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
