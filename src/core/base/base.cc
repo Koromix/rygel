@@ -4293,7 +4293,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
                     write_buf.len -= (Size)write_len;
                 } else if (!write_len) {
                     CloseDescriptorSafe(&in_pfd[1]);
-                } else {
+                } else if (errno != EINTR) {
                     LogError("Failed to write process input: %1", strerror(errno));
                     CloseDescriptorSafe(&in_pfd[1]);
                 }
@@ -4316,7 +4316,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             } else if (!read_len) {
                 // EOF
                 break;
-            } else {
+            } else if (errno != EINTR) {
                 LogError("Failed to read process output: %1", strerror(errno));
                 break;
             }
@@ -8148,7 +8148,7 @@ int32_t ConsolePrompter::ReadChar()
         buf.Append((char)uc);
         buf.len += read(STDIN_FILENO, buf.end(), bytes - 1);
         if (buf.len < 1)
-            return -1;
+            goto error;
 
         if (buf.len != bytes)
             return 0;
