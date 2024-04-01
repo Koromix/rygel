@@ -573,7 +573,8 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         } break;
 
         case rk_BlobType::Directory:
-        case rk_BlobType::Snapshot:
+        case rk_BlobType::Snapshot1:
+        case rk_BlobType::Snapshot2:
         case rk_BlobType::Link: { RG_UNREACHABLE(); } break;
     }
 
@@ -636,7 +637,10 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
                 return false;
         } break;
 
-        case rk_BlobType::Snapshot: {
+        case rk_BlobType::Snapshot1: {
+            static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
+        } [[fallthrough]];
+        case rk_BlobType::Snapshot2: {
             if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -648,12 +652,12 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             }
 
             // There must be at least one entry
-            if (blob.len <= RG_SIZE(SnapshotHeader)) {
+            if (blob.len <= RG_SIZE(SnapshotHeader2)) {
                 LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
 
-            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader), blob.len - RG_SIZE(SnapshotHeader));
+            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
             unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
             if (!get.ExtractEntries(entries, flags, dest_path))
@@ -679,55 +683,36 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
 
 bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots)
 {
+    BlockAllocator temp_alloc;
+
     Size prev_len = out_snapshots->len;
     RG_DEFER_N(out_guard) { out_snapshots->RemoveFrom(prev_len); };
 
-    HeapArray<rk_Hash> hashes;
-    if (!disk->ListTags(&hashes))
+    HeapArray<rk_TagInfo> tags;
+    if (!disk->ListTags(&temp_alloc, &tags))
         return false;
 
-    Async async(disk->GetThreads());
+    for (const rk_TagInfo &tag: tags) {
+        rk_SnapshotInfo snapshot = {};
 
-    // Gather snapshot information
-    {
-        std::mutex mutex;
-
-        for (const rk_Hash &hash: hashes) {
-            async.Run([=, &mutex]() {
-                rk_SnapshotInfo snapshot = {};
-
-                rk_BlobType type;
-                HeapArray<uint8_t> blob;
-                if (!disk->ReadBlob(hash, &type, &blob))
-                    return false;
-
-                if (type != rk_BlobType::Snapshot) {
-                    LogError("Blob '%1' is not a Snapshot (ignoring)", hash);
-                    return true;
-                }
-                if (blob.len <= RG_SIZE(SnapshotHeader)) {
-                    LogError("Malformed snapshot blob '%1' (ignoring)", hash);
-                    return true;
-                }
-
-                std::lock_guard lock(mutex);
-                const SnapshotHeader *header = (const SnapshotHeader *)blob.ptr;
-
-                snapshot.hash = hash;
-                snapshot.name = header->name[0] ? DuplicateString(header->name, alloc).ptr : nullptr;
-                snapshot.time = LittleEndian(header->time);
-                snapshot.len = LittleEndian(header->len);
-                snapshot.stored = LittleEndian(header->stored) + blob.len;
-
-                out_snapshots->Append(snapshot);
-
-                return true;
-            });
+        if (tag.payload.len < RG_OFFSET_OF(SnapshotHeader2, name) + 1 ||
+                tag.payload.len > RG_SIZE(SnapshotHeader2)) {
+            LogError("Malformed snapshot tag for '%1' (ignoring)", tag.hash);
+            continue;
         }
-    }
 
-    if (!async.Sync() && out_snapshots->len == prev_len)
-        return false;
+        SnapshotHeader2 header = {};
+        memcpy(&header, tag.payload.ptr, (size_t)tag.payload.len);
+        header.name[RG_SIZE(header.name) - 1] = 0;
+
+        snapshot.hash = tag.hash;
+        snapshot.name = header.name[0] ? DuplicateString(header.name, alloc).ptr : nullptr;
+        snapshot.time = LittleEndian(header.time);
+        snapshot.len = LittleEndian(header.len);
+        snapshot.stored = LittleEndian(header.stored);
+
+        out_snapshots->Append(snapshot);
+    }
 
     std::sort(out_snapshots->ptr + prev_len, out_snapshots->end(),
               [](const rk_SnapshotInfo &snapshot1, const rk_SnapshotInfo &snapshot2) { return snapshot1.time < snapshot2.time; });
@@ -884,14 +869,33 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
                 return false;
         } break;
 
-        case rk_BlobType::Snapshot: {
-            // There must be at least one entry
-            if (blob.len <= RG_SIZE(SnapshotHeader)) {
+        case rk_BlobType::Snapshot1: {
+            static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
+
+            if (blob.len <= RG_SIZE(SnapshotHeader1)) {
                 LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
 
-            const SnapshotHeader *header = (const SnapshotHeader *)blob.ptr;
+            SnapshotHeader1 *header1 = (SnapshotHeader1 *)blob.ptr;
+            SnapshotHeader2 header2 = {};
+
+            header2.time = header1->time;
+            header2.len = header1->len;
+            header2.stored = header1->stored;
+            memcpy(header2.name, header1->name, RG_SIZE(header2.name));
+
+            memcpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
+        } [[fallthrough]];
+        case rk_BlobType::Snapshot2: {
+            if (blob.len <= RG_SIZE(SnapshotHeader2)) {
+                LogError("Malformed snapshot blob '%1'", hash);
+                return false;
+            }
+
+            SnapshotHeader2 *header = (SnapshotHeader2 *)blob.ptr;
+            header->name[RG_SIZE(header->name) - 1] = 0;
+
             rk_ObjectInfo *obj = out_objects->AppendDefault();
 
             obj->hash = hash;
@@ -904,7 +908,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
 
             obj->stored = header->stored;
 
-            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader), blob.len - RG_SIZE(SnapshotHeader));
+            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
 
             if (!tree.RecurseEntries(entries, true, 1, alloc, out_objects))
                 return false;
@@ -1106,7 +1110,8 @@ std::unique_ptr<rk_FileReader> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash)
         } break;
 
         case rk_BlobType::Directory:
-        case rk_BlobType::Snapshot:
+        case rk_BlobType::Snapshot1:
+        case rk_BlobType::Snapshot2:
         case rk_BlobType::Link: {
             LogError("Expected file for '%1'", hash);
             return nullptr;

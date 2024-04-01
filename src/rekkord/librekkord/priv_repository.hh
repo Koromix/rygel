@@ -19,14 +19,24 @@
 namespace RG {
 
 #pragma pack(push, 1)
-struct SnapshotHeader {
+struct SnapshotHeader1 {
     char name[512];
     int64_t time; // Little Endian
     int64_t len; // Little Endian
     int64_t stored; // Little Endian
 };
 #pragma pack(pop)
-static_assert(RG_SIZE(SnapshotHeader) == 536);
+static_assert(RG_SIZE(SnapshotHeader1) == 536);
+
+#pragma pack(push, 1)
+struct SnapshotHeader2 {
+    int64_t time; // Little Endian
+    int64_t len; // Little Endian
+    int64_t stored; // Little Endian
+    char name[512];
+};
+#pragma pack(pop)
+static_assert(RG_SIZE(SnapshotHeader2) == 536);
 
 #pragma pack(push, 1)
 struct RawFile {

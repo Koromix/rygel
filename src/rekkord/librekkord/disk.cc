@@ -574,22 +574,52 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     return written;
 }
 
-Size rk_Disk::WriteTag(const rk_Hash &hash)
+Size rk_Disk::WriteTag(const rk_Hash &hash, Span<const uint8_t> payload)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::WriteOnly || mode == rk_DiskMode::Full);
 
-    // Prepare sealed hash
-    uint8_t cypher[crypto_box_SEALBYTES + 32];
-    if (crypto_box_seal(cypher, hash.hash, RG_SIZE(hash.hash), pkey) != 0) {
-        LogError("Failed to seal hash");
-        return -1;
+    TagIntro intro = {};
+
+    intro.version = TagVersion;
+    intro.hash = hash;
+
+    // Determine storage format
+    bool big;
+    {
+        Size cypher_len = crypto_box_SEALBYTES + RG_SIZE(intro) + payload.len;
+        Size name_len = sodium_base64_encoded_len(cypher_len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+
+        big = (name_len >= 256);
     }
 
-    // Write tag file with random name, retry if name is already used
-    for (int i = 0; i < 1000; i++) {
-        LocalArray<char, 256> path;
-        path.len = Fmt(path.data, "tags/%1", FmtRandom(8)).len;
+    HeapArray<uint8_t> src;
+    src.Append(MakeSpan((const uint8_t *)&intro, RG_SIZE(intro)));
+    src.Append(payload);
+
+    // Reuse for performance
+    HeapArray<uint8_t> cypher;
+
+    for (int i = 0; i < 100; i++) {
+        Size cypher_len = crypto_box_SEALBYTES + src.len;
+
+        cypher.RemoveFrom(0);
+        cypher.Reserve(cypher_len);
+        if (crypto_box_seal(cypher.end(), src.ptr, src.len, pkey) != 0) {
+            LogError("Failed to seal tag payload");
+            return -1;
+        }
+        cypher.len = cypher_len;
+
+        LocalArray<char, 2048> path;
+        if (big) {
+            path.len = Fmt(path.data, "tags/%1", FmtRandom(16)).len;
+        } else {
+            path.len = Fmt(path.data, "tags/").len;
+
+            RG_ASSERT(sodium_base64_ENCODED_LEN(cypher.len, sodium_base64_VARIANT_URLSAFE_NO_PADDING) < path.Available());
+            sodium_bin2base64(path.end(), path.Available(), cypher.ptr, cypher.len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
+        }
 
         Size written = WriteDirect(path.data, cypher, false);
 
@@ -604,15 +634,15 @@ Size rk_Disk::WriteTag(const rk_Hash &hash)
     return -1;
 }
 
-bool rk_Disk::ListTags(HeapArray<rk_Hash> *out_hashes)
+bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 {
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Full);
 
     BlockAllocator temp_alloc;
 
-    Size start_len = out_hashes->len;
-    RG_DEFER_N(out_guard) { out_hashes->RemoveFrom(start_len); };
+    Size start_len = out_tags->len;
+    RG_DEFER_N(out_guard) { out_tags->RemoveFrom(start_len); };
 
     HeapArray<const char *> filenames;
     {
@@ -627,7 +657,7 @@ bool rk_Disk::ListTags(HeapArray<rk_Hash> *out_hashes)
     }
 
     HeapArray<bool> ready;
-    out_hashes->AppendDefault(filenames.len);
+    out_tags->AppendDefault(filenames.len);
     ready.AppendDefault(filenames.len);
 
     Async async(GetThreads());
@@ -637,23 +667,51 @@ bool rk_Disk::ListTags(HeapArray<rk_Hash> *out_hashes)
         const char *filename = filenames[i];
 
         async.Run([=, &ready, this]() {
-            uint8_t blob[crypto_box_SEALBYTES + 32];
-            Size len = ReadRaw(filename, blob);
+            rk_TagInfo tag = {};
 
-            if (len != crypto_box_SEALBYTES + 32) {
-                if (len >= 0) {
-                    LogError("Malformed tag file '%1' (ignoring)", filename);
+            Span<const char> basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS);
+
+            HeapArray<uint8_t> cypher;
+
+            if (basename.len < crypto_box_SEALBYTES) {
+                if (ReadRaw(filename, &cypher) < 0)
+                    return true;
+            } else {
+                cypher.Reserve(basename.len);
+
+                size_t len = 0;
+                if (sodium_base642bin(cypher.ptr, cypher.capacity, basename.ptr, basename.len, nullptr,
+                                      &len, nullptr, sodium_base64_VARIANT_URLSAFE_NO_PADDING) < 0) {
+                    LogError("Invalid base64 string in tag");
+                    return true;
                 }
+                cypher.len = (Size)len;
+            }
+            if (cypher.len < crypto_box_SEALBYTES + RG_SIZE(TagIntro)) {
+                LogError("Truncated cypher in tag");
                 return true;
             }
 
-            rk_Hash hash = {};
-            if (crypto_box_seal_open(hash.hash, blob, RG_SIZE(blob), pkey, skey) != 0) {
-                LogError("Failed to unseal tag (ignoring)");
+            Size data_len = cypher.len - crypto_box_SEALBYTES;
+            Span<uint8_t> data = AllocateSpan<uint8_t>(alloc, data_len);
+
+            if (crypto_box_seal_open(data.ptr, cypher.ptr, cypher.len, pkey, skey) != 0) {
+                LogError("Failed to unseal tag data");
                 return true;
             }
 
-            out_hashes->ptr[start_len + i] = hash;
+            TagIntro intro = {};
+            memcpy(&intro, data.ptr, RG_SIZE(intro));
+
+            if (intro.version != TagVersion) {
+                LogError("Unexpected tag version %1 (expected %2)", intro.version, TagVersion);
+                return true;
+            }
+
+            tag.hash = intro.hash;
+            tag.payload = data.Take(RG_SIZE(intro), data.len - RG_SIZE(intro));
+
+            out_tags->ptr[start_len + i] = tag;
             ready[i] = true;
 
             return true;
@@ -665,10 +723,10 @@ bool rk_Disk::ListTags(HeapArray<rk_Hash> *out_hashes)
 
     Size j = 0;
     for (Size i = 0; i < filenames.len; i++) {
-        out_hashes->ptr[start_len + j] = out_hashes->ptr[start_len + i];
+        out_tags->ptr[start_len + j] = out_tags->ptr[start_len + i];
         j += ready[i];
     }
-    out_hashes->len = start_len + j;
+    out_tags->len = start_len + j;
 
     out_guard.Disable();
     return true;

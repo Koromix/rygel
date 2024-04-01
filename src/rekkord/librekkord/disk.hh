@@ -43,20 +43,27 @@ enum class rk_BlobType: int8_t {
     Chunk = 0,
     File = 1,
     Directory = 2,
-    Snapshot = 3,
-    Link = 4
+    Snapshot1 = 3,
+    Link = 4,
+    Snapshot2 = 5
 };
 static const char *const rk_BlobTypeNames[] = {
     "Chunk",
     "File",
     "Directory",
-    "Snapshot",
-    "Link"
+    "Snapshot1",
+    "Link",
+    "Snapshot2"
 };
 
 struct rk_UserInfo {
     const char *username;
     rk_DiskMode mode; // WriteOnly or Full
+};
+
+struct rk_TagInfo {
+    rk_Hash hash;
+    Span<const uint8_t> payload;
 };
 
 class rk_Disk {
@@ -113,14 +120,8 @@ public:
     bool ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uint8_t> *out_blob);
     Size WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> blob);
 
-    Size WriteTag(const rk_Hash &hash);
-    bool ListTags(HeapArray<rk_Hash> *out_hashes);
-
-protected:
-    bool InitDefault(const char *full_pwd, const char *write_pwd);
-
-    virtual bool CreateDirectory(const char *path) = 0;
-    virtual bool DeleteDirectory(const char *path) = 0;
+    Size WriteTag(const rk_Hash &hash, Span<const uint8_t> payload);
+    bool ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags);
 
     virtual Size ReadRaw(const char *path, Span<uint8_t> out_buf) = 0;
     virtual Size ReadRaw(const char *path, HeapArray<uint8_t> *out_blob) = 0;
@@ -128,10 +129,16 @@ protected:
     virtual Size WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func) = 0;
     virtual bool DeleteRaw(const char *path) = 0;
 
-    bool PutCache(const char *key);
-
     virtual bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) = 0;
     virtual StatResult TestRaw(const char *path) = 0;
+
+protected:
+    virtual bool CreateDirectory(const char *path) = 0;
+    virtual bool DeleteDirectory(const char *path) = 0;
+
+    bool InitDefault(const char *full_pwd, const char *write_pwd);
+
+    bool PutCache(const char *key);
 
 private:
     StatResult TestFast(const char *path);

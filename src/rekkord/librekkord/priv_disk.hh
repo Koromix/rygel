@@ -35,6 +35,13 @@ struct SecretData {
 #pragma pack(pop)
 
 #pragma pack(push, 1)
+struct TagIntro {
+    int8_t version;
+    rk_Hash hash;
+};
+#pragma pack(pop)
+
+#pragma pack(push, 1)
 struct BlobIntro {
     int8_t version;
     int8_t type;
@@ -44,8 +51,10 @@ struct BlobIntro {
 #pragma pack(pop)
 
 static const int SecretVersion = 1;
-static const int CacheVersion = 4;
+static const int TagVersion = 1;
 static const int BlobVersion = 7;
 static const Size BlobSplit = Kibibytes(32);
+
+static const int CacheVersion = 4;
 
 }

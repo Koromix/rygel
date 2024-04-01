@@ -27,9 +27,6 @@ public:
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
 
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
-
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
@@ -38,6 +35,9 @@ public:
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
     StatResult TestRaw(const char *path) override;
+
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
 };
 
 S3Disk::S3Disk(const s3_Config &config, int threads)
@@ -65,18 +65,6 @@ bool S3Disk::Init(const char *full_pwd, const char *write_pwd)
     RG_ASSERT(mode == rk_DiskMode::Secure);
 
     return InitDefault(full_pwd, write_pwd);
-}
-
-bool S3Disk::CreateDirectory(const char *)
-{
-    // Directories don't really exist, it's just a prefix
-    return true;
-}
-
-bool S3Disk::DeleteDirectory(const char *)
-{
-    // Directories don't really exist, it's just a prefix
-    return true;
 }
 
 Size S3Disk::ReadRaw(const char *path, Span<uint8_t> out_buf)
@@ -124,6 +112,18 @@ bool S3Disk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
 StatResult S3Disk::TestRaw(const char *path)
 {
     return s3.HasObject(path);
+}
+
+bool S3Disk::CreateDirectory(const char *)
+{
+    // Directories don't really exist, it's just a prefix
+    return true;
+}
+
+bool S3Disk::DeleteDirectory(const char *)
+{
+    // Directories don't really exist, it's just a prefix
+    return true;
 }
 
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, int threads)

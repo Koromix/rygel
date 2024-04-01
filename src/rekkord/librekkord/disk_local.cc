@@ -26,9 +26,6 @@ public:
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
 
-    bool CreateDirectory(const char *path) override;
-    bool DeleteDirectory(const char *path) override;
-
     Size ReadRaw(const char *path, Span<uint8_t> out_buf) override;
     Size ReadRaw(const char *path, HeapArray<uint8_t> *out_buf) override;
 
@@ -37,6 +34,9 @@ public:
 
     bool ListRaw(const char *path, FunctionRef<bool(const char *path)> func) override;
     StatResult TestRaw(const char *path) override;
+
+    bool CreateDirectory(const char *path) override;
+    bool DeleteDirectory(const char *path) override;
 };
 
 LocalDisk::LocalDisk(const char *path, int threads)
@@ -128,22 +128,6 @@ bool LocalDisk::Init(const char *full_pwd, const char *write_pwd)
 
     err_guard.Disable();
     return true;
-}
-
-bool LocalDisk::CreateDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    return MakeDirectory(filename.data, false);
-}
-
-bool LocalDisk::DeleteDirectory(const char *path)
-{
-    LocalArray<char, MaxPathSize + 128> filename;
-    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
-
-    return UnlinkDirectory(filename.data);
 }
 
 Size LocalDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
@@ -286,6 +270,22 @@ StatResult LocalDisk::TestRaw(const char *path)
     }
 
     return ret;
+}
+
+bool LocalDisk::CreateDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return MakeDirectory(filename.data, false);
+}
+
+bool LocalDisk::DeleteDirectory(const char *path)
+{
+    LocalArray<char, MaxPathSize + 128> filename;
+    filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
+
+    return UnlinkDirectory(filename.data);
 }
 
 std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads)

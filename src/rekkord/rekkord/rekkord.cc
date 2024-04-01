@@ -37,6 +37,7 @@ int RunMount(Span<const char *> arguments);
 
 int RunChangeID(Span<const char *> arguments);
 int RunRebuildCache(Span<const char *> arguments);
+int RunMigrateTags(Span<const char *> arguments);
 
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
@@ -85,7 +86,8 @@ Exploration commands:
             PrintLn(st, R"(
 Advanced commands:
     %!..+change_id%!0                    Change repository cache ID
-    %!..+rebuild_cache%!0                Rebuild local repository cache)");
+    %!..+rebuild_cache%!0                Rebuild local repository cache
+    %!..+migrate_tags%!0                 Migrate tags from old format)");
         } else {
             PrintLn(st, R"(
 Advanced and low-level commands are hidden, use %!..+rekkord --help full%!0 to reveal them.)");
@@ -189,6 +191,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunChangeID(arguments);
     } else if (TestStr(cmd, "rebuild_cache")) {
         return RunRebuildCache(arguments);
+    } else if (TestStr(cmd, "migrate_tags")) {
+        return RunMigrateTags(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;

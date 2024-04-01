@@ -532,8 +532,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         LogError("Only one object can be backuped up in raw mode");
         return false;
     }
-    if (settings.name && strlen(settings.name) >= RG_SIZE(SnapshotHeader::name)) {
-        LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotHeader::name));
+    if (settings.name && strlen(settings.name) >= RG_SIZE(SnapshotHeader2::name)) {
+        LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotHeader2::name));
         return false;
     }
 
@@ -541,10 +541,10 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     HeapArray<uint8_t> snapshot_blob;
-    SnapshotHeader *header = (SnapshotHeader *)snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader));
+    SnapshotHeader2 *header = (SnapshotHeader2 *)snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2));
 
-    CopyString(settings.name ? settings.name : "", header->name);
     header->time = LittleEndian(GetUnixTime());
+    CopyString(settings.name ? settings.name : "", header->name);
 
     PutContext put(disk);
 
@@ -647,11 +647,11 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         int64_t len_64le = LittleEndian(total_len);
         snapshot_blob.Append(MakeSpan((const uint8_t *)&len_64le, RG_SIZE(len_64le)));
 
-        HashBlake3(rk_BlobType::Snapshot, snapshot_blob, salt.ptr, &hash);
+        HashBlake3(rk_BlobType::Snapshot2, snapshot_blob, salt.ptr, &hash);
 
         // Write snapshot blob
         {
-            Size ret = disk->WriteBlob(hash, rk_BlobType::Snapshot, snapshot_blob);
+            Size ret = disk->WriteBlob(hash, rk_BlobType::Snapshot2, snapshot_blob);
             if (ret < 0)
                 return false;
             total_written += ret;
@@ -659,13 +659,16 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
         // Create tag file
         {
-            Size ret = disk->WriteTag(hash);
+            Size payload_len = RG_OFFSET_OF(SnapshotHeader2, name) + strlen(header->name) + 1;
+            Span<const uint8_t> payload = MakeSpan((const uint8_t *)header, payload_len);
+
+            Size ret = disk->WriteTag(hash, payload);
             if (ret < 0)
                 return false;
             total_written += ret;
         }
     } else {
-        const RawFile *entry = (const RawFile *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader));
+        const RawFile *entry = (const RawFile *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader2));
         hash = entry->hash;
     }
 
