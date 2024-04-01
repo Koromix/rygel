@@ -24,8 +24,6 @@ namespace RG {
 
 int RunInit(Span<const char *> arguments);
 int RunExportKey(Span<const char *> arguments);
-int RunChangeID(Span<const char *> arguments);
-int RunRebuildCache(Span<const char *> arguments);
 int RunAddUser(Span<const char *> arguments);
 int RunDeleteUser(Span<const char *> arguments);
 int RunListUsers(Span<const char *> arguments);
@@ -35,8 +33,10 @@ int RunRestore(Span<const char *> arguments);
 
 int RunSnapshots(Span<const char *> arguments);
 int RunList(Span<const char *> arguments);
-
 int RunMount(Span<const char *> arguments);
+
+int RunChangeID(Span<const char *> arguments);
+int RunRebuildCache(Span<const char *> arguments);
 
 bool FindAndLoadConfig(Span<const char *> arguments, rk_Config *out_config)
 {
@@ -60,16 +60,13 @@ int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
-    const auto print_usage = [](StreamWriter *st) {
+    const auto print_usage = [](StreamWriter *st, bool advanced) {
         PrintLn(st,
 R"(Usage: %!..+%1 <command> [args]%!0
 
 Management commands:
     %!..+init%!0                         Init new backup repository
-
     %!..+export_key%!0                   Export master repository key
-    %!..+change_id%!0                    Change repository cache ID
-    %!..+rebuild_cache%!0                Rebuild local repository cache
 
     %!..+add_user%!0                     Add user
     %!..+delete_user%!0                  Delete user
@@ -82,13 +79,24 @@ Snapshot commands:
 Exploration commands:
     %!..+snapshots%!0                    List known snapshots
     %!..+list%!0                         List snapshot or directory children
-    %!..+mount%!0                        Mount repository readonly as user filesystem
+    %!..+mount%!0                        Mount repository readonly as user filesystem)", FelixTarget);
 
+        if (advanced) {
+            PrintLn(st, R"(
+Advanced commands:
+    %!..+change_id%!0                    Change repository cache ID
+    %!..+rebuild_cache%!0                Rebuild local repository cache)");
+        } else {
+            PrintLn(st, R"(
+Advanced and low-level commands are hidden, use %!..+rekkord --help full%!0 to reveal them.)");
+        }
+
+        PrintLn(st, R"(
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {
-        print_usage(StdErr);
+        print_usage(StdErr, false);
         PrintLn(StdErr);
         LogError("No command provided");
         return 1;
@@ -140,10 +148,15 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
     // Handle help and version arguments
     if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
         if (arguments.len && arguments[0][0] != '-') {
-            cmd = arguments[0];
-            arguments[0] = (cmd[0] == '-') ? cmd : "--help";
+            if (TestStr(arguments[0], "full")) {
+                print_usage(StdOut, true);
+                return 0;
+            } else {
+                cmd = arguments[0];
+                arguments[0] = (cmd[0] == '-') ? cmd : "--help";
+            }
         } else {
-            print_usage(StdOut);
+            print_usage(StdOut, false);
             return 0;
         }
     } else if (TestStr(cmd, "--version")) {
@@ -156,10 +169,6 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunInit(arguments);
     } else if (TestStr(cmd, "export_key")) {
         return RunExportKey(arguments);
-    } else if (TestStr(cmd, "change_id")) {
-        return RunChangeID(arguments);
-    } else if (TestStr(cmd, "rebuild_cache")) {
-        return RunRebuildCache(arguments);
     } else if (TestStr(cmd, "add_user")) {
         return RunAddUser(arguments);
     } else if (TestStr(cmd, "delete_user")) {
@@ -176,6 +185,10 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunList(arguments);
     } else if (TestStr(cmd, "mount")) {
         return RunMount(arguments);
+    } else if (TestStr(cmd, "change_id")) {
+        return RunChangeID(arguments);
+    } else if (TestStr(cmd, "rebuild_cache")) {
+        return RunRebuildCache(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
