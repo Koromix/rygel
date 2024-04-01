@@ -14,9 +14,6 @@
 #include "src/core/base/base.hh"
 #include "build.hh"
 #include "locate.hh"
-#ifndef _WIN32
-    #include <unistd.h>
-#endif
 
 namespace RG {
 

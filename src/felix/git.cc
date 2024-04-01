@@ -13,6 +13,9 @@
 
 #include "src/core/base/base.hh"
 #include "git.hh"
+#ifdef _WIN32
+    #include <io.h>
+#endif
 
 namespace RG {
 
@@ -94,10 +97,10 @@ static void DecodeHash(Span<const uint8_t> raw, char *out_id)
 GitVersioneer::~GitVersioneer()
 {
     for (int fd: idx_files) {
-        close(fd);
+        CloseDescriptor(fd);
     }
     for (int fd: pack_files) {
-        close(fd);
+        CloseDescriptor(fd);
     }
 }
 
@@ -504,7 +507,7 @@ static bool ReadSection(int fd, int64_t offset, Size len, void *out_ptr)
     if (read_len < 0)
         return false;
     if (read_len < len) {
-        LogError("Truncated data in IDX or PACK file %1 %2 %3", offset, len, read);
+        LogError("Truncated data in IDX or PACK file");
         return false;
     }
 

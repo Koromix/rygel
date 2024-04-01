@@ -31,7 +31,6 @@
     #include <sys/uio.h>
     #include <fcntl.h>
     #include <poll.h>
-    #include <unistd.h>
 #endif
 
 namespace RG {

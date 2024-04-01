@@ -25,7 +25,6 @@
     #include <sys/socket.h>
     #include <fcntl.h>
     #include <linux/input.h>
-    #include <unistd.h>
 #endif
 
 namespace RG {
@@ -419,10 +418,8 @@ By default, the first of the following config files will be used:
         return 1;
     }
 
-#ifdef __linux__
     if (!NotifySystemd())
         return 1;
-#endif
 
     if (sandbox && !ApplySandbox())
         return 1;

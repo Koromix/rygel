@@ -29,7 +29,6 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <unistd.h>
 
 namespace RG {
 

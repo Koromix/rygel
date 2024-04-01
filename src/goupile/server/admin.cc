@@ -35,7 +35,6 @@
     #include <sys/stat.h>
     #include <fcntl.h>
     #include <pwd.h>
-    #include <unistd.h>
 #endif
 
 namespace RG {
@@ -2523,7 +2522,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             if (!extract_filename)
                 return;
             tmp_filenames.Append(extract_filename);
-            RG_DEFER { close(fd); };
+            RG_DEFER { CloseDescriptor(fd); };
 
             StreamReader reader(src_filename);
             StreamWriter writer(fd, extract_filename);
@@ -2565,7 +2564,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
             if (!main_filename)
                 return;
             tmp_filenames.Append(main_filename);
-            RG_DEFER { close(fd); };
+            RG_DEFER { CloseDescriptor(fd); };
 
             int success = mz_zip_reader_extract_file_to_callback(&zip, "goupile.db", [](void *udata, mz_uint64, const void *ptr, size_t len) {
                 RG_ASSERT(len <= RG_SIZE_MAX);

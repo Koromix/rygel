@@ -18,10 +18,6 @@
 #include "priv_repository.hh"
 #include "vendor/blake3/c/blake3.h"
 
-#ifndef _WIN32
-    #include <unistd.h>
-#endif
-
 namespace RG {
 
 static const Size ChunkAverage = Kibibytes(2048);

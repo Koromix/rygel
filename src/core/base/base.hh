@@ -42,6 +42,19 @@
 #include <thread>
 #include <type_traits>
 #include <utility>
+#ifdef _WIN32
+    #ifndef STDIN_FILENO
+        #define STDIN_FILENO 0
+    #endif
+    #ifndef STDOUT_FILENO
+        #define STDOUT_FILENO 1
+    #endif
+    #ifndef STDERR_FILENO
+        #define STDERR_FILENO 2
+    #endif
+#else
+    #include <unistd.h>
+#endif
 #if defined(_WIN32)
     #include <intrin.h>
 #elif !defined(__APPLE__) && (!defined(__linux__) || defined(__GLIBC__)) && __has_include(<ucontext.h>)
@@ -4036,6 +4049,7 @@ static inline int OpenFile(const char *filename, unsigned int flags)
     return fd;
 }
 
+void CloseDescriptor(int fd);
 bool FlushFile(int fd, const char *filename);
 
 bool FileIsVt100(int fd);

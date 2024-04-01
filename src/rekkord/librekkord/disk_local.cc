@@ -176,7 +176,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
             return -1;
         }
     }
-    RG_DEFER_N(file_guard) { close(fd); };
+    RG_DEFER_N(file_guard) { CloseDescriptor(fd); };
     RG_DEFER_N(tmp_guard) { UnlinkFile(tmp.data); };
 
     StreamWriter writer(fd, filename.data);
@@ -188,7 +188,7 @@ Size LocalDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Spa
         return -1;
 
     // File is complete
-    close(fd);
+    CloseDescriptor(fd);
     file_guard.Disable();
 
     // Atomic rename

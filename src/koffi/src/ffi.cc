@@ -40,7 +40,6 @@
     #include <ntsecapi.h>
 #else
     #include <dlfcn.h>
-    #include <unistd.h>
     #include <sys/mman.h>
     #ifndef MAP_STACK
         #define MAP_STACK 0

@@ -78,7 +78,6 @@
     #include <arpa/inet.h>
     #include <termios.h>
     #include <time.h>
-    #include <unistd.h>
 
     extern char **environ;
 #endif
@@ -2469,7 +2468,7 @@ static bool SyncFileDirectory(const char *filename)
         LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
         return false;
     }
-    RG_DEFER { close(dirfd); };
+    RG_DEFER { CloseDescriptor(dirfd); };
 
     if (fsync(dirfd) < 0) {
         LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
@@ -2493,7 +2492,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
             return false;
         }
     }
-    RG_DEFER { close(fd); };
+    RG_DEFER { CloseDescriptor(fd); };
 
     // Rename the file
     if (rename(src_filename, dest_filename) < 0) {
@@ -3263,7 +3262,7 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
     HANDLE h = nullptr;
     int fd = -1;
     RG_DEFER_N(err_guard) {
-        close(fd);
+        CloseDescriptor(fd);
         if (h) {
             CloseHandle(h);
         }
@@ -3311,6 +3310,14 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
     *out_fd = fd;
 
     return OpenResult::Success;
+}
+
+void CloseDescriptor(int fd)
+{
+    if (fd < 0)
+        return;
+
+    _close(fd);
 }
 
 bool FlushFile(int fd, const char *filename)
@@ -3560,6 +3567,11 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
 
     *out_fd = fd;
     return OpenResult::Success;
+}
+
+void CloseDescriptor(int fd)
+{
+    close(fd);
 }
 
 bool FlushFile(int fd, const char *filename)
@@ -4656,23 +4668,12 @@ bool NotifySystemd()
         return false;
     }
 
-#ifdef __APPLE__
-    int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
-    if (fd < 0) {
-        LogError("Failed to create UNIX socket: %1", strerror(errno));
-        return false;
-    }
-    RG_DEFER { close(fd); };
-
-    fcntl(fd, F_SETFD, FD_CLOEXEC);
-#else
     int fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
     if (fd < 0) {
         LogError("Failed to create UNIX socket: %1", strerror(errno));
         return false;
     }
     RG_DEFER { close(fd); };
-#endif
 
     struct iovec iov = {};
     struct msghdr msg = {};
@@ -4971,7 +4972,7 @@ const char *CreateUniqueFile(Span<const char> directory, const char *prefix, con
             if (out_fd) {
                 *out_fd = fd;
             } else {
-                close(fd);
+                CloseDescriptor(fd);
             }
 
             return true;
@@ -6193,7 +6194,7 @@ bool StreamReader::Close(bool implicit)
         case SourceType::Memory: { source.u.memory = {}; } break;
         case SourceType::File: {
             if (source.u.file.owned && source.u.file.fd >= 0) {
-                close(source.u.file.fd);
+                CloseDescriptor(source.u.file.fd);
             }
 
             source.u.file.fd = -1;
@@ -6575,7 +6576,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
             int fd = OpenFile(filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive);
             if (fd < 0)
                 return false;
-            close(fd);
+            CloseDescriptor(fd);
 
             dest.u.file.tmp_exclusive = true;
         }
@@ -6691,7 +6692,7 @@ bool StreamWriter::Close(bool implicit)
                 }
 
                 if (IsValid()) {
-                    close(dest.u.file.fd);
+                    CloseDescriptor(dest.u.file.fd);
                     dest.u.file.owned = false;
 
                     unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
@@ -6708,7 +6709,7 @@ bool StreamWriter::Close(bool implicit)
             }
 
             if (dest.u.file.owned && dest.u.file.fd >= 0) {
-                close(dest.u.file.fd);
+                CloseDescriptor(dest.u.file.fd);
                 dest.u.file.owned = false;
             }
 

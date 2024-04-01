@@ -28,7 +28,6 @@
 #else
     #include <sys/stat.h>
     #include <sys/time.h>
-    #include <unistd.h>
 #endif
 
 namespace RG {
@@ -341,7 +340,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                 int fd = OpenFile(meta.filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
                 if (fd < 0)
                     return;
-                RG_DEFER { close(fd); };
+                RG_DEFER { CloseDescriptor(fd); };
 
                 // Set directory metadata
                 if (chown) {
@@ -412,7 +411,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename);
                     if (fd < 0)
                         return false;
-                    RG_DEFER { close(fd); };
+                    RG_DEFER { CloseDescriptor(fd); };
 
                     // Set file metadata
                     if (chown) {
@@ -449,7 +448,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     RG_ASSERT(type == rk_BlobType::File || type == rk_BlobType::Chunk);
 
     int fd = -1;
-    RG_DEFER_N(err_guard) { close(fd); };
+    RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
 
     char tmp_filename[4096];
     {
@@ -582,7 +581,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         return -1;
 
     err_guard.Disable();
-    close(fd);
+    CloseDescriptor(fd);
 
     if (!RenameFile(tmp_filename, dest_filename, (int)RenameFlag::Overwrite))
         return -1;
@@ -619,7 +618,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             int fd = get.GetFile(hash, type, blob, dest_path);
             if (fd < 0)
                 return false;
-            close(fd);
+            CloseDescriptor(fd);
         } break;
 
         case rk_BlobType::Directory: {

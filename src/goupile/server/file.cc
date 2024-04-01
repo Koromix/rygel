@@ -467,7 +467,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         if (!tmp_filename)
             return;
         RG_DEFER {
-            close(fd);
+            CloseDescriptor(fd);
             UnlinkFile(tmp_filename);
         };
 

@@ -37,7 +37,6 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <termios.h>
-#include <unistd.h>
 
 // For some reason sys/capability.h is in some crap separate package, because why make
 // it simple when you could instead make it a mess and require users to install
