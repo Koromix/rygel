@@ -91,7 +91,7 @@ static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offs
                 for (;;) {
                     Size next = strcspn(str, "\"\r\n\t\f\v\a\b\x1B");
 
-                    fwrite(str, 1, next, stdout);
+                    StdOut->Write(str, next);
 
                     if (!str[next])
                         break;
