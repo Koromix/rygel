@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.17
+
+- Optimize tag storage and listing
+- Isolate advanced rekkord commands
+- Add `rekkord rebuild_cache` command
+
 ### Rekkord 0.16
 
 - Add FUSE support with `rekkord mount`
