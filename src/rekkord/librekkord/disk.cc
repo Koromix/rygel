@@ -673,7 +673,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
 
             HeapArray<uint8_t> cypher;
 
-            if (basename.len < crypto_box_SEALBYTES) {
+            if (basename.len < (Size)crypto_box_SEALBYTES) {
                 if (ReadRaw(filename, &cypher) < 0)
                     return true;
             } else {
@@ -687,7 +687,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
                 }
                 cypher.len = (Size)len;
             }
-            if (cypher.len < crypto_box_SEALBYTES + RG_SIZE(TagIntro)) {
+            if (cypher.len < (Size)crypto_box_SEALBYTES + RG_SIZE(TagIntro)) {
                 LogError("Truncated cypher in tag");
                 return true;
             }
