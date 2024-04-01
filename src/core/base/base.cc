@@ -3327,8 +3327,12 @@ bool FlushFile(int fd, const char *filename)
     HANDLE h = (HANDLE)_get_osfhandle(fd);
 
     if (!FlushFileBuffers(h)) {
-        LogError("Failed to sync '%1': %2", filename, GetWin32ErrorString());
-        return false;
+        DWORD err = GetLastError();
+
+        if (err != ERROR_INVALID_HANDLE) {
+            LogError("Failed to sync '%1': %2", filename, GetWin32ErrorString(err));
+            return false;
+        }
     }
 
     return true;
