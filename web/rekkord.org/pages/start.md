@@ -6,11 +6,11 @@
 
 ## Windows
 
-Download ready-to-use binaries here: [https://download.koromix.dev/windows/](https://download.koromix.dev/windows/)
+Ready-to-use binaries will be provided once the software stabilizes. In the meantime, feel free to [build it yourself](contribute#windows).
 
 ## macOS
 
-Download ready-to-use binaries here: [https://download.koromix.dev/macos/](https://download.koromix.dev/macos/)
+Ready-to-use binaries will be provided once the software stabilizes. In the meantime, feel free to [build it yourself](contribute#linux-macos).
 
 ## Linux (Debian)
 
