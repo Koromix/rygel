@@ -197,7 +197,7 @@ static bool ReserveFile(int fd, const char *filename, int64_t len)
 static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
 {
     while (buf.len) {
-        Size written = RG_POSIX_RESTART_EINTR(pwrite(fd, buf.ptr, buf.len, (off_t)offset), < 0);
+        Size written = RG_RESTART_EINTR(pwrite(fd, buf.ptr, buf.len, (off_t)offset), < 0);
 
         if (written < 0) {
             LogError("Failed to write to '%1': %2", filename, strerror(errno));

@@ -4146,14 +4146,12 @@ bool DropRootIdentity();
 bool NotifySystemd();
 #endif
 
-#ifndef _WIN32
-    #define RG_POSIX_RESTART_EINTR(CallCode, ErrorCond) \
-        ([&]() { \
-            decltype(CallCode) ret; \
-            while ((ret = (CallCode)) ErrorCond && errno == EINTR); \
-            return ret; \
-        })()
-#endif
+#define RG_RESTART_EINTR(CallCode, ErrorCond) \
+    ([&]() { \
+        decltype(CallCode) ret; \
+        while ((ret = (CallCode)) ErrorCond && errno == EINTR); \
+        return ret; \
+    })()
 
 void InitRG();
 int Main(int argc, char **argv);

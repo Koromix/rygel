@@ -2463,7 +2463,7 @@ static bool SyncFileDirectory(const char *filename)
     memcpy_safe(directory0, directory.ptr, directory.len);
     directory0[directory.len] = 0;
 
-    int dirfd = RG_POSIX_RESTART_EINTR(open(directory0, O_RDONLY | O_CLOEXEC), < 0);
+    int dirfd = RG_RESTART_EINTR(open(directory0, O_RDONLY | O_CLOEXEC), < 0);
     if (dirfd < 0) {
         LogError("Failed to sync directory '%1': %2", directory, strerror(errno));
         return false;
@@ -2482,7 +2482,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
 {
     int fd = -1;
     if (!(flags & (int)RenameFlag::Overwrite)) {
-        fd = RG_POSIX_RESTART_EINTR(open(dest_filename, O_CREAT | O_EXCL, 0644), < 0);
+        fd = RG_RESTART_EINTR(open(dest_filename, O_CREAT | O_EXCL, 0644), < 0);
         if (fd < 0) {
             if (errno == EEXIST) {
                 LogError("File '%1' already exists", dest_filename);
@@ -2513,7 +2513,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
-    DIR *dirp = RG_POSIX_RESTART_EINTR(opendir(dirname), == nullptr);
+    DIR *dirp = RG_RESTART_EINTR(opendir(dirname), == nullptr);
     if (!dirp) {
         LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
 
@@ -3553,7 +3553,7 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
         oflags |= O_EXCL;
     }
 
-    int fd = RG_POSIX_RESTART_EINTR(open(filename, oflags, 0644), < 0);
+    int fd = RG_RESTART_EINTR(open(filename, oflags, 0644), < 0);
     if (fd < 0) {
         OpenResult ret;
         switch (errno) {
@@ -4281,7 +4281,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             pfds.Append({ interrupt_pfd[0], POLLIN, 0 });
         }
 
-        if (RG_POSIX_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
+        if (RG_RESTART_EINTR(poll(pfds.data, (nfds_t)pfds.len, -1), < 0) < 0) {
             LogError("Failed to poll process I/O: %1", strerror(errno));
             break;
         }
@@ -4302,14 +4302,14 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             }
 
             if (write_buf.len) {
-                ssize_t write_len = write(in_pfd[1], write_buf.ptr, (size_t)write_buf.len);
+                ssize_t write_len = RG_RESTART_EINTR(write(in_pfd[1], write_buf.ptr, (size_t)write_buf.len), < 0);
 
                 if (write_len > 0) {
                     write_buf.ptr += write_len;
                     write_buf.len -= (Size)write_len;
                 } else if (!write_len) {
                     CloseDescriptorSafe(&in_pfd[1]);
-                } else if (errno != EINTR) {
+                } else {
                     LogError("Failed to write process input: %1", strerror(errno));
                     CloseDescriptorSafe(&in_pfd[1]);
                 }
@@ -4325,14 +4325,14 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             RG_ASSERT(out_func.IsValid());
 
             uint8_t read_buf[4096];
-            ssize_t read_len = read(out_pfd[0], read_buf, RG_SIZE(read_buf));
+            ssize_t read_len = RG_RESTART_EINTR(read(out_pfd[0], read_buf, RG_SIZE(read_buf)), < 0);
 
             if (read_len > 0) {
                 out_func(MakeSpan(read_buf, read_len));
             } else if (!read_len) {
                 // EOF
                 break;
-            } else if (errno != EINTR) {
+            } else {
                 LogError("Failed to read process output: %1", strerror(errno));
                 break;
             }
@@ -4356,7 +4356,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         int64_t start = GetMonotonicTime();
 
         for (;;) {
-            int ret = RG_POSIX_RESTART_EINTR(waitpid(pid, &status, terminate ? WNOHANG : 0), < 0);
+            int ret = RG_RESTART_EINTR(waitpid(pid, &status, terminate ? WNOHANG : 0), < 0);
 
             if (ret < 0) {
                 LogError("Failed to wait for process exit: %1", strerror(errno));
@@ -6416,12 +6416,8 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
         } break;
 
         case SourceType::File: {
-restart:
-            read_len = read(source.u.file.fd, out_buf, (size_t)max_len);
+            read_len = RG_RESTART_EINTR(read(source.u.file.fd, out_buf, (size_t)max_len), < 0);
             if (read_len < 0) {
-                if (errno == EINTR)
-                    goto restart;
-
                 LogError("Error while reading file '%1': %2", filename, strerror(errno));
                 error = true;
                 return -1;
@@ -6776,12 +6772,9 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
         case DestinationType::File: {
             while (buf.len) {
-                Size write_len = write(dest.u.file.fd, buf.ptr, (size_t)buf.len);
+                Size write_len = RG_RESTART_EINTR(write(dest.u.file.fd, buf.ptr, (size_t)buf.len), < 0);
 
                 if (write_len < 0) {
-                    if (errno == EINTR)
-                        continue;
-
                     LogError("Failed to write to '%1': %2", filename, strerror(errno));
                     error = true;
                     return false;

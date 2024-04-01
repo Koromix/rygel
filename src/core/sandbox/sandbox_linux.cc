@@ -165,7 +165,7 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
         LocalArray<char, 512> buf;
 
         buf.len = Fmt(buf.data, "%1 %1 1\n", uid).len;
-        if (RG_POSIX_RESTART_EINTR(write(uid_fd, buf.data, buf.len), < 0) < 0) {
+        if (RG_RESTART_EINTR(write(uid_fd, buf.data, buf.len), < 0) < 0) {
             LogError("Failed to write UID map: %1", strerror(errno));
             return false;
         }
@@ -176,7 +176,7 @@ static bool WriteUidGidMap(pid_t pid, uid_t uid, gid_t gid)
         LocalArray<char, 512> buf;
 
         buf.len = Fmt(buf.data, "%1 %1 1\n", gid).len;
-        if (RG_POSIX_RESTART_EINTR(write(gid_fd, buf.data, buf.len), < 0) < 0) {
+        if (RG_RESTART_EINTR(write(gid_fd, buf.data, buf.len), < 0) < 0) {
             LogError("Failed to write GID map: %1", strerror(errno));
             return false;
         }
@@ -282,7 +282,7 @@ bool sb_SandboxBuilder::Apply()
                 int64_t dummy = 1;
                 if (!InitNamespaces(isolation_flags))
                     return false;
-                if (RG_POSIX_RESTART_EINTR(write(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
+                if (RG_RESTART_EINTR(write(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
                     LogError("Failed to write to eventfd: %1", strerror(errno));
                     return false;
                 }
@@ -310,7 +310,7 @@ bool sb_SandboxBuilder::Apply()
                 }
             } else {
                 int64_t dummy;
-                if (RG_POSIX_RESTART_EINTR(read(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
+                if (RG_RESTART_EINTR(read(efd, &dummy, RG_SIZE(dummy)), < 0) < 0) {
                     LogError("Failed to read eventfd: %1", strerror(errno));
                     _exit(1);
                 }

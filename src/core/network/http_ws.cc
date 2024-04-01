@@ -341,7 +341,7 @@ pump:
             { daemon->stop_pfd[0], POLLIN, 0 }
         };
 
-        if (RG_POSIX_RESTART_EINTR(poll(pfds, RG_LEN(pfds), -1), < 0) < 0) {
+        if (RG_RESTART_EINTR(poll(pfds, RG_LEN(pfds), -1), < 0) < 0) {
             LogError("Failed to poll I/O loop: %1", strerror(errno));
             return -1;
         }
