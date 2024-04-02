@@ -43,8 +43,8 @@ struct BenchmarkInfo {
     do { \
         (*out_total)++; \
         if (!(Condition)) { \
-            Print(StdErr, "\n    %!D..[%1:%2]%!0 ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
-            Print(StdErr, __VA_ARGS__); \
+            Print("\n    %!D..[%1:%2]%!0 ", SplitStrReverseAny(__FILE__, RG_PATH_SEPARATORS), __LINE__); \
+            Print(__VA_ARGS__); \
             (*out_failures)++; \
         } \
     } while (false)
@@ -84,6 +84,7 @@ struct BenchmarkInfo {
 static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void()> func)
 {
     Print("  %!..+%1%!0", FmtArg(name).Pad(34));
+    StdOut->Flush();
 
     int64_t time = GetMonotonicTime();
     int64_t clock = GetClockCounter();

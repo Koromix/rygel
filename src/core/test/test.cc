@@ -75,23 +75,23 @@ int Main(int argc, char **argv)
         const TestInfo &test = *tests[i];
 
         if (!pattern || MatchPathSpec(test.path, pattern)) {
-            Print(StdErr, "%!y..%1%!0", FmtArg(test.path).Pad(36));
+            Print("%!y..%1%!0", FmtArg(test.path).Pad(36));
 
             Size total = 0;
             Size failures = 0;
             test.func(&total, &failures);
 
             if (failures) {
-                PrintLn(StdErr, "\n    %!R..Failed%!0 (%1/%2)\n", failures, total);
+                PrintLn("\n    %!R..Failed%!0 (%1/%2)\n", failures, total);
             } else {
-                PrintLn(StdErr, " %!G..Success%!0 (%1)", total);
+                PrintLn(" %!G..Success%!0 (%1)", total);
             }
 
             matches++;
         }
     }
     if (matches) {
-        PrintLn(StdErr);
+        PrintLn();
     }
 
 #ifdef RG_DEBUG
@@ -111,9 +111,9 @@ int Main(int argc, char **argv)
 #endif
 
         if (enable) {
-            PrintLn(StdErr, "%!m..%1%!0", bench.path);
+            PrintLn("%!m..%1%!0", bench.path);
             bench.func();
-            PrintLn(StdErr);
+            PrintLn();
 
             matches++;
         }
