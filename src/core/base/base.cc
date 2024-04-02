@@ -745,6 +745,8 @@ bool CopyString(Span<const char> str, Span<char> buf)
 
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
 {
+    RG_ASSERT(alloc);
+
     char *new_str = (char *)AllocateRaw(alloc, str.len + 1);
     memcpy_safe(new_str, str.ptr, (size_t)str.len);
     new_str[str.len] = 0;
@@ -1765,6 +1767,8 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out
 
 Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc)
 {
+    RG_ASSERT(alloc);
+
     HeapArray<char> buf(alloc);
     FmtFmt(fmt, args, &buf);
     return buf.TrimAndLeak(1);
