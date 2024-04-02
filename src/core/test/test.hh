@@ -91,7 +91,7 @@ static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<v
 
     for (Size i = 0; i < iterations; i++) {
         func();
-#ifndef MSC_VER
+#if defined(__clang__) || !defined(_MSC_VER)
         __asm__ __volatile__("" : : : "memory");
 #endif
     }
