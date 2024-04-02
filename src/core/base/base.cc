@@ -6046,8 +6046,8 @@ void Fiber::Toggle(int to, std::unique_lock<std::mutex> *lock)
 // ------------------------------------------------------------------------
 
 static StreamReader StdInStream(STDIN_FILENO, "<stdin>");
-static StreamWriter StdOutStream(STDOUT_FILENO, "<stdout>");
-static StreamWriter StdErrStream(STDERR_FILENO, "<stderr>");
+static StreamWriter StdOutStream(STDOUT_FILENO, "<stdout>", (int)StreamWriterFlag::LineBuffer);
+static StreamWriter StdErrStream(STDERR_FILENO, "<stderr>", (int)StreamWriterFlag::LineBuffer);
 
 extern StreamReader *const StdIn = &StdInStream;
 extern StreamWriter *const StdOut = &StdOutStream;
@@ -6509,7 +6509,7 @@ bool StreamWriter::Open(HeapArray<uint8_t> *mem, const char *filename,
     return true;
 }
 
-bool StreamWriter::Open(int fd, const char *filename,
+bool StreamWriter::Open(int fd, const char *filename, unsigned int flags,
                         CompressionType compression_type, CompressionSpeed compression_speed)
 {
     Close(true);
@@ -6522,8 +6522,8 @@ bool StreamWriter::Open(int fd, const char *filename,
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
-    dest.type = DestinationType::File;
-    memset_safe(&dest.u.file, 0, RG_SIZE(dest.u.file));
+    InitFile(flags);
+
     dest.u.file.fd = fd;
     dest.vt100 = FileIsVt100(fd);
 
@@ -6546,8 +6546,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
     RG_ASSERT(filename);
     this->filename = DuplicateString(filename, &str_alloc).ptr;
 
-    dest.type = DestinationType::File;
-    memset_safe(&dest.u.file, 0, RG_SIZE(dest.u.file));
+    InitFile(flags);
 
     if (flags & (int)StreamWriterFlag::Atomic) {
         Span<const char> directory = GetPathDirectory(filename);
@@ -6612,7 +6611,13 @@ bool StreamWriter::Flush()
 
     switch (dest.type) {
         case DestinationType::Memory: return true;
-        case DestinationType::File: {
+
+        case DestinationType::LineFile:
+        case DestinationType::BufferedFile: {
+            if (!FlushBuffer())
+                return false;
+        } [[fallthrough]];
+        case DestinationType::DirectFile: {
             if (!FlushFile(dest.u.file.fd, filename)) {
                 error = true;
                 return false;
@@ -6620,6 +6625,7 @@ bool StreamWriter::Flush()
 
             return true;
         } break;
+
         case DestinationType::Function: return true;
     }
 
@@ -6628,7 +6634,10 @@ bool StreamWriter::Flush()
 
 int StreamWriter::GetDescriptor() const
 {
-    RG_ASSERT(dest.type == DestinationType::File);
+    RG_ASSERT(dest.type == DestinationType::BufferedFile ||
+              dest.type == DestinationType::LineFile ||
+              dest.type == DestinationType::DirectFile);
+
     return dest.u.file.fd;
 }
 
@@ -6660,7 +6669,13 @@ bool StreamWriter::Close(bool implicit)
     switch (dest.type) {
         case DestinationType::Memory: { dest.u.mem = {}; } break;
 
-        case DestinationType::File: {
+        case DestinationType::BufferedFile:
+        case DestinationType::LineFile: {
+            if (IsValid()) {
+                FlushBuffer();
+            }
+        } [[fallthrough]];
+        case DestinationType::DirectFile: {
             if (dest.u.file.tmp_filename) {
                 if (IsValid()) {
                     if (implicit) {
@@ -6720,6 +6735,51 @@ bool StreamWriter::Close(bool implicit)
     return ret;
 }
 
+void StreamWriter::InitFile(unsigned int flags)
+{
+    bool direct = (flags & (int)StreamWriterFlag::NoBuffer);
+    bool line = (flags & (int)StreamWriterFlag::LineBuffer);
+
+    RG_ASSERT(!direct || !line);
+
+    memset_safe(&dest.u.file, 0, RG_SIZE(dest.u.file));
+
+    if (direct) {
+        dest.type = DestinationType::DirectFile;
+    } else if (line) {
+        dest.type = DestinationType::LineFile;
+        dest.u.file.buf = AllocateSpan<uint8_t>(&str_alloc, Kibibytes(4));
+    } else {
+        dest.type = DestinationType::BufferedFile;
+        dest.u.file.buf = AllocateSpan<uint8_t>(&str_alloc, Kibibytes(4));
+    }
+}
+
+bool StreamWriter::FlushBuffer()
+{
+    RG_ASSERT(!error);
+    RG_ASSERT(dest.type == DestinationType::BufferedFile ||
+              dest.type == DestinationType::LineFile);
+
+    while (dest.u.file.buf_used) {
+        Size write_len = RG_RESTART_EINTR(write(dest.u.file.fd, dest.u.file.buf.ptr, (size_t)dest.u.file.buf_used), < 0);
+
+        if (write_len < 0) {
+            LogError("Failed to write to '%1': %2", filename, strerror(errno));
+            error = true;
+            return false;
+        }
+
+        Size move_len = dest.u.file.buf_used - write_len;
+        memcpy_safe(dest.u.file.buf.ptr, dest.u.file.buf.ptr + write_len, (size_t)move_len);
+        dest.u.file.buf_used -= write_len;
+
+        raw_written += write_len;
+    }
+
+    return true;
+}
+
 bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
 {
     if (type != CompressionType::None) {
@@ -6750,7 +6810,54 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
             raw_written += buf.len;
         } break;
 
-        case DestinationType::File: {
+        case DestinationType::BufferedFile: {
+            if (!buf.len)
+                return true;
+
+            for (;;) {
+                Size copy_len = std::min(buf.len, dest.u.file.buf.len - dest.u.file.buf_used);
+                memcpy(dest.u.file.buf.ptr + dest.u.file.buf_used, buf.ptr, copy_len);
+
+                buf.ptr += copy_len;
+                buf.len -= copy_len;
+                dest.u.file.buf_used += copy_len;
+
+                if (!buf.len)
+                    break;
+                if (!FlushBuffer())
+                    return false;
+            }
+        } break;
+
+        case DestinationType::LineFile: {
+            while (buf.len) {
+                const uint8_t *end = (const uint8_t *)memchr(buf.ptr, '\n', (size_t)buf.len);
+
+                if (end++) {
+                    Size copy_len = std::min(end - buf.ptr, dest.u.file.buf.len - dest.u.file.buf_used);
+                    memcpy(dest.u.file.buf.ptr + dest.u.file.buf_used, buf.ptr, copy_len);
+
+                    buf.ptr += copy_len;
+                    buf.len -= copy_len;
+                    dest.u.file.buf_used += copy_len;
+                } else {
+                    Size copy_len = std::min(buf.len, dest.u.file.buf.len - dest.u.file.buf_used);
+                    memcpy(dest.u.file.buf.ptr + dest.u.file.buf_used, buf.ptr, copy_len);
+
+                    buf.ptr += copy_len;
+                    buf.len -= copy_len;
+                    dest.u.file.buf_used += copy_len;
+
+                    if (!buf.len)
+                        break;
+                }
+
+                if (!FlushBuffer())
+                    return false;
+            }
+        } break;
+
+        case DestinationType::DirectFile: {
             while (buf.len) {
                 Size write_len = RG_RESTART_EINTR(write(dest.u.file.fd, buf.ptr, (size_t)buf.len), < 0);
 

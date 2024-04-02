@@ -1023,7 +1023,7 @@ protected:
     virtual LinkedAllocator *GetAllocator() = 0;
 
 private:
-    bool AllocateSeparately(Size aligned_size) const { return aligned_size >= block_size / 2; }
+    bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
 };
 
 class BlockAllocator final: public BlockAllocatorBase {
@@ -4531,7 +4531,9 @@ public:
 
 enum class StreamWriterFlag {
     Exclusive = 1 << 0,
-    Atomic = 1 << 1
+    Atomic = 1 << 1,
+    NoBuffer = 1 << 2,
+    LineBuffer = 1 << 3
 };
 
 class StreamWriter {
@@ -4539,7 +4541,9 @@ class StreamWriter {
 
     enum class DestinationType {
         Memory,
-        File,
+        DirectFile,
+        LineFile,
+        BufferedFile,
         Function
     };
 
@@ -4556,6 +4560,9 @@ class StreamWriter {
             struct {
                 int fd;
                 bool owned;
+
+                Span<uint8_t> buf;
+                Size buf_used;
 
                 // Atomic write mode
                 const char *tmp_filename;
@@ -4575,7 +4582,7 @@ class StreamWriter {
 
     int64_t raw_written = 0;
 
-    BlockAllocator str_alloc;
+    BlockAllocator str_alloc { Kibibytes(8) };
 
 public:
     StreamWriter() { Close(true); }
@@ -4587,10 +4594,10 @@ public:
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
         : StreamWriter() { Open(mem, filename, compression_type, compression_speed); }
-    StreamWriter(int fd, const char *filename,
+    StreamWriter(int fd, const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
-        : StreamWriter() { Open(fd, filename, compression_type, compression_speed); }
+        : StreamWriter() { Open(fd, filename, flags, compression_type, compression_speed); }
     StreamWriter(const char *filename, unsigned int flags = 0,
                  CompressionType compression_type = CompressionType::None,
                  CompressionSpeed compression_speed = CompressionSpeed::Default)
@@ -4611,7 +4618,7 @@ public:
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default)
         { return Open((HeapArray<uint8_t> *)mem, filename, compression_type, compression_speed); }
-    bool Open(int fd, const char *filename,
+    bool Open(int fd, const char *filename, unsigned int flags = 0,
               CompressionType compression_type = CompressionType::None,
               CompressionSpeed compression_speed = CompressionSpeed::Default);
     bool Open(const char *filename, unsigned int flags = 0,
@@ -4640,6 +4647,9 @@ public:
 
 private:
     bool Close(bool implicit);
+
+    void InitFile(unsigned int flags);
+    bool FlushBuffer();
 
     bool InitCompressor(CompressionType type, CompressionSpeed speed);
 

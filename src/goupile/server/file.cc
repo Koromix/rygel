@@ -478,7 +478,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
         Size total_len = 0;
         char sha256[65];
         {
-            StreamWriter writer(fd, "<temp>", compression_type);
+            StreamWriter writer(fd, "<temp>", 0, compression_type);
             StreamReader reader;
             if (!io->OpenForRead(instance->config.max_file_size, &reader))
                 return;
