@@ -190,7 +190,7 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
     int indent = (start_depth + obj.depth) * 2;
 
     char suffix = (obj.type == rk_ObjectType::Directory) ? '/' : ' ';
-    int align = std::max(60 - indent - strlen(obj.name), (size_t)0);
+    int align = (int)std::max(60 - indent - strlen(obj.name), (size_t)0);
     bool size = (obj.readable && obj.type == rk_ObjectType::File);
 
     if (obj.type != rk_ObjectType::Link && obj.mode) {

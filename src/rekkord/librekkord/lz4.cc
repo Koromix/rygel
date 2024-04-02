@@ -61,7 +61,7 @@ bool DecodeLZ4::Flush(bool complete, FunctionRef<bool(Span<const uint8_t>)> func
             done = true;
         } else if (LZ4F_isError(ret)) {
             LogError("Malformed LZ4 stream: %1", LZ4F_getErrorName(ret));
-            return -1;
+            return false;
         }
 
         memmove_safe(in_buf.ptr, in_buf.ptr + avail_in, (size_t)in_buf.len - avail_in);

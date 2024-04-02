@@ -1015,7 +1015,7 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
 
         if (len != file_len) [[unlikely]] {
             LogError("File size mismatch for '%1'", entry->hash);
-            return -1;
+            return false;
         }
     }
 

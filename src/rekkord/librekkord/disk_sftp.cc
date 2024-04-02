@@ -451,7 +451,7 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
     }
     RG_DEFER { sftp_closedir(dir); };
 
-    HeapArray<const char *> temp_paths;
+    HeapArray<const char *> filenames;
     BlockAllocator temp_alloc;
 
     Async async(ctx->tasks);
@@ -480,7 +480,7 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
             if (!ListRaw(ctx, filename))
                 return false;
         } else {
-            temp_paths.Append(filename);
+            filenames.Append(filename);
         }
     }
 
@@ -491,8 +491,8 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
     {
         std::lock_guard<std::mutex> lock(ctx->mutex);
 
-        for (const char *path: temp_paths) {
-            if (!ctx->func(path))
+        for (const char *filename: filenames) {
+            if (!ctx->func(filename))
                 return false;
         }
     }
