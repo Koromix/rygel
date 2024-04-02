@@ -65,12 +65,12 @@ bool s3_Config::SetProperty(Span<const char> key, Span<const char> value, Span<c
 bool s3_Config::Complete()
 {
     if (!access_id) {
-        const char *str = getenv("AWS_ACCESS_KEY_ID");
+        const char *str = GetEnv("AWS_ACCESS_KEY_ID");
         access_id = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
     }
 
     if (!access_key) {
-        const char *str = getenv("AWS_SECRET_ACCESS_KEY");
+        const char *str = GetEnv("AWS_SECRET_ACCESS_KEY");
 
         if (str) {
             access_key = DuplicateString(str, &str_alloc).ptr;
@@ -282,7 +282,7 @@ bool s3_Session::Open(const s3_Config &config)
     }
 
     if (!this->config.region) {
-        const char *region = getenv("AWS_REGION");
+        const char *region = GetEnv("AWS_REGION");
         this->config.region = region ? DuplicateString(region, &this->config.str_alloc).ptr : nullptr;
     }
 

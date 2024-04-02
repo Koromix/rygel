@@ -25,7 +25,7 @@ bool Builder::PrepareEsbuild()
         esbuild_binary = build.esbuild_binary;
         return true;
     } else {
-        const char *str = getenv("ESBUILD_PATH");
+        const char *str = GetEnv("ESBUILD_PATH");
 
         if (str && str[0]) {
             esbuild_binary = str;

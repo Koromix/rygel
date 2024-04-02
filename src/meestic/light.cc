@@ -125,7 +125,7 @@ bool ApplyLight(hs_port *port, const LightSettings &settings)
         pkt.colors[0] = { 29, 191, 255 }; // MSI blue
     }
 
-    if (GetDebugFlag("DUMP")) {
+    if (GetDebugFlag("DUMP_PACKETS")) {
         DumpPacket(MakeSpan((const uint8_t *)&pkt, RG_SIZE(pkt)));
     }
     if (hs_hid_send_feature_report(port, (const uint8_t *)&pkt, RG_SIZE(pkt)) < 0)

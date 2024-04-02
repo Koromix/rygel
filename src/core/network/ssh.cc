@@ -61,12 +61,12 @@ bool ssh_Config::SetProperty(Span<const char> key, Span<const char> value, Span<
 bool ssh_Config::Complete()
 {
     if (!password && !keyfile) {
-        const char *str = getenv("SSH_KEY_FILE");
+        const char *str = GetEnv("SSH_KEY_FILE");
 
         if (str) {
             keyfile = DuplicateString(str, &str_alloc).ptr;
         } else {
-            str = getenv("SSH_PASSWORD");
+            str = GetEnv("SSH_PASSWORD");
 
             if (str) {
                 password = DuplicateString(str, &str_alloc).ptr;
@@ -79,7 +79,7 @@ bool ssh_Config::Complete()
     }
 
     if (!fingerprint) {
-        const char *str = getenv("SSH_FINGERPRINT");
+        const char *str = GetEnv("SSH_FINGERPRINT");
         fingerprint = str ? DuplicateString(str, &str_alloc).ptr : nullptr;
     }
 

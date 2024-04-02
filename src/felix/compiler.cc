@@ -42,7 +42,7 @@ static bool SplitPrefixSuffix(const char *binary, const char *needle,
 static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *out_buf)
 {
     for (const char *name: names) {
-        const char *flags = getenv(name);
+        const char *flags = GetEnv(name);
 
         if (flags && flags[0]) {
             Fmt(out_buf, " %1", flags);
@@ -138,7 +138,7 @@ static bool DetectCcache() {
 
 static bool DetectDistCC() {
     static bool detected = FindExecutableInPath("distcc") &&
-                           (getenv("DISTCC_HOSTS") || getenv("DISTCC_POTENTIAL_HOSTS"));
+                           (GetEnv("DISTCC_HOSTS") || GetEnv("DISTCC_POTENTIAL_HOSTS"));
     return detected;
 }
 

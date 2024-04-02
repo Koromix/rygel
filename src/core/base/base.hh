@@ -3132,7 +3132,7 @@ typedef void LogFunc(LogLevel level, const char *ctx, const char *msg);
 typedef void LogFilterFunc(LogLevel level, const char *ctx, const char *msg,
                            FunctionRef<LogFunc> func);
 
-const char *GetQualifiedEnv(const char *name);
+const char *GetEnv(const char *name);
 bool GetDebugFlag(const char *name);
 
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args);

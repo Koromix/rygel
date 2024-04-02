@@ -508,9 +508,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Parse environment variables
-    if (getenv("FELIX_HOST") && !ParseHostString(getenv("FELIX_HOST"), &temp_alloc, &host_spec))
+    if (const char *str = GetEnv("FELIX_HOST"); str && !ParseHostString(str, &temp_alloc, &host_spec))
         return 1;
-    if (getenv("FELIX_FEATURES") && !ParseFeatureString(getenv("FELIX_FEATURES"), &build.features, &maybe_features))
+    if (const char *str = GetEnv("FELIX_FEATURES"); str && !ParseFeatureString(str, &build.features, &maybe_features))
         return 1;
 
     // Parse arguments

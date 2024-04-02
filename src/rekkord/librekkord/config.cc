@@ -19,7 +19,7 @@ namespace RG {
 bool rk_Config::Complete(bool require_auth)
 {
     if (!url) {
-        const char *str = getenv("REKKORD_URL");
+        const char *str = GetEnv("REKKORD_URL");
         if (!str) {
             LogError("Missing repository location");
             return false;
@@ -31,7 +31,7 @@ bool rk_Config::Complete(bool require_auth)
         return false;
 
     if (require_auth && !username) {
-        const char *str = getenv("REKKORD_USERNAME");
+        const char *str = GetEnv("REKKORD_USERNAME");
         if (!str) {
             LogError("Missing repository username");
             return false;
@@ -40,7 +40,7 @@ bool rk_Config::Complete(bool require_auth)
     }
 
     if (require_auth && !password) {
-        const char *str = getenv("REKKORD_PASSWORD");
+        const char *str = GetEnv("REKKORD_PASSWORD");
 
         if (str) {
             password = DuplicateString(str, &str_alloc).ptr;

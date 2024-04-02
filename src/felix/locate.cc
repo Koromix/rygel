@@ -51,7 +51,7 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
         const char *directory = nullptr;
 
         if (test.env) {
-            Span<const char> prefix = getenv(test.env);
+            Span<const char> prefix = GetEnv(test.env);
 
             if (!prefix.len)
                 continue;
@@ -210,8 +210,7 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
 
     if (qmake_binary) {
         qt.qmake = NormalizePath(qmake_binary, alloc).ptr;
-    } else if (getenv("QMAKE_PATH")) {
-        const char *binary = getenv("QMAKE_PATH");
+    } else if (const char *binary = GetEnv("QMAKE_PATH"); binary) {
         qt.qmake = NormalizePath(binary, alloc).ptr;
     } else {
         bool success = FindExecutableInPath("qmake6", alloc, &qt.qmake) ||
@@ -361,7 +360,7 @@ bool FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_
 
     for (const TestPath &test: test_paths) {
         if (test.env) {
-            Span<const char> prefix = getenv(test.env);
+            Span<const char> prefix = GetEnv(test.env);
 
             if (!prefix.len)
                 continue;

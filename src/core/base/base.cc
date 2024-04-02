@@ -1830,27 +1830,14 @@ static std::function<LogFunc> log_handler = DefaultLogHandler;
 static RG_THREAD_LOCAL std::function<LogFilterFunc> *log_filters[16];
 static RG_THREAD_LOCAL Size log_filters_len;
 
-const char *GetQualifiedEnv(const char *name)
+const char *GetEnv(const char *name)
 {
-    RG_ASSERT(strlen(name) < 256);
-
-    LocalArray<char, 1024> buf;
-#if defined(FELIX) || defined(FELIX_TARGET)
-    while (FelixTarget[buf.len]) {
-        int c = UpperAscii(FelixTarget[buf.len]);
-        buf.Append((char)c);
-    }
-    buf.Append('_');
-#endif
-    buf.Append(name);
-    buf.Append(0);
-
 #ifdef __EMSCRIPTEN__
     // Each accessed environment variable is kept in memory and thus leaked once
     static HashMap<const char *, const char *> values;
 
     bool inserted;
-    const char **ptr = values.TrySet(name, nullptr, &inserted);
+    auto bucket = values.TrySetDefault(name, &inserted);
 
     if (inserted) {
         const char *str = (const char *)EM_ASM_INT({
@@ -1869,25 +1856,27 @@ const char *GetQualifiedEnv(const char *name)
             } catch (error) {
                 return 0;
             }
-        }, buf.data);
+        }, name);
 
-        *ptr = str;
+        bucket->key = DuplicateString(name, GetDefaultAllocator());
+        bucket->value = str;
     }
 
-    return *ptr;
+    return bucket->value;
 #else
-    return getenv(buf.data);
+    return getenv(name);
 #endif
 }
 
 bool GetDebugFlag(const char *name)
 {
-    const char *debug = GetQualifiedEnv(name);
+    const char *debug = GetEnv(name);
 
     if (debug) {
-        bool ret;
-        ParseBool(debug, &ret);
-
+        bool ret = false;
+        if (!ParseBool(debug, &ret, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log)) {
+            LogError("Environment variable '%1' is not a boolean", name);
+        }
         return ret;
     } else {
         return false;
@@ -2847,7 +2836,7 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
     LocalArray<char, 16384> env_buf;
     Span<const char> paths;
     if (win32_utf8) {
-        paths = getenv("PATH");
+        paths = GetEnv("PATH");
     } else {
         wchar_t buf_w[RG_SIZE(env_buf.data)];
         DWORD len = GetEnvironmentVariableW(L"PATH", buf_w, RG_LEN(buf_w));
@@ -2868,7 +2857,7 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
         paths = env_buf;
     }
 #else
-    Span<const char> paths = getenv("PATH");
+    Span<const char> paths = GetEnv("PATH");
 #endif
 
     return FindExecutableInPath(paths, name, alloc, out_path);
@@ -3184,10 +3173,10 @@ static bool CheckForDumbTerm()
     static bool dumb = false;
 
     if (!init) {
-        const char *term = getenv("TERM");
+        const char *term = GetEnv("TERM");
 
         dumb |= term && TestStr(term, "dumb");
-        dumb |= !!getenv("NO_COLOR");
+        dumb |= !!GetEnv("NO_COLOR");
     }
 
     return dumb;
@@ -3370,7 +3359,7 @@ bool FileIsVt100(int fd)
                         atexit([]() { SetConsoleMode(exit_handle, exit_mode); });
                     } else {
                         // Try ConEmu ANSI support for Windows < 10
-                        const char *conemuansi_str = getenv("ConEmuANSI");
+                        const char *conemuansi_str = GetEnv("ConEmuANSI");
                         emulation = conemuansi_str && TestStr(conemuansi_str, "ON");
                     }
                 }
@@ -4586,7 +4575,7 @@ int GetCoreCount()
     static int cores;
 
     if (!cores) {
-        const char *env = GetQualifiedEnv("CORES");
+        const char *env = GetEnv("OVERRIDE_CORES");
 
         if (env) {
             char *end_ptr;
@@ -4643,7 +4632,7 @@ error:
 #ifdef __linux__
 bool NotifySystemd()
 {
-    const char *addr_str = getenv("NOTIFY_SOCKET");
+    const char *addr_str = GetEnv("NOTIFY_SOCKET");
     if (!addr_str)
         return true;
 
@@ -4817,8 +4806,8 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
 {
     RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
 
-    const char *xdg = getenv("XDG_CONFIG_HOME");
-    const char *home = getenv("HOME");
+    const char *xdg = GetEnv("XDG_CONFIG_HOME");
+    const char *home = GetEnv("HOME");
 
     const char *path = nullptr;
 
@@ -4840,8 +4829,8 @@ const char *GetUserCachePath(const char *name, Allocator *alloc)
 {
     RG_ASSERT(!strchr(RG_PATH_SEPARATORS, name[0]));
 
-    const char *xdg = getenv("XDG_CACHE_HOME");
-    const char *home = getenv("HOME");
+    const char *xdg = GetEnv("XDG_CACHE_HOME");
+    const char *home = GetEnv("HOME");
 
     const char *path = nullptr;
 
@@ -4873,7 +4862,7 @@ const char *GetTemporaryDirectory()
     static std::once_flag flag;
 
     std::call_once(flag, []() {
-        Span<const char> env = getenv("TMPDIR");
+        Span<const char> env = GetEnv("TMPDIR");
 
         while (env.len > 0 && IsPathSeparator(env[env.len - 1])) {
             env.len--;
