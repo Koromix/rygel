@@ -39,6 +39,7 @@ struct AssetCopy {
 struct AssetBundle {
     const char *name;
     const char *dest_filename;
+    const char *gzip_filename;
     const char *src_filename;
     const char *options;
 };
@@ -237,7 +238,7 @@ missing:
     return nullptr;
 }
 
-static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, uint8_t out_hash[32])
+static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, uint8_t out_hash[32], bool gzip)
 {
     char cmd[4096];
 
@@ -268,10 +269,10 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
         }
     }
 
+    StreamReader reader(bundle.dest_filename);
+
     // Compute destination hash
     {
-        StreamReader reader(bundle.dest_filename);
-
         crypto_hash_sha256_state state;
         crypto_hash_sha256_init(&state);
 
@@ -285,6 +286,20 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
         } while (!reader.IsEOF());
 
         crypto_hash_sha256_final(&state, out_hash);
+    }
+
+    // Precompress file
+    if (gzip) {
+        reader.Rewind();
+
+        StreamWriter writer(bundle.gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+
+        if (!SpliceStream(&reader, -1, &writer))
+            return false;
+        if (!writer.Close())
+            return false;
+    } else {
+        UnlinkFile(bundle.gzip_filename);
     }
 
     return true;
@@ -638,7 +653,19 @@ static bool SpliceWithChecksum(StreamReader *reader, StreamWriter *writer, uint8
 static bool ShouldCompressFile(const char *filename)
 {
     const char *mimetype = GetMimeType(GetPathExtension(filename));
-    return StartsWith(mimetype, "text/");
+
+    if (StartsWith(mimetype, "text/"))
+        return true;
+    if (TestStr(mimetype, "application/javascript"))
+        return true;
+    if (TestStr(mimetype, "application/json"))
+        return true;
+    if (TestStr(mimetype, "application/xml"))
+        return true;
+    if (TestStr(mimetype, "image/svg+xml"))
+        return true;
+
+    return false;
 }
 
 static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *output_dir, bool gzip)
@@ -792,6 +819,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
 
                     bundle->name = DuplicateString(prop.section, &temp_alloc).ptr;
                     bundle->dest_filename = NormalizePath(prop.section, output_dir, &temp_alloc).ptr;
+                    bundle->gzip_filename = Fmt(&temp_alloc, "%1.gz", bundle->dest_filename).ptr;
 
                     while (ini.NextInSection(&prop)) {
                         if (prop.key == "Source") {
@@ -938,7 +966,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             hash->name = bundle.name;
             hash->filename = bundle.dest_filename;
 
-            async.Run([=] { return BundleScript(bundle, esbuild_path, hash->sha256); });
+            async.Run([=] { return BundleScript(bundle, esbuild_path, hash->sha256, gzip); });
 
             assets.map.Set(hash);
         }
