@@ -11,25 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import * as flaat from '../../../../src/web/flaat/flaat.js';
+import '../../../../src/web/flaat/flaat.js';
 import * as hljs from '../../../../vendor/highlight.js/highlight.js';
 
 let timer_id = null;
 
-function init() {
-    flaat.init();
+window.addEventListener('load', e => {
     initScreenshots();
     hljs.highlightAll();
-}
-
-function deploy() {
-    flaat.deploy();
-}
-
-export {
-    init,
-    deploy
-}
+});
 
 function initScreenshots() {
     let containers = document.querySelectorAll('.mini, .screenshot, .slideshow');

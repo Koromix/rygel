@@ -10,6 +10,8 @@
 
         <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
 
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}" async></script>
+
         <style>
             #news {
                 display: grid;
@@ -186,7 +188,6 @@ function parse_markdown($text) {
             </div>
         </footer>
 
-        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
         <script>
             let news_timer = null;
 
@@ -233,8 +234,6 @@ function parse_markdown($text) {
                     clearTimeout(news_timer);
                 news_timer = setTimeout(() => toggleNews(1, false), explicit ? 14000 : 6000);
             }
-
-            main.init();
         </script>
     </body>
 </html>

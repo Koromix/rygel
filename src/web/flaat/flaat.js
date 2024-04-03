@@ -11,13 +11,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-function init() {
+window.addEventListener('load', e => {
+    initDeploy();
     initMenu();
     initSide();
     initScroll();
 
     document.body.classList.remove('nojs');
     document.body.classList.add('js');
+});
+
+function initDeploy() {
+    let deploy = document.querySelector('#deploy');
+
+    deploy.addEventListener('click', e => {
+        let top = document.querySelector('nav#top');
+        top.classList.toggle('active');
+    });
 }
 
 function initMenu() {
@@ -135,14 +145,4 @@ function findParent(el, func) {
     while (el && !func(el))
         el = el.parentElement;
     return el;
-}
-
-function deploy() {
-    let top = document.querySelector('nav#top');
-    top.classList.toggle('active');
-}
-
-export {
-    init,
-    deploy
 }
