@@ -1,6 +1,6 @@
 # Install required dependencies
 
-On Debian and Ubuntu use the follow commands:
+On Debian and Ubuntu use the following commands:
 
 ```sh
 sudo apt update
