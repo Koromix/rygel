@@ -8,6 +8,7 @@
         <meta name="description" content="{{ DESCRIPTION }}">
         <link rel="icon" href="{{ ASSET favicon.png }}">
 
+        <meta name="theme-color" content="#3c7778">
         <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
 
         <script type="text/javascript" src="{{ ASSET static/site.min.js }}" async></script>
