@@ -1,0 +1,295 @@
+/* This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Affero General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Affero General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program. If not, see https://www.gnu.org/licenses/. */
+
+@import url('../../../../src/web/flaat/flaat.css');
+@import url('print.css');
+
+html {
+    --main_color: #ff6600;
+}
+
+h1 { border-bottom: 1px solid #ccc; }
+
+.schema {
+    display: block;
+    margin: 2em auto;
+    width: min(100%, 800px);
+}
+
+.columns {
+    display: flex;
+    align-items: start;
+    gap: 2em;
+}
+.columns > * { flex: 1; width: 0; }
+
+.note {
+    width: 600px;
+    max-width: 90%;
+    margin: 1em auto;
+    padding: 0.5em;
+    border-top: none;
+    border-left: 2px solid var(--main_color);
+    border-radius: 2px;
+    box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.05),0 0 .0625rem rgba(0, 0, 0, 0.1);
+}
+.note > .title {
+    background: #fff4e5;
+    margin: -0.5em -0.5em 0.5em -0.5em;
+    padding: 4px 0.5em;
+    font-weight: bold;
+}
+
+footer {
+    padding: 1em;
+    background: #f6f6f9;
+    display: flex;
+    gap: 1.5em;
+    align-items: center;
+    justify-content: center;
+}
+footer > img { filter: saturate(0%) brightness(0); }
+
+.pills > div {
+    display: flex;
+    margin-bottom: 0;
+    margin-top: 0;
+    box-shadow: 1px 1px #00000011;
+    font-size: 0.8em;
+}
+.pills > div > div:first-child {
+    border: 1px solid #3d787922;
+    width: 120px;
+    background: #3d7879;
+    color: white;
+    padding: 1em;
+    font-size: 1.5em;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+.pills > div > div:last-child {
+    border: 1px solid #3d787922;
+    flex: 1;
+    padding: 1em;
+    background: #4b9596;
+    color: white;
+    z-index: 1;
+}
+.pills > div ul {
+    margin: 0;
+    padding: 0 12px;
+}
+
+.team {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    font-size: 0.9em;
+    flex-wrap: wrap;
+}
+.team + .team { margin-top: 24px; }
+.team > div {
+    background: #f8f8f8;
+    padding: 1em 0.5em;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 240px;
+    align-items: center;
+}
+.team img {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+}
+.team .name {
+    font-weight: bold;
+    text-align: center;
+}
+.team .title {
+    text-align: center;
+    margin-bottom: 1em;
+}
+.team .mission {
+    font-style: italic;
+    text-align: center;
+    font-size: 0.8em;
+    margin-top: -8px;
+}
+
+.colorful {
+    table-layout: fixed;
+    width: min(100%, 800px);
+    font-size: 0.9em;
+}
+.colorful th, .colorful td {
+    background: transparent !important;
+    border: 1px solid #ffffff11;
+    color: white;
+}
+.colorful th {
+    font-weight: bold;
+    font-style: normal;
+}
+.colorful th:first-child {
+    width: 200px;
+}
+
+.partners {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 40px;
+}
+.partners > a {
+    width: 40%;
+    min-width: 300px;
+    max-height: 150px;
+    margin: 20px 0;
+}
+.partners > a > img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.partner {
+    text-align: center;
+    margin: 1em;
+}
+.partner > a > img {
+    width: 200px;
+}
+
+.tel_3114 {
+    display: flex;
+    max-width: 600px;
+    margin: 0 auto 1em auto;
+    padding: 1em;
+    align-items: center;
+    gap: 20px;
+    border: 2px solid #ffd212;
+}
+
+@media screen and (max-width: 960px) {
+    .tel_3114 { flex-direction: column; }
+    .tel_3114 > img { margin: 0.5em 0; }
+}
+
+.shelf {
+    display: flex;
+    margin: 2em 1em;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.shelf img { object-fit: contain; }
+
+.buttons {
+    margin: 1em;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.buttons > a {
+    display: block;
+    width: 40%;
+    min-width: 250px;
+    background: #4b9596;
+    color: white;
+    padding: 0.6em 1em;
+    text-decoration: none;
+    text-align: center;
+}
+.buttons > a:hover { background: #3d7879; }
+
+.links {
+    margin: 1em;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.links > a {
+    display: block;
+    width: 80%;
+    min-width: 250px;
+    background: #4b9596;
+    color: white;
+    padding: 0.6em 1em;
+    text-decoration: none;
+    text-align: center;
+}
+.links > a:hover { background: var(--hover, #3d7879) !important; }
+
+.quotes {
+    margin: 2em auto;
+    max-width: 90%;
+    width: 600px;
+    font-style: italic;
+}
+.quotes > .intro { padding: 6px; }
+.quotes > .content {;
+    position: relative;
+    padding: 1em;
+    text-align: justify;
+    border-radius: 12px;
+    background: #3c8ebb;
+    color: white;
+}
+.quotes > .content > img {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    margin-right: 1em;
+    object-fit: contain;
+}
+.quotes > .content > div { margin-left: calc(48px + 1.5em); }
+.quotes > .content > div + div { margin-top: 2em; }
+.quotes p:last-child {
+    margin-top: 2px;
+    font-size: 1.1em;
+}
+
+.inline {
+    float: left;
+    margin: 8px 3.5% 8px 12px;
+}
+.inline.right {
+    float: right;
+    margin: 8px 12px 8px 3.5%;
+}
+
+@media screen and (max-width: 960px) {
+    footer {
+        flex-direction: column;
+        padding: 0.5em;
+        gap: 6px;
+        text-align: center;
+    }
+    footer > img { display: none; }
+
+    .columns { display: block; }
+    .columns > * { width: auto; }
+    .columns > * + * { margin-top: 3em; }
+
+    .team {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .inline { display: none; }
+}

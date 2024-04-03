@@ -1,0 +1,60 @@
+/* This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Affero General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Affero General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program. If not, see https://www.gnu.org/licenses/. */
+
+@import url('../../../src/web/flaat/flaat.css');
+@import url('../../../vendor/highlight.js/styles/base16/tomorrow.css');
+
+html {
+    --main_color: #383838;
+}
+
+main a { text-decoration: underline; }
+main a:hover {
+    background: #383838;
+    color: white;
+}
+
+#me {
+    display: flex;
+    gap: 2em;
+    align-items: center;
+}
+#me > img {
+    width: 210px;
+    height: 300px;
+}
+#me > div { flex: 1; }
+
+#hire {
+    display: block;
+    position: absolute;
+    right: 16px;
+    top: 57px;
+    padding: 2px 8px;
+    background: #ee0a0a;
+    border-radius: 6px;
+    font-size: 0.8em;
+    color: white;
+}
+
+@media screen and (max-width: 1300px) {
+    #hire {
+        position: fixed;
+        right: 16px;
+        top: 19px;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    #me > img { display: none; }
+}
