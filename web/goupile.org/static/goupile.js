@@ -11,8 +11,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import '../../../../src/web/flaat/flaat.js';
-import * as hljs from '../../../../vendor/highlight.js/highlight.js';
+import '../../../src/web/flaat/flaat.js';
+import * as hljs from '../../../vendor/highlight.js/highlight.js';
 
 let timer_id = null;
 
