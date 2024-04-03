@@ -31,11 +31,13 @@ function initMenu() {
         {
             let target = findParent(e.target, el => el.tagName == 'LI');
 
-            for (let item of items) {
-                if (item == target) {
-                    item.classList.toggle('active');
-                } else {
-                    item.classList.remove('active');
+            if (target.querySelector('div') != null) {
+                for (let item of items) {
+                    if (item == target) {
+                        item.classList.toggle('active');
+                    } else {
+                        item.classList.remove('active');
+                    }
                 }
             }
         }
