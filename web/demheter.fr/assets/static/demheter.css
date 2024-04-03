@@ -15,7 +15,8 @@
 @import url('print.css');
 
 html {
-    --main_color: #ff6600;
+    --primary_color: #ff6600;
+    --secondary_color: #4b9596;
 }
 
 h1 { border-bottom: 1px solid #ccc; }
@@ -39,7 +40,7 @@ h1 { border-bottom: 1px solid #ccc; }
     margin: 1em auto;
     padding: 0.5em;
     border-top: none;
-    border-left: 2px solid var(--main_color);
+    border-left: 2px solid var(--primary_color);
     border-radius: 2px;
     box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.05),0 0 .0625rem rgba(0, 0, 0, 0.1);
 }
@@ -195,25 +196,6 @@ footer > img { filter: saturate(0%) brightness(0); }
     flex-wrap: wrap;
 }
 .shelf img { object-fit: contain; }
-
-.buttons {
-    margin: 1em;
-    display: flex;
-    gap: 20px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
-.buttons > a {
-    display: block;
-    width: 40%;
-    min-width: 250px;
-    background: #4b9596;
-    color: white;
-    padding: 0.6em 1em;
-    text-decoration: none;
-    text-align: center;
-}
-.buttons > a:hover { background: #3d7879; }
 
 .links {
     margin: 1em;

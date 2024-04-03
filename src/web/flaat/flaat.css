@@ -87,11 +87,11 @@ a:hover { text-decoration: underline; }
 }
 #top li > a:hover, #top li.active > a {
     margin-bottom: -1px;
-    border-bottom: 2px solid var(--main_color);
+    border-bottom: 2px solid var(--primary_color);
 }
 #top li > a.active { font-weight: bold; }
 #top li > div { display: none; }
-.nojs #top li:hover, #top li.active { border-left-color: var(--main_color); }
+.nojs #top li:hover, #top li.active { border-left-color: var(--primary_color); }
 .nojs #top li:hover > a, #top li.active > a {
     margin-bottom: 1px;
     border-bottom: none;
@@ -105,8 +105,8 @@ a:hover { text-decoration: underline; }
     display: flex;
     flex-direction: column;
     background: white;
-    border-left: 2px solid var(--main_color);
-    border-bottom: 2px solid var(--main_color);
+    border-left: 2px solid var(--primary_color);
+    border-bottom: 2px solid var(--primary_color);
 }
 #top li > div > a { margin-top: 3px; }
 #top li > div > a.active { font-weight: bold; }
@@ -226,6 +226,25 @@ table + div.legend {
     text-align: center;
     font-size: 0.8em;
 }
+
+.buttons {
+    margin: 1em;
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.buttons > a {
+    display: block;
+    width: 40%;
+    min-width: 250px;
+    background: var(--secondary_color);
+    color: white;
+    padding: 0.6em 1em;
+    text-decoration: none;
+    text-align: center;
+}
+.buttons > a:hover { filter: brightness(80%) contrast(150%); }
 
 code:not(.hljs) {
     padding: 2px 6px;

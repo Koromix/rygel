@@ -1,11 +1,8 @@
 # Introduction
 
-Goupile is an open-source electronic data capture application that
-strives to make form creation and data entry both powerful and easy.
+Goupile is an open-source electronic data capture application that strives to make form creation and data entry both powerful and easy.
 
-It is licensed under the [AGPL 3 license](https://www.gnu.org/licenses/#AGPL). You can freely
-download and use the goupile source code. Everyone is granted the right to copy, modify
-and redistribute it.
+It is licensed under the [AGPL 3 license](https://www.gnu.org/licenses/#AGPL). You can freely download and use the goupile source code. Everyone is granted the right to copy, modify and redistribute it.
 
 # Get started
 

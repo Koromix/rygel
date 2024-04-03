@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>Goupile – {{ TITLE }}</title>
+        <meta name="author" content="Niels Martignène">
+        <meta name="description" content="{{ DESCRIPTION }}">
+
+        <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
+    </head>
+
+    <body class="nojs">
+        <div id="deploy" onclick="main.deploy(); return false;"></div>
+
+        <nav id="top">
+            <menu>
+                <a id="logo" href="/"><img src="{{ ASSET static/logo.webp }}" alt="Logo Rekkord" /></a>
+
+{{ LINKS }}
+
+                <div style="flex: 1;"></div>
+                <li><a href="https://github.com/Koromix/goupile" target="_blank">GitHub</a></li>
+            </menu>
+
+        </nav>
+
+        {{ TOC }}
+
+        <main>
+            {{ CONTENT }}
+        </main>
+
+        <script>
+            main.init();
+        </script>
+    </body>
+</html>

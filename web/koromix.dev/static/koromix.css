@@ -15,7 +15,7 @@
 @import url('../../../vendor/highlight.js/styles/base16/tomorrow.css');
 
 html {
-    --main_color: #383838;
+    --primary_color: #383838;
 }
 
 main a { text-decoration: underline; }
