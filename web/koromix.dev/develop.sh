@@ -6,9 +6,9 @@ trap 'kill $(jobs -p)' EXIT
 
 ../../bootstrap.sh
 
-../../felix -q -pFast serf hodler
+../../felix -pFast serf hodler
 ../../bin/Fast/hodler . -O dist
 ../../bin/Fast/serf &
 sleep 10
 
-watch -n1 ../../felix -q -pFast --run_here hodler . -O dist
+watch -n1 ../../felix -qq -pFast --run_here hodler . -O dist
