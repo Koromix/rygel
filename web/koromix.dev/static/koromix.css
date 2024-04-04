@@ -22,9 +22,11 @@ html {
 }
 
 main a { text-decoration: underline; }
-main a:hover {
+main a:has(> img) { text-decoration: none !important; }
+main a:not(:has(> img)):hover {
     background: #383838;
     color: white;
+    text-decoration: none;
 }
 
 #me {

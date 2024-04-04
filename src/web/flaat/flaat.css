@@ -44,6 +44,7 @@ a {
     text-decoration: none;
 }
 a:hover { text-decoration: underline; }
+a:has(> img) { text-decoration: none !important; }
 
 #top {
     position: sticky;
