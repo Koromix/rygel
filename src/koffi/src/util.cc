@@ -579,12 +579,22 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     return "Unknown";
 }
 
-void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
+void SetValueTag(InstanceData *instance, Napi::Value value, const void *marker)
 {
     RG_ASSERT(marker);
 
-    napi_type_tag tag = { instance->tag_lower, (uint64_t)marker };
-    napi_status status = napi_type_tag_object(value.Env(), value, &tag);
+    napi_type_tag *tag = instance->tags_map.FindValue(marker, nullptr);
+
+    if (!tag) {
+        tag = instance->tags.AppendDefault();
+
+        tag->lower = instance->tag_lower;
+        tag->upper = (uint64_t)marker;
+
+        instance->tags_map.Set(marker, tag);
+    }
+
+    napi_status status = napi_type_tag_object(value.Env(), value, tag);
     RG_ASSERT(status == napi_ok);
 }
 

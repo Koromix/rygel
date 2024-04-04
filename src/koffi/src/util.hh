@@ -102,7 +102,7 @@ bool CanStoreType(const TypeInfo *type);
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
-void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
+void SetValueTag(InstanceData *instance, Napi::Value value, const void *marker);
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 
 static inline bool IsNullOrUndefined(Napi::Value value)
