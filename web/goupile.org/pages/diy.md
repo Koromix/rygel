@@ -59,7 +59,7 @@ Pour créer un nouveau domaine, exécutez la commande suivante :
 
 N'oubliez pas de **stocker de manière sécurisée** la clé de décryption qui vous est communiquée lors de la création du domaine !
 
-## Delete domain
+## Supprimer un domaine
 
 Supprimez le fichier INI correspondand dans `/etc/goupile/domains.d` et stoppez le service :
 

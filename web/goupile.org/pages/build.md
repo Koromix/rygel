@@ -1,6 +1,7 @@
 # Structure globale
 
 *XXX*
+
 # Mise au point des pages
 
 ## Interface

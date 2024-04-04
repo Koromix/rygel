@@ -451,23 +451,17 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                     RG_ASSERT(literal);
 
                     const char *cls = nullptr;
-                    const char *type = nullptr;
 
                     if (TestStr(literal, "[!NOTE]")) {
                         cls = "note";
-                        type = "Note";
                     } else if (TestStr(literal, "[!TIP]")) {
                         cls = "tip";
-                        type = "Tip";
                     } else if (TestStr(literal, "[!IMPORTANT]")) {
                         cls = "important";
-                        type = "⚠\uFE0E Important";
                     } else if (TestStr(literal, "[!WARNING]")) {
                         cls = "warning";
-                        type = "⚠\uFE0E Warning";
                     } else if (TestStr(literal, "[!CAUTION]")) {
                         cls = "caution";
-                        type = "⚠\uFE0E Caution";
                     }
 
                     if (cls) {
@@ -477,14 +471,13 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                         };
 
                         const char *tag = Fmt(alloc, "<div class=\"alert %1\">", cls).ptr;
-                        const char *before = Fmt(alloc, "<div class=\"title\">%1</div>", type).ptr;
 
                         cmark_node *block = cmark_node_new(CMARK_NODE_CUSTOM_BLOCK);
                         cmark_node *title = cmark_node_new(CMARK_NODE_HTML_INLINE);
 
                         cmark_node_set_on_enter(block, tag);
                         cmark_node_set_on_exit(block, "</div>");
-                        cmark_node_set_literal(title, before);
+                        cmark_node_set_literal(title, "<div class=\"title\"></div>");
 
                         cmark_node_replace(node, block);
 

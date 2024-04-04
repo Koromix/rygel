@@ -283,11 +283,27 @@ pre {
     font-weight: bold;
     color: var(--color);
 }
-.alert.note { --color: #316dca; }
-.alert.tip { --color: #347d39; }
-.alert.important { --color: #8256d0; }
-.alert.warning { --color: #966600; }
-.alert.caution { --color: #c93c37; }
+.alert > .title::after { content: var(--text); }
+.alert.note {
+    --color: #316dca;
+    --text: 'Note';
+}
+.alert.tip {
+    --color: #347d39;
+    --text: 'Tip';
+}
+.alert.important {
+    --color: #8256d0;
+    --text: '⚠\FE0E  Important';
+}
+.alert.warning {
+    --color: #966600;
+    --text: '⚠\FE0E  Warning';
+}
+.alert.caution {
+    --color: #c93c37;
+    --text: '⚠\FE0E  Caution';
+}
 
 @media screen and (max-width: 1300px) {
     #side menu {
