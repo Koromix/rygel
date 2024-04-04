@@ -19,9 +19,9 @@ Le code source est publié sous licence [AGPL version 3](https://www.gnu.org/lic
         <a>○</a>
         <a>○</a>
     </div>
-    <img src="{{ ASSET static/screenshots/editor.webp }}"/>
-    <img src="{{ ASSET static/screenshots/data.webp }}"/>
-    <img src="{{ ASSET static/screenshots/overview.webp }}"/>
-    <img src="{{ ASSET static/screenshots/tablet.webp }}"/>
-    <img src="{{ ASSET static/screenshots/admin.webp }}"/>
+    <img src="{{ ASSET static/screenshots/editor.webp }}" alt="Capture de l'éditeur"/>
+    <img src="{{ ASSET static/screenshots/data.webp }}" alt="Capture du tableau de données"/>
+    <img src="{{ ASSET static/screenshots/overview.webp }}" alt="Capture d'un formulaire"/>
+    <img src="{{ ASSET static/screenshots/tablet.webp }}" alt="Affichage en mode tablette"/>
+    <img src="{{ ASSET static/screenshots/admin.webp }}" alt="Capture du panneau d'administration"/>
 </div>
