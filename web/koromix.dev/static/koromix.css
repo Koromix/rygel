@@ -15,6 +15,9 @@
 @import url('../../../vendor/highlight.js/styles/base16/tomorrow.css');
 
 html {
+    --top_height: 70px;
+    --small_height: 70px;
+
     --primary_color: #383838;
 }
 
@@ -56,5 +59,6 @@ main a:hover {
 }
 
 @media screen and (max-width: 960px) {
+    #top li > a.active { display: block !important; }
     #me > img { display: none; }
 }

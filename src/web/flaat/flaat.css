@@ -15,8 +15,11 @@
 @import url('print.css');
 
 html {
+    --top_height: 120px;
+    --small_height: 90px;
+
     height: 100%;
-    scroll-padding-top: 130px;
+    scroll-padding-top: calc(var(--top_height) + 10px);
 }
 
 body {
@@ -56,7 +59,7 @@ a:hover { text-decoration: underline; }
     top: 0;
     box-sizing: border-box;
     max-width: 1200px;
-    height: 120px;
+    height: var(--top_height);
     box-sizing: border-box;
     margin: 0 auto;
     padding: 16px 16px 24px 16px;
@@ -91,8 +94,8 @@ a:hover { text-decoration: underline; }
 }
 #top li > a.active { font-weight: bold; }
 #top li > div { display: none; }
-.nojs #top li:hover, #top li.active { border-left-color: var(--primary_color); }
-.nojs #top li:hover > a, #top li.active > a {
+.nojs #top li:has(> div):hover, #top li:has(> div).active { border-left-color: var(--primary_color); }
+.nojs #top li:has(> div):hover > a, #top li:has(> div).active > a {
     margin-bottom: 1px;
     border-bottom: none;
 }
@@ -133,7 +136,7 @@ a:hover { text-decoration: underline; }
 
     position: fixed;
     left: calc(50% + 360px);
-    top: 150px;
+    top: calc(var(--top_height) + 34px);
 
     background: #fdfdfd;
     border: 2px solid #383838;
@@ -294,10 +297,10 @@ pre {
 }
 
 @media screen and (max-width: 960px) {
-    html { scroll-padding-top: 100px; }
+    html { scroll-padding-top: calc(var(--small_height) + 10px); }
 
     #top menu {
-        height: 90px;
+        height: var(--small_height);
         padding-left: 60px;
         padding-bottom: 16px;
         flex-direction: column;
@@ -310,16 +313,14 @@ pre {
         line-height: 1.6em;
     }
     #top li > a:hover, #top li.active > a { margin-bottom: -2px; }
-    #top li > a {
-        display: none;
-        border-bottom: none;
-    }
-    #top.active menu {
+    #top li > a { border-bottom: none; }
+    .js #top li > a, .nojs #top:not(:hover) li > a { display: none; }
+    .nojs #top:hover menu, #top.active menu {
         height: auto;
         gap: 4px;
     }
-    #top.active li > a { display: block !important; }
-    #top li.active > div { position: static; }
+    #top.active li > a, .nojs #top li.active > a { display: block !important; }
+    #top li.active > div, .nojs #top li:hover > div { position: static; }
 
     #side a {
         font-size: 1.1em;
@@ -331,7 +332,8 @@ pre {
         margin: 0 auto;
         transform: translate(-10px, 0);
     }
-    #top.active #logo { display: none; }
+    .js #top.active #logo { display: none; }
+    .nojs #top:hover #logo { display: none; }
 
     #deploy {
         display: block !important;
@@ -347,6 +349,7 @@ pre {
         z-index: 999;
         cursor: pointer;
     }
+    .nojs #deploy { pointer-events: none; }
 
     pre { margin: 1em 0; }
 

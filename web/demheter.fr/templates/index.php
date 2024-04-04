@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr"class="nojs">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -114,7 +114,7 @@
         </style>
     </head>
 
-    <body class="nojs">
+    <body>
         <div id="deploy" onclick="main.deploy(); return false;"></div>
 
         <nav id="top">

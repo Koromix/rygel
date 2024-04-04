@@ -17,8 +17,8 @@ window.addEventListener('load', e => {
     initSide();
     initScroll();
 
-    document.body.classList.remove('nojs');
-    document.body.classList.add('js');
+    document.documentElement.classList.remove('nojs');
+    document.documentElement.classList.add('js');
 });
 
 function initDeploy() {
