@@ -4,6 +4,10 @@
 
 ### Koffi 2.8
 
+#### Koffi 2.8.1 (2024-04-04)
+
+- Fix incompatibility with Node 20.12+ and 21.6+
+
 #### Koffi 2.8.0 (2024-02-12)
 
 - Support pushing pointers for string arguments
