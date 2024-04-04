@@ -337,17 +337,17 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     Span<const char> relative_url = TrimStrLeft(request.url, "/\\").ptr;
-    const char *filename = NormalizePath(relative_url, config.root_directory, &io->allocator).ptr;
+    Span<const char> filename = NormalizePath(relative_url, config.root_directory, &io->allocator);
 
     FileInfo file_info;
     {
-        StatResult stat = StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+        StatResult stat = StatFile(filename.ptr, (int)StatFlag::IgnoreMissing, &file_info);
 
         if (config.auto_html) {
-            if (stat == StatResult::MissingPath && !EndsWith(relative_url, "/")
-                                                && !GetPathExtension(relative_url).len) {
-                filename = Fmt(&io->allocator, "%1.html", relative_url).ptr;
-                stat = StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+            if (stat == StatResult::MissingPath && !EndsWith(filename, "/")
+                                                && !GetPathExtension(filename).len) {
+                filename = Fmt(&io->allocator, "%1.html", filename).ptr;
+                stat = StatFile(filename.ptr, (int)StatFlag::IgnoreMissing, &file_info);
             }
         }
 
@@ -365,7 +365,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     if (file_info.type == FileType::File) {
-        ServeFile(filename, file_info, request, io);
+        ServeFile(filename.ptr, file_info, request, io);
     } else if (file_info.type == FileType::Directory) {
         if (!EndsWith(request.url, "/")) {
             const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
@@ -382,7 +382,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 index_info.type == FileType::File) {
             ServeFile(index_filename, index_info, request, io);
         } else if (config.auto_index) {
-            ServeIndex(filename, request, io);
+            ServeIndex(filename.ptr, request, io);
         } else {
             LogError("Cannot access directory without index.html");
             io->AttachError(403);
@@ -393,7 +393,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         return;
     }
 }
-
 
 int Main(int argc, char **argv)
 {
