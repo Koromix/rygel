@@ -185,7 +185,7 @@ h1 {
 h2 {
     margin: 0 0 1em 0;
     display: table;
-    padding: 2px 12px 2px 30px;
+    padding: 2px 14px 2px 30px;
     background: #191f22;
     font-size: 1.2em;
     font-weight: normal;
@@ -194,10 +194,14 @@ h2 {
 }
 h3 {
     margin: 0 0 0.8em 0;
-    font-size: 1em;
-    text-transform: uppercase;
+    display: table;
+    padding: 2px 14px 2px 40px;
+    background: #ddd;
+    font-size: 1.1em;
     font-weight: normal;
     font-style: italic;
+    text-transform: uppercase;
+    color: #383838;
 }
 * + h1, * + h2, * + h3 { margin-top: 1.2em; }
 
