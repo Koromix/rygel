@@ -8,7 +8,7 @@ trap 'kill $(jobs -p)' EXIT
 
 ../../felix -pFast serf hodler
 ../../bin/Fast/hodler . -O dist
-../../bin/Fast/serf &
+../../bin/Fast/serf dist/ &
 sleep 10
 
 watch -n1 ../../felix -qq -pFast --run_here hodler . -O dist
