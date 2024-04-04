@@ -1,0 +1,86 @@
+/* This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Affero General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Affero General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program. If not, see https://www.gnu.org/licenses/. */
+
+@media screen and (max-width: 1300px) {
+    #side menu {
+        width: auto;
+        margin: 16px;
+        padding: 16px;
+        position: static;
+    }
+
+    main { padding-right: 16px !important; }
+}
+
+@media screen and (max-width: 960px) {
+    html { scroll-padding-top: calc(var(--small_height) + 10px); }
+
+    #top menu {
+        height: var(--small_height);
+        padding-left: 60px;
+        padding-bottom: 16px;
+        flex-direction: column;
+        gap: 0;
+        align-items: start;
+        z-index: 8;
+    }
+    #top li a {
+        font-size: 1.1em;
+        line-height: 1.6em;
+    }
+    #top li > a:hover, #top li.active > a { margin-bottom: -2px; }
+    #top li > a { border-bottom: none; }
+    .js #top li > a, .nojs #top:not(:hover) li > a { display: none; }
+    .nojs #top:hover menu, #top.active menu {
+        height: auto;
+        gap: 4px;
+    }
+    #top.active li > a, .nojs #top li.active > a { display: block !important; }
+    #top li.active > div, .nojs #top li:hover > div { position: static; }
+
+    #side a {
+        font-size: 1.1em;
+        line-height: 1.6em;
+    }
+
+    #logo {
+        height: 100%;
+        margin: 0 auto;
+        transform: translate(-10px, 0);
+    }
+    .js #top.active #logo { display: none; }
+    .nojs #top:hover #logo { display: none; }
+
+    #deploy {
+        display: block !important;
+        position: fixed;
+        width: 42px;
+        height: 40px;
+        top: 10px;
+        left: 8px;
+        padding: 0;
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAAWCAYAAADEtGw7AAAAOUlEQVQ4T2O0sLD4z0ADwDhqMCxUGWkQvGAjRw2GhyztgmI0HcPTMc2CYjSDDOGygmapYtRgWKoAAGrCE+uzrIQ5AAAAAElFTkSuQmCC");
+        background-repeat: no-repeat;
+        background-position: center;
+        z-index: 999;
+        cursor: pointer;
+    }
+    .nojs #deploy { pointer-events: none; }
+
+    pre { margin: 1em 0; }
+
+    .alert {
+        margin-left: 0.4em;
+        margin-right: 0.4em;
+    }
+}
