@@ -19,6 +19,13 @@ html {
     --secondary_color: #4b9596;
 }
 
+main a {
+    color: var(--color, #383838);
+    text-decoration: underline;
+}
+main a:has(> img) { text-decoration: none !important; }
+main a:not(:has(> img)):hover { color: var(--color, black); }
+
 h1 { border-bottom: 1px solid #ccc; }
 
 .schema {
