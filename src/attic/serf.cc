@@ -49,6 +49,10 @@ bool Config::Validate() const
         LogError("HTTP MaxAge must be >= 0");
         valid = false;
     }
+    if (!TestFile(config.root_directory, FileType::Directory)) {
+        LogError("Root directory '%1' does not exist", config.root_directory);
+        valid = false;
+    }
 
     return valid;
 }
