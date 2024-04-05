@@ -207,7 +207,7 @@ async function main() {
 
     try {
         let success = !!(await command());
-        process.exit(!success);
+        process.exit(0 + !success);
     } catch (err) {
         console.error(err);
         process.exit(1);
