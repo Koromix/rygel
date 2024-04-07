@@ -1555,10 +1555,15 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     }
 
 #ifndef _WIN32
-    bool lazy = false;
+    int flags = 0;
+
     if (info.Length() >= 2) {
         Napi::Object options = info[1].As<Napi::Object>();
-        lazy = options.Get("lazy").ToBoolean();
+
+        flags |= options.Get("lazy").ToBoolean() ? RTLD_LAZY : RTLD_NOW;
+        flags |= options.Get("global").ToBoolean() ? RTLD_GLOBAL : RTLD_LOCAL;
+    } else {
+        flags = RTLD_NOW | RTLD_LOCAL;
     }
 #endif
 
@@ -1582,8 +1587,6 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
     }
 #else
     if (info[0].IsString()) {
-        int flags = lazy ? RTLD_LAZY : RTLD_NOW;
-
         std::string filename = info[0].As<Napi::String>();
         module = dlopen(filename.c_str(), flags);
 

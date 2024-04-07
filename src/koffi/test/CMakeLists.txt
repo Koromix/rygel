@@ -57,3 +57,11 @@ if(WIN32)
     target_link_libraries(win32 win32_dep)
     set_target_properties(win32 PROPERTIES PREFIX "")
 endif()
+
+if(UNIX AND NOT APPLE)
+    add_library(posix SHARED posix.c)
+    set_target_properties(posix PROPERTIES PREFIX "")
+
+    add_library(posix_dep SHARED posix_dep.c)
+    set_target_properties(posix_dep PROPERTIES PREFIX "")
+endif()

@@ -37,7 +37,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -81,7 +82,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -125,7 +127,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -169,7 +172,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -290,7 +294,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -334,7 +339,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -378,7 +384,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -471,7 +478,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -515,7 +523,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
@@ -559,7 +568,8 @@
                     "Test Async": "node test/async.js",
                     "Test Callbacks": "node test/callbacks.js",
                     "Test Raylib": "xvfb-run node test/raylib.js",
-                    "Test SQLite": "node test/sqlite.js"
+                    "Test SQLite": "node test/sqlite.js",
+                    "Test POSIX": "node test/posix.js"
                 }
             }
         }
