@@ -4,6 +4,10 @@
 
 ### Koffi 2.8
 
+#### Koffi 2.8.2 (2024-04-07)
+
+- Support [loading library](functions.md#loading-options) with RTLD_GLOBAL on POSIX platforms
+
 #### Koffi 2.8.1 (2024-04-04)
 
 - Fix incompatibility with Node 20.12+ and 21.6+
