@@ -21,13 +21,14 @@ On some platforms (such as with the [musl C library on Linux](https://wiki.musl-
 
 ## Loading options
 
-*New in Koffi 2.6*
+*New in Koffi 2.6 and Koffi 2.8.2*
 
 The `load` function can take an optional object argument, with the following options:
 
 ```js
 const options = {
-    lazy: true // Use RTLD_LAZY (lazy-binding) on POSIX platforms (by default, use RTLD_NOW)
+    lazy: true, // Use RTLD_LAZY (lazy-binding) on POSIX platforms (by default, use RTLD_NOW)
+    global: true // Use RTLD_GLOBAL on POSIX platforms (by default, use RTLD_LOCAL)
 };
 
 const lib = koffi.load('/path/to/shared/library.so', options);

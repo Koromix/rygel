@@ -126,13 +126,3 @@ EXPORT void MakeMultiUIndirect(float a, float b, MultiU *out)
 
 EXPORT float GetMultiDouble(MultiU u) { return u.d; }
 EXPORT float GetMultiUnsigned(MultiU u) { return u.u; }
-
-#if !defined(_WIN32) && !defined(__APPLE__)
-
-EXPORT int TestLazyBinding()
-{
-    int DoesNotExist();
-    return DoesNotExist();
-}
-
-#endif
