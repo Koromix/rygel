@@ -45,7 +45,7 @@ struct udev_aggregate {
 static struct device_subsystem device_subsystems[] = {
     {"hidraw", HS_DEVICE_TYPE_HID},
     {"tty",    HS_DEVICE_TYPE_SERIAL},
-    {NULL}
+    {0}
 };
 
 static pthread_mutex_t udev_init_lock = PTHREAD_MUTEX_INITIALIZER;
