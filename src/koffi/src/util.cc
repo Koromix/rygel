@@ -29,11 +29,11 @@
 namespace RG {
 
 // Value does not matter, the tag system uses memory addresses
-const int TypeInfoMarker = 0xDEADBEEF;
-const int DirectionMarker = 0xDEADBEEF;
-const int PointerMarker = 0xDEADBEEF;
-const int CastMarker = 0xDEADBEEF;
-const int UnionObjectMarker = 0xDEADBEEF;
+const napi_type_tag TypeInfoMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
+const napi_type_tag DirectionMarker = { 0xe99e34ae48144077, 0x8f4909c27c94dd65 };
+const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
+const napi_type_tag PointerMarker = { 0x146707b81ddc4ecc, 0x8558121150601674 };
+const napi_type_tag UnionObjectMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
 
 Napi::Function TypeObject::InitClass(Napi::Env env)
 {
@@ -740,35 +740,19 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     return "Unknown";
 }
 
-void SetValueTag(InstanceData *instance, Napi::Value value, const void *marker)
+void SetValueTag(const InstanceData *instance, Napi::Value value, const napi_type_tag *tag)
 {
-    RG_ASSERT(marker);
-
-    napi_type_tag *tag = instance->tags_map.FindValue(marker, nullptr);
-
-    if (!tag) {
-        tag = instance->tags.AppendDefault();
-
-        tag->lower = instance->tag_lower;
-        tag->upper = (uint64_t)marker;
-
-        instance->tags_map.Set(marker, tag);
-    }
-
     napi_status status = napi_type_tag_object(value.Env(), value, tag);
     RG_ASSERT(status == napi_ok);
 }
 
-bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
+bool CheckValueTag(const InstanceData *instance, Napi::Value value, const napi_type_tag *tag)
 {
-    RG_ASSERT(marker);
+    if (IsNullOrUndefined(value))
+        return false;
 
     bool match = false;
-
-    if (!IsNullOrUndefined(value)) {
-        napi_type_tag tag = { instance->tag_lower, (uint64_t)marker };
-        napi_check_object_type_tag(value.Env(), value, &tag, &match);
-    }
+    napi_check_object_type_tag(value.Env(), value, tag, &match);
 
     return match;
 }

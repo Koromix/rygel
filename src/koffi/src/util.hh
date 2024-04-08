@@ -28,11 +28,11 @@
 
 namespace RG {
 
-extern const int TypeInfoMarker;
-extern const int DirectionMarker;
-extern const int PointerMarker;
-extern const int CastMarker;
-extern const int UnionObjectMarker;
+extern const napi_type_tag TypeInfoMarker;
+extern const napi_type_tag DirectionMarker;
+extern const napi_type_tag PointerMarker;
+extern const napi_type_tag CastMarker;
+extern const napi_type_tag UnionObjectMarker;
 
 class TypeObject: public Napi::ObjectWrap<TypeObject> {
     const TypeInfo *type;
@@ -137,8 +137,8 @@ bool CanStoreType(const TypeInfo *type);
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
-void SetValueTag(InstanceData *instance, Napi::Value value, const void *marker);
-bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
+void SetValueTag(const InstanceData *instance, Napi::Value value, const napi_type_tag *tag);
+bool CheckValueTag(const InstanceData *instance, Napi::Value value, const napi_type_tag *tag);
 
 bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *expect);
 Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeInfo *type, void *ptr);

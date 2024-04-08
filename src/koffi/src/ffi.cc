@@ -2036,7 +2036,6 @@ static InstanceData *CreateInstance()
     instance->main_thread_id = std::this_thread::get_id();
 
     instance->debug = GetDebugFlag("DUMP_CALLS");
-    FillRandomSafe(&instance->tag_lower, RG_SIZE(instance->tag_lower));
 
 #ifdef _WIN32
     TEB *teb = GetTEB();
