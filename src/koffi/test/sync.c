@@ -959,7 +959,7 @@ EXPORT const char *GetSymbolStr()
     return sym_str;
 }
 
-EXPORT int GetSymbolInt3(int out[3])
+EXPORT void GetSymbolInt3(int out[3])
 {
     out[0] = sym_int3[0];
     out[1] = sym_int3[1];
