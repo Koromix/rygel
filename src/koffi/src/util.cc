@@ -740,7 +740,7 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     return "Unknown";
 }
 
-void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
+void SetValueTag(InstanceData *instance, Napi::Value value, const void *marker)
 {
     RG_ASSERT(marker);
 
