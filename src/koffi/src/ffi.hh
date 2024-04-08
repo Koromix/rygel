@@ -40,8 +40,10 @@ static const Size MaxParameters = 64;
 static const Size MaxTrampolines = 8192;
 
 enum class PrimitiveKind {
-    Void,
+    // Void is explictly not first so that it is not 0, for reasons related to N-API type tags.
+    // Look at TypeInfo definition for more information!
     Bool,
+    Void,
     Int8,
     UInt8,
     Int16,
@@ -68,8 +70,8 @@ enum class PrimitiveKind {
     Callback
 };
 static const char *const PrimitiveKindNames[] = {
-    "Void",
     "Bool",
+    "Void",
     "Int8",
     "UInt8",
     "Int16",
@@ -123,7 +125,12 @@ static const char *const ArrayHintNames[] = {
 struct TypeInfo {
     const char *name;
 
-    PrimitiveKind primitive;
+    // Make sure primitie ends up as the upper N-API tag value when we cast TypeInfo pointers to
+    // napi_type_tag pointers. Yes, I want to do this. We don't do strict aliasing here.
+    // N.B. Some node versions don't like when one of the two tag values is 0, so make sure
+    // this does not happen! It would happen if primitive is 0 and size is 0. To avoid this
+    // situation, PrimitiveKind::Void (the only type with size 0) is explictly not 0.
+    alignas(8) PrimitiveKind primitive;
     int32_t size;
     int16_t align;
     uint16_t flags;
