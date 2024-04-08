@@ -1,6 +1,6 @@
 # Function calls
 
-### Calling conventions
+## Calling conventions
 
 By default, calling a C function happens synchronously.
 

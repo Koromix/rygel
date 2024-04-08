@@ -218,7 +218,7 @@ console.log(vec1); // { x: 3, y: 2, z: 1 }
 console.log(vec2); // { x: 1, y: 2, z: 3 }
 ```
 
-See [decoding variables](variables.md#decode-to-js-values) for more information about the decode function.
+See [decoding variables](memory.md#decode-to-js-values) for more information about the decode function.
 
 ### Stable pointers
 
@@ -228,7 +228,7 @@ In some cases, the native code may need to change the output buffer at a later t
 
 In this case, it is **not safe to use buffers or typed arrays**! 
 
-However, you can use `koffi.alloc(type, len)` to allocate memory and get a pointer that won't move, and can be safely used at any time by the native code. Use [koffi.decode()](variables.md#decode-to-js-values) to read data from the pointer when needed.
+However, you can use `koffi.alloc(type, len)` to allocate memory and get a pointer that won't move, and can be safely used at any time by the native code. Use [koffi.decode()](memory.md#decode-to-js-values) to read data from the pointer when needed.
 
 The example below sets up some memory to be used as an output buffer where a concatenation function appends a string on each call.
 
