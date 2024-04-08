@@ -273,10 +273,6 @@ struct InstanceData {
 
     bool debug;
 
-    uint64_t tag_lower;
-    BucketArray<napi_type_tag> tags;
-    HashMap<const void *, napi_type_tag *> tags_map;
-
     const TypeInfo *void_type;
     const TypeInfo *char_type;
     const TypeInfo *char16_type;

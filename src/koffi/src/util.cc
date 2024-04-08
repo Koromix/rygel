@@ -29,9 +29,9 @@
 namespace RG {
 
 // Value does not matter, the tag system uses memory addresses
-const int TypeInfoMarker = 0xDEADBEEF;
-const int CastMarker = 0xDEADBEEF;
-const int MagicUnionMarker = 0xDEADBEEF;
+const napi_type_tag TypeInfoMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
+const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
+const napi_type_tag MagicUnionMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 };
 
 Napi::Function MagicUnion::InitClass(Napi::Env env, const TypeInfo *type)
 {
@@ -579,20 +579,20 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     return "Unknown";
 }
 
-void SetValueTag(InstanceData *instance, Napi::Value value, const void *marker)
+void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
 {
-    RG_ASSERT(marker);
+    static_assert(RG_SIZE(TypeInfo) >= 16);
 
-    napi_type_tag *tag = instance->tags_map.FindValue(marker, nullptr);
-
-    if (!tag) {
-        tag = instance->tags.AppendDefault();
-
-        tag->lower = instance->tag_lower;
-        tag->upper = (uint64_t)marker;
-
-        instance->tags_map.Set(marker, tag);
-    }
+    // We used to make a temporary tag on the stack with lower set to a constant value and
+    // upper to the pointer address, but this broke in Node 20.12 and Node 21.6 due to ExternalWrapper
+    // storing a pointer to the tag and not the tag value itself (which seems wrong, but anyway).
+    //
+    // Since this is no longer an option, we just type alias whatever marker points to to napi_type_tag.
+    // This may seem gross, but we disable strict aliasing anyway, so as long as what marker points
+    // to is bigger than 16 bytes and does not change, it works!
+    // Which holds true for us: the main thing pointed to is TypeInfo, which is constant and big enough,
+    // and the few other markers we use, such as CastMarker, are actual const napi_type_tag structs.
+    const napi_type_tag *tag = (const napi_type_tag *)marker;
 
     napi_status status = napi_type_tag_object(value.Env(), value, tag);
     RG_ASSERT(status == napi_ok);
@@ -600,13 +600,11 @@ void SetValueTag(InstanceData *instance, Napi::Value value, const void *marker)
 
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker)
 {
-    RG_ASSERT(marker);
-
     bool match = false;
 
     if (!IsNullOrUndefined(value)) {
-        napi_type_tag tag = { instance->tag_lower, (uint64_t)marker };
-        napi_check_object_type_tag(value.Env(), value, &tag, &match);
+        const napi_type_tag *tag = (const napi_type_tag *)marker;
+        napi_check_object_type_tag(value.Env(), value, tag, &match);
     }
 
     return match;

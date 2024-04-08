@@ -28,9 +28,9 @@
 
 namespace RG {
 
-extern const int TypeInfoMarker;
-extern const int CastMarker;
-extern const int MagicUnionMarker;
+extern const napi_type_tag TypeInfoMarker;
+extern const napi_type_tag CastMarker;
+extern const napi_type_tag MagicUnionMarker;
 
 class MagicUnion: public Napi::ObjectWrap<MagicUnion> {
     const TypeInfo *type;
@@ -102,7 +102,7 @@ bool CanStoreType(const TypeInfo *type);
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
-void SetValueTag(InstanceData *instance, Napi::Value value, const void *marker);
+void SetValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 bool CheckValueTag(const InstanceData *instance, Napi::Value value, const void *marker);
 
 static inline bool IsNullOrUndefined(Napi::Value value)
