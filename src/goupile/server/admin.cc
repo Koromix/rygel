@@ -436,7 +436,7 @@ static bool ParseKeyString(Span<const char> str, uint8_t out_key[32] = nullptr)
     }
 
     if (out_key) {
-        memcpy(out_key, key, RG_SIZE(key));
+        MemCpy(out_key, key, RG_SIZE(key));
     }
     return true;
 }
@@ -814,7 +814,7 @@ Options:
                     RG_ASSERT(strlen(opt.current_value) < RG_SIZE(decrypt_key));
                     CopyString(opt.current_value, decrypt_key);
                 } else {
-                    memset(decrypt_key, 0, RG_SIZE(decrypt_key));
+                    MemSet(decrypt_key, 0, RG_SIZE(decrypt_key));
                 }
 
                 random_key = false;
@@ -1387,9 +1387,9 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
         size_t copy = len;
 
         while (len) {
-            size_t copy_len = std::min(len, (size_t)ctx->buf.Available());
-            memcpy_safe(ctx->buf.end(), buf, copy_len);
-            ctx->buf.len += (Size)copy_len;
+            Size copy_len = std::min((Size)len, ctx->buf.Available());
+            MemCpy(ctx->buf.end(), buf, copy_len);
+            ctx->buf.len += copy_len;
 
             if (!ctx->buf.Available()) {
                 uint8_t cypher[4096];

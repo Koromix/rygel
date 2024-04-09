@@ -491,7 +491,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::Union: {
             if (func->ret.vec_count) {
                 HfaRet ret = PERFORM_CALL(DDDD);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 result.u64 = PERFORM_CALL(GG);
             }
@@ -569,7 +569,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[0] : nullptr;
     gpr_ptr += proto->ret.use_memory;
 
-    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
+    RG_DEFER_N(err_guard) { MemSet(out_reg, 0, RG_SIZE(*out_reg)); };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -732,8 +732,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                         // The problem is that the object is split between the GPRs and the caller stack.
                         uint8_t *ptr = AllocHeap(param.type->size, 16);
 
-                        memcpy(ptr, gpr_ptr, gpr_size);
-                        memcpy(ptr + gpr_size, args_ptr, param.type->size - gpr_size);
+                        MemCpy(ptr, gpr_ptr, gpr_size);
+                        MemCpy(ptr + gpr_size, args_ptr, param.type->size - gpr_size);
 
                         Napi::Object obj = DecodeObject(env, ptr, param.type);
                         arguments.Append(obj);
@@ -943,9 +943,9 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             float f = GetNumber<float>(value);
 #ifdef __ARM_PCS_VFP
-            memcpy(&out_reg->d0, &f, 4);
+            MemCpy(&out_reg->d0, &f, 4);
 #else
-            memcpy(&out_reg->r0, &f, 4);
+            MemCpy(&out_reg->r0, &f, 4);
 #endif
         } break;
         case PrimitiveKind::Float64: {
@@ -958,7 +958,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 #ifdef __ARM_PCS_VFP
             out_reg->d0 = d;
 #else
-            memcpy(&out_reg->r0, &d, 8);
+            MemCpy(&out_reg->r0, &d, 8);
 #endif
         } break;
         case PrimitiveKind::Callback: {

@@ -492,7 +492,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
             file_blob.len -= RG_SIZE(int64_t);
 
             // Get file length from end of stream
-            memcpy(&file_len, file_blob.end(), RG_SIZE(file_len));
+            MemCpy(&file_len, file_blob.end(), RG_SIZE(file_len));
             file_len = LittleEndian(file_len);
 
             if (file_len < 0) {
@@ -512,7 +512,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 FileChunk chunk = {};
 
                 RawChunk entry = {};
-                memcpy(&entry, file_blob.ptr + offset, RG_SIZE(entry));
+                MemCpy(&entry, file_blob.ptr + offset, RG_SIZE(entry));
 
                 chunk.offset = LittleEndian(entry.offset);
                 chunk.len = LittleEndian(entry.len);
@@ -701,7 +701,7 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
         }
 
         SnapshotHeader2 header = {};
-        memcpy(&header, tag.payload.ptr, (size_t)tag.payload.len);
+        MemCpy(&header, tag.payload.ptr, tag.payload.len);
         header.name[RG_SIZE(header.name) - 1] = 0;
 
         snapshot.hash = tag.hash;
@@ -882,9 +882,9 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             header2.time = header1->time;
             header2.len = header1->len;
             header2.stored = header1->stored;
-            memcpy(header2.name, header1->name, RG_SIZE(header2.name));
+            MemCpy(header2.name, header1->name, RG_SIZE(header2.name));
 
-            memcpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
+            MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
         case rk_BlobType::Snapshot2: {
             if (blob.len <= RG_SIZE(SnapshotHeader2)) {
@@ -983,7 +983,7 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
 
     // Get file length from end of stream
     int64_t file_len = -1;
-    memcpy(&file_len, blob.end(), RG_SIZE(file_len));
+    MemCpy(&file_len, blob.end(), RG_SIZE(file_len));
     file_len = LittleEndian(file_len);
 
     // Check coherence
@@ -993,7 +993,7 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
         FileChunk chunk = {};
 
         RawChunk entry = {};
-        memcpy(&entry, blob.ptr + offset, RG_SIZE(entry));
+        MemCpy(&entry, blob.ptr + offset, RG_SIZE(entry));
 
         chunk.offset = LittleEndian(entry.offset);
         chunk.len = LittleEndian(entry.len);
@@ -1058,7 +1058,7 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
                 buf_idx = i;
             }
 
-            memcpy_safe(out_buf.ptr, buf.ptr + copy_offset, (size_t)copy_len);
+            MemCpy(out_buf.ptr, buf.ptr + copy_offset, copy_len);
         }
 
         offset += copy_len;
@@ -1083,7 +1083,7 @@ Size ChunkReader::Read(int64_t offset, Span<uint8_t> out_buf)
     Size copy_offset = (Size)std::min(offset, (int64_t)chunk.len);
     Size copy_len = std::min(chunk.len - copy_offset, out_buf.len);
 
-    memcpy_safe(out_buf.ptr, chunk.ptr + copy_offset, (size_t)copy_len);
+    MemCpy(out_buf.ptr, chunk.ptr + copy_offset, copy_len);
 
     return copy_len;
 }

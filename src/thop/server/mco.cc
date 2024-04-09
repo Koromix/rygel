@@ -375,8 +375,8 @@ bool McoResultProvider::RunFilter(FunctionRef<void(Span<const mco_Result>, Span<
 
                     if (result.ghm.Root() == ghm_root) {
                         results_buf[j] = result;
-                        memmove_safe(&mono_results_buf[k], &mono_results_buf[m],
-                                     result.stays.len * RG_SIZE(mco_Result));
+                        MemMove(&mono_results_buf[k], &mono_results_buf[m],
+                                    result.stays.len * RG_SIZE(mco_Result));
 
                         j++;
                         k += result.stays.len;

@@ -105,8 +105,8 @@ void mco_Price(Span<const mco_Result> results, bool apply_coefficient,
 
         async.Run([&, task_offset]() {
             Size end = std::min(results.len, task_offset + task_size);
-            memset_safe(out_pricings->ptr + start_pricings_len + task_offset, 0,
-                        (end - task_offset) * RG_SIZE(*out_pricings->ptr));
+            MemSet(out_pricings->ptr + start_pricings_len + task_offset, 0,
+                       (end - task_offset) * RG_SIZE(*out_pricings->ptr));
             for (Size j = task_offset; j < end; j++) {
                 mco_Price(results[j], apply_coefficient, &out_pricings->ptr[start_pricings_len + j]);
             }

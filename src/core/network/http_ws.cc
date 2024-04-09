@@ -256,8 +256,8 @@ Size http_IO::ReadWS(Span<uint8_t> out_buf)
                     goto pump;
 
                 uint16_t payload16;
-                memcpy_safe(&payload16, ws_buf.ptr + 2, 2);
-                memcpy_safe(mask, ws_buf.ptr + 4, 4);
+                MemCpy(&payload16, ws_buf.ptr + 2, 2);
+                MemCpy(mask, ws_buf.ptr + 4, 4);
 
                 payload = BigEndian(payload16);
                 offset = 8;
@@ -266,8 +266,8 @@ Size http_IO::ReadWS(Span<uint8_t> out_buf)
                     goto pump;
 
                 uint64_t payload64;
-                memcpy_safe(&payload64, ws_buf.ptr + 2, 8);
-                memcpy_safe(mask, ws_buf.ptr + 10, 4);
+                MemCpy(&payload64, ws_buf.ptr + 2, 8);
+                MemCpy(mask, ws_buf.ptr + 10, 4);
 
                 if (uint64_t max = Kilobytes(256); payload64 > max) {
                     LogError("Excessive WS packet length %1 (maximum = %2)", FmtMemSize(payload64), FmtMemSize(max));
@@ -280,7 +280,7 @@ Size http_IO::ReadWS(Span<uint8_t> out_buf)
                 if (ws_buf.len < 6)
                     goto pump;
 
-                memcpy_safe(mask, ws_buf.ptr + 2, 4);
+                MemCpy(mask, ws_buf.ptr + 2, 4);
 
                 offset = 6;
             }
@@ -312,7 +312,7 @@ Size http_IO::ReadWS(Span<uint8_t> out_buf)
             }
 
             ws_buf.len = std::max(ws_buf.len - offset - payload, (Size)0);
-            memmove_safe(ws_buf.ptr, ws_buf.ptr + offset + payload, ws_buf.len);
+            MemMove(ws_buf.ptr, ws_buf.ptr + offset + payload, ws_buf.len);
 
             // We can't return empty messages because this is a signal for EOF
             // in the StreamReader code. Oups.

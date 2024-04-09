@@ -263,12 +263,12 @@ static int DoGetAttr(const char *path, struct stat *stbuf, fuse_file_info *)
 {
     const CacheEntry *entry;
     if (int error = ResolveEntry(path, &entry); error < 0) {
-        memset(stbuf, 0, RG_SIZE(*stbuf));
+        MemSet(stbuf, 0, RG_SIZE(*stbuf));
         return error;
     }
     RG_DEFER { entry->Unref(); };
 
-    memcpy(stbuf, &entry->sb, RG_SIZE(entry->sb));
+    MemCpy(stbuf, &entry->sb, RG_SIZE(entry->sb));
     return 0;
 }
 

@@ -381,7 +381,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 float f = GetNumber<float>(value);
                 uint64_t *ptr = (param.xmm_count ? xmm_ptr : args_ptr)++;
 
-                memset((uint8_t *)ptr + 4, 0, 4);
+                MemSet((uint8_t *)ptr + 4, 0, 4);
                 *(float *)ptr = f;
             } break;
             case PrimitiveKind::Float64: {
@@ -461,16 +461,16 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::Union: {
             if (func->ret.gpr_first && !func->ret.xmm_count) {
                 RaxRdxRet ret = PERFORM_CALL(GG);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.gpr_first) {
                 RaxXmm0Ret ret = PERFORM_CALL(GD);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.xmm_count == 2) {
                 Xmm0Xmm1Ret ret = PERFORM_CALL(DD);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 Xmm0RaxRet ret = PERFORM_CALL(DG);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
@@ -546,7 +546,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[0] : nullptr;
     gpr_ptr += proto->ret.use_memory;
 
-    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
+    RG_DEFER_N(err_guard) { MemSet(out_reg, 0, RG_SIZE(*out_reg)); };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -849,17 +849,17 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                     return;
 
                 if (proto->ret.gpr_first && !proto->ret.xmm_count) {
-                    memcpy(&out_reg->rax, buf + 0, 8);
-                    memcpy(&out_reg->rdx, buf + 8, 8);
+                    MemCpy(&out_reg->rax, buf + 0, 8);
+                    MemCpy(&out_reg->rdx, buf + 8, 8);
                 } else if (proto->ret.gpr_first) {
-                    memcpy(&out_reg->rax, buf + 0, 8);
-                    memcpy(&out_reg->xmm0, buf + 8, 8);
+                    MemCpy(&out_reg->rax, buf + 0, 8);
+                    MemCpy(&out_reg->xmm0, buf + 8, 8);
                 } else if (proto->ret.xmm_count == 2) {
-                    memcpy(&out_reg->xmm0, buf + 0, 8);
-                    memcpy(&out_reg->xmm1, buf + 8, 8);
+                    MemCpy(&out_reg->xmm0, buf + 0, 8);
+                    MemCpy(&out_reg->xmm1, buf + 8, 8);
                 } else {
-                    memcpy(&out_reg->xmm0, buf + 0, 8);
-                    memcpy(&out_reg->rax, buf + 8, 8);
+                    MemCpy(&out_reg->xmm0, buf + 0, 8);
+                    MemCpy(&out_reg->rax, buf + 8, 8);
                 }
             }
         } break;
@@ -872,8 +872,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             float f = GetNumber<float>(value);
 
-            memset((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
-            memcpy(&out_reg->xmm0, &f, 4);
+            MemSet((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
+            MemCpy(&out_reg->xmm0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {

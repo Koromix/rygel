@@ -100,7 +100,7 @@ bool json_Parser::Handler::RawNumber(const char *str, Size len, bool)
     token = json_TokenType::Number;
 
     u.num.len = std::min(len, RG_SIZE(u.num.data) - 1);
-    memcpy_safe(u.num.data, str, len);
+    MemCpy(u.num.data, str, len);
     u.num.data[u.num.len] = 0;
 
     return true;

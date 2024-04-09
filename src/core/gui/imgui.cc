@@ -206,7 +206,7 @@ void gui_Window::StartImGuiFrame()
     io->DisplaySize = ImVec2((float)state.display.width, (float)state.display.height);
     io->DeltaTime = (float)state.time.monotonic_delta;
 
-    memset_safe(io->KeysDown, 0, RG_SIZE(io->KeysDown));
+    MemSet(io->KeysDown, 0, RG_SIZE(io->KeysDown));
     for (Size idx: state.input.keys) {
         io->KeysDown[idx] = true;
     }

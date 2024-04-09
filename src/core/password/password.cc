@@ -155,7 +155,7 @@ static Size SimplifyText(Span<const char> password, Span<char> out_buf)
                 return -1;
             }
 
-            memcpy_safe(out_buf.ptr + len, ptr, (size_t)expand);
+            MemCpy(out_buf.ptr + len, ptr, expand);
             len += expand;
         } else {
             LogError("Illegal UTF-8 sequence");

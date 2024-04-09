@@ -565,7 +565,7 @@ bool bk_VirtualMachine::Run()
 
                         func->native(this, args, ret);
 
-                        memmove_safe(args.ptr - 1, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                        MemMove(args.ptr - 1, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
                         stack.len -= args.len + 2;
                     } else {
                         Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size, func_type->params_size);
@@ -574,7 +574,7 @@ bool bk_VirtualMachine::Run()
 
                         func->native(this, args, ret);
 
-                        memmove_safe(args.ptr - 1, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                        MemMove(args.ptr - 1, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
                         stack.len -= args.len + 1;
                     }
 
@@ -627,7 +627,7 @@ bool bk_VirtualMachine::Run()
 
                     func->native(this, args, ret);
 
-                    memmove_safe(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                    MemMove(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
                     stack.len -= args.len + 1;
                 } else {
                     Span<bk_PrimitiveValue> args = MakeSpan(stack.end() - func_type->params_size, func_type->params_size);
@@ -636,7 +636,7 @@ bool bk_VirtualMachine::Run()
 
                     func->native(this, args, ret);
 
-                    memmove_safe(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
+                    MemMove(args.ptr, ret.ptr, ret.len * RG_SIZE(*ret.ptr));
                     stack.len -= args.len;
                 }
 
@@ -679,7 +679,7 @@ bool bk_VirtualMachine::Run()
         CASE(InlineIf): {
             Size ptr = stack.len - 2 * inst->u2.i - 1;
             Size src = stack[ptr].b ? (ptr + 1) : (ptr + 1 + inst->u2.i);
-            memcpy_safe(stack.ptr + ptr, stack.ptr + src, inst->u2.i * RG_SIZE(*stack.ptr));
+            MemCpy(stack.ptr + ptr, stack.ptr + src, inst->u2.i * RG_SIZE(*stack.ptr));
             stack.len = ptr + inst->u2.i;
             DISPATCH(++pc);
         }

@@ -63,7 +63,7 @@ static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t 
     blake3_hasher hasher;
 
     uint8_t salt2[32];
-    memcpy(salt2, salt, RG_SIZE(salt2));
+    MemCpy(salt2, salt, RG_SIZE(salt2));
     salt2[31] ^= (uint8_t)type;
 
     blake3_hasher_init_keyed(&hasher, salt2);
@@ -76,7 +76,7 @@ PutContext::PutContext(rk_Disk *disk)
       dir_async(disk->GetThreads()), file_async(disk->GetThreads())
 {
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
-    memcpy(&salt64, salt.ptr, RG_SIZE(salt64));
+    MemCpy(&salt64, salt.ptr, RG_SIZE(salt64));
 }
 
 PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs)
@@ -171,7 +171,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                 }
 
                 entry->name_len = (int16_t)basename_len;
-                memcpy_safe(entry->GetName().ptr, basename, basename_len);
+                MemCpy(entry->GetName().ptr, basename, basename_len);
 
                 return true;
             });
@@ -219,7 +219,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                                                     btime == entry->btime &&
                                                                     mode == entry->mode &&
                                                                     size == entry->size) {
-                                    memcpy(&entry->hash, hash.ptr, RG_SIZE(rk_Hash));
+                                    MemCpy(&entry->hash, hash.ptr, RG_SIZE(rk_Hash));
 
                                     entry->flags |= LittleEndian((int16_t)RawFile::Flags::Readable);
                                     pending->total_len += size;
@@ -315,7 +315,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             PendingDirectory *pending = &pending_directories[i];
 
             int64_t len_64le = LittleEndian(pending->total_len.load());
-            memcpy(pending->blob.end() - RG_SIZE(len_64le), &len_64le, RG_SIZE(len_64le));
+            MemCpy(pending->blob.end() - RG_SIZE(len_64le), &len_64le, RG_SIZE(len_64le));
 
             HashBlake3(rk_BlobType::Directory, pending->blob, salt.ptr, &pending->hash);
 
@@ -463,7 +463,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                             return false;
                         stat_written += ret;
 
-                        memcpy(file_blob.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
+                        MemCpy(file_blob.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
 
                         return true;
                     });
@@ -482,7 +482,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
             if (!async.Sync())
                 return PutResult::Error;
 
-            memmove_safe(buf.ptr, remain.ptr, remain.len);
+            MemMove(buf.ptr, remain.ptr, remain.len);
             buf.len = remain.len;
         } while (!st.IsEOF() || buf.len);
     }
@@ -558,7 +558,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
         Size entry_len = RG_SIZE(RawFile) + name.len;
         RawFile *entry = (RawFile *)snapshot_blob.Grow(entry_len);
-        memset(entry, 0, (size_t)entry_len);
+        MemSet(entry, 0, entry_len);
 
         // Transform name (same length or shorter)
         {
@@ -580,7 +580,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             name = name.Take(1, name.len - 1);
 
             entry->name_len = (int16_t)name.len;
-            memcpy_safe(entry->GetName().ptr, name.ptr, name.len);
+            MemCpy(entry->GetName().ptr, name.ptr, name.len);
 
             if (changed) {
                 LogWarning("Storing '%1' as '%2'", filename, entry->GetName());

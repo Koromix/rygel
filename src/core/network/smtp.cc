@@ -197,8 +197,8 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
         success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *buf, size_t size, size_t nmemb, void *udata) {
             Span<const char> *payload = (Span<const char> *)udata;
 
-            size_t copy_len = std::min(size * nmemb, (size_t)payload->len);
-            memcpy_safe(buf, payload->ptr, copy_len);
+            Size copy_len = std::min((Size)(size * nmemb), payload->len);
+            MemCpy(buf, payload->ptr, copy_len);
 
             payload->ptr += copy_len;
             payload->len -= (Size)copy_len;

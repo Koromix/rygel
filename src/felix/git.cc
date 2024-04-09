@@ -670,11 +670,11 @@ bool GitVersioneer::ReadPackAttributes(Size idx, int64_t offset, FunctionRef<boo
         Span<const uint8_t> remain = {};
 
         if (type == 6) { // OBJ_OFS_DELTA
-            memcpy(&offset, obj.ptr, RG_SIZE(offset));
+            MemCpy(&offset, obj.ptr, RG_SIZE(offset));
             remain = obj.Take(RG_SIZE(offset), obj.len - RG_SIZE(offset));
         } else if (type == 7) { // OBJ_REF_DELTA
             GitHash hash = {};
-            memcpy(hash.raw, obj.ptr, 20);
+            MemCpy(hash.raw, obj.ptr, 20);
 
             PackLocation location = {};
             if (!FindInIndexes(idx, hash, &location))

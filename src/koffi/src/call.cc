@@ -341,7 +341,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
 
             // Fast path: encoded value already exists, just copy!
             if (raw) {
-                memcpy(origin, raw, type->size);
+                MemCpy(origin, raw, type->size);
                 return true;
             }
 
@@ -375,7 +375,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
         RG_UNREACHABLE();
     }
 
-    memset(origin, 0, type->size);
+    MemSet(origin, 0, type->size);
 
     for (Size i = 0; i < members.len; i++) {
         const RecordMember &member = members[i];
@@ -874,7 +874,7 @@ bool CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo 
     }
 
     // Go fast yeaaaah :)
-    memcpy_safe(origin, buffer.ptr, (size_t)buffer.len);
+    MemCpy(origin, buffer.ptr, buffer.len);
 
 #define SWAP(CType) \
         do { \
@@ -928,7 +928,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
         } break;
     }
 
-    memset_safe(origin + encoded, 0, type->size - encoded);
+    MemSet(origin + encoded, 0, type->size - encoded);
 
     return true;
 }
@@ -1001,7 +1001,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                         if (!PushNormalArray(array, len, type, ptr))
                             return false;
                     } else {
-                        memset_safe(ptr, 0, size);
+                        MemSet(ptr, 0, size);
                     }
 
                     out_kind = OutArgument::Kind::Array;
@@ -1031,7 +1031,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     if (!PushObject(obj, type->ref.type, ptr))
                         return false;
                 } else {
-                    memset_safe(ptr, 0, type->size);
+                    MemSet(ptr, 0, type->size);
                 }
 
                 out_kind = OutArgument::Kind::Object;

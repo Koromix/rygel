@@ -144,7 +144,7 @@ bool s3_DecodeURL(Span<const char> url, s3_Config *out_config)
         char url0[32768];
 
         url.len = std::min(url.len, RG_SIZE(url0) - 1);
-        memcpy(url0, url.ptr, url.len);
+        MemCpy(url0, url.ptr, url.len);
         url0[url.len] = 0;
 
         ret = curl_url_set(h, CURLUPART_URL, url0, CURLU_NON_SUPPORT_SCHEME);
@@ -440,7 +440,7 @@ Size s3_Session::GetObject(Span<const char> key, Span<uint8_t> out_buf)
                 GetContext *ctx = (GetContext *)udata;
 
                 Size copy_len = std::min((Size)nmemb, ctx->out.len - ctx->len);
-                memcpy_safe(ctx->out.ptr + ctx->len, ptr, (size_t)copy_len);
+                MemCpy(ctx->out.ptr + ctx->len, ptr, copy_len);
                 ctx->len += copy_len;
 
                 return nmemb;
@@ -618,9 +618,9 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
 
             success &= !curl_easy_setopt(curl, CURLOPT_READFUNCTION, +[](char *ptr, size_t size, size_t nmemb, void *udata) {
                 Span<const uint8_t> *remain = (Span<const uint8_t> *)udata;
-                size_t give = std::min(size * nmemb, (size_t)remain->len);
+                Size give = std::min((Size)(size * nmemb), remain->len);
 
-                memcpy_safe(ptr, remain->ptr, give);
+                MemCpy(ptr, remain->ptr, give);
                 remain->ptr += (Size)give;
                 remain->len -= (Size)give;
 
@@ -881,10 +881,10 @@ static void HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
     // Hash and/or pad key
     if (key.len > RG_SIZE(padded_key)) {
         crypto_hash_sha256(padded_key, key.ptr, (size_t)key.len);
-        memset_safe(padded_key + 32, 0, RG_SIZE(padded_key) - 32);
+        MemSet(padded_key + 32, 0, RG_SIZE(padded_key) - 32);
     } else {
-        memcpy_safe(padded_key, key.ptr, (size_t)key.len);
-        memset_safe(padded_key + key.len, 0, (size_t)(RG_SIZE(padded_key) - key.len));
+        MemCpy(padded_key, key.ptr, key.len);
+        MemSet(padded_key + key.len, 0, RG_SIZE(padded_key) - key.len);
     }
 
     // Inner hash

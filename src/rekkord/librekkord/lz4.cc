@@ -64,7 +64,7 @@ bool DecodeLZ4::Flush(bool complete, FunctionRef<bool(Span<const uint8_t>)> func
             return false;
         }
 
-        memmove_safe(in_buf.ptr, in_buf.ptr + avail_in, (size_t)in_buf.len - avail_in);
+        MemMove(in_buf.ptr, in_buf.ptr + avail_in, in_buf.len - avail_in);
         in_buf.len -= avail_in;
         in_hint = (Size)ret;
 
@@ -152,7 +152,7 @@ bool EncodeLZ4::Flush(bool complete, FunctionRef<Size(Span<const uint8_t>)> func
         if (!processed)
             break;
 
-        memmove_safe(dynamic_buf.ptr, dynamic_buf.ptr + processed, dynamic_buf.len - processed);
+        MemMove(dynamic_buf.ptr, dynamic_buf.ptr + processed, dynamic_buf.len - processed);
         dynamic_buf.len -= processed;
     }
 

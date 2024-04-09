@@ -424,7 +424,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
 
             frame.generation_idx = snapshot->generations.len;
             frame.mtime = raw_frame.mtime;
-            memcpy_safe(frame.sha256, raw_frame.sha256, RG_SIZE(frame.sha256));
+            MemCpy(frame.sha256, raw_frame.sha256, RG_SIZE(frame.sha256));
 
             snapshot->frames.Append(frame);
         } while (!st.IsEOF());

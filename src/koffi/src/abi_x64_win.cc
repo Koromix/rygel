@@ -179,7 +179,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
                 float f = GetNumber<float>(value);
 
-                memset((uint8_t *)args_ptr + 4, 0, 4);
+                MemSet((uint8_t *)args_ptr + 4, 0, 4);
                 *(float *)(args_ptr++) = f;
             } break;
             case PrimitiveKind::Float64: {
@@ -370,7 +370,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
     uint8_t *return_ptr = !proto->ret.regular ? (uint8_t *)gpr_ptr[0] : nullptr;
 
-    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
+    RG_DEFER_N(err_guard) { MemSet(out_reg, 0, RG_SIZE(*out_reg)); };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -676,8 +676,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             float f = GetNumber<float>(value);
 
-            memset((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
-            memcpy(&out_reg->xmm0, &f, 4);
+            MemSet((uint8_t *)&out_reg->xmm0 + 4, 0, 4);
+            MemCpy(&out_reg->xmm0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {

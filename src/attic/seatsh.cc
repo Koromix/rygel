@@ -170,7 +170,7 @@ In order for this to work, you must first install the service from an elevated c
 
         {
             int count = (int)args.len;
-            memcpy_safe(msg.data, &count, 4);
+            MemCpy(msg.data, &count, 4);
         }
         msg.len = 4;
 
@@ -182,7 +182,7 @@ In order for this to work, you must first install the service from an elevated c
                 return 127;
             }
 
-            memcpy_safe(msg.end(), arg, len);
+            MemCpy(msg.end(), arg, len);
             msg.len += len;
         }
 
@@ -602,7 +602,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
                 } else if (client_in.len >= 0) {
                     if (client_in.len) {
                         proc_in.len = client_in.len;
-                        memcpy_safe(proc_in.buf, client_in.buf, proc_in.len);
+                        MemCpy(proc_in.buf, client_in.buf, proc_in.len);
                         client_in.len = -1;
 
                         if (!proc_in.err && !WriteFileEx(in_pipe[1], proc_in.buf, (DWORD)proc_in.len,
@@ -644,7 +644,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
             if (!proc_out.pending && !client_out.pending) {
                 if (!proc_out.err && proc_out.len >= 0) {
                     client_out.len = proc_out.len + 1;
-                    memcpy_safe(client_out.buf, proc_out.buf, client_out.len);
+                    MemCpy(client_out.buf, proc_out.buf, client_out.len);
                     proc_out.len = -1;
 
                     if (!client_out.err && !WriteFileEx(pipe, client_out.buf, (DWORD)client_out.len,
@@ -684,7 +684,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
             if (!proc_err.pending && !client_err.pending) {
                 if (!proc_err.err && proc_err.len >= 0) {
                     client_err.len = proc_err.len + 1;
-                    memcpy_safe(client_err.buf, proc_err.buf, client_err.len);
+                    MemCpy(client_err.buf, proc_err.buf, client_err.len);
                     proc_err.len = -1;
 
                     if (!client_err.err && !WriteFileEx(pipe, client_err.buf, (DWORD)client_err.len,
@@ -736,7 +736,7 @@ static bool HandleClient(HANDLE pipe, Span<const char> work_dir,
         uint8_t buf[5];
 
         buf[0] = 0;
-        memcpy(buf + 1, &exit_code, 4);
+        MemCpy(buf + 1, &exit_code, 4);
 
         if (!WriteSync(pipe, buf, RG_SIZE(buf))) {
             LogError("Failed to send process exit code to client: %1", GetWin32ErrorString());

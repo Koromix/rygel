@@ -126,7 +126,7 @@ rk_Splitter::rk_Splitter(Size avg, Size min, Size max, uint64_t salt64)
         static_assert(RG_SIZE(u.salt) == RG_SIZE(salt64));
 
         u.salt64 = LittleEndian(salt64);
-        memcpy(salt, u.salt, RG_SIZE(salt));
+        MemCpy(salt, u.salt, RG_SIZE(salt));
     }
 }
 

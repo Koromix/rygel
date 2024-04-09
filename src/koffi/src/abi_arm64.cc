@@ -108,7 +108,7 @@ static inline void ExpandFloats(uint8_t *ptr, Size len, Size bytes)
         const uint8_t *src = ptr + i * bytes;
         uint8_t *dest = ptr + i * 8;
 
-        memmove(dest, src, bytes);
+        MemMove(dest, src, bytes);
     }
 }
 
@@ -118,7 +118,7 @@ static inline void CompactFloats(uint8_t *ptr, Size len, Size bytes)
         const uint8_t *src = ptr + i * 8;
         uint8_t *dest = ptr + i * bytes;
 
-        memmove(dest, src, bytes);
+        MemMove(dest, src, bytes);
     }
 }
 
@@ -486,11 +486,11 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 float f = GetNumber<float>(value);
 
                 if (param.vec_count) [[likely]] {
-                    memset((uint8_t *)vec_ptr + 4, 0, 4);
+                    MemSet((uint8_t *)vec_ptr + 4, 0, 4);
                     *(float *)(vec_ptr++) = f;
 #ifdef _WIN32
                 } else if (param.gpr_count) {
-                    memset((uint8_t *)gpr_ptr + 4, 0, 4);
+                    MemSet((uint8_t *)gpr_ptr + 4, 0, 4);
                     *(float *)(gpr_ptr++) = f;
 #endif
                 } else {
@@ -499,7 +499,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     *(float *)args_ptr = f;
                     args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
 #else
-                    memset((uint8_t *)args_ptr + 4, 0, 4);
+                    MemSet((uint8_t *)args_ptr + 4, 0, 4);
                     *(float *)(args_ptr++) = f;
 #endif
                 }
@@ -624,10 +624,10 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::Union: {
             if (func->ret.gpr_count) {
                 X0X1Ret ret = PERFORM_CALL(GG);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.vec_count) {
                 HfaRet ret = PERFORM_CALL(DDDD);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 PERFORM_CALL(GG);
             }
@@ -731,7 +731,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
     uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[8] : nullptr;
 
-    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
+    RG_DEFER_N(err_guard) { MemSet(out_reg, 0, RG_SIZE(*out_reg)); };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -1238,8 +1238,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             float f = GetNumber<float>(value);
 
-            memset((uint8_t *)&out_reg->d0 + 4, 0, 4);
-            memcpy(&out_reg->d0, &f, 4);
+            MemSet((uint8_t *)&out_reg->d0 + 4, 0, 4);
+            MemCpy(&out_reg->d0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {

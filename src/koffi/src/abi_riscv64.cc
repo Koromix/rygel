@@ -74,14 +74,14 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
 
 static inline void ExpandPair(const uint8_t raw[16], int size1, int size2, uint64_t out_regs[2])
 {
-    memcpy(out_regs + 0, raw, size1);
-    memcpy(out_regs + 1, raw + size1, size2);
+    MemCpy(out_regs + 0, raw, size1);
+    MemCpy(out_regs + 1, raw + size1, size2);
 }
 
 static inline void CompactPair(const uint64_t regs[2], int size1, int size2, uint8_t out_raw[16])
 {
-    memcpy(out_raw, regs + 0, size1);
-    memcpy(out_raw + size1, regs + 1, size2);
+    MemCpy(out_raw, regs + 0, size1);
+    MemCpy(out_raw + size1, regs + 1, size2);
 }
 
 static void AnalyseParameter(ParameterInfo *param, int gpr_avail, int vec_avail)
@@ -298,7 +298,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     } else {
                         RG_ASSERT(param.type->align <= 8);
 
-                        memcpy_safe(args_ptr, regs, param.type->size);
+                        MemCpy(args_ptr, regs, param.type->size);
                         args_ptr += (param.type->size + 7) / 8;
                     }
                 } else {
@@ -327,13 +327,13 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 float f = GetNumber<float>(value);
 
                 if (param.vec_count) [[likely]] {
-                    memset((uint8_t *)vec_ptr + 4, 0xFF, 4);
+                    MemSet((uint8_t *)vec_ptr + 4, 0xFF, 4);
                     *(float *)(vec_ptr++) = f;
                 } else if (param.gpr_count) {
-                    memset((uint8_t *)gpr_ptr + 4, 0xFF, 4);
+                    MemSet((uint8_t *)gpr_ptr + 4, 0xFF, 4);
                     *(float *)(gpr_ptr++) = f;
                 } else {
-                    memset(args_ptr, 0xFF, 8);
+                    MemSet(args_ptr, 0xFF, 8);
                     *(float *)(args_ptr++) = f;
                 }
             } break;
@@ -421,16 +421,16 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::Union: {
             if (func->ret.gpr_first && !func->ret.vec_count) {
                 A0A1Ret ret = PERFORM_CALL(GG);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.gpr_first) {
                 A0Fa0Ret ret = PERFORM_CALL(GD);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else if (func->ret.vec_count == 2) {
                 Fa0Fa1Ret ret = PERFORM_CALL(DD);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             } else {
                 Fa0A0Ret ret = PERFORM_CALL(DG);
-                memcpy(&result.buf, &ret, RG_SIZE(ret));
+                MemCpy(&result.buf, &ret, RG_SIZE(ret));
             }
         } break;
         case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
@@ -511,7 +511,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     uint8_t *return_ptr = proto->ret.use_memory ? (uint8_t *)gpr_ptr[0] : nullptr;
     gpr_ptr += proto->ret.use_memory;
 
-    RG_DEFER_N(err_guard) { memset(out_reg, 0, RG_SIZE(*out_reg)); };
+    RG_DEFER_N(err_guard) { MemSet(out_reg, 0, RG_SIZE(*out_reg)); };
 
     if (trampoline.generation >= 0 && trampoline.generation != (int32_t)mem->generation) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Cannot use non-registered callback beyond FFI call");
@@ -658,7 +658,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                     } else {
                         RG_ASSERT(param.type->align <= 8);
 
-                        memcpy_safe(regs, args_ptr, param.type->size);
+                        MemCpy(regs, args_ptr, param.type->size);
                         args_ptr += (param.type->size + 7) / 8;
                     }
 
@@ -849,8 +849,8 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             }
 
             float f = GetNumber<float>(value);
-            memset((uint8_t *)&out_reg->fa0 + 4, 0xFF, 4);
-            memcpy(&out_reg->fa0, &f, 4);
+            MemSet((uint8_t *)&out_reg->fa0 + 4, 0xFF, 4);
+            MemCpy(&out_reg->fa0, &f, 4);
         } break;
         case PrimitiveKind::Float64: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {

@@ -271,7 +271,7 @@ Options:
                 header.time = header1->time;
                 header.len = header1->len;
                 header.stored = header1->stored;
-                memcpy(header.name, header1->name, RG_SIZE(header.name));
+                MemCpy(header.name, header1->name, RG_SIZE(header.name));
             }
 
             Size payload_len = RG_OFFSET_OF(SnapshotHeader2, name) + strlen(header.name) + 1;

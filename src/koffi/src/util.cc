@@ -1243,7 +1243,7 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
 void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *ref)
 {
     // Go fast brrrrr!
-    memcpy_safe(buffer.ptr, origin, (size_t)buffer.len);
+    MemCpy(buffer.ptr, origin, buffer.len);
 
 #define SWAP(CType) \
         do { \
@@ -1419,8 +1419,8 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             FunctionInfo *func = new FunctionInfo();
             RG_DEFER { func->Unref(); };
 
-            memcpy((void *)func, proto, RG_SIZE(*proto));
-            memset((void *)&func->parameters, 0, RG_SIZE(func->parameters));
+            MemCpy((void *)func, proto, RG_SIZE(*proto));
+            MemSet((void *)&func->parameters, 0, RG_SIZE(func->parameters));
             func->parameters = proto->parameters;
 
             func->name = "<anonymous>";

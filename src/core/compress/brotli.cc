@@ -63,8 +63,8 @@ Size BrotliDecompressor::Read(Size max_len, void *user_buf)
             Size copy_len = std::min(max_len, out_len);
 
             out_len -= copy_len;
-            memcpy(user_buf, out_buf, copy_len);
-            memmove(out_buf, out_buf + copy_len, out_len);
+            MemCpy(user_buf, out_buf, copy_len);
+            MemMove(out_buf, out_buf + copy_len, out_len);
 
             SetEOF(!out_len && done);
             return copy_len;
@@ -92,7 +92,7 @@ Size BrotliDecompressor::Read(Size max_len, void *user_buf)
             return -1;
         }
 
-        memmove_safe(in_buf, next_in, (size_t)avail_in);
+        MemMove(in_buf, next_in, avail_in);
         in_len = avail_in;
 
         out_len = next_out - out_buf - out_len;

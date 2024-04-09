@@ -487,38 +487,44 @@ static inline T *AlignDown(T *ptr, Size align)
 
 // Calling memcpy (and friends) with a NULL source pointer is undefined behavior
 // even if length is 0. This is dumb, work around this.
-static inline void *memcpy_safe(void *dest, const void *src, size_t len)
+static inline void *MemCpy(void *dest, const void *src, Size len)
 {
+    RG_ASSERT(len >= 0);
+
 #ifdef __clang__
     // LLVM guarantees sane behavior
-    __builtin_memcpy(dest, src, len);
+    __builtin_memcpy(dest, src, (size_t)len);
 #else
     if (len) {
-        memcpy(dest, src, len);
+        memcpy(dest, src, (size_t)len);
     }
 #endif
     return dest;
 }
-static inline void *memmove_safe(void *dest, const void *src, size_t len)
+static inline void *MemMove(void *dest, const void *src, Size len)
 {
+    RG_ASSERT(len >= 0);
+
 #ifdef __clang__
     // LLVM guarantees sane behavior
-    __builtin_memmove(dest, src, len);
+    __builtin_memmove(dest, src, (size_t)len);
 #else
     if (len) {
-        memmove(dest, src, len);
+        memmove(dest, src, (size_t)len);
     }
 #endif
     return dest;
 }
-static inline void *memset_safe(void *dest, int c, size_t len)
+static inline void *MemSet(void *dest, int c, Size len)
 {
+    RG_ASSERT(len >= 0);
+
 #ifdef __clang__
     // LLVM guarantees sane behavior
-    __builtin_memset(dest, c, len);
+    __builtin_memset(dest, c, (size_t)len);
 #else
     if (len) {
-        memset(dest, c, len);
+        memset(dest, c, (size_t)len);
     }
 #endif
     return dest;
@@ -1246,7 +1252,7 @@ public:
                 len++;
             }
         } else {
-            memset_safe(first, 0, count * RG_SIZE(T));
+            MemSet(first, 0, count * RG_SIZE(T));
             len += count;
         }
 
@@ -1329,8 +1335,8 @@ public:
     HeapArray &operator=(HeapArray &&other)
     {
         Clear();
-        memmove_safe(this, &other, RG_SIZE(other));
-        memset_safe(&other, 0, RG_SIZE(other));
+        MemMove(this, &other, RG_SIZE(other));
+        MemSet(&other, 0, RG_SIZE(other));
         return *this;
     }
     HeapArray(const HeapArray &other) { *this = other; }
@@ -1343,7 +1349,7 @@ public:
                 ptr[i] = other.ptr[i];
             }
         } else {
-            memcpy_safe(ptr, other.ptr, (size_t)(other.len * RG_SIZE(*ptr)));
+            MemCpy(ptr, other.ptr, other.len * RG_SIZE(*ptr));
         }
         len = other.len;
         return *this;
@@ -1449,7 +1455,7 @@ public:
                 len++;
             }
         } else {
-            memset_safe(first, 0, count * RG_SIZE(T));
+            MemSet(first, 0, count * RG_SIZE(T));
             len += count;
         }
 
@@ -1636,8 +1642,8 @@ public:
     BucketArray &operator=(BucketArray &&other)
     {
         ClearBucketsAndValues();
-        memmove_safe(this, &other, RG_SIZE(other));
-        memset_safe(&other, 0, RG_SIZE(other));
+        MemMove(this, &other, RG_SIZE(other));
+        MemSet(&other, 0, RG_SIZE(other));
         return *this;
     }
 
@@ -1763,8 +1769,8 @@ public:
             for (Size i = 0; i < end_bucket_idx; i++) {
                 DeleteBucket(buckets[i]);
             }
-            memmove_safe(&buckets[0], &buckets[end_bucket_idx],
-                         (size_t)((buckets.len - end_bucket_idx) * RG_SIZE(Bucket *)));
+            MemMove(&buckets[0], &buckets[end_bucket_idx],
+                        (buckets.len - end_bucket_idx) * RG_SIZE(Bucket *));
             buckets.RemoveLast(end_bucket_idx);
         }
 
@@ -1874,7 +1880,7 @@ public:
 
     void Clear()
     {
-        memset_safe(data, 0, RG_SIZE(data));
+        MemSet(data, 0, RG_SIZE(data));
     }
 
     Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
@@ -2080,8 +2086,8 @@ public:
     HashTable &operator=(HashTable &&other)
     {
         Clear();
-        memmove_safe(this, &other, RG_SIZE(other));
-        memset_safe(&other, 0, RG_SIZE(other));
+        MemMove(this, &other, RG_SIZE(other));
+        MemSet(&other, 0, RG_SIZE(other));
         return *this;
     }
     HashTable(const HashTable &other) { *this = other; }
@@ -2119,7 +2125,7 @@ public:
         count = 0;
         if (used) {
             size_t len = (size_t)(capacity + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t);
-            memset_safe(used, 0, len);
+            MemSet(used, 0, len);
         }
     }
 
@@ -2225,7 +2231,7 @@ public:
                 Size real_idx = KeyToIndex(Handler::GetKey(data[idx]));
 
                 if (TestNewSlot(real_idx, empty_idx)) {
-                    memmove_safe(&data[empty_idx], &data[idx], RG_SIZE(*data));
+                    MemMove(&data[empty_idx], &data[idx], RG_SIZE(*data));
                     empty_idx = idx;
                 }
 
@@ -2347,7 +2353,7 @@ private:
                         new_idx = (new_idx + 1) & (capacity - 1);
                     }
                     MarkUsed(new_idx);
-                    memmove_safe(&data[new_idx], &old_data[i], RG_SIZE(*data));
+                    MemMove(&data[new_idx], &old_data[i], RG_SIZE(*data));
                 }
             }
         } else {

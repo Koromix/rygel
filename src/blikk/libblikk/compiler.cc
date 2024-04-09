@@ -530,7 +530,7 @@ void bk_Parser::AddFunction(const char *prototype, unsigned int flags, std::func
         func->name = InternString(ptr);
 
         ptr[offset] = '(';
-        memcpy_safe(buf.ptr + offset, "func ", 5);
+        MemCpy(buf.ptr + offset, "func ", 5);
         signature = InternString(buf.ptr + offset);
 
         ptr += offset;
@@ -3157,14 +3157,14 @@ bool bk_Parser::CopyBigConstant(Size size)
                     return false;
 
                 offset -= IR[addr].u2.i;
-                memset_safe(program->ro.end() + offset, 0, IR[addr].u2.i * RG_SIZE(bk_PrimitiveValue));
+                MemSet(program->ro.end() + offset, 0, IR[addr].u2.i * RG_SIZE(bk_PrimitiveValue));
             } break;
             case bk_Opcode::Fetch: {
                 if (IR[addr].u1.i > offset)
                     return false;
 
                 offset -= IR[addr].u1.i;
-                memcpy_safe(program->ro.end() + offset, program->ro.ptr + IR[addr].u2.i, IR[addr].u1.i * RG_SIZE(bk_PrimitiveValue));
+                MemCpy(program->ro.end() + offset, program->ro.ptr + IR[addr].u2.i, IR[addr].u1.i * RG_SIZE(bk_PrimitiveValue));
             } break;
 
             default: return false;

@@ -173,7 +173,7 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
                 ptr = text.ptr + offset;
             }
 
-            memcpy_safe(id.end(), ptr, (size_t)expand);
+            MemCpy(id.end(), ptr, expand);
             id.len += expand;
 
             skip_special = false;

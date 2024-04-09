@@ -119,7 +119,7 @@ bool ApplyLight(hs_port *port, const LightSettings &settings)
     pkt.intensity = (int8_t)settings.intensity;
     if (settings.colors.len) {
         pkt.count = (int8_t)settings.colors.len;
-        memcpy_safe(pkt.colors, settings.colors.data, settings.colors.len * RG_SIZE(RgbColor));
+        MemCpy(pkt.colors, settings.colors.data, settings.colors.len * RG_SIZE(RgbColor));
     } else {
         pkt.count = 1;
         pkt.colors[0] = { 29, 191, 255 }; // MSI blue

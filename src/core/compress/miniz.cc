@@ -112,7 +112,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
         }
 
         // Put back remaining data in the buffer
-        memcpy_safe(in_buf, header + header_offset, (size_t)(header_len - header_offset));
+        MemCpy(in_buf, header + header_offset, header_len - header_offset);
         in_ptr = in_buf;
         in_len = header_len - header_offset;
 
@@ -124,14 +124,14 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
         Size read_len = 0;
         for (;;) {
             if (max_len < out_len) {
-                memcpy_safe(user_buf, out_ptr, (size_t)max_len);
+                MemCpy(user_buf, out_ptr, max_len);
                 read_len += max_len;
                 out_ptr += max_len;
                 out_len -= max_len;
 
                 return read_len;
             } else {
-                memcpy_safe(user_buf, out_ptr, (size_t)out_len);
+                MemCpy(user_buf, out_ptr, out_len);
                 read_len += out_len;
                 user_buf = (uint8_t *)user_buf + out_len;
                 max_len -= out_len;
@@ -178,7 +178,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
                         static_assert(RG_SIZE(footer) == 8);
 
                         if (in_len < RG_SIZE(footer)) {
-                            memcpy_safe(footer, in_ptr, (size_t)in_len);
+                            MemCpy(footer, in_ptr, in_len);
 
                             Size missing_len = RG_SIZE(footer) - in_len;
                             if (ReadRaw(missing_len, footer + in_len) < missing_len) {
@@ -189,7 +189,7 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
                                 }
                             }
                         } else {
-                            memcpy_safe(footer, in_ptr, RG_SIZE(footer));
+                            MemCpy(footer, in_ptr, RG_SIZE(footer));
                         }
                         footer[0] = LittleEndian(footer[0]);
                         footer[1] = LittleEndian(footer[1]);
@@ -275,7 +275,7 @@ bool MinizCompressor::Write(Span<const uint8_t> buf)
     if (small_buf.len) {
         Size copy_len = std::min(buf.len, small_buf.Available());
 
-        memcpy_safe(small_buf.end(), buf.ptr, copy_len);
+        MemCpy(small_buf.end(), buf.ptr, copy_len);
         small_buf.len += copy_len;
         buf.ptr += copy_len;
         buf.len -= copy_len;
@@ -290,7 +290,7 @@ bool MinizCompressor::Write(Span<const uint8_t> buf)
             if (!WriteDeflate(buf))
                 return false;
         } else {
-            memcpy_safe(small_buf.data, buf.ptr, buf.len);
+            MemCpy(small_buf.data, buf.ptr, buf.len);
             small_buf.len = buf.len;
         }
     }

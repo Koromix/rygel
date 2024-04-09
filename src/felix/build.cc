@@ -1167,8 +1167,8 @@ static Size ExtractShowIncludes(Span<char> buf, Allocator *alloc, HeapArray<cons
             }
         } else {
             Size copy_len = line.len + (buf.ptr > line.end());
+            MemMove(new_buf.end(), line.ptr, copy_len);
 
-            memmove_safe(new_buf.end(), line.ptr, copy_len);
             new_buf.len += copy_len;
         }
     }

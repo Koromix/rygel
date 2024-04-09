@@ -196,7 +196,7 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, int border, HeapArray<uint8
         IHDR ihdr = {};
 
         chunk.len = BigEndian((uint32_t)RG_SIZE(ihdr));
-        memcpy_safe(chunk.type, "IHDR", 4);
+        MemCpy(chunk.type, "IHDR", 4);
         ihdr.width = BigEndian(size4);
         ihdr.height = BigEndian(size4);
         ihdr.bit_depth = 1;
@@ -219,7 +219,7 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, int border, HeapArray<uint8
 
         ChunkHeader chunk = {};
         chunk.len = 0; // Unknown for now
-        memcpy_safe(chunk.type, "IDAT", 4);
+        MemCpy(chunk.type, "IDAT", 4);
         out_png->Append(MakeSpan((const uint8_t *)&chunk, RG_SIZE(chunk)));
 
         StreamWriter writer(out_png, "<png>", CompressionType::Zlib);
@@ -239,7 +239,7 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, int border, HeapArray<uint8
         {
             uint32_t len = BigEndian((uint32_t)(out_png->len - chunk_pos - 8));
             uint32_t *ptr = (uint32_t *)(out_png->ptr + chunk_pos);
-            memcpy(ptr, &len, RG_SIZE(len));
+            MemCpy(ptr, &len, RG_SIZE(len));
         }
 
         // Chunk CRC-32
@@ -273,10 +273,10 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
     // Hash and/or pad key
     if (key.len > RG_SIZE(padded_key)) {
         mbedtls_sha1(key.ptr, (size_t)key.len, padded_key);
-        memset_safe(padded_key + 20, 0, RG_SIZE(padded_key) - 20);
+        MemSet(padded_key + 20, 0, RG_SIZE(padded_key) - 20);
     } else {
-        memcpy_safe(padded_key, key.ptr, (size_t)key.len);
-        memset_safe(padded_key + key.len, 0, (size_t)(RG_SIZE(padded_key) - key.len));
+        MemCpy(padded_key, key.ptr, key.len);
+        MemSet(padded_key + key.len, 0, RG_SIZE(padded_key) - key.len);
     }
 
     // Inner hash
@@ -325,10 +325,10 @@ static Size HmacSha256(Span<const uint8_t> key, Span<const uint8_t> message, uin
     // Hash and/or pad key
     if (key.len > RG_SIZE(padded_key)) {
         crypto_hash_sha256(padded_key, key.ptr, (size_t)key.len);
-        memset_safe(padded_key + 32, 0, RG_SIZE(padded_key) - 32);
+        MemSet(padded_key + 32, 0, RG_SIZE(padded_key) - 32);
     } else {
-        memcpy_safe(padded_key, key.ptr, (size_t)key.len);
-        memset_safe(padded_key + key.len, 0, (size_t)(RG_SIZE(padded_key) - key.len));
+        MemCpy(padded_key, key.ptr, key.len);
+        MemSet(padded_key + key.len, 0, RG_SIZE(padded_key) - key.len);
     }
 
     // Inner hash
@@ -373,10 +373,10 @@ static Size HmacSha512(Span<const uint8_t> key, Span<const uint8_t> message, uin
     // Hash and/or pad key
     if (key.len > RG_SIZE(padded_key)) {
         crypto_hash_sha512(padded_key, key.ptr, (size_t)key.len);
-        memset_safe(padded_key + 64, 0, RG_SIZE(padded_key) - 64);
+        MemSet(padded_key + 64, 0, RG_SIZE(padded_key) - 64);
     } else {
-        memcpy_safe(padded_key, key.ptr, (size_t)key.len);
-        memset_safe(padded_key + key.len, 0, (size_t)(RG_SIZE(padded_key) - key.len));
+        MemCpy(padded_key, key.ptr, key.len);
+        MemSet(padded_key + key.len, 0, RG_SIZE(padded_key) - key.len);
     }
 
     // Inner hash

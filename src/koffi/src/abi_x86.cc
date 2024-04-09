@@ -497,7 +497,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
 
     RG_DEFER_N(err_guard) {
         int pop = out_reg->ret_pop;
-        memset(out_reg, 0, RG_SIZE(*out_reg));
+        MemSet(out_reg, 0, RG_SIZE(*out_reg));
         out_reg->x87_double = true;
         out_reg->ret_pop = pop;
     };

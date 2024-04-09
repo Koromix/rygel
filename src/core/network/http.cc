@@ -426,8 +426,8 @@ MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const cha
                 RG_ASSERT(io->read_buf.IsValid());
 
                 Size copy_len = std::min(io->read_buf.len - io->read_len, (Size)*upload_data_size);
+                MemCpy(io->read_buf.ptr + io->read_len, upload_data, copy_len);
 
-                memcpy_safe(io->read_buf.ptr + io->read_len, upload_data, copy_len);
                 io->read_len += copy_len;
                 *upload_data_size -= copy_len;
             }
@@ -474,7 +474,8 @@ ssize_t http_Daemon::HandleWrite(void *cls, uint64_t, char *buf, size_t max)
 
     if (io->write_buf.len) {
         Size copy_len = std::min(io->write_buf.len - io->write_offset, (Size)max);
-        memcpy_safe(buf, io->write_buf.ptr + io->write_offset, copy_len);
+        MemCpy(buf, io->write_buf.ptr + io->write_offset, copy_len);
+
         io->write_offset += copy_len;
 
         if (io->write_offset >= io->write_buf.len) {

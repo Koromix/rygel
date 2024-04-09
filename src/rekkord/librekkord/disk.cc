@@ -59,7 +59,7 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
 
         if (ReadKey(write_filename, pwd, pkey, &error)) {
             mode = rk_DiskMode::WriteOnly;
-            memset(skey, 0, RG_SIZE(skey));
+            MemSet(skey, 0, RG_SIZE(skey));
         } else if (ReadKey(full_filename, pwd, skey, &error)) {
             mode = rk_DiskMode::Full;
             crypto_scalarmult_base(pkey, skey);
@@ -99,7 +99,7 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
         return false;
 
     mode = rk_DiskMode::Full;
-    memcpy(skey, key.ptr, key.len);
+    MemCpy(skey, key.ptr, key.len);
     crypto_scalarmult_base(pkey, skey);
 
     // Open local cache
@@ -394,7 +394,7 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
             LogError("Truncated blob");
             return false;
         }
-        memcpy(&intro, remain.ptr, RG_SIZE(intro));
+        MemCpy(&intro, remain.ptr, RG_SIZE(intro));
 
         if (intro.version > BlobVersion) {
             LogError("Unexpected blob version %1 (expected %2)", intro.version, BlobVersion);
@@ -701,7 +701,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             }
 
             TagIntro intro = {};
-            memcpy(&intro, data.ptr, RG_SIZE(intro));
+            MemCpy(&intro, data.ptr, RG_SIZE(intro));
 
             if (intro.version != TagVersion) {
                 LogError("Unexpected tag version %1 (expected %2)", intro.version, TagVersion);

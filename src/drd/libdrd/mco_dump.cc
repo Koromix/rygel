@@ -326,7 +326,7 @@ bool mco_BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes, Allocat
     ctx.ghm_nodes = ghm_nodes;
     out_nodes->Grow(ghm_nodes.len);
     ctx.out_nodes = MakeSpan(out_nodes->end(), ghm_nodes.len);
-    memset_safe(ctx.out_nodes.ptr, 0, ctx.out_nodes.len * RG_SIZE(*ctx.out_nodes.ptr));
+    MemSet(ctx.out_nodes.ptr, 0, ctx.out_nodes.len * RG_SIZE(*ctx.out_nodes.ptr));
     ctx.str_alloc = str_alloc;
 
     if (!ProcessGhmNode(ctx, 0))

@@ -578,9 +578,9 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         TypeInfo *copy = instance->types.AppendDefault();
         RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
-        memcpy((void *)copy, type, RG_SIZE(*type));
+        MemCpy((void *)copy, type, RG_SIZE(*type));
         copy->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
-        memset(&copy->defn, 0, RG_SIZE(copy->defn));
+        MemSet(&copy->defn, 0, RG_SIZE(copy->defn));
 
         bool inserted;
         instance->types_map.TrySet(copy->name, copy, &inserted);
@@ -1223,7 +1223,7 @@ Napi::Value TranslateVariadicCall(const FunctionInfo *func, void *native, const 
     InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     FunctionInfo copy;
-    memcpy((void *)&copy, func, RG_SIZE(*func));
+    MemCpy((void *)&copy, func, RG_SIZE(*func));
     copy.lib = nullptr;
 
     // This makes variadic calls non-reentrant

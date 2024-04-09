@@ -122,7 +122,7 @@ bool UserSetBuilder::LoadIni(StreamReader *st)
                     if (first_property) {
                         Size template_idx = map.FindValue(prop.value.ptr, -1);
                         if (template_idx >= 0) {
-                            memcpy_safe(user, &set.users[template_idx], RG_SIZE(*user));
+                            MemCpy(user, &set.users[template_idx], RG_SIZE(*user));
                             rule_set = rule_sets[template_idx];
                             allow.Append(rule_sets[template_idx].allow);
                             deny.Append(rule_sets[template_idx].deny);
