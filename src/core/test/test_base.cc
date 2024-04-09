@@ -25,7 +25,7 @@
 
 namespace RG {
 
-TEST_FUNCTION("base/TestFormatDouble")
+TEST_FUNCTION("base/FormatDouble")
 {
     char buf[512];
 
@@ -72,7 +72,7 @@ TEST_FUNCTION("base/TestFormatDouble")
     TEST_STR(Fmt(buf, "%1", FmtDouble(10.2, 0, 0)), "10");
 }
 
-TEST_FUNCTION("base/TestFormatSize")
+TEST_FUNCTION("base/FormatSize")
 {
     char buf[512];
 
@@ -109,7 +109,7 @@ TEST_FUNCTION("base/TestFormatSize")
     TEST_STR(Fmt(buf, "%1", FmtDiskSize(10000000000000)), "10000.0 GB");
 }
 
-TEST_FUNCTION("base/TestMatchPathName")
+TEST_FUNCTION("base/MatchPathName")
 {
 #define CHECK_PATH_SPEC(Pattern, Path, Expected) \
         TEST_EQ(MatchPathName((Path), (Pattern)), (Expected))
@@ -198,7 +198,7 @@ TEST_FUNCTION("base/TestMatchPathName")
 #undef CHECK_PATH_SPEC
 }
 
-TEST_FUNCTION("base/TestFastRandom")
+TEST_FUNCTION("base/FastRandom")
 {
     for (int i = 0; i < 2; i++) {
         FastRandom rng(42);
@@ -253,7 +253,7 @@ TEST_FUNCTION("base/TestFastRandom")
     }
 }
 
-TEST_FUNCTION("base/TestGetRandomIntSafe")
+TEST_FUNCTION("base/GetRandomIntSafe")
 {
     static const int iterations = 100;
     static const int upper = 2000;
@@ -286,7 +286,7 @@ TEST_FUNCTION("base/TestGetRandomIntSafe")
     TEST_EX(varied, "GetRandomIntSafe() values look well distributed");
 }
 
-TEST_FUNCTION("base/TestOptionParser")
+TEST_FUNCTION("base/OptionParser")
 {
     // Empty
 
@@ -557,7 +557,7 @@ TEST_FUNCTION("base/TestOptionParser")
     }
 }
 
-TEST_FUNCTION("base/TestPathCheck")
+TEST_FUNCTION("base/PathCheck")
 {
     TEST_EQ(PathIsAbsolute("foo"), false);
     TEST_EQ(PathIsAbsolute(""), false);
@@ -597,7 +597,7 @@ TEST_FUNCTION("base/TestPathCheck")
 #endif
 }
 
-BENCHMARK_FUNCTION("base/BenchFmt")
+BENCHMARK_FUNCTION("base/Fmt")
 {
     static const int iterations = 1600000;
 
@@ -668,7 +668,7 @@ BENCHMARK_FUNCTION("base/BenchFmt")
     });
 }
 
-BENCHMARK_FUNCTION("base/BenchMatchPathName")
+BENCHMARK_FUNCTION("base/MatchPathName")
 {
     static const int iterations = 3000000;
 
@@ -687,7 +687,7 @@ BENCHMARK_FUNCTION("base/BenchMatchPathName")
     });
 }
 
-BENCHMARK_FUNCTION("base/BenchRandom")
+BENCHMARK_FUNCTION("base/Random")
 {
     static const int iterations = 50000000;
 
