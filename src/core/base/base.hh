@@ -489,23 +489,38 @@ static inline T *AlignDown(T *ptr, Size align)
 // even if length is 0. This is dumb, work around this.
 static inline void *memcpy_safe(void *dest, const void *src, size_t len)
 {
+#ifdef __clang__
+    // LLVM guarantees sane behavior
+    __builtin_memcpy(dest, src, len);
+#else
     if (len) {
         memcpy(dest, src, len);
     }
+#endif
     return dest;
 }
 static inline void *memmove_safe(void *dest, const void *src, size_t len)
 {
+#ifdef __clang__
+    // LLVM guarantees sane behavior
+    __builtin_memmove(dest, src, len);
+#else
     if (len) {
         memmove(dest, src, len);
     }
+#endif
     return dest;
 }
 static inline void *memset_safe(void *dest, int c, size_t len)
 {
+#ifdef __clang__
+    // LLVM guarantees sane behavior
+    __builtin_memset(dest, c, len);
+#else
     if (len) {
         memset(dest, c, len);
     }
+#endif
     return dest;
 }
 
