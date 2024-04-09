@@ -751,7 +751,7 @@ static DWORD WINAPI RunPipeThread(void *pipe)
 {
     RG_DEFER { CloseHandle(pipe); };
 
-    int client_id = GetRandomIntSafe(0, 100000000);
+    int client_id = GetRandomInt(0, 100000000);
 
     char err_buf[8192];
     CopyString("Unknown error", MakeSpan(err_buf + 1, RG_SIZE(err_buf) - 1));
@@ -828,7 +828,7 @@ static void WINAPI RunService(DWORD, char **)
 
     ReportStatus(SERVICE_START_PENDING);
 
-    instance_id = GetRandomIntSafe(0, 100000000);
+    instance_id = GetRandomInt(0, 100000000);
 
     // This event is used (embedded in an OVERLAPPED) to wake up on connection
     HANDLE connect_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);

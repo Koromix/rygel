@@ -1431,7 +1431,7 @@ static inline void ProcessArg(const FmtArg &arg, AppendFunc append)
                 RG_ASSERT(arg.u.random.len <= RG_SIZE(out_buf.data));
 
                 for (Size j = 0; j < arg.u.random.len; j++) {
-                    int rnd = GetRandomIntFast(0, (int)chars.len);
+                    int rnd = GetRandomInt(0, (int)chars.len);
                     out_buf.Append(chars[rnd]);
                 }
 
@@ -5092,7 +5092,7 @@ void FillRandomSafe(void *out_buf, Size len)
     bool reseed = false;
 
     // Reseed every 4 megabytes, or every hour, or after a fork
-    reseed |= (rnd_remain <= 0);
+    // reseed |= (rnd_remain <= 0);
     reseed |= (GetMonotonicTime() - rnd_time > 3600 * 1000);
 #ifndef _WIN32
     reseed |= (getpid() != rnd_pid);
@@ -5144,24 +5144,6 @@ restart:
     }
 
     rnd_remain -= len;
-}
-
-int GetRandomIntSafe(int min, int max)
-{
-    int range = max - min;
-
-    if (range < 2) [[unlikely]]
-        return min;
-
-    unsigned int treshold = (UINT_MAX - UINT_MAX % range);
-
-    unsigned int x;
-    do {
-        FillRandomSafe(&x, RG_SIZE(x));
-    } while (x >= treshold);
-    x %= range;
-
-    return min + (int)x;
 }
 
 FastRandom::FastRandom()
@@ -5228,7 +5210,7 @@ uint64_t FastRandom::Next()
     return result;
 }
 
-int GetRandomIntFast(int min, int max)
+int GetRandomInt(int min, int max)
 {
     return rng_fast.GetInt(min, max);
 }
@@ -5643,7 +5625,7 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
     if (async_running_pool != async->pool) {
         for (;;) {
-            int idx = GetRandomIntFast(0, (int)workers.len);
+            int idx = GetRandomInt(0, (int)workers.len);
             WorkerData *worker = &workers[idx];
 
             std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);

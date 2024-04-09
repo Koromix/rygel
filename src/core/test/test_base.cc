@@ -253,7 +253,7 @@ TEST_FUNCTION("base/FastRandom")
     }
 }
 
-TEST_FUNCTION("base/GetRandomIntSafe")
+TEST_FUNCTION("base/GetRandomInt")
 {
     static const int iterations = 100;
     static const int upper = 2000;
@@ -262,7 +262,7 @@ TEST_FUNCTION("base/GetRandomIntSafe")
     bool varied = true;
 
     for (int i = 0; i < iterations; i++) {
-        int max = GetRandomIntSafe(100, upper);
+        int max = GetRandomInt(100, upper);
 
         TEST(max >= 100);
         TEST(max < upper);
@@ -271,7 +271,7 @@ TEST_FUNCTION("base/GetRandomIntSafe")
         bool memory[upper] = {};
 
         for (int j = 0; j < loop; j++) {
-            int rnd = GetRandomIntSafe(0, max);
+            int rnd = GetRandomInt(0, max);
 
             TEST(rnd >= 0);
             TEST(rnd < max);
@@ -283,7 +283,7 @@ TEST_FUNCTION("base/GetRandomIntSafe")
         varied &= (distrib > 95 * max / 100);
     }
 
-    TEST_EX(varied, "GetRandomIntSafe() values look well distributed");
+    TEST_EX(varied, "GetRandomInt() values look well distributed");
 }
 
 TEST_FUNCTION("base/OptionParser")
@@ -696,12 +696,8 @@ BENCHMARK_FUNCTION("base/Random")
         rng.GetInt(1, 24097);
     });
 
-    RunBenchmark("GetRandomIntSafe", iterations, [&]() {
-        GetRandomIntSafe(1, 24097);
-    });
-
-    RunBenchmark("GetRandomIntFast", iterations, [&]() {
-        GetRandomIntFast(1, 24097);
+    RunBenchmark("GetRandomInt", iterations, [&]() {
+        GetRandomInt(1, 24097);
     });
 }
 

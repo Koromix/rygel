@@ -258,10 +258,10 @@ static inline bool InsertRandom(sq_Database *db)
 {
     char buf[512];
 
-    int i = GetRandomIntSafe(0, 65536);
+    int i = GetRandomInt(0, 65536);
     const char *str = Fmt(buf, "%1", FmtRandom(i % 64)).ptr;
 
-    if (GetRandomIntSafe(0, 1000) < 20) {
+    if (GetRandomInt(0, 1000) < 20) {
         bool success = db->Transaction([&]() {
             if (!db->Run("INSERT INTO dummy VALUES (?1, ?2, 1)", i, str))
                 return false;
@@ -310,7 +310,7 @@ static bool TortureSnapshots(const char *database_filename, const char *snapshot
     }
 
     // Add some random data before first snapshot
-    for (Size i = 0; i < GetRandomIntSafe(0, 65536); i++) {
+    for (Size i = 0; i < GetRandomInt(0, 65536); i++) {
         if (!InsertRandom(&db))
             return false;
     }
@@ -329,7 +329,7 @@ static bool TortureSnapshots(const char *database_filename, const char *snapshot
             if (!db.Checkpoint())
                 return false;
 
-            int wait = GetRandomIntSafe(500, 2000);
+            int wait = GetRandomInt(500, 2000);
             WaitDelay(wait);
         }
 

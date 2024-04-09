@@ -813,7 +813,7 @@ StatResult rk_Disk::TestFast(const char *path)
     }
 
     // Probabilistic check
-    if (GetRandomIntSafe(0, 100) < 2) {
+    if (GetRandomInt(0, 100) < 2) {
         bool really_exists = false;
 
         switch (TestRaw(path)) {

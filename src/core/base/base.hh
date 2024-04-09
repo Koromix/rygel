@@ -4184,7 +4184,6 @@ const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix
 void ZeroMemorySafe(void *ptr, Size len);
 void FillRandomSafe(void *buf, Size len);
 static inline void FillRandomSafe(Span<uint8_t> buf) { FillRandomSafe(buf.ptr, buf.len); }
-int GetRandomIntSafe(int min, int max);
 
 class FastRandom {
     uint64_t state[4];
@@ -4220,7 +4219,7 @@ public:
     }
 };
 
-int GetRandomIntFast(int min, int max);
+int GetRandomInt(int min, int max);
 
 // ------------------------------------------------------------------------
 // Sockets

@@ -827,7 +827,7 @@ int s3_Session::RunSafe(const char *action, FunctionRef<int(void)> func)
             return status;
 
         int delay = 200 + 200 * (1 << i);
-        delay += !!i * GetRandomIntSafe(0, delay / 2);
+        delay += !!i * GetRandomInt(0, delay / 2);
 
         WaitDelay(delay);
     }
