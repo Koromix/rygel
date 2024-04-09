@@ -4,9 +4,13 @@
 
 ### Koffi 2.8
 
-#### Koffi 2.8.3 (2024-04-08)
+#### Koffi 2.8.4 (2024-04-09)
 
 - Use simpler workaround for Node 20.12+ and 21.6+ to avoid excessive memory use
+
+```{warning}
+Some pre-built binaries are missing in Koffi 2.8.3, skip this version.
+```
 
 #### Koffi 2.8.2 (2024-04-07)
 
