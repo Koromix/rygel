@@ -187,6 +187,38 @@ static inline bool CheckAlignment(int64_t align)
     return valid;
 }
 
+// Prevent simple mistakes but don't be too strict, the world is bigger than the US!
+static bool IsNameValid(const char *name)
+{
+    if (!name[0] || IsAsciiWhite(name[0]) || IsAsciiDigit(name[0])) [[unlikely]]
+        return false;
+
+    for (Size i = 1; name[i]; i++) {
+        if (IsAsciiWhite(name[i])) [[unlikely]]
+            return false;
+    }
+
+    return true;
+}
+
+static bool MapType(Napi::Env env, InstanceData *instance, const TypeInfo *type, const char *name)
+{
+    if (!IsNameValid(name)) {
+        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", name);
+        return env.Null();
+    }
+
+    bool inserted;
+    instance->types_map.TrySet(name, type, &inserted);
+
+    if (!inserted) {
+        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", name);
+        return false;
+    }
+
+    return true;
+}
+
 static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 {
     Napi::Env env = info.Env();
@@ -232,13 +264,8 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     if (named) {
         type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
 
-        bool inserted;
-        instance->types_map.TrySet(type->name, type, &inserted);
-
-        if (!inserted) {
-            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+        if (!MapType(env, instance, type, type->name))
             return env.Null();
-        }
     } else {
         type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
     }
@@ -296,6 +323,11 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
 
         if (size > instance->config.max_type_size) {
             ThrowError<Napi::Error>(env, "Struct '%1' size is too high (max = %2)", type->name, FmtMemSize(size));
+            return env.Null();
+        }
+
+        if (!IsNameValid(member.name)) {
+            ThrowError<Napi::Error>(env, "Invalid member name '%1'", member.name);
             return env.Null();
         }
 
@@ -378,13 +410,8 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     if (named) {
         type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
 
-        bool inserted;
-        instance->types_map.TrySet(type->name, type, &inserted);
-
-        if (!inserted) {
-            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
+        if (!MapType(env, instance, type, type->name))
             return env.Null();
-        }
     } else {
         type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
     }
@@ -435,6 +462,11 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         align = align ? align : member.type->align;
         size = std::max(size, member.type->size);
         type->align = std::max(type->align, align);
+
+        if (!IsNameValid(member.name)) {
+            ThrowError<Napi::Error>(env, "Invalid member name '%1'", member.name);
+            return env.Null();
+        }
 
         bool inserted;
         members.TrySet(member.name, &inserted);
@@ -517,15 +549,8 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     type->align = 0;
 
     // If the insert succeeds, we cannot fail anymore
-    if (named) {
-        bool inserted;
-        instance->types_map.TrySet(type->name, type, &inserted);
-
-        if (!inserted) {
-            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", type->name);
-            return env.Null();
-        }
-    }
+    if (named && !MapType(env, instance, type, type->name))
+        return env.Null();
     err_guard.Disable();
 
     return FinalizeType(env, instance, type);
@@ -582,14 +607,9 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
         copy->name = DuplicateString(name.c_str(), &instance->str_alloc).ptr;
         MemSet(&copy->defn, 0, RG_SIZE(copy->defn));
 
-        bool inserted;
-        instance->types_map.TrySet(copy->name, copy, &inserted);
-
         // If the insert succeeds, we cannot fail anymore
-        if (!inserted) {
-            ThrowError<Napi::Error>(env, "Duplicate type name '%1'", copy->name);
+        if (!MapType(env, instance, copy, copy->name))
             return env.Null();
-        }
         err_guard.Disable();
 
         type = copy;
@@ -1012,15 +1032,8 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
         return env.Null();
 
     // Alias the type
-    {
-        bool inserted;
-        instance->types_map.TrySet(alias, type, &inserted);
-
-        if (!inserted) {
-            ThrowError<Napi::Error>(env, "Type name '%1' already exists", alias);
-            return env.Null();
-        }
-    }
+    if (!MapType(env, instance, type, alias))
+        return env.Null();
 
     return FinalizeType(env, instance, type);
 }
