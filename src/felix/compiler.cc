@@ -428,7 +428,7 @@ public:
         }
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-unknown-warning-option");
-            Fmt(&buf, " -Wreturn-type -Werror=return-type");
+            Fmt(&buf, " -Wzero-as-null-pointer-constant -Wreturn-type -Werror=return-type");
         } else {
             Fmt(&buf, " -Wno-everything");
         }
@@ -1003,7 +1003,7 @@ public:
             if (src_type == SourceType::Cxx) {
                 Fmt(&buf, " -Wno-init-list-lifetime");
             }
-            Fmt(&buf, " -Wreturn-type -Werror=return-type");
+            Fmt(&buf, " -Wzero-as-null-pointer-constant -Wreturn-type -Werror=return-type");
         } else {
             Fmt(&buf, " -w");
         }
@@ -1774,7 +1774,7 @@ public:
         }
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra");
-            Fmt(&buf, " -Wreturn-type -Werror=return-type");
+            Fmt(&buf, " -Wzero-as-null-pointer-constant -Wreturn-type -Werror=return-type");
         } else {
             Fmt(&buf, " -w");
         }
@@ -2091,7 +2091,7 @@ public:
         }
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra");
-            Fmt(&buf, " -Wreturn-type -Werror=return-type");
+            Fmt(&buf, " -Wzero-as-null-pointer-constant -Wreturn-type -Werror=return-type");
         } else {
             Fmt(&buf, " -Wno-everything");
         }

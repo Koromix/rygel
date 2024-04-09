@@ -59,7 +59,7 @@ public:
     // Not implemented
     void Put(char) {}
     void Flush() {}
-    char *PutBegin() { return 0; }
+    char *PutBegin() { return nullptr; }
     Size PutEnd(char *) { return 0; }
 
     const char *GetFileName() const { return st->GetFileName(); }
