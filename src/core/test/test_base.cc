@@ -691,13 +691,24 @@ BENCHMARK_FUNCTION("base/Random")
 {
     static const int iterations = 50000000;
 
+    srand(42);
+    RunBenchmark("rand", iterations, [&]() {
+        int x;
+
+        do {
+            x = rand();
+        } while (x >= (RAND_MAX - RAND_MAX % 24096));
+
+        x %= 24096;
+    });
+
     FastRandom rng(42);
     RunBenchmark("FastRandom::GetInt", iterations, [&]() {
-        rng.GetInt(1, 24097);
+        rng.GetInt(0, 24096);
     });
 
     RunBenchmark("GetRandomInt", iterations, [&]() {
-        GetRandomInt(1, 24097);
+        GetRandomInt(0, 24096);
     });
 }
 
