@@ -852,6 +852,11 @@ async function test() {
         koffi.free(ptr);
     }
 
+    // Test invalid names
+    assert.throws(() => koffi.struct(' Space', { dummy: 'int' }), /Invalid type name/);
+    assert.throws(() => koffi.union('4deux', { dummy: 'int', }), /Invalid type name/);
+    assert.throws(() => koffi.struct('MemberNameIsWrong', { 'dummy ': 'int' }), /Invalid member name/);
+
     lib.unload();
 }
 

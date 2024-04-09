@@ -204,8 +204,8 @@ static bool IsNameValid(const char *name)
 static bool MapType(Napi::Env env, InstanceData *instance, const TypeInfo *type, const char *name)
 {
     if (!IsNameValid(name)) {
-        ThrowError<Napi::Error>(env, "Duplicate type name '%1'", name);
-        return env.Null();
+        ThrowError<Napi::Error>(env, "Invalid type name '%1'", name);
+        return false;
     }
 
     bool inserted;
