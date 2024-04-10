@@ -20,6 +20,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "src/core/base/base.hh"
+#include "src/core/unicode/xid.hh"
 #include "ffi.hh"
 #include "parser.hh"
 
@@ -98,9 +99,9 @@ void PrototypeParser::Tokenize(const char *str)
 
         if (IsAsciiWhite(c)) {
             continue;
-        } else if (IsAsciiAlpha(c) || c == '_') {
+        } else if (IsXidStart(c)) {
             Size j = i;
-            while (str[++j] && (IsAsciiAlphaOrDigit(str[j]) || str[j] == '_'));
+            while (str[++j] && IsXidContinue(str[j]));
 
             Span<const char> tok = MakeSpan(str + i, j - i);
             tokens.Append(tok);
