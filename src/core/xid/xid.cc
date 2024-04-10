@@ -39,12 +39,14 @@ static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
 
 bool IsXidStart(int32_t uc)
 {
-    return TestUnicodeTable(XidStartTable, uc);
+    bool match = IsAsciiAlpha(uc) || uc == '_' || TestUnicodeTable(XidStartTable, uc);
+    return match;
 }
 
 bool IsXidContinue(int32_t uc)
 {
-    return TestUnicodeTable(XidContinueTable, uc);
+    bool match = IsAsciiAlphaOrDigit(uc) || uc == '_' || TestUnicodeTable(XidContinueTable, uc);
+    return match;
 }
 
 }
