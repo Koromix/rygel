@@ -12,9 +12,9 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "src/core/xid/xid.hh"
 #include "error.hh"
 #include "lexer.hh"
-#include "lexer_xid.inc"
 #include "vendor/fast_float/fast_float.h"
 
 namespace RG {
@@ -457,7 +457,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                     int32_t uc = 0;
                     Size bytes = DecodeUtf8(code, offset, &uc);
 
-                    if (!TestUnicodeTable(bk_UnicodeIdStartTable, uc)) [[unlikely]] {
+                    if (!IsXidStart(uc)) [[unlikely]] {
                         MarkUnexpected(offset, "Identifiers cannot start with");
                         return false;
                     }
@@ -475,7 +475,7 @@ bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
                         int32_t uc = 0;
                         Size bytes = DecodeUtf8(code, next, &uc);
 
-                        if (!TestUnicodeTable(bk_UnicodeIdContinueTable, uc)) {
+                        if (!IsXidContinue(uc)) {
                             MarkUnexpected(next, "Identifiers cannot contain");
                             return false;
                         }
