@@ -20,6 +20,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "src/core/base/base.hh"
+#include "src/core/xid/xid.hh"
 #include "ffi.hh"
 #include "call.hh"
 #include "parser.hh"
@@ -187,14 +188,13 @@ static inline bool CheckAlignment(int64_t align)
     return valid;
 }
 
-// Prevent simple mistakes but don't be too strict, the world is bigger than the US!
 static bool IsNameValid(const char *name)
 {
-    if (!name[0] || IsAsciiWhite(name[0]) || IsAsciiDigit(name[0])) [[unlikely]]
+    if (!IsXidStart(name[0]))
         return false;
 
     for (Size i = 1; name[i]; i++) {
-        if (IsAsciiWhite(name[i])) [[unlikely]]
+        if (!IsXidContinue(name[i])) [[unlikely]]
             return false;
     }
 

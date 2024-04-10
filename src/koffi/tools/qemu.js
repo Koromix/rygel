@@ -545,7 +545,8 @@ function snapshot() {
         let parts = filename.split('/');
 
         if (parts[0] == 'src' && parts[1] == 'core') {
-            return parts[2] == null || parts[2] == 'base';
+            return parts[2] == null || parts[2] == 'base' ||
+                                       parts[2] == 'xid';
         } else if (parts[0] == 'src') {
             return parts[1] == null || parts[1] == 'cnoke' ||
                                        parts[1] == 'koffi';
