@@ -4,6 +4,12 @@
 
 ### Koffi 2.8
 
+#### Koffi 2.8.5 (2024-04-11)
+
+- Prevent obviously invalid type and member names
+- Fix possible infinite loop / UB for `koffi.load()` errors on POSIX systems
+- Fix null return value instead of exception for some errors in `koffi.load()` on Windows
+
 #### Koffi 2.8.4 (2024-04-09)
 
 - Use simpler workaround for Node 20.12+ and 21.6+ to avoid excessive memory use
