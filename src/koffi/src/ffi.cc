@@ -1757,9 +1757,10 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
             if (StartsWith(msg, filename.c_str())) {
                 msg += filename.length();
-            }
-            while (strchr(": ", msg[0])) {
-                msg++;
+
+                while (strchr(": ", msg[0]) && msg[0]) {
+                    msg++;
+                }
             }
 
             ThrowError<Napi::Error>(env, "Failed to load shared library: %1", msg);
