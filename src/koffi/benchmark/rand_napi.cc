@@ -74,4 +74,4 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     return exports;
 }
 
-NODE_API_MODULE(koffi, InitModule);
+NODE_API_MODULE(rand_napi, InitModule);
