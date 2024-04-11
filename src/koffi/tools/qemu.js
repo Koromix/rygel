@@ -41,6 +41,7 @@ let script_dir = null;
 let root_dir = null;
 
 let machines = null;
+let all_machines = false;
 let keyboard_layout = null;
 let accelerate = true;
 let ignore = new Set;
@@ -181,7 +182,6 @@ async function main() {
                 process.exit(1);
             }
         }
-
     } else {
         machines = new Set(Object.keys(machines_map));
 
@@ -201,6 +201,7 @@ async function main() {
         }
         return machine;
     });
+    all_machines = (machines.length == Object.keys(machines_map).length);
 
     console.log('Machines:', machines.map(machine => machine.name).join(', '));
     console.log();
@@ -402,6 +403,11 @@ async function build() {
             console.log('>> Status: ' + chalk.bold.red('FAILED'));
             return null;
         }
+    }
+
+    if (!all_machines) {
+        console.log('>> Run for all machines to generate package!');
+        return null;
     }
 
     console.log('>> Prepare NPM package');
