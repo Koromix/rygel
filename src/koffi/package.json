@@ -43,6 +43,7 @@
     "tar": "^6.1.11"
   },
   "cnoke": {
+    "api": "../../vendor/node-api-headers",
     "output": "build/koffi/{{ platform }}_{{ arch }}",
     "node": 16,
     "napi": 8,

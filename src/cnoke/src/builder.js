@@ -85,6 +85,8 @@ function Builder(config = {}) {
     let cmake_bin = null;
 
     this.configure = async function(retry = true) {
+        let pkg = read_package_json();
+
         let args = [project_dir];
 
         check_cmake();
@@ -94,50 +96,60 @@ function Builder(config = {}) {
         console.log(`>> Target: ${process.platform}_${arch}`);
 
         // Prepare build directory
-        fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
         fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
         fs.mkdirSync(work_dir, { recursive: true, mode: 0o755 });
 
         retry &= fs.existsSync(work_dir + '/CMakeCache.txt');
 
-        // Download Node headers
-        {
+        // Download or use Node headers
+        if (pkg.cnoke.api == null) {
             let destname = `${cache_dir}/node-v${runtime_version}-headers.tar.gz`;
 
             if (!fs.existsSync(destname)) {
+                fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
+
                 let url = `https://nodejs.org/dist/v${runtime_version}/node-v${runtime_version}-headers.tar.gz`;
                 await tools.download_http(url, destname);
             }
 
             await tools.extract_targz(destname, work_dir + '/headers', 1);
+
+            args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
+        } else {
+            console.log(`>> Using local node-api headers`);
+            args.push(`-DNODE_JS_INCLUDE_DIRS=${pkg.cnoke.api}/include`);
         }
 
-        // Download Node import library (Windows)
-        if (process.platform === 'win32') {
-            let dirname;
-            switch (arch) {
-                case 'ia32': { dirname = 'win-x86'; } break;
-                case 'x64': { dirname = 'win-x64'; } break;
-                case 'arm64': { dirname = 'win-arm64'; } break;
+        // Download or create Node import library (Windows)
+        if (process.platform == 'win32') {
+            if (pkg.cnoke.api == null) {
+                let dirname;
+                switch (arch) {
+                    case 'ia32': { dirname = 'win-x86'; } break;
+                    case 'x64': { dirname = 'win-x64'; } break;
+                    case 'arm64': { dirname = 'win-arm64'; } break;
 
-                default: {
-                    throw new Error(`Unsupported architecture '${arch}' for Node on Windows`);
-                } break;
+                    default: {
+                        throw new Error(`Unsupported architecture '${arch}' for Node on Windows`);
+                    } break;
+                }
+
+                let destname = `${cache_dir}/node_v${runtime_version}_${arch}.lib`;
+
+                if (!fs.existsSync(destname)) {
+                    fs.mkdirSync(cache_dir, { recursive: true, mode: 0o755 });
+
+                    let url = `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`;
+                    await tools.download_http(url, destname);
+                }
+
+                fs.copyFileSync(destname, work_dir + '/node.lib');
+            } else {
+                args.push(`-DNODE_JS_LINK_DEF=${pkg.cnoke.api}/def/node_api.def`);
             }
-
-            let destname = `${cache_dir}/node_v${runtime_version}_${arch}.lib`;
-
-            if (!fs.existsSync(destname)) {
-                let url = `https://nodejs.org/dist/v${runtime_version}/${dirname}/node.lib`;
-                await tools.download_http(url, destname);
-            }
-
-            fs.copyFileSync(destname, work_dir + '/node.lib');
         }
 
         args.push(`-DCMAKE_MODULE_PATH=${app_dir}/assets`);
-
-        args.push(`-DNODE_JS_INCLUDE_DIRS=${work_dir}/headers/include/node`);
 
         // Set platform flags
         switch (process.platform) {
@@ -145,7 +157,7 @@ function Builder(config = {}) {
                 fs.copyFileSync(`${app_dir}/assets/win_delay_hook.c`, work_dir + '/win_delay_hook.c');
 
                 args.push(`-DNODE_JS_SOURCES=${work_dir}/win_delay_hook.c`);
-                args.push(`-DNODE_JS_LIBRARIES=${work_dir}/node.lib`);
+                args.push(`-DNODE_JS_LINK_LIB=${work_dir}/node.lib`);
 
                 switch (arch) {
                     case 'ia32': {
