@@ -40,6 +40,20 @@ Consult the [migration guide](migration.md) for more information.
 
 ### Koffi 2.8
 
+#### Koffi 2.8.5 (2024-04-11)
+
+- Prevent obviously invalid type and member names
+- Fix possible infinite loop / UB for `koffi.load()` errors on POSIX systems
+- Fix null return value instead of exception for some errors in `koffi.load()` on Windows
+
+#### Koffi 2.8.4 (2024-04-09)
+
+- Use simpler workaround for Node 20.12+ and 21.6+ to avoid excessive memory use
+
+```{warning}
+Some pre-built binaries are missing in Koffi 2.8.3, skip this version.
+```
+
 #### Koffi 2.8.2 (2024-04-07)
 
 - Support [loading library](library.md#load-library) with RTLD_GLOBAL on POSIX platforms
