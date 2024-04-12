@@ -44,6 +44,7 @@
     #if !defined(_GLFW_WAYLAND)     // Required for Wayland windowing
         #define _GLFW_X11
     #endif
+    #define _GNU_SOURCE
 #endif
 #if defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__DragonFly__)
     #define _GLFW_X11
