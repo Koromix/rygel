@@ -1573,6 +1573,9 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
         flags |= options.Get("lazy").ToBoolean() ? RTLD_LAZY : RTLD_NOW;
         flags |= options.Get("global").ToBoolean() ? RTLD_GLOBAL : RTLD_LOCAL;
+#ifdef RTLD_DEEPBIND
+        flags |= options.Get("deep").ToBoolean() ? RTLD_DEEPBIND : 0;
+#endif
     } else {
         flags = RTLD_NOW | RTLD_LOCAL;
     }

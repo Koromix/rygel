@@ -21,15 +21,12 @@
 
 #define EXPORT __attribute__((visibility("default")))
 
-int DoSumInts(int a, int b);
-
-EXPORT int SumInts(int a, int b)
+EXPORT int DoGetInt()
 {
-    return DoSumInts(a, b);
+    return 3;
 }
 
-EXPORT int TestLazyBinding()
+EXPORT int GetInt()
 {
-    int DoesNotExist();
-    return DoesNotExist();
+    return DoGetInt();
 }

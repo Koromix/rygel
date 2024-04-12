@@ -19,9 +19,21 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+#include <stdint.h>
+
 #define EXPORT __attribute__((visibility("default")))
 
 EXPORT int DoSumInts(int a, int b)
 {
     return a + b;
+}
+
+EXPORT int DoGetInt()
+{
+    return 1;
+}
+
+EXPORT int GetInt()
+{
+    return DoGetInt();
 }

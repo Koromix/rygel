@@ -16,7 +16,8 @@ The `load` function can take an optional object argument, with the following opt
 ```js
 const options = {
     lazy: true, // Use RTLD_LAZY (lazy-binding) on POSIX platforms (by default, use RTLD_NOW)
-    global: true // Use RTLD_GLOBAL on POSIX platforms (by default, use RTLD_LOCAL)
+    global: true, // Use RTLD_GLOBAL on POSIX platforms (by default, use RTLD_LOCAL)
+    deep: true // Use RTLD_DEEPBIND if supported (Linux, FreeBSD)
 };
 
 const lib = koffi.load('/path/to/shared/library.so', options);
