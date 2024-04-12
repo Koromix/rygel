@@ -110,3 +110,11 @@ if (ret == IDYES)
 ## Bundling Koffi
 
 Please read the [dedicated page](packaging.md) for information about bundling and packaging applications using Koffi.
+
+## Build manually
+
+Follow the [build instrutions](contribute.md#build-from-source) if you want to build the native Koffi code yourself.
+
+```{note}
+This is only needed if you want to hack on Koffi. The official NPM package provide prebuilt binaries and you don't need to compile anything if you only want to use Koffi in Node.js.
+```
