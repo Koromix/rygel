@@ -137,12 +137,12 @@ bool CanStoreType(const TypeInfo *type);
 // Can be slow, only use for error messages
 const char *GetValueType(const InstanceData *instance, Napi::Value value);
 
-void SetValueTag(const InstanceData *instance, Napi::Value value, const napi_type_tag *tag);
-bool CheckValueTag(const InstanceData *instance, Napi::Value value, const napi_type_tag *tag);
+void SetValueTag(Napi::Value value, const napi_type_tag *tag);
+bool CheckValueTag(Napi::Value value, const napi_type_tag *tag);
 
 bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *expect);
 Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeInfo *type, void *ptr);
-void *UnwrapPointer(Napi::Env env, const InstanceData *instance, Napi::Value value);
+void *UnwrapPointer(Napi::Value value);
 
 static inline bool IsNullOrUndefined(Napi::Value value)
 {

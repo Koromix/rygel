@@ -120,7 +120,7 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
         } break;
     }
 
-    SetValueTag(instance, defn, &TypeInfoMarker);
+    SetValueTag(defn, &TypeInfoMarker);
 
     defn.Freeze();
 }
@@ -159,7 +159,7 @@ PointerObject::PointerObject(const Napi::CallbackInfo &info)
     ptr = external1.Data();
     type = external2.Data();
 
-    SetValueTag(instance, wrapper, &PointerMarker);
+    SetValueTag(wrapper, &PointerMarker);
 
     wrapper.Freeze();
 }
@@ -318,7 +318,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         }
 
         return type;
-    } else if (CheckValueTag(instance, value, &TypeInfoMarker)) {
+    } else if (CheckValueTag(value, &TypeInfoMarker)) {
         RG_ASSERT(value.IsObject());
 
         Napi::Object obj = value.As<Napi::Object>();
@@ -328,7 +328,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
             *out_directions = 1;
         }
         return defn->GetType();
-    } else if (CheckValueTag(instance, value, &DirectionMarker)) {
+    } else if (CheckValueTag(value, &DirectionMarker)) {
         RG_ASSERT(value.IsExternal());
 
         Napi::External<TypeInfo> external = value.As<Napi::External<TypeInfo>>();
@@ -684,17 +684,17 @@ bool CanStoreType(const TypeInfo *type)
 
 const char *GetValueType(const InstanceData *instance, Napi::Value value)
 {
-    if (CheckValueTag(instance, value, &CastMarker)) {
+    if (CheckValueTag(value, &CastMarker)) {
         Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
         ValueCast *cast = external.Data();
 
         return cast->type->name;
     }
 
-    if (CheckValueTag(instance, value, &TypeInfoMarker))
+    if (CheckValueTag(value, &TypeInfoMarker))
         return "Type";
 
-    if (CheckValueTag(instance, value, &PointerMarker)) {
+    if (CheckValueTag(value, &PointerMarker)) {
         PointerObject *obj = PointerObject::Unwrap(value.As<Napi::Object>());
         return obj->GetType()->name;
     }
@@ -740,13 +740,13 @@ const char *GetValueType(const InstanceData *instance, Napi::Value value)
     return "Unknown";
 }
 
-void SetValueTag(const InstanceData *instance, Napi::Value value, const napi_type_tag *tag)
+void SetValueTag(Napi::Value value, const napi_type_tag *tag)
 {
     napi_status status = napi_type_tag_object(value.Env(), value, tag);
     RG_ASSERT(status == napi_ok);
 }
 
-bool CheckValueTag(const InstanceData *instance, Napi::Value value, const napi_type_tag *tag)
+bool CheckValueTag(Napi::Value value, const napi_type_tag *tag)
 {
     if (IsNullOrUndefined(value))
         return false;
@@ -759,7 +759,7 @@ bool CheckValueTag(const InstanceData *instance, Napi::Value value, const napi_t
 
 bool CheckPointerType(const InstanceData *instance, Napi::Value value, const TypeInfo *expect)
 {
-    if (!CheckValueTag(instance, value, &PointerMarker))
+    if (!CheckValueTag(value, &PointerMarker))
         return false;
 
     PointerObject *obj = PointerObject::Unwrap(value.As<Napi::Object>());
@@ -788,9 +788,9 @@ Napi::Value WrapPointer(Napi::Env env, const InstanceData *instance, const TypeI
     }
 }
 
-void *UnwrapPointer(Napi::Env env, const InstanceData *instance, Napi::Value value)
+void *UnwrapPointer(Napi::Value value)
 {
-    RG_ASSERT(CheckValueTag(instance, value, &PointerMarker));
+    RG_ASSERT(CheckValueTag(value, &PointerMarker));
 
     PointerObject *obj = PointerObject::Unwrap(value.As<Napi::Object>());
     return obj->GetPointer();
@@ -821,7 +821,7 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
         InstanceData *instance = env.GetInstanceData<InstanceData>();
 
         Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-        SetValueTag(instance, wrapper, &UnionObjectMarker);
+        SetValueTag(wrapper, &UnionObjectMarker);
 
         UnionObject *u = UnionObject::Unwrap(wrapper);
         u->SetRaw(origin);
@@ -1273,8 +1273,8 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
 
     const uint8_t *ptr = nullptr;
 
-    if (CheckValueTag(instance, value, &PointerMarker)) {
-        ptr = (const uint8_t *)UnwrapPointer(env, instance, value);
+    if (CheckValueTag(value, &PointerMarker)) {
+        ptr = (const uint8_t *)UnwrapPointer(value);
     } else if (IsRawBuffer(value)) {
         Span<uint8_t> buffer = GetRawBuffer(value);
 
@@ -1444,8 +1444,8 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
 
     uint8_t *ptr = nullptr;
 
-    if (CheckValueTag(instance, ref, &PointerMarker)) {
-        ptr = (uint8_t *)UnwrapPointer(env, instance, ref);
+    if (CheckValueTag(ref, &PointerMarker)) {
+        ptr = (uint8_t *)UnwrapPointer(ref);
     } else if (IsRawBuffer(ref)) {
         Span<uint8_t> buffer = GetRawBuffer(ref);
 
@@ -1610,7 +1610,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
                 ThrowError<Napi::Error>(env, "Cannot encode non-registered callback");
                 return false;
             } else if (CheckPointerType(instance, value, type->ref.type)) {
-                ptr = UnwrapPointer(env, instance, value);
+                ptr = UnwrapPointer(value);
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {

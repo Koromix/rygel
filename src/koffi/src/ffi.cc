@@ -519,7 +519,7 @@ Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
     }
 
     Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
-    SetValueTag(instance, wrapper, &UnionObjectMarker);
+    SetValueTag(wrapper, &UnionObjectMarker);
 
     return wrapper;
 }
@@ -635,8 +635,8 @@ Napi::Value InstantiatePointer(const Napi::CallbackInfo &info)
     Napi::Value value = info[0];
     void *ptr = nullptr;
 
-    if (CheckValueTag(instance, value, &PointerMarker)) {
-        ptr = UnwrapPointer(env, instance, value);
+    if (CheckValueTag(value, &PointerMarker)) {
+        ptr = UnwrapPointer(value);
     } else if (IsNullOrUndefined(value)) {
         ptr = nullptr;
     } else if (value.IsNumber() || value.IsBigInt()) {
@@ -691,7 +691,7 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     const TypeInfo *marked = (const TypeInfo *)((uint8_t *)type + directions - 1);
 
     Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)marked);
-    SetValueTag(instance, external, &DirectionMarker);
+    SetValueTag(external, &DirectionMarker);
 
     return external;
 }
@@ -773,8 +773,8 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
     Napi::Value value = info[0];
     void *ptr = nullptr;
 
-    if (CheckValueTag(instance, value, &PointerMarker)) {
-        ptr = UnwrapPointer(env, instance, value);
+    if (CheckValueTag(value, &PointerMarker)) {
+        ptr = UnwrapPointer(value);
     } else if (IsNullOrUndefined(value)) {
         ptr = nullptr;
     } else {
@@ -1716,7 +1716,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    PointerObject *obj = CheckValueTag(instance, info[0], &PointerMarker) ? PointerObject::Unwrap(info[0].As<Napi::Object>()) : nullptr;
+    PointerObject *obj = CheckValueTag(info[0], &PointerMarker) ? PointerObject::Unwrap(info[0].As<Napi::Object>()) : nullptr;
 
     if (!obj || obj->GetType()->primitive != PrimitiveKind::Callback) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected registered callback", GetValueType(instance, info[0]));
@@ -1781,7 +1781,7 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     cast->type = type;
 
     Napi::External<ValueCast> external = Napi::External<ValueCast>::New(env, cast, [](Napi::Env, ValueCast *cast) { delete cast; });
-    SetValueTag(instance, external, &CastMarker);
+    SetValueTag(external, &CastMarker);
 
     return external;
 }

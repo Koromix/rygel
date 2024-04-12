@@ -330,7 +330,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
     if (type->primitive == PrimitiveKind::Record) {
         members = type->members;
     } else if (type->primitive == PrimitiveKind::Union) {
-        if (CheckValueTag(instance, obj, &UnionObjectMarker)) {
+        if (CheckValueTag(obj, &UnionObjectMarker)) {
             UnionObject *u = UnionObject::Unwrap(obj);
             const uint8_t *raw = u->GetRaw();
 
@@ -604,7 +604,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                     if (!ptr) [[unlikely]]
                         return false;
                 } else if (CheckPointerType(instance, value, member.type)) {
-                    ptr = UnwrapPointer(env, instance, value);
+                    ptr = UnwrapPointer(value);
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
@@ -844,7 +844,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
                     if (!ptr) [[unlikely]]
                         return false;
                 } else if (CheckPointerType(instance, value, ref)) {
-                    ptr = UnwrapPointer(env, instance, value);
+                    ptr = UnwrapPointer(value);
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
@@ -935,7 +935,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
 
 bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr)
 {
-    if (CheckValueTag(instance, value, &CastMarker)) {
+    if (CheckValueTag(value, &CastMarker)) {
         Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
         ValueCast *cast = external.Data();
 
@@ -958,7 +958,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
             Size out_max_len = -1;
 
             if (CheckPointerType(instance, value, type)) {
-                ptr = (uint8_t *)UnwrapPointer(env, instance, value);
+                ptr = (uint8_t *)UnwrapPointer(value);
 
                 directions = 1;
                 out_kind = OutArgument::Kind::Array; // Whatever, just avoid unitialized warning
@@ -1022,7 +1022,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 ptr = AllocHeap(type->ref.type->size, 16);
 
                 if (type->ref.type->primitive == PrimitiveKind::Union &&
-                        (directions & 2) && !CheckValueTag(instance, obj, &UnionObjectMarker)) [[unlikely]] {
+                        (directions & 2) && !CheckValueTag(obj, &UnionObjectMarker)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(instance, obj));
                     return false;
                 }
@@ -1241,7 +1241,7 @@ void CallData::PopOutArguments()
             case OutArgument::Kind::Object: {
                 Napi::Object obj = value.As<Napi::Object>();
 
-                if (CheckValueTag(instance, value, &UnionObjectMarker)) {
+                if (CheckValueTag(value, &UnionObjectMarker)) {
                     UnionObject *u = UnionObject::Unwrap(obj);
                     u->SetRaw(out.ptr);
                 } else {

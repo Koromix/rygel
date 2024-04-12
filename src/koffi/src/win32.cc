@@ -75,6 +75,7 @@ HANDLE LoadWindowsLibrary(Napi::Env env, Span<const char> path)
 
     Span<wchar_t> filename_w = AllocateSpan<wchar_t>(&temp_alloc, path.len + 1);
 
+    // First naive try with path as-is
     if (ConvertUtf8ToWin32Wide(path, filename_w) < 0) {
         ThrowError<Napi::Error>(env, "Invalid path string");
         return nullptr;
@@ -82,18 +83,20 @@ HANDLE LoadWindowsLibrary(Napi::Env env, Span<const char> path)
 
     HMODULE module = LoadLibraryW(filename_w.ptr);
 
+    // If the native load has failed, try to load the DLL with an additional
+    // search path for its dependencies, the DLL directory itself.
     if (!module) {
         DWORD flags = LOAD_LIBRARY_SEARCH_DEFAULT_DIRS | LOAD_LIBRARY_SEARCH_DLL_LOAD_DIR;
 
-        Span<const char> filename = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
-        Span<wchar_t> filename_w = AllocateSpan<wchar_t>(&temp_alloc, filename.len + 1);
+        Span<const char> fullname = NormalizePath(path, GetWorkingDirectory(), &temp_alloc);
+        Span<wchar_t> fullname_w = AllocateSpan<wchar_t>(&temp_alloc, fullname.len + 1);
 
-        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0) {
+        if (ConvertUtf8ToWin32Wide(fullname, fullname_w) < 0) {
             ThrowError<Napi::Error>(env, "Invalid path string");
             return nullptr;
         }
 
-        module = LoadLibraryExW(filename_w.ptr, nullptr, flags);
+        module = LoadLibraryExW(fullname_w.ptr, nullptr, flags);
     }
 
     if (!module) {

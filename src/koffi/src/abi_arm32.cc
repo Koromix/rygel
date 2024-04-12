@@ -431,7 +431,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     if (!ptr) [[unlikely]]
                         return false;
                 } else if (CheckPointerType(instance, value, param.type)) {
-                    ptr = UnwrapPointer(env, instance, value);
+                    ptr = UnwrapPointer(value);
                 } else if (IsNullOrUndefined(value)) {
                     ptr = nullptr;
                 } else {
@@ -897,7 +897,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             uint8_t *ptr;
 
             if (CheckPointerType(instance, value, type)) {
-                ptr = (uint8_t *)UnwrapPointer(env, instance, value);
+                ptr = (uint8_t *)UnwrapPointer(value);
             } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
                                            type->ref.type->primitive == PrimitiveKind::Union)) {
                 Napi::Object obj = value.As<Napi::Object>();
@@ -971,7 +971,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 if (!ptr) [[unlikely]]
                     return;
             } else if (CheckPointerType(instance, value, type)) {
-                ptr = UnwrapPointer(env, instance, value);
+                ptr = UnwrapPointer(value);
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {
