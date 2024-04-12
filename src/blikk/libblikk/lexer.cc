@@ -110,19 +110,6 @@ bk_Lexer::bk_Lexer(bk_TokenizedFile *file)
     RG_ASSERT(file);
 }
 
-static bool TestUnicodeTable(Span<const int32_t> table, int32_t uc)
-{
-    RG_ASSERT(table.len > 0);
-    RG_ASSERT(table.len % 2 == 0);
-
-    auto it = std::upper_bound(table.begin(), table.end(), uc,
-                               [](int32_t uc, int32_t x) { return uc < x; });
-    Size idx = it - table.ptr;
-
-    // Each pair of value in table represents a valid interval
-    return idx & 0x1;
-}
-
 bool bk_Lexer::Tokenize(Span<const char> code, const char *filename)
 {
     RG_DEFER_NC(err_guard, tokens_len = tokens.len,
