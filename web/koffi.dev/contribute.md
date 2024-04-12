@@ -25,7 +25,7 @@ First, make sure the following dependencies are met:
 
 - The "Desktop development with C++" workload from [Visual Studio 2022 or 2019](https://visualstudio.microsoft.com/downloads/) or the "C++ build tools" workload from the [Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022), with the default optional components.
 - [CMake meta build system](https://cmake.org/)
-- [Node.js](https://nodejs.org/) 12 or later
+- [Node.js](https://nodejs.org/) 16 or later
 
 Once this is done, run this command _from the test or the benchmark directory_ (depending on what you want to build):
 
@@ -41,7 +41,7 @@ Make sure the following dependencies are met:
 - `gcc` and `g++` >= 8.3 or newer
 - GNU Make 3.81 or newer
 - [CMake meta build system](https://cmake.org/)
-- [Node.js](https://nodejs.org/) 12 or later
+- [Node.js](https://nodejs.org/) 16 or later
 
 Once this is done, run this command _from the test or the benchmark directory_ (depending on what you want to build):
 
