@@ -78,6 +78,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 
         case WM_MOUSELEAVE: { thread_info->input.mouseover = false; } [[fallthrough]];
         case WM_KILLFOCUS: {
+            thread_info->input.events.Clear();
             thread_info->input.keys.Clear();
             thread_info->input.buttons = 0;
         } break;
@@ -87,9 +88,15 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
         case WM_KEYDOWN:
         case WM_KEYUP: {
 #define HANDLE_KEY(VkCode, Code) \
-                case (VkCode): { thread_info->input.keys.Set((Size)(Code), state); } break
+                case (VkCode): { \
+                    if (thread_info->input.events.Available()) [[likely]] { \
+                        thread_info->input.events.Append({ (uint8_t)(Code), down }); \
+                    } \
+                    thread_info->input.keys.Set((Size)(Code), down); \
+                } break
 
-            bool state = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+            bool down = (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN);
+
             switch (wparam) {
                 HANDLE_KEY(VK_CONTROL, gui_InputKey::Control);
                 HANDLE_KEY(VK_MENU, gui_InputKey::Alt);
@@ -133,6 +140,16 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 HANDLE_KEY('X', gui_InputKey::X);
                 HANDLE_KEY('Y', gui_InputKey::Y);
                 HANDLE_KEY('Z', gui_InputKey::Z);
+                HANDLE_KEY('0', gui_InputKey::Key0);
+                HANDLE_KEY('1', gui_InputKey::Key1);
+                HANDLE_KEY('2', gui_InputKey::Key2);
+                HANDLE_KEY('3', gui_InputKey::Key3);
+                HANDLE_KEY('4', gui_InputKey::Key4);
+                HANDLE_KEY('5', gui_InputKey::Key5);
+                HANDLE_KEY('6', gui_InputKey::Key6);
+                HANDLE_KEY('7', gui_InputKey::Key7);
+                HANDLE_KEY('8', gui_InputKey::Key8);
+                HANDLE_KEY('9', gui_InputKey::Key9);
             }
 
 #undef HANDLE_KEY
@@ -525,6 +542,7 @@ bool gui_Window::ProcessEvents(bool wait)
     }
 
     // Reset relative inputs
+    priv.input.events.Clear();
     priv.input.text.Clear();
     priv.input.text.data[priv.input.text.len] = 0;
     priv.input.buttons &= ~window->released_buttons;

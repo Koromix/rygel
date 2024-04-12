@@ -78,6 +78,51 @@ R"!(uniform sampler2D Texture;
     }
 )!";
 
+static const HashMap<uint8_t, ImGuiKey> KeyMap {
+    { (uint8_t)gui_InputKey::Control, ImGuiMod_Ctrl },
+    { (uint8_t)gui_InputKey::Alt, ImGuiMod_Alt },
+    { (uint8_t)gui_InputKey::Shift, ImGuiMod_Shift },
+
+    { (uint8_t)gui_InputKey::Tab, ImGuiKey_Tab },
+    { (uint8_t)gui_InputKey::Delete, ImGuiKey_Delete },
+    { (uint8_t)gui_InputKey::Backspace, ImGuiKey_Backspace },
+    { (uint8_t)gui_InputKey::Enter, ImGuiKey_Enter },
+    { (uint8_t)gui_InputKey::Escape, ImGuiKey_Escape },
+    { (uint8_t)gui_InputKey::Home, ImGuiKey_Home },
+    { (uint8_t)gui_InputKey::End, ImGuiKey_End },
+    { (uint8_t)gui_InputKey::PageUp, ImGuiKey_PageUp },
+    { (uint8_t)gui_InputKey::PageDown, ImGuiKey_PageDown },
+    { (uint8_t)gui_InputKey::Left, ImGuiKey_LeftArrow },
+    { (uint8_t)gui_InputKey::Right, ImGuiKey_RightArrow },
+    { (uint8_t)gui_InputKey::Up, ImGuiKey_UpArrow },
+    { (uint8_t)gui_InputKey::Down, ImGuiKey_DownArrow },
+    { (uint8_t)gui_InputKey::A, ImGuiKey_A },
+    { (uint8_t)gui_InputKey::B, ImGuiKey_B },
+    { (uint8_t)gui_InputKey::C, ImGuiKey_C },
+    { (uint8_t)gui_InputKey::D, ImGuiKey_D },
+    { (uint8_t)gui_InputKey::E, ImGuiKey_E },
+    { (uint8_t)gui_InputKey::F, ImGuiKey_F },
+    { (uint8_t)gui_InputKey::G, ImGuiKey_G },
+    { (uint8_t)gui_InputKey::H, ImGuiKey_H },
+    { (uint8_t)gui_InputKey::I, ImGuiKey_I },
+    { (uint8_t)gui_InputKey::J, ImGuiKey_J },
+    { (uint8_t)gui_InputKey::K, ImGuiKey_K },
+    { (uint8_t)gui_InputKey::L, ImGuiKey_L },
+    { (uint8_t)gui_InputKey::M, ImGuiKey_M },
+    { (uint8_t)gui_InputKey::N, ImGuiKey_N },
+    { (uint8_t)gui_InputKey::O, ImGuiKey_O },
+    { (uint8_t)gui_InputKey::P, ImGuiKey_P },
+    { (uint8_t)gui_InputKey::Q, ImGuiKey_Q },
+    { (uint8_t)gui_InputKey::R, ImGuiKey_R },
+    { (uint8_t)gui_InputKey::S, ImGuiKey_S },
+    { (uint8_t)gui_InputKey::T, ImGuiKey_T },
+    { (uint8_t)gui_InputKey::U, ImGuiKey_U },
+    { (uint8_t)gui_InputKey::V, ImGuiKey_V },
+    { (uint8_t)gui_InputKey::W, ImGuiKey_W },
+    { (uint8_t)gui_InputKey::X, ImGuiKey_Y },
+    { (uint8_t)gui_InputKey::Z, ImGuiKey_Z }
+};
+
 static GLuint shader_program = 0;
 static GLint attrib_proj_mtx;
 static GLint attrib_texture;
@@ -172,26 +217,6 @@ bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
 
     io->BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 
-    io->KeyMap[ImGuiKey_Tab] = (int)gui_InputKey::Tab;
-    io->KeyMap[ImGuiKey_Delete] = (int)gui_InputKey::Delete;
-    io->KeyMap[ImGuiKey_Backspace] = (int)gui_InputKey::Backspace;
-    io->KeyMap[ImGuiKey_Enter] = (int)gui_InputKey::Enter;
-    io->KeyMap[ImGuiKey_Escape] = (int)gui_InputKey::Escape;
-    io->KeyMap[ImGuiKey_Home] = (int)gui_InputKey::Home;
-    io->KeyMap[ImGuiKey_End] = (int)gui_InputKey::End;
-    io->KeyMap[ImGuiKey_PageUp] = (int)gui_InputKey::PageUp;
-    io->KeyMap[ImGuiKey_PageDown] = (int)gui_InputKey::PageDown;
-    io->KeyMap[ImGuiKey_LeftArrow] = (int)gui_InputKey::Left;
-    io->KeyMap[ImGuiKey_RightArrow] = (int)gui_InputKey::Right;
-    io->KeyMap[ImGuiKey_UpArrow] = (int)gui_InputKey::Up;
-    io->KeyMap[ImGuiKey_DownArrow] = (int)gui_InputKey::Down;
-    io->KeyMap[ImGuiKey_A] = (int)gui_InputKey::A;
-    io->KeyMap[ImGuiKey_C] = (int)gui_InputKey::C;
-    io->KeyMap[ImGuiKey_V] = (int)gui_InputKey::V;
-    io->KeyMap[ImGuiKey_X] = (int)gui_InputKey::X;
-    io->KeyMap[ImGuiKey_Y] = (int)gui_InputKey::Y;
-    io->KeyMap[ImGuiKey_Z] = (int)gui_InputKey::Z;
-
     imgui_local = true;
     imgui_ready = true;
 
@@ -206,13 +231,12 @@ void gui_Window::StartImGuiFrame()
     io->DisplaySize = ImVec2((float)state.display.width, (float)state.display.height);
     io->DeltaTime = (float)state.time.monotonic_delta;
 
-    MemSet(io->KeysDown, 0, RG_SIZE(io->KeysDown));
-    for (Size idx: state.input.keys) {
-        io->KeysDown[idx] = true;
+    for (gui_KeyEvent evt: state.input.events) {
+        ImGuiKey key = KeyMap.FindValue(evt.key, ImGuiKey_None);
+        if (key == ImGuiKey_None)
+            continue;
+        io->AddKeyEvent(key, evt.down);
     }
-    io->KeyCtrl = state.input.keys.Test((Size)gui_InputKey::Control);
-    io->KeyAlt = state.input.keys.Test((Size)gui_InputKey::Alt);
-    io->KeyShift = state.input.keys.Test((Size)gui_InputKey::Shift);
     io->AddInputCharactersUTF8(state.input.text.data);
 
     io->MousePos = ImVec2((float)state.input.x, (float)state.input.y);

@@ -70,13 +70,28 @@ enum class gui_InputKey {
     W,
     X,
     Y,
-    Z
+    Z,
+    Key0,
+    Key1,
+    Key2,
+    Key3,
+    Key4,
+    Key5,
+    Key6,
+    Key7,
+    Key8,
+    Key9
 };
 
 enum class gui_InputButton {
     Left,
     Right,
     Middle
+};
+
+struct gui_KeyEvent {
+    uint8_t key;
+    bool down;
 };
 
 struct gui_State {
@@ -86,10 +101,12 @@ struct gui_State {
     } time;
 
     struct {
-        int width, height;
+        int width;
+        int height;
     } display;
 
     struct {
+        LocalArray<gui_KeyEvent, 64> events;
         Bitset<256> keys;
         LocalArray<char, 256> text;
 

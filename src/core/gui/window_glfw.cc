@@ -111,7 +111,13 @@ bool gui_Window::Create(const char *application_name)
         gui_Window *self = (gui_Window *)glfwGetWindowUserPointer(window);
 
 #define HANDLE_KEY(GlfwCode, Code) \
-            case (GlfwCode): { self->priv.input.keys.Set((Size)(Code), action != GLFW_RELEASE); } break
+            case (GlfwCode): { \
+                bool down = (action != GLFW_RELEASE); \
+                if (self->priv.input.events.Available()) [[likely]] { \
+                    self->priv.input.events.Append({ (uint8_t)(Code), down }); \
+                } \
+                self->priv.input.keys.Set((Size)(Code), down); \
+            } break
 
         switch (key) {
             HANDLE_KEY(GLFW_KEY_LEFT_CONTROL, gui_InputKey::Control);
@@ -156,6 +162,16 @@ bool gui_Window::Create(const char *application_name)
             HANDLE_KEY(GLFW_KEY_X, gui_InputKey::X);
             HANDLE_KEY(GLFW_KEY_Y, gui_InputKey::Y);
             HANDLE_KEY(GLFW_KEY_Z, gui_InputKey::Z);
+            HANDLE_KEY(GLFW_KEY_0, gui_InputKey::Key0);
+            HANDLE_KEY(GLFW_KEY_1, gui_InputKey::Key1);
+            HANDLE_KEY(GLFW_KEY_2, gui_InputKey::Key2);
+            HANDLE_KEY(GLFW_KEY_3, gui_InputKey::Key3);
+            HANDLE_KEY(GLFW_KEY_4, gui_InputKey::Key4);
+            HANDLE_KEY(GLFW_KEY_5, gui_InputKey::Key5);
+            HANDLE_KEY(GLFW_KEY_6, gui_InputKey::Key6);
+            HANDLE_KEY(GLFW_KEY_7, gui_InputKey::Key7);
+            HANDLE_KEY(GLFW_KEY_8, gui_InputKey::Key8);
+            HANDLE_KEY(GLFW_KEY_9, gui_InputKey::Key9);
         }
 
 #undef HANDLE_KEY
@@ -209,6 +225,7 @@ bool gui_Window::ProcessEvents(bool wait)
     }
 
     // Reset relative inputs
+    priv.input.events.Clear();
     priv.input.text.Clear();
     priv.input.text.data[priv.input.text.len] = 0;
     priv.input.buttons &= ~released_buttons;
