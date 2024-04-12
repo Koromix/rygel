@@ -21,8 +21,12 @@
 
 cmake_minimum_required(VERSION 3.6)
 cmake_policy(SET CMP0091 NEW)
-project(koffi C CXX ASM)
 
+if(NOT NODE_JS_INCLUDE_DIRS)
+    message(FATAL_ERROR "Please use CNoke to build Koffi, follow instructions here: https://koffi.dev/contribute#build-from-source")
+endif()
+
+project(koffi C CXX ASM)
 find_package(CNoke)
 
 include(CheckCXXCompilerFlag)
