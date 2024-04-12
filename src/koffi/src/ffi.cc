@@ -499,7 +499,6 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
 Napi::Value InstantiateUnion(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (!info.IsConstructCall()) {
         ThrowError<Napi::TypeError>(env, "This function is a constructor and must be called with new");
@@ -669,7 +668,6 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     RG_ASSERT(directions >= 1 && directions <= 3);
 
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -1755,7 +1753,6 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
 static Napi::Value CastValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 2) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());

@@ -148,9 +148,6 @@ PointerObject::PointerObject(const Napi::CallbackInfo &info)
     RG_ASSERT(info[0u].IsExternal());
     RG_ASSERT(info[1u].IsExternal());
 
-    Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
-
     Napi::External<void> external1 = info[0u].As<Napi::External<void>>(); 
     Napi::External<TypeInfo> external2 = info[1u].As<Napi::External<TypeInfo>>();
 
@@ -818,8 +815,6 @@ Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *
 {
     // We can't decode unions because we don't know which member is valid
     if (type->primitive == PrimitiveKind::Union) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
         Napi::Object wrapper = type->construct.New({}).As<Napi::Object>();
         SetValueTag(wrapper, &UnionObjectMarker);
 
