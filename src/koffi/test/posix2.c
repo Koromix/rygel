@@ -33,3 +33,13 @@ EXPORT int TestLazyBinding()
     int DoesNotExist();
     return DoesNotExist();
 }
+
+EXPORT int DoGetInt()
+{
+    return 2;
+}
+
+EXPORT int GetInt()
+{
+    return DoGetInt();
+}

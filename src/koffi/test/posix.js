@@ -44,12 +44,23 @@ async function test() {
     // Test relative path because on Windows this uses a different code path
     process.chdir(__dirname);
 
-    let lib1 = koffi.load('./build/posix.so', { global: true });
-    assert.throws(() => koffi.load('./build/posix_dep.so'));
-    let lib2 = koffi.load('./build/posix_dep.so', { lazy: true });
+    let lib1 = koffi.load('./build/posix1.so', { global: true });
+    assert.throws(() => koffi.load('./build/posix2.so'));
+    let lib2 = koffi.load('./build/posix2.so', { lazy: true });
+    let lib3 = koffi.load('./build/posix3.so', { deep: true });
 
     const SumInts = lib2.func('int SumInts(int a, int b)');
+    const GetInt1 = lib1.func('int GetInt()');
+    const GetInt2 = lib2.func('int GetInt()');
+    const GetInt3 = lib3.func('int GetInt()');
 
     assert.equal(SumInts(4, 2), 6);
     assert.equal(SumInts(50, -8), 42);
+
+    // Test RTLD_DEEPBIND
+    if (process.platform == 'linux' || process.platform == 'macos') {
+        assert.equal(GetInt1(), 1);
+        assert.equal(GetInt2(), 1);
+        assert.equal(GetInt3(), 3);
+    }
 }

@@ -59,9 +59,12 @@ if(WIN32)
 endif()
 
 if(UNIX AND NOT APPLE)
-    add_library(posix SHARED posix.c)
-    set_target_properties(posix PROPERTIES PREFIX "")
+    add_library(posix1 SHARED posix1.c)
+    set_target_properties(posix1 PROPERTIES PREFIX "")
 
-    add_library(posix_dep SHARED posix_dep.c)
-    set_target_properties(posix_dep PROPERTIES PREFIX "")
+    add_library(posix2 SHARED posix2.c)
+    set_target_properties(posix2 PROPERTIES PREFIX "")
+
+    add_library(posix3 SHARED posix3.c)
+    set_target_properties(posix3 PROPERTIES PREFIX "")
 endif()
