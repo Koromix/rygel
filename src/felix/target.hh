@@ -111,6 +111,7 @@ class TargetSetBuilder {
 
     BlockAllocator temp_alloc;
 
+    HashSet<const char *> known_targets;
     TargetSet set;
 
 public:

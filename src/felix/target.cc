@@ -203,15 +203,22 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
             TargetConfig target_config = {};
 
             target_config.name = DuplicateString(prop.section, &set.str_alloc).ptr;
-            if (set.targets_map.Find(target_config.name)) {
-                LogError("Duplicate target name '%1'", target_config.name);
-                valid = false;
-            }
             target_config.type = TargetType::Executable;
             target_config.platforms = ParseSupportedPlatforms("Desktop Emscripten");
             RG_ASSERT(target_config.platforms);
             target_config.title = target_config.name;
             target_config.version_tag = target_config.name;
+
+            // Don't reuse target names
+            {
+                bool inserted;
+                known_targets.TrySet(target_config.name, &inserted);
+
+                if (!inserted) {
+                    LogError("Duplicate target name '%1'", target_config.name);
+                    valid = false;
+                }
+            }
 
             // Type property must be specified first
             if (prop.key == "Type") {
@@ -441,7 +448,11 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             const TargetInfo *import = set.targets_map.FindValue(import_name, nullptr);
 
             if (!import) {
-                LogError("Cannot import from unknown target '%1'", import_name);
+                if (known_targets.Find(import_name)) {
+                    LogError("Cannot use broken target '%1'", import_name);
+                } else {
+                    LogError("Cannot import from unknown target '%1'", import_name);
+                }
                 return nullptr;
             }
             if (import->type != TargetType::Library) {
