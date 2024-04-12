@@ -4,6 +4,10 @@
 
 ### Koffi 2.8
 
+#### Koffi 2.8.6 (2024-04-12)
+
+- Support [loading library](functions.md#loading-options) with RTLD_DEEPBIND where supported
+
 #### Koffi 2.8.5 (2024-04-11)
 
 - Prevent obviously invalid type and member names
