@@ -61,10 +61,13 @@ endif()
 if(UNIX AND NOT APPLE)
     add_library(posix1 SHARED posix1.c)
     set_target_properties(posix1 PROPERTIES PREFIX "")
+    target_compile_options(posix1 PRIVATE "-fsemantic-interposition")
 
     add_library(posix2 SHARED posix2.c)
     set_target_properties(posix2 PROPERTIES PREFIX "")
+    target_compile_options(posix2 PRIVATE "-fsemantic-interposition")
 
     add_library(posix3 SHARED posix3.c)
     set_target_properties(posix3 PROPERTIES PREFIX "")
+    target_compile_options(posix3 PRIVATE "-fsemantic-interposition")
 endif()
