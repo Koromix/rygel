@@ -185,7 +185,7 @@ html.small .ui_toolbar button.icon {
     height: 3px;
 }
 .ui_toolbar > .drop > div hr:first-child,
-    .ui_toolbar > .drop > div hr:last-child { display: none; } 
+    .ui_toolbar > .drop > div hr:last-child { display: none; }
 .ui_toolbar > .drop.active { background-color: var(--menu_color_n1); }
 .ui_toolbar > .drop.active > div {
     display: flex;

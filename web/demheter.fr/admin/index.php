@@ -114,10 +114,10 @@
                 document.querySelector('#page').innerHTML =
                     '<div class="fatal"><div>' +
                         '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
-                        'Nous vous recommandons <u>l\'un de ces navigateurs</u> :<br/><br/>' + 
+                        'Nous vous recommandons <u>l\'un de ces navigateurs</u> :<br/><br/>' +
                         '<b>Mozilla Firefox</b> <span class="browser">(version ≥ 60)</span><br/>' +
                         '<b>Google Chrome</b> <span class="browser">(version ≥ 55)</span><br/>' +
-                        '<b>Microsoft Edge</b> <span class="browser">(version ≥ 17)</span><br/>' + 
+                        '<b>Microsoft Edge</b> <span class="browser">(version ≥ 17)</span><br/>' +
                         '<b>Apple Safari</b> <span class="browser">(version ≥ 11)</span>' +
                     '</div></div>';
                 document.body.classList.remove('loading');

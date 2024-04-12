@@ -34,7 +34,7 @@ Sans les explications d’un médecin, les **personnes se retrouvent seules** fa
     <div class="content" style="background: #ec9d36;">
         <img src="{{ ASSET static/clubhouse/talk.png }}" alt="" />
         <div>
-            <p>« Annoncer le diagnostic permet d’établir une relation thérapeutique de confiance et 
+            <p>« Annoncer le diagnostic permet d’établir une relation thérapeutique de confiance et
         de traverser le diagnostic ensemble »
             <p>Alyx
         </div>
@@ -51,7 +51,7 @@ Dans ces conditions, **deux écueils possibles** : le refus du diagnostic ou la 
 
 L’accès à un diagnostic clair permet non seulement de répondre **au besoin de savoir** de la personne mais lui donne aussi la possibilité, si elle le souhaite, d’annoncer et d’expliquer son trouble à ses proches.
 
-Le trouble psychique peut être vécu comme un **« tabou familial »** : la compréhension de son diagnostic et la connaissance de son trouble peuvent alors aider la personne à se sentir plus légitime d’en parler et à lutter à son échelle **contre la stigmatisation des troubles psychiques**. 
+Le trouble psychique peut être vécu comme un **« tabou familial »** : la compréhension de son diagnostic et la connaissance de son trouble peuvent alors aider la personne à se sentir plus légitime d’en parler et à lutter à son échelle **contre la stigmatisation des troubles psychiques**.
 
 <div class="quotes">
     <div class="intro">Ils témoignent...</div>
@@ -68,7 +68,7 @@ Le trouble psychique peut être vécu comme un **« tabou familial »** : la com
     </div>
 </div>
 
-Les membres du Clubhouse de Lille préconisent d’ailleurs que l’annonce du diagnostic par le médecin puisse être réalisée **en présence d’un proche**. 
+Les membres du Clubhouse de Lille préconisent d’ailleurs que l’annonce du diagnostic par le médecin puisse être réalisée **en présence d’un proche**.
 
 Le médecin peut en effet jouer le **rôle d’intermédiaire** entre la personne présentant un trouble psychique et son entourage et dissiper les éventuelles incompréhensions des proches.
 

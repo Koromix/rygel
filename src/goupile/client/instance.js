@@ -1001,7 +1001,7 @@ function addAutomaticActions(builder, model) {
                     await records.unlock(form_thread.tid);
                 }
 
-                await data_mutex.run(async () => { 
+                await data_mutex.run(async () => {
                     await openRecord(form_thread.tid, null, route.page);
                     data_threads = null;
                 });
@@ -1016,7 +1016,7 @@ function addAutomaticActions(builder, model) {
                 await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                        'Oublier', () => {});
 
-                await data_mutex.run(async () => { 
+                await data_mutex.run(async () => {
                     await openRecord(route.tid, route.anchor, route.page);
                 });
 

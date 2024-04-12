@@ -409,7 +409,7 @@ int Main(int argc, char **argv)
     bool explicit_config = false;
 
     const auto print_usage = [=](StreamWriter *st) {
-        PrintLn(st, 
+        PrintLn(st,
 R"(Usage: %!..+%1 [options] [root]%!0
 
 Options:

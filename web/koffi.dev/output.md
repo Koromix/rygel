@@ -226,7 +226,7 @@ See [decoding variables](memory.md#decode-to-js-values) for more information abo
 
 In some cases, the native code may need to change the output buffer at a later time, maybe during a later call or from another thread.
 
-In this case, it is **not safe to use buffers or typed arrays**! 
+In this case, it is **not safe to use buffers or typed arrays**!
 
 However, you can use `koffi.alloc(type, len)` to allocate memory and get a pointer that won't move, and can be safely used at any time by the native code. Use [koffi.decode()](memory.md#decode-to-js-values) to read data from the pointer when needed.
 

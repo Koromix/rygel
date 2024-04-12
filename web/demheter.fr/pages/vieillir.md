@@ -23,7 +23,7 @@ L’équipe médicale de DEMHETER apporte ici **quelques éléments de réponse*
     </div>
 </div>
 
-Un trouble de l’humeur **non pris en charge augmente le risque de morbi-mortalité** : réduction de l’espérance de vie, addictions, tentative de suicide, décès par suicide. 
+Un trouble de l’humeur **non pris en charge augmente le risque de morbi-mortalité** : réduction de l’espérance de vie, addictions, tentative de suicide, décès par suicide.
 
 Suivre un <u>traitement permet de réduire ce risque</u> et d’améliorer la qualité de vie.
 
@@ -36,7 +36,7 @@ Suivre un <u>traitement permet de réduire ce risque</u> et d’améliorer la qu
     </div>
 </div>
 
-Chaque individu peut réagir différemment aux traitements. 
+Chaque individu peut réagir différemment aux traitements.
 
 La plupart des médicaments sont métabolisés par le foie : une surveillance de la **tolérance hépatique est parfois nécessaire** lorsque l’on prend un traitement sur le long court.
 
@@ -91,7 +91,7 @@ Les **troubles de l’humeur, l’âge et les maladies cardiovasculaires** peuve
     </div>
 </div>
 
-Avec l’âge, les troubles de l’humeur peuvent être **plus sévères ou pharmaco-résistants** en cas de rechute. 
+Avec l’âge, les troubles de l’humeur peuvent être **plus sévères ou pharmaco-résistants** en cas de rechute.
 
 <img src="{{ ASSET static/clubhouse/people3.png }}" class="inline right" width="131" height="121" alt="" />
 

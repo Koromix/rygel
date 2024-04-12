@@ -5,7 +5,7 @@
 # X-Upstream-Vcs: <none>
 # X-Upstream-Bugs: <none>
 # X-Upstream-Forum: <none>
-# 
+#
 # Files: *
 # Copyright: © 1989 Paul Leyland <pcl@ox.ac.uk>
 # License: GPL-2.0+
@@ -24,7 +24,7 @@
 #  .
 #  On Debian systems, the complete text of the GNU General
 #  Public License version 2 can be found in "/usr/share/common-licenses/GPL-2".
-# 
+#
 # Files: debian/*
 # Copyright: © 2012 Khalid El Fathi <khalid@elfathi.fr>
 #            © 2008-2010 Francois Marier <francois@debian.org>

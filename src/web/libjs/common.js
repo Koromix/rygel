@@ -668,7 +668,7 @@ const Log = new function() {
         this.debug = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'debug', msg, timeout); };
         this.info = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'info', msg, timeout); };
         this.success = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'success', msg, timeout); };
-        this.warning = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'warning', msg, timeout); }; 
+        this.warning = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'warning', msg, timeout); };
         this.error = function(msg, timeout = Log.defaultTimeout) { return updateEntry(self, 'error', msg, timeout); };
 
         this.progress = function(action, value = null, max = null) {

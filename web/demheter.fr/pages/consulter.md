@@ -21,7 +21,7 @@ Lors de cet atelier, les membres du Clubhouse de Lille ont fait part de leurs **
     <div><img src="{{ ASSET static/clubhouse/sad.png }}" alt="" /></div>
     <div>
         <p>La honte de consulter
-        <p class="small">liée à la stigmatisation des troubles psychiques et à<br> l'auto-stigmatisation 
+        <p class="small">liée à la stigmatisation des troubles psychiques et à<br> l'auto-stigmatisation
     </div>
     <div><img src="{{ ASSET static/clubhouse/question.png }}" alt="" /></div>
     <div>

@@ -1264,7 +1264,7 @@ function FormBuilder(state, model) {
                     case 'î':
                     case 'ï': { c = '[iîï]'; } break;
                     case 'ù':
-                    case 'ü': 
+                    case 'ü':
                     case 'û':
                     case 'ú': { c = 'u'; } break;
                     case 'n':

@@ -524,7 +524,7 @@ bool GitVersioneer::FindInIndexes(Size start_idx, const GitHash &hash, PackLocat
             const char *idx_filename = idx_filenames[idx];
 
             fd = OpenFile(idx_filename, (int)OpenFlag::Read);
-            if (fd < 0) 
+            if (fd < 0)
                 return false;
             idx_files[idx] = fd;
         }

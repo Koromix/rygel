@@ -1,7 +1,7 @@
 // Copyright 2023 Niels Martignène <niels.martignene@protonmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
-// this software and associated documentation files (the “Software”), to deal in 
+// this software and associated documentation files (the “Software”), to deal in
 // the Software without restriction, including without limitation the rights to use,
 // copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the
 // Software, and to permit persons to whom the Software is furnished to do so,
@@ -148,7 +148,7 @@ PointerObject::PointerObject(const Napi::CallbackInfo &info)
     RG_ASSERT(info[0u].IsExternal());
     RG_ASSERT(info[1u].IsExternal());
 
-    Napi::External<void> external1 = info[0u].As<Napi::External<void>>(); 
+    Napi::External<void> external1 = info[0u].As<Napi::External<void>>();
     Napi::External<TypeInfo> external2 = info[1u].As<Napi::External<TypeInfo>>();
 
     Napi::Object wrapper = Value();
@@ -206,7 +206,7 @@ Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
     RG_ASSERT(type->primitive == PrimitiveKind::Union);
 
     // node-addon-api wants std::vector
-    std::vector<Napi::ClassPropertyDescriptor<UnionObject>> properties; 
+    std::vector<Napi::ClassPropertyDescriptor<UnionObject>> properties;
     properties.reserve(type->members.len);
 
     for (Size i = 0; i < type->members.len; i++) {
@@ -1304,12 +1304,12 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             type = MakeArrayType(instance, type, *len);
         } else {
             switch (type->primitive) {
-                case PrimitiveKind::Int8: 
+                case PrimitiveKind::Int8:
                 case PrimitiveKind::UInt8: {
                     Size count = strlen((const char *)ptr);
                     type = MakeArrayType(instance, type, count);
                 } break;
-                case PrimitiveKind::Int16: 
+                case PrimitiveKind::Int16:
                 case PrimitiveKind::UInt16: {
                     Size count = NullTerminatedLength((const char16_t *)ptr, RG_SIZE_MAX);
                     type = MakeArrayType(instance, type, count);

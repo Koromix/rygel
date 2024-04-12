@@ -26,7 +26,7 @@ app.form("tab_general", "Génèralités", () => {
     // ...
     app.form("app_optimap_gravity", "Optimap - IGS2", null, {
         enabled: meta => {
-            return meta.map.pharmacology 
+            return meta.map.pharmacology
                 && meta.map.pharmacology.values.dobutamin == 1
         }
     })
@@ -161,7 +161,7 @@ Variable `load`
 app.form("tab_general", "Généralités", () => {
     // ...
     app.form("app_optimap_gravity", "Optimap - IGS2", null, {
-        load: ['app_inclusion'] 
+        load: ['app_inclusion']
     })
     // ...
 })
@@ -228,7 +228,7 @@ minusMonths()
 
 ```js
 form.sameLine(); form.time("biology_time", "",{
-    value: times.now() 
+    value: times.now()
 })
 ```
 

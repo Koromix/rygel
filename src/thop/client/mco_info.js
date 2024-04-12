@@ -451,7 +451,7 @@ function makeFilterFunction(filter) {
                 case 'ï': { re += '[iîï]'; } break;
                 case 'u':
                 case 'ù':
-                case 'ü': 
+                case 'ü':
                 case 'û':
                 case 'ú': { re += '[uùüûú]'; } break;
                 case 'n':

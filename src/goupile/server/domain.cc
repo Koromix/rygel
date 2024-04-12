@@ -22,7 +22,7 @@ const int DomainVersion = 105;
 const int MaxInstancesPerDomain = 1024;
 const int64_t FullSnapshotDelay = 86400 * 1000;
 
-// Process-wide unique instance identifier 
+// Process-wide unique instance identifier
 static std::atomic_int64_t next_unique = 0;
 
 bool CheckDomainTitle(Span<const char> title)

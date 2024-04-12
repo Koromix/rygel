@@ -1,5 +1,5 @@
 # https://www.data.gouv.fr/fr/datasets/liste-de-prenoms-et-patronymes/
-# Licence Ouverte / Open Licence version 2.0 
+# Licence Ouverte / Open Licence version 2.0
 
 AA,15
 AAAAAA,1

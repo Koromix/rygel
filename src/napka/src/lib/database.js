@@ -250,7 +250,7 @@ function migrate(db, version) {
             } // fallthrough
 
             case 2: {
-                let st = 
+                let st =
 
                 db.exec(`
                     CREATE TABLE maps (

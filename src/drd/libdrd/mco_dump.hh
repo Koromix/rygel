@@ -31,7 +31,7 @@ struct mco_ReadableGhmNode {
     Size children_count;
 };
 
-bool mco_BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes, Allocator *str_alloc, 
+bool mco_BuildReadableGhmTree(Span<const mco_GhmDecisionNode> ghm_nodes, Allocator *str_alloc,
                               HeapArray<mco_ReadableGhmNode> *out_nodes);
 void mco_DumpGhmDecisionTree(Span<const mco_ReadableGhmNode> readable_nodes, StreamWriter *out_st);
 void mco_DumpGhmDecisionTree(Span<const mco_GhmDecisionNode> ghm_nodes, StreamWriter *out_st);

@@ -20,7 +20,7 @@
          <li><i>Focaliser l'attention sur la région du cœur  plutôt que les émotions désagréables. Se centrer sur la respiration et maintenir l'attention au moins 10 secondes.</i>
          <li><i>Imaginer un sentiment agréable déjà éprouvé et le savourer.</i>
          <li><i>Conserver le calme et évoquer le problème de départ. Se demander quelle pourrait être la réaction la plus adéquate à l'avenir ? Quelles pensées serait-il conseillé d'avoir ?</i>
-         <li><i>Regarder les conséquences sur les émotions, sentiments et pensées.</i> 
+         <li><i>Regarder les conséquences sur les émotions, sentiments et pensées.</i>
     </ul>
 </div>
 

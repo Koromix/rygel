@@ -1166,7 +1166,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
 
             if (!inserted) [[unlikely]] {
                 Size param_pos = definitions_map.FindValue(&param, -1);
-                Size previous_pos = definitions_map.FindValue(*ptr, -1); 
+                Size previous_pos = definitions_map.FindValue(*ptr, -1);
 
                 MarkError(param_pos, "Duplicate member name '%1'", param.name);
                 Hint(previous_pos, "Previous member was declared here");
@@ -2720,7 +2720,7 @@ void bk_Parser::ParseRecordDot()
 
     const char *name = ConsumeIdentifier();
     const bk_RecordTypeInfo::Member *member =
-        std::find_if(record_type->members.begin(), record_type->members.end(), 
+        std::find_if(record_type->members.begin(), record_type->members.end(),
                      [&](const bk_RecordTypeInfo::Member &member) { return TestStr(member.name, name); });
 
     if (member == record_type->members.end()) [[unlikely]] {

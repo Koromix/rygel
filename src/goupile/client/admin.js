@@ -105,7 +105,7 @@ function renderInstances() {
                                 (<a href=${'/' + instance.key} target="_blank">accès</a>)
                             </td>
                             <td><a role="button" tabindex="0" @click=${UI.wrap(e => runSplitInstanceDialog(e, instance.key))}>Diviser</a></td>
-                            <td><a role="button" tabindex="0" href=${Util.pasteURL('/admin/', { select: instance.key })} 
+                            <td><a role="button" tabindex="0" href=${Util.pasteURL('/admin/', { select: instance.key })}
                                    @click=${UI.wrap(instance != selected_instance ? (e => togglePanel('users', true))
                                                                                         : (e => { go(e, '/admin/'); e.preventDefault(); }))}>Droits</a></td>
                             <td><a role="button" tabindex="0" @click=${UI.wrap(e => runConfigureInstanceDialog(e, instance))}>Configurer</a></td>

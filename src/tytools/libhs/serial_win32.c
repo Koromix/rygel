@@ -295,7 +295,7 @@ ssize_t hs_serial_write(hs_port *port, const uint8_t *buf, size_t size, int time
     assert(port->dev->type == HS_DEVICE_TYPE_SERIAL);
     assert(port->mode & HS_PORT_MODE_WRITE);
     assert(buf);
-    
+
     if (!size)
         return 0;
 

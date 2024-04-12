@@ -231,7 +231,7 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
     background: var(--many_color_n1);
     color: white;
 }
-.ins_level > .title { 
+.ins_level > .title {
     font-weight: bold;
     flex: 1;
 }
