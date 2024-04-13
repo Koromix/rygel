@@ -239,11 +239,12 @@ void gui_Window::StartImGuiFrame()
     }
     io->AddInputCharactersUTF8(state.input.text.data);
 
-    io->MousePos = ImVec2((float)state.input.x, (float)state.input.y);
+    io->AddMousePosEvent((float)state.input.x, (float)state.input.y);
     for (Size i = 0; i < RG_LEN(io->MouseDown); i++) {
-        io->MouseDown[i] = state.input.buttons & (unsigned int)(1 << i);
+        bool down = (state.input.buttons & (unsigned int)(1 << i));
+        io->AddMouseButtonEvent(i, down);
     }
-    io->MouseWheel = (float)state.input.wheel_y;
+    io->AddMouseWheelEvent((float)state.input.wheel_x, (float)state.input.wheel_y);
 
     ImGui::NewFrame();
 }
