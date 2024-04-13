@@ -90,7 +90,8 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
 #define HANDLE_KEY(VkCode, Code) \
                 case (VkCode): { \
                     if (thread_info->input.events.Available()) [[likely]] { \
-                        thread_info->input.events.Append({ (uint8_t)(Code), down }); \
+                        gui_KeyEvent evt = { (uint8_t)(Code), down }; \
+                        thread_info->input.events.Append(evt); \
                     } \
                     thread_info->input.keys.Set((Size)(Code), down); \
                 } break

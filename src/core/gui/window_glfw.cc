@@ -114,7 +114,8 @@ bool gui_Window::Create(const char *application_name)
             case (GlfwCode): { \
                 bool down = (action != GLFW_RELEASE); \
                 if (self->priv.input.events.Available()) [[likely]] { \
-                    self->priv.input.events.Append({ (uint8_t)(Code), down }); \
+                    gui_KeyEvent evt = { (uint8_t)(Code), down }; \
+                    self->priv.input.events.Append(evt); \
                 } \
                 self->priv.input.keys.Set((Size)(Code), down); \
             } break
