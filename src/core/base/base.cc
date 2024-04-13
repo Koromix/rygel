@@ -6383,7 +6383,12 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
         } break;
 
         case SourceType::File: {
+#ifdef _WIN32
+            max_len = std::min(max_len, (Size)UINT_MAX);
+            read_len = _read(source.u.file.fd, out_buf, (unsigned int)max_len);
+#else
             read_len = RG_RESTART_EINTR(read(source.u.file.fd, out_buf, (size_t)max_len), < 0);
+#endif
             if (read_len < 0) {
                 LogError("Error while reading file '%1': %2", filename, strerror(errno));
                 error = true;
@@ -6749,7 +6754,11 @@ bool StreamWriter::FlushBuffer()
               dest.type == DestinationType::LineFile);
 
     while (dest.u.file.buf_used) {
+#ifdef _WIN32
+        Size write_len = _write(dest.u.file.fd, dest.u.file.buf.ptr, (unsigned int)dest.u.file.buf_used);
+#else
         Size write_len = RG_RESTART_EINTR(write(dest.u.file.fd, dest.u.file.buf.ptr, (size_t)dest.u.file.buf_used), < 0);
+#endif
 
         if (write_len < 0) {
             LogError("Failed to write to '%1': %2", filename, strerror(errno));
@@ -6846,7 +6855,12 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
         case DestinationType::DirectFile: {
             while (buf.len) {
+#ifdef _WIN32
+                unsigned int int_len = (unsigned int)std::min(buf.len, (Size)UINT_MAX);
+                Size write_len = _write(dest.u.file.fd, buf.ptr, int_len);
+#else
                 Size write_len = RG_RESTART_EINTR(write(dest.u.file.fd, buf.ptr, (size_t)buf.len), < 0);
+#endif
 
                 if (write_len < 0) {
                     LogError("Failed to write to '%1': %2", filename, strerror(errno));

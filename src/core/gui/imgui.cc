@@ -240,7 +240,7 @@ void gui_Window::StartImGuiFrame()
     io->AddInputCharactersUTF8(state.input.text.data);
 
     io->AddMousePosEvent((float)state.input.x, (float)state.input.y);
-    for (Size i = 0; i < RG_LEN(io->MouseDown); i++) {
+    for (int i = 0; i < RG_LEN(io->MouseDown); i++) {
         bool down = (state.input.buttons & (unsigned int)(1 << i));
         io->AddMouseButtonEvent(i, down);
     }
