@@ -1849,7 +1849,7 @@ const char *GetEnv(const char *name)
             }
         }, name);
 
-        bucket->key = DuplicateString(name, GetDefaultAllocator());
+        bucket->key = DuplicateString(name, GetDefaultAllocator()).ptr;
         bucket->value = str;
     }
 
@@ -6816,7 +6816,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
                 const uint8_t *end = (const uint8_t *)memchr(buf.ptr, '\n', (size_t)buf.len);
 
                 if (end++) {
-                    Size copy_len = std::min(end - buf.ptr, dest.u.file.buf.len - dest.u.file.buf_used);
+                    Size copy_len = std::min((Size)(end - buf.ptr), dest.u.file.buf.len - dest.u.file.buf_used);
                     MemCpy(dest.u.file.buf.ptr + dest.u.file.buf_used, buf.ptr, copy_len);
 
                     buf.ptr += copy_len;

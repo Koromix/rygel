@@ -194,7 +194,7 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
     return id.ptr;
 }
 
-static const char *FindEsbuild(const char *path, Allocator *alloc)
+static const char *FindEsbuild(const char *path, [[maybe_unused]] Allocator *alloc)
 {
     if (!path) {
         const char *str = GetEnv("ESBUILD_PATH");
