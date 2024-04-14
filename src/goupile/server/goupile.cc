@@ -21,7 +21,7 @@
 #include "record.hh"
 #include "user.hh"
 #include "vm.hh"
-#include "src/core/network/network.hh"
+#include "src/core/http/http.hh"
 #include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #ifndef _WIN32
@@ -500,6 +500,22 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
     }
 }
 
+static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf)
+{
+    for (char c: str) {
+        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
+            out_buf->Append((char)c);
+        } else if (passthrough && strchr(passthrough, c)) {
+            out_buf->Append((char)c);
+        } else {
+            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
+        }
+    }
+
+    out_buf->Grow(1);
+    out_buf->ptr[out_buf->len] = 0;
+}
+
 static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
 {
     InstanceHolder *instance = nullptr;
@@ -542,9 +558,9 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                                                                      const char *key, const char *value) {
             HeapArray<char> *buf = (HeapArray<char> *)udata;
 
-            http_EncodeUrlSafe(key, buf);
+            EncodeUrlSafe(key, nullptr, buf);
             buf->Append('=');
-            http_EncodeUrlSafe(value, buf);
+            EncodeUrlSafe(value, nullptr, buf);
             buf->Append('&');
 
             return MHD_YES;

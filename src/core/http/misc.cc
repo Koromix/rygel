@@ -20,8 +20,8 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "src/core/base/base.hh"
-#include "http.hh"
-#include "http_misc.hh"
+#include "server.hh"
+#include "misc.hh"
 
 namespace RG {
 
@@ -162,22 +162,6 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
 
     out_guard.Disable();
     return true;
-}
-
-void http_EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf)
-{
-    for (char c: str) {
-        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
-            out_buf->Append((char)c);
-        } else if (passthrough && strchr(passthrough, c)) {
-            out_buf->Append((char)c);
-        } else {
-            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
-        }
-    }
-
-    out_buf->Grow(1);
-    out_buf->ptr[out_buf->len] = 0;
 }
 
 bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)

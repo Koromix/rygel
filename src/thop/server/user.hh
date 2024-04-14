@@ -15,7 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/drd/libdrd/libdrd.hh"
-#include "src/core/network/network.hh"
+#include "src/core/http/http.hh"
 
 namespace RG {
 

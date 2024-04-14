@@ -21,7 +21,36 @@
 
 #pragma once
 
-#include "curl.hh"
-#include "s3.hh"
-#include "sms.hh"
-#include "smtp.hh"
+#include "src/core/base/base.hh"
+#include "src/core/wrap/json.hh"
+
+namespace RG {
+
+struct http_RequestInfo;
+class http_IO;
+
+struct http_ByteRange {
+    Size start;
+    Size end;
+};
+
+uint32_t http_ParseAcceptableEncodings(Span<const char> encodings);
+bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 16> *out_ranges);
+
+bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io);
+
+class http_JsonPageBuilder: public json_Writer {
+    http_IO *io = nullptr;
+
+    HeapArray<uint8_t> buf;
+    StreamWriter st;
+    CompressionType encoding;
+
+public:
+    http_JsonPageBuilder(): json_Writer(&st) {}
+
+    bool Init(http_IO *io);
+    void Finish();
+};
+
+}

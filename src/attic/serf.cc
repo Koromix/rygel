@@ -12,7 +12,7 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/base/base.hh"
-#include "src/core/network/network.hh"
+#include "src/core/http/http.hh"
 
 namespace RG {
 

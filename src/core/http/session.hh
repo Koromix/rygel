@@ -22,7 +22,7 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "http.hh"
+#include "server.hh"
 
 namespace RG {
 

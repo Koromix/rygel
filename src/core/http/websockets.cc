@@ -20,7 +20,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "src/core/base/base.hh"
-#include "http.hh"
+#include "server.hh"
 #include "vendor/mbedtls/include/mbedtls/sha1.h"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 

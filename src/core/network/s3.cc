@@ -22,7 +22,6 @@
 #include "src/core/base/base.hh"
 #include "s3.hh"
 #include "curl.hh"
-#include "http_misc.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/pugixml/src/pugixml.hpp"
 
@@ -301,6 +300,22 @@ void s3_Session::Close()
     config = {};
 }
 
+static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArray<char> *out_buf)
+{
+    for (char c: str) {
+        if (IsAsciiAlphaOrDigit(c) || c == '-' || c == '.' || c == '_' || c == '~') {
+            out_buf->Append((char)c);
+        } else if (passthrough && strchr(passthrough, c)) {
+            out_buf->Append((char)c);
+        } else {
+            Fmt(out_buf, "%%%1", FmtHex((uint8_t)c).Pad0(-2));
+        }
+    }
+
+    out_buf->Grow(1);
+    out_buf->ptr[out_buf->len] = 0;
+}
+
 bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *key)> func)
 {
     BlockAllocator temp_alloc;
@@ -325,8 +340,8 @@ bool s3_Session::ListObjects(const char *prefix, FunctionRef<bool(const char *ke
         xml.RemoveFrom(0);
 
         Fmt(&query, "list-type=2");
-        Fmt(&query, "&prefix="); http_EncodeUrlSafe(prefix, &query);
-        Fmt(&query, "&start-after="); http_EncodeUrlSafe(after, &query);
+        Fmt(&query, "&prefix="); EncodeUrlSafe(prefix, nullptr, &query);
+        Fmt(&query, "&start-after="); EncodeUrlSafe(after, nullptr, &query);
 
         int status = RunSafe("list S3 objects", [&]() {
             LocalArray<curl_slist, 32> headers;
@@ -995,11 +1010,11 @@ Span<const char> s3_Session::MakeURL(Span<const char> key, Allocator *alloc, Spa
 
     if (config.path_mode) {
         buf.Append('/');
-        http_EncodeUrlSafe(config.bucket, &buf);
+        EncodeUrlSafe(config.bucket, nullptr, &buf);
     }
     if (key.len) {
         buf.Append('/');
-        http_EncodeUrlSafe(key, "/", &buf);
+        EncodeUrlSafe(key, "/", &buf);
     }
     if (buf.len == path_offset) {
         Fmt(&buf, "/");

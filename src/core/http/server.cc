@@ -20,8 +20,8 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include "src/core/base/base.hh"
-#include "http.hh"
-#include "http_misc.hh"
+#include "server.hh"
+#include "misc.hh"
 
 #ifdef _WIN32
     #include <io.h>
