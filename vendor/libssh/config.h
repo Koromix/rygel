@@ -91,7 +91,9 @@
     #define HAVE_STDINT_H 1
     #define HAVE_PTHREAD_H 1
     #define HAVE_ECC 1
-    #define HAVE_GLOB_GL_FLAGS_MEMBER 1
+    #ifndef __EMSCRIPTEN__
+        #define HAVE_GLOB_GL_FLAGS_MEMBER 1
+    #endif
 
     #define HAVE_SNPRINTF 1
     #define HAVE_VSNPRINTF 1
