@@ -107,6 +107,10 @@
 #  include "config-freebsd.h"
 #endif
 
+#ifdef __EMSCRIPTEN__
+#  include "config-emscripten.h"
+#endif
+
 #ifdef macintosh
 #  include "config-mac.h"
 #endif
