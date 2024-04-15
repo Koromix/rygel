@@ -41,17 +41,17 @@ struct ClientCommand {
 };
 
 static const ClientCommand commands[] = {
-    {"run",       &TyCommander::runMainInstance,      NULL,                        NULL},
-    {"open",      &TyCommander::executeRemoteCommand, NULL,                        QT_TR_NOOP("Open a new window (default)")},
-    {"reset",     &TyCommander::executeRemoteCommand, NULL,                        QT_TR_NOOP("Reset board")},
-    {"reboot",    &TyCommander::executeRemoteCommand, NULL,                        QT_TR_NOOP("Reboot board")},
+    {"run",       &TyCommander::runMainInstance,      nullptr,                        nullptr},
+    {"open",      &TyCommander::executeRemoteCommand, nullptr,                        QT_TR_NOOP("Open a new window (default)")},
+    {"reset",     &TyCommander::executeRemoteCommand, nullptr,                        QT_TR_NOOP("Reset board")},
+    {"reboot",    &TyCommander::executeRemoteCommand, nullptr,                        QT_TR_NOOP("Reboot board")},
     {"upload",    &TyCommander::executeRemoteCommand, QT_TR_NOOP("[<firmwares>]"), QT_TR_NOOP("Upload current or new firmware")},
-    {"attach",    &TyCommander::executeRemoteCommand, NULL,                        QT_TR_NOOP("Attach serial monitor")},
-    {"detach",    &TyCommander::executeRemoteCommand, NULL,                        QT_TR_NOOP("Detach serial monitor")},
-    {"integrate", &TyCommander::integrateArduino,     NULL,                        NULL},
-    {"restore",   &TyCommander::integrateArduino,     NULL,                        NULL},
+    {"attach",    &TyCommander::executeRemoteCommand, nullptr,                        QT_TR_NOOP("Attach serial monitor")},
+    {"detach",    &TyCommander::executeRemoteCommand, nullptr,                        QT_TR_NOOP("Detach serial monitor")},
+    {"integrate", &TyCommander::integrateArduino,     nullptr,                        nullptr},
+    {"restore",   &TyCommander::integrateArduino,     nullptr,                        nullptr},
     // Hidden command for Arduino 1.0.6 integration
-    {"avrdude",   &TyCommander::fakeAvrdudeUpload,    NULL,                        NULL},
+    {"avrdude",   &TyCommander::fakeAvrdudeUpload,    nullptr,                        nullptr},
     {}
 };
 

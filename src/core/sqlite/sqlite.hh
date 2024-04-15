@@ -25,6 +25,10 @@
 #include "vendor/sqlite3/sqlite3mc.h"
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
+// Work around -Wzero-as-null-pointer-constant warning
+#undef SQLITE_STATIC
+#define SQLITE_STATIC      ((sqlite3_destructor_type)nullptr)
+
 #include <thread>
 
 namespace RG {

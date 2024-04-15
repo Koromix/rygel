@@ -94,7 +94,7 @@ static bool reopen_stream(FILE *fp, const QString &path, const char *mode)
     fp = freopen(path.toLocal8Bit().constData(), mode, fp);
     if (!fp)
         return false;
-    setvbuf(fp, NULL, _IONBF, 0);
+    setvbuf(fp, nullptr, _IONBF, 0);
 
     return true;
 }
@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
     app.setClientConsole(ty_standard_get_modes(TY_STREAM_OUTPUT) != TY_DESCRIPTOR_MODE_DEVICE);
 #endif
 
-    hs_log_set_handler(ty_libhs_log_handler, NULL);
+    hs_log_set_handler(ty_libhs_log_handler, nullptr);
     if (ty_models_load_patch(nullptr) == TY_ERROR_MEMORY)
         return 1;
 

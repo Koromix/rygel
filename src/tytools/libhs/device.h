@@ -61,7 +61,11 @@ typedef enum hs_device_type {
  * @sa hs_device_type
  */
 static const char *const hs_device_type_strings[] = {
+#ifdef __cplusplus
+    nullptr,
+#else
     NULL,
+#endif
     "hid",
     "serial"
 };

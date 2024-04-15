@@ -58,7 +58,7 @@ void ArduinoDialog::refresh()
     if (install_.path().isEmpty())
         return;
 
-    const char *color = NULL;
+    const char *color = nullptr;
     QString text;
 
     if (install_.isIntegrated()) {

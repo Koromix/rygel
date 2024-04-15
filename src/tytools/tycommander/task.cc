@@ -111,7 +111,7 @@ void TyTask::notifyMessage(const ty_message_data *msg)
         task_->user_cleanup_udata = new shared_ptr<Task>(shared_from_this());
 
         ty_task_unref(task_);
-        task_ = NULL;
+        task_ = nullptr;
     }
 
     switch (msg->type) {
@@ -144,7 +144,7 @@ void TyTask::notifyStatus(const ty_message_data *msg)
     case TY_TASK_STATUS_FINISHED: {
         void *result = msg->task->result;
         void (*result_cleanup_func)(void *result) = msg->task->result_cleanup;
-        msg->task->result_cleanup = NULL;
+        msg->task->result_cleanup = nullptr;
 
         if (!result_cleanup_func)
             result_cleanup_func = [](void *result) { Q_UNUSED(result); };

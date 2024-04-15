@@ -94,7 +94,7 @@ int TyUploader::run()
 
 int main(int argc, char *argv[])
 {
-    hs_log_set_handler(ty_libhs_log_handler, NULL);
+    hs_log_set_handler(ty_libhs_log_handler, nullptr);
 
     qRegisterMetaType<ty_log_level>("ty_log_level");
     qRegisterMetaType<std::shared_ptr<void>>("std::shared_ptr<void>");

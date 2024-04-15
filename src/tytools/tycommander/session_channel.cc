@@ -66,7 +66,7 @@ bool SessionChannel::lock()
     if (!mutex_) {
         QString mutexName = QString("Local\\") + id_;
 
-        mutex_ = CreateMutexW(NULL, FALSE, reinterpret_cast<LPCWSTR>(mutexName.utf16()));
+        mutex_ = CreateMutexW(nullptr, FALSE, reinterpret_cast<LPCWSTR>(mutexName.utf16()));
         locked_ = mutex_ && (GetLastError() == ERROR_SUCCESS);
     }
 
