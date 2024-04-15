@@ -60,15 +60,7 @@ Once Koffi is built, you can build the tests and run them with the following com
 cd src/koffi/test
 node ../../cnoke/cnoke.js
 
-node sync.js # Run synchronous unit tests
-node async.js # Run asynchronous unit tests
-node callbacks.js # Run callback unit tests
-node union.js # Run union unit tests
-node posix.js # Run POSIX-specific unit tests (not for Windows)
-node win32.js # Run Windows-specific unit tests (only on Windows)
-
-node sqlite.js # Run SQLite integration tests
-node raylib.js # Run Raylib integration tests
+node test.js
 ```
 
 ### On virtual machines
