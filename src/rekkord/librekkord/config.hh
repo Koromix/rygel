@@ -14,8 +14,8 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "src/core/network/s3.hh"
-#include "src/core/network/ssh.hh"
+#include "src/core/request/s3.hh"
+#include "src/core/request/ssh.hh"
 
 namespace RG {
 

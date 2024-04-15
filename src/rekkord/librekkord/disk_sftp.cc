@@ -13,7 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "disk.hh"
-#include "src/core/network/ssh.hh"
+#include "src/core/request/ssh.hh"
 
 #include <fcntl.h>
 

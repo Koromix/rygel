@@ -15,11 +15,12 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
-#include "src/core/network/network.hh"
 
 namespace RG {
 
 class InstanceHolder;
+struct smtp_Config;
+struct sms_Config;
 
 bool InitSMTP(const smtp_Config &config);
 bool InitSMS(const sms_Config &config);

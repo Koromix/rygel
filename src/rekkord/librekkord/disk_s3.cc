@@ -13,7 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "disk.hh"
-#include "src/core/network/s3.hh"
+#include "src/core/request/s3.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {

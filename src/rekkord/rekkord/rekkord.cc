@@ -12,7 +12,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "src/core/network/curl.hh"
+#include "src/core/request/curl.hh"
 #include "rekkord.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #ifndef _WIN32

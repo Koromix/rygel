@@ -16,7 +16,8 @@
 #include "goupile.hh"
 #include "message.hh"
 #include "src/core/http/http.hh"
-#include "src/core/network/network.hh"
+#include "src/core/request/sms.hh"
+#include "src/core/request/smtp.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
