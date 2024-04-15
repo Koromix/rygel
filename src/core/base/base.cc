@@ -3555,6 +3555,11 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
 
 void CloseDescriptor(int fd)
 {
+    // We could call close() anyway, it will fail with EINVAL,
+    // but that leads to debugger or valgrind noise.
+    if (fd < 0)
+        return;
+
     close(fd);
 }
 
