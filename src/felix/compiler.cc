@@ -2277,6 +2277,11 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
     } else if (StartsWith(HostPlatformNames[(int)spec.platform], "WASM/Emscripten/")) {
+        if (spec.architecture != HostArchitecture::Web) {
+            LogError("Emscripten can only build for Web archtiecture, not %1", HostArchitectureNames[(int)spec.architecture]);
+            return nullptr;
+        }
+
         if (!spec.cc) {
             spec.cc = "emcc";
         }

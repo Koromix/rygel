@@ -43,15 +43,15 @@ Host = :clang:lld
 Features = Warnings, OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
 [NodeJS]
-Host = Emscripten/Node
+Host = Emscripten/Node:Web
 Features = Warnings, DebugInfo, OptimizeSpeed
 
 [WebJS]
-Host = Emscripten/Web
+Host = Emscripten/Web:Web
 Features = Warnings, DebugInfo, OptimizeSpeed
 
 [WasmBox]
-Host = Emscripten/Box
+Host = Emscripten/Box:Web
 Features = Warnings, DebugInfo, OptimizeSpeed
 
 [Teensy20]
