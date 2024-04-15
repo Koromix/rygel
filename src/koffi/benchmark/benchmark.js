@@ -78,7 +78,7 @@ function run(name, ref) {
         if (proc.status == null)
             throw new Error(proc.error);
         if (proc.status !== 0)
-            throw new Error(proc.stderr);
+            throw new Error(proc.stderr || proc.stdout);
 
         let perf = JSON.parse(proc.stdout);
 
