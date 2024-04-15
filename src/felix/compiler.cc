@@ -428,7 +428,10 @@ public:
         }
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-unknown-warning-option");
-            Fmt(&buf, " -Wzero-as-null-pointer-constant -Wreturn-type -Werror=return-type");
+            if (src_type == SourceType::Cxx) {
+                Fmt(&buf, " -Wzero-as-null-pointer-constant");
+            }
+            Fmt(&buf, " -Wreturn-type -Werror=return-type");
         } else {
             Fmt(&buf, " -Wno-everything");
         }
@@ -1001,9 +1004,9 @@ public:
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-cast-function-type");
             if (src_type == SourceType::Cxx) {
-                Fmt(&buf, " -Wno-init-list-lifetime");
+                Fmt(&buf, " -Wno-init-list-lifetime -Wzero-as-null-pointer-constant");
             }
-            Fmt(&buf, " -Wzero-as-null-pointer-constant -Wreturn-type -Werror=return-type");
+            Fmt(&buf, " -Wreturn-type -Werror=return-type");
         } else {
             Fmt(&buf, " -w");
         }
@@ -1774,7 +1777,10 @@ public:
         }
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra");
-            Fmt(&buf, " -Wzero-as-null-pointer-constant -Wreturn-type -Werror=return-type");
+            if (src_type == SourceType::Cxx) {
+                Fmt(&buf, " -Wzero-as-null-pointer-constant");
+            }
+            Fmt(&buf, " -Wreturn-type -Werror=return-type");
         } else {
             Fmt(&buf, " -w");
         }
@@ -2091,7 +2097,10 @@ public:
         }
         if (features & (int)CompileFeature::Warnings) {
             Fmt(&buf, " -Wall -Wextra");
-            Fmt(&buf, " -Wzero-as-null-pointer-constant -Wreturn-type -Werror=return-type");
+            if (src_type == SourceType::Cxx) {
+                Fmt(&buf, " -Wzero-as-null-pointer-constant");
+            }
+            Fmt(&buf, " -Wreturn-type -Werror=return-type");
         } else {
             Fmt(&buf, " -Wno-everything");
         }
