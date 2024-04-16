@@ -83,7 +83,6 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
         if (token == marker) {
             int major = 0;
             int minor = 0;
-            int patch = 0;
 
             if (!ParseInt(remain, &major, 0, &remain)) {
                 LogError("Unexpected version format returned by '%1'", cmd);
@@ -97,16 +96,8 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
                     return -1;
                 }
             }
-            if(remain[0] == '.') {
-                remain = remain.Take(1, remain.len - 1);
 
-                if (!ParseInt(remain, &patch, 0, &remain)) {
-                    LogError("Unexpected version format returned by '%1'", cmd);
-                    return -1;
-                }
-            }
-
-            int version = major * 10000 + minor * 100 + patch;
+            int version = major * 100 + minor;
             return version;
         }
     }
@@ -292,7 +283,7 @@ public:
             LogError("Clang CFI feature requires LTO compilation");
             return false;
         }
-        if (lld_ver < 110000 && (features & (int)CompileFeature::ShuffleCode)) {
+        if (lld_ver < 1100 && (features & (int)CompileFeature::ShuffleCode)) {
             LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=:clang-11:lld-11)");
             return false;
         }
@@ -413,7 +404,7 @@ public:
 
         // Build options
         Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
-        if (clang_ver >= 130000) {
+        if (clang_ver >= 1300) {
             Fmt(&buf, " -fno-finite-loops");
         }
         if (features & (int)CompileFeature::OptimizeSpeed) {
@@ -469,7 +460,7 @@ public:
 
             default: {
                 Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC");
-                if (clang_ver >= 110000) {
+                if (clang_ver >= 1100) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
@@ -503,7 +494,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-        if (platform == HostPlatform::Linux && (clang_ver >= 110000)) {
+        if (platform == HostPlatform::Linux && clang_ver >= 1100) {
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::SafeStack) {
@@ -516,7 +507,7 @@ public:
         if (features & (int)CompileFeature::ZeroInit) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
 
-            if (clang_ver < 160000) {
+            if (clang_ver < 1600) {
                 Fmt(&buf, " -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang");
             }
         }
@@ -721,7 +712,7 @@ public:
             Fmt(&buf, " -fsanitize=cfi");
         }
         if (features & (int)CompileFeature::ShuffleCode) {
-            if (lld_ver >= 130000) {
+            if (lld_ver >= 1300) {
                 Fmt(&buf, " -Wl,--shuffle-sections=*=0");
             } else {
                 Fmt(&buf, " -Wl,--shuffle-sections=0");
@@ -817,7 +808,6 @@ public:
                 compiler->gcc_ver = ParseVersion(cmd, output, "version");
                 compiler->i686 = FindStr(output, "i686") >= 0;
             }
-
         };
 
         return compiler;
@@ -874,7 +864,7 @@ public:
             LogError("Cannot use ASan and TSan at the same time");
             return false;
         }
-        if (gcc_ver < 120100 && (features & (int)CompileFeature::ZeroInit)) {
+        if (gcc_ver < 1201 && (features & (int)CompileFeature::ZeroInit)) {
             LogError("ZeroInit requires GCC >= 12.1, try --host option (e.g. --host=:gcc-12)");
             return false;
         }
@@ -988,7 +978,7 @@ public:
 
         // Build options
         Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
-        if (gcc_ver >= 100000) {
+        if (gcc_ver >= 1000) {
             Fmt(&buf, " -fno-finite-loops");
         }
         if (features & (int)CompileFeature::OptimizeSpeed) {
