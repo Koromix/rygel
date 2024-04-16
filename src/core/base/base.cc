@@ -1816,10 +1816,10 @@ static int64_t start_time = GetMonotonicTime();
 
 static std::function<LogFunc> log_handler = DefaultLogHandler;
 
-// NOTE: LocalArray does not work with __thread, and thread_local is broken on MinGW
-// when destructors are involved. So heap allocation it is, at least for now.
-static RG_THREAD_LOCAL std::function<LogFilterFunc> *log_filters[16];
-static RG_THREAD_LOCAL Size log_filters_len;
+// thread_local is broken on MinGW when destructors are involved.
+// So heap allocation it is, at least for now.
+static thread_local std::function<LogFilterFunc> *log_filters[16];
+static thread_local Size log_filters_len;
 
 const char *GetEnv(const char *name)
 {
@@ -1906,7 +1906,7 @@ static void RunLogFilter(Size idx, LogLevel level, const char *ctx, const char *
 
 void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg> args)
 {
-    static RG_THREAD_LOCAL bool skip = false;
+    static thread_local bool skip = false;
 
     static bool init = false;
     static bool log_times;
@@ -2094,7 +2094,7 @@ Size ConvertWin32WideToUtf8(LPCWSTR str_w, Span<char> out_str)
 
 char *GetWin32ErrorString(uint32_t error_code)
 {
-    static RG_THREAD_LOCAL char str_buf[512];
+    static thread_local char str_buf[512];
 
     if (error_code == UINT32_MAX) {
         error_code = GetLastError();
@@ -2881,7 +2881,7 @@ bool SetWorkingDirectory(const char *directory)
 
 const char *GetWorkingDirectory()
 {
-    static RG_THREAD_LOCAL char buf[4096];
+    static thread_local char buf[4096];
 
 #ifdef _WIN32
     if (!win32_utf8) {
@@ -3320,8 +3320,8 @@ bool FlushFile(int fd, const char *filename)
 
 bool FileIsVt100(int fd)
 {
-    static RG_THREAD_LOCAL int cache_fd = -1;
-    static RG_THREAD_LOCAL bool cache_vt100;
+    static thread_local int cache_fd = -1;
+    static thread_local bool cache_vt100;
 
     if (CheckForDumbTerm())
         return false;
@@ -3581,8 +3581,8 @@ bool FlushFile(int fd, const char *filename)
 
 bool FileIsVt100(int fd)
 {
-    static RG_THREAD_LOCAL int cache_fd = -1;
-    static RG_THREAD_LOCAL bool cache_vt100;
+    static thread_local int cache_fd = -1;
+    static thread_local bool cache_vt100;
 
     if (CheckForDumbTerm())
         return false;
@@ -4985,14 +4985,14 @@ const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix
 // Random
 // ------------------------------------------------------------------------
 
-static RG_THREAD_LOCAL Size rnd_remain;
-static RG_THREAD_LOCAL int64_t rnd_time;
+static thread_local Size rnd_remain;
+static thread_local int64_t rnd_time;
 #ifndef _WIN32
-static RG_THREAD_LOCAL pid_t rnd_pid;
+static thread_local pid_t rnd_pid;
 #endif
-static RG_THREAD_LOCAL uint32_t rnd_state[16];
-static RG_THREAD_LOCAL uint8_t rnd_buf[64];
-static RG_THREAD_LOCAL Size rnd_offset;
+static thread_local uint32_t rnd_state[16];
+static thread_local uint8_t rnd_buf[64];
+static thread_local Size rnd_offset;
 
 static thread_local FastRandom rng_fast;
 
@@ -5472,10 +5472,10 @@ public:
 
 // thread_local breaks down on MinGW when destructors are involved, work
 // around this with heap allocation.
-static RG_THREAD_LOCAL AsyncPool *async_default_pool = nullptr;
-static RG_THREAD_LOCAL AsyncPool *async_running_pool = nullptr;
-static RG_THREAD_LOCAL int async_running_worker_idx;
-static RG_THREAD_LOCAL bool async_running_task = false;
+static thread_local AsyncPool *async_default_pool = nullptr;
+static thread_local AsyncPool *async_running_pool = nullptr;
+static thread_local int async_running_worker_idx;
+static thread_local bool async_running_task = false;
 
 Async::Async(int threads, bool stop_after_error)
     : stop_after_error(stop_after_error)
@@ -5757,9 +5757,9 @@ void AsyncPool::RunTask(Task *task)
 
 #if defined(_WIN32)
 
-static RG_THREAD_LOCAL int fib_fibers;
-static RG_THREAD_LOCAL void *fib_self;
-static RG_THREAD_LOCAL bool fib_run;
+static thread_local int fib_fibers;
+static thread_local void *fib_self;
+static thread_local bool fib_run;
 
 Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
     : f(f)
@@ -5857,8 +5857,8 @@ void WINAPI Fiber::FiberCallback(void *udata)
 
 #elif defined(RG_FIBER_USE_UCONTEXT)
 
-static RG_THREAD_LOCAL ucontext_t fib_self;
-static RG_THREAD_LOCAL ucontext_t *fib_run;
+static thread_local ucontext_t fib_self;
+static thread_local ucontext_t *fib_run;
 
 Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
     : f(f)
@@ -5941,8 +5941,8 @@ void Fiber::FiberCallback(unsigned int high, unsigned int low)
 
 #warning makecontext API is not available, using slower thread-based implementation
 
-static RG_THREAD_LOCAL std::unique_lock<std::mutex> *fib_lock;
-static RG_THREAD_LOCAL Fiber *fib_self;
+static thread_local std::unique_lock<std::mutex> *fib_lock;
+static thread_local Fiber *fib_self;
 
 Fiber::Fiber(const std::function<bool()> &f, Size)
     : f(f)

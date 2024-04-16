@@ -170,15 +170,6 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
     #define RG_POP_NO_WARNINGS \
         _Pragma("GCC diagnostic pop")
 
-    // thread_local has many bugs with MinGW (Windows):
-    // - Destructors are run after the memory is freed
-    // - It crashes when used in R packages
-    #ifdef __EMSCRIPTEN__
-        #define RG_THREAD_LOCAL
-    #else
-        #define RG_THREAD_LOCAL __thread
-    #endif
-
     #ifndef SCNd8
         #define SCNd8 "hhd"
     #endif
@@ -191,8 +182,6 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
 #elif defined(_MSC_VER)
     #define RG_PUSH_NO_WARNINGS __pragma(warning(push, 0))
     #define RG_POP_NO_WARNINGS __pragma(warning(pop))
-
-    #define RG_THREAD_LOCAL thread_local
 #else
     #error Compiler not supported
 #endif

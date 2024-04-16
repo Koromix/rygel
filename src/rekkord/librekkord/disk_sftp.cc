@@ -39,7 +39,7 @@ struct ConnectionData {
         return (ErrorValue); \
     RG_DEFER { ReleaseConnection(VarName); };
 
-static RG_THREAD_LOCAL ConnectionData *thread_conn;
+static thread_local ConnectionData *thread_conn;
 
 class SftpDisk: public rk_Disk {
     struct ListContext {

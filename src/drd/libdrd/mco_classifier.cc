@@ -342,7 +342,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
         const mco_Stay &mono_stay = *mono_prep.stay;
 
         // Reuse for performance
-        static RG_THREAD_LOCAL Bitset<512> additions;
+        static thread_local Bitset<512> additions;
         int additions_mismatch = 0;
         uint8_t proc_activities = 0;
 

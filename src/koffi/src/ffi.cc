@@ -53,7 +53,7 @@ namespace RG {
 
 SharedData shared;
 
-static RG_THREAD_LOCAL CallData *exec_call;
+static thread_local CallData *exec_call;
 
 static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
