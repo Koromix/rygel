@@ -155,7 +155,7 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
 #define RG_FORCE_EXPAND(x) x
 #define RG_IGNORE (void)!
 
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
     #define RG_PUSH_NO_WARNINGS \
         _Pragma("GCC diagnostic push") \
         _Pragma("GCC diagnostic ignored \"-Wall\"") \
