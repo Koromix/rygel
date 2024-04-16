@@ -75,23 +75,6 @@ typedef struct AssetInfo {
     Span data;
 } AssetInfo;)";
 
-enum class MergeMode {
-    Naive,
-    CSS,
-    JS
-};
-
-struct MergeRule {
-    const char *name;
-
-    HeapArray<const char *> sources;
-
-    bool override_compression;
-    CompressionType compression_type;
-
-    MergeMode merge_mode;
-};
-
 struct BlobInfo {
     const char *name;
 
@@ -109,22 +92,10 @@ static const char *StripDirectoryComponents(Span<const char> filename, int strip
     return name;
 }
 
-static MergeMode FindDefaultMergeMode(const char *filename)
+static bool LoadMetaFile(const char *filename, CompressionType compression_type,
+                         Allocator *alloc, HeapArray<PackAsset> *out_assets)
 {
-    Span<const char> extension = GetPathExtension(filename);
-
-    if (extension == ".css") {
-        return MergeMode::CSS;
-    } else if (extension == ".js") {
-        return MergeMode::JS;
-    } else {
-        return MergeMode::Naive;
-    }
-}
-
-static bool LoadMergeRules(const char *filename, BlockAllocator *alloc, HeapArray<MergeRule> *out_rules)
-{
-    RG_DEFER_NC(out_guard, len = out_rules->len) { out_rules->RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, len = out_assets->len) { out_assets->RemoveFrom(len); };
 
     StreamReader st(filename);
     if (!st.IsValid())
@@ -143,43 +114,29 @@ static bool LoadMergeRules(const char *filename, BlockAllocator *alloc, HeapArra
                 return false;
             }
 
-            MergeRule *rule = out_rules->AppendDefault();
-            rule->name = DuplicateString(prop.section, alloc).ptr;
-            rule->merge_mode = FindDefaultMergeMode(rule->name);
+            PackAsset *asset = out_assets->AppendDefault();
+
+            asset->name = DuplicateString(prop.section, alloc).ptr;
+            asset->compression_type = compression_type;
 
             do {
                 if (prop.key == "CompressionType") {
-                    if (OptionToEnumI(CompressionTypeNames, prop.value, &rule->compression_type)) {
-                        rule->override_compression = true;
-                    } else {
+                    if (!OptionToEnumI(CompressionTypeNames, prop.value, &asset->compression_type)) {
                         LogError("Unknown compression type '%1'", prop.value);
                         valid = false;
                     }
-                } else if (prop.key == "MergeMode") {
-                    if (prop.value == "Naive") {
-                        rule->merge_mode = MergeMode::Naive;
-                    } else if (prop.value == "CSS") {
-                        rule->merge_mode = MergeMode::CSS;
-                    } else if (prop.value == "JS") {
-                        rule->merge_mode = MergeMode::JS;
-                    } else {
-                        LogError("Invalid MergeMode value '%1'", prop.value);
-                        valid = false;
-                    }
                 } else if (prop.key == "File") {
-                    while (prop.value.len) {
-                        Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-
-                        if (part.len) {
-                            const char *copy = DuplicateString(part, alloc).ptr;
-                            rule->sources.Append(copy);
-                        }
-                    }
+                    asset->src_filename = DuplicateString(prop.value, alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
                 }
             } while (ini.NextInSection(&prop));
+
+            if (!asset->src_filename) {
+                LogError("Missing File attribute");
+                valid = false;
+            }
         }
     }
     if (!ini.IsValid() || !valid)
@@ -189,87 +146,25 @@ static bool LoadMergeRules(const char *filename, BlockAllocator *alloc, HeapArra
     return true;
 }
 
-static void InitSourceMergeData(PackSource *src, MergeMode merge_mode, Allocator *alloc)
-{
-    RG_ASSERT(alloc);
-
-    switch (merge_mode) {
-        case MergeMode::Naive: {
-            src->prefix = "";
-            src->suffix = "";
-        } break;
-        case MergeMode::CSS: {
-            src->prefix = Fmt(alloc, "/* %1\n   ------------------------------------ */\n\n", src->filename).ptr;
-            src->suffix = "\n";
-        } break;
-        case MergeMode::JS: {
-            src->prefix = Fmt(alloc, "// %1\n// ------------------------------------\n\n", src->filename).ptr;
-            src->suffix = "\n";
-        } break;
-    }
-}
-
 bool ResolveAssets(Span<const char *const> filenames, int strip_count,
                    CompressionType compression_type, PackAssetSet *out_set)
 {
-    // Reuse for performance
-    HeapArray<MergeRule> rules;
+    RG_DEFER_NC(out_guard, len = out_set->assets.len) { out_set->assets.RemoveFrom(len); };
 
     for (const char *filename: filenames) {
         if (StartsWith(filename, "@")) {
-            rules.RemoveFrom(0);
-
-            if (!LoadMergeRules(filename + 1, &out_set->str_alloc, &rules))
+            if (!LoadMetaFile(filename + 1, compression_type, &out_set->str_alloc, &out_set->assets))
                 return false;
-
-            for (const MergeRule &rule: rules) {
-                PackAsset *asset = out_set->assets.AppendDefault();
-
-                asset->name = StripDirectoryComponents(rule.name, strip_count);
-                asset->compression_type = rule.override_compression ? rule.compression_type : compression_type;
-
-                for (const char *src_filename: rule.sources) {
-                    PackSource *src = asset->sources.AppendDefault();
-
-                    src->filename = src_filename;
-                    InitSourceMergeData(src, rule.merge_mode, &out_set->str_alloc);
-                }
-            }
         } else {
             PackAsset *asset = out_set->assets.AppendDefault();
-            PackSource *src = asset->sources.AppendDefault();
 
             asset->name = StripDirectoryComponents(filename, strip_count);
             asset->compression_type = compression_type;
-
-            src->filename = filename;
+            asset->src_filename = filename;
         }
     }
 
-    return true;
-}
-
-static bool MergeAssetSourceFiles(Span<const PackSource> sources, StreamWriter *writer)
-{
-    for (const PackSource &src: sources) {
-        writer->Write(Span<const char>(src.prefix).As<const uint8_t>());
-
-        StreamReader reader(src.filename);
-        do {
-            LocalArray<uint8_t, 16384> read_buf;
-            read_buf.len = reader.Read(read_buf.data);
-            if (read_buf.len < 0)
-                return false;
-
-            if (!writer->Write(read_buf))
-                return false;
-        } while (!reader.IsEOF());
-
-        writer->Write(Span<const char>(src.suffix).As<const uint8_t>());
-    }
-    if (!writer->IsValid())
-        return false;
-
+    out_guard.Disable();
     return true;
 }
 
@@ -286,8 +181,12 @@ static Size WriteAsset(const PackAsset &asset, FunctionRef<void(Span<const uint8
     if (!compressor.IsValid())
         return -1;
 
-    if (!MergeAssetSourceFiles(asset.sources, &compressor))
-        return -1;
+    // Pass through
+    {
+        StreamReader reader(asset.src_filename);
+        if (!SpliceStream(&reader, -1, &compressor))
+            return false;
+    }
 
     bool success = compressor.Close();
     RG_ASSERT(success);

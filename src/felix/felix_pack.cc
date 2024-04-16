@@ -97,7 +97,7 @@ Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(in
         }
     }
 
-    // Resolve merge rules
+    // Resolve list of assets
     PackAssetSet asset_set;
     if (!ResolveAssets(filenames, strip_count, compression_type, &asset_set))
         return 1;

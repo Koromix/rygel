@@ -17,18 +17,11 @@
 
 namespace RG {
 
-struct PackSource {
-    const char *filename;
-
-    const char *prefix;
-    const char *suffix;
-};
-
 struct PackAsset {
     const char *name;
-    HeapArray<PackSource> sources;
-
     CompressionType compression_type;
+
+    const char *src_filename;
 };
 
 struct PackAssetSet {
