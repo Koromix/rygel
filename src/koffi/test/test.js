@@ -44,6 +44,7 @@ function test() {
     success &= run('Sync', 'sync.js');
     success &= run('Async', 'async.js');
     success &= run('Callbacks', 'callbacks.js');
+    success &= run('Union', 'union.js');
     if (process.platform != 'win32' && process.platform != 'darwin')
         success &= run('POSIX', 'posix.js');
     if (process.platform == 'win32')
