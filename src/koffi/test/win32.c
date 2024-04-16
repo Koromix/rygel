@@ -20,14 +20,6 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdarg.h>
-
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
 
 #define IMPORT __declspec(dllimport)
 #define EXPORT __declspec(dllexport)
