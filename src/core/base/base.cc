@@ -4922,7 +4922,10 @@ static const char *CreateUniquePath(Span<const char> directory, const char *pref
     HeapArray<char> filename(alloc);
     filename.Append(directory);
     filename.Append(*RG_PATH_SEPARATORS);
-    filename.Append(prefix);
+    if (prefix) {
+        filename.Append(prefix);
+        filename.Append('.');
+    }
 
     Size change_offset = filename.len;
 
@@ -6572,7 +6575,9 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 #endif
 
         if (!dest.u.file.owned) {
-            dest.u.file.tmp_filename = CreateUniqueFile(directory, ".", ".tmp", &str_alloc, &dest.u.file.fd);
+            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
+
+            dest.u.file.tmp_filename = CreateUniqueFile(directory, basename, ".tmp", &str_alloc, &dest.u.file.fd);
             if (!dest.u.file.tmp_filename)
                 return false;
             dest.u.file.owned = true;
@@ -6730,8 +6735,9 @@ bool StreamWriter::Close(bool implicit)
                         // a temporary file and let RenameFile() handle the final step. Should be rare!
                         if (!linked) {
                             Span<const char> directory = GetPathDirectory(filename);
+                            const char *basename = SplitStrReverseAny(filename, RG_PATH_SEPARATORS).ptr;
 
-                            dest.u.file.tmp_filename = CreateUniquePath(directory, ".", ".tmp", &str_alloc, [&](const char *path) {
+                            dest.u.file.tmp_filename = CreateUniquePath(directory, basename, ".tmp", &str_alloc, [&](const char *path) {
                                 return !linkat(AT_FDCWD, proc, AT_FDCWD, path, AT_SYMLINK_FOLLOW);
                             });
                             if (!dest.u.file.tmp_filename) {

@@ -462,7 +462,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     io->RunAsync([=]() {
         // Create temporary file
         int fd = -1;
-        const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp",
+        const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp",
                                                     &io->allocator, &fd);
         if (!tmp_filename)
             return;
