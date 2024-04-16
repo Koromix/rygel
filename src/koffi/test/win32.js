@@ -49,7 +49,8 @@ async function test() {
 
     let kernel32 = koffi.load('kernel32.dll');
 
-    const DivideBySafe = lib.func('DivideBySafe', 'int', ['int', 'int']);
+    const DivideBySafe1 = lib.func('DivideBySafe1', 'int', ['int', 'int']);
+    const DivideBySafe2 = lib.func('DivideBySafe2', 'int', ['int', 'int']);
     const CallThrough1 = lib.func('int CallThrough(CallThroughFunc1 *func, int value)');
     const CallThrough2 = lib.func('int CallThrough(CallThroughFunc2 *func, int value)');
 
@@ -65,33 +66,45 @@ async function test() {
         assert.equal(GetLastError(), i);
     }
 
-    // Sync SEH support
-    assert.equal(DivideBySafe(12, 3), 4);
-    assert.equal(DivideBySafe(84, 0), -42);
+    // Sync SEH and exception support
+    assert.equal(DivideBySafe1(12, 3), 4);
+    assert.equal(DivideBySafe1(84, 0), -42);
+    assert.equal(DivideBySafe2(12, 3), 4);
+    assert.equal(DivideBySafe2(84, 0), -42);
 
     // Async SEH support
     {
         let results = await Promise.all([
-            util.promisify(DivideBySafe.async)(90, -9),
-            util.promisify(DivideBySafe.async)(227, 0)
+            util.promisify(DivideBySafe1.async)(90, -9),
+            util.promisify(DivideBySafe1.async)(227, 0),
+            util.promisify(DivideBySafe2.async)(90, -9),
+            util.promisify(DivideBySafe2.async)(227, 0)
         ]);
 
         assert.equal(results[0], -10);
         assert.equal(results[1], -42);
+        assert.equal(results[2], -10);
+        assert.equal(results[3], -42);
     }
 
     // Test SEH inside callback
-    assert.equal(CallThrough1((value) => DivideBySafe(value, 2), 16), 8);
-    assert.equal(CallThrough2((value) => DivideBySafe(value * 2, 0), 16), -42);
+    assert.equal(CallThrough1((value) => DivideBySafe1(value, 2), 16), 8);
+    assert.equal(CallThrough2((value) => DivideBySafe1(value * 2, 0), 16), -42);
+    assert.equal(CallThrough1((value) => DivideBySafe2(value, 2), 16), 8);
+    assert.equal(CallThrough2((value) => DivideBySafe2(value * 2, 0), 16), -42);
 
     // Test SEH inside callback running async
     {
         let results = await Promise.all([
-            util.promisify(CallThrough1.async)((value) => DivideBySafe(value + 5, -5), 70),
-            util.promisify(CallThrough2.async)((value) => DivideBySafe(value + 2, 5 - 5), 5)
+            util.promisify(CallThrough1.async)((value) => DivideBySafe1(value + 5, -5), 70),
+            util.promisify(CallThrough2.async)((value) => DivideBySafe1(value + 2, 5 - 5), 5),
+            util.promisify(CallThrough1.async)((value) => DivideBySafe2(value + 5, -5), 70),
+            util.promisify(CallThrough2.async)((value) => DivideBySafe2(value + 2, 5 - 5), 5)
         ]);
 
         assert.equal(results[0], -15);
         assert.equal(results[1], -42);
+        assert.equal(results[2], -15);
+        assert.equal(results[3], -42);
     }
 }
