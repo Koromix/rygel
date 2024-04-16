@@ -6540,25 +6540,47 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 
     InitFile(flags);
 
-    if (flags & (int)StreamWriterFlag::Atomic) {
+    dest.u.file.atomic = (flags & (int)StreamWriterFlag::Atomic);
+    dest.u.file.exclusive = (flags & (int)StreamWriterFlag::Exclusive);
+
+    if (dest.u.file.atomic) {
         Span<const char> directory = GetPathDirectory(filename);
 
-        if (flags & (int)StreamWriterFlag::Exclusive) {
+        if (dest.u.file.exclusive) {
             int fd = OpenFile(filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive);
             if (fd < 0)
                 return false;
             CloseDescriptor(fd);
-
-            dest.u.file.tmp_exclusive = true;
         }
 
-        dest.u.file.tmp_filename = CreateUniqueFile(directory, ".", ".tmp", &str_alloc, &dest.u.file.fd);
-        if (!dest.u.file.tmp_filename)
-            return false;
-        dest.u.file.owned = true;
+#ifdef O_TMPFILE
+        {
+            static bool has_proc = !access("/proc/self/fd", X_OK);
+
+            if (has_proc) {
+                const char *dirname = DuplicateString(directory, &str_alloc).ptr;
+                dest.u.file.fd = RG_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE, 0644), < 0);
+
+                if (dest.u.file.fd >= 0) {
+                    dest.u.file.owned = true;
+                } else if (errno != EINVAL && errno != EOPNOTSUPP) {
+                    LogError("Cannot open temporary file in '%1': %2", directory, strerror(errno));
+                    return false;
+                }
+            }
+        }
+#endif
+
+        if (!dest.u.file.owned) {
+            dest.u.file.tmp_filename = CreateUniqueFile(directory, ".", ".tmp", &str_alloc, &dest.u.file.fd);
+            if (!dest.u.file.tmp_filename)
+                return false;
+            dest.u.file.owned = true;
+        }
+
     } else {
         unsigned int open_flags = (int)OpenFlag::Write;
-        open_flags |= (flags & (int)StreamWriterFlag::Exclusive) ? (int)OpenFlag::Exclusive : 0;
+        open_flags |= dest.u.file.exclusive ? (int)OpenFlag::Exclusive : 0;
 
         dest.u.file.fd = OpenFile(filename, open_flags);
         if (dest.u.file.fd < 0)
@@ -6668,7 +6690,7 @@ bool StreamWriter::Close(bool implicit)
             }
         } [[fallthrough]];
         case DestinationType::DirectFile: {
-            if (dest.u.file.tmp_filename) {
+            if (dest.u.file.atomic) {
                 if (IsValid()) {
                     if (implicit) {
                         LogDebug("Deleting implicitly closed file '%1'", filename);
@@ -6679,16 +6701,58 @@ bool StreamWriter::Close(bool implicit)
                 }
 
                 if (IsValid()) {
+#ifdef O_TMPFILE
+                    if (!dest.u.file.tmp_filename) {
+                        bool linked = false;
+
+                        // AT_EMPTY_PATH requires CAP_DAC_READ_SEARCH so use the /proc trick instead.
+                        // Will revisit once this restriction is lifted (if ever).
+                        char proc[256];
+                        Fmt(proc, "/proc/self/fd/%1", dest.u.file.fd);
+
+                        for (int i = 0; i < 10; i++) {
+                            if (linkat(AT_FDCWD, proc, AT_FDCWD, filename, AT_SYMLINK_FOLLOW) < 0) {
+                                if (errno == EEXIST) {
+                                    unlink(filename);
+                                    continue;
+                                }
+
+                                LogError("Failed to materialize file '%1': %2", filename, strerror(errno));
+                                return false;
+                            }
+
+                            linked = true;
+                            break;
+                        }
+
+                        // The linkat() call cannot overwrite an exisiting file. We try to unlink() the file if
+                        // needed everal times (see loop above) to make it work but it it still doesn't, link to
+                        // a temporary file and let RenameFile() handle the final step. Should be rare!
+                        if (!linked) {
+                            Span<const char> directory = GetPathDirectory(filename);
+
+                            dest.u.file.tmp_filename = CreateUniquePath(directory, ".", ".tmp", &str_alloc, [&](const char *path) {
+                                return !linkat(AT_FDCWD, proc, AT_FDCWD, path, AT_SYMLINK_FOLLOW);
+                            });
+                            if (!dest.u.file.tmp_filename) {
+                                LogError("Failed to materialize file '%1': %2", filename, strerror(errno));
+                                error = true;
+                            }
+                        }
+                    }
+#endif
+
                     CloseDescriptor(dest.u.file.fd);
                     dest.u.file.owned = false;
 
-                    unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
+                    if (dest.u.file.tmp_filename) {
+                        unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
 
-                    if (RenameFile(dest.u.file.tmp_filename, filename, flags)) {
-                        dest.u.file.tmp_filename = nullptr;
-                        dest.u.file.tmp_exclusive = false;
-                    } else {
-                        error = true;
+                        if (RenameFile(dest.u.file.tmp_filename, filename, flags)) {
+                            dest.u.file.tmp_filename = nullptr;
+                        } else {
+                            error = true;
+                        }
                     }
                 } else {
                     error = true;
@@ -6704,7 +6768,7 @@ bool StreamWriter::Close(bool implicit)
             if (dest.u.file.tmp_filename) {
                 UnlinkFile(dest.u.file.tmp_filename);
             }
-            if (dest.u.file.tmp_exclusive && filename) {
+            if (error && dest.u.file.exclusive && filename) {
                 UnlinkFile(filename);
             }
 

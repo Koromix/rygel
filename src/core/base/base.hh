@@ -4585,9 +4585,9 @@ class StreamWriter {
                 Span<uint8_t> buf;
                 Size buf_used;
 
-                // Atomic write mode
+                bool exclusive;
+                bool atomic;
                 const char *tmp_filename;
-                bool tmp_exclusive;
             } file;
             std::function<bool(Span<const uint8_t>)> func;
 
