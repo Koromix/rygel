@@ -20,10 +20,6 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 #include <stdlib.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <string.h>
-#include <stdarg.h>
 #include <stdexcept>
 
 #define NOMINMAX
