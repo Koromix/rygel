@@ -12,13 +12,11 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 import '../../../src/web/flaat/flaat.js';
-import * as hljs from '../../../vendor/highlight.js/highlight.js';
 
 let timer_id = null;
 
 window.addEventListener('load', e => {
     initScreenshots();
-    hljs.highlightAll();
 });
 
 function initScreenshots() {
