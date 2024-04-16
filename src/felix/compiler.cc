@@ -1260,6 +1260,8 @@ class MsCompiler final: public Compiler {
     const char *rc;
     const char *link;
 
+    int cl_ver = 0;
+
     BlockAllocator str_alloc;
 
 public:
@@ -1280,6 +1282,17 @@ public:
             compiler->cl = DuplicateString(cl, &compiler->str_alloc).ptr;
             compiler->rc = Fmt(&compiler->str_alloc, "%1rc%2", prefix, version).ptr;
             compiler->link = Fmt(&compiler->str_alloc, "%1link%2", prefix, version).ptr;
+        }
+
+        // Determine CL version
+        {
+            char cmd[2048];
+            Fmt(cmd, "\"%1\"", compiler->cl);
+
+            HeapArray<char> output;
+            if (ReadCommandOutput(cmd, &output)) {
+                compiler->cl_ver = ParseVersion(cmd, output, "Version");
+            }
         }
 
         return compiler;
@@ -1344,8 +1357,10 @@ public:
     {
         RG_ASSERT(alloc);
 
-        // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
-        RG::MakePackCommand(pack_filenames, true, pack_options, dest_filename, alloc, out_cmd);
+        // Strings literals were limited in length before MSVC 2022
+        bool use_arrays = (cl_ver < 1930);
+
+        RG::MakePackCommand(pack_filenames, use_arrays, pack_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
