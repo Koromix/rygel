@@ -485,7 +485,7 @@ bool GitVersioneer::ReadLooseAttributes(const char *filename, FunctionRef<bool(S
 static bool SeekFile(int fd, int64_t offset)
 {
 #ifdef _WIN32
-    int ret = _lseeki64(fd, (int64_t)offset, SEEK_SET);
+    int64_t ret = _lseeki64(fd, (int64_t)offset, SEEK_SET);
 #else
     int ret = lseek(fd, (off_t)offset, SEEK_SET);
 #endif
@@ -503,7 +503,11 @@ static bool ReadSection(int fd, int64_t offset, Size len, void *out_ptr)
     if (!SeekFile(fd, offset))
         return false;
 
-    Size read_len = read(fd, out_ptr, (size_t)len);
+#ifdef _WIN32
+    Size read_len = _read(fd, out_ptr, (unsigned int)len);
+#else
+    Size read_len = RG_RESTART_EINTR(read(fd, out_ptr, (size_t)len), < 0);
+#endif
     if (read_len < 0)
         return false;
     if (read_len < len) {

@@ -123,7 +123,7 @@ static bool make_relative_cursor(struct device_cursor *cursor,
                                  enum device_cursor_relative relative,
                                  struct device_cursor *new_cursor)
 {
-    DEVINST new_inst;
+    DEVINST new_inst = 0;
     CONFIGRET cret = 0xFFFFFFFF;
 
     switch (relative) {
@@ -1228,7 +1228,7 @@ static int post_event(hs_monitor *monitor, enum event_type event_type, const cha
         DEVINST inst;
         CONFIGRET cret;
 
-        cret = CM_Locate_DevNodeA(&inst, (DEVINSTID)event->device_key, CM_LOCATE_DEVNODE_NORMAL);
+        cret = CM_Locate_DevNodeA(&inst, (DEVINSTID_A)event->device_key, CM_LOCATE_DEVNODE_NORMAL);
         if (cret != CR_SUCCESS) {
             hs_log(HS_LOG_DEBUG, "Device node '%s' does not exist: 0x%lx", event->device_key, cret);
             return 0;
@@ -1532,7 +1532,7 @@ static int process_arrival_event(hs_monitor *monitor, const char *key, hs_enumer
     CONFIGRET cret;
     int r;
 
-    cret = CM_Locate_DevNodeA(&inst, (DEVINSTID)key, CM_LOCATE_DEVNODE_NORMAL);
+    cret = CM_Locate_DevNodeA(&inst, (DEVINSTID_A)key, CM_LOCATE_DEVNODE_NORMAL);
     if (cret != CR_SUCCESS) {
         hs_log(HS_LOG_DEBUG, "Device node '%s' does not exist: 0x%lx", key, cret);
         return 0;
