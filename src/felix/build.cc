@@ -1191,7 +1191,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
     json_Parser parser(&reader, alloc);
 
     HeapArray<Span<const char>> outputs;
-    Size prefix_len = -1;
+    Span<const char> prefix = {};
 
     parser.ParseObject();
     while (parser.InObject()) {
@@ -1216,7 +1216,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
                 parser.ParseKey(&output);
 
                 // Find entry with entryPoint, which we need to fix all paths
-                if (prefix_len < 0) {
+                if (!prefix.ptr) {
                     parser.ParseObject();
                     while (parser.InObject()) {
                         Span<const char> key = {};
@@ -1226,7 +1226,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
                             Span<const char> entry_point = {};
                             parser.ParseString(&entry_point);
 
-                            prefix_len = output.len - entry_point.len;
+                            prefix = output.Take(0, output.len - entry_point.len);
                         } else {
                             parser.Skip();
                         }
@@ -1245,7 +1245,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
         return false;
     reader.Close();
 
-    if (prefix_len < 0) {
+    if (!prefix.ptr) {
         LogError("Failed to find entryPiont in esbuild meta file '%1'", filename);
         return false; 
     }
@@ -1255,10 +1255,13 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
         StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
 
         for (Span<const char> output: outputs) {
-            if (output.len > prefix_len) {
-                PrintLn(&writer, "[%1]", output.Take(prefix_len, output.len - prefix_len));
-                PrintLn(&writer, "File = %1", output);
+            if (!StartsWith(output, prefix)) [[unlikely]] {
+                LogError("Ignoring esbuild output file '%1' (prefix mismatch)", output);
+                continue;
             }
+
+            PrintLn(&writer, "[%1]", output.Take(prefix.len, output.len - prefix.len));
+            PrintLn(&writer, "File = %1", output);
         }
 
         if (!writer.Close())
