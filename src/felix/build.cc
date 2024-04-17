@@ -1268,7 +1268,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
 
         for (Span<const char> output: outputs) {
             if (!StartsWith(output, prefix)) [[unlikely]] {
-                LogError("Ignoring esbuild output file '%1' (prefix mismatch)", output);
+                LogWarning("Ignoring esbuild output file '%1' (prefix mismatch)", output);
                 continue;
             }
 
