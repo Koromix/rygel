@@ -652,6 +652,7 @@ public:
                 const char *suffix = (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) ? "" : "d";
 
                 Fmt(&buf, " -Wl,/NODEFAULTLIB:libcmt -Wl,/NODEFAULTLIB:msvcrt -Wl,setargv.obj -Wl,oldnames.lib");
+                Fmt(&buf, " -Wl,/OPT:ref");
 
                 if (features & (int)CompileFeature::StaticRuntime) {
                     Fmt(&buf, " -Wl,libcmt%1.lib", suffix);
@@ -666,7 +667,7 @@ public:
 
             case HostPlatform::macOS: {
                 Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration ");
-                Fmt(&buf, " -rpath \"@executable_path/../Frameworks\"");
+                Fmt(&buf, " -Wl,-dead_strip -rpath \"@executable_path/../Frameworks\"");
             } break;
 
             default: {
@@ -1537,7 +1538,7 @@ public:
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " /LTCG");
         }
-        Fmt(&buf, " /DYNAMICBASE /HIGHENTROPYVA");
+        Fmt(&buf, " /DYNAMICBASE /HIGHENTROPYVA /OPT:ref");
 
         // Objects and libraries
         for (const char *obj_filename: obj_filenames) {
