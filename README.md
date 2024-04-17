@@ -25,18 +25,14 @@ You can also visit the [attic](src/attic/) for a few more single-file tools.
 
 ## C++ projects
 
-Most projects use a dedicated build tool called felix. To get started, you need to build
-this tool. You can use the bootstrap scripts at the root of the repository to bootstrap it:
+Most projects use a dedicated build tool called felix. To get started, you need to build this tool. You can use the bootstrap scripts at the root of the repository to bootstrap it:
 
 * Run `./bootstrap.sh` on Linux and macOS
 * Run `bootstrap.bat` on Windows
 
-This will create a felix binary at the root of the source tree. You can then start it to
-build all projects defined in *FelixBuild.ini*: `felix` on Windows or `./felix` on Linux and macOS.
+This will create a felix binary at the root of the source tree. You can then start it to build all projects defined in *FelixBuild.ini*: `felix` on Windows or `./felix` on Linux and macOS.
 
-The following compilers are supported: GCC, Clang and MSVC (on Windows). If you
-want to build Fast or LTO builds you also need to install Node.js in order to
-transpile the JS code used in some projects.
+The following compilers are supported: GCC, Clang and MSVC (on Windows). If you want to build Fast or LTO builds you also need to install Node.js in order to transpile the JS code used in some projects.
 
 Use `./felix --help` for more information.
 
@@ -48,9 +44,7 @@ Refer to each project (Koffi, etc.) documentation for instructions on how to bui
 
 ## R packages
 
-Some packages provide an Rproject file and can be built by R CMD INSTALL. Open the
-project file (e.g. *src/drd/drdR/drdR.Rproj*) in RStudio and use *Install and restart* in the
-Build tab.
+Some packages provide an Rproject file and can be built by R CMD INSTALL. Open the project file (e.g. *src/drd/drdR/drdR.Rproj*) in RStudio and use *Install and restart* in the Build tab.
 
 Provided the needed dependencies are available (including Rtools and Rcpp), it should just work!
 
