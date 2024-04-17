@@ -1190,9 +1190,8 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
         return false;
     json_Parser parser(&reader, alloc);
 
-    StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
-    if (!writer.IsValid())
-        return false;
+    HeapArray<Span<const char>> outputs;
+    Size prefix_len = -1;
 
     parser.ParseObject();
     while (parser.InObject()) {
@@ -1211,14 +1210,12 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
                 parser.Skip();
             }
         } else if (key == "outputs") {
-            Size prefix_len = -1;
-
             parser.ParseObject();
             while (parser.InObject()) {
-                Span<const char> filename = {};
-                parser.ParseKey(&filename);
+                Span<const char> output = {};
+                parser.ParseKey(&output);
 
-                // The first entry contrains entryPoint which we need to fix all paths
+                // Find entry with entryPoint, which we need to fix all paths
                 if (prefix_len < 0) {
                     parser.ParseObject();
                     while (parser.InObject()) {
@@ -1229,24 +1226,16 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
                             Span<const char> entry_point = {};
                             parser.ParseString(&entry_point);
 
-                            prefix_len = filename.len - entry_point.len;
+                            prefix_len = output.len - entry_point.len;
                         } else {
                             parser.Skip();
                         }
-                    }
-
-                    if (prefix_len < 0) {
-                        LogError("Failed to read output files from esbuild meta file");
-                        return false;
                     }
                 } else {
                     parser.Skip();
                 }
 
-                if (filename.len > prefix_len) {
-                    PrintLn(&writer, "[%1]", filename.Take(prefix_len, filename.len - prefix_len));
-                    PrintLn(&writer, "File = %1", filename);
-                }
+                outputs.Append(output);
             }
         } else {
             parser.Skip();
@@ -1256,8 +1245,25 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
         return false;
     reader.Close();
 
-    if (!writer.Close())
-        return true;
+    if (prefix_len < 0) {
+        LogError("Failed to find entryPiont in esbuild meta file '%1'", filename);
+        return false; 
+    }
+
+    // Replace with INI file
+    {
+        StreamWriter writer(filename, (int)StreamWriterFlag::Atomic);
+
+        for (Span<const char> output: outputs) {
+            if (output.len > prefix_len) {
+                PrintLn(&writer, "[%1]", output.Take(prefix_len, output.len - prefix_len));
+                PrintLn(&writer, "File = %1", output);
+            }
+        }
+
+        if (!writer.Close())
+            return true;
+    }
 
     err_guard.Disable();
     return true;
