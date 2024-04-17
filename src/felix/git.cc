@@ -397,7 +397,7 @@ bool GitVersioneer::CacheTagInfo(Span<const char> tag, Span<const char> id)
     if (!success)
         return false;
     if (date < 0) {
-        char id[40];
+        char id[41];
         DecodeHash(hash.raw, id);
 
         LogError("Cannot find commit date for '%1'", id);
