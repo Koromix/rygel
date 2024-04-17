@@ -19,7 +19,7 @@
 #include "src/core/wrap/json.hh"
 #include "vendor/basu/src/systemd/sd-bus.h"
 #include "vendor/stb/stb_image.h"
-#include "vendor/stb/stb_image_resize.h"
+#include "vendor/stb/stb_image_resize2.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"
 
@@ -211,7 +211,7 @@ static IconInfo InitIcons()
             icons[i] = MakeSpan(icon, len);
 
             // Downsize the icon for the tray
-            int resized = stbir_resize_uint8(png, width, height, 0, icon, size.x, size.y, 0, 4);
+            uint8_t *resized = stbir_resize_uint8_linear(png, width, height, 0, icon, size.x, size.y, 0, STBIR_RGBA);
             RG_CRITICAL(resized, "Failed to resize icon");
 
             // Write out first icon size to disk
