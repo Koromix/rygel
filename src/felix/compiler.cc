@@ -686,6 +686,10 @@ public:
         }
 
         // Features
+        if (lld_ver) {
+            // Fix undefined __start_/__stop_ symbols related to --gc-sections
+            Fmt(&buf, " -z nostart-stop-gc");
+        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
             if (platform == HostPlatform::Windows && !(features & (int)CompileFeature::StaticRuntime)) {
