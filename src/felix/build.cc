@@ -1201,10 +1201,10 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
         if (key == "inputs") {
             parser.ParseObject();
             while (parser.InObject()) {
-                Span<const char> filename = {};
-                parser.ParseKey(&filename);
+                Span<const char> input = {};
+                parser.ParseKey(&input);
 
-                const char *dep_filename = NormalizePath(filename, alloc).ptr;
+                const char *dep_filename = NormalizePath(input, alloc).ptr;
                 out_filenames->Append(dep_filename);
 
                 parser.Skip();
