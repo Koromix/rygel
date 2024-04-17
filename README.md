@@ -74,3 +74,6 @@ My personal preference goes to a rather C-like C++ style:
 - Avoid dependencies unless a strong argument can be made for one, and vendorize them aggressively (with patches if needed)
 
 I keep watch of all dependencies using GitHub notifications, RSS feeds, mailing lists and visual web page change detection (depending on the project), in order to update them as needed.
+
+> [!NOTE]
+> This does not apply to TyTools (and libhs), which are older than the other projects, and were made before I settled on my current programming style.
