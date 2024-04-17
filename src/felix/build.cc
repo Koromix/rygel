@@ -691,11 +691,18 @@ bool Builder::Build(int jobs, bool verbose)
             for (const WorkerState &worker: workers) {
                 for (const CacheEntry &entry: worker.entries) {
                     cache_map.Set(entry)->deps_offset = cache_dependencies.len;
+
                     for (Size i = 0; i < entry.deps_len; i++) {
                         DependencyEntry dep = {};
 
                         dep.filename = DuplicateString(worker.dependencies[entry.deps_offset + i], &str_alloc).ptr;
-                        dep.mtime = GetFileModificationTime(dep.filename, true);
+
+                        FileInfo file_info;
+                        if (StatFile(dep.filename, (int)StatFlag::IgnoreMissing, &file_info) == StatResult::Success) {
+                            dep.mtime = file_info.mtime;
+                        } else {
+                            dep.mtime = -1;
+                        }
 
                         cache_dependencies.Append(dep);
                     }
@@ -1040,21 +1047,23 @@ bool Builder::IsFileUpToDate(const char *dest_filename, Span<const DependencyEnt
     return true;
 }
 
-int64_t Builder::GetFileModificationTime(const char *filename, bool retry)
+int64_t Builder::GetFileModificationTime(const char *filename)
 {
     int64_t *ptr = mtime_map.Find(filename);
 
-    if (ptr && (*ptr >= 0 || !retry)) {
+    if (ptr) {
         return *ptr;
     } else {
-        FileInfo file_info;
-        if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != StatResult::Success)
-            return -1;
-
         // filename might be temporary (e.g. dependency filenames in NeedsRebuild())
-        const char *filename2 = DuplicateString(filename, &str_alloc).ptr;
-        mtime_map.Set(filename2, file_info.mtime);
+        filename = DuplicateString(filename, &str_alloc).ptr;
 
+        FileInfo file_info;
+        if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != StatResult::Success) {
+            mtime_map.Set(filename, -1);
+            return -1;
+        }
+
+        mtime_map.Set(filename, file_info.mtime);
         return file_info.mtime;
     }
 }

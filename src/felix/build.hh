@@ -179,7 +179,7 @@ private:
                       Span<const char *const> src_filenames);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);
     bool IsFileUpToDate(const char *dest_filename, Span<const DependencyEntry> dependencies);
-    int64_t GetFileModificationTime(const char *filename, bool retry = false);
+    int64_t GetFileModificationTime(const char *filename);
 
     bool RunNode(Async *async, Node *node, bool verbose);
 };
