@@ -647,6 +647,7 @@ public:
         }
 
         // Platform flags
+        Fmt(&buf, " -Wl,--gc-sections");
         switch (platform) {
             case HostPlatform::Windows: {
                 const char *suffix = (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) ? "" : "d";
@@ -685,9 +686,6 @@ public:
         }
 
         // Features
-        if (features & (int)CompileFeature::OptimizeSize) {
-            Fmt(&buf, " -Wl,--gc-sections");
-        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
             if (platform == HostPlatform::Windows && !(features & (int)CompileFeature::StaticRuntime)) {
@@ -1184,6 +1182,7 @@ public:
         }
 
         // Platform flags and libraries
+        Fmt(&buf, " -Wl,--gc-sections");
         switch (platform) {
             case HostPlatform::Windows: {
                 Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat");
@@ -1219,9 +1218,6 @@ public:
         }
 
         // Features
-        if (features & (int)CompileFeature::OptimizeSize) {
-            Fmt(&buf, " -Wl,--gc-sections");
-        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
         }
