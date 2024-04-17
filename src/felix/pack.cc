@@ -152,7 +152,7 @@ bool ResolveAssets(Span<const char *const> filenames, int strip_count,
     RG_DEFER_NC(out_guard, len = out_set->assets.len) { out_set->assets.RemoveFrom(len); };
 
     for (const char *filename: filenames) {
-        if (StartsWith(filename, "@")) {
+        if (filename[0] == '@') {
             if (!LoadMetaFile(filename + 1, compression_type, &out_set->str_alloc, &out_set->assets))
                 return false;
         } else {
@@ -184,8 +184,9 @@ static Size WriteAsset(const PackAsset &asset, FunctionRef<void(Span<const uint8
     // Pass through
     {
         StreamReader reader(asset.src_filename);
+
         if (!SpliceStream(&reader, -1, &compressor))
-            return false;
+            return -1;
     }
 
     bool success = compressor.Close();
