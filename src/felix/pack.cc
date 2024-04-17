@@ -92,6 +92,16 @@ static const char *StripDirectoryComponents(Span<const char> filename, int strip
     return name;
 }
 
+static CompressionType AdaptCompression(const char *filename, CompressionType compression_type)
+{
+    if (compression_type == CompressionType::None)
+        return CompressionType::None;
+    if (!CanCompressFile(filename))
+        return CompressionType::None;
+
+    return compression_type;
+}
+
 static bool LoadMetaFile(const char *filename, CompressionType compression_type,
                          Allocator *alloc, HeapArray<PackAsset> *out_assets)
 {
@@ -117,7 +127,7 @@ static bool LoadMetaFile(const char *filename, CompressionType compression_type,
             PackAsset *asset = out_assets->AppendDefault();
 
             asset->name = DuplicateString(prop.section, alloc).ptr;
-            asset->compression_type = compression_type;
+            asset->compression_type = AdaptCompression(asset->name, compression_type);
 
             do {
                 if (prop.key == "CompressionType") {
@@ -159,7 +169,7 @@ bool ResolveAssets(Span<const char *const> filenames, int strip_count,
             PackAsset *asset = out_set->assets.AppendDefault();
 
             asset->name = StripDirectoryComponents(filename, strip_count);
-            asset->compression_type = compression_type;
+            asset->compression_type = AdaptCompression(filename, compression_type);
             asset->src_filename = filename;
         }
     }
