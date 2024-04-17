@@ -1429,7 +1429,7 @@ public:
             Fmt(&buf, " /GL");
         }
         if (features & (int)CompileFeature::Warnings) {
-            Fmt(&buf, " /W4 /wd4200 /wd4458 /wd4706 /wd4100 /wd4127 /wd4702 /wd4815 /wd4206");
+            Fmt(&buf, " /W4 /wd4200 /wd4706 /wd4100 /wd4127 /wd4702 /wd4815 /wd4206 /wd4456 /wd4457 /wd4458 /wd4459");
         } else {
             Fmt(&buf, " /w");
         }
