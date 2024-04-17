@@ -647,7 +647,6 @@ public:
         }
 
         // Platform flags
-        Fmt(&buf, " -Wl,--gc-sections");
         switch (platform) {
             case HostPlatform::Windows: {
                 const char *suffix = (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) ? "" : "d";
@@ -666,12 +665,18 @@ public:
             } break;
 
             case HostPlatform::macOS: {
-                Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration");
+                Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration ");
                 Fmt(&buf, " -rpath \"@executable_path/../Frameworks\"");
             } break;
 
             default: {
-                Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+                Fmt(&buf, " -pthread -Wl,--gc-sections");
+                Fmt(&buf, " -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+
+                if (lld_ver) {
+                    // Fix undefined __start_/__stop_ symbols related to --gc-sections
+                    Fmt(&buf, " -z nostart-stop-gc");
+                }
 
                 if (platform == HostPlatform::Linux) {
                     Fmt(&buf, "  -static-libgcc -static-libstdc++ -ldl -lrt");
@@ -686,10 +691,6 @@ public:
         }
 
         // Features
-        if (lld_ver) {
-            // Fix undefined __start_/__stop_ symbols related to --gc-sections
-            Fmt(&buf, " -z nostart-stop-gc");
-        }
         if (features & (int)CompileFeature::ASan) {
             Fmt(&buf, " -fsanitize=address");
             if (platform == HostPlatform::Windows && !(features & (int)CompileFeature::StaticRuntime)) {
