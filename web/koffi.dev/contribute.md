@@ -145,3 +145,5 @@ Some platforms are emulated so this can take a few minutes until the pre-built b
 Koffi is programmed in a mix of C++ and assembly code (architecture-specific code). It uses [node-addon-api](https://github.com/nodejs/node-addon-api) (C++ N-API wrapper) to interact with Node.js.
 
 My personal preference goes to a rather C-like C++ style, with careful use of templates (mainly for containers) and little object-oriented programming. I strongly prefer tagged unions and code locality over inheritance and virtual methods. Exceptions are disabled.
+
+Find more information about code style in the [monorepository README](https://github.com/Koromix/rygel/?tab=readme-ov-file#c-flavor) file.
