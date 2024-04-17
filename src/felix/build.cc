@@ -1215,6 +1215,9 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
                 Span<const char> output = {};
                 parser.ParseKey(&output);
 
+                const char *dep_filename = NormalizePath(output, alloc).ptr;
+                out_filenames->Append(dep_filename);
+
                 // Find entry with entryPoint, which we need to fix all paths
                 if (!prefix.ptr) {
                     parser.ParseObject();
