@@ -167,10 +167,11 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
             Fmt(&buf, " --format=iife --global-name=%1", global_name);
             Fmt(&buf, " --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
 
+            if ((features & (int)CompileFeature::OptimizeSize) || (features & (int)CompileFeature::OptimizeSpeed)) {
+                Fmt(&buf, " --minify");
+            }
             if (features & (int)CompileFeature::DebugInfo) {
                 Fmt(&buf, " --sourcemap=inline");
-            } else {
-                Fmt(&buf, " --minify");
             }
             if (src.target->bundle_options) {
                 Fmt(&buf, " %1", src.target->bundle_options);
