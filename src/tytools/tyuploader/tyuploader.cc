@@ -26,6 +26,7 @@ TyUploader::TyUploader(int &argc, char *argv[])
     : QApplication(argc, argv)
 {
     setOrganizationName("ty");
+    setDesktopFileName(TY_CONFIG_TYUPLOADER_NAME);
     setApplicationName(TY_CONFIG_TYUPLOADER_NAME);
     setApplicationVersion(ty_version_string());
 

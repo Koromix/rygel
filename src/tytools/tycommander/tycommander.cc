@@ -61,6 +61,7 @@ TyCommander::TyCommander(int &argc, char *argv[])
     : QApplication(argc, argv), argc_(argc), argv_(argv)
 {
     setOrganizationName("TyTools");
+    setDesktopFileName(TY_CONFIG_TYCOMMANDER_NAME);
     setApplicationName(TY_CONFIG_TYCOMMANDER_NAME);
     setApplicationVersion(ty_version_string());
 
