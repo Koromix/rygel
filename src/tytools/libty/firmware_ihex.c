@@ -14,6 +14,13 @@
 
 struct parser_context {
     ty_firmware *fw;
+
+    ty_firmware_read_func *func;
+    void *udata;
+
+    ty_firmware_program *program;
+
+    _HS_ARRAY(uint8_t) buf;
     unsigned int line;
 
     const char *ptr;
@@ -88,7 +95,7 @@ static int parse_line(struct parser_context *ctx, const char *line, size_t line_
         case 0: { // data record
             address += ctx->offset1 + ctx->offset2;
 
-            r = ty_firmware_expand_segment(ctx->fw, ctx->segment, address + data_len);
+            r = ty_firmware_expand_segment(ctx->program, ctx->segment, address + data_len);
             if (r < 0)
                 return r;
 
@@ -115,7 +122,7 @@ static int parse_line(struct parser_context *ctx, const char *line, size_t line_
             address = (uint32_t)parse_hex_value(ctx, 2) << 16;
 
             if (address + 65536 > ctx->segment->address + 1048576) {
-                r = ty_firmware_add_segment(ctx->fw, address, 0, &ctx->segment);
+                r = ty_firmware_add_segment(ctx->program, address, 0, &ctx->segment);
                 if (r < 0)
                     return r;
 
@@ -151,20 +158,17 @@ static int parse_line(struct parser_context *ctx, const char *line, size_t line_
     return (type == 1);
 }
 
-int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *udata)
+static int load_hex(struct parser_context *ctx, size_t pgm)
 {
-    assert(fw);
-    assert(!fw->segments_count && !fw->total_size);
-    assert(func);
+    assert(pgm >= 0 && pgm < ctx->fw->programs_count);
 
-    struct parser_context ctx = {0};
-    _HS_ARRAY(uint8_t) buf = {0};
     size_t start, end;
     bool eof = false;
     ssize_t r;
 
-    ctx.fw = fw;
-    r = ty_firmware_add_segment(fw, 0, 0, &ctx.segment);
+    ctx->program = &ctx->fw->programs[pgm];
+
+    r = ty_firmware_add_segment(ctx->program, 0, 0, &ctx->segment);
     if (r < 0)
         goto cleanup;
 
@@ -176,54 +180,79 @@ int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
 
         // Find line limits
         start = end;
-        while (start < buf.count && (buf.values[start] == '\r' || buf.values[start] == '\n'))
+        while (start < ctx->buf.count && (ctx->buf.values[start] == '\r' || ctx->buf.values[start] == '\n'))
             start++;
         end = start;
-        while (end < buf.count && buf.values[end] != '\r' && buf.values[end] != '\n')
+        while (end < ctx->buf.count && ctx->buf.values[end] != '\r' && ctx->buf.values[end] != '\n')
             end++;
 
         // Could not find end of line, need more data
-        if (end >= buf.count) {
-            if (buf.count > 2 * 1024 * 1024) {
-                r = ty_error(TY_ERROR_PARSE, "Excessive IHEX line length in '%s' (%d)", fw->filename, ctx.line + 1);
+        if (end >= ctx->buf.count) {
+            if (ctx->buf.count > 2 * 1024 * 1024) {
+                r = ty_error(TY_ERROR_PARSE, "Excessive IHEX line length in '%s' (%d)", ctx->fw->filename, ctx->line + 1);
                 goto cleanup;
             }
 
-            r = _hs_array_grow(&buf, 4096);
+            r = _hs_array_grow(&ctx->buf, 4096);
             if (r < 0)
                 goto cleanup;
 
-            r = (*func)(-1, buf.values + buf.count, buf.allocated - buf.count, udata);
+            r = (*ctx->func)(-1, ctx->buf.values + ctx->buf.count, ctx->buf.allocated - ctx->buf.count, ctx->udata);
             if (r < 0)
                 goto cleanup;
             if (!r) {
-                buf.values[buf.count++] = '\n';
+                ctx->buf.values[ctx->buf.count++] = '\n';
                 eof = true;
             }
-            buf.count += (size_t)r;
+            ctx->buf.count += (size_t)r;
 
             end = 0;
             continue;
         }
-        ctx.line++;
+        ctx->line++;
 
         // Returns 1 when EOF record is detected
-        r = parse_line(&ctx, (const char *)buf.values + start, end - start);
+        r = parse_line(ctx, (const char *)ctx->buf.values + start, end - start);
         if (r < 0)
             goto cleanup;
 
-        memmove(buf.values, buf.values + end, buf.count - end);
-        buf.count -= end;
+        memmove(ctx->buf.values, ctx->buf.values + end, ctx->buf.count - end);
+        ctx->buf.count -= end;
         end = 0;
     } while (r != 1);
 
-    for (unsigned int i = 0; i < fw->segments_count; i++) {
-        const ty_firmware_segment *segment = &fw->segments[i];
-        fw->max_address = _HS_MAX(fw->max_address, segment->address + segment->size);
+    for (unsigned int i = 0; i < ctx->program->segments_count; i++) {
+        const ty_firmware_segment *segment = &ctx->program->segments[i];
+        ctx->program->max_address = _HS_MAX(ctx->program->max_address, segment->address + segment->size);
     }
 
     r = 0;
 cleanup:
-    _hs_array_release(&buf);
     return (int)r;
+}
+
+int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *udata)
+{
+    assert(fw);
+    assert(!fw->programs_count);
+    assert(func);
+
+    struct parser_context ctx = {0};
+    int r;
+
+    fw->type = TY_FIRMWARE_TYPE_IHEX;
+    fw->programs_count = 1;
+
+    ctx.fw = fw;
+    ctx.func = func;
+    ctx.udata = udata;
+
+    r = load_hex(&ctx, 0);
+    if (r < 0)
+        goto cleanup;
+
+    r = 0;
+cleanup:
+    _hs_array_release(&ctx.buf);
+    return r;
 }

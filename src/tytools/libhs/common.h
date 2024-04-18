@@ -97,6 +97,7 @@ typedef long ssize_t;
 #define _HS_UNIQUE_ID(prefix) _HS_CONCAT(prefix, __LINE__)
 #define _HS_UNUSED(arg) ((void)(arg))
 #define _HS_COUNTOF(a) (sizeof(a) / sizeof(*(a)))
+#define _HS_OFFSETOF(Type, Member) __builtin_offsetof(Type, Member)
 #define _HS_MIN(a,b) ((a) < (b) ? (a) : (b))
 #define _HS_MAX(a,b) ((a) > (b) ? (a) : (b))
 #define _HS_ALIGN_SIZE(size, align) (((size) + (align) - 1) / (align) * (align))

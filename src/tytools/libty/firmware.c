@@ -76,6 +76,9 @@ int ty_firmware_new(const char *filename, ty_firmware **rfw)
         }
     }
 
+    for (size_t i = 0; i < _HS_COUNTOF(fw->programs); i++)
+        fw->programs[i].idx = (int)i;
+
     *rfw = fw;
     return 0;
 
@@ -298,8 +301,11 @@ void ty_firmware_unref(ty_firmware *fw)
         if (_ty_refcount_decrease(&fw->refcount))
             return;
 
-        for (unsigned int i = 0; i < fw->segments_count; i++)
-            free(fw->segments[i].data);
+        for (unsigned int i = 0; i < fw->programs_count; i++) {
+            ty_firmware_program *program = &fw->programs[i];
+            for (unsigned int j = 0; j < program->segments_count; j++)
+                free(program->segments[j].data);
+        }
         free(fw->name);
         free(fw->filename);
     }
@@ -307,12 +313,18 @@ void ty_firmware_unref(ty_firmware *fw)
     free(fw);
 }
 
-const ty_firmware_segment *ty_firmware_find_segment(const ty_firmware *fw, uint32_t address)
+const ty_firmware *ty_firmware_from_program(const ty_firmware_program *program)
 {
-    assert(fw);
+    size_t offset = _HS_OFFSETOF(ty_firmware, programs) + program->idx * sizeof(*program);
+    return (const ty_firmware *)((const uint8_t *)program - offset);
+}
 
-    for (unsigned int i = fw->segments_count; i-- > 0;) {
-        const ty_firmware_segment *segment = &fw->segments[i];
+const ty_firmware_segment *ty_firmware_find_segment(const ty_firmware_program *program, uint32_t address)
+{
+    assert(program);
+
+    for (unsigned int i = program->segments_count; i-- > 0;) {
+        const ty_firmware_segment *segment = &program->segments[i];
 
         if (address >= segment->address && address < segment->address + segment->size)
             return segment;
@@ -321,13 +333,14 @@ const ty_firmware_segment *ty_firmware_find_segment(const ty_firmware *fw, uint3
     return NULL;
 }
 
-size_t ty_firmware_extract(const ty_firmware *fw, uint32_t address, uint8_t *buf, size_t size)
+size_t ty_firmware_extract(const ty_firmware_program *program, uint32_t address, uint8_t *buf, size_t size)
 {
-    assert(fw);
+    assert(program);
 
     size_t total_len = 0;
-    for (unsigned int i = 0; i < fw->segments_count; i++) {
-        const ty_firmware_segment *segment = &fw->segments[i];
+
+    for (unsigned int i = 0; i < program->segments_count; i++) {
+        const ty_firmware_segment *segment = &program->segments[i];
 
         if (address >= segment->address && address < segment->address + segment->size) {
             size_t delta = address - segment->address;
@@ -347,39 +360,42 @@ size_t ty_firmware_extract(const ty_firmware *fw, uint32_t address, uint8_t *buf
     return total_len;
 }
 
-int ty_firmware_add_segment(ty_firmware *fw, uint32_t address, size_t size,
+int ty_firmware_add_segment(ty_firmware_program *program, uint32_t address, size_t size,
                             ty_firmware_segment **rsegment)
 {
-    assert(fw);
+    assert(program);
 
     ty_firmware_segment *segment;
     int r;
 
-    if (fw->segments_count >= TY_FIRMWARE_MAX_SEGMENTS)
-        return ty_error(TY_ERROR_RANGE, "Firmware '%s' has too many segments", fw->filename);
+    if (program->segments_count >= TY_FIRMWARE_MAX_SEGMENTS)
+        return ty_error(TY_ERROR_RANGE, "Firmware '%s' has too many segments",
+                        ty_firmware_from_program(program)->filename);
 
-    segment = &fw->segments[fw->segments_count];
+    segment = &program->segments[program->segments_count];
     segment->address = address;
 
-    r = ty_firmware_expand_segment(fw, segment, size);
+    r = ty_firmware_expand_segment(program, segment, size);
     if (r < 0)
         return r;
 
-    fw->segments_count++;
+    program->segments_count++;
 
     if (rsegment)
         *rsegment = segment;
     return 0;
 }
 
-int ty_firmware_expand_segment(ty_firmware *fw, ty_firmware_segment *segment, size_t size)
+int ty_firmware_expand_segment(ty_firmware_program *program, ty_firmware_segment *segment, size_t size)
 {
+    assert(program);
+
+    size_t total_size = program->total_size - segment->size + size;
     const size_t step_size = 65536;
-    size_t total_size = fw->total_size - segment->size + size;
 
     if (total_size > TY_FIRMWARE_MAX_SIZE)
         return ty_error(TY_ERROR_RANGE, "Firmware '%s' has excessive size (max %u bytes)",
-                        fw->filename, TY_FIRMWARE_MAX_SIZE);
+                        ty_firmware_from_program(program)->filename, TY_FIRMWARE_MAX_SIZE);
 
     if (size > segment->alloc_size) {
         uint8_t *tmp;
@@ -395,7 +411,7 @@ int ty_firmware_expand_segment(ty_firmware *fw, ty_firmware_segment *segment, si
     }
 
     segment->size = size;
-    fw->total_size = total_size;
+    program->total_size = total_size;
 
     return 0;
 }

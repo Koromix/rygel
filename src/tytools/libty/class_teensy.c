@@ -378,8 +378,9 @@ static uint64_t read_uint64_le(const uint8_t *ptr)
 static unsigned int teensy_identify_models(const ty_firmware *fw, ty_model *rmodels,
                                            unsigned int max_models)
 {
-    const ty_firmware_segment *segment0 = ty_firmware_find_segment(fw, 0);
-    const ty_firmware_segment *teensy4_segment = ty_firmware_find_segment(fw, 0x60000000);
+    const ty_firmware_program *program = &fw->programs[0];
+    const ty_firmware_segment *segment0 = ty_firmware_find_segment(program, 0);
+    const ty_firmware_segment *teensy4_segment = ty_firmware_find_segment(program, 0x60000000);
 
     // First, try the Teensy 4.0
     if (teensy4_segment && teensy4_segment->size >= sizeof(uint64_t)) {
@@ -467,9 +468,9 @@ static unsigned int teensy_identify_models(const ty_firmware *fw, ty_model *rmod
 
     /* Now try AVR Teensies. We search for machine code that matches model-specific code in
        _reboot_Teensyduino_(). Not elegant, but it does the work. */
-    if (fw->max_address <= 130048) {
-        for (unsigned int i = 0; i < fw->segments_count; i++) {
-            const ty_firmware_segment *segment = &fw->segments[i];
+    if (program->max_address <= 130048) {
+        for (unsigned int i = 0; i < program->segments_count; i++) {
+            const ty_firmware_segment *segment = &program->segments[i];
             if (segment->size < sizeof(uint64_t))
                 continue;
 
@@ -733,6 +734,7 @@ static int get_halfkay_settings(ty_model model, unsigned int *rhalfkay_version,
 static int teensy_upload(ty_board_interface *iface, ty_firmware *fw,
                          ty_board_upload_progress_func *pf, void *udata)
 {
+    const ty_firmware_program *program = &fw->programs[0];
     unsigned int halfkay_version;
     size_t min_address, max_address, block_size;
     int r;
@@ -741,23 +743,23 @@ static int teensy_upload(ty_board_interface *iface, ty_firmware *fw,
     if (r < 0)
         return r;
 
-    if (fw->max_address > max_address)
+    if (program->max_address > max_address)
         return ty_error(TY_ERROR_RANGE, "Firmware is too big for %s",
                         ty_models[iface->model].name);
 
     if (pf) {
-        r = (*pf)(iface->board, fw, 0, max_address - min_address, udata);
+        r = (*pf)(iface->board, fw, program->total_size, 0, max_address - min_address, udata);
         if (r)
             return r;
     }
 
     size_t uploaded_len = 0;
-    for (size_t address = min_address; address < fw->max_address; address += block_size) {
+    for (size_t address = min_address; address < program->max_address; address += block_size) {
         uint8_t buf[8192];
         size_t buf_len;
 
         memset(buf, 0, sizeof(buf));
-        buf_len = ty_firmware_extract(fw, (uint32_t)address, buf, block_size);
+        buf_len = ty_firmware_extract(program, (uint32_t)address, buf, block_size);
 
         if (buf_len) {
             // The first write takes longer because it triggers a complete erase of all blocks.
@@ -771,7 +773,7 @@ static int teensy_upload(ty_board_interface *iface, ty_firmware *fw,
             hs_delay(first ? 500 : 1);
 
             if (pf) {
-                r = (*pf)(iface->board, fw, uploaded_len, max_address - min_address, udata);
+                r = (*pf)(iface->board, fw, program->total_size, uploaded_len, max_address - min_address, udata);
                 if (r)
                     return r;
             }

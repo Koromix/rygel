@@ -58,6 +58,7 @@ typedef struct Elf32_Phdr {
 
 struct loader_context {
     ty_firmware *fw;
+    ty_firmware_program *program;
 
     ty_firmware_read_func *func;
     void *udata;
@@ -141,7 +142,7 @@ static int load_segment(struct loader_context *ctx, unsigned int i)
     if (phdr.p_type != PT_LOAD || !phdr.p_filesz)
         return 0;
 
-    r = ty_firmware_add_segment(ctx->fw, phdr.p_paddr, phdr.p_filesz, &segment);
+    r = ty_firmware_add_segment(ctx->program, phdr.p_paddr, phdr.p_filesz, &segment);
     if (r < 0)
         return r;
     r = read_chunk(ctx, phdr.p_offset, segment->data, phdr.p_filesz);
@@ -154,12 +155,17 @@ static int load_segment(struct loader_context *ctx, unsigned int i)
 int ty_firmware_load_elf(ty_firmware *fw, ty_firmware_read_func *func, void *udata)
 {
     assert(fw);
-    assert(!fw->segments_count && !fw->total_size);
+    assert(!fw->programs_count);
 
+    ty_firmware_program *program = &fw->programs[0];
     struct loader_context ctx = {0};
     int r;
 
+    fw->type = TY_FIRMWARE_TYPE_ELF;
+    fw->programs_count = 1;
+
     ctx.fw = fw;
+    ctx.program = program;
     ctx.func = func;
     ctx.udata = udata;
 
@@ -198,9 +204,9 @@ int ty_firmware_load_elf(ty_firmware *fw, ty_firmware_read_func *func, void *uda
             return r;
     }
 
-    for (unsigned int i = 0; i < fw->segments_count; i++) {
-        const ty_firmware_segment *segment = &fw->segments[i];
-        fw->max_address = _HS_MAX(fw->max_address, segment->address + segment->size);
+    for (unsigned int i = 0; i < program->segments_count; i++) {
+        const ty_firmware_segment *segment = &program->segments[i];
+        program->max_address = _HS_MAX(program->max_address, segment->address + segment->size);
     }
 
     return 0;

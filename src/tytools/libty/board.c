@@ -608,7 +608,7 @@ static int select_compatible_firmware(ty_board *board, ty_firmware **fws, unsign
     }
 }
 
-static int upload_progress_callback(const ty_board *board, const ty_firmware *fw,
+static int upload_progress_callback(const ty_board *board, ty_firmware *fw, size_t total_size,
                                     size_t uploaded_size, size_t flash_size, void *udata)
 {
     _HS_UNUSED(board);
@@ -616,17 +616,15 @@ static int upload_progress_callback(const ty_board *board, const ty_firmware *fw
 
     if (!uploaded_size) {
         ty_log(TY_LOG_INFO, "Firmware: %s", fw->name);
-        if (fw->total_size >= 1024) {
+        if (total_size >= 1024) {
             ty_log(TY_LOG_INFO, "Flash usage: %zu kiB (%.1f%%)",
-                   (fw->total_size + 1023) / 1024,
-                   (double)fw->total_size / (double)flash_size * 100.0);
+                   (total_size + 1023) / 1024, (double)total_size / (double)flash_size * 100.0);
         } else {
             ty_log(TY_LOG_INFO, "Flash usage: %zu bytes (%.1f%%)",
-                   fw->total_size,
-                   (double)fw->total_size / (double)flash_size * 100.0);
+                   total_size, (double)total_size / (double)flash_size * 100.0);
         }
     }
-    ty_progress("Uploading", uploaded_size, fw->total_size);
+    ty_progress("Uploading", uploaded_size, total_size);
 
     return 0;
 }

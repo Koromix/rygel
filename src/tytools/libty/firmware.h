@@ -16,8 +16,16 @@
 
 _HS_BEGIN_C
 
+#define TY_FIRMWARE_MAX_PROGRAMS 4
 #define TY_FIRMWARE_MAX_SEGMENTS 16
 #define TY_FIRMWARE_MAX_SIZE (32 * 1024 * 1024)
+
+// Keep in sync with ty_firmware_formats in firmware.c
+typedef enum ty_firmware_type {
+    TY_FIRMWARE_TYPE_ELF,
+    TY_FIRMWARE_TYPE_IHEX,
+    TY_FIRMWARE_TYPE_EHEX
+} ty_firmware_type;
 
 typedef struct ty_firmware_segment {
     uint8_t *data;
@@ -26,17 +34,25 @@ typedef struct ty_firmware_segment {
     uint32_t address;
 } ty_firmware_segment;
 
-typedef struct ty_firmware {
-    unsigned int refcount;
-
-    char *name;
-    char *filename;
+typedef struct ty_firmware_program {
+    int idx;
 
     ty_firmware_segment segments[TY_FIRMWARE_MAX_SEGMENTS];
     unsigned int segments_count;
 
     size_t max_address;
     size_t total_size;
+} ty_firmware_program;
+
+typedef struct ty_firmware {
+    unsigned int refcount;
+
+    ty_firmware_type type;
+    char *name;
+    char *filename;
+
+    ty_firmware_program programs[TY_FIRMWARE_MAX_PROGRAMS];
+    unsigned int programs_count;
 } ty_firmware;
 
 typedef ssize_t ty_firmware_read_func(int64_t offset, uint8_t *buf, size_t len, void *udata);
@@ -63,16 +79,16 @@ int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
 ty_firmware *ty_firmware_ref(ty_firmware *fw);
 void ty_firmware_unref(ty_firmware *fw);
 
-const ty_firmware_segment *ty_firmware_find_segment(const ty_firmware *fw, uint32_t address);
-size_t ty_firmware_extract(const ty_firmware *fw, uint32_t address, uint8_t *buf, size_t size);
+const ty_firmware *ty_firmware_from_program(const ty_firmware_program *program);
 
-int ty_firmware_add_segment(ty_firmware *fw, uint32_t address, size_t size,
+const ty_firmware_segment *ty_firmware_find_segment(const ty_firmware_program *program, uint32_t address);
+size_t ty_firmware_extract(const ty_firmware_program *program, uint32_t address, uint8_t *buf, size_t size);
+
+int ty_firmware_add_segment(ty_firmware_program *program, uint32_t address, size_t size,
                             ty_firmware_segment **rsegment);
-int ty_firmware_expand_segment(ty_firmware *fw, ty_firmware_segment *segment, size_t size);
+int ty_firmware_expand_segment(ty_firmware_program *program, ty_firmware_segment *segment, size_t size);
 
-
-unsigned int ty_firmware_identify(const ty_firmware *fw, ty_model *rmodels,
-                                  unsigned int max_models);
+unsigned int ty_firmware_identify(const ty_firmware *fw, ty_model *rmodels, unsigned int max_models);
 
 _HS_END_C
 
