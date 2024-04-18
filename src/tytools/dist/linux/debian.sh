@@ -11,12 +11,12 @@ PKG_ARCHITECTURES="amd64 i386 arm64"
 
 SCRIPT_PATH=src/tytools/dist/linux/debian.sh
 VERSION_TARGET=tycmd
-DOCKER_IMAGE=debian12
+DOCKER_IMAGE=debian11
 
 build() {
     apt update
-    apt install -y qt6-base-dev qt6-base-dev-tools libudev-dev \
-                   qt6-base-dev:$1 libudev-dev:$1
+    apt install -y qt6-base-dev qt6-base-dev-tools/bullseye-backports libudev-dev \
+                   qt6-base-dev:$1/bullseye-backports libudev-dev:$1
 
     ./bootstrap.sh
     ./felix -pFast --host=$1 tycmd tycommander tyuploader
