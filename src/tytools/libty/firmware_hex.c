@@ -177,6 +177,9 @@ static int load_hex(struct parser_context *ctx, size_t pgm)
     if (r < 0)
         goto cleanup;
 
+#define SKIP_LINE(c) \
+        (ctx->line += (c == '\n'), c == '\r' || c == '\n')
+
     do {
         if (eof) {
             r = ty_error(TY_ERROR_PARSE, "Missing EOF record in '%s' (IHEX)", fw->filename);
@@ -185,10 +188,10 @@ static int load_hex(struct parser_context *ctx, size_t pgm)
 
         // Find line limits
         start = end;
-        while (start < buf->count && (buf->values[start] == '\r' || buf->values[start] == '\n'))
+        while (start < buf->count && SKIP_LINE(buf->values[start]))
             start++;
         end = start;
-        while (end < buf->count && buf->values[end] != '\r' && buf->values[end] != '\n')
+        while (end < buf->count && (buf->values[end] != '\r' && buf->values[end] != '\n'))
             end++;
 
         // Could not find end of line, need more data
@@ -214,17 +217,21 @@ static int load_hex(struct parser_context *ctx, size_t pgm)
             end = 0;
             continue;
         }
-        ctx->line++;
 
         // Returns 1 when EOF record is detected
         r = parse_line(ctx, (const char *)buf->values + start, end - start);
         if (r < 0)
             goto cleanup;
 
+        while (end < buf->count && SKIP_LINE(buf->values[end]))
+            end++;
+
         memmove(buf->values, buf->values + end, buf->count - end);
         buf->count -= end;
         end = 0;
     } while (r != 1);
+
+#undef SKIP_LINE
 
     for (unsigned int i = 0; i < program->segments_count; i++) {
         const ty_firmware_segment *segment = &program->segments[i];
@@ -251,6 +258,7 @@ int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
     ctx.fw = fw;
     ctx.func = func;
     ctx.udata = udata;
+    ctx.line = 1;
 
     r = load_hex(&ctx, 0);
     if (r < 0)
@@ -277,6 +285,7 @@ int ty_firmware_load_ehex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
     ctx.fw = fw;
     ctx.func = func;
     ctx.udata = udata;
+    ctx.line = 1;
 
     r = load_hex(&ctx, 0);
     if (r < 0)
