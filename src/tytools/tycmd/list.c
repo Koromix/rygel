@@ -48,6 +48,8 @@ static int print_interface_info_plain(ty_board_interface *iface, void *udata)
 
 static int print_event_plain(ty_board *board, ty_monitor_event event)
 {
+    static bool first = true;
+
     ty_model model = ty_board_get_model(board);
     const char *action = "";
 
@@ -57,6 +59,11 @@ static int print_event_plain(ty_board *board, ty_monitor_event event)
         case TY_MONITOR_EVENT_DISAPPEARED: { action = "miss"; } break;
         case TY_MONITOR_EVENT_DROPPED: { action = "remove"; } break;
     }
+
+    if (list_verbose && !first) {
+        printf("\n");
+    }
+    first = false;
 
     if (ty_board_get_description(board)) {
         printf("%s %s %s (%s)\n", action, ty_board_get_tag(board), ty_models[model].name,
@@ -76,11 +83,9 @@ static int print_event_plain(ty_board *board, ty_monitor_event event)
             if (capabilities & (1 << i))
                 printf("    %s\n", ty_board_capability_get_name(i));
         }
-        printf("\n");
 
         printf("  interfaces:\n");
         ty_board_list_interfaces(board, print_interface_info_plain, NULL);
-        printf("\n");
     }
 
     fflush(stdout);
