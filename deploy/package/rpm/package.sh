@@ -7,7 +7,7 @@ CLIENT_DIR=${DEST_DIR}/client
 if [ "$1" = "" -o "$1" = "package" ]; then
     ./bootstrap.sh
 
-    VERSION=$(./felix --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
+    VERSION=$(./felix -pDebug --run ${VERSION_TARGET} --version | awk -F'[ _]' "/^${VERSION_TARGET}/ {print \$2}")
     DATE=$(git show -s --format=%ci | LANG=en_US xargs -0 -n1 date "+%a, %d %b %Y %H:%M:%S %z" -d)
 
     RELEASE=$(echo $VERSION | sed 's/^.*-//')
