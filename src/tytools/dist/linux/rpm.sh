@@ -13,7 +13,7 @@ VERSION_TARGET=tycmd
 DOCKER_IMAGE=fedora38
 
 build() {
-    dnf install -y qt6-qtbase-devel libudev-devel
+    dnf install -y qt6-qtbase-devel libudev-devel ImageMagick
 
     export QMAKE_PATH=/usr/lib64/qt6/bin/qmake
 
@@ -29,6 +29,14 @@ build() {
     install -D -m0644 src/tytools/assets/images/tycommander.png ${ROOT_DIR}/usr/share/icons/hicolor/512x512/apps/tycommander.png
     install -D -m0644 src/tytools/assets/images/tyuploader.png ${ROOT_DIR}/usr/share/icons/hicolor/512x512/apps/tyuploader.png
     install -D -m0644 src/tytools/dist/linux/teensy.rules ${ROOT_DIR}/usr/lib/udev/rules.d/00-teensy.rules
+
+    for size in 16 32 48 256; do
+        mkdir -p -m0755 "${ROOT_DIR}/usr/share/icons/hicolor/${size}x${size}/apps"
+        convert -resize "${size}x${size}" src/tytools/assets/images/tycommander.png \
+            "${ROOT_DIR}/usr/share/icons/hicolor/${size}x${size}/apps/tycommander.png"
+        convert -resize "${size}x${size}" src/tytools/assets/images/tyuploader.png \
+            "${ROOT_DIR}/usr/share/icons/hicolor/${size}x${size}/apps/tyuploader.png"
+    done
 }
 
 cd "$(dirname $0)/../../../.."
