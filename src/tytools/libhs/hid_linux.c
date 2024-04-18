@@ -109,11 +109,10 @@ ssize_t hs_hid_get_feature_report(hs_port *port, uint8_t report_id, uint8_t *buf
 
     ssize_t r;
 
-    if (size >= 2)
-        buf[1] = report_id;
+    buf[0] = report_id;
 
 restart:
-    r = ioctl(port->u.file.fd, HIDIOCGFEATURE(size - 1), (const char *)buf + 1);
+    r = ioctl(port->u.file.fd, HIDIOCGFEATURE(size), (const char *)buf);
     if (r < 0) {
         if (errno == EINTR)
             goto restart;
@@ -122,8 +121,7 @@ restart:
                         strerror(errno));
     }
 
-    buf[0] = report_id;
-    return r + 1;
+    return r;
 }
 
 ssize_t hs_hid_send_feature_report(hs_port *port, const uint8_t *buf, size_t size)
