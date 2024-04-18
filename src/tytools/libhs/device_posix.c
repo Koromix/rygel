@@ -142,11 +142,6 @@ error:
 void _hs_close_file_port(hs_port *port)
 {
     if (port) {
-#ifdef __linux__
-        // Only used for hidraw to work around a bug on old kernels
-        free(port->u.file.read_buf);
-#endif
-
         close(port->u.file.fd);
         hs_device_unref(port->dev);
     }

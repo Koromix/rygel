@@ -39,9 +39,6 @@ struct hs_port {
             int fd;
 
     #ifdef __linux__
-            // Used to work around an old kernel 2.6 (pre-2.6.34) hidraw bug
-            uint8_t *read_buf;
-            size_t read_buf_size;
             bool numbered_hid_reports;
     #endif
         } file;

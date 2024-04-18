@@ -22,18 +22,6 @@
 #include "hid.h"
 #include "platform.h"
 
-static bool detect_kernel26_byte_bug()
-{
-    static bool init, bug;
-
-    if (!init) {
-        bug = hs_linux_version() >= 20628000 && hs_linux_version() < 20634000;
-        init = true;
-    }
-
-    return bug;
-}
-
 ssize_t hs_hid_read(hs_port *port, uint8_t *buf, size_t size, int timeout)
 {
     assert(port);
@@ -66,25 +54,7 @@ restart:
     }
 
     if (port->u.file.numbered_hid_reports) {
-        /* Work around a hidraw bug introduced in Linux 2.6.28 and fixed in Linux 2.6.34, see
-           https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=5a38f2c7c4dd53d5be097930902c108e362584a3 */
-        if (detect_kernel26_byte_bug()) {
-            if (size + 1 > port->u.file.read_buf_size) {
-                free(port->u.file.read_buf);
-                port->u.file.read_buf_size = 0;
-
-                port->u.file.read_buf = (uint8_t *)malloc(size + 1);
-                if (!port->u.file.read_buf)
-                    return hs_error(HS_ERROR_MEMORY, NULL);
-                port->u.file.read_buf_size = size + 1;
-            }
-
-            r = read(port->u.file.fd, port->u.file.read_buf, size + 1);
-            if (r > 0)
-                memcpy(buf, port->u.file.read_buf + 1, (size_t)--r);
-        } else {
-            r = read(port->u.file.fd, buf, size);
-        }
+        r = read(port->u.file.fd, buf, size);
     } else {
         r = read(port->u.file.fd, buf + 1, size - 1);
         if (r > 0) {
