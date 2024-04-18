@@ -243,22 +243,34 @@ cleanup:
     return (int)r;
 }
 
+static void init_context(struct parser_context *ctx, ty_firmware *fw, ty_firmware_read_func *func, void *udata)
+{
+    memset(ctx, 0, sizeof(*ctx));
+
+    ctx->fw = fw;
+    ctx->func = func;
+    ctx->udata = udata;
+    ctx->line = 1;
+}
+
+static void release_context(struct parser_context *ctx)
+{
+    _hs_array_release(&ctx->buf);
+}
+
 int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *udata)
 {
     assert(fw);
     assert(!fw->programs_count);
     assert(func);
 
-    struct parser_context ctx = {0};
+    struct parser_context ctx;
     int r;
 
     fw->type = TY_FIRMWARE_TYPE_IHEX;
     fw->programs_count = 1;
 
-    ctx.fw = fw;
-    ctx.func = func;
-    ctx.udata = udata;
-    ctx.line = 1;
+    init_context(&ctx, fw, func, udata);
 
     r = load_hex(&ctx, 0);
     if (r < 0)
@@ -266,7 +278,7 @@ int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
 
     r = 0;
 cleanup:
-    _hs_array_release(&ctx.buf);
+    release_context(&ctx);
     return r;
 }
 
@@ -276,16 +288,13 @@ int ty_firmware_load_ehex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
     assert(!fw->programs_count);
     assert(func);
 
-    struct parser_context ctx = {0};
+    struct parser_context ctx;
     int r;
 
     fw->type = TY_FIRMWARE_TYPE_EHEX;
     fw->programs_count = 2;
 
-    ctx.fw = fw;
-    ctx.func = func;
-    ctx.udata = udata;
-    ctx.line = 1;
+    init_context(&ctx, fw, func, udata);
 
     r = load_hex(&ctx, 0);
     if (r < 0)
@@ -296,6 +305,6 @@ int ty_firmware_load_ehex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
 
     r = 0;
 cleanup:
-    _hs_array_release(&ctx.buf);
+    release_context(&ctx);
     return r;
 }
