@@ -75,6 +75,7 @@ int ty_firmware_load_mem(const char *filename, const uint8_t *mem, size_t len,
 
 int ty_firmware_load_elf(ty_firmware *fw, ty_firmware_read_func *func, void *udata);
 int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *udata);
+int ty_firmware_load_ehex(ty_firmware *fw, ty_firmware_read_func *func, void *udata);
 
 ty_firmware *ty_firmware_ref(ty_firmware *fw);
 void ty_firmware_unref(ty_firmware *fw);

@@ -15,7 +15,8 @@
 
 const ty_firmware_format ty_firmware_formats[] = {
     {"elf",  ".elf", ty_firmware_load_elf},
-    {"ihex", ".hex", ty_firmware_load_ihex}
+    {"ihex", ".hex", ty_firmware_load_ihex},
+    {"ehex", ".ehex", ty_firmware_load_ehex}
 };
 const unsigned int ty_firmware_formats_count = _HS_COUNTOF(ty_firmware_formats);
 
