@@ -159,7 +159,8 @@ int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
 
     struct parser_context ctx = {0};
     _HS_ARRAY(uint8_t) buf = {0};
-    size_t start, end = 0;
+    size_t start, end;
+    bool eof = false;
     ssize_t r;
 
     ctx.fw = fw;
@@ -168,6 +169,11 @@ int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
         goto cleanup;
 
     do {
+        if (eof) {
+            r = ty_error(TY_ERROR_PARSE, "Missing EOF record in '%s' (IHEX)", ctx->fw->filename);
+            goto cleanup;
+        }
+
         // Find line limits
         start = end;
         while (start < buf.count && (buf.values[start] == '\r' || buf.values[start] == '\n'))
@@ -190,12 +196,11 @@ int ty_firmware_load_ihex(ty_firmware *fw, ty_firmware_read_func *func, void *ud
             r = (*func)(-1, buf.values + buf.count, buf.allocated - buf.count, udata);
             if (r < 0)
                 goto cleanup;
-            buf.count += (size_t)r;
-
-            if (!r && !buf.count) {
-                r = ty_error(TY_ERROR_PARSE, "Missing EOF record in '%s' (IHEX)", fw->filename);
-                goto cleanup;
+            if (!r) {
+                buf.values[buf.count++] = '\n';
+                eof = true;
             }
+            buf.count += (size_t)r;
 
             end = 0;
             continue;
