@@ -31,6 +31,7 @@ typedef enum ty_board_capability {
     TY_BOARD_CAPABILITY_UNIQUE,
     TY_BOARD_CAPABILITY_RUN,
     TY_BOARD_CAPABILITY_UPLOAD,
+    TY_BOARD_CAPABILITY_ENCRYPT,
     TY_BOARD_CAPABILITY_RESET,
     TY_BOARD_CAPABILITY_RTC,
     TY_BOARD_CAPABILITY_REBOOT,
@@ -100,6 +101,8 @@ ssize_t ty_board_serial_write(ty_board *board, const char *buf, size_t size);
 int ty_board_upload(ty_board *board, struct ty_firmware *fw, ty_board_upload_progress_func *pf, void *udata);
 int ty_board_reset(ty_board *board, int64_t rtc);
 int ty_board_reboot(ty_board *board);
+
+ssize_t ty_board_read_public_hash(ty_board *board, uint8_t *rhash, size_t max_size);
 
 ty_board_interface *ty_board_interface_ref(ty_board_interface *iface);
 void ty_board_interface_unref(ty_board_interface *iface);

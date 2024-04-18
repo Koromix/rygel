@@ -32,6 +32,8 @@ struct _ty_class_vtable {
                   ty_board_upload_progress_func *pf, void *udata);
     int (*reset)(ty_board_interface *iface, int64_t rtc_time);
     int (*reboot)(ty_board_interface *iface);
+
+    ssize_t (*read_public_hash)(ty_board_interface *iface, uint8_t *rhash, size_t max_size);
 };
 
 struct _ty_class {

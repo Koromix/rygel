@@ -26,6 +26,7 @@ static const char *capability_names[] = {
     "unique",
     "run",
     "upload",
+    "encrypt",
     "reset",
     "rtc",
     "reboot",
@@ -411,6 +412,26 @@ int ty_board_reboot(ty_board *board)
         return ty_error(TY_ERROR_MODE, "Cannot reboot board '%s'", board->tag);
 
     r = (*iface->class_vtable->reboot)(iface);
+
+    ty_board_interface_close(iface);
+    return r;
+}
+
+ssize_t ty_board_read_public_hash(ty_board *board, uint8_t *rhash, size_t max_size)
+{
+    assert(board);
+    assert(rhash);
+
+    ty_board_interface *iface;
+    ssize_t r;
+
+    r = ty_board_open_interface(board, TY_BOARD_CAPABILITY_ENCRYPT, &iface);
+    if (r < 0)
+        return r;
+    if (!r)
+        return ty_error(TY_ERROR_MODE, "Cannot read public key of board '%s'", board->tag);
+
+    r = (*iface->class_vtable->read_public_hash)(iface, rhash, max_size);
 
     ty_board_interface_close(iface);
     return r;

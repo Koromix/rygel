@@ -161,8 +161,11 @@ static int teensy_load_interface(ty_board_interface *iface)
     }
 
     if (iface->model == TY_MODEL_TEENSY_40 || iface->model == TY_MODEL_TEENSY_41 ||
-            iface->model == TY_MODEL_TEENSY_MM)
+            iface->model == TY_MODEL_TEENSY_MM) {
+        if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD))
+            iface->capabilities |= 1 << TY_BOARD_CAPABILITY_ENCRYPT;
         iface->capabilities |= 1 << TY_BOARD_CAPABILITY_RTC;
+    }
 
     iface->class_vtable = &_ty_teensy_class_vtable;
 
@@ -847,6 +850,31 @@ static int teensy_reboot(ty_board_interface *iface)
     return r;
 }
 
+static ssize_t teensy_read_public_hash(ty_board_interface *iface, uint8_t *rhash, size_t max_size)
+{
+    if (max_size < 32)
+        return ty_error(TY_ERROR_PARAM, "Not enough space to store Teensy public key hash");
+
+    uint8_t buf[385];
+    ssize_t r;
+
+    r = hs_hid_get_feature_report(iface->port, 0, buf, sizeof(buf));
+    if (r < 0)
+        return ty_libhs_translate_error(r);
+
+    for (int i = 0; i < 8; i++) {
+        int dest = 4 * i;
+        int src = 5 + 4 * i;
+
+        rhash[dest + 0] = buf[src + 3];
+        rhash[dest + 1] = buf[src + 2];
+        rhash[dest + 2] = buf[src + 1];
+        rhash[dest + 3] = buf[src + 0];
+    }
+
+    return 32;
+}
+
 const struct _ty_class_vtable _ty_teensy_class_vtable = {
     .load_interface = teensy_load_interface,
     .update_board = teensy_update_board,
@@ -858,5 +886,7 @@ const struct _ty_class_vtable _ty_teensy_class_vtable = {
     .serial_write = teensy_serial_write,
     .upload = teensy_upload,
     .reset = teensy_reset,
-    .reboot = teensy_reboot
+    .reboot = teensy_reboot,
+
+    .read_public_hash = teensy_read_public_hash
 };
