@@ -173,6 +173,30 @@ Attention à la syntaxe du code. Lorsque les parenthèses ou les guillemets ne c
     }
 </style>
 
+# Images et autres fichiers
+
+Il est possible d'intégrer des images, des vidéos et tous types de fichiers, directement hébergés par Goupile. Pour cela, ouvrez le panneau de publication (accessible au-dessus de l'éditeur), puis cliquez sur le lien « Ajouter un fichier » [1].
+
+<div class="screenshot">
+    <img src="{{ ASSET static/help/dev_file1.webp }}" style="height: 240px;" alt=""/>
+    <img src="{{ ASSET static/help/dev_file2.webp }}" style="height: 240px;" alt=""/>
+</div>
+
+Vous pouvez ensuite sélectionner un fichier à ajouter depuis votre ordinateur, et le renommer si vous le souhaitez. Vous pouvez également le mettre en arborescence en lui donnant un nom tel que « images/alpes/montblanc.png ».
+
+Une fois l'image ajoutée, vous pouvez directement l'afficher dans vos pages à l'aide du widget `form.output` et du code HTML suivant:
+
+```js
+form.output(html`
+    <img src=${ENV.urls.files + 'apple.png'} alt="Logo Apple" />
+`)
+```
+
+L'utilisation de `ENV.urls.files` pour construire l'URL vous garantit une URL qui changera à chaque publication du projet, pour éviter des problèmes liés au cache des navigateurs. Cependant, chaque fichier est aussi accessible via `/projet/files/images/alpes/montagne.png`, et cette URL est stable depuis l'extérieur de Goupile.
+
+> [!NOTE]
+> Le nom de fichier `favicon.png` est particulier. Si vous mettez une image nommée favicon.png elle remplacera la favicon affichée dans le navigateur, et l'icône affichée sur l'écran de connexion.
+
 # Identifiants uniques
 
 Chaque enregistrement dans Goupile dispose de deux identifiants uniques :
