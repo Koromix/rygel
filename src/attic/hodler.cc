@@ -245,11 +245,11 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
     // Prepare command
     if (bundle.options) {
         Fmt(cmd, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
-                 "  --minify --platform=browser %4",
+                 "  --minify --platform=browser --target=es6 %4",
             esbuild_binary, bundle.src_filename, bundle.dest_filename, bundle.options);
     } else {
         Fmt(cmd, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
-                 "  --minify --platform=browser",
+                 "  --minify --platform=browser --target=es6",
             esbuild_binary, bundle.src_filename, bundle.dest_filename);
     }
 
