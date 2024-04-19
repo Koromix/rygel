@@ -41,7 +41,7 @@ function initMenu() {
         {
             let target = findParent(e.target, el => el.tagName == 'LI');
 
-            if (target.querySelector('div') != null) {
+            if (target?.querySelector('div') != null) {
                 for (let item of items) {
                     if (item == target) {
                         item.classList.toggle('active');

@@ -133,3 +133,23 @@ html {
 .alert.important { --text: '⚠\FE0E  Important'; }
 .alert.warning { --text: '⚠\FE0E  Attention'; }
 .alert.caution { --text: '⚠\FE0E  Danger'; }
+
+#veil {
+    display: none;
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.9);
+    cursor: pointer;
+    z-index: 999;
+}
+#veil.active { display: flex; }
+#veil > img {
+    position: absolute;
+    max-width: 90%;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+}

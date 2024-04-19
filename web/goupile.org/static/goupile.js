@@ -14,6 +14,7 @@
 import '../../../src/web/flaat/flaat.js';
 
 let timer_id = null;
+let veil = null;
 
 window.addEventListener('load', e => {
     initScreenshots();
