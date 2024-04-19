@@ -671,12 +671,15 @@ public:
             } break;
 
             default: {
-                Fmt(&buf, " -pthread -Wl,--gc-sections");
-                Fmt(&buf, " -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
+                Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
 
                 if (lld_ver) {
-                    // Fix undefined __start_/__stop_ symbols related to --gc-sections
-                    Fmt(&buf, " -z nostart-stop-gc");
+                    if (lld_ver >= 1300) {
+                        // The second flag is needed to fix undefined __start_/__stop_ symbols related to --gc-sections
+                        Fmt(&buf, "  -Wl,--gc-sections -z nostart-stop-gc");
+                    }
+                } else {
+                    Fmt(&buf, " -Wl,--gc-sections");
                 }
 
                 if (platform == HostPlatform::Linux) {
