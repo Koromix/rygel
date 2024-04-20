@@ -1,8 +1,6 @@
 # Grille tarifaire
 
-## Service HDS
-
-### Hébergement HDS
+## Hébergement HDS
 
 Prestation | Description |Tarif
 ---------- | ----------- | -----
@@ -10,15 +8,13 @@ Prestation | Description |Tarif
 **Projet HDS** (structure privée) | Hébergement d’un eCRF unique par nos soins | 300€/mois
 **Forfait HDS** | Hébergement d’un domaine Goupile (avec nombre d’eCRF illimité) par nos soins | Sur devis
 
-### Services en supplément
+## Aide à la conception
 
-Service | Description | Tarif
-------- | ----------- | -----
-**SMS** | Envoi de SMS automatisés pour connexion, rappels, ou autre (programmable depuis Goupile) | 0,1€/SMS
-**Domaine de 2ème niveau** | Achat et gestion d’un domaine de 2ème niveau (exemple : example.com plutôt que example.goupile.fr) | 5€/mois
-**Serveur miroir** | Réplication simultanée des données sur un serveur secondaire, bascule rapide (< 1h) en cas de panne du serveur principal[^1] | 100€/mois
-
-[^1]: Avec cette option, le délai de remise en ligne après incident passe de 24-48 heures à 1 heure, et les données inférieures à 24 heures seront disponibles. Sans cette option, vous bénéficiez malgré tout d’une sauvegarde quotidienne, déportée dans un autre datacenter, et restaurable en 24-48 heures.
+Prestation | Description | Tarif
+---------- | ----------- | -----
+**Aide à la conception** | Demandes par tickets et mails pour l’aide au développement de votre eCRF | 100€/mois
+**Création eCRF** | Développement d’un eCRF complet par notre équipe | Sur devis
+**Fonctionnalités** | Ajout de fonctionnalités spécifiques à Goupile pour vos besoins | Sur devis
 
 ## Formation
 
@@ -31,14 +27,6 @@ Séance | Description | Durée | Tarif
 ~~**Monitoring**~~ | ~~Work in progress~~ | ~~2 heures~~ | ~~100€/participant~~
 
 Il est également possible d’organiser des formations plus spécifiques en fonction de vos besoins (par exemple : intégration d’une expérience dynamique avec diffusion de vidéos et réponses à des questions réalisable en ligne).
-
-## Aide à la conception
-
-Prestation | Description | Tarif
----------- | ----------- | -----
-**Aide à la conception** | Demandes par tickets et mails pour l’aide au développement de votre eCRF | 100€/mois
-**Création eCRF** | Développement d’un eCRF complet par notre équipe | Sur devis
-**Fonctionnalités** | Ajout de fonctionnalités spécifiques à Goupile pour vos besoins | Sur devis
 
 # Détails HDS
 
@@ -53,14 +41,10 @@ Chaque environnement utilise deux serveurs :
 - *Serveur proxy*, qui filtre les connexions via NGINX et nous permet de rapidement rediriger les requêtes (vers un autre back-end) en cas de problème.
 - *Serveur back-end*, qui contient les services et bases de données Goupile. Les serveurs Goupile sont accessibles derrière un deuxième service NGINX qui tourne sur le serveur back-end.
 
-La communication entre le serveur proxy et le serveur back-end a lieu via un canal sécurisé (IPSec et TLS 1.2+). Les échanges entre les deux services NGINX sont protégés par des certificats serveur et client signés par un certificat interne créé au moment du déploiement (et donc la clé privée est supprimée immédiatement).
+La communication entre le serveur proxy et le serveur back-end a lieu via un canal sécurisé (IPSec et TLS 1.2+). Les échanges entre les deux services NGINX sont protégés par des certificats serveur et client signés par un certificat interne créé au moment du déploiement (et dont la clé privée est supprimée immédiatement).
 
-## Plan de reprise d'activité [WIP]
+## Plan de reprise d'activité
 
 Les environnements serveur sont configurés intégralement par des scripts Ansible automatisés et peuvent être reproduits à l'identique en quelques minutes.
 
-La restauration des données après perte du serveur principal peut être effectuée à partir de plusieurs sources :
-
-- Bases répliquées en continu sur un autre serveur [WIP]
-- Backup nocturne chiffré des bases SQLite réalisé et copié sur un serveur à part dans un autre datacenter [WIP]
-- Snapshot des VPS réalisé chaque nuit et conservé 14 jours, qui peut être restauré rapidement par GPLExpert
+La restauration des données après perte du serveur principal peut être effectuée à partir des snapshots des VPS réalisés chaque nuit et conservés 14 jours, qui peuvent être restaurés rapidement par GPLExpert.
