@@ -99,6 +99,9 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     if (!disk)
         return 1;
 
+    ZeroMemorySafe((void *)config.password, strlen(config.password));
+    config.password = nullptr;
+
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::Full) {
         LogError("You must use the read-write password with this command");
@@ -401,6 +404,9 @@ Available output formats: %!..+%3%!0)",
     std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
+
+    ZeroMemorySafe((void *)config.password, strlen(config.password));
+    config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::Full) {

@@ -75,6 +75,7 @@ protected:
     rk_DiskMode mode = rk_DiskMode::Secure;
     uint8_t pkey[32] = {};
     uint8_t skey[32] = {};
+    bool mlocked = false;
 
     sq_Database cache_db;
     std::mutex cache_mutex;
@@ -84,7 +85,7 @@ protected:
     BlockAllocator str_alloc;
 
 public:
-    virtual ~rk_Disk() = default;
+    virtual ~rk_Disk();
 
     virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
 

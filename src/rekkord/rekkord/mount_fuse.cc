@@ -522,6 +522,9 @@ Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
     if (!disk)
         return 1;
 
+    ZeroMemorySafe((void *)config.password, strlen(config.password));
+    config.password = nullptr;
+
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::Full) {
         LogError("You must use the read-write password with this command");

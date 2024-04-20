@@ -29,6 +29,15 @@ static_assert(crypto_secretbox_KEYBYTES == 32);
 static_assert(crypto_secretbox_NONCEBYTES == 24);
 static_assert(crypto_secretbox_MACBYTES == 16);
 
+rk_Disk::~rk_Disk()
+{
+    Lock();
+
+    if (mlocked) {
+        UnlockMemory(this, RG_SIZE(*this));
+    }
+}
+
 bool rk_Disk::Authenticate(const char *username, const char *pwd)
 {
     RG_ASSERT(url);
@@ -52,6 +61,9 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
         case StatResult::AccessDenied:
         case StatResult::OtherError: return false;
     }
+
+    // Best effort
+    mlocked = mlocked || LockMemory(this, RG_SIZE(*this));
 
     // Open disk and determine mode
     {
@@ -97,6 +109,9 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
 
     if (!CheckRepository())
         return false;
+
+    // Best effort
+    mlocked = mlocked || LockMemory(this, RG_SIZE(*this));
 
     mode = rk_DiskMode::Full;
     MemCpy(skey, key.ptr, key.len);

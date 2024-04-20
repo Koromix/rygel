@@ -109,6 +109,9 @@ Options:
     if (!disk)
         return 1;
 
+    ZeroMemorySafe((void *)config.password, strlen(config.password));
+    config.password = nullptr;
+
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::WriteOnly) {
         LogWarning("You should use the write-only key with this command");
@@ -228,6 +231,9 @@ Options:
     std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
+
+    ZeroMemorySafe((void *)config.password, strlen(config.password));
+    config.password = nullptr;
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::Full) {

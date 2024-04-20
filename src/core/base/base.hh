@@ -1069,6 +1069,9 @@ public:
     void ReleaseAll();
 };
 
+bool LockMemory(void *ptr, Size len);
+void UnlockMemory(void *ptr, Size len);
+
 // ------------------------------------------------------------------------
 // Reference counting
 // ------------------------------------------------------------------------

@@ -19,36 +19,31 @@ namespace RG {
 bool rk_Config::Complete(bool require_auth)
 {
     if (!url) {
-        const char *str = GetEnv("REKKORD_URL");
-        if (!str) {
+        url = GetEnv("REKKORD_URL");
+        if (!url) {
             LogError("Missing repository location");
             return false;
         }
-        url = DuplicateString(str, &str_alloc).ptr;
     }
 
     if (!rk_DecodeURL(url, this))
         return false;
 
     if (require_auth && !username) {
-        const char *str = GetEnv("REKKORD_USERNAME");
-        if (!str) {
+        username = GetEnv("REKKORD_USERNAME");
+        if (!username) {
             LogError("Missing repository username");
             return false;
         }
-        username = DuplicateString(str, &str_alloc).ptr;
     }
 
     if (require_auth && !password) {
-        const char *str = GetEnv("REKKORD_PASSWORD");
-
-        if (str) {
-            password = DuplicateString(str, &str_alloc).ptr;
-        } else if (FileIsVt100(STDERR_FILENO)) {
+        password = GetEnv("REKKORD_PASSWORD");
+        if (!password && FileIsVt100(STDERR_FILENO)) {
             password = Prompt("Repository password: ", nullptr, "*", &str_alloc);
-            if (!password)
-                return false;
         }
+        if (!password)
+            return false;
     }
 
     switch (type) {
@@ -196,6 +191,7 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                         config.username = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "Password") {
                         config.password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                        ZeroMemorySafe((void *)prop.value.ptr, prop.value.len);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

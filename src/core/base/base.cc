@@ -69,6 +69,7 @@
     #include <signal.h>
     #include <spawn.h>
     #include <sys/ioctl.h>
+    #include <sys/mman.h>
     #include <sys/stat.h>
     #include <sys/types.h>
     #include <sys/socket.h>
@@ -410,6 +411,42 @@ void IndirectBlockAllocator::ReleaseAll()
     ForgetCurrentBlock();
     allocator->ReleaseAll();
 }
+
+#ifdef _WIN32
+
+bool LockMemory(void *ptr, Size len)
+{
+    if (!VirtualLock(ptr, (SIZE_T)len)) {
+        LogError("Failed to lock memory (%1): %2", FmtMemSize(len), GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
+void UnlockMemory(void *ptr, Size len)
+{
+    VirtualUnlock(ptr, (SIZE_T)len);
+}
+
+#else
+
+bool LockMemory(void *ptr, Size len)
+{
+    if (mlock(ptr, (size_t)len) < 0) {
+        LogError("Failed to lock memory (%1): %2", FmtMemSize(len), strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+void UnlockMemory(void *ptr, Size len)
+{
+    munlock(ptr, (size_t)len);
+}
+
+#endif
 
 // ------------------------------------------------------------------------
 // Date
