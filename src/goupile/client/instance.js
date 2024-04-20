@@ -75,6 +75,8 @@ async function init() {
     if (profile.develop) {
         ENV.urls.files = `${ENV.urls.base}files/0/`;
         ENV.version = 0;
+
+        await initEsbuild();
     }
 
     await initApp();
@@ -82,6 +84,11 @@ async function init() {
 
     if (ENV.demo)
         Log.warning('Mode de démonstration... Attention, les formulaires et les données peuvent disparaître à tout moment !', -1);
+}
+
+async function initEsbuild() {
+    await Net.loadScript(ENV.urls.static + 'esbuild.js');
+    await esbuild.initialize({ wasmURL: ENV.urls.static + 'esbuild/esbuild.wasm' });
 }
 
 async function initApp() {
@@ -1805,6 +1812,15 @@ async function buildScript(code, variables) {
 
     variables = [...Object.keys(base), ...variables];
 
+    if (typeof esbuild != 'undefined') {
+        try {
+            let ret = await esbuild.transform(code);
+            code = ret.code;
+        } catch (err) {
+            throwParseError(err);
+        }
+    }
+
     try {
         let func = new AsyncFunction(variables, code);
 
@@ -1815,15 +1831,22 @@ async function buildScript(code, variables) {
                 let values = variables.map(key => api[key]);
                 await func(...values);
             } catch (err) {
-                throwScriptError(err);
+                throwRunError(err);
             }
         };
     } catch (err) {
-        throwScriptError(err);
+        throwRunError(err);
     }
 }
 
-function throwScriptError(err) {
+function throwParseError(err) {
+    let line = err.errors[0].location.line;
+    let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.errors[0].text}`;
+
+    throw new Error(msg);
+}
+
+function throwRunError(err) {
     let line = Util.parseEvalErrorLine(err);
     let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
 
