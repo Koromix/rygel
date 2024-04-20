@@ -59,6 +59,7 @@ let data_rows = null;
 let code_buffers = new LruMap(32);
 let code_builds = new LruMap(4);
 let fs_timer = null;
+let bundler = null;
 
 let error_entry = new Log.Entry;
 let error_map = new LruMap(8);
@@ -76,7 +77,7 @@ async function init() {
         ENV.urls.files = `${ENV.urls.base}files/0/`;
         ENV.version = 0;
 
-        await initEsbuild();
+        await initBundler();
     }
 
     await initApp();
@@ -86,9 +87,9 @@ async function init() {
         Log.warning('Mode de démonstration... Attention, les formulaires et les données peuvent disparaître à tout moment !', -1);
 }
 
-async function initEsbuild() {
-    await Net.loadScript(ENV.urls.static + 'esbuild.js');
-    await esbuild.initialize({ wasmURL: ENV.urls.static + 'esbuild/esbuild.wasm' });
+async function initBundler() {
+    bundler = await import(`${ENV.urls.static}bundler.js`);
+    await bundler.init();
 }
 
 async function initApp() {
@@ -1812,10 +1813,12 @@ async function buildScript(code, variables) {
 
     variables = [...Object.keys(base), ...variables];
 
-    if (typeof esbuild != 'undefined') {
+    if (typeof bundler != 'undefined') {
         try {
-            let ret = await esbuild.transform(code);
-            code = ret.code;
+            code = await bundler.build(code, async filename => {
+                let file = await fetchCode(filename);
+                return file.code;
+            });
         } catch (err) {
             throwParseError(err);
         }
