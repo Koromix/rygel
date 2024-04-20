@@ -542,8 +542,7 @@ function renderListInfo(type, label, current_list) {
 }
 
 async function exportListToXLSX(records, handler) {
-    if (typeof XLSX === 'undefined')
-        await Net.loadScript(`${ENV.base_url}static/XLSX.bundle.js?${ENV.buster}`);
+    let XLSX = await import(`${ENV.base_url}static/XLSX.bundle.js?${ENV.buster}`);
 
     let ws = XLSX.utils.aoa_to_sheet([
         handler.columns.map(col => col.key),
@@ -658,12 +657,11 @@ async function runGhs() {
 
     // Render grid or plot
     if (route.ghs.plot) {
-        if (typeof Chart === 'undefined')
-            await Net.loadScript(`${ENV.base_url}static/chart.bundle.js?${ENV.buster}`);
+        let chart = await import(`${ENV.base_url}static/chart.bundle.js?${ENV.buster}`);
 
         render(chart_canvas, document.querySelector('#th_view'));
-        updatePriceChart(mco.ghm_roots.describe(route.ghs.ghm_root), columns,
-                         route.ghs.duration, route.ghs.coeff);
+        updatePriceChart(chart.Chart, mco.ghm_roots.describe(route.ghs.ghm_root), columns,
+                                      route.ghs.duration, route.ghs.coeff);
     } else {
         let diff_map;
         if (version_diff) {
@@ -796,7 +794,7 @@ function renderPriceGrid(ghm_root, columns, diff_map, max_duration, apply_coeff)
     `;
 }
 
-function updatePriceChart(ghm_root, columns, max_duration, apply_coeff) {
+function updatePriceChart(Chart, ghm_root, columns, max_duration, apply_coeff) {
     let conditions = columns.map(col => buildConditionsArray(col));
     let max_price = max_map.get(`${ghm_root}@${max_duration}`) || 0.0;
 
@@ -840,7 +838,7 @@ function updatePriceChart(ghm_root, columns, max_duration, apply_coeff) {
     } else {
         let ctx = chart_canvas.getContext('2d');
 
-        chart_obj = new chart.Chart(ctx, {
+        chart_obj = new Chart(ctx, {
             type: 'line',
             data: {
                 datasets: datasets

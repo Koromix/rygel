@@ -161,10 +161,13 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
         {
             HeapArray<char> buf(&str_alloc);
 
-            const char *global_name = MakeGlobalName(src.filename, &str_alloc);
-
             Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning", esbuild_binary, src.filename);
-            Fmt(&buf, " --format=iife --global-name=%1", global_name);
+            if (features & (int)CompileFeature::ESM) {
+                Fmt(&buf, " --format=esm");
+            } else {
+                const char *global_name = MakeGlobalName(src.filename, &str_alloc);
+                Fmt(&buf, " --format=iife --global-name=%1", global_name);
+            }
             Fmt(&buf, " --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
 
             if ((features & (int)CompileFeature::OptimizeSize) || (features & (int)CompileFeature::OptimizeSpeed)) {

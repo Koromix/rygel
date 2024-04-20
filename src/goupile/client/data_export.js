@@ -21,8 +21,7 @@ async function exportRecords(stores, filter = null) {
     if (filter == null)
         filter = () => true;
 
-    if (typeof XLSX === 'undefined')
-        await Net.loadScript(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
+    let XLSX = await import(`${ENV.urls.static}sheetjs/XLSX.bundle.js`);
 
     let definitions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'label', 'type']]);
     let propositions = XLSX.utils.aoa_to_sheet([['table', 'variable', 'prop', 'label']]);
