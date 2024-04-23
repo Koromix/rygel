@@ -60,6 +60,10 @@
                 font-weight: bold;
                 margin-bottom: 1.4em;
             }
+            #news > div a {
+                color: white;
+                text-decoration: underline;
+            }
 
             @media screen and (max-width: 960px) {
                 #news {
