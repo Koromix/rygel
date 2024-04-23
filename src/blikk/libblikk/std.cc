@@ -23,6 +23,7 @@ void bk_ImportAll(bk_Compiler *out_compiler)
 {
     bk_ImportPrint(out_compiler);
     bk_ImportMath(out_compiler);
+    bk_ImportRandom(out_compiler);
 }
 
 void bk_ImportPrint(bk_Compiler *out_compiler)
@@ -72,6 +73,11 @@ void bk_ImportMath(bk_Compiler *out_compiler)
     BK_ADD_FUNCTION(*out_compiler, "asin(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = asin(args[0].d); });
     BK_ADD_FUNCTION(*out_compiler, "atan(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = atan(args[0].d); });
     BK_ADD_FUNCTION(*out_compiler, "atan2(Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = atan2(args[0].d, args[1].d); });
+}
+
+void bk_ImportRandom(bk_Compiler *out_compiler)
+{
+    BK_ADD_FUNCTION(*out_compiler, "randInt(Int, Int): Int", 0, { ret[0].i = GetRandomInt64(args[0].i, args[1].i); });
 }
 
 static Size PrintValue(bk_VirtualMachine *vm, const bk_TypeInfo *type, Size offset, bool quote)

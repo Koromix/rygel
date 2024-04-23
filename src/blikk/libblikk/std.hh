@@ -24,6 +24,7 @@ union bk_PrimitiveValue;
 void bk_ImportAll(bk_Compiler *out_compiler);
 void bk_ImportPrint(bk_Compiler *out_compiler);
 void bk_ImportMath(bk_Compiler *out_compiler);
+void bk_ImportRandom(bk_Compiler *out_compiler);
 
 void bk_DoPrint(bk_VirtualMachine *vm, Span<const bk_PrimitiveValue> args, bool quote);
 
