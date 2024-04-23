@@ -845,6 +845,9 @@ public:
             supported |= (int)CompileFeature::LTO;
         }
         supported |= (int)CompileFeature::ZeroInit;
+        if (platform == HostPlatform::Linux && architecture == HostArchitecture::x86_64) {
+            supported |= (int)CompileFeature::CFI;
+        }
         supported |= (int)CompileFeature::StaticRuntime;
         supported |= (int)CompileFeature::LinkLibrary;
         if (platform == HostPlatform::Windows) {
@@ -1071,6 +1074,9 @@ public:
         }
         if (features & (int)CompileFeature::ZeroInit) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
+        }
+        if (features & (int)CompileFeature::CFI) {
+            Fmt(&buf, " -fcf-protection=full");
         }
 
         // Sources and definitions
