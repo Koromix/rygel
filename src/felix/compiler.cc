@@ -1073,7 +1073,7 @@ public:
                 Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64");
 
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
-                    Fmt(&buf, " -D_FORTIFY_SOURCE=2", gcc_ver >= 1200 ? 3 : 2);
+                    Fmt(&buf, " -D_FORTIFY_SOURCE=2");
                 }
             } break;
         }
