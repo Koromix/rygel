@@ -4,6 +4,10 @@
 
 ### Koffi 2.8
 
+#### Koffi 2.8.7 (2024-04-23)
+
+- Improve compatibility with SEHOP on Windows ([@longhun12346](https://github.com/longhun12346))
+
 #### Koffi 2.8.6 (2024-04-12)
 
 - Support [loading library](functions.md#loading-options) with RTLD_DEEPBIND where supported
