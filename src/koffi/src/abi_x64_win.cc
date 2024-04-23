@@ -233,12 +233,14 @@ void CallData::Execute(const FunctionInfo *func, void *native)
                base = teb->StackBase,
                limit = teb->StackLimit,
                dealloc = teb->DeallocationStack,
-               guaranteed = teb->GuaranteedStackBytes) {
+               guaranteed = teb->GuaranteedStackBytes,
+               stfs = teb->SameTebFlags) {
         teb->ExceptionList = exception_list;
         teb->StackBase = base;
         teb->StackLimit = limit;
         teb->DeallocationStack = dealloc;
         teb->GuaranteedStackBytes = guaranteed;
+        teb->SameTebFlags = stfs;
 
         instance->last_error = teb->LastErrorValue;
     };
@@ -249,6 +251,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
     teb->StackLimit = mem->stack0.ptr;
     teb->DeallocationStack = mem->stack0.ptr;
     teb->GuaranteedStackBytes = 0;
+    teb->SameTebFlags &= ~0x200;
 
     teb->LastErrorValue = instance->last_error;
 
