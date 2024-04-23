@@ -27,7 +27,10 @@
         </div>
     </div>
     <div>
-        <p>La mise en place du réseau DEMHETER s’appuie sur une organisation en niveau pour un véritable maillage territorial et ainsi faciliter l’accès aux soins des personnes souffrant de troubles de l’humeur.
+        <p>La mise en place du réseau DEMHETER s’appuie sur une organisation en niveau pour un véritable maillage territorial et ainsi faciliter l’accès aux soins des personnes souffrant de troubles de l’humeur.</p>
+        <div class="shelf" style="margin-bottom: 0;">
+            <a href="static/flyer.pdf" target="_blank"><img src="{{ ASSET static/flyer.webp }}" height="260" alt="Flyer DEMHETER" /></a>
+        </div>
     </div>
 </div>
 
