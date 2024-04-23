@@ -61,27 +61,6 @@
                 margin-bottom: 1.4em;
             }
 
-            #news div.big {
-                display: block;
-                position: absolute;
-                left: 0;
-                top: 256px;
-                box-sizing: border-box;
-                padding-left: max(1em, calc((100% - 1200px) / 2 + 16px));
-                padding-right: max(1em, calc((100% - 1200px) / 2 + 16px));
-                background: white;
-                border-bottom: 2px solid #383838;
-                z-index: 4;
-                transform: scaleY(0);
-                transform-origin: top;
-                transition: transform 0.2s ease, color 0.4s ease, --color 0.4s ease;
-            }
-            #news.expand div.big {
-                transform: scaleY(1);
-                color: #383838;
-                --color: #383838;
-            }
-
             @media screen and (max-width: 960px) {
                 #news {
                     height: auto;
