@@ -466,7 +466,7 @@ public:
                 }
 
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
-                    Fmt(&buf, " -D_FORTIFY_SOURCE=%1", clang_ver >= 1701 ? 3 : 2);
+                    Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", clang_ver >= 1701 ? 3 : 2);
                 } else {
                     Fmt(&buf, " -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
@@ -480,7 +480,7 @@ public:
                 }
 
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
-                    Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+                    Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2");
                 }
             } break;
         }
@@ -1059,7 +1059,7 @@ public:
                 Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
 
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
-                    Fmt(&buf, " -D_FORTIFY_SOURCE=%1", gcc_ver >= 1200 ? 3 : 2);
+                    Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", gcc_ver >= 1200 ? 3 : 2);
                 } else {
                     Fmt(&buf, " -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
@@ -1073,7 +1073,7 @@ public:
                 Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64");
 
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
-                    Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+                    Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2");
                 }
             } break;
         }
