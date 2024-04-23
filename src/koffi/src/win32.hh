@@ -95,9 +95,12 @@ struct TEB {
     void *DeallocationStack;
     char _pad3[360];
     uint32_t GuaranteedStackBytes;
+    char _pad4[78];
+    unsigned short SameTebFlags;
 };
 static_assert(RG_OFFSET_OF(TEB, DeallocationStack) == 0xE0C);
 static_assert(RG_OFFSET_OF(TEB, GuaranteedStackBytes) == 0x0F78);
+static_assert(RG_OFFSET_OF(TEB, SameTebFlags) == 0xFCA);
 
 #endif
 
