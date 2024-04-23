@@ -7,6 +7,7 @@
     #pragma GCC diagnostic ignored "-Wunused-variable"
     #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
     #pragma GCC diagnostic ignored "-Wunused-parameter"
+    #pragma GCC diagnostic ignored "-Warray-bounds"
 #endif
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
