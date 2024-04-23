@@ -73,6 +73,13 @@ void bk_ImportMath(bk_Compiler *out_compiler)
     BK_ADD_FUNCTION(*out_compiler, "asin(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = asin(args[0].d); });
     BK_ADD_FUNCTION(*out_compiler, "atan(Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = atan(args[0].d); });
     BK_ADD_FUNCTION(*out_compiler, "atan2(Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = atan2(args[0].d, args[1].d); });
+
+    BK_ADD_FUNCTION(*out_compiler, "min(Int, Int): Int", (int)bk_FunctionFlag::Pure, { ret[0].i = std::min(args[0].i, args[1].i); });
+    BK_ADD_FUNCTION(*out_compiler, "min(Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = std::min(args[0].d, args[1].d); });
+    BK_ADD_FUNCTION(*out_compiler, "max(Int, Int): Int", (int)bk_FunctionFlag::Pure, { ret[0].i = std::max(args[0].i, args[1].i); });
+    BK_ADD_FUNCTION(*out_compiler, "max(Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = std::max(args[0].d, args[1].d); });
+    BK_ADD_FUNCTION(*out_compiler, "clamp(Int, Int, Int): Int", (int)bk_FunctionFlag::Pure, { ret[0].i = std::clamp(args[0].i, args[1].i, args[2].i); });
+    BK_ADD_FUNCTION(*out_compiler, "clamp(Float, Float, Float): Float", (int)bk_FunctionFlag::Pure, { ret[0].d = std::clamp(args[0].d, args[1].d, args[2].d); });
 }
 
 void bk_ImportRandom(bk_Compiler *out_compiler)
