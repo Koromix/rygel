@@ -458,15 +458,29 @@ public:
                 Fmt(&buf, " -pthread -fPIC");
             } break;
 
-            default: {
-                Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC");
+            case HostPlatform::Linux: {
+                Fmt(&buf, " -pthread -fPIC -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
+
                 if (clang_ver >= 1100) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
+
+                if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
+                    Fmt(&buf, " -D_FORTIFY_SOURCE=%1", clang_ver >= 1701 ? 3 : 2);
+                } else {
+                    Fmt(&buf, " -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
+                }
+            } break;
+
+            default: {
+                Fmt(&buf, " -pthread -fPIC -D_FILE_OFFSET_BITS=64");
+
+                if (clang_ver >= 1100) {
+                    Fmt(&buf, " -fno-semantic-interposition");
+                }
+
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
                     Fmt(&buf, " -D_FORTIFY_SOURCE=2");
-                } else {
-                    Fmt(&buf, " -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
             } break;
         }
@@ -1041,16 +1055,25 @@ public:
                 Fmt(&buf, " -pthread -fPIC");
             } break;
 
-            default: {
-                Fmt(&buf, " -D_FILE_OFFSET_BITS=64 -pthread -fPIC -fno-semantic-interposition");
+            case HostPlatform::Linux: {
+                Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
+
                 if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
-                    Fmt(&buf, " -D_FORTIFY_SOURCE=2");
+                    Fmt(&buf, " -D_FORTIFY_SOURCE=%1", gcc_ver >= 1200 ? 3 : 2);
                 } else {
-                    Fmt(&buf, " -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
+                    Fmt(&buf, " -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
 
                 if (architecture == HostArchitecture::ARM32) {
                     Fmt(&buf, " -Wno-psabi");
+                }
+            } break;
+
+            default: {
+                Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64");
+
+                if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
+                    Fmt(&buf, " -D_FORTIFY_SOURCE=2", gcc_ver >= 1200 ? 3 : 2);
                 }
             } break;
         }
