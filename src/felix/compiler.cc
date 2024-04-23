@@ -2469,6 +2469,9 @@ static const SupportedCompiler CompilerTable[] = {
     {"Clang", "clang"},
     {"MSVC", "cl"},
     {"GCC", "gcc"},
+#elif defined(__linux__)
+    {"GCC", "gcc"},
+    {"Clang", "clang"},
 #else
     {"Clang", "clang"},
     {"GCC", "gcc"},
