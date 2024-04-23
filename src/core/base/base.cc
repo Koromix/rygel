@@ -5237,6 +5237,22 @@ int FastRandom::GetInt(int min, int max)
     return min + (int)x;
 }
 
+int64_t FastRandom::GetInt64(int64_t min, int64_t max)
+{
+    int64_t range = max - min;
+    RG_ASSERT(range >= 2);
+
+    uint64_t treshold = (UINT64_MAX - UINT64_MAX % range);
+
+    uint64_t x;
+    do {
+        x = (uint64_t)Next();
+    } while (x >= treshold);
+    x %= range;
+
+    return min + (int64_t)x;
+}
+
 uint64_t FastRandom::Next()
 {
     // xoshiro256++ by David Blackman and Sebastiano Vigna (vigna@acm.org)
@@ -5258,6 +5274,11 @@ uint64_t FastRandom::Next()
 int GetRandomInt(int min, int max)
 {
     return rng_fast.GetInt(min, max);
+}
+
+int64_t GetRandomInt64(int64_t min, int64_t max)
+{
+    return rng_fast.GetInt64(min, max);
 }
 
 // ------------------------------------------------------------------------
