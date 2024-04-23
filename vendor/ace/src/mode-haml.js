@@ -742,7 +742,7 @@ function JSX() {
                     value: val.substr(offset)
                 }];
         },
-        regex: "</?" + tagRegex + "",
+        regex: "</?(?:" + tagRegex + "|(?=>))",
         next: "jsxAttributes",
         nextState: "jsx"
     };
@@ -755,8 +755,7 @@ function JSX() {
     this.$rules.jsx = [
         jsxJsRule,
         jsxTag,
-        { include: "reference" },
-        { defaultToken: "string" }
+        { include: "reference" }, { defaultToken: "string.xml" }
     ];
     this.$rules.jsxAttributes = [{
             token: "meta.tag.punctuation.tag-close.xml",
@@ -1123,7 +1122,7 @@ var constantNumericDecimal = exports.constantNumericDecimal = {
     token: "constant.numeric",
     regex: /\b(0[dD](?:[1-9](?:[\d]|_(?=[\d]))*|0))\b/
 };
-var constantNumericOctal = exports.constantNumericDecimal = {
+var constantNumericOctal = exports.constantNumericOctal = {
     token: "constant.numeric",
     regex: /\b(0[oO]?(?:[1-7](?:[0-7]|_(?=[0-7]))*|0))\b/
 };
