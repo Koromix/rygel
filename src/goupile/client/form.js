@@ -1832,7 +1832,7 @@ instead of:
 
             label: label,
             options: options,
-            line: Util.parseEvalErrorLine(new Error()),
+            line: Util.parseEvalErrorLocation(new Error())?.line,
 
             errors: [],
 

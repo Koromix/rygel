@@ -379,40 +379,41 @@ const Util = new function() {
         return file;
     };
 
-    this.parseEvalErrorLine = function(err) {
+    this.parseEvalErrorLocation = function(err) {
+        let location = null;
+
         if (err instanceof SyntaxError && err.lineNumber != null) {
-            // At least Firefox seems to do well in this case, it's better than nothing
-            return err.lineNumber - 2;
+            // At least Firefox seems to do well in this case, it's better than nothing!
+
+            location = {
+                line: err.lineNumber - 2,
+                column: err.columnNumber || 1
+            };
         } else if (err.stack) {
             let lines = String(err.stack).split('\n');
-            let line_no = null;
-
-            // We want to return the last match of the first group with consecutive matches
-            // This is kinda specific to what we want in Goupile; maybe this function needs
-            // to provide options, or this needs to be moved to Goupile.
 
             for (let str of lines) {
                 let m = null;
 
-                if (m = str.match(/ > (?:Async)?Function:([0-9]+):[0-9]+/) ||
-                        str.match(/, <anonymous>:([0-9]+):[0-9]+/)) {
+                if (m = str.match(/ > (?:Async)?Function:([0-9]+):([0-9]+)/) ||
+                        str.match(/, <anonymous>:([0-9]+):([0-9]+)/)) {
                     // Can someone explain to me why do I have to offset by -2?
-                    line_no = parseInt(m[1], 10) - 2;
-                    continue;
-                }
-                if (m = str.match(/Function code:([0-9]+):[0-9]+/)) {
-                    line_no = parseInt(m[1], 10);
-                    continue;
-                }
-
-                if (line_no != null)
+                    location = {
+                        line: parseInt(m[1], 10) - 2,
+                        column: parseInt(m[2], 10)
+                    };
                     break;
+                } else if (m = str.match(/Function code:([0-9]+):([0-9]+)/)) {
+                    location = {
+                        line: parseInt(m[1], 10),
+                        column: parseInt(m[2], 10)
+                    };
+                    break;
+                }
             }
-
-            return line_no;
-        } else {
-            return null;
         }
+
+        return location;
     };
 
     this.findParent = function(el, func) {

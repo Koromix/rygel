@@ -69,7 +69,7 @@ function VmApi(native) {
     }
 
     function throwScriptError(err) {
-        let line = Util.parseEvalErrorLine(err);
+        let line = Util.parseEvalErrorLocation(err)?.line;
         let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.message}`;
 
         throw new Error(msg);
