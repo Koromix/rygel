@@ -204,8 +204,11 @@ int ty_firmware_load_elf(ty_firmware *fw, ty_firmware_read_func *func, void *uda
             return r;
     }
 
+    program->min_address = SIZE_MAX;
     for (unsigned int i = 0; i < program->segments_count; i++) {
         const ty_firmware_segment *segment = &program->segments[i];
+
+        program->min_address = _HS_MIN(program->min_address, segment->address);
         program->max_address = _HS_MAX(program->max_address, segment->address + segment->size);
     }
 

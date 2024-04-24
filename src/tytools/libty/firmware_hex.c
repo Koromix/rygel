@@ -97,9 +97,17 @@ static int parse_line(struct parser_context *ctx, const char *line, size_t line_
         case 0: { // data record
             address += ctx->offset1 + ctx->offset2;
 
-            r = ty_firmware_expand_segment(ctx->program, ctx->segment, address + data_len);
-            if (r < 0)
-                return r;
+            if (!ctx->segment || address + data_len > ctx->segment->address + 1048576) {
+                r = ty_firmware_add_segment(ctx->program, address, data_len, &ctx->segment);
+                if (r < 0)
+                    return r;
+                address = 0;
+            } else {
+                address -= ctx->segment->address;
+                r = ty_firmware_expand_segment(ctx->program, ctx->segment, address + data_len);
+                if (r < 0)
+                    return r;
+            }
 
             for (unsigned int i = 0; i < data_len; i++)
                 ctx->segment->data[address + i] = (uint8_t)parse_hex_value(ctx, 1);
@@ -121,17 +129,7 @@ static int parse_line(struct parser_context *ctx, const char *line, size_t line_
             if (data_len != 2)
                 return ihex_parse_error(ctx);
 
-            address = (uint32_t)parse_hex_value(ctx, 2) << 16;
-
-            if (address + 65536 > ctx->segment->address + 1048576) {
-                r = ty_firmware_add_segment(ctx->program, address, 0, &ctx->segment);
-                if (r < 0)
-                    return r;
-
-                ctx->offset1 = 0;
-            } else {
-                ctx->offset1 = address - ctx->segment->address;
-            }
+            ctx->offset1 = (uint32_t)parse_hex_value(ctx, 2) << 16;
         } break;
 
         case 3:   // start segment address record
@@ -162,7 +160,7 @@ static int parse_line(struct parser_context *ctx, const char *line, size_t line_
 
 static int load_hex(struct parser_context *ctx, size_t pgm)
 {
-    assert(pgm >= 0 && pgm < ctx->fw->programs_count);
+    assert(pgm < ctx->fw->programs_count);
 
     ty_firmware *fw = ctx->fw;
     ty_firmware_program *program = &fw->programs[pgm];
@@ -172,10 +170,7 @@ static int load_hex(struct parser_context *ctx, size_t pgm)
     ssize_t r;
 
     ctx->program = program;
-
-    r = ty_firmware_add_segment(program, 0, 0, &ctx->segment);
-    if (r < 0)
-        goto cleanup;
+    ctx->segment = NULL;
 
 #define SKIP_LINE(c) \
         (ctx->line += (c == '\n'), c == '\r' || c == '\n')
@@ -233,8 +228,11 @@ static int load_hex(struct parser_context *ctx, size_t pgm)
 
 #undef SKIP_LINE
 
+    program->min_address = SIZE_MAX;
     for (unsigned int i = 0; i < program->segments_count; i++) {
         const ty_firmware_segment *segment = &program->segments[i];
+
+        program->min_address = _HS_MIN(program->min_address, segment->address);
         program->max_address = _HS_MAX(program->max_address, segment->address + segment->size);
     }
 

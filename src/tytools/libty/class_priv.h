@@ -33,6 +33,7 @@ struct _ty_class_vtable {
     int (*reset)(ty_board_interface *iface, int64_t rtc_time);
     int (*reboot)(ty_board_interface *iface);
 
+    int (*send_bootloader)(ty_board_interface *iface, struct ty_firmware *fw);
     ssize_t (*read_public_hash)(ty_board_interface *iface, uint8_t *rhash, size_t max_size);
 };
 

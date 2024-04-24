@@ -40,6 +40,7 @@ typedef struct ty_firmware_program {
     ty_firmware_segment segments[TY_FIRMWARE_MAX_SEGMENTS];
     unsigned int segments_count;
 
+    size_t min_address;
     size_t max_address;
     size_t total_size;
 } ty_firmware_program;

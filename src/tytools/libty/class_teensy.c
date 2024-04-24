@@ -20,6 +20,7 @@
 
 enum {
     TEENSY_USAGE_PAGE_BOOTLOADER = 0xFF9C,
+    TEENSY_USAGE_PAGE_LOCKED = 0xFF00,
     TEENSY_USAGE_PAGE_RAWHID = 0xFFAB,
     TEENSY_USAGE_PAGE_SEREMU = 0xFFC9
 };
@@ -132,6 +133,15 @@ static int teensy_load_interface(ty_board_interface *iface)
                     }
                 } break;
 
+                case TEENSY_USAGE_PAGE_LOCKED: {
+                    iface->name = "HAB Locked";
+                    iface->model = TY_MODEL_TEENSY;
+                    iface->capabilities |= 1 << TY_BOARD_CAPABILITY_UPLOAD;
+                    iface->capabilities |= 1 << TY_BOARD_CAPABILITY_VOID;
+                    iface->capabilities |= 1 << TY_BOARD_CAPABILITY_ENCRYPT;
+                    iface->capabilities |= 1 << TY_BOARD_CAPABILITY_RTC;
+                } break;
+
                 case TEENSY_USAGE_PAGE_RAWHID: {
                     iface->name = "RawHID";
                     iface->capabilities |= 1 << TY_BOARD_CAPABILITY_RUN;
@@ -162,8 +172,10 @@ static int teensy_load_interface(ty_board_interface *iface)
 
     if (iface->model == TY_MODEL_TEENSY_40 || iface->model == TY_MODEL_TEENSY_41 ||
             iface->model == TY_MODEL_TEENSY_MM) {
-        if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD))
+        if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD)) {
             iface->capabilities |= 1 << TY_BOARD_CAPABILITY_ENCRYPT;
+            iface->capabilities |= 1 << TY_BOARD_CAPABILITY_HASH;
+        }
         iface->capabilities |= 1 << TY_BOARD_CAPABILITY_RTC;
     }
 
@@ -251,8 +263,13 @@ static int teensy_update_board(ty_board_interface *iface, ty_board *board, bool 
         const char *product_string = NULL;
 
         if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD)) {
-            if (!board->description)
-                product_string = "HalfKay";
+            if (!board->description) {
+                if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_VOID)) {
+                    product_string = "HAB Locked";
+                } else {
+                    product_string = "HalfKay";
+                }
+            }
         } else if (iface->dev->product_string) {
             product_string = iface->dev->product_string;
         } else {
@@ -734,6 +751,9 @@ static int get_halfkay_settings(ty_model model, unsigned int *rhalfkay_version,
 static int teensy_upload(ty_board_interface *iface, ty_firmware *fw,
                          ty_board_upload_progress_func *pf, void *udata)
 {
+    if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_VOID))
+        return ty_error(TY_ERROR_UNSUPPORTED, "Missing RAM bootloader to flash locked Teensy");
+
     const ty_firmware_program *program = &fw->programs[0];
     unsigned int halfkay_version;
     size_t min_address, max_address, block_size;
@@ -852,6 +872,59 @@ static int teensy_reboot(ty_board_interface *iface)
     return r;
 }
 
+static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
+{
+    if (!(iface->capabilities & (1 << TY_BOARD_CAPABILITY_VOID)))
+        return 0;
+
+    unsigned char magic1[] = { 0x1, 0x2, 0x2, 0x20, 0x20, 0x80, 0, 0x20, 0, 0, 0, 0x4, 0, 0, 0, 0, 0};
+    unsigned char magic2[] = { 0x1, 0x4, 0x4, 0x20, 0x20, 0x80, 0, 0, 0, 0, 0x15, 0xa0, 0, 0, 0, 0, 0};
+    unsigned char magic3[] = { 0x1, 0xb, 0xb, 0x20, 0x20, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+    if (fw->type != TY_FIRMWARE_TYPE_EHEX)
+        return ty_error(TY_ERROR_PARAM, "Cannot upload non-EHEX file to locked Teensy");
+    assert(fw->programs_count == 2);
+
+    ty_firmware_program *program = &fw->programs[1];
+    ssize_t r;
+
+    if (program->total_size > UINT16_MAX)
+        return ty_error(TY_ERROR_RANGE, "Excessive EHEX loader size");
+
+    magic2[10] = (unsigned char)((program->total_size >> 8) & 0xFF);
+    magic2[11] = (unsigned char)((program->total_size >> 0) & 0xFF);
+
+    r = hs_hid_write(iface->port, magic1, sizeof(magic1));
+    if (r < 0)
+        return ty_libhs_translate_error((int)r);
+    hs_delay(20);
+
+    r = hs_hid_write(iface->port, magic2, sizeof(magic2));
+    if (r < 0)
+        return ty_libhs_translate_error((int)r);
+    hs_delay(20);
+
+    for (size_t address = program->min_address; address < program->max_address; address += 1024) {
+        uint8_t buf[1025];
+        memset(buf, 0, sizeof(buf));
+
+        buf[0] = 2;
+        ty_firmware_extract(program, (uint32_t)address, buf + 1, sizeof(buf) - 1);
+
+        r = hs_hid_write(iface->port, buf, sizeof(buf));
+        if (r < 0)
+            return ty_libhs_translate_error((int)r);
+        hs_delay(20);
+    }
+
+    r = hs_hid_write(iface->port, magic3, sizeof(magic3));
+    if (r < 0)
+        return ty_libhs_translate_error((int)r);
+    hs_delay(20);
+
+    return 0;
+}
+
 static ssize_t teensy_read_public_hash(ty_board_interface *iface, uint8_t *rhash, size_t max_size)
 {
     if (max_size < 32)
@@ -890,5 +963,6 @@ const struct _ty_class_vtable _ty_teensy_class_vtable = {
     .reset = teensy_reset,
     .reboot = teensy_reboot,
 
+    .send_bootloader = teensy_send_bootloader,
     .read_public_hash = teensy_read_public_hash
 };

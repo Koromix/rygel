@@ -38,7 +38,7 @@ static void print_list_usage(FILE *f)
 
 static int read_public_key_hash(ty_board *board, char *rhash, size_t max_len)
 {
-    assert(ty_board_has_capability(board, TY_BOARD_CAPABILITY_ENCRYPT));
+    assert(ty_board_has_capability(board, TY_BOARD_CAPABILITY_HASH));
 
     uint8_t hash[128];
     ssize_t r;
@@ -106,7 +106,7 @@ static int print_event_plain(ty_board *board, ty_monitor_event event)
         printf("  interfaces:\n");
         ty_board_list_interfaces(board, print_interface_info_plain, NULL);
 
-        if (ty_board_has_capability(board, TY_BOARD_CAPABILITY_ENCRYPT)) {
+        if (ty_board_has_capability(board, TY_BOARD_CAPABILITY_HASH)) {
             char hash[512];
             int r = (int)read_public_key_hash(board, hash, sizeof(hash));
 
@@ -220,7 +220,7 @@ static int print_event_json(ty_board *board, ty_monitor_event event, bool *comma
         ty_board_list_interfaces(board, print_interface_info_json, comma);
         print_json_end(']', comma);
 
-        if (ty_board_has_capability(board, TY_BOARD_CAPABILITY_ENCRYPT)) {
+        if (ty_board_has_capability(board, TY_BOARD_CAPABILITY_HASH)) {
             char hash[512];
             int r = read_public_key_hash(board, hash, sizeof(hash));
 

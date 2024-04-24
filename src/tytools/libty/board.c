@@ -24,9 +24,11 @@
 
 static const char *capability_names[] = {
     "unique",
+    "void",
     "run",
     "upload",
     "encrypt",
+    "hash",
     "reset",
     "rtc",
     "reboot",
@@ -281,6 +283,7 @@ cleanup:
 struct wait_for_context {
     ty_board *board;
     ty_board_capability capability;
+    bool active;
 };
 
 static int wait_for_callback(ty_monitor *monitor, void *udata)
@@ -293,10 +296,11 @@ static int wait_for_callback(ty_monitor *monitor, void *udata)
     if (board->status == TY_BOARD_STATUS_DROPPED)
         return ty_error(TY_ERROR_NOT_FOUND, "Board '%s' has disappeared", board->tag);
 
-    return ty_board_has_capability(board, ctx->capability);
+    bool capability = ty_board_has_capability(board, ctx->capability);
+    return capability == ctx->active;
 }
 
-int ty_board_wait_for(ty_board *board, ty_board_capability capability, int timeout)
+int ty_board_wait_for(ty_board *board, ty_board_capability capability, bool active, int timeout)
 {
     assert(board);
 
@@ -310,6 +314,7 @@ int ty_board_wait_for(ty_board *board, ty_board_capability capability, int timeo
 
     ctx.board = board;
     ctx.capability = capability;
+    ctx.active = active;
 
     return ty_monitor_wait(monitor, wait_for_callback, &ctx, timeout);
 }
@@ -417,6 +422,25 @@ int ty_board_reboot(ty_board *board)
     return r;
 }
 
+int ty_board_send_bootloader(ty_board *board, ty_firmware *fw)
+{
+    assert(board);
+
+    ty_board_interface *iface;
+    ssize_t r;
+
+    r = ty_board_open_interface(board, TY_BOARD_CAPABILITY_UPLOAD, &iface);
+    if (r < 0)
+        return r;
+    if (!r)
+        return ty_error(TY_ERROR_MODE, "Cannot send bootloader to board '%s'", board->tag);
+
+    r = (*iface->class_vtable->send_bootloader)(iface, fw);
+
+    ty_board_interface_close(iface);
+    return r;
+}
+
 ssize_t ty_board_read_public_hash(ty_board *board, uint8_t *rhash, size_t max_size)
 {
     assert(board);
@@ -425,7 +449,7 @@ ssize_t ty_board_read_public_hash(ty_board *board, uint8_t *rhash, size_t max_si
     ty_board_interface *iface;
     ssize_t r;
 
-    r = ty_board_open_interface(board, TY_BOARD_CAPABILITY_ENCRYPT, &iface);
+    r = ty_board_open_interface(board, TY_BOARD_CAPABILITY_HASH, &iface);
     if (r < 0)
         return r;
     if (!r)
@@ -696,7 +720,7 @@ static int run_upload(ty_task *task)
     }
 
 wait:
-    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD,
+    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD, true,
                           (flags & TY_UPLOAD_WAIT) ? -1 : USB_CHANGE_TIMEOUT);
     if (r < 0)
         return r;
@@ -705,6 +729,42 @@ wait:
         flags |= TY_UPLOAD_WAIT;
 
         goto wait;
+    }
+
+    if (!(flags & TY_UPLOAD_DELEGATE) && ty_board_has_capability(board, TY_BOARD_CAPABILITY_VOID)) {
+        ty_log(TY_LOG_INFO, "Sending alternative bootloader...");
+
+        ty_firmware *ehex = fw;
+
+        if (!ehex) {
+            if (ty_models[board->model].mcu) {
+                r = select_compatible_firmware(board, task->u.upload.fws, task->u.upload.fws_count, &ehex);
+                if (r < 0)
+                    return r;
+                fw = ehex;
+            } else {
+                for (unsigned int i = 0; i < task->u.upload.fws_count; i++) {
+                    if (task->u.upload.fws[i]->type == TY_FIRMWARE_TYPE_EHEX) {
+                        ehex = task->u.upload.fws[i];
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (!ehex)
+            return ty_error(TY_ERROR_MODE, "Cannot find compatible EHEX firmware");
+
+        r = ty_board_send_bootloader(board, ehex);
+        if (r < 0)
+            return r;
+
+        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_VOID, false, USB_CHANGE_TIMEOUT);
+        if (r < 0)
+            return r;
+        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD, true, USB_CHANGE_TIMEOUT);
+        if (r < 0)
+            return r;
     }
 
     if (!fw) {
@@ -738,7 +798,7 @@ wait:
 
         }
 
-        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RUN, USB_CHANGE_TIMEOUT);
+        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RUN, true, USB_CHANGE_TIMEOUT);
         if (r < 0)
             return r;
         if (!r)
@@ -818,7 +878,7 @@ static int run_reset(ty_task *task)
         if (r < 0)
             return r;
 
-        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RESET, USB_CHANGE_TIMEOUT);
+        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RESET, true, USB_CHANGE_TIMEOUT);
         if (r <= 0)
             return ty_error(TY_ERROR_TIMEOUT, "Failed to reboot board '%s'", board->tag);
     }
@@ -828,7 +888,7 @@ static int run_reset(ty_task *task)
     if (r < 0)
         return r;
 
-    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RUN, USB_CHANGE_TIMEOUT);
+    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_RUN, true, USB_CHANGE_TIMEOUT);
     if (r < 0)
         return r;
     if (!r)
@@ -877,7 +937,7 @@ static int run_reboot(ty_task *task)
     if (r < 0)
         return r;
 
-    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD, USB_CHANGE_TIMEOUT);
+    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD, true, USB_CHANGE_TIMEOUT);
     if (r < 0)
         return r;
     if (!r)

@@ -29,9 +29,11 @@ typedef struct ty_board_interface ty_board_interface;
 // Keep in sync with capability_names in board.c
 typedef enum ty_board_capability {
     TY_BOARD_CAPABILITY_UNIQUE,
+    TY_BOARD_CAPABILITY_VOID,
     TY_BOARD_CAPABILITY_RUN,
     TY_BOARD_CAPABILITY_UPLOAD,
     TY_BOARD_CAPABILITY_ENCRYPT,
+    TY_BOARD_CAPABILITY_HASH,
     TY_BOARD_CAPABILITY_RESET,
     TY_BOARD_CAPABILITY_RTC,
     TY_BOARD_CAPABILITY_REBOOT,
@@ -93,7 +95,7 @@ static inline bool ty_board_has_capability(const ty_board *board, ty_board_capab
     return ty_board_get_capabilities(board) & (1 << cap);
 }
 
-int ty_board_wait_for(ty_board *board, ty_board_capability capability, int timeout);
+int ty_board_wait_for(ty_board *board, ty_board_capability capability, bool active, int timeout);
 
 ssize_t ty_board_serial_read(ty_board *board, char *buf, size_t size, int timeout);
 ssize_t ty_board_serial_write(ty_board *board, const char *buf, size_t size);
@@ -102,6 +104,7 @@ int ty_board_upload(ty_board *board, struct ty_firmware *fw, ty_board_upload_pro
 int ty_board_reset(ty_board *board, int64_t rtc);
 int ty_board_reboot(ty_board *board);
 
+int ty_board_send_bootloader(ty_board *board, struct ty_firmware *fw);
 ssize_t ty_board_read_public_hash(ty_board *board, uint8_t *rhash, size_t max_size);
 
 ty_board_interface *ty_board_interface_ref(ty_board_interface *iface);

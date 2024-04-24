@@ -296,7 +296,7 @@ restart:
                         return 0;
 
                     ty_log(TY_LOG_INFO, "Waiting for '%s'...", ty_board_get_tag(board));
-                    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_SERIAL, -1);
+                    r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_SERIAL, true, -1);
                     if (r < 0)
                         return (int)r;
 
