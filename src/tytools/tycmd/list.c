@@ -36,25 +36,6 @@ static void print_list_usage(FILE *f)
                "   -w, --watch              Watch devices dynamically\n");
 }
 
-static int read_public_key_hash(ty_board *board, char *rhash, size_t max_len)
-{
-    assert(ty_board_has_capability(board, TY_BOARD_CAPABILITY_HASH));
-
-    uint8_t hash[128];
-    ssize_t r;
-
-    r = ty_board_read_public_hash(board, hash, sizeof(hash));
-    if (r < 0)
-        return (int)r;
-    if ((size_t)r * 2 > max_len)
-        return ty_error(TY_ERROR_PARAM, "Buffer is too small for public key hash string");
-
-    for (size_t i = 0; i < (size_t)r; i++)
-        sprintf(rhash + i * 2, "%02X", hash[i]);
-
-    return 0;
-}
-
 static int print_interface_info_plain(ty_board_interface *iface, void *udata)
 {
     _HS_UNUSED(udata);
@@ -96,6 +77,7 @@ static int print_event_plain(ty_board *board, ty_monitor_event event)
         printf("  location: %s\n", ty_board_get_location(board));
 
         int capabilities = ty_board_get_capabilities(board);
+        const char *public_hash = ty_board_get_public_hash(board);
 
         printf("  capabilities:\n");
         for (unsigned int i = 0; i < TY_BOARD_CAPABILITY_COUNT; i++) {
@@ -106,16 +88,8 @@ static int print_event_plain(ty_board *board, ty_monitor_event event)
         printf("  interfaces:\n");
         ty_board_list_interfaces(board, print_interface_info_plain, NULL);
 
-        if (ty_board_has_capability(board, TY_BOARD_CAPABILITY_HASH)) {
-            char hash[512];
-            int r = (int)read_public_key_hash(board, hash, sizeof(hash));
-
-            if (!r) {
-                printf("  public key hash: %s\n", hash);
-            } else {
-                printf("  public key hash: unkown\n");
-            }
-        }
+        if (public_hash)
+            printf("  public key hash: %s\n", public_hash);
     }
 
     fflush(stdout);
@@ -208,6 +182,7 @@ static int print_event_json(ty_board *board, ty_monitor_event event, bool *comma
         print_json_string("location", ty_board_get_location(board), comma);
 
         int capabilities = ty_board_get_capabilities(board);
+        const char *public_hash = ty_board_get_public_hash(board);
 
         print_json_start("capabilities", '[', comma);
         for (unsigned int i = 0; i < TY_BOARD_CAPABILITY_COUNT; i++) {
@@ -220,12 +195,8 @@ static int print_event_json(ty_board *board, ty_monitor_event event, bool *comma
         ty_board_list_interfaces(board, print_interface_info_json, comma);
         print_json_end(']', comma);
 
-        if (ty_board_has_capability(board, TY_BOARD_CAPABILITY_HASH)) {
-            char hash[512];
-            int r = read_public_key_hash(board, hash, sizeof(hash));
-
-            print_json_string("public_key_hash", !r ? hash : NULL, comma);
-        }
+        if (public_hash)
+            print_json_string("public_key_hash", public_hash, comma);
     }
 
     print_json_end('}', comma);

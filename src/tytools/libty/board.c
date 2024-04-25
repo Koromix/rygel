@@ -28,7 +28,8 @@ static const char *capability_names[] = {
     "run",
     "upload",
     "encrypt",
-    "hash",
+    "lock",
+    "locked",
     "reset",
     "rtc",
     "reboot",
@@ -63,6 +64,7 @@ void ty_board_unref(ty_board *board)
         free(board->serial_number);
         free(board->location);
         free(board->description);
+        free(board->public_hash);
 
         ty_mutex_release(&board->ifaces_lock);
 
@@ -201,6 +203,12 @@ const char *ty_board_get_description(const ty_board *board)
 {
     assert(board);
     return board->description;
+}
+
+const char *ty_board_get_public_hash(const ty_board *board)
+{
+    assert(board);
+    return board->public_hash;
 }
 
 int ty_board_get_secondary(const ty_board *board)
@@ -441,26 +449,6 @@ int ty_board_send_bootloader(ty_board *board, ty_firmware *fw)
     return r;
 }
 
-ssize_t ty_board_read_public_hash(ty_board *board, uint8_t *rhash, size_t max_size)
-{
-    assert(board);
-    assert(rhash);
-
-    ty_board_interface *iface;
-    ssize_t r;
-
-    r = ty_board_open_interface(board, TY_BOARD_CAPABILITY_HASH, &iface);
-    if (r < 0)
-        return r;
-    if (!r)
-        return ty_error(TY_ERROR_MODE, "Cannot read public key of board '%s'", board->tag);
-
-    r = (*iface->class_vtable->read_public_hash)(iface, rhash, max_size);
-
-    ty_board_interface_close(iface);
-    return r;
-}
-
 ty_board_interface *ty_board_interface_ref(ty_board_interface *iface)
 {
     assert(iface);
@@ -477,6 +465,7 @@ void ty_board_interface_unref(ty_board_interface *iface)
 
         hs_port_close(iface->port);
         hs_device_unref(iface->dev);
+        free(iface->public_hash);
 
         ty_mutex_release(&iface->open_lock);
     }

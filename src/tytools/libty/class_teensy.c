@@ -27,6 +27,26 @@ enum {
 
 extern const struct _ty_class_vtable _ty_teensy_class_vtable;
 
+static uint32_t read_uint32_le(const uint8_t *ptr)
+{
+    return (uint32_t)ptr[0] |
+           ((uint32_t)ptr[1] << 8) |
+           ((uint32_t)ptr[2] << 16) |
+           ((uint32_t)ptr[3] << 24);
+}
+
+static uint64_t read_uint64_le(const uint8_t *ptr)
+{
+    return (uint64_t)ptr[0] |
+           ((uint64_t)ptr[1] << 8) |
+           ((uint64_t)ptr[2] << 16) |
+           ((uint64_t)ptr[3] << 24) |
+           ((uint64_t)ptr[4] << 32) |
+           ((uint64_t)ptr[5] << 40) |
+           ((uint64_t)ptr[6] << 48) |
+           ((uint64_t)ptr[7] << 56);
+}
+
 static ty_model identify_model_bcd(uint16_t bcd_device)
 {
     ty_model model = 0;
@@ -110,6 +130,79 @@ static uint64_t parse_bootloader_serial_number(const char *s)
     return serial;
 }
 
+static bool is_teensy4(ty_model model)
+{
+    if (model == TY_MODEL_TEENSY_40)
+        return true;
+    if (model == TY_MODEL_TEENSY_41)
+        return true;
+    if (model == TY_MODEL_TEENSY_MM)
+        return true;
+
+    return false;
+}
+
+static void explore_encryption(ty_board_interface *iface)
+{
+    hs_port *port = NULL;
+    uint8_t report[385];
+    ssize_t r;
+
+    memset(report, 0, sizeof(report));
+
+    r = hs_port_open(iface->dev, HS_PORT_MODE_READ, &port);
+    if (r < 0) {
+        r = ty_libhs_translate_error((int)r);
+        goto cleanup;
+    }
+
+    r = hs_hid_get_feature_report(port, 0, report, sizeof(report));
+    if (r < 0) {
+        r = ty_libhs_translate_error((int)r);
+        goto cleanup;
+    }
+
+    uint32_t dw0 = read_uint32_le(report + 1);
+    uint32_t dw1 = read_uint32_le(report + 37);
+    uint32_t dw2 = read_uint32_le(report + 41);
+
+    if (dw0 != 0x7393CD01) {
+        ty_log(TY_LOG_DEBUG, "This Teensy does not support encryption");
+        goto cleanup;
+    }
+
+    if (dw2 & 0x4000000) {
+        iface->capabilities |= 1 << TY_BOARD_CAPABILITY_LOCKED;
+    } else if (!(dw1 & 0x4)) {
+        iface->capabilities |= 1 << TY_BOARD_CAPABILITY_LOCK;
+    }
+    iface->capabilities |= 1 << TY_BOARD_CAPABILITY_ENCRYPT;
+
+    // Read public key hash
+    {
+        uint8_t h[32];
+
+        for (size_t i = 0; i < 32; i += 4) {
+            h[i + 0] = report[8 + i];
+            h[i + 1] = report[7 + i];
+            h[i + 2] = report[6 + i];
+            h[i + 3] = report[5 + i];
+        }
+
+        r = _hs_asprintf(&iface->public_hash, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
+                                              "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+                                              h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],
+                                              h[8], h[9], h[10], h[11], h[12], h[13], h[14], h[15],
+                                              h[16], h[17], h[18], h[19], h[20], h[21], h[22], h[23],
+                                              h[24], h[25], h[26], h[27], h[28], h[29], h[30], h[31]);
+        if (r < 0)
+            goto cleanup;
+    }
+
+cleanup:
+    hs_port_close(port);
+}
+
 static int teensy_load_interface(ty_board_interface *iface)
 {
     hs_device *dev = iface->dev;
@@ -139,6 +232,7 @@ static int teensy_load_interface(ty_board_interface *iface)
                     iface->capabilities |= 1 << TY_BOARD_CAPABILITY_UPLOAD;
                     iface->capabilities |= 1 << TY_BOARD_CAPABILITY_VOID;
                     iface->capabilities |= 1 << TY_BOARD_CAPABILITY_ENCRYPT;
+                    iface->capabilities |= 1 << TY_BOARD_CAPABILITY_LOCKED;
                     iface->capabilities |= 1 << TY_BOARD_CAPABILITY_RTC;
                 } break;
 
@@ -170,12 +264,10 @@ static int teensy_load_interface(ty_board_interface *iface)
             iface->model = TY_MODEL_TEENSY;
     }
 
-    if (iface->model == TY_MODEL_TEENSY_40 || iface->model == TY_MODEL_TEENSY_41 ||
-            iface->model == TY_MODEL_TEENSY_MM) {
-        if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD)) {
-            iface->capabilities |= 1 << TY_BOARD_CAPABILITY_ENCRYPT;
-            iface->capabilities |= 1 << TY_BOARD_CAPABILITY_HASH;
-        }
+    if (is_teensy4(iface->model)) {
+        if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD))
+            explore_encryption(iface);
+
         iface->capabilities |= 1 << TY_BOARD_CAPABILITY_RTC;
     }
 
@@ -189,6 +281,7 @@ static int teensy_update_board(ty_board_interface *iface, ty_board *board, bool 
     ty_model model = 0;
     char *serial_number = NULL;
     char *description = NULL;
+    char *public_hash = NULL;
     char *id = NULL;
     int r;
 
@@ -286,6 +379,9 @@ static int teensy_update_board(ty_board_interface *iface, ty_board *board, bool 
         }
     }
 
+    if (iface->public_hash)
+        public_hash = strdup(iface->public_hash);
+
     // Update board unique identifier
     if (!board->id || serial_number) {
         if (board->secondary > 0) {
@@ -311,6 +407,10 @@ static int teensy_update_board(ty_board_interface *iface, ty_board *board, bool 
     if (description) {
         free(board->description);
         board->description = description;
+    }
+    if (public_hash) {
+        free(board->public_hash);
+        board->public_hash = public_hash;
     }
     if (id) {
         free(board->id);
@@ -372,25 +472,6 @@ static void teensy_close_interface(ty_board_interface *iface)
     iface->port = NULL;
 }
 
-static uint32_t read_uint32_le(const uint8_t *ptr)
-{
-    return (uint32_t)ptr[0] |
-           ((uint32_t)ptr[1] << 8) |
-           ((uint32_t)ptr[2] << 16) |
-           ((uint32_t)ptr[3] << 24);
-}
-
-static uint64_t read_uint64_le(const uint8_t *ptr)
-{
-    return (uint64_t)ptr[0] |
-           ((uint64_t)ptr[1] << 8) |
-           ((uint64_t)ptr[2] << 16) |
-           ((uint64_t)ptr[3] << 24) |
-           ((uint64_t)ptr[4] << 32) |
-           ((uint64_t)ptr[5] << 40) |
-           ((uint64_t)ptr[6] << 48) |
-           ((uint64_t)ptr[7] << 56);
-}
 
 static unsigned int teensy_identify_models(const ty_firmware *fw, ty_model *rmodels,
                                            unsigned int max_models)
@@ -925,31 +1006,6 @@ static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
     return 0;
 }
 
-static ssize_t teensy_read_public_hash(ty_board_interface *iface, uint8_t *rhash, size_t max_size)
-{
-    if (max_size < 32)
-        return ty_error(TY_ERROR_PARAM, "Not enough space to store Teensy public key hash");
-
-    uint8_t buf[385];
-    ssize_t r;
-
-    r = hs_hid_get_feature_report(iface->port, 0, buf, sizeof(buf));
-    if (r < 0)
-        return ty_libhs_translate_error((int)r);
-
-    for (int i = 0; i < 8; i++) {
-        int dest = 4 * i;
-        int src = 5 + 4 * i;
-
-        rhash[dest + 0] = buf[src + 3];
-        rhash[dest + 1] = buf[src + 2];
-        rhash[dest + 2] = buf[src + 1];
-        rhash[dest + 3] = buf[src + 0];
-    }
-
-    return 32;
-}
-
 const struct _ty_class_vtable _ty_teensy_class_vtable = {
     .load_interface = teensy_load_interface,
     .update_board = teensy_update_board,
@@ -963,6 +1019,5 @@ const struct _ty_class_vtable _ty_teensy_class_vtable = {
     .reset = teensy_reset,
     .reboot = teensy_reboot,
 
-    .send_bootloader = teensy_send_bootloader,
-    .read_public_hash = teensy_read_public_hash
+    .send_bootloader = teensy_send_bootloader
 };

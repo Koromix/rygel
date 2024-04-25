@@ -32,6 +32,7 @@ struct ty_board_interface {
     const char *name;
     int capabilities;
     ty_model model;
+    char *public_hash;
 
     hs_device *dev;
     ty_mutex open_lock;
@@ -55,6 +56,7 @@ struct ty_board {
     char *serial_number;
     char *description;
     char *location;
+    char *public_hash;
 
     int secondary;
     int match_iface;
