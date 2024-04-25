@@ -165,7 +165,7 @@ static int load_hex(struct parser_context *ctx, size_t pgm)
     ty_firmware *fw = ctx->fw;
     ty_firmware_program *program = &fw->programs[pgm];
     read_buf *buf = &ctx->buf;
-    size_t start, end;
+    size_t start, end = 0;
     bool eof = false;
     ssize_t r;
 

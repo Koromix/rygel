@@ -265,7 +265,7 @@ void LinkedAllocator::Release(const void *ptr, Size size)
 LinkedAllocator::Bucket *LinkedAllocator::PointerToBucket(void *ptr)
 {
     uint8_t *data = (uint8_t *)ptr;
-    return (Bucket *)(data - RG_OFFSET_OF(Bucket, data));
+    return (Bucket *)(data - offsetof(Bucket, data));
 }
 
 void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
@@ -4706,7 +4706,7 @@ bool NotifySystemd()
     iov.iov_base = (void *)"READY=1";
     iov.iov_len = strlen("READY=1");
     msg.msg_name = &addr;
-    msg.msg_namelen = RG_OFFSET_OF(struct sockaddr_un, sun_path) + strlen(addr_str);
+    msg.msg_namelen = offsetof(struct sockaddr_un, sun_path) + strlen(addr_str);
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
 

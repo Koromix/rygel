@@ -272,7 +272,7 @@ Options:
                 MemCpy(header.name, header1->name, RG_SIZE(header.name));
             }
 
-            Size payload_len = RG_OFFSET_OF(SnapshotHeader2, name) + strlen(header.name) + 1;
+            Size payload_len = offsetof(SnapshotHeader2, name) + strlen(header.name) + 1;
             Span<const uint8_t> payload = MakeSpan((const uint8_t *)&header, payload_len);
 
             if (!disk->WriteTag(hash, payload))

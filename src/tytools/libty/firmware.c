@@ -316,7 +316,7 @@ void ty_firmware_unref(ty_firmware *fw)
 
 const ty_firmware *ty_firmware_from_program(const ty_firmware_program *program)
 {
-    size_t offset = _HS_OFFSETOF(ty_firmware, programs) + program->idx * sizeof(*program);
+    size_t offset = offsetof(ty_firmware, programs) + program->idx * sizeof(*program);
     return (const ty_firmware *)((const uint8_t *)program - offset);
 }
 

@@ -935,7 +935,7 @@ static ssize_t teensy_read_public_hash(ty_board_interface *iface, uint8_t *rhash
 
     r = hs_hid_get_feature_report(iface->port, 0, buf, sizeof(buf));
     if (r < 0)
-        return ty_libhs_translate_error(r);
+        return ty_libhs_translate_error((int)r);
 
     for (int i = 0; i < 8; i++) {
         int dest = 4 * i;

@@ -200,7 +200,7 @@ static bool ParseTableHeaders(Span<const uint8_t> file_data, const char *filenam
                 weird_section = true;
 
                 MemMove(&raw_table_header.pad1, raw_table_header.name,
-                        RG_SIZE(PackedHeader1111) - RG_OFFSET_OF(PackedHeader1111, pad1));
+                        RG_SIZE(PackedHeader1111) - offsetof(PackedHeader1111, pad1));
                 MemCpy(&raw_table_header.name, raw_table_header.signature, RG_SIZE(raw_table_header.name));
             }
             FAIL_PARSE_IF(filename, file_data.len < (Size)(raw_table_ptr.raw_offset +

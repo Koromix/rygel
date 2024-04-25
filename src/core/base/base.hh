@@ -271,7 +271,6 @@ template <typename T, unsigned N>
 char (&ComputeArraySize(T const (&)[N]))[N];
 #define RG_BITS(Type) (8 * RG_SIZE(Type))
 #define RG_LEN(Array) RG_SIZE(RG::ComputeArraySize(Array))
-#define RG_OFFSET_OF(Type, Member) ((Size)__builtin_offsetof(Type, Member))
 
 static inline constexpr uint16_t ReverseBytes(uint16_t u)
 {
@@ -2629,7 +2628,7 @@ public:
     {
         if (!it)
             return;
-        table.Remove((Bucket *)((uint8_t *)it - RG_OFFSET_OF(Bucket, value)));
+        table.Remove((Bucket *)((uint8_t *)it - offsetof(Bucket, value)));
     }
     void Remove(Bucket *it)
     {

@@ -194,11 +194,11 @@ bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
     glEnableVertexAttribArray(attrib_uv);
     glEnableVertexAttribArray(attrib_color);
     glVertexAttribPointer(attrib_position, 2, GL_FLOAT, GL_FALSE, RG_SIZE(ImDrawVert),
-                          (GLvoid *)RG_OFFSET_OF(ImDrawVert, pos));
+                          (GLvoid *)offsetof(ImDrawVert, pos));
     glVertexAttribPointer(attrib_uv, 2, GL_FLOAT, GL_FALSE, RG_SIZE(ImDrawVert),
-                          (GLvoid *)RG_OFFSET_OF(ImDrawVert, uv));
+                          (GLvoid *)offsetof(ImDrawVert, uv));
     glVertexAttribPointer(attrib_color, 4, GL_UNSIGNED_BYTE, GL_TRUE, RG_SIZE(ImDrawVert),
-                          (GLvoid *)RG_OFFSET_OF(ImDrawVert, col));
+                          (GLvoid *)offsetof(ImDrawVert, col));
 
     if (!font_texture) {
         uint8_t *pixels;

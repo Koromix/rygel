@@ -343,22 +343,22 @@ static bool RegisterTrayIcon()
     static const sd_bus_vtable vtable[] = {
         SD_BUS_VTABLE_START(0),
 
-        SD_BUS_PROPERTY("Category", "s", nullptr, RG_OFFSET_OF(decltype(properties), category), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Id", "s", nullptr, RG_OFFSET_OF(decltype(properties), id), 0),
-        SD_BUS_PROPERTY("Title", "s", nullptr, RG_OFFSET_OF(decltype(properties), title), 0),
-        SD_BUS_PROPERTY("Status", "s", nullptr, RG_OFFSET_OF(decltype(properties), status), 0),
-        SD_BUS_PROPERTY("WindowId", "u", nullptr, RG_OFFSET_OF(decltype(properties), window_id), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("IconThemePath", "s", nullptr, RG_OFFSET_OF(decltype(properties), icon_theme), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("Category", "s", nullptr, offsetof(decltype(properties), category), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("Id", "s", nullptr, offsetof(decltype(properties), id), 0),
+        SD_BUS_PROPERTY("Title", "s", nullptr, offsetof(decltype(properties), title), 0),
+        SD_BUS_PROPERTY("Status", "s", nullptr, offsetof(decltype(properties), status), 0),
+        SD_BUS_PROPERTY("WindowId", "u", nullptr, offsetof(decltype(properties), window_id), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("IconThemePath", "s", nullptr, offsetof(decltype(properties), icon_theme), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("IconName", "s", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("IconPixmap", "a(iiay)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("AttentionIconName", "s", nullptr, RG_OFFSET_OF(decltype(properties), attention_icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("AttentionMovieName", "s", nullptr, RG_OFFSET_OF(decltype(properties), attention_movie_name), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("AttentionIconName", "s", nullptr, offsetof(decltype(properties), attention_icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("AttentionMovieName", "s", nullptr, offsetof(decltype(properties), attention_movie_name), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("AttentionIconPixmap", "a(iiay)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("OverlayIconName", "s", nullptr, RG_OFFSET_OF(decltype(properties), attention_icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("OverlayIconName", "s", nullptr, offsetof(decltype(properties), attention_icon_name), SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("OverlayIconPixmap", "a(iiay)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
         SD_BUS_PROPERTY("ToolTip", "(sa(iiay)ss)", GetIconComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("ItemIsMenu", "b", nullptr, RG_OFFSET_OF(decltype(properties), item_is_menu), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Menu", "o", nullptr, RG_OFFSET_OF(decltype(properties), menu), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("ItemIsMenu", "b", nullptr, offsetof(decltype(properties), item_is_menu), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("Menu", "o", nullptr, offsetof(decltype(properties), menu), SD_BUS_VTABLE_PROPERTY_CONST),
 
         SD_BUS_METHOD("Activate", "ii", "", [](sd_bus_message *, void *, sd_bus_error *) {
             ToggleProfile(1);
@@ -467,9 +467,9 @@ static bool RegisterTrayMenu()
         SD_BUS_VTABLE_START(0),
 
         SD_BUS_PROPERTY("IconThemePath", "as", GetMenuComplexProperty, 0, SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Version", "u", nullptr, RG_OFFSET_OF(decltype(properties), version), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("TextDirection", "s", nullptr, RG_OFFSET_OF(decltype(properties), text_direction), SD_BUS_VTABLE_PROPERTY_CONST),
-        SD_BUS_PROPERTY("Status", "s", nullptr, RG_OFFSET_OF(decltype(properties), status), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("Version", "u", nullptr, offsetof(decltype(properties), version), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("TextDirection", "s", nullptr, offsetof(decltype(properties), text_direction), SD_BUS_VTABLE_PROPERTY_CONST),
+        SD_BUS_PROPERTY("Status", "s", nullptr, offsetof(decltype(properties), status), SD_BUS_VTABLE_PROPERTY_CONST),
 
         SD_BUS_METHOD("GetLayout", "iias", "u(ia{sv}av)", [](sd_bus_message *m, void *, sd_bus_error *) {
             sd_bus_message *reply;

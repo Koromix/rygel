@@ -939,7 +939,7 @@ bool rk_Disk::WriteSecret(const char *path, Span<const uint8_t> data, bool overw
     randombytes_buf(secret.nonce, RG_SIZE(secret.nonce));
     crypto_secretbox_easy(secret.cypher, data.ptr, (size_t)data.len, secret.nonce, pkey);
 
-    Size len = RG_OFFSET_OF(SecretData, cypher) + crypto_secretbox_MACBYTES + data.len;
+    Size len = offsetof(SecretData, cypher) + crypto_secretbox_MACBYTES + data.len;
     Span<const uint8_t> buf = MakeSpan((const uint8_t *)&secret, len);
     Size written = WriteDirect(path, buf, overwrite);
 
@@ -962,12 +962,12 @@ bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
 
     if (len < 0)
         return false;
-    if (len < RG_OFFSET_OF(SecretData, cypher)) {
+    if (len < offsetof(SecretData, cypher)) {
         LogError("Malformed secret file '%1'", path);
         return false;
     }
 
-    len -= RG_OFFSET_OF(SecretData, cypher);
+    len -= offsetof(SecretData, cypher);
     len = std::min(len, out_buf.len + (Size)crypto_secretbox_MACBYTES);
 
     if (crypto_secretbox_open_easy(out_buf.ptr, secret.cypher, len, secret.nonce, pkey)) {

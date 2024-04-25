@@ -427,7 +427,7 @@ int ty_board_send_bootloader(ty_board *board, ty_firmware *fw)
     assert(board);
 
     ty_board_interface *iface;
-    ssize_t r;
+    int r;
 
     r = ty_board_open_interface(board, TY_BOARD_CAPABILITY_UPLOAD, &iface);
     if (r < 0)
