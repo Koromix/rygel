@@ -202,6 +202,42 @@ int GetDllMachine(const wchar_t *filename)
     return GetFileMachine(h, true);
 }
 
+void TebManipulator::AdjustStack(void *base, void *limit)
+{
+    RG_ASSERT(!active);
+
+    ExceptionList = teb->ExceptionList;
+    StackBase = teb->StackBase;
+    StackLimit = teb->StackLimit;
+    DeallocationStack = teb->DeallocationStack;
+    GuaranteedStackBytes = teb->GuaranteedStackBytes;
+    SameTebFlags = teb->SameTebFlags;
+
+    teb->ExceptionList = (void *)-1;
+    teb->StackBase = base;
+    teb->StackLimit = limit;
+    teb->DeallocationStack = limit;
+    teb->GuaranteedStackBytes = 0;
+    teb->SameTebFlags &= ~0x200; // Skip SEHOP check
+
+    active = true;
+}
+
+void TebManipulator::RestoreStack()
+{
+    if (!active)
+        return;
+
+    teb->ExceptionList = ExceptionList;
+    teb->StackBase = StackBase;
+    teb->StackLimit = StackLimit;
+    teb->DeallocationStack = DeallocationStack;
+    teb->GuaranteedStackBytes = GuaranteedStackBytes;
+    teb->SameTebFlags = SameTebFlags;
+
+    active = false;
+}
+
 }
 
 #endif

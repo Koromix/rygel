@@ -322,35 +322,17 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func, void *native)
 {
+
 #ifdef _WIN32
-    TEB *teb = GetTEB();
+    TebManipulator teb;
 
-    // Restore previous stack limits at the end
-    RG_DEFER_C(exception_list = teb->ExceptionList,
-               base = teb->StackBase,
-               limit = teb->StackLimit,
-               dealloc = teb->DeallocationStack,
-               guaranteed = teb->GuaranteedStackBytes,
-               stfs = teb->SameTebFlags) {
-        teb->ExceptionList = exception_list;
-        teb->StackBase = base;
-        teb->StackLimit = limit;
-        teb->DeallocationStack = dealloc;
-        teb->GuaranteedStackBytes = guaranteed;
-        teb->SameTebFlags = stfs;
-
-        instance->last_error = teb->LastErrorValue;
-    };
-
-    // Adjust stack limits so SEH works correctly
-    teb->ExceptionList = (void *)-1; // EXCEPTION_CHAIN_END
-    teb->StackBase = mem->stack0.end();
-    teb->StackLimit = mem->stack0.ptr;
-    teb->DeallocationStack = mem->stack0.ptr;
-    teb->GuaranteedStackBytes = 0;
-    teb->SameTebFlags &= ~0x200;
-
+    teb.AdjustStack(mem->stack0.end(), mem->stack0.ptr);
     teb->LastErrorValue = instance->last_error;
+
+    RG_DEFER {
+        instance->last_error = teb->LastErrorValue;
+        teb.RestoreStack();
+    };
 #endif
 
 #define PERFORM_CALL(Suffix) \

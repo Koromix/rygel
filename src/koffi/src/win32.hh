@@ -120,6 +120,28 @@ static inline TEB *GetTEB()
     return teb;
 }
 
+class TebManipulator {
+    TEB *teb;
+
+    bool active = false;
+
+    void *ExceptionList;
+    void *StackBase;
+    void *StackLimit;
+    void *DeallocationStack;
+    uint32_t GuaranteedStackBytes;
+    uint16_t SameTebFlags;
+
+public:
+    TebManipulator() : teb(GetTEB()) {}
+    ~TebManipulator() { RG_ASSERT(!active); }
+
+    void AdjustStack(void *base, void *limit);
+    void RestoreStack();
+
+    TEB *operator->() { return teb; }
+};
+
 extern const HashMap<int, const char *> WindowsMachineNames;
 
 void *LoadWindowsLibrary(Napi::Env env, Span<const char> path); // Returns HANDLE
