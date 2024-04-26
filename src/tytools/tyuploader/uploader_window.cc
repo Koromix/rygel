@@ -41,7 +41,6 @@ UploaderWindow::UploaderWindow(QWidget *parent)
     resize(0, 0);
 
     connect(actionUpload, &QAction::triggered, this, &UploaderWindow::uploadNewToCurrent);
-    connect(actionReset, &QAction::triggered, this, &UploaderWindow::resetCurrent);
     connect(actionQuit, &QAction::triggered, this, &TyUploader::quit);
 
     connect(actionOpenLog, &QAction::triggered, tyUploader, &TyUploader::showLogWindow);
@@ -61,7 +60,6 @@ UploaderWindow::UploaderWindow(QWidget *parent)
     monitor_model_.setSourceModel(monitor_);
     boardComboBox->setModel(&monitor_model_);
     connect(uploadButton, &QToolButton::clicked, this, &UploaderWindow::uploadNewToCurrent);
-    connect(resetButton, &QToolButton::clicked, this, &UploaderWindow::resetCurrent);
 
     // Error messages
     connect(tyUploader, &TyUploader::globalError, this, &UploaderWindow::showErrorMessage);
@@ -96,14 +94,6 @@ void UploaderWindow::uploadNewToCurrent()
     current_board_->startUpload(filename);
 }
 
-void UploaderWindow::resetCurrent()
-{
-    if (!current_board_)
-        return;
-
-    current_board_->startReset();
-}
-
 void UploaderWindow::openWebsite()
 {
     QDesktopServices::openUrl(QUrl(TY_CONFIG_URL_WEBSITE));
@@ -135,14 +125,12 @@ void UploaderWindow::changeCurrentBoard(Board *board)
 
 void UploaderWindow::refreshActions()
 {
-    bool upload = false, reset = false;
+    bool upload = false;
 
     if (current_board_) {
         if (current_board_->taskStatus() == TY_TASK_STATUS_READY) {
             upload = current_board_->hasCapability(TY_BOARD_CAPABILITY_UPLOAD) ||
                      current_board_->hasCapability(TY_BOARD_CAPABILITY_REBOOT);
-            reset = current_board_->hasCapability(TY_BOARD_CAPABILITY_RESET) ||
-                    current_board_->hasCapability(TY_BOARD_CAPABILITY_REBOOT);
         }
     } else {
         stackedWidget->setCurrentIndex(0);
@@ -150,8 +138,6 @@ void UploaderWindow::refreshActions()
 
     uploadButton->setEnabled(upload);
     actionUpload->setEnabled(upload);
-    resetButton->setEnabled(reset);
-    actionReset->setEnabled(reset);
 }
 
 void UploaderWindow::refreshProgress()

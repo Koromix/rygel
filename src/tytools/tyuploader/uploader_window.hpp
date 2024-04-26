@@ -49,7 +49,6 @@ public slots:
     void showErrorMessage(const QString &msg);
 
     void uploadNewToCurrent();
-    void resetCurrent();
 
     void openWebsite();
     void openBugReports();
