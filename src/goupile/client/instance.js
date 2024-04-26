@@ -1852,7 +1852,7 @@ function throwParseError(err) {
 }
 
 function throwRunError(err, map) {
-    let location = Util.parseEvalErrorLocation(err);
+    let location = Util.locateEvalError(err);
 
     let line = location?.line;
     if (map != null && line != null)

@@ -379,7 +379,7 @@ const Util = new function() {
         return file;
     };
 
-    this.parseEvalErrorLocation = function(err) {
+    this.locateEvalError = function(err) {
         let location = null;
 
         if (err instanceof SyntaxError && err.lineNumber != null) {
