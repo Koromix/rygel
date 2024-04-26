@@ -593,9 +593,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                         return false;
                 } else if (IsRawBuffer(value)) {
                     Span<const uint8_t> buffer = GetRawBuffer(value);
-
-                    if (!PushBuffer(buffer, member.type->size, member.type, dest))
-                        return false;
+                    PushBuffer(buffer, member.type->size, member.type, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, member.type, dest))
                         return false;
@@ -830,9 +828,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
                         return false;
                 } else if (IsRawBuffer(value)) {
                     Span<const uint8_t> buffer = GetRawBuffer(value);
-
-                    if (!PushBuffer(buffer, ref->size, ref, dest))
-                        return false;
+                    PushBuffer(buffer, ref->size, ref, dest);
                 } else if (value.IsString()) {
                     if (!PushStringArray(value, ref, dest))
                         return false;
@@ -896,15 +892,13 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
     return true;
 }
 
-bool CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin)
+void CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin)
 {
-    if (buffer.len != size) [[unlikely]] {
-        ThrowError<Napi::Error>(env, "Expected array or buffer of size %1, got %2", size, buffer.len);
-        return false;
-    }
+    buffer.len = std::min(buffer.len, size);
 
-    // Go fast yeaaaah :)
+    // Go fast brrrrrrr :)
     memcpy_safe(origin, buffer.ptr, (size_t)buffer.len);
+    memset_safe(origin + buffer.len, 0, (size_t)(size - buffer.len));
 
 #define SWAP(CType) \
         do { \
@@ -929,8 +923,6 @@ bool CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo 
     }
 
 #undef SWAP
-
-    return true;
 }
 
 bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *origin)

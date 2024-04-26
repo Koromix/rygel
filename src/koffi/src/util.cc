@@ -1446,9 +1446,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
                     return false;
             } else if (IsRawBuffer(value)) {
                 Span<const uint8_t> buffer = GetRawBuffer(value);
-
-                if (!call.PushBuffer(buffer, type->size, type, origin))
-                    return false;
+                call.PushBuffer(buffer, type->size, type, origin);
             } else if (value.IsString()) {
                 if (!call.PushStringArray(value, type, origin))
                     return false;

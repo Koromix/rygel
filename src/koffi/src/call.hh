@@ -119,7 +119,7 @@ public:
     Size PushString16Value(Napi::Value value, const char16_t **out_str16);
     bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin);
     bool PushNormalArray(Napi::Array array, Size len, const TypeInfo *type, uint8_t *origin);
-    bool PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin);
+    void PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin);
     bool PushStringArray(Napi::Value value, const TypeInfo *type, uint8_t *origin);
     bool PushPointer(Napi::Value value, const TypeInfo *type, int directions, void **out_ptr);
     Size PushIndirectString(Napi::Array array, const TypeInfo *ref, uint8_t **out_ptr);
