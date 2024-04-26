@@ -958,12 +958,12 @@ static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
     if (!(iface->capabilities & (1 << TY_BOARD_CAPABILITY_VOID)))
         return 0;
 
-    unsigned char magic1[] = { 0x1, 0x2, 0x2, 0x20, 0x20, 0x80, 0, 0x20, 0, 0, 0, 0x4, 0, 0, 0, 0, 0};
-    unsigned char magic2[] = { 0x1, 0x4, 0x4, 0x20, 0x20, 0x80, 0, 0, 0, 0, 0x15, 0xa0, 0, 0, 0, 0, 0};
-    unsigned char magic3[] = { 0x1, 0xb, 0xb, 0x20, 0x20, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    unsigned char magic1[] = { 0x1, 0x2, 0x2, 0x20, 0x20, 0x80, 0, 0x20, 0, 0, 0, 0x4, 0, 0, 0, 0, 0 };
+    unsigned char magic2[] = { 0x1, 0x4, 0x4, 0x20, 0x20, 0x80, 0, 0, 0, 0, 0x15, 0xa0, 0, 0, 0, 0, 0 };
+    unsigned char magic3[] = { 0x1, 0xb, 0xb, 0x20, 0x20, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     if (fw->type != TY_FIRMWARE_TYPE_EHEX)
-        return ty_error(TY_ERROR_PARAM, "Cannot upload non-EHEX file to locked Teensy");
+        return ty_error(TY_ERROR_UNSUPPORTED, "Cannot upload non-EHEX file to locked board");
     assert(fw->programs_count == 2);
 
     ty_firmware_program *program = &fw->programs[1];
@@ -995,7 +995,7 @@ static int teensy_send_bootloader(ty_board_interface *iface, ty_firmware *fw)
         r = hs_hid_write(iface->port, buf, sizeof(buf));
         if (r < 0)
             return ty_libhs_translate_error((int)r);
-        hs_delay(20);
+    hs_delay(20);
     }
 
     r = hs_hid_write(iface->port, magic3, sizeof(magic3));

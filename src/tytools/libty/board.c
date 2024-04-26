@@ -303,6 +303,8 @@ static int wait_for_callback(ty_monitor *monitor, void *udata)
 
     if (board->status == TY_BOARD_STATUS_DROPPED)
         return ty_error(TY_ERROR_NOT_FOUND, "Board '%s' has disappeared", board->tag);
+    if (board->status == TY_BOARD_STATUS_MISSING)
+        return 0;
 
     bool capability = ty_board_has_capability(board, ctx->capability);
     return capability == ctx->active;
@@ -721,8 +723,6 @@ wait:
     }
 
     if (!(flags & TY_UPLOAD_DELEGATE) && ty_board_has_capability(board, TY_BOARD_CAPABILITY_VOID)) {
-        ty_log(TY_LOG_INFO, "Sending alternative bootloader...");
-
         ty_firmware *ehex = fw;
 
         if (!ehex) {
@@ -730,8 +730,14 @@ wait:
                 r = select_compatible_firmware(board, task->u.upload.fws, task->u.upload.fws_count, &ehex);
                 if (r < 0)
                     return r;
+
+                if (!ehex)
+                    return ty_error(TY_ERROR_UNSUPPORTED, "Cannot find compatible firmware");
+
                 fw = ehex;
             } else {
+                ehex = task->u.upload.fws[0];
+
                 for (unsigned int i = 0; i < task->u.upload.fws_count; i++) {
                     if (task->u.upload.fws[i]->type == TY_FIRMWARE_TYPE_EHEX) {
                         ehex = task->u.upload.fws[i];
@@ -741,9 +747,11 @@ wait:
             }
         }
 
-        if (!ehex)
-            return ty_error(TY_ERROR_MODE, "Cannot find compatible EHEX firmware");
+        if (ty_board_has_capability(board, TY_BOARD_CAPABILITY_LOCKED) &&
+                ehex->type != TY_FIRMWARE_TYPE_EHEX)
+            return ty_error(TY_ERROR_UNSUPPORTED, "Cannot upload non-EHEX file to locked board");
 
+        ty_log(TY_LOG_INFO, "Sending bootloader...");
         r = ty_board_send_bootloader(board, ehex);
         if (r < 0)
             return r;
@@ -751,9 +759,8 @@ wait:
         r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_VOID, false, USB_CHANGE_TIMEOUT);
         if (r < 0)
             return r;
-        r = ty_board_wait_for(board, TY_BOARD_CAPABILITY_UPLOAD, true, USB_CHANGE_TIMEOUT);
-        if (r < 0)
-            return r;
+        if (!r)
+            return ty_error(TY_ERROR_TIMEOUT, "Invalid bootloader for '%s'", board->tag);
     }
 
     if (!fw) {
