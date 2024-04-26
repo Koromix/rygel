@@ -263,7 +263,13 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         }
     }
 
-    Size prev_obj_filenames = obj_filenames.len;
+    // Start with pregeneration steps (such as UI to header file)
+    for (const SourceFileInfo *src: target.sources) {
+        if (src->type == SourceType::QtUi) {
+            const char *header_filename = AddQtUiSource(*src);
+            predep_filenames.Append(header_filename);
+        }
+    }
 
     // Deal with user source files
     for (const SourceFileInfo *src: target.sources) {
@@ -283,10 +289,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                 pack_filenames.Append(meta_filename);
             } break;
 
-            case SourceType::QtUi: {
-                const char *header_filename = AddQtUiSource(*src);
-                predep_filenames.Append(header_filename);
-            } break;
+            case SourceType::QtUi: { /* Already handled */ } break;
 
             case SourceType::QtResources: {
                 qrc_filenames.Append(src->filename);
@@ -298,27 +301,6 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     if (qrc_filenames.len) {
         const char *obj_filename = AddQtResource(target, qrc_filenames);
         obj_filenames.Append(obj_filename);
-    }
-
-    // Make sure C/C++ source files must depend on generated headers
-    for (Size i = prev_obj_filenames; i < obj_filenames.len; i++) {
-        const char *obj_filename = obj_filenames[i];
-        Size node_idx = nodes_map.FindValue(obj_filename, -1);
-
-        if (node_idx >= 0) {
-            Node *node = &nodes[node_idx];
-
-            for (const char *predep_filename: predep_filenames) {
-                Size src_idx = nodes_map.FindValue(predep_filename, -1);
-
-                if (src_idx >= 0) {
-                    Node *src = &nodes[src_idx];
-
-                    src->triggers.Append(node_idx);
-                    node->semaphore++;
-                }
-            }
-        }
     }
 
     // User assets and libraries
