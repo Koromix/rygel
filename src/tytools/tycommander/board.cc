@@ -239,6 +239,9 @@ void Board::updateStatus()
         if (hasCapability(TY_BOARD_CAPABILITY_RUN)) {
             status_text_ = status_firmware_.isEmpty() ? tr("(running)") : status_firmware_;
             icon_name = serialOpen() ? ":/board_attached" : ":/board_detached";
+        } else if (hasCapability(TY_BOARD_CAPABILITY_VOID)) {
+            status_text_ = tr("(locked)");
+            icon_name = ":/board_locked";
         } else if (hasCapability(TY_BOARD_CAPABILITY_UPLOAD)) {
             status_text_ = tr("(bootloader)");
             icon_name = ":/board_bootloader";
