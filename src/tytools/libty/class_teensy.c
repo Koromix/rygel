@@ -20,7 +20,7 @@
 
 enum {
     TEENSY_USAGE_PAGE_BOOTLOADER = 0xFF9C,
-    TEENSY_USAGE_PAGE_LOCKED = 0xFF00,
+    TEENSY_USAGE_PAGE_HAB = 0xFF00,
     TEENSY_USAGE_PAGE_RAWHID = 0xFFAB,
     TEENSY_USAGE_PAGE_SEREMU = 0xFFC9
 };
@@ -226,8 +226,8 @@ static int teensy_load_interface(ty_board_interface *iface)
                     }
                 } break;
 
-                case TEENSY_USAGE_PAGE_LOCKED: {
-                    iface->name = "HAB Locked";
+                case TEENSY_USAGE_PAGE_HAB: {
+                    iface->name = "HAB";
                     iface->model = TY_MODEL_TEENSY;
                     iface->capabilities |= 1 << TY_BOARD_CAPABILITY_UPLOAD;
                     iface->capabilities |= 1 << TY_BOARD_CAPABILITY_VOID;
@@ -358,7 +358,7 @@ static int teensy_update_board(ty_board_interface *iface, ty_board *board, bool 
         if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD)) {
             if (!board->description) {
                 if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_VOID)) {
-                    product_string = "HAB Locked";
+                    product_string = "HAB";
                 } else {
                     product_string = "HalfKay";
                 }
