@@ -142,7 +142,7 @@ static bool is_teensy4(ty_model model)
     return false;
 }
 
-static void explore_encryption(ty_board_interface *iface)
+static int explore_encryption(ty_board_interface *iface)
 {
     hs_port *port = NULL;
     uint8_t report[385];
@@ -158,7 +158,8 @@ static void explore_encryption(ty_board_interface *iface)
 
     r = hs_hid_get_feature_report(port, 0, report, sizeof(report));
     if (r < 0) {
-        r = ty_libhs_translate_error((int)r);
+        // Assume no encryption support
+        r = 0;
         goto cleanup;
     }
 
@@ -168,6 +169,7 @@ static void explore_encryption(ty_board_interface *iface)
 
     if (dw0 != 0x7393CD01) {
         ty_log(TY_LOG_DEBUG, "This Teensy does not support encryption");
+        r = 0;
         goto cleanup;
     }
 
@@ -189,8 +191,8 @@ static void explore_encryption(ty_board_interface *iface)
             h[i + 3] = report[5 + i];
         }
 
-        r = _hs_asprintf(&iface->public_hash, "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X"
-                                              "%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X%02X",
+        r = _hs_asprintf(&iface->public_hash, "%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X"
+                                              "%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X",
                                               h[0], h[1], h[2], h[3], h[4], h[5], h[6], h[7],
                                               h[8], h[9], h[10], h[11], h[12], h[13], h[14], h[15],
                                               h[16], h[17], h[18], h[19], h[20], h[21], h[22], h[23],
@@ -199,8 +201,10 @@ static void explore_encryption(ty_board_interface *iface)
             goto cleanup;
     }
 
+    r = 1;
 cleanup:
     hs_port_close(port);
+    return (int)r;
 }
 
 static int teensy_load_interface(ty_board_interface *iface)
@@ -265,8 +269,11 @@ static int teensy_load_interface(ty_board_interface *iface)
     }
 
     if (is_teensy4(iface->model)) {
-        if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD))
-            explore_encryption(iface);
+        if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_UPLOAD)) {
+            int r = explore_encryption(iface);
+            if (r < 0)
+                return r;
+        }
 
         iface->capabilities |= 1 << TY_BOARD_CAPABILITY_RTC;
     }
