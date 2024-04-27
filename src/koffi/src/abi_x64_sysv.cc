@@ -428,6 +428,9 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func, void *native)
 {
+    errno = instance->last_errno;
+    RG_DEFER { instance->last_errno = errno; };
+
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
             auto ret = (func->forward_fp ? ForwardCallX ## Suffix(native, new_sp, &old_sp) \

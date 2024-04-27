@@ -322,18 +322,20 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func, void *native)
 {
-
 #ifdef _WIN32
     TebManipulator teb;
 
     teb.AdjustStack(mem->stack0.end(), mem->stack0.ptr);
-    teb->LastErrorValue = instance->last_error;
+    teb->LastErrorValue = instance->last_error_win32;
 
     RG_DEFER {
-        instance->last_error = teb->LastErrorValue;
+        instance->last_error_win32 = teb->LastErrorValue;
         teb.RestoreStack();
     };
 #endif
+
+    errno = instance->last_errno;
+    RG_DEFER { instance->last_errno = errno; };
 
 #define PERFORM_CALL(Suffix) \
         ([&]() { \

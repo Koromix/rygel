@@ -282,11 +282,14 @@ struct InstanceData {
     std::thread::id main_thread_id;
     napi_threadsafe_function broker = nullptr;
 
+    int last_errno = 0;
+#ifdef _WIN32
+    uint32_t last_error_win32 = 0;
+#endif
+
 #ifdef _WIN32
     void *main_stack_max;
     void *main_stack_min;
-
-    uint32_t last_error = 0;
 #endif
 
     BucketArray<BlockAllocator> encode_allocators;
