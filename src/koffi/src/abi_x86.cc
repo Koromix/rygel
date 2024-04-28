@@ -77,34 +77,6 @@ extern "C" void ForwardCall(const void* func, Size len)
         ExitProcess(exceptionCode);
     }
 }
-extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
-extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
-extern "C" double ForwardCallD(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
-extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
-extern "C" float ForwardCallRF(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
-extern "C" double ForwardCallRD(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
-extern "C" void ForwardCall(const void* func, Size len)
-{
-    __try
-    {
-        __asm
-        {
-            sub esp, len
-            mov edi, esp
-            mov esi, ebp
-            add esi, 24
-            mov ecx, len
-            shr ecx, 2
-            cld
-            rep movsd
-            call func
-            add esp, len
-        }
-    }
-    __except (UnhandledExceptionFilter(GetExceptionInformation()))
-    {
-    }
-}
 
 extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_value *argv,
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
