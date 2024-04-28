@@ -962,7 +962,7 @@ bool rk_Disk::ReadSecret(const char *path, Span<uint8_t> out_buf)
 
     if (len < 0)
         return false;
-    if (len < offsetof(SecretData, cypher)) {
+    if (len < (Size)offsetof(SecretData, cypher)) {
         LogError("Malformed secret file '%1'", path);
         return false;
     }

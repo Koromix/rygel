@@ -694,7 +694,7 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
     for (const rk_TagInfo &tag: tags) {
         rk_SnapshotInfo snapshot = {};
 
-        if (tag.payload.len < offsetof(SnapshotHeader2, name) + 1 ||
+        if (tag.payload.len < (Size)offsetof(SnapshotHeader2, name) + 1 ||
                 tag.payload.len > RG_SIZE(SnapshotHeader2)) {
             LogError("Malformed snapshot tag for '%1' (ignoring)", tag.hash);
             continue;
