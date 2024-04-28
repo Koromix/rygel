@@ -44,12 +44,34 @@ struct BackRegisters {
     int ret_pop;
 };
 
-extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" double ForwardCallD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" float ForwardCallRF(const void *func, uint8_t *sp, uint8_t **out_old_sp);
-extern "C" double ForwardCallRD(const void *func, uint8_t *sp, uint8_t **out_old_sp);
+extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" double ForwardCallD(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" float ForwardCallRF(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" double ForwardCallRD(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" void ForwardCall(const void* func, Size len)
+{
+    __try
+    {
+        __asm
+        {
+            sub esp, len
+            mov edi, esp
+            mov esi, ebp
+            add esi, 24
+            mov ecx, len
+            shr ecx, 2
+            cld
+            rep movsd
+            call func
+            add esp, len
+        }
+    }
+    __except (UnhandledExceptionFilter(GetExceptionInformation()))
+    {
+    }
+}
 
 extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_value *argv,
                                       uint8_t *old_sp, Span<uint8_t> *new_stack,
@@ -133,6 +155,8 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 {
     uint32_t *args_ptr = nullptr;
     uint32_t *fast_ptr = nullptr;
+
+    uint8_t* sp = mem->stack.end();
 
     // Pass return value in register or through memory
     if (!AllocStack(func->args_size, 16, &args_ptr)) [[unlikely]]
@@ -316,6 +340,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 #undef PUSH_INTEGER_32
 
     new_sp = mem->stack.end();
+    len = sp - new_sp;
 
     return true;
 }
@@ -355,8 +380,8 @@ void CallData::Execute(const FunctionInfo *func, void *native)
 
 #define PERFORM_CALL(Suffix) \
         ([&]() { \
-            auto ret = (func->fast ? ForwardCallR ## Suffix(native, new_sp, &old_sp) \
-                                   : ForwardCall ## Suffix(native, new_sp, &old_sp)); \
+            auto ret = (func->fast ? ForwardCallR ## Suffix(native, new_sp, &old_sp, len) \
+                                   : ForwardCall ## Suffix(native, new_sp, &old_sp, len)); \
             return ret; \
         })()
 
