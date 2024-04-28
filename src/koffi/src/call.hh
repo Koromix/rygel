@@ -63,6 +63,7 @@ class alignas(8) CallData {
 
     uint8_t *new_sp;
     uint8_t *old_sp;
+    Size len;
 
     union {
         int8_t i8;

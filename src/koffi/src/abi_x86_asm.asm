@@ -30,6 +30,10 @@ public ForwardCallRF
 public ForwardCallRD
 
 .model flat, C
+
+.data
+extern ForwardCall:proc
+
 .code
 
 ; Copy function pointer to EAX, in order to save it through argument forwarding.
@@ -38,16 +42,18 @@ public ForwardCallRD
 prologue macro
     endbr32
     push ebp
+    push esi
     mov ebp, esp
-    mov eax, dword ptr [esp+16]
+    mov eax, dword ptr [esp+20]
     mov dword ptr [eax+0], esp
-    mov eax, dword ptr [esp+8]
-    mov esp, dword ptr [esp+12]
+    mov eax, dword ptr [esp+12]
+    mov esi, dword ptr [esp+24]
+    mov esp, dword ptr [esp+16]
 endm
 
 fastcall macro
-    mov ecx, dword ptr [esp+0]
-    mov edx, dword ptr [esp+4]
+    mov ecx, dword ptr [esp+4]
+    mov edx, dword ptr [esp+8]
     add esp, 16
 endm
 
@@ -55,8 +61,13 @@ endm
 ; Once done, restore normal stack pointer and return.
 ; The return value is passed back untouched.
 epilogue macro
-    call eax
+    sub esp, 8
+    push esi
+    push eax
+    call ForwardCall
+    add esp, 16
     mov esp, ebp
+    pop esi
     pop ebp
     ret
 endm
