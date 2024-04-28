@@ -52,6 +52,39 @@ extern "C" float ForwardCallRF(const void *func, uint8_t *sp, uint8_t **out_old_
 extern "C" double ForwardCallRD(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
 extern "C" void ForwardCall(const void* func, Size len)
 {
+    DWORD exceptionCode;
+    __try
+    {
+        __asm
+        {
+            sub esp, 8
+            sub esp, len
+            mov edi, esp
+            mov esi, ebp
+            add esi, 24
+            mov ecx, len
+            shr ecx, 2
+            cld
+            rep movsd
+            call func
+            add esp, len
+            add esp, 8
+        }
+    }
+    __except (exceptionCode = GetExceptionCode(), 
+        UnhandledExceptionFilter(GetExceptionInformation()))
+    {
+        ExitProcess(exceptionCode);
+    }
+}
+extern "C" uint64_t ForwardCallG(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" float ForwardCallF(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" double ForwardCallD(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" uint64_t ForwardCallRG(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" float ForwardCallRF(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" double ForwardCallRD(const void *func, uint8_t *sp, uint8_t **out_old_sp, Size len);
+extern "C" void ForwardCall(const void* func, Size len)
+{
     __try
     {
         __asm
