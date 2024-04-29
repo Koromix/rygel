@@ -76,18 +76,49 @@ static void AppendNormalizedPath(Span<const char> path, Allocator *alloc, HeapAr
     out_paths->Append(path.ptr);
 }
 
-static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<const char *> *out_libraries)
+static void AppendListValues(Span<const char> str, Allocator *alloc, HeapArray<const char *> *out_list)
 {
     RG_ASSERT(alloc);
 
-    while (str.len) {
-        Span<const char> lib = TrimStr(SplitStrAny(str, " ,", &str));
+    HeapArray<char> buf(alloc);
 
-        if (lib.len) {
-            const char *copy = DuplicateString(lib, alloc).ptr;
-            out_libraries->Append(copy);
+#define APPEND_ITEM() \
+        do { \
+            if (buf.len) { \
+                buf.Append(0); \
+                 \
+                const char *copy = buf.TrimAndLeak().ptr; \
+                out_list->Append(copy); \
+            } \
+        } while (false)
+
+    bool quote = false;
+    bool escape = false;
+
+    for (Size i = 0; i < str.len; i++) {
+        if (str[i] == '\\') {
+            buf.Append('\\');
+            escape = true;
+        } else if (str[i] == '"') {
+            if (!escape) {
+                quote = !quote;
+                buf.Append('\\');
+            }
+            buf.Append('"');
+
+            escape = false;
+        } else if (str[i] == ' ' && !quote) {
+            APPEND_ITEM();
+            escape = false;
+        } else {
+            buf.Append(str[i]);
+            escape = false;
         }
     }
+
+    APPEND_ITEM();
+
+#undef APPEND_ITEM
 }
 
 static bool EnumerateSortedFiles(const char *directory, bool recursive,
@@ -156,7 +187,7 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_enable, uint3
     bool valid = true;
 
     while (str.len) {
-        Span<const char> part = TrimStr(SplitStrAny(str, " ,", &str));
+        Span<const char> part = TrimStr(SplitStr(str, ' ', &str));
 
         bool enable;
         if (part.len && part[0] == '-') {
@@ -288,23 +319,9 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                             target_config.src_features.TrySet(filename, features);
                         }
                     } else if (prop.key == "SourceIgnore") {
-                        while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-
-                            if (part.len) {
-                                const char *copy = DuplicateString(part, &set.str_alloc).ptr;
-                                target_config.src_file_set.ignore.Append(copy);
-                            }
-                        }
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.src_file_set.ignore);
                     } else if (prop.key == "ImportFrom") {
-                        while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-
-                            if (part.len) {
-                                const char *copy = DuplicateString(part, &set.str_alloc).ptr;
-                                target_config.imports.Append(copy);
-                            }
-                        }
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.imports);
                     } else if (prop.key == "IncludeDirectory") {
                         AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.include_directories);
                     } else if (prop.key == "ExportDirectory") {
@@ -355,14 +372,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "AssetFile") {
                         AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.pack_file_set.filenames);
                     } else if (prop.key == "AssetIgnore") {
-                        while (prop.value.len) {
-                            Span<const char> part = TrimStr(SplitStrAny(prop.value, " ,", &prop.value));
-
-                            if (part.len) {
-                                const char *copy = DuplicateString(part, &set.str_alloc).ptr;
-                                target_config.pack_file_set.ignore.Append(copy);
-                            }
-                        }
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.pack_file_set.ignore);
                     } else if (prop.key == "PackOptions" || prop.key == "AssetOptions") {
                         target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else {
@@ -643,7 +653,7 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
 
     Span<const char> remain = str;
     while (remain.len) {
-        Span<const char> part = SplitStrAny(remain, ", ", &remain);
+        Span<const char> part = SplitStr(remain, ' ', &remain);
 
         if (TestStrI(part, "Win32")) {
             // Old name, supported for compatibility (easier bisect)
