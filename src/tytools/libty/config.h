@@ -11,14 +11,30 @@
 #ifndef TY_CONFIG_H
 #define TY_CONFIG_H
 
-#define TY_CONFIG_TYCMD_NAME "tycmd"
-#define TY_CONFIG_TYCMD_EXECUTABLE "tycmd"
-#define TY_CONFIG_TYCOMMANDER_NAME "TyCommander"
-#define TY_CONFIG_TYCOMMANDER_EXECUTABLE "tycommander"
-#define TY_CONFIG_TYUPLOADER_NAME "TyUploader"
-#define TY_CONFIG_TYUPLOADER_EXECUTABLE "tyuploader"
+#ifndef TY_CONFIG_TYCMD_NAME
+    #define TY_CONFIG_TYCMD_NAME "tycmd"
+#endif
+#ifndef TY_CONFIG_TYCMD_EXECUTABLE
+    #define TY_CONFIG_TYCMD_EXECUTABLE "tycmd"
+#endif
+#ifndef TY_CONFIG_TYCOMMANDER_NAME
+    #define TY_CONFIG_TYCOMMANDER_NAME "TyCommander"
+#endif
+#ifndef TY_CONFIG_TYCOMMANDER_EXECUTABLE
+    #define TY_CONFIG_TYCOMMANDER_EXECUTABLE "tycommander"
+#endif
+#ifndef TY_CONFIG_TYUPLOADER_NAME
+    #define TY_CONFIG_TYUPLOADER_NAME "TyUploader"
+#endif
+#ifndef TY_CONFIG_TYUPLOADER_EXECUTABLE
+    #define TY_CONFIG_TYUPLOADER_EXECUTABLE "tyuploader"
+#endif
 
-#define TY_CONFIG_URL_WEBSITE "https://koromix.dev/tytools"
-#define TY_CONFIG_URL_BUGS "https://github.com/Koromix/tytools/issues"
+#ifndef TY_CONFIG_URL_WEBSITE
+    #define TY_CONFIG_URL_WEBSITE "https://koromix.dev/tytools"
+#endif
+#ifndef TY_CONFIG_URL_BUGS
+    #define TY_CONFIG_URL_BUGS "https://github.com/Koromix/tytools/issues"
+#endif
 
 #endif
