@@ -189,19 +189,17 @@ int main(int argc, char *argv[])
     const struct command *cmd;
     int r;
 
-    if (argc && *argv[0]) {
-        tycmd_executable_name = argv[0] + strlen(argv[0]);
-        while (tycmd_executable_name > argv[0] && !strchr(TY_PATH_SEPARATORS, tycmd_executable_name[-1]))
-            tycmd_executable_name--;
-    } else {
-#ifdef _WIN32
-        tycmd_executable_name = TY_CONFIG_TYCMD_EXECUTABLE ".exe";
-#else
-        tycmd_executable_name = TY_CONFIG_TYCMD_EXECUTABLE;
-#endif
+    if (argc < 1) {
+        ty_log(TY_LOG_ERROR, "Missing argv[0]");
+        return 1;
     }
 
+    tycmd_executable_name = argv[0] + strlen(argv[0]);
+    while (tycmd_executable_name > argv[0] && !strchr(TY_PATH_SEPARATORS, tycmd_executable_name[-1]))
+        tycmd_executable_name--;
+
     hs_log_set_handler(ty_libhs_log_handler, NULL);
+
     r = ty_models_load_patch(NULL);
     if (r == TY_ERROR_MEMORY)
         return EXIT_FAILURE;

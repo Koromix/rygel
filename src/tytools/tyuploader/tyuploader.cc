@@ -20,14 +20,18 @@
 #include "tyuploader.hpp"
 #include "uploader_window.hpp"
 
+#ifndef TYUPLOADER_TITLE
+    #define TYUPLOADER_TITLE "TyUploader"
+#endif
+
 using namespace std;
 
 TyUploader::TyUploader(int &argc, char *argv[])
     : QApplication(argc, argv)
 {
     setOrganizationName("ty");
-    setDesktopFileName(TY_CONFIG_TYUPLOADER_NAME);
-    setApplicationName(TY_CONFIG_TYUPLOADER_NAME);
+    setDesktopFileName(TYUPLOADER_TITLE);
+    setApplicationName(TYUPLOADER_TITLE);
     setApplicationVersion(ty_version_string());
 
     ty_message_redirect([](const ty_message_data *msg, void *) {

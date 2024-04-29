@@ -134,16 +134,16 @@ MainWindow::MainWindow(QWidget *parent)
     connect(actionPreferences, &QAction::triggered, this, &MainWindow::openPreferences);
 
     // About menu
-    if (TY_CONFIG_URL_WEBSITE[0]) {
-        connect(actionWebsite, &QAction::triggered, &AboutDialog::openWebsite);
-    } else {
-        actionWebsite->setVisible(false);
-    }
-    if (TY_CONFIG_URL_BUGS[0]) {
-        connect(actionReportBug, &QAction::triggered, &AboutDialog::openBugReports);
-    } else {
-        actionReportBug->setVisible(false);
-    }
+#ifdef WEBSITE_URL
+    connect(actionWebsite, &QAction::triggered, &AboutDialog::openWebsite);
+#else
+    actionWebsite->setVisible(false);
+#endif
+#ifdef BUGS_URL
+    connect(actionReportBug, &QAction::triggered, &AboutDialog::openBugReports);
+#else
+    actionReportBug->setVisible(false);
+#endif
 
     connect(actionAbout, &QAction::triggered, this, &MainWindow::openAboutDialog);
 

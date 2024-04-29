@@ -31,6 +31,10 @@
 #include "task.hpp"
 #include "tycommander.hpp"
 
+#ifndef TYCOMMANDER_TITLE
+    #define TYCOMMANDER_TITLE "TyCommander"
+#endif
+
 struct ClientCommand {
     const char *name;
 
@@ -61,8 +65,8 @@ TyCommander::TyCommander(int &argc, char *argv[])
     : QApplication(argc, argv), argc_(argc), argv_(argv)
 {
     setOrganizationName("TyTools");
-    setDesktopFileName(TY_CONFIG_TYCOMMANDER_NAME);
-    setApplicationName(TY_CONFIG_TYCOMMANDER_NAME);
+    setDesktopFileName(TYCOMMANDER_TITLE);
+    setApplicationName(TYCOMMANDER_TITLE);
     setApplicationVersion(ty_version_string());
 
     // This can be triggered from multiple threads, but Qt can queue signals appropriately
@@ -110,7 +114,7 @@ TyCommander::~TyCommander()
 QString TyCommander::clientFilePath()
 {
 #ifdef _WIN32
-    return applicationDirPath() + "/" TY_CONFIG_TYCOMMANDER_EXECUTABLE "C.exe";
+    return applicationDirPath() + "/TyCommanderC.exe";
 #else
     return applicationFilePath();
 #endif

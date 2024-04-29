@@ -25,7 +25,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include "src/tytools/libhs/common.h"
-#include "config.h"
 
 _HS_BEGIN_C
 

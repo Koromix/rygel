@@ -37,7 +37,6 @@ UploaderWindow::UploaderWindow(QWidget *parent)
     setupUi(this);
     setWindowTitle(QApplication::applicationName());
 
-
     if (QFile::exists(":/logo")) {
         QStyleHints *hints = QApplication::styleHints();
 
@@ -50,16 +49,16 @@ UploaderWindow::UploaderWindow(QWidget *parent)
     connect(actionQuit, &QAction::triggered, this, &TyUploader::quit);
 
     connect(actionOpenLog, &QAction::triggered, tyUploader, &TyUploader::showLogWindow);
-    if (TY_CONFIG_URL_WEBSITE[0]) {
-        connect(actionWebsite, &QAction::triggered, this, &UploaderWindow::openWebsite);
-    } else {
-        actionWebsite->setVisible(false);
-    }
-    if (TY_CONFIG_URL_BUGS[0]) {
-        connect(actionReportBug, &QAction::triggered, this, &UploaderWindow::openBugReports);
-    } else {
-        actionReportBug->setVisible(false);
-    }
+#ifdef WEBSITE_URL
+    connect(actionWebsite, &QAction::triggered, this, &UploaderWindow::openWebsite);
+#else
+    actionWebsite->setVisible(false);
+#endif
+#ifdef BUGS_URL
+    connect(actionReportBug, &QAction::triggered, this, &UploaderWindow::openBugReports);
+#else
+    actionReportBug->setVisible(false);
+#endif
 
     connect(boardComboBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             this, &UploaderWindow::currentChanged);
@@ -102,12 +101,16 @@ void UploaderWindow::uploadNewToCurrent()
 
 void UploaderWindow::openWebsite()
 {
-    QDesktopServices::openUrl(QUrl(TY_CONFIG_URL_WEBSITE));
+#ifdef WEBSITE_URL
+    QDesktopServices::openUrl(QUrl(WEBSITE_URL));
+#endif
 }
 
 void UploaderWindow::openBugReports()
 {
-    QDesktopServices::openUrl(QUrl(TY_CONFIG_URL_BUGS));
+#ifdef BUGS_URL
+    QDesktopServices::openUrl(QUrl(BUGS_URL));
+#endif
 }
 
 void UploaderWindow::adaptLogo(Qt::ColorScheme scheme)
