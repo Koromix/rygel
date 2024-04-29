@@ -245,7 +245,7 @@ bool GitVersioneer::Prepare(const char *root_directory)
         if (StartsWith(buf, "ref: ")) {
             Span<const char> ref = TrimStr(buf.Take(4, buf.len - 4));
 
-            const char *filename = Fmt(&str_alloc, ".git%/%1", TrimStr(buf.Take(4, buf.len - 4))).ptr;
+            const char *filename = Fmt(&str_alloc, "%1%/%2", repo_directory, TrimStr(buf.Take(4, buf.len - 4))).ptr;
 
             if (TestFile(filename)) {
                 buf.len = ReadFile(filename, buf.data);

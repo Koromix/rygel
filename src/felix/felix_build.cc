@@ -707,27 +707,37 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         }
     }
 
-    if (TestFile(".git")) {
-        if (!quiet) {
-            LogInfo("Computing versions...");
-        }
-        if (GitVersioneer::IsAvailable()) {
-            GitVersioneer versioneer;
+    // Find git repository
+    for (int i = 0; i < 4; i++) {
+        LocalArray<char, 256> git;
+        git.len = Fmt(git.data, ".%1/.git", FmtArg("/..").Repeat(i)).len;
 
-            if (versioneer.Prepare(".")) {
-                for (Size i = 0; i < enabled_targets.len; i++) {
-                    EnabledTarget *it = &enabled_targets[i];
+        if (TestFile(git.data)) {
+            git[git.len - 4] = 0;
 
-                    if (it->target->type != TargetType::Executable)
-                        continue;
-
-                    // Continue even if versioning fails
-                    const char *version = versioneer.Version(it->target->version_tag);
-                    it->version = version ? DuplicateString(version, &temp_alloc).ptr : nullptr;
-                }
+            if (!quiet) {
+                LogInfo("Computing versions...");
             }
-        } else {
-            LogWarning("Built without git versioning support");
+            if (GitVersioneer::IsAvailable()) {
+                GitVersioneer versioneer;
+
+                if (versioneer.Prepare(git.data)) {
+                    for (Size i = 0; i < enabled_targets.len; i++) {
+                        EnabledTarget *it = &enabled_targets[i];
+
+                        if (it->target->type != TargetType::Executable)
+                            continue;
+
+                        // Continue even if versioning fails
+                        const char *version = versioneer.Version(it->target->version_tag);
+                        it->version = version ? DuplicateString(version, &temp_alloc).ptr : nullptr;
+                    }
+                }
+            } else {
+                LogWarning("Built without git versioning support");
+            }
+
+            break;
         }
     }
 
