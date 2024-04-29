@@ -312,7 +312,7 @@ Options:
 
     // Run macdeployqt file
     {
-        const char *cmd_line = Fmt(&temp_alloc, "\"%1%/macdeployqt\" \"%2\"", qt.binaries, output_bundle).ptr;
+        const char *cmd_line = Fmt(&temp_alloc, "\"%1\" \"%2\"", qt.macdeployqt, output_bundle).ptr;
 
         HeapArray<char> output;
         if (!ReadCommandOutput(cmd_line, &output)) {

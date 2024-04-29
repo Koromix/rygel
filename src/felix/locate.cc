@@ -261,6 +261,13 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
                     const char *binary = Fmt(alloc, "%1%/uic%2", value, RG_EXECUTABLE_EXTENSION).ptr;
                     qt.uic = TestFile(binary, FileType::File) ? binary : nullptr;
                 }
+
+#ifdef __APPLE__
+                if (!qt.macdeployqt) {
+                    const char *binary = Fmt(alloc, "%1%/macdeployqt", value).ptr;
+                    qt.macdeployqt = TestFile(binary, FileType::File) ? binary : nullptr;
+                }
+#endif
             } else if (key == "QT_INSTALL_HEADERS") {
                 qt.headers = DuplicateString(value, alloc).ptr;
             } else if (key == "QT_INSTALL_LIBS") {
