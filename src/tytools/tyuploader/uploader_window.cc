@@ -11,6 +11,7 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QUrl>
+#include <QStyleHints>
 
 #include "src/tytools/tycommander/board.hpp"
 #include "src/tytools/tycommander/monitor.hpp"
@@ -36,8 +37,13 @@ UploaderWindow::UploaderWindow(QWidget *parent)
     setupUi(this);
     setWindowTitle(QApplication::applicationName());
 
-    if (QFile::exists(":/logo"))
-        logoLabel->setPixmap(QPixmap(":/logo"));
+
+    if (QFile::exists(":/logo")) {
+        QStyleHints *hints = QApplication::styleHints();
+
+        connect(hints, &QStyleHints::colorSchemeChanged, this, &UploaderWindow::adaptLogo);
+        adaptLogo(hints->colorScheme());
+    }
     resize(0, 0);
 
     connect(actionUpload, &QAction::triggered, this, &UploaderWindow::uploadNewToCurrent);
@@ -102,6 +108,15 @@ void UploaderWindow::openWebsite()
 void UploaderWindow::openBugReports()
 {
     QDesktopServices::openUrl(QUrl(TY_CONFIG_URL_BUGS));
+}
+
+void UploaderWindow::adaptLogo(Qt::ColorScheme scheme)
+{
+    if (scheme == Qt::ColorScheme::Dark && QFile::exists(":/dark")) {
+        logoLabel->setPixmap(QPixmap(":/dark"));
+    } else {
+        logoLabel->setPixmap(QPixmap(":/logo"));
+    }
 }
 
 void UploaderWindow::changeCurrentBoard(Board *board)
