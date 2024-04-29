@@ -647,7 +647,7 @@ bool Builder::UpdateVersionSource(const char *target, const char *version, const
               "const char *FelixTarget = \"%1\";\n"
               "const char *FelixVersion = \"%2\";\n"
               "const char *FelixCompiler = \"%3 (%4)\";\n",
-        target, version ? version : "(unknown version)",
+        target, version ? version : "UNKNOWN",
         build.compiler->name, FmtFlags(build.features, CompileFeatureOptions));
 
     bool new_version;
