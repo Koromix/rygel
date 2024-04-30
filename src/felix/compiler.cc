@@ -1919,7 +1919,8 @@ class TeensyCompiler final: public Compiler {
         Teensy35,
         Teensy36,
         Teensy40,
-        Teensy41
+        Teensy41,
+        TeensyMM
     };
 
     const char *arduino;
@@ -1955,6 +1956,7 @@ public:
             case HostPlatform::Teensy36: { compiler->model = Model::Teensy36; } break;
             case HostPlatform::Teensy40: { compiler->model = Model::Teensy40; } break;
             case HostPlatform::Teensy41: { compiler->model = Model::Teensy41; } break;
+            case HostPlatform::TeensyMM: { compiler->model = Model::TeensyMM; } break;
 
             default: { RG_UNREACHABLE(); } break;
         }
@@ -2025,7 +2027,8 @@ public:
             case Model::Teensy35:
             case Model::Teensy36: { dirname = Fmt(alloc, "%1%/hardware/teensy/avr/cores/teensy3", arduino).ptr; } break;
             case Model::Teensy40:
-            case Model::Teensy41: { dirname = Fmt(alloc, "%1%/hardware/teensy/avr/cores/teensy4", arduino).ptr; } break;
+            case Model::Teensy41:
+            case Model::TeensyMM: { dirname = Fmt(alloc, "%1%/hardware/teensy/avr/cores/teensy4", arduino).ptr; } break;
         }
         RG_ASSERT(dirname);
 
@@ -2152,6 +2155,8 @@ public:
                                               " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%2", arduino, set_fcpu ? " -DF_CPU=600000000" : ""); } break;
             case Model::Teensy41: { Fmt(&buf, " -DARDUINO_TEENSY41 \"-I%1/hardware/teensy/avr/cores/teensy4\" -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
                                               " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%2", arduino, set_fcpu ? " -DF_CPU=600000000" : ""); } break;
+            case Model::TeensyMM: { Fmt(&buf, " -DARDUINO_TEENSY_MICROMOD \"-I%1/hardware/teensy/avr/cores/teensy4\" -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%2", arduino, set_fcpu ? " -DF_CPU=600000000" : ""); } break;
         }
         if (src_type == SourceType::Cxx) {
             Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
@@ -2269,6 +2274,7 @@ public:
                                               " -fsingle-precision-constant \"-T%1/hardware/teensy/avr/cores/teensy3/mk66fx1m0.ld\"", arduino); } break;
             case Model::Teensy40: { Fmt(&buf, " -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math \"-T%1/hardware/teensy/avr/cores/teensy4/imxrt1062.ld\"", arduino); } break;
             case Model::Teensy41: { Fmt(&buf, " -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math \"-T%1/hardware/teensy/avr/cores/teensy4/imxrt1062_t41.ld\"", arduino); } break;
+            case Model::TeensyMM: { Fmt(&buf, " -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math \"-T%1/hardware/teensy/avr/cores/teensy4/imxrt1062_mm.ld\"", arduino); } break;
         }
         Fmt(&buf, " -lm -lstdc++");
 

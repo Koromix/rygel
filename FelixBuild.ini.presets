@@ -89,3 +89,7 @@ Features = Warnings, OptimizeSize
 [Teensy41]
 Host = Teensy41
 Features = Warnings, OptimizeSize
+
+[TeensyMM]
+Host = TeensyMM
+Features = Warnings, OptimizeSize

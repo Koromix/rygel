@@ -36,7 +36,8 @@ enum class HostPlatform {
     Teensy35,
     Teensy36,
     Teensy40,
-    Teensy41
+    Teensy41,
+    TeensyMM
 };
 static const char *const HostPlatformNames[] = {
     "Desktop/Windows",
@@ -57,7 +58,8 @@ static const char *const HostPlatformNames[] = {
     "Embedded/Teensy/ARM/Teensy35",
     "Embedded/Teensy/ARM/Teensy36",
     "Embedded/Teensy/ARM/Teensy40",
-    "Embedded/Teensy/ARM/Teensy41"
+    "Embedded/Teensy/ARM/Teensy41",
+    "Embedded/Teensy/ARM/TeensyMM"
 };
 
 #if defined(_WIN32)
