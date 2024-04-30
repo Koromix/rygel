@@ -545,7 +545,7 @@ public:
             Fmt(&buf, " -include \"%1\"", pch_filename);
         }
         for (const char *definition: definitions) {
-            Fmt(&buf, " \"-D%1\"", definition);
+            Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
@@ -1108,7 +1108,7 @@ public:
             Fmt(&buf, " -include \"%1\"", pch_filename);
         }
         for (const char *definition: definitions) {
-            Fmt(&buf, " \"-D%1\"", definition);
+            Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
@@ -1505,7 +1505,7 @@ public:
             Fmt(&buf, " \"/FI%1\" \"/Yu%1\" \"/Fp%1.pch\"", pch_filename);
         }
         for (const char *definition: definitions) {
-            Fmt(&buf, " \"/D%1\"", definition);
+            Fmt(&buf, " \"/%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"/I%1\"", include_directory);
@@ -1879,7 +1879,7 @@ public:
             Fmt(&buf, " -include \"%1\"", pch_filename);
         }
         for (const char *definition: definitions) {
-            Fmt(&buf, " \"-D%1\"", definition);
+            Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
@@ -2156,7 +2156,7 @@ public:
             Fmt(&buf, " -include \"%1\"", pch_filename);
         }
         for (const char *definition: definitions) {
-            Fmt(&buf, " \"-D%1\"", definition);
+            Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
         }
         for (const char *include_directory: include_directories) {
             Fmt(&buf, " \"-I%1\"", include_directory);
