@@ -318,7 +318,7 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
     return true;
 }
 
-bool FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc)
+bool FindArduino(const char *name, const char *compiler, Span<char> out_arduino, Span<char> out_cc)
 {
 #ifdef _WIN32
     wchar_t buf[2048];
@@ -335,16 +335,16 @@ bool FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_
     if (!arduino)
         return false;
 
-    Size pos = ConvertWin32WideToUtf8(buf, out_cc);
-    if (pos < 0)
+    Size end = ConvertWin32WideToUtf8(buf, out_arduino);
+    if (end < 0)
         return false;
 
-    Span<char> remain = out_cc.Take(pos, out_cc.len - pos);
-    Fmt(remain, "%/%1.exe", compiler);
-    for (Size i = 0; remain.ptr[i]; i++) {
-        char c = remain.ptr[i];
-        remain.ptr[i] = (c == '/') ? '\\' : c;
+    for (Size i = 0; i < end; i++) {
+        char c = out_arduino.ptr[i];
+        out_arduino.ptr[i] = (c == '/') ? '\\' : c;
     }
+
+    Fmt(out_cc, "%1%/%2.exe", out_arduino.ptr, compiler);
 
     if (TestFile(out_cc.ptr, FileType::File)) {
         LogDebug("Found %1 compiler for Teensy: '%2'", name, out_cc.ptr);
@@ -378,9 +378,11 @@ bool FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_
                 prefix.len--;
             }
 
-            Fmt(out_cc, "%1%/%2%/%3", prefix, test.path, compiler);
+            Fmt(out_arduino, "%1%/%2", prefix, test.path);
+            Fmt(out_cc, "%1%/%2", out_arduino.ptr, compiler);
         } else {
-            Fmt(out_cc, "%1%/%2", test.path, compiler);
+            CopyString(test.path, out_arduino);
+            Fmt(out_cc, "%1%/%2", out_arduino.ptr, compiler);
         }
 
         if (TestFile(out_cc.ptr, FileType::File)) {
@@ -390,7 +392,9 @@ bool FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_
     }
 #endif
 
+    out_arduino[0] = 0;
     out_cc[0] = 0;
+
     return false;
 }
 

@@ -38,6 +38,6 @@ struct QtInfo {
 
 bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *alloc, QtInfo *out_qt);
 
-bool FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_cc);
+bool FindArduino(const char *name, const char *compiler, Span<char> out_arduino, Span<char> out_cc);
 
 }
