@@ -114,10 +114,6 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
     Span<const char> cc = SplitStr(str, ':', &str);
     Span<const char> ld = SplitStr(str, ':', &str);
 
-    // Defaults
-    out_spec->platform = NativePlatform;
-    out_spec->architecture = NativeArchitecture;
-
     // Short form with architecture but native platform
     if (TestStrI(platform, "Native")) {
         out_spec->architecture = NativeArchitecture;
