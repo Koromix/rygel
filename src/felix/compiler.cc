@@ -2442,7 +2442,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             std::call_once(flag, []() { FindArduinoCompiler("GCC AVR", "hardware/tools/avr/bin/avr-gcc", cc); });
 
             if (!cc[0]) {
-                LogError("Path to Teensy compiler must be explicitly specified");
+                LogError("Cannot find Arduino, set ARDUINO_PATH or use a compatible AVR compiler with --host");
                 return nullptr;
             }
 
@@ -2463,7 +2463,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             std::call_once(flag, []() { FindArduinoCompiler("GCC ARM", "hardware/tools/arm/bin/arm-none-eabi-gcc", cc); });
 
             if (!cc[0]) {
-                LogError("Path to Teensy compiler must be explicitly specified");
+                LogError("Cannot find Arduino, set ARDUINO_PATH or use a compatible ARM compiler with --host");
                 return nullptr;
             }
 

@@ -357,9 +357,11 @@ bool FindArduinoCompiler(const char *name, const char *compiler, Span<char> out_
     };
 
     static const TestPath test_paths[] = {
+        { nullptr, "/opt/arduino" },
         { nullptr, "/usr/share/arduino" },
         { nullptr, "/usr/local/share/arduino" },
         { "HOME",  ".local/share/arduino" },
+        { "ARDUINO_PATH", "." },
 #ifdef __APPLE__
         { nullptr, "/Applications/Arduino.app/Contents/Java" }
 #endif
