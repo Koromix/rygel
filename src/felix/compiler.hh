@@ -215,10 +215,6 @@ public:
     virtual const char *GetLinkExtension(TargetType type) const = 0;
     virtual const char *GetPostExtension(TargetType type) const = 0;
 
-    virtual bool GetCore(Span<const char *const> definitions, Allocator *alloc,
-                         HeapArray<const char *> *out_filenames,
-                         HeapArray<const char *> *out_definitions, const char **out_ns) const = 0;
-
     virtual void MakePackCommand(Span<const char *const> pack_filenames,
                                  const char *pack_options, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;

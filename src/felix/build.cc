@@ -213,56 +213,6 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         } break;
     }
 
-    // Core platform source files (e.g. Teensy core)
-    TargetInfo *core = nullptr;
-    const char *ns = nullptr;
-    {
-        HeapArray<const char *> core_filenames;
-        HeapArray<const char *> core_definitions;
-        if (!build.compiler->GetCore(target.definitions, &str_alloc,
-                                     &core_filenames, &core_definitions, &ns))
-            return false;
-
-        if (core_filenames.len) {
-            RG_ASSERT(ns);
-
-            core = core_targets_map.FindValue(ns, nullptr);
-
-            if (!core) {
-                core = core_targets.AppendDefault();
-
-                core->name = Fmt(&str_alloc, "Cores/%1", ns).ptr;
-                core->type = TargetType::Library;
-                core->platforms = 1u << (int)build.compiler->platform;
-                std::swap(core->definitions, core_definitions);
-                core->disable_features = (int)CompileFeature::Warnings;
-
-                for (const char *core_filename: core_filenames) {
-                    SourceFileInfo src = {};
-
-                    src.target = core;
-                    src.filename = core_filename;
-                    DetermineSourceType(core_filename, &src.type);
-
-                    const SourceFileInfo *ptr = core_sources.Append(src);
-                    core->sources.Append(ptr);
-                }
-
-                core_targets_map.Set(ns, core);
-            }
-        }
-    }
-
-    // Core object files (e.g. Teensy core)
-    if (core) {
-        for (const SourceFileInfo *src: core->sources) {
-            RG_ASSERT(src->type == SourceType::C || src->type == SourceType::Cxx);
-
-            if (!AddCppSource(*src, core->name, &obj_filenames))
-                return false;
-        }
-    }
-
     Size prev_obj_filenames = obj_filenames.len;
 
     // Start with pregeneration steps (such as UI to header file)
@@ -278,7 +228,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         switch (src->type) {
             case SourceType::C:
             case SourceType::Cxx: {
-                if (!AddCppSource(*src, ns, &obj_filenames))
+                if (!AddCppSource(*src, &obj_filenames))
                     return false;
             } break;
 
@@ -332,7 +282,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
     // Assets
     if (pack_filenames.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_assets.c", cache_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_pack.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
@@ -344,7 +294,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             build.compiler->MakePackCommand(pack_filenames, target.pack_options, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Pack %!..+%1%!0 assets", target.name).ptr;
-            AppendNode(text, src_filename, cmd, pack_filenames, nullptr);
+            AppendNode(text, src_filename, cmd, pack_filenames);
         }
 
         // Build object file
@@ -361,7 +311,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             }
 
             const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 assets", target.name).ptr;
-            AppendNode(text, obj_filename, cmd, src_filename, nullptr);
+            AppendNode(text, obj_filename, cmd, src_filename);
         }
 
         // Build module if needed
@@ -374,7 +324,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                             features, build.env, module_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(module_filename)).ptr;
-            AppendNode(text, module_filename, cmd, obj_filename, nullptr);
+            AppendNode(text, module_filename, cmd, obj_filename);
         } else {
             obj_filenames.Append(obj_filename);
         }
@@ -383,7 +333,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     // Some compilers (such as MSVC) also build PCH object files that need to be linked
     if (build.features & (int)CompileFeature::PCH) {
         for (const char *filename: target.pchs) {
-            const char *pch_filename = build_map.FindValue({ ns, filename }, nullptr);
+            const char *pch_filename = build_map.FindValue(filename, nullptr);
 
             if (pch_filename) {
                 const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
@@ -397,7 +347,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
     // Version string
     if (target.type == TargetType::Executable) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2.c", cache_directory, target.name).ptr;
+        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_version.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
         uint32_t features = target.CombineFeatures(build.features);
 
@@ -410,7 +360,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 version file", target.name).ptr;
-        AppendNode(text, obj_filename, cmd, src_filename, ns);
+        AppendNode(text, obj_filename, cmd, src_filename);
 
         obj_filenames.Append(obj_filename);
     }
@@ -418,8 +368,8 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     // Resource file (Windows only)
     if (build.compiler->platform == HostPlatform::Windows &&
             target.type == TargetType::Executable) {
-        const char *rc_filename = Fmt(&str_alloc, "%1%/Misc%/%2.rc", cache_directory, target.name).ptr;
-        const char *res_filename = Fmt(&str_alloc, "%1%/Misc%/%2.res", cache_directory, target.name).ptr;
+        const char *rc_filename = Fmt(&str_alloc, "%1%/Misc%/%2_res.rc", cache_directory, target.name).ptr;
+        const char *res_filename = Fmt(&str_alloc, "%1%/Misc%/%2_res.res", cache_directory, target.name).ptr;
 
         if (!UpdateResourceFile(target.name, target.icon_filename, build.fake, rc_filename))
             return false;
@@ -429,9 +379,9 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
         const char *text = Fmt(&str_alloc, "Build %!..+%1%!0 resource file", target.name).ptr;
         if (target.icon_filename) {
-            AppendNode(text, res_filename, cmd, { rc_filename, target.icon_filename }, ns);
+            AppendNode(text, res_filename, cmd, { rc_filename, target.icon_filename });
         } else {
-            AppendNode(text, res_filename, cmd, rc_filename, ns);
+            AppendNode(text, res_filename, cmd, rc_filename);
         }
 
         obj_filenames.Append(res_filename);
@@ -457,7 +407,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                             features, build.env, link_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(link_filename)).ptr;
-            AppendNode(text, link_filename, cmd, obj_filenames, ns);
+            AppendNode(text, link_filename, cmd, obj_filenames);
         }
 
         const char *target_filename;
@@ -468,7 +418,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             build.compiler->MakePostCommand(link_filename, target_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Convert %!..+%1%!0", GetLastDirectoryAndName(target_filename)).ptr;
-            AppendNode(text, target_filename, cmd, link_filename, ns);
+            AppendNode(text, target_filename, cmd, link_filename);
         } else {
             target_filename = link_filename;
         }
@@ -494,7 +444,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             }
 
             const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", GetLastDirectoryAndName(bundle_filename)).ptr;
-            AppendNode(text, bundle_filename, cmd, target_filename, ns);
+            AppendNode(text, bundle_filename, cmd, target_filename);
 
             target_filename = bundle_filename;
         }
@@ -510,7 +460,7 @@ bool Builder::AddSource(const SourceFileInfo &src)
 {
     switch (src.type) {
         case SourceType::C:
-        case SourceType::Cxx: return AddCppSource(src, nullptr, nullptr);
+        case SourceType::Cxx: return AddCppSource(src, nullptr);
         case SourceType::Esbuild: return AddEsbuildSource(src);
         case SourceType::QtUi: return AddQtUiSource(src);
 
@@ -523,7 +473,7 @@ bool Builder::AddSource(const SourceFileInfo &src)
     RG_UNREACHABLE();
 }
 
-bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *out_objects)
+bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *out_objects)
 {
     RG_ASSERT(src.type == SourceType::C || src.type == SourceType::Cxx);
 
@@ -548,10 +498,10 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
         }
 
         if (pch) {
-            pch_filename = build_map.FindValue({ ns, pch->filename }, nullptr);
+            pch_filename = build_map.FindValue(pch->filename, nullptr);
 
             if (!pch_filename) {
-                pch_filename = BuildObjectPath(ns, pch->filename, cache_directory, pch_ext);
+                pch_filename = BuildObjectPath(pch->filename, cache_directory, "", pch_ext);
 
                 const char *cache_filename = build.compiler->GetPchCache(pch_filename, &str_alloc);
 
@@ -582,7 +532,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
                 }
 
                 const char *text = Fmt(&str_alloc, "Precompile %!..+%1%!0", pch->filename).ptr;
-                if (AppendNode(text, pch_filename, cmd, pch->filename, ns)) {
+                if (AppendNode(text, pch_filename, cmd, pch->filename)) {
                     if (!build.fake && !CreatePrecompileHeader(pch->filename, pch_filename))
                         return false;
                 }
@@ -590,11 +540,11 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
         }
     }
 
-    const char *obj_filename = build_map.FindValue({ ns, src.filename }, nullptr);
+    const char *obj_filename = build_map.FindValue(src.filename, nullptr);
 
     // Build main object
     if (!obj_filename) {
-        obj_filename = BuildObjectPath(ns, src.filename, cache_directory, build.compiler->GetObjectExtension());
+        obj_filename = BuildObjectPath(src.filename, cache_directory, "", build.compiler->GetObjectExtension());
 
         uint32_t features = build.features;
         features = src.target->CombineFeatures(features);
@@ -612,8 +562,8 @@ bool Builder::AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
-        if (pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename }, ns)
-                         : AppendNode(text, obj_filename, cmd, src.filename, ns)) {
+        if (pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename })
+                         : AppendNode(text, obj_filename, cmd, src.filename)) {
             if (!build.fake && !EnsureDirectoryExists(obj_filename))
                 return false;
         }
@@ -665,18 +615,6 @@ bool Builder::UpdateVersionSource(const char *target, const char *version, const
     } else {
         return true;
     }
-}
-
-const char *Builder::GetTargetIncludeDirectory(const TargetInfo &target)
-{
-    bool inserted;
-    const char **ptr = target_headers.TrySet(target.name, "", &inserted);
-
-    if (inserted) {
-        *ptr = Fmt(&str_alloc, "%1%/Headers/%2", cache_directory, target.name).ptr;
-    }
-
-    return *ptr;
 }
 
 bool Builder::Build(int jobs, bool verbose)
@@ -912,22 +850,25 @@ void Builder::LoadCache()
     clear_guard.Disable();
 }
 
-const char *Builder::BuildObjectPath(const char *ns, const char *src_filename,
-                                     const char *output_directory, const char *suffix)
+const char *Builder::BuildObjectPath(Span<const char> src_filename, const char *output_directory,
+                                     const char *prefix, const char *suffix)
 {
     if (PathIsAbsolute(src_filename)) {
-        src_filename += strcspn(src_filename, RG_PATH_SEPARATORS) + 1;
+        SplitStrAny(src_filename, RG_PATH_SEPARATORS, &src_filename);
     }
 
     HeapArray<char> buf(&str_alloc);
 
-    Size offset;
-    if (ns) {
-        offset = Fmt(&buf, "%1%/Objects%/@%2%/", output_directory, ns).len;
+    Span<const char> src_directory;
+    Span<const char> src_name = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS, &src_directory);
+
+    Size offset = Fmt(&buf, "%1%/Objects%/", output_directory).len;
+
+    if (src_directory.len) {
+        Fmt(&buf, "%1%/%2%3%4", src_directory, prefix, src_name, suffix);
     } else {
-        offset = Fmt(&buf, "%1%/Objects%/", output_directory).len;
+        Fmt(&buf, "%1%2%3", prefix, src_name, suffix);
     }
-    Fmt(&buf, "%1%2", src_filename, suffix);
 
     // Replace '..' components with '__'
     {
@@ -952,11 +893,11 @@ static inline const char *CleanFileName(const char *str)
 }
 
 bool Builder::AppendNode(const char *text, const char *dest_filename, const Command &cmd,
-                         Span<const char *const> src_filenames, const char *ns)
+                         Span<const char *const> src_filenames)
 {
     RG_ASSERT(src_filenames.len >= 1);
 
-    build_map.Set({ ns, CleanFileName(src_filenames[0]) }, dest_filename);
+    build_map.Set(CleanFileName(src_filenames[0]), dest_filename);
     total++;
 
     if (NeedsRebuild(dest_filename, cmd, src_filenames)) {

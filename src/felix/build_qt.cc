@@ -67,7 +67,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
 {
     RG_ASSERT(src.type == SourceType::QtUi);
 
-    const char *header_filename = build_map.FindValue({ nullptr, src.filename }, nullptr);
+    const char *header_filename = build_map.FindValue(src.filename, nullptr);
 
     // First, we need Qt!
     if (!header_filename && !PrepareQtSdk(src.target->qt_version))
@@ -75,13 +75,10 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
 
     // Run Qt UI builder
     if (!header_filename) {
-        const char *target_includes = GetTargetIncludeDirectory(*src.target);
+        Span<const char> filename_noext;
+        SplitStrReverse(src.filename, '.', &filename_noext);
 
-        // Get basename without extension
-        Span<const char> basename = SplitStrReverseAny(src.filename, RG_PATH_SEPARATORS);
-        SplitStrReverse(basename, '.', &basename);
-
-        header_filename = Fmt(&str_alloc, "%1%/ui_%2.h", target_includes, basename).ptr;
+        header_filename = BuildObjectPath(filename_noext, cache_directory, "ui_", ".h");
 
         Command cmd = {};
 
@@ -96,7 +93,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
         }
 
         const char *text = Fmt(&str_alloc, "Build UI %!..+%1%!0", src.filename).ptr;
-        if (AppendNode(text, header_filename, cmd, { src.filename, qt->uic }, nullptr)) {
+        if (AppendNode(text, header_filename, cmd, { src.filename, qt->uic })) {
             if (!build.fake && !EnsureDirectoryExists(header_filename))
                 return nullptr;
         }
@@ -107,7 +104,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
 
 const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames)
 {
-    const char *cpp_filename = build_map.FindValue({ nullptr, qrc_filenames[0] }, nullptr);
+    const char *cpp_filename = build_map.FindValue(qrc_filenames[0], nullptr);
 
     // First, we need Qt!
     if (!cpp_filename && !PrepareQtSdk(target.qt_version))
@@ -132,10 +129,10 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
         }
 
         const char *text = Fmt(&str_alloc, "Assemble %!..+%1%!0 resource file", target.name).ptr;
-        AppendNode(text, cpp_filename, cmd, qrc_filenames, nullptr);
+        AppendNode(text, cpp_filename, cmd, qrc_filenames);
     }
 
-    const char *obj_filename = build_map.FindValue({ nullptr, cpp_filename }, nullptr);
+    const char *obj_filename = build_map.FindValue(cpp_filename, nullptr);
 
     if (!obj_filename) {
         obj_filename = Fmt(&str_alloc, "%1%2", cpp_filename, build.compiler->GetObjectExtension()).ptr;
@@ -147,8 +144,8 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
                                           nullptr, {}, {}, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", cpp_filename).ptr;
-        AppendNode(text, obj_filename, cmd, cpp_filename, nullptr);
+        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 QRC resources", target.name).ptr;
+        AppendNode(text, obj_filename, cmd, cpp_filename);
     }
 
     return obj_filename;
@@ -159,12 +156,10 @@ bool Builder::AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *
     if (!PrepareQtSdk(src.target->qt_version))
         return false;
 
-    const char *target_includes = GetTargetIncludeDirectory(*src.target);
-    out_list->Append(target_includes);
-
     const char *src_directory = DuplicateString(GetPathDirectory(src.filename), &str_alloc).ptr;
-    out_list->Append(src_directory);
+    const char *misc_includes = nullptr;
 
+    out_list->Append(src_directory);
     out_list->Append(qt->headers);
 
     for (const char *component: src.target->qt_components) {
@@ -173,13 +168,18 @@ bool Builder::AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *
         RG_ASSERT(build.compiler->platform != HostPlatform::macOS);
 #else
         if (build.compiler->platform == HostPlatform::macOS) {
+            if (!misc_includes) {
+                misc_includes = Fmt(&str_alloc, "%1%/Misc/%2", cache_directory, src.target->name).ptr;
+                out_list->Append(misc_includes);
+            }
+
             const char *dirname = Fmt(&str_alloc, "%1%/Qt%2.framework/Versions/Current/Headers", qt->libraries, component).ptr;
 
             if (TestFile(dirname, FileType::Directory)) {
-                const char *linkname = Fmt(&str_alloc, "%1%/Qt%2", target_includes, component).ptr;
+                const char *linkname = Fmt(&str_alloc, "%1%/Qt%2", misc_includes, component).ptr;
 
                 if (!build.fake && !TestFile(linkname, FileType::Link)) {
-                    if (!MakeDirectoryRec(target_includes))
+                    if (!MakeDirectoryRec(misc_includes))
                         return false;
                     if (symlink(dirname, linkname) < 0) {
                         LogError("Failed to create symbolic link '%1': %2", linkname, strerror(errno));
@@ -335,7 +335,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
             const char *header_filename = Fmt(&str_alloc, "%1%2", base, ext).ptr;
 
             if (TestFile(header_filename, FileType::File)) {
-                moc_filename = BuildObjectPath("moc", header_filename, cache_directory, ".cpp");
+                moc_filename = BuildObjectPath(header_filename, cache_directory, "moc_", ".cpp");
 
                 Command cmd = {};
 
@@ -343,7 +343,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
                 cmd.cache_len = cmd.cmd_line.len;
 
                 const char *text = Fmt(&str_alloc, "Run MOC on %!..+%1%!0", header_filename).ptr;
-                if (AppendNode(text, moc_filename, cmd, { header_filename, qt->moc }, "moc")) {
+                if (AppendNode(text, moc_filename, cmd, { header_filename, qt->moc })) {
                     if (!build.fake && !EnsureDirectoryExists(moc_filename))
                         return false;
                 }
@@ -354,7 +354,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
     }
 
     if (moc_filename) {
-        const char *obj_filename = build_map.FindValue({ "moc", moc_filename }, nullptr);
+        const char *obj_filename = build_map.FindValue(moc_filename, nullptr);
 
         if (!obj_filename) {
             obj_filename = Fmt(&str_alloc, "%1%2", moc_filename, build.compiler->GetObjectExtension()).ptr;
@@ -367,7 +367,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
                                               obj_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Build MOC for %!..+%1%!0", src.filename).ptr;
-            AppendNode(text, obj_filename, cmd, moc_filename, "moc");
+            AppendNode(text, obj_filename, cmd, moc_filename);
         }
 
         moc_map.Set(src.filename, obj_filename);
@@ -407,7 +407,7 @@ R"(#include <QtCore/QtPlugin>
                                       obj_filename,  &str_alloc, &cmd);
 
     const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 static Qt helper", target.name).ptr;
-    AppendNode(text, obj_filename, cmd, src_filename, nullptr);
+    AppendNode(text, obj_filename, cmd, src_filename);
 
     return obj_filename;
 }

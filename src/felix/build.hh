@@ -76,22 +76,27 @@ class Builder {
     };
 
     struct BuildKey {
-        const char *ns;
-        const char *filename;
+        const char *ns = nullptr;
+        const char *filename = nullptr;
 
         bool operator==(const BuildKey &other) const
         {
-            return (ns ? (other.ns && TestStr(ns, other.ns)) : !other.ns) &&
-                   TestStr(filename, other.filename);
+            bool test = TestStr(ns, other.ns) &&
+                        TestStr(filename, other.filename);
+            return test;
         }
         bool operator !=(const BuildKey &other) const { return !(*this == other); }
 
         uint64_t Hash() const
         {
-            uint64_t hash = (ns ? HashTraits<const char *>::Hash(ns) : 0ull) ^
+            uint64_t hash = HashTraits<const char *>::Hash(ns) ^
                             HashTraits<const char *>::Hash(filename);
             return hash;
         }
+
+        BuildKey() = default;
+        BuildKey(const char *filename) : ns("default"), filename(filename) {}
+        BuildKey(const char *ns, const char *filename) : ns(ns), filename(filename) {}
     };
 
     BuildSettings build;
@@ -110,11 +115,6 @@ class Builder {
     // Javascript bundler
     const char *esbuild_binary = nullptr;
 
-    // Core host targets (if any)
-    BucketArray<TargetInfo> core_targets;
-    HashMap<const char *, TargetInfo *> core_targets_map;
-    BucketArray<SourceFileInfo> core_sources;
-
     // AddTarget, AddSource
     HeapArray<Node> nodes;
     Size total = 0;
@@ -122,7 +122,6 @@ class Builder {
     HashMap<BuildKey, const char *> build_map;
     HashMap<const char *, const char *> moc_map;
     HashMap<const char *, int64_t> mtime_map;
-    HashMap<const void *, const char *> target_headers;
 
     // Build
     std::mutex out_mutex;
@@ -153,7 +152,7 @@ private:
     bool PrepareQtSdk(int64_t version);
     bool PrepareEsbuild();
 
-    bool AddCppSource(const SourceFileInfo &src, const char *ns, HeapArray<const char *> *obj_filenames = nullptr);
+    bool AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *obj_filenames = nullptr);
     const char *AddEsbuildSource(const SourceFileInfo &src);
     const char *AddQtUiSource(const SourceFileInfo &src);
     const char *AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames);
@@ -168,13 +167,11 @@ private:
 
     bool UpdateVersionSource(const char *target, const char *version, const char *dest_filename);
 
-    const char *GetTargetIncludeDirectory(const TargetInfo &target);
-
-    const char *BuildObjectPath(const char *ns, const char *src_filename,
-                                const char *output_directory, const char *suffix);
+    const char *BuildObjectPath(Span<const char> src_filename, const char *output_directory,
+                                const char *prefix, const char *suffix);
 
     bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
-                    Span<const char *const> src_filenames, const char *ns);
+                    Span<const char *const> src_filenames);
     bool NeedsRebuild(const char *dest_filename, const Command &cmd,
                       Span<const char *const> src_filenames);
     bool IsFileUpToDate(const char *dest_filename, Span<const char *const> src_filenames);

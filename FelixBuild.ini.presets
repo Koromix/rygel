@@ -53,39 +53,3 @@ Features = Warnings, DebugInfo, OptimizeSpeed
 [WasmBox]
 Host = Emscripten/Box:Web
 Features = Warnings, DebugInfo, OptimizeSpeed
-
-[Teensy20]
-Host = Teensy20
-Features = Warnings, OptimizeSize
-
-[Teensy20++]
-Host = Teensy20++
-Features = Warnings, OptimizeSize
-
-[TeensyLC]
-Host = TeensyLC
-Features = Warnings, OptimizeSize
-
-[Teensy30]
-Host = Teensy30
-Features = Warnings, OptimizeSize
-
-[Teensy31]
-Host = Teensy31
-Features = Warnings, OptimizeSize
-
-[Teensy35]
-Host = Teensy35
-Features = Warnings, OptimizeSize
-
-[Teensy36]
-Host = Teensy36
-Features = Warnings, OptimizeSize
-
-[Teensy40]
-Host = Teensy40
-Features = Warnings, OptimizeSize
-
-[Teensy41]
-Host = Teensy41
-Features = Warnings, OptimizeSize
