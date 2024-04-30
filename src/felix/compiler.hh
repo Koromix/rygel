@@ -28,8 +28,6 @@ enum class HostPlatform {
     EmscriptenWeb,
     EmscriptenBox,
 
-    Teensy20,
-    Teensy20pp,
     TeensyLC,
     Teensy30,
     Teensy31,
@@ -50,8 +48,6 @@ static const char *const HostPlatformNames[] = {
     "WASM/Emscripten/Web",
     "WASM/Emscripten/Box",
 
-    "Embedded/Teensy/AVR/Teensy20",
-    "Embedded/Teensy/AVR/Teensy20++",
     "Embedded/Teensy/ARM/TeensyLC",
     "Embedded/Teensy/ARM/Teensy30",
     "Embedded/Teensy/ARM/Teensy31",
@@ -84,7 +80,6 @@ enum class HostArchitecture {
     ARM32,
     ARM64,
     RISCV64,
-    AVR,
     Web
 };
 static const char *const HostArchitectureNames[] = {
@@ -93,7 +88,6 @@ static const char *const HostArchitectureNames[] = {
     "ARM32",
     "ARM64",
     "RISCV64",
-    "AVR",
     "Web"
 };
 

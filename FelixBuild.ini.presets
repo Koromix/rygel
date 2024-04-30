@@ -54,14 +54,6 @@ Features = Warnings, DebugInfo, OptimizeSpeed
 Host = Emscripten/Box:Web
 Features = Warnings, DebugInfo, OptimizeSpeed
 
-[Teensy20]
-Host = Teensy20
-Features = Warnings, OptimizeSize
-
-[Teensy20++]
-Host = Teensy20++
-Features = Warnings, OptimizeSize
-
 [TeensyLC]
 Host = TeensyLC
 Features = Warnings, OptimizeSize

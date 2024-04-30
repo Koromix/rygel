@@ -785,7 +785,6 @@ private:
                 case HostArchitecture::RISCV64: { Fmt(out_buf, " --target=riscv64-pc-linux-gnu"); } break;
 
                 case HostArchitecture::ARM32:
-                case HostArchitecture::AVR:
                 case HostArchitecture::Web: { RG_UNREACHABLE(); } break;
             }
         }
@@ -1911,8 +1910,6 @@ public:
 
 class TeensyCompiler final: public Compiler {
     enum class Model {
-        Teensy20,
-        Teensy20pp,
         TeensyLC,
         Teensy30,
         Teensy31,
@@ -1941,14 +1938,6 @@ public:
 
         // Decode model string
         switch (platform) {
-            case HostPlatform::Teensy20: {
-                compiler->architecture = HostArchitecture::AVR;
-                compiler->model = Model::Teensy20;
-            } break;
-            case HostPlatform::Teensy20pp: {
-                compiler->architecture = HostArchitecture::AVR;
-                compiler->model = Model::Teensy20pp;
-            } break;
             case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
             case HostPlatform::Teensy30: { compiler->model = Model::Teensy30; } break;
             case HostPlatform::Teensy31: { compiler->model = Model::Teensy31; } break;
@@ -2019,8 +2008,6 @@ public:
     {
         const char *dirname = nullptr;
         switch (model) {
-            case Model::Teensy20:
-            case Model::Teensy20pp: { dirname = Fmt(alloc, "%1%/hardware/teensy/avr/cores/teensy", arduino).ptr; } break;
             case Model::TeensyLC:
             case Model::Teensy30:
             case Model::Teensy31:
@@ -2139,8 +2126,6 @@ public:
         Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib");
         Fmt(&buf, " -DARDUINO=10819 -DTEENSYDUINO=159");
         switch (model) {
-            case Model::Teensy20: { Fmt(&buf, " -DARDUINO_ARCH_AVR -DARDUINO_TEENSY2 \"-I%1/hardware/teensy/avr/cores/teensy\" -mmcu=atmega32u4%2", arduino, set_fcpu ? " -DF_CPU=16000000" : ""); } break;
-            case Model::Teensy20pp: { Fmt(&buf, " -DARDUINO_ARCH_AVR -DARDUINO_TEENSY2PP \"-I%1/hardware/teensy/avr/cores/teensy\" -mmcu=at90usb1286%1", arduino, set_fcpu ? " -DF_CPU=16000000" : ""); } break;
             case Model::TeensyLC: { Fmt(&buf, " -DARDUINO_TEENSYLC \"-I%1/hardware/teensy/avr/cores/teensy3\" -mcpu=cortex-m0plus -mthumb"
                                               " -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MKL26Z64__%2", arduino, set_fcpu ? " -DF_CPU=48000000" : ""); } break;
             case Model::Teensy30: { Fmt(&buf, " -DARDUINO_TEENSY30 \"-I%1/hardware/teensy/avr/cores/teensy3\" -mcpu=cortex-m4 -mthumb"
@@ -2263,8 +2248,6 @@ public:
         // Platform flags and libraries
         Fmt(&buf, " -Wl,--gc-sections,--defsym=__rtc_localtime=0 --specs=nano.specs");
         switch (model) {
-            case Model::Teensy20: { Fmt(&buf, " -mmcu=atmega32u4"); } break;
-            case Model::Teensy20pp: { Fmt(&buf, " -mmcu=at90usb1286"); } break;
             case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -mthumb -larm_cortexM0l_math -fsingle-precision-constant \"-T%1/hardware/teensy/avr/cores/teensy3/mkl26z64.ld\"", arduino); } break;
             case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -larm_cortexM4l_math -fsingle-precision-constant \"-T%1/hardware/teensy/avr/cores/teensy3/mk20dx128.ld\"", arduino); } break;
             case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -larm_cortexM4l_math -fsingle-precision-constant \"-T%1/hardware/teensy/avr/cores/teensy3/mk20dx256.ld\"", arduino); } break;
@@ -2407,7 +2390,6 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
 
                 case HostArchitecture::ARM32:
-                case HostArchitecture::AVR:
                 case HostArchitecture::Web: {} break;
             }
         }
@@ -2430,7 +2412,6 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 case HostArchitecture::RISCV64: {} break;
 
                 case HostArchitecture::ARM32:
-                case HostArchitecture::AVR:
                 case HostArchitecture::Web: {
                     LogError("Clang cross-compilation for '%1' is not supported", HostArchitectureNames[(int)spec.architecture]);
                     return nullptr;
@@ -2443,26 +2424,6 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
 #endif
-    } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/AVR/")) {
-        static std::once_flag flag;
-        static char arduino[4096];
-        static char cc[2048];
-
-        std::call_once(flag, []() { FindArduino("GCC AVR", "hardware/tools/avr/bin/avr-gcc", arduino, cc); });
-
-        if (!arduino[0]) {
-            LogError("Cannot find Arduino/Teensyduino, set ARDUINO_PATH manually");
-            return nullptr;
-        }
-
-        spec.cc = spec.cc ? spec.cc : cc;
-
-        if (spec.ld) {
-            LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
-            return nullptr;
-        }
-
-        return TeensyCompiler::Create(spec.platform, arduino, spec.cc);
     } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/ARM/")) {
         static std::once_flag flag;
         static char arduino[4096];
