@@ -213,6 +213,63 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         } break;
     }
 
+    // Core platform source files (e.g. Teensy core)
+    TargetInfo *core = nullptr;
+    {
+        HeapArray<const char *> core_filenames;
+        HeapArray<const char *> core_definitions;
+        const char *name = nullptr;
+
+        if (!build.compiler->GetCore(target.definitions, &str_alloc,
+                                     &name, &core_filenames, &core_definitions))
+            return false;
+
+        if (name) {
+            core = core_targets_map.FindValue(name, nullptr);
+
+            if (!core) {
+                core = core_targets.AppendDefault();
+
+                core->name = name;
+                core->type = TargetType::Library;
+                core->platforms = 1u << (int)build.compiler->platform;
+                std::swap(core->definitions, core_definitions);
+                core->disable_features = (int)CompileFeature::Warnings;
+
+                for (const char *core_filename: core_filenames) {
+                    SourceFileInfo src = {};
+
+                    src.target = core;
+                    src.filename = core_filename;
+                    DetermineSourceType(core_filename, &src.type);
+
+                    const SourceFileInfo *ptr = core_sources.Append(src);
+                    core->sources.Append(ptr);
+                }
+
+                core_targets_map.Set(name, core);
+            }
+        }
+    }
+
+    if (core) {
+        RG_DEFER_C(prev_ns = current_ns,
+                   prev_directory = cache_directory) {
+            current_ns = prev_ns;
+            cache_directory = prev_directory;
+        };
+
+        cache_directory = Fmt(&str_alloc, "%1%/%2", cache_directory, core->name).ptr;
+        current_ns = core->name;
+
+        for (const SourceFileInfo *src: core->sources) {
+            RG_ASSERT(src->type == SourceType::C || src->type == SourceType::Cxx);
+
+            if (!AddCppSource(*src, &obj_filenames))
+                return false;
+        }
+    }
+
     Size prev_obj_filenames = obj_filenames.len;
 
     // Start with pregeneration steps (such as UI to header file)
@@ -333,7 +390,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     // Some compilers (such as MSVC) also build PCH object files that need to be linked
     if (build.features & (int)CompileFeature::PCH) {
         for (const char *filename: target.pchs) {
-            const char *pch_filename = build_map.FindValue(filename, nullptr);
+            const char *pch_filename = build_map.FindValue({ current_ns, filename }, nullptr);
 
             if (pch_filename) {
                 const char *obj_filename = build.compiler->GetPchObject(pch_filename, &str_alloc);
@@ -498,7 +555,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
         }
 
         if (pch) {
-            pch_filename = build_map.FindValue(pch->filename, nullptr);
+            pch_filename = build_map.FindValue({ current_ns, pch->filename }, nullptr);
 
             if (!pch_filename) {
                 pch_filename = BuildObjectPath(pch->filename, cache_directory, "", pch_ext);
@@ -540,7 +597,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
         }
     }
 
-    const char *obj_filename = build_map.FindValue(src.filename, nullptr);
+    const char *obj_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
 
     // Build main object
     if (!obj_filename) {
@@ -897,7 +954,7 @@ bool Builder::AppendNode(const char *text, const char *dest_filename, const Comm
 {
     RG_ASSERT(src_filenames.len >= 1);
 
-    build_map.Set(CleanFileName(src_filenames[0]), dest_filename);
+    build_map.Set({ current_ns, CleanFileName(src_filenames[0]) }, dest_filename);
     total++;
 
     if (NeedsRebuild(dest_filename, cmd, src_filenames)) {

@@ -139,7 +139,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
 {
     RG_ASSERT(src.type == SourceType::Esbuild);
 
-    const char *meta_filename = build_map.FindValue(src.filename, nullptr);
+    const char *meta_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
 
     // First, we need esbuild!
     if (!meta_filename && !PrepareEsbuild())

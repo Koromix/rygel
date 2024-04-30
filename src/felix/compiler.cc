@@ -314,6 +314,13 @@ public:
     }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
 
+    bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
+                 HeapArray<const char *> *, HeapArray<const char *> *) const override
+    {
+        *out_name = nullptr;
+        return true;
+    }
+
     void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -916,6 +923,13 @@ public:
     }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
 
+    bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
+                 HeapArray<const char *> *, HeapArray<const char *> *) const override
+    {
+        *out_name = nullptr;
+        return true;
+    }
+
     void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -1384,6 +1398,13 @@ public:
     }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
 
+    bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
+                 HeapArray<const char *> *, HeapArray<const char *> *) const override
+    {
+        *out_name = nullptr;
+        return true;
+    }
+
     void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -1695,6 +1716,13 @@ public:
         return ext;
     }
 
+    bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
+                 HeapArray<const char *> *, HeapArray<const char *> *) const override
+    {
+        *out_name = nullptr;
+        return true;
+    }
+
     void MakePackCommand(Span<const char *const> pack_filenames,
                          const char *pack_options, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
@@ -1881,6 +1909,389 @@ public:
     }
 };
 
+class TeensyCompiler final: public Compiler {
+    enum class Model {
+        Teensy20,
+        Teensy20pp,
+        TeensyLC,
+        Teensy30,
+        Teensy31,
+        Teensy35,
+        Teensy36,
+        Teensy40,
+        Teensy41
+    };
+
+    const char *cc;
+    const char *cxx;
+    const char *ld;
+    const char *objcopy;
+    Model model;
+
+    BlockAllocator str_alloc;
+
+public:
+    TeensyCompiler(HostPlatform platform) : Compiler(platform, HostArchitecture::ARM32, "GCC") {}
+
+    static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc)
+    {
+        std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(platform);
+
+        // Decode model string
+        switch (platform) {
+            case HostPlatform::Teensy20: {
+                compiler->architecture = HostArchitecture::AVR;
+                compiler->model = Model::Teensy20;
+            } break;
+            case HostPlatform::Teensy20pp: {
+                compiler->architecture = HostArchitecture::AVR;
+                compiler->model = Model::Teensy20pp;
+            } break;
+            case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
+            case HostPlatform::Teensy30: { compiler->model = Model::Teensy30; } break;
+            case HostPlatform::Teensy31: { compiler->model = Model::Teensy31; } break;
+            case HostPlatform::Teensy35: { compiler->model = Model::Teensy35; } break;
+            case HostPlatform::Teensy36: { compiler->model = Model::Teensy36; } break;
+            case HostPlatform::Teensy40: { compiler->model = Model::Teensy40; } break;
+            case HostPlatform::Teensy41: { compiler->model = Model::Teensy41; } break;
+
+            default: { RG_UNREACHABLE(); } break;
+        }
+
+        // Find executables
+        {
+            Span<const char> prefix;
+            Span<const char> suffix;
+            Span<const char> version;
+            if (!SplitPrefixSuffix(cc, "gcc", &prefix, &suffix, &version))
+                return nullptr;
+
+            compiler->cc = DuplicateString(cc, &compiler->str_alloc).ptr;
+            compiler->cxx = Fmt(&compiler->str_alloc, "%1g++%2", prefix, suffix).ptr;
+            compiler->ld = Fmt(&compiler->str_alloc, "%1ld%2", prefix, version).ptr;
+            compiler->objcopy = Fmt(&compiler->str_alloc, "%1objcopy%2", prefix, version).ptr;
+        }
+
+        return compiler;
+    }
+
+    bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const override
+    {
+        uint32_t supported = 0;
+
+        supported |= (int)CompileFeature::OptimizeSpeed;
+        supported |= (int)CompileFeature::OptimizeSize;
+        supported |= (int)CompileFeature::Warnings;
+        supported |= (int)CompileFeature::DebugInfo;
+        supported |= (int)CompileFeature::LTO;
+
+        uint32_t unsupported = features & ~supported;
+        if (unsupported) {
+            LogError("Some features are not supported by %1: %2",
+                     name, FmtFlags(unsupported, CompileFeatureOptions));
+            return false;
+        }
+
+        features |= (supported & maybe_features);
+
+        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
+            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
+            return false;
+        }
+
+        *out_features = features;
+        return true;
+    }
+
+    const char *GetObjectExtension() const override { return ".o"; }
+    const char *GetLinkExtension(TargetType type) const override {
+        RG_ASSERT(type == TargetType::Executable);
+        return ".elf";
+    }
+    const char *GetPostExtension(TargetType) const override { return ".hex"; }
+
+    bool GetCore(Span<const char *const> definitions, Allocator *alloc, const char **out_name,
+                 HeapArray<const char *> *out_filenames, HeapArray<const char *> *out_definitions) const override
+    {
+        const char *dirname = nullptr;
+        switch (model) {
+            case Model::Teensy20:
+            case Model::Teensy20pp: { dirname = "vendor/teensy/cores/teensy"; } break;
+            case Model::TeensyLC:
+            case Model::Teensy30:
+            case Model::Teensy31:
+            case Model::Teensy35:
+            case Model::Teensy36: { dirname = "vendor/teensy/cores/teensy3"; } break;
+            case Model::Teensy40:
+            case Model::Teensy41: { dirname = "vendor/teensy/cores/teensy4"; } break;
+        }
+        RG_ASSERT(dirname);
+
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, 1024,
+                                            [&](const char *basename, FileType) {
+            if (TestStr(basename, "Blink.cc"))
+                return true;
+
+            SourceType src_type;
+            if (!DetermineSourceType(basename, &src_type))
+                return true;
+            if (src_type != SourceType::C && src_type != SourceType::Cxx)
+                return true;
+
+            const char *src_filename = NormalizePath(basename, dirname, alloc).ptr;
+            out_filenames->Append(src_filename);
+
+            return true;
+        });
+        if (ret != EnumResult::Success)
+            return false;
+
+        uint64_t hash = 0;
+        for (const char *definition: definitions) {
+            if (StartsWith(definition, "F_CPU=") ||
+                    StartsWith(definition, "USB_") ||
+                    StartsWith(definition, "LAYOUT_")) {
+                out_definitions->Append(definition);
+                hash ^= HashTraits<const char *>::Hash(definition);
+            }
+        }
+        *out_name = Fmt(alloc, "Teensy/%1", FmtHex(hash).Pad0(-16)).ptr;
+
+        return true;
+    }
+
+    void MakePackCommand(Span<const char *const> pack_filenames,
+                         const char *pack_options, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
+        RG::MakePackCommand(pack_filenames, true, pack_options, dest_filename, alloc, out_cmd);
+    }
+
+    void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
+                        Span<const char *const>, uint32_t, bool, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+
+    const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
+    const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
+
+    void MakeObjectCommand(const char *src_filename, SourceType src_type,
+                           const char *pch_filename, Span<const char *const> definitions,
+                           Span<const char *const> include_directories, Span<const char *const> system_directories,
+                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        HeapArray<char> buf(alloc);
+
+        // Compiler
+        switch (src_type) {
+            case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++17", cxx); } break;
+            case SourceType::Esbuild:
+            case SourceType::QtUi:
+            case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+        }
+        RG_ASSERT(dest_filename); // No PCH
+        Fmt(&buf, " -o \"%1\"", dest_filename);
+        Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Build options
+        Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
+        if (features & (int)CompileFeature::OptimizeSpeed) {
+            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
+        } else if (features & (int)CompileFeature::OptimizeSize) {
+            Fmt(&buf, " -Os -fwrapv -DNDEBUG");
+        } else {
+            Fmt(&buf, " -O0 -ftrapv -fsanitize-undefined-trap-on-error");
+        }
+        if (features & (int)CompileFeature::LTO) {
+            Fmt(&buf, " -flto");
+        }
+        if (features & (int)CompileFeature::Warnings) {
+            Fmt(&buf, " -Wall -Wextra");
+            if (src_type == SourceType::Cxx) {
+                Fmt(&buf, " -Wzero-as-null-pointer-constant");
+            }
+            Fmt(&buf, " -Wreturn-type -Werror=return-type");
+        } else {
+            Fmt(&buf, " -w");
+        }
+
+        // Don't override explicit user defines
+        bool set_fcpu = true;
+        bool set_usb = true;
+        bool set_layout = true;
+        for (const char *definition: definitions) {
+            set_fcpu &= !StartsWith(definition, "F_CPU=");
+            set_usb &= !StartsWith(definition, "USB_");
+            set_layout &= !StartsWith(definition, "LAYOUT_");
+        }
+
+        // Platform flags
+        Fmt(&buf, " -ffunction-sections -fdata-sections -nostdlib");
+        Fmt(&buf, " -DARDUINO=10819 -DTEENSYDUINO=159");
+        switch (model) {
+            case Model::Teensy20: { Fmt(&buf, " -DARDUINO_ARCH_AVR -DARDUINO_TEENSY2 -Ivendor/teensy/cores/teensy -mmcu=atmega32u4%1", set_fcpu ? " -DF_CPU=16000000" : ""); } break;
+            case Model::Teensy20pp: { Fmt(&buf, " -DARDUINO_ARCH_AVR -DARDUINO_TEENSY2PP -Ivendor/teensy/cores/teensy -mmcu=at90usb1286%1", set_fcpu ? " -DF_CPU=16000000" : ""); } break;
+            case Model::TeensyLC: { Fmt(&buf, " -DARDUINO_TEENSYLC -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m0plus -mthumb"
+                                              " -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MKL26Z64__%1", set_fcpu ? " -DF_CPU=48000000" : ""); } break;
+            case Model::Teensy30: { Fmt(&buf, " -DARDUINO_TEENSY30 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mthumb"
+                                              " -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MK20DX128__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::Teensy31: { Fmt(&buf, " -DARDUINO_TEENSY31 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mthumb"
+                                              " -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MK20DX256__%1", set_fcpu ? " -DF_CPU=96000000" : ""); } break;
+            case Model::Teensy35: { Fmt(&buf, " -DARDUINO_TEENSY35 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MK64FX512__%1", set_fcpu ? " -DF_CPU=120000000" : ""); } break;
+            case Model::Teensy36: { Fmt(&buf, " -DARDUINO_TEENSY36 -Ivendor/teensy/cores/teensy3 -mcpu=cortex-m4 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv4-sp-d16 -fsingle-precision-constant -mno-unaligned-access -Wno-error=narrowing -D__MK66FX1M0__%1", set_fcpu ? " -DF_CPU=180000000" : ""); } break;
+            case Model::Teensy40: { Fmt(&buf, " -DARDUINO_TEENSY40 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
+            case Model::Teensy41: { Fmt(&buf, " -DARDUINO_TEENSY41 -Ivendor/teensy/cores/teensy4 -mcpu=cortex-m7 -mthumb -mfloat-abi=hard"
+                                              " -mfpu=fpv5-d16 -mno-unaligned-access -D__IMXRT1062__%1", set_fcpu ? " -DF_CPU=600000000" : ""); } break;
+        }
+        if (src_type == SourceType::Cxx) {
+            Fmt(&buf, " -felide-constructors -fno-exceptions -fno-rtti");
+        }
+        if (set_usb) {
+            Fmt(&buf, " -DUSB_SERIAL");
+        }
+        if (set_layout) {
+            Fmt(&buf, " -DLAYOUT_US_ENGLISH");
+        }
+
+        // Features
+        if (features & (int)CompileFeature::DebugInfo) {
+            Fmt(&buf, " -g");
+        }
+        if (features & (int)CompileFeature::ZeroInit) {
+            Fmt(&buf, " -ftrivial-auto-var-init=zero");
+        }
+
+        // Sources and definitions
+        Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
+        if (pch_filename) {
+            Fmt(&buf, " -include \"%1\"", pch_filename);
+        }
+        for (const char *definition: definitions) {
+            Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " \"-I%1\"", include_directory);
+        }
+        for (const char *system_directory: system_directories) {
+            Fmt(&buf, " -isystem \"%1\"", system_directory);
+        }
+        for (const char *include_file: include_files) {
+            Fmt(&buf, " -include \"%1\"", include_file);
+        }
+
+        if (env_flags) {
+            switch (src_type) {
+                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
+                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Esbuild:
+                case SourceType::QtUi:
+                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
+            }
+        }
+
+        out_cmd->cache_len = buf.len;
+        if (FileIsVt100(STDOUT_FILENO)) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        } else {
+            Fmt(&buf, " -fdiagnostics-color=never");
+        }
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+
+        // Dependencies
+        out_cmd->deps_mode = Command::DependencyMode::MakeLike;
+        out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
+    }
+
+    void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+
+    void MakeLinkCommand(Span<const char *const> obj_filenames,
+                         Span<const char *const> libraries, TargetType link_type,
+                         uint32_t features, bool env_flags, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        HeapArray<char> buf(alloc);
+
+        // Linker
+        switch (link_type) {
+            case TargetType::Executable: { Fmt(&buf, "\"%1\"", cc); } break;
+            case TargetType::Library: { RG_UNREACHABLE(); } break;
+        }
+        Fmt(&buf, " -o \"%1\"", dest_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Build mode
+        if (!(features & (int)CompileFeature::DebugInfo)) {
+            Fmt(&buf, " -s");
+        }
+        if (features & (int)CompileFeature::LTO) {
+            Fmt(&buf, " -flto -Wl,-Os");
+        }
+
+        // Objects and libraries
+        for (const char *obj_filename: obj_filenames) {
+            Fmt(&buf, " \"%1\"", obj_filename);
+        }
+        if (libraries.len) {
+            Fmt(&buf, " -Wl,--start-group");
+            for (const char *lib: libraries) {
+                if (strpbrk(lib, RG_PATH_SEPARATORS)) {
+                    Fmt(&buf, " %1", lib);
+                } else {
+                    Fmt(&buf, " -l%1", lib);
+                }
+            }
+            Fmt(&buf, " -Wl,--end-group");
+        }
+
+        // Platform flags and libraries
+        Fmt(&buf, " -Wl,--gc-sections,--defsym=__rtc_localtime=0 --specs=nano.specs");
+        switch (model) {
+            case Model::Teensy20: { Fmt(&buf, " -mmcu=atmega32u4"); } break;
+            case Model::Teensy20pp: { Fmt(&buf, " -mmcu=at90usb1286"); } break;
+            case Model::TeensyLC: { Fmt(&buf, " -mcpu=cortex-m0plus -mthumb -larm_cortexM0l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mkl26z64.ld"); } break;
+            case Model::Teensy30: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -larm_cortexM4l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx128.ld"); } break;
+            case Model::Teensy31: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -larm_cortexM4l_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk20dx256.ld"); } break;
+            case Model::Teensy35: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk64fx512.ld"); } break;
+            case Model::Teensy36: { Fmt(&buf, " -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -larm_cortexM4lf_math -fsingle-precision-constant -Tvendor/teensy/cores/teensy3/mk66fx1m0.ld"); } break;
+            case Model::Teensy40: { Fmt(&buf, " -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062.ld"); } break;
+            case Model::Teensy41: { Fmt(&buf, " -mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16 -larm_cortexM7lfsp_math -Tvendor/teensy/cores/teensy4/imxrt1062_t41.ld"); } break;
+        }
+        Fmt(&buf, " -lm -lstdc++");
+
+        if (env_flags) {
+            AddEnvironmentFlags("LDFLAGS", &buf);
+        }
+
+        out_cmd->cache_len = buf.len;
+        if (FileIsVt100(STDOUT_FILENO)) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        } else {
+            Fmt(&buf, " -fdiagnostics-color=never");
+        }
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+    }
+
+    void MakePostCommand(const char *src_filename, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        Span<const char> cmd = Fmt(alloc, "\"%1\" -O ihex -R .eeprom \"%2\" \"%3\"", objcopy, src_filename, dest_filename);
+        out_cmd->cmd_line = cmd;
+    }
+};
+
 std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 {
     if (spec.platform == NativePlatform && spec.architecture == NativeArchitecture) {
@@ -2023,6 +2434,48 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
 #endif
+    } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/AVR/")) {
+        if (!spec.cc) {
+            static std::once_flag flag;
+            static char cc[2048];
+
+            std::call_once(flag, []() { FindArduinoCompiler("GCC AVR", "hardware/tools/avr/bin/avr-gcc", cc); });
+
+            if (!cc[0]) {
+                LogError("Path to Teensy compiler must be explicitly specified");
+                return nullptr;
+            }
+
+            spec.cc = cc;
+        }
+
+        if (spec.ld) {
+            LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
+            return nullptr;
+        }
+
+        return TeensyCompiler::Create(spec.platform, spec.cc);
+    } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/ARM/")) {
+        if (!spec.cc) {
+            static std::once_flag flag;
+            static char cc[2048];
+
+            std::call_once(flag, []() { FindArduinoCompiler("GCC ARM", "hardware/tools/arm/bin/arm-none-eabi-gcc", cc); });
+
+            if (!cc[0]) {
+                LogError("Path to Teensy compiler must be explicitly specified");
+                return nullptr;
+            }
+
+            spec.cc = cc;
+        }
+
+        if (spec.ld) {
+            LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
+            return nullptr;
+        }
+
+        return TeensyCompiler::Create(spec.platform, spec.cc);
     } else {
         LogError("Cross-compilation from platform '%1 (%2)' to '%3 (%4)' is not supported",
                  HostPlatformNames[(int)NativePlatform], HostArchitectureNames[(int)NativeArchitecture],

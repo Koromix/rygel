@@ -103,6 +103,7 @@ class Builder {
     const char *cache_directory;
     const char *shared_directory;
     const char *cache_filename;
+    const char *current_ns = "default";
 
     // Platform-specific
     const char *lib_prefix = nullptr;
@@ -114,6 +115,11 @@ class Builder {
 
     // Javascript bundler
     const char *esbuild_binary = nullptr;
+
+    // Core host targets (if any)
+    BucketArray<TargetInfo> core_targets;
+    HashMap<const char *, TargetInfo *> core_targets_map;
+    BucketArray<SourceFileInfo> core_sources;
 
     // AddTarget, AddSource
     HeapArray<Node> nodes;

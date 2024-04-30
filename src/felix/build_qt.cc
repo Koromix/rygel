@@ -67,7 +67,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
 {
     RG_ASSERT(src.type == SourceType::QtUi);
 
-    const char *header_filename = build_map.FindValue(src.filename, nullptr);
+    const char *header_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
 
     // First, we need Qt!
     if (!header_filename && !PrepareQtSdk(src.target->qt_version))
@@ -104,7 +104,7 @@ const char *Builder::AddQtUiSource(const SourceFileInfo &src)
 
 const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames)
 {
-    const char *cpp_filename = build_map.FindValue(qrc_filenames[0], nullptr);
+    const char *cpp_filename = build_map.FindValue({ current_ns, qrc_filenames[0] }, nullptr);
 
     // First, we need Qt!
     if (!cpp_filename && !PrepareQtSdk(target.qt_version))
@@ -132,7 +132,7 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
         AppendNode(text, cpp_filename, cmd, qrc_filenames);
     }
 
-    const char *obj_filename = build_map.FindValue(cpp_filename, nullptr);
+    const char *obj_filename = build_map.FindValue({ current_ns, cpp_filename }, nullptr);
 
     if (!obj_filename) {
         obj_filename = Fmt(&str_alloc, "%1%2", cpp_filename, build.compiler->GetObjectExtension()).ptr;
@@ -354,7 +354,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
     }
 
     if (moc_filename) {
-        const char *obj_filename = build_map.FindValue(moc_filename, nullptr);
+        const char *obj_filename = build_map.FindValue({ current_ns, moc_filename }, nullptr);
 
         if (!obj_filename) {
             obj_filename = Fmt(&str_alloc, "%1%2", moc_filename, build.compiler->GetObjectExtension()).ptr;
