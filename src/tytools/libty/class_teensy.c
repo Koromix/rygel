@@ -172,6 +172,11 @@ static int explore_encryption(ty_board_interface *iface)
         r = 0;
         goto cleanup;
     }
+    if (dw1 & 0x8) {
+        ty_log(TY_LOG_DEBUG, "Encryption is not yet configured");
+        r = 0;
+        goto cleanup;
+    }
 
     if (dw2 & 0x4000000) {
         iface->capabilities |= 1 << TY_BOARD_CAPABILITY_LOCKED;
@@ -841,6 +846,8 @@ static int teensy_upload(ty_board_interface *iface, ty_firmware *fw,
 {
     if (iface->capabilities & (1 << TY_BOARD_CAPABILITY_VOID))
         return ty_error(TY_ERROR_UNSUPPORTED, "Missing RAM bootloader to flash locked Teensy");
+    if (fw->type == TY_FIRMWARE_TYPE_EHEX && !(iface->capabilities & (1 << TY_BOARD_CAPABILITY_ENCRYPT)))
+        return ty_error(TY_ERROR_UNSUPPORTED, "Encryption is not supported or not yet configured");
 
     const ty_firmware_program *program = &fw->programs[0];
     unsigned int halfkay_version;
