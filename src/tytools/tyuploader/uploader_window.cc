@@ -115,11 +115,14 @@ void UploaderWindow::openBugReports()
 
 void UploaderWindow::adaptLogo(Qt::ColorScheme scheme)
 {
-    if (scheme == Qt::ColorScheme::Dark && QFile::exists(":/dark")) {
-        logoLabel->setPixmap(QPixmap(":/dark"));
-    } else {
-        logoLabel->setPixmap(QPixmap(":/logo"));
-    }
+    const char *path = ":/logo";
+    if (scheme == Qt::ColorScheme::Dark && QFile::exists(":/dark"))
+        path = ":/dark";
+
+    QPixmap pixmap(path);
+    QPixmap scaled = pixmap.scaledToHeight(60, Qt::SmoothTransformation);
+
+    logoLabel->setPixmap(scaled);
 }
 
 void UploaderWindow::changeCurrentBoard(Board *board)
