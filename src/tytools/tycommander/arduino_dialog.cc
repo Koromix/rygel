@@ -199,7 +199,7 @@ void ArduinoDialog::installWithUAC(const QString &command)
     background_process_ = true;
 
     auto notifier = new QWinEventNotifier(info.hProcess, this);
-    connect(notifier, &QWinEventNotifier::activated, this, [=](HANDLE h) {
+    connect(notifier, &QWinEventNotifier::activated, this, [=, this](HANDLE h) {
         Q_UNUSED(h);
 
         background_process_ = false;

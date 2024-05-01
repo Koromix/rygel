@@ -42,7 +42,7 @@ static void make_minidump(EXCEPTION_POINTERS *ex)
     char dmp_path[MAX_PATH + 256];
     {
         // Crash dump directory
-        if (SHGetFolderPathA_(0, CSIDL_LOCAL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, dmp_path) != S_OK)
+        if (SHGetFolderPathA_(nullptr, CSIDL_LOCAL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, dmp_path) != S_OK)
             return;
         strcat(dmp_path, "\\CrashDumps");
         CreateDirectoryA(dmp_path, nullptr);
@@ -66,8 +66,8 @@ static void make_minidump(EXCEPTION_POINTERS *ex)
                  module_name, st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     }
 
-    HANDLE h = CreateFileA(dmp_path, GENERIC_WRITE, FILE_SHARE_READ, 0, CREATE_ALWAYS,
-                           FILE_ATTRIBUTE_NORMAL, 0);
+    HANDLE h = CreateFileA(dmp_path, GENERIC_WRITE, FILE_SHARE_READ, nullptr, CREATE_ALWAYS,
+                           FILE_ATTRIBUTE_NORMAL, nullptr);
     if(h == INVALID_HANDLE_VALUE)
         return;
 
