@@ -51,17 +51,17 @@ typedef int32_t Size;
 
 #ifdef EXPORT
     #ifdef _WIN32
-        #define EXPORT_SYMBOL __declspec(dllexport)
+        #define EXPORT __declspec(dllexport)
     #else
-        #define EXPORT_SYMBOL __attribute__((visibility("default")))
+        #define EXPORT __attribute__((visibility("default")))
     #endif
 #else
-    #define EXPORT_SYMBOL
+    #define EXPORT
 #endif
 #ifdef __cplusplus
-    #define EXTERN_SYMBOL extern "C"
+    #define EXTERN extern "C"
 #else
-    #define EXTERN_SYMBOL extern
+    #define EXTERN extern
 #endif
 
 typedef struct Span {
@@ -427,7 +427,7 @@ static const uint8_t raw_data[] = {)");
     if (!(flags & (int)EmbedFlag::NoArray)) {
         PrintLn(&c);
 
-        PrintLn(&c, "EXPORT_SYMBOL EXTERN_SYMBOL const Span EmbedAssets;");
+        PrintLn(&c, "EXPORT EXTERN const Span EmbedAssets;");
         if (assets.len) {
             PrintLn(&c, "static AssetInfo assets[%1] = {", blobs.len);
 
@@ -435,7 +435,7 @@ static const uint8_t raw_data[] = {)");
             for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
                 const BlobInfo &blob = blobs[i];
 
-                PrintLn(&c, "    {\"%1\", %2, { raw_data + %3, %4 }},",
+                PrintLn(&c, "    { \"%1\", %2, { raw_data + %3, %4 } },",
                              blob.name, (int)blob.compression_type, raw_offset, blob.len);
 
                 raw_offset += blob.len + 1;
@@ -443,7 +443,7 @@ static const uint8_t raw_data[] = {)");
 
             PrintLn(&c, "};");
         }
-        PrintLn(&c, "const Span EmbedAssets = {%1, %2};", blobs.len ? "assets" : "0", blobs.len);
+        PrintLn(&c, "const Span EmbedAssets = { %1, %2 };", blobs.len ? "assets" : "0", blobs.len);
     }
 
     if (!(flags & (int)EmbedFlag::NoSymbols)) {
@@ -453,8 +453,8 @@ static const uint8_t raw_data[] = {)");
             const BlobInfo &blob = blobs[i];
             const char *var = MakeVariableName(blob.name, &temp_alloc);
 
-            PrintLn(&c, "EXPORT_SYMBOL EXTERN_SYMBOL const AssetInfo %1;", var);
-            PrintLn(&c, "const AssetInfo %1 = {\"%2\", %3, { raw_data + %4, %5 }};",
+            PrintLn(&c, "EXPORT EXTERN const AssetInfo %1;", var);
+            PrintLn(&c, "const AssetInfo %1 = { \"%2\", %3, { raw_data + %4, %5 } };",
                          var, blob.name, (int)blob.compression_type, raw_offset, blob.len);
 
             raw_offset += blob.len + 1;
