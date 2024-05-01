@@ -17,33 +17,32 @@
 
 namespace RG {
 
-struct PackAsset {
+struct EmbedAsset {
     const char *name;
     CompressionType compression_type;
 
     const char *src_filename;
 };
 
-struct PackAssetSet {
-    HeapArray<PackAsset> assets;
+struct EmbedAssetSet {
+    HeapArray<EmbedAsset> assets;
     BlockAllocator str_alloc;
 };
 
-enum class PackFlag {
+enum class EmbedFlag {
     UseEmbed = 1 << 0,
     UseLiterals = 1 << 1,
     NoSymbols = 1 << 2,
     NoArray = 1 << 3
 };
-static const char *const PackFlagNames[] = {
+static const char *const EmbedFlagNames[] = {
     "UseEmbed",
     "UseLiterals",
     "NoSymbols",
     "NoArray"
 };
 
-bool ResolveAssets(Span<const char *const> filenames, int strip_count, CompressionType compression_type, PackAssetSet *out_set);
-
-bool PackAssets(Span<const PackAsset> assets, unsigned int flags, const char *output_path);
+bool ResolveAssets(Span<const char *const> filenames, int strip_count, CompressionType compression_type, EmbedAssetSet *out_set);
+bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *output_path);
 
 }

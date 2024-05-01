@@ -198,7 +198,7 @@ static const char *GetLastDirectoryAndName(const char *filename)
 bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 {
     HeapArray<const char *> obj_filenames;
-    HeapArray<const char *> pack_filenames;
+    HeapArray<const char *> embed_filenames;
     HeapArray<const char *> link_libraries;
     HeapArray<const char *> predep_filenames;
     HeapArray<const char *> qrc_filenames;
@@ -295,7 +295,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                     return false;
 
                 meta_filename = Fmt(&str_alloc, "@%1", meta_filename).ptr;
-                pack_filenames.Append(meta_filename);
+                embed_filenames.Append(meta_filename);
             } break;
 
             case SourceType::QtUi: { /* Already handled */ } break;
@@ -334,12 +334,12 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     }
 
     // User assets and libraries
-    pack_filenames.Append(target.pack_filenames);
+    embed_filenames.Append(target.embed_filenames);
     link_libraries.Append(target.libraries);
 
     // Assets
-    if (pack_filenames.len) {
-        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_pack.c", cache_directory, target.name).ptr;
+    if (embed_filenames.len) {
+        const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_embed.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
@@ -348,10 +348,10 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         // Make C file
         {
             Command cmd = {};
-            build.compiler->MakePackCommand(pack_filenames, target.pack_options, src_filename, &str_alloc, &cmd);
+            build.compiler->MakeEmbedCommand(embed_filenames, target.embed_options, src_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Pack %!..+%1%!0 assets", target.name).ptr;
-            AppendNode(text, src_filename, cmd, pack_filenames);
+            const char *text = Fmt(&str_alloc, "Embed %!..+%1%!0 assets", target.name).ptr;
+            AppendNode(text, src_filename, cmd, embed_filenames);
         }
 
         // Build object file

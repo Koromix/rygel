@@ -7213,7 +7213,7 @@ bool ReloadAssets()
     }
     RG_DEFER { FreeLibrary(h); };
 
-    lib_assets = (const Span<const AssetInfo> *)GetProcAddress(h, "PackedAssets");
+    lib_assets = (const Span<const AssetInfo> *)GetProcAddress(h, "EmbedAssets");
 #else
     void *h = dlopen(assets_filename, RTLD_LAZY | RTLD_LOCAL);
     if (!h) {
@@ -7222,10 +7222,10 @@ bool ReloadAssets()
     }
     RG_DEFER { dlclose(h); };
 
-    lib_assets = (const Span<const AssetInfo> *)dlsym(h, "PackedAssets");
+    lib_assets = (const Span<const AssetInfo> *)dlsym(h, "EmbedAssets");
 #endif
     if (!lib_assets) {
-        LogError("Cannot find symbol '%1' in library '%2'", "PackedAssets", assets_filename);
+        LogError("Cannot find symbol '%1' in library '%2'", "EmbedAssets", assets_filename);
         return false;
     }
 
@@ -7252,7 +7252,7 @@ bool ReloadAssets()
     return true;
 }
 
-Span<const AssetInfo> GetPackedAssets()
+Span<const AssetInfo> GetEmbedAssets()
 {
     if (!assets_ready) {
         ReloadAssets();
@@ -7262,7 +7262,7 @@ Span<const AssetInfo> GetPackedAssets()
     return assets;
 }
 
-const AssetInfo *FindPackedAsset(const char *name)
+const AssetInfo *FindEmbedAsset(const char *name)
 {
     if (!assets_ready) {
         ReloadAssets();
@@ -7274,14 +7274,14 @@ const AssetInfo *FindPackedAsset(const char *name)
 
 #else
 
-HashTable<const char *, const AssetInfo *> PackedAssets_map;
+HashTable<const char *, const AssetInfo *> EmbedAssetsMap;
 static bool assets_ready;
 
-void InitPackedMap(Span<const AssetInfo> assets)
+void InitEmbedMap(Span<const AssetInfo> assets)
 {
     if (!assets_ready) [[likely]] {
         for (const AssetInfo &asset: assets) {
-            PackedAssets_map.Set(&asset);
+            EmbedAssetsMap.Set(&asset);
         }
     }
 }

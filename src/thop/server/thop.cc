@@ -263,7 +263,7 @@ static void InitRoutes()
         routes.Set(route);
     };
 
-    Span<const AssetInfo> assets = GetPackedAssets();
+    Span<const AssetInfo> assets = GetEmbedAssets();
     RG_ASSERT(assets.len > 0);
 
     // We can use a global ETag because everything is in the binary

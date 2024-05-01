@@ -386,7 +386,7 @@ Felix can also run the following special commands:
     %!..+macify%!0                       Create macOS bundle app from binary)");
 #endif
         PrintLn(st, R"(
-    %!..+pack%!0                         Pack assets to C source file and other formats
+    %!..+embed%!0                        Embed assets to C source file and other formats
 
 For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget);
     };

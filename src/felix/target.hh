@@ -77,8 +77,8 @@ struct TargetInfo {
 
     const char *bundle_options;
 
-    HeapArray<const char *> pack_filenames;
-    const char *pack_options;
+    HeapArray<const char *> embed_filenames;
+    const char *embed_options;
 
     uint32_t CombineFeatures(uint32_t defaults) const
     {

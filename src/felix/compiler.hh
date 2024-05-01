@@ -139,7 +139,7 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"DebugInfo",      "Add debug information to generated binaries"},
     {"OptimizeSpeed",  "Optimize generated builds for speed"},
     {"OptimizeSize",   "Optimize generated builds for size"},
-    {"HotAssets",      "Pack assets in reloadable shared library"},
+    {"HotAssets",      "Embed assets in reloadable shared library"},
     {"ASan",           "Enable AdressSanitizer (ASan)"},
     {"TSan",           "Enable ThreadSanitizer (TSan)"},
     {"UBSan",          "Enable UndefinedBehaviorSanitizer (UBSan)"},
@@ -214,9 +214,9 @@ public:
     virtual bool GetCore(Span<const char *const> definitions, Allocator *alloc, const char **out_ns,
                          HeapArray<const char *> *out_filenames, HeapArray<const char *> *out_definitions) const = 0;
 
-    virtual void MakePackCommand(Span<const char *const> pack_filenames,
-                                 const char *pack_options, const char *dest_filename,
-                                 Allocator *alloc, Command *out_cmd) const = 0;
+    virtual void MakeEmbedCommand(Span<const char *const> embed_filenames,
+                                  const char *embed_options, const char *dest_filename,
+                                  Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type,
                                 Span<const char *const> definitions,

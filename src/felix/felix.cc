@@ -18,7 +18,7 @@ namespace RG {
 
 int RunBuild(Span<const char *> arguments);
 int RunMacify(Span<const char *> arguments);
-int RunPack(Span<const char *> arguments);
+int RunEmbed(Span<const char *> arguments);
 
 int Main(int argc, char **argv)
 {
@@ -66,8 +66,8 @@ int Main(int argc, char **argv)
     } else if (TestStr(cmd, "macify")) {
         return RunMacify(arguments);
 #endif
-    } else if (TestStr(cmd, "pack")) {
-        return RunPack(arguments);
+    } else if (TestStr(cmd, "embed")) {
+        return RunEmbed(arguments);
     } else {
         arguments = MakeSpan((const char **)argv + 1, argc - 1);
         return RunBuild(arguments);

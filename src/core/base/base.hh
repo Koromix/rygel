@@ -4780,18 +4780,18 @@ struct AssetInfo {
 #ifdef FELIX_HOT_ASSETS
 
 bool ReloadAssets();
-Span<const AssetInfo> GetPackedAssets();
-const AssetInfo *FindPackedAsset(const char *name);
+Span<const AssetInfo> GetEmbedAssets();
+const AssetInfo *FindEmbedAsset(const char *name);
 
 #else
 
 // Reserved for internal use
-void InitPackedMap(Span<const AssetInfo> assets);
+void InitEmbedMap(Span<const AssetInfo> assets);
 
-extern "C" const Span<const AssetInfo> PackedAssets;
-extern HashTable<const char *, const AssetInfo *> PackedAssets_map;
+extern "C" const Span<const AssetInfo> EmbedAssets;
+extern HashTable<const char *, const AssetInfo *> EmbedAssetsMap;
 
-// By definining functions here (with static inline), we don't need PackedAssets
+// By definining functions here (with static inline), we don't nee EmbedAssets
 // to exist unless these functions are called. It also allows the compiler to remove
 // calls to ReloadAssets in non-debug builds (LTO or not).
 
@@ -4800,15 +4800,15 @@ static inline bool ReloadAssets()
     return false;
 }
 
-static inline Span<const AssetInfo> GetPackedAssets()
+static inline Span<const AssetInfo> GetEmbedAssets()
 {
-    return PackedAssets;
+    return EmbedAssets;
 }
 
-static inline const AssetInfo *FindPackedAsset(const char *name)
+static inline const AssetInfo *FindEmbedAsset(const char *name)
 {
-    InitPackedMap(PackedAssets);
-    return PackedAssets_map.FindValue(name, nullptr);
+    InitEmbedMap(EmbedAssets);
+    return EmbedAssetsMap.FindValue(name, nullptr);
 }
 
 #endif

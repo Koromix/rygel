@@ -307,7 +307,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
                            VALUES (1, ?1, ?2))", &stmt2))
             return false;
 
-        for (const AssetInfo &asset: GetPackedAssets()) {
+        for (const AssetInfo &asset: GetEmbedAssets()) {
             if (StartsWith(asset.name, "src/goupile/server/demo/")) {
                 const char *filename = asset.name + 24;
 

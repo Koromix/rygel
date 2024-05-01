@@ -62,8 +62,8 @@ struct TargetConfig {
 
     const char *bundle_options;
 
-    FileSet pack_file_set;
-    const char *pack_options;
+    FileSet embed_file_set;
+    const char *embed_options;
 
     RG_HASHTABLE_HANDLER(TargetConfig, name);
 };
@@ -366,15 +366,15 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "BundleOptions") {
                         target_config.bundle_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "AssetDirectory") {
-                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.pack_file_set.directories);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.embed_file_set.directories);
                     } else if (prop.key == "AssetDirectoryRec") {
-                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.pack_file_set.directories_rec);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.embed_file_set.directories_rec);
                     } else if (prop.key == "AssetFile") {
-                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.pack_file_set.filenames);
+                        AppendNormalizedPath(prop.value, &set.str_alloc, &target_config.embed_file_set.filenames);
                     } else if (prop.key == "AssetIgnore") {
-                        AppendListValues(prop.value, &set.str_alloc, &target_config.pack_file_set.ignore);
-                    } else if (prop.key == "PackOptions" || prop.key == "AssetOptions") {
-                        target_config.pack_options = DuplicateString(prop.value, &set.str_alloc).ptr;
+                        AppendListValues(prop.value, &set.str_alloc, &target_config.embed_file_set.ignore);
+                    } else if (prop.key == "EmbedOptions" || prop.key == "PackOptions") {
+                        target_config.embed_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -448,7 +448,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->enable_features = target_config->enable_features;
     target->disable_features = target_config->disable_features;
     target->bundle_options = target_config->bundle_options;
-    target->pack_options = target_config->pack_options;
+    target->embed_options = target_config->embed_options;
 
     // Resolve imported targets
     {
@@ -577,7 +577,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     }
 
     // Gather asset filenames
-    if (!ResolveFileSet(target_config->pack_file_set, &set.str_alloc, &target->pack_filenames))
+    if (!ResolveFileSet(target_config->embed_file_set, &set.str_alloc, &target->embed_filenames))
         return nullptr;
 
     set.targets_map.Set(target);

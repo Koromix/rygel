@@ -12,11 +12,11 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 #include "src/core/base/base.hh"
-#include "pack.hh"
+#include "embed.hh"
 
 namespace RG {
 
-int RunPack(Span<const char *> arguments)
+int RunEmbed(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
 
@@ -29,21 +29,21 @@ int RunPack(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 pack [options] <filename> ...%!0
+R"(Usage: %!..+%1 embed [options] <filename> ...%!0
 
 Options:
     %!..+-O, --output_file <file>%!0     Redirect output to file or directory
 
-    %!..+-f, --flags <flags>%!0          Set packing flags
+    %!..+-f, --flags <flags>%!0          Set embedding flags
     %!..+-s, --strip <count>%!0          Strip first count directory components, or 'All'
                                  %!D..(default: 0)%!0
 
     %!..+-c, --compress <type>%!0        Compress data, see below for available types
                                  %!D..(default: %2)%!0
 
-Available packing flags: %!..+%3%!0
+Available embedding flags: %!..+%3%!0
 Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(int)compression_type],
-                                       FmtSpan(PackFlagNames), FmtSpan(CompressionTypeNames));
+                                       FmtSpan(EmbedFlagNames), FmtSpan(CompressionTypeNames));
     };
 
     // Parse arguments
@@ -60,8 +60,8 @@ Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(in
                 while (flags_str[0]) {
                     Span<const char> part = TrimStr(SplitStrAny(flags_str, " ,", &flags_str), " ");
 
-                    if (part.len && !OptionToFlagI(PackFlagNames, part, &flags)) {
-                        LogError("Unknown packing flag '%1'", part);
+                    if (part.len && !OptionToFlagI(EmbedFlagNames, part, &flags)) {
+                        LogError("Unknown embedding flag '%1'", part);
                         return 1;
                     }
                 }
@@ -98,7 +98,7 @@ Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(in
     }
 
     // Resolve list of assets
-    PackAssetSet asset_set;
+    EmbedAssetSet asset_set;
     if (!ResolveAssets(filenames, strip_count, compression_type, &asset_set))
         return 1;
 

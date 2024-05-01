@@ -231,7 +231,7 @@ static void InitAssets()
         Fmt(shared_etag, "%1", FmtHex(buf).Pad0(-16));
     }
 
-    for (const AssetInfo &asset: GetPackedAssets()) {
+    for (const AssetInfo &asset: GetEmbedAssets()) {
         if (TestStr(asset.name, "src/goupile/client/goupile.html")) {
             assets_map.Set("/", &asset);
             assets_for_cache.Append("/");

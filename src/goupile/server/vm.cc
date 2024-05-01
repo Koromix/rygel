@@ -171,7 +171,7 @@ int RunVM(Span<const char *> arguments)
     // Get packed server script
     HeapArray<char> vm_js;
     {
-        const AssetInfo *asset = FindPackedAsset("src/goupile/server/vm.js");
+        const AssetInfo *asset = FindEmbedAsset("src/goupile/server/vm.js");
         RG_ASSERT(asset);
 
         StreamReader reader(asset->data, "<asset>", asset->compression_type);

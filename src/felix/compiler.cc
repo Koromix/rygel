@@ -50,23 +50,23 @@ static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *
     }
 }
 
-static void MakePackCommand(Span<const char *const> pack_filenames, bool use_arrays,
-                            const char *pack_options, const char *dest_filename,
-                            Allocator *alloc, Command *out_cmd)
+static void MakeEmbedCommand(Span<const char *const> embed_filenames, bool use_arrays,
+                             const char *embed_options, const char *dest_filename,
+                             Allocator *alloc, Command *out_cmd)
 {
     RG_ASSERT(alloc);
 
     HeapArray<char> buf(alloc);
 
-    Fmt(&buf, "\"%1\" pack -O \"%2\"", GetApplicationExecutable(), dest_filename);
+    Fmt(&buf, "\"%1\" embed -O \"%2\"", GetApplicationExecutable(), dest_filename);
 
     Fmt(&buf, use_arrays ? "" : " -fUseLiterals");
-    if (pack_options) {
-        Fmt(&buf, " %1", pack_options);
+    if (embed_options) {
+        Fmt(&buf, " %1", embed_options);
     }
 
-    for (const char *pack_filename: pack_filenames) {
-        Fmt(&buf, " \"%1\"", pack_filename);
+    for (const char *embed_filename: embed_filenames) {
+        Fmt(&buf, " \"%1\"", embed_filename);
     }
 
     out_cmd->cache_len = buf.len;
@@ -321,12 +321,12 @@ public:
         return true;
     }
 
-    void MakePackCommand(Span<const char *const> pack_filenames,
-                         const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames,
+                          const char *embed_options, const char *dest_filename,
+                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, false, pack_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, false, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -929,12 +929,12 @@ public:
         return true;
     }
 
-    void MakePackCommand(Span<const char *const> pack_filenames,
-                         const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames,
+                          const char *embed_options, const char *dest_filename,
+                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, false, pack_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, false, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1404,16 +1404,16 @@ public:
         return true;
     }
 
-    void MakePackCommand(Span<const char *const> pack_filenames,
-                         const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames,
+                          const char *embed_options, const char *dest_filename,
+                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
         // Strings literals were limited in length before MSVC 2022
         bool use_arrays = (cl_ver < 1930);
 
-        RG::MakePackCommand(pack_filenames, use_arrays, pack_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, use_arrays, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1722,12 +1722,12 @@ public:
         return true;
     }
 
-    void MakePackCommand(Span<const char *const> pack_filenames,
-                         const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames,
+                          const char *embed_options, const char *dest_filename,
+                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakePackCommand(pack_filenames, false, pack_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, false, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
@@ -2051,14 +2051,14 @@ public:
         return true;
     }
 
-    void MakePackCommand(Span<const char *const> pack_filenames,
-                         const char *pack_options, const char *dest_filename,
-                         Allocator *alloc, Command *out_cmd) const override
+    void MakeEmbedCommand(Span<const char *const> embed_filenames,
+                          const char *embed_options, const char *dest_filename,
+                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
         // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
-        RG::MakePackCommand(pack_filenames, true, pack_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, true, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,

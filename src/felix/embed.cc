@@ -13,7 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/wrap/json.hh"
-#include "pack.hh"
+#include "embed.hh"
 
 namespace RG {
 
@@ -103,7 +103,7 @@ static CompressionType AdaptCompression(const char *filename, CompressionType co
 }
 
 static bool LoadMetaFile(const char *filename, CompressionType compression_type,
-                         Allocator *alloc, HeapArray<PackAsset> *out_assets)
+                         Allocator *alloc, HeapArray<EmbedAsset> *out_assets)
 {
     RG_DEFER_NC(out_guard, len = out_assets->len) { out_assets->RemoveFrom(len); };
 
@@ -124,7 +124,7 @@ static bool LoadMetaFile(const char *filename, CompressionType compression_type,
                 return false;
             }
 
-            PackAsset *asset = out_assets->AppendDefault();
+            EmbedAsset *asset = out_assets->AppendDefault();
 
             asset->name = DuplicateString(prop.section, alloc).ptr;
             asset->compression_type = AdaptCompression(asset->name, compression_type);
@@ -157,7 +157,7 @@ static bool LoadMetaFile(const char *filename, CompressionType compression_type,
 }
 
 bool ResolveAssets(Span<const char *const> filenames, int strip_count,
-                   CompressionType compression_type, PackAssetSet *out_set)
+                   CompressionType compression_type, EmbedAssetSet *out_set)
 {
     RG_DEFER_NC(out_guard, len = out_set->assets.len) { out_set->assets.RemoveFrom(len); };
 
@@ -166,7 +166,7 @@ bool ResolveAssets(Span<const char *const> filenames, int strip_count,
             if (!LoadMetaFile(filename + 1, compression_type, &out_set->str_alloc, &out_set->assets))
                 return false;
         } else {
-            PackAsset *asset = out_set->assets.AppendDefault();
+            EmbedAsset *asset = out_set->assets.AppendDefault();
 
             asset->name = StripDirectoryComponents(filename, strip_count);
             asset->compression_type = AdaptCompression(filename, compression_type);
@@ -178,7 +178,7 @@ bool ResolveAssets(Span<const char *const> filenames, int strip_count,
     return true;
 }
 
-static Size WriteAsset(const PackAsset &asset, FunctionRef<void(Span<const uint8_t> buf)> func)
+static Size WriteAsset(const EmbedAsset &asset, FunctionRef<void(Span<const uint8_t> buf)> func)
 {
     Size compressed_len = 0;
     StreamWriter compressor([&](Span<const uint8_t> buf) {
@@ -342,11 +342,11 @@ static const char *MakeVariableName(const char *name, Allocator *alloc)
     return buf.Leak().ptr;
 }
 
-bool PackAssets(Span<const PackAsset> assets, unsigned int flags, const char *output_path)
+bool PackAssets(Span<const EmbedAsset> assets, unsigned int flags, const char *output_path)
 {
     BlockAllocator temp_alloc;
 
-    if ((flags & (int)PackFlag::UseEmbed) && (flags & (int)PackFlag::UseLiterals)) {
+    if ((flags & (int)EmbedFlag::UseEmbed) && (flags & (int)EmbedFlag::UseLiterals)) {
         LogError("Cannot use both UseEmbed and UseLiterals flags");
         return false;
     }
@@ -357,14 +357,14 @@ bool PackAssets(Span<const PackAsset> assets, unsigned int flags, const char *ou
         if (!c.Open(output_path))
             return false;
 
-        if (flags & (int)PackFlag::UseEmbed) {
+        if (flags & (int)EmbedFlag::UseEmbed) {
             const char *bin_filename = Fmt(&temp_alloc, "%1.bin", output_path).ptr;
 
             if (!bin.Open(bin_filename))
                 return false;
         }
     } else {
-        if (flags & (int)PackFlag::UseEmbed) {
+        if (flags & (int)EmbedFlag::UseEmbed) {
             LogError("You must use an explicit output path for UseEmbed");
             return false;
         }
@@ -383,23 +383,23 @@ bool PackAssets(Span<const PackAsset> assets, unsigned int flags, const char *ou
         PrintLn(&c, R"(
 static const uint8_t raw_data[] = {)");
 
-        if (flags & (int)PackFlag::UseEmbed) {
+        if (flags & (int)EmbedFlag::UseEmbed) {
             PrintLn(&c, "    #embed \"%1.bin\"", output_path);
             print = [&](Span<const uint8_t> buf) { bin.Write(buf); };
-        } else if (flags & (int)PackFlag::UseLiterals) {
+        } else if (flags & (int)EmbedFlag::UseLiterals) {
             print = [&](Span<const uint8_t> buf) { PrintAsLiterals(buf, &c); };
         } else {
             print = [&](Span<const uint8_t> buf) { PrintAsArray(buf, &c); };
         }
 
-        // Pack assets and source maps
-        for (const PackAsset &asset: assets) {
+        // Embed assets and source maps
+        for (const EmbedAsset &asset: assets) {
             BlobInfo blob = {};
 
             blob.name = asset.name;
             blob.compression_type = asset.compression_type;
 
-            if (flags & (int)PackFlag::UseEmbed) {
+            if (flags & (int)EmbedFlag::UseEmbed) {
                 blob.len = WriteAsset(asset, print);
                 if (blob.len < 0)
                     return false;
@@ -424,10 +424,10 @@ static const uint8_t raw_data[] = {)");
         PrintLn(&c, "};");
     }
 
-    if (!(flags & (int)PackFlag::NoArray)) {
+    if (!(flags & (int)EmbedFlag::NoArray)) {
         PrintLn(&c);
 
-        PrintLn(&c, "EXPORT_SYMBOL EXTERN_SYMBOL const Span PackedAssets;");
+        PrintLn(&c, "EXPORT_SYMBOL EXTERN_SYMBOL const Span EmbedAssets;");
         if (assets.len) {
             PrintLn(&c, "static AssetInfo assets[%1] = {", blobs.len);
 
@@ -443,10 +443,10 @@ static const uint8_t raw_data[] = {)");
 
             PrintLn(&c, "};");
         }
-        PrintLn(&c, "const Span PackedAssets = {%1, %2};", blobs.len ? "assets" : "0", blobs.len);
+        PrintLn(&c, "const Span EmbedAssets = {%1, %2};", blobs.len ? "assets" : "0", blobs.len);
     }
 
-    if (!(flags & (int)PackFlag::NoSymbols)) {
+    if (!(flags & (int)EmbedFlag::NoSymbols)) {
         PrintLn(&c);
 
         for (Size i = 0, raw_offset = 0; i < blobs.len; i++) {
@@ -463,7 +463,7 @@ static const uint8_t raw_data[] = {)");
 
     if (!c.Close())
         return false;
-    if ((flags & (int)PackFlag::UseEmbed) && !bin.Close())
+    if ((flags & (int)EmbedFlag::UseEmbed) && !bin.Close())
         return false;
 
     return true;
