@@ -157,7 +157,7 @@ bool Builder::AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *
         return false;
 
     const char *src_directory = DuplicateString(GetPathDirectory(src.filename), &str_alloc).ptr;
-    const char *misc_includes = nullptr;
+    [[maybe_unused]] const char *misc_includes = nullptr;
 
     out_list->Append(src_directory);
     out_list->Append(qt->headers);
