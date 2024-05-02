@@ -229,8 +229,8 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
                 }
             }
 
-            const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt->libraries, lib_prefix,
-                                                                    qt->version_major, component, import_extension).ptr;
+            const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5.%6",
+                                      qt->libraries, lib_prefix, qt->version_major, component, import_extension, qt->version_major).ptr;
             obj_filenames->Append(library);
         }
 
