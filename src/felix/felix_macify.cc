@@ -60,10 +60,6 @@ static bool WriteInfoPlist(const char *name, const char *title,
     <string>NSApplication</string>
     <key>NSHighResolutionCapable</key>
     <string>True</string>
-    <key>NSRequiresAquaSystemAppearance</key>
-    <true/>
-    <key>UIUserInterfaceStyle</key>
-    <string>Light</string>
 </dict>
 </plist>
 )";
