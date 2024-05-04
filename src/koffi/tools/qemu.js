@@ -428,7 +428,8 @@ async function build() {
                 return true;
             } else if (parts[0] == 'vendor') {
                 return parts[1] == null ||
-                       parts[1] == 'node-addon-api';
+                       parts[1] == 'node-addon-api'
+                       parts[1] == 'node-api-headers';
             } else if (parts[0] == 'web') {
                 return true;
             } else {
@@ -551,20 +552,25 @@ function snapshot() {
         let parts = filename.split('/');
 
         if (parts[0] == 'src' && parts[1] == 'core') {
-            return parts[2] == null || parts[2] == 'base' ||
-                                       parts[2] == 'xid';
+            return parts[2] == null ||
+                   parts[2] == 'base' ||
+                   parts[2] == 'xid';
         } else if (parts[0] == 'src') {
-            return parts[1] == null || parts[1] == 'cnoke' ||
-                                       parts[1] == 'koffi';
+            return parts[1] == null ||
+                   parts[1] == 'cnoke' ||
+                   parts[1] == 'koffi';
         } else if (parts[0] == 'tools') {
             return parts[1] == null || parts[1] != 'qemu';
         } else if (parts[0] == 'vendor') {
-            return parts[1] == null || parts[1] == 'node-addon-api' ||
-                                       parts[1] == 'raylib' ||
-                                       parts[1] == 'sqlite3' ||
-                                       parts[1] == 'sqlite3mc';
+            return parts[1] == null || 
+                   parts[1] == 'node-addon-api' ||
+                   parts[1] == 'node-api-headers' ||
+                   parts[1] == 'raylib' ||
+                   parts[1] == 'sqlite3' ||
+                   parts[1] == 'sqlite3mc';
         } else if (parts[0] == 'web') {
-            return parts[1] == null || parts[1] == 'koffi.dev';
+            return parts[1] == null ||
+                   parts[1] == 'koffi.dev';
         } else {
             return false;
         }
