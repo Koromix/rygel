@@ -12,6 +12,7 @@
 #include <QFileDialog>
 #include <QUrl>
 #include <QStyleHints>
+#include <QtGlobal>
 
 #include "src/tytools/tycommander/board.hpp"
 #include "src/tytools/tycommander/monitor.hpp"
@@ -38,10 +39,12 @@ UploaderWindow::UploaderWindow(QWidget *parent)
     setWindowTitle(QApplication::applicationName());
 
     if (QFile::exists(":/logo")) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         QStyleHints *hints = QApplication::styleHints();
-
         connect(hints, &QStyleHints::colorSchemeChanged, this, &UploaderWindow::adaptLogo);
-        adaptLogo(hints->colorScheme());
+#endif
+
+        adaptLogo();
     }
     resize(0, 0);
 
@@ -113,11 +116,17 @@ void UploaderWindow::openBugReports()
 #endif
 }
 
-void UploaderWindow::adaptLogo(Qt::ColorScheme scheme)
+void UploaderWindow::adaptLogo()
 {
     const char *path = ":/logo";
+
+#if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
+    QStyleHints *hints = QApplication::styleHints();
+    Qt::ColorScheme scheme = hints->colorScheme();
+
     if (scheme == Qt::ColorScheme::Dark && QFile::exists(":/dark"))
         path = ":/dark";
+#endif
 
     QPixmap pixmap(path);
     QPixmap scaled = pixmap.scaledToHeight(60, Qt::SmoothTransformation);

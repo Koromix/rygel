@@ -54,7 +54,7 @@ public slots:
     void openBugReports();
 
 private:
-    void adaptLogo(Qt::ColorScheme scheme);
+    void adaptLogo();
 
     void changeCurrentBoard(Board *board);
     void refreshActions();
