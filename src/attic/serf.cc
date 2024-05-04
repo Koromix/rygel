@@ -417,10 +417,11 @@ Options:
                                  %!D..(default: %2)%!0
 
     %!..+-p, --port <port>%!0            Change web server port
-                                 %!D..(default: %4)%!0
+                                 %!D..(default: %3)%!0
+        %!..+--enable_sab%!0             Set headers for SharedArrayBuffer support
 
     %!..+-v, --verbose%!0                Log served requests)",
-                FelixTarget, config_filename, config.root_directory, config.http.port);
+                FelixTarget, config_filename, config.http.port);
     };
 
     // Handle version
@@ -464,6 +465,20 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
+            } else if (opt.Test("--enable_sab")) {
+                Size j = 0;
+                for (Size i = 0; i < config.headers.len; i++) {
+                    const HttpHeader &header = config.headers[i];
+                    config.headers[j] = header;
+
+                    bool keep = !TestStrI(header.key, "Cross-Origin-Opener-Policy") &&
+                                !TestStrI(header.key, "Cross-Origin-Embedder-Policy");
+                    j += keep;
+                }
+                config.headers.len = j;
+
+                config.headers.Append({ "Cross-Origin-Opener-Policy", "same-origin" });
+                config.headers.Append({ "Cross-Origin-Embedder-Policy", "require-corp" });
             } else if (opt.Test("-v", "--verbose")) {
                 config.verbose = true;
             } else {
