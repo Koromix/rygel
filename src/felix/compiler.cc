@@ -343,8 +343,13 @@ public:
     {
         RG_ASSERT(alloc);
 
-        const char *cache_filename = Fmt(alloc, "%1.gch", pch_filename).ptr;
-        return cache_filename;
+        if (platform == HostPlatform::Windows) {
+            const char *cache_filename = Fmt(alloc, "%1.pch", pch_filename).ptr;
+            return cache_filename;
+        } else {
+            const char *cache_filename = Fmt(alloc, "%1.gch", pch_filename).ptr;
+            return cache_filename;
+        }
     }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
