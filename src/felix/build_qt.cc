@@ -229,9 +229,15 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
                 }
             }
 
-            const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5.%6",
-                                      qt->libraries, lib_prefix, qt->version_major, component, import_extension, qt->version_major).ptr;
-            obj_filenames->Append(library);
+            if (build.compiler->platform == HostPlatform::Windows) {
+                const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5",
+                                          qt->libraries, lib_prefix, qt->version_major, component, import_extension).ptr;
+                obj_filenames->Append(library);
+            } else {
+                const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5.%6",
+                                          qt->libraries, lib_prefix, qt->version_major, component, import_extension, qt->version_major).ptr;
+                obj_filenames->Append(library);
+            }
         }
 
         // Fix quirk: QtGui depends on QtDBus but it's not listed correctly
