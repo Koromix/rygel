@@ -243,12 +243,7 @@ function buildFiles(map, live, sourcemap) {
         write: false,
         format: 'iife',
         globalName: 'napka',
-        target: [
-            'chrome52',
-            'edge18',
-            'firefox60',
-            'safari11'
-        ],
+        target: 'es2020',
         outfile: 'napka.js'
     });
     files['napka.js'] = Buffer.from(js.outputFiles[0].contents);
