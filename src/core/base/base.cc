@@ -5137,7 +5137,7 @@ void FillRandomSafe(void *out_buf, Size len)
     bool reseed = false;
 
     // Reseed every 4 megabytes, or every hour, or after a fork
-    // reseed |= (rnd_remain <= 0);
+    reseed |= (rnd_remain <= 0);
     reseed |= (GetMonotonicTime() - rnd_time > 3600 * 1000);
 #ifndef _WIN32
     reseed |= (getpid() != rnd_pid);
