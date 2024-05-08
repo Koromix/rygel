@@ -13,7 +13,7 @@ test:
 	@$(MAKE) --no-print-directory -j6 test-common
 
 # These tests are for development
-test-common: test-go vet-go no-filepath verify-source-map end-to-end-tests js-api-tests plugin-tests register-test node-unref-tests
+test-common: test-go vet-go no-filepath verify-source-map end-to-end-tests js-api-tests plugin-tests register-test node-unref-tests decorator-tests
 
 # These tests are for release (the extra tests are not included in "test" because they are pretty slow)
 test-all:
@@ -85,6 +85,16 @@ end-to-end-tests: version-go
 	node scripts/esbuild.js npm/esbuild/package.json --version
 	node scripts/end-to-end-tests.js
 
+# Note: The TypeScript source code for these tests was copied from the repo
+# https://github.com/evanw/decorator-tests, which is the official location of
+# the source code for these tests. Any changes to these tests should be made
+# there first and then copied here afterward.
+decorator-tests: esbuild
+	./esbuild scripts/decorator-tests.ts --target=es2022 --outfile=scripts/decorator-tests.js
+	node scripts/decorator-tests.js
+	node scripts/decorator-tests.js | grep -q 'All checks passed'
+	git diff --exit-code scripts/decorator-tests.js
+
 js-api-tests: version-go
 	node scripts/esbuild.js npm/esbuild/package.json --version
 	node scripts/js-api-tests.js
@@ -107,10 +117,13 @@ test-old-ts: platform-neutral | require/old-ts/node_modules
 node-unref-tests: | scripts/node_modules
 	node scripts/node-unref-tests.js
 
-lib-typecheck: lib-typecheck-node lib-typecheck-deno
+lib-typecheck: lib-typecheck-node lib-typecheck-node-nolib lib-typecheck-deno
 
 lib-typecheck-node: | lib/node_modules
 	cd lib && node_modules/.bin/tsc -noEmit -p tsconfig.json
+
+lib-typecheck-node-nolib: | lib/node_modules
+	cd lib && node_modules/.bin/tsc -noEmit -p tsconfig-nolib.json
 
 lib-typecheck-deno: lib/deno/lib.deno.d.ts | lib/node_modules
 	cd lib && node_modules/.bin/tsc -noEmit -p tsconfig-deno.json

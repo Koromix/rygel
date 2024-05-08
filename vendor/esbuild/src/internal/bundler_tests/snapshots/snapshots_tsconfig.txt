@@ -163,14 +163,10 @@ var foo3 = "shimFoo";
 var bar3 = "shimBar";
 
 // Users/user/project/src/main.ts
-if (foo2 !== "foo")
-  throw "fail: foo";
-if (bar2 !== "bar")
-  throw "fail: bar";
-if (foo3 !== "shimFoo")
-  throw "fail: shimFoo";
-if (bar3 !== "shimBar")
-  throw "fail: shimBar";
+if (foo2 !== "foo") throw "fail: foo";
+if (bar2 !== "bar") throw "fail: bar";
+if (foo3 !== "shimFoo") throw "fail: shimFoo";
+if (bar3 !== "shimBar") throw "fail: shimBar";
 
 ================================================================================
 TestTsconfigIgnoredTargetSilent
@@ -395,6 +391,12 @@ var both_default = /* @__PURE__ */ R.c(R.F, null, /* @__PURE__ */ R.c("div", nul
 
 // Users/user/project/entry.ts
 console.log(factory_default, fragment_default, both_default);
+
+================================================================================
+TestTsconfigPackageJsonExportsYarnPnP
+---------- /Users/user/project/out.js ----------
+// packages/app/index.tsx
+console.log(/* @__PURE__ */ success("div", null));
 
 ================================================================================
 TestTsconfigPaths
@@ -749,8 +751,7 @@ TestTsconfigWithStatementAlwaysStrictFalse
 ---------- /Users/user/project/out.js ----------
 (() => {
   // Users/user/project/src/entry.ts
-  with (x)
-    y;
+  with (x) y;
 })();
 
 ================================================================================
@@ -758,8 +759,7 @@ TestTsconfigWithStatementStrictFalse
 ---------- /Users/user/project/out.js ----------
 (() => {
   // Users/user/project/src/entry.ts
-  with (x)
-    y;
+  with (x) y;
 })();
 
 ================================================================================
@@ -767,6 +767,5 @@ TestTsconfigWithStatementStrictTrueAlwaysStrictFalse
 ---------- /Users/user/project/out.js ----------
 (() => {
   // Users/user/project/src/entry.ts
-  with (x)
-    y;
+  with (x) y;
 })();

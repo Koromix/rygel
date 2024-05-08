@@ -13,13 +13,6 @@ import (
 	"github.com/evanw/esbuild/internal/test"
 )
 
-func assertEqual(t *testing.T, a interface{}, b interface{}) {
-	t.Helper()
-	if a != b {
-		t.Fatalf("%s != %s", a, b)
-	}
-}
-
 func expectPrintedCommon(t *testing.T, name string, contents string, expected string, options config.Options) {
 	t.Helper()
 	t.Run(name, func(t *testing.T) {
@@ -511,28 +504,39 @@ func TestObject(t *testing.T) {
 	expectPrinted(t, "let x = () => ({}.x)", "let x = () => ({}).x;\n")
 	expectPrinted(t, "let x = () => ({} = {})", "let x = () => ({} = {});\n")
 	expectPrinted(t, "let x = () => (x, {} = {})", "let x = () => (x, {} = {});\n")
+
+	// "{ __proto__: __proto__ }" must not become "{ __proto__ }"
+	expectPrinted(t, "function foo(__proto__) { return { __proto__: __proto__ } }", "function foo(__proto__) {\n  return { __proto__: __proto__ };\n}\n")
+	expectPrinted(t, "function foo(__proto__) { return { '__proto__': __proto__ } }", "function foo(__proto__) {\n  return { \"__proto__\": __proto__ };\n}\n")
+	expectPrinted(t, "function foo(__proto__) { return { ['__proto__']: __proto__ } }", "function foo(__proto__) {\n  return { [\"__proto__\"]: __proto__ };\n}\n")
+	expectPrinted(t, "import { __proto__ } from 'foo'; let foo = () => ({ __proto__: __proto__ })", "import { __proto__ } from \"foo\";\nlet foo = () => ({ __proto__: __proto__ });\n")
+	expectPrinted(t, "import { __proto__ } from 'foo'; let foo = () => ({ '__proto__': __proto__ })", "import { __proto__ } from \"foo\";\nlet foo = () => ({ \"__proto__\": __proto__ });\n")
+	expectPrinted(t, "import { __proto__ } from 'foo'; let foo = () => ({ ['__proto__']: __proto__ })", "import { __proto__ } from \"foo\";\nlet foo = () => ({ [\"__proto__\"]: __proto__ });\n")
+
+	// Don't use ES6+ features (such as a shorthand or computed property name) in ES5
+	expectPrintedTarget(t, 5, "function foo(__proto__) { return { __proto__ } }", "function foo(__proto__) {\n  return { __proto__: __proto__ };\n}\n")
 }
 
 func TestFor(t *testing.T) {
 	// Make sure "in" expressions are forbidden in the right places
-	expectPrinted(t, "for ((a in b);;);", "for ((a in b); ; )\n  ;\n")
-	expectPrinted(t, "for (a ? b : (c in d);;);", "for (a ? b : (c in d); ; )\n  ;\n")
-	expectPrinted(t, "for ((a ? b : c in d).foo;;);", "for ((a ? b : c in d).foo; ; )\n  ;\n")
-	expectPrinted(t, "for (var x = (a in b);;);", "for (var x = (a in b); ; )\n  ;\n")
-	expectPrinted(t, "for (x = (a in b);;);", "for (x = (a in b); ; )\n  ;\n")
-	expectPrinted(t, "for (x == (a in b);;);", "for (x == (a in b); ; )\n  ;\n")
-	expectPrinted(t, "for (1 * (x == a in b);;);", "for (1 * (x == a in b); ; )\n  ;\n")
-	expectPrinted(t, "for (a ? b : x = (c in d);;);", "for (a ? b : x = (c in d); ; )\n  ;\n")
-	expectPrinted(t, "for (var x = y = (a in b);;);", "for (var x = y = (a in b); ; )\n  ;\n")
-	expectPrinted(t, "for ([a in b];;);", "for ([a in b]; ; )\n  ;\n")
-	expectPrinted(t, "for (x(a in b);;);", "for (x(a in b); ; )\n  ;\n")
-	expectPrinted(t, "for (x[a in b];;);", "for (x[a in b]; ; )\n  ;\n")
-	expectPrinted(t, "for (x?.[a in b];;);", "for (x?.[a in b]; ; )\n  ;\n")
-	expectPrinted(t, "for ((x => a in b);;);", "for ((x) => (a in b); ; )\n  ;\n")
+	expectPrinted(t, "for ((a in b);;);", "for ((a in b); ; ) ;\n")
+	expectPrinted(t, "for (a ? b : (c in d);;);", "for (a ? b : (c in d); ; ) ;\n")
+	expectPrinted(t, "for ((a ? b : c in d).foo;;);", "for ((a ? b : c in d).foo; ; ) ;\n")
+	expectPrinted(t, "for (var x = (a in b);;);", "for (var x = (a in b); ; ) ;\n")
+	expectPrinted(t, "for (x = (a in b);;);", "for (x = (a in b); ; ) ;\n")
+	expectPrinted(t, "for (x == (a in b);;);", "for (x == (a in b); ; ) ;\n")
+	expectPrinted(t, "for (1 * (x == a in b);;);", "for (1 * (x == a in b); ; ) ;\n")
+	expectPrinted(t, "for (a ? b : x = (c in d);;);", "for (a ? b : x = (c in d); ; ) ;\n")
+	expectPrinted(t, "for (var x = y = (a in b);;);", "for (var x = y = (a in b); ; ) ;\n")
+	expectPrinted(t, "for ([a in b];;);", "for ([a in b]; ; ) ;\n")
+	expectPrinted(t, "for (x(a in b);;);", "for (x(a in b); ; ) ;\n")
+	expectPrinted(t, "for (x[a in b];;);", "for (x[a in b]; ; ) ;\n")
+	expectPrinted(t, "for (x?.[a in b];;);", "for (x?.[a in b]; ; ) ;\n")
+	expectPrinted(t, "for ((x => a in b);;);", "for ((x) => (a in b); ; ) ;\n")
 
 	// Make sure for-of loops with commas are wrapped in parentheses
-	expectPrinted(t, "for (let a in b, c);", "for (let a in b, c)\n  ;\n")
-	expectPrinted(t, "for (let a of (b, c));", "for (let a of (b, c))\n  ;\n")
+	expectPrinted(t, "for (let a in b, c);", "for (let a in b, c) ;\n")
+	expectPrinted(t, "for (let a of (b, c));", "for (let a of (b, c)) ;\n")
 }
 
 func TestFunction(t *testing.T) {
@@ -564,8 +568,8 @@ func TestCommentsAndParentheses(t *testing.T) {
 	expectPrinted(t, "export default (/* foo */ function f() {});", "export default (\n  /* foo */\n  function f() {\n  }\n);\n")
 	expectPrinted(t, "export default (/* foo */ class x {});", "export default (\n  /* foo */\n  class x {\n  }\n);\n")
 	expectPrinted(t, "x = () => (/* foo */ {});", "x = () => (\n  /* foo */\n  {}\n);\n")
-	expectPrinted(t, "for ((/* foo */ let).x of y) ;", "for (\n  /* foo */\n  (let).x of y\n)\n  ;\n")
-	expectPrinted(t, "for (/* foo */ (let).x of y) ;", "for (\n  /* foo */\n  (let).x of y\n)\n  ;\n")
+	expectPrinted(t, "for ((/* foo */ let).x of y) ;", "for (\n  /* foo */\n  (let).x of y\n) ;\n")
+	expectPrinted(t, "for (/* foo */ (let).x of y) ;", "for (\n  /* foo */\n  (let).x of y\n) ;\n")
 	expectPrinted(t, "function *x() { yield (/* foo */ y) }", "function* x() {\n  yield (\n    /* foo */\n    y\n  );\n}\n")
 }
 

@@ -28,9 +28,9 @@ func expectParseErrorExperimentalDecoratorTS(t *testing.T, contents string, expe
 	})
 }
 
-func expectParseErrorWithUnsupportedFeaturesTS(t *testing.T, unsupportedJSFeatures compat.JSFeature, contents string, expected string) {
+func expectPrintedWithUnsupportedFeaturesTS(t *testing.T, unsupportedJSFeatures compat.JSFeature, contents string, expected string) {
 	t.Helper()
-	expectParseErrorCommon(t, contents, expected, config.Options{
+	expectPrintedCommon(t, contents, expected, config.Options{
 		TS: config.TSOptions{
 			Parse: true,
 		},
@@ -751,7 +751,7 @@ func TestTSClass(t *testing.T) {
 
 	expectPrintedAssignSemanticsTS(t, "class Foo { 'foo' = 0 }", "class Foo {\n  constructor() {\n    this[\"foo\"] = 0;\n  }\n}\n")
 	expectPrintedAssignSemanticsTS(t, "class Foo { ['foo'] = 0 }", "class Foo {\n  constructor() {\n    this[\"foo\"] = 0;\n  }\n}\n")
-	expectPrintedAssignSemanticsTS(t, "class Foo { [foo] = 0 }", "var _a;\nclass Foo {\n  constructor() {\n    this[_a] = 0;\n  }\n  static {\n    _a = foo;\n  }\n}\n")
+	expectPrintedAssignSemanticsTS(t, "class Foo { [foo] = 0 }", "var _a;\n_a = foo;\nclass Foo {\n  constructor() {\n    this[_a] = 0;\n  }\n}\n")
 	expectPrintedMangleAssignSemanticsTS(t, "class Foo { 'foo' = 0 }", "class Foo {\n  constructor() {\n    this.foo = 0;\n  }\n}\n")
 	expectPrintedMangleAssignSemanticsTS(t, "class Foo { ['foo'] = 0 }", "class Foo {\n  constructor() {\n    this.foo = 0;\n  }\n}\n")
 
@@ -890,16 +890,18 @@ func TestTSPrivateIdentifiers(t *testing.T) {
 	expectPrintedTS(t, "class Foo { static set #foo(x) {} }", "class Foo {\n  static set #foo(x) {\n  }\n}\n")
 
 	// Decorators are not valid on private members
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo = 1 }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec get #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec set #foo() {x} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo = 1 }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static get #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static set #foo() {x} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo = 1 }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec get #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec set #foo(x) {x} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec accessor #foo }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo = 1 }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static get #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static set #foo(x) {x} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static accessor #foo }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
 
 	// Decorators are now able to access private names, since the TypeScript
 	// compiler was changed to move them into a "static {}" block within the
@@ -1804,7 +1806,7 @@ func TestTSDeclare(t *testing.T) {
 	expectPrintedTS(t, "declare\nconst foo = 0", "declare;\nconst foo = 0;\n")
 	expectPrintedTS(t, "declare\nfunction foo() {}", "declare;\nfunction foo() {\n}\n")
 	expectPrintedTS(t, "declare\nclass Foo {}", "declare;\nclass Foo {\n}\n")
-	expectPrintedTS(t, "declare\nenum Foo {}", "declare;\nvar Foo = /* @__PURE__ */ ((Foo) => {\n})(Foo || {});\n")
+	expectPrintedTS(t, "declare\nenum Foo {}", "declare;\nvar Foo = /* @__PURE__ */ ((Foo) => {\n  return Foo;\n})(Foo || {});\n")
 	expectPrintedTS(t, "class Foo { declare \n foo }", "class Foo {\n  declare;\n  foo;\n}\n")
 
 	expectPrintedTS(t, "declare;", "declare;\n")
@@ -1919,18 +1921,20 @@ func TestTSExperimentalDecorator(t *testing.T) {
 	expectParseErrorExperimentalDecoratorTS(t, "({ foo(@dec x) {} })", "<stdin>: ERROR: Expected identifier but found \"@\"\n")
 
 	// Decorators aren't allowed with private names
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo = 1 }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec *#foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec async #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec async* #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo = 1 }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static *#foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static async #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
-	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static async* #foo() {} }", "<stdin>: ERROR: Expected identifier but found \"#foo\"\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo = 1 }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec *#foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec async #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec async* #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec accessor #foo }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo = 1 }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static *#foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static async #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static async* #foo() {} }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
+	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec static accessor #foo }", "<stdin>: ERROR: TypeScript experimental decorators cannot be used on private identifiers\n")
 
 	// Decorators aren't allowed on class constructors
 	expectParseErrorExperimentalDecoratorTS(t, "class Foo { @dec constructor() {} }", "<stdin>: ERROR: Decorators are not allowed on class constructors\n")
@@ -2051,8 +2055,14 @@ func TestTSExperimentalDecorator(t *testing.T) {
 	expectParseErrorExperimentalDecoratorTS(t, "@x export default abstract", "<stdin>: ERROR: Decorators are not valid here\n")
 	expectParseErrorExperimentalDecoratorTS(t, "@x export @y default class {}", "<stdin>: ERROR: Decorators are not valid here\n<stdin>: ERROR: Unexpected \"default\"\n")
 
-	// TypeScript experimental decorators are actually allowed on declared fields
+	// From the TypeScript team: "We do allow postfix ! because it's TypeScript only."
+	// https://github.com/microsoft/TypeScript/issues/57756
+	expectPrintedExperimentalDecoratorTS(t, "@x!.y!.z class Foo {}", "let Foo = class {\n};\nFoo = __decorateClass([\n  x.y.z\n], Foo);\n")
+
+	// TypeScript experimental decorators are actually allowed on declared and abstract fields
 	expectPrintedExperimentalDecoratorTS(t, "class Foo { @(() => {}) declare foo: any; @(() => {}) bar: any }",
+		"class Foo {\n  bar;\n}\n__decorateClass([\n  () => {\n  }\n], Foo.prototype, \"foo\", 2);\n__decorateClass([\n  () => {\n  }\n], Foo.prototype, \"bar\", 2);\n")
+	expectPrintedExperimentalDecoratorTS(t, "abstract class Foo { @(() => {}) abstract foo: any; @(() => {}) bar: any }",
 		"class Foo {\n  bar;\n}\n__decorateClass([\n  () => {\n  }\n], Foo.prototype, \"foo\", 2);\n__decorateClass([\n  () => {\n  }\n], Foo.prototype, \"bar\", 2);\n")
 }
 
@@ -2086,9 +2096,11 @@ func TestTSDecorators(t *testing.T) {
 	expectPrintedTS(t, "class Foo { #x = @y.#x.y.#x class {} }", "class Foo {\n  #x = @y.#x.y.#x class {\n  };\n}\n")
 	expectParseErrorTS(t, "@123 class Foo {}", "<stdin>: ERROR: Expected identifier but found \"123\"\n")
 	expectParseErrorTS(t, "@x[y] class Foo {}", "<stdin>: ERROR: Expected \";\" but found \"class\"\n")
-	expectParseErrorTS(t, "@x?.() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
-	expectParseErrorTS(t, "@x?.y() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
-	expectParseErrorTS(t, "@x?.[y]() class Foo {}", "<stdin>: ERROR: Expected \".\" but found \"?.\"\n")
+	expectParseErrorTS(t, "@x?.() class Foo {}", "<stdin>: ERROR: Expected identifier but found \"(\"\n")
+	expectParseErrorTS(t, "@x?.y() class Foo {}",
+		"<stdin>: ERROR: JavaScript decorator syntax does not allow \"?.\" here\n"+
+			"<stdin>: NOTE: Wrap this decorator in parentheses to allow arbitrary expressions:\n")
+	expectParseErrorTS(t, "@x?.[y]() class Foo {}", "<stdin>: ERROR: Expected identifier but found \"[\"\n")
 	expectParseErrorTS(t, "@new Function() class Foo {}", "<stdin>: ERROR: Expected identifier but found \"new\"\n")
 	expectParseErrorTS(t, "@() => {} class Foo {}", "<stdin>: ERROR: Unexpected \")\"\n")
 	expectParseErrorTS(t, "x = @y function() {}", "<stdin>: ERROR: Expected \"class\" but found \"function\"\n")
@@ -2101,16 +2113,85 @@ func TestTSDecorators(t *testing.T) {
 
 	// TypeScript 5.0+ allows this but Babel doesn't. I believe this is a bug
 	// with TypeScript: https://github.com/microsoft/TypeScript/issues/55336
-	expectParseErrorTS(t, "class Foo { @x<{}>().y<[], () => {}>() z: any }", "<stdin>: ERROR: Expected identifier but found \".\"\n")
+	expectParseErrorTS(t, "class Foo { @x<{}>().y<[], () => {}>() z: any }",
+		"<stdin>: ERROR: JavaScript decorator syntax does not allow \".\" after a call expression\n"+
+			"<stdin>: NOTE: Wrap this decorator in parentheses to allow arbitrary expressions:\n")
 
-	errorText := "<stdin>: ERROR: Transforming JavaScript decorators to the configured target environment is not supported yet\n"
-	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "@dec class Foo {}", errorText)
-	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec x }", errorText)
-	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec x() {} }", errorText)
-	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec accessor x }", errorText)
-	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static x }", errorText)
-	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static x() {} }", errorText)
-	expectParseErrorWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static accessor x }", errorText)
+	expectPrintedWithUnsupportedFeaturesTS(t, compat.Decorators, "@dec class Foo {}",
+		`var _Foo_decorators, _init;
+_init = [, , ,];
+_Foo_decorators = [dec];
+class Foo {
+}
+Foo = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo);
+__runInitializers(_init, 1, Foo);
+`)
+	expectPrintedWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec x }",
+		`var _x_dec, _init;
+_init = [, , ,];
+_x_dec = [dec];
+class Foo {
+  constructor() {
+    __publicField(this, "x", __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+  }
+}
+__decorateElement(_init, 5, "x", _x_dec, Foo);
+`)
+	expectPrintedWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec x() {} }",
+		`var _x_dec, _init;
+_init = [, , ,];
+_x_dec = [dec];
+class Foo {
+  constructor() {
+    __runInitializers(_init, 5, this);
+  }
+  x() {
+  }
+}
+__decorateElement(_init, 1, "x", _x_dec, Foo);
+`)
+	expectPrintedWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec accessor x }",
+		`var _x_dec, _init, _x;
+_init = [, , ,];
+_x_dec = [dec];
+class Foo {
+  constructor() {
+    __privateAdd(this, _x, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+  }
+}
+_x = new WeakMap();
+__decorateElement(_init, 4, "x", _x_dec, Foo, _x);
+`)
+	expectPrintedWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static x }",
+		`var _x_dec, _init;
+_init = [, , ,];
+_x_dec = [dec];
+class Foo {
+}
+__decorateElement(_init, 13, "x", _x_dec, Foo);
+__publicField(Foo, "x", __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo);
+`)
+	expectPrintedWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static x() {} }",
+		`var _x_dec, _init;
+_init = [, , ,];
+_x_dec = [dec];
+class Foo {
+  static x() {
+  }
+}
+__decorateElement(_init, 9, "x", _x_dec, Foo);
+__runInitializers(_init, 3, Foo);
+`)
+	expectPrintedWithUnsupportedFeaturesTS(t, compat.Decorators, "class Foo { @dec static accessor x }",
+		`var _x_dec, _init, _x;
+_init = [, , ,];
+_x_dec = [dec];
+class Foo {
+}
+_x = new WeakMap();
+__decorateElement(_init, 12, "x", _x_dec, Foo, _x);
+__privateAdd(Foo, _x, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo);
+`)
 
 	// Check ASI for "abstract"
 	expectPrintedTS(t, "@x abstract class Foo {}", "@x class Foo {\n}\n")
@@ -2130,8 +2211,14 @@ func TestTSDecorators(t *testing.T) {
 	expectParseErrorTS(t, "@x export default abstract", "<stdin>: ERROR: Decorators are not valid here\n")
 	expectParseErrorTS(t, "@x export @y default class {}", "<stdin>: ERROR: Decorators are not valid here\n<stdin>: ERROR: Unexpected \"default\"\n")
 
-	// JavaScript decorators are not allowed on declared fields
+	// From the TypeScript team: "We do allow postfix ! because it's TypeScript only."
+	// https://github.com/microsoft/TypeScript/issues/57756
+	expectPrintedTS(t, "@x!.y!.z class Foo {}", "@x.y.z class Foo {\n}\n")
+
+	// JavaScript decorators are not allowed on declared or abstract fields
 	expectParseErrorTS(t, "class Foo { @(() => {}) declare foo: any; @(() => {}) bar: any }",
+		"<stdin>: ERROR: Decorators are not valid here\n")
+	expectParseErrorTS(t, "abstract class Foo { @(() => {}) abstract foo: any; @(() => {}) bar: any }",
 		"<stdin>: ERROR: Decorators are not valid here\n")
 }
 
@@ -2305,22 +2392,19 @@ func TestTSSuperCall(t *testing.T) {
 `)
 
 	expectPrintedAssignSemanticsTS(t, "class A extends B { [x] = 1; constructor() { foo(); super(1); } }",
-		`var _a;
-class A extends B {
+		`var _a, _b;
+class A extends (_b = B, _a = x, _b) {
   constructor() {
     foo();
     super(1);
     this[_a] = 1;
   }
-  static {
-    _a = x;
-  }
 }
 `)
 
 	expectPrintedAssignSemanticsTS(t, "class A extends B { [x] = 1; constructor() { foo(); y ||= super(1); } }",
-		`var _a;
-class A extends B {
+		`var _a, _b;
+class A extends (_b = B, _a = x, _b) {
   constructor() {
     var __super = (...args) => {
       super(...args);
@@ -2330,17 +2414,12 @@ class A extends B {
     foo();
     y ||= __super(1);
   }
-  static {
-    _a = x;
-  }
 }
 `)
 
 	expectPrintedAssignSemanticsTS(t, "class A extends B { [x]; constructor() { foo(); super(1); } }",
-		`class A extends B {
-  static {
-    x;
-  }
+		`var _a;
+class A extends (_a = B, x, _a) {
   constructor() {
     foo();
     super(1);
@@ -2349,10 +2428,8 @@ class A extends B {
 `)
 
 	expectPrintedAssignSemanticsTS(t, "class A extends B { [x]; constructor() { foo(); y ||= super(1); } }",
-		`class A extends B {
-  static {
-    x;
-  }
+		`var _a;
+class A extends (_a = B, x, _a) {
   constructor() {
     foo();
     y ||= super(1);
@@ -2387,8 +2464,7 @@ class A extends B {
 
 	expectPrintedAssignSemanticsTS(t, "class A extends B { constructor(public x = 1) { if (false) super(1); super(2); } }", `class A extends B {
   constructor(x = 1) {
-    if (false)
-      __super(1);
+    if (false) __super(1);
     super(2);
     this.x = x;
   }
@@ -2402,8 +2478,7 @@ class A extends B {
       this.x = x;
       return this;
     };
-    if (foo)
-      __super(1);
+    if (foo) __super(1);
     __super(2);
   }
 }
@@ -2416,10 +2491,8 @@ class A extends B {
       this.x = x;
       return this;
     };
-    if (foo)
-      __super(1);
-    else
-      __super(2);
+    if (foo) __super(1);
+    else __super(2);
   }
 }
 `)
@@ -2627,9 +2700,9 @@ func TestTSInstantiationExpression(t *testing.T) {
 	expectPrintedTS(t, "return Array < number > in x;", "return Array in x;\n")
 	expectPrintedTS(t, "return Array < Array < number >> in x;", "return Array in x;\n")
 	expectPrintedTS(t, "return Array < Array < number > > in x;", "return Array in x;\n")
-	expectPrintedTS(t, "for (var x = Array < number > in y) ;", "x = Array;\nfor (var x in y)\n  ;\n")
-	expectPrintedTS(t, "for (var x = Array < Array < number >> in y) ;", "x = Array;\nfor (var x in y)\n  ;\n")
-	expectPrintedTS(t, "for (var x = Array < Array < number > > in y) ;", "x = Array;\nfor (var x in y)\n  ;\n")
+	expectPrintedTS(t, "for (var x = Array < number > in y) ;", "x = Array;\nfor (var x in y) ;\n")
+	expectPrintedTS(t, "for (var x = Array < Array < number >> in y) ;", "x = Array;\nfor (var x in y) ;\n")
+	expectPrintedTS(t, "for (var x = Array < Array < number > > in y) ;", "x = Array;\nfor (var x in y) ;\n")
 
 	// See: https://github.com/microsoft/TypeScript/pull/49353
 	expectPrintedTS(t, "F<{}> 0", "F < {} > 0;\n")
@@ -2658,9 +2731,9 @@ func TestTSImport(t *testing.T) {
 	expectPrintedTS(t, "import * as ns from 'foo'; log(ns)", "import * as ns from \"foo\";\nlog(ns);\n")
 
 	// Dead control flow must not affect usage tracking
-	expectPrintedTS(t, "import {x} from 'foo'; if (false) log(x)", "import \"foo\";\nif (false)\n  log(x);\n")
-	expectPrintedTS(t, "import x from 'foo'; if (false) log(x)", "import \"foo\";\nif (false)\n  log(x);\n")
-	expectPrintedTS(t, "import * as ns from 'foo'; if (false) log(ns)", "import \"foo\";\nif (false)\n  log(ns);\n")
+	expectPrintedTS(t, "import {x} from 'foo'; if (false) log(x)", "import \"foo\";\nif (false) log(x);\n")
+	expectPrintedTS(t, "import x from 'foo'; if (false) log(x)", "import \"foo\";\nif (false) log(x);\n")
+	expectPrintedTS(t, "import * as ns from 'foo'; if (false) log(ns)", "import \"foo\";\nif (false) log(ns);\n")
 }
 
 // This is TypeScript-specific export syntax
@@ -2668,7 +2741,7 @@ func TestTSExportEquals(t *testing.T) {
 	// This use of the "export" keyword should not trigger strict mode because
 	// this syntax works in CommonJS modules, not in ECMAScript modules
 	expectPrintedTS(t, "export = []", "module.exports = [];\n")
-	expectPrintedTS(t, "export = []; with ({}) ;", "with ({})\n  ;\nmodule.exports = [];\n")
+	expectPrintedTS(t, "export = []; with ({}) ;", "with ({}) ;\nmodule.exports = [];\n")
 }
 
 // This is TypeScript-specific import syntax
@@ -2676,7 +2749,7 @@ func TestTSImportEquals(t *testing.T) {
 	// This use of the "export" keyword should not trigger strict mode because
 	// this syntax works in CommonJS modules, not in ECMAScript modules
 	expectPrintedTS(t, "import x = require('y')", "const x = require(\"y\");\n")
-	expectPrintedTS(t, "import x = require('y'); with ({}) ;", "const x = require(\"y\");\nwith ({})\n  ;\n")
+	expectPrintedTS(t, "import x = require('y'); with ({}) ;", "const x = require(\"y\");\nwith ({}) ;\n")
 
 	expectPrintedTS(t, "import x = require('foo'); x()", "const x = require(\"foo\");\nx();\n")
 	expectPrintedTS(t, "import x = require('foo')\nx()", "const x = require(\"foo\");\nx();\n")
@@ -3031,22 +3104,19 @@ func TestTSClassSideEffectOrder(t *testing.T) {
 	static [g()]() {}
 	[h()];
 }
-`, `var _a, _b;
+`, `var _a, _b, _c;
 class Foo {
   constructor() {
-    this[_a] = 1;
-  }
-  static {
-    h();
+    this[_c] = 1;
   }
   [a()]() {
   }
-  [(b(), _a = c(), d())]() {
+  [(b(), _c = c(), d())]() {
   }
   static {
     this[_b] = 1;
   }
-  static [(e(), _b = f(), g())]() {
+  static [(e(), _b = f(), _a = g(), h(), _a)]() {
   }
 }
 `)
@@ -3054,10 +3124,8 @@ class Foo {
 	static [x()] = 1;
 }
 `, `var _a;
+_a = x();
 class Foo {
-  static {
-    _a = x();
-  }
   static {
     this[_a] = 1;
   }
@@ -3073,19 +3141,18 @@ class Foo {
 	static [g()]() {}
 	[h()];
 }
-`, `var _a, _b;
+`, `var _a, _b, _c;
 class Foo {
   constructor() {
-    this[_a] = 1;
+    this[_c] = 1;
   }
   [a()]() {
   }
-  [(b(), _a = c(), d())]() {
+  [(b(), _c = c(), d())]() {
   }
-  static [(e(), _b = f(), g())]() {
+  static [(e(), _b = f(), _a = g(), h(), _a)]() {
   }
 }
-h();
 Foo[_b] = 1;
 `)
 }

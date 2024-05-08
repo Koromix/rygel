@@ -501,7 +501,7 @@ func ConvertBindingToExpr(binding Binding, wrapIdentifier func(logger.Loc, ast.R
 		properties := make([]Property, len(b.Properties))
 		for i, property := range b.Properties {
 			value := ConvertBindingToExpr(property.Value, wrapIdentifier)
-			kind := PropertyNormal
+			kind := PropertyField
 			if property.IsSpread {
 				kind = PropertySpread
 			}
@@ -1086,6 +1086,45 @@ func extractNumericValues(left Expr, right Expr) (float64, float64, bool) {
 	return 0, 0, false
 }
 
+func extractStringValue(data E) ([]uint16, bool) {
+	switch e := data.(type) {
+	case *EAnnotation:
+		return extractStringValue(e.Value.Data)
+
+	case *EInlinedEnum:
+		return extractStringValue(e.Value.Data)
+
+	case *EString:
+		return e.Value, true
+	}
+
+	return nil, false
+}
+
+func extractStringValues(left Expr, right Expr) ([]uint16, []uint16, bool) {
+	if a, ok := extractStringValue(left.Data); ok {
+		if b, ok := extractStringValue(right.Data); ok {
+			return a, b, true
+		}
+	}
+	return nil, nil, false
+}
+
+func stringCompareUCS2(a []uint16, b []uint16) int {
+	var n int
+	if len(a) < len(b) {
+		n = len(a)
+	} else {
+		n = len(b)
+	}
+	for i := 0; i < n; i++ {
+		if delta := int(a[i]) - int(b[i]); delta != 0 {
+			return delta
+		}
+	}
+	return len(a) - len(b)
+}
+
 func approximatePrintedIntCharCount(intValue float64) int {
 	count := 1 + (int)(math.Max(0, math.Floor(math.Log10(math.Abs(intValue)))))
 	if intValue < 0 {
@@ -1106,7 +1145,11 @@ func ShouldFoldBinaryArithmeticWhenMinifying(binary *EBinary) bool {
 		// are unlikely to result in larger output.
 		BinOpBitwiseAnd,
 		BinOpBitwiseOr,
-		BinOpBitwiseXor:
+		BinOpBitwiseXor,
+		BinOpLt,
+		BinOpGt,
+		BinOpLe,
+		BinOpGe:
 		return true
 
 	case BinOpAdd:
@@ -1220,6 +1263,38 @@ func FoldBinaryArithmetic(loc logger.Loc, e *EBinary) Expr {
 	case BinOpBitwiseXor:
 		if left, right, ok := extractNumericValues(e.Left, e.Right); ok {
 			return Expr{Loc: loc, Data: &ENumber{Value: float64(ToInt32(left) ^ ToInt32(right))}}
+		}
+
+	case BinOpLt:
+		if left, right, ok := extractNumericValues(e.Left, e.Right); ok {
+			return Expr{Loc: loc, Data: &EBoolean{Value: left < right}}
+		}
+		if left, right, ok := extractStringValues(e.Left, e.Right); ok {
+			return Expr{Loc: loc, Data: &EBoolean{Value: stringCompareUCS2(left, right) < 0}}
+		}
+
+	case BinOpGt:
+		if left, right, ok := extractNumericValues(e.Left, e.Right); ok {
+			return Expr{Loc: loc, Data: &EBoolean{Value: left > right}}
+		}
+		if left, right, ok := extractStringValues(e.Left, e.Right); ok {
+			return Expr{Loc: loc, Data: &EBoolean{Value: stringCompareUCS2(left, right) > 0}}
+		}
+
+	case BinOpLe:
+		if left, right, ok := extractNumericValues(e.Left, e.Right); ok {
+			return Expr{Loc: loc, Data: &EBoolean{Value: left <= right}}
+		}
+		if left, right, ok := extractStringValues(e.Left, e.Right); ok {
+			return Expr{Loc: loc, Data: &EBoolean{Value: stringCompareUCS2(left, right) <= 0}}
+		}
+
+	case BinOpGe:
+		if left, right, ok := extractNumericValues(e.Left, e.Right); ok {
+			return Expr{Loc: loc, Data: &EBoolean{Value: left >= right}}
+		}
+		if left, right, ok := extractStringValues(e.Left, e.Right); ok {
+			return Expr{Loc: loc, Data: &EBoolean{Value: stringCompareUCS2(left, right) >= 0}}
 		}
 	}
 
@@ -2193,7 +2268,7 @@ func (ctx HelperContext) ClassCanBeRemovedIfUnused(class Class) bool {
 			return false
 		}
 
-		if property.Flags.Has(PropertyIsMethod) {
+		if property.Kind.IsMethodDefinition() {
 			if fn, ok := property.ValueOrNil.Data.(*EFunction); ok {
 				for _, arg := range fn.Fn.Args {
 					if len(arg.Decorators) > 0 {
@@ -2246,7 +2321,7 @@ func (ctx HelperContext) ClassCanBeRemovedIfUnused(class Class) bool {
 			//     static foo = 1
 			//   }
 			//
-			if !class.UseDefineForClassFields && !property.Flags.Has(PropertyIsMethod) {
+			if property.Kind == PropertyField && !class.UseDefineForClassFields {
 				return false
 			}
 		}
@@ -2570,7 +2645,7 @@ func MangleObjectSpread(properties []Property) []Property {
 					// descriptor is not inlined into the caller. Since we are not
 					// evaluating code at compile time, just bail if we hit one
 					// and preserve the spread with the remaining properties.
-					if p.Kind == PropertyGet || p.Kind == PropertySet {
+					if p.Kind == PropertyGetter || p.Kind == PropertySetter {
 						// Don't mutate the original AST
 						clone := *v
 						clone.Properties = v.Properties[i:]
@@ -2582,7 +2657,7 @@ func MangleObjectSpread(properties []Property) []Property {
 					// Also bail if we hit a verbatim "__proto__" key. This will
 					// actually set the prototype of the object being spread so
 					// inlining it is not correct.
-					if p.Kind == PropertyNormal && !p.Flags.Has(PropertyIsComputed) && !p.Flags.Has(PropertyIsMethod) {
+					if p.Kind == PropertyField && !p.Flags.Has(PropertyIsComputed) {
 						if str, ok := p.Key.Data.(*EString); ok && helpers.UTF16EqualsString(str.Value, "__proto__") {
 							// Don't mutate the original AST
 							clone := *v

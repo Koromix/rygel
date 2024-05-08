@@ -3528,6 +3528,43 @@ for (const minify of [[], ['--minify-syntax']]) {
       `,
     }),
   )
+
+  // https://github.com/evanw/esbuild/issues/3700
+  tests.push(
+    test(['in.js', '--bundle', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        import imported from './data.json'
+        const native = JSON.parse(\`{
+          "hello": "world",
+          "__proto__": {
+            "sky": "universe"
+          }
+        }\`)
+        const literal1 = {
+          "hello": "world",
+          "__proto__": {
+            "sky": "universe"
+          }
+        }
+        const literal2 = {
+          "hello": "world",
+          ["__proto__"]: {
+            "sky": "universe"
+          }
+        }
+        if (Object.getPrototypeOf(native)?.sky) throw 'fail: native'
+        if (!Object.getPrototypeOf(literal1)?.sky) throw 'fail: literal1'
+        if (Object.getPrototypeOf(literal2)?.sky) throw 'fail: literal2'
+        if (Object.getPrototypeOf(imported)?.sky) throw 'fail: imported'
+      `,
+      'data.json': `{
+        "hello": "world",
+        "__proto__": {
+          "sky": "universe"
+        }
+      }`,
+    }),
+  )
 }
 
 // Test minification of top-level symbols
@@ -3734,6 +3771,29 @@ for (let flags of [[], ['--minify', '--keep-names']]) {
         namespace foo { export class Foo {} }
         if (foo.Foo.name !== 'Foo') throw 'fail: ' + foo.Foo.name
       `,
+    }),
+
+    // See: https://github.com/evanw/esbuild/issues/3756
+    test(['in.js', '--outfile=node.js', '--bundle'].concat(flags), {
+      'in.js': `(() => { let obj = { fn() {} }; if (obj.fn.name !== 'fn') throw 'fail: ' + obj.fn.name })()`,
+    }),
+    test(['in.js', '--outfile=node.js', '--bundle'].concat(flags), {
+      'in.js': `(() => { let obj = { *fn() {} }; if (obj.fn.name !== 'fn') throw 'fail: ' + obj.fn.name })()`,
+    }),
+    test(['in.js', '--outfile=node.js', '--bundle'].concat(flags), {
+      'in.js': `(() => { let obj = { async fn() {} }; if (obj.fn.name !== 'fn') throw 'fail: ' + obj.fn.name })()`,
+    }),
+    test(['in.js', '--outfile=node.js', '--bundle'].concat(flags), {
+      'in.js': `(() => {
+        let obj = { get fn() {} }, { get } = Object.getOwnPropertyDescriptor(obj, 'fn')
+        if (get.name !== 'get fn') throw 'fail: ' + get.name
+      })()`,
+    }),
+    test(['in.js', '--outfile=node.js', '--bundle'].concat(flags), {
+      'in.js': `(() => {
+        let obj = { set fn(_) {} }, { set } = Object.getOwnPropertyDescriptor(obj, 'fn')
+        if (set.name !== 'set fn') throw 'fail: ' + set.name
+      })()`,
     }),
   )
 }
@@ -5694,6 +5754,122 @@ for (let flags of [['--target=es2022'], ['--target=es6'], ['--bundle', '--target
         },
       }`,
     }),
+
+    // Check various combinations of flags
+    test(['in.ts', '--outfile=node.js', '--supported:class-field=false'].concat(flags), {
+      'in.ts': `
+        class Foo {
+          accessor foo = 1
+          static accessor bar = 2
+        }
+        if (new Foo().foo !== 1 || Foo.bar !== 2) throw 'fail'
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js', '--supported:class-static-field=false'].concat(flags), {
+      'in.ts': `
+        class Foo {
+          accessor foo = 1
+          static accessor bar = 2
+        }
+        if (new Foo().foo !== 1 || Foo.bar !== 2) throw 'fail'
+      `,
+    }),
+
+    // Make sure class body side effects aren't reordered
+    test(['in.ts', '--outfile=node.js', '--supported:class-field=false'].concat(flags), {
+      'in.ts': `
+        const log = []
+        class Foo extends (log.push(1), Object) {
+          [log.push(2)] = 123;
+          [log.push(3)] = 123;
+        }
+        if (log + '' !== '1,2,3') throw 'fail: ' + log
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js', '--supported:class-static-field=false'].concat(flags), {
+      'in.ts': `
+        const log = []
+        class Foo extends (log.push(1), Object) {
+          static [log.push(2)] = 123;
+          static [log.push(3)] = 123;
+        }
+        if (log + '' !== '1,2,3') throw 'fail: ' + log
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js', '--supported:class-field=false'].concat(flags), {
+      'in.ts': `
+        const log = []
+        class Foo {
+          static [log.push(1)]() {}
+          [log.push(2)] = 123;
+          static [log.push(3)]() {}
+        }
+        if (log + '' !== '1,2,3') throw 'fail: ' + log
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js', '--supported:class-static-field=false'].concat(flags), {
+      'in.ts': `
+        const log = []
+        class Foo {
+          [log.push(1)]() {}
+          static [log.push(2)] = 123;
+          [log.push(3)]() {}
+        }
+        if (log + '' !== '1,2,3') throw 'fail: ' + log
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        const log = []
+        class Foo {
+          @(() => { log.push(3) }) [log.push(1)]() {}
+          [log.push(2)] = 123;
+        }
+        if (log + '' !== '1,2,3') throw 'fail: ' + log
+      `,
+      'tsconfig.json': `{
+        "compilerOptions": {
+          "experimentalDecorators": true
+        }
+      }`,
+    }),
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        const log = []
+        class Foo {
+          @(() => { log.push(3) }) static [log.push(1)]() {}
+          static [log.push(2)] = 123;
+        }
+        if (log + '' !== '1,2,3') throw 'fail: ' + log
+      `,
+      'tsconfig.json': `{
+        "compilerOptions": {
+          "experimentalDecorators": true
+        }
+      }`,
+    }),
+
+    // Check "await" in computed property names
+    test(['in.ts', '--outfile=node.js', '--format=cjs', '--supported:class-field=false'].concat(flags), {
+      'in.ts': `
+        exports.async = async () => {
+          class Foo {
+            [await Promise.resolve('foo')] = 123
+          }
+          if (new Foo().foo !== 123) throw 'fail'
+        }
+      `,
+    }, { async: true }),
+    test(['in.ts', '--outfile=node.js', '--format=cjs', '--supported:class-static-field=false'].concat(flags), {
+      'in.ts': `
+        exports.async = async () => {
+          class Foo {
+            static [await Promise.resolve('foo')] = 123
+          }
+          if (Foo.foo !== 123) throw 'fail'
+        }
+      `,
+    }, { async: true }),
   )
 
   // https://github.com/evanw/esbuild/issues/3177

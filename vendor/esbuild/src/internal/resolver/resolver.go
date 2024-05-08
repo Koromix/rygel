@@ -248,17 +248,34 @@ func NewResolver(call config.APICall, fs fs.FS, log logger.Log, caches *cache.Ca
 		}
 	}
 
-	// Sort all JavaScript file extensions after TypeScript file extensions
-	// for imports of files inside of "node_modules" directories
+	// Sort all TypeScript file extensions after all JavaScript file extensions
+	// for imports of files inside of "node_modules" directories. But insert
+	// the TypeScript file extensions right after the last JavaScript file
+	// extension instead of at the end so that they might come before the
+	// first CSS file extension, which is important to people that publish
+	// TypeScript and CSS code to npm with the same file names for both.
 	nodeModulesExtensionOrder := make([]string, 0, len(options.ExtensionOrder))
-	for _, ext := range options.ExtensionOrder {
-		if loader, ok := options.ExtensionToLoader[ext]; !ok || !loader.IsTypeScript() {
-			nodeModulesExtensionOrder = append(nodeModulesExtensionOrder, ext)
+	split := 0
+	for i, ext := range options.ExtensionOrder {
+		if loader, ok := options.ExtensionToLoader[ext]; ok && loader == config.LoaderJS || loader == config.LoaderJSX {
+			split = i + 1 // Split after the last JavaScript extension
 		}
 	}
-	for _, ext := range options.ExtensionOrder {
-		if loader, ok := options.ExtensionToLoader[ext]; ok && loader.IsTypeScript() {
-			nodeModulesExtensionOrder = append(nodeModulesExtensionOrder, ext)
+	if split != 0 { // Only do this if there are any JavaScript extensions
+		for _, ext := range options.ExtensionOrder[:split] { // Non-TypeScript extensions before the split
+			if loader, ok := options.ExtensionToLoader[ext]; !ok || !loader.IsTypeScript() {
+				nodeModulesExtensionOrder = append(nodeModulesExtensionOrder, ext)
+			}
+		}
+		for _, ext := range options.ExtensionOrder { // All TypeScript extensions
+			if loader, ok := options.ExtensionToLoader[ext]; ok && loader.IsTypeScript() {
+				nodeModulesExtensionOrder = append(nodeModulesExtensionOrder, ext)
+			}
+		}
+		for _, ext := range options.ExtensionOrder[split:] { // Non-TypeScript extensions after the split
+			if loader, ok := options.ExtensionToLoader[ext]; !ok || !loader.IsTypeScript() {
+				nodeModulesExtensionOrder = append(nodeModulesExtensionOrder, ext)
+			}
 		}
 	}
 
@@ -311,6 +328,9 @@ func NewResolver(call config.APICall, fs fs.FS, log logger.Log, caches *cache.Ca
 			visited = make(map[string]bool)
 		}
 		if options.TSConfigPath != "" {
+			if r.log.Level <= logger.LevelDebug {
+				r.debugLogs = &debugLogs{what: fmt.Sprintf("Resolving tsconfig file %q", options.TSConfigPath)}
+			}
 			res.tsConfigOverride, err = r.parseTSConfig(options.TSConfigPath, visited)
 		} else {
 			source := logger.Source{
@@ -328,6 +348,8 @@ func NewResolver(call config.APICall, fs fs.FS, log logger.Log, caches *cache.Ca
 				r.log.AddError(nil, logger.Range{}, fmt.Sprintf("Cannot read file %q: %s",
 					PrettyPath(r.fs, logger.Path{Text: options.TSConfigPath, Namespace: "file"}), err.Error()))
 			}
+		} else {
+			r.flushDebugLogs(flushDueToSuccess)
 		}
 	}
 
@@ -487,7 +509,6 @@ func (res *Resolver) Resolve(sourceDir string, importPath string, kind ast.Impor
 
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
-	sourceDirInfo := r.dirInfoCached(sourceDir)
 
 	// Check for the Yarn PnP manifest if it hasn't already been checked for
 	if !r.pnpManifestWasChecked {
@@ -514,6 +535,12 @@ func (res *Resolver) Resolve(sourceDir string, importPath string, kind ast.Impor
 				break
 			}
 		}
+	}
+
+	sourceDirInfo := r.dirInfoCached(sourceDir)
+	if sourceDirInfo == nil {
+		// Bail if the directory is missing for some reason
+		return nil, debugMeta
 	}
 
 	result := r.resolveWithoutSymlinks(sourceDir, sourceDirInfo, importPath)
@@ -661,6 +688,11 @@ func (res *Resolver) ResolveGlob(sourceDir string, importPathPattern []helpers.G
 	visit = func(dirInfo *dirInfo, dir string) {
 		for _, key := range dirInfo.entries.SortedKeys() {
 			entry, _ := dirInfo.entries.Get(key)
+			if r.debugLogs != nil {
+				r.debugLogs.addNote(fmt.Sprintf("Considering entry %q", r.fs.Join(dirInfo.absPath, key)))
+				r.debugLogs.increaseIndent()
+			}
+
 			switch entry.Kind(r.fs) {
 			case fs.DirEntry:
 				// To avoid infinite loops, don't follow any symlinks
@@ -688,6 +720,10 @@ func (res *Resolver) ResolveGlob(sourceDir string, importPathPattern []helpers.G
 					r.finalizeResolve(&result)
 					results[relPath] = result
 				}
+			}
+
+			if r.debugLogs != nil {
+				r.debugLogs.decreaseIndent()
 			}
 		}
 	}
@@ -989,11 +1025,6 @@ func (r resolverQuery) resolveWithoutSymlinks(sourceDir string, sourceDirInfo *d
 	}
 
 	if checkPackage {
-		if sourceDirInfo == nil {
-			// Bail if the directory is missing for some reason
-			return nil
-		}
-
 		// Support remapping one package path to another via the "browser" field
 		if remapped, ok := r.checkBrowserMap(sourceDirInfo, importPath, packagePathKind); ok {
 			if remapped == nil {
@@ -1247,6 +1278,26 @@ func (r resolverQuery) parseTSConfigFromSource(source logger.Source, visited map
 					}
 					goto pnpError
 				} else if result.status == pnpSuccess {
+					// If Yarn PnP path resolution succeeded, run a custom abbreviated
+					// version of node's module resolution algorithm. The Yarn PnP
+					// specification says to use node's module resolution algorithm verbatim
+					// but that isn't what Yarn actually does. See this for more info:
+					// https://github.com/evanw/esbuild/issues/2473#issuecomment-1216774461
+					if entries, _, dirErr := r.fs.ReadDirectory(result.pkgDirPath); dirErr == nil {
+						if entry, _ := entries.Get("package.json"); entry != nil && entry.Kind(r.fs) == fs.FileEntry {
+							// Check the "exports" map
+							if packageJSON := r.parsePackageJSON(result.pkgDirPath); packageJSON != nil && packageJSON.exportsMap != nil {
+								if absolute, ok, _ := r.esmResolveAlgorithm(result.pkgIdent, "."+result.pkgSubpath, packageJSON, result.pkgDirPath, source.KeyPath.Text); ok {
+									base, err := r.parseTSConfig(absolute.Primary.Text, visited)
+									if result, shouldReturn := maybeFinishOurSearch(base, err, absolute.Primary.Text); shouldReturn {
+										return result
+									}
+								}
+								goto pnpError
+							}
+						}
+					}
+
 					// Continue with the module resolution algorithm from node.js
 					extends = r.fs.Join(result.pkgDirPath, result.pkgSubpath)
 				}
@@ -1385,8 +1436,12 @@ func (r resolverQuery) parseTSConfigFromSource(source logger.Source, visited map
 		// Suppress warnings about missing base config files inside "node_modules"
 	pnpError:
 		if !helpers.IsInsideNodeModules(source.KeyPath.Text) {
-			r.log.AddID(logger.MsgID_TSConfigJSON_Missing, logger.Warning, &tracker, extendsRange,
-				fmt.Sprintf("Cannot find base config file %q", extends))
+			var notes []logger.MsgData
+			if r.debugLogs != nil {
+				notes = r.debugLogs.notes
+			}
+			r.log.AddIDWithNotes(logger.MsgID_TSConfigJSON_Missing, logger.Warning, &tracker, extendsRange,
+				fmt.Sprintf("Cannot find base config file %q", extends), notes)
 		}
 
 		return nil

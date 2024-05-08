@@ -5496,6 +5496,89 @@ NOTE: The expression "b['c']" has been configured to be replaced with a constant
 	})
 }
 
+func TestKeepNamesAllForms(t *testing.T) {
+	default_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/keep.js": `
+				// Initializers
+				function fn() {}
+				function foo(fn = function() {}) {}
+				var fn = function() {};
+				var obj = { "f n": function() {} };
+				class Foo0 { "f n" = function() {} }
+				class Foo1 { static "f n" = function() {} }
+				class Foo2 { accessor "f n" = function() {} }
+				class Foo3 { static accessor "f n" = function() {} }
+				class Foo4 { #fn = function() {} }
+				class Foo5 { static #fn = function() {} }
+				class Foo6 { accessor #fn = function() {} }
+				class Foo7 { static accessor #fn = function() {} }
+
+				// Assignments
+				fn = function() {};
+				fn ||= function() {};
+				fn &&= function() {};
+				fn ??= function() {};
+
+				// Destructuring
+				var [fn = function() {}] = [];
+				var { fn = function() {} } = {};
+				for (var [fn = function() {}] = []; ; ) ;
+				for (var { fn = function() {} } = {}; ; ) ;
+				for (var [fn = function() {}] in obj) ;
+				for (var { fn = function() {} } in obj) ;
+				for (var [fn = function() {}] of obj) ;
+				for (var { fn = function() {} } of obj) ;
+				function foo([fn = function() {}]) {}
+				function foo({ fn = function() {} }) {}
+				[fn = function() {}] = [];
+				({ fn = function() {} } = {});
+			`,
+			"/do-not-keep.js": `
+				// Class methods
+				class Foo0 { fn() {} }
+				class Foo1 { *fn() {} }
+				class Foo2 { get fn() {} }
+				class Foo3 { set fn(_) {} }
+				class Foo4 { async fn() {} }
+				class Foo5 { static fn() {} }
+				class Foo6 { static *fn() {} }
+				class Foo7 { static get fn() {} }
+				class Foo8 { static set fn(_) {} }
+				class Foo9 { static async fn() {} }
+
+				// Class private methods
+				class Bar0 { #fn() {} }
+				class Bar1 { *#fn() {} }
+				class Bar2 { get #fn() {} }
+				class Bar3 { set #fn(_) {} }
+				class Bar4 { async #fn() {} }
+				class Bar5 { static #fn() {} }
+				class Bar6 { static *#fn() {} }
+				class Bar7 { static get #fn() {} }
+				class Bar8 { static set #fn(_) {} }
+				class Bar9 { static async #fn(_) {} }
+
+				// Object methods
+				const Baz0 = { fn() {} }
+				const Baz1 = { *fn() {} }
+				const Baz2 = { get fn() {} }
+				const Baz3 = { set fn(_) {} }
+				const Baz4 = { async fn() {} }
+			`,
+		},
+		entryPaths: []string{
+			"/keep.js",
+			"/do-not-keep.js",
+		},
+		options: config.Options{
+			Mode:         config.ModePassThrough,
+			AbsOutputDir: "/out",
+			KeepNames:    true,
+		},
+	})
+}
+
 func TestKeepNamesTreeShaking(t *testing.T) {
 	default_suite.expectBundled(t, bundled{
 		files: map[string]string{
@@ -8687,6 +8770,127 @@ func TestJSXDevSelfEdgeCases(t *testing.T) {
 					},
 				},
 			},
+		},
+	})
+}
+
+func TestObjectLiteralProtoSetterEdgeCases(t *testing.T) {
+	default_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/local-shorthand.js": `
+				function foo(__proto__, bar) {
+					{
+						let __proto__, bar // These locals will be renamed
+						console.log(
+							'this must not become "{ __proto__: ... }":',
+							{
+								__proto__,
+								bar,
+							},
+						)
+					}
+				}
+			`,
+			"/local-normal.js": `
+				function foo(__proto__, bar) {
+					console.log(
+						'this must not become "{ __proto__ }":',
+						{
+							__proto__: __proto__,
+							bar: bar,
+						},
+					)
+				}
+			`,
+			"/import-shorthand.js": `
+				import { __proto__, bar } from 'foo'
+				function foo() {
+					console.log(
+						'this must not become "{ __proto__: ... }":',
+						{
+							__proto__,
+							bar,
+						},
+					)
+				}
+			`,
+			"/import-normal.js": `
+				import { __proto__, bar } from 'foo'
+				function foo() {
+					console.log(
+						'this must not become "{ __proto__ }":',
+						{
+							__proto__: __proto__,
+							bar: bar,
+						},
+					)
+				}
+			`,
+		},
+		entryPaths: []string{"*"},
+		options: config.Options{
+			AbsOutputDir: "/out",
+		},
+	})
+}
+
+func TestObjectLiteralProtoSetterEdgeCasesMinifySyntax(t *testing.T) {
+	default_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/local-computed.js": `
+				function foo(__proto__, bar) {
+					{
+						let __proto__, bar // These locals will be renamed
+						console.log(
+							'this must not become "{ __proto__: ... }":',
+							{
+								['__proto__']: __proto__,
+								['bar']: bar,
+							},
+						)
+					}
+				}
+			`,
+			"/local-normal.js": `
+				function foo(__proto__, bar) {
+					console.log(
+						'this must not become "{ __proto__ }":',
+						{
+							__proto__: __proto__,
+							bar: bar,
+						},
+					)
+				}
+			`,
+			"/import-computed.js": `
+				import { __proto__, bar } from 'foo'
+				function foo() {
+					console.log(
+						'this must not become "{ __proto__: ... }":',
+						{
+							['__proto__']: __proto__,
+							['bar']: bar,
+						},
+					)
+				}
+			`,
+			"/import-normal.js": `
+				import { __proto__, bar } from 'foo'
+				function foo() {
+					console.log(
+						'this must not become "{ __proto__ }":',
+						{
+							__proto__: __proto__,
+							bar: bar,
+						},
+					)
+				}
+			`,
+		},
+		entryPaths: []string{"*"},
+		options: config.Options{
+			AbsOutputDir: "/out",
+			MinifySyntax: true,
 		},
 	})
 }
