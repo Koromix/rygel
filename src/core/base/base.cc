@@ -2818,7 +2818,7 @@ bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *a
         buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
 
 #ifdef _WIN32
-        static const Span<const char> extensions[] = {".com", ".exe", ".bat", ".cmd"};
+        static const Span<const char> extensions[] = { ".com", ".exe", ".bat", ".cmd" };
 
         for (Span<const char> ext: extensions) {
             if (ext.len < buf.Available() - 1) [[likely]] {
@@ -4268,10 +4268,10 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
         }
 
         if (info.work_dir) {
-            const char *argv[] = {"env", "-C", info.work_dir, "sh", "-c", cmd_line, nullptr };
+            const char *argv[] = { "env", "-C", info.work_dir, "sh", "-c", cmd_line, nullptr };
             errno = posix_spawn(&pid, "/bin/env", &file_actions, nullptr, const_cast<char **>(argv), new_env.ptr ? new_env.ptr : environ);
         } else {
-            const char *argv[] = {"sh", "-c", cmd_line, nullptr};
+            const char *argv[] = { "sh", "-c", cmd_line, nullptr };
             errno = posix_spawn(&pid, "/bin/sh", &file_actions, nullptr, const_cast<char **>(argv), new_env.ptr ? new_env.ptr : environ);
         }
         if (errno) {
@@ -5038,7 +5038,8 @@ static inline uint32_t ROTL32(uint32_t v, int n)
     return (v << n) | (v >> (32 - n));
 }
 
-static inline uint64_t ROTL64(uint64_t v, int n) {
+static inline uint64_t ROTL64(uint64_t v, int n)
+{
     return (v << n) | (v >> (64 - n));
 }
 
@@ -8440,7 +8441,7 @@ const char *GetMimeType(Span<const char> extension, const char *default_type)
         #define MIMETYPE(Extension, MimeType) { (Extension), (MimeType) },
         #include "mimetypes.inc"
 
-        {"", "application/octet-stream"}
+        { "", "application/octet-stream" }
     };
 
     const char *mime_type = mime_types.FindValue(extension, nullptr);
