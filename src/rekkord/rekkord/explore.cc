@@ -227,15 +227,15 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
     char buf[128];
 
     json->Key("type"); json->String(rk_ObjectTypeNames[(int)obj.type]);
-    if (obj.readable) {
-        json->Key("hash"); json->String(Fmt(buf, "%1", obj.hash).ptr);
-    } else {
-        json->Key("hash"); json->Null();
-    }
     if (obj.name) {
         json->Key("name"); json->String(obj.name);
     } else {
         json->Key("name"); json->Null();
+    }
+    if (obj.readable) {
+        json->Key("hash"); json->String(Fmt(buf, "%1", obj.hash).ptr);
+    } else {
+        json->Key("hash"); json->Null();
     }
 
     if (obj.type == rk_ObjectType::Snapshot) {
@@ -268,12 +268,12 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
 
     pugi::xml_node element = ptr->append_child(rk_ObjectTypeNames[(int)obj.type]);
 
+    element.append_attribute("Name") = obj.name ? obj.name : "";
     if (obj.readable) {
         element.append_attribute("Hash") = Fmt(buf, "%1", obj.hash).ptr;
     } else {
         element.append_attribute("Hash") = "";
     }
-    element.append_attribute("Name") = obj.name ? obj.name : "";
 
     if (obj.type == rk_ObjectType::Snapshot) {
         element.append_attribute("Time") = obj.mtime;
