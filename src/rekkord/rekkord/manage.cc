@@ -588,8 +588,8 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
             for (const rk_UserInfo &user: users) {
                 pugi::xml_node element = root.append_child("User");
 
-                element.append_attribute("name") = user.username;
-                element.append_attribute("mode") = rk_DiskModeNames[(int)user.mode];
+                element.append_attribute("Name") = user.username;
+                element.append_attribute("Mode") = rk_DiskModeNames[(int)user.mode];
             }
 
             doc.save(std::cout, "    ");

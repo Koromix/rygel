@@ -173,11 +173,11 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 char hash[128];
                 Fmt(hash, "%1", snapshot.hash);
 
-                element.append_attribute("hash") = hash;
-                element.append_attribute("name") = snapshot.name ? snapshot.name : "";
-                element.append_attribute("time") = snapshot.time;
-                element.append_attribute("size") = snapshot.len;
-                element.append_attribute("storage") = snapshot.stored;
+                element.append_attribute("Hash") = hash;
+                element.append_attribute("Name") = snapshot.name ? snapshot.name : "";
+                element.append_attribute("Time") = snapshot.time;
+                element.append_attribute("Size") = snapshot.len;
+                element.append_attribute("Storage") = snapshot.stored;
             }
 
             doc.save(std::cout, "    ");
@@ -269,29 +269,29 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
     pugi::xml_node element = ptr->append_child(rk_ObjectTypeNames[(int)obj.type]);
 
     if (obj.readable) {
-        element.append_attribute("hash") = Fmt(buf, "%1", obj.hash).ptr;
+        element.append_attribute("Hash") = Fmt(buf, "%1", obj.hash).ptr;
     } else {
-        element.append_attribute("hash") = "";
+        element.append_attribute("Hash") = "";
     }
-    element.append_attribute("name") = obj.name ? obj.name : "";
+    element.append_attribute("Name") = obj.name ? obj.name : "";
 
     if (obj.type == rk_ObjectType::Snapshot) {
-        element.append_attribute("time") = obj.mtime;
+        element.append_attribute("Time") = obj.mtime;
     } else {
-        element.append_attribute("mtime") = obj.mtime;
-        element.append_attribute("btime") = obj.btime;
+        element.append_attribute("Mtime") = obj.mtime;
+        element.append_attribute("Btime") = obj.btime;
         if (obj.type != rk_ObjectType::Link) {
-            element.append_attribute("mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
+            element.append_attribute("Mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
         }
-        element.append_attribute("uid") = obj.uid;
-        element.append_attribute("gid") = obj.gid;
+        element.append_attribute("UID") = obj.uid;
+        element.append_attribute("GID") = obj.gid;
     }
 
     if (obj.readable) {
         switch (obj.type) {
             case rk_ObjectType::Snapshot:
             case rk_ObjectType::Directory: {} break;
-            case rk_ObjectType::File: { element.append_attribute("size") = obj.size; } break;
+            case rk_ObjectType::File: { element.append_attribute("Size") = obj.size; } break;
             case rk_ObjectType::Link:
             case rk_ObjectType::Unknown: {} break;
         }
