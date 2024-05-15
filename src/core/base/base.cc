@@ -6613,6 +6613,8 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
             if (fd < 0)
                 return false;
             CloseDescriptor(fd);
+
+            dest.u.file.unlink_on_error = true;
         }
 
 #ifdef O_TMPFILE
@@ -6641,7 +6643,6 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
                 return false;
             dest.u.file.owned = true;
         }
-
     } else {
         unsigned int open_flags = (int)OpenFlag::Write;
         open_flags |= dest.u.file.exclusive ? (int)OpenFlag::Exclusive : 0;
@@ -6650,6 +6651,8 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
         if (dest.u.file.fd < 0)
             return false;
         dest.u.file.owned = true;
+
+        dest.u.file.unlink_on_error = dest.u.file.exclusive;
     }
     dest.vt100 = FileIsVt100(dest.u.file.fd);
 
@@ -6833,7 +6836,7 @@ bool StreamWriter::Close(bool implicit)
             if (dest.u.file.tmp_filename) {
                 UnlinkFile(dest.u.file.tmp_filename);
             }
-            if (error && dest.u.file.exclusive && filename) {
+            if (error && dest.u.file.unlink_on_error) {
                 UnlinkFile(filename);
             }
 

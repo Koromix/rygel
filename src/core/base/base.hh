@@ -4583,6 +4583,7 @@ class StreamWriter {
 
                 bool exclusive;
                 bool atomic;
+                bool unlink_on_error;
                 const char *tmp_filename;
             } file;
             std::function<bool(Span<const uint8_t>)> func;
