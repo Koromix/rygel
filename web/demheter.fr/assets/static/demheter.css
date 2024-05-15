@@ -222,7 +222,10 @@ footer > img { filter: saturate(0%) brightness(0); }
     text-decoration: none;
     text-align: center;
 }
-.links > a:hover { background: var(--hover, #3d7879) !important; }
+.links > a:hover {
+    background: var(--hover, #3d7879) !important;
+    color: white;
+}
 
 .quotes {
     margin: 2em auto;
