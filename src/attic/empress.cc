@@ -169,6 +169,9 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
             StreamReader reader(src_filename);
             StreamWriter writer(dest_filename, write_flags, compression_type, compression_speed);
 
+            if (!reader.IsValid() || !writer.IsValid())
+                return false;
+
             const char *basename = SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS).ptr;
             LogInfo("Compressing '%1'...", basename);
 
@@ -342,6 +345,9 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
 
             StreamReader reader(src_filename, dest.compression_type);
             StreamWriter writer(dest.filename, write_flags);
+
+            if (!reader.IsValid() || !writer.IsValid())
+                return false;
 
             const char *basename = SplitStrReverseAny(dest.filename, RG_PATH_SEPARATORS).ptr;
             LogInfo("Decompressing '%1'...", basename);
