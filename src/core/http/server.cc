@@ -640,6 +640,7 @@ void http_IO::AddEncodingHeader(CompressionType encoding)
         case CompressionType::Gzip: { AddHeader("Content-Encoding", "gzip"); } break;
         case CompressionType::Brotli: { AddHeader("Content-Encoding", "br"); } break;
         case CompressionType::LZ4: { RG_UNREACHABLE(); } break;
+        case CompressionType::Zstd: { AddHeader("Content-Encoding", "zstd"); } break;
     }
 }
 

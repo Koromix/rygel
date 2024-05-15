@@ -3906,21 +3906,24 @@ enum class CompressionType {
     Zlib,
     Gzip,
     Brotli,
-    LZ4
+    LZ4,
+    Zstd
 };
 static const char *const CompressionTypeNames[] = {
     "None",
     "Zlib",
     "Gzip",
     "Brotli",
-    "LZ4"
+    "LZ4",
+    "Zstd"
 };
 static const char *const CompressionTypeExtensions[] = {
     nullptr,
     nullptr,
     ".gz",
     ".br",
-    ".lz4"
+    ".lz4",
+    ".zst"
 };
 
 Span<const char> GetPathDirectory(Span<const char> filename);
