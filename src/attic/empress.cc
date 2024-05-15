@@ -67,14 +67,14 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
                     return 1;
                 }
             } else if (opt.Test("-s", "--speed", OptionType::Value)) {
-                if (TestStr(opt.current_value, "Default")) {
+                if (TestStrI(opt.current_value, "Default")) {
                     compression_speed = CompressionSpeed::Default;
-                } else if (TestStr(opt.current_value, "Fast")) {
+                } else if (TestStrI(opt.current_value, "Fast")) {
                     compression_speed = CompressionSpeed::Fast;
-                } else if (TestStr(opt.current_value, "Slow")) {
+                } else if (TestStrI(opt.current_value, "Slow")) {
                     compression_speed = CompressionSpeed::Slow;
                 } else {
-                    LogError("Unknown compression algorithm '%1'", opt.current_value);
+                    LogError("Unknown compression speed '%1'", opt.current_value);
                     return 1;
                 }
             } else if (opt.Test("-f", "--force")) {
