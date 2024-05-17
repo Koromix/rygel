@@ -452,7 +452,7 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
 
     switch (func->ret.type->primitive) {
         case PrimitiveKind::Void: return env.Undefined();
-        case PrimitiveKind::Bool: return Napi::Boolean::New(env, result.u32);
+        case PrimitiveKind::Bool: return Napi::Boolean::New(env, result.u8 & 0x1);
         case PrimitiveKind::Int8: return Napi::Number::New(env, (double)result.i8);
         case PrimitiveKind::UInt8: return Napi::Number::New(env, (double)result.u8);
         case PrimitiveKind::Int16: return Napi::Number::New(env, (double)result.i16);

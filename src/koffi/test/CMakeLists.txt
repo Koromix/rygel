@@ -31,7 +31,7 @@ include (../cmake/sqlite.cmake)
 
 # ---- Test code ----
 
-add_library(sync SHARED sync.c)
+add_library(sync SHARED sync.c sync2.c)
 set_target_properties(sync PROPERTIES PREFIX "")
 
 if(MSVC)

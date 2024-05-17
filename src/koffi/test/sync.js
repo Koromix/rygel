@@ -275,6 +275,7 @@ async function test() {
     const GetSymbolInt3 = lib.func('void GetSymbolInt3(_Out_ int *out)');
     const WriteConfigure = lib.func('void WriteConfigure(char16_t *buf, int size)');
     const WriteString = lib.func('void WriteString(const char16_t *str)');
+    const ReturnBool = lib.func('bool ReturnBool(int value)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -856,6 +857,13 @@ async function test() {
     assert.throws(() => koffi.struct(' Space', { dummy: 'int' }), /Invalid type name/);
     assert.throws(() => koffi.union('4deux', { dummy: 'int', }), /Invalid type name/);
     assert.throws(() => koffi.struct('MemberNameIsWrong', { 'dummy ': 'int' }), /Invalid member name/);
+
+    // Test weird bool return values
+    assert.equal(ReturnBool(0), false);
+    assert.equal(ReturnBool(1), true);
+    assert.equal(ReturnBool(-1), true);
+    assert.equal(ReturnBool(-2), true);
+    assert.equal(ReturnBool(0xFFFFFE), true);
 
     lib.unload();
 }

@@ -60,6 +60,8 @@
     #define STDCALL
 #endif
 
+bool DoReturnBool(int cond);
+
 typedef struct Pack1 {
     int a;
 } Pack1;
@@ -984,4 +986,11 @@ EXPORT void WriteString(const char16_t *str)
     }
 
     write_ptr[len] = 0;
+}
+
+EXPORT bool ReturnBool(int cond)
+{
+    bool ret = DoReturnBool(cond);
+    assert(ret == !!cond);
+    return ret;
 }
