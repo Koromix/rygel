@@ -40,6 +40,10 @@ Consult the [migration guide](migration.md) for more information.
 
 ### Koffi 2.8
 
+#### Koffi 2.8.9 (2024-05-17)
+
+- Fix ABI issue regarding bool return values on x86_64 (and possibly other platforms)
+
 #### Koffi 2.8.8 (2024-04-26)
 
 - Support use of buffers with mismatched size (truncation or zero-filling)
