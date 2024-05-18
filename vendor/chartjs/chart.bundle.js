@@ -558,7 +558,7 @@ var Color = class _Color {
 // node_modules/chart.js/dist/chunks/helpers.segment.js
 function noop() {
 }
-var uid = (() => {
+var uid = /* @__PURE__ */ (() => {
   let id = 0;
   return () => id++;
 })();
@@ -1548,6 +1548,9 @@ function _alignPixel(chart, pixel, width) {
   return Math.round((pixel - halfWidth) * devicePixelRatio) / devicePixelRatio + halfWidth;
 }
 function clearCanvas(canvas, ctx) {
+  if (!ctx && !canvas) {
+    return;
+  }
   ctx = ctx || canvas.getContext("2d");
   ctx.save();
   ctx.resetTransform();
@@ -2051,7 +2054,7 @@ function _descriptors(proxy, defaults2 = {
 var readKey = (prefix, name) => prefix ? prefix + _capitalize(name) : name;
 var needsSubResolver = (prop, value) => isObject(value) && prop !== "adapters" && (Object.getPrototypeOf(value) === null || value.constructor === Object);
 function _cached(target, prop, resolve2) {
-  if (Object.prototype.hasOwnProperty.call(target, prop)) {
+  if (Object.prototype.hasOwnProperty.call(target, prop) || prop === "constructor") {
     return target[prop];
   }
   const value = resolve2();
@@ -2446,7 +2449,7 @@ function getRelativePosition(event, chart) {
 function getContainerSize(canvas, width, height) {
   let maxWidth, maxHeight;
   if (width === void 0 || height === void 0) {
-    const container = _getParentNode(canvas);
+    const container = canvas && _getParentNode(canvas);
     if (!container) {
       width = canvas.clientWidth;
       height = canvas.clientHeight;
@@ -3363,15 +3366,18 @@ function applyStack(stack, value, dsIndex, options = {}) {
   }
   return value;
 }
-function convertObjectDataToArray(data) {
+function convertObjectDataToArray(data, meta) {
+  const { iScale, vScale } = meta;
+  const iAxisKey = iScale.axis === "x" ? "x" : "y";
+  const vAxisKey = vScale.axis === "x" ? "x" : "y";
   const keys = Object.keys(data);
   const adata = new Array(keys.length);
   let i, ilen, key;
   for (i = 0, ilen = keys.length; i < ilen; ++i) {
     key = keys[i];
     adata[i] = {
-      x: key,
-      y: data[key]
+      [iAxisKey]: key,
+      [vAxisKey]: data[key]
     };
   }
   return adata;
@@ -3563,7 +3569,8 @@ var DatasetController = class {
     const data = dataset.data || (dataset.data = []);
     const _data = this._data;
     if (isObject(data)) {
-      this._data = convertObjectDataToArray(data);
+      const meta = this._cachedMeta;
+      this._data = convertObjectDataToArray(data, meta);
     } else if (_data !== data) {
       if (_data) {
         unlistenArrayEvents(_data, this);
@@ -4535,7 +4542,7 @@ var BarController = class extends DatasetController {
     const ilen = rects.length;
     let i = 0;
     for (; i < ilen; ++i) {
-      if (this.getParsed(i)[vScale.axis] !== null) {
+      if (this.getParsed(i)[vScale.axis] !== null && !rects[i].hidden) {
         rects[i].draw(this._ctx);
       }
     }
@@ -6346,7 +6353,7 @@ var DomPlatform = class extends BasePlatform {
     return getMaximumSize(canvas, width, height, aspectRatio);
   }
   isAttached(canvas) {
-    const container = _getParentNode(canvas);
+    const container = canvas && _getParentNode(canvas);
     return !!(container && container.isConnected);
   }
 };
@@ -8398,7 +8405,7 @@ function needContext(proxy, names2) {
   }
   return false;
 }
-var version = "4.4.2";
+var version = "4.4.3";
 var KNOWN_POSITIONS = [
   "top",
   "bottom",
@@ -14345,7 +14352,7 @@ export {
 
 chart.js/dist/chunks/helpers.segment.js:
   (*!
-   * Chart.js v4.4.2
+   * Chart.js v4.4.3
    * https://www.chartjs.org
    * (c) 2024 Chart.js Contributors
    * Released under the MIT License
@@ -14353,7 +14360,7 @@ chart.js/dist/chunks/helpers.segment.js:
 
 chart.js/dist/chart.js:
   (*!
-   * Chart.js v4.4.2
+   * Chart.js v4.4.3
    * https://www.chartjs.org
    * (c) 2024 Chart.js Contributors
    * Released under the MIT License
