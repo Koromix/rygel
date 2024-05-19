@@ -750,11 +750,17 @@ async function stop(all = true) {
 }
 
 async function info() {
+    check_qemu();
+
     for (let machine of machines) {
         if (machine.qemu == null)
             continue;
 
+        let binary = qemu_prefix + machine.qemu.binary + (process.platform == 'win32' ? '.exe' : '');
+        let cmd = [binary, ...machine.qemu.arguments].map(v => String(v).match(/[^a-zA-Z0-9_\-=\:\.,]/) ? `"${v}"` : v).join(' ');
+
         console.log(`>> ${machine.name} (${machine.key})`);
+        console.log(`  - Command-line: ${cmd}`);
         console.log(`  - SSH port: ${machine.qemu.ssh_port}`);
         console.log(`  - VNC port: ${machine.qemu.vnc_port}`);
         console.log(`  - Username: ${machine.qemu.username}`);
