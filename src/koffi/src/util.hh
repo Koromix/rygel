@@ -128,7 +128,7 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len);
 const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len, ArrayHint hint);
 
-Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo *type);
+Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo *type, bool freeze = true);
 
 bool CanPassType(const TypeInfo *type, int directions);
 bool CanReturnType(const TypeInfo *type);

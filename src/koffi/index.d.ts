@@ -87,9 +87,10 @@ declare module 'koffi' {
     export function struct(def: Record<string, TypeSpecWithAlignment>): TypeInfo;
     export function pack(name: string, def: Record<string, TypeSpecWithAlignment>): TypeInfo;
     export function pack(def: Record<string, TypeSpecWithAlignment>): TypeInfo;
-
     export function union(name: string, def: Record<string, TypeSpecWithAlignment>): TypeInfo;
     export function union(def: Record<string, TypeSpecWithAlignment>): TypeInfo;
+    export function enumeration(name: string, def: Record<string, number>): TypeInfo;
+    export function enumeration(def: Record<string, number>): TypeInfo;
 
     export class Union {
         constructor(type: TypeSpec);

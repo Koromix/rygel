@@ -1008,6 +1008,121 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     return FinalizeType(env, instance, type);
 }
 
+static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+    InstanceData *instance = env.GetInstanceData<InstanceData>();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 or 2 arguments, got %1", info.Length());
+        return env.Null();
+    }
+
+    bool named = info.Length() > 1;
+
+    if (named && !info[0].IsString()) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        return env.Null();
+    }
+    if (!IsObject(info[named])) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for values, expected object", GetValueType(instance, info[1]));
+        return env.Null();
+    }
+
+    Napi::String name = info[0].As<Napi::String>();
+    Napi::Object obj = info[named].As<Napi::Object>();
+    Napi::Array keys = GetOwnPropertyNames(obj);
+
+    TypeInfo *type = instance->types.AppendDefault();
+    RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
+
+    type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+
+    Napi::Object values = Napi::Object::New(env);
+
+    // Determine needed storage type
+    {
+        bool negative = false;
+        bool negative64 = false;
+        uint64_t max = 0;
+
+        for (uint32_t i = 0; i < keys.Length(); i++) {
+            std::string key = keys.Get(i).As<Napi::String>();
+            Napi::Value value = obj[key];
+
+            if (value.IsNumber()) {
+                int64_t i = value.As<Napi::Number>().Int64Value();
+
+                if (i < 0) {
+                    negative = true;
+                    negative64 |= (i < INT_MIN);
+                } else {
+                    max = std::max(max, (uint64_t)i);
+                }
+            } else if (value.IsBigInt()) {
+                Napi::BigInt big = value.As<Napi::BigInt>();
+
+                bool lossless;
+                int64_t i = big.Int64Value(&lossless);
+
+                if (lossless && i < 0) {
+                    negative = true;
+                    negative64 |= (i < INT_MIN);
+                } else {
+                    uint64_t u = big.Uint64Value(&lossless);
+
+                    if (!lossless) {
+                        ThrowError<Napi::Error>(env, "Cannot find storage type wide enough for enum values");
+                        return env.Null();
+                    }
+
+                    max = std::max(max, u);
+                }
+            } else {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for enumeration value, expected number",  GetValueType(instance, info[0]));
+                return env.Null();
+            }
+
+            values.Set(key, value);
+        }
+
+        // The rules are implementation-defined, but tend to be the same 
+        if (max <= UINT_MAX && !negative) {
+            type->primitive = PrimitiveKind::UInt32;
+            type->size = 4;
+            type->align = 4;
+        } else if (max <= INT_MAX && !negative64) {
+            type->primitive = PrimitiveKind::Int32;
+            type->size = 4;
+            type->align = 4;
+        } else if (!negative) {
+            type->primitive = PrimitiveKind::UInt64;
+            type->size = 8;
+            type->align = alignof(uint64_t);
+        } else if (max <= INT64_MAX) {
+            type->primitive = PrimitiveKind::Int64;
+            type->size = 8;
+            type->align = alignof(int64_t);
+        } else {
+            ThrowError<Napi::Error>(env, "Cannot find storage type wide enough for enum values");
+            return env.Null();
+        }
+    }
+
+    // If the insert succeeds, we cannot fail anymore
+    if (named && !MapType(env, instance, type, type->name))
+        return env.Null();
+    err_guard.Disable();
+
+    Napi::Object defn = FinalizeType(env, instance, type, false);
+
+    defn.Set("values", values);
+    defn.Freeze();
+
+    return defn;
+}
+
 static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -2081,6 +2196,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("array", Napi::Function::New(env, CreateArrayType, "array"));
     exports.Set("proto", Napi::Function::New(env, CreateFunctionType, "proto"));
     exports.Set("alias", Napi::Function::New(env, CreateTypeAlias, "alias"));
+    exports.Set("enumeration", Napi::Function::New(env, CreateEnumType, "enumeration"));
 
     exports.Set("sizeof", Napi::Function::New(env, GetTypeSize, "sizeof"));
     exports.Set("alignof", Napi::Function::New(env, GetTypeAlign, "alignof"));

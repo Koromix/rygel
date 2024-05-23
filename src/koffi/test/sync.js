@@ -150,6 +150,12 @@ const BufferInfo = koffi.struct('BufferInfo', {
 const BinaryIntFunc = koffi.proto('int BinaryIntFunc(int a, int b)');
 const VariadicIntFunc = koffi.proto('int VariadicIntFunc(int n, ...)');
 
+const Enum1 = koffi.enumeration('Enum1', { A: 0, B: 42 });
+const Enum2 = koffi.enumeration('Enum2', { A: -1, B: 2147483647 });
+const Enum3 = koffi.enumeration('Enum3', { A: -1, B: 2147483648 });
+const Enum4 = koffi.enumeration('Enum4', { A: 0, B: 2147483648 });
+const Enum5 = koffi.enumeration('Enum5', { A: 0, B: 9223372036854775808n });
+
 main();
 
 async function main() {
@@ -276,6 +282,12 @@ async function test() {
     const WriteConfigure = lib.func('void WriteConfigure(char16_t *buf, int size)');
     const WriteString = lib.func('void WriteString(const char16_t *str)');
     const ReturnBool = lib.func('bool ReturnBool(int value)');
+    const ReturnEnumValue = lib.func('int ReturnEnumValue(Enum1 e)');
+    const GetEnumPrimitive1 = lib.func('const char *GetEnumPrimitive1()');
+    const GetEnumPrimitive2 = lib.func('const char *GetEnumPrimitive2()');
+    const GetEnumPrimitive3 = lib.func('const char *GetEnumPrimitive3()');
+    const GetEnumPrimitive4 = lib.func('const char *GetEnumPrimitive4()');
+    const GetEnumPrimitive5 = lib.func('const char *GetEnumPrimitive5()');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -864,6 +876,15 @@ async function test() {
     assert.equal(ReturnBool(-1), true);
     assert.equal(ReturnBool(-2), true);
     assert.equal(ReturnBool(0xFFFFFE), true);
+
+    // Test enums
+    assert.equal(ReturnEnumValue(Enum1.values.A), 0);
+    assert.equal(ReturnEnumValue(Enum1.values.B), 42);
+    check_text(GetEnumPrimitive1(), Enum1.primitive);
+    check_text(GetEnumPrimitive2(), Enum2.primitive);
+    check_text(GetEnumPrimitive3(), Enum3.primitive);
+    check_text(GetEnumPrimitive4(), Enum4.primitive);
+    check_text(GetEnumPrimitive5(), Enum5.primitive);
 
     lib.unload();
 }

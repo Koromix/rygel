@@ -121,8 +121,6 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
     }
 
     SetValueTag(defn, &TypeInfoMarker);
-
-    defn.Freeze();
 }
 
 Napi::Function PointerObject::InitClass(Napi::Env env)
@@ -620,14 +618,18 @@ const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size 
     return MakeArrayType(instance, ref, len, hint, false);
 }
 
-Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo *type)
+Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo *type, bool freeze)
 {
     if (type->defn.IsEmpty()) {
         Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
         instance->construct_type.New({ external });
     }
 
-    return type->defn.Value();
+    Napi::Object defn = type->defn.Value();
+    if (freeze) {
+        defn.Freeze();
+    }
+    return defn;
 }
 
 bool CanPassType(const TypeInfo *type, int directions)
