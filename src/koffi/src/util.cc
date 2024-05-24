@@ -335,7 +335,7 @@ const TypeInfo *ResolveType(Napi::Value value, int *out_directions)
         }
         return type;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(instance, value));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value as type specifier, expected string or type", GetValueType(value));
         return nullptr;
     }
 }
@@ -675,7 +675,7 @@ bool CanStoreType(const TypeInfo *type)
     return true;
 }
 
-const char *GetValueType(const InstanceData *instance, Napi::Value value)
+const char *GetValueType(Napi::Value value)
 {
     if (CheckValueTag(value, &CastMarker)) {
         Napi::External<ValueCast> external = value.As<Napi::External<ValueCast>>();
@@ -1260,7 +1260,6 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *r
 Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len)
 {
     Napi::Env env = value.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     const uint8_t *ptr = nullptr;
 
@@ -1277,7 +1276,7 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
 
         ptr = (const uint8_t *)buffer.ptr;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected pointer or TypedArray", GetValueType(instance, value));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for variable, expected pointer or TypedArray", GetValueType(value));
         return env.Null();
     }
 
@@ -1431,7 +1430,6 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len)
 {
     Napi::Env env = ref.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     uint8_t *ptr = nullptr;
 
@@ -1448,7 +1446,7 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
 
         ptr = (uint8_t *)buffer.ptr;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer or TypedArray", GetValueType(instance, value));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for reference, expected pointer or TypedArray", GetValueType(value));
         return env.Null();
     }
 
@@ -1482,7 +1480,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 #define PUSH_INTEGER(CType) \
         do { \
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value)); \
                 return false; \
             } \
              \
@@ -1492,7 +1490,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 #define PUSH_INTEGER_SWAP(CType) \
         do { \
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value)); \
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value)); \
                 return false; \
             } \
              \
@@ -1505,7 +1503,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 
         case PrimitiveKind::Bool: {
             if (!value.IsBoolean()) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected boolean", GetValueType(value));
                 return false;
             }
 
@@ -1547,7 +1545,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             if (!IsObject(value)) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected object", GetValueType(value));
                 return false;
             }
 
@@ -1570,13 +1568,13 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
                 if (!call.PushStringArray(value, type, origin))
                     return false;
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected array", GetValueType(value));
                 return false;
             }
         } break;
         case PrimitiveKind::Float32: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value));
                 return false;
             }
 
@@ -1585,7 +1583,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         } break;
         case PrimitiveKind::Float64: {
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(instance, value));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected number", GetValueType(value));
                 return false;
             }
 
@@ -1603,7 +1601,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(instance, value), type->name);
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected %2", GetValueType(value), type->name);
                 return false;
             }
 

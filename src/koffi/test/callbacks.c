@@ -283,7 +283,7 @@ EXPORT const char *FmtRepeat(RepeatCallback *cb)
 
     cb(&repeat, &str);
 
-    int len = strlen(str);
+    int len = (int)strlen(str);
     int total = len * repeat + 1;
     char *copy = malloc(total);
 

@@ -60,9 +60,7 @@ static bool ChangeSize(const char *name, Napi::Value value, Size min_size, Size 
     Napi::Env env = value.Env();
 
     if (!value.IsNumber()) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected number", GetValueType(instance, value), name);
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected number", GetValueType(value), name);
         return false;
     }
 
@@ -90,9 +88,7 @@ static bool ChangeAsyncLimit(const char *name, Napi::Value value, int max, int *
     Napi::Env env = value.Env();
 
     if (!value.IsNumber()) {
-        InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected number", GetValueType(instance, value), name);
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for '%2', expected number", GetValueType(value), name);
         return false;
     }
 
@@ -119,7 +115,7 @@ static Napi::Value GetSetConfig(const Napi::CallbackInfo &info)
         }
 
         if (!info[0].IsObject()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for config, expected object", GetValueType(instance, info[0]));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for config, expected object", GetValueType(info[0]));
             return env.Null();
         }
 
@@ -232,11 +228,11 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     bool named = (info.Length() >= 2);
 
     if (named && !info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
     if (!IsObject(info[named])) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(info[1]));
         return env.Null();
     }
 
@@ -378,11 +374,11 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     bool named = (info.Length() >= 2);
 
     if (named && !info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
     if (!IsObject(info[named])) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for members, expected object", GetValueType(info[1]));
         return env.Null();
     }
 
@@ -531,7 +527,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     bool named = (info.Length() >= 1);
 
     if (named && !info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
 
@@ -568,7 +564,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     bool named = (info.Length() >= 2 && !info[1].IsNumber());
 
     if (named && !info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
 
@@ -581,7 +577,7 @@ static Napi::Value CreatePointerType(const Napi::CallbackInfo &info)
     int count = 0;
     if (info.Length() >= 2u + named) {
         if (!info[1 + named].IsNumber()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(instance, info[1 + named]));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for count, expected number", GetValueType(info[1 + named]));
             return env.Null();
         }
 
@@ -642,7 +638,7 @@ Napi::Value InstantiatePointer(const Napi::CallbackInfo &info)
         uint64_t u = GetNumber<uint64_t>(value);
         ptr = (void *)u;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(value));
         return env.Null();
     }
 
@@ -719,7 +715,7 @@ static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
         return env.Null();
     }
     if (!info[1].IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(info[1]));
         return env.Null();
     }
 
@@ -761,7 +757,6 @@ static Napi::Value CallAlloc(const Napi::CallbackInfo &info)
 static Napi::Value CallFree(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 1) {
         ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
@@ -776,7 +771,7 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
     } else if (IsNullOrUndefined(value)) {
         ptr = nullptr;
     } else {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(instance, value));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(value));
         return env.Null();
     }
 
@@ -788,13 +783,12 @@ static Napi::Value CallFree(const Napi::CallbackInfo &info)
 static Napi::Value GetOrSetErrNo(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() >= 1) {
         Napi::Number value = info[0].As<Napi::Number>();
 
         if (!value.IsNumber()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for errno, expected integer", GetValueType(instance, value));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for errno, expected integer", GetValueType(value));
             return env.Null();
         }
 
@@ -815,7 +809,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         return env.Null();
     }
     if (!info[1].IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(info[1]));
         return env.Null();
     }
 
@@ -837,7 +831,7 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
 
     if (info.Length() >= 3 && !IsNullOrUndefined(info[2])) {
         if (!info[2].IsString()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(instance, info[2]));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for hint, expected string", GetValueType(info[2]));
             return env.Null();
         }
 
@@ -901,7 +895,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *o
     }
 #endif
     if (!name.IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(instance, name));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string or integer", GetValueType(name));
         return false;
     }
 
@@ -916,7 +910,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *o
     }
 
     if (!parameters.IsArray()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(instance, parameters), out_func->name);
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for parameters of '%2', expected an array", GetValueType(parameters), out_func->name);
         return false;
     }
 
@@ -972,7 +966,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
             return env.Null();
     } else if (info.Length() >= 1) {
         if (!info[0].IsString()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for prototype, expected string", GetValueType(instance, info[0]));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for prototype, expected string", GetValueType(info[0]));
             return env.Null();
         }
 
@@ -1022,11 +1016,11 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
     bool typed = (info.Length() >= 2u + named);
 
     if (named && !info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
     if (!IsObject(info[named])) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for values, expected object", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for values, expected object", GetValueType(info[1]));
         return env.Null();
     }
 
@@ -1066,35 +1060,35 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
             Napi::Value value = obj[key];
 
             if (value.IsNumber()) {
-                int64_t i = value.As<Napi::Number>().Int64Value();
+                int64_t i64 = value.As<Napi::Number>().Int64Value();
 
-                if (i < 0) {
+                if (i64 < 0) {
                     negative = true;
-                    negative64 |= (i < INT_MIN);
+                    negative64 |= (i64 < INT_MIN);
                 } else {
-                    max = std::max(max, (uint64_t)i);
+                    max = std::max(max, (uint64_t)i64);
                 }
             } else if (value.IsBigInt()) {
                 Napi::BigInt big = value.As<Napi::BigInt>();
 
                 bool lossless;
-                int64_t i = big.Int64Value(&lossless);
+                int64_t i64 = big.Int64Value(&lossless);
 
-                if (lossless && i < 0) {
+                if (lossless && i64 < 0) {
                     negative = true;
-                    negative64 |= (i < INT_MIN);
+                    negative64 |= (i64 < INT_MIN);
                 } else {
-                    uint64_t u = big.Uint64Value(&lossless);
+                    uint64_t u64 = big.Uint64Value(&lossless);
 
                     if (!lossless) {
                         ThrowError<Napi::Error>(env, "Cannot find storage type wide enough for enum values");
                         return env.Null();
                     }
 
-                    max = std::max(max, u);
+                    max = std::max(max, u64);
                 }
             } else {
-                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for enumeration value, expected number",  GetValueType(instance, info[0]));
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for enumeration value, expected number",  GetValueType(info[0]));
                 return env.Null();
             }
 
@@ -1145,7 +1139,7 @@ static Napi::Value CreateTypeAlias(const Napi::CallbackInfo &info)
         return env.Null();
     }
     if (!info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
 
@@ -1198,14 +1192,13 @@ static Napi::Value GetTypeAlign(const Napi::CallbackInfo &info)
 static Napi::Value GetMemberOffset(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
-    InstanceData *instance = env.GetInstanceData<InstanceData>();
 
     if (info.Length() < 2) {
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
         return env.Null();
     }
     if (!info[1].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member, expected string", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for member, expected string", GetValueType(info[1]));
         return env.Null();
     }
 
@@ -1507,7 +1500,7 @@ Napi::Value TranslateAsyncCall(const FunctionInfo *func, void *native, const Nap
     Napi::Function callback = info[(uint32_t)func->parameters.len].As<Napi::Function>();
 
     if (!callback.IsFunction()) {
-        ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(instance, callback));
+        ThrowError<Napi::TypeError>(env, "Expected callback function as last argument, got %1", GetValueType(callback));
         return env.Null();
     }
 
@@ -1571,7 +1564,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
             return env.Null();
     } else if (info.Length() >= 1) {
         if (!info[0].IsString()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for prototype, expected string", GetValueType(instance, info[0]));
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for prototype, expected string", GetValueType(info[0]));
             return env.Null();
         }
 
@@ -1638,7 +1631,7 @@ static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
         return env.Null();
     }
      if (!info[0].IsString()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
 
@@ -1684,11 +1677,11 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         return env.Null();
     }
     if (!info[0].IsString() && !IsNullOrUndefined(info[0])) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for filename, expected string or null", GetValueType(info[0]));
         return env.Null();
     }
     if (info.Length() >= 2 && !IsObject(info[1])) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for options, expected object", GetValueType(instance, info[1]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for options, expected object", GetValueType(info[1]));
         return env.Null();
     }
 
@@ -1786,7 +1779,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
         return env.Null();
     }
     if (!info[0u + has_recv].IsFunction()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(instance, info[0 + has_recv]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for func, expected function", GetValueType(info[0 + has_recv]));
         return env.Null();
     }
 
@@ -1847,7 +1840,7 @@ static Napi::Value UnregisterCallback(const Napi::CallbackInfo &info)
     PointerObject *obj = CheckValueTag(info[0], &PointerMarker) ? PointerObject::Unwrap(info[0].As<Napi::Object>()) : nullptr;
 
     if (!obj || obj->GetType()->primitive != PrimitiveKind::Callback) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected registered callback", GetValueType(instance, info[0]));
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected registered callback", GetValueType(info[0]));
         return env.Null();
     }
 

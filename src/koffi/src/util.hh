@@ -135,7 +135,7 @@ bool CanReturnType(const TypeInfo *type);
 bool CanStoreType(const TypeInfo *type);
 
 // Can be slow, only use for error messages
-const char *GetValueType(const InstanceData *instance, Napi::Value value);
+const char *GetValueType(Napi::Value value);
 
 void SetValueTag(Napi::Value value, const napi_type_tag *tag);
 bool CheckValueTag(Napi::Value value, const napi_type_tag *tag);
