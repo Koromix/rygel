@@ -19,6 +19,7 @@
   * Get pointer type with `pointer.type`
   * Get pointer address with `pointer.address`
   * Make or cast pointers with `new koffi.Pointer(address, type)`
+- Add `koffi.enumeration()` to create [enum types](input.md#enum-types)
 
 **Newly deprecated functions:**
 

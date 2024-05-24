@@ -375,6 +375,66 @@ The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS s
 
 In C, dynamically-sized arrays are usually passed around as pointers. Read more about [array pointers](pointers.md#dynamic-arrays) in the relevant section.
 
+## Enum types
+
+C enumeration values are stored as integers. The exact integer type is implementation-defined, and is usually `unsigned int` on Linux and `int` on Windows.
+
+You can declare an enum type with `koffi.enumeration(name, values)`, and Koffi will use the default GCC rules to determine the storage type:
+
+- If no negative values exist: `unsigned int` by default, `uint64_t` if needed
+- If negatives values exist: `int` by default, `int64_t` if needed
+
+```js
+// For OpenResult, the underlying type will be unsigned int
+const OpenResult = koffi.enumeration('OpenResult', {
+    Success: 0,
+    MissingFile: 1,
+    AccessDenied: 2,
+    OtherError: 3
+});
+
+// For RelativePosition, the underlying type will be int
+const RelativePosition = koffi.enumeration('RelativePosition', {
+    Left: -1,
+    Center: 0,
+    Right: 1
+});
+
+// For IntLimits, the underlying type will be int64_t
+const Int64Limits = koffi.enumeration('Int64Limits', {
+    Min: -9223372036854775808n,
+    Max: 9223372036854775807n
+});
+```
+
+```{warning}
+This behavior may not match your compiler:
+
+- POSIX platforms: GCC and Clang support will use a short integer type if `-fshort-enums` is specified and the enumeration values fit in `short` or `unsigned short`
+- Windows: MSVC (and Clang) always use `int` even if some values do not fit, which does not match what Koffi does... unless the compiler flag `/Zc:enumTypes` is set!
+
+Use an explicit type specifier to work around these problems, as shown below.
+```
+
+You can access the constants in `values` member of the type object.
+
+```js
+console.log(OpenResult.values.MissingFile); // Prints 1
+console.log(RelativePosition.values.Left); // Prints -1
+```
+
+You can specify the storage type explicitly as the last argument to `koffi.enumeration(name, values, type)`.
+
+```js
+// This one explictly uses int64_t as the underlying type,
+// despite the fact that the values fit inside an int.
+const ExplicitEnum = koffi.enumeration('ExplicitEnum', {
+    Zero: 0,
+    One: 1,
+    Two: 2
+}, 'int64_t');
+```
+
 ## Union types
 
 The declaration and use of [unions types](unions.md) will be explained in a later section, they are only briefly mentioned here if you need them.
