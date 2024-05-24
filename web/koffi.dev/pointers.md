@@ -132,8 +132,6 @@ By default, just like for objects, array arguments are copied from JS to C but n
 
 ## Handling void pointers
 
-*New in Koffi 2.1*
-
 Many C functions use `void *` parameters in order to pass polymorphic objects and arrays, meaning that the data format changes can change depending on one other argument, or on some kind of struct tag member.
 
 Koffi provides two features to deal with this:

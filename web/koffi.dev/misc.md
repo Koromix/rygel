@@ -4,8 +4,6 @@
 
 ### Definition
 
-*New in Koffi 3.0: `koffi.type()`*
-
 The type object returned after a new type has been made (struct, pointer, etc.) can be introspected with various information about the type: name, primitive, size, alignment, members (record types), reference type (array, pointer) and length (array), signature (prototypes).
 
 ```js

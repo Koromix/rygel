@@ -83,8 +83,6 @@ console.log(ret);
 
 ### Registered callbacks
 
-*New in Koffi 2.0 (explicit this binding in Koffi 2.2)*
-
 Use registered callbacks when the function needs to be called at a later time (e.g. log handler, event handler, `fopencookie/funopen`). Call `koffi.register(func, type)` to register a callback function, with two arguments: the JS function, and the callback type.
 
 When you are done, call `koffi.unregister()` (with the value returned by `koffi.register()`) to release the slot. A maximum of 8192 callbacks can exist at the same time. Failure to do so will leak the slot, and subsequent registrations may fail (with an exception) once all slots are used.
@@ -148,8 +146,6 @@ let cb2 = koffi.register(store, store.get, 'IntCallback *'); // However in this 
 
 ### Decoding pointer arguments
 
-*New in Koffi 2.2, changed in Koffi 2.3*
-
 Koffi does not have enough information to convert callback pointer arguments to an appropriate JS value. In this case, your JS function will receive an opaque *External* object.
 
 You can pass this value through to another C function that expects a pointer of the same type, or you can use [koffi.decode()](memory.md#decode-to-js-values) function to decode pointer arguments.
@@ -178,8 +174,6 @@ console.log(array); // Prints ['123', 'bar', 'foo', 'foobar']
 ```
 
 ### Asynchronous callbacks
-
-*New in Koffi 2.2.2*
 
 JS execution is inherently single-threaded, so JS callbacks must run on the main thread. There are two ways you may want to call a callback function from another thread:
 
