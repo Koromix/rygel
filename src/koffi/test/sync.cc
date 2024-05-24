@@ -36,16 +36,18 @@
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
+    #include <direct.h>
 #else
     #include <unistd.h>
     #include <errno.h>
     #include <pthread.h>
 #endif
+#include <type_traits>
 
 #ifdef _WIN32
-    #define EXPORT __declspec(dllexport)
+    #define EXPORT extern "C" __declspec(dllexport)
 #else
-    #define EXPORT __attribute__((visibility("default")))
+    #define EXPORT extern "C"__attribute__((visibility("default")))
 #endif
 #if defined(_M_IX86) || defined(__i386__)
     #ifdef _MSC_VER
@@ -60,7 +62,7 @@
     #define STDCALL
 #endif
 
-bool DoReturnBool(int cond);
+extern "C" bool DoReturnBool(int cond);
 
 typedef struct Pack1 {
     int a;
@@ -479,9 +481,9 @@ EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const cha
 EXPORT void MakePolymorphBFG(int type, int x, double y, const char *str, void *p)
 {
     if (type == 0) {
-        MakeBFG(p, x, y, str);
+        MakeBFG((BFG *)p, x, y, str);
     } else if (type == 1) {
-        MakePackedBFG(x, y, p, str);
+        MakePackedBFG(x, y, (PackedBFG *)p, str);
     }
 }
 
@@ -499,7 +501,7 @@ EXPORT const char *ReturnBigString(const char *str)
 EXPORT const char *PrintFmt(const char *fmt, ...)
 {
     const int size = 256;
-    char *ptr = malloc(size);
+    char *ptr = (char *)malloc(size);
 
     va_list ap;
     va_start(ap, fmt);
@@ -521,7 +523,7 @@ size_t Length16(const char16_t *str)
 EXPORT const char16_t *Concat16(const char16_t *str1, const char16_t *str2)
 {
     const int size = 1024;
-    char16_t *ptr = malloc(size * 2);
+    char16_t *ptr = (char16_t *)malloc(size * 2);
 
     size_t len1 = Length16(str1);
     size_t len2 = Length16(str2);
@@ -536,7 +538,7 @@ EXPORT const char16_t *Concat16(const char16_t *str1, const char16_t *str2)
 EXPORT void Concat16Out(const char16_t *str1, const char16_t *str2, const char16_t **out)
 {
     const int size = 1024;
-    char16_t *ptr = malloc(size * 2);
+    char16_t *ptr = (char16_t *)malloc(size * 2);
 
     size_t len1 = Length16(str1);
     size_t len2 = Length16(str2);
@@ -811,7 +813,7 @@ EXPORT void UpperToInternalBuffer(const char *str, char **ptr)
 
 EXPORT int ComputeLengthUntilNul(const void *ptr)
 {
-    return (int)strlen(ptr);
+    return (int)strlen((const char *)ptr);
 }
 
 static size_t WideStringLength(const char16_t *str16)
@@ -845,7 +847,7 @@ EXPORT void ReverseStringVoid(void *ptr)
 EXPORT void ReverseString16Void(void *ptr)
 {
     char16_t *str16 = (char16_t *)ptr;
-    size_t len = WideStringLength(ptr);
+    size_t len = WideStringLength(str16);
 
     for (size_t i = 0; i < len / 2; i++) {
         char16_t tmp = str16[i];
@@ -1001,23 +1003,19 @@ EXPORT bool ReturnBool(int cond)
     return ret;
 }
 
-int ReturnEnumValue(Enum1 e)
+EXPORT int ReturnEnumValue(Enum1 e)
 {
     return (int)e;
 }
 
-#define ENUM_PRIMITIVE(Type) \
-    _Generic((Type)0, \
-        int: "Int32", \
-        unsigned int: "UInt32", \
-        int64_t: "Int64", \
-        uint64_t: "UInt64" \
-    )
+template<typename T> struct IntTraits {};
+template<> struct IntTraits<int> { static const char *GetPrimitive() { return "Int32"; } };
+template<> struct IntTraits<unsigned int> { static const char *GetPrimitive() { return "UInt32"; } };
+template<> struct IntTraits<int64_t> { static const char *GetPrimitive() { return "Int64"; } };
+template<> struct IntTraits<uint64_t> { static const char *GetPrimitive() { return "UInt64"; } };
 
-const char *GetEnumPrimitive1() { return ENUM_PRIMITIVE(Enum1); }
-const char *GetEnumPrimitive2() { return ENUM_PRIMITIVE(Enum2); }
-const char *GetEnumPrimitive3() { return ENUM_PRIMITIVE(Enum3); }
-const char *GetEnumPrimitive4() { return ENUM_PRIMITIVE(Enum4); }
-const char *GetEnumPrimitive5() { return ENUM_PRIMITIVE(Enum5); }
-
-#undef ENUM_PRIMITIVE
+EXPORT const char *GetEnumPrimitive1() { return IntTraits<std::underlying_type<Enum1>::type>::GetPrimitive(); }
+EXPORT const char *GetEnumPrimitive2() { return IntTraits<std::underlying_type<Enum2>::type>::GetPrimitive(); }
+EXPORT const char *GetEnumPrimitive3() { return IntTraits<std::underlying_type<Enum3>::type>::GetPrimitive(); }
+EXPORT const char *GetEnumPrimitive4() { return IntTraits<std::underlying_type<Enum4>::type>::GetPrimitive(); }
+EXPORT const char *GetEnumPrimitive5() { return IntTraits<std::underlying_type<Enum5>::type>::GetPrimitive(); }
