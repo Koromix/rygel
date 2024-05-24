@@ -1129,10 +1129,8 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
         return env.Null();
     err_guard.Disable();
 
-    Napi::Object defn = FinalizeType(env, instance, type, false);
-
+    Napi::Object defn = FinalizeType(env, instance, type);
     defn.Set("values", values);
-    defn.Freeze();
 
     return defn;
 }

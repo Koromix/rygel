@@ -109,7 +109,6 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
                 members.Set(member.name, obj);
             }
 
-            members.Freeze();
             defn.Set("members", members);
         } break;
 
@@ -155,8 +154,6 @@ PointerObject::PointerObject(const Napi::CallbackInfo &info)
     type = external2.Data();
 
     SetValueTag(wrapper, &PointerMarker);
-
-    wrapper.Freeze();
 }
 
 Napi::Value PointerObject::Inspect(const Napi::CallbackInfo &info)
@@ -618,7 +615,7 @@ const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size 
     return MakeArrayType(instance, ref, len, hint, false);
 }
 
-Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo *type, bool freeze)
+Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo *type)
 {
     if (type->defn.IsEmpty()) {
         Napi::External<TypeInfo> external = Napi::External<TypeInfo>::New(env, (TypeInfo *)type);
@@ -626,9 +623,6 @@ Napi::Object FinalizeType(Napi::Env env, InstanceData *instance, const TypeInfo 
     }
 
     Napi::Object defn = type->defn.Value();
-    if (freeze) {
-        defn.Freeze();
-    }
     return defn;
 }
 
@@ -1668,8 +1662,6 @@ Napi::Object DescribeFunction(Napi::Env env, const FunctionInfo *func)
 
         arguments.Set((uint32_t)i, obj);
     }
-
-    meta.Freeze();
 
     return meta;
 }
