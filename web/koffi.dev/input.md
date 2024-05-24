@@ -377,15 +377,17 @@ In C, dynamically-sized arrays are usually passed around as pointers. Read more 
 
 ## Enum types
 
-C enumeration values are stored as integers. The exact integer type is implementation-defined, and is usually `unsigned int` on Linux and `int` on Windows.
+C enumeration values are stored as integers. The underlying integer type is implementation-defined but Koffi tries to match usual platform behavior.
 
-You can declare an enum type with `koffi.enumeration(name, values)`, and Koffi will use the default GCC rules to determine the storage type:
+On POSIX platforms, Koffi follows the following rules:
 
-- If no negative values exist: `unsigned int` by default, `uint64_t` if needed
-- If negatives values exist: `int` by default, `int64_t` if needed
+- If no negative value exists: `unsigned int` by default, `uint64_t` if needed
+- If any negative value exists: `int` by default, `int64_t` if needed
+
+On Windows, things are simpler, and `int` is used all the time. Koffi will throw an error if any enumeration value does not fit in a 32-bit integer.
 
 ```js
-// For OpenResult, the underlying type will be unsigned int
+// For OpenResult, the underlying type will be unsigned int on POSIX, int on Windows
 const OpenResult = koffi.enumeration('OpenResult', {
     Success: 0,
     MissingFile: 1,
@@ -393,14 +395,14 @@ const OpenResult = koffi.enumeration('OpenResult', {
     OtherError: 3
 });
 
-// For RelativePosition, the underlying type will be int
+// For RelativePosition, the underlying type will be int everywhere
 const RelativePosition = koffi.enumeration('RelativePosition', {
     Left: -1,
     Center: 0,
     Right: 1
 });
 
-// For IntLimits, the underlying type will be int64_t
+// For IntLimits, the underlying type will be int64_t on POSIX, and fail on Windows
 const Int64Limits = koffi.enumeration('Int64Limits', {
     Min: -9223372036854775808n,
     Max: 9223372036854775807n
@@ -411,7 +413,7 @@ const Int64Limits = koffi.enumeration('Int64Limits', {
 This behavior may not match your compiler:
 
 - POSIX platforms: GCC and Clang support will use a short integer type if `-fshort-enums` is specified and the enumeration values fit in `short` or `unsigned short`
-- Windows: MSVC (and Clang) always use `int` even if some values do not fit, which does not match what Koffi does... unless the compiler flag `/Zc:enumTypes` is set!
+- Windows: MSVC (and Clang) always use `int` even if some values do not fit, which matches what Koffi does... unless the compiler flag `/Zc:enumTypes` is set, maybe.
 
 Use an explicit type specifier to work around these problems, as shown below.
 ```

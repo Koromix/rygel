@@ -152,9 +152,6 @@ const VariadicIntFunc = koffi.proto('int VariadicIntFunc(int n, ...)');
 
 const Enum1 = koffi.enumeration('Enum1', { A: 0, B: 42 });
 const Enum2 = koffi.enumeration('Enum2', { A: -1, B: 2147483647 });
-const Enum3 = koffi.enumeration('Enum3', { A: -1, B: 2147483648 });
-const Enum4 = koffi.enumeration('Enum4', { A: 0, B: 2147483648 });
-const Enum5 = koffi.enumeration('Enum5', { A: 0, B: 9223372036854775808n });
 
 main();
 
@@ -877,14 +874,29 @@ async function test() {
     assert.equal(ReturnBool(-2), true);
     assert.equal(ReturnBool(0xFFFFFE), true);
 
-    // Test enums
-    assert.equal(ReturnEnumValue(Enum1.values.A), 0);
-    assert.equal(ReturnEnumValue(Enum1.values.B), 42);
-    check_text(GetEnumPrimitive1(), Enum1.primitive);
-    check_text(GetEnumPrimitive2(), Enum2.primitive);
-    check_text(GetEnumPrimitive3(), Enum3.primitive);
-    check_text(GetEnumPrimitive4(), Enum4.primitive);
-    check_text(GetEnumPrimitive5(), Enum5.primitive);
+    // Test enums with implicit types
+    {
+        assert.equal(ReturnEnumValue(Enum1.values.A), 0);
+        assert.equal(ReturnEnumValue(Enum1.values.B), 42);
+        check_text(GetEnumPrimitive1(), Enum1.primitive);
+        check_text(GetEnumPrimitive2(), Enum2.primitive);
+
+        if (process.platform != 'win32') {
+            const Enum3 = koffi.enumeration('Enum3', { A: -1, B: 2147483648 });
+            const Enum4 = koffi.enumeration('Enum4', { A: 0, B: 2147483648 });
+            const Enum5 = koffi.enumeration('Enum5', { A: 0, B: 9223372036854775808n });
+
+            check_text(GetEnumPrimitive3(), Enum3.primitive);
+            check_text(GetEnumPrimitive4(), Enum4.primitive);
+            check_text(GetEnumPrimitive5(), Enum5.primitive);
+        } else {
+            assert.throws(() => koffi.enumeration('Enum3', { A: -1, B: 2147483648 }), /Cannot find storage type wide enough for enum values/);
+            assert.throws(() => koffi.enumeration('Enum4', { A: 0, B: 2147483648 }), /Cannot find storage type wide enough for enum values/);
+            assert.throws(() => koffi.enumeration('Enum5', { A: 0, B: 9223372036854775808n }), /Cannot find storage type wide enough for enum values/);
+        }
+    }
+
+    // Test enums with explicit storage
     assert.equal(koffi.enumeration({}, 'uint64_t').primitive, 'UInt64');
     assert.equal(koffi.enumeration({}, 'int').primitive, 'Int32');
     assert.equal(koffi.enumeration('EnumX', {}, 'uint64_t').primitive, 'UInt64');

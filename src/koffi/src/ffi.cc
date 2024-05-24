@@ -1051,6 +1051,37 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
         type->size = storage->size;
         type->align = storage->align;
     } else {
+#ifdef _WIN32
+        type->primitive = PrimitiveKind::Int32;
+        type->size = 4;
+        type->align = 4;
+
+        for (uint32_t i = 0; i < keys.Length(); i++) {
+            std::string key = keys.Get(i).As<Napi::String>();
+            Napi::Value value = obj[key];
+
+            int64_t i64;
+            bool lossless;
+
+            if (value.IsNumber()) {
+                i64 = value.As<Napi::Number>().Int64Value();
+                lossless = true;
+            } else if (value.IsBigInt()) {
+                Napi::BigInt big = value.As<Napi::BigInt>();
+                i64 = big.Int64Value(&lossless);
+            } else {
+                ThrowError<Napi::TypeError>(env, "Unexpected %1 value for enumeration value, expected number",  GetValueType(info[0]));
+                return env.Null();
+            }
+
+            if (!lossless || i64 < INT_MIN || i64 > INT_MAX) {
+                ThrowError<Napi::Error>(env, "Cannot find storage type wide enough for enum values");
+                return env.Null();
+            }
+
+            values.Set(key, value);
+        }
+#else
         bool negative = false;
         bool negative64 = false;
         uint64_t max = 0;
@@ -1116,6 +1147,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
             ThrowError<Napi::Error>(env, "Cannot find storage type wide enough for enum values");
             return env.Null();
         }
+#endif
     }
 
     // If the insert succeeds, we cannot fail anymore
