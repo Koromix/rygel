@@ -1046,6 +1046,11 @@ async function test() {
     assert.equal(GetEnumPrimitive3(), Enum3.primitive);
     assert.equal(GetEnumPrimitive4(), Enum4.primitive);
     assert.equal(GetEnumPrimitive5(), Enum5.primitive);
+    assert.equal(koffi.enumeration({}, 'uint64_t').primitive, 'UInt64');
+    assert.equal(koffi.enumeration({}, 'int').primitive, 'Int32');
+    assert.equal(koffi.enumeration('EnumX', {}, 'uint64_t').primitive, 'UInt64');
+    assert.equal(koffi.enumeration('EnumY', {}, 'short').primitive, 'Int16');
+    assert.throws(() => koffi.enumeration({}, 'float'), /Expected integer type for underlying enum storage type/);
 
     lib.unload();
 }

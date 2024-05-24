@@ -1198,7 +1198,8 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    bool named = info.Length() > 1;
+    bool named = (info.Length() >= 2 && !info[0].IsObject());
+    bool typed = (info.Length() >= 2u + named);
 
     if (named && !info[0].IsString()) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(instance, info[0]));
@@ -1222,7 +1223,20 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
     Napi::Object values = Napi::Object::New(env);
 
     // Determine needed storage type
-    {
+    if (typed) {
+        const TypeInfo *storage = ResolveType(info[1 + named]);
+        if (!storage)
+            return env.Null();
+
+        if (!IsInteger(storage)) {
+            ThrowError<Napi::TypeError>(env, "Expected integer type for underlying enum storage type");
+            return env.Null();
+        }
+
+        type->primitive = storage->primitive;
+        type->size = storage->size;
+        type->align = storage->align;
+    } else {
         bool negative = false;
         bool negative64 = false;
         uint64_t max = 0;
