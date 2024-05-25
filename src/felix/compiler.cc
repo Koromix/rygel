@@ -231,33 +231,40 @@ public:
         if (DetectDistCC()) {
             supported |= (int)CompileFeature::DistCC;
         }
-        supported |= (int)CompileFeature::HotAssets;
+        if (platform != HostPlatform::WasmWasi) {
+            supported |= (int)CompileFeature::HotAssets;
+        }
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
-        supported |= (int)CompileFeature::ASan;
-        supported |= (int)CompileFeature::UBSan;
-        supported |= (int)CompileFeature::LTO;
+        if (platform != HostPlatform::WasmWasi) {
+            supported |= (int)CompileFeature::ASan;
+            supported |= (int)CompileFeature::UBSan;
+            supported |= (int)CompileFeature::LTO;
+        }
         supported |= (int)CompileFeature::ZeroInit;
-        if (platform != HostPlatform::OpenBSD) {
-            supported |= (int)CompileFeature::CFI; // LTO only
-        }
-        if (platform != HostPlatform::Windows) {
-            supported |= (int)CompileFeature::TSan;
-            supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
-        }
-        if (platform == HostPlatform::Linux) {
-            if (architecture == HostArchitecture::x86_64) {
-                supported |= (int)CompileFeature::SafeStack;
-            } else if (architecture == HostArchitecture::ARM64) {
-                supported |= (int)CompileFeature::SafeStack;
+        if (platform != HostPlatform::WasmWasi) {
+            if (platform != HostPlatform::OpenBSD) {
+                supported |= (int)CompileFeature::CFI; // LTO only
+            }
+            if (platform != HostPlatform::Windows) {
+                supported |= (int)CompileFeature::TSan;
+                supported |= (int)CompileFeature::ShuffleCode; // Requires lld version >= 11
+            }
+            if (platform == HostPlatform::Linux) {
+                if (architecture == HostArchitecture::x86_64) {
+                    supported |= (int)CompileFeature::SafeStack;
+                } else if (architecture == HostArchitecture::ARM64) {
+                    supported |= (int)CompileFeature::SafeStack;
+                }
+            }
+            supported |= (int)CompileFeature::StaticRuntime;
+            supported |= (int)CompileFeature::LinkLibrary;
+            if (platform == HostPlatform::Windows) {
+                supported |= (int)CompileFeature::NoConsole;
             }
         }
-        supported |= (int)CompileFeature::StaticRuntime;
-        supported |= (int)CompileFeature::LinkLibrary;
-        if (platform == HostPlatform::Windows) {
-            supported |= (int)CompileFeature::NoConsole;
-        }
+
         supported |= (int)CompileFeature::AESNI;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
@@ -299,6 +306,11 @@ public:
     }
     const char *GetLinkExtension(TargetType type) const override
     {
+        if (platform == HostPlatform::WasmWasi) {
+            RG_ASSERT(type != TargetType::Library);
+            return ".wasm";
+        }
+
         switch (type) {
             case TargetType::Executable: {
                 const char *ext = (platform == HostPlatform::Windows) ? ".exe" : "";
@@ -487,6 +499,11 @@ public:
                 }
             } break;
 
+            case HostPlatform::WasmWasi: {
+                Fmt(&buf, " -fno-exceptions");
+                // --target is handled elsewhere
+            } break;
+
             default: {
                 Fmt(&buf, " -pthread -fPIC -D_FILE_OFFSET_BITS=64");
 
@@ -644,7 +661,8 @@ public:
         if (libraries.len) {
             HashSet<Span<const char>> framework_paths;
 
-            if (platform != HostPlatform::Windows && platform != HostPlatform::macOS) {
+            if (platform != HostPlatform::Windows && platform != HostPlatform::macOS &&
+                    platform != HostPlatform::WasmWasi) {
                 Fmt(&buf, " -Wl,--start-group");
             }
             for (const char *lib: libraries) {
@@ -671,7 +689,8 @@ public:
                     Fmt(&buf, " -l%1", lib);
                 }
             }
-            if (platform != HostPlatform::Windows && platform != HostPlatform::macOS) {
+            if (platform != HostPlatform::Windows && platform != HostPlatform::macOS &&
+                    platform != HostPlatform::WasmWasi) {
                 Fmt(&buf, " -Wl,--end-group");
             }
         }
@@ -699,6 +718,8 @@ public:
                 Fmt(&buf, " -ldl -pthread -framework CoreFoundation -framework SystemConfiguration ");
                 Fmt(&buf, " -Wl,-dead_strip -rpath \"@executable_path/../Frameworks\"");
             } break;
+
+            case HostPlatform::WasmWasi: { /* --target is handled elsewhere */ } break;
 
             default: {
                 Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
@@ -780,9 +801,14 @@ public:
 private:
     void AddClangTarget([[maybe_unused]] HeapArray<char> *out_buf) const
     {
-        // Only for Linux (for now)
+        if (platform == HostPlatform::WasmWasi) {
+            Fmt(out_buf, " -target wasm32-wasi --sysroot=/opt/wasi-sdk/share/wasi-sysroot");
+            return;
+        }
 
 #ifdef __linux__
+        // Only for Linux (for now)
+
         if (architecture != NativeArchitecture) {
             RG_ASSERT(platform == HostPlatform::Linux);
 
@@ -882,6 +908,7 @@ public:
         if (platform == HostPlatform::Windows) {
             supported |= (int)CompileFeature::NoConsole;
         }
+
         supported |= (int)CompileFeature::AESNI;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
@@ -1374,6 +1401,7 @@ public:
         supported |= (int)CompileFeature::LinkLibrary;
         supported |= (int)CompileFeature::StaticRuntime;
         supported |= (int)CompileFeature::NoConsole;
+
         supported |= (int)CompileFeature::AESNI;
         supported |= (int)CompileFeature::AVX2;
         supported |= (int)CompileFeature::AVX512;
@@ -1666,10 +1694,6 @@ public:
                 LogError("Could not find '%1' in PATH", cc);
                 return nullptr;
             }
-            if (platform == HostPlatform::EmscriptenBox && !FindExecutableInPath("wasm2c")) {
-                LogError("Could not find 'wasm2c' in PATH");
-                return nullptr;
-            }
 
             Span<const char> prefix;
             Span<const char> suffix;
@@ -1717,16 +1741,11 @@ public:
         switch (platform) {
             case HostPlatform::EmscriptenNode: return ".js";
             case HostPlatform::EmscriptenWeb: return ".html";
-            case HostPlatform::EmscriptenBox: return ".wasm";
 
             default: { RG_UNREACHABLE(); } break;
         }
     }
-    const char *GetPostExtension(TargetType) const override
-    {
-        const char *ext = (platform == HostPlatform::EmscriptenBox) ? ".c" : nullptr;
-        return ext;
-    }
+    const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
                  HeapArray<const char *> *, HeapArray<const char *> *) const override
@@ -1877,7 +1896,6 @@ public:
             Fmt(&buf, " \"%1\"", obj_filename);
         }
         if (libraries.len) {
-            Fmt(&buf, " -Wl,--start-group");
             for (const char *lib: libraries) {
                 if (strpbrk(lib, RG_PATH_SEPARATORS)) {
                     Fmt(&buf, " %1", lib);
@@ -1885,19 +1903,15 @@ public:
                     Fmt(&buf, " -l%1", lib);
                 }
             }
-            Fmt(&buf, " -Wl,--end-group");
         }
 
         // Platform flags
-        Fmt(&buf, " -s ALLOW_MEMORY_GROWTH=1 -s MAXIMUM_MEMORY=2147483648");
+        Fmt(&buf, " -s MAXIMUM_MEMORY=%1 -s ALLOW_MEMORY_GROWTH=1", Mebibytes(256));
         if (platform == HostPlatform::EmscriptenNode) {
             Fmt(&buf, " -s NODERAWFS=1 -lnodefs.js");
-        } else if (platform == HostPlatform::EmscriptenBox) {
-            Fmt(&buf, " -s STANDALONE_WASM=1");
-
-            if (link_type == TargetType::Library) {
-                Fmt(&buf, " -s SIDE_MODULE=1");
-            }
+        }
+        if (link_type == TargetType::Library) {
+            Fmt(&buf, " -s SIDE_MODULE=1");
         }
 
         if (env_flags) {
@@ -1913,14 +1927,7 @@ public:
         out_cmd->cmd_line = buf.TrimAndLeak(1);
     }
 
-    void MakePostCommand(const char *src_filename, const char *dest_filename,
-                         Allocator *alloc, Command *out_cmd) const override
-    {
-        RG_ASSERT(alloc);
-
-        Span<const char> cmd = Fmt(alloc, "wasm2c \"%1\" -o \"%2\"", src_filename, dest_filename);
-        out_cmd->cmd_line = cmd;
-    }
+    void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 };
 
 class TeensyCompiler final: public Compiler {
@@ -2373,10 +2380,6 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         if (!spec.cc) {
             spec.cc = "emcc";
         }
-        if (!IdentifyCompiler(spec.cc, "emcc")) {
-            LogError("Only Emcripten (emcc) can be used for WASM cross-compilation");
-            return nullptr;
-        }
 
         if (spec.ld) {
             LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
@@ -2384,6 +2387,22 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         }
 
         return EmCompiler::Create(spec.platform, spec.cc);
+    } else if (spec.platform == HostPlatform::WasmWasi) {
+        if (spec.architecture != HostArchitecture::Web) {
+            LogError("WASM can only build for Web archtiecture, not %1", HostArchitectureNames[(int)spec.architecture]);
+            return nullptr;
+        }
+
+        if (!spec.cc) {
+            spec.cc = "/opt/wasi-sdk/bin/clang";
+        }
+
+        if (spec.ld) {
+            LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
+            return nullptr;
+        }
+
+        return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
 #ifdef __linux__
     } else if (spec.platform == HostPlatform::Windows && spec.architecture == HostArchitecture::x86_64) {
         if (!spec.cc) {

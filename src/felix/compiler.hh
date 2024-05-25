@@ -26,7 +26,7 @@ enum class HostPlatform {
 
     EmscriptenNode,
     EmscriptenWeb,
-    EmscriptenBox,
+    WasmWasi,
 
     TeensyLC,
     Teensy30,
@@ -46,7 +46,7 @@ static const char *const HostPlatformNames[] = {
 
     "WASM/Emscripten/Node",
     "WASM/Emscripten/Web",
-    "WASM/Emscripten/Box",
+    "WASM/WASI",
 
     "Embedded/Teensy/ARM/TeensyLC",
     "Embedded/Teensy/ARM/Teensy30",
@@ -69,7 +69,9 @@ static const char *const HostPlatformNames[] = {
 #elif defined(__FreeBSD__)
     static const HostPlatform NativePlatform = HostPlatform::FreeBSD;
 #elif defined(__EMSCRIPTEN__)
-    static const HostPlatform NativePlatform = HostPlatform::EmscriptenNode;
+    static const HostPlatform NativePlatform = HostPlatform::WasmEmscripten;
+#elif defined(__wasi__)
+    static const HostPlatform NativePlatform = HostPlatform::WasmWasi;
 #else
     #error Unsupported platform
 #endif

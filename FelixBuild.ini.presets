@@ -42,16 +42,16 @@ Features = Warnings, DebugInfo, OptimizeSpeed, LTO
 Host = :clang:lld
 Features = Warnings, OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
-[NodeJS]
+[EmscriptenNode]
 Host = Emscripten/Node:Web
 Features = Warnings, DebugInfo, OptimizeSpeed
 
-[WebJS]
+[EmscriptenWeb]
 Host = Emscripten/Web:Web
 Features = Warnings, DebugInfo, OptimizeSpeed
 
-[WasmBox]
-Host = Emscripten/Box:Web
+[WasmWasi]
+Host = WASM/WASI:Web
 Features = Warnings, DebugInfo, OptimizeSpeed
 
 [TeensyLC]
