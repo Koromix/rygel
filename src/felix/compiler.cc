@@ -1881,6 +1881,15 @@ public:
     {
         RG_ASSERT(alloc);
 
+        // Hide noisy EmCC messages
+        {
+            static const ExecuteInfo::KeyValue variables[] = {
+                { "EMCC_LOGGING", "0" }
+            };
+
+            out_cmd->env_variables = variables;
+        }
+
         HeapArray<char> buf(alloc);
 
         // Linker
