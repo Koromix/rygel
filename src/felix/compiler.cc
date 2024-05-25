@@ -390,6 +390,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
             case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -400,6 +401,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { Fmt(&buf, " -x c-header -Xclang -fno-pch-timestamp"); } break;
                 case SourceType::Cxx: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp"); } break;
+                case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
                 case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -574,6 +576,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
                 case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -998,6 +1001,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
             case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -1008,6 +1012,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
                 case SourceType::Cxx: { Fmt(&buf, " -x c++-header"); } break;
+                case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
                 case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -1144,6 +1149,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
                 case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -1460,6 +1466,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" /nologo /std:c++20 /Zc:__cplusplus", cl); } break;
+            case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
             case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -1554,6 +1561,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
                 case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -1764,6 +1772,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
             case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -1824,6 +1833,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
                 case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -2086,6 +2096,7 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++17", cxx); } break;
+            case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
             case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -2188,6 +2199,7 @@ public:
             switch (src_type) {
                 case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
                 case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
+                case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
                 case SourceType::QtResources: { RG_UNREACHABLE(); } break;
@@ -2469,6 +2481,11 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
     } else if (extension == ".cc" || extension == ".cpp") {
         if (out_type) {
             *out_type = SourceType::Cxx;
+        }
+        return true;
+    } else if (extension == ".o" || extension == ".obj") {
+        if (out_type) {
+            *out_type = SourceType::Object;
         }
         return true;
     } else if (extension == ".js" || extension == ".css") {

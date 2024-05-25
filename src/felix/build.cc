@@ -289,6 +289,8 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                     return false;
             } break;
 
+            case SourceType::Object: { obj_filenames.Append(src->filename); } break;
+
             case SourceType::Esbuild: {
                 const char *meta_filename = AddEsbuildSource(*src);
                 if (!meta_filename)
@@ -521,8 +523,12 @@ bool Builder::AddSource(const SourceFileInfo &src)
         case SourceType::Esbuild: return AddEsbuildSource(src);
         case SourceType::QtUi: return AddQtUiSource(src);
 
+        case SourceType::Object: {
+            LogWarning("Object file does not need to be built");
+            return false;
+        } break;
         case SourceType::QtResources: {
-            LogInfo("You cannot build QRC files directly");
+            LogError("You cannot build QRC files directly");
             return false;
         }
     }
@@ -549,6 +555,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                 pch_ext = ".cc";
             } break;
 
+            case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
             case SourceType::QtResources: { RG_UNREACHABLE(); } break;
