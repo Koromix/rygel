@@ -105,6 +105,9 @@
     #include <sys/param.h>
     #include <sys/sysctl.h>
 #endif
+#ifdef __EMSCRIPTEN__
+    #include <emscripten.h>
+#endif
 #include <chrono>
 #include <random>
 #include <thread>
@@ -440,7 +443,7 @@ void UnlockMemory(void *ptr, Size len)
     VirtualUnlock(ptr, (SIZE_T)len);
 }
 
-#elif !defined(__wasi__)
+#elif !defined(__wasm__)
 
 bool LockMemory(void *ptr, Size len)
 {
@@ -3049,7 +3052,7 @@ const char *GetApplicationExecutable()
     }
 
     return executable_path;
-#elif defined(__EMSCRIPTEN__) || defined(__wasi__)
+#elif defined(__wasm__)
     return nullptr;
 #else
     #error GetApplicationExecutable() not implemented for this platform
@@ -5328,7 +5331,7 @@ int64_t GetRandomInt64(int64_t min, int64_t max)
 // Sockets
 // ------------------------------------------------------------------------
 
-#if !defined(__wasi__)
+#ifndef __wasi__
 
 int OpenIPSocket(SocketType type, int port, SocketMode mode)
 {
@@ -7407,7 +7410,7 @@ static bool input_is_raw;
 #if defined(_WIN32)
 static HANDLE stdin_handle;
 static DWORD input_orig_mode;
-#elif !defined(__wasi__)
+#elif !defined(__wasm__)
 static struct termios input_orig_tio;
 #endif
 
@@ -7435,7 +7438,7 @@ static bool EnableRawMode()
     }
 
     return input_is_raw;
-#elif !defined(__wasi__)
+#elif !defined(__wasm__)
     static bool init_atexit = false;
 
     if (!input_is_raw) {
@@ -7463,13 +7466,13 @@ static void DisableRawMode()
     if (input_is_raw) {
 #ifdef _WIN32
         input_is_raw = !SetConsoleMode(stdin_handle, input_orig_mode);
-#elif !defined(__wasi__)
+#elif !defined(__wasm__)
         input_is_raw = !(tcsetattr(STDIN_FILENO, TCSAFLUSH, &input_orig_tio) >= 0);
 #endif
     }
 }
 
-#if !defined(_WIN32) && !defined(__wasi__)
+#if !defined(_WIN32) && !defined(__wasm__)
 static void IgnoreSigWinch(struct sigaction *old_sa)
 {
     struct sigaction sa;
@@ -7484,7 +7487,7 @@ static void IgnoreSigWinch(struct sigaction *old_sa)
 
 bool ConsolePrompter::Read(Span<const char> *out_str)
 {
-#if !defined(_WIN32) && !defined(__wasi__)
+#if !defined(_WIN32) && !defined(__wasm__)
     struct sigaction old_sa;
     IgnoreSigWinch(&old_sa);
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
@@ -7504,7 +7507,7 @@ bool ConsolePrompter::Read(Span<const char> *out_str)
 
 bool ConsolePrompter::ReadYN(bool *out_value)
 {
-#if !defined(_WIN32) && !defined(__wasi__)
+#if !defined(_WIN32) && !defined(__wasm__)
     struct sigaction old_sa;
     IgnoreSigWinch(&old_sa);
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
@@ -8055,7 +8058,7 @@ Vec2<int> ConsolePrompter::GetConsoleSize()
     CONSOLE_SCREEN_BUFFER_INFO screen;
     if (GetConsoleScreenBufferInfo(h, &screen))
         return { screen.dwSize.X, screen.dwSize.Y };
-#elif !defined(__wasi__)
+#elif !defined(__wasm__)
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) >= 0 && ws.ws_col)
         return { ws.ws_col, ws.ws_row };

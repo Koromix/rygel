@@ -57,9 +57,6 @@
 #else
     #include <unistd.h>
 #endif
-#ifdef __EMSCRIPTEN__
-    #include <emscripten.h>
-#endif
 #ifdef _MSC_VER
     #define ENABLE_INTSAFE_SIGNED_FUNCTIONS
     #include <intsafe.h>
@@ -120,7 +117,7 @@ extern "C" const char *FelixCompiler;
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
     typedef int32_t Size;
     #define RG_SIZE_MAX INT32_MAX
-#elif defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__) || defined(__wasi__)
+#elif defined(__thumb__) || defined(__arm__) || defined(__wasm32__)
     typedef int32_t Size;
     #define RG_SIZE_MAX INT32_MAX
 #else
@@ -4262,7 +4259,7 @@ int64_t GetRandomInt64(int64_t min, int64_t max);
 // Sockets
 // ------------------------------------------------------------------------
 
-#if !defined(__wasi__)
+#ifndef __wasi__
 
 enum class SocketType {
     Dual,
