@@ -1736,15 +1736,7 @@ public:
     }
 
     const char *GetObjectExtension() const override { return ".o"; }
-    const char *GetLinkExtension(TargetType) const override
-    {
-        switch (platform) {
-            case HostPlatform::EmscriptenNode: return ".js";
-            case HostPlatform::EmscriptenWeb: return ".html";
-
-            default: { RG_UNREACHABLE(); } break;
-        }
-    }
+    const char *GetLinkExtension(TargetType) const override { return ".js"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
