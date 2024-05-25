@@ -235,7 +235,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
 
             target_config.name = DuplicateString(prop.section, &set.str_alloc).ptr;
             target_config.type = TargetType::Executable;
-            target_config.platforms = ParseSupportedPlatforms("Desktop Emscripten");
+            target_config.platforms = ParseSupportedPlatforms("Desktop");
             RG_ASSERT(target_config.platforms);
             target_config.title = target_config.name;
             target_config.version_tag = target_config.name;
