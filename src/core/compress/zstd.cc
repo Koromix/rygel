@@ -44,7 +44,7 @@ ZstdDecompressor::ZstdDecompressor(StreamReader *reader, CompressionType)
 {
     ctx = ZSTD_createDStream();
     if (!ctx)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 
     in_buf.Reserve(ZSTD_DStreamInSize());
     out_buf.Reserve(ZSTD_DStreamOutSize());
@@ -115,7 +115,7 @@ ZstdCompressor::ZstdCompressor(StreamWriter *writer, CompressionType, Compressio
 {
     ctx = ZSTD_createCStream();
     if (!ctx)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 
     out_buf.Reserve(ZSTD_CStreamOutSize());
 

@@ -620,7 +620,7 @@ ConnectionData *SftpDisk::ReserveConnection()
     conn->sftp = sftp_new(conn->ssh);
 
     if (!conn->sftp)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
     if (sftp_init(conn->sftp) < 0) {
         LogError("Failed to initialize SFTP: %1", ssh_get_error(conn->ssh));
         return nullptr;

@@ -200,7 +200,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
 
     ssh_session ssh = ssh_new();
     if (!ssh)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 
     RG_DEFER_N(err_guard) {
         if (ssh_is_connected(ssh)) {

@@ -25,7 +25,7 @@
     #include "vendor/dragonbox/include/dragonbox/dragonbox.h"
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #ifndef NOMINMAX
         #define NOMINMAX
     #endif
@@ -59,6 +59,17 @@
 
     #define RtlGenRandom SystemFunction036
     extern "C" BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
+#elif defined(__wasi__)
+    #include <dirent.h>
+    #include <fcntl.h>
+    #include <fnmatch.h>
+    #include <poll.h>
+    #include <sys/ioctl.h>
+    #include <sys/stat.h>
+    #include <sys/types.h>
+    #include <time.h>
+
+    extern char **environ;
 #else
     #include <dlfcn.h>
     #include <dirent.h>
@@ -412,7 +423,7 @@ void IndirectBlockAllocator::ReleaseAll()
     allocator->ReleaseAll();
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 bool LockMemory(void *ptr, Size len)
 {
@@ -429,7 +440,7 @@ void UnlockMemory(void *ptr, Size len)
     VirtualUnlock(ptr, (SIZE_T)len);
 }
 
-#else
+#elif !defined(__wasi__)
 
 bool LockMemory(void *ptr, Size len)
 {
@@ -1978,8 +1989,10 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
         }
     }
 
+#ifndef __wasi__
     static std::mutex mutex;
     std::unique_lock<std::mutex> lock(mutex);
+#endif
 
     if (log_filters_len) {
         RunLogFilter(log_filters_len - 1, level, ctx, msg_buf);
@@ -2568,7 +2581,9 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
                     case DT_BLK:
                     case DT_CHR: { file_type = FileType::Device; } break;
                     case DT_FIFO: { file_type = FileType::Pipe; } break;
+#ifndef __wasi__
                     case DT_SOCK: { file_type = FileType::Socket; } break;
+#endif
 
                     default: {
                         // This... should not happen. But who knows?
@@ -3034,7 +3049,7 @@ const char *GetApplicationExecutable()
     }
 
     return executable_path;
-#elif defined(__EMSCRIPTEN__)
+#elif defined(__EMSCRIPTEN__) || defined(__wasi__)
     return nullptr;
 #else
     #error GetApplicationExecutable() not implemented for this platform
@@ -3727,6 +3742,8 @@ bool EnsureDirectoryExists(const char *filename)
     Span<const char> directory = GetPathDirectory(filename);
     return MakeDirectoryRec(directory);
 }
+
+#ifndef __wasi__
 
 #ifdef _WIN32
 
@@ -4484,6 +4501,8 @@ bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
     return true;
 }
 
+#endif
+
 #ifdef _WIN32
 
 static HANDLE wait_msg_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
@@ -4559,6 +4578,8 @@ void WaitDelay(int64_t delay)
     }
 }
 
+#ifndef __wasi__
+
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
     static std::atomic_bool message { false };
@@ -4600,9 +4621,11 @@ void SignalWaitFor()
 
 #endif
 
+#endif
+
 int GetCoreCount()
 {
-#ifdef __EMSCRIPTEN__
+#if defined(__wasi__)
     return 1;
 #else
     static int cores;
@@ -4631,7 +4654,8 @@ int GetCoreCount()
 #endif
 }
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__wasi__)
+
 bool DropRootIdentity()
 {
     uid_t uid = getuid();
@@ -4660,9 +4684,11 @@ error:
     LogError("Failed to drop root privilegies: %1", strerror(errno));
     return false;
 }
+
 #endif
 
 #ifdef __linux__
+
 bool NotifySystemd()
 {
     const char *addr_str = GetEnv("NOTIFY_SOCKET");
@@ -4718,16 +4744,17 @@ bool NotifySystemd()
     unsetenv("NOTIFY_SOCKET");
     return true;
 }
+
 #endif
 
 void InitRG()
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     // Use binary standard I/O
     _setmode(STDIN_FILENO, _O_BINARY);
     _setmode(STDOUT_FILENO, _O_BINARY);
     _setmode(STDERR_FILENO, _O_BINARY);
-#else
+#elif !defined(__wasi__)
     // Best effort
     setpgid(0, 0);
 
@@ -4755,6 +4782,17 @@ void InitRG()
     GetApplicationExecutable();
 #endif
 }
+
+#ifdef __wasi__
+
+extern "C" pid_t getpid();
+
+pid_t getpid()
+{
+    return 1;
+}
+
+#endif
 
 // ------------------------------------------------------------------------
 // Standard paths
@@ -4848,8 +4886,10 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
         path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
     } else if (home) {
         path = Fmt(alloc, "%1%/.config/%2", home, name).ptr;
+#ifndef __wasi__
     } else if (!getuid()) {
         path = Fmt(alloc, "/root/.config/%1", name).ptr;
+#endif
     }
 
     if (path && !EnsureDirectoryExists(path))
@@ -4871,8 +4911,10 @@ const char *GetUserCachePath(const char *name, Allocator *alloc)
         path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
     } else if (home) {
         path = Fmt(alloc, "%1%/.cache/%2", home, name).ptr;
+#ifndef __wasi__
     } else if (!getuid()) {
         path = Fmt(alloc, "/root/.cache/%1", name).ptr;
+#endif
     }
 
     if (path && !EnsureDirectoryExists(path))
@@ -5168,7 +5210,7 @@ restart:
 
         rnd_remain = Mebibytes(4);
         rnd_time = GetMonotonicTime();
-#ifndef _WIN32
+#ifndef _win32
         rnd_pid = getpid();
 #endif
 
@@ -5285,6 +5327,8 @@ int64_t GetRandomInt64(int64_t min, int64_t max)
 // ------------------------------------------------------------------------
 // Sockets
 // ------------------------------------------------------------------------
+
+#if !defined(__wasi__)
 
 int OpenIPSocket(SocketType type, int port, SocketMode mode)
 {
@@ -5481,9 +5525,13 @@ void CloseSocket(int fd)
 #endif
 }
 
+#endif
+
 // ------------------------------------------------------------------------
 // Tasks
 // ------------------------------------------------------------------------
+
+#ifndef __wasi__
 
 struct Task {
     Async *async;
@@ -5810,282 +5858,52 @@ void AsyncPool::RunTask(Task *task)
     }
 }
 
-// ------------------------------------------------------------------------
-// Fibers
-// ------------------------------------------------------------------------
-
-#if defined(_WIN32)
-
-static thread_local int fib_fibers;
-static thread_local void *fib_self;
-static thread_local bool fib_run;
-
-Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
-    : f(f)
-{
-    if (!fib_self) {
-        fib_self = ConvertThreadToFiber(nullptr);
-
-        if (!fib_self) {
-            LogError("Failed to convert thread to fiber: %1", GetWin32ErrorString());
-            return;
-        }
-    }
-    RG_DEFER_N(self_guard) {
-        if (!fib_fibers) {
-            RG_CRITICAL(ConvertFiberToThread(), "ConvertFiberToThread() failed: %1", GetWin32ErrorString());
-            fib_self = nullptr;
-        }
-    };
-
-    fiber = CreateFiber((SIZE_T)stack_size, FiberCallback, this);
-    if (!fiber) {
-        LogError("Failed to create fiber: %1", GetWin32ErrorString());
-        return;
-    }
-
-    self_guard.Disable();
-    done = false;
-    fib_fibers++;
-}
-
-Fiber::~Fiber()
-{
-    if (fib_run) {
-        // We are forced to execute it until the end
-        Finalize();
-        fib_run = false;
-    }
-
-    if (fiber) {
-        DeleteFiber(fiber);
-        fiber = nullptr;
-
-        if (!--fib_fibers && fib_self) {
-            RG_CRITICAL(ConvertFiberToThread(), "ConvertFiberToThread() failed: %1", GetWin32ErrorString());
-            fib_self = nullptr;
-        }
-    }
-}
-
-void Fiber::SwitchTo()
-{
-    if (!fiber) [[unlikely]]
-        return;
-
-    if (!done) {
-        fib_run = true;
-        SwitchToFiber(fiber);
-    }
-}
-
-bool Fiber::Finalize()
-{
-    if (!fiber) [[unlikely]]
-        return false;
-
-    if (!done) {
-        fib_run = false;
-        SwitchToFiber(fiber);
-
-        RG_ASSERT(done);
-    }
-
-    return success;
-}
-
-bool Fiber::SwitchBack()
-{
-    if (fib_run) {
-        SwitchToFiber(fib_self);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-void WINAPI Fiber::FiberCallback(void *udata)
-{
-    Fiber *self = (Fiber *)udata;
-
-    self->success = self->f();
-    self->done = true;
-
-    SwitchToFiber(fib_self);
-}
-
-#elif defined(RG_FIBER_USE_UCONTEXT)
-
-static thread_local ucontext_t fib_self;
-static thread_local ucontext_t *fib_run;
-
-Fiber::Fiber(const std::function<bool()> &f, Size stack_size)
-    : f(f)
-{
-    if (getcontext(&fib_self) < 0) {
-        LogError("Failed to get fiber context: %1", strerror(errno));
-        return;
-    }
-
-    MemCpy(&ucp, &fib_self, RG_SIZE(ucp));
-    ucp.uc_stack.ss_sp = GetDefaultAllocator()->Allocate(stack_size);
-    ucp.uc_stack.ss_size = (size_t)stack_size;
-    ucp.uc_link = nullptr;
-
-    unsigned int high = (unsigned int)((uint64_t)this >> 32);
-    unsigned int low = (unsigned int)((uint64_t)this & 0xFFFFFFFFull);
-    makecontext(&ucp, (void (*)())FiberCallback, 2, high, low);
-
-    done = false;
-}
-
-Fiber::~Fiber()
-{
-    if (fib_run) {
-        // We are forced to execute it until the end
-        Finalize();
-        fib_run = nullptr;
-    }
-
-    ReleaseRaw(nullptr, ucp.uc_stack.ss_sp, (Size)ucp.uc_stack.ss_size);
-}
-
-void Fiber::SwitchTo()
-{
-    if (!ucp.uc_stack.ss_sp) [[unlikely]]
-        return;
-
-    if (!done) {
-        fib_run = &ucp;
-        RG_CRITICAL(swapcontext(&fib_self, &ucp) == 0, "swapcontext() failed: %1", strerror(errno));
-    }
-}
-
-bool Fiber::Finalize()
-{
-    if (!ucp.uc_stack.ss_sp) [[unlikely]]
-        return false;
-
-    if (!done) {
-        fib_run = nullptr;
-        RG_CRITICAL(swapcontext(&fib_self, &ucp) == 0, "swapcontext() failed: %1", strerror(errno));
-
-        RG_ASSERT(done);
-    }
-
-    return success;
-}
-
-bool Fiber::SwitchBack()
-{
-    if (fib_run) {
-        RG_CRITICAL(swapcontext(fib_run, &fib_self) == 0, "swapcontext() failed: %1", strerror(errno));
-        return true;
-    } else {
-        return false;
-    }
-}
-
-void Fiber::FiberCallback(unsigned int high, unsigned int low)
-{
-    Fiber *self = (Fiber *)(((uint64_t)high << 32) | (uint64_t)low);
-
-    self->success = self->f();
-    self->done = true;
-
-    RG_CRITICAL(swapcontext(&self->ucp, &fib_self) == 0, "swapcontext() failed: %1", strerror(errno));
-}
-
 #else
 
-#warning makecontext API is not available, using slower thread-based implementation
 
-static thread_local std::unique_lock<std::mutex> *fib_lock;
-static thread_local Fiber *fib_self;
-
-Fiber::Fiber(const std::function<bool()> &f, Size)
-    : f(f)
+Async::Async(int threads, bool stop_after_error)
+    : stop_after_error(stop_after_error)
 {
-    int ret = pthread_create(&thread, nullptr, ThreadCallback, this);
-    if (ret) {
-        LogError("Failed to create thread: %1", strerror(ret));
+    RG_ASSERT(threads);
+}
+
+Async::Async(Async *parent, bool stop_after_error)
+    : stop_after_error(stop_after_error)
+{
+    RG_ASSERT(parent);
+}
+
+Async::~Async()
+{
+    // Nothing to do
+}
+
+void Async::Run(const std::function<bool()> &func)
+{
+    if (!success && stop_after_error)
         return;
-    }
-    joinable = true;
 
-    done = false;
-
-    while (toggle == 1) {
-        cv.wait(lock);
-    }
+    success &= !!func();
 }
 
-Fiber::~Fiber()
+bool Async::Sync()
 {
-    // We are forced to execute it until the end
-    Finalize();
-
-    if (joinable) {
-        pthread_join(thread, nullptr);
-    }
-}
-
-void Fiber::SwitchTo()
-{
-    if (!done) {
-        Toggle(1, &lock);
-    }
-}
-
-bool Fiber::Finalize()
-{
-    fib_lock = nullptr;
-    SwitchTo();
-
     return success;
 }
 
-bool Fiber::SwitchBack()
+bool Async::IsTaskRunning()
 {
-    if (fib_lock) {
-        Fiber *self = fib_self;
-        self->Toggle(0, fib_lock);
-
-        return true;
-    } else {
-        return false;
-    }
+    return false;
 }
 
-void *Fiber::ThreadCallback(void *udata)
+int Async::GetWorkerIdx()
 {
-    Fiber *self = (Fiber *)udata;
-
-    std::unique_lock<std::mutex> lock(self->mutex);
-
-    fib_lock = &lock;
-    fib_self = self;
-
-    // Wait for our turn
-    self->Toggle(0, fib_lock);
-
-    self->success = self->f();
-    self->done = true;
-
-    self->toggle = 0;
-    self->cv.notify_one();
-
-    return nullptr;
+    return 0;
 }
 
-void Fiber::Toggle(int to, std::unique_lock<std::mutex> *lock)
+int Async::GetWorkerCount()
 {
-    toggle = to;
-
-    cv.notify_one();
-    while (toggle == to) {
-        cv.wait(*lock);
-    }
+    return 1;
 }
 
 #endif
@@ -7586,10 +7404,10 @@ void OptionParser::LogUnusedArguments() const
 // ------------------------------------------------------------------------
 
 static bool input_is_raw;
-#ifdef _WIN32
+#if defined(_WIN32)
 static HANDLE stdin_handle;
 static DWORD input_orig_mode;
-#else
+#elif !defined(__wasi__)
 static struct termios input_orig_tio;
 #endif
 
@@ -7600,9 +7418,7 @@ ConsolePrompter::ConsolePrompter()
 
 static bool EnableRawMode()
 {
-#if defined(__EMSCRIPTEN__)
-    return false;
-#elif defined(_WIN32)
+#if defined(_WIN32)
     static bool init_atexit = false;
 
     if (!input_is_raw) {
@@ -7619,7 +7435,7 @@ static bool EnableRawMode()
     }
 
     return input_is_raw;
-#else
+#elif !defined(__wasi__)
     static bool init_atexit = false;
 
     if (!input_is_raw) {
@@ -7637,6 +7453,8 @@ static bool EnableRawMode()
     }
 
     return input_is_raw;
+#else
+    return false;
 #endif
 }
 
@@ -7645,13 +7463,13 @@ static void DisableRawMode()
     if (input_is_raw) {
 #ifdef _WIN32
         input_is_raw = !SetConsoleMode(stdin_handle, input_orig_mode);
-#else
+#elif !defined(__wasi__)
         input_is_raw = !(tcsetattr(STDIN_FILENO, TCSAFLUSH, &input_orig_tio) >= 0);
 #endif
     }
 }
 
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__wasi__)
 static void IgnoreSigWinch(struct sigaction *old_sa)
 {
     struct sigaction sa;
@@ -7666,7 +7484,7 @@ static void IgnoreSigWinch(struct sigaction *old_sa)
 
 bool ConsolePrompter::Read(Span<const char> *out_str)
 {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__wasi__)
     struct sigaction old_sa;
     IgnoreSigWinch(&old_sa);
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
@@ -7686,7 +7504,7 @@ bool ConsolePrompter::Read(Span<const char> *out_str)
 
 bool ConsolePrompter::ReadYN(bool *out_value)
 {
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__wasi__)
     struct sigaction old_sa;
     IgnoreSigWinch(&old_sa);
     RG_DEFER { sigaction(SIGWINCH, &old_sa, nullptr); };
@@ -8231,13 +8049,13 @@ void ConsolePrompter::RenderBuffered()
 
 Vec2<int> ConsolePrompter::GetConsoleSize()
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     HANDLE h = (HANDLE)_get_osfhandle(STDERR_FILENO);
 
     CONSOLE_SCREEN_BUFFER_INFO screen;
     if (GetConsoleScreenBufferInfo(h, &screen))
         return { screen.dwSize.X, screen.dwSize.Y };
-#else
+#elif !defined(__wasi__)
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) >= 0 && ws.ws_col)
         return { ws.ws_col, ws.ws_row };

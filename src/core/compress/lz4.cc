@@ -50,7 +50,7 @@ LZ4Decompressor::LZ4Decompressor(StreamReader *reader, CompressionType)
 {
     LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&decoder, LZ4F_VERSION);
     if (LZ4F_isError(err))
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 }
 
 LZ4Decompressor::~LZ4Decompressor()
@@ -123,7 +123,7 @@ LZ4Compressor::LZ4Compressor(StreamWriter *writer, CompressionType, CompressionS
 {
     LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
     if (LZ4F_isError(err))
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 
     switch (speed) {
         case CompressionSpeed::Default: { prefs.compressionLevel = LZ4HC_CLEVEL_MIN; } break;
@@ -135,7 +135,7 @@ LZ4Compressor::LZ4Compressor(StreamWriter *writer, CompressionType, CompressionS
 
     size_t ret = LZ4F_compressBegin(encoder, dynamic_buf.end(), dynamic_buf.capacity - dynamic_buf.len, &prefs);
     if (LZ4F_isError(ret))
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 
     dynamic_buf.len += ret;
 }

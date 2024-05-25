@@ -30,7 +30,7 @@ CURL *curl_Init()
 {
     CURL *curl = curl_easy_init();
     if (!curl)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
     RG_DEFER_N(err_guard) { curl_easy_cleanup(curl); };
 
     bool success = true;
@@ -100,7 +100,7 @@ Span<const char> curl_GetUrlPartStr(CURLU *h, CURLUPart part, Allocator *alloc)
 
     CURLUcode ret = curl_url_get(h, part, &buf, 0);
     if (ret == CURLUE_OUT_OF_MEMORY)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
     RG_DEFER { curl_free(buf); };
 
     if (buf && buf[0]) {
@@ -117,7 +117,7 @@ int curl_GetUrlPartInt(CURLU *h, CURLUPart part)
 
     CURLUcode ret = curl_url_get(h, part, &buf, 0);
     if (ret == CURLUE_OUT_OF_MEMORY)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
     RG_DEFER { curl_free(buf); };
 
     int value = -1;

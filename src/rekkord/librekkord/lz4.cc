@@ -21,7 +21,7 @@ DecodeLZ4::DecodeLZ4()
     LZ4F_errorCode_t err = LZ4F_createDecompressionContext(&decoder, LZ4F_VERSION);
 
     if (LZ4F_isError(err))
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 }
 
 DecodeLZ4::~DecodeLZ4()
@@ -82,7 +82,7 @@ EncodeLZ4::EncodeLZ4()
     LZ4F_errorCode_t err = LZ4F_createCompressionContext(&encoder, LZ4F_VERSION);
 
     if (LZ4F_isError(err))
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 }
 
 EncodeLZ4::~EncodeLZ4()

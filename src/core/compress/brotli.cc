@@ -48,7 +48,7 @@ BrotliDecompressor::BrotliDecompressor(StreamReader *reader, CompressionType)
 {
     state = BrotliDecoderCreateInstance(nullptr, nullptr, nullptr);
     if (!state)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 }
 
 BrotliDecompressor::~BrotliDecompressor()
@@ -117,7 +117,7 @@ BrotliCompressor::BrotliCompressor(StreamWriter *writer, CompressionType, Compre
 {
     state = BrotliEncoderCreateInstance(nullptr, nullptr, nullptr);
     if (!state)
-        throw std::bad_alloc();
+        RG_BAD_ALLOC();
 
     static_assert(BROTLI_MIN_QUALITY == 0 && BROTLI_MAX_QUALITY == 11);
 

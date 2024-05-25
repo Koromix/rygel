@@ -52,14 +52,10 @@
     #ifndef STDERR_FILENO
         #define STDERR_FILENO 2
     #endif
+
+    #include <intrin.h>
 #else
     #include <unistd.h>
-#endif
-#if defined(_WIN32)
-    #include <intrin.h>
-#elif !defined(__APPLE__) && (!defined(__linux__) || defined(__GLIBC__)) && __has_include(<ucontext.h>)
-    #define RG_FIBER_USE_UCONTEXT
-    #include <ucontext.h>
 #endif
 #ifdef __EMSCRIPTEN__
     #include <emscripten.h>
@@ -124,7 +120,7 @@ extern "C" const char *FelixCompiler;
 #elif defined(_WIN32) || defined(__APPLE__) || defined(__unix__)
     typedef int32_t Size;
     #define RG_SIZE_MAX INT32_MAX
-#elif defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__)
+#elif defined(__thumb__) || defined(__arm__) || defined(__EMSCRIPTEN__) || defined(__wasi__)
     typedef int32_t Size;
     #define RG_SIZE_MAX INT32_MAX
 #else
@@ -214,6 +210,19 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
     #define RG_DEBUG_BREAK() __asm__ __volatile__(".inst 0xe7f001f0")
 #elif defined(__riscv)
     #define RG_DEBUG_BREAK() __asm__ __volatile__("ebreak")
+#endif
+
+#if defined(_MSC_VER) || __EXCEPTIONS
+    #define RG_BAD_ALLOC() \
+        do { \
+            throw std::bad_alloc(); \
+        } while (false)
+#else
+    #define RG_BAD_ALLOC() \
+        do { \
+            PrintLn(StdErr, "Memory allocation failed"); \
+            abort(); \
+        } while (false);
 #endif
 
 #define RG_CRITICAL(Cond, ...) \
@@ -1068,8 +1077,10 @@ public:
     void ReleaseAll();
 };
 
+#ifndef __wasi__
 bool LockMemory(void *ptr, Size len);
 void UnlockMemory(void *ptr, Size len);
+#endif
 
 // ------------------------------------------------------------------------
 // Reference counting
@@ -4069,6 +4080,8 @@ bool FlushFile(int fd, const char *filename);
 
 bool FileIsVt100(int fd);
 
+#ifndef __wasi__
+
 #ifdef _WIN32
 enum class PipeMode {
     Byte,
@@ -4138,7 +4151,11 @@ static inline bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &i
 Size ReadCommandOutput(const char *cmd_line, Span<char> out_output);
 bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output);
 
+#endif
+
 void WaitDelay(int64_t delay);
+
+#ifndef __wasi__
 
 enum class WaitForResult {
     Interrupt,
@@ -4151,6 +4168,8 @@ enum class WaitForResult {
 // Beware, on Unix platforms, this may not work correctly if not called from the main thread.
 WaitForResult WaitForInterrupt(int64_t timeout = -1);
 void SignalWaitFor();
+
+#endif
 
 int GetCoreCount();
 
@@ -4243,6 +4262,8 @@ int64_t GetRandomInt64(int64_t min, int64_t max);
 // Sockets
 // ------------------------------------------------------------------------
 
+#if !defined(__wasi__)
+
 enum class SocketType {
     Dual,
     IPv4,
@@ -4269,6 +4290,8 @@ int ConnectToUnixSocket(const char *path, SocketMode mode = SocketMode::ConnectS
 
 void CloseSocket(int fd);
 
+#endif
+
 // ------------------------------------------------------------------------
 // Tasks
 // ------------------------------------------------------------------------
@@ -4277,10 +4300,14 @@ class Async {
     RG_DELETE_COPY(Async)
 
     bool stop_after_error;
+#ifndef __wasi__
     std::atomic_bool success { true };
     std::atomic_int remaining_tasks { 0 };
 
     class AsyncPool *pool;
+#else
+    bool success = true;
+#endif
 
 public:
     Async(int threads = -1, bool stop_after_error = true);
@@ -4295,54 +4322,6 @@ public:
     static int GetWorkerCount();
 
     friend class AsyncPool;
-};
-
-// ------------------------------------------------------------------------
-// Fibers
-// ------------------------------------------------------------------------
-
-class Fiber {
-    RG_DELETE_COPY(Fiber)
-
-    std::function<bool()> f;
-
-#ifdef _WIN32
-    void *fiber = nullptr;
-#elif defined(RG_FIBER_USE_UCONTEXT)
-    ucontext_t ucp = {};
-#else
-    pthread_t thread;
-    bool joinable = false;
-
-    std::mutex mutex;
-    std::condition_variable cv;
-    std::unique_lock<std::mutex> lock { mutex };
-    int toggle = 1;
-#endif
-
-    bool done = true;
-    bool success = false;
-
-public:
-    Fiber(const std::function<bool()> &f, Size stack_size = RG_FIBER_DEFAULT_STACK_SIZE);
-    ~Fiber();
-
-    void SwitchTo();
-    bool Finalize();
-
-    static bool SwitchBack();
-
-private:
-#if defined(_WIN64)
-    static void FiberCallback(void *udata);
-#elif defined(_WIN32)
-    static void __stdcall FiberCallback(void *udata);
-#elif defined(RG_FIBER_USE_UCONTEXT)
-    static void FiberCallback(unsigned int high, unsigned int low);
-#else
-    static void *ThreadCallback(void *udata);
-    void Toggle(int to, std::unique_lock<std::mutex> *lock);
-#endif
 };
 
 // ------------------------------------------------------------------------
