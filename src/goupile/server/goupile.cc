@@ -20,7 +20,6 @@
 #include "message.hh"
 #include "record.hh"
 #include "user.hh"
-#include "vm.hh"
 #include "src/core/http/http.hh"
 #include "src/core/request/curl.hh"
 #include "src/core/sandbox/sandbox.hh"
@@ -1171,8 +1170,6 @@ int Main(int argc, char **argv)
         return RunKeys(arguments);
     } else if (TestStr(cmd, "unseal")) {
         return RunUnseal(arguments);
-    } else if (TestStr(cmd, "vm")) {
-        return RunVM(arguments);
     } else if (TestStr(cmd, "serve")) {
         return RunServe(arguments);
     } else {
