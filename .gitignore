@@ -36,3 +36,5 @@ package-lock.json
 /src/napka/tmp/*.css
 
 /deploy/docker/goupile/goupile
+
+/vendor/spidermonkey/spidermonkey/

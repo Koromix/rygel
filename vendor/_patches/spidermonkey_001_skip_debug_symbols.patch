@@ -1,0 +1,13 @@
+diff --git a/vendor/spidermonkey/spidermonkey/build-engine.sh b/vendor/spidermonkey/spidermonkey/build-engine.sh
+index 92b9537..722f499 100755
+--- a/vendor/spidermonkey/spidermonkey/build-engine.sh
++++ b/vendor/spidermonkey/spidermonkey/build-engine.sh
+@@ -50,6 +50,8 @@ esac
+ case "$mode" in
+   release)
+     echo "ac_add_options --disable-debug" >> "$mozconfig"
++    echo "ac_add_options --disable-debug-symbols" >> "$mozconfig"
++    echo "ac_add_options --enable-strip" >> "$mozconfig"
+     ;;
+ 
+   debug)
