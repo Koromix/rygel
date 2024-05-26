@@ -159,7 +159,8 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
         _Pragma("GCC diagnostic ignored \"-Wunused-variable\"") \
         _Pragma("GCC diagnostic ignored \"-Wunused-but-set-variable\"") \
         _Pragma("GCC diagnostic ignored \"-Wunused-parameter\"") \
-        _Pragma("GCC diagnostic ignored \"-Wzero-as-null-pointer-constant\"")
+        _Pragma("GCC diagnostic ignored \"-Wzero-as-null-pointer-constant\"") \
+        _Pragma("GCC diagnostic ignored \"-Winvalid-offsetof\"")
     #define RG_POP_NO_WARNINGS \
         _Pragma("GCC diagnostic pop")
 
