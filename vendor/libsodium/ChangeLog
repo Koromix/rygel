@@ -1,3 +1,34 @@
+* Version 1.0.20
+  This point release includes all the changes from 1.0.19-stable,
+mainly addressing compilation issues and improvements to the .NET
+packages.
+
+* Version 1.0.19-stable
+ - Building with `zig build` now requires Zig 0.12.
+ - When using the traditional build system, -O3 is used instead of -Ofast.
+ - Improved detection of the compiler flags required on aarch64.
+ - Improved compatibility with custom build systems on aarch64.
+ - apple-xcframework: VisionOS packages are not built if Xcode doesn't
+include that SDK.
+ - `crypto_kdf_hkdf_sha512_statebytes()` was added.
+ - When using Visual Studio, runtime CPU feature detection is now enabled
+on Windows/aarch64.
+ - There were issues with C++ guards affecting usage of libsodium
+using Swift on Windows. This has been fixed.
+ - Emscripten: `crypto_aead_aegis*()` functions are now exported in
+JavaScript builds
+ - Emscripten: unsupported `--memory-init-file` option has been removed.
+ - apple-xcframework: the minimal deployment target can be set to iOS 11+.
+ - .NET packages now include precompiled libraries for Windows/arm64,
+iOS, TvOS and Catalyst.
+ - .NET precompiled libraries now work on any CPUs, using only runtime
+feature detection.
+ - SYSV assembly should not be used when targeting Windows (reported by
+@meiyese, thanks!)
+ - Compatibility issues with LLVM 18 and AVX512 have been addressed.
+ - GitHub attestation build provenance are now added to NuGet packages.
+ - JavaScript tests can now use Bun as an alternative to Node.
+
 * Version 1.0.19
   This release includes all the changes from 1.0.18-stable, as well as two
 additions:
@@ -19,7 +50,7 @@ the SHA-256 and SHA-512 hash functions.
  - Visual Studio: AVX512 implementations are enabled on supported CPUs.
  - Visual Studio: an MSVC 2022 solution was added.
  - Apple XCFramework: support for VisionOS was added.
- - Apple XCFranework: support for Catalyst was added.
+ - Apple XCFramework: support for Catalyst was added.
  - Apple XCFramework: building the simulators is now optional.
  - iOS: bitcode is not generated any more, as it was deprecated by Apple.
  - watchOS: support for arm64 was added.

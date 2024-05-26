@@ -1,19 +1,20 @@
 diff --git a/vendor/libsodium/src/libsodium/include/sodium/version.h b/vendor/libsodium/src/libsodium/include/sodium/version.h
 new file mode 100644
-index 0000000..56ec2b9
+index 000000000..e07ae90d9
 --- /dev/null
 +++ b/vendor/libsodium/src/libsodium/include/sodium/version.h
-@@ -0,0 +1,32 @@
+@@ -0,0 +1,33 @@
 +
 +#ifndef sodium_version_H
 +#define sodium_version_H
 +
 +#include "export.h"
 +
-+#define SODIUM_VERSION_STRING "1.0.19"
++#define SODIUM_VERSION_STRING "1.0.20"
 +
 +#define SODIUM_LIBRARY_VERSION_MAJOR 26
-+#define SODIUM_LIBRARY_VERSION_MINOR 1
++#define SODIUM_LIBRARY_VERSION_MINOR 2
++
 +
 +#ifdef __cplusplus
 +extern "C" {
