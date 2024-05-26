@@ -25,7 +25,7 @@
 
 namespace RG {
 
-enum pwd_HotpAlgorithm {
+enum class pwd_HotpAlgorithm {
     SHA1, // Only choice supported by Google Authenticator
     SHA256,
     SHA512
