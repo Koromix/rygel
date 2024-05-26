@@ -22,7 +22,7 @@
 #include "src/core/base/base.hh"
 #include "otp.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
-#include "vendor/mbedtls/include/mbedtls/sha1.h"
+#include "vendor/sha1/sha1.h"
 #include "vendor/qrcodegen/qrcodegen.hpp"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"
@@ -268,11 +268,13 @@ bool pwd_GenerateHotpPng(const char *url, int border, HeapArray<uint8_t> *out_bu
 
 static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8_t out_digest[20])
 {
+    RG_ASSERT(message.len <= UINT32_MAX);
+
     uint8_t padded_key[64];
 
     // Hash and/or pad key
     if (key.len > RG_SIZE(padded_key)) {
-        mbedtls_sha1(key.ptr, (size_t)key.len, padded_key);
+        SHA1((char *)padded_key, (const char *)key.ptr, (uint32_t)key.len);
         MemSet(padded_key + 20, 0, RG_SIZE(padded_key) - 20);
     } else {
         MemCpy(padded_key, key.ptr, key.len);
@@ -282,35 +284,31 @@ static Size HmacSha1(Span<const uint8_t> key, Span<const uint8_t> message, uint8
     // Inner hash
     uint8_t inner_hash[20];
     {
-        mbedtls_sha1_context ctx;
-        mbedtls_sha1_init(&ctx);
-        mbedtls_sha1_starts(&ctx);
-        RG_DEFER { mbedtls_sha1_free(&ctx); };
+        SHA1_CTX ctx;
+        SHA1Init(&ctx);
 
         for (Size i = 0; i < RG_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36;
         }
 
-        mbedtls_sha1_update(&ctx, padded_key, RG_SIZE(padded_key));
-        mbedtls_sha1_update(&ctx, message.ptr, (size_t)message.len);
-        mbedtls_sha1_finish(&ctx, (unsigned char *)inner_hash);
+        SHA1Update(&ctx, padded_key, RG_SIZE(padded_key));
+        SHA1Update(&ctx, message.ptr, (uint32_t)message.len);
+        SHA1Final((unsigned char *)inner_hash, &ctx);
     }
 
     // Outer hash
     {
-        mbedtls_sha1_context ctx;
-        mbedtls_sha1_init(&ctx);
-        mbedtls_sha1_starts(&ctx);
-        RG_DEFER { mbedtls_sha1_free(&ctx); };
+        SHA1_CTX ctx;
+        SHA1Init(&ctx);
 
         for (Size i = 0; i < RG_SIZE(padded_key); i++) {
             padded_key[i] ^= 0x36; // IPAD is still there
             padded_key[i] ^= 0x5C;
         }
 
-        mbedtls_sha1_update(&ctx, padded_key, RG_SIZE(padded_key));
-        mbedtls_sha1_update(&ctx, inner_hash, RG_SIZE(inner_hash));
-        mbedtls_sha1_finish(&ctx, (unsigned char *)out_digest);
+        SHA1Update(&ctx, padded_key, RG_SIZE(padded_key));
+        SHA1Update(&ctx, inner_hash, RG_SIZE(inner_hash));
+        SHA1Final((unsigned char *)out_digest, &ctx);
     }
 
     return 20;
