@@ -23,7 +23,7 @@
 #include "otp.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #include "vendor/sha1/sha1.h"
-#include "vendor/qrcodegen/qrcodegen.hpp"
+#include "vendor/qrcodegen/qrcodegen.h"
 #define MINIZ_NO_ZLIB_COMPATIBLE_NAMES
 #include "vendor/miniz/miniz.h"
 
@@ -162,15 +162,23 @@ const char *pwd_GenerateHotpUrl(const char *label, const char *username, const c
     return url;
 }
 
-static void GeneratePNG(const qrcodegen::QrCode &qr, int border, HeapArray<uint8_t> *out_png)
+static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, HeapArray<uint8_t> *out_png)
 {
-    static const uint8_t header[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
-    static const uint8_t footer[] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82};
+    // Account for scanline byte
+    static const int MaxSize = Kibibytes(2) - 1;
 
-    int size = qr.getSize() + 2 * border / 4;
-    int size4 = qr.getSize() * 4 + 2 * border;
+    static const uint8_t PngHeader[] = { 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A };
+    static const uint8_t PngFooter[] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82};
 
-    out_png->Append(header);
+    int size = qrcodegen_getSize(qr) + 2 * border / 4;
+    int size4 = qrcodegen_getSize(qr) * 4 + 2 * border;
+
+    if (size > MaxSize) [[unlikely]] {
+        LogError("Excessive QR code image size");
+        return false;
+    }
+
+    out_png->Append(PngHeader);
 
 #pragma pack(push, 1)
     struct ChunkHeader {
@@ -224,13 +232,16 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, int border, HeapArray<uint8
 
         StreamWriter writer(out_png, "<png>", CompressionType::Zlib);
         for (int y = 0; y < size4; y++) {
-            writer.Write((uint8_t)0); // Scanline filter
+            LocalArray<uint8_t, MaxSize + 1> buf;
+            buf.Append((uint8_t)0); // Scanline filter
 
             for (int x = 0; x < size; x += 2) {
-                uint8_t byte = (qr.getModule(x + 0 - border / 4, y / 4 - border / 4) * 0xF0) |
-                               (qr.getModule(x + 1 - border / 4, y / 4 - border / 4) * 0x0F);
-                writer.Write(~byte);
+                uint8_t byte = (qrcodegen_getModule(qr, x + 0 - border / 4, y / 4 - border / 4) * 0xF0) |
+                               (qrcodegen_getModule(qr, x + 1 - border / 4, y / 4 - border / 4) * 0x0F);
+                buf.Append(~byte);
             }
+
+            writer.Write(buf);
         }
         bool success = writer.Close();
         RG_ASSERT(success);
@@ -248,20 +259,28 @@ static void GeneratePNG(const qrcodegen::QrCode &qr, int border, HeapArray<uint8
     }
 
     // End image (IEND)
-    out_png->Append(footer);
+    out_png->Append(PngFooter);
+
+    return true;
 }
 
 bool pwd_GenerateHotpPng(const char *url, int border, HeapArray<uint8_t> *out_buf)
 {
     RG_ASSERT(!out_buf->len);
 
-    try {
-        qrcodegen::QrCode qr = qrcodegen::QrCode::encodeText(url, qrcodegen::QrCode::Ecc::MEDIUM);
-        GeneratePNG(qr, border, out_buf);
-    } catch (const std::exception &err) {
-        LogError("QR code encoding failed: %1", err.what());
+    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
+    uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
+    static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
+
+    bool success = qrcodegen_encodeText(url, tmp, qr, qrcodegen_Ecc_MEDIUM,
+                                        qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+    if (!success) {
+        LogError("QR code encoding failed");
         return false;
     }
+
+    if (!GeneratePNG(qr, border, out_buf))
+        return false;
 
     return true;
 }
