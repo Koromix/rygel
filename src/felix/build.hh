@@ -31,10 +31,6 @@ struct BuildSettings {
     uint32_t features = 0;
     bool env = false;
     bool fake = false;
-
-    // Tools
-    const char *qmake_binary = nullptr;
-    const char *esbuild_binary = nullptr;
 };
 
 class Builder {
@@ -152,6 +148,8 @@ public:
     bool Build(int jobs, bool verbose);
 
 private:
+    Command InitCommand();
+
     void SaveCache();
     void LoadCache();
 

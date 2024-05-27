@@ -42,7 +42,7 @@ struct WasiSdkInfo {
     const char *sysroot = nullptr;
 };
 
-bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *alloc, QtInfo *out_qt);
+bool FindQtSdk(const Compiler *compiler, Allocator *alloc, QtInfo *out_qt);
 bool FindWasiSdk(Allocator *alloc, WasiSdkInfo *out_sdk);
 bool FindArduinoSdk(const char *compiler, Allocator *alloc, const char **out_arduino, const char **out_cc);
 

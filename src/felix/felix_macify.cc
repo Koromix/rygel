@@ -189,7 +189,6 @@ int RunMacify(Span<const char *> arguments)
     const char *title = nullptr;
     const char *icon_filename = nullptr;
     bool force = false;
-    const char *qmake_binary = nullptr;
     const char *binary_filename = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -202,9 +201,7 @@ Options:
         %!..+--title <title>%!0          Set bundle name
         %!..+--icon <icon>%!0            Set bundle icon (ICNS)
 
-    %!..+-f, --force%!0                  Overwrite destination files
-
-        %!..+--qmake_path <path>%!0      Set explicit path to QMake)",
+    %!..+-f, --force%!0                  Overwrite destination files)",
                 FelixTarget);
     };
 
@@ -224,8 +221,6 @@ Options:
                 icon_filename = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 force = true;
-            } else if (opt.Test("--qmake_path", OptionType::Value)) {
-                qmake_binary = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -250,7 +245,7 @@ Options:
         return 1;
 
     QtInfo qt = {};
-    if (!FindQtSdk(compiler.get(), qmake_binary, &temp_alloc, &qt))
+    if (!FindQtSdk(compiler.get(), &temp_alloc, &qt))
         return 1;
 
     if (TestFile(output_bundle)) {

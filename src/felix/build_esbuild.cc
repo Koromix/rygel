@@ -21,10 +21,8 @@ bool Builder::PrepareEsbuild()
     if (esbuild_binary)
         return true;
 
-    if (build.esbuild_binary) {
-        esbuild_binary = build.esbuild_binary;
-        return true;
-    } else {
+    // Try environment first
+    {
         const char *str = GetEnv("ESBUILD_PATH");
 
         if (str && str[0]) {

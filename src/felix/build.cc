@@ -349,7 +349,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
         // Make C file
         {
-            Command cmd = {};
+            Command cmd = InitCommand();
             build.compiler->MakeEmbedCommand(embed_filenames, target.embed_options, src_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Embed %!..+%1%!0 assets", target.name).ptr;
@@ -358,7 +358,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
 
         // Build object file
         {
-            Command cmd = {};
+            Command cmd = InitCommand();
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
                                                   nullptr, {"EXPORT"}, {}, {}, {}, features, build.env,
@@ -378,7 +378,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets%3", build.output_directory,
                                               target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
 
-            Command cmd = {};
+            Command cmd = InitCommand();
             build.compiler->MakeLinkCommand(obj_filename, {}, TargetType::Library,
                                             features, build.env, module_filename, &str_alloc, &cmd);
 
@@ -413,7 +413,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         if (!UpdateVersionSource(target.name, version_str, src_filename))
             return false;
 
-        Command cmd = {};
+        Command cmd = InitCommand();
         build.compiler->MakeObjectCommand(src_filename, SourceType::C,
                                           nullptr, {}, {}, {}, {}, features, build.env,
                                           obj_filename, &str_alloc, &cmd);
@@ -433,7 +433,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         if (!UpdateResourceFile(target.name, target.icon_filename, build.fake, rc_filename))
             return false;
 
-        Command cmd = {};
+        Command cmd = InitCommand();
         build.compiler->MakeResourceCommand(rc_filename, res_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Build %!..+%1%!0 resource file", target.name).ptr;
@@ -461,7 +461,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             link_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.title, link_ext).ptr;
             uint32_t features = target.CombineFeatures(build.features);
 
-            Command cmd = {};
+            Command cmd = InitCommand();
             build.compiler->MakeLinkCommand(obj_filenames, link_libraries, target.type,
                                             features, build.env, link_filename, &str_alloc, &cmd);
 
@@ -473,7 +473,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         if (post_ext) {
             target_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.title, post_ext).ptr;
 
-            Command cmd = {};
+            Command cmd = InitCommand();
             build.compiler->MakePostCommand(link_filename, target_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Convert %!..+%1%!0", GetLastDirectoryAndName(target_filename)).ptr;
@@ -487,7 +487,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         if (build.compiler->platform == HostPlatform::macOS && target.qt_components.len) {
             const char *bundle_filename = Fmt(&str_alloc, "%1.app", target_filename).ptr;
 
-            Command cmd = {};
+            Command cmd = InitCommand();
 
             {
                 HeapArray<char> buf(&str_alloc);
@@ -496,11 +496,14 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                 if (target.icon_filename) {
                     Fmt(&buf, " --icon \"%1\"", target.icon_filename);
                 }
-                Fmt(&buf, " --title \"%1\" --qmake_path \"%2\"", target.title, qt->qmake);
+                Fmt(&buf, " --title \"%1\"", target.title);
 
                 cmd.cache_len = buf.len;
                 cmd.cmd_line = buf.TrimAndLeak(1);
             }
+
+            // Help command find qmake
+            out_cmd->env_variables.Push({ "QMAKE_PATH", qt->qmake });
 
             const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", GetLastDirectoryAndName(bundle_filename)).ptr;
             AppendNode(text, bundle_filename, cmd, target_filename);
@@ -573,7 +576,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                 features = pch->target->CombineFeatures(features);
                 features = pch->CombineFeatures(features);
 
-                Command cmd = {};
+                Command cmd = InitCommand();
                 build.compiler->MakePchCommand(pch_filename, pch->type,
                                                pch->target->definitions, pch->target->include_directories,
                                                pch->target->include_files, features, build.env, &str_alloc, &cmd);
@@ -618,7 +621,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
         if (src.target->qt_components.len && !AddQtDirectories(src, &system_directories))
             return false;
 
-        Command cmd = {};
+        Command cmd = InitCommand();
         build.compiler->MakeObjectCommand(src.filename, src.type,
                                           pch_filename, src.target->definitions,
                                           src.target->include_directories, system_directories,
@@ -820,6 +823,13 @@ bool Builder::Build(int jobs, bool verbose)
         }
         return false;
     }
+}
+
+Command Builder::InitCommand()
+{
+    Command cmd = {};
+    cmd.env_variables.allocator = &str_alloc;
+    return cmd;
 }
 
 void Builder::SaveCache()

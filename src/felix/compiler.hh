@@ -188,7 +188,7 @@ struct Command {
     };
 
     Span<const char> cmd_line; // Must be C safe (NULL termination)
-    Span<const ExecuteInfo::KeyValue> env_variables;
+    HeapArray<ExecuteInfo::KeyValue> env_variables;
 
     Size cache_len;
     Size rsp_offset;

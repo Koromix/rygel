@@ -202,14 +202,12 @@ static bool AdjustLibraryPath(const char *name, const Compiler *compiler,
     return true;
 }
 
-bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *alloc, QtInfo *out_qt)
+bool FindQtSdk(const Compiler *compiler, Allocator *alloc, QtInfo *out_qt)
 {
     QtInfo qt = {};
 
-    if (qmake_binary) {
-        qt.qmake = NormalizePath(qmake_binary, alloc).ptr;
-    } else if (const char *binary = GetEnv("QMAKE_PATH"); binary) {
-        qt.qmake = NormalizePath(binary, alloc).ptr;
+    if (const char *str = GetEnv("QMAKE_PATH"); str) {
+        qt.qmake = NormalizePath(str, alloc).ptr;
     } else {
         bool success = FindExecutableInPath("qmake6", alloc, &qt.qmake) ||
                        FindExecutableInPath("qmake", alloc, &qt.qmake) ||

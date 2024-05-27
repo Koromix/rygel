@@ -47,7 +47,7 @@ bool Builder::PrepareQtSdk(int64_t min_version)
     if (!qt) {
         qt = std::make_unique<QtInfo>();
 
-        if (!FindQtSdk(build.compiler, build.qmake_binary, &str_alloc, qt.get())) {
+        if (!FindQtSdk(build.compiler, &str_alloc, qt.get())) {
             qt.reset(nullptr);
             return false;
         }

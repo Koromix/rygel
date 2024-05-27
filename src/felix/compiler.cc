@@ -386,21 +386,10 @@ public:
         if (features & (int)CompileFeature::Ccache) {
             Fmt(&buf, "ccache ");
 
+            out_cmd->env_variables.Append({ "CCACHE_DEPEND", "1" });
+            out_cmd->env_variables.Append({ "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" });
             if (dest_filename && (features & (int)CompileFeature::DistCC)) {
-                static const ExecuteInfo::KeyValue variables[] = {
-                    { "CCACHE_DEPEND", "1" },
-                    { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" },
-                    { "CCACHE_PREFIX", "distcc" }
-                };
-
-                out_cmd->env_variables = variables;
-            } else {
-                static const ExecuteInfo::KeyValue variables[] = {
-                    { "CCACHE_DEPEND", "1" },
-                    { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" }
-                };
-
-                out_cmd->env_variables = variables;
+                out_cmd->env_variables.Append({ "CCACHE_PREFIX", "distcc" });
             }
         } else if (dest_filename && (features & (int)CompileFeature::DistCC)) {
             Fmt(&buf, "distcc ");
@@ -1012,21 +1001,10 @@ public:
         if (features & (int)CompileFeature::Ccache) {
             Fmt(&buf, "ccache ");
 
+            out_cmd->env_variables.Append({ "CCACHE_DEPEND", "1" });
+            out_cmd->env_variables.Append({ "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" });
             if (dest_filename && (features & (int)CompileFeature::DistCC)) {
-                static const ExecuteInfo::KeyValue variables[] = {
-                    { "CCACHE_DEPEND", "1" },
-                    { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" },
-                    { "CCACHE_PREFIX", "distcc" }
-                };
-
-                out_cmd->env_variables = variables;
-            } else {
-                static const ExecuteInfo::KeyValue variables[] = {
-                    { "CCACHE_DEPEND", "1" },
-                    { "CCACHE_SLOPPINESS", "pch_defines,time_macros,include_file_ctime,include_file_mtime" }
-                };
-
-                out_cmd->env_variables = variables;
+                out_cmd->env_variables.Append({ "CCACHE_PREFIX", "distcc" });
             }
         } else if (dest_filename && (features & (int)CompileFeature::DistCC)) {
             Fmt(&buf, "distcc ");
@@ -1777,13 +1755,7 @@ public:
         RG_ASSERT(alloc);
 
         // Hide noisy EmCC messages
-        {
-            static const ExecuteInfo::KeyValue variables[] = {
-                { "EMCC_LOGGING", "0" }
-            };
-
-            out_cmd->env_variables = variables;
-        }
+        out_cmd->env_variables.Append({ "EMCC_LOGGING", "0" });
 
         HeapArray<char> buf(alloc);
 
@@ -1882,13 +1854,7 @@ public:
         RG_ASSERT(alloc);
 
         // Hide noisy EmCC messages
-        {
-            static const ExecuteInfo::KeyValue variables[] = {
-                { "EMCC_LOGGING", "0" }
-            };
-
-            out_cmd->env_variables = variables;
-        }
+        out_cmd->env_variables.Append({ "EMCC_LOGGING", "0" });
 
         HeapArray<char> buf(alloc);
 
