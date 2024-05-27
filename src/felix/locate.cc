@@ -316,6 +316,75 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
     return true;
 }
 
+static bool TestWasiSdk(const char *path, Allocator *alloc, WasiSdkInfo *out_sdk)
+{
+    char cc[4096];
+    char ld[4096];
+    char sysroot[4096];
+
+    if (!TestFile(path))
+        return false;
+
+    Fmt(cc, "%1%/bin/clang%2", path, RG_EXECUTABLE_EXTENSION);
+    Fmt(ld, "%1%/bin/wasm-ld%2", path, RG_EXECUTABLE_EXTENSION);
+    Fmt(sysroot, "%1%/share/wasi-sysroot", path);
+
+    if (!TestFile(cc, FileType::File))
+        return false;
+    if (!TestFile(ld, FileType::File))
+        return false;
+    if (!TestFile(sysroot, FileType::Directory))
+        return false;
+
+    out_sdk->path = DuplicateString(path, alloc).ptr;
+    out_sdk->cc = DuplicateString(cc, alloc).ptr;
+    out_sdk->sysroot = DuplicateString(sysroot, alloc).ptr;
+
+    return true;
+}
+
+bool FindWasiSdk(Allocator *alloc, WasiSdkInfo *out_sdk)
+{
+    struct TestPath {
+        const char *env;
+        const char *path;
+    };
+
+    static const TestPath test_paths[] = {
+        { "WASI_SDK_PATH", "" },
+#ifndef _WIN32
+        { nullptr, "/opt/wasi-sdk" },
+        { nullptr, "/usr/share/wasi-sdk" },
+        { nullptr, "/usr/local/share/wasi-sdk" },
+        { "HOME",  "/.local/share/wasi-sdk" },
+        { "HOME",  "/wasi-sdk" }
+#endif
+    };
+
+    for (const TestPath &test: test_paths) {
+        char path[4096];
+
+        if (test.env) {
+            Span<const char> prefix = GetEnv(test.env);
+            prefix = TrimStrRight(prefix, RG_PATH_SEPARATORS);
+
+            if (!prefix.len)
+                continue;
+
+            Fmt(path, "%1%2", prefix, test.path);
+        } else {
+            CopyString(test.path, path);
+        }
+
+        if (TestWasiSdk(path, alloc, out_sdk)) {
+            LogDebug("Found WASI-SDK: %1", path);
+            return true;
+        }
+    }
+
+    return false;
+}
+
 bool FindArduinoSdk(const char *compiler, Allocator *alloc, const char **out_arduino, const char **out_cc)
 {
 #ifdef _WIN32

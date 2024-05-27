@@ -139,6 +139,8 @@ class ClangCompiler final: public Compiler {
     const char *rc;
     const char *ld;
 
+    const char *sysroot = nullptr;
+
     int clang_ver = 0;
     int lld_ver = 0;
 
@@ -147,7 +149,8 @@ class ClangCompiler final: public Compiler {
 public:
     ClangCompiler(HostPlatform platform, HostArchitecture architecture) : Compiler(platform, architecture, "Clang") {}
 
-    static std::unique_ptr<const Compiler> Create(HostPlatform platform, HostArchitecture architecture, const char *cc, const char *ld)
+    static std::unique_ptr<const Compiler> Create(HostPlatform platform, HostArchitecture architecture,
+                                                  const char *cc, const char *ld, const char *sysroot = nullptr)
     {
         std::unique_ptr<ClangCompiler> compiler = std::make_unique<ClangCompiler>(platform, architecture);
 
@@ -174,6 +177,11 @@ public:
             } else {
                 compiler->ld = nullptr;
             }
+        }
+
+        if (platform == HostPlatform::WasmWasi) {
+            RG_ASSERT(sysroot);
+            compiler->sysroot = DuplicateString(sysroot, &compiler->str_alloc).ptr;
         }
 
         Async async;
@@ -802,7 +810,7 @@ private:
     void AddClangTarget([[maybe_unused]] HeapArray<char> *out_buf) const
     {
         if (platform == HostPlatform::WasmWasi) {
-            Fmt(out_buf, " -target wasm32-wasi --sysroot=/opt/wasi-sdk/share/wasi-sysroot");
+            Fmt(out_buf, " -target wasm32-wasi --sysroot=%1", sysroot);
             return;
         }
 
@@ -2396,16 +2404,22 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
 
-        if (!spec.cc) {
-            spec.cc = "/opt/wasi-sdk/bin/clang";
+        static WasiSdkInfo sdk;
+        static bool found = FindWasiSdk(&str_alloc, &sdk);
+
+        if (!found) {
+            LogError("Cannot find WASI-SDK, set WASI_SDK_PATH manually");
+            return nullptr;
         }
+
+        spec.cc = spec.cc ? spec.cc : sdk.cc;
 
         if (spec.ld) {
             LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
             return nullptr;
         }
 
-        return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
+        return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld, sdk.sysroot);
 #ifdef __linux__
     } else if (spec.platform == HostPlatform::Windows && spec.architecture == HostArchitecture::x86_64) {
         if (!spec.cc) {
