@@ -316,82 +316,92 @@ bool FindQtSdk(const Compiler *compiler, const char *qmake_binary, Allocator *al
     return true;
 }
 
-bool FindArduino(const char *name, const char *compiler, Span<char> out_arduino, Span<char> out_cc)
+bool FindArduinoSdk(const char *compiler, Allocator *alloc, const char **out_arduino, const char **out_cc)
 {
 #ifdef _WIN32
-    wchar_t buf[2048];
-    DWORD buf_len = RG_LEN(buf);
+    {
+        wchar_t buf_w[2048];
+        DWORD buf_w_len = RG_LEN(buf);
 
-    bool arduino = !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\Arduino", L"Install_Dir",
-                                 RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
-                   !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
-                                 RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
-                   !RegGetValueW(HKEY_CURRENT_USER, L"Software\\Arduino", L"Install_Dir",
-                                 RRF_RT_REG_SZ, nullptr, buf, &buf_len) ||
-                   !RegGetValueW(HKEY_CURRENT_USER, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
-                                 RRF_RT_REG_SZ, nullptr, buf, &buf_len);
-    if (!arduino)
-        return false;
+        bool found = !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\Arduino", L"Install_Dir",
+                                   RRF_RT_REG_SZ, nullptr, buf_w, &buf_w_len) ||
+                     !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
+                                   RRF_RT_REG_SZ, nullptr, buf_w, &buf_w_len) ||
+                     !RegGetValueW(HKEY_CURRENT_USER, L"Software\\Arduino", L"Install_Dir",
+                                   RRF_RT_REG_SZ, nullptr, buf_w, &buf_w_len) ||
+                     !RegGetValueW(HKEY_CURRENT_USER, L"Software\\WOW6432Node\\Arduino", L"Install_Dir",
+                                   RRF_RT_REG_SZ, nullptr, buf_w, &buf_w_len);
 
-    Size end = ConvertWin32WideToUtf8(buf, out_arduino);
-    if (end < 0)
-        return false;
+        if (found) {
+            Span<char> arduino = AllocateSpan<char>(alloc, 2 * (Size)buf_w_len + 1);
 
-    for (Size i = 0; i < end; i++) {
-        char c = out_arduino.ptr[i];
-        out_arduino.ptr[i] = (c == '/') ? '\\' : c;
+            arduino.len = ConvertWin32WideToUtf8(buf_w, arduino);
+            if (arduino.len < 0)
+                return false;
+
+            for (char &c: arduino) {
+                c = (c == '/') ? '\\' : c;
+            }
+
+            Span<char> cc = Fmt(alloc, "%1%/%2.exe", arduino, compiler);
+
+            if (!TestFile(cc.ptr, FileType::File)) {
+                LogDebug("Found compiler for Teensy: %1", cc);
+
+                *out_arduino = arduino.ptr;
+                *out_cc = cc.ptr;
+
+                return true;
+            }
+        }
     }
+#endif
 
-    Fmt(out_cc, "%1%/%2.exe", out_arduino.ptr, compiler);
-
-    if (TestFile(out_cc.ptr, FileType::File)) {
-        LogDebug("Found %1 compiler for Teensy: '%2'", name, out_cc.ptr);
-        return true;
-    }
-#else
     struct TestPath {
         const char *env;
         const char *path;
     };
 
     static const TestPath test_paths[] = {
+        { "ARDUINO_PATH", "" },
+#ifndef _WIN32
         { nullptr, "/opt/arduino" },
         { nullptr, "/usr/share/arduino" },
         { nullptr, "/usr/local/share/arduino" },
-        { "HOME",  ".local/share/arduino" },
-        { "ARDUINO_PATH", "." },
+        { "HOME",  "/.local/share/arduino" },
 #ifdef __APPLE__
         { nullptr, "/Applications/Arduino.app/Contents/Java" }
+#endif
 #endif
     };
 
     for (const TestPath &test: test_paths) {
+        char arduino[4096];
+        char cc[4096];
+
         if (test.env) {
             Span<const char> prefix = GetEnv(test.env);
+            prefix = TrimStrRight(prefix, RG_PATH_SEPARATORS);
 
             if (!prefix.len)
                 continue;
 
-            while (prefix.len && IsPathSeparator(prefix[prefix.len - 1])) {
-                prefix.len--;
-            }
-
-            Fmt(out_arduino, "%1%/%2", prefix, test.path);
-            Fmt(out_cc, "%1%/%2", out_arduino.ptr, compiler);
+            Fmt(arduino, "%1%%2", prefix, test.path);
+            Fmt(cc, "%1%/%2", arduino, compiler);
         } else {
-            CopyString(test.path, out_arduino);
-            Fmt(out_cc, "%1%/%2", out_arduino.ptr, compiler);
+            CopyString(test.path, arduino);
+            Fmt(cc, "%1%/%2", arduino, compiler);
         }
 
-        if (TestFile(out_cc.ptr, FileType::File)) {
-            LogDebug("Found %1 compiler for Teensy: '%2'", name, out_cc.ptr);
+        if (TestFile(cc, FileType::File)) {
+            LogDebug("Found compiler for Teensy: %1", cc);
+
+            *out_arduino = DuplicateString(arduino, alloc).ptr;
+            *out_cc = DuplicateString(cc, alloc).ptr;
+
             return true;
         }
     }
-#endif
-
-    out_arduino[0] = 0;
-    out_cc[0] = 0;
 
     return false;
 }

@@ -2311,6 +2311,8 @@ public:
 
 std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 {
+    static BlockAllocator str_alloc;
+
     if (spec.platform == NativePlatform && spec.architecture == NativeArchitecture) {
         if (!spec.cc) {
             for (const SupportedCompiler &supported: SupportedCompilers) {
@@ -2462,13 +2464,11 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         }
 #endif
     } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/ARM/")) {
-        static std::once_flag flag;
-        static char arduino[4096];
-        static char cc[4096];
+        static const char *arduino = nullptr;
+        static const char *cc = nullptr;
+        static bool found = FindArduinoSdk("hardware/tools/arm/bin/arm-none-eabi-gcc", &str_alloc, &arduino, &cc);
 
-        std::call_once(flag, []() { FindArduino("GCC ARM", "hardware/tools/arm/bin/arm-none-eabi-gcc", arduino, cc); });
-
-        if (!arduino[0]) {
+        if (!found) {
             LogError("Cannot find Arduino/Teensyduino, set ARDUINO_PATH manually");
             return nullptr;
         }
