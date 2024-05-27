@@ -26,6 +26,12 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdarg.h>
+#if __has_include(<uchar.h>)
+    #include <uchar.h>
+#else
+    typedef uint16_t char16_t;
+    typedef uint32_t char32_t;
+#endif
 #ifdef _WIN32
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
@@ -36,14 +42,11 @@
     #include <errno.h>
     #include <pthread.h>
 #endif
-#include <type_traits>
 
 #ifdef _WIN32
-    #define EXPORT_SYMBOL extern "C" __declspec(dllexport)
-    #define EXPORT_FUNCTION extern "C" __declspec(dllexport)
+    #define EXPORT __declspec(dllexport)
 #else
-    #define EXPORT_SYMBOL __attribute__((visibility("default")))
-    #define EXPORT_FUNCTION extern "C" __attribute__((visibility("default")))
+    #define EXPORT __attribute__((visibility("default")))
 #endif
 #if defined(_M_IX86) || defined(__i386__)
     #ifdef _MSC_VER
@@ -58,7 +61,7 @@
     #define STDCALL
 #endif
 
-extern "C" bool DoReturnBool(int cond);
+bool DoReturnBool(int cond);
 
 typedef struct Pack1 {
     int a;
@@ -191,44 +194,44 @@ typedef enum Enum3 { Enum3_A = -1, Enum3_B = 2147483648u } Enum3;
 typedef enum Enum4 { Enum4_A = 0, Enum4_B = 2147483648u } Enum4;
 typedef enum Enum5 { Enum5_A = 0, Enum5_B = 9223372036854775808ull } Enum5;
 
-EXPORT_SYMBOL int sym_int = 0;
-EXPORT_SYMBOL const char *sym_str = NULL;
-EXPORT_SYMBOL int sym_int3[3] = { 0, 0, 0 };
+EXPORT int sym_int = 0;
+EXPORT const char *sym_str = NULL;
+EXPORT int sym_int3[3] = { 0, 0, 0 };
 
 static char16_t *write_ptr;
 static int write_max;
 
-EXPORT_FUNCTION void CallFree(void *ptr)
+EXPORT void CallFree(void *ptr)
 {
     free(ptr);
 }
 
-EXPORT_FUNCTION int8_t GetMinusOne1(void)
+EXPORT int8_t GetMinusOne1(void)
 {
     return -1;
 }
 
-EXPORT_FUNCTION int16_t GetMinusOne2(void)
+EXPORT int16_t GetMinusOne2(void)
 {
     return -1;
 }
 
-EXPORT_FUNCTION int32_t GetMinusOne4(void)
+EXPORT int32_t GetMinusOne4(void)
 {
     return -1;
 }
 
-EXPORT_FUNCTION int64_t GetMinusOne8(void *dummy)
+EXPORT int64_t GetMinusOne8(void *dummy)
 {
     return -1;
 }
 
-EXPORT_FUNCTION void FillPack1(int a, Pack1 *p)
+EXPORT void FillPack1(int a, Pack1 *p)
 {
     p->a = a;
 }
 
-EXPORT_FUNCTION Pack1 RetPack1(int a)
+EXPORT Pack1 RetPack1(int a)
 {
     Pack1 p;
 
@@ -237,18 +240,18 @@ EXPORT_FUNCTION Pack1 RetPack1(int a)
     return p;
 }
 
-EXPORT_FUNCTION void FASTCALL AddPack1(int a, Pack1 *p)
+EXPORT void FASTCALL AddPack1(int a, Pack1 *p)
 {
     p->a += a;
 }
 
-EXPORT_FUNCTION void FillPack2(int a, int b, Pack2 *p)
+EXPORT void FillPack2(int a, int b, Pack2 *p)
 {
     p->a = a;
     p->b = b;
 }
 
-EXPORT_FUNCTION Pack2 RetPack2(int a, int b)
+EXPORT Pack2 RetPack2(int a, int b)
 {
     Pack2 p;
 
@@ -258,20 +261,20 @@ EXPORT_FUNCTION Pack2 RetPack2(int a, int b)
     return p;
 }
 
-EXPORT_FUNCTION void FASTCALL AddPack2(int a, int b, Pack2 *p)
+EXPORT void FASTCALL AddPack2(int a, int b, Pack2 *p)
 {
     p->a += a;
     p->b += b;
 }
 
-EXPORT_FUNCTION void FillPack3(int a, int b, int c, Pack3 *p)
+EXPORT void FillPack3(int a, int b, int c, Pack3 *p)
 {
     p->a = a;
     p->b = b;
     p->c = c;
 }
 
-EXPORT_FUNCTION Pack3 RetPack3(int a, int b, int c)
+EXPORT Pack3 RetPack3(int a, int b, int c)
 {
     Pack3 p;
 
@@ -282,14 +285,14 @@ EXPORT_FUNCTION Pack3 RetPack3(int a, int b, int c)
     return p;
 }
 
-EXPORT_FUNCTION void FASTCALL AddPack3(int a, int b, int c, Pack3 *p)
+EXPORT void FASTCALL AddPack3(int a, int b, int c, Pack3 *p)
 {
     p->a += a;
     p->b += b;
     p->c += c;
 }
 
-EXPORT_FUNCTION Float1 PackFloat1(float f, Float1 *out)
+EXPORT Float1 PackFloat1(float f, Float1 *out)
 {
     Float1 ret;
 
@@ -299,12 +302,12 @@ EXPORT_FUNCTION Float1 PackFloat1(float f, Float1 *out)
     return ret;
 }
 
-EXPORT_FUNCTION Float1 ThroughFloat1(Float1 f1)
+EXPORT Float1 ThroughFloat1(Float1 f1)
 {
     return f1;
 }
 
-EXPORT_FUNCTION Float2 PackFloat2(float a, float b, Float2 *out)
+EXPORT Float2 PackFloat2(float a, float b, Float2 *out)
 {
     Float2 ret;
 
@@ -315,12 +318,12 @@ EXPORT_FUNCTION Float2 PackFloat2(float a, float b, Float2 *out)
     return ret;
 }
 
-EXPORT_FUNCTION Float2 ThroughFloat2(Float2 f2)
+EXPORT Float2 ThroughFloat2(Float2 f2)
 {
     return f2;
 }
 
-EXPORT_FUNCTION Float3 PackFloat3(float a, float b, float c, Float3 *out)
+EXPORT Float3 PackFloat3(float a, float b, float c, Float3 *out)
 {
     Float3 ret;
 
@@ -332,12 +335,12 @@ EXPORT_FUNCTION Float3 PackFloat3(float a, float b, float c, Float3 *out)
     return ret;
 }
 
-EXPORT_FUNCTION Float3 ThroughFloat3(Float3 f3)
+EXPORT Float3 ThroughFloat3(Float3 f3)
 {
     return f3;
 }
 
-EXPORT_FUNCTION Double2 PackDouble2(double a, double b, Double2 *out)
+EXPORT Double2 PackDouble2(double a, double b, Double2 *out)
 {
     Double2 ret;
 
@@ -348,7 +351,7 @@ EXPORT_FUNCTION Double2 PackDouble2(double a, double b, Double2 *out)
     return ret;
 }
 
-EXPORT_FUNCTION Double3 PackDouble3(double a, double b, double c, Double3 *out)
+EXPORT Double3 PackDouble3(double a, double b, double c, Double3 *out)
 {
     Double3 ret;
 
@@ -360,7 +363,7 @@ EXPORT_FUNCTION Double3 PackDouble3(double a, double b, double c, Double3 *out)
     return ret;
 }
 
-EXPORT_FUNCTION IntFloat ReverseFloatInt(FloatInt sfi)
+EXPORT IntFloat ReverseFloatInt(FloatInt sfi)
 {
     IntFloat sif;
 
@@ -370,7 +373,7 @@ EXPORT_FUNCTION IntFloat ReverseFloatInt(FloatInt sfi)
     return sif;
 }
 
-EXPORT_FUNCTION FloatInt ReverseIntFloat(IntFloat sif)
+EXPORT FloatInt ReverseIntFloat(IntFloat sif)
 {
     FloatInt sfi;
 
@@ -380,7 +383,7 @@ EXPORT_FUNCTION FloatInt ReverseIntFloat(IntFloat sif)
     return sfi;
 }
 
-EXPORT_FUNCTION int64_t ConcatenateToInt1(int8_t a, int8_t b, int8_t c, int8_t d, int8_t e, int8_t f,
+EXPORT int64_t ConcatenateToInt1(int8_t a, int8_t b, int8_t c, int8_t d, int8_t e, int8_t f,
                                  int8_t g, int8_t h, int8_t i, int8_t j, int8_t k, int8_t l)
 {
     int64_t ret = 100000000000ull * a + 10000000000ull * b + 1000000000ull * c +
@@ -390,7 +393,7 @@ EXPORT_FUNCTION int64_t ConcatenateToInt1(int8_t a, int8_t b, int8_t c, int8_t d
     return ret;
 }
 
-EXPORT_FUNCTION int64_t ConcatenateToInt4(int32_t a, int32_t b, int32_t c, int32_t d, int32_t e, int32_t f,
+EXPORT int64_t ConcatenateToInt4(int32_t a, int32_t b, int32_t c, int32_t d, int32_t e, int32_t f,
                                  int32_t g, int32_t h, int32_t i, int32_t j, int32_t k, int32_t l)
 {
     int64_t ret = 100000000000ull * a + 10000000000ull * b + 1000000000ull * c +
@@ -400,7 +403,7 @@ EXPORT_FUNCTION int64_t ConcatenateToInt4(int32_t a, int32_t b, int32_t c, int32
     return ret;
 }
 
-EXPORT_FUNCTION int64_t ConcatenateToInt8(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e, int64_t f,
+EXPORT int64_t ConcatenateToInt8(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e, int64_t f,
                                  int64_t g, int64_t h, int64_t i, int64_t j, int64_t k, int64_t l)
 {
     int64_t ret = 100000000000ull * a + 10000000000ull * b + 1000000000ull * c +
@@ -410,7 +413,7 @@ EXPORT_FUNCTION int64_t ConcatenateToInt8(int64_t a, int64_t b, int64_t c, int64
     return ret;
 }
 
-EXPORT_FUNCTION const char *ConcatenateToStr1(int8_t a, int8_t b, int8_t c, int8_t d, int8_t e, int8_t f,
+EXPORT const char *ConcatenateToStr1(int8_t a, int8_t b, int8_t c, int8_t d, int8_t e, int8_t f,
                                      int8_t g, int8_t h, IJK1 ijk, int8_t l)
 {
     static char buf[128];
@@ -418,7 +421,7 @@ EXPORT_FUNCTION const char *ConcatenateToStr1(int8_t a, int8_t b, int8_t c, int8
     return buf;
 }
 
-EXPORT_FUNCTION const char *ConcatenateToStr4(int32_t a, int32_t b, int32_t c, int32_t d, int32_t e, int32_t f,
+EXPORT const char *ConcatenateToStr4(int32_t a, int32_t b, int32_t c, int32_t d, int32_t e, int32_t f,
                                      int32_t g, int32_t h, IJK4 *ijk, int32_t l)
 {
     static char buf[128];
@@ -426,7 +429,7 @@ EXPORT_FUNCTION const char *ConcatenateToStr4(int32_t a, int32_t b, int32_t c, i
     return buf;
 }
 
-EXPORT_FUNCTION const char *ConcatenateToStr8(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e, int64_t f,
+EXPORT const char *ConcatenateToStr8(int64_t a, int64_t b, int64_t c, int64_t d, int64_t e, int64_t f,
                                      int64_t g, int64_t h, IJK8 ijk, int64_t l)
 {
     static char buf[128];
@@ -436,7 +439,7 @@ EXPORT_FUNCTION const char *ConcatenateToStr8(int64_t a, int64_t b, int64_t c, i
     return buf;
 }
 
-EXPORT_FUNCTION BFG STDCALL MakeBFG(BFG *p, int x, double y, const char *str)
+EXPORT BFG STDCALL MakeBFG(BFG *p, int x, double y, const char *str)
 {
     BFG bfg;
 
@@ -455,7 +458,7 @@ EXPORT_FUNCTION BFG STDCALL MakeBFG(BFG *p, int x, double y, const char *str)
     return bfg;
 }
 
-EXPORT_FUNCTION PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const char *str)
+EXPORT PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, const char *str)
 {
     PackedBFG bfg;
 
@@ -474,7 +477,7 @@ EXPORT_FUNCTION PackedBFG FASTCALL MakePackedBFG(int x, double y, PackedBFG *p, 
     return bfg;
 }
 
-EXPORT_FUNCTION void MakePolymorphBFG(int type, int x, double y, const char *str, void *p)
+EXPORT void MakePolymorphBFG(int type, int x, double y, const char *str, void *p)
 {
     if (type == 0) {
         MakeBFG((BFG *)p, x, y, str);
@@ -487,17 +490,17 @@ EXPORT_FUNCTION void MakePolymorphBFG(int type, int x, double y, const char *str
 // Exported by DEF file
 const char *ReturnBigString(const char *str)
 #else
-EXPORT_FUNCTION const char *ReturnBigString(const char *str)
+EXPORT const char *ReturnBigString(const char *str)
 #endif
 {
     const char *copy = strdup(str);
     return copy;
 }
 
-EXPORT_FUNCTION const char *PrintFmt(const char *fmt, ...)
+EXPORT const char *PrintFmt(const char *fmt, ...)
 {
     const int size = 256;
-    char *ptr = (char *)malloc(size);
+    char *ptr = malloc(size);
 
     va_list ap;
     va_start(ap, fmt);
@@ -516,10 +519,10 @@ size_t Length16(const char16_t *str)
     return len;
 }
 
-EXPORT_FUNCTION const char16_t *Concat16(const char16_t *str1, const char16_t *str2)
+EXPORT const char16_t *Concat16(const char16_t *str1, const char16_t *str2)
 {
     const int size = 1024;
-    char16_t *ptr = (char16_t *)malloc(size * 2);
+    char16_t *ptr = malloc(size * 2);
 
     size_t len1 = Length16(str1);
     size_t len2 = Length16(str2);
@@ -531,10 +534,10 @@ EXPORT_FUNCTION const char16_t *Concat16(const char16_t *str1, const char16_t *s
     return ptr;
 }
 
-EXPORT_FUNCTION void Concat16Out(const char16_t *str1, const char16_t *str2, const char16_t **out)
+EXPORT void Concat16Out(const char16_t *str1, const char16_t *str2, const char16_t **out)
 {
     const int size = 1024;
-    char16_t *ptr = (char16_t *)malloc(size * 2);
+    char16_t *ptr = malloc(size * 2);
 
     size_t len1 = Length16(str1);
     size_t len2 = Length16(str2);
@@ -546,87 +549,87 @@ EXPORT_FUNCTION void Concat16Out(const char16_t *str1, const char16_t *str2, con
     *out = ptr;
 }
 
-EXPORT_FUNCTION FixedString ReturnFixedStr(FixedString str)
+EXPORT FixedString ReturnFixedStr(FixedString str)
 {
     return str;
 }
 
-EXPORT_FUNCTION FixedWide ReturnFixedWide(FixedWide str)
+EXPORT FixedWide ReturnFixedWide(FixedWide str)
 {
     return str;
 }
 
-EXPORT_FUNCTION uint32_t ThroughUInt32UU(uint32_t v)
+EXPORT uint32_t ThroughUInt32UU(uint32_t v)
 {
     return v;
 }
-EXPORT_FUNCTION SingleU32 ThroughUInt32SS(SingleU32 s)
+EXPORT SingleU32 ThroughUInt32SS(SingleU32 s)
 {
     return s;
 }
-EXPORT_FUNCTION SingleU32 ThroughUInt32SU(uint32_t v)
+EXPORT SingleU32 ThroughUInt32SU(uint32_t v)
 {
     SingleU32 s;
     s.v = v;
     return s;
 }
-EXPORT_FUNCTION uint32_t ThroughUInt32US(SingleU32 s)
+EXPORT uint32_t ThroughUInt32US(SingleU32 s)
 {
     return s.v;
 }
 
-EXPORT_FUNCTION uint64_t ThroughUInt64UU(uint64_t v)
+EXPORT uint64_t ThroughUInt64UU(uint64_t v)
 {
     return v;
 }
-EXPORT_FUNCTION SingleU64 ThroughUInt64SS(SingleU64 s)
+EXPORT SingleU64 ThroughUInt64SS(SingleU64 s)
 {
     return s;
 }
-EXPORT_FUNCTION SingleU64 ThroughUInt64SU(uint64_t v)
+EXPORT SingleU64 ThroughUInt64SU(uint64_t v)
 {
     SingleU64 s;
     s.v = v;
     return s;
 }
-EXPORT_FUNCTION uint64_t ThroughUInt64US(SingleU64 s)
+EXPORT uint64_t ThroughUInt64US(SingleU64 s)
 {
     return s.v;
 }
 
-EXPORT_FUNCTION int64_t ThroughInt64II(int64_t v)
+EXPORT int64_t ThroughInt64II(int64_t v)
 {
     return v;
 }
-EXPORT_FUNCTION SingleI64 ThroughInt64SS(SingleI64 s)
+EXPORT SingleI64 ThroughInt64SS(SingleI64 s)
 {
     return s;
 }
-EXPORT_FUNCTION SingleI64 ThroughInt64SI(int64_t v)
+EXPORT SingleI64 ThroughInt64SI(int64_t v)
 {
     SingleI64 s;
     s.v = v;
     return s;
 }
-EXPORT_FUNCTION int64_t ThroughInt64IS(SingleI64 s)
+EXPORT int64_t ThroughInt64IS(SingleI64 s)
 {
     return s.v;
 }
 
-EXPORT_FUNCTION int CallJS(const char *str, int (*cb)(const char *str))
+EXPORT int CallJS(const char *str, int (*cb)(const char *str))
 {
     char buf[64];
     snprintf(buf, sizeof(buf), "Hello %s!", str);
     return cb(buf);
 }
 
-EXPORT_FUNCTION float CallRecursiveJS(int i, float (*func)(int i, const char *str, double d))
+EXPORT float CallRecursiveJS(int i, float (*func)(int i, const char *str, double d))
 {
     float f = func(i, "Hello!", 42.0);
     return f;
 }
 
-EXPORT_FUNCTION BFG ModifyBFG(int x, double y, const char *str, BFG (*func)(BFG bfg), BFG *p)
+EXPORT BFG ModifyBFG(int x, double y, const char *str, BFG (*func)(BFG bfg), BFG *p)
 {
     BFG bfg;
 
@@ -646,7 +649,7 @@ EXPORT_FUNCTION BFG ModifyBFG(int x, double y, const char *str, BFG (*func)(BFG 
     return bfg;
 }
 
-EXPORT_FUNCTION IntContainer ArrayToStruct(int *values, int len)
+EXPORT IntContainer ArrayToStruct(int *values, int len)
 {
     IntContainer ic;
 
@@ -657,7 +660,7 @@ EXPORT_FUNCTION IntContainer ArrayToStruct(int *values, int len)
     return ic;
 }
 
-EXPORT_FUNCTION void FillRange(int init, int step, int *out, int len)
+EXPORT void FillRange(int init, int step, int *out, int len)
 {
     while (--len >= 0) {
         *(out++) = init;
@@ -665,34 +668,34 @@ EXPORT_FUNCTION void FillRange(int init, int step, int *out, int len)
     }
 }
 
-EXPORT_FUNCTION void MultiplyIntegers(int multiplier, int *values, int len)
+EXPORT void MultiplyIntegers(int multiplier, int *values, int len)
 {
     for (int i = 0; i < len; i++) {
         values[i] *= multiplier;
     }
 }
 
-EXPORT_FUNCTION const char *ThroughStr(StrStruct s)
+EXPORT const char *ThroughStr(StrStruct s)
 {
     return s.str;
 }
 
-EXPORT_FUNCTION const char16_t *ThroughStr16(StrStruct s)
+EXPORT const char16_t *ThroughStr16(StrStruct s)
 {
     return s.str16;
 }
 
-EXPORT_FUNCTION const char *ThroughStrStar(StrStruct *s)
+EXPORT const char *ThroughStrStar(StrStruct *s)
 {
     return s->str;
 }
 
-EXPORT_FUNCTION const char16_t *ThroughStrStar16(StrStruct *s)
+EXPORT const char16_t *ThroughStrStar16(StrStruct *s)
 {
     return s->str16;
 }
 
-EXPORT_FUNCTION void ReverseBytes(void *p, int len)
+EXPORT void ReverseBytes(void *p, int len)
 {
     uint8_t *bytes = (uint8_t *)p;
 
@@ -703,12 +706,12 @@ EXPORT_FUNCTION void ReverseBytes(void *p, int len)
     }
 }
 
-EXPORT_FUNCTION void CopyEndianInts1(EndianInts ints, uint8_t buf[56])
+EXPORT void CopyEndianInts1(EndianInts ints, uint8_t buf[56])
 {
     memcpy(buf, &ints, sizeof(ints));
 }
 
-EXPORT_FUNCTION void CopyEndianInts2(int16_t i16le, int16_t i16be, uint16_t u16le, uint16_t u16be,
+EXPORT void CopyEndianInts2(int16_t i16le, int16_t i16be, uint16_t u16le, uint16_t u16be,
                             int32_t i32le, int32_t i32be, uint32_t u32le, uint32_t u32be,
                             int64_t i64le, int64_t i64be, uint64_t u64le, uint64_t u64be,
                             EndianInts *out)
@@ -727,11 +730,11 @@ EXPORT_FUNCTION void CopyEndianInts2(int16_t i16le, int16_t i16be, uint16_t u16l
     out->u64be = u64be;
 }
 
-EXPORT_FUNCTION uint16_t ReturnEndianInt2(uint16_t v) { return v; }
-EXPORT_FUNCTION uint32_t ReturnEndianInt4(uint32_t v) { return v; }
-EXPORT_FUNCTION uint64_t ReturnEndianInt8(uint64_t v) { return v; }
+EXPORT uint16_t ReturnEndianInt2(uint16_t v) { return v; }
+EXPORT uint32_t ReturnEndianInt4(uint32_t v) { return v; }
+EXPORT uint64_t ReturnEndianInt8(uint64_t v) { return v; }
 
-EXPORT_FUNCTION BigText ReverseBigText(BigText buf)
+EXPORT BigText ReverseBigText(BigText buf)
 {
     BigText ret;
     for (int i = 0; i < sizeof(buf.text); i++) {
@@ -740,7 +743,7 @@ EXPORT_FUNCTION BigText ReverseBigText(BigText buf)
     return ret;
 }
 
-EXPORT_FUNCTION size_t UpperCaseStrAscii(const char *str, char *out)
+EXPORT size_t UpperCaseStrAscii(const char *str, char *out)
 {
     size_t len = 0;
 
@@ -760,7 +763,7 @@ EXPORT_FUNCTION size_t UpperCaseStrAscii(const char *str, char *out)
     return len;
 }
 
-EXPORT_FUNCTION size_t UpperCaseStrAscii16(const char16_t *str, char16_t *out)
+EXPORT size_t UpperCaseStrAscii16(const char16_t *str, char16_t *out)
 {
     size_t len = 0;
 
@@ -780,12 +783,12 @@ EXPORT_FUNCTION size_t UpperCaseStrAscii16(const char16_t *str, char16_t *out)
     return len;
 }
 
-EXPORT_FUNCTION void ChangeDirectory(const char *dirname)
+EXPORT void ChangeDirectory(const char *dirname)
 {
     chdir(dirname);
 }
 
-EXPORT_FUNCTION void UpperToInternalBuffer(const char *str, char **ptr)
+EXPORT void UpperToInternalBuffer(const char *str, char **ptr)
 {
     static char buf[512];
 
@@ -807,7 +810,7 @@ EXPORT_FUNCTION void UpperToInternalBuffer(const char *str, char **ptr)
     *ptr = buf;
 }
 
-EXPORT_FUNCTION int ComputeLengthUntilNul(const void *ptr)
+EXPORT int ComputeLengthUntilNul(const void *ptr)
 {
     return (int)strlen((const char *)ptr);
 }
@@ -823,12 +826,12 @@ static size_t WideStringLength(const char16_t *str16)
     return len;
 }
 
-EXPORT_FUNCTION int ComputeLengthUntilNulWide(const int16_t *ptr)
+EXPORT int ComputeLengthUntilNulWide(const int16_t *ptr)
 {
     return (int)WideStringLength((const char16_t *)ptr);
 }
 
-EXPORT_FUNCTION void ReverseStringVoid(void *ptr)
+EXPORT void ReverseStringVoid(void *ptr)
 {
     char *str = (char *)ptr;
     size_t len = strlen(str);
@@ -840,7 +843,7 @@ EXPORT_FUNCTION void ReverseStringVoid(void *ptr)
     }
 }
 
-EXPORT_FUNCTION void ReverseString16Void(void *ptr)
+EXPORT void ReverseString16Void(void *ptr)
 {
     char16_t *str16 = (char16_t *)ptr;
     size_t len = WideStringLength(str16);
@@ -860,7 +863,7 @@ static int SubstractInt(int a, int b) { return a - b; }
 static int MultiplyInt(int a, int b) { return a * b; }
 static int DivideInt(int a, int b) { return a / b; }
 
-EXPORT_FUNCTION BinaryIntFunc *GetBinaryIntFunction(const char *type)
+EXPORT BinaryIntFunc *GetBinaryIntFunction(const char *type)
 {
     if (!strcmp(type, "add")) {
         return AddInt;
@@ -903,7 +906,7 @@ static int MultiplyIntN(int n, ...)
     return total;
 }
 
-EXPORT_FUNCTION VariadicIntFunc *GetVariadicIntFunction(const char *type)
+EXPORT VariadicIntFunc *GetVariadicIntFunction(const char *type)
 {
     if (!strcmp(type, "add")) {
         return AddIntN;
@@ -914,28 +917,28 @@ EXPORT_FUNCTION VariadicIntFunc *GetVariadicIntFunction(const char *type)
     }
 }
 
-EXPORT_FUNCTION void FillBufferDirect(BufferInfo buf, int c)
+EXPORT void FillBufferDirect(BufferInfo buf, int c)
 {
     memset(buf.ptr, c, buf.len);
 }
 
-EXPORT_FUNCTION void FillBufferIndirect(const BufferInfo *buf, int c)
+EXPORT void FillBufferIndirect(const BufferInfo *buf, int c)
 {
     memset(buf->ptr, c, buf->len);
 }
 
-EXPORT_FUNCTION const char *GetLatin1String()
+EXPORT const char *GetLatin1String()
 {
     // ®²
     return "Microsoft\xAE\xB2";
 }
 
-EXPORT_FUNCTION int BoolToInt(bool a)
+EXPORT int BoolToInt(bool a)
 {
     return (int)a;
 }
 
-EXPORT_FUNCTION unsigned int BoolToMask12(bool a, bool b, bool c, bool d, bool e, bool f,
+EXPORT unsigned int BoolToMask12(bool a, bool b, bool c, bool d, bool e, bool f,
                                  bool g, bool h, bool i, bool j, bool k, bool l)
 {
     unsigned int mask = ((unsigned int)a << 11) | ((unsigned int)b << 10) | ((unsigned int)c << 9) |
@@ -945,34 +948,34 @@ EXPORT_FUNCTION unsigned int BoolToMask12(bool a, bool b, bool c, bool d, bool e
     return mask;
 }
 
-EXPORT_FUNCTION int IfElseInt(bool cond, int a, int b)
+EXPORT int IfElseInt(bool cond, int a, int b)
 {
     return cond ? a : b;
 }
 
-EXPORT_FUNCTION const char *IfElseStr(const char *a, const char *b, bool cond)
+EXPORT const char *IfElseStr(const char *a, const char *b, bool cond)
 {
     return cond ? a : b;
 }
 
-EXPORT_FUNCTION int GetSymbolInt()
+EXPORT int GetSymbolInt()
 {
     return sym_int;
 }
 
-EXPORT_FUNCTION const char *GetSymbolStr()
+EXPORT const char *GetSymbolStr()
 {
     return sym_str;
 }
 
-EXPORT_FUNCTION void GetSymbolInt3(int out[3])
+EXPORT void GetSymbolInt3(int out[3])
 {
     out[0] = sym_int3[0];
     out[1] = sym_int3[1];
     out[2] = sym_int3[2];
 }
 
-EXPORT_FUNCTION void WriteConfigure(char16_t *buf, int max)
+EXPORT void WriteConfigure(char16_t *buf, int max)
 {
     assert(max > 0);
 
@@ -980,7 +983,7 @@ EXPORT_FUNCTION void WriteConfigure(char16_t *buf, int max)
     write_max = max - 1;
 }
 
-EXPORT_FUNCTION void WriteString(const char16_t *str)
+EXPORT void WriteString(const char16_t *str)
 {
     int len = 0;
 
@@ -992,35 +995,32 @@ EXPORT_FUNCTION void WriteString(const char16_t *str)
     write_ptr[len] = 0;
 }
 
-EXPORT_FUNCTION bool ReturnBool(int cond)
+EXPORT bool ReturnBool(int cond)
 {
     bool ret = DoReturnBool(cond);
     assert(ret == !!cond);
     return ret;
 }
 
-EXPORT_FUNCTION int ReturnEnumValue(Enum1 e)
+EXPORT int ReturnEnumValue(Enum1 e)
 {
     return (int)e;
 }
 
-template<typename T>
-static const char *GetEnumPrimitive()
-{
-    using U = typename std::underlying_type<T>::type;
+#define GET_ENUM_PRIMITIVE(EnumType) \
+    (sizeof(EnumType) == 1 && (EnumType)-1 < 0 ? "Int8" : \
+     sizeof(EnumType) == 1 ? "UInt8" : \
+     sizeof(EnumType) == 2 && (EnumType)-1 < 0 ? "Int16" : \
+     sizeof(EnumType) == 2 ? "UInt16" : \
+     sizeof(EnumType) == 4 && (EnumType)-1 < 0 ? "Int32" : \
+     sizeof(EnumType) == 4 ? "UInt32" : \
+     sizeof(EnumType) == 8 && (EnumType)-1 < 0 ? "Int64" : \
+     sizeof(EnumType) == 8 ? "UInt64" : NULL)
 
-    switch (sizeof(U)) {
-        case 1: return std::is_signed<U>::value ? "Int8" : "UInt8";
-        case 2: return std::is_signed<U>::value ? "Int16" : "UInt16";
-        case 4: return std::is_signed<U>::value ? "Int32" : "UInt32";
-        case 8: return std::is_signed<U>::value ? "Int64" : "UInt64";
-    }
+EXPORT const char *GetEnumPrimitive1() { return GET_ENUM_PRIMITIVE(Enum1); }
+EXPORT const char *GetEnumPrimitive2() { return GET_ENUM_PRIMITIVE(Enum2); }
+EXPORT const char *GetEnumPrimitive3() { return GET_ENUM_PRIMITIVE(Enum3); }
+EXPORT const char *GetEnumPrimitive4() { return GET_ENUM_PRIMITIVE(Enum4); }
+EXPORT const char *GetEnumPrimitive5() { return GET_ENUM_PRIMITIVE(Enum5); }
 
-    return nullptr;
-}
-
-EXPORT_FUNCTION const char *GetEnumPrimitive1() { return GetEnumPrimitive<Enum1>(); }
-EXPORT_FUNCTION const char *GetEnumPrimitive2() { return GetEnumPrimitive<Enum2>(); }
-EXPORT_FUNCTION const char *GetEnumPrimitive3() { return GetEnumPrimitive<Enum3>(); }
-EXPORT_FUNCTION const char *GetEnumPrimitive4() { return GetEnumPrimitive<Enum4>(); }
-EXPORT_FUNCTION const char *GetEnumPrimitive5() { return GetEnumPrimitive<Enum5>(); }
+#undef GET_ENUM_PRIMITIVE
