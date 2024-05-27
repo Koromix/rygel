@@ -39,7 +39,7 @@
 #include <type_traits>
 
 #ifdef _WIN32
-    #define EXPORT_SYMBOL __declspec(dllexport)
+    #define EXPORT_SYMBOL extern "C" __declspec(dllexport)
     #define EXPORT_FUNCTION extern "C" __declspec(dllexport)
 #else
     #define EXPORT_SYMBOL __attribute__((visibility("default")))
