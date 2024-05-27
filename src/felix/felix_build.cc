@@ -332,7 +332,6 @@ Options:
 
     %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
 
-
     %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
                                  %!D..(default: %2)%!0
     %!..+-s, --stop_after_error%!0       Continue build after errors
