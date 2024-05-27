@@ -5202,7 +5202,7 @@ restart:
 
         rnd_remain = Mebibytes(4);
         rnd_time = GetMonotonicTime();
-#ifndef _win32
+#ifndef _WIN32
         rnd_pid = getpid();
 #endif
 
