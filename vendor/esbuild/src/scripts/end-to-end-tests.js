@@ -218,6 +218,30 @@ tests.push(
       export let bar = 'bar'
     `,
   }),
+
+  // See: https://github.com/evanw/esbuild/issues/3767
+  test(['apps/client/src/index.ts', '--bundle', '--outfile=node.js'], {
+    'apps/client/src/index.ts': `
+      import { foo } from '~/foo'
+      if (foo !== 'foo') throw 'fail'
+    `,
+    'apps/client/src/foo.ts': `
+      export const foo = 'foo'
+    `,
+    'apps/client/tsconfig.json': `{
+      "extends": "@repo/tsconfig/base"
+    }`,
+    'apps/client/node_modules/@repo/tsconfig': {
+      symlink: `../../../../tooling/typescript`,
+    },
+    'tooling/typescript/base.json': `{
+      "compilerOptions": {
+        "paths": {
+          "~/*": ["../../apps/client/src/*"]
+        }
+      }
+    }`,
+  }),
 )
 
 // Test coverage for a special JSX error message
@@ -6063,6 +6087,48 @@ for (let flags of [['--target=es2022'], ['--target=es6'], ['--bundle', '--target
       }`,
     }),
   )
+
+  // https://github.com/evanw/esbuild/issues/3768
+  tests.push(
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        const bar = x => x
+        class Foo {
+          @bar baz() { return Foo }
+        }
+        if (new Foo().baz() !== Foo) throw 'fail'
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        class Foo {}
+        const bar = x => x
+        class Baz extends Foo {
+          @bar baz() { return Baz }
+        }
+        if (new Baz().baz() !== Baz) throw 'fail'
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        const bar = () => x => x
+        class Foo {
+          @bar baz = Foo
+        }
+        if (new Foo().baz !== Foo) throw 'fail'
+      `,
+    }),
+    test(['in.ts', '--outfile=node.js'].concat(flags), {
+      'in.ts': `
+        class Foo {}
+        const bar = () => x => x
+        class Baz extends Foo {
+          @bar baz = Baz
+        }
+        if (new Baz().baz !== Baz) throw 'fail'
+      `,
+    }),
+  )
 }
 
 // Async lowering tests
@@ -7080,6 +7146,23 @@ for (let flags of [[], ['--target=es2017'], ['--target=es6']]) {
           for (const bar of await foo.x('foo'))
             if (foo !== bar)
               throw 'fail'
+        }
+      `,
+    }, { async: true }),
+
+    // https://github.com/arogozine/LinqToTypeScript/issues/29
+    test(['in.js', '--outfile=node.js'].concat(flags), {
+      'in.js': `
+        exports.async = async () => {
+          let total = 0
+        outer:
+          for await (const n of [Promise.resolve(1), Promise.resolve(2), Promise.resolve(5)]) {
+            for (let i = 1; i <= n; i++) {
+              if (i === 4) continue outer
+              total += i
+            }
+          }
+          if (total !== 1 + (1 + 2) + (1 + 2 + 3)) throw 'fail'
         }
       `,
     }, { async: true }),

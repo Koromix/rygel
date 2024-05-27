@@ -1,15 +1,18 @@
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __knownSymbol = (name, symbol) => (symbol = Symbol[name]) ? symbol : Symbol.for("Symbol." + name);
 var __typeError = (msg) => {
   throw TypeError(msg);
 };
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+var __decoratorStart = (base) => [, , , __create(base?.[__knownSymbol("metadata")] ?? null)];
 var __decoratorStrings = ["class", "method", "getter", "setter", "accessor", "field", "value", "get", "set"];
 var __expectFn = (fn) => fn !== void 0 && typeof fn !== "function" ? __typeError("Function expected") : fn;
-var __decoratorContext = (kind, name, done, fns) => ({ kind: __decoratorStrings[kind], name, addInitializer: (fn) => done._ ? __typeError("Already initialized") : fns.push(__expectFn(fn || null)) });
-var __runInitializers = (array, flags, value) => {
-  for (var i = 0, fns = array[flags >> 1], n = fns && fns.length; i < n; i++) flags & 1 ? fns[i].call(value) : value = (0, fns[i])(value);
+var __decoratorContext = (kind, name, done, metadata, fns) => ({ kind: __decoratorStrings[kind], name, metadata, addInitializer: (fn) => done._ ? __typeError("Already initialized") : fns.push(__expectFn(fn || null)) });
+var __runInitializers = (array, flags, self, value) => {
+  for (var i = 0, fns = array[flags >> 1], n = fns && fns.length; i < n; i++) flags & 1 ? fns[i].call(self) : value = fns[i].call(self, value);
   return value;
 };
 var __decorateElement = (array, flags, name, decorators, target, extra) => {
@@ -23,7 +26,7 @@ var __decorateElement = (array, flags, name, decorators, target, extra) => {
   } }, name));
   k ? p && k < 4 && __name(extra, (k > 2 ? "set " : k > 1 ? "get " : "") + name) : __name(target, name);
   for (var i = decorators.length - 1; i >= 0; i--) {
-    ctx = __decoratorContext(k, name, done = {}, extraInitializers);
+    ctx = __decoratorContext(k, name, done = {}, array[3], extraInitializers);
     if (k) {
       ctx.static = s, ctx.private = p, access = ctx.access = { has: p ? (x) => __privateIn(target, x) : (x) => name in x };
       if (k ^ 3) access.get = p ? (x) => (k ^ 1 ? __privateGet : __privateMethod)(x, target, k ^ 4 ? extra : desc.get) : (x) => x[name];
@@ -34,7 +37,7 @@ var __decorateElement = (array, flags, name, decorators, target, extra) => {
     else if (typeof it !== "object" || it === null) __typeError("Object expected");
     else __expectFn(fn = it.get) && (desc.get = fn), __expectFn(fn = it.set) && (desc.set = fn), __expectFn(fn = it.init) && initializers.unshift(fn);
   }
-  return desc && __defProp(target, name, desc), p ? k ^ 4 ? extra : desc : target;
+  return k || (target[__knownSymbol("metadata")] = array[3]), desc && __defProp(target, name, desc), p ? k ^ 4 ? extra : desc : target;
 };
 var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 var __accessCheck = (obj, member, msg) => member.has(obj) || __typeError("Cannot " + msg);
@@ -43,225 +46,268 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
+if (!("metadata" in Symbol)) {
+  Symbol.metadata = Symbol("Symbol.metadata");
+}
 const tests = {
   // Class decorators
   "Class decorators: Basic statement": () => {
     var _Foo_decorators, _init;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
-    _init = [, , ,];
-    _Foo_decorators = [dec];
+    _Foo_decorators = [dec("Foo")];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
     __runInitializers(_init, 1, Foo2);
     assertEq(() => Foo2, old);
   },
   "Class decorators: Basic expression: Anonymous": () => {
-    var _class_decorators, _init, _a;
+    var _class_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
-    const Foo2 = /* @__PURE__ */ ((x) => x)((_init = [, , ,], _class_decorators = [dec], _a = class {
-    }, _a = __decorateElement(_init, 0, "", _class_decorators, _a), __runInitializers(_init, 1, _a), _a));
+    const Foo2 = /* @__PURE__ */ ((x) => x)((_class_decorators = [dec("")], _a = class {
+    }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "", _class_decorators, _a), __runInitializers(_init, 1, _a), _a));
     assertEq(() => Foo2, old);
+    const Bar = /* @__PURE__ */ ((x) => x)((_Baz_decorators = [dec("Baz")], _b = class {
+    }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b));
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Property value": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
     const obj = {
-      Foo: (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-      }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a)
+      Foo: (_Foo_decorators = [dec("Foo")], _a = class {
+      }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a)
     };
     assertEq(() => obj.Foo, old);
+    const obj2 = {
+      Bar: (_Baz_decorators = [dec("Baz")], _b = class {
+      }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b)
+    };
+    assertEq(() => obj2.Bar, old);
   },
   "Class decorators: Basic expression: Variable initializer": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
-    const Foo2 = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-    }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
+    const Foo2 = (_Foo_decorators = [dec("Foo")], _a = class {
+    }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
     assertEq(() => Foo2, old);
+    const Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+    }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b);
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Array binding": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
-    const [Foo2 = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-    }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a)] = [];
+    const [Foo2 = (_Foo_decorators = [dec("Foo")], _a = class {
+    }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a)] = [];
     assertEq(() => Foo2, old);
+    const [Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+    }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b)] = [];
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Object binding": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
-    const { Foo: Foo2 = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-    }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a) } = {};
+    const { Foo: Foo2 = (_Foo_decorators = [dec("Foo")], _a = class {
+    }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a) } = {};
     assertEq(() => Foo2, old);
+    const { Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+    }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b) } = {};
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Assignment initializer": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
     let Foo2;
-    Foo2 = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-    }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
+    Foo2 = (_Foo_decorators = [dec("Foo")], _a = class {
+    }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
     assertEq(() => Foo2, old);
+    let Bar;
+    Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+    }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b);
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Assignment array binding": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
     let Foo2;
-    [Foo2 = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-    }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a)] = [];
+    [Foo2 = (_Foo_decorators = [dec("Foo")], _a = class {
+    }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a)] = [];
     assertEq(() => Foo2, old);
+    let Bar;
+    [Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+    }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b)] = [];
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Assignment object binding": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
     let Foo2;
-    ({ Foo: Foo2 = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-    }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a) } = {});
+    ({ Foo: Foo2 = (_Foo_decorators = [dec("Foo")], _a = class {
+    }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a) } = {});
     assertEq(() => Foo2, old);
+    let Bar;
+    ({ Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+    }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b) } = {});
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Instance field initializer": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
     class Class {
-      Foo = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-      }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
+      Foo = (_Foo_decorators = [dec("Foo")], _a = class {
+      }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
     }
     const Foo2 = new Class().Foo;
     assertEq(() => Foo2, old);
+    class Class2 {
+      Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+      }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b);
+    }
+    const Bar = new Class2().Bar;
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Static field initializer": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
     class Class {
-      static Foo = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-      }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
+      static Foo = (_Foo_decorators = [dec("Foo")], _a = class {
+      }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
     }
     assertEq(() => Class.Foo, old);
+    class Class2 {
+      static Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+      }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b);
+    }
+    assertEq(() => Class2.Bar, old);
   },
   "Class decorators: Basic expression: Instance auto-accessor initializer": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
     class Class {
-      #Foo = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-      }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
+      #Foo = (_Foo_decorators = [dec("Foo")], _a = class {
+      }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
       get Foo() {
         return this.#Foo;
       }
@@ -271,23 +317,35 @@ const tests = {
     }
     const Foo2 = new Class().Foo;
     assertEq(() => Foo2, old);
+    class Class2 {
+      #Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+      }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b);
+      get Bar() {
+        return this.#Bar;
+      }
+      set Bar(_) {
+        this.#Bar = _;
+      }
+    }
+    const Bar = new Class2().Bar;
+    assertEq(() => Bar, old);
   },
   "Class decorators: Basic expression: Static auto-accessor initializer": () => {
-    var _Foo_decorators, _init, _a;
+    var _Foo_decorators, _init, _a, _Baz_decorators, _init2, _b;
     let old;
-    const dec = (cls, ctx) => {
+    const dec = (name) => (cls, ctx) => {
       assertEq(() => typeof cls, "function");
-      assertEq(() => cls.name, "Foo");
+      assertEq(() => cls.name, name);
       assertEq(() => ctx.kind, "class");
-      assertEq(() => ctx.name, "Foo");
+      assertEq(() => ctx.name, name);
       assertEq(() => "static" in ctx, false);
       assertEq(() => "private" in ctx, false);
       assertEq(() => "access" in ctx, false);
       old = cls;
     };
     class Class {
-      static #Foo = (_init = [, , ,], _Foo_decorators = [dec], _a = class {
-      }, _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
+      static #Foo = (_Foo_decorators = [dec("Foo")], _a = class {
+      }, _init = __decoratorStart(null), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 1, _a), _a);
       static get Foo() {
         return this.#Foo;
       }
@@ -296,6 +354,17 @@ const tests = {
       }
     }
     assertEq(() => Class.Foo, old);
+    class Class2 {
+      static #Bar = (_Baz_decorators = [dec("Baz")], _b = class {
+      }, _init2 = __decoratorStart(null), _b = __decorateElement(_init2, 0, "Baz", _Baz_decorators, _b), __runInitializers(_init2, 1, _b), _b);
+      static get Bar() {
+        return this.#Bar;
+      }
+      static set Bar(_) {
+        this.#Bar = _;
+      }
+    }
+    assertEq(() => Class2.Bar, old);
   },
   "Class decorators: Order": () => {
     var _Foo_decorators, _init;
@@ -319,13 +388,13 @@ const tests = {
       return Baz;
     };
     log.push(0);
-    _init = [, , ,];
     _Foo_decorators = [dec1, dec2];
     class Foo2 {
       constructor() {
         log.push(6);
       }
     }
+    _init = __decoratorStart(null);
     Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
     __runInitializers(_init, 1, Foo2);
     log.push(3);
@@ -340,10 +409,10 @@ const tests = {
       const dec = (cls, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _Foo_decorators = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
       __runInitializers(_init, 1, Foo2);
     }, TypeError);
@@ -354,10 +423,10 @@ const tests = {
       const dec = (cls, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _Foo_decorators = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
       __runInitializers(_init, 1, Foo2);
     }, TypeError);
@@ -375,10 +444,10 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _Foo_decorators = [dec, dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
     __runInitializers(_init, 1, Foo2);
     assertEq(() => got.this, Foo2);
@@ -403,7 +472,6 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     class Foo2 {
       constructor() {
         __runInitializers(_init, 5, this);
@@ -415,6 +483,7 @@ const tests = {
       [_a = (_baz_dec = [dec(baz, "")], baz)]() {
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 1, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 1, _b, _bar_dec, Foo2);
     __decorateElement(_init, 1, _a, _baz_dec, Foo2);
@@ -440,7 +509,6 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     class Foo2 {
       static foo() {
       }
@@ -449,6 +517,7 @@ const tests = {
       static [_a = (_baz_dec = [dec(baz, "")], baz)]() {
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 9, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 9, _b, _bar_dec, Foo2);
     __decorateElement(_init, 9, _a, _baz_dec, Foo2);
@@ -477,7 +546,6 @@ const tests = {
       old = fn;
     };
     let $foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     const _Foo = class _Foo {
       constructor() {
@@ -485,6 +553,7 @@ const tests = {
         __privateAdd(this, _Foo_instances);
       }
     };
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_fn = function() {
     };
@@ -514,10 +583,10 @@ const tests = {
       old = fn;
     };
     let $foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     const _Foo = class _Foo {
     };
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_fn = function() {
     };
@@ -538,7 +607,6 @@ const tests = {
       };
       return bar;
     };
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
@@ -549,6 +617,7 @@ const tests = {
         return this.bar;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 1, "foo", _foo_dec, Foo2);
     assertEq(() => Foo2.prototype.foo, bar);
     assertEq(() => new Foo2().foo(), 124);
@@ -562,13 +631,13 @@ const tests = {
       };
       return bar;
     };
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       static foo() {
         return this.bar;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 9, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     __publicField(Foo2, "bar", 123);
@@ -585,7 +654,6 @@ const tests = {
       return bar;
     };
     let $foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     const _Foo = class _Foo {
       constructor() {
@@ -594,6 +662,7 @@ const tests = {
         __publicField(this, "bar", 123);
       }
     };
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_fn = function() {
       return this.bar;
@@ -614,10 +683,10 @@ const tests = {
       return bar;
     };
     let $foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     const _Foo = class _Foo {
     };
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_fn = function() {
       return this.bar;
@@ -653,7 +722,6 @@ const tests = {
       return baz;
     };
     log.push(0);
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       constructor() {
@@ -663,6 +731,7 @@ const tests = {
         return log.push(6);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 1, "foo", _foo_dec, Foo2);
     log.push(3);
     new Foo2().foo();
@@ -692,13 +761,13 @@ const tests = {
       return baz;
     };
     log.push(0);
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       static foo() {
         return log.push(6);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 9, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     log.push(3);
@@ -730,7 +799,6 @@ const tests = {
     };
     log.push(0);
     let $foo;
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     const _Foo = class _Foo {
       constructor() {
@@ -738,6 +806,7 @@ const tests = {
         __privateAdd(this, _Foo_instances);
       }
     };
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_fn = function() {
       return log.push(6);
@@ -774,10 +843,10 @@ const tests = {
     };
     log.push(0);
     let $foo;
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     const _Foo = class _Foo {
     };
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_fn = function() {
       return log.push(6);
@@ -799,7 +868,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -808,6 +876,7 @@ const tests = {
         foo() {
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 1, "foo", _foo_dec, Foo2);
     }, TypeError);
   },
@@ -817,12 +886,12 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         static foo() {
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 9, "foo", _foo_dec, Foo2);
       __runInitializers(_init, 3, Foo2);
     }, TypeError);
@@ -833,7 +902,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -841,6 +909,7 @@ const tests = {
           __privateAdd(this, _Foo_instances);
         }
       }
+      _init = __decoratorStart(null);
       _Foo_instances = new WeakSet();
       foo_fn = function() {
       };
@@ -853,10 +922,10 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _Foo_static = new WeakSet();
       foo_fn = function() {
       };
@@ -871,7 +940,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -880,6 +948,7 @@ const tests = {
         foo() {
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 1, "foo", _foo_dec, Foo2);
     }, TypeError);
   },
@@ -889,12 +958,12 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         static foo() {
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 9, "foo", _foo_dec, Foo2);
       __runInitializers(_init, 3, Foo2);
     }, TypeError);
@@ -905,7 +974,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -913,6 +981,7 @@ const tests = {
           __privateAdd(this, _Foo_instances);
         }
       }
+      _init = __decoratorStart(null);
       _Foo_instances = new WeakSet();
       foo_fn = function() {
       };
@@ -925,10 +994,10 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _Foo_static = new WeakSet();
       foo_fn = function() {
       };
@@ -950,7 +1019,6 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
@@ -959,6 +1027,7 @@ const tests = {
       foo() {
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 1, "foo", _foo_dec, Foo2);
     assertEq(() => got, void 0);
     const instance = new Foo2();
@@ -978,12 +1047,12 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       static foo() {
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 9, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     assertEq(() => got.this, Foo2);
@@ -1002,7 +1071,6 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
@@ -1010,6 +1078,7 @@ const tests = {
         __privateAdd(this, _Foo_instances);
       }
     }
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_fn = function() {
     };
@@ -1032,10 +1101,10 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_fn = function() {
     };
@@ -1065,15 +1134,15 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     _foo_dec = [dec("foo")], _b = (_bar_dec = [dec(bar)], bar), _a = (_baz_dec = [dec(baz)], baz);
     class Foo2 {
       constructor() {
-        __publicField(this, "foo", __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, this);
-        __publicField(this, _b, __runInitializers(_init, 10, 123)), __runInitializers(_init, 13, this);
-        __publicField(this, _a, __runInitializers(_init, 14, 123)), __runInitializers(_init, 17, this);
+        __publicField(this, "foo", __runInitializers(_init, 8, this, 123)), __runInitializers(_init, 11, this);
+        __publicField(this, _b, __runInitializers(_init, 12, this, 123)), __runInitializers(_init, 15, this);
+        __publicField(this, _a, __runInitializers(_init, 16, this, 123)), __runInitializers(_init, 19, this);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 5, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 5, _b, _bar_dec, Foo2);
     __decorateElement(_init, 5, _a, _baz_dec, Foo2);
@@ -1100,16 +1169,16 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     _foo_dec = [dec("foo")], _b = (_bar_dec = [dec(bar)], bar), _a = (_baz_dec = [dec(baz)], baz);
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 13, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 13, _b, _bar_dec, Foo2);
     __decorateElement(_init, 13, _a, _baz_dec, Foo2);
-    __publicField(Foo2, "foo", __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, Foo2);
-    __publicField(Foo2, _b, __runInitializers(_init, 10, 123)), __runInitializers(_init, 13, Foo2);
-    __publicField(Foo2, _a, __runInitializers(_init, 14, 123)), __runInitializers(_init, 17, Foo2);
+    __publicField(Foo2, "foo", __runInitializers(_init, 8, Foo2, 123)), __runInitializers(_init, 11, Foo2);
+    __publicField(Foo2, _b, __runInitializers(_init, 12, Foo2, 123)), __runInitializers(_init, 15, Foo2);
+    __publicField(Foo2, _a, __runInitializers(_init, 16, Foo2, 123)), __runInitializers(_init, 19, Foo2);
     assertEq(() => Foo2.foo, 123);
     assertEq(() => Foo2[bar], 123);
     assertEq(() => Foo2[baz], 123);
@@ -1135,13 +1204,13 @@ const tests = {
       };
     };
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
-        __privateAdd(this, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this, 123)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 21, "#foo", _foo_dec, _foo);
     get$foo = (x) => __privateGet(x, _foo);
@@ -1168,13 +1237,13 @@ const tests = {
       };
     };
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 29, "#foo", _foo_dec, _foo);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, Foo2);
+    __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2, 123)), __runInitializers(_init, 11, Foo2);
     get$foo = (x) => __privateGet(x, _foo);
     assertEq(() => get$foo(Foo2), 123);
     lateAsserts();
@@ -1183,113 +1252,121 @@ const tests = {
     var _bar_dec, _foo_dec, _init;
     let log = [];
     const dec = (value, ctx) => {
-      return (x) => log.push(x);
+      return function(x) {
+        assertEq(() => this instanceof Foo2, true);
+        return log.push("foo" in this, "bar" in this, x);
+      };
     };
-    _init = [, , ,];
     _foo_dec = [dec], _bar_dec = [dec];
     class Foo2 {
       constructor() {
-        __publicField(this, "foo", __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, this);
-        __publicField(this, "bar", __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __publicField(this, "foo", __runInitializers(_init, 8, this, 123)), __runInitializers(_init, 11, this);
+        __publicField(this, "bar", __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 5, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 5, "bar", _bar_dec, Foo2);
     assertEq(() => log + "", "");
     var obj = new Foo2();
-    assertEq(() => obj.foo, 1);
-    assertEq(() => obj.bar, 2);
-    assertEq(() => log + "", "123,");
-    var obj = new Foo2();
     assertEq(() => obj.foo, 3);
-    assertEq(() => obj.bar, 4);
-    assertEq(() => log + "", "123,,123,");
+    assertEq(() => obj.bar, 6);
+    assertEq(() => log + "", "false,false,123,true,false,");
   },
   "Field decorators: Shim (static field)": () => {
+    var _bar_dec, _foo_dec, _init;
+    let foo;
     let log = [];
     const dec = (value, ctx) => {
-      return (x) => log.push(x);
-    };
-    const fn = (foo, bar) => {
-      var _bar_dec, _foo_dec, _init;
-      _init = [, , ,];
-      _foo_dec = [dec], _bar_dec = [dec];
-      class Foo2 {
-      }
-      __decorateElement(_init, 13, "foo", _foo_dec, Foo2);
-      __decorateElement(_init, 13, "bar", _bar_dec, Foo2);
-      __publicField(Foo2, "foo", __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, Foo2);
-      __publicField(Foo2, "bar", __runInitializers(_init, 10)), __runInitializers(_init, 13, Foo2);
-      assertEq(() => Foo2.foo, foo);
-      assertEq(() => Foo2.bar, bar);
+      return function(x) {
+        assertEq(() => this, foo);
+        return log.push("foo" in this, "bar" in this, x);
+      };
     };
     assertEq(() => log + "", "");
-    fn(1, 2);
-    assertEq(() => log + "", "123,");
-    fn(3, 4);
-    assertEq(() => log + "", "123,,123,");
+    _foo_dec = [dec], _bar_dec = [dec];
+    const _Foo = class _Foo {
+    };
+    _init = __decoratorStart(null);
+    __decorateElement(_init, 13, "foo", _foo_dec, _Foo);
+    __decorateElement(_init, 13, "bar", _bar_dec, _Foo);
+    foo = _Foo;
+    __publicField(_Foo, "foo", __runInitializers(_init, 8, _Foo, 123)), __runInitializers(_init, 11, _Foo);
+    __publicField(_Foo, "bar", __runInitializers(_init, 12, _Foo)), __runInitializers(_init, 15, _Foo);
+    let Foo2 = _Foo;
+    assertEq(() => Foo2.foo, 3);
+    assertEq(() => Foo2.bar, 6);
+    assertEq(() => log + "", "false,false,123,true,false,");
   },
   "Field decorators: Shim (private instance field)": () => {
     var _bar_dec, _foo_dec, _init, _foo, _bar;
     let log = [];
     const dec = (value, ctx) => {
-      return (x) => log.push(x);
+      return function(x) {
+        assertEq(() => this instanceof Foo2, true);
+        return log.push(has$foo(this), has$bar(this), x);
+      };
     };
+    let has$foo;
+    let has$bar;
     let get$foo;
     let get$bar;
-    _init = [, , ,];
     _foo_dec = [dec], _bar_dec = [dec];
     class Foo2 {
       constructor() {
-        __privateAdd(this, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, this);
-        __privateAdd(this, _bar, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this, 123)), __runInitializers(_init, 11, this);
+        __privateAdd(this, _bar, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     _bar = new WeakMap();
     __decorateElement(_init, 21, "#foo", _foo_dec, _foo);
     __decorateElement(_init, 21, "#bar", _bar_dec, _bar);
+    has$foo = (x) => __privateIn(_foo, x);
+    has$bar = (x) => __privateIn(_bar, x);
     get$foo = (x) => __privateGet(x, _foo);
     get$bar = (x) => __privateGet(x, _bar);
     assertEq(() => log + "", "");
     var obj = new Foo2();
-    assertEq(() => get$foo(obj), 1);
-    assertEq(() => get$bar(obj), 2);
-    assertEq(() => log + "", "123,");
-    var obj = new Foo2();
     assertEq(() => get$foo(obj), 3);
-    assertEq(() => get$bar(obj), 4);
-    assertEq(() => log + "", "123,,123,");
+    assertEq(() => get$bar(obj), 6);
+    assertEq(() => log + "", "false,false,123,true,false,");
   },
   "Field decorators: Shim (private static field)": () => {
+    var _bar_dec, _foo_dec, _init, _foo, _bar;
+    let foo;
     let log = [];
     const dec = (value, ctx) => {
-      return (x) => log.push(x);
-    };
-    const fn = (foo, bar) => {
-      var _bar_dec, _foo_dec, _init, _foo, _bar;
-      let get$foo;
-      let get$bar;
-      _init = [, , ,];
-      _foo_dec = [dec], _bar_dec = [dec];
-      class Foo2 {
-      }
-      _foo = new WeakMap();
-      _bar = new WeakMap();
-      __decorateElement(_init, 29, "#foo", _foo_dec, _foo);
-      __decorateElement(_init, 29, "#bar", _bar_dec, _bar);
-      __privateAdd(Foo2, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, Foo2);
-      __privateAdd(Foo2, _bar, __runInitializers(_init, 10)), __runInitializers(_init, 13, Foo2);
-      get$foo = (x) => __privateGet(x, _foo);
-      get$bar = (x) => __privateGet(x, _bar);
-      assertEq(() => get$foo(Foo2), foo);
-      assertEq(() => get$bar(Foo2), bar);
+      return function(x) {
+        assertEq(() => this, foo);
+        return log.push(has$foo(this), has$bar(this), x);
+      };
     };
     assertEq(() => log + "", "");
-    fn(1, 2);
-    assertEq(() => log + "", "123,");
-    fn(3, 4);
-    assertEq(() => log + "", "123,,123,");
+    let has$foo;
+    let has$bar;
+    let get$foo;
+    let get$bar;
+    _foo_dec = [dec], _bar_dec = [dec];
+    const _Foo = class _Foo {
+    };
+    _init = __decoratorStart(null);
+    _foo = new WeakMap();
+    _bar = new WeakMap();
+    __decorateElement(_init, 29, "#foo", _foo_dec, _foo);
+    __decorateElement(_init, 29, "#bar", _bar_dec, _bar);
+    foo = _Foo;
+    has$foo = (x) => __privateIn(_foo, x);
+    has$bar = (x) => __privateIn(_bar, x);
+    get$foo = (x) => __privateGet(x, _foo);
+    get$bar = (x) => __privateGet(x, _bar);
+    __privateAdd(_Foo, _foo, __runInitializers(_init, 8, _Foo, 123)), __runInitializers(_init, 11, _Foo);
+    __privateAdd(_Foo, _bar, __runInitializers(_init, 12, _Foo)), __runInitializers(_init, 15, _Foo);
+    let Foo2 = _Foo;
+    assertEq(() => get$foo(Foo2), 3);
+    assertEq(() => get$bar(Foo2), 6);
+    assertEq(() => log + "", "false,false,123,true,false,");
   },
   "Field decorators: Order (instance field)": () => {
     var _foo_dec, _init;
@@ -1303,13 +1380,13 @@ const tests = {
       return () => log.push(5);
     };
     log.push(0);
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       constructor() {
-        __publicField(this, "foo", __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, this);
+        __publicField(this, "foo", __runInitializers(_init, 8, this, 123)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 5, "foo", _foo_dec, Foo2);
     log.push(3);
     var obj = new Foo2();
@@ -1329,12 +1406,12 @@ const tests = {
       return () => log.push(4);
     };
     log.push(0);
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 13, "foo", _foo_dec, Foo2);
-    __publicField(Foo2, "foo", __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, Foo2);
+    __publicField(Foo2, "foo", __runInitializers(_init, 8, Foo2, 123)), __runInitializers(_init, 11, Foo2);
     log.push(5);
     assertEq(() => Foo2.foo, 5);
     assertEq(() => log + "", "0,1,2,3,4,5");
@@ -1352,13 +1429,13 @@ const tests = {
     };
     log.push(0);
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       constructor() {
-        __privateAdd(this, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this, 123)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 21, "#foo", _foo_dec, _foo);
     get$foo = (x) => __privateGet(x, _foo);
@@ -1381,13 +1458,13 @@ const tests = {
     };
     log.push(0);
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 29, "#foo", _foo_dec, _foo);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, Foo2);
+    __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2, 123)), __runInitializers(_init, 11, Foo2);
     get$foo = (x) => __privateGet(x, _foo);
     log.push(5);
     assertEq(() => get$foo(Foo2), 5);
@@ -1399,13 +1476,13 @@ const tests = {
       const dec = (value, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
-          __publicField(this, "foo", __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+          __publicField(this, "foo", __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 5, "foo", _foo_dec, Foo2);
     }, TypeError);
   },
@@ -1415,12 +1492,12 @@ const tests = {
       const dec = (value, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 13, "foo", _foo_dec, Foo2);
-      __publicField(Foo2, "foo", __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+      __publicField(Foo2, "foo", __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     }, TypeError);
   },
   "Field decorators: Return null (private instance field)": () => {
@@ -1429,13 +1506,13 @@ const tests = {
       const dec = (value, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
-          __privateAdd(this, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+          __privateAdd(this, _foo, __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
         }
       }
+      _init = __decoratorStart(null);
       _foo = new WeakMap();
       __decorateElement(_init, 21, "#foo", _foo_dec, _foo);
     }, TypeError);
@@ -1446,13 +1523,13 @@ const tests = {
       const dec = (value, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _foo = new WeakMap();
       __decorateElement(_init, 29, "#foo", _foo_dec, _foo);
-      __privateAdd(Foo2, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+      __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     }, TypeError);
   },
   "Field decorators: Return object (instance field)": () => {
@@ -1461,13 +1538,13 @@ const tests = {
       const dec = (value, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
-          __publicField(this, "foo", __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+          __publicField(this, "foo", __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 5, "foo", _foo_dec, Foo2);
     }, TypeError);
   },
@@ -1477,12 +1554,12 @@ const tests = {
       const dec = (value, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 13, "foo", _foo_dec, Foo2);
-      __publicField(Foo2, "foo", __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+      __publicField(Foo2, "foo", __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     }, TypeError);
   },
   "Field decorators: Return object (private instance field)": () => {
@@ -1491,13 +1568,13 @@ const tests = {
       const dec = (value, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
-          __privateAdd(this, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+          __privateAdd(this, _foo, __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
         }
       }
+      _init = __decoratorStart(null);
       _foo = new WeakMap();
       __decorateElement(_init, 21, "#foo", _foo_dec, _foo);
     }, TypeError);
@@ -1508,13 +1585,13 @@ const tests = {
       const dec = (value, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _foo = new WeakMap();
       __decorateElement(_init, 29, "#foo", _foo_dec, _foo);
-      __privateAdd(Foo2, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+      __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     }, TypeError);
   },
   "Field decorators: Extra initializer (instance field)": () => {
@@ -1530,13 +1607,13 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
-        __publicField(this, "foo", __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+        __publicField(this, "foo", __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 5, "foo", _foo_dec, Foo2);
     assertEq(() => got, void 0);
     const instance = new Foo2();
@@ -1556,12 +1633,12 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 13, "foo", _foo_dec, Foo2);
-    __publicField(Foo2, "foo", __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+    __publicField(Foo2, "foo", __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     assertEq(() => got.this, Foo2);
     assertEq(() => got.args.length, 0);
   },
@@ -1578,13 +1655,13 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
-        __privateAdd(this, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 21, "#foo", _foo_dec, _foo);
     assertEq(() => got, void 0);
@@ -1605,13 +1682,13 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 29, "#foo", _foo_dec, _foo);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+    __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     assertEq(() => got.this, Foo2);
     assertEq(() => got.args.length, 0);
   },
@@ -1632,7 +1709,6 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     class Foo2 {
       constructor() {
         __runInitializers(_init, 5, this);
@@ -1648,6 +1724,7 @@ const tests = {
         return this.bar;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 2, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 2, _b, _bar_dec, Foo2);
     __decorateElement(_init, 2, _a, _baz_dec, Foo2);
@@ -1671,7 +1748,6 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     class Foo2 {
       static get foo() {
         return this.bar;
@@ -1683,6 +1759,7 @@ const tests = {
         return this.bar;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 10, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 10, _b, _bar_dec, Foo2);
     __decorateElement(_init, 10, _a, _baz_dec, Foo2);
@@ -1710,7 +1787,6 @@ const tests = {
       };
     };
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
@@ -1719,6 +1795,7 @@ const tests = {
         __privateAdd(this, _bar, 123);
       }
     }
+    _init = __decoratorStart(null);
     _bar = new WeakMap();
     _Foo_instances = new WeakSet();
     foo_get = function() {
@@ -1747,10 +1824,10 @@ const tests = {
       };
     };
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _bar = new WeakMap();
     _Foo_static = new WeakSet();
     foo_get = function() {
@@ -1773,7 +1850,6 @@ const tests = {
       };
       return bar;
     };
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
@@ -1784,6 +1860,7 @@ const tests = {
         return this.bar;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 2, "foo", _foo_dec, Foo2);
     assertEq(() => Object.getOwnPropertyDescriptor(Foo2.prototype, "foo").get, bar);
     assertEq(() => new Foo2().foo, 124);
@@ -1797,13 +1874,13 @@ const tests = {
       };
       return bar;
     };
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       static get foo() {
         return this.bar;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 10, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     __publicField(Foo2, "bar", 123);
@@ -1820,7 +1897,6 @@ const tests = {
       return bar;
     };
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
@@ -1829,6 +1905,7 @@ const tests = {
         __privateAdd(this, _bar, 123);
       }
     }
+    _init = __decoratorStart(null);
     _bar = new WeakMap();
     _Foo_instances = new WeakSet();
     foo_get = function() {
@@ -1848,10 +1925,10 @@ const tests = {
       return bar;
     };
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _bar = new WeakMap();
     _Foo_static = new WeakSet();
     foo_get = function() {
@@ -1886,7 +1963,6 @@ const tests = {
       return baz;
     };
     log.push(0);
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       constructor() {
@@ -1896,6 +1972,7 @@ const tests = {
         return log.push(6);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 2, "foo", _foo_dec, Foo2);
     log.push(3);
     new Foo2().foo;
@@ -1925,13 +2002,13 @@ const tests = {
       return baz;
     };
     log.push(0);
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       static get foo() {
         return log.push(6);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 10, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     log.push(3);
@@ -1963,7 +2040,6 @@ const tests = {
     };
     log.push(0);
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       constructor() {
@@ -1971,6 +2047,7 @@ const tests = {
         __privateAdd(this, _Foo_instances);
       }
     }
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_get = function() {
       return log.push(6);
@@ -2005,10 +2082,10 @@ const tests = {
     };
     log.push(0);
     let get$foo;
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_get = function() {
       return log.push(6);
@@ -2028,7 +2105,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -2038,6 +2114,7 @@ const tests = {
           return;
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 2, "foo", _foo_dec, Foo2);
     }, TypeError);
   },
@@ -2047,13 +2124,13 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         static get foo() {
           return;
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 10, "foo", _foo_dec, Foo2);
       __runInitializers(_init, 3, Foo2);
     }, TypeError);
@@ -2064,7 +2141,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -2072,6 +2148,7 @@ const tests = {
           __privateAdd(this, _Foo_instances);
         }
       }
+      _init = __decoratorStart(null);
       _Foo_instances = new WeakSet();
       foo_get = function() {
         return;
@@ -2085,10 +2162,10 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _Foo_static = new WeakSet();
       foo_get = function() {
         return;
@@ -2104,7 +2181,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -2114,6 +2190,7 @@ const tests = {
           return;
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 2, "foo", _foo_dec, Foo2);
     }, TypeError);
   },
@@ -2123,13 +2200,13 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         static get foo() {
           return;
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 10, "foo", _foo_dec, Foo2);
       __runInitializers(_init, 3, Foo2);
     }, TypeError);
@@ -2140,7 +2217,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -2148,6 +2224,7 @@ const tests = {
           __privateAdd(this, _Foo_instances);
         }
       }
+      _init = __decoratorStart(null);
       _Foo_instances = new WeakSet();
       foo_get = function() {
         return;
@@ -2161,10 +2238,10 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _Foo_static = new WeakSet();
       foo_get = function() {
         return;
@@ -2187,7 +2264,6 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
@@ -2197,6 +2273,7 @@ const tests = {
         return;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 2, "foo", _foo_dec, Foo2);
     assertEq(() => got, void 0);
     const instance = new Foo2();
@@ -2216,13 +2293,13 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       static get foo() {
         return;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 10, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     assertEq(() => got.this, Foo2);
@@ -2241,7 +2318,6 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
@@ -2249,6 +2325,7 @@ const tests = {
         __privateAdd(this, _Foo_instances);
       }
     }
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_get = function() {
       return;
@@ -2272,10 +2349,10 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_get = function() {
       return;
@@ -2306,7 +2383,6 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     class Foo2 {
       constructor() {
         __runInitializers(_init, 5, this);
@@ -2322,6 +2398,7 @@ const tests = {
         this.bar = x;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 3, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 3, _b, _bar_dec, Foo2);
     __decorateElement(_init, 3, _a, _baz_dec, Foo2);
@@ -2352,7 +2429,6 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     class Foo2 {
       static set foo(x) {
         this.bar = x;
@@ -2364,6 +2440,7 @@ const tests = {
         this.bar = x;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 11, "foo", _foo_dec, Foo2);
     __decorateElement(_init, 11, _b, _bar_dec, Foo2);
     __decorateElement(_init, 11, _a, _baz_dec, Foo2);
@@ -2398,7 +2475,6 @@ const tests = {
       };
     };
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
@@ -2407,6 +2483,7 @@ const tests = {
         __publicField(this, "bar", 0);
       }
     }
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_set = function(x) {
       this.bar = x;
@@ -2441,10 +2518,10 @@ const tests = {
       };
     };
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_set = function(x) {
       this.bar = x;
@@ -2469,7 +2546,6 @@ const tests = {
       };
       return bar;
     };
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
@@ -2480,6 +2556,7 @@ const tests = {
         this.bar = x;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 3, "foo", _foo_dec, Foo2);
     assertEq(() => Object.getOwnPropertyDescriptor(Foo2.prototype, "foo").set, bar);
     var obj = new Foo2();
@@ -2495,13 +2572,13 @@ const tests = {
       };
       return bar;
     };
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       static set foo(x) {
         this.bar = x;
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 11, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     __publicField(Foo2, "bar", 123);
@@ -2519,7 +2596,6 @@ const tests = {
       return bar;
     };
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
@@ -2528,6 +2604,7 @@ const tests = {
         __publicField(this, "bar", 123);
       }
     }
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_set = function(x) {
       this.bar = x;
@@ -2550,10 +2627,10 @@ const tests = {
       return bar;
     };
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_set = function(x) {
       this.bar = x;
@@ -2590,7 +2667,6 @@ const tests = {
       return baz;
     };
     log.push(0);
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       constructor() {
@@ -2600,6 +2676,7 @@ const tests = {
         log.push(6);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 3, "foo", _foo_dec, Foo2);
     log.push(3);
     new Foo2().foo = 123;
@@ -2629,13 +2706,13 @@ const tests = {
       return baz;
     };
     log.push(0);
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       static set foo(x) {
         log.push(6);
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 11, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     log.push(3);
@@ -2667,7 +2744,6 @@ const tests = {
     };
     log.push(0);
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
       constructor() {
@@ -2675,6 +2751,7 @@ const tests = {
         __privateAdd(this, _Foo_instances);
       }
     }
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_set = function(x) {
       log.push(6);
@@ -2711,10 +2788,10 @@ const tests = {
     };
     log.push(0);
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec1, dec2];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_set = function(x) {
       log.push(6);
@@ -2736,7 +2813,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -2745,6 +2821,7 @@ const tests = {
         set foo(x) {
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 3, "foo", _foo_dec, Foo2);
     }, TypeError);
   },
@@ -2754,12 +2831,12 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         static set foo(x) {
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 11, "foo", _foo_dec, Foo2);
       __runInitializers(_init, 3, Foo2);
     }, TypeError);
@@ -2770,7 +2847,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -2778,6 +2854,7 @@ const tests = {
           __privateAdd(this, _Foo_instances);
         }
       }
+      _init = __decoratorStart(null);
       _Foo_instances = new WeakSet();
       foo_set = function(x) {
       };
@@ -2790,10 +2867,10 @@ const tests = {
       const dec = (fn, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _Foo_static = new WeakSet();
       foo_set = function(x) {
       };
@@ -2808,7 +2885,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -2817,6 +2893,7 @@ const tests = {
         set foo(x) {
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 3, "foo", _foo_dec, Foo2);
     }, TypeError);
   },
@@ -2826,12 +2903,12 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         static set foo(x) {
         }
       }
+      _init = __decoratorStart(null);
       __decorateElement(_init, 11, "foo", _foo_dec, Foo2);
       __runInitializers(_init, 3, Foo2);
     }, TypeError);
@@ -2842,7 +2919,6 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
@@ -2850,6 +2926,7 @@ const tests = {
           __privateAdd(this, _Foo_instances);
         }
       }
+      _init = __decoratorStart(null);
       _Foo_instances = new WeakSet();
       foo_set = function(x) {
       };
@@ -2862,10 +2939,10 @@ const tests = {
       const dec = (fn, ctx) => {
         return {};
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _Foo_static = new WeakSet();
       foo_set = function(x) {
       };
@@ -2887,7 +2964,6 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
@@ -2896,6 +2972,7 @@ const tests = {
       set foo(x) {
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 3, "foo", _foo_dec, Foo2);
     assertEq(() => got, void 0);
     const instance = new Foo2();
@@ -2915,12 +2992,12 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       static set foo(x) {
       }
     }
+    _init = __decoratorStart(null);
     __decorateElement(_init, 11, "foo", _foo_dec, Foo2);
     __runInitializers(_init, 3, Foo2);
     assertEq(() => got.this, Foo2);
@@ -2939,7 +3016,6 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
@@ -2947,6 +3023,7 @@ const tests = {
         __privateAdd(this, _Foo_instances);
       }
     }
+    _init = __decoratorStart(null);
     _Foo_instances = new WeakSet();
     foo_set = function(x) {
     };
@@ -2969,10 +3046,10 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _Foo_static = new WeakSet();
     foo_set = function(x) {
     };
@@ -3005,15 +3082,15 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     _foo_dec = [dec("foo", "get foo", "set foo")], _b = (_bar_dec = [dec(bar, "get [bar]", "set [bar]")], bar), _a = (_baz_dec = [dec(baz, "get ", "set ")], baz);
     class Foo2 {
       constructor() {
-        __privateAdd(this, _foo, __runInitializers(_init, 6, 0)), __runInitializers(_init, 9, this);
-        __privateAdd(this, __b, __runInitializers(_init, 10, 0)), __runInitializers(_init, 13, this);
-        __privateAdd(this, __a, __runInitializers(_init, 14, 0)), __runInitializers(_init, 17, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this, 0)), __runInitializers(_init, 11, this);
+        __privateAdd(this, __b, __runInitializers(_init, 12, this, 0)), __runInitializers(_init, 15, this);
+        __privateAdd(this, __a, __runInitializers(_init, 16, this, 0)), __runInitializers(_init, 19, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __b = new WeakMap();
     __a = new WeakMap();
@@ -3050,19 +3127,19 @@ const tests = {
     };
     const bar = Symbol("bar");
     const baz = Symbol();
-    _init = [, , ,];
     _foo_dec = [dec("foo", "get foo", "set foo")], _b = (_bar_dec = [dec(bar, "get [bar]", "set [bar]")], bar), _a = (_baz_dec = [dec(baz, "get ", "set ")], baz);
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __b = new WeakMap();
     __a = new WeakMap();
     __decorateElement(_init, 12, "foo", _foo_dec, Foo2, _foo);
     __decorateElement(_init, 12, _b, _bar_dec, Foo2, __b);
     __decorateElement(_init, 12, _a, _baz_dec, Foo2, __a);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6, 0)), __runInitializers(_init, 9, Foo2);
-    __privateAdd(Foo2, __b, __runInitializers(_init, 10, 0)), __runInitializers(_init, 13, Foo2);
-    __privateAdd(Foo2, __a, __runInitializers(_init, 14, 0)), __runInitializers(_init, 17, Foo2);
+    __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2, 0)), __runInitializers(_init, 11, Foo2);
+    __privateAdd(Foo2, __b, __runInitializers(_init, 12, Foo2, 0)), __runInitializers(_init, 15, Foo2);
+    __privateAdd(Foo2, __a, __runInitializers(_init, 16, Foo2, 0)), __runInitializers(_init, 19, Foo2);
     Foo2.foo = 321;
     assertEq(() => Foo2.foo, 321);
     Foo2[bar] = 4321;
@@ -3095,14 +3172,14 @@ const tests = {
     };
     let get$foo;
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
         __privateAdd(this, _Foo_instances);
-        __privateAdd(this, _foo, __runInitializers(_init, 6, 0)), __runInitializers(_init, 9, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this, 0)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     _Foo_instances = new WeakSet();
     _a = __decorateElement(_init, 20, "#foo", _foo_dec, _Foo_instances, _foo), foo_get = _a.get, foo_set = _a.set;
@@ -3139,15 +3216,15 @@ const tests = {
     };
     let get$foo;
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     _Foo_static = new WeakSet();
     _a = __decorateElement(_init, 28, "#foo", _foo_dec, _Foo_static, _foo), foo_get = _a.get, foo_set = _a.set;
     __privateAdd(Foo2, _Foo_static);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6, 0)), __runInitializers(_init, 9, Foo2);
+    __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2, 0)), __runInitializers(_init, 11, Foo2);
     get$foo = (x) => __privateGet(x, _Foo_static, foo_get);
     set$foo = (x, y) => {
       __privateSet(x, _Foo_static, y, foo_set);
@@ -3161,7 +3238,10 @@ const tests = {
     let get;
     let set;
     const dec = (target, ctx) => {
-      const init = (x) => x + 1;
+      function init(x) {
+        assertEq(() => this instanceof Foo2, true);
+        return x + 1;
+      }
       get = function() {
         return target.get.call(this) * 10;
       };
@@ -3170,13 +3250,13 @@ const tests = {
       };
       return { get, set, init };
     };
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
-        __privateAdd(this, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this, 123)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 4, "foo", _foo_dec, Foo2, _foo);
     assertEq(() => Object.getOwnPropertyDescriptor(Foo2.prototype, "foo").get, get);
@@ -3188,10 +3268,14 @@ const tests = {
   },
   "Auto-accessor decorators: Shim (static auto-accessor)": () => {
     var _foo_dec, _init, _foo;
+    let foo;
     let get;
     let set;
     const dec = (target, ctx) => {
-      const init = (x) => x + 1;
+      function init(x) {
+        assertEq(() => this, foo);
+        return x + 1;
+      }
       get = function() {
         return target.get.call(this) * 10;
       };
@@ -3200,13 +3284,15 @@ const tests = {
       };
       return { get, set, init };
     };
-    _init = [, , ,];
     _foo_dec = [dec];
-    class Foo2 {
-    }
+    const _Foo = class _Foo {
+    };
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
-    __decorateElement(_init, 12, "foo", _foo_dec, Foo2, _foo);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, Foo2);
+    __decorateElement(_init, 12, "foo", _foo_dec, _Foo, _foo);
+    foo = _Foo;
+    __privateAdd(_Foo, _foo, __runInitializers(_init, 8, _Foo, 123)), __runInitializers(_init, 11, _Foo);
+    let Foo2 = _Foo;
     assertEq(() => Object.getOwnPropertyDescriptor(Foo2, "foo").get, get);
     assertEq(() => Object.getOwnPropertyDescriptor(Foo2, "foo").set, set);
     assertEq(() => Foo2.foo, (123 + 1) * 10);
@@ -3218,7 +3304,10 @@ const tests = {
     let get;
     let set;
     const dec = (target, ctx) => {
-      const init = (x) => x + 1;
+      function init(x) {
+        assertEq(() => this instanceof Foo2, true);
+        return x + 1;
+      }
       get = function() {
         return target.get.call(this) * 10;
       };
@@ -3229,14 +3318,14 @@ const tests = {
     };
     let get$foo;
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
     class Foo2 {
       constructor() {
         __privateAdd(this, _Foo_instances);
-        __privateAdd(this, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this, 123)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     _Foo_instances = new WeakSet();
     _a = __decorateElement(_init, 20, "#foo", _foo_dec, _Foo_instances, _foo), foo_get = _a.get, foo_set = _a.set;
@@ -3251,10 +3340,14 @@ const tests = {
   },
   "Auto-accessor decorators: Shim (private static auto-accessor)": () => {
     var _foo_dec, _init, _foo, _a, foo_get, foo_set, _Foo_static;
+    let foo;
     let get;
     let set;
     const dec = (target, ctx) => {
-      const init = (x) => x + 1;
+      function init(x) {
+        assertEq(() => this, foo);
+        return x + 1;
+      }
       get = function() {
         return target.get.call(this) * 10;
       };
@@ -3265,19 +3358,21 @@ const tests = {
     };
     let get$foo;
     let set$foo;
-    _init = [, , ,];
     _foo_dec = [dec];
-    class Foo2 {
-    }
+    const _Foo = class _Foo {
+    };
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     _Foo_static = new WeakSet();
     _a = __decorateElement(_init, 28, "#foo", _foo_dec, _Foo_static, _foo), foo_get = _a.get, foo_set = _a.set;
-    __privateAdd(Foo2, _Foo_static);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6, 123)), __runInitializers(_init, 9, Foo2);
+    __privateAdd(_Foo, _Foo_static);
+    foo = _Foo;
     get$foo = (x) => __privateGet(x, _Foo_static, foo_get);
     set$foo = (x, y) => {
       __privateSet(x, _Foo_static, y, foo_set);
     };
+    __privateAdd(_Foo, _foo, __runInitializers(_init, 8, _Foo, 123)), __runInitializers(_init, 11, _Foo);
+    let Foo2 = _Foo;
     assertEq(() => get$foo(Foo2), (123 + 1) * 10);
     assertEq(() => set$foo(Foo2, 321), void 0);
     assertEq(() => get$foo(Foo2), 321 * 2 * 10);
@@ -3288,13 +3383,13 @@ const tests = {
       const dec = (target, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
-          __privateAdd(this, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+          __privateAdd(this, _foo, __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
         }
       }
+      _init = __decoratorStart(null);
       _foo = new WeakMap();
       __decorateElement(_init, 4, "foo", _foo_dec, Foo2, _foo);
     }, TypeError);
@@ -3305,13 +3400,13 @@ const tests = {
       const dec = (target, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _foo = new WeakMap();
       __decorateElement(_init, 12, "foo", _foo_dec, Foo2, _foo);
-      __privateAdd(Foo2, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+      __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     }, TypeError);
   },
   "Auto-accessor decorators: Return null (private instance auto-accessor)": () => {
@@ -3320,14 +3415,14 @@ const tests = {
       const dec = (target, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
         constructor() {
           __privateAdd(this, _Foo_instances);
-          __privateAdd(this, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+          __privateAdd(this, _foo, __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
         }
       }
+      _init = __decoratorStart(null);
       _foo = new WeakMap();
       _Foo_instances = new WeakSet();
       _a = __decorateElement(_init, 20, "#foo", _foo_dec, _Foo_instances, _foo), foo_get = _a.get, foo_set = _a.set;
@@ -3339,15 +3434,15 @@ const tests = {
       const dec = (target, ctx) => {
         return null;
       };
-      _init = [, , ,];
       _foo_dec = [dec];
       class Foo2 {
       }
+      _init = __decoratorStart(null);
       _foo = new WeakMap();
       _Foo_static = new WeakSet();
       _a = __decorateElement(_init, 28, "#foo", _foo_dec, _Foo_static, _foo), foo_get = _a.get, foo_set = _a.set;
       __privateAdd(Foo2, _Foo_static);
-      __privateAdd(Foo2, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+      __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     }, TypeError);
   },
   "Auto-accessor decorators: Extra initializer (instance auto-accessor)": () => {
@@ -3363,13 +3458,13 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
-        __privateAdd(this, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 4, "foo", _foo_dec, Foo2, _foo);
     assertEq(() => got, void 0);
@@ -3390,13 +3485,13 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     __decorateElement(_init, 12, "foo", _foo_dec, Foo2, _foo);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+    __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     assertEq(() => got.this, Foo2);
     assertEq(() => got.args.length, 0);
   },
@@ -3413,14 +3508,14 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
       constructor() {
         __privateAdd(this, _Foo_instances);
-        __privateAdd(this, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+        __privateAdd(this, _foo, __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
       }
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     _Foo_instances = new WeakSet();
     _a = __decorateElement(_init, 20, "#foo", _foo_dec, _Foo_instances, _foo), foo_get = _a.get, foo_set = _a.set;
@@ -3442,21 +3537,21 @@ const tests = {
       assertThrows(() => ctx.addInitializer({}), TypeError);
       oldAddInitializer = ctx.addInitializer;
     };
-    _init = [, , ,];
     _foo_dec = [dec, dec];
     class Foo2 {
     }
+    _init = __decoratorStart(null);
     _foo = new WeakMap();
     _Foo_static = new WeakSet();
     _a = __decorateElement(_init, 28, "#foo", _foo_dec, _Foo_static, _foo), foo_get = _a.get, foo_set = _a.set;
     __privateAdd(Foo2, _Foo_static);
-    __privateAdd(Foo2, _foo, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+    __privateAdd(Foo2, _foo, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     assertEq(() => got.this, Foo2);
     assertEq(() => got.args.length, 0);
   },
   // Decorator list evaluation
   "Decorator list evaluation: Computed names (class statement)": () => {
-    var _dec, _a, _dec2, _b, _dec3, _c, _dec4, _d, _dec5, _e, _dec6, _f, _dec7, _g, _dec8, _h, _dec9, _i, _dec10, _j, _Foo_decorators, _init, __b, __a;
+    var _dec, _a, _dec2, _b, _dec3, _c, _dec4, _d, _dec5, _e, _dec6, _f, _dec7, _g, _dec8, _h, _dec9, _i, _dec10, _j, _Foo_decorators, _init, __b, __a, _k;
     const log = [];
     const foo = (n) => {
       log.push(n);
@@ -3485,14 +3580,13 @@ const tests = {
         return Symbol("accessor");
       }
     };
-    _init = [, , ,];
     _Foo_decorators = [foo(0)];
-    class Foo2 extends (foo(1), Object) {
+    class Foo2 extends (_k = (foo(1), Object)) {
       constructor() {
         super(...arguments);
         __runInitializers(_init, 5, this);
-        __publicField(this, _h, __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-        __privateAdd(this, __b, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __publicField(this, _h, __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, __b, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
       }
       [_j = (_dec10 = [foo(2)], computed.method)]() {
       }
@@ -3509,6 +3603,7 @@ const tests = {
       static set [(_c = (_dec3 = [foo(16)], computed.setter), _b = (_dec2 = [foo(18)], computed.accessor), _a = (_dec = [foo(20)], computed.accessor), _c)](x) {
       }
     }
+    _init = __decoratorStart(_k);
     __b = new WeakMap();
     __a = new WeakMap();
     __decorateElement(_init, 9, _i, _dec9, Foo2);
@@ -3523,13 +3618,13 @@ const tests = {
     __decorateElement(_init, 5, _h, _dec8, Foo2);
     Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
     __runInitializers(_init, 3, Foo2);
-    __publicField(Foo2, _g, __runInitializers(_init, 14)), __runInitializers(_init, 17, Foo2);
-    __privateAdd(Foo2, __a, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+    __publicField(Foo2, _g, __runInitializers(_init, 16, Foo2)), __runInitializers(_init, 19, Foo2);
+    __privateAdd(Foo2, __a, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     __runInitializers(_init, 1, Foo2);
     assertEq(() => "" + log, "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21");
   },
   "Decorator list evaluation: Computed names (class expression)": () => {
-    var _dec, _a, _dec2, _b, _dec3, _c, _dec4, _d, _dec5, _e, _dec6, _f, _dec7, _g, _dec8, _h, _dec9, _i, _dec10, _j, _class_decorators, _init, _k, __b, __a;
+    var _dec, _a, _dec2, _b, _dec3, _c, _dec4, _d, _dec5, _e, _dec6, _f, _dec7, _g, _dec8, _h, _dec9, _i, _dec10, _j, _class_decorators, _init, _k, __b, __a, _l;
     const log = [];
     const foo = (n) => {
       log.push(n);
@@ -3558,12 +3653,12 @@ const tests = {
         return Symbol("accessor");
       }
     };
-    _init = [, , ,], _class_decorators = [foo(0)], _k = class extends (foo(1), Object) {
+    _class_decorators = [foo(0)], _k = class extends (_l = (foo(1), Object)) {
       constructor() {
         super(...arguments);
         __runInitializers(_init, 5, this);
-        __publicField(this, _h, __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-        __privateAdd(this, __b, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __publicField(this, _h, __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, __b, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
       }
       [_j = (_dec10 = [foo(2)], computed.method)]() {
       }
@@ -3579,7 +3674,7 @@ const tests = {
       }
       static set [(_c = (_dec3 = [foo(16)], computed.setter), _b = (_dec2 = [foo(18)], computed.accessor), _a = (_dec = [foo(20)], computed.accessor), _c)](x) {
       }
-    }, __b = new WeakMap(), __a = new WeakMap(), __decorateElement(_init, 9, _i, _dec9, _k), __decorateElement(_init, 10, _e, _dec5, _k), __decorateElement(_init, 11, _c, _dec3, _k), __decorateElement(_init, 12, _a, _dec, _k, __a), __decorateElement(_init, 1, _j, _dec10, _k), __decorateElement(_init, 2, _f, _dec6, _k), __decorateElement(_init, 3, _d, _dec4, _k), __decorateElement(_init, 4, _b, _dec2, _k, __b), __decorateElement(_init, 13, _g, _dec7, _k), __decorateElement(_init, 5, _h, _dec8, _k), _k = __decorateElement(_init, 0, "", _class_decorators, _k), __runInitializers(_init, 3, _k), __publicField(_k, _g, __runInitializers(_init, 14)), __runInitializers(_init, 17, _k), __privateAdd(_k, __a, __runInitializers(_init, 6)), __runInitializers(_init, 9, _k), __runInitializers(_init, 1, _k), _k;
+    }, _init = __decoratorStart(_l), __b = new WeakMap(), __a = new WeakMap(), __decorateElement(_init, 9, _i, _dec9, _k), __decorateElement(_init, 10, _e, _dec5, _k), __decorateElement(_init, 11, _c, _dec3, _k), __decorateElement(_init, 12, _a, _dec, _k, __a), __decorateElement(_init, 1, _j, _dec10, _k), __decorateElement(_init, 2, _f, _dec6, _k), __decorateElement(_init, 3, _d, _dec4, _k), __decorateElement(_init, 4, _b, _dec2, _k, __b), __decorateElement(_init, 13, _g, _dec7, _k), __decorateElement(_init, 5, _h, _dec8, _k), _k = __decorateElement(_init, 0, "", _class_decorators, _k), __runInitializers(_init, 3, _k), __publicField(_k, _g, __runInitializers(_init, 16, _k)), __runInitializers(_init, 19, _k), __privateAdd(_k, __a, __runInitializers(_init, 8, _k)), __runInitializers(_init, 11, _k), __runInitializers(_init, 1, _k), _k;
     assertEq(() => "" + log, "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21");
   },
   'Decorator list evaluation: "this" (class statement)': () => {
@@ -3593,14 +3688,13 @@ const tests = {
     };
     function wrapper() {
       var _accessor_dec, _accessor_dec2, _setter_dec, _setter_dec2, _getter_dec, _getter_dec2, _field_dec, _field_dec2, _method_dec, _method_dec2, _a, _Foo_decorators, _init, _accessor, _accessor2;
-      _init = [, , ,];
       _Foo_decorators = [(assertEq(() => this.foo(0), void 0), dummy)];
       class Foo2 extends (_a = (assertEq(() => this.foo(1), void 0), Object), _method_dec2 = [(assertEq(() => this.foo(2), void 0), dummy)], _method_dec = [(assertEq(() => this.foo(3), void 0), dummy)], _field_dec2 = [(assertEq(() => this.foo(4), void 0), dummy)], _field_dec = [(assertEq(() => this.foo(5), void 0), dummy)], _getter_dec2 = [(assertEq(() => this.foo(6), void 0), dummy)], _getter_dec = [(assertEq(() => this.foo(7), void 0), dummy)], _setter_dec2 = [(assertEq(() => this.foo(8), void 0), dummy)], _setter_dec = [(assertEq(() => this.foo(9), void 0), dummy)], _accessor_dec2 = [(assertEq(() => this.foo(10), void 0), dummy)], _accessor_dec = [(assertEq(() => this.foo(11), void 0), dummy)], _a) {
         constructor() {
           super(...arguments);
           __runInitializers(_init, 5, this);
-          __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-          __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+          __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+          __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
         }
         method() {
         }
@@ -3617,6 +3711,7 @@ const tests = {
         static set setter(x) {
         }
       }
+      _init = __decoratorStart(_a);
       _accessor = new WeakMap();
       _accessor2 = new WeakMap();
       __decorateElement(_init, 9, "method", _method_dec, Foo2);
@@ -3631,8 +3726,8 @@ const tests = {
       __decorateElement(_init, 5, "field", _field_dec2, Foo2);
       Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
       __runInitializers(_init, 3, Foo2);
-      __publicField(Foo2, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, Foo2);
-      __privateAdd(Foo2, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+      __publicField(Foo2, "field", __runInitializers(_init, 16, Foo2)), __runInitializers(_init, 19, Foo2);
+      __privateAdd(Foo2, _accessor2, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
       __runInitializers(_init, 1, Foo2);
     }
     wrapper.call(ctx);
@@ -3649,12 +3744,12 @@ const tests = {
     };
     function wrapper() {
       var _accessor_dec, _accessor_dec2, _setter_dec, _setter_dec2, _getter_dec, _getter_dec2, _field_dec, _field_dec2, _method_dec, _method_dec2, _a, _class_decorators, _init, _b, _accessor, _accessor2;
-      _init = [, , ,], _class_decorators = [(assertEq(() => this.foo(0), void 0), dummy)], _b = class extends (_a = (assertEq(() => this.foo(1), void 0), Object), _method_dec2 = [(assertEq(() => this.foo(2), void 0), dummy)], _method_dec = [(assertEq(() => this.foo(3), void 0), dummy)], _field_dec2 = [(assertEq(() => this.foo(4), void 0), dummy)], _field_dec = [(assertEq(() => this.foo(5), void 0), dummy)], _getter_dec2 = [(assertEq(() => this.foo(6), void 0), dummy)], _getter_dec = [(assertEq(() => this.foo(7), void 0), dummy)], _setter_dec2 = [(assertEq(() => this.foo(8), void 0), dummy)], _setter_dec = [(assertEq(() => this.foo(9), void 0), dummy)], _accessor_dec2 = [(assertEq(() => this.foo(10), void 0), dummy)], _accessor_dec = [(assertEq(() => this.foo(11), void 0), dummy)], _a) {
+      _class_decorators = [(assertEq(() => this.foo(0), void 0), dummy)], _b = class extends (_a = (assertEq(() => this.foo(1), void 0), Object), _method_dec2 = [(assertEq(() => this.foo(2), void 0), dummy)], _method_dec = [(assertEq(() => this.foo(3), void 0), dummy)], _field_dec2 = [(assertEq(() => this.foo(4), void 0), dummy)], _field_dec = [(assertEq(() => this.foo(5), void 0), dummy)], _getter_dec2 = [(assertEq(() => this.foo(6), void 0), dummy)], _getter_dec = [(assertEq(() => this.foo(7), void 0), dummy)], _setter_dec2 = [(assertEq(() => this.foo(8), void 0), dummy)], _setter_dec = [(assertEq(() => this.foo(9), void 0), dummy)], _accessor_dec2 = [(assertEq(() => this.foo(10), void 0), dummy)], _accessor_dec = [(assertEq(() => this.foo(11), void 0), dummy)], _a) {
         constructor() {
           super(...arguments);
           __runInitializers(_init, 5, this);
-          __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-          __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+          __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+          __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
         }
         method() {
         }
@@ -3670,7 +3765,7 @@ const tests = {
         }
         static set setter(x) {
         }
-      }, _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _b), __decorateElement(_init, 10, "getter", _getter_dec, _b), __decorateElement(_init, 11, "setter", _setter_dec, _b), __decorateElement(_init, 12, "accessor", _accessor_dec, _b, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _b), __decorateElement(_init, 2, "getter", _getter_dec2, _b), __decorateElement(_init, 3, "setter", _setter_dec2, _b), __decorateElement(_init, 4, "accessor", _accessor_dec2, _b, _accessor), __decorateElement(_init, 13, "field", _field_dec, _b), __decorateElement(_init, 5, "field", _field_dec2, _b), _b = __decorateElement(_init, 0, "", _class_decorators, _b), __runInitializers(_init, 3, _b), __publicField(_b, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, _b), __privateAdd(_b, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, _b), __runInitializers(_init, 1, _b), _b;
+      }, _init = __decoratorStart(_a), _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _b), __decorateElement(_init, 10, "getter", _getter_dec, _b), __decorateElement(_init, 11, "setter", _setter_dec, _b), __decorateElement(_init, 12, "accessor", _accessor_dec, _b, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _b), __decorateElement(_init, 2, "getter", _getter_dec2, _b), __decorateElement(_init, 3, "setter", _setter_dec2, _b), __decorateElement(_init, 4, "accessor", _accessor_dec2, _b, _accessor), __decorateElement(_init, 13, "field", _field_dec, _b), __decorateElement(_init, 5, "field", _field_dec2, _b), _b = __decorateElement(_init, 0, "", _class_decorators, _b), __runInitializers(_init, 3, _b), __publicField(_b, "field", __runInitializers(_init, 16, _b)), __runInitializers(_init, 19, _b), __privateAdd(_b, _accessor2, __runInitializers(_init, 8, _b)), __runInitializers(_init, 11, _b), __runInitializers(_init, 1, _b), _b;
     }
     wrapper.call(ctx);
     assertEq(() => "" + log, "0,1,2,3,4,5,6,7,8,9,10,11");
@@ -3681,14 +3776,13 @@ const tests = {
     };
     async function wrapper() {
       var _accessor_dec, _accessor_dec2, _setter_dec, _setter_dec2, _getter_dec, _getter_dec2, _field_dec, _field_dec2, _method_dec, _method_dec2, _a, _Foo_decorators, _init, _accessor, _accessor2;
-      _init = [, , ,];
       _Foo_decorators = [(log.push(await Promise.resolve(0)), dummy)];
       class Foo2 extends (_a = (log.push(await Promise.resolve(1)), Object), _method_dec2 = [(log.push(await Promise.resolve(2)), dummy)], _method_dec = [(log.push(await Promise.resolve(3)), dummy)], _field_dec2 = [(log.push(await Promise.resolve(4)), dummy)], _field_dec = [(log.push(await Promise.resolve(5)), dummy)], _getter_dec2 = [(log.push(await Promise.resolve(6)), dummy)], _getter_dec = [(log.push(await Promise.resolve(7)), dummy)], _setter_dec2 = [(log.push(await Promise.resolve(8)), dummy)], _setter_dec = [(log.push(await Promise.resolve(9)), dummy)], _accessor_dec2 = [(log.push(await Promise.resolve(10)), dummy)], _accessor_dec = [(log.push(await Promise.resolve(11)), dummy)], _a) {
         constructor() {
           super(...arguments);
           __runInitializers(_init, 5, this);
-          __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-          __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+          __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+          __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
         }
         method() {
         }
@@ -3705,6 +3799,7 @@ const tests = {
         static set setter(x) {
         }
       }
+      _init = __decoratorStart(_a);
       _accessor = new WeakMap();
       _accessor2 = new WeakMap();
       __decorateElement(_init, 9, "method", _method_dec, Foo2);
@@ -3719,8 +3814,8 @@ const tests = {
       __decorateElement(_init, 5, "field", _field_dec2, Foo2);
       Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
       __runInitializers(_init, 3, Foo2);
-      __publicField(Foo2, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, Foo2);
-      __privateAdd(Foo2, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+      __publicField(Foo2, "field", __runInitializers(_init, 16, Foo2)), __runInitializers(_init, 19, Foo2);
+      __privateAdd(Foo2, _accessor2, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
       __runInitializers(_init, 1, Foo2);
     }
     await wrapper();
@@ -3732,12 +3827,12 @@ const tests = {
     };
     async function wrapper() {
       var _accessor_dec, _accessor_dec2, _setter_dec, _setter_dec2, _getter_dec, _getter_dec2, _field_dec, _field_dec2, _method_dec, _method_dec2, _a, _class_decorators, _init, _b, _accessor, _accessor2;
-      _init = [, , ,], _class_decorators = [(log.push(await Promise.resolve(0)), dummy)], _b = class extends (_a = (log.push(await Promise.resolve(1)), Object), _method_dec2 = [(log.push(await Promise.resolve(2)), dummy)], _method_dec = [(log.push(await Promise.resolve(3)), dummy)], _field_dec2 = [(log.push(await Promise.resolve(4)), dummy)], _field_dec = [(log.push(await Promise.resolve(5)), dummy)], _getter_dec2 = [(log.push(await Promise.resolve(6)), dummy)], _getter_dec = [(log.push(await Promise.resolve(7)), dummy)], _setter_dec2 = [(log.push(await Promise.resolve(8)), dummy)], _setter_dec = [(log.push(await Promise.resolve(9)), dummy)], _accessor_dec2 = [(log.push(await Promise.resolve(10)), dummy)], _accessor_dec = [(log.push(await Promise.resolve(11)), dummy)], _a) {
+      _class_decorators = [(log.push(await Promise.resolve(0)), dummy)], _b = class extends (_a = (log.push(await Promise.resolve(1)), Object), _method_dec2 = [(log.push(await Promise.resolve(2)), dummy)], _method_dec = [(log.push(await Promise.resolve(3)), dummy)], _field_dec2 = [(log.push(await Promise.resolve(4)), dummy)], _field_dec = [(log.push(await Promise.resolve(5)), dummy)], _getter_dec2 = [(log.push(await Promise.resolve(6)), dummy)], _getter_dec = [(log.push(await Promise.resolve(7)), dummy)], _setter_dec2 = [(log.push(await Promise.resolve(8)), dummy)], _setter_dec = [(log.push(await Promise.resolve(9)), dummy)], _accessor_dec2 = [(log.push(await Promise.resolve(10)), dummy)], _accessor_dec = [(log.push(await Promise.resolve(11)), dummy)], _a) {
         constructor() {
           super(...arguments);
           __runInitializers(_init, 5, this);
-          __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-          __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+          __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+          __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
         }
         method() {
         }
@@ -3753,7 +3848,7 @@ const tests = {
         }
         static set setter(x) {
         }
-      }, _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _b), __decorateElement(_init, 10, "getter", _getter_dec, _b), __decorateElement(_init, 11, "setter", _setter_dec, _b), __decorateElement(_init, 12, "accessor", _accessor_dec, _b, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _b), __decorateElement(_init, 2, "getter", _getter_dec2, _b), __decorateElement(_init, 3, "setter", _setter_dec2, _b), __decorateElement(_init, 4, "accessor", _accessor_dec2, _b, _accessor), __decorateElement(_init, 13, "field", _field_dec, _b), __decorateElement(_init, 5, "field", _field_dec2, _b), _b = __decorateElement(_init, 0, "", _class_decorators, _b), __runInitializers(_init, 3, _b), __publicField(_b, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, _b), __privateAdd(_b, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, _b), __runInitializers(_init, 1, _b), _b;
+      }, _init = __decoratorStart(_a), _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _b), __decorateElement(_init, 10, "getter", _getter_dec, _b), __decorateElement(_init, 11, "setter", _setter_dec, _b), __decorateElement(_init, 12, "accessor", _accessor_dec, _b, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _b), __decorateElement(_init, 2, "getter", _getter_dec2, _b), __decorateElement(_init, 3, "setter", _setter_dec2, _b), __decorateElement(_init, 4, "accessor", _accessor_dec2, _b, _accessor), __decorateElement(_init, 13, "field", _field_dec, _b), __decorateElement(_init, 5, "field", _field_dec2, _b), _b = __decorateElement(_init, 0, "", _class_decorators, _b), __runInitializers(_init, 3, _b), __publicField(_b, "field", __runInitializers(_init, 16, _b)), __runInitializers(_init, 19, _b), __privateAdd(_b, _accessor2, __runInitializers(_init, 8, _b)), __runInitializers(_init, 11, _b), __runInitializers(_init, 1, _b), _b;
     }
     await wrapper();
     assertEq(() => "" + log, "0,1,2,3,4,5,6,7,8,9,10,11");
@@ -3769,14 +3864,13 @@ const tests = {
       }
       static {
         const dummy = this;
-        _init = [, , ,];
         _Foo_decorators = [dummy.#foo(0)];
         class Foo2 extends (_a = (dummy.#foo(1), Object), _method_dec2 = [dummy.#foo(2)], _method_dec = [dummy.#foo(3)], _field_dec2 = [dummy.#foo(4)], _field_dec = [dummy.#foo(5)], _getter_dec2 = [dummy.#foo(6)], _getter_dec = [dummy.#foo(7)], _setter_dec2 = [dummy.#foo(8)], _setter_dec = [dummy.#foo(9)], _accessor_dec2 = [dummy.#foo(10)], _accessor_dec = [dummy.#foo(11)], _a) {
           constructor() {
             super(...arguments);
             __runInitializers(_init, 5, this);
-            __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-            __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+            __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+            __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
           }
           method() {
           }
@@ -3793,6 +3887,7 @@ const tests = {
           static set setter(x) {
           }
         }
+        _init = __decoratorStart(_a);
         _accessor = new WeakMap();
         _accessor2 = new WeakMap();
         __decorateElement(_init, 9, "method", _method_dec, Foo2);
@@ -3807,8 +3902,8 @@ const tests = {
         __decorateElement(_init, 5, "field", _field_dec2, Foo2);
         Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
         __runInitializers(_init, 3, Foo2);
-        __publicField(Foo2, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, Foo2);
-        __privateAdd(Foo2, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+        __publicField(Foo2, "field", __runInitializers(_init, 16, Foo2)), __runInitializers(_init, 19, Foo2);
+        __privateAdd(Foo2, _accessor2, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
         __runInitializers(_init, 1, Foo2);
       }
     }
@@ -3825,12 +3920,12 @@ const tests = {
       }
       static {
         const dummy = this;
-        _init = [, , ,], _class_decorators = [dummy.#foo(0)], _b = class extends (_a = (dummy.#foo(1), Object), _method_dec2 = [dummy.#foo(2)], _method_dec = [dummy.#foo(3)], _field_dec2 = [dummy.#foo(4)], _field_dec = [dummy.#foo(5)], _getter_dec2 = [dummy.#foo(6)], _getter_dec = [dummy.#foo(7)], _setter_dec2 = [dummy.#foo(8)], _setter_dec = [dummy.#foo(9)], _accessor_dec2 = [dummy.#foo(10)], _accessor_dec = [dummy.#foo(11)], _a) {
+        _class_decorators = [dummy.#foo(0)], _b = class extends (_a = (dummy.#foo(1), Object), _method_dec2 = [dummy.#foo(2)], _method_dec = [dummy.#foo(3)], _field_dec2 = [dummy.#foo(4)], _field_dec = [dummy.#foo(5)], _getter_dec2 = [dummy.#foo(6)], _getter_dec = [dummy.#foo(7)], _setter_dec2 = [dummy.#foo(8)], _setter_dec = [dummy.#foo(9)], _accessor_dec2 = [dummy.#foo(10)], _accessor_dec = [dummy.#foo(11)], _a) {
           constructor() {
             super(...arguments);
             __runInitializers(_init, 5, this);
-            __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-            __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+            __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+            __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
           }
           method() {
           }
@@ -3846,7 +3941,7 @@ const tests = {
           }
           static set setter(x) {
           }
-        }, _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _b), __decorateElement(_init, 10, "getter", _getter_dec, _b), __decorateElement(_init, 11, "setter", _setter_dec, _b), __decorateElement(_init, 12, "accessor", _accessor_dec, _b, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _b), __decorateElement(_init, 2, "getter", _getter_dec2, _b), __decorateElement(_init, 3, "setter", _setter_dec2, _b), __decorateElement(_init, 4, "accessor", _accessor_dec2, _b, _accessor), __decorateElement(_init, 13, "field", _field_dec, _b), __decorateElement(_init, 5, "field", _field_dec2, _b), _b = __decorateElement(_init, 0, "", _class_decorators, _b), __runInitializers(_init, 3, _b), __publicField(_b, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, _b), __privateAdd(_b, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, _b), __runInitializers(_init, 1, _b), _b;
+        }, _init = __decoratorStart(_a), _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _b), __decorateElement(_init, 10, "getter", _getter_dec, _b), __decorateElement(_init, 11, "setter", _setter_dec, _b), __decorateElement(_init, 12, "accessor", _accessor_dec, _b, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _b), __decorateElement(_init, 2, "getter", _getter_dec2, _b), __decorateElement(_init, 3, "setter", _setter_dec2, _b), __decorateElement(_init, 4, "accessor", _accessor_dec2, _b, _accessor), __decorateElement(_init, 13, "field", _field_dec, _b), __decorateElement(_init, 5, "field", _field_dec2, _b), _b = __decorateElement(_init, 0, "", _class_decorators, _b), __runInitializers(_init, 3, _b), __publicField(_b, "field", __runInitializers(_init, 16, _b)), __runInitializers(_init, 19, _b), __privateAdd(_b, _accessor2, __runInitializers(_init, 8, _b)), __runInitializers(_init, 11, _b), __runInitializers(_init, 1, _b), _b;
       }
     }
     assertEq(() => "" + log, "0,1,2,3,4,5,6,7,8,9,10,11");
@@ -3862,14 +3957,13 @@ const tests = {
     class Dummy {
       static #foo = NaN;
       static {
-        _init = [, , ,];
         _Foo_decorators = [capture(() => new Foo2().#foo + 0)], _method_dec2 = [capture(() => __privateGet(new _Foo(), _foo) + 1)], _method_dec = [capture(() => __privateGet(new _Foo(), _foo) + 2)], _field_dec2 = [capture(() => __privateGet(new _Foo(), _foo) + 3)], _field_dec = [capture(() => __privateGet(new _Foo(), _foo) + 4)], _getter_dec2 = [capture(() => __privateGet(new _Foo(), _foo) + 5)], _getter_dec = [capture(() => __privateGet(new _Foo(), _foo) + 6)], _setter_dec2 = [capture(() => __privateGet(new _Foo(), _foo) + 7)], _setter_dec = [capture(() => __privateGet(new _Foo(), _foo) + 8)], _accessor_dec2 = [capture(() => __privateGet(new _Foo(), _foo) + 9)], _accessor_dec = [capture(() => __privateGet(new _Foo(), _foo) + 10)];
         let _Foo = class _Foo {
           constructor() {
             __runInitializers(_init, 5, this);
             __privateAdd(this, _foo, 10);
-            __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-            __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+            __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+            __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
           }
           method() {
           }
@@ -3886,6 +3980,7 @@ const tests = {
           static set setter(x) {
           }
         };
+        _init = __decoratorStart(null);
         _foo = new WeakMap();
         _accessor = new WeakMap();
         _accessor2 = new WeakMap();
@@ -3901,8 +3996,8 @@ const tests = {
         __decorateElement(_init, 5, "field", _field_dec2, _Foo);
         _Foo = __decorateElement(_init, 0, "Foo", _Foo_decorators, _Foo);
         __runInitializers(_init, 3, _Foo);
-        __publicField(_Foo, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, _Foo);
-        __privateAdd(_Foo, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, _Foo);
+        __publicField(_Foo, "field", __runInitializers(_init, 16, _Foo)), __runInitializers(_init, 19, _Foo);
+        __privateAdd(_Foo, _accessor2, __runInitializers(_init, 8, _Foo)), __runInitializers(_init, 11, _Foo);
         __runInitializers(_init, 1, _Foo);
         let Foo2 = _Foo;
       }
@@ -3932,12 +4027,12 @@ const tests = {
     class Outer {
       static #foo = 0;
       static {
-        _init = [, , ,], _Foo_decorators = [capture(() => Outer.#foo + 0)], _method_dec2 = [capture(() => __privateGet(new _a(), _foo) + 1)], _method_dec = [capture(() => __privateGet(new _a(), _foo) + 2)], _field_dec2 = [capture(() => __privateGet(new _a(), _foo) + 3)], _field_dec = [capture(() => __privateGet(new _a(), _foo) + 4)], _getter_dec2 = [capture(() => __privateGet(new _a(), _foo) + 5)], _getter_dec = [capture(() => __privateGet(new _a(), _foo) + 6)], _setter_dec2 = [capture(() => __privateGet(new _a(), _foo) + 7)], _setter_dec = [capture(() => __privateGet(new _a(), _foo) + 8)], _accessor_dec2 = [capture(() => __privateGet(new _a(), _foo) + 9)], _accessor_dec = [capture(() => __privateGet(new _a(), _foo) + 10)], _a = class {
+        _Foo_decorators = [capture(() => Outer.#foo + 0)], _method_dec2 = [capture(() => __privateGet(new _a(), _foo) + 1)], _method_dec = [capture(() => __privateGet(new _a(), _foo) + 2)], _field_dec2 = [capture(() => __privateGet(new _a(), _foo) + 3)], _field_dec = [capture(() => __privateGet(new _a(), _foo) + 4)], _getter_dec2 = [capture(() => __privateGet(new _a(), _foo) + 5)], _getter_dec = [capture(() => __privateGet(new _a(), _foo) + 6)], _setter_dec2 = [capture(() => __privateGet(new _a(), _foo) + 7)], _setter_dec = [capture(() => __privateGet(new _a(), _foo) + 8)], _accessor_dec2 = [capture(() => __privateGet(new _a(), _foo) + 9)], _accessor_dec = [capture(() => __privateGet(new _a(), _foo) + 10)], _a = class {
           constructor() {
             __runInitializers(_init, 5, this);
             __privateAdd(this, _foo, 10);
-            __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-            __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+            __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+            __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
           }
           method() {
           }
@@ -3953,7 +4048,7 @@ const tests = {
           }
           static set setter(x) {
           }
-        }, _foo = new WeakMap(), _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _a), __decorateElement(_init, 10, "getter", _getter_dec, _a), __decorateElement(_init, 11, "setter", _setter_dec, _a), __decorateElement(_init, 12, "accessor", _accessor_dec, _a, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _a), __decorateElement(_init, 2, "getter", _getter_dec2, _a), __decorateElement(_init, 3, "setter", _setter_dec2, _a), __decorateElement(_init, 4, "accessor", _accessor_dec2, _a, _accessor), __decorateElement(_init, 13, "field", _field_dec, _a), __decorateElement(_init, 5, "field", _field_dec2, _a), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 3, _a), __publicField(_a, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, _a), __privateAdd(_a, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, _a), __runInitializers(_init, 1, _a), _a;
+        }, _init = __decoratorStart(null), _foo = new WeakMap(), _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _a), __decorateElement(_init, 10, "getter", _getter_dec, _a), __decorateElement(_init, 11, "setter", _setter_dec, _a), __decorateElement(_init, 12, "accessor", _accessor_dec, _a, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _a), __decorateElement(_init, 2, "getter", _getter_dec2, _a), __decorateElement(_init, 3, "setter", _setter_dec2, _a), __decorateElement(_init, 4, "accessor", _accessor_dec2, _a, _accessor), __decorateElement(_init, 13, "field", _field_dec, _a), __decorateElement(_init, 5, "field", _field_dec2, _a), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 3, _a), __publicField(_a, "field", __runInitializers(_init, 16, _a)), __runInitializers(_init, 19, _a), __privateAdd(_a, _accessor2, __runInitializers(_init, 8, _a)), __runInitializers(_init, 11, _a), __runInitializers(_init, 1, _a), _a;
       }
     }
     const log = [];
@@ -3969,13 +4064,12 @@ const tests = {
       return () => {
       };
     };
-    _init = [, , ,];
     _Foo_decorators = [capture(() => Foo2)], _method_dec2 = [capture(() => _Foo)], _method_dec = [capture(() => _Foo)], _field_dec2 = [capture(() => _Foo)], _field_dec = [capture(() => _Foo)], _getter_dec2 = [capture(() => _Foo)], _getter_dec = [capture(() => _Foo)], _setter_dec2 = [capture(() => _Foo)], _setter_dec = [capture(() => _Foo)], _accessor_dec2 = [capture(() => _Foo)], _accessor_dec = [capture(() => _Foo)];
     let _Foo = class _Foo {
       constructor() {
         __runInitializers(_init, 5, this);
-        __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-        __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
       }
       method() {
       }
@@ -3992,6 +4086,7 @@ const tests = {
       static set setter(x) {
       }
     };
+    _init = __decoratorStart(null);
     _accessor = new WeakMap();
     _accessor2 = new WeakMap();
     __decorateElement(_init, 9, "method", _method_dec, _Foo);
@@ -4006,8 +4101,8 @@ const tests = {
     __decorateElement(_init, 5, "field", _field_dec2, _Foo);
     _Foo = __decorateElement(_init, 0, "Foo", _Foo_decorators, _Foo);
     __runInitializers(_init, 3, _Foo);
-    __publicField(_Foo, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, _Foo);
-    __privateAdd(_Foo, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, _Foo);
+    __publicField(_Foo, "field", __runInitializers(_init, 16, _Foo)), __runInitializers(_init, 19, _Foo);
+    __privateAdd(_Foo, _accessor2, __runInitializers(_init, 8, _Foo)), __runInitializers(_init, 11, _Foo);
     __runInitializers(_init, 1, _Foo);
     let Foo2 = _Foo;
     const originalFoo = Foo2;
@@ -4022,18 +4117,18 @@ const tests = {
     }
   },
   "Decorator list evaluation: Class binding (class expression)": () => {
-    var _accessor_dec, _accessor_dec2, _setter_dec, _setter_dec2, _getter_dec, _getter_dec2, _field_dec, _field_dec2, _method_dec, _method_dec2, _originalFoo_decorators, _init, _a, _accessor, _accessor2;
+    var _accessor_dec, _accessor_dec2, _setter_dec, _setter_dec2, _getter_dec, _getter_dec2, _field_dec, _field_dec2, _method_dec, _method_dec2, _Foo_decorators, _init, _a, _accessor, _accessor2;
     const fns = [];
     const capture = (fn) => {
       fns.push(fn);
       return () => {
       };
     };
-    const originalFoo = (_init = [, , ,], _originalFoo_decorators = [capture(() => Foo)], _method_dec2 = [capture(() => _a)], _method_dec = [capture(() => _a)], _field_dec2 = [capture(() => _a)], _field_dec = [capture(() => _a)], _getter_dec2 = [capture(() => _a)], _getter_dec = [capture(() => _a)], _setter_dec2 = [capture(() => _a)], _setter_dec = [capture(() => _a)], _accessor_dec2 = [capture(() => _a)], _accessor_dec = [capture(() => _a)], _a = class {
+    const originalFoo = (_Foo_decorators = [capture(() => Foo)], _method_dec2 = [capture(() => _a)], _method_dec = [capture(() => _a)], _field_dec2 = [capture(() => _a)], _field_dec = [capture(() => _a)], _getter_dec2 = [capture(() => _a)], _getter_dec = [capture(() => _a)], _setter_dec2 = [capture(() => _a)], _setter_dec = [capture(() => _a)], _accessor_dec2 = [capture(() => _a)], _accessor_dec = [capture(() => _a)], _a = class {
       constructor() {
         __runInitializers(_init, 5, this);
-        __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-        __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
       }
       method() {
       }
@@ -4049,12 +4144,209 @@ const tests = {
       }
       static set setter(x) {
       }
-    }, _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _a), __decorateElement(_init, 10, "getter", _getter_dec, _a), __decorateElement(_init, 11, "setter", _setter_dec, _a), __decorateElement(_init, 12, "accessor", _accessor_dec, _a, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _a), __decorateElement(_init, 2, "getter", _getter_dec2, _a), __decorateElement(_init, 3, "setter", _setter_dec2, _a), __decorateElement(_init, 4, "accessor", _accessor_dec2, _a, _accessor), __decorateElement(_init, 13, "field", _field_dec, _a), __decorateElement(_init, 5, "field", _field_dec2, _a), _a = __decorateElement(_init, 0, "originalFoo", _originalFoo_decorators, _a), __runInitializers(_init, 3, _a), __publicField(_a, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, _a), __privateAdd(_a, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, _a), __runInitializers(_init, 1, _a), _a);
+    }, _init = __decoratorStart(null), _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _a), __decorateElement(_init, 10, "getter", _getter_dec, _a), __decorateElement(_init, 11, "setter", _setter_dec, _a), __decorateElement(_init, 12, "accessor", _accessor_dec, _a, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _a), __decorateElement(_init, 2, "getter", _getter_dec2, _a), __decorateElement(_init, 3, "setter", _setter_dec2, _a), __decorateElement(_init, 4, "accessor", _accessor_dec2, _a, _accessor), __decorateElement(_init, 13, "field", _field_dec, _a), __decorateElement(_init, 5, "field", _field_dec2, _a), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 3, _a), __publicField(_a, "field", __runInitializers(_init, 16, _a)), __runInitializers(_init, 19, _a), __privateAdd(_a, _accessor2, __runInitializers(_init, 8, _a)), __runInitializers(_init, 11, _a), __runInitializers(_init, 1, _a), _a);
     const firstFn = fns.shift();
     assertThrows(() => firstFn(), ReferenceError);
     for (const fn of fns) {
       assertEq(() => fn(), originalFoo);
     }
+  },
+  // Decorator metadata
+  "Decorator metadata: class statement": () => {
+    var _staticSetter_dec, _staticGetter_dec, _staticMethod_dec, _staticAccessor_dec, _staticField_dec, _instanceSetter_dec, _instanceGetter_dec, _instanceMethod_dec, _instanceAccessor_dec, _instanceField_dec, _Foo_decorators, _init, _instanceAccessor, _staticAccessor, _staticSetter_dec2, _staticGetter_dec2, _staticMethod_dec2, _staticAccessor_dec2, _staticField_dec2, _instanceSetter_dec2, _instanceGetter_dec2, _instanceMethod_dec2, _instanceAccessor_dec2, _instanceField_dec2, _a, _Bar_decorators, _init2, _instanceField, _instanceAccessor2, _b, instanceAccessor_get, instanceAccessor_set, _Bar_instances, instanceMethod_fn, instanceGetter_get, instanceSetter_set, _staticField, _staticAccessor2, _c, staticAccessor_get, staticAccessor_set, _Bar_static, staticMethod_fn, staticGetter_get, staticSetter_set;
+    let counter = 0;
+    const dec = (_, ctx) => {
+      ctx.metadata[ctx.name] = counter++;
+    };
+    _Foo_decorators = [dec], _instanceField_dec = [dec], _instanceAccessor_dec = [dec], _instanceMethod_dec = [dec], _instanceGetter_dec = [dec], _instanceSetter_dec = [dec], _staticField_dec = [dec], _staticAccessor_dec = [dec], _staticMethod_dec = [dec], _staticGetter_dec = [dec], _staticSetter_dec = [dec];
+    class Foo2 {
+      constructor() {
+        __runInitializers(_init, 5, this);
+        __publicField(this, "instanceField", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, _instanceAccessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
+      }
+      instanceMethod() {
+      }
+      get instanceGetter() {
+        return;
+      }
+      set instanceSetter(_) {
+      }
+      static staticMethod() {
+      }
+      static get staticGetter() {
+        return;
+      }
+      static set staticSetter(_) {
+      }
+    }
+    _init = __decoratorStart(null);
+    _instanceAccessor = new WeakMap();
+    _staticAccessor = new WeakMap();
+    __decorateElement(_init, 12, "staticAccessor", _staticAccessor_dec, Foo2, _staticAccessor);
+    __decorateElement(_init, 9, "staticMethod", _staticMethod_dec, Foo2);
+    __decorateElement(_init, 10, "staticGetter", _staticGetter_dec, Foo2);
+    __decorateElement(_init, 11, "staticSetter", _staticSetter_dec, Foo2);
+    __decorateElement(_init, 4, "instanceAccessor", _instanceAccessor_dec, Foo2, _instanceAccessor);
+    __decorateElement(_init, 1, "instanceMethod", _instanceMethod_dec, Foo2);
+    __decorateElement(_init, 2, "instanceGetter", _instanceGetter_dec, Foo2);
+    __decorateElement(_init, 3, "instanceSetter", _instanceSetter_dec, Foo2);
+    __decorateElement(_init, 13, "staticField", _staticField_dec, Foo2);
+    __decorateElement(_init, 5, "instanceField", _instanceField_dec, Foo2);
+    Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
+    __runInitializers(_init, 3, Foo2);
+    __publicField(Foo2, "staticField", __runInitializers(_init, 16, Foo2)), __runInitializers(_init, 19, Foo2);
+    __privateAdd(Foo2, _staticAccessor, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
+    __runInitializers(_init, 1, Foo2);
+    _Bar_decorators = [dec];
+    class Bar extends (_a = Foo2, _instanceField_dec2 = [dec], _instanceAccessor_dec2 = [dec], _instanceMethod_dec2 = [dec], _instanceGetter_dec2 = [dec], _instanceSetter_dec2 = [dec], _staticField_dec2 = [dec], _staticAccessor_dec2 = [dec], _staticMethod_dec2 = [dec], _staticGetter_dec2 = [dec], _staticSetter_dec2 = [dec], _a) {
+      constructor() {
+        super(...arguments);
+        __runInitializers(_init2, 5, this);
+        __privateAdd(this, _Bar_instances);
+        __privateAdd(this, _instanceField, __runInitializers(_init2, 20, this)), __runInitializers(_init2, 23, this);
+        __privateAdd(this, _instanceAccessor2, __runInitializers(_init2, 12, this)), __runInitializers(_init2, 15, this);
+      }
+    }
+    _init2 = __decoratorStart(_a);
+    _instanceField = new WeakMap();
+    _instanceAccessor2 = new WeakMap();
+    _Bar_instances = new WeakSet();
+    instanceMethod_fn = function() {
+    };
+    instanceGetter_get = function() {
+      return;
+    };
+    instanceSetter_set = function(_) {
+    };
+    _staticField = new WeakMap();
+    _staticAccessor2 = new WeakMap();
+    _Bar_static = new WeakSet();
+    staticMethod_fn = function() {
+    };
+    staticGetter_get = function() {
+      return;
+    };
+    staticSetter_set = function(_) {
+    };
+    _c = __decorateElement(_init2, 28, "#staticAccessor", _staticAccessor_dec2, _Bar_static, _staticAccessor2), staticAccessor_get = _c.get, staticAccessor_set = _c.set;
+    staticMethod_fn = __decorateElement(_init2, 25, "#staticMethod", _staticMethod_dec2, _Bar_static, staticMethod_fn);
+    staticGetter_get = __decorateElement(_init2, 26, "#staticGetter", _staticGetter_dec2, _Bar_static, staticGetter_get);
+    staticSetter_set = __decorateElement(_init2, 27, "#staticSetter", _staticSetter_dec2, _Bar_static, staticSetter_set);
+    _b = __decorateElement(_init2, 20, "#instanceAccessor", _instanceAccessor_dec2, _Bar_instances, _instanceAccessor2), instanceAccessor_get = _b.get, instanceAccessor_set = _b.set;
+    instanceMethod_fn = __decorateElement(_init2, 17, "#instanceMethod", _instanceMethod_dec2, _Bar_instances, instanceMethod_fn);
+    instanceGetter_get = __decorateElement(_init2, 18, "#instanceGetter", _instanceGetter_dec2, _Bar_instances, instanceGetter_get);
+    instanceSetter_set = __decorateElement(_init2, 19, "#instanceSetter", _instanceSetter_dec2, _Bar_instances, instanceSetter_set);
+    __decorateElement(_init2, 29, "#staticField", _staticField_dec2, _staticField);
+    __decorateElement(_init2, 21, "#instanceField", _instanceField_dec2, _instanceField);
+    __privateAdd(Bar, _Bar_static);
+    Bar = __decorateElement(_init2, 0, "Bar", _Bar_decorators, Bar);
+    __runInitializers(_init2, 3, Bar);
+    __privateAdd(Bar, _staticField, __runInitializers(_init2, 16, Bar)), __runInitializers(_init2, 19, Bar);
+    __privateAdd(Bar, _staticAccessor2, __runInitializers(_init2, 8, Bar)), __runInitializers(_init2, 11, Bar);
+    __runInitializers(_init2, 1, Bar);
+    const order = (meta) => "" + [
+      meta["staticAccessor"],
+      meta["staticMethod"],
+      meta["staticGetter"],
+      meta["staticSetter"],
+      meta["#staticAccessor"],
+      meta["#staticMethod"],
+      meta["#staticGetter"],
+      meta["#staticSetter"],
+      meta["instanceAccessor"],
+      meta["instanceMethod"],
+      meta["instanceGetter"],
+      meta["instanceSetter"],
+      meta["#instanceAccessor"],
+      meta["#instanceMethod"],
+      meta["#instanceGetter"],
+      meta["#instanceSetter"],
+      meta["staticField"],
+      meta["#staticField"],
+      meta["instanceField"],
+      meta["#instanceField"],
+      meta["Foo"],
+      meta["Bar"]
+    ];
+    const foo = Foo2[Symbol.metadata];
+    const bar = Bar[Symbol.metadata];
+    assertEq(() => order(foo), "0,1,2,3,,,,,4,5,6,7,,,,,8,,9,,10,");
+    assertEq(() => order(bar), "0,1,2,3,11,12,13,14,4,5,6,7,15,16,17,18,8,19,9,20,10,21");
+    assertEq(() => Object.getPrototypeOf(bar), foo);
+  },
+  "Decorator metadata: class expression": () => {
+    var _staticSetter_dec, _staticGetter_dec, _staticMethod_dec, _staticAccessor_dec, _staticField_dec, _instanceSetter_dec, _instanceGetter_dec, _instanceMethod_dec, _instanceAccessor_dec, _instanceField_dec, _Foo_decorators, _init, _a, _instanceAccessor, _staticAccessor, _staticSetter_dec2, _staticGetter_dec2, _staticMethod_dec2, _staticAccessor_dec2, _staticField_dec2, _instanceSetter_dec2, _instanceGetter_dec2, _instanceMethod_dec2, _instanceAccessor_dec2, _instanceField_dec2, _b, _Bar_decorators, _init2, _instanceField, _instanceAccessor2, _c, instanceAccessor_get, instanceAccessor_set, _Bar_instances, instanceMethod_fn, instanceGetter_get, instanceSetter_set, _d, _staticField, _staticAccessor2, _e, staticAccessor_get, staticAccessor_set, _Bar_static, staticMethod_fn, staticGetter_get, staticSetter_set;
+    let counter = 0;
+    const dec = (_, ctx) => {
+      ctx.metadata[ctx.name] = counter++;
+    };
+    const Foo2 = (_Foo_decorators = [dec], _instanceField_dec = [dec], _instanceAccessor_dec = [dec], _instanceMethod_dec = [dec], _instanceGetter_dec = [dec], _instanceSetter_dec = [dec], _staticField_dec = [dec], _staticAccessor_dec = [dec], _staticMethod_dec = [dec], _staticGetter_dec = [dec], _staticSetter_dec = [dec], _a = class {
+      constructor() {
+        __runInitializers(_init, 5, this);
+        __publicField(this, "instanceField", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, _instanceAccessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
+      }
+      instanceMethod() {
+      }
+      get instanceGetter() {
+        return;
+      }
+      set instanceSetter(_) {
+      }
+      static staticMethod() {
+      }
+      static get staticGetter() {
+        return;
+      }
+      static set staticSetter(_) {
+      }
+    }, _init = __decoratorStart(null), _instanceAccessor = new WeakMap(), _staticAccessor = new WeakMap(), __decorateElement(_init, 12, "staticAccessor", _staticAccessor_dec, _a, _staticAccessor), __decorateElement(_init, 9, "staticMethod", _staticMethod_dec, _a), __decorateElement(_init, 10, "staticGetter", _staticGetter_dec, _a), __decorateElement(_init, 11, "staticSetter", _staticSetter_dec, _a), __decorateElement(_init, 4, "instanceAccessor", _instanceAccessor_dec, _a, _instanceAccessor), __decorateElement(_init, 1, "instanceMethod", _instanceMethod_dec, _a), __decorateElement(_init, 2, "instanceGetter", _instanceGetter_dec, _a), __decorateElement(_init, 3, "instanceSetter", _instanceSetter_dec, _a), __decorateElement(_init, 13, "staticField", _staticField_dec, _a), __decorateElement(_init, 5, "instanceField", _instanceField_dec, _a), _a = __decorateElement(_init, 0, "Foo", _Foo_decorators, _a), __runInitializers(_init, 3, _a), __publicField(_a, "staticField", __runInitializers(_init, 16, _a)), __runInitializers(_init, 19, _a), __privateAdd(_a, _staticAccessor, __runInitializers(_init, 8, _a)), __runInitializers(_init, 11, _a), __runInitializers(_init, 1, _a), _a), Bar = (_Bar_decorators = [dec], _d = class extends (_b = Foo2, _instanceField_dec2 = [dec], _instanceAccessor_dec2 = [dec], _instanceMethod_dec2 = [dec], _instanceGetter_dec2 = [dec], _instanceSetter_dec2 = [dec], _staticField_dec2 = [dec], _staticAccessor_dec2 = [dec], _staticMethod_dec2 = [dec], _staticGetter_dec2 = [dec], _staticSetter_dec2 = [dec], _b) {
+      constructor() {
+        super(...arguments);
+        __runInitializers(_init2, 5, this);
+        __privateAdd(this, _Bar_instances);
+        __privateAdd(this, _instanceField, __runInitializers(_init2, 20, this)), __runInitializers(_init2, 23, this);
+        __privateAdd(this, _instanceAccessor2, __runInitializers(_init2, 12, this)), __runInitializers(_init2, 15, this);
+      }
+    }, _init2 = __decoratorStart(_b), _instanceField = new WeakMap(), _instanceAccessor2 = new WeakMap(), _Bar_instances = new WeakSet(), instanceMethod_fn = function() {
+    }, instanceGetter_get = function() {
+      return;
+    }, instanceSetter_set = function(_) {
+    }, _staticField = new WeakMap(), _staticAccessor2 = new WeakMap(), _Bar_static = new WeakSet(), staticMethod_fn = function() {
+    }, staticGetter_get = function() {
+      return;
+    }, staticSetter_set = function(_) {
+    }, _e = __decorateElement(_init2, 28, "#staticAccessor", _staticAccessor_dec2, _Bar_static, _staticAccessor2), staticAccessor_get = _e.get, staticAccessor_set = _e.set, staticMethod_fn = __decorateElement(_init2, 25, "#staticMethod", _staticMethod_dec2, _Bar_static, staticMethod_fn), staticGetter_get = __decorateElement(_init2, 26, "#staticGetter", _staticGetter_dec2, _Bar_static, staticGetter_get), staticSetter_set = __decorateElement(_init2, 27, "#staticSetter", _staticSetter_dec2, _Bar_static, staticSetter_set), _c = __decorateElement(_init2, 20, "#instanceAccessor", _instanceAccessor_dec2, _Bar_instances, _instanceAccessor2), instanceAccessor_get = _c.get, instanceAccessor_set = _c.set, instanceMethod_fn = __decorateElement(_init2, 17, "#instanceMethod", _instanceMethod_dec2, _Bar_instances, instanceMethod_fn), instanceGetter_get = __decorateElement(_init2, 18, "#instanceGetter", _instanceGetter_dec2, _Bar_instances, instanceGetter_get), instanceSetter_set = __decorateElement(_init2, 19, "#instanceSetter", _instanceSetter_dec2, _Bar_instances, instanceSetter_set), __decorateElement(_init2, 29, "#staticField", _staticField_dec2, _staticField), __decorateElement(_init2, 21, "#instanceField", _instanceField_dec2, _instanceField), __privateAdd(_d, _Bar_static), _d = __decorateElement(_init2, 0, "Bar", _Bar_decorators, _d), __runInitializers(_init2, 3, _d), __privateAdd(_d, _staticField, __runInitializers(_init2, 16, _d)), __runInitializers(_init2, 19, _d), __privateAdd(_d, _staticAccessor2, __runInitializers(_init2, 8, _d)), __runInitializers(_init2, 11, _d), __runInitializers(_init2, 1, _d), _d);
+    const order = (meta) => "" + [
+      meta["staticAccessor"],
+      meta["staticMethod"],
+      meta["staticGetter"],
+      meta["staticSetter"],
+      meta["#staticAccessor"],
+      meta["#staticMethod"],
+      meta["#staticGetter"],
+      meta["#staticSetter"],
+      meta["instanceAccessor"],
+      meta["instanceMethod"],
+      meta["instanceGetter"],
+      meta["instanceSetter"],
+      meta["#instanceAccessor"],
+      meta["#instanceMethod"],
+      meta["#instanceGetter"],
+      meta["#instanceSetter"],
+      meta["staticField"],
+      meta["#staticField"],
+      meta["instanceField"],
+      meta["#instanceField"],
+      meta["Foo"],
+      meta["Bar"]
+    ];
+    const foo = Foo2[Symbol.metadata];
+    const bar = Bar[Symbol.metadata];
+    assertEq(() => order(foo), "0,1,2,3,,,,,4,5,6,7,,,,,8,,9,,10,");
+    assertEq(() => order(bar), "0,1,2,3,11,12,13,14,4,5,6,7,15,16,17,18,8,19,9,20,10,21");
+    assertEq(() => Object.getPrototypeOf(bar), foo);
   },
   // Initializer order
   "Initializer order (public members, class statement)": () => {
@@ -4217,15 +4509,14 @@ const tests = {
       } };
     };
     log.push("start");
-    _init = [, , ,];
     _Foo_decorators = [classDec1, classDec2];
     class Foo2 extends (_a = (log.push("extends"), Object), _method_dec2 = [methodDec1, methodDec2], _method_dec = [staticMethodDec1, staticMethodDec2], _field_dec2 = [fieldDec1, fieldDec2], _field_dec = [staticFieldDec1, staticFieldDec2], _getter_dec2 = [getterDec1, getterDec2], _getter_dec = [staticGetterDec1, staticGetterDec2], _setter_dec2 = [setterDec1, setterDec2], _setter_dec = [staticSetterDec1, staticSetterDec2], _accessor_dec2 = [accessorDec1, accessorDec2], _accessor_dec = [staticAccessorDec1, staticAccessorDec2], _a) {
       constructor() {
         log.push("ctor:start");
         super();
         __runInitializers(_init, 5, this);
-        __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-        __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
         log.push("ctor:end");
       }
       method() {
@@ -4243,6 +4534,7 @@ const tests = {
       static set setter(x) {
       }
     }
+    _init = __decoratorStart(_a);
     _accessor = new WeakMap();
     _accessor2 = new WeakMap();
     __decorateElement(_init, 9, "method", _method_dec, Foo2);
@@ -4258,8 +4550,8 @@ const tests = {
     Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
     __runInitializers(_init, 3, Foo2);
     log.push("static:start");
-    __publicField(Foo2, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, Foo2);
-    __privateAdd(Foo2, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+    __publicField(Foo2, "field", __runInitializers(_init, 16, Foo2)), __runInitializers(_init, 19, Foo2);
+    __privateAdd(Foo2, _accessor2, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     log.push("static:end");
     __runInitializers(_init, 1, Foo2);
     log.push("after");
@@ -4427,13 +4719,13 @@ const tests = {
       } };
     };
     log.push("start");
-    const Foo2 = (_init = [, , ,], _Foo_decorators = [classDec1, classDec2], _b = class extends (_a = (log.push("extends"), Object), _method_dec2 = [methodDec1, methodDec2], _method_dec = [staticMethodDec1, staticMethodDec2], _field_dec2 = [fieldDec1, fieldDec2], _field_dec = [staticFieldDec1, staticFieldDec2], _getter_dec2 = [getterDec1, getterDec2], _getter_dec = [staticGetterDec1, staticGetterDec2], _setter_dec2 = [setterDec1, setterDec2], _setter_dec = [staticSetterDec1, staticSetterDec2], _accessor_dec2 = [accessorDec1, accessorDec2], _accessor_dec = [staticAccessorDec1, staticAccessorDec2], _a) {
+    const Foo2 = (_Foo_decorators = [classDec1, classDec2], _b = class extends (_a = (log.push("extends"), Object), _method_dec2 = [methodDec1, methodDec2], _method_dec = [staticMethodDec1, staticMethodDec2], _field_dec2 = [fieldDec1, fieldDec2], _field_dec = [staticFieldDec1, staticFieldDec2], _getter_dec2 = [getterDec1, getterDec2], _getter_dec = [staticGetterDec1, staticGetterDec2], _setter_dec2 = [setterDec1, setterDec2], _setter_dec = [staticSetterDec1, staticSetterDec2], _accessor_dec2 = [accessorDec1, accessorDec2], _accessor_dec = [staticAccessorDec1, staticAccessorDec2], _a) {
       constructor() {
         log.push("ctor:start");
         super();
         __runInitializers(_init, 5, this);
-        __publicField(this, "field", __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-        __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __publicField(this, "field", __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
         log.push("ctor:end");
       }
       method() {
@@ -4450,7 +4742,7 @@ const tests = {
       }
       static set setter(x) {
       }
-    }, _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _b), __decorateElement(_init, 10, "getter", _getter_dec, _b), __decorateElement(_init, 11, "setter", _setter_dec, _b), __decorateElement(_init, 12, "accessor", _accessor_dec, _b, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _b), __decorateElement(_init, 2, "getter", _getter_dec2, _b), __decorateElement(_init, 3, "setter", _setter_dec2, _b), __decorateElement(_init, 4, "accessor", _accessor_dec2, _b, _accessor), __decorateElement(_init, 13, "field", _field_dec, _b), __decorateElement(_init, 5, "field", _field_dec2, _b), _b = __decorateElement(_init, 0, "Foo", _Foo_decorators, _b), __runInitializers(_init, 3, _b), log.push("static:start"), __publicField(_b, "field", __runInitializers(_init, 14)), __runInitializers(_init, 17, _b), __privateAdd(_b, _accessor2, __runInitializers(_init, 6)), __runInitializers(_init, 9, _b), log.push("static:end"), __runInitializers(_init, 1, _b), _b);
+    }, _init = __decoratorStart(_a), _accessor = new WeakMap(), _accessor2 = new WeakMap(), __decorateElement(_init, 9, "method", _method_dec, _b), __decorateElement(_init, 10, "getter", _getter_dec, _b), __decorateElement(_init, 11, "setter", _setter_dec, _b), __decorateElement(_init, 12, "accessor", _accessor_dec, _b, _accessor2), __decorateElement(_init, 1, "method", _method_dec2, _b), __decorateElement(_init, 2, "getter", _getter_dec2, _b), __decorateElement(_init, 3, "setter", _setter_dec2, _b), __decorateElement(_init, 4, "accessor", _accessor_dec2, _b, _accessor), __decorateElement(_init, 13, "field", _field_dec, _b), __decorateElement(_init, 5, "field", _field_dec2, _b), _b = __decorateElement(_init, 0, "Foo", _Foo_decorators, _b), __runInitializers(_init, 3, _b), log.push("static:start"), __publicField(_b, "field", __runInitializers(_init, 16, _b)), __runInitializers(_init, 19, _b), __privateAdd(_b, _accessor2, __runInitializers(_init, 8, _b)), __runInitializers(_init, 11, _b), log.push("static:end"), __runInitializers(_init, 1, _b), _b);
     log.push("after");
     new Foo2();
     log.push("end");
@@ -4616,7 +4908,6 @@ const tests = {
       } };
     };
     log.push("start");
-    _init = [, , ,];
     _Foo_decorators = [classDec1, classDec2];
     class Foo2 extends (_a = (log.push("extends"), Object), _method_dec = [methodDec1, methodDec2], _staticMethod_dec = [staticMethodDec1, staticMethodDec2], _field_dec = [fieldDec1, fieldDec2], _staticField_dec = [staticFieldDec1, staticFieldDec2], _getter_dec = [getterDec1, getterDec2], _staticGetter_dec = [staticGetterDec1, staticGetterDec2], _setter_dec = [setterDec1, setterDec2], _staticSetter_dec = [staticSetterDec1, staticSetterDec2], _accessor_dec = [accessorDec1, accessorDec2], _staticAccessor_dec = [staticAccessorDec1, staticAccessorDec2], _a) {
       constructor() {
@@ -4624,11 +4915,12 @@ const tests = {
         super();
         __runInitializers(_init, 5, this);
         __privateAdd(this, _Foo_instances);
-        __privateAdd(this, _field, __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-        __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __privateAdd(this, _field, __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
         log.push("ctor:end");
       }
     }
+    _init = __decoratorStart(_a);
     _Foo_instances = new WeakSet();
     method_fn = function() {
     };
@@ -4663,8 +4955,8 @@ const tests = {
     Foo2 = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo2);
     __runInitializers(_init, 3, Foo2);
     log.push("static:start");
-    __privateAdd(Foo2, _staticField, __runInitializers(_init, 14)), __runInitializers(_init, 17, Foo2);
-    __privateAdd(Foo2, _staticAccessor, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo2);
+    __privateAdd(Foo2, _staticField, __runInitializers(_init, 16, Foo2)), __runInitializers(_init, 19, Foo2);
+    __privateAdd(Foo2, _staticAccessor, __runInitializers(_init, 8, Foo2)), __runInitializers(_init, 11, Foo2);
     log.push("static:end");
     __runInitializers(_init, 1, Foo2);
     log.push("after");
@@ -4673,7 +4965,7 @@ const tests = {
     assertEq(() => log + "", "start,extends,M1,M2,G1,G2,S1,S2,A1,A2,m1,m2,g1,g2,s1,s2,a1,a2,F1,F2,f1,f2,c1,c2,M3,M4,M5,M6,G3,G4,G5,G6,S3,S4,S5,S6,static:start,F7,F8,F3,F4,F5,F6,A7,A8,A3,A4,A5,A6,static:end,c3,c4,c5,c6,after,ctor:start,m3,m4,m5,m6,g3,g4,g5,g6,s3,s4,s5,s6,f7,f8,f3,f4,f5,f6,a7,a8,a3,a4,a5,a6,ctor:end,end");
   },
   "Initializer order (private members, class expression)": () => {
-    var _staticAccessor_dec, _accessor_dec, _staticSetter_dec, _setter_dec, _staticGetter_dec, _getter_dec, _staticField_dec, _field_dec, _staticMethod_dec, _method_dec, _a, _class_decorators, _init, _instances, method_fn, _static, _b, staticMethod_fn, _field, _staticField, getter_get, staticGetter_get, setter_set, staticSetter_set, _accessor, _c, accessor_get, accessor_set, _staticAccessor, _d, staticAccessor_get, staticAccessor_set;
+    var _staticAccessor_dec, _accessor_dec, _staticSetter_dec, _setter_dec, _staticGetter_dec, _getter_dec, _staticField_dec, _field_dec, _staticMethod_dec, _method_dec, _a, _Foo_decorators, _init, _Foo_instances, method_fn, _Foo_static, _b, staticMethod_fn, _field, _staticField, getter_get, staticGetter_get, setter_set, staticSetter_set, _accessor, _c, accessor_get, accessor_set, _staticAccessor, _d, staticAccessor_get, staticAccessor_set;
     const log = [];
     const classDec1 = (cls, ctxClass) => {
       log.push("c2");
@@ -4832,25 +5124,25 @@ const tests = {
       } };
     };
     log.push("start");
-    const Foo2 = (_init = [, , ,], _class_decorators = [classDec1, classDec2], _b = class extends (_a = (log.push("extends"), Object), _method_dec = [methodDec1, methodDec2], _staticMethod_dec = [staticMethodDec1, staticMethodDec2], _field_dec = [fieldDec1, fieldDec2], _staticField_dec = [staticFieldDec1, staticFieldDec2], _getter_dec = [getterDec1, getterDec2], _staticGetter_dec = [staticGetterDec1, staticGetterDec2], _setter_dec = [setterDec1, setterDec2], _staticSetter_dec = [staticSetterDec1, staticSetterDec2], _accessor_dec = [accessorDec1, accessorDec2], _staticAccessor_dec = [staticAccessorDec1, staticAccessorDec2], _a) {
+    const Foo2 = (_Foo_decorators = [classDec1, classDec2], _b = class extends (_a = (log.push("extends"), Object), _method_dec = [methodDec1, methodDec2], _staticMethod_dec = [staticMethodDec1, staticMethodDec2], _field_dec = [fieldDec1, fieldDec2], _staticField_dec = [staticFieldDec1, staticFieldDec2], _getter_dec = [getterDec1, getterDec2], _staticGetter_dec = [staticGetterDec1, staticGetterDec2], _setter_dec = [setterDec1, setterDec2], _staticSetter_dec = [staticSetterDec1, staticSetterDec2], _accessor_dec = [accessorDec1, accessorDec2], _staticAccessor_dec = [staticAccessorDec1, staticAccessorDec2], _a) {
       constructor() {
         log.push("ctor:start");
         super();
         __runInitializers(_init, 5, this);
-        __privateAdd(this, _instances);
-        __privateAdd(this, _field, __runInitializers(_init, 18)), __runInitializers(_init, 21, this);
-        __privateAdd(this, _accessor, __runInitializers(_init, 10)), __runInitializers(_init, 13, this);
+        __privateAdd(this, _Foo_instances);
+        __privateAdd(this, _field, __runInitializers(_init, 20, this)), __runInitializers(_init, 23, this);
+        __privateAdd(this, _accessor, __runInitializers(_init, 12, this)), __runInitializers(_init, 15, this);
         log.push("ctor:end");
       }
-    }, _instances = new WeakSet(), method_fn = function() {
-    }, _static = new WeakSet(), staticMethod_fn = function() {
+    }, _init = __decoratorStart(_a), _Foo_instances = new WeakSet(), method_fn = function() {
+    }, _Foo_static = new WeakSet(), staticMethod_fn = function() {
     }, _field = new WeakMap(), _staticField = new WeakMap(), getter_get = function() {
       return;
     }, staticGetter_get = function() {
       return;
     }, setter_set = function(x) {
     }, staticSetter_set = function(x) {
-    }, _accessor = new WeakMap(), _staticAccessor = new WeakMap(), staticMethod_fn = __decorateElement(_init, 25, "#staticMethod", _staticMethod_dec, _static, staticMethod_fn), staticGetter_get = __decorateElement(_init, 26, "#staticGetter", _staticGetter_dec, _static, staticGetter_get), staticSetter_set = __decorateElement(_init, 27, "#staticSetter", _staticSetter_dec, _static, staticSetter_set), _d = __decorateElement(_init, 28, "#staticAccessor", _staticAccessor_dec, _static, _staticAccessor), staticAccessor_get = _d.get, staticAccessor_set = _d.set, method_fn = __decorateElement(_init, 17, "#method", _method_dec, _instances, method_fn), getter_get = __decorateElement(_init, 18, "#getter", _getter_dec, _instances, getter_get), setter_set = __decorateElement(_init, 19, "#setter", _setter_dec, _instances, setter_set), _c = __decorateElement(_init, 20, "#accessor", _accessor_dec, _instances, _accessor), accessor_get = _c.get, accessor_set = _c.set, __decorateElement(_init, 29, "#staticField", _staticField_dec, _staticField), __decorateElement(_init, 21, "#field", _field_dec, _field), __privateAdd(_b, _static), _b = __decorateElement(_init, 0, "", _class_decorators, _b), __runInitializers(_init, 3, _b), log.push("static:start"), __privateAdd(_b, _staticField, __runInitializers(_init, 14)), __runInitializers(_init, 17, _b), __privateAdd(_b, _staticAccessor, __runInitializers(_init, 6)), __runInitializers(_init, 9, _b), log.push("static:end"), __runInitializers(_init, 1, _b), _b);
+    }, _accessor = new WeakMap(), _staticAccessor = new WeakMap(), staticMethod_fn = __decorateElement(_init, 25, "#staticMethod", _staticMethod_dec, _Foo_static, staticMethod_fn), staticGetter_get = __decorateElement(_init, 26, "#staticGetter", _staticGetter_dec, _Foo_static, staticGetter_get), staticSetter_set = __decorateElement(_init, 27, "#staticSetter", _staticSetter_dec, _Foo_static, staticSetter_set), _d = __decorateElement(_init, 28, "#staticAccessor", _staticAccessor_dec, _Foo_static, _staticAccessor), staticAccessor_get = _d.get, staticAccessor_set = _d.set, method_fn = __decorateElement(_init, 17, "#method", _method_dec, _Foo_instances, method_fn), getter_get = __decorateElement(_init, 18, "#getter", _getter_dec, _Foo_instances, getter_get), setter_set = __decorateElement(_init, 19, "#setter", _setter_dec, _Foo_instances, setter_set), _c = __decorateElement(_init, 20, "#accessor", _accessor_dec, _Foo_instances, _accessor), accessor_get = _c.get, accessor_set = _c.set, __decorateElement(_init, 29, "#staticField", _staticField_dec, _staticField), __decorateElement(_init, 21, "#field", _field_dec, _field), __privateAdd(_b, _Foo_static), _b = __decorateElement(_init, 0, "Foo", _Foo_decorators, _b), __runInitializers(_init, 3, _b), log.push("static:start"), __privateAdd(_b, _staticField, __runInitializers(_init, 16, _b)), __runInitializers(_init, 19, _b), __privateAdd(_b, _staticAccessor, __runInitializers(_init, 8, _b)), __runInitializers(_init, 11, _b), log.push("static:end"), __runInitializers(_init, 1, _b), _b);
     log.push("after");
     new Foo2();
     log.push("end");

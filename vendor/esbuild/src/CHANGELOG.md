@@ -1,5 +1,210 @@
 # Changelog
 
+## 0.21.4
+
+* Update support for import assertions and import attributes in node ([#3778](https://github.com/evanw/esbuild/issues/3778))
+
+    Import assertions (the `assert` keyword) have been removed from node starting in v22.0.0. So esbuild will now strip them and generate a warning with `--target=node22` or above:
+
+    ```
+    ▲ [WARNING] The "assert" keyword is not supported in the configured target environment ("node22") [assert-to-with]
+
+        example.mjs:1:40:
+          1 │ import json from "esbuild/package.json" assert { type: "json" }
+            │                                         ~~~~~~
+            ╵                                         with
+
+      Did you mean to use "with" instead of "assert"?
+    ```
+
+    Import attributes (the `with` keyword) have been backported to node 18 starting in v18.20.0. So esbuild will no longer strip them with `--target=node18.N` if `N` is 20 or greater.
+
+* Fix `for await` transform when a label is present
+
+    This release fixes a bug where the `for await` transform, which wraps the loop in a `try` statement, previously failed to also move the loop's label into the `try` statement. This bug only affects code that uses both of these features in combination. Here's an example of some affected code:
+
+    ```js
+    // Original code
+    async function test() {
+      outer: for await (const x of [Promise.resolve([0, 1])]) {
+        for (const y of x) if (y) break outer
+        throw 'fail'
+      }
+    }
+
+    // Old output (with --target=es6)
+    function test() {
+      return __async(this, null, function* () {
+        outer: try {
+          for (var iter = __forAwait([Promise.resolve([0, 1])]), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
+            const x = temp.value;
+            for (const y of x) if (y) break outer;
+            throw "fail";
+          }
+        } catch (temp) {
+          error = [temp];
+        } finally {
+          try {
+            more && (temp = iter.return) && (yield temp.call(iter));
+          } finally {
+            if (error)
+              throw error[0];
+          }
+        }
+      });
+    }
+
+    // New output (with --target=es6)
+    function test() {
+      return __async(this, null, function* () {
+        try {
+          outer: for (var iter = __forAwait([Promise.resolve([0, 1])]), more, temp, error; more = !(temp = yield iter.next()).done; more = false) {
+            const x = temp.value;
+            for (const y of x) if (y) break outer;
+            throw "fail";
+          }
+        } catch (temp) {
+          error = [temp];
+        } finally {
+          try {
+            more && (temp = iter.return) && (yield temp.call(iter));
+          } finally {
+            if (error)
+              throw error[0];
+          }
+        }
+      });
+    }
+    ```
+
+* Do additional constant folding after cross-module enum inlining ([#3416](https://github.com/evanw/esbuild/issues/3416), [#3425](https://github.com/evanw/esbuild/issues/3425))
+
+    This release adds a few more cases where esbuild does constant folding after cross-module enum inlining.
+
+    ```ts
+    // Original code: enum.ts
+    export enum Platform {
+      WINDOWS = 'windows',
+      MACOS = 'macos',
+      LINUX = 'linux',
+    }
+
+    // Original code: main.ts
+    import { Platform } from './enum';
+    declare const PLATFORM: string;
+    export function logPlatform() {
+      if (PLATFORM == Platform.WINDOWS) console.log('Windows');
+      else if (PLATFORM == Platform.MACOS) console.log('macOS');
+      else if (PLATFORM == Platform.LINUX) console.log('Linux');
+      else console.log('Other');
+    }
+
+    // Old output (with --bundle '--define:PLATFORM="macos"' --minify --format=esm)
+    function n(){"windows"=="macos"?console.log("Windows"):"macos"=="macos"?console.log("macOS"):"linux"=="macos"?console.log("Linux"):console.log("Other")}export{n as logPlatform};
+
+    // New output (with --bundle '--define:PLATFORM="macos"' --minify --format=esm)
+    function n(){console.log("macOS")}export{n as logPlatform};
+    ```
+
+* Pass import attributes to on-resolve plugins ([#3384](https://github.com/evanw/esbuild/issues/3384), [#3639](https://github.com/evanw/esbuild/issues/3639), [#3646](https://github.com/evanw/esbuild/issues/3646))
+
+    With this release, on-resolve plugins will now have access to the import attributes on the import via the `with` property of the arguments object. This mirrors the `with` property of the arguments object that's already passed to on-load plugins. In addition, you can now pass `with` to the `resolve()` API call which will then forward that value on to all relevant plugins. Here's an example of a plugin that can now be written:
+
+    ```js
+    const examplePlugin = {
+      name: 'Example plugin',
+      setup(build) {
+        build.onResolve({ filter: /.*/ }, args => {
+          if (args.with.type === 'external')
+            return { external: true }
+        })
+      }
+    }
+
+    require('esbuild').build({
+      stdin: {
+        contents: `
+          import foo from "./foo" with { type: "external" }
+          foo()
+        `,
+      },
+      bundle: true,
+      format: 'esm',
+      write: false,
+      plugins: [examplePlugin],
+    }).then(result => {
+      console.log(result.outputFiles[0].text)
+    })
+    ```
+
+* Formatting support for the `@position-try` rule ([#3773](https://github.com/evanw/esbuild/issues/3773))
+
+    Chrome shipped this new CSS at-rule in version 125 as part of the [CSS anchor positioning API](https://developer.chrome.com/blog/anchor-positioning-api). With this release, esbuild now knows to expect a declaration list inside of the `@position-try` body block and will format it appropriately.
+
+* Always allow internal string import and export aliases ([#3343](https://github.com/evanw/esbuild/issues/3343))
+
+    Import and export names can be string literals in ES2022+. Previously esbuild forbid any usage of these aliases when the target was below ES2022. Starting with this release, esbuild will only forbid such usage when the alias would otherwise end up in output as a string literal. String literal aliases that are only used internally in the bundle and are "compiled away" are no longer errors. This makes it possible to use string literal aliases with esbuild's `inject` feature even when the target is earlier than ES2022.
+
+## 0.21.3
+
+* Implement the decorator metadata proposal ([#3760](https://github.com/evanw/esbuild/issues/3760))
+
+    This release implements the [decorator metadata proposal](https://github.com/tc39/proposal-decorator-metadata), which is a sub-proposal of the [decorators proposal](https://github.com/tc39/proposal-decorators). Microsoft shipped the decorators proposal in [TypeScript 5.0](https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/#decorators) and the decorator metadata proposal in [TypeScript 5.2](https://devblogs.microsoft.com/typescript/announcing-typescript-5-2/#decorator-metadata), so it's important that esbuild also supports both of these features. Here's a quick example:
+
+    ```js
+    // Shim the "Symbol.metadata" symbol
+    Symbol.metadata ??= Symbol('Symbol.metadata')
+
+    const track = (_, context) => {
+      (context.metadata.names ||= []).push(context.name)
+    }
+
+    class Foo {
+      @track foo = 1
+      @track bar = 2
+    }
+
+    // Prints ["foo", "bar"]
+    console.log(Foo[Symbol.metadata].names)
+    ```
+
+    **⚠️ WARNING ⚠️**
+
+    This proposal has been marked as "stage 3" which means "recommended for implementation". However, it's still a work in progress and isn't a part of JavaScript yet, so keep in mind that any code that uses JavaScript decorator metadata may need to be updated as the feature continues to evolve. If/when that happens, I will update esbuild's implementation to match the specification. I will not be supporting old versions of the specification.
+
+* Fix bundled decorators in derived classes ([#3768](https://github.com/evanw/esbuild/issues/3768))
+
+    In certain cases, bundling code that uses decorators in a derived class with a class body that references its own class name could previously generate code that crashes at run-time due to an incorrect variable name. This problem has been fixed. Here is an example of code that was compiled incorrectly before this fix:
+
+    ```js
+    class Foo extends Object {
+      @(x => x) foo() {
+        return Foo
+      }
+    }
+    console.log(new Foo().foo())
+    ```
+
+* Fix `tsconfig.json` files inside symlinked directories ([#3767](https://github.com/evanw/esbuild/issues/3767))
+
+    This release fixes an issue with a scenario involving a `tsconfig.json` file that `extends` another file from within a symlinked directory that uses the `paths` feature. In that case, the implicit `baseURL` value should be based on the real path (i.e. after expanding all symbolic links) instead of the original path. This was already done for other files that esbuild resolves but was not yet done for `tsconfig.json` because it's special-cased (the regular path resolver can't be used because the information inside `tsconfig.json` is involved in path resolution). Note that this fix no longer applies if the `--preserve-symlinks` setting is enabled.
+
+## 0.21.2
+
+* Correct `this` in field and accessor decorators ([#3761](https://github.com/evanw/esbuild/issues/3761))
+
+    This release changes the value of `this` in initializers for class field and accessor decorators from the module-level `this` value to the appropriate `this` value for the decorated element (either the class or the instance). It was previously incorrect due to lack of test coverage. Here's an example of a decorator that doesn't work without this change:
+
+    ```js
+    const dec = () => function() { this.bar = true }
+    class Foo { @dec static foo }
+    console.log(Foo.bar) // Should be "true"
+    ```
+
+* Allow `es2023` as a target environment ([#3762](https://github.com/evanw/esbuild/issues/3762))
+
+    TypeScript recently [added `es2023`](https://github.com/microsoft/TypeScript/pull/58140) as a compilation target, so esbuild now supports this too. There is no difference between a target of `es2022` and `es2023` as far as esbuild is concerned since the 2023 edition of JavaScript doesn't introduce any new syntax features.
+
 ## 0.21.1
 
 * Fix a regression with `--keep-names` ([#3756](https://github.com/evanw/esbuild/issues/3756))

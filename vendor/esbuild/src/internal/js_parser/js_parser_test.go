@@ -2074,27 +2074,26 @@ func TestDecorators(t *testing.T) {
 
 	expectPrintedWithUnsupportedFeatures(t, compat.Decorators, "@dec class Foo {}",
 		`var _Foo_decorators, _init;
-_init = [, , ,];
 _Foo_decorators = [dec];
 class Foo {
 }
+_init = __decoratorStart(null);
 Foo = __decorateElement(_init, 0, "Foo", _Foo_decorators, Foo);
 __runInitializers(_init, 1, Foo);
 `)
 	expectPrintedWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec x }",
 		`var _x_dec, _init;
-_init = [, , ,];
 _x_dec = [dec];
 class Foo {
   constructor() {
-    __publicField(this, "x", __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+    __publicField(this, "x", __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
   }
 }
+_init = __decoratorStart(null);
 __decorateElement(_init, 5, "x", _x_dec, Foo);
 `)
 	expectPrintedWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec x() {} }",
 		`var _x_dec, _init;
-_init = [, , ,];
 _x_dec = [dec];
 class Foo {
   constructor() {
@@ -2103,49 +2102,50 @@ class Foo {
   x() {
   }
 }
+_init = __decoratorStart(null);
 __decorateElement(_init, 1, "x", _x_dec, Foo);
 `)
 	expectPrintedWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec accessor x }",
 		`var _x_dec, _init, _x;
-_init = [, , ,];
 _x_dec = [dec];
 class Foo {
   constructor() {
-    __privateAdd(this, _x, __runInitializers(_init, 6)), __runInitializers(_init, 9, this);
+    __privateAdd(this, _x, __runInitializers(_init, 8, this)), __runInitializers(_init, 11, this);
   }
 }
+_init = __decoratorStart(null);
 _x = new WeakMap();
 __decorateElement(_init, 4, "x", _x_dec, Foo, _x);
 `)
 	expectPrintedWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec static x }",
 		`var _x_dec, _init;
-_init = [, , ,];
 _x_dec = [dec];
 class Foo {
 }
+_init = __decoratorStart(null);
 __decorateElement(_init, 13, "x", _x_dec, Foo);
-__publicField(Foo, "x", __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo);
+__publicField(Foo, "x", __runInitializers(_init, 8, Foo)), __runInitializers(_init, 11, Foo);
 `)
 	expectPrintedWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec static x() {} }",
 		`var _x_dec, _init;
-_init = [, , ,];
 _x_dec = [dec];
 class Foo {
   static x() {
   }
 }
+_init = __decoratorStart(null);
 __decorateElement(_init, 9, "x", _x_dec, Foo);
 __runInitializers(_init, 3, Foo);
 `)
 	expectPrintedWithUnsupportedFeatures(t, compat.Decorators, "class Foo { @dec static accessor x }",
 		`var _x_dec, _init, _x;
-_init = [, , ,];
 _x_dec = [dec];
 class Foo {
 }
+_init = __decoratorStart(null);
 _x = new WeakMap();
 __decorateElement(_init, 12, "x", _x_dec, Foo, _x);
-__privateAdd(Foo, _x, __runInitializers(_init, 6)), __runInitializers(_init, 9, Foo);
+__privateAdd(Foo, _x, __runInitializers(_init, 8, Foo)), __runInitializers(_init, 11, Foo);
 `)
 
 	// Check ASI for "abstract"
@@ -3029,8 +3029,6 @@ func TestImport(t *testing.T) {
 		"<stdin>: ERROR: This import alias is invalid because it contains the unpaired Unicode surrogate U+D800\n")
 	expectParseError(t, "import {'\\uDC00' as x} from 'foo'",
 		"<stdin>: ERROR: This import alias is invalid because it contains the unpaired Unicode surrogate U+DC00\n")
-	expectParseErrorTarget(t, 2020, "import {'' as x} from 'foo'",
-		"<stdin>: ERROR: Using a string as a module namespace identifier name is not supported in the configured target environment\n")
 
 	// String import alias with "import * as"
 	expectParseError(t, "import * as '' from 'foo'", "<stdin>: ERROR: Expected identifier but found \"''\"\n")
@@ -3083,8 +3081,6 @@ func TestExport(t *testing.T) {
 		"<stdin>: ERROR: This export alias is invalid because it contains the unpaired Unicode surrogate U+D800\n")
 	expectParseError(t, "let x; export {x as '\\uDC00'}",
 		"<stdin>: ERROR: This export alias is invalid because it contains the unpaired Unicode surrogate U+DC00\n")
-	expectParseErrorTarget(t, 2020, "let x; export {x as ''}",
-		"<stdin>: ERROR: Using a string as a module namespace identifier name is not supported in the configured target environment\n")
 
 	// String import alias with "export {} from"
 	expectPrinted(t, "export {'' as x} from 'foo'", "export { \"\" as x } from \"foo\";\n")
@@ -3095,8 +3091,6 @@ func TestExport(t *testing.T) {
 		"<stdin>: ERROR: This export alias is invalid because it contains the unpaired Unicode surrogate U+D800\n")
 	expectParseError(t, "export {'\\uDC00' as x} from 'foo'",
 		"<stdin>: ERROR: This export alias is invalid because it contains the unpaired Unicode surrogate U+DC00\n")
-	expectParseErrorTarget(t, 2020, "export {'' as x} from 'foo'",
-		"<stdin>: ERROR: Using a string as a module namespace identifier name is not supported in the configured target environment\n")
 
 	// String export alias with "export {} from"
 	expectPrinted(t, "export {x as ''} from 'foo'", "export { x as \"\" } from \"foo\";\n")
@@ -3107,8 +3101,6 @@ func TestExport(t *testing.T) {
 		"<stdin>: ERROR: This export alias is invalid because it contains the unpaired Unicode surrogate U+D800\n")
 	expectParseError(t, "export {x as '\\uDC00'} from 'foo'",
 		"<stdin>: ERROR: This export alias is invalid because it contains the unpaired Unicode surrogate U+DC00\n")
-	expectParseErrorTarget(t, 2020, "export {x as ''} from 'foo'",
-		"<stdin>: ERROR: Using a string as a module namespace identifier name is not supported in the configured target environment\n")
 
 	// String import and export alias with "export {} from"
 	expectPrinted(t, "export {'x'} from 'foo'", "export { x } from \"foo\";\n")
@@ -3125,8 +3117,6 @@ func TestExport(t *testing.T) {
 		"<stdin>: ERROR: This export alias is invalid because it contains the unpaired Unicode surrogate U+D800\n")
 	expectParseError(t, "export * as '\\uDC00' from 'foo'",
 		"<stdin>: ERROR: This export alias is invalid because it contains the unpaired Unicode surrogate U+DC00\n")
-	expectParseErrorTarget(t, 2020, "export * as '' from 'foo'",
-		"<stdin>: ERROR: Using a string as a module namespace identifier name is not supported in the configured target environment\n")
 }
 
 func TestExportDuplicates(t *testing.T) {
@@ -6229,6 +6219,17 @@ func TestImportAttributes(t *testing.T) {
 	expectPrintedWithUnsupportedFeatures(t, compat.ImportAssertions|compat.ImportAttributes,
 		"import 'x' with {y: 'z'}; import('x', {with: {y: 'z'}})",
 		"import \"x\";\nimport(\"x\");\n")
+
+	// Test the migration warning
+	expectParseErrorWithUnsupportedFeatures(t, compat.ImportAssertions,
+		"import x from 'y' assert {type: 'json'}",
+		"<stdin>: WARNING: The \"assert\" keyword is not supported in the configured target environment\nNOTE: Did you mean to use \"with\" instead of \"assert\"?\n")
+	expectParseErrorWithUnsupportedFeatures(t, compat.ImportAssertions,
+		"export {default} from 'y' assert {type: 'json'}",
+		"<stdin>: WARNING: The \"assert\" keyword is not supported in the configured target environment\nNOTE: Did you mean to use \"with\" instead of \"assert\"?\n")
+	expectParseErrorWithUnsupportedFeatures(t, compat.ImportAssertions,
+		"import('y', {assert: {type: 'json'}})",
+		"<stdin>: WARNING: The \"assert\" keyword is not supported in the configured target environment\nNOTE: Did you mean to use \"with\" instead of \"assert\"?\n")
 }
 
 func TestES5(t *testing.T) {
