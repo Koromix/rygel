@@ -26,12 +26,6 @@
 #include <inttypes.h>
 #include <string.h>
 #include <stdarg.h>
-#if __has_include(<uchar.h>)
-    #include <uchar.h>
-#else
-    typedef uint16_t char16_t;
-    typedef uint32_t char32_t;
-#endif
 #ifdef _WIN32
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
@@ -1010,14 +1004,23 @@ EXPORT_FUNCTION int ReturnEnumValue(Enum1 e)
     return (int)e;
 }
 
-template<typename T> struct IntTraits {};
-template<> struct IntTraits<int> { static const char *GetPrimitive() { return "Int32"; } };
-template<> struct IntTraits<unsigned int> { static const char *GetPrimitive() { return "UInt32"; } };
-template<> struct IntTraits<int64_t> { static const char *GetPrimitive() { return "Int64"; } };
-template<> struct IntTraits<uint64_t> { static const char *GetPrimitive() { return "UInt64"; } };
+template<typename T>
+static const char *GetEnumPrimitive()
+{
+    using U = typename std::underlying_type<T>::type;
 
-EXPORT_FUNCTION const char *GetEnumPrimitive1() { return IntTraits<std::underlying_type<Enum1>::type>::GetPrimitive(); }
-EXPORT_FUNCTION const char *GetEnumPrimitive2() { return IntTraits<std::underlying_type<Enum2>::type>::GetPrimitive(); }
-EXPORT_FUNCTION const char *GetEnumPrimitive3() { return IntTraits<std::underlying_type<Enum3>::type>::GetPrimitive(); }
-EXPORT_FUNCTION const char *GetEnumPrimitive4() { return IntTraits<std::underlying_type<Enum4>::type>::GetPrimitive(); }
-EXPORT_FUNCTION const char *GetEnumPrimitive5() { return IntTraits<std::underlying_type<Enum5>::type>::GetPrimitive(); }
+    switch (sizeof(U)) {
+        case 1: return std::is_signed<U>::value ? "Int8" : "UInt8";
+        case 2: return std::is_signed<U>::value ? "Int16" : "UInt16";
+        case 4: return std::is_signed<U>::value ? "Int32" : "UInt32";
+        case 8: return std::is_signed<U>::value ? "Int64" : "UInt64";
+    }
+
+    return nullptr;
+}
+
+EXPORT_FUNCTION const char *GetEnumPrimitive1() { return GetEnumPrimitive<Enum1>(); }
+EXPORT_FUNCTION const char *GetEnumPrimitive2() { return GetEnumPrimitive<Enum2>(); }
+EXPORT_FUNCTION const char *GetEnumPrimitive3() { return GetEnumPrimitive<Enum3>(); }
+EXPORT_FUNCTION const char *GetEnumPrimitive4() { return GetEnumPrimitive<Enum4>(); }
+EXPORT_FUNCTION const char *GetEnumPrimitive5() { return GetEnumPrimitive<Enum5>(); }
