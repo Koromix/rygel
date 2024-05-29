@@ -45,7 +45,6 @@ let machines = null;
 let all_builds = false;
 
 let keyboard_layout = null;
-let accelerate = true;
 
 let ignore_machines = new Set;
 let ignore_builds = new Set;
@@ -119,8 +118,6 @@ async function main() {
                     throw new Error(`Missing value for ${arg}`);
 
                 keyboard_layout = value;
-            } else if ((command == test || command == start) && arg == '--no_accel') {
-                accelerate = false;
             } else if (arg[0] == '-') {
                 throw new Error(`Unexpected argument '${arg}'`);
             } else {
@@ -149,17 +146,14 @@ async function main() {
 
             machine.key = key;
             machine.started = false;
+            machine.qemu.accelerate = null;
 
-            if (machine.qemu != null) {
-                machine.qemu.accelerate = null;
-
-                if (accelerate && (machine.qemu.binary == 'qemu-system-x86_64' ||
-                                   machine.qemu.binary == 'qemu-system-i386')) {
-                    if (process.platform == 'linux') {
-                        machine.qemu.accelerate = 'kvm';
-                    } else if (process.platform == 'win32') {
-                        machine.qemu.accelerate = 'whpx';
-                    }
+            if (machine.qemu.binary == 'qemu-system-x86_64' ||
+                    machine.qemu.binary == 'qemu-system-i386') {
+                if (process.platform == 'linux') {
+                    machine.qemu.accelerate = 'kvm';
+                } else if (process.platform == 'win32') {
+                    machine.qemu.accelerate = 'whpx';
                 }
             }
         }
@@ -268,8 +262,6 @@ Commands:
 
 Options:
     -k, --keyboard <LAYOUT>      Set VNC keyboard layout
-
-        --no_accel               Disable QEMU acceleration
 `;
 
     console.log(help);
