@@ -125,7 +125,7 @@ async function main() {
                 throw new Error(`Unexpected argument '${arg}'`);
             } else {
                 if (arg.startsWith('__') || arg.match(/[\\/\.]/))
-                    throw new Error(`Machine name '${arg} is not valid`);
+                    throw new Error(`Build or machine pattern '${arg} is not valid`);
 
                 patterns.push(arg);
             }
