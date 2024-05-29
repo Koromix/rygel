@@ -1,0 +1,340 @@
+{
+    "linux_arm32": {
+        "title": "Linux ARM32",
+
+        "info": {
+            "arch": "arm32hf",
+            "machine": "debian_arm32",
+            "directory": "/home/debian/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "linux_arm64": {
+        "title": "Linux ARM64",
+
+        "info": {
+            "arch": "arm64",
+            "machine": "debian_arm64",
+            "directory": "/home/debian/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "linux_i386": {
+        "title": "Linux x86",
+
+        "info": {
+            "arch": "ia32",
+            "machine": "debian_i386",
+            "directory": "/home/debian/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "linux_x64": {
+        "title": "Linux x64",
+
+        "info": {
+            "arch": "x64",
+            "machine": "debian_x64",
+            "directory": "/home/debian/luigi",
+            "build": "CC=clang-17 CXX=clang++-17 node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "CC=clang-17 CXX=clang++-17 node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "linux_riscv64": {
+        "title": "Linux RISCV-64",
+
+        "info": {
+            "platform": "linux",
+            "arch": "riscv64hf64",
+            "machine": "debian_riscv64",
+            "directory": "/home/debian/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "freebsd_i386": {
+        "title": "FreeBSD x86",
+
+        "info": {
+            "arch": "ia32",
+            "machine": "freebsd_i386",
+            "directory": "/home/freebsd/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "freebsd_x64": {
+        "title": "FreeBSD x64",
+
+        "info": {
+            "arch": "x64",
+            "machine": "freebsd_x64",
+            "directory": "/home/freebsd/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "freebsd_arm64": {
+        "title": "FreeBSD ARM64",
+
+        "info": {
+            "arch": "arm64",
+            "machine": "freebsd_arm64",
+            "directory": "/home/freebsd/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "openbsd_i386": {
+        "title": "OpenBSD x86",
+
+        "info": {
+            "arch": "ia32",
+            "machine": "openbsd_i386",
+            "directory": "/home/openbsd/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "openbsd_x64": {
+        "title": "OpenBSD x64",
+
+        "info": {
+            "arch": "x64",
+            "machine": "openbsd_x64",
+            "directory": "/home/openbsd/luigi",
+            "build": "node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "node test/sync.js",
+                "Test Union": "node test/union.js",
+                "Test Async": "node test/async.js",
+                "Test Callbacks": "node test/callbacks.js",
+                "Test Raylib": "xvfb-run node test/raylib.js",
+                "Test SQLite": "node test/sqlite.js",
+                "Test POSIX": "node test/posix.js"
+            }
+        }
+    },
+
+    "windows_i386": {
+        "title": "Windows x86",
+
+        "info": {
+            "arch": "ia32",
+            "machine": "windows_x64",
+            "directory": "C:/Users/windows/Desktop/luigi_ia32",
+            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "C:\\Node32\\node32.cmd node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "C:\\Node32\\node32.cmd node test/sync.js",
+                "Test Union": "C:\\Node32\\node32.cmd node test/union.js",
+                "Test Async": "C:\\Node32\\node32.cmd node test/async.js",
+                "Test Callbacks": "C:\\Node32\\node32.cmd node test/callbacks.js",
+                "Test Raylib": "seatsh C:\\Node32\\node32.cmd node test/raylib.js",
+                "Test SQLite": "C:\\Node32\\node32.cmd node test/sqlite.js",
+                "Test Win32": {
+                    "command": "C:\\Node32\\node32.cmd node test/win32.js",
+                    "repeat": 8
+                }
+            }
+        }
+    },
+
+    "windows_x64": {
+        "title": "Windows x64",
+
+        "info": {
+            "arch": "x64",
+            "machine": "windows_x64",
+            "directory": "C:/Users/windows/Desktop/luigi_x64",
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "C:\\Node64\\node64.cmd node test/sync.js",
+                "Test Union": "C:\\Node64\\node64.cmd node test/union.js",
+                "Test Async": "C:\\Node64\\node64.cmd node test/async.js",
+                "Test Callbacks": "C:\\Node64\\node64.cmd node test/callbacks.js",
+                "Test Raylib": "seatsh C:\\Node64\\node64.cmd node test/raylib.js",
+                "Test SQLite": "C:\\Node64\\node64.cmd node test/sqlite.js",
+                "Test Win32": {
+                    "command": "C:\\Node64\\node64.cmd node test/win32.js",
+                    "repeat": 8
+                }
+            }
+        }
+    },
+
+    "windows_arm64": {
+        "title": "Windows ARM64",
+
+        "info": {
+            "arch": "arm64",
+            "machine": "windows_x64",
+            "directory": "C:/Users/windows/Desktop/luigi_arm64",
+            "build": "C:\\Node64\\node64.cmd node ../cnoke/cnoke.js -a arm64 -v 19.9.0"
+        }
+    },
+
+    "macos_x64": {
+        "title": "macOS x64",
+
+        "info": {
+            "arch": "x64",
+            "machine": "macos_x64",
+            "directory": "/Users/macos/luigi",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js"
+        },
+
+        "test": {
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -d test",
+            "commands": {
+                "Test Sync": "PATH=/usr/local/bin:/usr/bin:/bin node test/sync.js",
+                "Test Union": "PATH=/usr/local/bin:/usr/bin:/bin node test/union.js",
+                "Test Async": "PATH=/usr/local/bin:/usr/bin:/bin node test/async.js",
+                "Test Callbacks": "PATH=/usr/local/bin:/usr/bin:/bin node test/callbacks.js",
+                "Test SQLite": "PATH=/usr/local/bin:/usr/bin:/bin node test/sqlite.js"
+            }
+        }
+    },
+
+    "macos_arm64": {
+        "title": "macOS ARM64",
+
+        "info": {
+            "arch": "arm64",
+            "machine": "macos_x64",
+            "directory": "/Users/macos/luigi_arm64",
+            "build": "PATH=/usr/local/bin:/usr/bin:/bin SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX11.3.sdk node ../cnoke/cnoke.js -a arm64"
+        }
+    }
+}

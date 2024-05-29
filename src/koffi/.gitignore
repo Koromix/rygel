@@ -6,11 +6,7 @@ build
 node_modules
 
 /package-lock.json
-/qemu/*.zst
-/qemu/qemu/*
 /tools/*.zst
-/tools/qemu/*
-!/tools/qemu/.gitkeep
 /benchmark/atoi_cc
 /benchmark/atoi_cc.exe
 /benchmark/raylib_cc

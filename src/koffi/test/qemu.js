@@ -40,11 +40,15 @@ const tar = require('tar');
 let script_dir = null;
 let root_dir = null;
 
+let builds = null;
 let machines = null;
-let all_machines = false;
+let all_builds = false;
+
 let keyboard_layout = null;
 let accelerate = true;
-let ignore = new Set;
+
+let ignore_machines = new Set;
+let ignore_builds = new Set;
 
 let qemu_prefix = null;
 
@@ -135,13 +139,13 @@ async function main() {
         throw new Error('Missing ssh binary in PATH');
 
     // Load machine registry
-    let machines_map;
+    let known_machines;
     {
-        let json = fs.readFileSync('registry/machines.json', { encoding: 'utf-8' });
+        let json = fs.readFileSync('../../../deploy/qemu/machines.json', { encoding: 'utf-8' });
+        known_machines = JSON.parse(json);
 
-        machines_map = JSON.parse(json);
-        for (let key in machines_map) {
-            let machine = machines_map[key];
+        for (let key in known_machines) {
+            let machine = known_machines[key];
 
             machine.key = key;
             machine.started = false;
@@ -161,49 +165,80 @@ async function main() {
         }
     }
 
+    // Load build registy
+    let known_builds;
+    {
+        let json = fs.readFileSync('./qemu.json', { encoding: 'utf-8' });
+        known_builds = JSON.parse(json);
+
+        for (let key in known_builds) {
+            let build = known_builds[key];
+            let machine = known_machines[build.info.machine];
+
+            if (!known_machines.hasOwnProperty(build.info.machine))
+                throw new Error(`Unknown machine '${build.info.machine}' for build '${build.title}'`);
+
+            build.key = key;
+        }
+    }
+
+    // List matching builds and machines
     if (patterns.length) {
+        builds = new Set;
         machines = new Set;
 
         for (let pattern of patterns) {
             let re = minimatch.makeRe(pattern);
             let match = false;
 
-            for (let name in machines_map) {
-                let machine = machines_map[name];
+            for (let name in known_builds) {
+                let build = known_builds[name];
 
-                if (name.match(re) || machine.name.match(re)) {
+                if (name.match(re) || build.title.match(re)) {
+                    builds.add(name);
+                    machines.add(build.info.machine);
+
+                    match = true;
+                }
+            }
+
+            for (let name in known_machines) {
+                let machine = known_machines[name];
+
+                if (name.match(re) || machine.title.match(re)) {
+                    for (let key in known_builds) {
+                        let build = known_builds[key];
+
+                        if (build.info.machine == name)
+                            builds.add(key);
+                    }
                     machines.add(name);
+
                     match = true;
                 }
             }
 
             if (!match) {
-                console.log(`Pattern '${pattern}' does not match any machine`);
+                console.log(`Pattern '${pattern}' does not match any build or machine`);
                 process.exit(1);
             }
         }
     } else {
-        machines = new Set(Object.keys(machines_map));
+        builds = new Set(Object.keys(known_builds));
+        machines = new Set(Object.values(known_builds).map(build => build.info.machine));
 
-        if (!machines.size) {
-            console.error('Could not detect any machine');
+        if (!builds.size) {
+            console.error('Could not find any build');
             process.exit(1);
         }
     }
 
-    machines = Array.from(machines);
-    machines = machines.map(name => {
-        let machine = machines_map[name];
-        if (machine == null) {
-            machine = Object.values(machines_map).find(machine => machine.name == name);
-            if (machine == null)
-                throw new Error(`Could not find machine ${name}`);
-        }
-        return machine;
-    });
-    all_machines = (machines.length == Object.keys(machines_map).length);
+    builds = Object.values(known_builds).filter(build => builds.has(build.key));
+    machines = Object.values(known_machines).filter(machine => machines.has(machine.key));
+    all_builds = (builds.length == Object.keys(known_builds).length);
 
-    console.log('Machines:', machines.map(machine => machine.name).join(', '));
+    console.log('Builds:', builds.map(build => build.title).join(', '));
+    console.log('Machines:', machines.map(machine => machine.title).join(', '));
     console.log();
 
     try {
@@ -250,21 +285,15 @@ async function start(detach = true) {
 
     console.log('>> Starting up machines...');
     await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine))
+        if (ignore_machines.has(machine))
             return;
-        if (machine.qemu == null) {
-            ignore.add(machine);
-            missing++;
 
-            return;
-        }
-
-        let dirname = `qemu/${machine.key}`;
+        let dirname = `../../../deploy/qemu/${machine.key}`;
 
         if (!fs.existsSync(dirname)) {
             log(machine, 'Missing files', chalk.bold.gray('[ignore]'));
 
-            ignore.add(machine);
+            ignore_machines.add(machine);
             missing++;
 
             return;
@@ -278,7 +307,7 @@ async function start(detach = true) {
             if (version < machine.qemu.version) {
                 log(machine, 'Machine version mismatch', chalk.bold.gray('[ignore]'));
 
-                ignore.add(machine);
+                ignore_machines.add(machine);
                 success = false;
 
                 return;
@@ -297,7 +326,7 @@ async function start(detach = true) {
         } catch (err) {
             log(machine, 'Start', chalk.bold.red('[error]'));
 
-            ignore.add(machine);
+            ignore_machines.add(machine);
             success = false;
         }
     }));
@@ -317,39 +346,42 @@ async function build() {
 
     console.log('>> Version:', version);
     console.log('>> Checking build archives...');
-    for (let machine of machines) {
-        let needed = false;
+    {
+        let needed_machines = new Set;
 
-        for (let suite in machine.builds) {
-            let build = machine.builds[suite];
+        for (let build of builds) {
+            let machine = machines.find(machine => machine.key == build.info.machine);
 
-            let binary_filename = root_dir + `/src/koffi/build/qemu/${version}/${machine.platform}_${build.arch}/koffi.node`;
+            let binary_name = machine.platform + '_' + build.info.arch;
+            let binary_filename = root_dir + `/src/koffi/build/qemu/${version}/${binary_name}/koffi.node`;
 
             if (fs.existsSync(binary_filename)) {
-                log(machine, `${suite} > Status`, chalk.bold.green(`[ok]`));
-            } else if (machine.qemu == null) {
-                log(machine, `${suite} > Status`, chalk.bold.red(`[manual]`));
-                needed = true;
+                log(machine, `${build.title} > Status`, chalk.bold.green(`[ok]`));
+                ignore_builds.add(build);
             } else {
-                log(machine, `${suite} > Status`, chalk.bold.red(`[missing]`));
-                needed = true;
+                log(machine, `${build.title} > Status`, chalk.bold.red(`[missing]`));
+                needed_machines.add(machine);
             }
         }
 
-        if (!needed)
-            ignore.add(machine);
+        for (let machine of machines) {
+            if (!needed_machines.has(machine))
+                ignore_machines.add(machine);
+        }
     }
 
-    let ready = ignore.size;
+    let ready_builds = ignore_builds.size;
+    let ready_machines = ignore_machines.size;
+
     let artifacts = [];
 
     // Run machine commands
     {
         let success = true;
 
-        if (ready < machines.length) {
+        if (ready_builds < builds.length) {
             success &= await start(false);
-            success &= await upload(snapshot_dir, machine => Object.values(machine.builds).map(build => build.directory));
+            success &= await upload(snapshot_dir);
 
             console.log('>> Run build commands...');
             await compile();
@@ -359,44 +391,46 @@ async function build() {
         {
             let build_dir = root_dir + '/src/koffi/build/qemu';
 
-            await Promise.all(machines.map(async machine => {
-                let copied = true;
+            await Promise.all(builds.map(async build => {
+                let machine = machines.find(machine => machine.key == build.info.machine);
 
-                await Promise.all(Object.keys(machine.builds).map(async suite => {
-                    let build = machine.builds[suite];
+                let binary_name = machine.platform + '_' + build.info.arch;
+                let src_dir = build.info.directory + `/src/koffi/build/koffi/${binary_name}`;
+                let dest_dir = build_dir + `/${version}/${binary_name}`;
 
-                    let src_dir = build.directory + `/src/koffi/build/koffi/${machine.platform}_${build.arch}`;
-                    let dest_dir = build_dir + `/${version}/${machine.platform}_${build.arch}`;
+                artifacts.push(dest_dir);
 
-                    artifacts.push(dest_dir);
+                if (ignore_machines.has(machine))
+                    return;
+                if (ignore_builds.has(build))
+                    return;
 
-                    if (ignore.has(machine))
-                        return;
+                unlink_recursive(dest_dir);
+                fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
 
-                    unlink_recursive(dest_dir);
-                    fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
+                try {
+                    await machine.ssh.getDirectory(dest_dir, src_dir, {
+                        recursive: false,
+                        concurrency: 4,
+                        validate: filename => !path.basename(filename).match(/^v[0-9]+/)
+                    });
 
-                    try {
-                        await machine.ssh.getDirectory(dest_dir, src_dir, {
-                            recursive: false,
-                            concurrency: 4,
-                            validate: filename => !path.basename(filename).match(/^v[0-9]+/)
-                        });
-                    } catch (err) {
-                        ignore.add(machine);
-                        success = false;
-                        copied = false;
-                    }
-                }));
+                    log(machine, `${build.title} > Download`, chalk.bold.green('[ok]'));
+                } catch (err) {
+                    console.error(dest_dir, src_dir);
 
-                let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
-                log(machine, 'Pack', status);
+                    log(machine, `${build.title} > Download`, chalk.bold.red('[error]'));
+
+                    ignore_builds.add(machine);
+                    success = false;
+                }
             }));
         }
 
         if (machines.some(machine => machine.started))
             success &= await stop(false);
-        success &= (ignore.size == ready);
+        success &= (ignore_builds.size == ready_builds);
+        success &= (ignore_machines.size == ready_machines);
 
         if (!success) {
             console.log('');
@@ -405,8 +439,8 @@ async function build() {
         }
     }
 
-    if (!all_machines) {
-        console.log('>> Run for all machines to generate package!');
+    if (!all_builds) {
+        console.log('>> Run for all builds to generate package!');
         return null;
     }
 
@@ -498,44 +532,44 @@ async function build() {
 async function compile(debug = false) {
     let success = true;
 
-    await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine))
+    await Promise.all(builds.map(async build => {
+        let machine = machines.find(machine => machine.key == build.info.machine);
+
+        if (ignore_builds.has(machine))
+            return;
+        if (ignore_machines.has(machine))
             return;
 
-        await Promise.all(Object.keys(machine.builds).map(async suite => {
-            let build = machine.builds[suite];
+        let cmd = build.info.build + (debug ? ' --debug' : ' --config release');
+        let cwd = build.info.directory + '/src/koffi';
 
-            let cmd = build.build + (debug ? ' --debug' : ' --config release');
-            let cwd = build.directory + '/src/koffi';
+        let start = process.hrtime.bigint();
+        let ret = await exec_remote(machine, cmd, cwd);
+        let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
-            let start = process.hrtime.bigint();
-            let ret = await exec_remote(machine, cmd, cwd);
-            let time = Number((process.hrtime.bigint() - start) / 1000000n);
+        if (ret.code == 0) {
+            log(machine, `${build.title} > Build`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+        } else {
+            log(machine, `${build.title} > Build`, chalk.bold.red('[error]'));
 
-            if (ret.code == 0) {
-                log(machine, `${suite} > Build`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
-            } else {
-                log(machine, `${suite} > Build`, chalk.bold.red('[error]'));
+            if (ret.stdout || ret.stderr)
+                console.error('');
 
-                if (ret.stdout || ret.stderr)
-                    console.error('');
-
-                let align = log.align + 9;
-                if (ret.stdout) {
-                    let str = ' '.repeat(align) + 'Standard output:\n' +
-                              chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
-                }
-                if (ret.stderr) {
-                    let str = ' '.repeat(align) + 'Standard error:\n' +
-                              chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
-                }
-
-                ignore.add(machine);
-                success = false;
+            let align = log.align + 9;
+            if (ret.stdout) {
+                let str = ' '.repeat(align) + 'Standard output:\n' +
+                          chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                console.error(str);
             }
-        }));
+            if (ret.stderr) {
+                let str = ' '.repeat(align) + 'Standard error:\n' +
+                          chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                console.error(str);
+            }
+
+            ignore_builds.add(build);
+            success = false;
+        }
     }));
 
     return success;
@@ -579,43 +613,43 @@ function snapshot() {
     return snapshot_dir;
 }
 
-async function upload(snapshot_dir, func) {
+async function upload(snapshot_dir) {
     let success = true;
 
     console.log('>> Upload source code...');
-    await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine))
+    await Promise.all(builds.map(async build => {
+        let machine = machines.find(machine => machine.key == build.info.machine);
+
+        if (ignore_builds.has(build))
+            return;
+        if (ignore_machines.has(machine))
             return;
 
-        let copied = true;
-
-        for (let directory of func(machine)) {
-            for (let i = 0; i < 10; i++) {
-                try {
-                    await machine.ssh.exec('rm', ['-rf', directory]);
-                    break;
-                } catch (err) {
-                    // Fails often on Windows (busy directory or whatever), but rarely a problem
-
-                    await wait(1000);
-                    continue;
-                }
-            }
-
+        for (let i = 0; i < 10; i++) {
             try {
-                await machine.ssh.putDirectory(snapshot_dir, directory, {
-                    recursive: true,
-                    concurrency: (process.platform != 'win32') ? 4 : 1
-                });
+                await machine.ssh.exec('rm', ['-rf', build.info.directory]);
+                break;
             } catch (err) {
-                ignore.add(machine);
-                success = false;
-                copied = false;
+                // Fails often on Windows (busy directory or whatever), but rarely a problem
+
+                await wait(1000);
+                continue;
             }
         }
 
-        let status = copied ? chalk.bold.green('[ok]') : chalk.bold.red('[error]');
-        log(machine, 'Upload', status);
+        try {
+            await machine.ssh.putDirectory(snapshot_dir, build.info.directory, {
+                recursive: true,
+                concurrency: (process.platform != 'win32') ? 4 : 1
+            });
+
+            log(machine, `${build.title} > Upload`, chalk.bold.green('[ok]'));
+        } catch (err) {
+            log(machine, `${build.title} > Upload`, chalk.bold.red('[error]'));
+
+            ignore_builds.add(build);
+            success = false;
+        }
     }));
 
     return success;
@@ -632,73 +666,80 @@ async function test(debug = false) {
     let success = true;
 
     success &= await start(false);
-    success &= await upload(snapshot_dir, machine => Object.values(machine.builds).map(build => build.directory));
+    success &= await upload(snapshot_dir);
 
     // Errors beyond here are actual failures
-    let ignored = ignore.size;
+    let ignored_builds = ignore_builds.size;
+    let ignored_machines = ignore_machines.size;
 
     console.log('>> Run build commands...');
     await compile(debug);
 
     console.log('>> Run test commands...');
-    await Promise.all(machines.map(async machine => {
-        if (ignore.has(machine))
+    await Promise.all(builds.map(async build => {
+        if (build.test == null)
             return;
 
-        await Promise.all(Object.keys(machine.tests).map(async suite => {
-            let test = machine.tests[suite];
-            let commands = {
-                'Build': test.build + (debug ? ' --debug' : ' --config release'),
-                ...test.commands
-            };
+        let machine = machines.find(machine => machine.key == build.info.machine);
 
-            for (let name in commands) {
-                let cmd = commands[name];
-                let cwd = test.directory + '/src/koffi';
+        if (ignore_builds.has(build))
+            return;
+        if (ignore_machines.has(machine))
+            return;
 
-                let start = process.hrtime.bigint();
-                let ret = await exec_remote(machine, cmd, cwd);
-                let time = Number((process.hrtime.bigint() - start) / 1000000n);
+        let commands = {
+            'Build tests': build.test.build + (debug ? ' --debug' : ' --config release'),
+            ...build.test.commands
+        };
 
-                if (ret.code === 0) {
-                    log(machine, `${suite} > ${name}`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
-                } else {
-                    log(machine, `${suite} > ${name}`, chalk.bold.red('[error]'));
+        for (let name in commands) {
+            let cmd = commands[name];
+            let cwd = build.info.directory + '/src/koffi';
 
-                    if (ret.stdout || ret.stderr)
-                        console.error('');
+            let start = process.hrtime.bigint();
+            let ret = await exec_remote(machine, cmd, cwd);
+            let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
-                    let align = log.align + 9;
-                    if (ret.stdout) {
-                        let str = ' '.repeat(align) + 'Standard output:\n' +
-                                  chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                        console.error(str);
-                    }
-                    if (ret.stderr) {
-                        let str = ' '.repeat(align) + 'Standard error:\n' +
-                                  chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                        console.error(str);
-                    }
+            if (ret.code === 0) {
+                log(machine, `${build.title} > ${name}`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+            } else {
+                log(machine, `${build.title} > ${name}`, chalk.bold.red('[error]'));
 
-                    success = false;
+                if (ret.stdout || ret.stderr)
+                    console.error('');
 
-                    if (name == 'Build')
-                        break;
+                let align = log.align + 9;
+                if (ret.stdout) {
+                    let str = ' '.repeat(align) + 'Standard output:\n' +
+                              chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                    console.error(str);
                 }
+                if (ret.stderr) {
+                    let str = ' '.repeat(align) + 'Standard error:\n' +
+                              chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                    console.error(str);
+                }
+
+                success = false;
+
+                if (name == 'Build')
+                    break;
             }
-        }));
+        }
     }));
 
     if (machines.some(machine => machine.started))
         success &= await stop(false);
 
     // Build failures need to register as errors
-    success &= (ignore.size == ignored);
+    success &= (ignore_builds.size == ignored_builds);
+    success &= (ignore_machines.size == ignored_machines);
 
     if (success) {
         console.log('>> Status: ' + chalk.bold.green('SUCCESS'));
-        if (ignore.size)
-            console.log('   (but some machines could not be tested)');
+
+        if (ignore_builds.size || ignore_machines.size)
+            console.log('   (but some tests could not be performed)');
     } else {
         console.log('>> Status: ' + chalk.bold.red('FAILED'));
     }
@@ -752,19 +793,22 @@ async function stop(all = true) {
 async function info() {
     check_qemu();
 
-    for (let machine of machines) {
-        if (machine.qemu == null)
-            continue;
+    console.log('>> Builds:');
+    for (let build of builds)
+        console.log(`  - ${build.title} (${build.key}) on ${build.info.machine}`);
+    console.log();
 
+    console.log('>> Machines:');
+    for (let machine of machines) {
         let binary = qemu_prefix + machine.qemu.binary + (process.platform == 'win32' ? '.exe' : '');
         let cmd = [binary, ...machine.qemu.arguments].map(v => String(v).match(/[^a-zA-Z0-9_\-=\:\.,]/) ? `"${v}"` : v).join(' ');
 
-        console.log(`>> ${machine.name} (${machine.key})`);
-        console.log(`  - Command-line: ${cmd}`);
-        console.log(`  - SSH port: ${machine.qemu.ssh_port}`);
-        console.log(`  - VNC port: ${machine.qemu.vnc_port}`);
-        console.log(`  - Username: ${machine.qemu.username}`);
-        console.log(`  - Password: ${machine.qemu.password}`);
+        console.log(`  - Machine: ${machine.title} (${machine.key})`);
+        console.log(`    * Command-line: ${cmd}`);
+        console.log(`    * SSH port: ${machine.qemu.ssh_port}`);
+        console.log(`    * VNC port: ${machine.qemu.vnc_port}`);
+        console.log(`    * Username: ${machine.qemu.username}`);
+        console.log(`    * Password: ${machine.qemu.password}`);
     }
 }
 
@@ -805,7 +849,7 @@ async function reset() {
         if (machine.qemu == null)
             return;
 
-        let dirname = `qemu/${machine.key}`;
+        let dirname = `../../../deploy/qemu/${machine.key}`;
         let disk = dirname + '/' + machine.qemu.disk;
 
         if (!fs.existsSync(dirname)) {
@@ -955,7 +999,7 @@ async function join(machine, tries) {
             break;
         } catch (err) {
             if (!--tries)
-                throw new Error(`Failed to connect to ${machine.name}`);
+                throw new Error(`Failed to connect to ${machine.title}`);
 
             // Try again... a few times
             await wait(10 * 1000);
@@ -971,14 +1015,14 @@ function wait(ms) {
 
 function log(machine, action, status) {
     if (log.align == null) {
-        let lengths = machines.map(machine => machine.name.length);
+        let lengths = machines.map(machine => machine.title.length);
         log.align = Math.max(...lengths);
     }
 
-    let align1 = Math.max(log.align - machine.name.length, 0);
+    let align1 = Math.max(log.align - machine.title.length, 0);
     let align2 = Math.max(34 - action.length, 0);
 
-    console.log(`     [${machine.name}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
+    console.log(`     [${machine.title}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
 }
 
 async function exec_remote(machine, cmd, cwd = null) {
