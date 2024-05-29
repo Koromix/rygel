@@ -1,0 +1,8 @@
+{
+  "name": "qemu",
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "minimatch": "^5.0.1",
+    "node-ssh": "^13.2.0"
+  }
+}
