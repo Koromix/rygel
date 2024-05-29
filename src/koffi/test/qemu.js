@@ -46,6 +46,7 @@ let all_builds = false;
 
 let keyboard_layout = null;
 
+let started_machines = new Set;
 let ignore_machines = new Set;
 let ignore_builds = new Set;
 
@@ -143,19 +144,7 @@ async function main() {
 
         for (let key in known_machines) {
             let machine = known_machines[key];
-
             machine.key = key;
-            machine.started = false;
-            machine.qemu.accelerate = null;
-
-            if (machine.qemu.binary == 'qemu-system-x86_64' ||
-                    machine.qemu.binary == 'qemu-system-i386') {
-                if (process.platform == 'linux') {
-                    machine.qemu.accelerate = 'kvm';
-                } else if (process.platform == 'win32') {
-                    machine.qemu.accelerate = 'whpx';
-                }
-            }
         }
     }
 
@@ -309,8 +298,10 @@ async function start(detach = true) {
         try {
             await boot(machine, dirname, detach);
 
-            if (machine.started) {
-                let action = `Start (${machine.qemu.accelerate || 'emulated'})`;
+            if (started_machines.has(machine)) {
+                let accelerator = get_machine_accelerator(machine);
+                let action = `Start (${accelerator ?? 'emulated'})`;
+
                 log(machine, action, chalk.bold.green('[ok]'));
             } else {
                 log(machine, 'Join', chalk.bold.green('[ok]'));
@@ -419,7 +410,7 @@ async function build() {
             }));
         }
 
-        if (machines.some(machine => machine.started))
+        if (started_machines.size)
             success &= await stop(false);
         success &= (ignore_builds.size == ready_builds);
         success &= (ignore_machines.size == ready_machines);
@@ -720,7 +711,7 @@ async function test(debug = false) {
         }
     }));
 
-    if (machines.some(machine => machine.started))
+    if (started_machines.size)
         success &= await stop(false);
 
     // Build failures need to register as errors
@@ -744,9 +735,7 @@ async function stop(all = true) {
 
     console.log('>> Sending shutdown commands...');
     await Promise.all(machines.map(async machine => {
-        if (machine.qemu == null)
-            return;
-        if (!machine.started && !all)
+        if (!started_machines.has(machine) && !all)
             return;
 
         if (machine.ssh == null) {
@@ -792,8 +781,8 @@ async function info() {
 
     console.log('>> Machines:');
     for (let machine of machines) {
-        let binary = qemu_prefix + machine.qemu.binary + (process.platform == 'win32' ? '.exe' : '');
-        let cmd = [binary, ...machine.qemu.arguments].map(v => String(v).match(/[^a-zA-Z0-9_\-=\:\.,]/) ? `"${v}"` : v).join(' ');
+        let [binary, args] = make_qemu_command(machine);
+        let cmd = [binary, ...args].map(v => String(v).match(/[^a-zA-Z0-9_\-=\:\.,]/) ? `"${v}"` : v).join(' ');
 
         console.log(`  - Machine: ${machine.title} (${machine.key})`);
         console.log(`    * Command-line: ${cmd}`);
@@ -838,9 +827,6 @@ async function reset() {
 
     console.log('>> Restoring snapshots...')
     await Promise.all(machines.map(machine => {
-        if (machine.qemu == null)
-            return;
-
         let dirname = `../../../deploy/qemu/${machine.key}`;
         let disk = dirname + '/' + machine.qemu.disk;
 
@@ -939,17 +925,9 @@ function unlink_recursive(path) {
 }
 
 async function boot(machine, dirname, detach) {
-    let args = machine.qemu.arguments.slice();
-
-    if (keyboard_layout != null)
-        args.push('-k', keyboard_layout);
-    if (machine.qemu.accelerate)
-        args.push('-accel', machine.qemu.accelerate);
-    // args.push('-display', 'none');
+    let [binary, args] = make_qemu_command(machine);
 
     try {
-        let binary = qemu_prefix + machine.qemu.binary + (process.platform == 'win32' ? '.exe' : '');
-
         let proc = spawn(binary, args, {
             cwd: dirname,
             detached: detach,
@@ -963,15 +941,14 @@ async function boot(machine, dirname, detach) {
             proc.on('error', reject);
             proc.on('exit', reject);
         });
-
         await join(machine, 30);
-        machine.started = true;
+
+        started_machines.add(machine);
     } catch (err) {
         if (typeof err != 'number')
             throw err;
 
         await join(machine, 2);
-        machine.started = false;
     }
 }
 
@@ -1015,6 +992,32 @@ function log(machine, action, status) {
     let align2 = Math.max(34 - action.length, 0);
 
     console.log(`     [${machine.title}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
+}
+
+function make_qemu_command(machine) {
+    let binary = qemu_prefix + machine.qemu.binary + (process.platform == 'win32' ? '.exe' : '');
+    let args = machine.qemu.arguments.slice();
+
+    let accelerator = get_machine_accelerator(machine);
+
+    if (keyboard_layout != null)
+        args.push('-k', keyboard_layout);
+    if (accelerator != null)
+        args.push('-accel', accelerator);
+
+    return [binary, args];
+}
+
+function get_machine_accelerator(machine) {
+    if (machine.qemu.binary == 'qemu-system-x86_64' ||
+            machine.qemu.binary == 'qemu-system-i386') {
+        switch (process.platform) {
+            case 'linux': return 'kvm';
+            case 'win32': return 'whpx';
+        }
+    }
+
+    return null;
 }
 
 async function exec_remote(machine, cmd, cwd = null) {
