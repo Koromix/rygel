@@ -769,6 +769,9 @@ async function info() {
 }
 
 async function ssh() {
+    if (spawnSync('sshpass', ['-V']).status !== 0)
+        throw new Error('Missing sshpass binary in PATH');
+
     if (machines.length != 1) {
         console.error('The ssh command can only be used with one machine');
         return false;
