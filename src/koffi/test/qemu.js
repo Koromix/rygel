@@ -28,10 +28,9 @@ const fs = require('fs');
 const path = require('path');
 const { spawnSync } = require('child_process');
 const esbuild = require('esbuild');
-const chalk = require('chalk');
-const minimatch = require('minimatch');
 const { DefaultCommands, parse_arguments, QemuRunner,
-        copy_recursive, unlink_recursive, make_path_filter, wait } = require('../../../deploy/qemu/qemu.js');
+        copy_recursive, unlink_recursive, make_path_filter,
+        minimatch, chalk, wait } = require('../../../deploy/qemu/qemu.js');
 
 const ValidCommands = {
     ...DefaultCommands,
@@ -188,10 +187,10 @@ async function build() {
             let binary_filename = root_dir + `/src/koffi/build/qemu/${version}/${binary_name}/koffi.node`;
 
             if (fs.existsSync(binary_filename)) {
-                runner.log(machine, `${build.title} > Status`, chalk.bold.green(`[ok]`));
+                runner.logSuccess(machine, `${build.title} > Status`);
                 ignore_builds.add(build);
             } else {
-                runner.log(machine, `${build.title} > Status`, chalk.bold.red(`[missing]`));
+                runner.logError(machine, `${build.title} > Status`, 'missing');
                 needed_machines.add(machine);
             }
         }
@@ -247,11 +246,9 @@ async function build() {
                         validate: filename => !path.basename(filename).match(/^v[0-9]+/)
                     });
 
-                    runner.log(machine, `${build.title} > Download`, chalk.bold.green('[ok]'));
+                    runner.logSuccess(machine, `${build.title} > Download`);
                 } catch (err) {
-                    console.error(dest_dir, src_dir);
-
-                    runner.log(machine, `${build.title} > Download`, chalk.bold.red('[error]'));
+                    runner.logError(machine, `${build.title} > Download`);
 
                     ignore_builds.add(machine);
                     success = false;
@@ -376,24 +373,10 @@ async function compile(debug = false) {
         let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
         if (ret.code == 0) {
-            runner.log(machine, `${build.title} > Build`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+            runner.logSuccess(machine, `${build.title} > Build`, (time / 1000).toFixed(2) + 's');
         } else {
-            runner.log(machine, `${build.title} > Build`, chalk.bold.red('[error]'));
-
-            if (ret.stdout || ret.stderr)
-                console.error('');
-
-            let align = runner.logAlign + 9;
-            if (ret.stdout) {
-                let str = ' '.repeat(align) + 'Standard output:\n' +
-                          chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                console.error(str);
-            }
-            if (ret.stderr) {
-                let str = ' '.repeat(align) + 'Standard error:\n' +
-                          chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                console.error(str);
-            }
+            runner.logError(machine, `${build.title} > Build`);
+            runner.logOutput(ret.stdout, ret.stderr);
 
             ignore_builds.add(build);
             success = false;
@@ -456,9 +439,9 @@ async function upload(snapshot_dir) {
                 concurrency: (process.platform != 'win32') ? 4 : 1
             });
 
-            runner.log(machine, `${build.title} > Upload`, chalk.bold.green('[ok]'));
+            runner.logSuccess(machine, `${build.title} > Upload`);
         } catch (err) {
-            runner.log(machine, `${build.title} > Upload`, chalk.bold.red('[error]'));
+            runner.logError(machine, `${build.title} > Upload`);
 
             ignore_builds.add(build);
             success = false;
@@ -514,24 +497,10 @@ async function test(debug = false) {
             let time = Number((process.hrtime.bigint() - start) / 1000000n);
 
             if (ret.code === 0) {
-                runner.log(machine, `${build.title} > ${name}`, chalk.bold.green(`[${(time / 1000).toFixed(2)}s]`));
+                runner.logSuccess(machine, `${build.title} > ${name}`, (time / 1000).toFixed(2) + 's');
             } else {
-                runner.log(machine, `${build.title} > ${name}`, chalk.bold.red('[error]'));
-
-                if (ret.stdout || ret.stderr)
-                    console.error('');
-
-                let align = runner.logAlign + 9;
-                if (ret.stdout) {
-                    let str = ' '.repeat(align) + 'Standard output:\n' +
-                              chalk.yellow(ret.stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
-                }
-                if (ret.stderr) {
-                    let str = ' '.repeat(align) + 'Standard error:\n' +
-                              chalk.yellow(ret.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
-                }
+                runner.logError(machine, `${build.title} > ${name}`);
+                runner.logOutput(ret.stdout, ret.stderr);
 
                 success = false;
 

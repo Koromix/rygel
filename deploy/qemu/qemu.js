@@ -145,8 +145,7 @@ function QemuRunner(registry = null) {
 
     Object.defineProperties(this, {
         machines: { get: () => machines, enumerable: true },
-        ignoreCount: { get: () => ignore_machines.size, enumerable: true },
-        logAlign: { get: () => log_align, enumerable: true }
+        ignoreCount: { get: () => ignore_machines.size, enumerable: true }
     });
 
     this.start = async function(detach = true) {
@@ -193,12 +192,12 @@ function QemuRunner(registry = null) {
                     let accelerator = get_machine_accelerator(machine);
                     let action = `Start (${accelerator ?? 'emulated'})`;
 
-                    self.log(machine, action, chalk.bold.green('[ok]'));
+                    self.logSuccess(machine, action);
                 } else {
-                    self.log(machine, 'Join', chalk.bold.green('[ok]'));
+                    self.logSuccess(machine, 'Join');
                 }
             } catch (err) {
-                self.log(machine, 'Start', chalk.bold.red('[error]'));
+                self.logError(machine, 'Start');
 
                 ignore_machines.add(machine);
                 success = false;
@@ -226,7 +225,7 @@ function QemuRunner(registry = null) {
                 try {
                     await join(machine, 2);
                 } catch (err) {
-                    self.log(machine, 'Already down', chalk.bold.green('[ok]'));
+                    self.logSuccess(machine, 'Already down');
                     return;
                 }
             }
@@ -245,9 +244,9 @@ function QemuRunner(registry = null) {
                     self.exec(machine, machine.qemu.shutdown);
                 });
 
-                self.log(machine, 'Stop', chalk.bold.green('[ok]'));
+                self.logSuccess(machine, 'Stop');
             } catch (err) {
-                self.log(machine, 'Stop', chalk.bold.red('[error]'));
+                self.logError(machine, 'Stop');
                 success = false;
             }
         }));
@@ -317,18 +316,10 @@ function QemuRunner(registry = null) {
             let proc = spawnSync(binary, ['snapshot', disk, '-a', 'base'], { encoding: 'utf-8' });
 
             if (proc.status === 0) {
-                self.log(machine, 'Reset disk', chalk.bold.green('[ok]'));
+                self.logSuccess(machine, 'Reset disk');;
             } else {
-                self.log(machine, 'Reset disk', chalk.bold.red('[error]'));
-
-                if (proc.stderr) {
-                    console.error('');
-
-                    let align = log_align + 9;
-                    let str = ' '.repeat(align) + 'Standard error:\n' +
-                              chalk.yellow(proc.stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
-                    console.error(str);
-                }
+                self.logError(machine, 'Reset disk');
+                self.logOutput(null, proc.stderr);
             }
         }));
     };
@@ -365,6 +356,34 @@ function QemuRunner(registry = null) {
         let align2 = Math.max(34 - action.length, 0);
 
         console.log(`     [${machine.title}]${' '.repeat(align1)}  ${action}${' '.repeat(align2)}  ${status}`);
+    };
+
+    this.logSuccess = function(machine, action, message = 'ok') {
+        self.log(machine, action, chalk.bold.green('[' + message + ']'));
+    };
+
+    this.logError = function(machine, action, message = 'error') {
+        self.log(machine, action, chalk.bold.red('[' + message + ']'));
+    };
+
+    this.logOutput = function(machine, stdout, stderr) {
+        if (!stdout && !stderr)
+            return;
+        console.error('');
+
+        let align = log_align + 9;
+
+        if (stdout) {
+            let str = ' '.repeat(align) + 'Standard output:\n' +
+                      chalk.yellow(stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+            console.error(str);
+        }
+
+        if (stderr) {
+            let str = ' '.repeat(align) + 'Standard error:\n' +
+                      chalk.yellow(stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+            console.error(str);
+        }
     };
 
     async function boot(machine, dirname, detach) {
@@ -652,9 +671,14 @@ function wait(ms) {
 module.exports = {
     DefaultCommands,
     parse_arguments,
+
     QemuRunner,
+
     copy_recursive,
     unlink_recursive,
     make_path_filter,
-    wait
+    wait,
+
+    minimatch,
+    chalk
 };
