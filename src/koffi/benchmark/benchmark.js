@@ -24,7 +24,6 @@
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const minimatch = require('minimatch');
 
 main();
 
@@ -52,8 +51,7 @@ function run(name, ref) {
     {
         let entries = fs.readdirSync(__dirname);
 
-        let pattern = name + '_*.js';
-        let re = minimatch.makeRe(pattern);
+        let re = new RegExp(name + '_[a-z0-9_]+\.js$');
 
         for (let entry of entries) {
             if (entry.match(re)) {

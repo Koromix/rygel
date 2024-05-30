@@ -169,7 +169,9 @@ async function main() {
 // Commands
 
 async function build() {
-    let dist_dir = script_dir + '/../build/dist';
+    let build_dir = root_dir + '/bin/Koffi';
+    let dist_dir = build_dir + '/package';
+
     let snapshot_dir = snapshot();
 
     let json = fs.readFileSync(root_dir + '/src/koffi/package.json', { encoding: 'utf-8' });
@@ -184,7 +186,7 @@ async function build() {
             let machine = runner.machine(build.info.machine);
 
             let binary_name = machine.platform + '_' + build.info.arch;
-            let binary_filename = root_dir + `/src/koffi/build/qemu/${version}/${binary_name}/koffi.node`;
+            let binary_filename = build_dir + `/qemu/${version}/${binary_name}/koffi.node`;
 
             if (fs.existsSync(binary_filename)) {
                 runner.logSuccess(machine, `${build.title} > Status`);
@@ -219,42 +221,38 @@ async function build() {
         }
 
         console.log('>> Get build artifacts');
-        {
-            let build_dir = root_dir + '/src/koffi/build/qemu';
+        await Promise.all(builds.map(async build => {
+            let machine = runner.machine(build.info.machine);
 
-            await Promise.all(builds.map(async build => {
-                let machine = runner.machine(build.info.machine);
+            let binary_name = machine.platform + '_' + build.info.arch;
+            let src_dir = build.info.directory + `/bin/Koffi/${binary_name}`;
+            let dest_dir = build_dir + `/qemu/${version}/${binary_name}`;
 
-                let binary_name = machine.platform + '_' + build.info.arch;
-                let src_dir = build.info.directory + `/src/koffi/build/koffi/${binary_name}`;
-                let dest_dir = build_dir + `/${version}/${binary_name}`;
+            artifacts.push(dest_dir);
 
-                artifacts.push(dest_dir);
+            if (runner.isIgnored(machine))
+                return;
+            if (ignore_builds.has(build))
+                return;
 
-                if (runner.isIgnored(machine))
-                    return;
-                if (ignore_builds.has(build))
-                    return;
+            unlink_recursive(dest_dir);
+            fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
 
-                unlink_recursive(dest_dir);
-                fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
+            try {
+                await machine.ssh.getDirectory(dest_dir, src_dir, {
+                    recursive: false,
+                    concurrency: 4,
+                    validate: filename => !path.basename(filename).match(/^v[0-9]+/)
+                });
 
-                try {
-                    await machine.ssh.getDirectory(dest_dir, src_dir, {
-                        recursive: false,
-                        concurrency: 4,
-                        validate: filename => !path.basename(filename).match(/^v[0-9]+/)
-                    });
+                runner.logSuccess(machine, `${build.title} > Download`);
+            } catch (err) {
+                runner.logError(machine, `${build.title} > Download`);
 
-                    runner.logSuccess(machine, `${build.title} > Download`);
-                } catch (err) {
-                    runner.logError(machine, `${build.title} > Download`);
-
-                    ignore_builds.add(machine);
-                    success = false;
-                }
-            }));
-        }
+                ignore_builds.add(machine);
+                success = false;
+            }
+        }));
 
         success &= await runner.stop(false);
         success &= (ignore_builds.size == ready_builds);
@@ -267,14 +265,9 @@ async function build() {
         }
     }
 
-    if (!all_builds) {
-        console.log('>> Run for all builds to generate package!');
-        return null;
-    }
-
     console.log('>> Prepare NPM package');
     {
-        let build_dir = dist_dir + '/build/koffi';
+        let binary_dir = dist_dir + '/build/koffi';
 
         unlink_recursive(dist_dir);
         fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });
@@ -296,10 +289,10 @@ async function build() {
             'vendor/node-api-headers',
             'web/koffi.dev'
         ]));
-        fs.mkdirSync(build_dir, { mode: 0o755, recursive: true });
+        fs.mkdirSync(binary_dir, { mode: 0o755, recursive: true });
 
         for (let artifact of artifacts) {
-            let dest_dir = build_dir + '/' + path.basename(artifact);
+            let dest_dir = binary_dir + '/' + path.basename(artifact);
 
             fs.mkdirSync(dest_dir, { mode: 0o755 });
             copy_recursive(artifact, dest_dir);
@@ -387,7 +380,7 @@ async function compile(debug = false) {
 }
 
 function snapshot() {
-    let snapshot_dir = script_dir + '/../build/snapshot';
+    let snapshot_dir = root_dir + '/bin/Koffi/snapshot';
 
     unlink_recursive(snapshot_dir);
     fs.mkdirSync(snapshot_dir, { mode: 0o755, recursive: true });

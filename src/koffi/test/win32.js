@@ -23,7 +23,9 @@
 
 const koffi = require('../../koffi');
 const assert = require('assert');
+const path = require('path');
 const util = require('util');
+const pkg = require('./package.json');
 
 const CallThroughFunc1 = koffi.proto('int __stdcall CallThroughFunc1(int)');
 const CallThroughFunc2 = koffi.proto('__stdcall', 'CallThroughFunc2', 'int', ['int']);
@@ -44,7 +46,7 @@ async function test() {
     // Test relative path because on Windows this uses a different code path
     process.chdir(__dirname);
 
-    let lib_filename = './build/win32.dll';
+    let lib_filename = pkg.cnoke.output + '/win32.dll';
     let lib = koffi.load(lib_filename);
 
     let kernel32 = koffi.load('kernel32.dll');

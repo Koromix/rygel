@@ -21,7 +21,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-const atoi = require('./build/atoi_napi.node');
+const pkg = require('./package.json');
+const atoi = require(pkg.cnoke.output + '/atoi_napi.node');
 const { performance } = require('perf_hooks');
 
 const strings = [

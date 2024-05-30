@@ -52,7 +52,8 @@ let native = null;
     let names = [
         `/build/koffi/${process.platform}_${arch}/koffi.node`,
         `/koffi/${process.platform}_${arch}/koffi.node`,
-        `/node_modules/koffi/build/koffi/${process.platform}_${arch}/koffi.node`
+        `/node_modules/koffi/build/koffi/${process.platform}_${arch}/koffi.node`,
+        `/../../bin/Koffi/${process.platform}_${arch}/koffi.node`
     ];
 
     for (let root of roots) {

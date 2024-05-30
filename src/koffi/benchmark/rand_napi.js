@@ -21,7 +21,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-const rand = require('./build/rand_napi.node');
+const pkg = require('./package.json');
+const rand = require(pkg.cnoke.output + '/rand_napi.node');
 const { performance } = require('perf_hooks');
 
 let sum = 0;

@@ -22,7 +22,9 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 const koffi = require('../../koffi');
+const path = require('path');
 const { performance } = require('perf_hooks');
+const pkg = require('./package.json');
 
 const Color = koffi.struct('Color', {
     r: 'uchar',
@@ -89,7 +91,7 @@ function main() {
             throw new Error('Time must be positive');
     }
 
-    let lib_filename = __dirname + '/build/raylib' + koffi.extension;
+    let lib_filename = path.join(__dirname, pkg.cnoke.output, 'raylib' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
     const InitWindow = lib.func('InitWindow', 'void', ['int', 'int', 'str']);

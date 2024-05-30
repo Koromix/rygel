@@ -23,7 +23,9 @@
 
 const koffi = require('../../koffi');
 const assert = require('assert');
+const path = require('path');
 const util = require('util');
+const pkg = require('./package.json');
 
 const CallThroughFunc1 = koffi.proto('int __stdcall CallThroughFunc1(int)');
 const CallThroughFunc2 = koffi.proto('__stdcall', 'CallThroughFunc2', 'int', ['int']);
@@ -41,13 +43,12 @@ async function main() {
 }
 
 async function test() {
-    // Test relative path because on Windows this uses a different code path
-    process.chdir(__dirname);
+    let root_dir = path.join(__dirname, pkg.cnoke.output);
 
-    let lib1 = koffi.load('./build/posix1.so', { global: true });
-    assert.throws(() => koffi.load('./build/posix2.so'));
-    let lib2 = koffi.load('./build/posix2.so', { lazy: true });
-    let lib3 = koffi.load('./build/posix3.so', { deep: true });
+    let lib1 = koffi.load(root_dir + '/posix1.so', { global: true });
+    assert.throws(() => koffi.load(root_dir + '/posix2.so'));
+    let lib2 = koffi.load(root_dir + '/posix2.so', { lazy: true });
+    let lib3 = koffi.load(root_dir + '/posix3.so', { deep: true });
 
     const SumInts = lib2.func('int SumInts(int a, int b)');
     const GetInt1 = lib1.func('int GetInt()');

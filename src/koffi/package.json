@@ -42,7 +42,7 @@
   },
   "cnoke": {
     "api": "../../vendor/node-api-headers",
-    "output": "build/koffi/{{ platform }}_{{ arch }}",
+    "output": "../../bin/Koffi/{{ platform }}_{{ arch }}",
     "node": 16,
     "napi": 8,
     "require": "./index.js"
