@@ -535,7 +535,7 @@ async function test(debug = false) {
 
                 success = false;
 
-                if (name == 'Build')
+                if (name == 'Build tests')
                     break;
             }
         }
