@@ -96,12 +96,14 @@ async function main() {
     }
 }
 
-function print_usage(binary = 'qemu.js', commands = DefaultCommands) {
-    let help = `Usage: node ${binary} <command> [options...]`;
+function print_usage(binary, commands) {
+    let help = `Usage: node ${binary} <command> [options...]
+
+Commands:`;
 
     for (let cmd in commands) {
         let align = Math.max(0, 28 - cmd.length);
-        help += `\n    ${cmd} ${' '.repeat(align)}${commands[keys]}`;
+        help += `\n    ${cmd} ${' '.repeat(align)}${commands[cmd]}`;
     }
     help = help.trim();
 
@@ -478,12 +480,12 @@ function QemuRunner(registry = null) {
 
 // Utility
 
-function parse_arguments(binary, args, commands = {}) {
+function parse_arguments(binary, args, commands) {
     let command = null;
     let patterns = [];
 
     if (args[0] == '--help') {
-        print_usage(binary);
+        print_usage(binary, commands);
         return;
     }
     if (args.length < 1 || args[0][0] == '-')
@@ -514,7 +516,7 @@ function parse_arguments(binary, args, commands = {}) {
         }
 
         if (arg == '--help') {
-            print_usage(binary);
+            print_usage(binary, commands);
             return;
         } else if (arg[0] == '-') {
             throw new Error(`Unexpected argument '${arg}'`);

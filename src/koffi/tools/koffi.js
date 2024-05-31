@@ -67,7 +67,7 @@ async function main() {
     // Some code assumes we are working from the script directory
     process.chdir(script_dir);
 
-    let config = parse_arguments('qemu.js', process.argv.slice(2), ValidCommands);
+    let config = parse_arguments('koffi.js', process.argv.slice(2), ValidCommands);
     if (config == null)
         return;
 
