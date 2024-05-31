@@ -36,6 +36,8 @@ package-lock.json
 /src/napka/tmp/*.css
 
 /deploy/docker/goupile/goupile
-/deploy/qemu/*/**
+/deploy/qemu/machines/**
 
 /vendor/spidermonkey/spidermonkey/
+
+!.gitkeep
