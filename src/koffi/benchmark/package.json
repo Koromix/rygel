@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "ffi-napi": "^4.0.3",
+    "raylib": "^0.14.0",
+    "ref-napi": "^3.0.3",
+    "ref-struct-di": "^1.1.1"
+  },
+  "cnoke": {
+    "output": "../../../bin/Koffi/benchmark"
+  }
+}
