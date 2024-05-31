@@ -22,12 +22,12 @@
 const { spawnSync } = require('child_process');
 const path = require('path');
 const { performance } = require('perf_hooks');
-const pkg = require('./package.json');
+const cnoke = require('./CNoke.json');
 
 main();
 
 function main() {
-    let filename = path.join(__dirname, pkg.cnoke.output, 'raylib_cc' + (process.platform == 'win32' ? '.exe' : ''));
+    let filename = path.join(__dirname, cnoke.output, 'raylib_cc' + (process.platform == 'win32' ? '.exe' : ''));
     let proc = spawnSync(filename, process.argv.slice(2), { stdio: 'inherit' });
 
     if (proc.status == null) {

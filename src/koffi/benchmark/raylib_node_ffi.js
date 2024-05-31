@@ -27,7 +27,7 @@ const struct = require('ref-struct-di')(ref);
 const koffi = require('../../koffi');
 const path = require('path');
 const { performance } = require('perf_hooks');
-const pkg = require('./package.json');
+const cnoke = require('./CNoke.json');
 
 const Color = struct({
     r: 'uchar',
@@ -107,7 +107,7 @@ function main() {
             throw new Error('Time must be positive');
     }
 
-    let lib_filename = path.join(__dirname, pkg.cnoke.output, 'raylib' + koffi.extension);
+    let lib_filename = path.join(__dirname, cnoke.output, 'raylib' + koffi.extension);
 
     const r = ffi.Library(lib_filename, {
         InitWindow: ['void', ['int', 'int', 'string']],

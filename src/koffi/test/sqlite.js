@@ -27,7 +27,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const pkg = require('./package.json');
+const cnoke = require('./CNoke.json');
 
 const sqlite3 = koffi.opaque('sqlite3');
 const sqlite3_stmt = koffi.opaque('sqlite3_stmt');
@@ -45,7 +45,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.join(__dirname, pkg.cnoke.output, 'sqlite3' + koffi.extension);
+    let lib_filename = path.join(__dirname, cnoke.output, 'sqlite3' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
     const sqlite3_open_v2 = lib.func('sqlite3_open_v2', 'int', ['str', koffi.out(koffi.pointer(sqlite3, 2)), 'int', 'str']);
