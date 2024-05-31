@@ -388,7 +388,7 @@ bool FindArduinoSdk(const char *compiler, Allocator *alloc, const char **out_ard
 #ifdef _WIN32
     {
         wchar_t buf_w[2048];
-        DWORD buf_w_len = RG_LEN(buf);
+        DWORD buf_w_len = RG_LEN(buf_w);
 
         bool found = !RegGetValueW(HKEY_LOCAL_MACHINE, L"Software\\Arduino", L"Install_Dir",
                                    RRF_RT_REG_SZ, nullptr, buf_w, &buf_w_len) ||
