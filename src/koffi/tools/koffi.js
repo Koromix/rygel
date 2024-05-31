@@ -81,7 +81,7 @@ async function main() {
     // Load build registy
     let known_builds;
     {
-        let json = fs.readFileSync('./qemu.json', { encoding: 'utf-8' });
+        let json = fs.readFileSync('./koffi.json', { encoding: 'utf-8' });
         known_builds = JSON.parse(json);
 
         for (let key in known_builds) {

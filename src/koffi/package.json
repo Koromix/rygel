@@ -25,10 +25,10 @@
   "main": "./index.js",
   "types": "./index.d.ts",
   "scripts": {
-    "test": "node tools/qemu.js test",
-    "prepack": "echo 'Use \"npm run prepare\" instead' && false",
-    "prepublishOnly": "echo 'Use \"npm run release\" instead' && false",
-    "release": "node tools/qemu.js publish"
+    "test": "node tools/koffi.js test",
+    "prepack": "echo 'Use \"npm run package\" instead' && false",
+    "prepublishOnly": "echo 'Use \"npm run package\" instead' && false",
+    "package": "node tools/koffi.js build"
   },
   "license": "MIT",
   "devDependencies": {

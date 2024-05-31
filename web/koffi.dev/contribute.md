@@ -83,7 +83,7 @@ And now you can run the tests with:
 
 ```sh
 cd src/koffi
-node test/qemu.js test # Several options are available, use --help
+node tools/koffi.js test # Several options are available, use --help
 ```
 
 And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.
@@ -91,34 +91,34 @@ And be patient, this can be pretty slow for emulated machines. The Linux machine
 By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:
 
 ```sh
-node test/qemu.js start # Start the machines
-node test/qemu.js test # Test (without shutting down)
-node test/qemu.js test # Test again
-node test/qemu.js stop # Stop everything
+node tools/koffi.js start # Start the machines
+node tools/koffi.js test # Test (without shutting down)
+node tools/koffi.js test # Test again
+node tools/koffi.js stop # Stop everything
 ```
 
 You can also restrict the test to a subset of machines:
 
 ```sh
 # Full test cycle
-node test/qemu.js test debian_x64 debian_i386
+node tools/koffi.js test debian_x64 debian_i386
 
 # Separate start, test, shutdown
-node test/qemu.js start debian_x64 debian_i386
-node test/qemu.js test debian_x64 debian_i386
-node test/qemu.js stop
+node tools/koffi.js start debian_x64 debian_i386
+node tools/koffi.js test debian_x64 debian_i386
+node tools/koffi.js stop
 ```
 
 Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:
 
 ```sh
-node test/qemu.js ssh debian_i386
+node tools/koffi.js ssh debian_i386
 ```
 
 Each machine is configured to run a VNC server available locally, which you can use to access the display, using KRDC or any other compatible viewer. Use the `info` command to get the VNC port.
 
 ```sh
-node test/qemu.js info debian_x64
+node tools/koffi.js info debian_x64
 ```
 
 ## Making a release
@@ -132,10 +132,11 @@ First, you must update the code in three steps:
 Once this is done, you can publish a new release with the following commands:
 
 ```sh
-node test/qemu.js test # If not done before
-node test/qemu.js build
+cd src/koffi
+node tools/koffi.js test # If not done before
+node tools/koffi.js build
 
-cd build/dist
+cd ../../bin/Koffi/package
 npm publish
 ```
 
