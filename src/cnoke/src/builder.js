@@ -80,6 +80,7 @@ function Builder(config = {}) {
             build_dir = project_dir + '/build';
         }
     }
+    build_dir = build_dir.replace(/\\/g, '/');
     work_dir = build_dir + `/v${runtime_version}_${arch}`;
 
     let cmake_bin = null;
