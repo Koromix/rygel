@@ -3,7 +3,7 @@
         "title": "Linux ARM32",
 
         "info": {
-            "arch": "arm32hf",
+            "arch": "armhf",
             "machine": "debian_arm32",
             "directory": "/home/debian/luigi",
             "build": "node ../cnoke/cnoke.js"
@@ -100,7 +100,7 @@
 
         "info": {
             "platform": "linux",
-            "arch": "riscv64hf64",
+            "arch": "riscv64d",
             "machine": "debian_riscv64",
             "directory": "/home/debian/luigi",
             "build": "node ../cnoke/cnoke.js"

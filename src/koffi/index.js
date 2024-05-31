@@ -50,10 +50,10 @@ try {
         case 'freebsd_arm64': { native = require('./build/koffi/freebsd_arm64/koffi.node'); } break;
         case 'freebsd_ia32': { native = require('./build/koffi/freebsd_ia32/koffi.node'); } break;
         case 'freebsd_x64': { native = require('./build/koffi/freebsd_x64/koffi.node'); } break;
-        case 'linux_arm32hf': { native = require('./build/koffi/linux_arm32hf/koffi.node'); } break;
+        case 'linux_armhf': { native = require('./build/koffi/linux_armhf/koffi.node'); } break;
         case 'linux_arm64': { native = require('./build/koffi/linux_arm64/koffi.node'); } break;
         case 'linux_ia32': { native = require('./build/koffi/linux_ia32/koffi.node'); } break;
-        case 'linux_riscv64hf64': { native = require('./build/koffi/linux_riscv64hf64/koffi.node'); } break;
+        case 'linux_riscv64d': { native = require('./build/koffi/linux_riscv64d/koffi.node'); } break;
         case 'linux_x64': { native = require('./build/koffi/linux_x64/koffi.node'); } break;
         case 'openbsd_ia32': { native = require('./build/koffi/openbsd_ia32/koffi.node'); } break;
         case 'openbsd_x64': { native = require('./build/koffi/openbsd_x64/koffi.node'); } break;

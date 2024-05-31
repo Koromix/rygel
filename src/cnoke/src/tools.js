@@ -239,17 +239,15 @@ function determine_arch() {
     if (arch == 'riscv32' || arch == 'riscv64') {
         let buf = read_file_header(process.execPath, 512);
         let header = decode_elf_header(buf);
-        let float_abi = (header.e_flags & 0x6) >> 1;
+        let float_abi = (header.e_flags & 0x6);
 
         switch (float_abi) {
-            case 0: { arch += 'sf'; } break;
-            case 1: { arch += 'hf32'; } break;
-            case 2: { arch += 'hf64'; } break;
-            case 3: { arch += 'hf128'; } break;
+            case 0: {} break;
+            case 2: { arch += 'f'; } break;
+            case 4: { arch += 'd'; } break;
+            case 6: { arch += 'q'; } break;
         }
     } else if (arch == 'arm') {
-        arch = 'arm32';
-
         let buf = read_file_header(process.execPath, 512);
         let header = decode_elf_header(buf);
 
