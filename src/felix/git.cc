@@ -13,6 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "git.hh"
+
 #ifdef _WIN32
     #include <io.h>
 #endif

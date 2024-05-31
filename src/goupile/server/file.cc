@@ -18,6 +18,10 @@
 #include "goupile.hh"
 #include "user.hh"
 
+#ifdef _WIN32
+    #include <io.h>
+#endif
+
 namespace RG {
 
 void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
