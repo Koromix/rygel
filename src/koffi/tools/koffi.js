@@ -207,7 +207,7 @@ async function build() {
         let success = true;
 
         if (ready_builds < builds.length) {
-            success &= await runner.start(false);
+            success &= await runner.start();
             success &= await upload(snapshot_dir);
 
             console.log('>> Run build commands...');
@@ -451,7 +451,7 @@ async function test(debug = false) {
 
     let success = true;
 
-    success &= await runner.start(false);
+    success &= await runner.start();
     success &= await upload(snapshot_dir);
 
     // Errors beyond here are actual failures

@@ -165,7 +165,7 @@ function QemuRunner(registry = null) {
         return ignore_machines.has(machine);
     };
 
-    this.start = async function(detach = true) {
+    this.start = async function() {
         let success = true;
         let missing = 0;
 
@@ -202,7 +202,7 @@ function QemuRunner(registry = null) {
             }
 
             try {
-                let started = await boot(machine, dirname, detach);
+                let started = await boot(machine, dirname);
 
                 if (started) {
                     let accelerator = get_machine_accelerator(machine);
@@ -467,17 +467,16 @@ function QemuRunner(registry = null) {
         }
     };
 
-    async function boot(machine, dirname, detach) {
+    async function boot(machine, dirname) {
         let [binary, args] = make_qemu_command(machine);
 
         try {
             let proc = spawn(binary, args, {
                 cwd: dirname,
-                detached: detach,
+                detached: true,
                 stdio: 'ignore'
             });
-            if (detach)
-                proc.unref();
+            proc.unref();
 
             await new Promise((resolve, reject) => {
                 proc.on('spawn', () => wait_delay(2 * 1000).then(resolve));
