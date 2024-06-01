@@ -255,7 +255,7 @@ async function build() {
 
         if (!success) {
             console.log('');
-            console.log('>> Status: ' + style_ansi('FAILED', '31;1'));
+            console.log('>> Status: ' + style_ansi('FAILED', 'red bold'));
             return null;
         }
     }
@@ -505,12 +505,12 @@ async function test(debug = false) {
     success &= (runner.ignoreCount == ignored_machines);
 
     if (success) {
-        console.log('>> Status: ' + style_ansi('SUCCESS', '32;1'));
+        console.log('>> Status: ' + style_ansi('SUCCESS', 'green bold'));
 
         if (ignore_builds.size)
             console.log('   (but some tests could not be performed)');
     } else {
-        console.log('>> Status: ' + style_ansi('FAILED', '31;1'));
+        console.log('>> Status: ' + style_ansi('FAILED', 'red bold'));
     }
 
     return success;

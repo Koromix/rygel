@@ -25,6 +25,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const tty = require('tty');
+const { style_ansi } = require('../../../deploy/qemu/qemu.js');
 
 main();
 
@@ -69,24 +70,15 @@ function run(title, name) {
             throw new Error(proc.stderr || proc.stdout);
 
         let time = Number((process.hrtime.bigint() - start) / 1000000n);
-        console.log(`>> Test ${title} ${style_ansi('[' + (time / 1000).toFixed(2) + 's]', '32;1')}`);
+        console.log(`>> Test ${title} ${style_ansi('[' + (time / 1000).toFixed(2) + 's]', 'green bold')}`);
 
         return true;
     } catch (err) {
-        console.log(`>> Test ${title} ${style_ansi('[error]', '31;1')}`);
+        console.log(`>> Test ${title} ${style_ansi('[error]', 'red bold')}`);
 
         let str = '\n' + style_ansi(err.message.replace(/^/gm, ' '.repeat(3)), '33');
         console.log(str);
 
         return false;
-    }
-}
-
-function style_ansi(text, ansi) {
-    if (tty.isatty(process.stdout.fd)) {
-        let str = `\x1b[${ansi}m${text}\x1b[0m`;
-        return str;
-    } else {
-        return text;
     }
 }

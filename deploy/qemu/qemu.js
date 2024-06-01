@@ -178,7 +178,7 @@ function QemuRunner(registry = null) {
             let dirname = `${__dirname}/machines/${machine.key}`;
 
             if (!fs.existsSync(dirname)) {
-                self.log(machine, 'Missing files', style_ansi('[ignore]', '30;1'));
+                self.log(machine, 'Missing files', style_ansi('[ignore]', 'gray bold'));
 
                 ignore_machines.add(machine);
                 missing++;
@@ -192,7 +192,7 @@ function QemuRunner(registry = null) {
                 let version = fs.existsSync(filename) ? parseInt(fs.readFileSync(filename).toString(), 10) : 0;
 
                 if (version < machine.qemu.version) {
-                    self.log(machine, 'Machine version mismatch', style_ansi('[ignore]', '30;1'));
+                    self.log(machine, 'Machine version mismatch', style_ansi('[ignore]', 'gray bold'));
 
                     ignore_machines.add(machine);
                     success = false;
@@ -326,7 +326,7 @@ function QemuRunner(registry = null) {
             let disk = dirname + '/' + machine.qemu.disk;
 
             if (!fs.existsSync(dirname)) {
-                self.log(machine, 'Missing files', style_ansi('[ignore]', '30;1'));
+                self.log(machine, 'Missing files', style_ansi('[ignore]', 'gray bold'));
                 return;
             }
 
@@ -440,11 +440,11 @@ function QemuRunner(registry = null) {
     };
 
     this.logSuccess = function(machine, action, message = 'ok') {
-        self.log(machine, action, style_ansi('[' + message + ']', '32;1'));
+        self.log(machine, action, style_ansi('[' + message + ']', 'green bold'));
     };
 
     this.logError = function(machine, action, message = 'error') {
-        self.log(machine, action, style_ansi('[' + message + ']', '31;1'));
+        self.log(machine, action, style_ansi('[' + message + ']', 'red bold'));
     };
 
     this.logOutput = function(machine, stdout, stderr) {
@@ -456,13 +456,13 @@ function QemuRunner(registry = null) {
 
         if (stdout) {
             let str = ' '.repeat(align) + 'Standard output:\n' +
-                      style_ansi(stdout.replace(/^/gm, ' '.repeat(align + 4)), '33') + '\n';
+                      style_ansi(stdout.replace(/^/gm, ' '.repeat(align + 4)), 'yellow') + '\n';
             console.error(str);
         }
 
         if (stderr) {
             let str = ' '.repeat(align) + 'Standard error:\n' +
-                      style_ansi(stderr.replace(/^/gm, ' '.repeat(align + 4)), 33) + '\n';
+                      style_ansi(stderr.replace(/^/gm, ' '.repeat(align + 4)), 'yellow') + '\n';
             console.error(str);
         }
     };
@@ -699,13 +699,47 @@ function make_wildcard_pattern(str) {
     return re;
 }
 
-function style_ansi(text, ansi) {
-    if (tty.isatty(process.stdout.fd)) {
-        let str = `\x1b[${ansi}m${text}\x1b[0m`;
-        return str;
-    } else {
+function style_ansi(text, styles = []) {
+    if (!tty.isatty(process.stdout.fd))
         return text;
+
+    if (typeof styles == 'string')
+        styles = styles.split(' ');
+
+    let ansi = [];
+
+    for (let style of styles) {
+        switch (style) {
+            case 'black': { ansi.push('30'); } break;
+            case 'red': { ansi.push('31'); } break;
+            case 'green': { ansi.push('32'); } break;
+            case 'yellow': { ansi.push('33'); } break;
+            case 'blue': { ansi.push('34'); } break;
+            case 'magenta': { ansi.push('35'); } break;
+            case 'cyan': { ansi.push('36'); } break;
+            case 'white': { ansi.push('37'); } break;
+
+            case 'gray':
+            case 'black+': { ansi.push('90'); } break;
+            case 'red+': { ansi.push('91'); } break;
+            case 'green+': { ansi.push('92'); } break;
+            case 'yellow+': { ansi.push('93'); } break;
+            case 'blue+': { ansi.push('94'); } break;
+            case 'magenta': { ansi.push('95'); } break;
+            case 'cyan+': { ansi.push('96'); } break;
+            case 'white+': { ansi.push('97'); } break;
+
+            case 'bold': { ansi.push('1'); } break;
+            case 'dim': { ansi.push('2'); } break;
+            case 'underline': { ansi.push('4'); } break;
+        }
     }
+
+    if (!ansi.length)
+        return text;
+
+    let str = `\x1b[${ansi.join(';')}m${text}\x1b[0m`;
+    return str;
 }
 
 function wait_delay(ms) {
