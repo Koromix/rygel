@@ -73,6 +73,7 @@ For example, if you want to run the tests on Debian ARM64, run the following com
 
 ```sh
 cd deploy/qemu/machines/
+
 wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
 sha256sum -c --ignore-missing sha256sum.txt
 ```
@@ -83,30 +84,19 @@ And now you can run the tests with:
 
 ```sh
 cd src/koffi
+
 node tools/koffi.js test # Several options are available, use --help
+node tools/koffi.js stop # Stop running machines
 ```
 
 And be patient, this can be pretty slow for emulated machines. The Linux machines have and use ccache to build Koffi, so subsequent build steps will get much more tolerable.
 
-By default, machines are started and stopped for each test. But you can start the machines ahead of time and run the tests multiple times instead:
-
-```sh
-node tools/koffi.js start # Start the machines
-node tools/koffi.js test # Test (without shutting down)
-node tools/koffi.js test # Test again
-node tools/koffi.js stop # Stop everything
-```
+Started machines remain up until you stop them. You can start them manually with `node tools/koffi.js start` if you prefer.
 
 You can also restrict the test to a subset of machines:
 
 ```sh
-# Full test cycle
 node tools/koffi.js test debian_x64 debian_i386
-
-# Separate start, test, shutdown
-node tools/koffi.js start debian_x64 debian_i386
-node tools/koffi.js test debian_x64 debian_i386
-node tools/koffi.js stop
 ```
 
 Finally, you can join a running machine with SSH with the following shortcut, if you need to do some debugging or any other manual procedure:
@@ -138,6 +128,8 @@ node tools/koffi.js build
 
 cd ../../bin/Koffi/package
 npm publish
+
+node tools/koffi.js stop
 ```
 
 Some platforms are emulated so this can take a few minutes until the pre-built binaries are ready. Go grab a cup of coffee, come back and execute the `npm publish` command!

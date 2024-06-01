@@ -248,7 +248,6 @@ async function build() {
             }
         }));
 
-        success &= await runner.stop(false);
         success &= (ignore_builds.size == ready_builds);
         success &= (runner.ignoreCount == ready_machines);
 
@@ -496,8 +495,6 @@ async function test(debug = false) {
             }
         }
     }));
-
-    success &= await runner.stop(false);
 
     // Build failures need to register as errors
     success &= (ignore_builds.size == ignored_builds);

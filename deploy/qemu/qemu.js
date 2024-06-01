@@ -111,7 +111,6 @@ function QemuRunner(registry = null) {
     let known_machines = null;
     let select_machines = false;
 
-    let started_machines = new Set;
     let ignore_machines = new Set;
     let ignore_builds = new Set;
 
@@ -181,9 +180,9 @@ function QemuRunner(registry = null) {
             }
 
             try {
-                await boot(machine, dirname, detach);
+                let started = await boot(machine, dirname, detach);
 
-                if (started_machines.has(machine)) {
+                if (started) {
                     let accelerator = get_machine_accelerator(machine);
                     let action = `Start (${accelerator ?? 'emulated'})`;
 
@@ -205,21 +204,16 @@ function QemuRunner(registry = null) {
         return success;
     };
 
-    this.stop = async function(all = true) {
+    this.stop = async function() {
         let machines = self.machines;
 
         if (!machines.length)
-            return true;
-        if (!started_machines.size && !all)
             return true;
 
         let success = true;
 
         console.log('>> Sending shutdown commands...');
         await Promise.all(machines.map(async machine => {
-            if (!started_machines.has(machine) && !all)
-                return;
-
             if (machine.ssh == null) {
                 try {
                     await join(machine, 2);
@@ -420,12 +414,14 @@ function QemuRunner(registry = null) {
             });
             await join(machine, 30);
 
-            started_machines.add(machine);
+            return true;
         } catch (err) {
             if (typeof err != 'number')
                 throw err;
 
             await join(machine, 2);
+
+            return false;
         }
     }
 
