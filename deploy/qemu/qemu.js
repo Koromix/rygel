@@ -113,6 +113,7 @@ function QemuRunner(registry = null) {
 
     let ignore_machines = new Set;
     let ignore_builds = new Set;
+    let connections = new WeakMap;
 
     let log_align = null;
 
@@ -142,6 +143,27 @@ function QemuRunner(registry = null) {
         machines: { get: () => all_machines.filter(machine => !ignore_machines.has(machine)), enumerable: true },
         ignoreCount: { get: () => ignore_machines.size, enumerable: true }
     });
+
+    this.select = function(machine) {
+        if (!select_machines) {
+            for (let machine of all_machines)
+                ignore_machines.add(machine);
+            select_machines = true;
+        }
+
+        machine = self.machine(machine);
+        ignore_machines.delete(machine);
+    };
+
+    this.ignore = function(machine) {
+        machine = self.machine(machine);
+        ignore_machines.add(machine);
+    };
+
+    this.isIgnored = function(machine) {
+        machine = self.machine(machine);
+        return ignore_machines.has(machine);
+    };
 
     this.start = async function(detach = true) {
         let success = true;
@@ -214,9 +236,11 @@ function QemuRunner(registry = null) {
 
         console.log('>> Sending shutdown commands...');
         await Promise.all(machines.map(async machine => {
-            if (machine.ssh == null) {
+            let ssh = connections.get(machine);
+
+            if (ssh == null) {
                 try {
-                    await join(machine, 2);
+                    ssh = await self.join(machine, 2);
                 } catch (err) {
                     self.logSuccess(machine, 'Already down');
                     return;
@@ -225,13 +249,8 @@ function QemuRunner(registry = null) {
 
             try {
                 await new Promise(async (resolve, reject) => {
-                    if (machine.ssh.connection == null) {
-                        reject();
-                        return;
-                    }
-
-                    machine.ssh.connection.on('close', resolve);
-                    machine.ssh.connection.on('end', resolve);
+                    ssh.connection.on('close', resolve);
+                    ssh.connection.on('end', resolve);
                     wait_delay(60000).then(() => { reject(new Error('Timeout')) });
 
                     self.exec(machine, machine.qemu.shutdown);
@@ -322,25 +341,78 @@ function QemuRunner(registry = null) {
         }));
     };
 
-    this.select = function(machine) {
-        if (!select_machines) {
-            for (let machine of all_machines)
-                ignore_machines.add(machine);
-            select_machines = true;
+    this.join = async function(machine, tries = 1) {
+        machine = self.machine(machine);
+
+        let ssh = connections.get(machine);
+
+        if (ssh == null) {
+            ssh = new NodeSSH;
+
+            while (tries) {
+                try {
+                    await ssh.connect({
+                        host: '127.0.0.1',
+                        port: machine.qemu.ssh_port,
+                        username: machine.qemu.username,
+                        password: machine.qemu.password,
+                        tryKeyboard: true
+                    });
+
+                    break;
+                } catch (err) {
+                    if (!--tries)
+                        throw new Error(`Failed to connect to ${machine.title}`);
+
+                    // Try again... a few times
+                    await wait_delay(10 * 1000);
+                }
+            }
+
+            ssh.connection.on('end', () => connections.delete(machine));
+            ssh.connection.on('close', () => connections.delete(machine));
+
+            connections.set(machine, ssh);
         }
 
-        machine = self.machine(machine);
-        ignore_machines.delete(machine);
-    }
-
-    this.ignore = function(machine) {
-        machine = self.machine(machine);
-        ignore_machines.add(machine);
+        return ssh;
     };
 
-    this.isIgnored = function(machine) {
+    this.exec = async function(machine, cmd, cwd = null) {
         machine = self.machine(machine);
-        return ignore_machines.has(machine);
+
+        if (typeof cmd == 'string') {
+            cmd = {
+                command: cmd,
+                repeat: 1
+            };
+        }
+
+        let ssh = await self.join(machine);
+
+        try {
+            let ret = { code: 0 };
+
+            if (machine.platform == 'win32') {
+                let cmd_line = cmd.command;
+
+                if (cwd != null) {
+                    cwd = cwd.replaceAll('/', '\\');
+                    cmd_line = `cd "${cwd}" && ${cmd_line}`;
+                }
+
+                for (let i = 0; ret.code === 0 && i < cmd.repeat; i++)
+                    ret = await ssh.execCommand(cmd_line);
+            } else {
+                for (let i = 0; ret.code === 0 && i < cmd.repeat; i++)
+                    ret = await ssh.execCommand(cmd.command, { cwd: cwd });
+            }
+
+            return ret;
+        } catch (err) {
+            console.log(err);
+            return err;
+        }
     };
 
     this.machine = function(key) {
@@ -412,79 +484,18 @@ function QemuRunner(registry = null) {
                 proc.on('error', reject);
                 proc.on('exit', reject);
             });
-            await join(machine, 30);
+            await self.join(machine, 30);
 
             return true;
         } catch (err) {
             if (typeof err != 'number')
                 throw err;
 
-            await join(machine, 2);
+            await self.join(machine, 2);
 
             return false;
         }
     }
-
-    async function join(machine, tries) {
-        let ssh = new NodeSSH;
-
-        while (tries) {
-            try {
-                await ssh.connect({
-                    host: '127.0.0.1',
-                    port: machine.qemu.ssh_port,
-                    username: machine.qemu.username,
-                    password: machine.qemu.password,
-                    tryKeyboard: true
-                });
-
-                break;
-            } catch (err) {
-                if (!--tries)
-                    throw new Error(`Failed to connect to ${machine.title}`);
-
-                // Try again... a few times
-                await wait_delay(10 * 1000);
-            }
-        }
-
-        machine.ssh = ssh;
-    }
-
-    this.exec = async function(machine, cmd, cwd = null) {
-        machine = self.machine(machine);
-
-        if (typeof cmd == 'string') {
-            cmd = {
-                command: cmd,
-                repeat: 1
-            };
-        }
-
-        try {
-            let ret = { code: 0 };
-
-            if (machine.platform == 'win32') {
-                let cmd_line = cmd.command;
-
-                if (cwd != null) {
-                    cwd = cwd.replaceAll('/', '\\');
-                    cmd_line = `cd "${cwd}" && ${cmd_line}`;
-                }
-
-                for (let i = 0; ret.code === 0 && i < cmd.repeat; i++)
-                    ret = await machine.ssh.execCommand(cmd_line);
-            } else {
-                for (let i = 0; ret.code === 0 && i < cmd.repeat; i++)
-                    ret = await machine.ssh.execCommand(cmd.command, { cwd: cwd });
-            }
-
-            return ret;
-        } catch (err) {
-            console.log(err);
-            return err;
-        }
-    };
 }
 
 // Utility

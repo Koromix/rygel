@@ -233,7 +233,9 @@ async function build() {
             fs.mkdirSync(dest_dir, { mode: 0o755, recursive: true });
 
             try {
-                await machine.ssh.getDirectory(dest_dir, src_dir, {
+                let ssh = await runner.join(machine);
+
+                await ssh.getDirectory(dest_dir, src_dir, {
                     recursive: false,
                     concurrency: 4,
                     validate: filename => !path.basename(filename).match(/^v[0-9]+/)
@@ -407,9 +409,11 @@ async function upload(snapshot_dir) {
         if (runner.isIgnored(machine))
             return;
 
+        let ssh = await runner.join(machine);
+
         for (let i = 0; i < 10; i++) {
             try {
-                await machine.ssh.exec('rm', ['-rf', build.info.directory]);
+                await ssh.exec('rm', ['-rf', build.info.directory]);
                 break;
             } catch (err) {
                 // Fails often on Windows (busy directory or whatever), but rarely a problem
@@ -420,7 +424,7 @@ async function upload(snapshot_dir) {
         }
 
         try {
-            await machine.ssh.putDirectory(snapshot_dir, build.info.directory, {
+            await ssh.putDirectory(snapshot_dir, build.info.directory, {
                 recursive: true,
                 concurrency: (process.platform != 'win32') ? 4 : 1
             });
