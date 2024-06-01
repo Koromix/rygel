@@ -48,7 +48,7 @@
     },
 
     "linux_i386": {
-        "title": "Linux x86",
+        "title": "Linux i386",
 
         "info": {
             "arch": "ia32",
@@ -121,7 +121,7 @@
     },
 
     "freebsd_i386": {
-        "title": "FreeBSD x86",
+        "title": "FreeBSD i386",
 
         "info": {
             "arch": "ia32",
@@ -193,7 +193,7 @@
     },
 
     "openbsd_i386": {
-        "title": "OpenBSD x86",
+        "title": "OpenBSD i386",
 
         "info": {
             "arch": "ia32",
@@ -241,7 +241,7 @@
     },
 
     "windows_i386": {
-        "title": "Windows x86",
+        "title": "Windows i386",
 
         "info": {
             "arch": "ia32",
