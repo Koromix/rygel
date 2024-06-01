@@ -4,8 +4,8 @@
         "platform": "linux",
 
         "qemu": {
-            "binary": "qemu-system-i386",
-            "arguments": ["-cpu", "max", "-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-686-pae", "-initrd", "initrd.img-5.10.0-12-686-pae", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22203-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:13"],
+            "binary": "qemu-system-x86_64",
+            "arguments": ["-m", "2G", "-smp", 2, "-kernel", "vmlinuz-5.10.0-12-686-pae", "-initrd", "initrd.img-5.10.0-12-686-pae", "-append", "root=/dev/sda1 apparmor=0", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22203-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:13"],
             "version": 3,
 
             "disk": "disk.qcow2",
@@ -151,7 +151,7 @@
         "platform": "freebsd",
 
         "qemu": {
-            "binary": "qemu-system-i386",
+            "binary": "qemu-system-x86_64",
             "arguments": ["-m", "2G", "-smp", 2, "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22207-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:17"],
             "version": 4,
 
