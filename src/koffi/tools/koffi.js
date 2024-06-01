@@ -30,7 +30,7 @@ const { spawnSync } = require('child_process');
 const esbuild = require('esbuild');
 const { DefaultCommands, parse_arguments, QemuRunner,
         copy_recursive, unlink_recursive, make_path_filter,
-        minimatch, chalk, wait } = require('../../../deploy/qemu/qemu.js');
+        make_wildcard_pattern, style_ansi, wait_delay } = require('../../../deploy/qemu/qemu.js');
 
 const ValidCommands = {
     ...DefaultCommands,
@@ -111,7 +111,7 @@ async function main() {
     // List matching builds and machines
     if (config.patterns.length) {
         for (let pattern of config.patterns) {
-            let re = minimatch.makeRe(pattern);
+            let re = make_wildcard_pattern(pattern);
             let match = false;
 
             for (let key in known_builds) {
@@ -260,7 +260,7 @@ async function build() {
 
         if (!success) {
             console.log('');
-            console.log('>> Status: ' + chalk.bold.red('FAILED'));
+            console.log('>> Status: ' + style_ansi('FAILED', '31;1'));
             return null;
         }
     }
@@ -421,7 +421,7 @@ async function upload(snapshot_dir) {
             } catch (err) {
                 // Fails often on Windows (busy directory or whatever), but rarely a problem
 
-                await wait(1000);
+                await wait_delay(1000);
                 continue;
             }
         }
@@ -510,12 +510,12 @@ async function test(debug = false) {
     success &= (runner.ignoreCount == ignored_machines);
 
     if (success) {
-        console.log('>> Status: ' + chalk.bold.green('SUCCESS'));
+        console.log('>> Status: ' + style_ansi('SUCCESS', '32;1'));
 
         if (ignore_builds.size)
             console.log('   (but some tests could not be performed)');
     } else {
-        console.log('>> Status: ' + chalk.bold.red('FAILED'));
+        console.log('>> Status: ' + style_ansi('FAILED', '31;1'));
     }
 
     return success;

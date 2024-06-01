@@ -27,9 +27,8 @@ const process = require('process');
 const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
+const tty = require('tty');
 const { NodeSSH } = require('node-ssh');
-const chalk = require('chalk');
-const minimatch = require('minimatch');
 
 const DefaultCommands = {
     'start': 'Start the machines but don\'t run anything',
@@ -65,7 +64,7 @@ async function main() {
         let use_machines = new Set;
 
         for (let pattern of config.patterns) {
-            let re = minimatch.makeRe(pattern);
+            let re = make_wildcard_pattern(pattern);
             let match = false;
 
             for (let machine of runner.machines) {
@@ -164,7 +163,7 @@ function QemuRunner(registry = null) {
             let dirname = `${__dirname}/machines/${machine.key}`;
 
             if (!fs.existsSync(dirname)) {
-                self.log(machine, 'Missing files', chalk.bold.gray('[ignore]'));
+                self.log(machine, 'Missing files', style_ansi('[ignore]', '30;1'));
 
                 ignore_machines.add(machine);
                 missing++;
@@ -178,7 +177,7 @@ function QemuRunner(registry = null) {
                 let version = fs.existsSync(filename) ? parseInt(fs.readFileSync(filename).toString(), 10) : 0;
 
                 if (version < machine.qemu.version) {
-                    self.log(machine, 'Machine version mismatch', chalk.bold.gray('[ignore]'));
+                    self.log(machine, 'Machine version mismatch', style_ansi('[ignore]', '30;1'));
 
                     ignore_machines.add(machine);
                     success = false;
@@ -241,7 +240,7 @@ function QemuRunner(registry = null) {
 
                     machine.ssh.connection.on('close', resolve);
                     machine.ssh.connection.on('end', resolve);
-                    wait(60000).then(() => { reject(new Error('Timeout')) });
+                    wait_delay(60000).then(() => { reject(new Error('Timeout')) });
 
                     self.exec(machine, machine.qemu.shutdown);
                 });
@@ -311,7 +310,7 @@ function QemuRunner(registry = null) {
             let disk = dirname + '/' + machine.qemu.disk;
 
             if (!fs.existsSync(dirname)) {
-                self.log(machine, 'Missing files', chalk.bold.gray('[ignore]'));
+                self.log(machine, 'Missing files', style_ansi('[ignore]', '30;1'));
                 return;
             }
 
@@ -361,11 +360,11 @@ function QemuRunner(registry = null) {
     };
 
     this.logSuccess = function(machine, action, message = 'ok') {
-        self.log(machine, action, chalk.bold.green('[' + message + ']'));
+        self.log(machine, action, style_ansi('[' + message + ']', '32;1'));
     };
 
     this.logError = function(machine, action, message = 'error') {
-        self.log(machine, action, chalk.bold.red('[' + message + ']'));
+        self.log(machine, action, style_ansi('[' + message + ']', '31;1'));
     };
 
     this.logOutput = function(machine, stdout, stderr) {
@@ -377,13 +376,13 @@ function QemuRunner(registry = null) {
 
         if (stdout) {
             let str = ' '.repeat(align) + 'Standard output:\n' +
-                      chalk.yellow(stdout.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                      style_ansi(stdout.replace(/^/gm, ' '.repeat(align + 4)), '33') + '\n';
             console.error(str);
         }
 
         if (stderr) {
             let str = ' '.repeat(align) + 'Standard error:\n' +
-                      chalk.yellow(stderr.replace(/^/gm, ' '.repeat(align + 4))) + '\n';
+                      style_ansi(stderr.replace(/^/gm, ' '.repeat(align + 4)), 33) + '\n';
             console.error(str);
         }
     };
@@ -401,7 +400,7 @@ function QemuRunner(registry = null) {
                 proc.unref();
 
             await new Promise((resolve, reject) => {
-                proc.on('spawn', () => wait(2 * 1000).then(resolve));
+                proc.on('spawn', () => wait_delay(2 * 1000).then(resolve));
                 proc.on('error', reject);
                 proc.on('exit', reject);
             });
@@ -435,7 +434,7 @@ function QemuRunner(registry = null) {
                     throw new Error(`Failed to connect to ${machine.title}`);
 
                 // Try again... a few times
-                await wait(10 * 1000);
+                await wait_delay(10 * 1000);
             }
         }
 
@@ -666,7 +665,29 @@ function make_path_filter(paths) {
     return filter;
 }
 
-function wait(ms) {
+function make_wildcard_pattern(str) {
+    let pattern = str.replaceAll(/[\/\^\$\.\|\[\]\(\)\*\+\?\{\}]/g, c => {
+        switch (c) {
+            case '*': return '[^/]*';
+            case '?': return '[^/]';
+            default: return `\\${c}`;
+        }
+    });
+    let re = new RegExp(pattern);
+
+    return re;
+}
+
+function style_ansi(text, ansi) {
+    if (tty.isatty(process.stdout.fd)) {
+        let str = `\x1b[${ansi}m${text}\x1b[0m`;
+        return str;
+    } else {
+        return text;
+    }
+}
+
+function wait_delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -679,8 +700,7 @@ module.exports = {
     copy_recursive,
     unlink_recursive,
     make_path_filter,
-    wait,
-
-    minimatch,
-    chalk
+    make_wildcard_pattern,
+    style_ansi,
+    wait_delay
 };
