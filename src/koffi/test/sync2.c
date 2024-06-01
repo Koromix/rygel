@@ -23,7 +23,7 @@
 
 #if defined(__x86_64__) && defined(__linux__)
 
-void DoReturnBool(int cond)
+__attribute__((naked)) void DoReturnBool(int cond)
 {
     // Return an ABI-compliant but weird bool where bits 8 to 31 are set.
     // On x86_64, only the least signifiant byte matters for bools and the rest is explicitly undefined.
@@ -33,6 +33,7 @@ void DoReturnBool(int cond)
         "setne %bl\n"
         "movl $0xFFFFFFFF, %eax\n"
         "andb %bl, %al\n"
+        "ret\n"
     );
 }
 
