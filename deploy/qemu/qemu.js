@@ -686,13 +686,15 @@ function make_path_filter(paths) {
 }
 
 function make_wildcard_pattern(str) {
-    let pattern = str.replaceAll(/[\/\^\$\.\|\[\]\(\)\*\+\?\{\}]/g, c => {
+    str = str.replaceAll(/[\/\^\$\.\|\[\]\(\)\*\+\?\{\}]/g, c => {
         switch (c) {
             case '*': return '[^/]*';
             case '?': return '[^/]';
             default: return `\\${c}`;
         }
     });
+
+    let pattern = `^${str}$`;
     let re = new RegExp(pattern);
 
     return re;
