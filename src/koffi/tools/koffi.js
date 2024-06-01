@@ -105,11 +105,10 @@ async function main() {
         }
     }
 
-    let use_builds = new Set;
-    let use_machines = new Set;
-
     // List matching builds and machines
     if (config.patterns.length) {
+        let use_builds = new Set;
+
         for (let pattern of config.patterns) {
             let re = make_wildcard_pattern(pattern);
             let match = false;
@@ -119,7 +118,7 @@ async function main() {
 
                 if (key.match(re) || build.title.match(re)) {
                     use_builds.add(key);
-                    use_machines.add(build.info.machine);
+                    runner.select(build.info.machine);
 
                     match = true;
                 }
@@ -133,7 +132,7 @@ async function main() {
                         if (build.info.machine == machine.key)
                             use_builds.add(key);
                     }
-                    use_machines.add(machine.key);
+                    runner.select(machine.key);
 
                     match = true;
                 }
@@ -144,17 +143,12 @@ async function main() {
                 process.exit(1);
             }
         }
+
+        builds = Object.values(known_builds).filter(build => use_builds.has(build.key));
+        all_builds = (builds.length == Object.keys(known_builds).length);
     } else {
-        use_builds = new Set(Object.keys(known_builds));
-        use_machines = new Set(Object.values(known_builds).map(build => build.info.machine));
-    }
-
-    builds = Object.values(known_builds).filter(build => use_builds.has(build.key));
-    all_builds = (builds.length == Object.keys(known_builds).length);
-
-    for (let machine of runner.machines) {
-        if (!use_machines.has(machine.key))
-            runner.ignore(machine);
+        builds = Object.values(known_builds);
+        all_builds = true;
     }
 
     try {

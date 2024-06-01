@@ -61,15 +61,13 @@ async function main() {
 
     // List matching machines
     if (config.patterns.length) {
-        let use_machines = new Set;
-
         for (let pattern of config.patterns) {
             let re = make_wildcard_pattern(pattern);
             let match = false;
 
             for (let machine of runner.machines) {
                 if (machine.key.match(re) || machine.title.match(re)) {
-                    use_machines.add(machine);
+                    runner.select(machine);
                     match = true;
                 }
             }
@@ -78,11 +76,6 @@ async function main() {
                 console.log(`Pattern '${pattern}' does not match any machine`);
                 process.exit(1);
             }
-        }
-
-        for (let machine of runner.machines) {
-            if (!use_machines.has(machine))
-                runner.ignore(machine.key);
         }
     }
 
@@ -114,8 +107,9 @@ Commands:`;
 function QemuRunner(registry = null) {
     let self = this;
 
-    let machines = null;
-    let map = null;
+    let all_machines = null;
+    let known_machines = null;
+    let select_machines = false;
 
     let started_machines = new Set;
     let ignore_machines = new Set;
@@ -136,16 +130,17 @@ function QemuRunner(registry = null) {
 
         let json = fs.readFileSync(registry, { encoding: 'utf-8' });
 
-        machines = JSON.parse(json);
-        machines = Object.keys(machines).map(key => ({
+        all_machines = JSON.parse(json);
+        all_machines = Object.keys(all_machines).map(key => ({
             key: key,
-            ...machines[key]
+            ...all_machines[key]
         }));
-        map = machines.reduce((obj, machine) => { obj[machine.key] = machine; return obj }, {});
+
+        known_machines = all_machines.reduce((map, machine) => { map.set(machine.key, machine); return map; }, new Map);
     };
 
     Object.defineProperties(this, {
-        machines: { get: () => machines, enumerable: true },
+        machines: { get: () => all_machines.filter(machine => !ignore_machines.has(machine)), enumerable: true },
         ignoreCount: { get: () => ignore_machines.size, enumerable: true }
     });
 
@@ -155,11 +150,10 @@ function QemuRunner(registry = null) {
 
         check_qemu();
 
+        let machines = self.machines;
+
         console.log('>> Starting up machines...');
         await Promise.all(machines.map(async machine => {
-            if (ignore_machines.has(machine))
-                return;
-
             let dirname = `${__dirname}/machines/${machine.key}`;
 
             if (!fs.existsSync(dirname)) {
@@ -212,6 +206,10 @@ function QemuRunner(registry = null) {
     };
 
     this.stop = async function(all = true) {
+        let machines = self.machines;
+
+        if (!machines.length)
+            return true;
         if (!started_machines.size && !all)
             return true;
 
@@ -258,6 +256,8 @@ function QemuRunner(registry = null) {
     this.info = function() {
         check_qemu();
 
+        let machines = self.machines;
+
         console.log('>> Machines:');
         for (let machine of machines) {
             let [binary, args] = make_qemu_command(machine);
@@ -276,12 +276,13 @@ function QemuRunner(registry = null) {
         if (spawnSync('sshpass', ['-V']).status !== 0)
             throw new Error('Missing sshpass binary in PATH');
 
+        let machines = self.machines;
+        let machine = machines[0];
+
         if (machines.length != 1) {
             console.error('The ssh command can only be used with one machine');
             return false;
         }
-
-        let machine = machines[0];
 
         let args = [
             '-p' + machine.qemu.password,
@@ -301,6 +302,8 @@ function QemuRunner(registry = null) {
 
     this.reset = async function() {
         check_qemu();
+
+        let machines = self.machines;
 
         let binary = qemu_prefix + 'qemu-img' + (process.platform == 'win32' ? '.exe' : '');
 
@@ -325,6 +328,17 @@ function QemuRunner(registry = null) {
         }));
     };
 
+    this.select = function(machine) {
+        if (!select_machines) {
+            for (let machine of all_machines)
+                ignore_machines.add(machine);
+            select_machines = true;
+        }
+
+        machine = self.machine(machine);
+        ignore_machines.delete(machine);
+    }
+
     this.ignore = function(machine) {
         machine = self.machine(machine);
         ignore_machines.add(machine);
@@ -339,7 +353,7 @@ function QemuRunner(registry = null) {
         if (typeof key != 'string')
             return key;
 
-        let machine = map[key];
+        let machine = known_machines.get(key);
         if (machine == null)
             throw new Error(`Unknown machine '${key}'`);
         return machine;
@@ -349,7 +363,7 @@ function QemuRunner(registry = null) {
         machine = self.machine(machine);
 
         if (log_align == null) {
-            let lengths = machines.map(machine => machine.title.length);
+            let lengths = self.machines.map(machine => machine.title.length);
             log_align = Math.max(...lengths);
         }
 
