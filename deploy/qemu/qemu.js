@@ -28,7 +28,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 const tty = require('tty');
-const { NodeSSH } = require('node-ssh');
+const { NodeSSH } = require('../../vendor/node-ssh/node-ssh.bundle.js');
 
 const DefaultCommands = {
     'start': 'Start the machines but don\'t run anything',

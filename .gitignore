@@ -37,7 +37,6 @@ package-lock.json
 
 /deploy/docker/goupile/goupile
 /deploy/qemu/machines/**
-!/deploy/qemu/node_modules/
 
 /vendor/spidermonkey/spidermonkey/
 
