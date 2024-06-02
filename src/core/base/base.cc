@@ -6709,7 +6709,7 @@ bool StreamWriter::FlushBuffer()
         }
 
         Size move_len = dest.u.file.buf_used - write_len;
-        MemCpy(dest.u.file.buf.ptr, dest.u.file.buf.ptr + write_len, move_len);
+        MemMove(dest.u.file.buf.ptr, dest.u.file.buf.ptr + write_len, move_len);
         dest.u.file.buf_used -= write_len;
 
         raw_written += write_len;
