@@ -1,3 +1,10 @@
+var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => {
+  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+  return value;
+};
+
 // node_modules/@kurkle/color/dist/color.esm.js
 function round(v) {
   return v + 0.5 | 0;
@@ -442,9 +449,9 @@ function functionParse(str) {
   }
   return hueParse(str);
 }
-var Color = class _Color {
+var Color = class {
   constructor(input) {
-    if (input instanceof _Color) {
+    if (input instanceof Color) {
       return input;
     }
     const type = typeof input;
@@ -504,7 +511,7 @@ var Color = class _Color {
     return this;
   }
   clone() {
-    return new _Color(this.rgb);
+    return new Color(this.rgb);
   }
   alpha(a) {
     this._rgb.a = n2b(a);
@@ -558,7 +565,7 @@ var Color = class _Color {
 // node_modules/chart.js/dist/chunks/helpers.segment.js
 function noop() {
 }
-var uid = /* @__PURE__ */ (() => {
+var uid = (() => {
   let id = 0;
   return () => id++;
 })();
@@ -3481,9 +3488,6 @@ var createStack = (canStack, meta, chart) => canStack && !meta.hidden && meta._s
   values: null
 };
 var DatasetController = class {
-  static defaults = {};
-  static datasetElementType = null;
-  static dataElementType = null;
   constructor(chart, datasetIndex) {
     this.chart = chart;
     this._ctx = chart.ctx;
@@ -4075,6 +4079,9 @@ var DatasetController = class {
     ]);
   }
 };
+__publicField(DatasetController, "defaults", {});
+__publicField(DatasetController, "datasetElementType", null);
+__publicField(DatasetController, "dataElementType", null);
 function getAllScaleValues(scale, type) {
   if (!scale._cache.$bar) {
     const visibleMetas = scale.getMatchingVisibleMetas(type);
@@ -4276,41 +4283,6 @@ function setInflateAmount(properties, { inflateAmount }, ratio) {
   properties.inflateAmount = inflateAmount === "auto" ? ratio === 1 ? 0.33 : 0 : inflateAmount;
 }
 var BarController = class extends DatasetController {
-  static id = "bar";
-  static defaults = {
-    datasetElementType: false,
-    dataElementType: "bar",
-    categoryPercentage: 0.8,
-    barPercentage: 0.9,
-    grouped: true,
-    animations: {
-      numbers: {
-        type: "number",
-        properties: [
-          "x",
-          "y",
-          "base",
-          "width",
-          "height"
-        ]
-      }
-    }
-  };
-  static overrides = {
-    scales: {
-      _index_: {
-        type: "category",
-        offset: true,
-        grid: {
-          offset: true
-        }
-      },
-      _value_: {
-        type: "linear",
-        beginAtZero: true
-      }
-    }
-  };
   parsePrimitiveData(meta, data, start, count) {
     return parseArrayOrPrimitive(meta, data, start, count);
   }
@@ -4548,33 +4520,42 @@ var BarController = class extends DatasetController {
     }
   }
 };
+__publicField(BarController, "id", "bar");
+__publicField(BarController, "defaults", {
+  datasetElementType: false,
+  dataElementType: "bar",
+  categoryPercentage: 0.8,
+  barPercentage: 0.9,
+  grouped: true,
+  animations: {
+    numbers: {
+      type: "number",
+      properties: [
+        "x",
+        "y",
+        "base",
+        "width",
+        "height"
+      ]
+    }
+  }
+});
+__publicField(BarController, "overrides", {
+  scales: {
+    _index_: {
+      type: "category",
+      offset: true,
+      grid: {
+        offset: true
+      }
+    },
+    _value_: {
+      type: "linear",
+      beginAtZero: true
+    }
+  }
+});
 var BubbleController = class extends DatasetController {
-  static id = "bubble";
-  static defaults = {
-    datasetElementType: false,
-    dataElementType: "point",
-    animations: {
-      numbers: {
-        type: "number",
-        properties: [
-          "x",
-          "y",
-          "borderWidth",
-          "radius"
-        ]
-      }
-    }
-  };
-  static overrides = {
-    scales: {
-      x: {
-        type: "linear"
-      },
-      y: {
-        type: "linear"
-      }
-    }
-  };
   initialize() {
     this.enableOptionSharing = true;
     super.initialize();
@@ -4665,6 +4646,32 @@ var BubbleController = class extends DatasetController {
     return values;
   }
 };
+__publicField(BubbleController, "id", "bubble");
+__publicField(BubbleController, "defaults", {
+  datasetElementType: false,
+  dataElementType: "point",
+  animations: {
+    numbers: {
+      type: "number",
+      properties: [
+        "x",
+        "y",
+        "borderWidth",
+        "radius"
+      ]
+    }
+  }
+});
+__publicField(BubbleController, "overrides", {
+  scales: {
+    x: {
+      type: "linear"
+    },
+    y: {
+      type: "linear"
+    }
+  }
+});
 function getRatioAndOffset(rotation, circumference, cutout) {
   let ratioX = 1;
   let ratioY = 1;
@@ -4696,76 +4703,6 @@ function getRatioAndOffset(rotation, circumference, cutout) {
   };
 }
 var DoughnutController = class extends DatasetController {
-  static id = "doughnut";
-  static defaults = {
-    datasetElementType: false,
-    dataElementType: "arc",
-    animation: {
-      animateRotate: true,
-      animateScale: false
-    },
-    animations: {
-      numbers: {
-        type: "number",
-        properties: [
-          "circumference",
-          "endAngle",
-          "innerRadius",
-          "outerRadius",
-          "startAngle",
-          "x",
-          "y",
-          "offset",
-          "borderWidth",
-          "spacing"
-        ]
-      }
-    },
-    cutout: "50%",
-    rotation: 0,
-    circumference: 360,
-    radius: "100%",
-    spacing: 0,
-    indexAxis: "r"
-  };
-  static descriptors = {
-    _scriptable: (name) => name !== "spacing",
-    _indexable: (name) => name !== "spacing" && !name.startsWith("borderDash") && !name.startsWith("hoverBorderDash")
-  };
-  static overrides = {
-    aspectRatio: 1,
-    plugins: {
-      legend: {
-        labels: {
-          generateLabels(chart) {
-            const data = chart.data;
-            if (data.labels.length && data.datasets.length) {
-              const { labels: { pointStyle, color: color2 } } = chart.legend.options;
-              return data.labels.map((label, i) => {
-                const meta = chart.getDatasetMeta(0);
-                const style = meta.controller.getStyle(i);
-                return {
-                  text: label,
-                  fillStyle: style.backgroundColor,
-                  strokeStyle: style.borderColor,
-                  fontColor: color2,
-                  lineWidth: style.borderWidth,
-                  pointStyle,
-                  hidden: !chart.getDataVisibility(i),
-                  index: i
-                };
-              });
-            }
-            return [];
-          }
-        },
-        onClick(e, legendItem, legend) {
-          legend.chart.toggleDataVisibility(legendItem.index);
-          legend.chart.update();
-        }
-      }
-    }
-  };
   constructor(chart, datasetIndex) {
     super(chart, datasetIndex);
     this.enableOptionSharing = true;
@@ -4964,24 +4901,77 @@ var DoughnutController = class extends DatasetController {
     return this._getRingWeightOffset(this.chart.data.datasets.length) || 1;
   }
 };
-var LineController = class extends DatasetController {
-  static id = "line";
-  static defaults = {
-    datasetElementType: "line",
-    dataElementType: "point",
-    showLine: true,
-    spanGaps: false
-  };
-  static overrides = {
-    scales: {
-      _index_: {
-        type: "category"
+__publicField(DoughnutController, "id", "doughnut");
+__publicField(DoughnutController, "defaults", {
+  datasetElementType: false,
+  dataElementType: "arc",
+  animation: {
+    animateRotate: true,
+    animateScale: false
+  },
+  animations: {
+    numbers: {
+      type: "number",
+      properties: [
+        "circumference",
+        "endAngle",
+        "innerRadius",
+        "outerRadius",
+        "startAngle",
+        "x",
+        "y",
+        "offset",
+        "borderWidth",
+        "spacing"
+      ]
+    }
+  },
+  cutout: "50%",
+  rotation: 0,
+  circumference: 360,
+  radius: "100%",
+  spacing: 0,
+  indexAxis: "r"
+});
+__publicField(DoughnutController, "descriptors", {
+  _scriptable: (name) => name !== "spacing",
+  _indexable: (name) => name !== "spacing" && !name.startsWith("borderDash") && !name.startsWith("hoverBorderDash")
+});
+__publicField(DoughnutController, "overrides", {
+  aspectRatio: 1,
+  plugins: {
+    legend: {
+      labels: {
+        generateLabels(chart) {
+          const data = chart.data;
+          if (data.labels.length && data.datasets.length) {
+            const { labels: { pointStyle, color: color2 } } = chart.legend.options;
+            return data.labels.map((label, i) => {
+              const meta = chart.getDatasetMeta(0);
+              const style = meta.controller.getStyle(i);
+              return {
+                text: label,
+                fillStyle: style.backgroundColor,
+                strokeStyle: style.borderColor,
+                fontColor: color2,
+                lineWidth: style.borderWidth,
+                pointStyle,
+                hidden: !chart.getDataVisibility(i),
+                index: i
+              };
+            });
+          }
+          return [];
+        }
       },
-      _value_: {
-        type: "linear"
+      onClick(e, legendItem, legend) {
+        legend.chart.toggleDataVisibility(legendItem.index);
+        legend.chart.update();
       }
     }
-  };
+  }
+});
+var LineController = class extends DatasetController {
   initialize() {
     this.enableOptionSharing = true;
     this.supportsDecimation = true;
@@ -5069,80 +5059,24 @@ var LineController = class extends DatasetController {
     super.draw();
   }
 };
-var PolarAreaController = class extends DatasetController {
-  static id = "polarArea";
-  static defaults = {
-    dataElementType: "arc",
-    animation: {
-      animateRotate: true,
-      animateScale: true
+__publicField(LineController, "id", "line");
+__publicField(LineController, "defaults", {
+  datasetElementType: "line",
+  dataElementType: "point",
+  showLine: true,
+  spanGaps: false
+});
+__publicField(LineController, "overrides", {
+  scales: {
+    _index_: {
+      type: "category"
     },
-    animations: {
-      numbers: {
-        type: "number",
-        properties: [
-          "x",
-          "y",
-          "startAngle",
-          "endAngle",
-          "innerRadius",
-          "outerRadius"
-        ]
-      }
-    },
-    indexAxis: "r",
-    startAngle: 0
-  };
-  static overrides = {
-    aspectRatio: 1,
-    plugins: {
-      legend: {
-        labels: {
-          generateLabels(chart) {
-            const data = chart.data;
-            if (data.labels.length && data.datasets.length) {
-              const { labels: { pointStyle, color: color2 } } = chart.legend.options;
-              return data.labels.map((label, i) => {
-                const meta = chart.getDatasetMeta(0);
-                const style = meta.controller.getStyle(i);
-                return {
-                  text: label,
-                  fillStyle: style.backgroundColor,
-                  strokeStyle: style.borderColor,
-                  fontColor: color2,
-                  lineWidth: style.borderWidth,
-                  pointStyle,
-                  hidden: !chart.getDataVisibility(i),
-                  index: i
-                };
-              });
-            }
-            return [];
-          }
-        },
-        onClick(e, legendItem, legend) {
-          legend.chart.toggleDataVisibility(legendItem.index);
-          legend.chart.update();
-        }
-      }
-    },
-    scales: {
-      r: {
-        type: "radialLinear",
-        angleLines: {
-          display: false
-        },
-        beginAtZero: true,
-        grid: {
-          circular: true
-        },
-        pointLabels: {
-          display: false
-        },
-        startAngle: 0
-      }
+    _value_: {
+      type: "linear"
     }
-  };
+  }
+});
+var PolarAreaController = class extends DatasetController {
   constructor(chart, datasetIndex) {
     super(chart, datasetIndex);
     this.innerRadius = void 0;
@@ -5251,36 +5185,89 @@ var PolarAreaController = class extends DatasetController {
     return this.chart.getDataVisibility(index2) ? toRadians(this.resolveDataElementOptions(index2, mode).angle || defaultAngle) : 0;
   }
 };
+__publicField(PolarAreaController, "id", "polarArea");
+__publicField(PolarAreaController, "defaults", {
+  dataElementType: "arc",
+  animation: {
+    animateRotate: true,
+    animateScale: true
+  },
+  animations: {
+    numbers: {
+      type: "number",
+      properties: [
+        "x",
+        "y",
+        "startAngle",
+        "endAngle",
+        "innerRadius",
+        "outerRadius"
+      ]
+    }
+  },
+  indexAxis: "r",
+  startAngle: 0
+});
+__publicField(PolarAreaController, "overrides", {
+  aspectRatio: 1,
+  plugins: {
+    legend: {
+      labels: {
+        generateLabels(chart) {
+          const data = chart.data;
+          if (data.labels.length && data.datasets.length) {
+            const { labels: { pointStyle, color: color2 } } = chart.legend.options;
+            return data.labels.map((label, i) => {
+              const meta = chart.getDatasetMeta(0);
+              const style = meta.controller.getStyle(i);
+              return {
+                text: label,
+                fillStyle: style.backgroundColor,
+                strokeStyle: style.borderColor,
+                fontColor: color2,
+                lineWidth: style.borderWidth,
+                pointStyle,
+                hidden: !chart.getDataVisibility(i),
+                index: i
+              };
+            });
+          }
+          return [];
+        }
+      },
+      onClick(e, legendItem, legend) {
+        legend.chart.toggleDataVisibility(legendItem.index);
+        legend.chart.update();
+      }
+    }
+  },
+  scales: {
+    r: {
+      type: "radialLinear",
+      angleLines: {
+        display: false
+      },
+      beginAtZero: true,
+      grid: {
+        circular: true
+      },
+      pointLabels: {
+        display: false
+      },
+      startAngle: 0
+    }
+  }
+});
 var PieController = class extends DoughnutController {
-  static id = "pie";
-  static defaults = {
-    cutout: 0,
-    rotation: 0,
-    circumference: 360,
-    radius: "100%"
-  };
 };
+__publicField(PieController, "id", "pie");
+__publicField(PieController, "defaults", {
+  cutout: 0,
+  rotation: 0,
+  circumference: 360,
+  radius: "100%"
+});
 var RadarController = class extends DatasetController {
-  static id = "radar";
-  static defaults = {
-    datasetElementType: "line",
-    dataElementType: "point",
-    indexAxis: "r",
-    showLine: true,
-    elements: {
-      line: {
-        fill: "start"
-      }
-    }
-  };
-  static overrides = {
-    aspectRatio: 1,
-    scales: {
-      r: {
-        type: "radialLinear"
-      }
-    }
-  };
   getLabelAndValue(index2) {
     const vScale = this._cachedMeta.vScale;
     const parsed = this.getParsed(index2);
@@ -5332,27 +5319,27 @@ var RadarController = class extends DatasetController {
     }
   }
 };
-var ScatterController = class extends DatasetController {
-  static id = "scatter";
-  static defaults = {
-    datasetElementType: false,
-    dataElementType: "point",
-    showLine: false,
-    fill: false
-  };
-  static overrides = {
-    interaction: {
-      mode: "point"
-    },
-    scales: {
-      x: {
-        type: "linear"
-      },
-      y: {
-        type: "linear"
-      }
+__publicField(RadarController, "id", "radar");
+__publicField(RadarController, "defaults", {
+  datasetElementType: "line",
+  dataElementType: "point",
+  indexAxis: "r",
+  showLine: true,
+  elements: {
+    line: {
+      fill: "start"
     }
-  };
+  }
+});
+__publicField(RadarController, "overrides", {
+  aspectRatio: 1,
+  scales: {
+    r: {
+      type: "radialLinear"
+    }
+  }
+});
+var ScatterController = class extends DatasetController {
   getLabelAndValue(index2) {
     const meta = this._cachedMeta;
     const labels = this.chart.data.labels || [];
@@ -5459,6 +5446,26 @@ var ScatterController = class extends DatasetController {
     return Math.max(border, firstPoint, lastPoint) / 2;
   }
 };
+__publicField(ScatterController, "id", "scatter");
+__publicField(ScatterController, "defaults", {
+  datasetElementType: false,
+  dataElementType: "point",
+  showLine: false,
+  fill: false
+});
+__publicField(ScatterController, "overrides", {
+  interaction: {
+    mode: "point"
+  },
+  scales: {
+    x: {
+      type: "linear"
+    },
+    y: {
+      type: "linear"
+    }
+  }
+});
 var controllers = /* @__PURE__ */ Object.freeze({
   __proto__: null,
   BarController,
@@ -5473,7 +5480,7 @@ var controllers = /* @__PURE__ */ Object.freeze({
 function abstract() {
   throw new Error("This method is not implemented: Check that a complete date adapter is provided.");
 }
-var DateAdapterBase = class _DateAdapterBase {
+var DateAdapterBase = class {
   /**
   * Override default date adapter methods.
   * Accepts type parameter to define options type.
@@ -5485,7 +5492,7 @@ var DateAdapterBase = class _DateAdapterBase {
   * })
   */
   static override(members) {
-    Object.assign(_DateAdapterBase.prototype, members);
+    Object.assign(DateAdapterBase.prototype, members);
   }
   options;
   constructor(options) {
@@ -6364,8 +6371,6 @@ function _detectPlatform(canvas) {
   return DomPlatform;
 }
 var Element = class {
-  static defaults = {};
-  static defaultRoutes = void 0;
   x;
   y;
   active = false;
@@ -6396,6 +6401,8 @@ var Element = class {
     return ret;
   }
 };
+__publicField(Element, "defaults", {});
+__publicField(Element, "defaultRoutes");
 function autoSkip(scale, ticks) {
   const tickOpts = scale.options.ticks;
   const determinedMaxTicks = determineMaxTicks(scale);
@@ -6624,7 +6631,7 @@ function titleArgs(scale, offset, position, align) {
     rotation
   };
 }
-var Scale = class _Scale extends Element {
+var Scale = class extends Element {
   constructor(cfg) {
     super();
     this.id = cfg.id;
@@ -7723,7 +7730,7 @@ var Scale = class _Scale extends Element {
     const tz = opts.ticks && opts.ticks.z || 0;
     const gz = valueOrDefault(opts.grid && opts.grid.z, -1);
     const bz = valueOrDefault(opts.border && opts.border.z, 0);
-    if (!this._isVisible() || this.draw !== _Scale.prototype.draw) {
+    if (!this._isVisible() || this.draw !== Scale.prototype.draw) {
       return [
         {
           z: tz,
@@ -8490,12 +8497,6 @@ function getDatasetArea(meta, chartArea) {
   return chartArea;
 }
 var Chart = class {
-  static defaults = defaults;
-  static instances = instances;
-  static overrides = overrides;
-  static registry = registry;
-  static version = version;
-  static getChart = getChart;
   static register(...items) {
     registry.add(...items);
     invalidatePlugins();
@@ -9316,6 +9317,12 @@ var Chart = class {
     return this.getElementsAtEventForMode(e, hoverOptions.mode, hoverOptions, useFinalPosition);
   }
 };
+__publicField(Chart, "defaults", defaults);
+__publicField(Chart, "instances", instances);
+__publicField(Chart, "overrides", overrides);
+__publicField(Chart, "registry", registry);
+__publicField(Chart, "version", version);
+__publicField(Chart, "getChart", getChart);
 function invalidatePlugins() {
   return each(Chart.instances, (chart) => chart._plugins.invalidate());
 }
@@ -9478,27 +9485,6 @@ function drawBorder(ctx, element, offset, spacing, circular) {
   }
 }
 var ArcElement = class extends Element {
-  static id = "arc";
-  static defaults = {
-    borderAlign: "center",
-    borderColor: "#fff",
-    borderDash: [],
-    borderDashOffset: 0,
-    borderJoinStyle: void 0,
-    borderRadius: 0,
-    borderWidth: 2,
-    offset: 0,
-    spacing: 0,
-    angle: void 0,
-    circular: true
-  };
-  static defaultRoutes = {
-    backgroundColor: "backgroundColor"
-  };
-  static descriptors = {
-    _scriptable: true,
-    _indexable: (name) => name !== "borderDash"
-  };
   circumference;
   endAngle;
   fullCircles;
@@ -9584,6 +9570,27 @@ var ArcElement = class extends Element {
     ctx.restore();
   }
 };
+__publicField(ArcElement, "id", "arc");
+__publicField(ArcElement, "defaults", {
+  borderAlign: "center",
+  borderColor: "#fff",
+  borderDash: [],
+  borderDashOffset: 0,
+  borderJoinStyle: void 0,
+  borderRadius: 0,
+  borderWidth: 2,
+  offset: 0,
+  spacing: 0,
+  angle: void 0,
+  circular: true
+});
+__publicField(ArcElement, "defaultRoutes", {
+  backgroundColor: "backgroundColor"
+});
+__publicField(ArcElement, "descriptors", {
+  _scriptable: true,
+  _indexable: (name) => name !== "borderDash"
+});
 function setStyle(ctx, options, style = options) {
   ctx.lineCap = valueOrDefault(style.borderCapStyle, options.borderCapStyle);
   ctx.setLineDash(valueOrDefault(style.borderDash, options.borderDash));
@@ -9737,28 +9744,6 @@ function draw(ctx, line, start, count) {
   }
 }
 var LineElement = class extends Element {
-  static id = "line";
-  static defaults = {
-    borderCapStyle: "butt",
-    borderDash: [],
-    borderDashOffset: 0,
-    borderJoinStyle: "miter",
-    borderWidth: 3,
-    capBezierPoints: true,
-    cubicInterpolationMode: "default",
-    fill: false,
-    spanGaps: false,
-    stepped: false,
-    tension: 0
-  };
-  static defaultRoutes = {
-    backgroundColor: "backgroundColor",
-    borderColor: "borderColor"
-  };
-  static descriptors = {
-    _scriptable: true,
-    _indexable: (name) => name !== "borderDash" && name !== "fill"
-  };
   constructor(cfg) {
     super();
     this.animated = true;
@@ -9869,6 +9854,28 @@ var LineElement = class extends Element {
     }
   }
 };
+__publicField(LineElement, "id", "line");
+__publicField(LineElement, "defaults", {
+  borderCapStyle: "butt",
+  borderDash: [],
+  borderDashOffset: 0,
+  borderJoinStyle: "miter",
+  borderWidth: 3,
+  capBezierPoints: true,
+  cubicInterpolationMode: "default",
+  fill: false,
+  spanGaps: false,
+  stepped: false,
+  tension: 0
+});
+__publicField(LineElement, "defaultRoutes", {
+  backgroundColor: "backgroundColor",
+  borderColor: "borderColor"
+});
+__publicField(LineElement, "descriptors", {
+  _scriptable: true,
+  _indexable: (name) => name !== "borderDash" && name !== "fill"
+});
 function inRange$1(el, pos, axis, useFinalPosition) {
   const options = el.options;
   const { [axis]: value } = el.getProps([
@@ -9877,29 +9884,9 @@ function inRange$1(el, pos, axis, useFinalPosition) {
   return Math.abs(pos - value) < options.radius + options.hitRadius;
 }
 var PointElement = class extends Element {
-  static id = "point";
   parsed;
   skip;
   stop;
-  /**
-  * @type {any}
-  */
-  static defaults = {
-    borderWidth: 1,
-    hitRadius: 1,
-    hoverBorderWidth: 1,
-    hoverRadius: 4,
-    pointStyle: "circle",
-    radius: 3,
-    rotation: 0
-  };
-  /**
-  * @type {any}
-  */
-  static defaultRoutes = {
-    backgroundColor: "backgroundColor",
-    borderColor: "borderColor"
-  };
   constructor(cfg) {
     super();
     this.options = void 0;
@@ -9956,6 +9943,26 @@ var PointElement = class extends Element {
     return options.radius + options.hitRadius;
   }
 };
+__publicField(PointElement, "id", "point");
+/**
+* @type {any}
+*/
+__publicField(PointElement, "defaults", {
+  borderWidth: 1,
+  hitRadius: 1,
+  hoverBorderWidth: 1,
+  hoverRadius: 4,
+  pointStyle: "circle",
+  radius: 3,
+  rotation: 0
+});
+/**
+* @type {any}
+*/
+__publicField(PointElement, "defaultRoutes", {
+  backgroundColor: "backgroundColor",
+  borderColor: "borderColor"
+});
 function getBarBounds(bar, useFinalPosition) {
   const { x, y, base, width, height } = bar.getProps([
     "x",
@@ -10070,18 +10077,6 @@ function inflateRect(rect, amount, refRect = {}) {
   };
 }
 var BarElement = class extends Element {
-  static id = "bar";
-  static defaults = {
-    borderSkipped: "start",
-    borderWidth: 0,
-    borderRadius: 0,
-    inflateAmount: "auto",
-    pointStyle: void 0
-  };
-  static defaultRoutes = {
-    backgroundColor: "backgroundColor",
-    borderColor: "borderColor"
-  };
   constructor(cfg) {
     super();
     this.options = void 0;
@@ -10138,6 +10133,18 @@ var BarElement = class extends Element {
     return axis === "x" ? this.width / 2 : this.height / 2;
   }
 };
+__publicField(BarElement, "id", "bar");
+__publicField(BarElement, "defaults", {
+  borderSkipped: "start",
+  borderWidth: 0,
+  borderRadius: 0,
+  inflateAmount: "auto",
+  pointStyle: void 0
+});
+__publicField(BarElement, "defaultRoutes", {
+  backgroundColor: "backgroundColor",
+  borderColor: "borderColor"
+});
 var elements = /* @__PURE__ */ Object.freeze({
   __proto__: null,
   ArcElement,
@@ -12036,7 +12043,6 @@ function invokeCallbackWithFallback(callbacks, name, ctx, arg) {
   return result;
 }
 var Tooltip = class extends Element {
-  static positioners = positioners;
   constructor(config) {
     super();
     this.opacity = 0;
@@ -12576,6 +12582,7 @@ var Tooltip = class extends Element {
     return position !== false && (caretX !== position.x || caretY !== position.y);
   }
 };
+__publicField(Tooltip, "positioners", positioners);
 var plugin_tooltip = {
   id: "tooltip",
   _element: Tooltip,
@@ -12741,12 +12748,6 @@ function _getLabelForValue(value) {
   return value;
 }
 var CategoryScale = class extends Scale {
-  static id = "category";
-  static defaults = {
-    ticks: {
-      callback: _getLabelForValue
-    }
-  };
   constructor(cfg) {
     super(cfg);
     this._startValue = void 0;
@@ -12833,6 +12834,12 @@ var CategoryScale = class extends Scale {
     return this.bottom;
   }
 };
+__publicField(CategoryScale, "id", "category");
+__publicField(CategoryScale, "defaults", {
+  ticks: {
+    callback: _getLabelForValue
+  }
+});
 function generateTicks$1(generationOptions, dataRange) {
   const ticks = [];
   const MIN_SPACING = 1e-14;
@@ -13056,12 +13063,6 @@ var LinearScaleBase = class extends Scale {
   }
 };
 var LinearScale = class extends LinearScaleBase {
-  static id = "linear";
-  static defaults = {
-    ticks: {
-      callback: Ticks.formatters.numeric
-    }
-  };
   determineDataLimits() {
     const { min, max } = this.getMinMax(true);
     this.min = isNumberFinite(min) ? min : 0;
@@ -13083,6 +13084,12 @@ var LinearScale = class extends LinearScaleBase {
     return this._startValue + this.getDecimalForPixel(pixel) * this._valueRange;
   }
 };
+__publicField(LinearScale, "id", "linear");
+__publicField(LinearScale, "defaults", {
+  ticks: {
+    callback: Ticks.formatters.numeric
+  }
+});
 var log10Floor = (v) => Math.floor(log10(v));
 var changeExponent = (v, m) => Math.pow(10, log10Floor(v) + m);
 function isMajor(tickVal) {
@@ -13145,15 +13152,6 @@ function generateTicks(generationOptions, { min, max }) {
   return ticks;
 }
 var LogarithmicScale = class extends Scale {
-  static id = "logarithmic";
-  static defaults = {
-    ticks: {
-      callback: Ticks.formatters.logarithmic,
-      major: {
-        enabled: true
-      }
-    }
-  };
   constructor(cfg) {
     super(cfg);
     this.start = void 0;
@@ -13251,6 +13249,15 @@ var LogarithmicScale = class extends Scale {
     return Math.pow(10, this._startValue + decimal * this._valueRange);
   }
 };
+__publicField(LogarithmicScale, "id", "logarithmic");
+__publicField(LogarithmicScale, "defaults", {
+  ticks: {
+    callback: Ticks.formatters.logarithmic,
+    major: {
+      enabled: true
+    }
+  }
+});
 function getTickBackdropHeight(opts) {
   const tickOpts = opts.ticks;
   if (tickOpts.display && opts.display) {
@@ -13504,49 +13511,6 @@ function createPointLabelContext(parent, index2, label) {
   });
 }
 var RadialLinearScale = class extends LinearScaleBase {
-  static id = "radialLinear";
-  static defaults = {
-    display: true,
-    animate: true,
-    position: "chartArea",
-    angleLines: {
-      display: true,
-      lineWidth: 1,
-      borderDash: [],
-      borderDashOffset: 0
-    },
-    grid: {
-      circular: false
-    },
-    startAngle: 0,
-    ticks: {
-      showLabelBackdrop: true,
-      callback: Ticks.formatters.numeric
-    },
-    pointLabels: {
-      backdropColor: void 0,
-      backdropPadding: 2,
-      display: true,
-      font: {
-        size: 10
-      },
-      callback(label) {
-        return label;
-      },
-      padding: 5,
-      centerPointLabels: false
-    }
-  };
-  static defaultRoutes = {
-    "angleLines.color": "borderColor",
-    "pointLabels.color": "color",
-    "ticks.color": "color"
-  };
-  static descriptors = {
-    angleLines: {
-      _fallback: "grid"
-    }
-  };
   constructor(cfg) {
     super(cfg);
     this.xCenter = void 0;
@@ -13743,6 +13707,49 @@ var RadialLinearScale = class extends LinearScaleBase {
   drawTitle() {
   }
 };
+__publicField(RadialLinearScale, "id", "radialLinear");
+__publicField(RadialLinearScale, "defaults", {
+  display: true,
+  animate: true,
+  position: "chartArea",
+  angleLines: {
+    display: true,
+    lineWidth: 1,
+    borderDash: [],
+    borderDashOffset: 0
+  },
+  grid: {
+    circular: false
+  },
+  startAngle: 0,
+  ticks: {
+    showLabelBackdrop: true,
+    callback: Ticks.formatters.numeric
+  },
+  pointLabels: {
+    backdropColor: void 0,
+    backdropPadding: 2,
+    display: true,
+    font: {
+      size: 10
+    },
+    callback(label) {
+      return label;
+    },
+    padding: 5,
+    centerPointLabels: false
+  }
+});
+__publicField(RadialLinearScale, "defaultRoutes", {
+  "angleLines.color": "borderColor",
+  "pointLabels.color": "color",
+  "ticks.color": "color"
+});
+__publicField(RadialLinearScale, "descriptors", {
+  angleLines: {
+    _fallback: "grid"
+  }
+});
 var INTERVALS = {
   millisecond: {
     common: true,
@@ -13879,26 +13886,6 @@ function ticksFromTimestamps(scale, values, majorUnit) {
   return ilen === 0 || !majorUnit ? ticks : setMajorTicks(scale, ticks, map3, majorUnit);
 }
 var TimeScale = class extends Scale {
-  static id = "time";
-  static defaults = {
-    bounds: "data",
-    adapters: {},
-    time: {
-      parser: false,
-      unit: false,
-      round: false,
-      isoWeekday: false,
-      minUnit: "millisecond",
-      displayFormats: {}
-    },
-    ticks: {
-      source: "auto",
-      callback: false,
-      major: {
-        enabled: false
-      }
-    }
-  };
   constructor(props) {
     super(props);
     this._cache = {
@@ -14165,6 +14152,26 @@ var TimeScale = class extends Scale {
     return _arrayUnique(values.sort(sorter));
   }
 };
+__publicField(TimeScale, "id", "time");
+__publicField(TimeScale, "defaults", {
+  bounds: "data",
+  adapters: {},
+  time: {
+    parser: false,
+    unit: false,
+    round: false,
+    isoWeekday: false,
+    minUnit: "millisecond",
+    displayFormats: {}
+  },
+  ticks: {
+    source: "auto",
+    callback: false,
+    major: {
+      enabled: false
+    }
+  }
+});
 function interpolate2(table, val, reverse) {
   let lo = 0;
   let hi = table.length - 1;
@@ -14186,8 +14193,6 @@ function interpolate2(table, val, reverse) {
   return span ? prevTarget + (nextTarget - prevTarget) * (val - prevSource) / span : prevTarget;
 }
 var TimeSeriesScale = class extends TimeScale {
-  static id = "timeseries";
-  static defaults = TimeScale.defaults;
   constructor(props) {
     super(props);
     this._table = [];
@@ -14273,6 +14278,8 @@ var TimeSeriesScale = class extends TimeScale {
     return interpolate2(this._table, decimal * this._tableRange + this._minPos, true);
   }
 };
+__publicField(TimeSeriesScale, "id", "timeseries");
+__publicField(TimeSeriesScale, "defaults", TimeScale.defaults);
 var scales = /* @__PURE__ */ Object.freeze({
   __proto__: null,
   CategoryScale,

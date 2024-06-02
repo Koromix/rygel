@@ -1,10 +1,9 @@
-# Update lit-html
+#!/bin/sh -e
 
-Run the following commands:
+cd "$(dirname $0)"
 
-```bash
 npm install lit
 npx esbuild --bundle --platform=browser --format=esm lit-html.js --outfile=lit-html.bundle.js
-```
 
-And that's it! You can remove node_modules and all :)
+rm -rf package*.json
+rm -rf node_modules

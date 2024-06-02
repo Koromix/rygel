@@ -1,10 +1,9 @@
-# Update lit-html
+#!/bin/sh -e
 
-Run the following commands:
+cd "$(dirname $0)"
 
-```bash
 npm install --omit=optional node-ssh
 npx esbuild --bundle --platform=node --loader:.node=empty --format=cjs node-ssh.js --outfile=node-ssh.bundle.js
-```
 
-And that's it! You can remove node_modules and all :)
+rm -rf package*.json
+rm -rf node_modules

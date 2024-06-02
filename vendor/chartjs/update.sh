@@ -1,10 +1,9 @@
-# Update Chart.js
+#!/bin/sh -e
 
-Run the following commands:
+cd "$(dirname $0)"
 
-```bash
 npm install chart.js
 npx esbuild --bundle --platform=browser --format=esm chart.js --outfile=chart.bundle.js
-```
 
-And that's it! You can remove node_modules and all :)
+rm -rf package*.json
+rm -rf node_modules

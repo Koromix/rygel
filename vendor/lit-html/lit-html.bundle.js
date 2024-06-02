@@ -39,7 +39,7 @@ var init_lit_html = __esm({
     i = t.trustedTypes;
     s = i ? i.createPolicy("lit-html", { createHTML: (t4) => t4 }) : void 0;
     e = "$lit$";
-    h = `lit$${(Math.random() + "").slice(9)}$`;
+    h = `lit$${Math.random().toFixed(9).slice(2)}$`;
     o = "?" + h;
     n = `<${o}>`;
     r = document;
@@ -76,13 +76,13 @@ var init_lit_html = __esm({
       }
       return [C(t4, l3 + (t4[s4] || "<?>") + (2 === i6 ? "</svg>" : "")), o5];
     };
-    V = class _V {
+    V = class {
       constructor({ strings: t4, _$litType$: s4 }, n5) {
         let r3;
         this.parts = [];
         let c4 = 0, a2 = 0;
         const u3 = t4.length - 1, d2 = this.parts, [f4, v2] = P(t4, s4);
-        if (this.el = _V.createElement(f4, n5), E.currentNode = this.el.content, 2 === s4) {
+        if (this.el = V.createElement(f4, n5), E.currentNode = this.el.content, 2 === s4) {
           const t5 = this.el.content.firstChild;
           t5.replaceWith(...t5.childNodes);
         }
@@ -149,7 +149,7 @@ var init_lit_html = __esm({
           void 0 !== s4 && (void 0 !== s4.strings ? (s4._$AI(t4, s4, i6), i6 += s4.strings.length - 2) : s4._$AI(t4[i6])), i6++;
       }
     };
-    M = class _M {
+    M = class {
       get _$AU() {
         return this._$AM?._$AU ?? this._$Cv;
       }
@@ -197,7 +197,7 @@ var init_lit_html = __esm({
         const i6 = this._$AH;
         let s4, e6 = 0;
         for (const h5 of t4)
-          e6 === i6.length ? i6.push(s4 = new _M(this.S(l()), this.S(l()), this, this.options)) : s4 = i6[e6], s4._$AI(h5), e6++;
+          e6 === i6.length ? i6.push(s4 = new M(this.S(l()), this.S(l()), this, this.options)) : s4 = i6[e6], s4._$AI(h5), e6++;
         e6 < i6.length && (this._$AR(s4 && s4._$AB.nextSibling, e6), i6.length = e6);
       }
       _$AR(t4 = this._$AA.nextSibling, i6) {
@@ -280,7 +280,7 @@ var init_lit_html = __esm({
     };
     z = { P: e, A: h, C: o, M: 1, L: P, R: S, D: u, V: N, I: M, H: R, N: H, U: I, B: k, F: L };
     Z = t.litHtmlPolyfillSupport;
-    Z?.(V, M), (t.litHtmlVersions ??= []).push("3.1.2");
+    Z?.(V, M), (t.litHtmlVersions ??= []).push("3.1.3");
     j = (t4, i6, s4) => {
       const e6 = s4?.renderBefore ?? i6;
       let h5 = e6._$litPart$;
