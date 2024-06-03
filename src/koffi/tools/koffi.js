@@ -108,6 +108,7 @@ async function main() {
     // List matching builds and machines
     if (config.patterns.length) {
         let use_builds = new Set;
+        let use_machines = [];
 
         for (let pattern of config.patterns) {
             let re = make_wildcard_pattern(pattern);
@@ -118,7 +119,7 @@ async function main() {
 
                 if (key.match(re) || build.title.match(re)) {
                     use_builds.add(key);
-                    runner.select(build.info.machine);
+                    use_machines.push(build.info.machine);
 
                     match = true;
                 }
@@ -132,7 +133,7 @@ async function main() {
                         if (build.info.machine == machine.key)
                             use_builds.add(key);
                     }
-                    runner.select(machine.key);
+                    use_machines.push(machine.key);
 
                     match = true;
                 }
@@ -143,6 +144,9 @@ async function main() {
                 process.exit(1);
             }
         }
+
+        for (let machine of use_machines)
+            runner.select(machine);
 
         builds = Object.values(known_builds).filter(build => use_builds.has(build.key));
         all_builds = (builds.length == Object.keys(known_builds).length);
