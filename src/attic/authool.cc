@@ -14,6 +14,7 @@
 #include "src/core/base/base.hh"
 #include "src/core/password/otp.hh"
 #include "src/core/password/password.hh"
+#include "src/core/wrap/qrcode.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -353,23 +354,20 @@ Options:
 
     if (!skip_qrcode) {
         if (png_filename) {
-            HeapArray<uint8_t> png;
-            if (!pwd_GenerateHotpPng(url, 12, &png))
+            StreamWriter st(png_filename);
+            if (!qr_EncodeTextToPng(url, 12, &st))
+                return 1;
+            if (!st.Close())
                 return 1;
 
-            if (!WriteFile(png, png_filename))
-                return 1;
             LogInfo("QR code written to: %!..+%1%!0", png_filename);
         } else {
             LogInfo();
 
             bool ansi = FileIsVt100(STDOUT_FILENO);
 
-            HeapArray<char> utf8;
-            if (!pwd_GenerateHotpUtf8(url, ansi, 4, &utf8))
+            if (!qr_EncodeTextToBlocks(url, ansi, 4, StdOut))
                 return 1;
-
-            StdOut->Write(utf8);
         }
     }
 

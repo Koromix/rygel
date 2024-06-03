@@ -20,6 +20,7 @@
 #include "src/core/http/http.hh"
 #include "src/core/password/otp.hh"
 #include "src/core/password/password.hh"
+#include "src/core/wrap/qrcode.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -1392,8 +1393,13 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
     Span<const uint8_t> png;
     {
         HeapArray<uint8_t> buf(&io->allocator);
-        if (!pwd_GenerateHotpPng(url, 0, &buf))
+
+        StreamWriter st(&buf);
+        if (!qr_EncodeTextToPng(url, 0, &st))
             return;
+        if (!st.Close())
+            return;
+
         png = buf.Leak();
     }
 
