@@ -33,8 +33,8 @@ bool CheckDomainTitle(Span<const char> title)
         LogError("Domain title cannot be empty");
         return false;
     }
-    if (title.len > 32) {
-        LogError("Domain title cannot be have more than 32 characters");
+    if (title.len > 64) {
+        LogError("Domain title cannot be have more than 64 characters");
         return false;
     }
     if (!std::all_of(title.begin(), title.end(), test_char)) {
