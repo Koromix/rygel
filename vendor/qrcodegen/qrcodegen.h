@@ -184,7 +184,7 @@ struct qrcodegen_Segment {
  * Please consult the QR Code specification for information on
  * data capacities per version, ECC level, and text encoding mode.
  */
-bool qrcodegen_encodeText(const char *text, uint8_t tempBuffer[], uint8_t qrcode[],
+bool qrcodegen_encodeText(const char *text, size_t textLen, uint8_t tempBuffer[], uint8_t qrcode[],
 	enum qrcodegen_Ecc ecl, int minVersion, int maxVersion, enum qrcodegen_Mask mask, bool boostEcl);
 
 
@@ -307,7 +307,7 @@ bool qrcodegen_encodeSegmentsAdvanced(const struct qrcodegen_Segment segs[], siz
  * Tests whether the given string can be encoded as a segment in numeric mode.
  * A string is encodable iff each character is in the range 0 to 9.
  */
-bool qrcodegen_isNumeric(const char *text);
+bool qrcodegen_isNumeric(const char *text, size_t textLen);
 
 
 /* 
@@ -315,7 +315,7 @@ bool qrcodegen_isNumeric(const char *text);
  * A string is encodable iff each character is in the following set: 0 to 9, A to Z
  * (uppercase only), space, dollar, percent, asterisk, plus, hyphen, period, slash, colon.
  */
-bool qrcodegen_isAlphanumeric(const char *text);
+bool qrcodegen_isAlphanumeric(const char *text, size_t textLen);
 
 
 /* 
@@ -343,7 +343,7 @@ struct qrcodegen_Segment qrcodegen_makeBytes(const uint8_t data[], size_t len, u
 /* 
  * Returns a segment representing the given string of decimal digits encoded in numeric mode.
  */
-struct qrcodegen_Segment qrcodegen_makeNumeric(const char *digits, uint8_t buf[]);
+struct qrcodegen_Segment qrcodegen_makeNumeric(const char *digits, size_t len, uint8_t buf[]);
 
 
 /* 
@@ -351,7 +351,7 @@ struct qrcodegen_Segment qrcodegen_makeNumeric(const char *digits, uint8_t buf[]
  * The characters allowed are: 0 to 9, A to Z (uppercase only), space,
  * dollar, percent, asterisk, plus, hyphen, period, slash, colon.
  */
-struct qrcodegen_Segment qrcodegen_makeAlphanumeric(const char *text, uint8_t buf[]);
+struct qrcodegen_Segment qrcodegen_makeAlphanumeric(const char *text, size_t len, uint8_t buf[]);
 
 
 /* 

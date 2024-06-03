@@ -553,7 +553,7 @@ static void testIsAlphanumeric(void) {
 		{false, "\xFF"},
 	};
 	for (size_t i = 0; i < ARRAY_LENGTH(cases); i++) {
-		assert(qrcodegen_isAlphanumeric(cases[i].text) == cases[i].answer);
+		assert(qrcodegen_isAlphanumeric(cases[i].text, strlen(cases[i].text)) == cases[i].answer);
 		numTestCases++;
 	}
 }
@@ -586,7 +586,7 @@ static void testIsNumeric(void) {
 		{false, "\xFF"},
 	};
 	for (size_t i = 0; i < ARRAY_LENGTH(cases); i++) {
-		assert(qrcodegen_isNumeric(cases[i].text) == cases[i].answer);
+		assert(qrcodegen_isNumeric(cases[i].text, strlen(cases[i].text)) == cases[i].answer);
 		numTestCases++;
 	}
 }

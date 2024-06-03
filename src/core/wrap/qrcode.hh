@@ -25,7 +25,7 @@
 
 namespace RG {
 
-bool qr_EncodeTextToPng(const char *text, int border, StreamWriter *out_st);
-bool qr_EncodeTextToBlocks(const char *text, bool ansi, int border, StreamWriter *out_st);
+bool qr_EncodeTextToPng(Span<const char> text, int border, StreamWriter *out_st);
+bool qr_EncodeTextToBlocks(Span<const char> text, bool ansi, int border, StreamWriter *out_st);
 
 }

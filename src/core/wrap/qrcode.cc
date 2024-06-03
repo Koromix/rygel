@@ -133,13 +133,13 @@ static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, 
     return true;
 }
 
-bool qr_EncodeTextToPng(const char *text, int border, StreamWriter *out_st)
+bool qr_EncodeTextToPng(Span<const char> text, int border, StreamWriter *out_st)
 {
     uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
     uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
     static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
 
-    bool success = qrcodegen_encodeText(text, tmp, qr, qrcodegen_Ecc_MEDIUM,
+    bool success = qrcodegen_encodeText(text.ptr, (size_t)text.len, tmp, qr, qrcodegen_Ecc_MEDIUM,
                                         qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
     if (!success) {
         LogError("QR code encoding failed");
@@ -175,7 +175,7 @@ static void GenerateUnicodeBlocks(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], bo
     }
 }
 
-bool qr_EncodeTextToBlocks(const char *text, bool ansi, int border, StreamWriter *out_st)
+bool qr_EncodeTextToBlocks(Span<const char> text, bool ansi, int border, StreamWriter *out_st)
 {
     RG_ASSERT(border % 2 == 0);
 
@@ -183,7 +183,7 @@ bool qr_EncodeTextToBlocks(const char *text, bool ansi, int border, StreamWriter
     uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
     static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
 
-    bool success = qrcodegen_encodeText(text, tmp, qr, qrcodegen_Ecc_MEDIUM,
+    bool success = qrcodegen_encodeText(text.ptr, (size_t)text.len, tmp, qr, qrcodegen_Ecc_MEDIUM,
                                         qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
     if (!success) {
         LogError("QR code encoding failed");

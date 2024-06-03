@@ -61,7 +61,7 @@ static void doBasicDemo(void) {
 	// Make and print the QR Code symbol
 	uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
 	uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
-	bool ok = qrcodegen_encodeText(text, tempBuffer, qrcode, errCorLvl,
+	bool ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode, errCorLvl,
 		qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 	if (ok)
 		printQr(qrcode);
@@ -71,18 +71,20 @@ static void doBasicDemo(void) {
 // Creates a variety of QR Codes that exercise different features of the library, and prints each one to the console.
 static void doVarietyDemo(void) {
 	{  // Numeric mode encoding (3.33 bits per digit)
+		const char *text = "314159265358979323846264338327950288419716939937510";
 		uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
 		uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
-		bool ok = qrcodegen_encodeText("314159265358979323846264338327950288419716939937510", tempBuffer, qrcode,
+		bool ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
 			printQr(qrcode);
 	}
 	
 	{  // Alphanumeric mode encoding (5.5 bits per character)
+		const char *text = "DOLLAR-AMOUNT:$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/";
 		uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
 		uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
-		bool ok = qrcodegen_encodeText("DOLLAR-AMOUNT:$39.87 PERCENTAGE:100.00% OPERATIONS:+-*/", tempBuffer, qrcode,
+		bool ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode,
 			qrcodegen_Ecc_HIGH, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
 			printQr(qrcode);
@@ -93,7 +95,7 @@ static void doVarietyDemo(void) {
 			"\xE4\xB8\x96\xE7\x95\x8C\xEF\xBC\x81\x20\xCE\xB1\xCE\xB2\xCE\xB3\xCE\xB4";
 		uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
 		uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
-		bool ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
+		bool ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode,
 			qrcodegen_Ecc_QUARTILE, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
 			printQr(qrcode);
@@ -110,7 +112,7 @@ static void doVarietyDemo(void) {
 			"a White Rabbit with pink eyes ran close by her.";
 		uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
 		uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
-		bool ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
+		bool ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode,
 			qrcodegen_Ecc_HIGH, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
 			printQr(qrcode);
@@ -134,7 +136,7 @@ static void doSegmentDemo(void) {
 			}
 			strcat(concat, silver0);
 			strcat(concat, silver1);
-			ok = qrcodegen_encodeText(concat, tempBuffer, qrcode, qrcodegen_Ecc_LOW,
+			ok = qrcodegen_encodeText(concat, strlen(concat), tempBuffer, qrcode, qrcodegen_Ecc_LOW,
 				qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 			if (ok)
 				printQr(qrcode);
@@ -175,7 +177,7 @@ static void doSegmentDemo(void) {
 			strcat(concat, golden0);
 			strcat(concat, golden1);
 			strcat(concat, golden2);
-			ok = qrcodegen_encodeText(concat, tempBuffer, qrcode, qrcodegen_Ecc_LOW,
+			ok = qrcodegen_encodeText(concat, strlen(concat), tempBuffer, qrcode, qrcodegen_Ecc_LOW,
 				qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 			if (ok)
 				printQr(qrcode);
@@ -226,7 +228,7 @@ static void doSegmentDemo(void) {
 				"\xEF\xBD\x84\xEF\xBD\x85\xEF\xBD\x93\xEF"
 				"\xBD\x95\xE3\x80\x80\xCE\xBA\xCE\xB1\xEF"
 				"\xBC\x9F";
-			ok = qrcodegen_encodeText(madoka, tempBuffer, qrcode, qrcodegen_Ecc_LOW,
+			ok = qrcodegen_encodeText(madoka, strlen(madoka), tempBuffer, qrcode, qrcodegen_Ecc_LOW,
 				qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 			if (ok)
 				printQr(qrcode);
@@ -267,16 +269,17 @@ static void doSegmentDemo(void) {
 // Creates QR Codes with the same size and contents but different mask patterns.
 static void doMaskDemo(void) {
 	{  // Project Nayuki URL
+		const char *url = "https://www.nayuki.io/";
 		uint8_t qrcode[qrcodegen_BUFFER_LEN_MAX];
 		uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
 		bool ok;
 		
-		ok = qrcodegen_encodeText("https://www.nayuki.io/", tempBuffer, qrcode,
+		ok = qrcodegen_encodeText(url, strlen(url), tempBuffer, qrcode,
 			qrcodegen_Ecc_HIGH, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
 		if (ok)
 			printQr(qrcode);
 		
-		ok = qrcodegen_encodeText("https://www.nayuki.io/", tempBuffer, qrcode,
+		ok = qrcodegen_encodeText(url, strlen(url), tempBuffer, qrcode,
 			qrcodegen_Ecc_HIGH, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_3, true);
 		if (ok)
 			printQr(qrcode);
@@ -295,22 +298,22 @@ static void doMaskDemo(void) {
 		uint8_t tempBuffer[qrcodegen_BUFFER_LEN_MAX];
 		bool ok;
 		
-		ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
+		ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_0, true);
 		if (ok)
 			printQr(qrcode);
 		
-		ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
+		ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_1, true);
 		if (ok)
 			printQr(qrcode);
 		
-		ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
+		ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_5, true);
 		if (ok)
 			printQr(qrcode);
 		
-		ok = qrcodegen_encodeText(text, tempBuffer, qrcode,
+		ok = qrcodegen_encodeText(text, strlen(text), tempBuffer, qrcode,
 			qrcodegen_Ecc_MEDIUM, qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_7, true);
 		if (ok)
 			printQr(qrcode);
