@@ -21,7 +21,7 @@
 
 #include <stdbool.h>
 
-#if defined(__x86_64__) && defined(__linux__)
+#if defined(__x86_64__)
 
 __attribute__((naked)) void DoReturnBool(int cond)
 {
@@ -30,9 +30,9 @@ __attribute__((naked)) void DoReturnBool(int cond)
 
     __asm__ __volatile__ (
         "cmpl $0, %edi\n"
-        "setne %bl\n"
+        "setne %r10b\n"
         "movl $0xFFFFFFFF, %eax\n"
-        "andb %bl, %al\n"
+        "andb %r10b, %al\n"
         "ret\n"
     );
 }
