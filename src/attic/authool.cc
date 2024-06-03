@@ -366,7 +366,7 @@ Options:
 
             bool ansi = FileIsVt100(STDOUT_FILENO);
 
-            if (!qr_EncodeTextToBlocks(url, ansi, 4, StdOut))
+            if (!qr_EncodeTextToBlocks(url, ansi, 2, StdOut))
                 return 1;
         }
     }
