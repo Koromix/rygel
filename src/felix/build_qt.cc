@@ -389,7 +389,7 @@ R"(#include <QtCore/QtPlugin>
 
 #if defined(_WIN32)
     Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
-    Q_IMPORT_PLUGIN(QWindowsVistaStylePlugin)
+    Q_IMPORT_PLUGIN(QModernWindowsStylePlugin)
 #elif defined(__APPLE__)
     Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
     Q_IMPORT_PLUGIN(QMacStylePlugin)
