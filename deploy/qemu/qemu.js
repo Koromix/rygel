@@ -304,7 +304,7 @@ function QemuRunner(registry = null) {
         let proc = spawnSync('sshpass', args, { stdio: 'inherit' });
 
         if (proc.status !== 0) {
-            if (spawnSync('sshpass', ['--help']).status !== 0)
+            if (spawnSync('sshpass', ['-h']).status !== 0)
                 throw new Error('Missing sshpass binary in PATH');
 
             console.error('Connection failed');
