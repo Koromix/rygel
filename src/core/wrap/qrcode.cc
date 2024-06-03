@@ -27,6 +27,52 @@
 
 namespace RG {
 
+template <typename T>
+bool EncodeText(Span<const char> text, int border, T func, StreamWriter *out_st)
+{
+    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
+    uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
+    static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
+
+    bool success = qrcodegen_encodeText(text.ptr, (size_t)text.len, tmp, qr, qrcodegen_Ecc_MEDIUM,
+                                        qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+    if (!success) {
+        LogError("QR code encoding failed");
+        return false;
+    }
+
+    if (!func(qr, border, out_st))
+        return false;
+
+    return true;
+}
+
+template <typename T>
+bool EncodeBinary(Span<const uint8_t> data, int border, T func, StreamWriter *out_st)
+{
+    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
+    uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
+    static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
+
+    if (data.len > RG_SIZE(tmp)) [[unlikely]] {
+        LogError("Cannot encode %1 bytes as QR code (max = %2)", data.len, RG_SIZE(tmp));
+        return false;
+    }
+    MemCpy(tmp, data.ptr, data.len);
+
+    bool success = qrcodegen_encodeBinary(tmp, (size_t)data.len, qr, qrcodegen_Ecc_MEDIUM,
+                                          qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+    if (!success) {
+        LogError("QR code encoding failed");
+        return false;
+    }
+
+    if (!func(qr, border, out_st))
+        return false;
+
+    return true;
+}
+
 static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, StreamWriter *out_st)
 {
     // Account for scanline byte
@@ -135,21 +181,12 @@ static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, 
 
 bool qr_EncodeTextToPng(Span<const char> text, int border, StreamWriter *out_st)
 {
-    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
-    uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
-    static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
+    return EncodeText(text, border, GeneratePNG, out_st);
+}
 
-    bool success = qrcodegen_encodeText(text.ptr, (size_t)text.len, tmp, qr, qrcodegen_Ecc_MEDIUM,
-                                        qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
-    if (!success) {
-        LogError("QR code encoding failed");
-        return false;
-    }
-
-    if (!GeneratePNG(qr, border, out_st))
-        return false;
-
-    return true;
+bool qr_EncodeBinaryToPng(Span<const uint8_t> data, int border, StreamWriter *out_st)
+{
+    return EncodeBinary(data, border, GeneratePNG, out_st);
 }
 
 static void GenerateUnicodeBlocks(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], bool ansi, int border, StreamWriter *out_st)
@@ -179,20 +216,20 @@ bool qr_EncodeTextToBlocks(Span<const char> text, bool ansi, int border, StreamW
 {
     RG_ASSERT(border % 2 == 0);
 
-    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
-    uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
-    static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
+    return EncodeText(text, border, [&](const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, StreamWriter *out_st) {
+        GenerateUnicodeBlocks(qr, ansi, border, out_st);
+        return true;
+    }, out_st);
+}
 
-    bool success = qrcodegen_encodeText(text.ptr, (size_t)text.len, tmp, qr, qrcodegen_Ecc_MEDIUM,
-                                        qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
-    if (!success) {
-        LogError("QR code encoding failed");
-        return false;
-    }
+bool qr_EncodeBinaryToBlocks(Span<const uint8_t> data, bool ansi, int border, StreamWriter *out_st)
+{
+    RG_ASSERT(border % 2 == 0);
 
-    GenerateUnicodeBlocks(qr, ansi, border, out_st);
-
-    return true;
+    return EncodeBinary(data, border, [&](const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, StreamWriter *out_st) {
+        GenerateUnicodeBlocks(qr, ansi, border, out_st);
+        return true;
+    }, out_st);
 }
 
 }

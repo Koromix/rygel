@@ -26,6 +26,9 @@
 namespace RG {
 
 bool qr_EncodeTextToPng(Span<const char> text, int border, StreamWriter *out_st);
+bool qr_EncodeBinaryToPng(Span<const uint8_t> data, int border, StreamWriter *out_st);
+
 bool qr_EncodeTextToBlocks(Span<const char> text, bool ansi, int border, StreamWriter *out_st);
+bool qr_EncodeBinaryToBlocks(Span<const uint8_t> data, bool ansi, int border, StreamWriter *out_st);
 
 }
