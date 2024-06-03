@@ -384,7 +384,7 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
 
 const char *Builder::CompileStaticQtHelper(const TargetInfo &target)
 {
-    static const char *const StaticCode =
+    static const char *const BaseCode =
 R"(#include <QtCore/QtPlugin>
 
 #if defined(_WIN32)
@@ -398,10 +398,19 @@ R"(#include <QtCore/QtPlugin>
 #endif
 )";
 
+    HeapArray<char> code;
+    code.Append(BaseCode);
+
+    for (const char *component: target.qt_components) {
+        if (TestStr(component, "Svg")) {
+            Fmt(&code, "Q_IMPORT_PLUGIN(QSvgPlugin)\n");
+        }
+    }
+
     const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_qt.cc", cache_directory, target.name).ptr;
     const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
 
-    if (!TestFile(src_filename) && !WriteFile(StaticCode, src_filename))
+    if (!TestFile(src_filename) && !WriteFile(code, src_filename))
         return nullptr;
 
     uint32_t features = target.CombineFeatures(build.features);
