@@ -248,6 +248,7 @@ static int RunGenerateTOTP(Span<const char *> arguments)
     pwd_HotpAlgorithm algorithm = pwd_HotpAlgorithm::SHA1;
     const char *secret = nullptr;
     int digits = 6;
+    bool skip_qrcode = false;
     const char *png_filename = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -266,7 +267,8 @@ Options:
     %!..+-d, --digits <digits>%!0        Use specified number of digits
                                  %!D..(default: %3)%!0
 
-    %!..+-O, --output_file <file>%!0     Write QR code PNG image to disk)",
+             --skip_qrcode               Skip generation of QR code
+    %!..+-P, --png_file <file>%!0        Write QR code PNG image to disk)",
                 FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm], digits);
     };
 
@@ -298,7 +300,9 @@ Options:
                     LogError("Option --digits value must be between 6 and 8");
                     return 1;
                 }
-            } else if (opt.Test("-O", "--output_file", OptionType::Value)) {
+            } else if (opt.Test("--skip_qrcode")) {
+                skip_qrcode = true;
+            } else if (opt.Test("-P", "--png_file", OptionType::Value)) {
                 png_filename = opt.current_value;
             } else {
                 opt.LogUnknownError();
@@ -347,14 +351,26 @@ Options:
     const char *url = pwd_GenerateHotpUrl(label, username, issuer, algorithm, secret, digits, &temp_alloc);
     LogInfo("URL: %!..+%1%!0", url);
 
-    if (png_filename) {
-        HeapArray<uint8_t> png;
-        if (!pwd_GenerateHotpPng(url, 12, &png))
-            return 1;
+    if (!skip_qrcode) {
+        if (png_filename) {
+            HeapArray<uint8_t> png;
+            if (!pwd_GenerateHotpPng(url, 12, &png))
+                return 1;
 
-        if (!WriteFile(png, png_filename))
-            return 1;
-        LogInfo("QR code written to: %!..+%1%!0", png_filename);
+            if (!WriteFile(png, png_filename))
+                return 1;
+            LogInfo("QR code written to: %!..+%1%!0", png_filename);
+        } else {
+            LogInfo();
+
+            bool ansi = FileIsVt100(STDOUT_FILENO);
+
+            HeapArray<char> utf8;
+            if (!pwd_GenerateHotpUtf8(url, ansi, 4, &utf8))
+                return 1;
+
+            StdOut->Write(utf8);
+        }
     }
 
     return 0;

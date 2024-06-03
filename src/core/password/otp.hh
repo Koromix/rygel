@@ -42,6 +42,7 @@ bool pwd_CheckSecret(const char *secret);
 
 const char *pwd_GenerateHotpUrl(const char *label, const char *username, const char *issuer,
                                 pwd_HotpAlgorithm algo, const char *secret, int digits, Allocator *alloc);
+bool pwd_GenerateHotpUtf8(const char *url, bool ansi, int border, HeapArray<char> *out_buf);
 bool pwd_GenerateHotpPng(const char *url, int border, HeapArray<uint8_t> *out_buf);
 
 int pwd_ComputeHotp(const char *secret, pwd_HotpAlgorithm algo, int64_t counter, int digits);

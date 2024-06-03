@@ -162,6 +162,50 @@ const char *pwd_GenerateHotpUrl(const char *label, const char *username, const c
     return url;
 }
 
+static void GenerateUtf8(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], bool ansi, int border, HeapArray<char> *out_utf8)
+{
+    int size = qrcodegen_getSize(qr) + 2 * border;
+
+    for (int y = 0; y < size; y += 2) {
+        out_utf8->Append(ansi ? "\e[40;37m" : "");
+
+        for (int x = 0; x < size; x++) {
+            int combined = (qrcodegen_getModule(qr, x - border, y - border) << 0) |
+                           (qrcodegen_getModule(qr, x - border, y - border + 1) << 1);
+
+            switch (combined) {
+                case 0: { out_utf8->Append("\u2588"); } break;
+                case 1: { out_utf8->Append("\u2584"); } break;
+                case 2: { out_utf8->Append("\u2580"); } break;
+                case 3: { out_utf8->Append(' '); } break;
+            }
+        }
+
+        out_utf8->Append(ansi ? "\e[0m\n" : "\n");
+    }
+}
+
+bool pwd_GenerateHotpUtf8(const char *url, bool ansi, int border, HeapArray<char> *out_buf)
+{
+    RG_ASSERT(!out_buf->len);
+    RG_ASSERT(border % 2 == 0);
+
+    uint8_t qr[qrcodegen_BUFFER_LEN_MAX];
+    uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
+    static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
+
+    bool success = qrcodegen_encodeText(url, tmp, qr, qrcodegen_Ecc_MEDIUM,
+                                        qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
+    if (!success) {
+        LogError("QR code encoding failed");
+        return false;
+    }
+
+    GenerateUtf8(qr, ansi, border, out_buf);
+
+    return true;
+}
+
 static bool GeneratePNG(const uint8_t qr[qrcodegen_BUFFER_LEN_MAX], int border, HeapArray<uint8_t> *out_png)
 {
     // Account for scanline byte
