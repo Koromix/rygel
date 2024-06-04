@@ -105,6 +105,39 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
     return -1;
 }
 
+static HostArchitecture ParseTarget(Span<const char> output)
+{
+    while (output.len) {
+        Span<const char> line = SplitStrLine(output, &output);
+
+        Span<const char> value;
+        Span<const char> key = SplitStr(line, ':', &value);
+        value = TrimStr(value);
+
+        if (!value.len)
+            continue;
+
+        if (key == "Target") {
+            if (StartsWith(value, "x86_64-") || StartsWith(value, "x86-64-")) {
+                return HostArchitecture::x86_64;
+            } else if (StartsWith(value, "i386-") || StartsWith(value, "i486-") || StartsWith(value, "i586-") ||
+                       StartsWith(value, "i686-") || StartsWith(value, "x86-")) {
+                return HostArchitecture::x86;
+            } else if (StartsWith(value, "aarch64-") || StartsWith(value, "arm64-")) {
+                return HostArchitecture::ARM64;
+            } else if (StartsWith(value, "arm-")) {
+                return HostArchitecture::ARM32;
+            } else if (StartsWith(value, "riscv64-")) {
+                return HostArchitecture::RISCV64;
+            } else {
+                break;
+            }
+        }
+    }
+
+    return HostArchitecture::Unknown;
+}
+
 static bool IdentifyCompiler(const char *bin, const char *needle)
 {
     bin = SplitStrReverseAny(bin, RG_PATH_SEPARATORS).ptr;
@@ -139,6 +172,7 @@ class ClangCompiler final: public Compiler {
     const char *rc;
     const char *ld;
 
+    const char *target = nullptr;
     const char *sysroot = nullptr;
 
     int clang_ver = 0;
@@ -181,12 +215,15 @@ public:
 
         if (platform == HostPlatform::WasmWasi) {
             RG_ASSERT(sysroot);
+
+            compiler->architecture = HostArchitecture::Web;
+            compiler->target = "--target=wasm32-wasi";
             compiler->sysroot = DuplicateString(sysroot, &compiler->str_alloc).ptr;
         }
 
         Async async;
 
-        // Determine Clang version
+        // Determine Clang version and architecture (if needed)
         async.Run([&]() {
             char cmd[2048];
             Fmt(cmd, "\"%1\" --version", compiler->cc);
@@ -194,6 +231,71 @@ public:
             HeapArray<char> output;
             if (ReadCommandOutput(cmd, &output)) {
                 compiler->clang_ver = ParseVersion(cmd, output, "version");
+
+                HostArchitecture architecture = ParseTarget(output);
+
+                if (architecture == HostArchitecture::Unknown) {
+                    LogError("Cannot determine default Clang architecture");
+                    return false;
+                }
+
+                if (compiler->architecture == HostArchitecture::Unknown) {
+                    compiler->architecture = architecture;
+#ifdef _WIN32
+                } else {
+                    switch (compiler->architecture) {
+                        case HostArchitecture::x86: { compiler->target = "-m32"; } break;
+                        case HostArchitecture::x86_64: { compiler->target = "-m64"; } break;
+
+                        case HostArchitecture::ARM64:
+                        case HostArchitecture::RISCV64:
+                        case HostArchitecture::ARM32:
+                        case HostArchitecture::Web: {
+                            LogError("Cannot use Clang (Windows) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
+                            return false;
+                        } break;
+
+                        case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                    }
+#elif !defined(__APPLE_)
+                } else {
+                    const char *prefix = nullptr;
+                    const char *suffix = nullptr;
+
+                    switch (compiler->architecture)  {
+                        case HostArchitecture::x86: { prefix = "x86"; } break;
+                        case HostArchitecture::x86_64: { prefix = "x86_64"; } break;
+                        case HostArchitecture::ARM64: { prefix = "aarch64"; } break;
+                        case HostArchitecture::RISCV64: { prefix = "riscv64"; } break;
+
+                        case HostArchitecture::ARM32:
+                        case HostArchitecture::Web: {
+                            LogError("Cannot use Clang to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
+                            return false;
+                        } break;
+
+                        case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                    }
+
+                    switch (compiler->platform) {
+                        case HostPlatform::Linux: { suffix = "pc-linux-gnu"; } break;
+                        case HostPlatform::FreeBSD: { suffix = "freebsd-unkown"; } break;
+                        case HostPlatform::OpenBSD: { suffix = "openbsd-unkown"; } break;
+
+                        default: {
+                            LogError("Cannot use Clang to build for '%1'", HostPlatformNames[(int)compiler->platform]);
+                            return false;
+                        } break;
+                    }
+
+                    compiler->target = Fmt(&compiler->str_alloc, "--target=%1-%2", prefix, suffix).ptr;
+#else
+                } else if (compiler->architecture != architecture) {
+                    LogError("Cannot use Clang (%1) compiler to build for '%2'",
+                             HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
+                    return false;
+#endif
+                }
             }
 
             return true;
@@ -222,7 +324,8 @@ public:
             return true;
         });
 
-        async.Sync();
+        if (!async.Sync())
+            return nullptr;
 
         return compiler;
     }
@@ -419,7 +522,7 @@ public:
         Fmt(&buf, " -MD -MF \"%1.d\"", dest_filename ? dest_filename : src_filename);
         out_cmd->rsp_offset = buf.len;
 
-        // Cross-compilation (Linux only for now)
+        // Cross-compilation
         AddClangTarget(&buf);
 
         // Build options
@@ -639,7 +742,7 @@ public:
         Fmt(&buf, " -o \"%1\"", dest_filename);
         out_cmd->rsp_offset = buf.len;
 
-        // Cross-compilation (Linux only for now)
+        // Cross-compilation
         AddClangTarget(&buf);
 
         // Build mode
@@ -796,32 +899,15 @@ public:
     void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
 private:
-    void AddClangTarget([[maybe_unused]] HeapArray<char> *out_buf) const
+    void AddClangTarget(HeapArray<char> *out_buf) const
     {
-        if (platform == HostPlatform::WasmWasi) {
-            Fmt(out_buf, " -target wasm32-wasi --sysroot=%1", sysroot);
-            return;
+        if (target) {
+            Fmt(out_buf, " %1", target);
         }
 
-#ifdef __linux__
-        // Only for Linux (for now)
-
-        if (architecture != NativeArchitecture) {
-            RG_ASSERT(platform == HostPlatform::Linux);
-
-            switch (architecture)  {
-                case HostArchitecture::x86: { Fmt(out_buf, " --target=x86-pc-linux-gnu"); } break;
-                case HostArchitecture::x86_64: { Fmt(out_buf, " --target=x86_64-pc-linux-gnu"); } break;
-                case HostArchitecture::ARM64: { Fmt(out_buf, " --target=aarch64-pc-linux-gnu"); } break;
-                case HostArchitecture::RISCV64: { Fmt(out_buf, " --target=riscv64-pc-linux-gnu"); } break;
-
-                case HostArchitecture::ARM32:
-                case HostArchitecture::Web: { RG_UNREACHABLE(); } break;
-            }
+        if (sysroot) {
+            Fmt(out_buf, " --sysroot=%1", sysroot);
         }
-#else
-        RG_ASSERT(architecture == NativeArchitecture);
-#endif
     }
 };
 
@@ -832,7 +918,6 @@ class GnuCompiler final: public Compiler {
     const char *ld;
 
     int gcc_ver = 0;
-    bool i686 = false;
 
     BlockAllocator str_alloc;
 
@@ -865,7 +950,21 @@ public:
             HeapArray<char> output;
             if (ReadCommandOutput(cmd, &output)) {
                 compiler->gcc_ver = ParseVersion(cmd, output, "version");
-                compiler->i686 = FindStr(output, "i686") >= 0;
+
+                HostArchitecture architecture = ParseTarget(output);
+
+                if (architecture == HostArchitecture::Unknown) {
+                    LogError("Cannot determine default GCC architecture");
+                    return nullptr;
+                }
+
+                if (compiler->architecture == HostArchitecture::Unknown) {
+                    compiler->architecture = architecture;
+                } else if (compiler->architecture != architecture) {
+                    LogError("Cannot use GCC (%1) compiler to build for '%2'",
+                             HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
+                    return nullptr;
+                }
             }
         };
 
@@ -1116,6 +1215,19 @@ public:
             } break;
         }
 
+        // Architecture flags
+        switch (architecture) {
+            case HostArchitecture::x86:
+            case HostArchitecture::ARM32: { Fmt(&buf, " -m32"); } break;
+
+            case HostArchitecture::x86_64:
+            case HostArchitecture::ARM64:
+            case HostArchitecture::RISCV64: { Fmt(&buf, " -m64"); } break;
+            case HostArchitecture::Web: {} break;
+
+            case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+        }
+
         // Features
         if (features & (int)CompileFeature::DebugInfo) {
             Fmt(&buf, " -g");
@@ -1263,7 +1375,7 @@ public:
         switch (platform) {
             case HostPlatform::Windows: {
                 Fmt(&buf, " -Wl,--dynamicbase -Wl,--nxcompat");
-                if (!i686) {
+                if (architecture != HostArchitecture::x86) {
                     Fmt(&buf, " -Wl,--high-entropy-va");
                 }
 
@@ -1365,6 +1477,26 @@ public:
             HeapArray<char> output;
             if (ReadCommandOutput(cmd, &output)) {
                 compiler->cl_ver = ParseVersion(cmd, output, "Version");
+
+                Span<const char> intro = SplitStrLine(output.As<const char>());
+                HostArchitecture architecture = {};
+
+                if (EndsWith(intro, " x86")) {
+                    architecture = HostArchitecture::x86;
+                } else if (EndsWith(intro, " x64")) {
+                    architecture = HostArchitecture::x86_64;
+                } else {
+                    LogError("Cannot determine MS compiler architecture");
+                    return nullptr;
+                }
+
+                if (compiler->architecture == HostArchitecture::Unknown) {
+                    compiler->architecture = architecture;
+                } else if (compiler->architecture != architecture) {
+                    LogError("Mismatch between target architecture '%1' and compiler architecture '%2'",
+                             HostArchitectureNames[(int)compiler->architecture], HostArchitectureNames[(int)architecture]);
+                    return nullptr;
+                }
             }
         }
 
@@ -1620,7 +1752,10 @@ public:
         if (features & (int)CompileFeature::LTO) {
             Fmt(&buf, " /LTCG");
         }
-        Fmt(&buf, " /DYNAMICBASE /HIGHENTROPYVA /OPT:ref");
+        Fmt(&buf, " /DYNAMICBASE /OPT:ref");
+        if (architecture != HostArchitecture::x86) {
+            Fmt(&buf, " /HIGHENTROPYVA");
+        }
 
         // Objects and libraries
         for (const char *obj_filename: obj_filenames) {
@@ -2287,18 +2422,43 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 {
     static BlockAllocator str_alloc;
 
-    if (spec.platform == NativePlatform && spec.architecture == NativeArchitecture) {
+    if (spec.platform == NativePlatform) {
         if (!spec.cc) {
-            for (const SupportedCompiler &supported: SupportedCompilers) {
-                if (supported.cc && FindExecutableInPath(supported.cc)) {
-                    spec.cc = supported.cc;
-                    break;
+            if (spec.architecture == NativeArchitecture ||
+                    spec.architecture == HostArchitecture::Unknown) {
+                for (const SupportedCompiler &supported: SupportedCompilers) {
+                    if (supported.cc && FindExecutableInPath(supported.cc)) {
+                        spec.cc = supported.cc;
+                        break;
+                    }
                 }
-            }
 
-            if (!spec.cc) {
-                LogError("Could not find any supported compiler in PATH");
-                return nullptr;
+                if (!spec.cc) {
+                    LogError("Could not find any supported compiler in PATH");
+                    return nullptr;
+                }
+            } else {
+#ifdef __linux__
+                switch (spec.architecture) {
+                    case HostArchitecture::x86: { spec.cc = "i686-linux-gnu-gcc"; } break;
+                    case HostArchitecture::x86_64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
+                    case HostArchitecture::ARM64: { spec.cc = "aarch64-linux-gnu-gcc"; } break;
+                    case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
+
+                    case HostArchitecture::ARM32:
+                    case HostArchitecture::Web:
+                    case HostArchitecture::Unknown: {} break;
+                }
+#endif
+
+                if (!spec.cc || !TestFile(spec.cc)) {
+                    if (!FindExecutableInPath("clang")) {
+                        LogError("Cannot find any compiler to build for '%1'", HostArchitectureNames[(int)spec.architecture]);
+                        return nullptr;
+                    }
+
+                    spec.cc = "clang";
+                }
             }
         } else if (!FindExecutableInPath(spec.cc)) {
             LogError("Cannot find compiler '%1' in PATH", spec.cc);
@@ -2334,6 +2494,21 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         if (IdentifyCompiler(spec.cc, "clang")) {
             return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
         } else if (IdentifyCompiler(spec.cc, "gcc")) {
+            switch (spec.architecture) {
+                case HostArchitecture::x86: { spec.cc = "i686-linux-gnu-gcc"; } break;
+                case HostArchitecture::x86_64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
+                case HostArchitecture::ARM64: { spec.cc = "aarch64-linux-gnu-gcc"; } break;
+                case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
+
+                case HostArchitecture::ARM32:
+                case HostArchitecture::Web: {
+                    LogError("GCC cross-compilation for '%1' is not supported", HostArchitectureNames[(int)spec.architecture]);
+                    return nullptr;
+                } break;
+
+                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+            }
+
             return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
 #ifdef _WIN32
         } else if (IdentifyCompiler(spec.cc, "cl")) {
@@ -2349,11 +2524,6 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
     } else if (StartsWith(HostPlatformNames[(int)spec.platform], "WASM/Emscripten/")) {
-        if (spec.architecture != HostArchitecture::Web) {
-            LogError("Emscripten can only build for Web archtiecture, not %1", HostArchitectureNames[(int)spec.architecture]);
-            return nullptr;
-        }
-
         if (!spec.cc) {
             spec.cc = "emcc";
         }
@@ -2365,11 +2535,6 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 
         return EmCompiler::Create(spec.platform, spec.cc);
     } else if (spec.platform == HostPlatform::WasmWasi) {
-        if (spec.architecture != HostArchitecture::Web) {
-            LogError("WASM can only build for Web archtiecture, not %1", HostArchitectureNames[(int)spec.architecture]);
-            return nullptr;
-        }
-
         static WasiSdkInfo sdk;
         static bool found = FindWasiSdk(&str_alloc, &sdk);
 
@@ -2385,12 +2550,46 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
 
-        return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld, sdk.sysroot);
+        return ClangCompiler::Create(spec.platform, HostArchitecture::Web, spec.cc, spec.ld, sdk.sysroot);
 #ifdef __linux__
-    } else if (spec.platform == HostPlatform::Windows && spec.architecture == HostArchitecture::x86_64) {
+    } else if (spec.platform == HostPlatform::Windows) {
         if (!spec.cc) {
-            LogError("Path to cross-platform MinGW must be explicitly specified");
-            return nullptr;
+            if (spec.architecture == HostArchitecture::Unknown) {
+                spec.architecture = HostArchitecture::x86;
+            }
+
+            switch (spec.architecture) {
+                case HostArchitecture::x86: {
+                    if (TestFile("i686-mingw-w64-gcc")) {
+                        spec.cc = "i686-mingw-w64-gcc";
+                    } else if (TestFile("i686-w64-mingw32-gcc")) {
+                        spec.cc = "i686-w64-mingw32-gcc";
+                    }
+                } break;
+
+                case HostArchitecture::x86_64: {
+                    if (TestFile("x86_64-mingw-w64-gcc")) {
+                        spec.cc = "x86_64-mingw-w64-gcc";
+                    } else if (TestFile("x86_64-w64-mingw32-gcc")) {
+                        spec.cc = "x86_64-w64-mingw32-gcc";
+                    }
+                } break;
+
+                case HostArchitecture::ARM64:
+                case HostArchitecture::RISCV64:
+                case HostArchitecture::ARM32:
+                case HostArchitecture::Web: {
+                    LogError("Cannot use MinGW to cross-build for '%1'", HostArchitectureNames[(int)spec.architecture]);
+                    return nullptr;
+                } break;
+
+                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+            }
+
+            if (!spec.cc) {
+                LogError("Path to cross-platform MinGW must be explicitly specified");
+                return nullptr;
+            }
         }
 
         if (IdentifyCompiler(spec.cc, "mingw-w64") || IdentifyCompiler(spec.cc, "w64-mingw32")) {
@@ -2409,7 +2608,12 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
 
                 case HostArchitecture::ARM32:
-                case HostArchitecture::Web: {} break;
+                case HostArchitecture::Web: {
+                    LogError("GCC cross-compilation for '%1' is not supported", HostArchitectureNames[(int)spec.architecture]);
+                    return nullptr;
+                } break;
+
+                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
             }
         }
 
@@ -2435,6 +2639,8 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                     LogError("Clang cross-compilation for '%1' is not supported", HostArchitectureNames[(int)spec.architecture]);
                     return nullptr;
                 } break;
+
+                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
             }
 
             return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);

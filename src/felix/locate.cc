@@ -114,6 +114,7 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
                     case HostArchitecture::x86_64: { matches &= EndsWith(basename, "_64"); } break;
                     case HostArchitecture::ARM64: { matches &= EndsWith(basename, "_arm32"); } break;
 
+                    case HostArchitecture::Unknown:
                     case HostArchitecture::ARM32:
                     case HostArchitecture::RISCV64:
                     case HostArchitecture::Web: { matches = false; } break;
@@ -146,6 +147,8 @@ static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const cha
 static const char *GetGnuArchitectureString(HostArchitecture architecture)
 {
     switch (architecture) {
+        case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+
         case HostArchitecture::x86: return "i386";
         case HostArchitecture::x86_64: return "x86_64";
         case HostArchitecture::ARM32: return "armv7";

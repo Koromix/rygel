@@ -82,7 +82,8 @@ enum class HostArchitecture {
     ARM32,
     ARM64,
     RISCV64,
-    Web
+    Web,
+    Unknown
 };
 static const char *const HostArchitectureNames[] = {
     "x86",
@@ -90,7 +91,8 @@ static const char *const HostArchitectureNames[] = {
     "ARM32",
     "ARM64",
     "RISCV64",
-    "Web"
+    "Web",
+    "Unknown"
 };
 
 #if defined(__i386__) || defined(_M_IX86)
@@ -257,7 +259,7 @@ struct SupportedCompiler {
 
 struct HostSpecifier {
     HostPlatform platform = NativePlatform;
-    HostArchitecture architecture = NativeArchitecture;
+    HostArchitecture architecture = HostArchitecture::Unknown;
     const char *cc = nullptr;
     const char *ld = nullptr;
 };

@@ -130,7 +130,7 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
         if (TestStrI(architecture, "Native")) {
             out_spec->architecture = NativeArchitecture;
         } else if (!ParseArchitecture(architecture, &out_spec->architecture)) {
-            out_spec->architecture = NativeArchitecture;
+            out_spec->architecture = HostArchitecture::Unknown;
 
             ld = cc;
             cc = architecture;
@@ -601,7 +601,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         LogInfo("Loading targets...");
     }
     TargetSet target_set;
-    if (!LoadTargetSet(config_filename, host_spec.platform, host_spec.architecture, &target_set))
+    if (!LoadTargetSet(config_filename, compiler->platform, compiler->architecture, &target_set))
         return 1;
     if (!target_set.targets.len) {
         LogError("Configuration file does not contain any target");
@@ -625,9 +625,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                     handled_set.TrySet(target.name, &inserted);
 
                     if (inserted) {
-                        if (!target.TestPlatforms(host_spec.platform)) {
+                        if (!target.TestPlatforms(compiler->platform)) {
                             LogError("Cannot build '%1' for platform '%2'",
-                                     target.name, HostPlatformNames[(int)host_spec.platform]);
+                                     target.name, HostPlatformNames[(int)compiler->platform]);
                             valid = false;
                         }
 
@@ -644,12 +644,12 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                     handled_set.TrySet(src.filename, &inserted);
 
                     if (inserted) {
-                        if (src.target->TestPlatforms(host_spec.platform)) {
+                        if (src.target->TestPlatforms(compiler->platform)) {
                             enabled_sources.Append(&src);
                             match = true;
                         } else {
                             LogError("Cannot build '%1' for platform '%2' (ignoring)",
-                                     src.filename, HostPlatformNames[(int)host_spec.platform]);
+                                     src.filename, HostPlatformNames[(int)compiler->platform]);
                         }
                     }
                 }
@@ -665,13 +665,13 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             return 1;
     } else {
         for (const TargetInfo &target: target_set.targets) {
-            if (target.enable_by_default && target.TestPlatforms(host_spec.platform)) {
+            if (target.enable_by_default && target.TestPlatforms(compiler->platform)) {
                 enabled_targets.Append({ &target });
             }
         }
 
         if (!enabled_targets.len) {
-            LogError("No target to build by default for platform '%1'", HostPlatformNames[(int)host_spec.platform]);
+            LogError("No target to build by default for platform '%1'", HostPlatformNames[(int)compiler->platform]);
             return 1;
         }
     }
@@ -679,7 +679,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     // Find and check target used with --run
     const TargetInfo *run_target = nullptr;
     if (run_target_name) {
-        if (host_spec.platform != NativePlatform) {
+        if (compiler->platform != NativePlatform) {
             LogError("Cannot use --run when cross-compiling");
             return 1;
         }
@@ -733,8 +733,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     if (!quiet) {
         LogInfo("Root directory: %!..+%1%!0", GetWorkingDirectory());
         LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
-        LogInfo("  Host: %!..+%1 (%2)%!0", HostPlatformNames[(int)host_spec.platform],
-                                           HostArchitectureNames[(int)host_spec.architecture]);
+        LogInfo("  Host: %!..+%1 (%2)%!0", HostPlatformNames[(int)compiler->platform],
+                                           HostArchitectureNames[(int)compiler->architecture]);
         LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
         LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
     }

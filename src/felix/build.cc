@@ -164,9 +164,10 @@ Builder::Builder(const BuildSettings &build)
     RG_ASSERT(build.output_directory);
     RG_ASSERT(build.compiler);
 
-    const char *short_platform = SplitStrReverse(HostPlatformNames[(int)build.compiler->platform], '/').ptr;
+    const char *platform = SplitStrReverse(HostPlatformNames[(int)build.compiler->platform], '/').ptr;
+    const char *architecture = HostArchitectureNames[(int)build.compiler->architecture];
 
-    cache_directory = Fmt(&str_alloc, "%1%/%2_%3", build.output_directory, short_platform, build.compiler->name).ptr;
+    cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
     shared_directory = Fmt(&str_alloc, "%1%/Shared", build.output_directory).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/FelixCache.bin", shared_directory).ptr;
 
