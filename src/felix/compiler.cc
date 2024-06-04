@@ -571,6 +571,10 @@ public:
             }
         } else if (architecture == HostArchitecture::x86) {
             Fmt(&buf, " -msse2");
+
+            if (features & (int)CompileFeature::AESNI) {
+                Fmt(&buf, " -maes -mpclmul");
+            }
         }
 
         // Platform flags
@@ -1179,6 +1183,10 @@ public:
             }
         } else if (architecture == HostArchitecture::x86) {
             Fmt(&buf, " -msse2");
+
+            if (features & (int)CompileFeature::AESNI) {
+                Fmt(&buf, " -maes -mpclmul");
+            }
         }
 
         // Platform flags

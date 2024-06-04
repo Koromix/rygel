@@ -136,6 +136,7 @@ enum class CompileFeature {
     ESM = 1 << 22
 };
 static const OptionDesc CompileFeatureOptions[] = {
+    // C++ features
     {"PCH",            "Use precompiled headers for faster compilation"},
     {"DistCC",         "Use distcc for distributed compilation (must be in PATH)"},
     {"Ccache",         "Use ccache accelerator (must be in PATH)"},
@@ -155,7 +156,7 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"StaticRuntime",  "Use static runtime shared libraries (libc/msvcrt, etc.)"},
     {"LinkLibrary",    "Link library targets to .so/.dll files"},
     {"NoConsole",      "Link with /subsystem:windows (only for Windows)"},
-    {"AESNI",          "Enable AES-NI generation and instrinsics (x86_64)"},
+    {"AESNI",          "Enable AES-NI generation and instrinsics (x86 and x86_64)"},
     {"AVX2",           "Enable AVX2 generation and instrinsics (x86_64)"},
     {"AVX512",         "Enable AVX512 generation and instrinsics (x86_64)"},
 
