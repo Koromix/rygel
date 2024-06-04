@@ -770,7 +770,7 @@ public:
                 Fmt(&buf, " -Wl,--start-group");
             }
             for (const char *lib: libraries) {
-                if (platform == HostPlatform::macOS && lib[0] == '!') {
+                if (platform == HostPlatform::macOS && lib[0] == '@') {
                     Span<const char> directory = {};
                     Span<const char> basename = SplitStrReverse(lib + 1, '/', &directory);
 
@@ -1350,7 +1350,7 @@ public:
                 Fmt(&buf, " -Wl,--start-group");
             }
             for (const char *lib: libraries) {
-                if (platform == HostPlatform::macOS && lib[0] == '!') {
+                if (platform == HostPlatform::macOS && lib[0] == '@') {
                     Span<const char> directory = {};
                     Span<const char> basename = SplitStrReverse(lib + 1, '/', &directory);
 
