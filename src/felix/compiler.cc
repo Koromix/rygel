@@ -1182,7 +1182,7 @@ public:
                 Fmt(&buf, " -mavx512f -mavx512vl");
             }
         } else if (architecture == HostArchitecture::x86) {
-            Fmt(&buf, " -msse2");
+            Fmt(&buf, " -msse2 -mfpmath=sse");
 
             if (features & (int)CompileFeature::AESNI) {
                 Fmt(&buf, " -maes -mpclmul");
@@ -1686,6 +1686,8 @@ public:
             if (features & (int)CompileFeature::AVX512) {
                 Fmt(&buf, " /arch:AVX512");
             }
+        } else if (architecture == HostArchitecture::x86) {
+            Fmt(&buf, " /arch:SSE2");
         }
 
         // Sources and definitions
