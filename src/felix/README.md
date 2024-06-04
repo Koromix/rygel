@@ -127,7 +127,7 @@ Extract it, open a command prompt and execute the following commands:
 cd qt-everywhere-src-6.7.1
 
 configure -release -static -opensource -platform win32-msvc -prefix C:/Qt/Static/6.7.1 ^
-          -submodule qtbase,qtsvg -static-runtime -no-opengl -no-harfbuzz -no-icu -no-cups -qt-pcre -qt-zlib ^
+          -submodules qtbase,qtsvg -static-runtime -no-opengl -no-harfbuzz -no-icu -no-cups -qt-pcre -qt-zlib ^
           -qt-freetype -qt-libpng -qt-libjpeg
 
 cmake --build . --parallel
