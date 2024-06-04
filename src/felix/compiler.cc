@@ -438,7 +438,7 @@ public:
             Fmt(&buf, " -flto");
         }
         if (features & (int)CompileFeature::Warnings) {
-            Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-unknown-warning-option");
+            Fmt(&buf, " -Wall -Wextra -Wswitch -Wuninitialized -Wno-unknown-warning-option");
             if (src_type == SourceType::Cxx) {
                 Fmt(&buf, " -Wzero-as-null-pointer-constant");
             }
@@ -1050,7 +1050,7 @@ public:
             Fmt(&buf, " -flto");
         }
         if (features & (int)CompileFeature::Warnings) {
-            Fmt(&buf, " -Wall -Wextra -Wuninitialized -Wno-cast-function-type");
+            Fmt(&buf, " -Wall -Wextra -Wswitch -Wuninitialized -Wno-cast-function-type");
             if (src_type == SourceType::Cxx) {
                 Fmt(&buf, " -Wno-init-list-lifetime -Wzero-as-null-pointer-constant");
             }
@@ -1783,7 +1783,7 @@ public:
             Fmt(&buf, " -O0 -ftrapv");
         }
         if (features & (int)CompileFeature::Warnings) {
-            Fmt(&buf, " -Wall -Wextra");
+            Fmt(&buf, " -Wall -Wextra -Wswitch");
             if (src_type == SourceType::Cxx) {
                 Fmt(&buf, " -Wzero-as-null-pointer-constant");
             }
@@ -2101,7 +2101,7 @@ public:
             Fmt(&buf, " -flto");
         }
         if (features & (int)CompileFeature::Warnings) {
-            Fmt(&buf, " -Wall -Wextra");
+            Fmt(&buf, " -Wall -Wextra -Wswitch");
             if (src_type == SourceType::Cxx) {
                 Fmt(&buf, " -Wzero-as-null-pointer-constant");
             }
