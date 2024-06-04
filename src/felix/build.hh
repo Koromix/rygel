@@ -108,6 +108,7 @@ class Builder {
 
     // Qt stuff
     std::unique_ptr<QtInfo> qt;
+    bool missing_qt = false;
 
     // Javascript bundler
     const char *esbuild_binary = nullptr;

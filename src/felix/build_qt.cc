@@ -44,11 +44,16 @@ static FmtArg FormatVersion(int64_t version, int components)
 
 bool Builder::PrepareQtSdk(int64_t min_version)
 {
+    if (missing_qt)
+        return false;
+
     if (!qt) {
         qt = std::make_unique<QtInfo>();
 
         if (!FindQtSdk(build.compiler, &str_alloc, qt.get())) {
             qt.reset(nullptr);
+
+            missing_qt = true;
             return false;
         }
     }
