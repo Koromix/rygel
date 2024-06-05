@@ -899,13 +899,19 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
         for (const char *src_filename: src_filenames) {
             const char *basename = TrimStrLeft(src_filename + prefix_len, RG_PATH_SEPARATORS).ptr;
 
-            const char *url = NormalizePath(basename, copy.dest_filename, &temp_alloc).ptr;
+            Span<const char> url = NormalizePath(basename, copy.dest_filename, &temp_alloc);
             const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_dir, url).ptr;
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
+#ifdef _WIN32
+            for (char &c: url.As<char>()) {
+                c = (c == '\\') ? '/' : c;
+            }
+#endif
+
             FileHash *hash = assets.hashes.AppendDefault();
 
-            hash->name = url;
+            hash->name = url.ptr;
             hash->filename = dest_filename;
 
             async.Run([=]() {
