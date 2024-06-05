@@ -668,8 +668,6 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
     // Output directory
     if (!MakeDirectory(output_dir, false))
         return false;
-    LogInfo("Source directory: %!..+%1%!0", source_dir);
-    LogInfo("Output directory: %!..+%1%!0", output_dir);
 
     const char *pages_filename = Fmt(&temp_alloc, "%1%/pages.ini", source_dir).ptr;
     const char *assets_filename = Fmt(&temp_alloc, "%1%/assets.ini", source_dir).ptr;
@@ -1030,13 +1028,12 @@ int Main(int argc, char *argv[])
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
-    BlockAllocator temp_alloc;
-
     // Options
     const char *source_dir = ".";
     const char *output_dir = nullptr;
     bool gzip = false;
     UrlFormat urls = UrlFormat::Pretty;
+    bool loop = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -1047,10 +1044,11 @@ Options:
                                  %!D..(default: %2)%!0
 
     %!..+-O, --output_dir <dir>%!0       Set output directory
+    %!..+-u, --urls <FORMAT>%!0          Change URL format (%3)
+                                 %!D..(default: %4)%!0
         %!..+--gzip%!0                   Create static gzip files
 
-    %!..+-u, --urls <FORMAT>%!0          Change URL format (%3)
-                                 %!D..(default: %4)%!0)",
+    %!..+-l, --loop%!0                   Build repeatedly until interrupted)",
                 FelixTarget, source_dir, FmtSpan(UrlFormatNames), UrlFormatNames[(int)urls]);
     };
 
@@ -1073,13 +1071,15 @@ Options:
                 source_dir = opt.current_value;
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
-            } else if (opt.Test("--gzip")) {
-                gzip = true;
             } else if (opt.Test("-u", "--urls", OptionType::Value)) {
                 if (!OptionToEnumI(UrlFormatNames, opt.current_value, &urls)) {
                     LogError("Unknown URL format '%1'", opt.current_value);
                     return true;
                 }
+            } else if (opt.Test("--gzip")) {
+                gzip = true;
+            } else if (opt.Test("-l", "--loop")) {
+                loop = true;
             } else {
                 LogError("Cannot handle option '%1'", opt.current_option);
                 return 1;
@@ -1092,8 +1092,21 @@ Options:
         return 1;
     }
 
-    if (!BuildAll(source_dir, urls, output_dir, gzip))
-        return 1;
+    LogInfo("Source directory: %!..+%1%!0", source_dir);
+    LogInfo("Output directory: %!..+%1%!0", output_dir);
+
+    if (loop) {
+        do {
+            if (BuildAll(source_dir, urls, output_dir, gzip)) {
+                LogInfo("Build successful");
+            } else {
+                LogError("Build failed");
+            }
+        } while (WaitForInterrupt(1000) != WaitForResult::Interrupt);
+    } else {
+        if (!BuildAll(source_dir, urls, output_dir, gzip))
+            return 1;
+    }
 
     LogInfo("Done!");
     return 0;
