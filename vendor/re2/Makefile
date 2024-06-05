@@ -4,12 +4,15 @@
 
 # Build against Abseil.
 ABSL_DEPS=\
+	absl_absl_check\
+	absl_absl_log\
 	absl_base\
 	absl_core_headers\
 	absl_fixed_array\
 	absl_flags\
 	absl_flat_hash_map\
 	absl_flat_hash_set\
+	absl_hash\
 	absl_inlined_vector\
 	absl_optional\
 	absl_span\
@@ -29,6 +32,13 @@ LDABSL=$(shell $(PKG_CONFIG) $(ABSL_DEPS) --libs | sed -e 's/-Wl / /g')
 # CCICU=$(shell $(PKG_CONFIG) icu-uc --cflags) -DRE2_USE_ICU
 # LDICU=$(shell $(PKG_CONFIG) icu-uc --libs)
 
+# Build against GoogleTest and Benchmark for... testing and benchmarking.
+# Capture only the `-L` flags for now; we will pass the `-l` flags later.
+CCGTEST=$(shell $(PKG_CONFIG) gtest gtest_main --cflags)
+LDGTEST=$(shell $(PKG_CONFIG) gtest gtest_main --libs-only-L)
+CCBENCHMARK=$(shell $(PKG_CONFIG) benchmark --cflags)
+LDBENCHMARK=$(shell $(PKG_CONFIG) benchmark --libs-only-L)
+
 # To build against PCRE for testing and benchmarking,
 # uncomment the next two lines:
 # CCPCRE=-I/usr/local/include -DUSEPCRE
@@ -39,8 +49,8 @@ CXX?=g++
 CXXFLAGS?=-O3 -g
 LDFLAGS?=
 # required
-RE2_CXXFLAGS?=-pthread -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -I. $(CCABSL) $(CCICU) $(CCPCRE)
-RE2_LDFLAGS?=-pthread $(LDABSL) $(LDICU) $(LDPCRE)
+RE2_CXXFLAGS?=-pthread -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -I. $(CCABSL) $(CCICU) $(CCGTEST) $(CCBENCHMARK) $(CCPCRE)
+RE2_LDFLAGS?=-pthread $(LDABSL) $(LDICU) $(LDGTEST) $(LDBENCHMARK) $(LDPCRE)
 AR?=ar
 ARFLAGS?=rsc
 NM?=nm
@@ -106,7 +116,6 @@ INSTALL_HFILES=\
 	re2/stringpiece.h\
 
 HFILES=\
-	util/logging.h\
 	util/malloc_counter.h\
 	util/pcre.h\
 	util/strutil.h\
@@ -233,22 +242,22 @@ obj/so/libre2.$(SOEXT): $(SOFILES) libre2.symbols libre2.symbols.darwin
 .PRECIOUS: obj/dbg/test/%
 obj/dbg/test/%: obj/dbg/libre2.a obj/dbg/re2/testing/%.o $(DTESTOFILES)
 	@mkdir -p obj/dbg/test
-	$(CXX) -o $@ obj/dbg/re2/testing/$*.o $(DTESTOFILES) -lgtest -lgtest_main obj/dbg/libre2.a $(RE2_LDFLAGS) $(LDFLAGS)
+	$(CXX) -o $@ obj/dbg/re2/testing/$*.o $(DTESTOFILES) obj/dbg/libre2.a $(RE2_LDFLAGS) $(LDFLAGS) -lgtest -lgtest_main
 
 .PRECIOUS: obj/test/%
 obj/test/%: obj/libre2.a obj/re2/testing/%.o $(TESTOFILES)
 	@mkdir -p obj/test
-	$(CXX) -o $@ obj/re2/testing/$*.o $(TESTOFILES) -lgtest -lgtest_main obj/libre2.a $(RE2_LDFLAGS) $(LDFLAGS)
+	$(CXX) -o $@ obj/re2/testing/$*.o $(TESTOFILES) obj/libre2.a $(RE2_LDFLAGS) $(LDFLAGS) -lgtest -lgtest_main
 
 # Test the shared lib, falling back to the static lib for private symbols
 .PRECIOUS: obj/so/test/%
 obj/so/test/%: obj/so/libre2.$(SOEXT) obj/libre2.a obj/re2/testing/%.o $(TESTOFILES)
 	@mkdir -p obj/so/test
-	$(CXX) -o $@ obj/re2/testing/$*.o $(TESTOFILES) -lgtest -lgtest_main -Lobj/so -lre2 obj/libre2.a $(RE2_LDFLAGS) $(LDFLAGS)
+	$(CXX) -o $@ obj/re2/testing/$*.o $(TESTOFILES) -Lobj/so -lre2 obj/libre2.a $(RE2_LDFLAGS) $(LDFLAGS) -lgtest -lgtest_main
 
 obj/test/regexp_benchmark: obj/libre2.a obj/re2/testing/regexp_benchmark.o $(TESTOFILES)
 	@mkdir -p obj/test
-	$(CXX) -o $@ obj/re2/testing/regexp_benchmark.o $(TESTOFILES) -lgtest -lbenchmark -lbenchmark_main obj/libre2.a $(RE2_LDFLAGS) $(LDFLAGS)
+	$(CXX) -o $@ obj/re2/testing/regexp_benchmark.o $(TESTOFILES) obj/libre2.a $(RE2_LDFLAGS) $(LDFLAGS) -lgtest -lbenchmark -lbenchmark_main
 
 obj/test/re2_fuzzer: obj/libre2.a obj/re2/fuzzing/re2_fuzzer.o
 	@mkdir -p obj/test
