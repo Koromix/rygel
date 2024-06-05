@@ -1,6 +1,9 @@
+>>> [!IMPORTANT]
+>>> La documentation est en cours de rédaction et d'amélioration, certaines sections sont incomplètes.
+
 # Structure globale
 
-*XXX*
+*Rédaction en cours*
 
 # Mise au point des pages
 
@@ -251,7 +254,7 @@ Pour tester des expressions régulières en live : https://regex101.com/
 
 ## Contrôles de cohérence
 
-*XXX*
+*Rédaction en cours*
 
 # Publication du projet
 

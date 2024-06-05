@@ -1,3 +1,6 @@
+>>> [!IMPORTANT]
+>>> La documentation est en cours de rédaction et d'amélioration, certaines sections sont incomplètes.
+
 # Suivi des saisies
 
 Le tableau de suivi affiche la liste des enregistrements avec leur statut (non saisi, enregistré, complété). Depuis ce tableau de suivi, vous pouvez accéder directement à un enregistrement spécifique pour le compléter ou vérifier les données saisies.
@@ -6,11 +9,11 @@ Le tableau de suivi affiche la liste des enregistrements avec leur statut (non s
 
 ## Annotations manuelles
 
-*XXX*
+*Rédaction en cours*
 
 ## Contrôle de cohérence
 
-*XXX*
+*Rédaction en cours*
 
 # Export des données
 

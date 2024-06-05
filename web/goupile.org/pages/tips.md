@@ -1,3 +1,6 @@
+>>> [!IMPORTANT]
+>>> La documentation est en cours de rédaction et d'amélioration, certaines sections sont incomplètes.
+
 # Ordre des pages
 
 ## Affichage conditionnel des pages
@@ -85,7 +88,7 @@ POur le deuxième exemple ; les séquences doivent être identiques.
 
 ## Disposition des widgets
 
-*XXX*
+*Rédaction en cours*
 
 ## Style visuel (CSS)
 
@@ -234,8 +237,7 @@ form.sameLine(); form.time("biology_time", "",{
 
 ### Méthodes
 
-*XXX*
-
+*Rédaction en cours*
 
 # Répétitions
 
@@ -259,7 +261,7 @@ L'ensemble des pages listés seront répétées autant de fois que nécessaires.
 
 ## Sections répétées dans une page
 
-*XXX*
+*Rédaction en cours*
 
 # Trucs et astuces
 
