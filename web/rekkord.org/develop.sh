@@ -2,13 +2,13 @@
 
 cd "$(dirname $0)"
 
-trap 'kill $(jobs -p)' EXIT
-
 ../../bootstrap.sh
-
 ../../felix -pFast serf hodler
-../../bin/Fast/hodler . -O dist
-../../bin/Fast/serf dist/ &
-sleep 10
 
-watch -n1 ../../felix -qq -pFast --run_here hodler . -O dist
+trap 'kill $(jobs -p) 2>/dev/null' EXIT
+trap 'kill $(jobs -p) 2>/dev/null' SIGINT
+
+../../bin/Fast/serf dist/ &
+../../bin/Fast/hodler . -O dist --loop &
+
+wait $(jobs -p)
