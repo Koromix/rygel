@@ -58,7 +58,7 @@
   /* Predicate for tests/groups. */
   const testIsTodo = ()=>false;
   const haveWasmCTests = ()=>{
-    return !!wasm.exports.sqlite3_wasm_test_intptr;
+    return !!wasm.exports.sqlite3__wasm_test_intptr;
   };
   const hasOpfs = ()=>{
     return globalThis.FileSystemHandle
@@ -717,7 +717,7 @@
 
       //log("xCall()...");
       {
-        const pJson = w.xCall('sqlite3_wasm_enum_json');
+        const pJson = w.xCall('sqlite3__wasm_enum_json');
         T.assert(Number.isFinite(pJson)).assert(w.cstrlen(pJson)>300);
       }
 
@@ -731,9 +731,9 @@
         T.mustThrowMatching(()=>fw(1), /requires 0 arg/);
         let rc = fw();
         T.assert('string'===typeof rc).assert(rc.length>5);
-        rc = w.xCallWrapped('sqlite3_wasm_enum_json','*');
+        rc = w.xCallWrapped('sqlite3__wasm_enum_json','*');
         T.assert(rc>0 && Number.isFinite(rc));
-        rc = w.xCallWrapped('sqlite3_wasm_enum_json','utf8');
+        rc = w.xCallWrapped('sqlite3__wasm_enum_json','utf8');
         T.assert('string'===typeof rc).assert(rc.length>300);
 
 
@@ -816,7 +816,7 @@
 
         if(haveWasmCTests()){
           if(!sqlite3.config.useStdAlloc){
-            fw = w.xWrap('sqlite3_wasm_test_str_hello', 'utf8:dealloc',['i32']);
+            fw = w.xWrap('sqlite3__wasm_test_str_hello', 'utf8:dealloc',['i32']);
             rc = fw(0);
             T.assert('hello'===rc);
             rc = fw(1);
@@ -826,14 +826,14 @@
           if(w.bigIntEnabled){
             w.xWrap.resultAdapter('thrice', (v)=>3n*BigInt(v));
             w.xWrap.argAdapter('twice', (v)=>2n*BigInt(v));
-            fw = w.xWrap('sqlite3_wasm_test_int64_times2','thrice','twice');
+            fw = w.xWrap('sqlite3__wasm_test_int64_times2','thrice','twice');
             rc = fw(1);
             T.assert(12n===rc);
 
             w.scopedAllocCall(function(){
               const pI1 = w.scopedAlloc(8), pI2 = pI1+4;
               w.pokePtr([pI1, pI2], 0);
-              const f = w.xWrap('sqlite3_wasm_test_int64_minmax',undefined,['i64*','i64*']);
+              const f = w.xWrap('sqlite3__wasm_test_int64_minmax',undefined,['i64*','i64*']);
               const [r1, r2] = w.peek64([pI1, pI2]);
               T.assert(!Number.isSafeInteger(r1)).assert(!Number.isSafeInteger(r2));
             });
@@ -937,7 +937,7 @@
           assert(wts.pointer>0).assert(0===wts.$v4).assert(0n===wts.$v8).
           assert(0===wts.$ppV).assert(0===wts.$xFunc);
         const testFunc =
-              W.xGet('sqlite3_wasm_test_struct'/*name gets mangled in -O3 builds!*/);
+              W.xGet('sqlite3__wasm_test_struct'/*name gets mangled in -O3 builds!*/);
         let counter = 0;
         //log("wts.pointer =",wts.pointer);
         const wtsFunc = function(arg){
@@ -1123,7 +1123,7 @@
   T.g('sqlite3.oo1')
     .t('Create db', function(sqlite3){
       const dbFile = '/tester1.db';
-      wasm.sqlite3_wasm_vfs_unlink(0, dbFile);
+      sqlite3.util.sqlite3__wasm_vfs_unlink(0, dbFile);
       const db = this.db = new sqlite3.oo1.DB(dbFile, 0 ? 'ct' : 'c');
       db.onclose = {
         disposeAfter: [],
@@ -1454,7 +1454,7 @@
       rv = db.exec("SELECT 1 WHERE 0",{rowMode: 0});
       T.assert(Array.isArray(rv)).assert(0===rv.length);
       if(wasm.bigIntEnabled && haveWasmCTests()){
-        const mI = wasm.xCall('sqlite3_wasm_test_int64_max');
+        const mI = wasm.xCall('sqlite3__wasm_test_int64_max');
         const b = BigInt(Number.MAX_SAFE_INTEGER * 2);
         T.assert(b === db.selectValue("SELECT "+b)).
           assert(b === db.selectValue("SELECT ?", b)).
@@ -1477,7 +1477,7 @@
           /*step() skipped intentionally*/.reset(true);
       } finally {
         T.assert(0===st.finalize())
-          .assert(undefined===st.finalize());        
+          .assert(undefined===st.finalize());
       }
 
       try {
@@ -1680,7 +1680,7 @@
           T.assert(n>0 && db2.selectValue(sql) === n);
         }finally{
           db2.close();
-          wasm.sqlite3_wasm_vfs_unlink(0, filename);
+          sqlite3.util.sqlite3__wasm_vfs_unlink(0, filename);
         }
       }
     }/*sqlite3_js_posix_create_file()*/)
@@ -2070,7 +2070,7 @@
         try{
           ptrInt = w.scopedAlloc(4);
           w.poke32(ptrInt,origValue);
-          const cf = w.xGet('sqlite3_wasm_test_intptr');
+          const cf = w.xGet('sqlite3__wasm_test_intptr');
           const oldPtrInt = ptrInt;
           T.assert(origValue === w.peek32(ptrInt));
           const rc = cf(ptrInt);
@@ -2085,13 +2085,13 @@
             const v64 = ()=>w.peek64(pi64)
             T.assert(v64() == o64);
             //T.assert(o64 === w.peek64(pi64));
-            const cf64w = w.xGet('sqlite3_wasm_test_int64ptr');
+            const cf64w = w.xGet('sqlite3__wasm_test_int64ptr');
             cf64w(pi64);
             T.assert(v64() == BigInt(2 * o64));
             cf64w(pi64);
             T.assert(v64() == BigInt(4 * o64));
 
-            const biTimes2 = w.xGet('sqlite3_wasm_test_int64_times2');
+            const biTimes2 = w.xGet('sqlite3__wasm_test_int64_times2');
             T.assert(BigInt(2 * o64) ===
                      biTimes2(BigInt(o64)/*explicit conv. required to avoid TypeError
                                            in the call :/ */));
@@ -2101,13 +2101,13 @@
             const g64 = (p)=>w.peek64(p);
             w.poke64([pMin, pMax], 0);
             const minMaxI64 = [
-              w.xCall('sqlite3_wasm_test_int64_min'),
-              w.xCall('sqlite3_wasm_test_int64_max')
+              w.xCall('sqlite3__wasm_test_int64_min'),
+              w.xCall('sqlite3__wasm_test_int64_max')
             ];
             T.assert(minMaxI64[0] < BigInt(Number.MIN_SAFE_INTEGER)).
               assert(minMaxI64[1] > BigInt(Number.MAX_SAFE_INTEGER));
             //log("int64_min/max() =",minMaxI64, typeof minMaxI64[0]);
-            w.xCall('sqlite3_wasm_test_int64_minmax', pMin, pMax);
+            w.xCall('sqlite3__wasm_test_int64_minmax', pMin, pMax);
             T.assert(g64(pMin) === minMaxI64[0], "int64 mismatch").
               assert(g64(pMax) === minMaxI64[1], "int64 mismatch");
             //log("pMin",g64(pMin), "pMax",g64(pMax));
@@ -2555,7 +2555,7 @@
   ////////////////////////////////////////////////////////////////////////
     .t('Close db', function(){
       T.assert(this.db).assert(wasm.isPtr(this.db.pointer));
-      //wasm.sqlite3_wasm_db_reset(this.db); // will leak virtual tables!
+      //wasm.sqlite3__wasm_db_reset(this.db); // will leak virtual tables!
       this.db.close();
       T.assert(!this.db.pointer);
     })
@@ -2582,7 +2582,7 @@
         const pVfs = capi.sqlite3_vfs_find('kvvfs');
         T.assert(pVfs);
         const JDb = this.JDb = sqlite3.oo1.JsStorageDb;
-        const unlink = this.kvvfsUnlink = ()=>{JDb.clearStorage(filename)};
+        const unlink = this.kvvfsUnlink = ()=>JDb.clearStorage(this.kvvfsDbFile);
         unlink();
         let db = new JDb(filename);
         try {
@@ -2883,18 +2883,17 @@
     .t({
       name: 'OPFS db sanity checks',
       test: async function(sqlite3){
+        T.assert(capi.sqlite3_vfs_find('opfs'));
+        const opfs = sqlite3.opfs;
         const filename = this.opfsDbFile = '/dir/sqlite3-tester1.db';
-        const pVfs = this.opfsVfs = capi.sqlite3_vfs_find('opfs');
-        T.assert(pVfs);
-        const unlink = this.opfsUnlink =
-              (fn=filename)=>{wasm.sqlite3_wasm_vfs_unlink(pVfs,fn)};
-        unlink();
-        let db = new sqlite3.oo1.OpfsDb(filename);
+        const fileUri = 'file://'+filename+'?delete-before-open=1';
+        const initSql = [
+          'create table p(a);',
+          'insert into p(a) values(1),(2),(3)'
+        ];
+        let db = new sqlite3.oo1.OpfsDb(fileUri);
         try {
-          db.exec([
-            'create table p(a);',
-            'insert into p(a) values(1),(2),(3)'
-          ]);
+          db.exec(initSql);
           T.assert(3 === db.selectValue('select count(*) from p'));
           db.close();
           db = new sqlite3.oo1.OpfsDb(filename);
@@ -2906,7 +2905,14 @@
                     && 0===this.opfsDbExport.byteLength % 512);
         }finally{
           db.close();
-          unlink();
+        }
+        T.assert(await opfs.entryExists(filename));
+        try {
+          db = new sqlite3.oo1.OpfsDb(fileUri);
+          db.exec(initSql) /* will throw if delete-before-open did not work */;
+          T.assert(3 === db.selectValue('select count(*) from p'));
+        }finally{
+          if(db) db.close();
         }
       }
     }/*OPFS db sanity checks*/)
@@ -2914,15 +2920,17 @@
       name: 'OPFS import',
       test: async function(sqlite3){
         let db;
+        const filename = this.opfsDbFile;
         try {
           const exp = this.opfsDbExport;
-          const filename = this.opfsDbFile;
           delete this.opfsDbExport;
           this.opfsImportSize = await sqlite3.oo1.OpfsDb.importDb(filename, exp);
           db = new sqlite3.oo1.OpfsDb(this.opfsDbFile);
           T.assert(6 === db.selectValue('select count(*) from p')).
             assert( this.opfsImportSize == exp.byteLength );
           db.close();
+          const unlink = this.opfsUnlink =
+                (fn=filename)=>sqlite3.util.sqlite3__wasm_vfs_unlink("opfs",fn);
           this.opfsUnlink(filename);
           T.assert(!(await sqlite3.opfs.entryExists(filename)));
           // Try again with a function as an input source:
@@ -2949,11 +2957,9 @@
       name: '(Internal-use) OPFS utility APIs',
       test: async function(sqlite3){
         const filename = this.opfsDbFile;
-        const pVfs = this.opfsVfs;
         const unlink = this.opfsUnlink;
-        T.assert(filename && pVfs && !!unlink);
+        T.assert(filename && !!unlink);
         delete this.opfsDbFile;
-        delete this.opfsVfs;
         delete this.opfsUnlink;
         /**************************************************************
            ATTENTION CLIENT-SIDE USERS: sqlite3.opfs is NOT intended
@@ -3202,6 +3208,7 @@
     print: log,
     printErr: error
   }).then(async function(sqlite3){
+    TestUtil.assert(!!sqlite3.util);
     log("Done initializing WASM/JS bits. Running tests...");
     sqlite3.config.warn("Installing sqlite3 bits as global S for local dev/test purposes.");
     globalThis.S = sqlite3;
@@ -3220,9 +3227,9 @@
       logClass('warning',"BigInt/int64 support is disabled.");
     }
     if(haveWasmCTests()){
-      log("sqlite3_wasm_test_...() APIs are available.");
+      log("sqlite3__wasm_test_...() APIs are available.");
     }else{
-      logClass('warning',"sqlite3_wasm_test_...() APIs unavailable.");
+      logClass('warning',"sqlite3__wasm_test_...() APIs unavailable.");
     }
     log("registered vfs list =",capi.sqlite3_js_vfs_list().join(', '));
     TestUtil.runTests(sqlite3);

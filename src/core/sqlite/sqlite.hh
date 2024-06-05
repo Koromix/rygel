@@ -22,7 +22,7 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "vendor/sqlite3/sqlite3mc.h"
+#include "vendor/sqlite3/sqlite3.h"
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
 // Work around -Wzero-as-null-pointer-constant warning
@@ -159,8 +159,7 @@ public:
 
     bool IsValid() const { return db; }
 
-    bool Open(const char *filename, const uint8_t key[32], unsigned int flags);
-    bool Open(const char *filename, unsigned int flags) { return Open(filename, nullptr, flags); }
+    bool Open(const char *filename, unsigned int flags);
     bool Close();
 
     bool SetWAL(bool enable);

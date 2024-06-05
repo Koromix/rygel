@@ -27,7 +27,7 @@ find_package(CNoke)
 # ---- Vendor libraries ----
 
 include (../cmake/raylib.cmake)
-include (../cmake/sqlite.cmake)
+include (../cmake/sqlite3.cmake)
 
 # ---- Test code ----
 
