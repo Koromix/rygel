@@ -89,14 +89,17 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
     }
 
     if (!src_filenames.len) {
-        LogError("Missing input filenames");
-        return 1;
+        src_filenames.Append("-");
     }
+
     if (output_filename && output_directory) {
         LogError("Cannot use --output_file and --output_dir at the same time");
         return 1;
     }
-
+    if (output_filename && src_filenames.len > 1) {
+        LogError("Option --output_file can only be used with one input");
+        return 1;
+    }
     if (output_directory && !TestFile(output_directory, FileType::Directory)) {
         LogError("Output directory '%1' does not exist", output_directory);
         return 1;
@@ -104,40 +107,53 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
 
     HeapArray<const char *> dest_filenames;
     if (src_filenames.len == 1) {
-        if (output_filename) {
-            if (compression_type == CompressionType::None) {
-                Span<const char> ext = GetPathExtension(output_filename, &compression_type);
+        const char *src_filename = src_filenames[0];
 
-                if (compression_type == CompressionType::None) {
-                    LogError("Cannot determine compression type from extension '%1'", ext);
-                    return 1;
-                }
+        if (TestStr(src_filename, "-")) {
+            src_filenames[0] = nullptr;
+            src_filename = nullptr;
+        }
+
+        if (output_filename) {
+            if (TestStr(output_filename, "-")) {
+                output_filename = nullptr;
+            } else if (compression_type == CompressionType::None) {
+                GetPathExtension(output_filename, &compression_type);
             }
-        } else {
+        } else if (output_directory) {
+            if (!src_filename) {
+                LogError("Cannot compress standard input to directory");
+                return 1;
+            }
+
             const char *compression_ext = CompressionTypeExtensions[(int)compression_type];
             if (!compression_ext) {
                 LogError("Cannot guess output filename without compression type");
                 return 1;
             }
 
-            if (output_directory) {
-                const char *basename = SplitStrReverseAny(src_filenames[0], RG_PATH_SEPARATORS).ptr;
-                output_filename = Fmt(&temp_alloc, "%1%/%2%3", output_directory, basename, compression_ext).ptr;
-            } else {
-                output_filename = Fmt(&temp_alloc, "%1%2", src_filenames[0], compression_ext).ptr;
+            const char *basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS).ptr;
+            output_filename = Fmt(&temp_alloc, "%1%/%2%3", output_directory, basename, compression_ext).ptr;
+        } else if (src_filename) {
+            const char *compression_ext = CompressionTypeExtensions[(int)compression_type];
+            if (!compression_ext) {
+                LogError("Cannot guess output filename without compression type");
+                return 1;
             }
+
+            output_filename = Fmt(&temp_alloc, "%1%2", src_filename, compression_ext).ptr;
+        }
+
+        if (compression_type == CompressionType::None) {
+            LogError("Cannot determine compression type, use --algorithm");
+            return 1;
         }
 
         dest_filenames.Append(output_filename);
     } else {
-        if (output_filename) {
-            LogError("Option --output_file can only be used with one input");
-            return 1;
-        }
-
         const char *compression_ext = CompressionTypeExtensions[(int)compression_type];
         if (compression_type == CompressionType::None) {
-            LogError("You must set an algorithm with a valid extension for multiple files");
+            LogError("You must set an explicit compression type for multiple files");
             return 1;
         }
 
@@ -166,14 +182,29 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
             const char *src_filename = src_filenames[i];
             const char *dest_filename = dest_filenames[i];
 
-            StreamReader reader(src_filename);
-            StreamWriter writer(dest_filename, write_flags, compression_type, compression_speed);
+            StreamReader reader;
+            StreamWriter writer;
 
-            if (!reader.IsValid() || !writer.IsValid())
-                return false;
+            if (src_filename) {
+                if (reader.Open(src_filename) != OpenResult::Success)
+                    return false;
+            } else {
+                if (!reader.Open(STDIN_FILENO, "<stdin>"))
+                    return false;
+            }
 
-            const char *basename = SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS).ptr;
-            LogInfo("Compressing '%1'...", basename);
+            if (dest_filename) {
+                if (!writer.Open(dest_filename, write_flags, compression_type, compression_speed))
+                    return false;
+
+                const char *basename = SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS).ptr;
+                LogInfo("Compressing '%1'...", basename);
+            } else {
+                if (!writer.Open(STDOUT_FILENO, "<stdout>", write_flags, compression_type, compression_speed))
+                    return false;
+
+                LogInfo("Compressing to standard output...");
+            }
 
             if (!SpliceStream(&reader, -1, &writer))
                 return false;
@@ -256,9 +287,10 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
     }
 
     if (!src_filenames.len) {
-        LogError("Missing input filenames");
+        LogError("Missing input filenames (use '-' for standard input)");
         return 1;
     }
+
     if (output_filename && output_directory) {
         LogError("Cannot use --output_file and --output_dir at the same time");
         return 1;
@@ -267,7 +299,6 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
         LogError("Option --output_file can only be used with one input");
         return 1;
     }
-
     if (output_directory && !TestFile(output_directory, FileType::Directory)) {
         LogError("Output directory '%1' does not exist", output_directory);
         return 1;
@@ -279,13 +310,74 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
     };
 
     HeapArray<DestinationFile> destinations;
-    {
+    if (src_filenames.len == 1) {
+        const char *src_filename = src_filenames[0];
+        CompressionType type = compression_type;
+
+        if (TestStr(src_filename, "-")) {
+            src_filenames[0] = nullptr;
+            src_filename = nullptr;
+        }
+
+        if (type == CompressionType::None) {
+            if (!src_filename) {
+                LogError("Cannot determine compression type from standard input");
+                return 1;
+            }
+
+            Span<const char> ext = GetPathExtension(src_filename, &type);
+
+            if (type == CompressionType::None) {
+                LogError("Cannot determine compression type from extension '%1'", ext);
+                return 1;
+            }
+        }
+
+        if (output_filename) {
+            if (TestStr(output_filename, "-")) {
+                output_filename = nullptr;
+            }
+
+            destinations.Append({ output_filename, type });
+        } else if (output_directory) {
+            if (!src_filename) {
+                LogError("Cannot compress standard input to directory");
+                return 1;
+            }
+
+            Span<const char> compression_ext = CompressionTypeExtensions[(int)type];
+
+            // Only strip matching compression extension
+            if (!compression_ext.ptr || compression_ext != GetPathExtension(src_filename)) {
+                compression_ext.len = 0;
+            }
+
+            Span<const char> basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS).ptr;
+            const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_directory, basename.Take(0, basename.len - compression_ext.len)).ptr;
+
+            destinations.Append({ dest_filename, type });
+        } else if (src_filename) {
+            Span<const char> compression_ext = CompressionTypeExtensions[(int)type];
+
+            if (!compression_ext.ptr || compression_ext != GetPathExtension(src_filename)) {
+                LogError("Cannot guess output filename");
+                return 1;
+            }
+
+            Size src_len = strlen(src_filename);
+            const char *dest_filename = DuplicateString(MakeSpan(src_filename, src_len - compression_ext.len), &temp_alloc).ptr;
+
+            destinations.Append({ dest_filename, type });
+        } else {
+            destinations.Append({ nullptr, type });
+        }
+    } else {
         bool valid = true;
 
         for (const char *src_filename: src_filenames) {
             CompressionType type = compression_type;
 
-            if (compression_type == CompressionType::None) {
+            if (type == CompressionType::None) {
                 Span<const char> ext = GetPathExtension(src_filename, &type);
 
                 if (type == CompressionType::None) {
@@ -296,9 +388,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
                 }
             }
 
-            if (output_filename) {
-                destinations.Append({ output_filename, type });
-            } else if (output_directory) {
+            if (output_directory) {
                 Span<const char> compression_ext = CompressionTypeExtensions[(int)type];
 
                 // Only strip matching compression extension
@@ -343,14 +433,29 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
             const char *src_filename = src_filenames[i];
             const DestinationFile &dest = destinations[i];
 
-            StreamReader reader(src_filename, dest.compression_type);
-            StreamWriter writer(dest.filename, write_flags);
+            StreamReader reader;
+            StreamWriter writer;
 
-            if (!reader.IsValid() || !writer.IsValid())
-                return false;
+            if (src_filename) {
+                if (reader.Open(src_filename, dest.compression_type) != OpenResult::Success)
+                    return false;
+            } else {
+                if (!reader.Open(STDIN_FILENO, "<stdin>", dest.compression_type))
+                    return false;
+            }
 
-            const char *basename = SplitStrReverseAny(dest.filename, RG_PATH_SEPARATORS).ptr;
-            LogInfo("Decompressing '%1'...", basename);
+            if (dest.filename) {
+                if (!writer.Open(dest.filename, write_flags))
+                    return false;
+
+                const char *basename = SplitStrReverseAny(dest.filename, RG_PATH_SEPARATORS).ptr;
+                LogInfo("Decompressing '%1'...", basename);
+            } else {
+                if (!writer.Open(STDOUT_FILENO, "<stdout>", write_flags))
+                    return false;
+
+                LogInfo("Decompressing to standard output...");
+            }
 
             if (!SpliceStream(&reader, -1, &writer))
                 return false;
