@@ -34,6 +34,11 @@ bool EncodeText(Span<const char> text, int border, T func, StreamWriter *out_st)
     uint8_t tmp[qrcodegen_BUFFER_LEN_MAX];
     static_assert(qrcodegen_BUFFER_LEN_MAX < Kibibytes(8));
 
+    if (text.len > RG_SIZE(tmp)) [[unlikely]] {
+        LogError("Cannot encode %1 bytes as QR code (max = %2)", text.len, RG_SIZE(tmp));
+        return false;
+    }
+
     bool success = qrcodegen_encodeText(text.ptr, (size_t)text.len, tmp, qr, qrcodegen_Ecc_MEDIUM,
                                         qrcodegen_VERSION_MIN, qrcodegen_VERSION_MAX, qrcodegen_Mask_AUTO, true);
     if (!success) {

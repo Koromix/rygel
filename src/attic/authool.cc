@@ -576,6 +576,104 @@ Options:
     }
 }
 
+static int RunEncodeQR(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *filename_or_text = nullptr;
+    bool is_text = false;
+    bool force_binary = false;
+    const char *png_filename = nullptr;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 encode_qr [options]%!0
+
+Options:
+    %!..+-F, --file <filename>%!0        Encode data from file
+    %!..+-t, --text <text>%!0            Encode string passed as argument
+
+             --force_binary              Force use of binary encoding
+
+    %!..+-P, --png_file <file>%!0        Write QR code PNG image to disk)",
+                FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-F", "--file", OptionType::Value)) {
+                filename_or_text = opt.current_value;
+                is_text = false;
+            } else if (opt.Test("-t", "--text", OptionType::Value)) {
+                filename_or_text = opt.current_value;
+                is_text = true;
+            } else if (opt.Test("--force_binary")) {
+                force_binary = true;
+            } else if (opt.Test("-P", "--png_file", OptionType::Value)) {
+                png_filename = opt.current_value;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        opt.LogUnusedArguments();
+    }
+
+    if (filename_or_text && !is_text && TestStr(filename_or_text, "-")) {
+        filename_or_text = nullptr;
+    }
+
+    // Load data
+    HeapArray<uint8_t> data;
+    if (is_text) {
+        Span<const char> str = filename_or_text;
+        data.Append(str.As<const uint8_t>());
+    } else if (filename_or_text) {
+        if (ReadFile(filename_or_text, Megabytes(2), &data) < 0)
+            return 1;
+    } else {
+        if (StdIn->ReadAll(Megabytes(2), &data) < 0)
+            return 1;
+    }
+
+    // Encode QR code
+    if (png_filename) {
+        StreamWriter st(png_filename);
+
+        if (force_binary) {
+            if (!qr_EncodeBinaryToPng(data, 12, &st))
+                return 1;
+        } else {
+            if (!qr_EncodeTextToPng(data.As<const char>(), 12, &st))
+                return 1;
+        }
+        if (!st.Close())
+            return 1;
+
+        LogInfo("QR code written to: %!..+%1%!0", png_filename);
+    } else {
+        bool ansi = FileIsVt100(STDOUT_FILENO);
+
+        if (force_binary) {
+            if (!qr_EncodeBinaryToBlocks(data, ansi, 2, StdOut))
+                return 1;
+        } else {
+            if (!qr_EncodeTextToBlocks(data.As<const char>(), ansi, 2, StdOut))
+                return 1;
+        }
+    }
+
+    return 0;
+}
+
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
@@ -594,6 +692,8 @@ Commands:
     %!..+generate_totp%!0                Generate a TOTP QR code
     %!..+compute_totp%!0                 Generate TOTP code based on current time
     %!..+check_totp%!0                   Check TOTP code based on current time
+
+    %!..+encode_qr%!0                    Encode text or binary data as QR code
 
 Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
     };
@@ -634,6 +734,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunComputeTOTP(arguments);
     } else if (TestStr(cmd, "check_totp")) {
         return RunCheckTOTP(arguments);
+    } else if (TestStr(cmd, "encode_qr")) {
+        return RunEncodeQR(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
