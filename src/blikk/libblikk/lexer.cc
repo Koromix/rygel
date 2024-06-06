@@ -19,7 +19,7 @@
 
 namespace RG {
 
-static const HashMap<const char *, bk_Token> KeywordsMap {
+static constinit FrozenMap<64, const char *, bk_Token> KeywordsMap = {
     { "func", { bk_TokenKind::Func, 0, 0, {} } },
     { "return", { bk_TokenKind::Return, 0, 0, {} } },
     { "let", { bk_TokenKind::Let, 0, 0, {} } },

@@ -71,64 +71,51 @@ struct PageData {
     Span<const char> html;
 };
 
-static int32_t DecodeUtf8Unsafe(const char *str);
+static constinit FrozenMap<128, int32_t, const char *> replacements = {
+    { DecodeUtf8("Ç"), "c" },
+    { DecodeUtf8("È"), "e" },
+    { DecodeUtf8("É"), "e" },
+    { DecodeUtf8("Ê"), "e" },
+    { DecodeUtf8("Ë"), "e" },
+    { DecodeUtf8("À"), "a" },
+    { DecodeUtf8("Å"), "a" },
+    { DecodeUtf8("Â"), "a" },
+    { DecodeUtf8("Ä"), "a" },
+    { DecodeUtf8("Î"), "i" },
+    { DecodeUtf8("Ï"), "i" },
+    { DecodeUtf8("Ù"), "u" },
+    { DecodeUtf8("Ü"), "u" },
+    { DecodeUtf8("Û"), "u" },
+    { DecodeUtf8("Ú"), "u" },
+    { DecodeUtf8("Ñ"), "n" },
+    { DecodeUtf8("Ô"), "o" },
+    { DecodeUtf8("Ó"), "o" },
+    { DecodeUtf8("Ö"), "o" },
+    { DecodeUtf8("Œ"), "oe" },
+    { DecodeUtf8("Ÿ"), "y" },
 
-static const HashMap<int32_t, const char *> replacements = {
-    { DecodeUtf8Unsafe("Ç"), "c" },
-    { DecodeUtf8Unsafe("È"), "e" },
-    { DecodeUtf8Unsafe("É"), "e" },
-    { DecodeUtf8Unsafe("Ê"), "e" },
-    { DecodeUtf8Unsafe("Ë"), "e" },
-    { DecodeUtf8Unsafe("À"), "a" },
-    { DecodeUtf8Unsafe("Å"), "a" },
-    { DecodeUtf8Unsafe("Â"), "a" },
-    { DecodeUtf8Unsafe("Ä"), "a" },
-    { DecodeUtf8Unsafe("Î"), "i" },
-    { DecodeUtf8Unsafe("Ï"), "i" },
-    { DecodeUtf8Unsafe("Ù"), "u" },
-    { DecodeUtf8Unsafe("Ü"), "u" },
-    { DecodeUtf8Unsafe("Û"), "u" },
-    { DecodeUtf8Unsafe("Ú"), "u" },
-    { DecodeUtf8Unsafe("Ñ"), "n" },
-    { DecodeUtf8Unsafe("Ô"), "o" },
-    { DecodeUtf8Unsafe("Ó"), "o" },
-    { DecodeUtf8Unsafe("Ö"), "o" },
-    { DecodeUtf8Unsafe("Œ"), "oe" },
-    { DecodeUtf8Unsafe("Ÿ"), "y" },
-
-    { DecodeUtf8Unsafe("ç"), "c" },
-    { DecodeUtf8Unsafe("è"), "e" },
-    { DecodeUtf8Unsafe("é"), "e" },
-    { DecodeUtf8Unsafe("ê"), "e" },
-    { DecodeUtf8Unsafe("ë"), "e" },
-    { DecodeUtf8Unsafe("à"), "a" },
-    { DecodeUtf8Unsafe("å"), "a" },
-    { DecodeUtf8Unsafe("â"), "a" },
-    { DecodeUtf8Unsafe("ä"), "a" },
-    { DecodeUtf8Unsafe("î"), "i" },
-    { DecodeUtf8Unsafe("ï"), "i" },
-    { DecodeUtf8Unsafe("ù"), "u" },
-    { DecodeUtf8Unsafe("ü"), "u" },
-    { DecodeUtf8Unsafe("û"), "u" },
-    { DecodeUtf8Unsafe("ú"), "u" },
-    { DecodeUtf8Unsafe("ñ"), "n" },
-    { DecodeUtf8Unsafe("ô"), "o" },
-    { DecodeUtf8Unsafe("ó"), "o" },
-    { DecodeUtf8Unsafe("ö"), "o" },
-    { DecodeUtf8Unsafe("œ"), "oe" },
-    { DecodeUtf8Unsafe("ÿ"), "y" }
+    { DecodeUtf8("ç"), "c" },
+    { DecodeUtf8("è"), "e" },
+    { DecodeUtf8("é"), "e" },
+    { DecodeUtf8("ê"), "e" },
+    { DecodeUtf8("ë"), "e" },
+    { DecodeUtf8("à"), "a" },
+    { DecodeUtf8("å"), "a" },
+    { DecodeUtf8("â"), "a" },
+    { DecodeUtf8("ä"), "a" },
+    { DecodeUtf8("î"), "i" },
+    { DecodeUtf8("ï"), "i" },
+    { DecodeUtf8("ù"), "u" },
+    { DecodeUtf8("ü"), "u" },
+    { DecodeUtf8("û"), "u" },
+    { DecodeUtf8("ú"), "u" },
+    { DecodeUtf8("ñ"), "n" },
+    { DecodeUtf8("ô"), "o" },
+    { DecodeUtf8("ó"), "o" },
+    { DecodeUtf8("ö"), "o" },
+    { DecodeUtf8("œ"), "oe" },
+    { DecodeUtf8("ÿ"), "y" }
 };
-
-static int32_t DecodeUtf8Unsafe(const char *str)
-{
-    int32_t uc = -1;
-    Size bytes = DecodeUtf8(str, &uc);
-
-    RG_ASSERT(bytes > 0);
-    RG_ASSERT(!str[bytes]);
-
-    return uc;
-}
 
 static const char *SectionToPageName(Span<const char> section, Allocator *alloc)
 {

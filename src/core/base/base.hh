@@ -3292,6 +3292,109 @@ public:
     void Trim() { table.Trim(); }
 };
 
+// XXX: Switch to perfect hashing later on
+template <Size N, typename KeyType, typename ValueType>
+class FrozenMap {
+public:
+    struct Bucket {
+        KeyType key;
+        ValueType value;
+    };
+
+    size_t used[(N + (RG_SIZE(size_t) * 8) - 1) / RG_SIZE(size_t)] = {};
+    Bucket data[N] = {};
+    Size count = 0;
+
+    constexpr FrozenMap(std::initializer_list<Bucket> l)
+    {
+        RG_CRITICAL(l.size() <= N, "FrozenMap<%1> cannot be store %2 values", N, l.size());
+
+        for (const Bucket &it: l) {
+            Bucket *bucket = Insert(it.key);
+
+            bucket->key = it.key;
+            bucket->value = it.value;
+        }
+    }
+    ~FrozenMap()
+    {
+        if constexpr(!std::is_trivial<ValueType>::value) {
+            for (Size i = 0; i < N; i++) {
+                data[i].~ValueType();
+            }
+        }
+    }
+
+    template <typename T = KeyType>
+    ValueType *Find(const T &key)
+        { return (ValueType *)((const FrozenMap *)this)->Find(key); }
+    template <typename T = KeyType>
+    const ValueType *Find(const T &key) const
+    {
+        uint64_t hash = HashTraits<KeyType>::Hash(key);
+        Size idx = HashToIndex(hash);
+
+        const Bucket *bucket = Find(&idx, key);
+        return bucket ? &bucket->value : nullptr;
+    }
+
+    template <typename T = KeyType>
+    ValueType FindValue(const T &key, const ValueType &default_value)
+        { return (ValueType)((const FrozenMap *)this)->FindValue(key, default_value); }
+    template <typename T = KeyType>
+    const ValueType FindValue(const T &key, const ValueType &default_value) const
+    {
+        const ValueType *it = Find(key);
+        return it ? *it : default_value;
+    }
+
+private:
+    template <typename T = KeyType>
+    constexpr Bucket *Find(Size *idx, const T &key)
+        { return (Bucket *)((const FrozenMap *)this)->Find(idx, key); }
+    template <typename T = KeyType>
+    constexpr const Bucket *Find(Size *idx, const T &key) const
+    {
+        while (!IsEmpty(*idx)) {
+            if (HashTraits<KeyType>::Test(data[*idx].key, key))
+                return &data[*idx];
+            *idx = (*idx + 1) & (N - 1);
+        }
+        return nullptr;
+    }
+
+    constexpr Bucket *Insert(const KeyType &key)
+    {
+        uint64_t hash = HashTraits<KeyType>::Hash(key);
+        Size idx = HashToIndex(hash);
+        Bucket *it = Find(&idx, key);
+
+        if (!it) {
+            count++;
+            MarkUsed(idx);
+
+            return &data[idx];
+        } else {
+            return it;
+        }
+    }
+
+    constexpr void MarkUsed(Size idx)
+    {
+        used[idx / (RG_SIZE(size_t) * 8)] |= (1ull << (idx % (RG_SIZE(size_t) * 8)));
+    }
+    constexpr bool IsEmpty(Size idx) const
+    {
+        bool empty = !(used[idx / (RG_SIZE(size_t) * 8)] & (1ull << (idx % (RG_SIZE(size_t) * 8))));
+        return empty;
+    }
+
+    constexpr Size HashToIndex(uint64_t hash) const
+    {
+        return (Size)(hash & (uint64_t)(N - 1));
+    }
+};
+
 // ------------------------------------------------------------------------
 // Date
 // ------------------------------------------------------------------------
