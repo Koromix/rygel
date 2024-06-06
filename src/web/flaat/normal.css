@@ -277,6 +277,7 @@ pre {
     background: #fcfcfc;
     border-left: 3px solid var(--color);
 }
+.alert:first-child { margin-top: 0; }
 .alert > .title {
     font-weight: bold;
     color: var(--color);
