@@ -30,19 +30,21 @@ static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
         return false;
     }
 
-    LocalDate start_date;
+    LocalDate start_date = {};
     LocalDate end_date = {};
     {
         Span<const char> remain = str;
 
-        start_date = LocalDate::Parse(remain, 0, &remain);
+        if (!ParseDate(remain, &start_date, (int)ParseFlag::Validate, &remain))
+            goto invalid;
         if (remain.len < 2 || remain[0] != '.' || remain[1] != '.')
             goto invalid;
-        end_date = LocalDate::Parse(remain.Take(2, remain.len - 2), 0, &remain);
+        if (!ParseDate(remain.Take(2, remain.len - 2), &end_date, (int)ParseFlag::Validate, &remain))
+            goto invalid;
         if (remain.len)
             goto invalid;
 
-        if (!start_date.IsValid() || !end_date.IsValid() || end_date <= start_date)
+        if (end_date <= start_date)
             goto invalid;
     }
 

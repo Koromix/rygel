@@ -113,7 +113,7 @@ const LocalDate rcc_Vector<LocalDate>::operator[](Size idx) const
         case Type::Character: {
             SEXP str = u.chr[idx];
             if (str != NA_STRING) {
-                date = LocalDate::Parse(CHAR(str), (int)ParseFlag::End);
+                ParseDate(CHAR(str), &date, (int)ParseFlag::Validate | (int)ParseFlag::End);
             }
         } break;
 

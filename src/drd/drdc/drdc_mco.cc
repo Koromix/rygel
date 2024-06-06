@@ -645,8 +645,7 @@ List options:
                 print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = LocalDate::Parse(opt.current_value);
-                if (!index_date.value)
+                if (!ParseDate(opt.current_value, &index_date))
                     return 1;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
@@ -735,8 +734,7 @@ Map options:
                 print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = LocalDate::Parse(opt.current_value);
-                if (!index_date.value)
+                if (!ParseDate(opt.current_value, &index_date))
                     return 1;
             } else if (!HandleCommonOption(opt)) {
                 return 1;
@@ -863,8 +861,7 @@ R"(Usage: %!..+%1 mco_show [options] name ...%!0
                 print_usage(StdOut);
                 return 0;
             } else if (opt.Test("-d", "--date", OptionType::Value)) {
-                index_date = LocalDate::Parse(opt.current_value);
-                if (!index_date.value)
+                if (!ParseDate(opt.current_value, &index_date))
                     return 1;
             } else if (!HandleCommonOption(opt)) {
                 return 1;

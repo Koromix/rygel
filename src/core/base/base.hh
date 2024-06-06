@@ -107,9 +107,16 @@ namespace RG {
 // Utility
 // ------------------------------------------------------------------------
 
+class StreamReader;
+class StreamWriter;
+
 extern "C" const char *FelixTarget;
 extern "C" const char *FelixVersion;
 extern "C" const char *FelixCompiler;
+
+extern StreamReader *const StdIn;
+extern StreamWriter *const StdOut;
+extern StreamWriter *const StdErr;
 
 #if defined(__x86_64__) || defined(_M_X64) || defined(__aarch64__) || defined(_M_ARM64) || __riscv_xlen == 64
     typedef int64_t Size;
@@ -652,13 +659,6 @@ T ApplyMask(T value, U mask, bool enable)
     }
 }
 
-enum class ParseFlag {
-    Log = 1 << 0,
-    Validate = 1 << 1,
-    End = 1 << 2
-};
-#define RG_DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
-
 template <typename T>
 struct Vec2 {
     T x;
@@ -672,6 +672,194 @@ struct Vec3 {
     T z;
 };
 
+template <Size N>
+class Bitset {
+public:
+    template <typename T>
+    class Iterator {
+    public:
+        typedef std::input_iterator_tag iterator_category;
+        typedef Size value_type;
+        typedef Size difference_type;
+        typedef Iterator *pointer;
+        typedef Iterator &reference;
+
+        T *bitset = nullptr;
+        Size offset;
+        size_t bits = 0;
+        int ctz;
+
+        Iterator() = default;
+        Iterator(T *bitset, Size offset)
+            : bitset(bitset), offset(offset - 1)
+        {
+            operator++();
+        }
+
+        Size operator*() const
+        {
+            RG_ASSERT(offset <= RG_LEN(bitset->data));
+
+            if (offset == RG_LEN(bitset->data))
+                return -1;
+            return offset * RG_SIZE(size_t) * 8 + ctz;
+        }
+
+        Iterator &operator++()
+        {
+            RG_ASSERT(offset <= RG_LEN(bitset->data));
+
+            while (!bits) {
+                if (offset == RG_LEN(bitset->data) - 1)
+                    return *this;
+                bits = bitset->data[++offset];
+            }
+
+            ctz = CountTrailingZeros((uint64_t)bits);
+            bits ^= (size_t)1 << ctz;
+
+            return *this;
+        }
+
+        Iterator operator++(int)
+        {
+            Iterator ret = *this;
+            ++(*this);
+            return ret;
+        }
+
+        bool operator==(const Iterator &other) const
+            { return bitset == other.bitset && offset == other.offset; }
+        bool operator!=(const Iterator &other) const { return !(*this == other); }
+    };
+
+    typedef Size value_type;
+    typedef Iterator<Bitset> iterator_type;
+
+    static constexpr Size Bits = N;
+    size_t data[(N + RG_BITS(size_t) - 1) / RG_BITS(size_t)] = {};
+
+    void Clear()
+    {
+        MemSet(data, 0, RG_SIZE(data));
+    }
+
+    Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
+    Iterator<const Bitset> begin() const { return Iterator<const Bitset>(this, 0); }
+    Iterator<Bitset> end() { return Iterator<Bitset>(this, RG_LEN(data)); }
+    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, RG_LEN(data)); }
+
+    Size PopCount() const
+    {
+        Size count = 0;
+        for (size_t bits: data) {
+#if RG_SIZE_MAX == INT64_MAX
+            count += RG::PopCount((uint64_t)bits);
+#else
+            count += RG::PopCount((uint32_t)bits);
+#endif
+        }
+        return count;
+    }
+
+    inline bool Test(Size idx) const
+    {
+        RG_ASSERT(idx >= 0 && idx < N);
+
+        Size offset = idx / (RG_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
+
+        return data[offset] & mask;
+    }
+    inline void Set(Size idx, bool value = true)
+    {
+        RG_ASSERT(idx >= 0 && idx < N);
+
+        Size offset = idx / (RG_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
+
+        data[offset] = ApplyMask(data[offset], mask, value);
+    }
+    inline bool TestAndSet(Size idx, bool value = true)
+    {
+        RG_ASSERT(idx >= 0 && idx < N);
+
+        Size offset = idx / (RG_SIZE(size_t) * 8);
+        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
+
+        bool ret = data[offset] & mask;
+        data[offset] = ApplyMask(data[offset], mask, value);
+
+        return ret;
+    }
+
+    Bitset &operator&=(const Bitset &other)
+    {
+        for (Size i = 0; i < RG_LEN(data); i++) {
+            data[i] &= other.data[i];
+        }
+        return *this;
+    }
+    Bitset operator&(const Bitset &other)
+    {
+        Bitset ret;
+        for (Size i = 0; i < RG_LEN(data); i++) {
+            ret.data[i] = data[i] & other.data[i];
+        }
+        return ret;
+    }
+
+    Bitset &operator|=(const Bitset &other)
+    {
+        for (Size i = 0; i < RG_LEN(data); i++) {
+            data[i] |= other.data[i];
+        }
+        return *this;
+    }
+    Bitset operator|(const Bitset &other)
+    {
+        Bitset ret;
+        for (Size i = 0; i < RG_LEN(data); i++) {
+            ret.data[i] = data[i] | other.data[i];
+        }
+        return ret;
+    }
+
+    Bitset &operator^=(const Bitset &other)
+    {
+        for (Size i = 0; i < RG_LEN(data); i++) {
+            data[i] ^= other.data[i];
+        }
+        return *this;
+    }
+    Bitset operator^(const Bitset &other)
+    {
+        Bitset ret;
+        for (Size i = 0; i < RG_LEN(data); i++) {
+            ret.data[i] = data[i] ^ other.data[i];
+        }
+        return ret;
+    }
+
+    Bitset &Flip()
+    {
+        for (Size i = 0; i < RG_LEN(data); i++) {
+            data[i] = ~data[i];
+        }
+        return *this;
+    }
+    Bitset operator~()
+    {
+        Bitset ret;
+        for (Size i = 0; i < RG_LEN(data); i++) {
+            ret.data[i] = ~data[i];
+        }
+        return ret;
+    }
+
+    // XXX: Shift operators
+};
+
 // ------------------------------------------------------------------------
 // Memory / Allocator
 // ------------------------------------------------------------------------
@@ -683,7 +871,7 @@ struct Span {
     T *ptr;
     Size len;
 
-    Span() = default;
+    constexpr Span() = default;
     constexpr Span(T &value) : ptr(&value), len(1) {}
     constexpr Span(std::initializer_list<T> l) : ptr(l.begin()), len((Size)l.size()) {}
     constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
@@ -696,10 +884,10 @@ struct Span {
         len = 0;
     }
 
-    T *begin() { return ptr; }
-    const T *begin() const { return ptr; }
-    T *end() { return ptr + len; }
-    const T *end() const { return ptr + len; }
+    constexpr T *begin() { return ptr; }
+    constexpr const T *begin() const { return ptr; }
+    constexpr T *end() { return ptr + len; }
+    constexpr const T *end() const { return ptr + len; }
 
     bool IsValid() const { return ptr; }
 
@@ -752,7 +940,7 @@ struct Span<const char> {
     const char *ptr;
     Size len;
 
-    Span() = default;
+    constexpr Span() = default;
     constexpr Span(const char &ch) : ptr(&ch), len(1) {}
     constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
 #ifdef __clang__
@@ -767,8 +955,8 @@ struct Span<const char> {
         len = 0;
     }
 
-    const char *begin() const { return ptr; }
-    const char *end() const { return ptr + len; }
+    constexpr const char *begin() const { return ptr; }
+    constexpr const char *end() const { return ptr + len; }
 
     bool IsValid() const { return ptr; }
 
@@ -1175,6 +1363,594 @@ public:
     friend class RetainPtr<T>;
     friend class RetainPtr<const T>;
 };
+
+// ------------------------------------------------------------------------
+// Strings
+// ------------------------------------------------------------------------
+
+bool CopyString(const char *str, Span<char> buf);
+bool CopyString(Span<const char> str, Span<char> buf);
+Span<char> DuplicateString(Span<const char> str, Allocator *alloc);
+
+static inline bool IsAsciiAlpha(int c)
+{
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+static inline bool IsAsciiDigit(int c)
+{
+    return (c >= '0' && c <= '9');
+}
+static inline bool IsAsciiAlphaOrDigit(int c)
+{
+    return IsAsciiAlpha(c) || IsAsciiDigit(c);
+}
+static inline bool IsAsciiWhite(int c)
+{
+    return c == ' ' || c == '\t' || c == '\v' ||
+           c == '\n' || c == '\r' || c == '\f';
+}
+
+static inline char UpperAscii(int c)
+{
+    if (c >= 'a' && c <= 'z') {
+        return (char)(c - 32);
+    } else {
+        return (char)c;
+    }
+}
+static inline char LowerAscii(int c)
+{
+    if (c >= 'A' && c <= 'Z') {
+        return (char)(c + 32);
+    } else {
+        return (char)c;
+    }
+}
+
+static inline bool TestStr(Span<const char> str1, Span<const char> str2)
+{
+    if (str1.len != str2.len)
+        return false;
+    for (Size i = 0; i < str1.len; i++) {
+        if (str1[i] != str2[i])
+            return false;
+    }
+    return true;
+}
+static inline bool TestStr(Span<const char> str1, const char *str2)
+{
+    Size i;
+    for (i = 0; i < str1.len && str2[i]; i++) {
+        if (str1[i] != str2[i])
+            return false;
+    }
+    return (i == str1.len) && !str2[i];
+}
+static inline bool TestStr(const char *str1, Span<const char> str2)
+    { return TestStr(str2, str1); }
+static inline bool TestStr(const char *str1, const char *str2)
+    { return !strcmp(str1, str2); }
+
+// Allow direct Span<const char> equality comparison
+inline bool Span<const char>::operator==(Span<const char> other) const
+    { return TestStr(*this, other); }
+inline bool Span<const char>::operator==(const char *other) const
+    { return TestStr(*this, other); }
+
+// Case insensitive (ASCII) versions
+static inline bool TestStrI(Span<const char> str1, Span<const char> str2)
+{
+    if (str1.len != str2.len)
+        return false;
+    for (Size i = 0; i < str1.len; i++) {
+        if (LowerAscii(str1[i]) != LowerAscii(str2[i]))
+            return false;
+    }
+    return true;
+}
+static inline bool TestStrI(Span<const char> str1, const char *str2)
+{
+    Size i;
+    for (i = 0; i < str1.len && str2[i]; i++) {
+        if (LowerAscii(str1[i]) != LowerAscii(str2[i]))
+            return false;
+    }
+    return (i == str1.len) && !str2[i];
+}
+static inline bool TestStrI(const char *str1, Span<const char> str2)
+    { return TestStrI(str2, str1); }
+static inline bool TestStrI(const char *str1, const char *str2)
+{
+    Size i = 0;
+    int delta;
+    do {
+        delta = LowerAscii(str1[i]) - LowerAscii(str2[i]);
+    } while (str1[i++] && !delta);
+    return !delta;
+}
+
+static inline int CmpStr(Span<const char> str1, Span<const char> str2)
+{
+    for (Size i = 0; i < str1.len && i < str2.len; i++) {
+        int delta = str1[i] - str2[i];
+        if (delta)
+            return delta;
+    }
+    if (str1.len < str2.len) {
+        return -str2[str1.len];
+    } else if (str1.len > str2.len) {
+        return str1[str2.len];
+    } else {
+        return 0;
+    }
+}
+static inline int CmpStr(Span<const char> str1, const char *str2)
+{
+    Size i;
+    for (i = 0; i < str1.len && str2[i]; i++) {
+        int delta = str1[i] - str2[i];
+        if (delta)
+            return delta;
+    }
+    if (str1.len == i) {
+        return -str2[i];
+    } else {
+        return str1[i];
+    }
+}
+static inline int CmpStr(const char *str1, Span<const char> str2)
+    { return -CmpStr(str2, str1); }
+static inline int CmpStr(const char *str1, const char *str2)
+    { return strcmp(str1, str2); }
+
+static inline bool StartsWith(Span<const char> str, Span<const char> prefix)
+{
+    Size i = 0;
+    while (i < str.len && i < prefix.len) {
+        if (str[i] != prefix[i])
+            return false;
+        i++;
+    }
+
+    return (i == prefix.len);
+}
+static inline bool StartsWith(Span<const char> str, const char *prefix)
+{
+    Size i = 0;
+    while (i < str.len && prefix[i]) {
+        if (str[i] != prefix[i])
+            return false;
+        i++;
+    }
+
+    return !prefix[i];
+}
+static inline bool StartsWith(const char *str, const char *prefix)
+{
+    Size i = 0;
+    while (str[i] && prefix[i]) {
+        if (str[i] != prefix[i])
+            return false;
+        i++;
+    }
+
+    return !prefix[i];
+}
+
+static inline bool EndsWith(Span<const char> str, const char *suffix)
+{
+    Size i = str.len - 1;
+    Size j = (Size)strlen(suffix) - 1;
+    while (i >= 0 && j >= 0) {
+        if (str[i] != suffix[j])
+            return false;
+
+        i--;
+        j--;
+    }
+
+    return j < 0;
+}
+
+static inline Size FindStr(Span<const char> str, Span<const char> needle)
+{
+    if (!needle.len)
+        return 0;
+    if (needle.len > str.len)
+        return -1;
+
+    Size end = str.len - needle.len;
+
+    for (Size i = 0; i <= end; i++) {
+        if (!memcmp(str.ptr + i, needle.ptr, (size_t)needle.len))
+            return i;
+    }
+
+    return -1;
+}
+static inline Size FindStr(const char *str, const char *needle)
+{
+    const char *ret = strstr(str, needle);
+    return ret ? ret - str : -1;
+}
+
+static inline Span<char> SplitStr(Span<char> str, char split_char, Span<char> *out_remainder = nullptr)
+{
+    Size part_len = 0;
+    while (part_len < str.len) {
+        if (str[part_len] == split_char) {
+            if (out_remainder) {
+                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
+            }
+            return str.Take(0, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(str.len, 0);
+    }
+    return str;
+}
+static inline Span<char> SplitStr(char *str, char split_char, char **out_remainder = nullptr)
+{
+    Size part_len = 0;
+    while (str[part_len]) {
+        if (str[part_len] == split_char) {
+            if (out_remainder) {
+                *out_remainder = str + part_len + 1;
+            }
+            return MakeSpan(str, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str + part_len;
+    }
+    return MakeSpan(str, part_len);
+}
+static inline Span<const char> SplitStr(Span<const char> str, char split_char, Span<const char> *out_remainder = nullptr)
+    { return SplitStr(MakeSpan((char *)str.ptr, str.len), split_char, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStr(const char *str, char split_char, const char **out_remainder = nullptr)
+    { return SplitStr((char *)str, split_char, (char **)out_remainder); }
+
+static inline Span<char> SplitStr(Span<char> str, const char *split_str, Span<char> *out_remainder = nullptr)
+{
+    RG_ASSERT(split_str[0]);
+
+    Size part_len = 0;
+    while (part_len < str.len) {
+        if (StartsWith(str.Take(part_len, str.len - part_len), split_str)) {
+            if (out_remainder) {
+                Size split_len = strlen(split_str);
+                *out_remainder = str.Take(part_len + split_len, str.len - part_len - split_len);
+            }
+            return str.Take(0, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(str.len, 0);
+    }
+    return str;
+}
+static inline Span<char> SplitStr(char *str, const char *split_str, char **out_remainder = nullptr)
+{
+    RG_ASSERT(split_str[0]);
+
+    Size part_len = 0;
+    while (str[part_len]) {
+        if (StartsWith(str + part_len, split_str)) {
+            if (out_remainder) {
+                Size split_len = strlen(split_str);
+                *out_remainder = str + part_len + split_len;
+            }
+            return MakeSpan(str, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str + part_len;
+    }
+    return MakeSpan(str, part_len);
+}
+static inline Span<const char> SplitStr(Span<const char> str, const char *split_str, Span<const char> *out_remainder = nullptr)
+    { return SplitStr(MakeSpan((char *)str.ptr, str.len), split_str, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStr(const char *str, const char *split_str, const char **out_remainder = nullptr)
+    { return SplitStr((char *)str, split_str, (char **)out_remainder); }
+
+static inline Span<char> SplitStrLine(Span<char> str, Span<char> *out_remainder = nullptr)
+{
+    Span<char> part = SplitStr(str, '\n', out_remainder);
+    if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
+        part.len--;
+    }
+    return part;
+}
+static inline Span<char> SplitStrLine(char *str, char **out_remainder = nullptr)
+{
+    Span<char> part = SplitStr(str, '\n', out_remainder);
+    if (str[part.len] && part.len && part[part.len - 1] == '\r') {
+        part.len--;
+    }
+    return part;
+}
+static inline Span<const char> SplitStrLine(Span<const char> str, Span<const char> *out_remainder = nullptr)
+    { return SplitStrLine(MakeSpan((char *)str.ptr, str.len), (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStrLine(const char *str, const char **out_remainder = nullptr)
+    { return SplitStrLine((char *)str, (char **)out_remainder); }
+
+static inline Span<char> SplitStrAny(Span<char> str, const char *split_chars, Span<char> *out_remainder = nullptr)
+{
+    Bitset<256> split_mask;
+    for (Size i = 0; split_chars[i]; i++) {
+        uint8_t c = (uint8_t)split_chars[i];
+        split_mask.Set(c);
+    }
+
+    Size part_len = 0;
+    while (part_len < str.len) {
+        uint8_t c = (uint8_t)str[part_len];
+
+        if (split_mask.Test(c)) {
+            if (out_remainder) {
+                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
+            }
+            return str.Take(0, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(str.len, 0);
+    }
+    return str;
+}
+static inline Span<char> SplitStrAny(char *str, const char *split_chars, char **out_remainder = nullptr)
+{
+    Bitset<256> split_mask;
+    for (Size i = 0; split_chars[i]; i++) {
+        uint8_t c = (uint8_t)split_chars[i];
+        split_mask.Set(c);
+    }
+
+    Size part_len = 0;
+    while (str[part_len]) {
+        uint8_t c = (uint8_t)str[part_len];
+
+        if (split_mask.Test(c)) {
+            if (out_remainder) {
+                *out_remainder = str + part_len + 1;
+            }
+            return MakeSpan(str, part_len);
+        }
+        part_len++;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str + part_len;
+    }
+    return MakeSpan(str, part_len);
+}
+static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars, Span<const char> *out_remainder = nullptr)
+    { return SplitStrAny(MakeSpan((char *)str.ptr, str.len), split_chars, (Span<char> *)out_remainder); }
+static inline Span<const char> SplitStrAny(const char *str, const char *split_chars, const char **out_remainder = nullptr)
+    { return SplitStrAny((char *)str, split_chars, (char **)out_remainder); }
+
+static inline Span<const char> SplitStrReverse(Span<const char> str, char split_char,
+                                               Span<const char> *out_remainder = nullptr)
+{
+    Size remainder_len = str.len - 1;
+    while (remainder_len >= 0) {
+        if (str[remainder_len] == split_char) {
+            if (out_remainder) {
+                *out_remainder = str.Take(0, remainder_len);
+            }
+            return str.Take(remainder_len + 1, str.len - remainder_len - 1);
+        }
+        remainder_len--;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(0, 0);
+    }
+    return str;
+}
+static inline Span<const char> SplitStrReverse(const char *str, char split_char,
+                                               Span<const char> *out_remainder = nullptr)
+    { return SplitStrReverse(MakeSpan(str, strlen(str)), split_char, out_remainder); }
+
+static inline Span<const char> SplitStrReverseAny(Span<const char> str, const char *split_chars,
+                                                  Span<const char> *out_remainder = nullptr)
+{
+    Bitset<256> split_mask;
+    for (Size i = 0; split_chars[i]; i++) {
+        uint8_t c = (uint8_t)split_chars[i];
+        split_mask.Set(c);
+    }
+
+    Size remainder_len = str.len - 1;
+    while (remainder_len >= 0) {
+        uint8_t c = (uint8_t)str[remainder_len];
+
+        if (split_mask.Test(c)) {
+            if (out_remainder) {
+                *out_remainder = str.Take(0, remainder_len);
+            }
+            return str.Take(remainder_len + 1, str.len - remainder_len - 1);
+        }
+        remainder_len--;
+    }
+
+    if (out_remainder) {
+        *out_remainder = str.Take(0, 0);
+    }
+    return str;
+}
+static inline Span<const char> SplitStrReverseAny(const char *str, const char *split_chars,
+                                                  Span<const char> *out_remainder = nullptr)
+    { return SplitStrReverseAny(MakeSpan(str, strlen(str)), split_chars, out_remainder); }
+
+static inline Span<char> TrimStrLeft(Span<char> str, char trim_char)
+{
+    while (str.len && str[0] == trim_char && str[0]) {
+        str.ptr++;
+        str.len--;
+    }
+
+    return str;
+}
+static inline Span<char> TrimStrRight(Span<char> str, char trim_char)
+{
+    while (str.len && str[str.len - 1] == trim_char && str[str.len - 1]) {
+        str.len--;
+    }
+
+    return str;
+}
+static inline Span<char> TrimStr(Span<char> str, char trim_char)
+{
+    str = TrimStrRight(str, trim_char);
+    str = TrimStrLeft(str, trim_char);
+
+    return str;
+}
+static inline Span<const char> TrimStrLeft(Span<const char> str, char trim_char)
+    { return TrimStrLeft(MakeSpan((char *)str.ptr, str.len), trim_char); }
+static inline Span<const char> TrimStrRight(Span<const char> str, char trim_char)
+    { return TrimStrRight(MakeSpan((char *)str.ptr, str.len), trim_char); }
+static inline Span<const char> TrimStr(Span<const char> str,char trim_char)
+    { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_char); }
+
+static inline Span<char> TrimStrLeft(Span<char> str, const char *trim_chars = " \t\r\n")
+{
+    while (str.len && strchr(trim_chars, str[0]) && str[0]) {
+        str.ptr++;
+        str.len--;
+    }
+
+    return str;
+}
+static inline Span<char> TrimStrRight(Span<char> str, const char *trim_chars = " \t\r\n")
+{
+    while (str.len && strchr(trim_chars, str[str.len - 1]) && str[str.len - 1]) {
+        str.len--;
+    }
+
+    return str;
+}
+static inline Span<char> TrimStr(Span<char> str, const char *trim_chars = " \t\r\n")
+{
+    str = TrimStrRight(str, trim_chars);
+    str = TrimStrLeft(str, trim_chars);
+
+    return str;
+}
+static inline Span<const char> TrimStrLeft(Span<const char> str, const char *trim_chars = " \t\r\n")
+    { return TrimStrLeft(MakeSpan((char *)str.ptr, str.len), trim_chars); }
+static inline Span<const char> TrimStrRight(Span<const char> str, const char *trim_chars = " \t\r\n")
+    { return TrimStrRight(MakeSpan((char *)str.ptr, str.len), trim_chars); }
+static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
+    { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_chars); }
+
+static inline int CountUtf8Bytes(char c)
+{
+    int ones = CountLeadingZeros((uint32_t)~c << 24);
+    return std::min(std::max(ones, 1), 4);
+}
+
+static inline Size DecodeUtf8(const char *str, int32_t *out_c)
+{
+    RG_ASSERT(str[0]);
+
+    const uint8_t *ptr = (const uint8_t *)str;
+
+    if (ptr[0] < 0x80) {
+        *out_c = ptr[0];
+        return 1;
+    } else if (ptr[0] - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
+        return 0;
+    } else if (ptr[1]) [[likely]] {
+        if (ptr[0] < 0xE0 && (ptr[1] & 0xC0) == 0x80) {
+            *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+            return 2;
+        } else if (ptr[2]) [[likely]] {
+            if (ptr[0] < 0xF0 && (ptr[1] & 0xC0) == 0x80 &&
+                                 (ptr[2] & 0xC0) == 0x80) {
+                *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+                return 3;
+            } else if (ptr[3]) [[likely]] {
+                if ((ptr[1] & 0xC0) == 0x80 &&
+                        (ptr[2] & 0xC0) == 0x80 &&
+                        (ptr[3] & 0xC0) == 0x80) {
+                    *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+                    return 4;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
+{
+    RG_ASSERT(offset < str.len);
+
+    const uint8_t *ptr = (const uint8_t *)(str.ptr + offset);
+    Size available = str.len - offset;
+
+    if (ptr[0] < 0x80) {
+        *out_c = ptr[0];
+        return 1;
+    } else if (ptr[0] - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
+        return 0;
+    } else if (ptr[0] < 0xE0 && available >= 2 && (ptr[1] & 0xC0) == 0x80) {
+        *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+        return 2;
+    } else if (ptr[0] < 0xF0 && available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
+                                                  (ptr[2] & 0xC0) == 0x80) {
+        *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+        return 3;
+    } else if (available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
+                                 (ptr[2] & 0xC0) == 0x80 &&
+                                 (ptr[3] & 0xC0) == 0x80) {
+        *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+        return 4;
+    } else {
+        return 0;
+    }
+}
+
+static inline Size EncodeUtf8(int32_t c, char out_buf[4])
+{
+    if (c < 0x80) {
+        out_buf[0] = (char)c;
+        return 1;
+    } else if (c < 0x800) {
+        out_buf[0] = (char)(0xC0 | (c >> 6));
+        out_buf[1] = (char)(0x80 | (c & 0x3F));
+        return 2;
+    } else if (c >= 0xD800 && c < 0xE000) {
+        return 0;
+    } else if (c < 0x10000) {
+        out_buf[0] = (char)(0xE0 | (c >> 12));
+        out_buf[1] = (char)(0x80 | ((c >> 6) & 0x3F));
+        out_buf[2] = (char)(0x80 | (c & 0x3F));
+        return 3;
+    } else if (c < 0x110000) {
+        out_buf[0] = (char)(0xF0 | (c >> 18));
+        out_buf[1] = (char)(0x80 | ((c >> 12) & 0x3F));
+        out_buf[2] = (char)(0x80 | ((c >> 6) & 0x3F));
+        out_buf[3] = (char)(0x80 | (c & 0x3F));
+        return 4;
+    } else {
+        return 0;
+    }
+}
 
 // ------------------------------------------------------------------------
 // Collections
@@ -1812,194 +2588,6 @@ private:
     }
 };
 
-template <Size N>
-class Bitset {
-public:
-    template <typename T>
-    class Iterator {
-    public:
-        typedef std::input_iterator_tag iterator_category;
-        typedef Size value_type;
-        typedef Size difference_type;
-        typedef Iterator *pointer;
-        typedef Iterator &reference;
-
-        T *bitset = nullptr;
-        Size offset;
-        size_t bits = 0;
-        int ctz;
-
-        Iterator() = default;
-        Iterator(T *bitset, Size offset)
-            : bitset(bitset), offset(offset - 1)
-        {
-            operator++();
-        }
-
-        Size operator*() const
-        {
-            RG_ASSERT(offset <= RG_LEN(bitset->data));
-
-            if (offset == RG_LEN(bitset->data))
-                return -1;
-            return offset * RG_SIZE(size_t) * 8 + ctz;
-        }
-
-        Iterator &operator++()
-        {
-            RG_ASSERT(offset <= RG_LEN(bitset->data));
-
-            while (!bits) {
-                if (offset == RG_LEN(bitset->data) - 1)
-                    return *this;
-                bits = bitset->data[++offset];
-            }
-
-            ctz = CountTrailingZeros((uint64_t)bits);
-            bits ^= (size_t)1 << ctz;
-
-            return *this;
-        }
-
-        Iterator operator++(int)
-        {
-            Iterator ret = *this;
-            ++(*this);
-            return ret;
-        }
-
-        bool operator==(const Iterator &other) const
-            { return bitset == other.bitset && offset == other.offset; }
-        bool operator!=(const Iterator &other) const { return !(*this == other); }
-    };
-
-    typedef Size value_type;
-    typedef Iterator<Bitset> iterator_type;
-
-    static constexpr Size Bits = N;
-    size_t data[(N + RG_BITS(size_t) - 1) / RG_BITS(size_t)] = {};
-
-    void Clear()
-    {
-        MemSet(data, 0, RG_SIZE(data));
-    }
-
-    Iterator<Bitset> begin() { return Iterator<Bitset>(this, 0); }
-    Iterator<const Bitset> begin() const { return Iterator<const Bitset>(this, 0); }
-    Iterator<Bitset> end() { return Iterator<Bitset>(this, RG_LEN(data)); }
-    Iterator<const Bitset> end() const { return Iterator<const Bitset>(this, RG_LEN(data)); }
-
-    Size PopCount() const
-    {
-        Size count = 0;
-        for (size_t bits: data) {
-#if RG_SIZE_MAX == INT64_MAX
-            count += RG::PopCount((uint64_t)bits);
-#else
-            count += RG::PopCount((uint32_t)bits);
-#endif
-        }
-        return count;
-    }
-
-    inline bool Test(Size idx) const
-    {
-        RG_ASSERT(idx >= 0 && idx < N);
-
-        Size offset = idx / (RG_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
-
-        return data[offset] & mask;
-    }
-    inline void Set(Size idx, bool value = true)
-    {
-        RG_ASSERT(idx >= 0 && idx < N);
-
-        Size offset = idx / (RG_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
-
-        data[offset] = ApplyMask(data[offset], mask, value);
-    }
-    inline bool TestAndSet(Size idx, bool value = true)
-    {
-        RG_ASSERT(idx >= 0 && idx < N);
-
-        Size offset = idx / (RG_SIZE(size_t) * 8);
-        size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
-
-        bool ret = data[offset] & mask;
-        data[offset] = ApplyMask(data[offset], mask, value);
-
-        return ret;
-    }
-
-    Bitset &operator&=(const Bitset &other)
-    {
-        for (Size i = 0; i < RG_LEN(data); i++) {
-            data[i] &= other.data[i];
-        }
-        return *this;
-    }
-    Bitset operator&(const Bitset &other)
-    {
-        Bitset ret;
-        for (Size i = 0; i < RG_LEN(data); i++) {
-            ret.data[i] = data[i] & other.data[i];
-        }
-        return ret;
-    }
-
-    Bitset &operator|=(const Bitset &other)
-    {
-        for (Size i = 0; i < RG_LEN(data); i++) {
-            data[i] |= other.data[i];
-        }
-        return *this;
-    }
-    Bitset operator|(const Bitset &other)
-    {
-        Bitset ret;
-        for (Size i = 0; i < RG_LEN(data); i++) {
-            ret.data[i] = data[i] | other.data[i];
-        }
-        return ret;
-    }
-
-    Bitset &operator^=(const Bitset &other)
-    {
-        for (Size i = 0; i < RG_LEN(data); i++) {
-            data[i] ^= other.data[i];
-        }
-        return *this;
-    }
-    Bitset operator^(const Bitset &other)
-    {
-        Bitset ret;
-        for (Size i = 0; i < RG_LEN(data); i++) {
-            ret.data[i] = data[i] ^ other.data[i];
-        }
-        return ret;
-    }
-
-    Bitset &Flip()
-    {
-        for (Size i = 0; i < RG_LEN(data); i++) {
-            data[i] = ~data[i];
-        }
-        return *this;
-    }
-    Bitset operator~()
-    {
-        Bitset ret;
-        for (Size i = 0; i < RG_LEN(data); i++) {
-            ret.data[i] = ~data[i];
-        }
-        return ret;
-    }
-
-    // XXX: Shift operators
-};
-
 template <typename KeyType, typename ValueType,
           typename Handler = typename std::remove_pointer<ValueType>::type::HashHandler>
 class HashTable {
@@ -2354,7 +2942,7 @@ private:
                         new_idx = (new_idx + 1) & (capacity - 1);
                     }
                     MarkUsed(new_idx);
-                    MemMove(&data[new_idx], &old_data[i], RG_SIZE(*data));
+                    data[new_idx] = old_data[i];
                 }
             }
         } else {
@@ -2408,16 +2996,16 @@ private:
 template <typename T>
 class HashTraits {
 public:
-    static uint64_t Hash(const T &key) { return key.Hash(); }
-    static bool Test(const T &key1, const T &key2) { return key1 == key2; }
+    static constexpr uint64_t Hash(const T &key) { return key.Hash(); }
+    static constexpr bool Test(const T &key1, const T &key2) { return key1 == key2; }
 };
 
 // Stole the Hash function from Thomas Wang (see here: https://gist.github.com/badboy/6267743)
-#define DEFINE_INTEGER_HASH_TRAITS_32(Type) \
+#define DEFINE_INTEGER_HASH_TRAITS_32(Type, ...) \
     template <> \
     class HashTraits<Type> { \
     public: \
-        static uint64_t Hash(Type key) \
+        static __VA_ARGS__ uint64_t Hash(Type key) \
         { \
             uint32_t hash = (uint32_t)key; \
              \
@@ -2430,13 +3018,13 @@ public:
             return (uint64_t)hash; \
         } \
          \
-        static bool Test(Type key1, Type key2) { return key1 == key2; } \
+        static __VA_ARGS__ bool Test(Type key1, Type key2) { return key1 == key2; } \
     }
-#define DEFINE_INTEGER_HASH_TRAITS_64(Type) \
+#define DEFINE_INTEGER_HASH_TRAITS_64(Type, ...) \
     template <> \
     class HashTraits<Type> { \
     public: \
-        static uint64_t Hash(Type key) \
+        static __VA_ARGS__ uint64_t Hash(Type key) \
         { \
             uint64_t hash = (uint64_t)key; \
              \
@@ -2450,24 +3038,24 @@ public:
             return hash; \
         } \
          \
-        static bool Test(Type key1, Type key2) { return key1 == key2; } \
+        static __VA_ARGS__ bool Test(Type key1, Type key2) { return key1 == key2; } \
     }
 
-DEFINE_INTEGER_HASH_TRAITS_32(char);
-DEFINE_INTEGER_HASH_TRAITS_32(unsigned char);
-DEFINE_INTEGER_HASH_TRAITS_32(short);
-DEFINE_INTEGER_HASH_TRAITS_32(unsigned short);
-DEFINE_INTEGER_HASH_TRAITS_32(int);
-DEFINE_INTEGER_HASH_TRAITS_32(unsigned int);
+DEFINE_INTEGER_HASH_TRAITS_32(char, constexpr);
+DEFINE_INTEGER_HASH_TRAITS_32(unsigned char, constexpr);
+DEFINE_INTEGER_HASH_TRAITS_32(short, constexpr);
+DEFINE_INTEGER_HASH_TRAITS_32(unsigned short, constexpr);
+DEFINE_INTEGER_HASH_TRAITS_32(int, constexpr);
+DEFINE_INTEGER_HASH_TRAITS_32(unsigned int, constexpr);
 #ifdef __LP64__
-    DEFINE_INTEGER_HASH_TRAITS_64(long);
-    DEFINE_INTEGER_HASH_TRAITS_64(unsigned long);
+    DEFINE_INTEGER_HASH_TRAITS_64(long, constexpr);
+    DEFINE_INTEGER_HASH_TRAITS_64(unsigned long, constexpr);
 #else
-    DEFINE_INTEGER_HASH_TRAITS_32(long);
-    DEFINE_INTEGER_HASH_TRAITS_32(unsigned long);
+    DEFINE_INTEGER_HASH_TRAITS_32(long, constexpr);
+    DEFINE_INTEGER_HASH_TRAITS_32(unsigned long, constexpr);
 #endif
-DEFINE_INTEGER_HASH_TRAITS_64(long long);
-DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long);
+DEFINE_INTEGER_HASH_TRAITS_64(long long, constexpr);
+DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long, constexpr);
 #if RG_SIZE_MAX == INT64_MAX
     DEFINE_INTEGER_HASH_TRAITS_64(void *);
     DEFINE_INTEGER_HASH_TRAITS_64(const void *);
@@ -2483,7 +3071,7 @@ template <>
 class HashTraits<const char *> {
 public:
     // FNV-1a
-    static uint64_t Hash(Span<const char> key)
+    static constexpr uint64_t Hash(Span<const char> key)
     {
         uint64_t hash = 0xCBF29CE484222325ull;
         for (char c: key) {
@@ -2493,7 +3081,7 @@ public:
 
         return hash;
     }
-    static uint64_t Hash(const char *key)
+    static constexpr uint64_t Hash(const char *key)
     {
         uint64_t hash = 0xCBF29CE484222325ull;
         for (Size i = 0; key[i]; i++) {
@@ -2504,15 +3092,15 @@ public:
         return hash;
     }
 
-    static bool Test(const char *key1, const char *key2) { return !strcmp(key1, key2); }
-    static bool Test(const char *key1, Span<const char> key2) { return key2 == key1; }
+    static constexpr bool Test(const char *key1, const char *key2) { return TestStr(key1, key2); }
+    static constexpr bool Test(const char *key1, Span<const char> key2) { return key2 == key1; }
 };
 
 template <>
 class HashTraits<Span<const char>> {
 public:
     // FNV-1a
-    static uint64_t Hash(Span<const char> key)
+    static constexpr uint64_t Hash(Span<const char> key)
     {
         uint64_t hash = 0xCBF29CE484222325ull;
         for (char c: key) {
@@ -2522,7 +3110,7 @@ public:
 
         return hash;
     }
-    static uint64_t Hash(const char *key)
+    static constexpr uint64_t Hash(const char *key)
     {
         uint64_t hash = 0xCBF29CE484222325ull;
         for (Size i = 0; key[i]; i++) {
@@ -2533,22 +3121,22 @@ public:
         return hash;
     }
 
-    static bool Test(Span<const char> key1, Span<const char> key2) { return key1 == key2; }
-    static bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
+    static constexpr bool Test(Span<const char> key1, Span<const char> key2) { return key1 == key2; }
+    static constexpr bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
 };
 
 #define RG_HASHTABLE_HANDLER_EX_N(Name, ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
     class Name { \
     public: \
-        static KeyType GetKey(const ValueType &value) \
+        static constexpr KeyType GetKey(const ValueType &value) \
             { return (KeyType)(value.KeyMember); } \
-        static KeyType GetKey(const ValueType *value) \
+        static constexpr KeyType GetKey(const ValueType *value) \
             { return (KeyType)(value->KeyMember); } \
         template <typename TestKey> \
-        static uint64_t HashKey(TestKey key) \
+        static constexpr uint64_t HashKey(TestKey key) \
             { return HashFunc(key); } \
         template <typename TestKey> \
-        static bool TestKeys(KeyType key1, TestKey key2) \
+        static constexpr bool TestKeys(KeyType key1, TestKey key2) \
             { return TestFunc((key1), (key2)); } \
     }
 #define RG_HASHTABLE_HANDLER_EX(ValueType, KeyType, KeyMember, HashFunc, TestFunc) \
@@ -2574,13 +3162,8 @@ public:
 
     HashTable<KeyType, Bucket> table;
 
-    HashMap() {}
-    HashMap(std::initializer_list<Bucket> l)
-    {
-        for (const Bucket &bucket: l) {
-            Set(bucket.key, bucket.value);
-        }
-    }
+    HashMap() = default;
+    HashMap(std::initializer_list<Bucket> l) : table(l) {}
 
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
@@ -2655,24 +3238,19 @@ template <typename ValueType>
 class HashSet {
     class Handler {
     public:
-        static ValueType GetKey(const ValueType &value) { return value; }
-        static ValueType GetKey(const ValueType *value) { return *value; }
-        static uint64_t HashKey(const ValueType &value)
+        static constexpr ValueType GetKey(const ValueType &value) { return value; }
+        static constexpr ValueType GetKey(const ValueType *value) { return *value; }
+        static constexpr uint64_t HashKey(const ValueType &value)
             { return HashTraits<ValueType>::Hash(value); }
-        static bool TestKeys(const ValueType &value1, const ValueType &value2)
+        static constexpr bool TestKeys(const ValueType &value1, const ValueType &value2)
             { return HashTraits<ValueType>::Test(value1, value2); }
     };
 
 public:
     HashTable<ValueType, ValueType, Handler> table;
 
-    HashSet() {}
-    HashSet(std::initializer_list<ValueType> l)
-    {
-        for (const ValueType &value: l) {
-            Set(value);
-        }
-    }
+    HashSet() = default;
+    HashSet(std::initializer_list<ValueType> l) : table(l) {}
 
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
@@ -2736,8 +3314,6 @@ union LocalDate {
         return (int8_t)(DaysPerMonth[month - 1] + (month == 2 && IsLeapYear(year)));
     }
 
-    static LocalDate Parse(Span<const char> date_str, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
-                           Span<const char> *out_remaining = nullptr);
     static LocalDate FromJulianDays(int days);
     static LocalDate FromCalendarDate(int days) { return LocalDate::FromJulianDays(days + 2440588); }
 
@@ -2852,14 +3428,6 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode = TimeMode::Local);
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------
-
-class StreamReader;
-class StreamWriter;
-
-// For convenience, don't close them
-extern StreamReader *const StdIn;
-extern StreamWriter *const StdOut;
-extern StreamWriter *const StdErr;
 
 enum class FmtType {
     Str1,
@@ -3203,682 +3771,6 @@ bool RedirectLogToWindowsEvents(const char *name);
 #endif
 
 // ------------------------------------------------------------------------
-// Strings
-// ------------------------------------------------------------------------
-
-bool CopyString(const char *str, Span<char> buf);
-bool CopyString(Span<const char> str, Span<char> buf);
-Span<char> DuplicateString(Span<const char> str, Allocator *alloc);
-
-static inline bool IsAsciiAlpha(int c)
-{
-    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
-}
-static inline bool IsAsciiDigit(int c)
-{
-    return (c >= '0' && c <= '9');
-}
-static inline bool IsAsciiAlphaOrDigit(int c)
-{
-    return IsAsciiAlpha(c) || IsAsciiDigit(c);
-}
-static inline bool IsAsciiWhite(int c)
-{
-    return c == ' ' || c == '\t' || c == '\v' ||
-           c == '\n' || c == '\r' || c == '\f';
-}
-
-static inline char UpperAscii(int c)
-{
-    if (c >= 'a' && c <= 'z') {
-        return (char)(c - 32);
-    } else {
-        return (char)c;
-    }
-}
-static inline char LowerAscii(int c)
-{
-    if (c >= 'A' && c <= 'Z') {
-        return (char)(c + 32);
-    } else {
-        return (char)c;
-    }
-}
-
-static inline bool TestStr(Span<const char> str1, Span<const char> str2)
-{
-    if (str1.len != str2.len)
-        return false;
-    for (Size i = 0; i < str1.len; i++) {
-        if (str1[i] != str2[i])
-            return false;
-    }
-    return true;
-}
-static inline bool TestStr(Span<const char> str1, const char *str2)
-{
-    Size i;
-    for (i = 0; i < str1.len && str2[i]; i++) {
-        if (str1[i] != str2[i])
-            return false;
-    }
-    return (i == str1.len) && !str2[i];
-}
-static inline bool TestStr(const char *str1, Span<const char> str2)
-    { return TestStr(str2, str1); }
-static inline bool TestStr(const char *str1, const char *str2)
-    { return !strcmp(str1, str2); }
-
-// Allow direct Span<const char> equality comparison
-inline bool Span<const char>::operator==(Span<const char> other) const
-    { return TestStr(*this, other); }
-inline bool Span<const char>::operator==(const char *other) const
-    { return TestStr(*this, other); }
-
-// Case insensitive (ASCII) versions
-static inline bool TestStrI(Span<const char> str1, Span<const char> str2)
-{
-    if (str1.len != str2.len)
-        return false;
-    for (Size i = 0; i < str1.len; i++) {
-        if (LowerAscii(str1[i]) != LowerAscii(str2[i]))
-            return false;
-    }
-    return true;
-}
-static inline bool TestStrI(Span<const char> str1, const char *str2)
-{
-    Size i;
-    for (i = 0; i < str1.len && str2[i]; i++) {
-        if (LowerAscii(str1[i]) != LowerAscii(str2[i]))
-            return false;
-    }
-    return (i == str1.len) && !str2[i];
-}
-static inline bool TestStrI(const char *str1, Span<const char> str2)
-    { return TestStrI(str2, str1); }
-static inline bool TestStrI(const char *str1, const char *str2)
-{
-    Size i = 0;
-    int delta;
-    do {
-        delta = LowerAscii(str1[i]) - LowerAscii(str2[i]);
-    } while (str1[i++] && !delta);
-    return !delta;
-}
-
-static inline int CmpStr(Span<const char> str1, Span<const char> str2)
-{
-    for (Size i = 0; i < str1.len && i < str2.len; i++) {
-        int delta = str1[i] - str2[i];
-        if (delta)
-            return delta;
-    }
-    if (str1.len < str2.len) {
-        return -str2[str1.len];
-    } else if (str1.len > str2.len) {
-        return str1[str2.len];
-    } else {
-        return 0;
-    }
-}
-static inline int CmpStr(Span<const char> str1, const char *str2)
-{
-    Size i;
-    for (i = 0; i < str1.len && str2[i]; i++) {
-        int delta = str1[i] - str2[i];
-        if (delta)
-            return delta;
-    }
-    if (str1.len == i) {
-        return -str2[i];
-    } else {
-        return str1[i];
-    }
-}
-static inline int CmpStr(const char *str1, Span<const char> str2)
-    { return -CmpStr(str2, str1); }
-static inline int CmpStr(const char *str1, const char *str2)
-    { return strcmp(str1, str2); }
-
-static inline bool StartsWith(Span<const char> str, Span<const char> prefix)
-{
-    Size i = 0;
-    while (i < str.len && i < prefix.len) {
-        if (str[i] != prefix[i])
-            return false;
-        i++;
-    }
-
-    return (i == prefix.len);
-}
-static inline bool StartsWith(Span<const char> str, const char *prefix)
-{
-    Size i = 0;
-    while (i < str.len && prefix[i]) {
-        if (str[i] != prefix[i])
-            return false;
-        i++;
-    }
-
-    return !prefix[i];
-}
-static inline bool StartsWith(const char *str, const char *prefix)
-{
-    Size i = 0;
-    while (str[i] && prefix[i]) {
-        if (str[i] != prefix[i])
-            return false;
-        i++;
-    }
-
-    return !prefix[i];
-}
-
-static inline bool EndsWith(Span<const char> str, const char *suffix)
-{
-    Size i = str.len - 1;
-    Size j = (Size)strlen(suffix) - 1;
-    while (i >= 0 && j >= 0) {
-        if (str[i] != suffix[j])
-            return false;
-
-        i--;
-        j--;
-    }
-
-    return j < 0;
-}
-
-static inline Size FindStr(Span<const char> str, Span<const char> needle)
-{
-    if (!needle.len)
-        return 0;
-    if (needle.len > str.len)
-        return -1;
-
-    Size end = str.len - needle.len;
-
-    for (Size i = 0; i <= end; i++) {
-        if (!memcmp(str.ptr + i, needle.ptr, (size_t)needle.len))
-            return i;
-    }
-
-    return -1;
-}
-static inline Size FindStr(const char *str, const char *needle)
-{
-    const char *ret = strstr(str, needle);
-    return ret ? ret - str : -1;
-}
-
-static inline Span<char> SplitStr(Span<char> str, char split_char, Span<char> *out_remainder = nullptr)
-{
-    Size part_len = 0;
-    while (part_len < str.len) {
-        if (str[part_len] == split_char) {
-            if (out_remainder) {
-                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
-            }
-            return str.Take(0, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str.Take(str.len, 0);
-    }
-    return str;
-}
-static inline Span<char> SplitStr(char *str, char split_char, char **out_remainder = nullptr)
-{
-    Size part_len = 0;
-    while (str[part_len]) {
-        if (str[part_len] == split_char) {
-            if (out_remainder) {
-                *out_remainder = str + part_len + 1;
-            }
-            return MakeSpan(str, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str + part_len;
-    }
-    return MakeSpan(str, part_len);
-}
-static inline Span<const char> SplitStr(Span<const char> str, char split_char, Span<const char> *out_remainder = nullptr)
-    { return SplitStr(MakeSpan((char *)str.ptr, str.len), split_char, (Span<char> *)out_remainder); }
-static inline Span<const char> SplitStr(const char *str, char split_char, const char **out_remainder = nullptr)
-    { return SplitStr((char *)str, split_char, (char **)out_remainder); }
-
-static inline Span<char> SplitStr(Span<char> str, const char *split_str, Span<char> *out_remainder = nullptr)
-{
-    RG_ASSERT(split_str[0]);
-
-    Size part_len = 0;
-    while (part_len < str.len) {
-        if (StartsWith(str.Take(part_len, str.len - part_len), split_str)) {
-            if (out_remainder) {
-                Size split_len = strlen(split_str);
-                *out_remainder = str.Take(part_len + split_len, str.len - part_len - split_len);
-            }
-            return str.Take(0, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str.Take(str.len, 0);
-    }
-    return str;
-}
-static inline Span<char> SplitStr(char *str, const char *split_str, char **out_remainder = nullptr)
-{
-    RG_ASSERT(split_str[0]);
-
-    Size part_len = 0;
-    while (str[part_len]) {
-        if (StartsWith(str + part_len, split_str)) {
-            if (out_remainder) {
-                Size split_len = strlen(split_str);
-                *out_remainder = str + part_len + split_len;
-            }
-            return MakeSpan(str, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str + part_len;
-    }
-    return MakeSpan(str, part_len);
-}
-static inline Span<const char> SplitStr(Span<const char> str, const char *split_str, Span<const char> *out_remainder = nullptr)
-    { return SplitStr(MakeSpan((char *)str.ptr, str.len), split_str, (Span<char> *)out_remainder); }
-static inline Span<const char> SplitStr(const char *str, const char *split_str, const char **out_remainder = nullptr)
-    { return SplitStr((char *)str, split_str, (char **)out_remainder); }
-
-static inline Span<char> SplitStrLine(Span<char> str, Span<char> *out_remainder = nullptr)
-{
-    Span<char> part = SplitStr(str, '\n', out_remainder);
-    if (part.len < str.len && part.len && part[part.len - 1] == '\r') {
-        part.len--;
-    }
-    return part;
-}
-static inline Span<char> SplitStrLine(char *str, char **out_remainder = nullptr)
-{
-    Span<char> part = SplitStr(str, '\n', out_remainder);
-    if (str[part.len] && part.len && part[part.len - 1] == '\r') {
-        part.len--;
-    }
-    return part;
-}
-static inline Span<const char> SplitStrLine(Span<const char> str, Span<const char> *out_remainder = nullptr)
-    { return SplitStrLine(MakeSpan((char *)str.ptr, str.len), (Span<char> *)out_remainder); }
-static inline Span<const char> SplitStrLine(const char *str, const char **out_remainder = nullptr)
-    { return SplitStrLine((char *)str, (char **)out_remainder); }
-
-static inline Span<char> SplitStrAny(Span<char> str, const char *split_chars, Span<char> *out_remainder = nullptr)
-{
-    Bitset<256> split_mask;
-    for (Size i = 0; split_chars[i]; i++) {
-        uint8_t c = (uint8_t)split_chars[i];
-        split_mask.Set(c);
-    }
-
-    Size part_len = 0;
-    while (part_len < str.len) {
-        uint8_t c = (uint8_t)str[part_len];
-
-        if (split_mask.Test(c)) {
-            if (out_remainder) {
-                *out_remainder = str.Take(part_len + 1, str.len - part_len - 1);
-            }
-            return str.Take(0, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str.Take(str.len, 0);
-    }
-    return str;
-}
-static inline Span<char> SplitStrAny(char *str, const char *split_chars, char **out_remainder = nullptr)
-{
-    Bitset<256> split_mask;
-    for (Size i = 0; split_chars[i]; i++) {
-        uint8_t c = (uint8_t)split_chars[i];
-        split_mask.Set(c);
-    }
-
-    Size part_len = 0;
-    while (str[part_len]) {
-        uint8_t c = (uint8_t)str[part_len];
-
-        if (split_mask.Test(c)) {
-            if (out_remainder) {
-                *out_remainder = str + part_len + 1;
-            }
-            return MakeSpan(str, part_len);
-        }
-        part_len++;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str + part_len;
-    }
-    return MakeSpan(str, part_len);
-}
-static inline Span<const char> SplitStrAny(Span<const char> str, const char *split_chars, Span<const char> *out_remainder = nullptr)
-    { return SplitStrAny(MakeSpan((char *)str.ptr, str.len), split_chars, (Span<char> *)out_remainder); }
-static inline Span<const char> SplitStrAny(const char *str, const char *split_chars, const char **out_remainder = nullptr)
-    { return SplitStrAny((char *)str, split_chars, (char **)out_remainder); }
-
-static inline Span<const char> SplitStrReverse(Span<const char> str, char split_char,
-                                               Span<const char> *out_remainder = nullptr)
-{
-    Size remainder_len = str.len - 1;
-    while (remainder_len >= 0) {
-        if (str[remainder_len] == split_char) {
-            if (out_remainder) {
-                *out_remainder = str.Take(0, remainder_len);
-            }
-            return str.Take(remainder_len + 1, str.len - remainder_len - 1);
-        }
-        remainder_len--;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str.Take(0, 0);
-    }
-    return str;
-}
-static inline Span<const char> SplitStrReverse(const char *str, char split_char,
-                                               Span<const char> *out_remainder = nullptr)
-    { return SplitStrReverse(MakeSpan(str, strlen(str)), split_char, out_remainder); }
-
-static inline Span<const char> SplitStrReverseAny(Span<const char> str, const char *split_chars,
-                                                  Span<const char> *out_remainder = nullptr)
-{
-    Bitset<256> split_mask;
-    for (Size i = 0; split_chars[i]; i++) {
-        uint8_t c = (uint8_t)split_chars[i];
-        split_mask.Set(c);
-    }
-
-    Size remainder_len = str.len - 1;
-    while (remainder_len >= 0) {
-        uint8_t c = (uint8_t)str[remainder_len];
-
-        if (split_mask.Test(c)) {
-            if (out_remainder) {
-                *out_remainder = str.Take(0, remainder_len);
-            }
-            return str.Take(remainder_len + 1, str.len - remainder_len - 1);
-        }
-        remainder_len--;
-    }
-
-    if (out_remainder) {
-        *out_remainder = str.Take(0, 0);
-    }
-    return str;
-}
-static inline Span<const char> SplitStrReverseAny(const char *str, const char *split_chars,
-                                                  Span<const char> *out_remainder = nullptr)
-    { return SplitStrReverseAny(MakeSpan(str, strlen(str)), split_chars, out_remainder); }
-
-static inline Span<char> TrimStrLeft(Span<char> str, char trim_char)
-{
-    while (str.len && str[0] == trim_char && str[0]) {
-        str.ptr++;
-        str.len--;
-    }
-
-    return str;
-}
-static inline Span<char> TrimStrRight(Span<char> str, char trim_char)
-{
-    while (str.len && str[str.len - 1] == trim_char && str[str.len - 1]) {
-        str.len--;
-    }
-
-    return str;
-}
-static inline Span<char> TrimStr(Span<char> str, char trim_char)
-{
-    str = TrimStrRight(str, trim_char);
-    str = TrimStrLeft(str, trim_char);
-
-    return str;
-}
-static inline Span<const char> TrimStrLeft(Span<const char> str, char trim_char)
-    { return TrimStrLeft(MakeSpan((char *)str.ptr, str.len), trim_char); }
-static inline Span<const char> TrimStrRight(Span<const char> str, char trim_char)
-    { return TrimStrRight(MakeSpan((char *)str.ptr, str.len), trim_char); }
-static inline Span<const char> TrimStr(Span<const char> str,char trim_char)
-    { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_char); }
-
-static inline Span<char> TrimStrLeft(Span<char> str, const char *trim_chars = " \t\r\n")
-{
-    while (str.len && strchr(trim_chars, str[0]) && str[0]) {
-        str.ptr++;
-        str.len--;
-    }
-
-    return str;
-}
-static inline Span<char> TrimStrRight(Span<char> str, const char *trim_chars = " \t\r\n")
-{
-    while (str.len && strchr(trim_chars, str[str.len - 1]) && str[str.len - 1]) {
-        str.len--;
-    }
-
-    return str;
-}
-static inline Span<char> TrimStr(Span<char> str, const char *trim_chars = " \t\r\n")
-{
-    str = TrimStrRight(str, trim_chars);
-    str = TrimStrLeft(str, trim_chars);
-
-    return str;
-}
-static inline Span<const char> TrimStrLeft(Span<const char> str, const char *trim_chars = " \t\r\n")
-    { return TrimStrLeft(MakeSpan((char *)str.ptr, str.len), trim_chars); }
-static inline Span<const char> TrimStrRight(Span<const char> str, const char *trim_chars = " \t\r\n")
-    { return TrimStrRight(MakeSpan((char *)str.ptr, str.len), trim_chars); }
-static inline Span<const char> TrimStr(Span<const char> str, const char *trim_chars = " \t\r\n")
-    { return TrimStr(MakeSpan((char *)str.ptr, str.len), trim_chars); }
-
-template <typename T>
-bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
-              Span<const char> *out_remaining = nullptr)
-{
-    if (!str.len) [[unlikely]] {
-        if (flags & (int)ParseFlag::Log) {
-            LogError("Cannot convert empty string to integer");
-        }
-        return false;
-    }
-
-    uint64_t value = 0;
-
-    Size pos = 0;
-    uint64_t neg = 0;
-    if (str.len >= 2) {
-        if (std::numeric_limits<T>::min() < 0 && str[0] == '-') {
-            pos = 1;
-            neg = UINT64_MAX;
-        } else if (str[0] == '+') {
-            pos = 1;
-        }
-    }
-
-    for (; pos < str.len; pos++) {
-        unsigned int digit = (unsigned int)(str[pos] - '0');
-        if (digit > 9) [[unlikely]] {
-            if (!pos || flags & (int)ParseFlag::End) {
-                if (flags & (int)ParseFlag::Log) {
-                    LogError("Malformed integer number '%1'", str);
-                }
-                return false;
-            } else {
-                break;
-            }
-        }
-
-        uint64_t new_value = (value * 10) + digit;
-        if (new_value < value) [[unlikely]]
-            goto overflow;
-        value = new_value;
-    }
-    if (value > (uint64_t)std::numeric_limits<T>::max()) [[unlikely]]
-        goto overflow;
-    value = ((value ^ neg) - neg);
-
-    if (out_remaining) {
-        *out_remaining = str.Take(pos, str.len - pos);
-    }
-    *out_value = (T)value;
-    return true;
-
-overflow:
-    if (flags & (int)ParseFlag::Log) {
-        LogError("Integer overflow for number '%1' (max = %2)", str,
-                std::numeric_limits<T>::max());
-    }
-    return false;
-}
-
-bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
-               Span<const char> *out_remaining = nullptr);
-
-bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
-               Span<const char> *out_remaining = nullptr);
-#if RG_SIZE_MAX < INT64_MAX
-static inline bool ParseSize(Span<const char> str, Size *out_size,
-                             unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr)
-{
-    int64_t size = 0;
-    if (!ParseSize(str, &size, flags, out_remaining))
-        return false;
-
-    if (size > RG_SIZE_MAX) [[unlikely]] {
-        if (flags & (int)ParseFlag::Log) {
-            LogError("Size value is too high");
-        }
-        return false;
-    }
-
-    *out_size = (Size)size;
-    return true;
-}
-#endif
-
-bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
-                   Span<const char> *out_remaining = nullptr);
-
-static inline Size EncodeUtf8(int32_t c, char out_buf[4])
-{
-    if (c < 0x80) {
-        out_buf[0] = (char)c;
-        return 1;
-    } else if (c < 0x800) {
-        out_buf[0] = (char)(0xC0 | (c >> 6));
-        out_buf[1] = (char)(0x80 | (c & 0x3F));
-        return 2;
-    } else if (c >= 0xD800 && c < 0xE000) {
-        return 0;
-    } else if (c < 0x10000) {
-        out_buf[0] = (char)(0xE0 | (c >> 12));
-        out_buf[1] = (char)(0x80 | ((c >> 6) & 0x3F));
-        out_buf[2] = (char)(0x80 | (c & 0x3F));
-        return 3;
-    } else if (c < 0x110000) {
-        out_buf[0] = (char)(0xF0 | (c >> 18));
-        out_buf[1] = (char)(0x80 | ((c >> 12) & 0x3F));
-        out_buf[2] = (char)(0x80 | ((c >> 6) & 0x3F));
-        out_buf[3] = (char)(0x80 | (c & 0x3F));
-        return 4;
-    } else {
-        return 0;
-    }
-}
-
-static inline int CountUtf8Bytes(char c)
-{
-    int ones = CountLeadingZeros((uint32_t)~c << 24);
-    return std::min(std::max(ones, 1), 4);
-}
-
-static inline Size DecodeUtf8(const char *str, int32_t *out_c)
-{
-    RG_ASSERT(str[0]);
-
-    const uint8_t *ptr = (const uint8_t *)str;
-
-    if (ptr[0] < 0x80) {
-        *out_c = ptr[0];
-        return 1;
-    } else if (ptr[0] - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
-        return 0;
-    } else if (ptr[1]) [[likely]] {
-        if (ptr[0] < 0xE0 && (ptr[1] & 0xC0) == 0x80) {
-            *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
-            return 2;
-        } else if (ptr[2]) [[likely]] {
-            if (ptr[0] < 0xF0 && (ptr[1] & 0xC0) == 0x80 &&
-                                 (ptr[2] & 0xC0) == 0x80) {
-                *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
-                return 3;
-            } else if (ptr[3]) [[likely]] {
-                if ((ptr[1] & 0xC0) == 0x80 &&
-                        (ptr[2] & 0xC0) == 0x80 &&
-                        (ptr[3] & 0xC0) == 0x80) {
-                    *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
-                    return 4;
-                }
-            }
-        }
-    }
-
-    return 0;
-}
-
-static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
-{
-    RG_ASSERT(offset < str.len);
-
-    const uint8_t *ptr = (const uint8_t *)(str.ptr + offset);
-    Size available = str.len - offset;
-
-    if (ptr[0] < 0x80) {
-        *out_c = ptr[0];
-        return 1;
-    } else if (ptr[0] - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
-        return 0;
-    } else if (ptr[0] < 0xE0 && available >= 2 && (ptr[1] & 0xC0) == 0x80) {
-        *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
-        return 2;
-    } else if (ptr[0] < 0xF0 && available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
-                                                  (ptr[2] & 0xC0) == 0x80) {
-        *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
-        return 3;
-    } else if (available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
-                                 (ptr[2] & 0xC0) == 0x80 &&
-                                 (ptr[3] & 0xC0) == 0x80) {
-        *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
-        return 4;
-    } else {
-        return 0;
-    }
-}
-
-// ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------
 
@@ -4209,6 +4101,109 @@ const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
 const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
                              Allocator *alloc, int *out_fd = nullptr);
 const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix, Allocator *alloc);
+
+// ------------------------------------------------------------------------
+// Parsing
+// ------------------------------------------------------------------------
+
+enum class ParseFlag {
+    Log = 1 << 0,
+    Validate = 1 << 1,
+    End = 1 << 2
+};
+#define RG_DEFAULT_PARSE_FLAGS ((int)ParseFlag::Log | (int)ParseFlag::Validate | (int)ParseFlag::End)
+
+template <typename T>
+bool ParseInt(Span<const char> str, T *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+              Span<const char> *out_remaining = nullptr)
+{
+    if (!str.len) [[unlikely]] {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Cannot convert empty string to integer");
+        }
+        return false;
+    }
+
+    uint64_t value = 0;
+
+    Size pos = 0;
+    uint64_t neg = 0;
+    if (str.len >= 2) {
+        if (std::numeric_limits<T>::min() < 0 && str[0] == '-') {
+            pos = 1;
+            neg = UINT64_MAX;
+        } else if (str[0] == '+') {
+            pos = 1;
+        }
+    }
+
+    for (; pos < str.len; pos++) {
+        unsigned int digit = (unsigned int)(str[pos] - '0');
+        if (digit > 9) [[unlikely]] {
+            if (!pos || flags & (int)ParseFlag::End) {
+                if (flags & (int)ParseFlag::Log) {
+                    LogError("Malformed integer number '%1'", str);
+                }
+                return false;
+            } else {
+                break;
+            }
+        }
+
+        uint64_t new_value = (value * 10) + digit;
+        if (new_value < value) [[unlikely]]
+            goto overflow;
+        value = new_value;
+    }
+    if (value > (uint64_t)std::numeric_limits<T>::max()) [[unlikely]]
+        goto overflow;
+    value = ((value ^ neg) - neg);
+
+    if (out_remaining) {
+        *out_remaining = str.Take(pos, str.len - pos);
+    }
+    *out_value = (T)value;
+    return true;
+
+overflow:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Integer overflow for number '%1' (max = %2)", str,
+                std::numeric_limits<T>::max());
+    }
+    return false;
+}
+
+bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+               Span<const char> *out_remaining = nullptr);
+
+bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+               Span<const char> *out_remaining = nullptr);
+#if RG_SIZE_MAX < INT64_MAX
+static inline bool ParseSize(Span<const char> str, Size *out_size,
+                             unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr)
+{
+    int64_t size = 0;
+    if (!ParseSize(str, &size, flags, out_remaining))
+        return false;
+
+    if (size > RG_SIZE_MAX) [[unlikely]] {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Size value is too high");
+        }
+        return false;
+    }
+
+    *out_size = (Size)size;
+    return true;
+}
+#endif
+
+
+bool ParseDate(Span<const char> date_str, LocalDate *out_date, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+               Span<const char> *out_remaining = nullptr);
+
+bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
+                   Span<const char> *out_remaining = nullptr);
 
 // ------------------------------------------------------------------------
 // Random

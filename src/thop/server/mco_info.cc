@@ -25,12 +25,13 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
     LocalDate date = {};
     {
         const char *date_str = request.GetQueryValue("date");
-        if (date_str) {
-            date = LocalDate::Parse(date_str);
-        } else {
+
+        if (!date_str) {
             LogError("Missing 'date' parameter");
+            io->AttachError(422);
+            return nullptr;
         }
-        if (!date.value) {
+        if (!ParseDate(date_str, &date)) {
             io->AttachError(422);
             return nullptr;
         }

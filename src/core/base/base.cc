@@ -466,76 +466,6 @@ void UnlockMemory(void *ptr, Size len)
 // Date
 // ------------------------------------------------------------------------
 
-// XXX: Rewrite the ugly parsing part
-LocalDate LocalDate::Parse(Span<const char> date_str, unsigned int flags,
-                           Span<const char> *out_remaining)
-{
-    LocalDate date;
-
-    int parts[3] = {};
-    int lengths[3] = {};
-    Size offset = 0;
-    for (int i = 0; i < 3; i++) {
-        int mult = 1;
-        while (offset < date_str.len) {
-            char c = date_str[offset];
-            int digit = c - '0';
-            if ((unsigned int)digit < 10) {
-                parts[i] = (parts[i] * 10) + digit;
-                if (++lengths[i] > 5) [[unlikely]]
-                    goto malformed;
-            } else if (!lengths[i] && c == '-' && mult == 1 && i != 1) {
-                mult = -1;
-            } else if (i == 2 && !(flags & (int)ParseFlag::End) && c != '/' && c != '-') [[unlikely]] {
-                break;
-            } else if (!lengths[i] || (c != '/' && c != '-')) [[unlikely]] {
-                goto malformed;
-            } else {
-                offset++;
-                break;
-            }
-            offset++;
-        }
-        parts[i] *= mult;
-    }
-    if ((flags & (int)ParseFlag::End) && offset < date_str.len)
-        goto malformed;
-
-    if ((unsigned int)lengths[1] > 2) [[unlikely]]
-        goto malformed;
-    if ((lengths[0] > 2) == (lengths[2] > 2)) [[unlikely]] {
-        if (flags & (int)ParseFlag::Log) {
-            LogError("Ambiguous date string '%1'", date_str);
-        }
-        return {};
-    } else if (lengths[2] > 2) {
-        std::swap(parts[0], parts[2]);
-    }
-    if (parts[0] < -INT16_MAX || parts[0] > INT16_MAX || (unsigned int)parts[2] > 99) [[unlikely]]
-        goto malformed;
-
-    date.st.year = (int16_t)parts[0];
-    date.st.month = (int8_t)parts[1];
-    date.st.day = (int8_t)parts[2];
-    if ((flags & (int)ParseFlag::Validate) && !date.IsValid()) {
-        if (flags & (int)ParseFlag::Log) {
-            LogError("Invalid date string '%1'", date_str);
-        }
-        return {};
-    }
-
-    if (out_remaining) {
-        *out_remaining = date_str.Take(offset, date_str.len - offset);
-    }
-    return date;
-
-malformed:
-    if (flags & (int)ParseFlag::Log) {
-        LogError("Malformed date string '%1'", date_str);
-    }
-    return {};
-}
-
 LocalDate LocalDate::FromJulianDays(int days)
 {
     RG_ASSERT(days >= 0);
@@ -802,146 +732,6 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
     MemCpy(new_str, str.ptr, str.len);
     new_str[str.len] = 0;
     return MakeSpan(new_str, str.len);
-}
-
-bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags,
-               Span<const char> *out_remaining)
-{
-#define TRY_MATCH(Match, Value) \
-        do { \
-            if (str == (Match)) { \
-                *out_value = (Value); \
-                if (out_remaining) { \
-                    *out_remaining = str.Take(str.len, 0); \
-                } \
-                return true; \
-            } else if (!(flags & (int)ParseFlag::End)) { \
-                *out_value = (Value); \
-                if (out_remaining) { \
-                    Size match_len = strlen(Match); \
-                    *out_remaining = str.Take(match_len, str.len - match_len); \
-                } \
-                return true; \
-            } \
-        } while (false)
-
-    TRY_MATCH("1", true);
-    TRY_MATCH("On", true);
-    TRY_MATCH("Y", true);
-    TRY_MATCH("Yes", true);
-    TRY_MATCH("True", true);
-    TRY_MATCH("0", false);
-    TRY_MATCH("Off", false);
-    TRY_MATCH("N", false);
-    TRY_MATCH("No", false);
-    TRY_MATCH("False", false);
-
-    if (flags & (int)ParseFlag::Log) {
-        LogError("Invalid boolean value '%1'", str);
-    }
-    return false;
-}
-
-bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags, Span<const char> *out_remaining)
-{
-    uint64_t size = 0;
-
-    if (!ParseInt(str, &size, flags & ~(int)ParseFlag::End, &str))
-        return false;
-    if (size > INT64_MAX) [[unlikely]]
-        goto overflow;
-
-    if (str.len) {
-        uint64_t multiplier = 1;
-        int next = 1;
-
-        switch (str[0]) {
-            case 'B': { multiplier = 1; } break;
-            case 'k': { multiplier = 1000; } break;
-            case 'M': { multiplier = 1000000; } break;
-            case 'G': { multiplier = 1000000000; } break;
-            case 'T': { multiplier = 1000000000000; } break;
-            default: { next = 0; } break;
-        }
-
-        if ((flags & (int)ParseFlag::End) && str.len > next) [[unlikely]] {
-            if (flags & (int)ParseFlag::Log) {
-                LogError("Unknown size unit '%1'", str[0]);
-            }
-            return false;
-        }
-        str = str.Take(next, str.len - next);
-
-        uint64_t total = size * multiplier;
-        if ((size && total / size != multiplier) || total > INT64_MAX) [[unlikely]]
-            goto overflow;
-        size = total;
-    }
-
-    *out_size = (int64_t)size;
-    if (out_remaining) {
-        *out_remaining = str;
-    }
-    return true;
-
-overflow:
-    if (flags & (int)ParseFlag::Log) {
-        LogError("Size value is too high");
-    }
-    return false;
-}
-
-bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags, Span<const char> *out_remaining)
-{
-    uint64_t duration = 0;
-
-    if (!ParseInt(str, &duration, flags & ~(int)ParseFlag::End, &str))
-        return false;
-    if (duration > INT64_MAX) [[unlikely]]
-        goto overflow;
-
-    if (str.len) {
-        uint64_t multiplier = 1;
-        int next = 1;
-
-        switch (str[0]) {
-            case 's': { multiplier = 1000; } break;
-            case 'm': { multiplier = 60000; } break;
-            case 'h': { multiplier = 3600000; } break;
-            case 'd': { multiplier = 86400000; } break;
-            default: { next = 0; } break;
-        }
-
-        if ((flags & (int)ParseFlag::End) && str.len > next) [[unlikely]] {
-            if (flags & (int)ParseFlag::Log) {
-                LogError("Unknown duration unit '%1'", str[0]);
-            }
-            return false;
-        }
-        str = str.Take(next, str.len - next);
-
-        uint64_t total = duration * multiplier;
-        if ((duration && total / duration != multiplier) || total > INT64_MAX) [[unlikely]]
-            goto overflow;
-        duration = total;
-    } else {
-        uint64_t total = duration * 1000;
-        if ((duration && total / duration != 1000) || total > INT64_MAX) [[unlikely]]
-            goto overflow;
-        duration = total;
-    }
-
-    *out_duration = (int64_t)duration;
-    if (out_remaining) {
-        *out_remaining = str;
-    }
-    return true;
-
-overflow:
-    if (flags & (int)ParseFlag::Log) {
-        LogError("Duration value is too high");
-    }
-    return false;
 }
 
 // ------------------------------------------------------------------------
@@ -5050,6 +4840,221 @@ const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix
     return CreateUniquePath(directory, prefix, "", alloc, [&](const char *path) {
         return MakeDirectory(path);
     });
+}
+
+// ------------------------------------------------------------------------
+// Parsing
+// ------------------------------------------------------------------------
+
+bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags,
+               Span<const char> *out_remaining)
+{
+#define TRY_MATCH(Match, Value) \
+        do { \
+            if (str == (Match)) { \
+                *out_value = (Value); \
+                if (out_remaining) { \
+                    *out_remaining = str.Take(str.len, 0); \
+                } \
+                return true; \
+            } else if (!(flags & (int)ParseFlag::End)) { \
+                *out_value = (Value); \
+                if (out_remaining) { \
+                    Size match_len = strlen(Match); \
+                    *out_remaining = str.Take(match_len, str.len - match_len); \
+                } \
+                return true; \
+            } \
+        } while (false)
+
+    TRY_MATCH("1", true);
+    TRY_MATCH("On", true);
+    TRY_MATCH("Y", true);
+    TRY_MATCH("Yes", true);
+    TRY_MATCH("True", true);
+    TRY_MATCH("0", false);
+    TRY_MATCH("Off", false);
+    TRY_MATCH("N", false);
+    TRY_MATCH("No", false);
+    TRY_MATCH("False", false);
+
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Invalid boolean value '%1'", str);
+    }
+    return false;
+}
+
+bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags, Span<const char> *out_remaining)
+{
+    uint64_t size = 0;
+
+    if (!ParseInt(str, &size, flags & ~(int)ParseFlag::End, &str))
+        return false;
+    if (size > INT64_MAX) [[unlikely]]
+        goto overflow;
+
+    if (str.len) {
+        uint64_t multiplier = 1;
+        int next = 1;
+
+        switch (str[0]) {
+            case 'B': { multiplier = 1; } break;
+            case 'k': { multiplier = 1000; } break;
+            case 'M': { multiplier = 1000000; } break;
+            case 'G': { multiplier = 1000000000; } break;
+            case 'T': { multiplier = 1000000000000; } break;
+            default: { next = 0; } break;
+        }
+
+        if ((flags & (int)ParseFlag::End) && str.len > next) [[unlikely]] {
+            if (flags & (int)ParseFlag::Log) {
+                LogError("Unknown size unit '%1'", str[0]);
+            }
+            return false;
+        }
+        str = str.Take(next, str.len - next);
+
+        uint64_t total = size * multiplier;
+        if ((size && total / size != multiplier) || total > INT64_MAX) [[unlikely]]
+            goto overflow;
+        size = total;
+    }
+
+    *out_size = (int64_t)size;
+    if (out_remaining) {
+        *out_remaining = str;
+    }
+    return true;
+
+overflow:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Size value is too high");
+    }
+    return false;
+}
+
+bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags, Span<const char> *out_remaining)
+{
+    uint64_t duration = 0;
+
+    if (!ParseInt(str, &duration, flags & ~(int)ParseFlag::End, &str))
+        return false;
+    if (duration > INT64_MAX) [[unlikely]]
+        goto overflow;
+
+    if (str.len) {
+        uint64_t multiplier = 1;
+        int next = 1;
+
+        switch (str[0]) {
+            case 's': { multiplier = 1000; } break;
+            case 'm': { multiplier = 60000; } break;
+            case 'h': { multiplier = 3600000; } break;
+            case 'd': { multiplier = 86400000; } break;
+            default: { next = 0; } break;
+        }
+
+        if ((flags & (int)ParseFlag::End) && str.len > next) [[unlikely]] {
+            if (flags & (int)ParseFlag::Log) {
+                LogError("Unknown duration unit '%1'", str[0]);
+            }
+            return false;
+        }
+        str = str.Take(next, str.len - next);
+
+        uint64_t total = duration * multiplier;
+        if ((duration && total / duration != multiplier) || total > INT64_MAX) [[unlikely]]
+            goto overflow;
+        duration = total;
+    } else {
+        uint64_t total = duration * 1000;
+        if ((duration && total / duration != 1000) || total > INT64_MAX) [[unlikely]]
+            goto overflow;
+        duration = total;
+    }
+
+    *out_duration = (int64_t)duration;
+    if (out_remaining) {
+        *out_remaining = str;
+    }
+    return true;
+
+overflow:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Duration value is too high");
+    }
+    return false;
+}
+
+// XXX: Rewrite the ugly parsing part
+bool ParseDate(Span<const char> date_str, LocalDate *out_date, unsigned int flags, Span<const char> *out_remaining)
+{
+    LocalDate date;
+
+    int parts[3] = {};
+    int lengths[3] = {};
+    Size offset = 0;
+    for (int i = 0; i < 3; i++) {
+        int mult = 1;
+        while (offset < date_str.len) {
+            char c = date_str[offset];
+            int digit = c - '0';
+            if ((unsigned int)digit < 10) {
+                parts[i] = (parts[i] * 10) + digit;
+                if (++lengths[i] > 5) [[unlikely]]
+                    goto malformed;
+            } else if (!lengths[i] && c == '-' && mult == 1 && i != 1) {
+                mult = -1;
+            } else if (i == 2 && !(flags & (int)ParseFlag::End) && c != '/' && c != '-') [[unlikely]] {
+                break;
+            } else if (!lengths[i] || (c != '/' && c != '-')) [[unlikely]] {
+                goto malformed;
+            } else {
+                offset++;
+                break;
+            }
+            offset++;
+        }
+        parts[i] *= mult;
+    }
+    if ((flags & (int)ParseFlag::End) && offset < date_str.len)
+        goto malformed;
+
+    if ((unsigned int)lengths[1] > 2) [[unlikely]]
+        goto malformed;
+    if ((lengths[0] > 2) == (lengths[2] > 2)) [[unlikely]] {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Ambiguous date string '%1'", date_str);
+        }
+        return false;
+    } else if (lengths[2] > 2) {
+        std::swap(parts[0], parts[2]);
+    }
+    if (parts[0] < -INT16_MAX || parts[0] > INT16_MAX || (unsigned int)parts[2] > 99) [[unlikely]]
+        goto malformed;
+
+    date.st.year = (int16_t)parts[0];
+    date.st.month = (int8_t)parts[1];
+    date.st.day = (int8_t)parts[2];
+
+    if ((flags & (int)ParseFlag::Validate) && !date.IsValid()) {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Invalid date string '%1'", date_str);
+        }
+        return false;
+    }
+
+    *out_date = date;
+    if (out_remaining) {
+        *out_remaining = date_str.Take(offset, date_str.len - offset);
+    }
+    return true;
+
+malformed:
+    if (flags & (int)ParseFlag::Log) {
+        LogError("Malformed date string '%1'", date_str);
+    }
+    return false;
 }
 
 // ------------------------------------------------------------------------

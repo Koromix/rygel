@@ -163,11 +163,9 @@ bool mco_AuthorizationSetBuilder::LoadIni(StreamReader *st)
                         valid = false;
                     }
                 } else if (prop.key == "Date") {
-                    auth.dates[0] = LocalDate::Parse(prop.value);
-                    valid &= !!auth.dates[0].value;
+                    valid &= ParseDate(prop.value, &auth.dates[0]);
                 } else if (prop.key == "End") {
-                    auth.dates[1] = LocalDate::Parse(prop.value);
-                    valid &= !!auth.dates[1].value;
+                    valid &= ParseDate(prop.value, &auth.dates[1]);
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

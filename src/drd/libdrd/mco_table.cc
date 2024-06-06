@@ -1393,15 +1393,11 @@ bool mco_TableSetBuilder::LoadPrices(StreamReader *st)
         bool valid = true;
         while (ini.Next(&prop) && !prop.section.len) {
             if (prop.key == "Date") {
-                table_info.limit_dates[0] = LocalDate::Parse(prop.value);
-                valid &= !!table_info.limit_dates[0].value;
+                valid &= ParseDate(prop.value, &table_info.limit_dates[0]);
             } else if (prop.key == "End") {
-                table_info.limit_dates[1] = LocalDate::Parse(prop.value);
-                valid &= !!table_info.limit_dates[1].value;
+                valid &= ParseDate(prop.value, &table_info.limit_dates[1]);
             } else if (prop.key == "Build") {
-                LocalDate build_date = LocalDate::Parse(prop.value);
-                valid &= build_date.IsValid();
-                table_info.build_date = build_date;
+                valid &= ParseDate(prop.value, &table_info.build_date);
             } else if (prop.key == "Sector") {
                 if (prop.value == "Public") {
                     table_info.type = mco_TableType::PriceTablePublic;
