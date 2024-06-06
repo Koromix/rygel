@@ -1989,8 +1989,8 @@ public:
     typedef T value_type;
     typedef T *iterator_type;
 
-    LocalArray() = default;
-    LocalArray(std::initializer_list<T> l)
+    constexpr LocalArray() = default;
+    constexpr LocalArray(std::initializer_list<T> l)
     {
         RG_ASSERT(l.size() <= N);
         for (const T &it: l) {
