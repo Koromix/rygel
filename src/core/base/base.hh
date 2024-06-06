@@ -286,13 +286,13 @@ char (&ComputeArraySize(T const (&)[N]))[N];
 #define RG_BITS(Type) (8 * RG_SIZE(Type))
 #define RG_LEN(Array) RG_SIZE(RG::ComputeArraySize(Array))
 
-static inline constexpr uint16_t ReverseBytes(uint16_t u)
+static constexpr inline uint16_t ReverseBytes(uint16_t u)
 {
     return (uint16_t)(((u & 0x00FF) << 8) |
                       ((u & 0xFF00) >> 8));
 }
 
-static inline constexpr uint32_t ReverseBytes(uint32_t u)
+static constexpr inline uint32_t ReverseBytes(uint32_t u)
 {
     return ((u & 0x000000FF) << 24) |
            ((u & 0x0000FF00) << 8)  |
@@ -300,7 +300,7 @@ static inline constexpr uint32_t ReverseBytes(uint32_t u)
            ((u & 0xFF000000) >> 24);
 }
 
-static inline constexpr uint64_t ReverseBytes(uint64_t u)
+static constexpr inline uint64_t ReverseBytes(uint64_t u)
 {
     return ((u & 0x00000000000000FF) << 56) |
            ((u & 0x000000000000FF00) << 40) |
@@ -312,11 +312,11 @@ static inline constexpr uint64_t ReverseBytes(uint64_t u)
            ((u & 0xFF00000000000000) >> 56);
 }
 
-static inline constexpr int16_t ReverseBytes(int16_t i)
+static constexpr inline int16_t ReverseBytes(int16_t i)
     { return (int16_t)ReverseBytes((uint16_t)i); }
-static inline constexpr int32_t ReverseBytes(int32_t i)
+static constexpr inline int32_t ReverseBytes(int32_t i)
     { return (int32_t)ReverseBytes((uint32_t)i); }
-static inline constexpr int64_t ReverseBytes(int64_t i)
+static constexpr inline int64_t ReverseBytes(int64_t i)
     { return (int64_t)ReverseBytes((uint64_t)i); }
 
 #ifdef RG_BIG_ENDIAN
@@ -878,7 +878,7 @@ struct Span {
     template <Size N>
     constexpr Span(T (&arr)[N]) : ptr(arr), len(N) {}
 
-    void Reset()
+    constexpr void Reset()
     {
         ptr = nullptr;
         len = 0;
@@ -889,22 +889,22 @@ struct Span {
     constexpr T *end() { return ptr + len; }
     constexpr const T *end() const { return ptr + len; }
 
-    bool IsValid() const { return ptr; }
+    constexpr bool IsValid() const { return ptr; }
 
-    T &operator[](Size idx)
+    constexpr T &operator[](Size idx)
     {
         RG_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
-    const T &operator[](Size idx) const
+    constexpr const T &operator[](Size idx) const
     {
         RG_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
-    operator Span<const T>() const { return Span<const T>(ptr, len); }
+    constexpr operator Span<const T>() const { return Span<const T>(ptr, len); }
 
-    bool operator==(const Span &other) const
+    constexpr bool operator==(const Span &other) const
     {
         if (len != other.len)
             return false;
@@ -916,9 +916,9 @@ struct Span {
 
         return true;
     }
-    bool operator!=(const Span &other) const { return !(*this == other); }
+    constexpr bool operator!=(const Span &other) const { return !(*this == other); }
 
-    Span Take(Size offset, Size sub_len) const
+    constexpr Span Take(Size offset, Size sub_len) const
     {
         RG_ASSERT(sub_len >= 0 && sub_len <= len);
         RG_ASSERT(offset >= 0 && offset <= len - sub_len);
@@ -930,7 +930,7 @@ struct Span {
     }
 
     template <typename U>
-    Span<U> As() const { return Span<U>((U *)ptr, len); }
+    constexpr Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
 // Use strlen() to build Span<const char> instead of the template-based
@@ -949,7 +949,7 @@ struct Span<const char> {
     constexpr Span(const char *const &str) : ptr(str), len(str ? (Size)strlen(str) : 0) {}
 #endif
 
-    void Reset()
+    constexpr void Reset()
     {
         ptr = nullptr;
         len = 0;
@@ -958,21 +958,21 @@ struct Span<const char> {
     constexpr const char *begin() const { return ptr; }
     constexpr const char *end() const { return ptr + len; }
 
-    bool IsValid() const { return ptr; }
+    constexpr bool IsValid() const { return ptr; }
 
-    char operator[](Size idx) const
+    constexpr char operator[](Size idx) const
     {
         RG_ASSERT(idx >= 0 && idx < len);
         return ptr[idx];
     }
 
     // The implementation comes later, after TestStr() is available
-    bool operator==(Span<const char> other) const;
-    bool operator==(const char *other) const;
-    bool operator!=(Span<const char> other) const { return !(*this == other); }
-    bool operator!=(const char *other) const { return !(*this == other); }
+    constexpr bool operator==(Span<const char> other) const;
+    constexpr bool operator==(const char *other) const;
+    constexpr bool operator!=(Span<const char> other) const { return !(*this == other); }
+    constexpr bool operator!=(const char *other) const { return !(*this == other); }
 
-    Span Take(Size offset, Size sub_len) const
+    constexpr Span Take(Size offset, Size sub_len) const
     {
         RG_ASSERT(sub_len >= 0 && sub_len <= len);
         RG_ASSERT(offset >= 0 && offset <= len - sub_len);
@@ -984,21 +984,21 @@ struct Span<const char> {
     }
 
     template <typename U>
-    Span<U> As() const { return Span<U>((U *)ptr, len); }
+    constexpr Span<U> As() const { return Span<U>((U *)ptr, len); }
 };
 
 template <typename T>
-static inline constexpr Span<T> MakeSpan(T *ptr, Size len)
+static constexpr inline Span<T> MakeSpan(T *ptr, Size len)
 {
     return Span<T>(ptr, len);
 }
 template <typename T>
-static inline constexpr Span<T> MakeSpan(T *ptr, T *end)
+static constexpr inline Span<T> MakeSpan(T *ptr, T *end)
 {
     return Span<T>(ptr, end - ptr);
 }
 template <typename T, Size N>
-static inline constexpr Span<T> MakeSpan(T (&arr)[N])
+static constexpr inline Span<T> MakeSpan(T (&arr)[N])
 {
     return Span<T>(arr, N);
 }
@@ -1013,9 +1013,9 @@ public:
     constexpr Strider(T *ptr_) : ptr(ptr_), stride(RG_SIZE(T)) {}
     constexpr Strider(T *ptr_, Size stride_) : ptr(ptr_), stride(stride_) {}
 
-    bool IsValid() const { return ptr; }
+    constexpr bool IsValid() const { return ptr; }
 
-    T &operator[](Size idx) const
+    constexpr T &operator[](Size idx) const
     {
         RG_ASSERT(idx >= 0);
         return *(T *)((uint8_t *)ptr + (idx * stride));
@@ -1023,17 +1023,17 @@ public:
 };
 
 template <typename T>
-static inline constexpr Strider<T> MakeStrider(T *ptr)
+static constexpr inline Strider<T> MakeStrider(T *ptr)
 {
     return Strider<T>(ptr, RG_SIZE(T));
 }
 template <typename T>
-static inline constexpr Strider<T> MakeStrider(T *ptr, Size stride)
+static constexpr inline Strider<T> MakeStrider(T *ptr, Size stride)
 {
     return Strider<T>(ptr, stride);
 }
 template <typename T, Size N>
-static inline constexpr Strider<T> MakeStrider(T (&arr)[N])
+static constexpr inline Strider<T> MakeStrider(T (&arr)[N])
 {
     return Strider<T>(arr, RG_SIZE(T));
 }
@@ -1372,25 +1372,25 @@ bool CopyString(const char *str, Span<char> buf);
 bool CopyString(Span<const char> str, Span<char> buf);
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc);
 
-static inline bool IsAsciiAlpha(int c)
+static constexpr inline bool IsAsciiAlpha(int c)
 {
     return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }
-static inline bool IsAsciiDigit(int c)
+static constexpr inline bool IsAsciiDigit(int c)
 {
     return (c >= '0' && c <= '9');
 }
-static inline bool IsAsciiAlphaOrDigit(int c)
+static constexpr inline bool IsAsciiAlphaOrDigit(int c)
 {
     return IsAsciiAlpha(c) || IsAsciiDigit(c);
 }
-static inline bool IsAsciiWhite(int c)
+static constexpr inline bool IsAsciiWhite(int c)
 {
     return c == ' ' || c == '\t' || c == '\v' ||
            c == '\n' || c == '\r' || c == '\f';
 }
 
-static inline char UpperAscii(int c)
+static constexpr inline char UpperAscii(int c)
 {
     if (c >= 'a' && c <= 'z') {
         return (char)(c - 32);
@@ -1398,7 +1398,7 @@ static inline char UpperAscii(int c)
         return (char)c;
     }
 }
-static inline char LowerAscii(int c)
+static constexpr inline char LowerAscii(int c)
 {
     if (c >= 'A' && c <= 'Z') {
         return (char)(c + 32);
@@ -1407,7 +1407,7 @@ static inline char LowerAscii(int c)
     }
 }
 
-static inline bool TestStr(Span<const char> str1, Span<const char> str2)
+static constexpr inline bool TestStr(Span<const char> str1, Span<const char> str2)
 {
     if (str1.len != str2.len)
         return false;
@@ -1417,7 +1417,7 @@ static inline bool TestStr(Span<const char> str1, Span<const char> str2)
     }
     return true;
 }
-static inline bool TestStr(Span<const char> str1, const char *str2)
+static constexpr inline bool TestStr(Span<const char> str1, const char *str2)
 {
     Size i;
     for (i = 0; i < str1.len && str2[i]; i++) {
@@ -1426,19 +1426,30 @@ static inline bool TestStr(Span<const char> str1, const char *str2)
     }
     return (i == str1.len) && !str2[i];
 }
-static inline bool TestStr(const char *str1, Span<const char> str2)
+static constexpr inline bool TestStr(const char *str1, Span<const char> str2)
     { return TestStr(str2, str1); }
-static inline bool TestStr(const char *str1, const char *str2)
-    { return !strcmp(str1, str2); }
+static constexpr inline bool TestStr(const char *str1, const char *str2)
+{
+#if defined(__GNUC__) || defined(__clang__)
+    return !__builtin_strcmp(str1, str2);
+#else
+    Size i;
+    for (i = 0; str1[i]; i++) {
+        if (str2[i] != str1[i])
+            return false;
+    }
+    return !str2[i];
+#endif
+}
 
 // Allow direct Span<const char> equality comparison
-inline bool Span<const char>::operator==(Span<const char> other) const
+constexpr inline bool Span<const char>::operator==(Span<const char> other) const
     { return TestStr(*this, other); }
-inline bool Span<const char>::operator==(const char *other) const
+constexpr inline bool Span<const char>::operator==(const char *other) const
     { return TestStr(*this, other); }
 
 // Case insensitive (ASCII) versions
-static inline bool TestStrI(Span<const char> str1, Span<const char> str2)
+static constexpr inline bool TestStrI(Span<const char> str1, Span<const char> str2)
 {
     if (str1.len != str2.len)
         return false;
@@ -1448,7 +1459,7 @@ static inline bool TestStrI(Span<const char> str1, Span<const char> str2)
     }
     return true;
 }
-static inline bool TestStrI(Span<const char> str1, const char *str2)
+static constexpr inline bool TestStrI(Span<const char> str1, const char *str2)
 {
     Size i;
     for (i = 0; i < str1.len && str2[i]; i++) {
@@ -1457,9 +1468,9 @@ static inline bool TestStrI(Span<const char> str1, const char *str2)
     }
     return (i == str1.len) && !str2[i];
 }
-static inline bool TestStrI(const char *str1, Span<const char> str2)
+static constexpr inline bool TestStrI(const char *str1, Span<const char> str2)
     { return TestStrI(str2, str1); }
-static inline bool TestStrI(const char *str1, const char *str2)
+static constexpr inline bool TestStrI(const char *str1, const char *str2)
 {
     Size i = 0;
     int delta;
@@ -1469,7 +1480,7 @@ static inline bool TestStrI(const char *str1, const char *str2)
     return !delta;
 }
 
-static inline int CmpStr(Span<const char> str1, Span<const char> str2)
+static constexpr inline int CmpStr(Span<const char> str1, Span<const char> str2)
 {
     for (Size i = 0; i < str1.len && i < str2.len; i++) {
         int delta = str1[i] - str2[i];
@@ -1484,7 +1495,7 @@ static inline int CmpStr(Span<const char> str1, Span<const char> str2)
         return 0;
     }
 }
-static inline int CmpStr(Span<const char> str1, const char *str2)
+static constexpr inline int CmpStr(Span<const char> str1, const char *str2)
 {
     Size i;
     for (i = 0; i < str1.len && str2[i]; i++) {
@@ -1498,10 +1509,10 @@ static inline int CmpStr(Span<const char> str1, const char *str2)
         return str1[i];
     }
 }
-static inline int CmpStr(const char *str1, Span<const char> str2)
+static constexpr inline int CmpStr(const char *str1, Span<const char> str2)
     { return -CmpStr(str2, str1); }
-static inline int CmpStr(const char *str1, const char *str2)
-    { return strcmp(str1, str2); }
+static constexpr inline int CmpStr(const char *str1, const char *str2)
+    { return __builtin_strcmp(str1, str2); }
 
 static inline bool StartsWith(Span<const char> str, Span<const char> prefix)
 {
@@ -1862,67 +1873,80 @@ static inline int CountUtf8Bytes(char c)
     return std::min(std::max(ones, 1), 4);
 }
 
-static inline Size DecodeUtf8(const char *str, int32_t *out_c)
+static constexpr inline Size DecodeUtf8(const char *str, int32_t *out_c)
 {
     RG_ASSERT(str[0]);
 
-    const uint8_t *ptr = (const uint8_t *)str;
+#define BYTE(Idx) ((uint8_t)str[Idx])
 
-    if (ptr[0] < 0x80) {
-        *out_c = ptr[0];
+    if (BYTE(0) < 0x80) {
+        *out_c = BYTE(0);
         return 1;
-    } else if (ptr[0] - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
+    } else if (BYTE(0) - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
         return 0;
-    } else if (ptr[1]) [[likely]] {
-        if (ptr[0] < 0xE0 && (ptr[1] & 0xC0) == 0x80) {
-            *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+    } else if (BYTE(1)) [[likely]] {
+        if (BYTE(0) < 0xE0 && (BYTE(1) & 0xC0) == 0x80) {
+            *out_c = ((BYTE(0) & 0x1F) << 6) | (BYTE(1) & 0x3F);
             return 2;
-        } else if (ptr[2]) [[likely]] {
-            if (ptr[0] < 0xF0 && (ptr[1] & 0xC0) == 0x80 &&
-                                 (ptr[2] & 0xC0) == 0x80) {
-                *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+        } else if (BYTE(2)) [[likely]] {
+            if (BYTE(0) < 0xF0 &&
+                   (BYTE(1) & 0xC0) == 0x80 &&
+                   (BYTE(2) & 0xC0) == 0x80) {
+                *out_c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
                 return 3;
-            } else if (ptr[3]) [[likely]] {
-                if ((ptr[1] & 0xC0) == 0x80 &&
-                        (ptr[2] & 0xC0) == 0x80 &&
-                        (ptr[3] & 0xC0) == 0x80) {
-                    *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+            } else if (BYTE(3)) [[likely]] {
+                if ((BYTE(1) & 0xC0) == 0x80 &&
+                       (BYTE(2) & 0xC0) == 0x80 &&
+                       (BYTE(3) & 0xC0) == 0x80) {
+                    *out_c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
                     return 4;
                 }
             }
         }
     }
 
+#undef BYTE
+
     return 0;
 }
 
-static inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
+static constexpr inline Size DecodeUtf8(Span<const char> str, Size offset, int32_t *out_c)
 {
     RG_ASSERT(offset < str.len);
 
-    const uint8_t *ptr = (const uint8_t *)(str.ptr + offset);
-    Size available = str.len - offset;
+    str = str.Take(offset, str.len - offset);
 
-    if (ptr[0] < 0x80) {
-        *out_c = ptr[0];
+#define BYTE(Idx) ((uint8_t)str[Idx])
+
+    if (BYTE(0) < 0x80) {
+        *out_c = BYTE(0);
         return 1;
-    } else if (ptr[0] - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
+    } else if (BYTE(0) - 0xC2 > 0xF4 - 0xC2) [[unlikely]] {
         return 0;
-    } else if (ptr[0] < 0xE0 && available >= 2 && (ptr[1] & 0xC0) == 0x80) {
-        *out_c = ((ptr[0] & 0x1F) << 6) | (ptr[1] & 0x3F);
+    } else if (BYTE(0) < 0xE0 && str.len >= 2 && (BYTE(1) & 0xC0) == 0x80) {
+        *out_c = ((BYTE(0) & 0x1F) << 6) | (BYTE(1) & 0x3F);
         return 2;
-    } else if (ptr[0] < 0xF0 && available >= 3 && (ptr[1] & 0xC0) == 0x80 &&
-                                                  (ptr[2] & 0xC0) == 0x80) {
-        *out_c = ((ptr[0] & 0xF) << 12) | ((ptr[1] & 0x3F) << 6) | (ptr[2] & 0x3F);
+    } else if (BYTE(0) < 0xF0 && str.len >= 3 && (BYTE(1) & 0xC0) == 0x80 &&
+                                                 (BYTE(2) & 0xC0) == 0x80) {
+        *out_c = ((BYTE(0) & 0xF) << 12) | ((BYTE(1) & 0x3F) << 6) | (BYTE(2) & 0x3F);
         return 3;
-    } else if (available >= 4 && (ptr[1] & 0xC0) == 0x80 &&
-                                 (ptr[2] & 0xC0) == 0x80 &&
-                                 (ptr[3] & 0xC0) == 0x80) {
-        *out_c = ((ptr[0] & 0x7) << 18) | ((ptr[1] & 0x3F) << 12) | ((ptr[2] & 0x3F) << 6) | (ptr[3] & 0x3F);
+    } else if (str.len >= 4 && (BYTE(1) & 0xC0) == 0x80 &&
+                               (BYTE(2) & 0xC0) == 0x80 &&
+                               (BYTE(3) & 0xC0) == 0x80) {
+        *out_c = ((BYTE(0) & 0x7) << 18) | ((BYTE(1) & 0x3F) << 12) | ((BYTE(2) & 0x3F) << 6) | (BYTE(3) & 0x3F);
         return 4;
     } else {
         return 0;
     }
+
+#undef BYTE
+}
+
+static constexpr inline int32_t DecodeUtf8(const char *str)
+{
+    int32_t uc = -1;
+    DecodeUtf8(str, &uc);
+    return uc;
 }
 
 static inline Size EncodeUtf8(int32_t c, char out_buf[4])
@@ -2661,15 +2685,7 @@ public:
             Set(value);
         }
     }
-    ~HashTable()
-    {
-        if constexpr(std::is_trivial<ValueType>::value) {
-            count = 0;
-            Rehash(0);
-        } else {
-            Clear();
-        }
-    }
+    ~HashTable() { Clear(); }
 
     HashTable(HashTable &&other) { *this = std::move(other); }
     HashTable &operator=(HashTable &&other)
@@ -2691,8 +2707,8 @@ public:
 
     void Clear()
     {
-        for (Size i = 0; i < capacity; i++) {
-            if (!IsEmpty(i)) {
+        if constexpr(!std::is_trivial<ValueType>::value) {
+            for (Size i = 0; i < capacity; i++) {
                 data[i].~ValueType();
             }
         }
@@ -2703,10 +2719,8 @@ public:
 
     void RemoveAll()
     {
-        static_assert(!std::is_pointer<ValueType>::value);
-
-        for (Size i = 0; i < capacity; i++) {
-            if (!IsEmpty(i)) {
+        if constexpr(!std::is_trivial<ValueType>::value) {
+            for (Size i = 0; i < capacity; i++) {
                 data[i].~ValueType();
             }
         }
@@ -2851,8 +2865,6 @@ public:
         }
     }
 
-    Size IsEmpty(Size idx) const { return IsEmpty(used, idx); }
-
 private:
     template <typename T = KeyType>
     ValueType *Find(Size *idx, const T &key)
@@ -2963,10 +2975,13 @@ private:
     {
         used[idx / (RG_SIZE(size_t) * 8)] &= ~(1ull << (idx % (RG_SIZE(size_t) * 8)));
     }
-    Size IsEmpty(size_t *used, Size idx) const
+
+    bool IsEmpty(size_t *used, Size idx) const
     {
-        return !(used[idx / (RG_SIZE(size_t) * 8)] & (1ull << (idx % (RG_SIZE(size_t) * 8))));
+        bool empty = !(used[idx / (RG_SIZE(size_t) * 8)] & (1ull << (idx % (RG_SIZE(size_t) * 8))));
+        return empty;
     }
+    bool IsEmpty(Size idx) const { return IsEmpty(used, idx); }
 
     Size HashToIndex(uint64_t hash) const
     {
