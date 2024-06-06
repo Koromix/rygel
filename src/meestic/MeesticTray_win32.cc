@@ -296,6 +296,16 @@ static void RedirectErrors() {
     });
 }
 
+static inline ConfigProfile MakeDefaultProfile(const char *name, LightMode mode)
+{
+    ConfigProfile profile = {};
+
+    profile.name = name;
+    profile.settings.mode = mode;
+
+    return profile;
+}
+
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
@@ -372,8 +382,8 @@ By default, the first of the following config files will be used:
 
         profile_idx = config.default_idx;
     } else {
-        config.profiles.Append({ .name = "Enable", .settings = { .mode = LightMode::Static } });
-        config.profiles.Append({ .name = "Disable", .settings = { .mode = LightMode::Disabled } });
+        config.profiles.Append(MakeDefaultProfile("Enable", LightMode::Static));
+        config.profiles.Append(MakeDefaultProfile("Disable", LightMode::Disabled));
     }
 
     HINSTANCE module = GetModuleHandle(nullptr);
