@@ -78,7 +78,7 @@ R"!(uniform sampler2D Texture;
     }
 )!";
 
-static constinit FrozenMap<128, uint8_t, ImGuiKey> KeyMap {
+static constinit ConstMap<128, uint8_t, ImGuiKey> KeyMap {
     { (uint8_t)gui_InputKey::Control, ImGuiMod_Ctrl },
     { (uint8_t)gui_InputKey::Alt, ImGuiMod_Alt },
     { (uint8_t)gui_InputKey::Shift, ImGuiMod_Shift },

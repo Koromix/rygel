@@ -3294,7 +3294,7 @@ public:
 
 // XXX: Switch to perfect hashing later on
 template <Size N, typename KeyType, typename ValueType>
-class FrozenMap {
+class ConstMap {
 public:
     struct Bucket {
         KeyType key;
@@ -3305,9 +3305,9 @@ public:
     Bucket data[N] = {};
     Size count = 0;
 
-    constexpr FrozenMap(std::initializer_list<Bucket> l)
+    constexpr ConstMap(std::initializer_list<Bucket> l)
     {
-        RG_CRITICAL(l.size() <= N, "FrozenMap<%1> cannot be store %2 values", N, l.size());
+        RG_CRITICAL(l.size() <= N, "ConstMap<%1> cannot be store %2 values", N, l.size());
 
         for (const Bucket &it: l) {
             Bucket *bucket = Insert(it.key);
@@ -3316,7 +3316,7 @@ public:
             bucket->value = it.value;
         }
     }
-    ~FrozenMap()
+    ~ConstMap()
     {
         if constexpr(!std::is_trivial<ValueType>::value) {
             for (Size i = 0; i < N; i++) {
@@ -3327,7 +3327,7 @@ public:
 
     template <typename T = KeyType>
     ValueType *Find(const T &key)
-        { return (ValueType *)((const FrozenMap *)this)->Find(key); }
+        { return (ValueType *)((const ConstMap *)this)->Find(key); }
     template <typename T = KeyType>
     const ValueType *Find(const T &key) const
     {
@@ -3340,7 +3340,7 @@ public:
 
     template <typename T = KeyType>
     ValueType FindValue(const T &key, const ValueType &default_value)
-        { return (ValueType)((const FrozenMap *)this)->FindValue(key, default_value); }
+        { return (ValueType)((const ConstMap *)this)->FindValue(key, default_value); }
     template <typename T = KeyType>
     const ValueType FindValue(const T &key, const ValueType &default_value) const
     {
@@ -3351,7 +3351,7 @@ public:
 private:
     template <typename T = KeyType>
     constexpr Bucket *Find(Size *idx, const T &key)
-        { return (Bucket *)((const FrozenMap *)this)->Find(idx, key); }
+        { return (Bucket *)((const ConstMap *)this)->Find(idx, key); }
     template <typename T = KeyType>
     constexpr const Bucket *Find(Size *idx, const T &key) const
     {
