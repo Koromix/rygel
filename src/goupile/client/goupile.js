@@ -246,10 +246,17 @@ function initNavigation() {
 async function syncProfile() {
     // Ask server (if needed)
     try {
-        let new_profile = await Net.get(`${ENV.urls.instance}api/session/profile`);
+        let response = await Net.fetch(`${ENV.urls.instance}api/session/profile`);
+
+        let new_profile = await response.json();
         await updateProfile(new_profile, true);
     } catch (err) {
-        throw err;
+        if (ENV.use_offline) {
+            if (!(err instanceof NetworkError))
+                Log.error(err);
+        } else {
+            throw err;
+        }
     }
 
     // Client-side lock?
@@ -378,7 +385,7 @@ async function runLoginScreen(e, initial) {
             let enc = await encryptSecretBox(new_profile, key);
 
             await db.saveWithKey('profiles', new_profile.username, {
-                salt: Base64.toBytes(salt),
+                salt: Base64.toBase64(salt),
                 errors: 0,
                 profile: enc
             });
@@ -730,7 +737,7 @@ async function deriveKey(password, salt) {
     let key = await crypto.subtle.importKey('raw', password, { name: 'PBKDF2' }, false, ['deriveBits']);
     let derived = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, key, 256);
 
-    return derived;
+    return new Uint8Array(derived);
 }
 
 async function updateProfile(new_profile) {
