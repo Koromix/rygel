@@ -52,8 +52,8 @@ static const char *const UserPermissionNames[] = {
     "MiscTexto",
     "MiscOffline"
 };
-static const uint32_t UserPermissionMasterMask = 0b000000001111u;
-static const uint32_t UserPermissionSlaveMask =  0b111111110000u;
+static const uint32_t UserPermissionMasterMask = 0b00000000001111u;
+static const uint32_t UserPermissionSlaveMask =  0b11111111110000u;
 
 static const int PasswordHashBytes = 128;
 
