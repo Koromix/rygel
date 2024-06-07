@@ -73,10 +73,10 @@ union alignas(8) drd_DiagnosisCode {
         return code;
     }
 
-    bool IsValid() const { return value; }
+    constexpr bool IsValid() const { return value; }
 
-    bool operator==(drd_DiagnosisCode other) const { return value == other.value; }
-    bool operator!=(drd_DiagnosisCode other) const { return value != other.value; }
+    constexpr bool operator==(drd_DiagnosisCode other) const { return value == other.value; }
+    constexpr bool operator!=(drd_DiagnosisCode other) const { return value != other.value; }
 
     bool operator<(drd_DiagnosisCode other) const { return CmpStr(str, other.str) < 0; }
     bool operator<=(drd_DiagnosisCode other) const { return CmpStr(str, other.str) <= 0; }
@@ -95,7 +95,7 @@ union alignas(8) drd_DiagnosisCode {
 
     operator FmtArg() const { return FmtArg(str); }
 
-    uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
+    constexpr uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
 
 union alignas(8) drd_ProcedureCode {
@@ -134,10 +134,10 @@ union alignas(8) drd_ProcedureCode {
         return code;
     }
 
-    bool IsValid() const { return value; }
+    constexpr bool IsValid() const { return value; }
 
-    bool operator==(drd_ProcedureCode other) const { return value == other.value; }
-    bool operator!=(drd_ProcedureCode other) const { return value != other.value; }
+    constexpr bool operator==(drd_ProcedureCode other) const { return value == other.value; }
+    constexpr bool operator!=(drd_ProcedureCode other) const { return value != other.value; }
 
     bool operator<(drd_ProcedureCode other) const { return CmpStr(str, other.str) < 0; }
     bool operator<=(drd_ProcedureCode other) const { return CmpStr(str, other.str) <= 0; }
@@ -146,7 +146,7 @@ union alignas(8) drd_ProcedureCode {
 
     operator FmtArg() const { return FmtArg(str); }
 
-    uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
+    constexpr uint64_t Hash() const { return HashTraits<const char *>::Hash(str); }
 };
 
 struct drd_UnitCode {
@@ -171,10 +171,10 @@ struct drd_UnitCode {
         return code;
     }
 
-    bool IsValid() const { return number > 0 && number <= 9999; }
+    constexpr bool IsValid() const { return number > 0 && number <= 9999; }
 
-    bool operator==(drd_UnitCode other) const { return number == other.number; }
-    bool operator!=(drd_UnitCode other) const { return number != other.number; }
+    constexpr bool operator==(drd_UnitCode other) const { return number == other.number; }
+    constexpr bool operator!=(drd_UnitCode other) const { return number != other.number; }
 
     bool operator<(drd_UnitCode other) const { return number < other.number; }
     bool operator<=(drd_UnitCode other) const { return number <= other.number; }
@@ -183,7 +183,7 @@ struct drd_UnitCode {
 
     operator FmtArg() const { return FmtArg(number); }
 
-    uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
+    constexpr uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
 };
 
 struct drd_ListMask {

@@ -69,11 +69,11 @@ union mco_GhmRootCode {
         return code;
     }
 
-    bool IsValid() const { return value; }
-    bool IsError() const { return parts.cmd == 90; }
+    constexpr bool IsValid() const { return value; }
+    constexpr bool IsError() const { return parts.cmd == 90; }
 
-    bool operator==(mco_GhmRootCode other) const { return value == other.value; }
-    bool operator!=(mco_GhmRootCode other) const { return value != other.value; }
+    constexpr bool operator==(mco_GhmRootCode other) const { return value == other.value; }
+    constexpr bool operator!=(mco_GhmRootCode other) const { return value != other.value; }
 
     bool operator<(mco_GhmRootCode other) const { return value < other.value; }
     bool operator<=(mco_GhmRootCode other) const { return value <= other.value; }
@@ -110,7 +110,7 @@ union mco_GhmRootCode {
         return arg;
     }
 
-    uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
+    constexpr uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
 };
 
 union mco_GhmCode {
@@ -168,8 +168,8 @@ union mco_GhmCode {
         return code;
     }
 
-    bool IsValid() const { return value; }
-    bool IsError() const { return parts.cmd == 90; }
+    constexpr bool IsValid() const { return value; }
+    constexpr bool IsError() const { return parts.cmd == 90; }
 
     int Severity() const
     {
@@ -182,8 +182,8 @@ union mco_GhmCode {
         }
     }
 
-    bool operator==(mco_GhmCode other) const { return value == other.value; }
-    bool operator!=(mco_GhmCode other) const { return value != other.value; }
+    constexpr bool operator==(mco_GhmCode other) const { return value == other.value; }
+    constexpr bool operator!=(mco_GhmCode other) const { return value != other.value; }
 
     bool operator<(mco_GhmCode other) const { return value < other.value; }
     bool operator<=(mco_GhmCode other) const { return value <= other.value; }
@@ -220,7 +220,7 @@ union mco_GhmCode {
         return arg;
     }
 
-    mco_GhmRootCode Root() const
+    constexpr mco_GhmRootCode Root() const
     {
         mco_GhmRootCode ghm_root = {};
         ghm_root.parts.cmd = parts.cmd;
@@ -229,7 +229,7 @@ union mco_GhmCode {
         return ghm_root;
     }
 
-    uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
+    constexpr uint64_t Hash() const { return HashTraits<int32_t>::Hash(value); }
 };
 
 struct mco_GhsCode {
@@ -254,10 +254,10 @@ struct mco_GhsCode {
         return code;
     }
 
-    bool IsValid() const { return number > 0; }
+    constexpr bool IsValid() const { return number > 0; }
 
-    bool operator==(mco_GhsCode other) const { return number == other.number; }
-    bool operator!=(mco_GhsCode other) const { return number != other.number; }
+    constexpr bool operator==(mco_GhsCode other) const { return number == other.number; }
+    constexpr bool operator!=(mco_GhsCode other) const { return number != other.number; }
 
     bool operator<(mco_GhsCode other) const { return number < other.number; }
     bool operator<=(mco_GhsCode other) const { return number <= other.number; }
@@ -266,7 +266,7 @@ struct mco_GhsCode {
 
     operator FmtArg() const { return FmtArg(number); }
 
-    uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
+    constexpr uint64_t Hash() const { return HashTraits<int16_t>::Hash(number); }
 };
 
 enum class mco_SupplementType {
