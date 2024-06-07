@@ -21,6 +21,7 @@
 namespace RG {
 
 extern const int InstanceVersion;
+extern const int LegacyVersion;
 
 class InstanceHolder {
     mutable std::atomic_int refcount { 0 };
@@ -31,6 +32,8 @@ public:
     Span<const char> key = {};
     sq_Database *db = nullptr;
     const char *title = nullptr;
+
+    bool legacy = false;
 
     InstanceHolder *master = nullptr;
     HeapArray<InstanceHolder *> slaves;
@@ -69,7 +72,7 @@ private:
     friend class DomainHolder;
 };
 
-bool MigrateInstance(sq_Database *db);
-bool MigrateInstance(const char *filename);
+bool MigrateInstance(sq_Database *db, int target = 0);
+bool MigrateInstance(const char *filename, int target = 0);
 
 }

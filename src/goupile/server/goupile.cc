@@ -20,6 +20,7 @@
 #include "message.hh"
 #include "record.hh"
 #include "user.hh"
+#include "../legacy/records.hh"
 #include "src/core/http/http.hh"
 #include "src/core/request/curl.hh"
 #include "src/core/sandbox/sandbox.hh"
@@ -402,12 +403,15 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("static"); json.String(Fmt(buf, "/admin/static/%1/", shared_etag).ptr);
                     json.EndObject();
                     json.Key("title"); json.String("Admin");
-                    json.Key("permissions"); json.StartArray();
+                    json.Key("permissions"); json.StartObject();
                     for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+                        bool legacy = LegacyPermissionMask & (1 << i);
+
                         Span<const char> str = json_ConvertToJsonName(UserPermissionNames[i], buf);
-                        json.String(str.ptr, (size_t)str.len);
+                        json.Key(str.ptr, (size_t)str.len);
+                        json.Bool(legacy);
                     }
-                    json.EndArray();
+                    json.EndObject();
                     json.Key("retention"); json.Int(gp_domain.config.archive_retention);
                     json.EndObject();
                 } else if (key == "HEAD_TAGS") {
@@ -626,6 +630,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                         json.Key("files"); json.String(Fmt(buf, "/%1/files/%2/", master->key, fs_version).ptr);
                     json.EndObject();
                     json.Key("title"); json.String(master->title);
+                    json.Key("legacy"); json.Bool(master->legacy);
                     json.Key("demo"); json.Bool(gp_domain.config.demo_mode);
                     json.Key("version"); json.Int64(fs_version);
                     json.Key("buster"); json.String(master_etag);
@@ -704,20 +709,26 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         HandleRecordList(instance, request, io);
     } else if (TestStr(instance_url, "/api/records/get") && request.method == http_RequestMethod::Get) {
         HandleRecordGet(instance, request, io);
-    } else if (TestStr(instance_url, "/api/records/audit") && request.method == http_RequestMethod::Get) {
+    } else if (!instance->legacy && TestStr(instance_url, "/api/records/audit") && request.method == http_RequestMethod::Get) {
         HandleRecordAudit(instance, request, io);
-    } else if (TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
         HandleRecordSave(instance, request, io);
-    } else if (TestStr(instance_url, "/api/records/delete") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && TestStr(instance_url, "/api/records/delete") && request.method == http_RequestMethod::Post) {
         HandleRecordDelete(instance, request, io);
-    } else if (TestStr(instance_url, "/api/records/lock") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && TestStr(instance_url, "/api/records/lock") && request.method == http_RequestMethod::Post) {
         HandleRecordLock(instance, request, io);
-    } else if (TestStr(instance_url, "/api/records/unlock") && request.method == http_RequestMethod::Post) {
+    } else if (!instance->legacy && TestStr(instance_url, "/api/records/unlock") && request.method == http_RequestMethod::Post) {
         HandleRecordUnlock(instance, request, io);
-    } else if (TestStr(instance_url, "/api/export/data") && request.method == http_RequestMethod::Get) {
+    } else if (!instance->legacy && TestStr(instance_url, "/api/export/data") && request.method == http_RequestMethod::Get) {
         HandleExportData(instance, request, io);
-    } else if (TestStr(instance_url, "/api/export/meta") && request.method == http_RequestMethod::Get) {
+    } else if (!instance->legacy && TestStr(instance_url, "/api/export/meta") && request.method == http_RequestMethod::Get) {
         HandleExportMeta(instance, request, io);
+    } else if (instance->legacy && TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
+        HandleLegacyLoad(instance, request, io);
+    } else if (instance->legacy && TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
+        HandleLegacySave(instance, request, io);
+    } else if (instance->legacy && TestStr(instance_url, "/api/records/export") && request.method == http_RequestMethod::Post) {
+        HandleLegacyExport(instance, request, io);
     } else if (TestStr(instance_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
         HandleSendMail(instance, request, io);
     } else if (TestStr(instance_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {

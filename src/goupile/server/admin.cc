@@ -268,7 +268,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
         return false;
     if (!db.SetWAL(true))
         return false;
-    if (!MigrateInstance(&db))
+    if (!MigrateInstance(&db, InstanceVersion))
         return false;
     if (!ChangeFileOwner(database_filename, owner_uid, owner_gid))
         return false;
@@ -1845,6 +1845,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
         } else {
             json.Key("slaves"); json.Int64(instance->slaves.len);
         }
+        json.Key("legacy"); json.Bool(instance->legacy);
         json.Key("config"); json.StartObject();
             json.Key("name"); json.String(instance->config.name);
             json.Key("use_offline"); json.Bool(instance->config.use_offline);
@@ -2127,6 +2128,9 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
 
         json.Key(Fmt(buf, "%1", userid).ptr); json.StartArray();
         for (Size i = 0; i < RG_LEN(UserPermissionNames); i++) {
+            if (instance->legacy && !(LegacyPermissionMask & (1 << i)))
+                continue;
+
             if (permissions & (1 << i)) {
                 Span<const char> str = json_ConvertToJsonName(UserPermissionNames[i], buf);
                 json.String(str.ptr, (size_t)str.len);

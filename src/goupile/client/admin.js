@@ -100,6 +100,7 @@ function renderInstances() {
                     ${instances.map(instance => html`
                         <tr class=${instance === selected_instance ? 'active' : ''}>
                             <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}>
+                                ${instance.master == null && instance.legacy ? html`<span class="ui_tag" style="background: #888;">Legacy</span>`  : ''}
                                 ${instance.master != null ? html`<span style="color: #ccc;">${instance.master} / </span>${instance.key.replace(/^.*\//, '')}` : ''}
                                 ${instance.master == null ? instance.key : ''}
                                 (<a href=${'/' + instance.key} target="_blank">accès</a>)
@@ -693,7 +694,7 @@ function runCreateUserDialog(e) {
 function runAssignUserDialog(e, instance, user, prev_permissions) {
     return UI.dialog(e, `Droits de ${user.username} sur ${instance.key}`, {}, (d, resolve, reject) => {
         d.section('Projet', () => {
-            let props = ENV.permissions.filter(perm => perm.startsWith('build_')).map(makePermissionProp);
+            let props = listPermissions('build_', instance.legacy);
             let value = (instance.master == null) ? prev_permissions.filter(perm => perm.startsWith('build_')) : null;
 
             d.multiCheck('build_permissions', null, props, {
@@ -702,7 +703,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
             });
         }, { color: '#b518bf' });
         d.sameLine(true); d.section('Données', () => {
-            let props = ENV.permissions.filter(perm => perm.startsWith('data_')).map(makePermissionProp);
+            let props = listPermissions('data_', instance.legacy);
             let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('data_')) : null;
 
             d.multiCheck('data_permissions', null, props, {
@@ -711,7 +712,7 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
             });
         }, { color: '#258264' });
         d.sameLine(true); d.section('Autres', () => {
-            let props = ENV.permissions.filter(perm => perm.startsWith('misc_')).map(makePermissionProp);
+            let props = listPermissions('misc_', instance.legacy);
             let value = !instance.slaves ? prev_permissions.filter(perm => perm.startsWith('misc_')) : null;
 
             d.multiCheck('misc_permissions', null, props, {
@@ -749,9 +750,22 @@ function runAssignUserDialog(e, instance, user, prev_permissions) {
     });
 }
 
-function makePermissionProp(perm) {
-    let name = perm.substr(perm.indexOf('_') + 1);
-    return [perm, Util.capitalize(name)];
+function listPermissions(prefix, legacy) {
+    let props = [];
+
+    for (let perm in ENV.permissions) {
+        if (legacy && !ENV.permissions[perm])
+            continue;
+        if (!perm.startsWith(prefix))
+            continue;
+
+        let name = Util.capitalize(perm.substr(prefix.length));
+        let prop = [perm, name];
+
+        props.push(prop);
+    }
+
+    return props;
 }
 
 function runEditUserDialog(e, user) {

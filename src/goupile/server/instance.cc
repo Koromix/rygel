@@ -24,6 +24,7 @@ namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
 const int InstanceVersion = 118;
+const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
 {
@@ -45,15 +46,21 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
             LogError("Schema of '%1' is too recent (%2, expected %3)", filename, version, InstanceVersion);
 
             return false;
-        } else if (version < InstanceVersion) {
-            if (migrate) {
-                if (!MigrateInstance(db))
-                    return false;
-            } else {
-                const char *filename = sqlite3_db_filename(*db, "main");
+        } else {
+            legacy = (version <= LegacyVersion);
 
-                LogError("Schema of '%1' is outdated", filename);
-                return false;
+            int target = legacy ? LegacyVersion : InstanceVersion;
+
+            if (version < target) {
+                if (migrate) {
+                    if (!MigrateInstance(db, target))
+                        return false;
+                } else {
+                    const char *filename = sqlite3_db_filename(*db, "main");
+
+                    LogError("Schema of '%1' is outdated", filename);
+                    return false;
+                }
             }
         }
     }
@@ -274,8 +281,10 @@ bool InstanceHolder::SyncViews(const char *directory)
     return true;
 }
 
-bool MigrateInstance(sq_Database *db)
+bool MigrateInstance(sq_Database *db, int target)
 {
+    RG_ASSERT(!target || target == LegacyVersion || target == InstanceVersion);
+
     BlockAllocator temp_alloc;
 
     // Database filename
@@ -294,18 +303,24 @@ bool MigrateInstance(sq_Database *db)
     int version;
     if (!db->GetUserVersion(&version))
         return false;
-    if (version >= 60 && version < 100)
-        version = 100;
 
-    if (version > InstanceVersion) {
+    if (!target) {
+        if (version > LegacyVersion) {
+            target = InstanceVersion;
+        } else {
+            target = LegacyVersion;
+        }
+    }
+
+    if (version > target) {
         LogError("Schema of '%1' is too recent (%2, expected %3)", filename, version, InstanceVersion);
         return false;
-    } else if (version == InstanceVersion) {
+    } else if (version == target) {
         return true;
     }
 
     LogInfo("Migrate instance database '%1': %2 to %3",
-            SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version, InstanceVersion);
+            SplitStrReverseAny(filename, RG_PATH_SEPARATORS), version, target);
 
     bool success = db->Transaction([&]() {
         int64_t time = GetUnixTime();
@@ -1819,6 +1834,9 @@ bool MigrateInstance(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+
+                if (target == LegacyVersion)
+                    break;
             } [[fallthrough]];
 
             case 100: {
@@ -2234,9 +2252,9 @@ bool MigrateInstance(sq_Database *db)
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",
-                     InstanceVersion, FelixVersion, time))
+                     target, FelixVersion, time))
             return false;
-        if (!db->SetUserVersion(InstanceVersion))
+        if (!db->SetUserVersion(target))
             return false;
 
         return true;
@@ -2245,13 +2263,13 @@ bool MigrateInstance(sq_Database *db)
     return success;
 }
 
-bool MigrateInstance(const char *filename)
+bool MigrateInstance(const char *filename, int target)
 {
     sq_Database db;
 
     if (!db.Open(filename, SQLITE_OPEN_READWRITE))
         return false;
-    if (!MigrateInstance(&db))
+    if (!MigrateInstance(&db, target))
         return false;
     if (!db.Close())
         return false;

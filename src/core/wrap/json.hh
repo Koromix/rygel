@@ -163,6 +163,8 @@ public:
     bool ParseString(Span<const char> *out_str);
     bool ParseString(const char **out_str);
 
+    bool IsNumberFloat() const;
+
     bool Skip();
     bool SkipNull();
     bool PassThrough(StreamWriter *writer);

@@ -18,6 +18,8 @@ import * as IDB from '../../web/libjs/indexedDB.js';
 import * as UI from './ui.js';
 import * as AdminController from './admin.js';
 import * as InstanceController from './instance.js';
+import * as LegacyController from '../legacy/instance.js';
+import { scrypt } from '../../../vendor/tweetnacl-js/scrypt-async.js';
 
 import '../../../vendor/opensans/OpenSans.css';
 import './goupile.css';
@@ -46,7 +48,7 @@ async function start() {
         controller = AdminController;
         document.documentElement.className = 'admin';
     } else {
-        controller = InstanceController;
+        controller = ENV.legacy ? LegacyController : InstanceController;
         document.documentElement.className = 'instance';
     }
 
@@ -969,8 +971,44 @@ function deleteSessionValue(key) {
     localStorage.removeItem(key);
 }
 
+function encryptSecretBox(obj, key) {
+    let nonce = new Uint8Array(24);
+    crypto.getRandomValues(nonce);
+
+    let json = JSON.stringify(obj, (k, v) => v != null ? v : null);
+    let message = (new TextEncoder()).encode(json);
+    let box = nacl.secretbox(message, nonce, key);
+
+    let enc = {
+        format: 2,
+        nonce: Base64.toBase64(nonce),
+        box: Base64.toBase64(box)
+    };
+    return enc;
+}
+
+function decryptSecretBox(enc, key) {
+    let nonce = Base64.toBytes(enc.nonce);
+    let box = Base64.toBytes(enc.box);
+
+    let message = nacl.secretbox.open(box, nonce, key);
+    if (message == null)
+        throw new Error('Failed to decrypt message: wrong key?');
+
+    let json;
+    if (enc.format >= 2) {
+        json = (new TextDecoder()).decode(message);
+    } else {
+        json = window.atob(Base64.toBase64(message));
+    }
+    let obj = JSON.parse(json);
+
+    return obj;
+}
+
 export {
     profile,
+    profile_keys as profileKeys,
 
     start,
     syncProfile,

@@ -240,6 +240,14 @@ bool json_Parser::ParseString(const char **out_str)
     }
 }
 
+bool json_Parser::IsNumberFloat() const
+{
+    if (handler.token != json_TokenType::Number)
+        return false;
+
+    return strchr(handler.u.num.data, '.');
+}
+
 bool json_Parser::Skip()
 {
     switch (PeekToken()) {
