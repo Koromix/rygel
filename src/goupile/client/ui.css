@@ -11,6 +11,8 @@
    You should have received a copy of the GNU Affero General Public License
    along with this program. If not, see https://www.gnu.org/licenses/. */
 
+@import url('icons/icons.css');
+
 /* -------------------- Global style and layout -------------------- */
 
 html { height: 100%; }
@@ -112,10 +114,7 @@ button:not(:disabled):hover { filter: brightness(80%) contrast(160%); }
 }
 .ui_toolbar button.icon {
     padding-left: 36px;
-    background-image: url('images/icons.png');
-    background-repeat: no-repeat;
-    background-size: 22px 770px;
-    background-position-x: 6px;
+    background-position: 6px;
 }
 .ui_toolbar > hr {
     border: none;
@@ -145,10 +144,9 @@ html.small .ui_toolbar button.icon {
     top: 9px;
     width: 22px;
     height: 16px;
-    background-image: url('images/icons.png');
+    background-image: url('icons/down.webp');
     background-repeat: no-repeat;
-    background-size: 22px 770px;
-    background-position: 1px calc(-591px + 1.2em);
+    background-size: 22px;
     content: ' ';
 }
 .ui_toolbar > .drop.disabled {
@@ -170,7 +168,7 @@ html.small .ui_toolbar button.icon {
     background-color: inherit;
     z-index: 9999;
 }
-.ui_toolbar > .drop.up > button::after { background-position: 1px calc(-107px + 1.2em); }
+.ui_toolbar > .drop.up > button::after { background-image: url('icons/up.webp'); }
 .ui_toolbar > .drop.up > div { bottom: 100%; }
 .ui_toolbar > .drop.right > div { right: 0; }
 .ui_toolbar > .drop > div button {

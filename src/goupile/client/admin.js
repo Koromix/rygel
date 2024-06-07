@@ -45,22 +45,18 @@ async function init(fallback) {
 function renderMenu() {
     return html`
         <nav class="ui_toolbar" id="ui_top" style="z-index: 999999;">
-            <button class="icon" style="background-position-y: calc(-714px + 1.2em);"
-                    @click=${UI.wrap(e => go(e, '/admin/'))}>Admin</button>
-            <button class=${'icon' + (UI.isPanelActive('instances') ? ' active' : '')}
-                    style="background-position-y: calc(-362px + 1.2em);"
+            <button class="icon lines" @click=${UI.wrap(e => go(e, '/admin/'))}>Admin</button>
+            <button class=${'icon instances' + (UI.isPanelActive('instances') ? ' active' : '')}
                     @click=${UI.wrap(e => togglePanel('instances'))}>Projets</button>
-            <button class=${'icon' + (UI.isPanelActive('users') ? ' active' : '')}
-                    style="background-position-y: calc(-406px + 1.2em);"
+            <button class=${'icon users' + (UI.isPanelActive('users') ? ' active' : '')}
                     @click=${UI.wrap(e => togglePanel('users'))}>Utilisateurs</button>
             ${profile.root ? html`
-                <button class=${'icon' + (UI.isPanelActive('archives') ? ' active' : '')}
-                        style="background-position-y: calc(-142px + 1.2em);"
+                <button class=${'icon archives' + (UI.isPanelActive('archives') ? ' active' : '')}
                         @click=${UI.wrap(e => togglePanel('archives'))}>Archives</button>
             ` : ''}
             <div style="flex: 1;"></div>
             <div class="drop right" @click=${UI.deployMenu}>
-                <button class="icon" style=${'background-position-y: calc(-' + (goupile.isLoggedOnline() ? 450 : 494) + 'px + 1.2em);'}>${profile.username}</button>
+                <button class=${goupile.isLoggedOnline() ? 'icon online' : 'icon offline'}>${profile.username}</button>
                 <div>
                     <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>Modifier mon mot de passe</button>
                     <button @click=${UI.wrap(goupile.runResetTOTP)}>Configurer la double authentification</button>

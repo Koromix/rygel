@@ -213,15 +213,13 @@ function renderMenu() {
     if (!form_record.saved && !form_state.hasChanged() && !UI.isPanelActive('view'))
         menu = false;
 
-    let user_icon = goupile.isLoggedOnline() ? 450 : 494;
     let tabs = getEditorTabs();
 
     return html`
         <nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'} id="ui_top" style="z-index: 999999;">
             ${goupile.hasPermission('build_code') ? html`
                 <div class="drop">
-                    <button class=${'icon' + (profile.develop ? ' active' : '')}
-                            style="background-position-y: calc(-230px + 1.2em);"
+                    <button class=${'icon code' + (profile.develop ? ' active' : '')}
                             @click=${UI.deployMenu}>Conception</button>
                     <div>
                         <button class=${profile.develop ? 'active' : ''}
@@ -233,29 +231,25 @@ function renderMenu() {
                 </div>
             ` : ''}
             ${profile.lock != null ? html`
-                <button class="icon" style="background-position-y: calc(-186px + 1.2em)"
+                <button class="icon lock"
                         @click=${UI.wrap(goupile.runUnlockDialog)}>Déverrouiller</button>
             ` : ''}
 
             ${app.panels.editor || app.panels.data ? html`
                 <div style="width: 8px;"></div>
                 ${app.panels.editor ? html`
-                    <button class=${!UI.hasTwoPanels() && UI.isPanelActive('editor') ? 'icon active' : 'icon'}
-                            style="background-position-y: calc(-230px + 1.2em);"
+                    <button class=${'icon code' + (!UI.hasTwoPanels() && UI.isPanelActive('editor') ? ' active' : '')}
                             @click=${UI.wrap(e => togglePanels(true, false))}></button>
                 ` : ''}
                 ${app.panels.data && !app.panels.editor ? html`
-                    <button class=${!UI.hasTwoPanels() && UI.isPanelActive('data') ? 'icon active' : 'icon'}
-                            style="background-position-y: calc(-274px + 1.2em);"
+                    <button class=${'icon data' + (!UI.hasTwoPanels() && UI.isPanelActive('data') ? ' active' : '')}
                             @click=${UI.wrap(e => togglePanels(true, false))}></button>
                 ` : ''}
                 ${UI.allowTwoPanels() ? html`
-                    <button class=${UI.hasTwoPanels() ? 'icon active' : 'icon'}
-                            style="background-position-y: calc(-626px + 1.2em);"
+                    <button class=${'icon dual' + (UI.hasTwoPanels() ? ' active' : '')}
                             @click=${UI.wrap(e => togglePanels(true, true))}></button>
                 ` : ''}
-                <button class=${!UI.hasTwoPanels() && UI.isPanelActive(1) ? 'icon active' : 'icon'}
-                        style="background-position-y: calc(-318px + 1.2em);"
+                <button class=${'icon view' + (!UI.hasTwoPanels() && UI.isPanelActive(1) ? ' active' : '')}
                         @click=${UI.wrap(e => togglePanels(false, true))}></button>
             ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
@@ -310,18 +304,15 @@ function renderMenu() {
             ${title ? html`<button title=${route.page.title} class="active">${route.page.title}</button>` : ''}
             ${app.panels.data && (!UI.isPanelActive('view') || form_record.chain[0].saved) ? html`
                 <div style="width: 15px;"></div>
-                <button class="icon" style="background-position-y: calc(-758px + 1.2em);"
-                        @click=${UI.wrap(e => go(e, route.form.chain[0].url + '/new'))}>Ajouter</button>
+                <button class="icon new" @click=${UI.wrap(e => go(e, route.form.chain[0].url + '/new'))}>Ajouter</button>
             ` : ''}
             <div style="flex: 1; min-width: 15px;"></div>
 
             ${!goupile.isLocked() && profile.instances == null ?
-                html`<button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                             @click=${e => go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
+                html`<button class="icon lines" @click=${e => go(e, ENV.urls.instance)}>${ENV.title}</button>` : ''}
             ${!goupile.isLocked() && profile.instances != null ? html`
                 <div class="drop right" @click=${UI.deployMenu}>
-                    <button class="icon" style="background-position-y: calc(-538px + 1.2em);"
-                            @click=${UI.deployMenu}>${ENV.title}</button>
+                    <button class="icon lines" @click=${UI.deployMenu}>${ENV.title}</button>
                     <div>
                         ${profile.instances.slice().sort(Util.makeComparator(instance => instance.name))
                                            .map(instance =>
@@ -332,7 +323,7 @@ function renderMenu() {
             ` : ''}
             ${profile.lock == null ? html`
                 <div class="drop right">
-                    <button class="icon" style=${'background-position-y: calc(-' + user_icon + 'px + 1.2em);'}
+                    <button class=${goupile.isLoggedOnline() ? 'icon online' : 'icon offline'}
                             @click=${UI.deployMenu}>${profile.type !== 'auto' ? profile.username : ''}</button>
                     <div>
                         ${profile.type === 'auto' && profile.userid ? html`
@@ -361,8 +352,7 @@ function renderMenu() {
                 </div>
             ` : ''}
             ${profile.lock != null ?
-                html`<button class="icon" @click=${UI.wrap(goupile.goToLogin)}
-                             style="background-position-y: calc(-450px + 1.2em);">Se connecter</button>` : ''}
+                html`<button class="icon online" @click=${UI.wrap(goupile.goToLogin)}>Se connecter</button>` : ''}
         </nav>
     `;
 }

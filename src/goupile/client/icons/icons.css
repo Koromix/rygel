@@ -1,0 +1,32 @@
+/* This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU Affero General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU Affero General Public License for more details.
+
+   You should have received a copy of the GNU Affero General Public License
+   along with this program. If not, see https://www.gnu.org/licenses/. */
+
+.icon {
+    background-repeat: no-repeat;
+    background-size: 22px;
+}
+
+.icon.archives { background-image: url('archives.webp'); }
+.icon.code { background-image: url('code.webp'); }
+.icon.data { background-image: url('data.webp'); }
+.icon.down { background-image: url('down.webp'); }
+.icon.dual { background-image: url('dual.webp'); }
+.icon.instances { background-image: url('instances.webp'); }
+.icon.lines { background-image: url('lines.webp'); }
+.icon.lock { background-image: url('lock.webp'); }
+.icon.new { background-image: url('new.webp'); }
+.icon.offline { background-image: url('offline.webp'); }
+.icon.online { background-image: url('online.webp'); }
+.icon.up { background-image: url('up.webp'); }
+.icon.users { background-image: url('users.webp'); }
+.icon.view { background-image: url('view.webp'); }
