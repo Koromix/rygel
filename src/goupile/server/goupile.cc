@@ -263,6 +263,10 @@ static void InitAssets()
             assets_for_cache.Append(url);
         }
     }
+
+    std::sort(assets_for_cache.begin(), assets_for_cache.end(), [](const char *url1, const char *url2) {
+        return CmpStr(url1, url2) < 0;
+    });
 }
 
 static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *etag,

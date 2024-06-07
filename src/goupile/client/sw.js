@@ -11,13 +11,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-let ENV = JSON.parse('{{ ENV_JSON }}');
+import { Util, Log, Net } from '../../web/libjs/common.js';
+
+let ENV = JSON.parse(`{{ ENV_JSON }}`);
 
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
         let [assets, list, cache] = await Promise.all([
-            net.get(`${ENV.urls.base}api/files/static`),
-            net.get(util.pasteURL(`${ENV.urls.base}api/files/list`, { version: ENV.version })),
+            Net.get(`${ENV.urls.base}api/files/static`),
+            Net.get(Util.pasteURL(`${ENV.urls.base}api/files/list`, { version: ENV.version })),
             caches.open(ENV.buster)
         ]);
 

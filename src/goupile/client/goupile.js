@@ -19,7 +19,7 @@ import * as UI from './ui.js';
 import * as AdminController from './admin.js';
 import * as InstanceController from './instance.js';
 import * as LegacyController from '../legacy/instance.js';
-import { scrypt } from '../../../vendor/tweetnacl-js/scrypt-async.js';
+import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 
 import '../../../vendor/opensans/OpenSans.css';
 import './goupile.css';
@@ -368,6 +368,25 @@ async function runLoginScreen(e, initial) {
         }
     } while (!new_profile.authorized);
 
+    // Save for offline login
+    if (ENV.use_offline) {
+        let db = await openLocalDB();
+
+        if (new_profile.permissions['misc_offline']) {
+            let salt = nacl.randomBytes(24);
+            let key = await deriveKey(password, salt);
+            let enc = await encryptSecretBox(new_profile, key);
+
+            await db.saveWithKey('profiles', new_profile.username, {
+                salt: Base64.toBytes(salt),
+                errors: 0,
+                profile: enc
+            });
+        } else {
+            await db.delete('profiles', new_profile.username);
+        }
+    }
+
     await updateProfile(new_profile);
 }
 
@@ -616,8 +635,26 @@ function runUnlockDialog(e) {
 };
 
 async function login(username, password) {
-    let new_profile = await loginOnline(username, password);
-    return new_profile;
+    let online = Net.isOnline();
+
+    try {
+        if (online || !ENV.use_offline) {
+            let new_profile = await loginOnline(username, password);
+            return new_profile;
+        } else {
+            online = false;
+
+            let new_profile = await loginOffline(username, password);
+            return new_profile;
+        }
+    } catch (err) {
+        if ((err instanceof NetworkError) && online && ENV.use_offline) {
+            let new_profile = await loginOffline(username, password);
+            return new_profile;
+        } else {
+            throw err;
+        }
+    }
 }
 
 async function loginOnline(username, password) {
@@ -687,16 +724,13 @@ async function loginOffline(username, password) {
     return new_profile;
 }
 
-function deriveKey(password, salt) {
-    return new Promise((resolve, reject) => {
-        scrypt(password, salt, {
-            N: 16384,
-            r: 8,
-            p: 1,
-            dkLen: 32,
-            encoding: 'binary'
-        }, resolve);
-    });
+async function deriveKey(password, salt) {
+    password = (new TextEncoder).encode(password);
+
+    let key = await crypto.subtle.importKey('raw', password, { name: 'PBKDF2' }, false, ['deriveBits']);
+    let derived = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, key, 256);
+
+    return derived;
 }
 
 async function updateProfile(new_profile) {
@@ -779,7 +813,7 @@ async function lock(e, password, ctx = null) {
 
     await confirmDangerousAction(e);
 
-    let salt = nacl.randomBytes(24);
+    let salt = nacl.randomBytes(16);
     let key = await deriveKey(password, salt);
     let enc = await encryptSecretBox(session_rnd, key);
 
