@@ -1804,7 +1804,7 @@ async function buildScript(code, variables) {
 
     let build = null;
 
-    if (typeof bundler != 'undefined') {
+    if (bundler != null) {
         try {
             build = await bundler.build(code, async filename => {
                 let file = await fetchCode(filename);
@@ -1813,6 +1813,8 @@ async function buildScript(code, variables) {
         } catch (err) {
             throwParseError(err);
         }
+    } else {
+        build = { code: code, map: null };
     }
 
     try {
@@ -1834,7 +1836,7 @@ async function buildScript(code, variables) {
 }
 
 function throwParseError(err) {
-    let line = err.errors[0]?.location?.line;
+    let line = err.errors?.[0]?.location?.line;
     let msg = `Erreur de script\n${line != null ? `Ligne ${line} : ` : ''}${err.errors[0].text}`;
 
     throw new Error(msg);
