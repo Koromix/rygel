@@ -263,7 +263,7 @@ public:
                     const char *suffix = nullptr;
 
                     switch (compiler->architecture)  {
-                        case HostArchitecture::x86: { prefix = "x86"; } break;
+                        case HostArchitecture::x86: { prefix = "i386"; } break;
                         case HostArchitecture::x86_64: { prefix = "x86_64"; } break;
                         case HostArchitecture::ARM64: { prefix = "aarch64"; } break;
                         case HostArchitecture::RISCV64: { prefix = "riscv64"; } break;
