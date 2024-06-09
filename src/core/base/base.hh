@@ -871,7 +871,7 @@ struct Span {
     T *ptr;
     Size len;
 
-    constexpr Span() = default;
+    Span() = default;
     constexpr Span(T &value) : ptr(&value), len(1) {}
     constexpr Span(std::initializer_list<T> l) : ptr(l.begin()), len((Size)l.size()) {}
     constexpr Span(T *ptr_, Size len_) : ptr(ptr_), len(len_) {}
@@ -923,9 +923,7 @@ struct Span {
         RG_ASSERT(sub_len >= 0 && sub_len <= len);
         RG_ASSERT(offset >= 0 && offset <= len - sub_len);
 
-        Span<T> sub;
-        sub.ptr = ptr + offset;
-        sub.len = sub_len;
+        Span<T> sub = { ptr + offset, sub_len };
         return sub;
     }
 
@@ -940,7 +938,7 @@ struct Span<const char> {
     const char *ptr;
     Size len;
 
-    constexpr Span() = default;
+    Span() = default;
     constexpr Span(const char &ch) : ptr(&ch), len(1) {}
     constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
 #ifdef __clang__
@@ -977,9 +975,7 @@ struct Span<const char> {
         RG_ASSERT(sub_len >= 0 && sub_len <= len);
         RG_ASSERT(offset >= 0 && offset <= len - sub_len);
 
-        Span<const char> sub;
-        sub.ptr = ptr + offset;
-        sub.len = sub_len;
+        Span<const char> sub = { ptr + offset, sub_len };
         return sub;
     }
 
@@ -1419,8 +1415,8 @@ static constexpr inline bool TestStr(Span<const char> str1, Span<const char> str
 }
 static constexpr inline bool TestStr(Span<const char> str1, const char *str2)
 {
-    Size i;
-    for (i = 0; i < str1.len && str2[i]; i++) {
+    Size i = 0;
+    for (; i < str1.len && str2[i]; i++) {
         if (str1[i] != str2[i])
             return false;
     }
@@ -1433,8 +1429,8 @@ static constexpr inline bool TestStr(const char *str1, const char *str2)
 #if defined(__GNUC__) || defined(__clang__)
     return !__builtin_strcmp(str1, str2);
 #else
-    Size i;
-    for (i = 0; str1[i]; i++) {
+    Size i = 0;
+    for (; str1[i]; i++) {
         if (str2[i] != str1[i])
             return false;
     }
@@ -1461,8 +1457,8 @@ static constexpr inline bool TestStrI(Span<const char> str1, Span<const char> st
 }
 static constexpr inline bool TestStrI(Span<const char> str1, const char *str2)
 {
-    Size i;
-    for (i = 0; i < str1.len && str2[i]; i++) {
+    Size i = 0;
+    for (; i < str1.len && str2[i]; i++) {
         if (LowerAscii(str1[i]) != LowerAscii(str2[i]))
             return false;
     }
@@ -1473,7 +1469,7 @@ static constexpr inline bool TestStrI(const char *str1, Span<const char> str2)
 static constexpr inline bool TestStrI(const char *str1, const char *str2)
 {
     Size i = 0;
-    int delta;
+    int delta = 0;
     do {
         delta = LowerAscii(str1[i]) - LowerAscii(str2[i]);
     } while (str1[i++] && !delta);
@@ -1497,8 +1493,8 @@ static constexpr inline int CmpStr(Span<const char> str1, Span<const char> str2)
 }
 static constexpr inline int CmpStr(Span<const char> str1, const char *str2)
 {
-    Size i;
-    for (i = 0; i < str1.len && str2[i]; i++) {
+    Size i = 0;
+    for (; i < str1.len && str2[i]; i++) {
         int delta = str1[i] - str2[i];
         if (delta)
             return delta;
