@@ -28,7 +28,6 @@
 
 namespace RG {
 
-// Value does not matter, the tag system uses memory addresses
 const napi_type_tag TypeInfoMarker = { 0x1cc449675b294374, 0xbb13a50e97dcb017 };
 const napi_type_tag DirectionMarker = { 0xe99e34ae48144077, 0x8f4909c27c94dd65 };
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
