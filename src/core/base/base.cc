@@ -2196,6 +2196,10 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
                 LogError("Cannot stat '%1': %2", filename, strerror(errno));
                 return StatResult::AccessDenied;
             } break;
+            case ENOTDIR: {
+                LogError("Cannot stat '%1': Component is not a directory", filename);
+                return StatResult::OtherError;
+            } break;
             default: {
                 LogError("Cannot stat '%1': %2", filename, strerror(errno));
                 return StatResult::OtherError;
@@ -2231,6 +2235,10 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
             case EACCES: {
                 LogError("Cannot stat '%1': %2", filename, strerror(errno));
                 return StatResult::AccessDenied;
+            } break;
+            case ENOTDIR: {
+                LogError("Cannot stat '%1': Component is not a directory", filename);
+                return StatResult::OtherError;
             } break;
             default: {
                 LogError("Cannot stat '%1': %2", filename, strerror(errno));
