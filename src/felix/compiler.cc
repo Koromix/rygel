@@ -129,6 +129,8 @@ static HostArchitecture ParseTarget(Span<const char> output)
                 return HostArchitecture::ARM32;
             } else if (StartsWith(value, "riscv64-")) {
                 return HostArchitecture::RISCV64;
+            } else if (StartsWith(value, "wasm32-")) {
+                return HostArchitecture::Web;
             } else {
                 break;
             }
@@ -211,14 +213,8 @@ public:
             } else {
                 compiler->ld = nullptr;
             }
-        }
 
-        if (platform == HostPlatform::WasmWasi) {
-            RG_ASSERT(sysroot);
-
-            compiler->architecture = HostArchitecture::Web;
-            compiler->target = "--target=wasm32-wasi";
-            compiler->sysroot = DuplicateString(sysroot, &compiler->str_alloc).ptr;
+            compiler->sysroot = sysroot ? DuplicateString(sysroot, &compiler->str_alloc).ptr : nullptr;
         }
 
         Async async;
@@ -267,9 +263,9 @@ public:
                         case HostArchitecture::x86_64: { prefix = "x86_64"; } break;
                         case HostArchitecture::ARM64: { prefix = "aarch64"; } break;
                         case HostArchitecture::RISCV64: { prefix = "riscv64"; } break;
+                        case HostArchitecture::Web: { prefix = "wasm32"; } break;
 
-                        case HostArchitecture::ARM32:
-                        case HostArchitecture::Web: {
+                        case HostArchitecture::ARM32: {
                             LogError("Cannot use Clang to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
                             return false;
                         } break;
@@ -281,6 +277,11 @@ public:
                         case HostPlatform::Linux: { suffix = "pc-linux-gnu"; } break;
                         case HostPlatform::FreeBSD: { suffix = "freebsd-unkown"; } break;
                         case HostPlatform::OpenBSD: { suffix = "openbsd-unkown"; } break;
+
+                        case HostPlatform::WasmWasi: {
+                            RG_ASSERT(sysroot);
+                            suffix = "wasi";
+                        } break;
 
                         default: {
                             LogError("Cannot use Clang to build for '%1'", HostPlatformNames[(int)compiler->platform]);
