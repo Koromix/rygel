@@ -518,9 +518,12 @@ Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
     if (!config.Complete(true))
         return 1;
 
+    // We keep the object in a global for simplicity, but we need to destroy it at the end
+    // of this function, before some exit functions (such as ssh_finalize) are called.
     disk = rk_Open(config, true);
     if (!disk)
         return 1;
+    RG_DEFER { disk.reset(nullptr); };
 
     ZeroMemorySafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
