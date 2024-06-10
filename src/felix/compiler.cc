@@ -2461,7 +2461,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 }
 #endif
 
-                if (!spec.cc || !TestFile(spec.cc)) {
+                if (!spec.cc || !FindExecutableInPath(spec.cc)) {
                     if (!FindExecutableInPath("clang")) {
                         LogError("Cannot find any compiler to build for '%1'", HostArchitectureNames[(int)spec.architecture]);
                         return nullptr;
