@@ -518,6 +518,20 @@ Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
     if (!config.Complete(true))
         return 1;
 
+    // Normalize mount point
+    mountpoint = Fmt(&temp_alloc, "%1/", TrimStrRight(mountpoint, '/')).ptr;
+
+    // Check mount point ahead of time
+    {
+        FileInfo file_info;
+        if (StatFile(mountpoint, &file_info) != StatResult::Success)
+            return 1;
+        if (file_info.type != FileType::Directory) {
+            LogError("Mountpoint '%1' is not a directory", mountpoint);
+            return 1;
+        }
+    }
+
     // We keep the object in a global for simplicity, but we need to destroy it at the end
     // of this function, before some exit functions (such as ssh_finalize) are called.
     disk = rk_Open(config, true);
