@@ -922,6 +922,7 @@ class GnuCompiler final: public Compiler {
     const char *ld;
 
     int gcc_ver = 0;
+    bool m32 = false;
 
     BlockAllocator str_alloc;
 
@@ -964,6 +965,11 @@ public:
 
                 if (compiler->architecture == HostArchitecture::Unknown) {
                     compiler->architecture = architecture;
+#ifdef __x86_64__
+                } else if (architecture == HostArchitecture::x86_64 &&
+                           compiler->architecture == HostArchitecture::x86) {
+                    compiler->m32 = true;
+#endif
                 } else if (compiler->architecture != architecture) {
                     LogError("Cannot use GCC (%1) compiler to build for '%2'",
                              HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
@@ -1182,6 +1188,10 @@ public:
                 Fmt(&buf, " -mavx512f -mavx512vl");
             }
         } else if (architecture == HostArchitecture::x86) {
+            if (m32) {
+                Fmt(&buf, " -m32");
+            }
+
             Fmt(&buf, " -msse2 -mfpmath=sse");
 
             if (features & (int)CompileFeature::AESNI) {
@@ -1412,6 +1422,9 @@ public:
                     Fmt(&buf, " -latomic");
                 }
             } break;
+        }
+        if (m32) {
+            Fmt(&buf, " -m32");
         }
 
         // Features
@@ -2448,12 +2461,14 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                     return nullptr;
                 }
             } else {
+                LocalArray<const char *, 4> ccs;
+
 #ifdef __linux__
                 switch (spec.architecture) {
-                    case HostArchitecture::x86: { spec.cc = "i686-linux-gnu-gcc"; } break;
-                    case HostArchitecture::x86_64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
-                    case HostArchitecture::ARM64: { spec.cc = "aarch64-linux-gnu-gcc"; } break;
-                    case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
+                    case HostArchitecture::x86: { ccs.Append("i686-linux-gnu-gcc"); } break;
+                    case HostArchitecture::x86_64: { ccs.Append("x86_64-linux-gnu-gcc"); } break;
+                    case HostArchitecture::ARM64: { ccs.Append("aarch64-linux-gnu-gcc"); } break;
+                    case HostArchitecture::RISCV64: { ccs.Append("riscv64-linux-gnu-gcc"); }  break;
 
                     case HostArchitecture::ARM32:
                     case HostArchitecture::Web:
@@ -2461,13 +2476,18 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 }
 #endif
 
-                if (!spec.cc || !FindExecutableInPath(spec.cc)) {
-                    if (!FindExecutableInPath("clang")) {
-                        LogError("Cannot find any compiler to build for '%1'", HostArchitectureNames[(int)spec.architecture]);
-                        return nullptr;
-                    }
+                ccs.Append("clang");
 
-                    spec.cc = "clang";
+                for (const char *cc: ccs) {
+                    if (FindExecutableInPath(cc)) {
+                        spec.cc = cc;
+                        break;
+                    }
+                }
+
+                if (!spec.cc) {
+                    LogError("Cannot find any compiler to build for '%1'", HostArchitectureNames[(int)spec.architecture]);
+                    return nullptr;
                 }
             }
         } else if (!FindExecutableInPath(spec.cc)) {
@@ -2504,21 +2524,6 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         if (IdentifyCompiler(spec.cc, "clang")) {
             return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
         } else if (IdentifyCompiler(spec.cc, "gcc")) {
-            switch (spec.architecture) {
-                case HostArchitecture::x86: { spec.cc = "i686-linux-gnu-gcc"; } break;
-                case HostArchitecture::x86_64: { spec.cc = "x86_64-linux-gnu-gcc"; } break;
-                case HostArchitecture::ARM64: { spec.cc = "aarch64-linux-gnu-gcc"; } break;
-                case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
-
-                case HostArchitecture::ARM32:
-                case HostArchitecture::Web: {
-                    LogError("GCC cross-compilation for '%1' is not supported", HostArchitectureNames[(int)spec.architecture]);
-                    return nullptr;
-                } break;
-
-                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
-            }
-
             return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
 #ifdef _WIN32
         } else if (IdentifyCompiler(spec.cc, "cl")) {
