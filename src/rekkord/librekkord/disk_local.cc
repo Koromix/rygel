@@ -262,7 +262,7 @@ StatResult LocalDisk::TestRaw(const char *path)
     filename.len = Fmt(filename.data, "%1%/%2", url, path).len;
 
     FileInfo file_info;
-    StatResult ret = StatFile(filename.data, (int)StatFlag::IgnoreMissing, &file_info);
+    StatResult ret = StatFile(filename.data, (int)StatFlag::SilentMissing, &file_info);
 
     if (ret == StatResult::Success && file_info.type != FileType::File) {
         LogError("Path '%1' is not a file", filename);

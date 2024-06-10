@@ -2008,7 +2008,7 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
         switch (err) {
             case ERROR_FILE_NOT_FOUND:
             case ERROR_PATH_NOT_FOUND: {
-                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                if (!(flags & (int)StatFlag::SilentMissing)) {
                     LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
                 }
                 return StatResult::MissingPath;
@@ -2187,7 +2187,7 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
     if (statx(AT_FDCWD, filename, stat_flags, stat_mask, &sxb) < 0) {
         switch (errno) {
             case ENOENT: {
-                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                if (!(flags & (int)StatFlag::SilentMissing)) {
                     LogError("Cannot stat '%1': %2", filename, strerror(errno));
                 }
                 return StatResult::MissingPath;
@@ -2227,7 +2227,7 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
     if (fstatat(AT_FDCWD, filename, &sb, stat_flags) < 0) {
         switch (errno) {
             case ENOENT: {
-                if (!(flags & (int)StatFlag::IgnoreMissing)) {
+                if (!(flags & (int)StatFlag::SilentMissing)) {
                     LogError("Cannot stat '%1': %2", filename, strerror(errno));
                 }
                 return StatResult::MissingPath;
@@ -2469,7 +2469,7 @@ bool IsDirectoryEmpty(const char *dirname)
 bool TestFile(const char *filename)
 {
     FileInfo file_info;
-    StatResult ret = StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info);
+    StatResult ret = StatFile(filename, (int)StatFlag::SilentMissing, &file_info);
 
     bool exists = (ret == StatResult::Success);
     return exists;
@@ -2478,7 +2478,7 @@ bool TestFile(const char *filename)
 bool TestFile(const char *filename, FileType type)
 {
     FileInfo file_info;
-    if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != StatResult::Success)
+    if (StatFile(filename, (int)StatFlag::SilentMissing, &file_info) != StatResult::Success)
         return false;
 
     // Don't follow, but don't warn if we just wanted a file
@@ -2506,7 +2506,7 @@ bool TestFile(const char *filename, FileType type)
 bool IsDirectory(const char *filename)
 {
     FileInfo file_info;
-    if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != StatResult::Success)
+    if (StatFile(filename, (int)StatFlag::SilentMissing, &file_info) != StatResult::Success)
         return false;
     return file_info.type == FileType::Directory;
 }

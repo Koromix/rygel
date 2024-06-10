@@ -345,13 +345,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     FileInfo file_info;
     {
-        StatResult stat = StatFile(filename.ptr, (int)StatFlag::IgnoreMissing, &file_info);
+        StatResult stat = StatFile(filename.ptr, (int)StatFlag::SilentMissing, &file_info);
 
         if (config.auto_html) {
             if (stat == StatResult::MissingPath && !EndsWith(filename, "/")
                                                 && !GetPathExtension(filename).len) {
                 filename = Fmt(&io->allocator, "%1.html", filename).ptr;
-                stat = StatFile(filename.ptr, (int)StatFlag::IgnoreMissing, &file_info);
+                stat = StatFile(filename.ptr, (int)StatFlag::SilentMissing, &file_info);
             }
         }
 
@@ -382,7 +382,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         FileInfo index_info;
 
-        if (StatFile(index_filename, (int)StatFlag::IgnoreMissing, &index_info) == StatResult::Success &&
+        if (StatFile(index_filename, (int)StatFlag::SilentMissing, &index_info) == StatResult::Success &&
                 index_info.type == FileType::File) {
             ServeFile(index_filename, index_info, request, io);
         } else if (config.auto_index) {

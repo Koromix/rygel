@@ -709,7 +709,7 @@ bool Builder::Build(int jobs, bool verbose)
                         dep.filename = DuplicateString(worker.dependencies[entry.deps_offset + i], &str_alloc).ptr;
 
                         FileInfo file_info;
-                        if (StatFile(dep.filename, (int)StatFlag::IgnoreMissing, &file_info) == StatResult::Success) {
+                        if (StatFile(dep.filename, (int)StatFlag::SilentMissing, &file_info) == StatResult::Success) {
                             dep.mtime = file_info.mtime;
                         } else {
                             dep.mtime = -1;
@@ -1079,7 +1079,7 @@ int64_t Builder::GetFileModificationTime(const char *filename)
         filename = DuplicateString(filename, &str_alloc).ptr;
 
         FileInfo file_info;
-        if (StatFile(filename, (int)StatFlag::IgnoreMissing, &file_info) != StatResult::Success) {
+        if (StatFile(filename, (int)StatFlag::SilentMissing, &file_info) != StatResult::Success) {
             mtime_map.Set(filename, -1);
             return -1;
         }

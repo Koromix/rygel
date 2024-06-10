@@ -3955,7 +3955,7 @@ bool PathIsAbsolute(Span<const char> path);
 bool PathContainsDotDot(const char *path);
 
 enum class StatFlag {
-    IgnoreMissing = 1 << 0,
+    SilentMissing = 1 << 0,
     FollowSymlink = 1 << 1
 };
 

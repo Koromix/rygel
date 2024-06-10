@@ -189,7 +189,7 @@ static const char *FindEsbuild(const char *path, [[maybe_unused]] Allocator *all
     }
 
     FileInfo file_info;
-    StatResult stat = StatFile(path, (int)StatFlag::IgnoreMissing, &file_info);
+    StatResult stat = StatFile(path, (int)StatFlag::SilentMissing, &file_info);
 
     if (stat == StatResult::MissingPath) {
         goto missing;
