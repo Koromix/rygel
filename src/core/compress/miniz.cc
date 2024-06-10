@@ -180,8 +180,10 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
                         if (in_len < RG_SIZE(footer)) {
                             MemCpy(footer, in_ptr, in_len);
 
+                            uint8_t *ptr = (uint8_t *)footer + in_len;
                             Size missing_len = RG_SIZE(footer) - in_len;
-                            if (ReadRaw(missing_len, footer + in_len) < missing_len) {
+
+                            if (ReadRaw(missing_len, ptr) < missing_len) {
                                 if (IsValid()) {
                                     goto truncated_error;
                                 } else {
