@@ -6112,25 +6112,34 @@ int StreamReader::GetDescriptor() const
 
 Size StreamReader::Read(Span<uint8_t> out_buf)
 {
-    if (error) [[unlikely]]
-        return -1;
-
     Size read_len = 0;
-    if (decoder) {
-        read_len = decoder->Read(out_buf.len, out_buf.ptr);
-        error |= (read_len < 0);
-    } else {
-        read_len = ReadRaw(out_buf.len, out_buf.ptr);
-        eof = source.eof;
+
+    while (out_buf.len && !eof) {
+        if (error) [[unlikely]]
+            return -1;
+
+        Size len = 0;
+
+        if (decoder) {
+            len = decoder->Read(out_buf.len, out_buf.ptr);
+            error |= (len < 0);
+        } else {
+            len = ReadRaw(out_buf.len, out_buf.ptr);
+            eof = source.eof;
+        }
+
+        out_buf.ptr += len;
+        out_buf.len -= len;
+        read_len += len;
+
+        if (!error && read_max >= 0 && read_len > read_max - read_total) [[unlikely]] {
+            LogError("Exceeded max stream size of %1", FmtDiskSize(read_max));
+            error = true;
+            return -1;
+        }
     }
 
-    if (!error && read_max >= 0 && read_len > read_max - read_total) [[unlikely]] {
-        LogError("Exceeded max stream size of %1", FmtDiskSize(read_max));
-        error = true;
-        return -1;
-    }
     read_total += read_len;
-
     return read_len;
 }
 
