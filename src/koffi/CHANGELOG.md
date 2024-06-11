@@ -6,28 +6,29 @@
 
 #### Koffi 3.0.0 (in development)
 
-**Major changes:**
+**Main changes:**
 
 - Stop automatic conversion of string pointers to JS strings
 - Drop disposable types, which were mainly useful to handle heap-allocated strings
+- Replace use of externals with proper type objects:
+  * Access type information directly on type variables without `koffi.introspect()`
+- Replace use of externals with proper pointer objects:
+  * Get pointer type with `pointer.type`
+  * Get pointer address with `pointer.address` (or `koffi.address(ptr)`)
+  * Read and write from/to C memory with `pointer.read()` and `pointer.write()`
+  * Call functions with `pointer.call()`
+  * Make or cast pointers with `new koffi.Pointer(address, type)`
 
 **Other changes:**
 
-- Replace use of externals with proper type objects:
-  * Access type information directly on type variables without `koffi.introspect`
-- Replace use of externals with proper pointer objects:
-  * Get pointer type with `pointer.type`
-  * Get pointer address with `pointer.address`
-  * Make or cast pointers with `new koffi.Pointer(address, type)`
 - Add `koffi.enumeration()` to create [enum types](input.md#enum-types)
 
 **Newly deprecated functions:**
 
 - Deprecate `koffi.resolve()` function, replace with `koffi.type()` method
-- Deprecate `koffi.address()` function, replace with `pointer.address` property
+- Deprecate `koffi.decode()` function, replace with `pointer.read()` method (or `koffi.read()`)
+- Deprecate `koffi.encode()` function, replace with `pointer.write()` method (or `koffi.write()`)
 - Deprecate `koffi.call()` function, replace with `pointer.call()` method
-- Deprecate `koffi.decode()` function, replace with `pointer.read()` method
-- Deprecate `koffi.encode()` function, replace with `pointer.write()` method
 
 **Removed deprecated functions:**
 

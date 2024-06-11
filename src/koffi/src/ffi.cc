@@ -2001,6 +2001,40 @@ static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
     return env.Undefined();
 }
 
+static Napi::Value GetPointerAddress(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1) {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
+    }
+
+    Napi::Value value = info[0];
+    void *ptr = nullptr;
+
+    if (CheckValueTag(value, &PointerMarker)) {
+        ptr = UnwrapPointer(value);
+    } else if (IsNullOrUndefined(value)) {
+        ptr = nullptr;
+    } else if (value.IsNumber() || value.IsBigInt()) {
+        uint64_t u = GetNumber<uint64_t>(value);
+        ptr = (void *)u;
+    } else {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for ptr, expected pointer", GetValueType(value));
+        return env.Null();
+    }
+
+    if (ptr) {
+        uint64_t ptr64 = (uint64_t)(uintptr_t)ptr;
+        Napi::BigInt bigint = Napi::BigInt::New(env, ptr64);
+
+        return bigint;
+    } else {
+        return env.Null();
+    }
+}
+
 static Napi::Value ResetKoffi(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
@@ -2255,6 +2289,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("as", Napi::Function::New(env, CastValue, "as"));
     exports.Set("decode", Napi::Function::New(env, DecodeValue, "decode"));
     exports.Set("encode", Napi::Function::New(env, EncodeValue, "encode"));
+    exports.Set("address", Napi::Function::New(env, GetPointerAddress, "address"));
 
     exports.Set("reset", Napi::Function::New(env, ResetKoffi, "reset"));
 
