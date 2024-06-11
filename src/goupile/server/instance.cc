@@ -130,6 +130,8 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
                     config.name = DuplicateString(value, &str_alloc).ptr;
                 } else if (TestStr(setting, "LockKey")) {
                     config.lock_key = DuplicateString(value, &str_alloc).ptr;
+                } else if (TestStr(setting, "SharedKey")) {
+                    config.shared_key = DuplicateString(value, &str_alloc).ptr;
                 }
             }
         }
