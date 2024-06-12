@@ -851,7 +851,7 @@ BENCHMARK_FUNCTION("base/Random")
 
 BENCHMARK_FUNCTION("base/HashTable")
 {
-    static const int iterations = 5000000;
+    static const int iterations = 1000000;
 
     HeapArray<std::string> keys;
     HeapArray<int> values;
