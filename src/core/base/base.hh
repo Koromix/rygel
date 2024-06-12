@@ -4504,7 +4504,7 @@ public:
         : StreamReader() { Open(func, filename, compression_type); }
     ~StreamReader() { Close(true); }
 
-    // Call before Open!
+    // Call before Open. Takes ownership and deletes the decoder at the end.
     void SetDecoder(StreamDecoder *decoder);
 
     bool Open(Span<const uint8_t> buf, const char *filename = nullptr,
@@ -4712,7 +4712,7 @@ public:
         : StreamWriter() { Open(func, filename, compression_type, compression_speed); }
     ~StreamWriter() { Close(true); }
 
-    // Call before Open!
+    // Call before Open. Takes ownership and deletes the encoder at the end.
     void SetEncoder(StreamEncoder *encoder);
 
     bool Open(HeapArray<uint8_t> *mem, const char *filename = nullptr,
