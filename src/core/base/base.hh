@@ -3090,8 +3090,6 @@ DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long, constexpr);
 #undef DEFINE_INTEGER_HASH_TRAITS_32
 #undef DEFINE_INTEGER_HASH_TRAITS_64
 
-#if RG_SIZE_MAX == INT64_MAX
-
 // MurmurHash2
 static constexpr inline uint64_t HashStr(Span<const char> str)
 {
@@ -3144,35 +3142,6 @@ static constexpr inline uint64_t HashStr(const char *str)
     Span<const char> span = str;
     return HashStr(span);
 }
-
-#else
-
-// FNV-1a
-static constexpr inline uint64_t HashStr(Span<const char> str)
-{
-    uint64_t hash = 0xCBF29CE484222325ull;
-
-    for (char c: str) {
-        hash ^= (uint64_t)c;
-        hash *= 0x100000001B3ull;
-    }
-
-    return hash;
-}
-
-static constexpr inline uint64_t HashStr(const char *str)
-{
-    uint64_t hash = 0xCBF29CE484222325ull;
-
-    for (Size i = 0; str[i]; i++) {
-        hash ^= (uint64_t)str[i];
-        hash *= 0x100000001B3ull;
-    }
-
-    return hash;
-}
-
-#endif
 
 template <>
 class HashTraits<const char *> {
