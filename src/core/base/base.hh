@@ -1508,7 +1508,19 @@ static constexpr inline int CmpStr(Span<const char> str1, const char *str2)
 static constexpr inline int CmpStr(const char *str1, Span<const char> str2)
     { return -CmpStr(str2, str1); }
 static constexpr inline int CmpStr(const char *str1, const char *str2)
-    { return __builtin_strcmp(str1, str2); }
+{
+#if defined(__GNUC__) || defined(__clang__)
+        return __builtin_strcmp(str1, str2);
+#else
+        Size i = 0;
+        for (; str1[i]; i++) {
+            int delta = str1[i] - str2[i];
+            if (delta)
+                return delta;
+        }
+        return str2[i] - str1[i];
+#endif
+}
 
 static inline bool StartsWith(Span<const char> str, Span<const char> prefix)
 {
@@ -3088,7 +3100,11 @@ static constexpr inline uint64_t HashStr(Span<const char> str)
 
     const auto unaligned_load = [](const char *p) {
         uint64_t result;
+#if defined(__GNUC__) || defined(__clang__)
         __builtin_memcpy(&result, p, sizeof(result));
+#else
+        memcpy(&result, p, sizeof(result));
+#endif
         return result;
     };
     const auto load_bytes = [](const char *p, int n) {
