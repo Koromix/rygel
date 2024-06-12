@@ -6307,6 +6307,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
 
 StreamDecompressorHelper::StreamDecompressorHelper(CompressionType compression_type, CreateDecompressorFunc *func)
 {
+    RG_ASSERT(!DecompressorFunctions[(int)compression_type]);
     DecompressorFunctions[(int)compression_type] = func;
 }
 
@@ -6858,6 +6859,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
 StreamCompressorHelper::StreamCompressorHelper(CompressionType compression_type, CreateCompressorFunc *func)
 {
+    RG_ASSERT(!CompressorFunctions[(int)compression_type]);
     CompressorFunctions[(int)compression_type] = func;
 }
 
