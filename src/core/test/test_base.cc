@@ -751,17 +751,17 @@ BENCHMARK_FUNCTION("base/Fmt")
     StreamWriter writer(fd, "/dev/null");
     RG_ASSERT(writer.IsValid());
 
-    RunBenchmark("printf", iterations, [&]() {
+    RunBenchmark("printf", iterations, [&](Size) {
         fprintf(fp, "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
-    RunBenchmark("snprintf", iterations, [&]() {
+    RunBenchmark("snprintf", iterations, [&](Size) {
         char buf[1024];
         snprintf(buf, RG_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
 #ifndef _WIN32
-    RunBenchmark("asprintf", iterations, [&]() {
+    RunBenchmark("asprintf", iterations, [&](Size) {
         char *str = nullptr;
         int ret = asprintf(&str, "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
         (void)ret;
@@ -769,38 +769,38 @@ BENCHMARK_FUNCTION("base/Fmt")
     });
 #endif
 
-    RunBenchmark("stbsp_snprintf", iterations, [&]() {
+    RunBenchmark("stbsp_snprintf", iterations, [&](Size) {
         char buf[1024];
         stbsp_snprintf(buf, RG_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
-    RunBenchmark("fmt::format_to", iterations, [&]() {
+    RunBenchmark("fmt::format_to", iterations, [&](Size) {
         char buf[1024];
         fmt::format_to(buf, "{}:{}:{}:{}:{}:{}%\n", 1234, 42, -313.3, "str", (void *)1000, 'X');
     });
 
-    RunBenchmark("fmt::format_to (FMT_COMPILE)", iterations, [&]() {
+    RunBenchmark("fmt::format_to (FMT_COMPILE)", iterations, [&](Size) {
         char buf[1024];
         fmt::format_to(buf, FMT_COMPILE("{}:{}:{}:{}:{}:{}%\n"), 1234, 42, -313.3, "str", (void *)1000, 'X');
     });
 
-    RunBenchmark("base Fmt", iterations, [&]() {
+    RunBenchmark("base Fmt", iterations, [&](Size) {
         LocalArray<char, 1024> buf;
         buf.len = Fmt(buf.data, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X').len;
     });
 
-    RunBenchmark("base Fmt (allocator)", iterations, [&]() {
+    RunBenchmark("base Fmt (allocator)", iterations, [&](Size) {
         LinkedAllocator temp_alloc;
         Fmt(&temp_alloc, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
-    RunBenchmark("base Fmt (heap)", iterations, [&]() {
+    RunBenchmark("base Fmt (heap)", iterations, [&](Size) {
         HeapArray<char> buf;
         Fmt(&buf, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
         buf.RemoveFrom(0);
     });
 
-    RunBenchmark("base Print", iterations, [&]() {
+    RunBenchmark("base Print", iterations, [&](Size) {
         Print(&writer, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 }
@@ -810,26 +810,26 @@ BENCHMARK_FUNCTION("base/MatchPathName")
     static const int iterations = 3000000;
 
 #ifdef _WIN32
-    RunBenchmark("PathMatchSpecA", iterations, [&]() {
+    RunBenchmark("PathMatchSpecA", iterations, [&](Size) {
         PathMatchSpecA("aaa/bbb", "a*/*b");
     });
 #endif
 
-    RunBenchmark("fnmatch (musl)", iterations, [&]() {
+    RunBenchmark("fnmatch (musl)", iterations, [&](Size) {
         fnmatch("a*/*b", "aaa/bbb", FNM_PATHNAME);
     });
 
-    RunBenchmark("MatchPathName", iterations, [&]() {
+    RunBenchmark("MatchPathName", iterations, [&](Size) {
         MatchPathName("aaa/bbb", "a*/*b");
     });
 }
 
 BENCHMARK_FUNCTION("base/Random")
 {
-    static const int iterations = 50000000;
+    static const int iterations = 500000;
 
     srand(42);
-    RunBenchmark("rand", iterations, [&]() {
+    RunBenchmark("rand", iterations, [&](Size) {
         int x;
 
         do {
@@ -840,12 +840,102 @@ BENCHMARK_FUNCTION("base/Random")
     });
 
     FastRandom rng(42);
-    RunBenchmark("FastRandom::GetInt", iterations, [&]() {
+    RunBenchmark("FastRandom::GetInt", iterations, [&](Size) {
         rng.GetInt(0, 24096);
     });
 
-    RunBenchmark("GetRandomInt", iterations, [&]() {
+    RunBenchmark("GetRandomInt", iterations, [&](Size) {
         GetRandomInt(0, 24096);
+    });
+}
+
+BENCHMARK_FUNCTION("base/HashTable")
+{
+    static const int iterations = 5000000;
+
+    HeapArray<std::string> keys;
+    HeapArray<int> values;
+    HeapArray<std::string> known;
+    HeapArray<std::string> unknown;
+
+    std::unordered_map<std::string, int> map1;
+    HashMap<Span<const char>, int> map2;
+    HashMap<const char *, int> map3;
+    unsigned int sum = 0;
+
+    for (int i = 0; i < iterations; i++) {
+        char buf[32];
+        Fmt(buf, "%1", FmtRandom(16));
+
+        std::string key(buf);
+        int value = GetRandomInt(0, 16);
+
+        keys.Append(key);
+        known.Append(key);
+        values.Append(value);
+
+        // Try to make sure the C string version is available
+        (void)key.c_str();
+    }
+
+    for (int i = 0; i < iterations; i++) {
+        char key[32]; Fmt(key, "%1", FmtRandom(16));
+        unknown.Append(std::string(key));
+    }
+
+    FastRandomRNG<size_t> rng;
+    std::shuffle(known.begin(), known.end(), rng);
+
+    RunBenchmark("std::unordered_map (set)", iterations, [&](Size i) {
+        map1[keys[i]] = values[i];
+    });
+
+    RunBenchmark("HashMap<Span> (set)", iterations, [&](Size i) {
+        Span<const char> key = { keys[i].c_str(), (Size)keys[i].size() };
+        map2.Set(key, values[i]);
+    });
+
+    RunBenchmark("HashMap<const char *> (set)", iterations, [&](Size i) {
+        const char *key = keys[i].c_str();
+        map3.Set(key, values[i]);
+    });
+
+    RunBenchmark("std::unordered_map (known)", iterations, [&](Size i) {
+        const auto it = map1.find(known[i]);
+        sum += (it != map1.end()) ? (unsigned int)it->second : 0;
+    });
+
+    RunBenchmark("HashMap<Span> (known)", iterations, [&](Size i) {
+        Span<const char> key = { known[i].c_str(), (Size)known[i].size() };
+        int *ptr = map2.Find(key);
+
+        sum += ptr ? (unsigned int)*ptr : 0;
+    });
+
+    RunBenchmark("HashMap<const char *> (known)", iterations, [&](Size i) {
+        const char *key = known[i].c_str();
+        int *ptr = map3.Find(key);
+
+        sum += ptr ? (unsigned int)*ptr : 0;
+    });
+
+    RunBenchmark("std::unordered_map (unknown)", iterations, [&](Size i) {
+        const auto it = map1.find(unknown[i]);
+        sum += (it != map1.end()) ? (unsigned int)it->second : 0;
+    });
+
+    RunBenchmark("HashMap<Span> (unknown)", iterations, [&](Size i) {
+        Span<const char> key = { unknown[i].c_str(), (Size)unknown[i].size() };
+        int *ptr = map2.Find(key);
+
+        sum += ptr ? (unsigned int)*ptr : 0;
+    });
+
+    RunBenchmark("HashMap<const char *> (unknown)", iterations, [&](Size i) {
+        const char *key = unknown[i].c_str();
+        int *ptr = map3.Find(key);
+
+        sum += ptr ? (unsigned int)*ptr : 0;
     });
 }
 

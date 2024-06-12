@@ -81,7 +81,7 @@ struct BenchmarkInfo {
     static void FuncName()
 #define BENCHMARK_FUNCTION(Path) BENCHMARK_FUNCTION_(RG_UNIQUE_NAME(func_), RG_UNIQUE_NAME(bench_), "bench/" Path)
 
-static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void()> func)
+static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<void(Size)> func)
 {
     Print("  %!..+%1%!0", FmtArg(name).Pad(34));
     StdOut->Flush();
@@ -90,7 +90,7 @@ static inline void RunBenchmark(const char *name, Size iterations, FunctionRef<v
     int64_t clock = GetClockCounter();
 
     for (Size i = 0; i < iterations; i++) {
-        func();
+        func(i);
 #if defined(__clang__) || !defined(_MSC_VER)
         __asm__ __volatile__("" : : : "memory");
 #endif
