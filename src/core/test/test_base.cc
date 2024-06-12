@@ -14,6 +14,9 @@
 #include "src/core/base/base.hh"
 #include "test.hh"
 
+#include <string>
+#include <unordered_map>
+
 // Comparative benchmarks
 #ifdef _WIN32
     extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
@@ -595,6 +598,140 @@ TEST_FUNCTION("base/PathCheck")
     TEST_EQ(PathContainsDotDot("foo..\\bar"), false);
     TEST_EQ(PathContainsDotDot("foo\\.\\bar"), false);
 #endif
+}
+
+struct IntBucket {
+    int key;
+    int value;
+
+    RG_HASHTABLE_HANDLER(IntBucket, key);
+};
+
+struct StrBucket {
+    const char *key;
+    int value;
+
+    RG_HASHTABLE_HANDLER(StrBucket, key);
+};
+
+TEST_FUNCTION("base/HashTable")
+{
+    BlockAllocator temp_alloc;
+
+    // Integer keys
+
+    for (int i = 0; i < 16; i++) {
+        std::unordered_map<int, int> ref;
+
+        HashTable<int, IntBucket> table;
+        HashMap<int, int> map;
+        HashSet<int> set;
+
+        for (int j = 0; j < 1000; j++) {
+            int key = 0;
+            do {
+                key = GetRandomInt(0, INT_MAX);
+            } while (ref.count(key));
+
+            TEST(!map.Find(key));
+            TEST(!set.Find(key));
+
+            int value = GetRandomInt(0, INT_MAX);
+            ref[key] = value;
+
+            table.Set({ key, value });
+            map.Set(key, value);
+            set.Set(key);
+        }
+
+        for (const auto &it: ref) {
+            if (it.first % 3) {
+                Size prev = table.count;
+
+                table.Remove(it.first);
+                map.Remove(it.first);
+                set.Remove(it.first);
+
+                TEST_EQ(table.count, prev - 1);
+                TEST_EQ(map.table.count, prev - 1);
+                TEST_EQ(set.table.count, prev - 1);
+            }
+        }
+
+        for (const auto &it: ref) {
+            if (it.first % 3) {
+                TEST(!table.Find(it.first));
+                TEST(!map.Find(it.first));
+                TEST(!set.Find(it.first));
+            } else {
+                TEST_EQ(table.FindValue(it.first, {}).value, it.second);
+                TEST_EQ(map.FindValue(it.first, 0), it.second);
+                TEST(set.Find(it.first));
+            }
+        }
+    }
+
+    // String keys
+
+    for (int i = 0; i < 16; i++) {
+        std::unordered_map<std::string, int> ref;
+
+        HashTable<const char *, StrBucket> table;
+        HashMap<const char *, int> map;
+        HashSet<const char *> set;
+
+        for (int j = 0; j < 1000; j++) {
+            std::string key;
+            do {
+                char buf[16];
+                Fmt(buf, "%1", FmtRandom(8));
+                key = std::string(buf);
+            } while (ref.count(key));
+
+            TEST(!table.Find(key.c_str()));
+            TEST(!map.Find(key.c_str()));
+            TEST(!set.Find(key.c_str()));
+
+            int value = GetRandomInt(0, INT_MAX);
+            ref[key] = value;
+
+            const char *copy = DuplicateString(key.c_str(), &temp_alloc).ptr;
+
+            table.Set({ copy, value });
+            map.Set(copy, value);
+            set.Set(copy);
+        }
+
+        for (const auto &it: ref) {
+            char c = *it.first.c_str();
+
+            if (c % 3) {
+                Size prev = table.count;
+
+                table.Remove(it.first.c_str());
+                map.Remove(it.first.c_str());
+                set.Remove(it.first.c_str());
+
+                TEST_EQ(table.count, prev - 1);
+                TEST_EQ(map.table.count, prev - 1);
+                TEST_EQ(set.table.count, prev - 1);
+            }
+        }
+
+        for (const auto &it: ref) {
+            char c = *it.first.c_str();
+
+            if (c % 3) {
+                TEST(!table.Find(it.first.c_str()));
+                TEST(!map.Find(it.first.c_str()));
+                TEST(!set.Find(it.first.c_str()));
+            } else {
+                TEST_EQ(table.FindValue(it.first.c_str(), {}).value, it.second);
+                TEST_EQ(map.FindValue(it.first.c_str(), 0), it.second);
+                TEST(set.Find(it.first.c_str()));
+            }
+        }
+    }
 }
 
 BENCHMARK_FUNCTION("base/Fmt")
