@@ -3078,30 +3078,91 @@ DEFINE_INTEGER_HASH_TRAITS_64(unsigned long long, constexpr);
 #undef DEFINE_INTEGER_HASH_TRAITS_32
 #undef DEFINE_INTEGER_HASH_TRAITS_64
 
+#if RG_SIZE_MAX == INT64_MAX
+
+// MurmurHash2
+static constexpr inline uint64_t HashStr(Span<const char> str)
+{
+    const uint64_t Seed = 0;
+    const uint64_t Mult = (((uint64_t)0xc6a4a793ull) << 32ull) + (uint64_t)0x5bd1e995ull;
+
+    const auto unaligned_load = [](const char *p) {
+        uint64_t result;
+        __builtin_memcpy(&result, p, sizeof(result));
+        return result;
+    };
+    const auto load_bytes = [](const char *p, int n) {
+        uint64_t result = 0;
+
+        n--;
+        do {
+            result = (result << 8) + (uint8_t)p[n];
+        } while (--n >= 0);
+
+        return result;
+    };
+    const auto shift_mix = [](uint64_t v) { return v ^ (v >> 47); };
+
+    const char *end = str.ptr + (str.len & ~0x7);
+    int remain = (int)(str.len & 0x7);
+
+    uint64_t hash = Seed ^ (str.len * Mult);
+
+    for (const char *p = str.ptr; p != end; p += 8) {
+        uint64_t u64 = shift_mix(unaligned_load(p) * Mult) * Mult;
+        hash = (hash ^ u64) * Mult;
+    }
+    if (remain) {
+        uint64_t u64 = load_bytes(end, remain);
+        hash = (hash ^ u64) * Mult;
+    }
+
+    hash = shift_mix(hash) * Mult;
+    hash = shift_mix(hash);
+
+    return hash;
+}
+
+static constexpr inline uint64_t HashStr(const char *str)
+{
+    Span<const char> span = str;
+    return HashStr(span);
+}
+
+#else
+
+// FNV-1a
+static constexpr inline uint64_t HashStr(Span<const char> str)
+{
+    uint64_t hash = 0xCBF29CE484222325ull;
+
+    for (char c: str) {
+        hash ^= (uint64_t)c;
+        hash *= 0x100000001B3ull;
+    }
+
+    return hash;
+}
+
+static constexpr inline uint64_t HashStr(const char *str)
+{
+    uint64_t hash = 0xCBF29CE484222325ull;
+
+    for (Size i = 0; str[i]; i++) {
+        hash ^= (uint64_t)str[i];
+        hash *= 0x100000001B3ull;
+    }
+
+    return hash;
+}
+
+#endif
+
 template <>
 class HashTraits<const char *> {
 public:
-    // FNV-1a
-    static constexpr uint64_t Hash(Span<const char> key)
-    {
-        uint64_t hash = 0xCBF29CE484222325ull;
-        for (char c: key) {
-            hash ^= (uint64_t)c;
-            hash *= 0x100000001B3ull;
-        }
-
-        return hash;
-    }
-    static constexpr uint64_t Hash(const char *key)
-    {
-        uint64_t hash = 0xCBF29CE484222325ull;
-        for (Size i = 0; key[i]; i++) {
-            hash ^= (uint64_t)key[i];
-            hash *= 0x100000001B3ull;
-        }
-
-        return hash;
-    }
+    static constexpr uint64_t Hash(Span<const char> key) { return HashStr(key); }
+    static constexpr uint64_t Hash(const char *key) { return HashStr(key); }
 
     static constexpr bool Test(const char *key1, const char *key2) { return TestStr(key1, key2); }
     static constexpr bool Test(const char *key1, Span<const char> key2) { return key2 == key1; }
@@ -3110,27 +3171,8 @@ public:
 template <>
 class HashTraits<Span<const char>> {
 public:
-    // FNV-1a
-    static constexpr uint64_t Hash(Span<const char> key)
-    {
-        uint64_t hash = 0xCBF29CE484222325ull;
-        for (char c: key) {
-            hash ^= (uint64_t)c;
-            hash *= 0x100000001B3ull;
-        }
-
-        return hash;
-    }
-    static constexpr uint64_t Hash(const char *key)
-    {
-        uint64_t hash = 0xCBF29CE484222325ull;
-        for (Size i = 0; key[i]; i++) {
-            hash ^= (uint64_t)key[i];
-            hash *= 0x100000001B3ull;
-        }
-
-        return hash;
-    }
+    static constexpr uint64_t Hash(Span<const char> key) { return HashStr(key); }
+    static constexpr uint64_t Hash(const char *key) { return HashStr(key); }
 
     static constexpr bool Test(Span<const char> key1, Span<const char> key2) { return key1 == key2; }
     static constexpr bool Test(Span<const char> key1, const char * key2) { return key1 == key2; }
