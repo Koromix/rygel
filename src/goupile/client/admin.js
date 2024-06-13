@@ -96,7 +96,7 @@ function renderInstances() {
                     ${instances.map(instance => html`
                         <tr class=${instance === selected_instance ? 'active' : ''}>
                             <td style="text-align: left;" class=${instance.master != null ? 'child' : ''}>
-                                ${instance.master == null && instance.legacy ? html`<span class="ui_tag" style="background: #888;">Legacy</span>`  : ''}
+                                ${instance.master == null && instance.legacy ? html`<span class="ui_tag" style="background: #bbb;">v2</span>`  : ''}
                                 ${instance.master != null ? html`<span style="color: #ccc;">${instance.master} / </span>${instance.key.replace(/^.*\//, '')}` : ''}
                                 ${instance.master == null ? instance.key : ''}
                                 (<a href=${'/' + instance.key} target="_blank">accès</a>)
