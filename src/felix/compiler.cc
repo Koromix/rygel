@@ -1644,7 +1644,7 @@ public:
         } else {
             Fmt(&buf, " /Yc \"/Fp%1.pch\" \"/Fo%1.obj\"", src_filename);
         }
-        Fmt(&buf, " /Zc:preprocessor /showIncludes");
+        Fmt(&buf, " /Zc:preprocessor /permissive- /Zc:twoPhase- /showIncludes");
         out_cmd->rsp_offset = buf.len;
 
         // Build options
