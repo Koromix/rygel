@@ -941,7 +941,7 @@ struct Span<const char> {
     Span() = default;
     constexpr Span(const char &ch) : ptr(&ch), len(1) {}
     constexpr Span(const char *ptr_, Size len_) : ptr(ptr_), len(len_) {}
-#ifdef __clang__
+#if defined(__clang__) || defined(_MSC_VER)
     constexpr Span(const char *const &str) : ptr(str), len(str ? (Size)__builtin_strlen(str) : 0) {}
 #else
     constexpr Span(const char *const &str) : ptr(str), len(str ? (Size)strlen(str) : 0) {}
@@ -3096,9 +3096,15 @@ static constexpr inline uint64_t HashStr(Span<const char> str)
     const uint64_t Seed = 0;
     const uint64_t Mult = (((uint64_t)0xc6a4a793ull) << 32ull) + (uint64_t)0x5bd1e995ull;
 
-    auto unaligned_load =
+    const auto unaligned_load =
 #if defined(__GNUC__) || defined(__clang__)
-        std::is_constant_evaluated() ?
+        !std::is_constant_evaluated() ?
+        [](const char *p) {
+            uint64_t result;
+            __builtin_memcpy(&result, p, sizeof(result));
+            return result;
+        } :
+#endif
         [](const char *p) {
 #ifdef RG_BIG_ENDIAN
             uint64_t result = ((uint64_t)p[0] << 56) |
@@ -3120,16 +3126,6 @@ static constexpr inline uint64_t HashStr(Span<const char> str)
                               ((uint64_t)p[7] << 56);
 #endif
 
-            return result;
-        } :
-#endif
-        [](const char *p) {
-            uint64_t result;
-#if defined(__GNUC__) || defined(__clang__)
-            __builtin_memcpy(&result, p, sizeof(result));
-#else
-            memcpy(&result, p, sizeof(result));
-#endif
             return result;
         };
 
