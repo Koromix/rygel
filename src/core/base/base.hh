@@ -3096,15 +3096,43 @@ static constexpr inline uint64_t HashStr(Span<const char> str)
     const uint64_t Seed = 0;
     const uint64_t Mult = (((uint64_t)0xc6a4a793ull) << 32ull) + (uint64_t)0x5bd1e995ull;
 
-    const auto unaligned_load = [](const char *p) {
-        uint64_t result;
+    auto unaligned_load =
 #if defined(__GNUC__) || defined(__clang__)
-        __builtin_memcpy(&result, p, sizeof(result));
+        std::is_constant_evaluated() ?
+        [](const char *p) {
+#ifdef RG_BIG_ENDIAN
+            uint64_t result = ((uint64_t)p[0] << 56) |
+                              ((uint64_t)p[1] << 48) |
+                              ((uint64_t)p[2] << 40) |
+                              ((uint64_t)p[3] << 32) |
+                              ((uint64_t)p[4] << 24) |
+                              ((uint64_t)p[5] << 16) |
+                              ((uint64_t)p[6] << 8) |
+                              ((uint64_t)p[7] << 0);
 #else
-        memcpy(&result, p, sizeof(result));
+            uint64_t result = ((uint64_t)p[0] << 0) |
+                              ((uint64_t)p[1] << 8) |
+                              ((uint64_t)p[2] << 16) |
+                              ((uint64_t)p[3] << 24) |
+                              ((uint64_t)p[4] << 32) |
+                              ((uint64_t)p[5] << 40) |
+                              ((uint64_t)p[6] << 48) |
+                              ((uint64_t)p[7] << 56);
 #endif
-        return result;
-    };
+
+            return result;
+        } :
+#endif
+        [](const char *p) {
+            uint64_t result;
+#if defined(__GNUC__) || defined(__clang__)
+            __builtin_memcpy(&result, p, sizeof(result));
+#else
+            memcpy(&result, p, sizeof(result));
+#endif
+            return result;
+        };
+
     const auto load_bytes = [](const char *p, int n) {
         uint64_t result = 0;
 
