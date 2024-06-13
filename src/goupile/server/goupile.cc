@@ -1011,6 +1011,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     if (sandbox) {
         LogInfo("Init sandbox");
 
+        // We use temp_store = MEMORY but, just in case...
         sqlite3_temp_directory = sqlite3_mprintf("%s", gp_domain.config.tmp_directory);
 
         const char *const reveal_paths[] = {
