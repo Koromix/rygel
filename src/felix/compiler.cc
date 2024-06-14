@@ -502,7 +502,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=%2", cxx, clang_ver >= 1000 ? "gnu++20" : "gnu++2a"); } break;
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -1123,7 +1123,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=%2", cxx, gcc_ver >= 1100 ? "gnu++20" : "gnu++2a"); } break;
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -1921,7 +1921,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++2a", cxx); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
