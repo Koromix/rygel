@@ -29,7 +29,7 @@ namespace RG {
 // XXX: Use compact and RO-only data structure made for big dictionaries
 // XXX: Add proper names to dictionary, and automatically manage plurals
 
-static constinit ConstMap<128, int32_t, const char *> replacements = {
+static RG_CONSTINIT ConstMap<128, int32_t, const char *> replacements = {
     { DecodeUtf8("Ç"), "c" },
     { DecodeUtf8("È"), "e" },
     { DecodeUtf8("É"), "e" },

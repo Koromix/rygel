@@ -468,6 +468,12 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
     #error No implementation of CountLeadingZeros(), CountTrailingZeros() and PopCount() for this compiler / toolchain
 #endif
 
+#if __cplusplus >= 202002L && (defined(_MSC_VER) || defined(__clang__) || __GNUC__ >= 11)
+    #define RG_CONSTINIT constinit
+#else
+    #define RG_CONSTINIT const
+#endif
+
 static inline Size AlignLen(Size len, Size align)
 {
     Size aligned = (len + align - 1) / align * align;
