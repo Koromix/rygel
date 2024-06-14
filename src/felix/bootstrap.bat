@@ -3,7 +3,7 @@
 setlocal enableDelayedExpansion
 cd %~dp0
 
-set SRC=*.cc ..\core\base\base.cc ..\core\compress\miniz.cc ..\core\wrap\json.cc ^
+set SRC=*.cc ..\core\base\base.cc ..\core\compress\zlib.cc ..\core\wrap\json.cc ^
         ..\..\vendor\miniz\miniz.c ..\..\vendor\pugixml\src\pugixml.cpp
 
 set TEMP=..\..\bin\BootstrapFelix
@@ -36,7 +36,7 @@ if NOT ERRORLEVEL 1 (
 
     echo Bootstrapping felix with MSVC...
     mkdir %TEMP%
-    cl /nologo /std:c++20 /I../.. /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%TEMP%\
+    cl /nologo /std:c++20 /Zc:twoPhase- /I../.. /W0 /EHsc /MP /DNDEBUG /DNOMINMAX /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE /c %SRC% /Fo%TEMP%\
     link /nologo %TEMP%\*.obj ws2_32.lib advapi32.lib shell32.lib ole32.lib /out:%TEMP%\felix.exe
     %TEMP%\felix.exe -pFast felix %*
     copy %BUILD%\felix.exe %BINARY% >NUL
