@@ -20,10 +20,12 @@ import { MagicData } from './form_data.js';
 
 import './form.css';
 
+// Unique widget HTML identifiers
+let ptr_ids = new WeakMap;
+let next_id = 0;
+
 function FormState(data = null) {
     let self = this;
-
-    this.unique_id = FormState.next_unique_id++;
 
     // Hook functions
     this.changeHandler = () => {};
@@ -67,7 +69,6 @@ function FormState(data = null) {
 
     this.justTriggered = function() { return self.just_triggered; };
 }
-FormState.next_unique_id = 0;
 
 function FormModel() {
     let self = this;
@@ -1333,7 +1334,7 @@ function FormBuilder(state, model) {
                 ${model.widgets.map(intf => {
                     if (intf.errors.length) {
                         return html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
-                                    <a href=${'#' + makeID(intf.key)}>${intf.label}</a><br/>`;
+                                    <a href=${'#' + intf.id}>${intf.label}</a><br/>`;
                      } else {
                         return '';
                      }
@@ -1749,7 +1750,21 @@ instead of:
     }
 
     function makeID(key) {
-        return `fm_var_${state.unique_id}_${key}`;
+        let ids = ptr_ids.get(key.ptr);
+
+        if (ids == null) {
+            ids = {};
+            ptr_ids.set(key.ptr, ids);
+        }
+
+        let id = ids[key];
+
+        if (id == null) {
+            id = next_id++;
+            ids[key] = id;
+        }
+
+        return `fm_var_${id}`;
     }
 
     function renderWrappedWidget(intf, frag) {
