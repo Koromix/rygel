@@ -24,7 +24,7 @@ function DataRemote() {
         let thread = await Net.get(url);
 
         return thread;
-    }
+    };
 
     this.save = async function(tid, entry, fs, constraints) {
         await Net.post(ENV.urls.instance + 'api/records/save', {
@@ -40,7 +40,7 @@ function DataRemote() {
                 constraints: constraints
             }
         });
-    }
+    };
 
     this.delete = async function(tid) {
         await Net.post(ENV.urls.instance + 'api/records/delete', { tid: tid });
