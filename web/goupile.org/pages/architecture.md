@@ -2,6 +2,10 @@
 
 Le serveur Goupile est développé en C++. Le binaire compilé contient directement le moteur de base de données ([SQLite](https://sqlite.org/)), un serveur HTTP ([libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/)) ainsi que le code HTML/CSS/Javascript envoyé aux navigateurs web.
 
+Le client web est développé en HTML, CSS et Javascript. La modification des pages via le code Javascript utilise très largement des [templates lit-html](https://lit.dev/docs/templates/overview/). L'ensemble du code JavaScript et CSS est assemblé (bundling) et minifié par [esbuild](https://esbuild.github.io/). Les fichiers statiques (images, etc.) et les fichiers générés par esbuild sont inclus dans le binaire du serveur Goupile au moment de la compilation.
+
+# Bases de données
+
 Plusieurs bases de données SQLite sont créées et utilisées pour chaque domaine. Tout d'abord, il existe une base maitre qui contient la liste des projets, des utilisateurs et les permissions. Ensuite, chaque projet utilise 1 à plusieurs bases (1 pour le projet + 1 par centre en cas de projet multi-centrique). Par exemple, un domaine avec 2 projets dont un multi-centrique pourrait utiliser les fichiers suivants :
 
 ```sh
@@ -14,11 +18,11 @@ instances/projet2@paris.db
 
 # Isolation des services
 
-Chaque domaine est géré par un service dédié (par exemple lancé par systemd), qui est capable de s'auto-containériser sur Linux (utilisation des capabilities POSIX, des namespaces et filtres seccomp) dans un namespace avec pratiquement aucun accès sauf au fichier SQLite.
+Chaque domaine est géré par un service dédié (par exemple lancé par systemd), qui est capable de s'auto-containériser sur Linux (utilisation des capabilities POSIX, des namespaces et filtres seccomp) dans un namespace avec pratiquement aucun accès sauf aux fichiers SQLite.
 
-Ce service peut utiliser un seul (mode mono-processus) ou plusieurs processus (mode multi-processus **[WIP]**) pour gérer chaque projet. Dans le mode multi-processus, la communication HTTP est relayée par le processus maître au processus en charge de la gestion du projet concerné.
+Ce processus garde malgré tout la capacité de se diviser (fork), et un processus enfant est créé pour gérer chaque projet présent sur le domaine. Ceci permet une isolation de chaque projet dans un processus dédié, qui a en charge les accès HTTP (statiques et API) pour ce projet.
 
-Dans tous les cas, lorsque le serveur valide les données du formulaire (option non systématique selon les besoins de validation de données d'un formulaire), le code Javascript est exécuté par le moteur SpiderMonkey dans un processus forké avec des droits complètement restreints (pas d'accès au système de fichier ou à la base de données).
+Pour valider les données envoyées par le client lors de l'enregistrement d'un formulaire, le serveur exécute le code JavaScript de ce formulaire avec le moteur SpiderMonkey (utilisé dans Firefox) compilé en [WebAssembly/WASI](https://github.com/bytecodealliance/spidermonkey-wasi-embedding), retransformé en C avec [wasm2c](https://github.com/WebAssembly/wabt/blob/main/wasm2c/README.md) et utilisé via [RLBox](https://rlbox.dev/). Avant d'être interpréré par SpiderMonkey/WASM, les données envoyées par le client (au format JSON) sont parsées et recréées une première fois avec [RapidJSON](https://rapidjson.org/).
 
 # Options de compilation
 
@@ -36,24 +40,20 @@ Par ailleurs, pendant le développement nous utilisons différents sanitizers (A
 
 # Format des données
 
-Chaque base de données Goupile est chiffrée au repos ([SQLite3 Multiple Ciphers](https://github.com/utelle/SQLite3MultipleCiphers)). La clé de chiffrement de la base principale est communiquée à Goupile lors du lancement par un moyen à déterminer par la personne qui administre le serveur. Chaque autre base a une clé spécifique stockée dans la base principale.
-
-Le script des formulaires d'un projet sont stockés et versionnées dans les bases SQLite.
+Le script des formulaires d'un projet sont stockés et versionnés dans les bases SQLite.
 
 Les données saisies dans un projet sont stockées dans la base SQLite correspondante (pour les études multi-centriques, chaque centre dispose d'une base séparée). Deux tables SQLite sont utilisées pour les données :
 
 - *Table rec_entries* : cette table contient une ligne par enregistrement avec les informations récapitulatives
 - *Table rec_fragments* : cette table contient toutes les modifications historisées d'un enregistrement (audit trail)
 
-La clé principale d'un enregistrement est au [format ULID](https://github.com/ulid/spec). Ceci permet de générer les identifiants d'enregistrement client (avec risque infinitésimal de collision) ce qui simplifie l'implémentation du mode hors ligne, tout en évitant les problèmes de performance posés par l'indexation des identifiants UUID.
+La clé principale d'un enregistrement est au [format ULID](https://github.com/ulid/spec). Ceci permet de générer les identifiants d'enregistrement du côté client (avec risque infinitésimal de collision) ce qui simplifie l'implémentation du mode hors ligne, tout en évitant les problèmes de performance posés par l'indexation des identifiants UUIDv4.
 
 # Validation des données
 
-La vérification de la validité des données par rapport aux contraintes imposées a lieu côté client (systématiquement) et côté serveur (sur les pages où cette option est activée). Celle-ci repose sur le code Javascript de chaque page, qui peut définir des conditions et des erreurs en fonction des données saisies.
+La vérification de la validité des données par rapport aux contraintes imposées a lieu côté client (systématiquement) et côté serveur (via SpiderMonkey/WASM comme décrit auparant).
 
-Ces erreurs alimentent la base de *contrôles qualités* qui peuvent ensuite être monitorées **[WIP]**.
-
-Pour assurer la sécurité du serveur malgré l'exécution de code Javascript potentiellement malveillant, plusieurs mesures sont prises et détaillées dans la section [Architecture du serveur](#architecture-du-serveur).
+Celle-ci repose sur le code Javascript de chaque page, qui peut définir des conditions et des erreurs en fonction des données saisies. Ces erreurs alimentent la base de *contrôles qualités* qui peuvent ensuite être monitorées.
 
 # Support hors ligne
 
@@ -63,4 +63,4 @@ Dans ce cas, les données sont synchronisées dans un deuxième temps lorsque la
 
 Les données hors ligne sont chiffrées symétriquement à l'aide d'une clé spécifique à chaque utilisateur et connue du serveur. Cette clé est communiquée au navigateur après une authentification réussie.
 
-Pour que l'utilisateur puisse se connecter à son application hors ligne, une copie de son profil (dont la clé de chiffrement des données hors ligne) est stockée sur sa machine, chiffrée par une clé dérivée de son mot de passe. Lorsqu'il cherche à se connecter hors ligne, son identifiant et son mot de passe sont utilisés pour déchiffrer ce profil et pouvoir accéder aux données locales.
+Pour que l'utilisateur puisse se connecter à son application hors ligne, une copie de son profil (dont la clé de chiffrement des données hors ligne) est stockée sur sa machine, chiffrée par une clé dérivée de son mot de passe (with [PBKDF2](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/deriveBits)). Lorsqu'il cherche à se connecter hors ligne, son identifiant et son mot de passe sont utilisés pour déchiffrer ce profil et pouvoir accéder aux données locales.
