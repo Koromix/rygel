@@ -622,14 +622,14 @@ function renderData() {
                                                               (status.mtime.getTime() != status.ctime.getTime() ? '\nModifié : ' + status.mtime.toLocaleString() : '');
 
                                                 return html`
-                                                    <td class=${active && page === route.page ? 'saved active' : 'saved'} title=${tooltip}>
+                                                    <td class=${active && page === route.page ? 'complete active' : 'complete'} title=${tooltip}>
                                                         <a href=${url}>${status.mtime.toLocaleDateString()}</a>
                                                         ${renderTags(status.tags)}
                                                     </td>
                                                 `;
                                             } else {
                                                 return html`
-                                                    <td class=${active && page === route.page ? 'saved active' : 'saved'}>
+                                                    <td class=${active && page === route.page ? 'complete active' : 'complete'}>
                                                         <a href=${url}>Rempli</a>
                                                         ${renderTags(status.tags)}
                                                     </td>
@@ -652,14 +652,14 @@ function renderData() {
                                                               (status.mtime.getTime() != status.ctime.getTime() ? '\nModifié : ' + status.mtime.toLocaleString() : '');
 
                                                 return html`
-                                                    <td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'} title=${tooltip}>
+                                                    <td class=${active && route.form.chain.includes(form) ? 'complete active' : 'complete'} title=${tooltip}>
                                                         <a href=${url}>${status.mtime.toLocaleDateString()}</a>
                                                         ${renderTags(status.tags)}
                                                     </td>
                                                 `;
                                             } else {
                                                 return html`
-                                                    <td class=${active && route.form.chain.includes(form) ? 'saved active' : 'saved'}>
+                                                    <td class=${active && route.form.chain.includes(form) ? 'complete active' : 'complete'}>
                                                         <a href=${url}>Rempli</a>
                                                         ${renderTags(status.tags)}
                                                     </td>
