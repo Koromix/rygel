@@ -239,6 +239,7 @@ static void InitAssets()
             assets_root = &asset;
         } else if (TestStr(asset.name, "src/goupile/client/sw.js")) {
             assets_map.Set("/sw.js", &asset);
+            assets_map.Set("/sw.pk.js", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/manifest.json")) {
             assets_map.Set("/manifest.json", &asset);
         } else if (TestStr(asset.name, "src/goupile/client/images/favicon.png")) {
@@ -598,6 +599,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         const AssetInfo *asset = assets_map.FindValue(instance_url, nullptr);
 
         if (TestStr(instance_url, "/") || TestStr(instance_url, "/sw.js") ||
+                                          TestStr(instance_url, "/sw.pk.js") ||
                                           TestStr(instance_url, "/manifest.json")) {
             RG_ASSERT(asset);
 
