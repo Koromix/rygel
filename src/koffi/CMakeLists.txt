@@ -34,7 +34,7 @@ include(CheckCXXCompilerFlag)
 set(CMAKE_CXX_STANDARD 20)
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus /Zc:preprocessor /W4 /wd4200 /wd4201 /wd4127 /wd4458 /wd4706 /wd4702 /wd4324")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Zc:__cplusplus /Zc:preprocessor /Zc:twoPhase- /W4 /wd4200 /wd4201 /wd4127 /wd4458 /wd4706 /wd4702 /wd4324")
 
     # ASM_MASM does not (yet) work on Windows ARM64
     if(NOT CMAKE_GENERATOR_PLATFORM MATCHES "ARM64")
