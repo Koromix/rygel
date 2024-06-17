@@ -272,6 +272,7 @@ async function build() {
         fs.mkdirSync(dist_dir, { mode: 0o755, recursive: true });
 
         copy_recursive(snapshot_dir, dist_dir, make_path_filter([
+            'src/core',
             'src/cnoke',
             'src/koffi/cmake',
             'src/koffi/examples',
