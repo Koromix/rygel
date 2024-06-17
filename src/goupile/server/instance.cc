@@ -1836,7 +1836,9 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
 
+            case 60: {
                 if (target == LegacyVersion)
                     break;
             } [[fallthrough]];

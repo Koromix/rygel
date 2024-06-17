@@ -1605,6 +1605,10 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                     return false;
             } [[fallthrough]];
 
+            case 32: {
+                // Goupile v2 domain version
+            } [[fallthrough]];
+
             case 100: {
                 bool success = db->RunMany(R"(
                     UPDATE dom_permissions SET permissions = IIF(permissions & 1, 1, 0) |
