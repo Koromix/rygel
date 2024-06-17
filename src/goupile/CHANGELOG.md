@@ -2,6 +2,13 @@
 
 ## Goupile 3.4
 
+### Goupile 3.5.0
+
+- Support running legacy (v2) Goupile projects
+- Bundle page scripts with esbuild to support import and provide better syntax error reports
+- Fix non-unique HTML ids in generated forms
+- Fix various offline bugs
+
 ### Goupile 3.4.0
 
 - Simplify goupile top menu
