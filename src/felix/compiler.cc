@@ -558,26 +558,38 @@ public:
         Span<const char> dest_directory = GetPathDirectory(dest_filename);
         Fmt(&buf, " \"-I%1\"", dest_directory);
 
-        if (architecture == HostArchitecture::x86_64) {
-            Fmt(&buf, " -mpopcnt -msse4.1 -msse4.2 -mssse3 -mcx16");
+        switch (architecture) {
+            case HostArchitecture::x86_64: {
+                Fmt(&buf, " -mpopcnt -msse4.1 -msse4.2 -mssse3 -mcx16");
 
-            if (features & (int)CompileFeature::AESNI) {
-                Fmt(&buf, " -maes -mpclmul");
-            }
-            if (features & (int)CompileFeature::AVX2) {
-                Fmt(&buf, " -mavx2");
-            }
-            if (features & (int)CompileFeature::AVX512) {
-                Fmt(&buf, " -mavx512f -mavx512vl");
-            }
-        } else if (architecture == HostArchitecture::x86) {
-            Fmt(&buf, " -msse2");
+                if (features & (int)CompileFeature::AESNI) {
+                    Fmt(&buf, " -maes -mpclmul");
+                }
+                if (features & (int)CompileFeature::AVX2) {
+                    Fmt(&buf, " -mavx2");
+                }
+                if (features & (int)CompileFeature::AVX512) {
+                    Fmt(&buf, " -mavx512f -mavx512vl");
+                }
+            } break;
 
-            if (features & (int)CompileFeature::AESNI) {
-                Fmt(&buf, " -maes -mpclmul");
-            }
-        } else if (architecture == HostArchitecture::Web32) {
-            Fmt(&buf, " -mbulk-memory");
+            case HostArchitecture::x86: {
+                Fmt(&buf, " -msse2");
+
+                if (features & (int)CompileFeature::AESNI) {
+                    Fmt(&buf, " -maes -mpclmul");
+                }
+            } break;
+
+            case HostArchitecture::Web32: {
+                Fmt(&buf, " -mbulk-memory");
+            } break;
+
+            case HostArchitecture::ARM32:
+            case HostArchitecture::ARM64:
+            case HostArchitecture::RISCV64: {} break;
+
+            case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
         }
 
         // Platform flags
@@ -1178,28 +1190,40 @@ public:
         Span<const char> dest_directory = GetPathDirectory(dest_filename);
         Fmt(&buf, " \"-I%1\"", dest_directory);
 
-        if (architecture == HostArchitecture::x86_64) {
-            Fmt(&buf, " -mpopcnt -msse4.1 -msse4.2 -mssse3 -mcx16");
+        // Architecture flags
+        switch (architecture)  {
+            case HostArchitecture::x86_64: {
+                Fmt(&buf, " -mpopcnt -msse4.1 -msse4.2 -mssse3 -mcx16");
 
-            if (features & (int)CompileFeature::AESNI) {
-                Fmt(&buf, " -maes -mpclmul");
-            }
-            if (features & (int)CompileFeature::AVX2) {
-                Fmt(&buf, " -mavx2");
-            }
-            if (features & (int)CompileFeature::AVX512) {
-                Fmt(&buf, " -mavx512f -mavx512vl");
-            }
-        } else if (architecture == HostArchitecture::x86) {
-            if (m32) {
-                Fmt(&buf, " -m32");
-            }
+                if (features & (int)CompileFeature::AESNI) {
+                    Fmt(&buf, " -maes -mpclmul");
+                }
+                if (features & (int)CompileFeature::AVX2) {
+                    Fmt(&buf, " -mavx2");
+                }
+                if (features & (int)CompileFeature::AVX512) {
+                    Fmt(&buf, " -mavx512f -mavx512vl");
+                }
+            } break;
 
-            Fmt(&buf, " -msse2 -mfpmath=sse");
+            case HostArchitecture::x86: {
+                if (m32) {
+                    Fmt(&buf, " -m32");
+                }
 
-            if (features & (int)CompileFeature::AESNI) {
-                Fmt(&buf, " -maes -mpclmul");
-            }
+                Fmt(&buf, " -msse2 -mfpmath=sse");
+
+                if (features & (int)CompileFeature::AESNI) {
+                    Fmt(&buf, " -maes -mpclmul");
+                }
+            } break;
+
+            case HostArchitecture::ARM32:
+            case HostArchitecture::ARM64:
+            case HostArchitecture::RISCV64:
+            case HostArchitecture::Web32: {} break;
+
+            case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
         }
 
         // Platform flags
@@ -1234,19 +1258,6 @@ public:
                     Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2");
                 }
             } break;
-        }
-
-        // Architecture flags
-        switch (architecture) {
-            case HostArchitecture::x86:
-            case HostArchitecture::ARM32: { Fmt(&buf, " -m32"); } break;
-
-            case HostArchitecture::x86_64:
-            case HostArchitecture::ARM64:
-            case HostArchitecture::RISCV64: { Fmt(&buf, " -m64"); } break;
-            case HostArchitecture::Web32: {} break;
-
-            case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
         }
 
         // Features
