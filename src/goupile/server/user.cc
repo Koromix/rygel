@@ -680,7 +680,7 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
                         session->admin_until = GetMonotonicTime() + 1200 * 1000;
                     }
 
-                    session->change_password = change_password || !CheckPasswordComplexity(*session, password);
+                    session->change_password = change_password;
 
                     sessions.Open(request, io, session);
                     WriteProfileJson(session.GetRaw(), instance, request, io);
