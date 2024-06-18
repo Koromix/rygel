@@ -576,6 +576,8 @@ public:
             if (features & (int)CompileFeature::AESNI) {
                 Fmt(&buf, " -maes -mpclmul");
             }
+        } else if (architecture == HostArchitecture::Web) {
+            Fmt(&buf, " -mbulk-memory");
         }
 
         // Platform flags
