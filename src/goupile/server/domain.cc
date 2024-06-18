@@ -1706,11 +1706,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
             } [[fallthrough]];
 
             case 105: {
-                LogInfo("XX %1", version);
-
                 if (version && version < 100) {
-                    LogInfo("X");
-
                     bool success = db->RunMany(R"(
                         UPDATE dom_permissions SET permissions = permissions | 8192;
                     )");
