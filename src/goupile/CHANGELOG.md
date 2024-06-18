@@ -1,6 +1,15 @@
 # Changelog
 
-## Goupile 3.4
+## Goupile 3.5
+
+### Goupile 3.5.1
+
+- Add pushPath/popPath system to replace "path" widget option
+- Use legacy form code in legacy instances
+- Drop forced low-complexity password change for now
+- Fix failure to enable develop mode in multi-center projects
+- Expose PeriodPicker widget to legacy instances
+- Clean up leftover debug statements
 
 ### Goupile 3.5.0
 
@@ -8,6 +17,8 @@
 - Bundle page scripts with esbuild to support import and provide better syntax error reports
 - Fix non-unique HTML ids in generated forms
 - Fix various offline bugs
+
+## Goupile 3.4
 
 ### Goupile 3.4.0
 
