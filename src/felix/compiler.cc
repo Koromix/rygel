@@ -130,7 +130,7 @@ static HostArchitecture ParseTarget(Span<const char> output)
             } else if (StartsWith(value, "riscv64-")) {
                 return HostArchitecture::RISCV64;
             } else if (StartsWith(value, "wasm32-")) {
-                return HostArchitecture::Web;
+                return HostArchitecture::Web32;
             } else {
                 break;
             }
@@ -246,7 +246,7 @@ public:
                         case HostArchitecture::ARM64:
                         case HostArchitecture::RISCV64:
                         case HostArchitecture::ARM32:
-                        case HostArchitecture::Web: {
+                        case HostArchitecture::Web32: {
                             LogError("Cannot use Clang (Windows) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
                             return false;
                         } break;
@@ -263,7 +263,7 @@ public:
                         case HostArchitecture::x86_64: { prefix = "x86_64"; } break;
                         case HostArchitecture::ARM64: { prefix = "aarch64"; } break;
                         case HostArchitecture::RISCV64: { prefix = "riscv64"; } break;
-                        case HostArchitecture::Web: { prefix = "wasm32"; } break;
+                        case HostArchitecture::Web32: { prefix = "wasm32"; } break;
 
                         case HostArchitecture::ARM32: {
                             LogError("Cannot use Clang to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
@@ -576,7 +576,7 @@ public:
             if (features & (int)CompileFeature::AESNI) {
                 Fmt(&buf, " -maes -mpclmul");
             }
-        } else if (architecture == HostArchitecture::Web) {
+        } else if (architecture == HostArchitecture::Web32) {
             Fmt(&buf, " -mbulk-memory");
         }
 
@@ -1244,7 +1244,7 @@ public:
             case HostArchitecture::x86_64:
             case HostArchitecture::ARM64:
             case HostArchitecture::RISCV64: { Fmt(&buf, " -m64"); } break;
-            case HostArchitecture::Web: {} break;
+            case HostArchitecture::Web32: {} break;
 
             case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
         }
@@ -1829,7 +1829,7 @@ class EmCompiler final: public Compiler {
     BlockAllocator str_alloc;
 
 public:
-    EmCompiler(HostPlatform platform) : Compiler(platform, HostArchitecture::Web, "EmCC") {}
+    EmCompiler(HostPlatform platform) : Compiler(platform, HostArchitecture::Web32, "EmCC") {}
 
     static std::unique_ptr<const Compiler> Create(HostPlatform platform, const char *cc)
     {
@@ -2474,7 +2474,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                     case HostArchitecture::RISCV64: { ccs.Append("riscv64-linux-gnu-gcc"); }  break;
 
                     case HostArchitecture::ARM32:
-                    case HostArchitecture::Web:
+                    case HostArchitecture::Web32:
                     case HostArchitecture::Unknown: {} break;
                 }
 #endif
@@ -2568,7 +2568,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return nullptr;
         }
 
-        return ClangCompiler::Create(spec.platform, HostArchitecture::Web, spec.cc, spec.ld, sdk.sysroot);
+        return ClangCompiler::Create(spec.platform, HostArchitecture::Web32, spec.cc, spec.ld, sdk.sysroot);
 #ifdef __linux__
     } else if (spec.platform == HostPlatform::Windows) {
         if (!spec.cc) {
@@ -2596,7 +2596,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 case HostArchitecture::ARM64:
                 case HostArchitecture::RISCV64:
                 case HostArchitecture::ARM32:
-                case HostArchitecture::Web: {
+                case HostArchitecture::Web32: {
                     LogError("Cannot use MinGW to cross-build for '%1'", HostArchitectureNames[(int)spec.architecture]);
                     return nullptr;
                 } break;
@@ -2626,7 +2626,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 case HostArchitecture::RISCV64: { spec.cc = "riscv64-linux-gnu-gcc"; }  break;
 
                 case HostArchitecture::ARM32:
-                case HostArchitecture::Web: {
+                case HostArchitecture::Web32: {
                     LogError("GCC cross-compilation for '%1' is not supported", HostArchitectureNames[(int)spec.architecture]);
                     return nullptr;
                 } break;
@@ -2653,7 +2653,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 case HostArchitecture::RISCV64: {} break;
 
                 case HostArchitecture::ARM32:
-                case HostArchitecture::Web: {
+                case HostArchitecture::Web32: {
                     LogError("Clang cross-compilation for '%1' is not supported", HostArchitectureNames[(int)spec.architecture]);
                     return nullptr;
                 } break;

@@ -82,7 +82,7 @@ enum class HostArchitecture {
     ARM32,
     ARM64,
     RISCV64,
-    Web,
+    Web32,
     Unknown
 };
 static const char *const HostArchitectureNames[] = {
@@ -91,7 +91,7 @@ static const char *const HostArchitectureNames[] = {
     "ARM32",
     "ARM64",
     "RISCV64",
-    "Web",
+    "Web32",
     "Unknown"
 };
 
