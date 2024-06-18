@@ -20,7 +20,7 @@ import * as goupile from '../client/goupile.js';
 import { profile } from '../client/goupile.js';
 import * as UI from '../client/ui.js';
 import { InstancePublisher } from '../client/instance_publish.js';
-import { FormState, FormModel, FormBuilder } from '../client/form.js';
+import { FormState, FormModel, FormBuilder } from './form.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 
 let db = null;
