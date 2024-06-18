@@ -295,7 +295,8 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
                 json.EndObject();
 
                 if (stamp->HasPermission(UserPermission::BuildCode)) {
-                    json.Key("develop"); json.Bool(stamp->develop.load(std::memory_order_relaxed));
+                    const SessionStamp *stamp = session->GetStamp(master);
+                    json.Key("develop"); json.Bool(stamp && stamp->develop.load(std::memory_order_relaxed));
                 } else {
                     RG_ASSERT(!stamp->develop.load());
                 }
@@ -1546,6 +1547,12 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
 
 void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
+    if (instance->master != instance) {
+        LogError("Cannot change mode through slave instance");
+        io->AttachError(403);
+        return;
+    }
+
     RetainPtr<const SessionInfo> session = sessions.Find(request, io);
     SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 

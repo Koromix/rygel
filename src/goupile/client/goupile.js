@@ -799,7 +799,7 @@ async function changeDevelopMode(enable) {
     if (enable == profile.develop)
         return;
 
-    await Net.post(`${ENV.urls.instance}api/change/mode`, { develop: enable });
+    await Net.post(`${ENV.urls.base}api/change/mode`, { develop: enable });
 
     // We want to reload no matter what, because the mode has changed
     let url = new URL(window.location.href);
