@@ -13,7 +13,9 @@
 
 import { Util, Log, Net } from '../../web/libjs/common.js';
 
-let ENV = JSON.parse(`{{ ENV_JSON }}`);
+// Hack around esbuild dropping simple template literals
+let raw = (strings) => strings[0];
+let ENV = JSON.parse(raw`{{ ENV_JSON }}`);
 
 self.addEventListener('install', e => {
     e.waitUntil(async function() {
