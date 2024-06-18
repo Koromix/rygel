@@ -21,6 +21,7 @@ import { profile } from '../client/goupile.js';
 import * as UI from '../client/ui.js';
 import { InstancePublisher } from '../client/instance_publish.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
+import { PeriodPicker } from '../../web/libwidgets/periodpicker.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 
 let db = null;
@@ -1237,6 +1238,7 @@ async function runCodeAsync(title, code, args) {
         svg: svg,
         LocalDate: LocalDate,
         LocalTime: LocalTime,
+        PeriodPicker: PeriodPicker,
 
         dates: LocalDate, // Deprecated
         times: LocalTime // Deprecated
@@ -1278,6 +1280,7 @@ function runCodeSync(title, code, args) {
         svg: svg,
         LocalDate: LocalDate,
         LocalTime: LocalTime,
+        PeriodPicker: PeriodPicker,
 
         dates: LocalDate, // Deprecated
         times: LocalTime // Deprecated
