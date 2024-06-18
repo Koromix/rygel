@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import { Util, Log } from '../libjs/common.js';
+import { Util, Log, LocalDate } from '../libjs/common.js';
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 
 import './periodpicker.css';
