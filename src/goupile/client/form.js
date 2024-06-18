@@ -122,13 +122,15 @@ function FormBuilder(state, model) {
 
     let data = state.data;
 
-    let default_root = state.values;
-    let default_ptr = default_root;
-
     let intf_map = new WeakMap;
 
     data.clearNotes('errors');
     data.clearNotes('variables');
+
+    let paths_stack = [{
+        root: state.values,
+        ptr: state.values
+    }];
 
     let options_stack = [{
         deploy: true,
@@ -166,6 +168,9 @@ function FormBuilder(state, model) {
     this.hasErrors = function() { return model.hasErrors(); };
 
     this.pushOptions = function(options = {}) {
+        if (options.hasOwnProperty('path'))
+            throw new Error('Option "path" is not supported anymore');
+
         options = expandOptions(options);
         options_stack.push(options);
     };
@@ -174,7 +179,41 @@ function FormBuilder(state, model) {
             throw new Error('Too many popOptions() operations');
 
         options_stack.pop();
-    }
+    };
+
+    this.pushPath = function(key, sub = null) {
+        key = decodeKey(key);
+
+        if (key.variables.has(key.name))
+            throw new Error(`Variable '${key}' already exists`);
+
+        let path = {
+            root: key.ptr[key.name],
+            ptr: null
+        };
+
+        if (!Util.isPodObject(path.root)) {
+            key.ptr[key.name] = {};
+            path.root = key.ptr[key.name];
+        }
+
+        if (sub != null) {
+            if (!Util.isPodObject(path.root[sub]))
+                path.root[sub] = {};
+            path.ptr = path.root[sub];
+        } else {
+            path.ptr = path.root;
+        };
+
+        paths_stack.push(path);
+    };
+
+    this.popPath = function() {
+        if (paths_stack.length < 2)
+            throw new Error('Too many popPath() operations');
+
+        paths_stack.pop();
+    };
 
     this.triggerErrors = function() {
         if (!self.isValid()) {
@@ -1503,24 +1542,24 @@ instead of:
             remove: isModifiable(key) ? idx => handleRepeatRemove(values, idx) : null
         });
 
-        let prev_root = default_root;
-        let prev_ptr = default_ptr;
-
         for (let i = 0;; i++) {
             if (!values.hasOwnProperty(i)) {
                 intf.length = i;
                 break;
             }
 
+            let prev_paths = paths_stack;
+
             try {
-                default_root = values;
-                default_ptr = values[i];
+                paths_stack = [{
+                    root: values,
+                    ptr: values[i]
+                }];
 
                 let remove = intf.remove ? (() => intf.remove(i)) : null;
                 captureWidgets(widgets, 'repeat', () => func(values[i], i, remove), options);
             } finally {
-                default_root = prev_root;
-                default_ptr = prev_ptr;
+                paths_stack = prev_paths;
             }
         }
 
@@ -1597,11 +1636,13 @@ instead of:
         }
 
         let prev_widgets = widgets_ref;
+        let prev_paths = paths_stack;
         let prev_options = options_stack;
         let prev_inline = inline_widgets;
 
         try {
             widgets_ref = widgets;
+            paths_stack = [paths_stack[paths_stack.length - 1]];
             options_stack = [expandOptions(options)];
 
             inline_next = false;
@@ -1613,6 +1654,7 @@ instead of:
             inline_widgets = prev_inline;
 
             options_stack = prev_options;
+            paths_stack = prev_paths;
             widgets_ref = prev_widgets;
         }
 
@@ -1678,8 +1720,8 @@ instead of:
         if (key.length < 2 || key.length > 3)
             throw new Error('Invalid key type');
 
-        let root = key[0] ?? default_root;
-        let ptr = (key.length >= 3 ? key[1] : key[0]) ?? default_ptr;
+        let root = key[0] ?? paths_stack[paths_stack.length - 1].root;
+        let ptr = (key.length >= 3 ? key[1] : key[0]) ?? paths_stack[paths_stack.length - 1].ptr;
         let name = (key.length >= 3 ? key[2] : key[1]);
 
         // Decode option shortcuts
