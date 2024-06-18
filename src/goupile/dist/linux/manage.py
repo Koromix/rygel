@@ -164,7 +164,7 @@ def decode_bool(s):
     elif s in ('n', 'no', 'f', 'false', 'off', '0'):
         return False
     else:
-        raise ValueError(f'Invalid truth value "{str}"')
+        raise ValueError(f'Invalid truth value "{s}"')
 
 def sync_domains(path, domains, template):
     os.makedirs(path, mode = 0o755, exist_ok = True)
