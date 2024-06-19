@@ -2105,6 +2105,15 @@ public:
     {
         std::unique_ptr<TeensyCompiler> compiler = std::make_unique<TeensyCompiler>(platform);
 
+        if (!cc) {
+            cc = Fmt(&compiler->str_alloc, "%1%/hardware/tools/arm/bin/arm-none-eabi-gcc%2", arduino, RG_EXECUTABLE_EXTENSION).ptr;
+
+            if (!TestFile(cc)) {
+                LogError("Cannot find Teensy compiler in Arduino SDK");
+                return nullptr;
+            }
+        }
+
         // Decode model string
         switch (platform) {
             case HostPlatform::TeensyLC: { compiler->model = Model::TeensyLC; } break;
@@ -2564,22 +2573,21 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
 
         return EmCompiler::Create(spec.platform, spec.cc);
     } else if (spec.platform == HostPlatform::WasmWasi) {
-        static WasiSdkInfo sdk;
-        static bool found = FindWasiSdk(&str_alloc, &sdk);
+        static const WasiSdkInfo *sdk = FindWasiSdk();
 
-        if (!found) {
+        if (!sdk) {
             LogError("Cannot find WASI-SDK, set WASI_SDK_PATH manually");
             return nullptr;
         }
 
-        spec.cc = spec.cc ? spec.cc : sdk.cc;
+        spec.cc = spec.cc ? spec.cc : sdk->cc;
 
         if (spec.ld) {
             LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);
             return nullptr;
         }
 
-        return ClangCompiler::Create(spec.platform, HostArchitecture::Web32, spec.cc, spec.ld, sdk.sysroot);
+        return ClangCompiler::Create(spec.platform, HostArchitecture::Web32, spec.cc, nullptr, sdk->sysroot);
 #ifdef __linux__
     } else if (spec.platform == HostPlatform::Windows) {
         if (!spec.cc) {
@@ -2679,16 +2687,12 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         }
 #endif
     } else if (StartsWith(HostPlatformNames[(int)spec.platform], "Embedded/Teensy/ARM/")) {
-        static const char *arduino = nullptr;
-        static const char *cc = nullptr;
-        static bool found = FindArduinoSdk("hardware/tools/arm/bin/arm-none-eabi-gcc", &str_alloc, &arduino, &cc);
+        static const char *arduino = FindArduinoSdk();
 
-        if (!found) {
+        if (!arduino) {
             LogError("Cannot find Arduino/Teensyduino, set ARDUINO_PATH manually");
             return nullptr;
         }
-
-        spec.cc = spec.cc ? spec.cc : cc;
 
         if (spec.ld) {
             LogError("Cannot use custom linker for platform '%1'", HostPlatformNames[(int)spec.platform]);

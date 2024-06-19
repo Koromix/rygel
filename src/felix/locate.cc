@@ -27,6 +27,9 @@
 
 namespace RG {
 
+static std::mutex mutex;
+static BlockAllocator str_alloc;
+
 static bool LocateSdkQmake(const Compiler *compiler, Allocator *alloc, const char **out_qmake)
 {
     BlockAllocator temp_alloc;
@@ -209,10 +212,11 @@ const QtInfo *FindQtSdk(const Compiler *compiler)
 {
     static QtInfo qt = {};
     static bool init = false;
-    static BlockAllocator str_alloc;
 
     if (!init) {
         init = true;
+
+        std::lock_guard<std::mutex> lock(mutex);
 
         if (const char *str = GetEnv("QMAKE_PATH"); str) {
             qt.qmake = NormalizePath(str, &str_alloc).ptr;
@@ -350,8 +354,19 @@ static bool TestWasiSdk(const char *path, Allocator *alloc, WasiSdkInfo *out_sdk
     return true;
 }
 
-bool FindWasiSdk(Allocator *alloc, WasiSdkInfo *out_sdk)
+const WasiSdkInfo *FindWasiSdk()
 {
+    static WasiSdkInfo sdk = {};
+    static bool init = false;
+    static bool found = false;
+
+    if (init)
+        return found ? &sdk : nullptr;
+
+    init = true;
+
+    std::lock_guard<std::mutex> lock(mutex);
+
     struct TestPath {
         const char *env;
         const char *path;
@@ -383,17 +398,48 @@ bool FindWasiSdk(Allocator *alloc, WasiSdkInfo *out_sdk)
             CopyString(test.path, path);
         }
 
-        if (TestWasiSdk(path, alloc, out_sdk)) {
+        if (TestWasiSdk(path, &str_alloc, &sdk)) {
             LogDebug("Found WASI-SDK: %1", path);
-            return true;
+
+            found = true;
+            return &sdk;
         }
     }
 
-    return false;
+    return nullptr;
 }
 
-bool FindArduinoSdk(const char *compiler, Allocator *alloc, const char **out_arduino, const char **out_cc)
+static bool TestArduinoSdk(const char *path)
 {
+    char arduino[4096];
+    char hardware[4096];
+
+    if (!TestFile(path))
+        return false;
+
+    Fmt(arduino, "%1%/arduino%2", path, RG_EXECUTABLE_EXTENSION);
+    Fmt(hardware, "%1%/hardware/arduino", path);
+
+    if (!TestFile(arduino, FileType::File))
+        return false;
+    if (!TestFile(hardware, FileType::Directory))
+        return false;
+
+    return true;
+}
+
+const char *FindArduinoSdk()
+{
+    static const char *sdk = nullptr;
+    static bool init = false;
+
+    if (init)
+        return sdk;
+
+    init = true;
+
+    std::lock_guard<std::mutex> lock(mutex);
+
 #ifdef _WIN32
     {
         wchar_t buf_w[2048];
@@ -409,25 +455,21 @@ bool FindArduinoSdk(const char *compiler, Allocator *alloc, const char **out_ard
                                    RRF_RT_REG_SZ, nullptr, buf_w, &buf_w_len);
 
         if (found) {
-            Span<char> arduino = AllocateSpan<char>(alloc, 2 * (Size)buf_w_len + 1);
+            Span<char> path = AllocateSpan<char>(&str_alloc, 2 * (Size)buf_w_len + 1);
 
-            arduino.len = ConvertWin32WideToUtf8(buf_w, arduino);
-            if (arduino.len < 0)
+            path.len = ConvertWin32WideToUtf8(buf_w, path);
+            if (path.len < 0)
                 return false;
 
-            for (char &c: arduino) {
+            for (char &c: path) {
                 c = (c == '/') ? '\\' : c;
             }
 
-            Span<char> cc = Fmt(alloc, "%1%/%2.exe", arduino, compiler);
+            if (TestArduinoSdk(path.ptr)) {
+                LogDebug("Found Arduino SDK: %1", path);
 
-            if (!TestFile(cc.ptr, FileType::File)) {
-                LogDebug("Found compiler for Teensy: %1", cc);
-
-                *out_arduino = arduino.ptr;
-                *out_cc = cc.ptr;
-
-                return true;
+                sdk = path.ptr;
+                return sdk;
             }
         }
     }
@@ -452,8 +494,7 @@ bool FindArduinoSdk(const char *compiler, Allocator *alloc, const char **out_ard
     };
 
     for (const TestPath &test: test_paths) {
-        char arduino[4096];
-        char cc[4096];
+        char path[4096];
 
         if (test.env) {
             Span<const char> prefix = GetEnv(test.env);
@@ -462,24 +503,20 @@ bool FindArduinoSdk(const char *compiler, Allocator *alloc, const char **out_ard
             if (!prefix.len)
                 continue;
 
-            Fmt(arduino, "%1%%2", prefix, test.path);
-            Fmt(cc, "%1%/%2", arduino, compiler);
+            Fmt(path, "%1%2", prefix, test.path);
         } else {
-            CopyString(test.path, arduino);
-            Fmt(cc, "%1%/%2", arduino, compiler);
+            CopyString(test.path, path);
         }
 
-        if (TestFile(cc, FileType::File)) {
-            LogDebug("Found compiler for Teensy: %1", cc);
+        if (TestArduinoSdk(path)) {
+            LogDebug("Found Arduino SDK: %1", path);
 
-            *out_arduino = DuplicateString(arduino, alloc).ptr;
-            *out_cc = DuplicateString(cc, alloc).ptr;
-
-            return true;
+            sdk = DuplicateString(path, &str_alloc).ptr;
+            return sdk;
         }
     }
 
-    return false;
+    return nullptr;
 }
 
 }
