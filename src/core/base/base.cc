@@ -1649,6 +1649,34 @@ void PrintLn()
     StdOut->Write('\n');
 }
 
+FmtArg FmtVersion(int64_t version, int parts, int by)
+{
+    RG_ASSERT(version >= 0);
+    RG_ASSERT(parts > 0);
+
+    FmtArg arg = {};
+    arg.type = FmtType::Buffer;
+
+    Span<char> buf = arg.u.buf;
+    int64_t divisor = 1;
+
+    for (int i = 1; i < parts; i++) {
+        divisor *= by;
+    }
+
+    for (int i = 0; i < parts; i++) {
+        int64_t component = (version / divisor) % by;
+        Size len = Fmt(buf, "%1.", component).len;
+
+        buf.ptr += len;
+        buf.len -= len;
+
+        divisor /= by;
+    }
+
+    return arg;
+}
+
 // ------------------------------------------------------------------------
 // Debug and errors
 // ------------------------------------------------------------------------
@@ -5063,6 +5091,51 @@ malformed:
         LogError("Malformed date string '%1'", date_str);
     }
     return false;
+}
+
+bool ParseVersion(Span<const char> str, int parts, int multiplier,
+                  int64_t *out_version, unsigned int flags, Span<const char> *out_remaining)
+{
+    RG_ASSERT(parts >= 0 && parts < 6);
+
+    int64_t version = 0;
+    Span<const char> remain = str;
+
+    while (remain.len && parts) {
+        int component = 0;
+        if (!ParseInt(remain, &component, 0, &remain)) {
+            if (flags & (int)ParseFlag::Log) {
+                LogError("Malformed version string '%1'", str);
+            }
+            return false;
+        }
+
+        version = (version * multiplier) + component;
+        parts--;
+
+        if (!remain.len || remain[0] != '.')
+            break;
+        remain.ptr++;
+        remain.len--;
+    }
+
+    if (remain.len && (flags & (int)ParseFlag::End)) {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Malformed version string '%1'", str);
+        }
+        return false;
+    }
+
+    while (parts) {
+        version *= multiplier;
+        parts--;
+    }
+
+    *out_version = version;
+    if (out_remaining) {
+        *out_remaining = remain;
+    }
+    return true;
 }
 
 // ------------------------------------------------------------------------

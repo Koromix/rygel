@@ -3816,6 +3816,8 @@ static inline FmtArg FmtFlags(uint64_t flags, Span<const struct OptionDesc> opti
     return arg;
 }
 
+FmtArg FmtVersion(int64_t version, int parts, int by);
+
 template <typename T>
 FmtArg FmtSpan(Span<T> arr, FmtType type, const char *sep = ", ")
 {
@@ -4369,12 +4371,14 @@ static inline bool ParseSize(Span<const char> str, Size *out_size,
 }
 #endif
 
-
 bool ParseDate(Span<const char> date_str, LocalDate *out_date, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
                Span<const char> *out_remaining = nullptr);
 
 bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
                    Span<const char> *out_remaining = nullptr);
+
+bool ParseVersion(Span<const char> str, int parts, int multiplier, int64_t *out_duration,
+                  unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr);
 
 // ------------------------------------------------------------------------
 // Random

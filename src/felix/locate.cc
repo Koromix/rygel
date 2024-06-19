@@ -205,116 +205,122 @@ static bool AdjustLibraryPath(const char *name, const Compiler *compiler,
     return true;
 }
 
-bool FindQtSdk(const Compiler *compiler, Allocator *alloc, QtInfo *out_qt)
+const QtInfo *FindQtSdk(const Compiler *compiler)
 {
-    QtInfo qt = {};
+    static QtInfo qt = {};
+    static bool init = false;
+    static BlockAllocator str_alloc;
 
-    if (const char *str = GetEnv("QMAKE_PATH"); str) {
-        qt.qmake = NormalizePath(str, alloc).ptr;
-    } else {
-        bool success = FindExecutableInPath("qmake6", alloc, &qt.qmake) ||
-                       FindExecutableInPath("qmake", alloc, &qt.qmake) ||
-                       LocateSdkQmake(compiler, alloc, &qt.qmake);
+    if (!init) {
+        init = true;
 
-        if (!success) {
-            LogError("Cannot find QMake binary for Qt");
-            return false;
-        }
-    }
+        if (const char *str = GetEnv("QMAKE_PATH"); str) {
+            qt.qmake = NormalizePath(str, &str_alloc).ptr;
+        } else {
+            bool success = FindExecutableInPath("qmake6", &str_alloc, &qt.qmake) ||
+                           FindExecutableInPath("qmake", &str_alloc, &qt.qmake) ||
+                           LocateSdkQmake(compiler, &str_alloc, &qt.qmake);
 
-    HeapArray<char> specs;
-    {
-        const char *cmd_line = Fmt(alloc, "\"%1\" -query", qt.qmake).ptr;
-
-        if (!ReadCommandOutput(cmd_line, &specs)) {
-            LogError("Failed to get qmake specs: %1", specs.As());
-            return false;
-        }
-    }
-
-    bool valid = true;
-
-    // Parse specs to find moc, include paths, library path
-    {
-        StreamReader st(specs.As<const uint8_t>(), "<qmake>");
-        LineReader reader(&st);
-
-        Span<const char> line;
-        while (reader.Next(&line)) {
-            Span<const char> value = {};
-            Span<const char> key = TrimStr(SplitStr(line, ':', &value));
-            value = TrimStr(value);
-
-            if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
-                qt.binaries = DuplicateString(value, alloc).ptr;
-
-                if (!qt.moc) {
-                    const char *binary = Fmt(alloc, "%1%/moc%2", value, RG_EXECUTABLE_EXTENSION).ptr;
-                    qt.moc = TestFile(binary, FileType::File) ? binary : nullptr;
-                }
-                if (!qt.rcc) {
-                    const char *binary = Fmt(alloc, "%1%/rcc%2", value, RG_EXECUTABLE_EXTENSION).ptr;
-                    qt.rcc = TestFile(binary, FileType::File) ? binary : nullptr;
-                }
-                if (!qt.uic) {
-                    const char *binary = Fmt(alloc, "%1%/uic%2", value, RG_EXECUTABLE_EXTENSION).ptr;
-                    qt.uic = TestFile(binary, FileType::File) ? binary : nullptr;
-                }
-
-#ifdef __APPLE__
-                if (!qt.macdeployqt) {
-                    const char *binary = Fmt(alloc, "%1%/macdeployqt", value).ptr;
-                    qt.macdeployqt = TestFile(binary, FileType::File) ? binary : nullptr;
-                }
-#endif
-            } else if (key == "QT_INSTALL_HEADERS") {
-                qt.headers = DuplicateString(value, alloc).ptr;
-            } else if (key == "QT_INSTALL_LIBS") {
-                valid &= AdjustLibraryPath("libraries", compiler, value, alloc, &qt.libraries);
-            } else if (key == "QT_INSTALL_PLUGINS") {
-                valid &= AdjustLibraryPath("plugins", compiler, value, alloc, &qt.plugins);
-            } else if (key == "QT_VERSION") {
-                qt.version = ParseVersionString(value, 3);
-
-                if (qt.version < 5000000 || qt.version >= 7000000) {
-                    LogError("Only Qt5 and Qt6 are supported");
-                    return false;
-                }
-                qt.version_major = (int)(qt.version / 1000000);
+            if (!success) {
+                LogError("Cannot find QMake binary for Qt");
+                return nullptr;
             }
         }
 
-        valid &= qt.moc && qt.rcc && qt.uic && qt.binaries &&
-                 qt.headers && qt.libraries && qt.plugins && qt.version_major;
+        HeapArray<char> specs;
+        {
+            const char *cmd_line = Fmt(&str_alloc, "\"%1\" -query", qt.qmake).ptr;
+
+            if (!ReadCommandOutput(cmd_line, &specs)) {
+                LogError("Failed to get qmake specs: %1", specs.As());
+                return nullptr;
+            }
+        }
+
+        bool valid = true;
+
+        // Parse specs to find moc, include paths, library path
+        {
+            StreamReader st(specs.As<const uint8_t>(), "<qmake>");
+            LineReader reader(&st);
+
+            Span<const char> line;
+            while (reader.Next(&line)) {
+                Span<const char> value = {};
+                Span<const char> key = TrimStr(SplitStr(line, ':', &value));
+                value = TrimStr(value);
+
+                if (key == "QT_HOST_BINS" || key == "QT_HOST_LIBEXECS") {
+                    qt.binaries = DuplicateString(value, &str_alloc).ptr;
+
+                    if (!qt.moc) {
+                        const char *binary = Fmt(&str_alloc, "%1%/moc%2", value, RG_EXECUTABLE_EXTENSION).ptr;
+                        qt.moc = TestFile(binary, FileType::File) ? binary : nullptr;
+                    }
+                    if (!qt.rcc) {
+                        const char *binary = Fmt(&str_alloc, "%1%/rcc%2", value, RG_EXECUTABLE_EXTENSION).ptr;
+                        qt.rcc = TestFile(binary, FileType::File) ? binary : nullptr;
+                    }
+                    if (!qt.uic) {
+                        const char *binary = Fmt(&str_alloc, "%1%/uic%2", value, RG_EXECUTABLE_EXTENSION).ptr;
+                        qt.uic = TestFile(binary, FileType::File) ? binary : nullptr;
+                    }
+
+    #ifdef __APPLE__
+                    if (!qt.macdeployqt) {
+                        const char *binary = Fmt(&str_alloc, "%1%/macdeployqt", value).ptr;
+                        qt.macdeployqt = TestFile(binary, FileType::File) ? binary : nullptr;
+                    }
+    #endif
+                } else if (key == "QT_INSTALL_HEADERS") {
+                    qt.headers = DuplicateString(value, &str_alloc).ptr;
+                } else if (key == "QT_INSTALL_LIBS") {
+                    valid &= AdjustLibraryPath("libraries", compiler, value, &str_alloc, &qt.libraries);
+                } else if (key == "QT_INSTALL_PLUGINS") {
+                    valid &= AdjustLibraryPath("plugins", compiler, value, &str_alloc, &qt.plugins);
+                } else if (key == "QT_VERSION") {
+                    if (!ParseVersion(value, 3, 1000, &qt.version))
+                        return nullptr;
+
+                    if (qt.version < 5000000 || qt.version >= 7000000) {
+                        LogError("Only Qt5 and Qt6 are supported");
+                        return nullptr;
+                    }
+                    qt.version_major = (int)(qt.version / 1000000);
+                }
+            }
+
+            valid &= qt.moc && qt.rcc && qt.uic && qt.binaries &&
+                     qt.headers && qt.libraries && qt.plugins && qt.version_major;
+        }
+
+        if (!valid) {
+            LogError("Cannot find required Qt tools");
+
+            qt.version = 0;
+            return nullptr;
+        }
+
+        // Determine if Qt is built statically
+        if (compiler->platform == HostPlatform::Windows) {
+            char library0[4046];
+            Fmt(library0, "%1%/Qt%2Core.dll", qt.binaries, qt.version_major);
+
+            qt.shared = TestFile(library0);
+        } else if (compiler->platform == HostPlatform::macOS) {
+            char library0[4046];
+            Fmt(library0, "%1%/libQt%2Core.a", qt.libraries, qt.version_major);
+
+            qt.shared = !TestFile(library0);
+        } else {
+            char library0[4046];
+            Fmt(library0, "%1%/libQt%2Core.so", qt.libraries, qt.version_major);
+
+            qt.shared = TestFile(library0);
+        }
     }
 
-    if (!valid) {
-        LogError("Cannot find required Qt tools");
-
-        qt.version = -1;
-        return false;
-    }
-
-    // Determine if Qt is built statically
-    if (compiler->platform == HostPlatform::Windows) {
-        char library0[4046];
-        Fmt(library0, "%1%/Qt%2Core.dll", qt.binaries, qt.version_major);
-
-        qt.shared = TestFile(library0);
-    } else if (compiler->platform == HostPlatform::macOS) {
-        char library0[4046];
-        Fmt(library0, "%1%/libQt%2Core.a", qt.libraries, qt.version_major);
-
-        qt.shared = !TestFile(library0);
-    } else {
-        char library0[4046];
-        Fmt(library0, "%1%/libQt%2Core.so", qt.libraries, qt.version_major);
-
-        qt.shared = TestFile(library0);
-    }
-
-    std::swap(qt, *out_qt);
-    return true;
+    return (qt.version > 0) ? &qt : nullptr;
 }
 
 static bool TestWasiSdk(const char *path, Allocator *alloc, WasiSdkInfo *out_sdk)

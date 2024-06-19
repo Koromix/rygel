@@ -17,51 +17,22 @@
 
 namespace RG {
 
-static FmtArg FormatVersion(int64_t version, int components)
-{
-    RG_ASSERT(components > 0);
-
-    FmtArg arg = {};
-
-    arg.type = FmtType::Buffer;
-
-    Size len = 0;
-    while (components--) {
-        Span<char> buf = MakeSpan(arg.u.buf + len, RG_SIZE(arg.u.buf) - len);
-
-        int divisor = 1;
-        for (int i = 0; i < components; i++) {
-            divisor *= 1000;
-        }
-        int component = (version / divisor) % 1000;
-
-        len += Fmt(buf, "%1.", component).len;
-    }
-    arg.u.buf[len - 1] = 0;
-
-    return arg;
-}
-
 bool Builder::PrepareQtSdk(int64_t min_version)
 {
     if (missing_qt)
         return false;
 
     if (!qt) {
-        qt = std::make_unique<QtInfo>();
+        qt = FindQtSdk(build.compiler);
 
-        if (!FindQtSdk(build.compiler, &str_alloc, qt.get())) {
-            qt.reset(nullptr);
-
+        if (!qt) {
             missing_qt = true;
             return false;
         }
     }
-    if (!qt->qmake)
-        return false;
 
     if (qt->version < min_version) {
-        LogError("Found Qt %1 but %2 is required", FormatVersion(qt->version, 3), FormatVersion(min_version, 3));
+        LogError("Found Qt %1 but %2 is required", FmtVersion(qt->version, 3, 1000), FmtVersion(min_version, 3, 1000));
         return false;
     }
 

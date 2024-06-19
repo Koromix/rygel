@@ -107,7 +107,7 @@ class Builder {
     const char *import_extension = nullptr;
 
     // Qt stuff
-    std::unique_ptr<QtInfo> qt;
+    const QtInfo *qt = nullptr;
     bool missing_qt = false;
 
     // Javascript bundler

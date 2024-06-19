@@ -664,10 +664,34 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
         if (!valid)
             return 1;
     } else {
+        const QtInfo *qt = nullptr;
+        bool missing_qt = false;
+
         for (const TargetInfo &target: target_set.targets) {
-            if (target.enable_by_default && target.TestPlatforms(compiler->platform)) {
-                enabled_targets.Append({ &target });
+            if (!target.enable_by_default)
+                continue;
+            if (!target.TestPlatforms(compiler->platform))
+                continue;
+
+            if (target.qt_components.len) {
+                if (!qt && !missing_qt) {
+                    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+                    RG_DEFER { PopLogFilter(); };
+
+                    qt = FindQtSdk(compiler.get());
+                    missing_qt = !qt;
+                }
+
+                if (!qt) {
+                    LogWarning("Skipping target '%1' because Qt SDK is missing", target.name);
+                    continue;
+                } else if (qt->version < target.qt_version) {
+                    LogWarning("Skipping target '%1' because it needs Qt >= %2", target.name, FmtVersion(target.qt_version, 3, 1000));
+                    continue;
+                }
             }
+
+            enabled_targets.Append({ &target });
         }
 
         if (!enabled_targets.len) {

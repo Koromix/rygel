@@ -361,8 +361,7 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     } else if (prop.key == "QtComponents") {
                         AppendListValues(prop.value, &set.str_alloc, &target_config.qt_components);
                     } else if (prop.key == "QtVersion") {
-                        target_config.qt_version = ParseVersionString(prop.value, 3);
-                        valid &= (target_config.qt_version >= 0);
+                        valid &= ParseVersion(prop.value, 3, 1000, &target_config.qt_version);
                     } else if (prop.key == "BundleOptions") {
                         target_config.bundle_options = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "AssetDirectory") {
@@ -706,38 +705,6 @@ bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture)
     }
 
     return false;
-}
-
-int64_t ParseVersionString(Span<const char> str, int components)
-{
-    RG_ASSERT(components >= 0 && components < 6);
-
-    int64_t version = 0;
-
-    Span<const char> remain = str;
-
-    while (remain.len && components) {
-        int component = 0;
-        if (!ParseInt(remain, &component, 0, &remain)) {
-            LogError("Malformed version string '%1'", str);
-            return -1;
-        }
-
-        version = (version * 1000) + component;
-        components--;
-
-        if (!remain.len || remain[0] != '.')
-            break;
-        remain.ptr++;
-        remain.len--;
-    }
-
-    while (components) {
-        version *= 1000;
-        components--;
-    }
-
-    return version;
 }
 
 bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, HostArchitecture architecture, TargetSet *out_set)
