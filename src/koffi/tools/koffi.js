@@ -303,6 +303,7 @@ async function build() {
         pkg.scripts = {
             install: 'node src/cnoke/cnoke.js -p . -d src/koffi --prebuild'
         };
+        pkg.cnoke.output = 'build/koffi/{{ platform }}_{{ arch }}';
         delete pkg.devDependencies;
 
         esbuild.buildSync({
