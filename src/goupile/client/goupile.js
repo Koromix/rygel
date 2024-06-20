@@ -263,17 +263,22 @@ async function syncProfile() {
     {
         let lock = await loadSessionValue('lock');
 
+        if (lock?.instances == null) {
+            await deleteSessionValue('lock');
+            lock = null;
+        }
+
         if (lock != null) {
             Util.deleteCookie('session_rnd', '/');
 
             let new_profile = {
                 userid: lock.userid,
                 username: lock.username,
+                instances: lock.instances,
                 online: false,
                 authorized: true,
                 permissions: {
-                    data_load: true,
-                    data_save: true
+                    data_edit: true
                 },
                 namespaces: lock.namespaces,
                 keys: lock.keys,
@@ -820,6 +825,8 @@ async function lock(e, password, ctx = null) {
 
     await confirmDangerousAction(e);
 
+    let instance = profile.instances.find(instance => instance.url == ENV.urls.instance);
+
     let salt = nacl.randomBytes(16);
     let key = await deriveKey(password, salt);
     let enc = await encryptSecretBox(session_rnd, key);
@@ -827,6 +834,7 @@ async function lock(e, password, ctx = null) {
     let lock = {
         userid: profile.userid,
         username: profile.username,
+        instances: [instance],
         salt: Base64.toBase64(salt),
         errors: 0,
         namespaces: {
@@ -894,9 +902,6 @@ async function unlock(e, password) {
 };
 
 function isLocked() {
-    if (controller != InstanceController)
-        return false;
-
     if (profile.lock != null)
         return true;
     if (!hasPermission('data_load'))
