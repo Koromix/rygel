@@ -69,7 +69,7 @@ uint32_t http_ParseAcceptableEncodings(Span<const char> encodings)
 
         acceptable_encodings = high_priority | low_priority;
     } else {
-        acceptable_encodings = AllEncodings;
+        acceptable_encodings = 1u << (int)CompressionType::None;
     }
 
     return acceptable_encodings;
