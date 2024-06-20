@@ -726,6 +726,15 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
             AttachNothing(code);
             AddEncodingHeader(dest_encoding);
         } else {
+            if (data.len > Mebibytes(16)) {
+                static const char *msg = "Refusing excessive content-encoding conversion size";
+
+                LogError(msg);
+                AttachError(415, msg);
+
+                return false;
+            }
+
             RunAsync([=, this]() {
                 StreamReader reader(data, nullptr, src_encoding);
 
@@ -734,7 +743,7 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
                     return;
                 AddEncodingHeader(dest_encoding);
 
-                if (!SpliceStream(&reader, Megabytes(8), &writer))
+                if (!SpliceStream(&reader, -1, &writer))
                     return;
                 writer.Close();
             });
