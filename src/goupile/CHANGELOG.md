@@ -2,20 +2,20 @@
 
 ## Goupile 3.5
 
-### Goupile 3.5.3
+### Goupile 3.5.3 (2024-06-20)
 
 - Fix compatiblity with legacy server-side locks
 - Fix various client-side locking bugs
 - Allow scripts to use lit `until` directive
 
-### Goupile 3.5.2
+### Goupile 3.5.2 (2024-06-20)
 
 - Fix unstyled widget labels in legacy instances
 - Fix esbuild.wasm fetch for non-Brotli content encodings
 - Use identity when Content-Encoding is missing or empty
 - Build Debian packages for ARM64
 
-### Goupile 3.5.1
+### Goupile 3.5.1 (2024-06-18)
 
 - Add pushPath/popPath system to replace "path" widget option
 - Use legacy form code in legacy instances
@@ -24,7 +24,7 @@
 - Expose PeriodPicker widget to legacy instances
 - Clean up leftover debug statements
 
-### Goupile 3.5.0
+### Goupile 3.5.0 (2024-06-17)
 
 - Support running legacy (v2) Goupile projects
 - Bundle page scripts with esbuild to support import and provide better syntax error reports
@@ -33,7 +33,7 @@
 
 ## Goupile 3.4
 
-### Goupile 3.4.0
+### Goupile 3.4.0 (2024-03-22)
 
 - Simplify goupile top menu
 - Change automatic form page with separate levels and tiles
@@ -45,36 +45,36 @@
 
 ## Goupile 3.3
 
-### Goupile 3.3.6
+### Goupile 3.3.6 (2024-02-08)
 
 - Improve data migration from goupile2
 
-### Goupile 3.3.5
+### Goupile 3.3.5 (2024-01-26)
 
 - Reduce permissions for demo users
 - Assign export keys to master instance
 
-### Goupile 3.3.4
+### Goupile 3.3.4 (2024-01-24)
 
 - Add option to disable SQLite snapshots
 - Disable SQLite snapshots in demo domains
 
-### Goupile 3.3.3
+### Goupile 3.3.3 (2024-01-22)
 
 - Warn user about demo mode
 - Fix HTTP property being set from Defaults section
 
-### Goupile 3.3.2
+### Goupile 3.3.2 (2024-01-22)
 
 - Add demo mode to Goupile
 - Show username on password change dialog
 
-### Goupile 3.3.1
+### Goupile 3.3.1 (2024-01-22)
 
 - Add hover effect to tiles
 - Disable Publish button if main script does not work
 
-### Goupile 3.3.0
+### Goupile 3.3.0 (2024-01-20)
 
 - Show completion tiles for groups of forms
 - Show first-level columns and stats in data table
@@ -90,24 +90,24 @@
 
 ## Goupile 3.2
 
-### Goupile 3.2.3
+### Goupile 3.2.3 (2024-01-17)
 
 - Fix UI deadlock in develop mode
 
-### Goupile 3.2.2
+### Goupile 3.2.2 (2024-01-16)
 
 - Fix support for repeated sections and notes
 - Fix undefined variable error while exporting
 - Fix minor deadlock issues
 
-### Goupile 3.2.1
+### Goupile 3.2.1 (2024-01-16)
 
 - Fix missing code for record deletion
 - Improve selection of visible data columns
 - Handle modification time on the server
 - Build with JavaScriptCore
 
-### Goupile 3.2.0
+### Goupile 3.2.0 (2024-01-14)
 
 - Add configurable password complexity checks to goupile
 - Fix generic 'NetworkError is not defined' error
