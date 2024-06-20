@@ -80,12 +80,44 @@ rm /etc/goupile/domains.d/<name>.ini
 
 ### Updates
 
+#### Debian
+
 You should ideally configure your server for automated updates:
 
 ```sh
 apt install unattended-upgrades
 dpkg-reconfigure -pmedium unattended-upgrades
 ```
+
+> [!IMPORTANT]
+> By default, in Debian and derivative distributions, only core packages are updated automatically, so **this is not enough**. Follow the instructions below to fix this and allow Goupile to be updated.
+
+You need to edit `/etc/apt/apt.conf.d/50unattended-upgrades` for Goupile to update too. Depending on your distribution, two syntaxes are possible:
+
+- one uses `Unattended-Upgrade::Allowed-Origins`
+- the other uses `Unattended-Upgrade::Origins-Pattern`
+
+In the first case, find the line `Unattended-Upgrade::Allowed-Origins {` and append `"*:*";` to the next line, like in this example:
+
+```
+Unattended-Upgrade::Allowed-Origins {
+    "*:*";
+}
+```
+
+If this line does not exist, search instead for `Unattended-Upgrade::Origins-Pattern {` and append `"o=*";` to the next line, like in this example:
+
+```
+Unattended-Upgrade::Origins-Pattern {
+    "o=*";
+}
+```
+
+This will allow Goupile to be updated from the koromix.dev Debian repository, at night time, if needed.
+
+#### RedHat / RPM
+
+Follow your distribution manual to enable automatic unattended updates.
 
 ### Backups
 
