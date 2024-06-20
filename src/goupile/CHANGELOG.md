@@ -2,6 +2,13 @@
 
 ## Goupile 3.5
 
+### Goupile 3.5.2
+
+- Fix unstyled widget labels in legacy instances
+- Fix esbuild.wasm fetch for non-Brotli content encodings
+- Use identity when Content-Encoding is missing or empty
+- Build Debian packages for ARM64
+
 ### Goupile 3.5.1
 
 - Add pushPath/popPath system to replace "path" widget option
