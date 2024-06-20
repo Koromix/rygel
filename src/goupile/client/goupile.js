@@ -72,25 +72,17 @@ async function start() {
     if (url.searchParams.get('login')) {
         syncHistory(url.pathname, false);
         url = new URL(window.location.href);
+    } else if (url.searchParams.has('token')) {
+        await Net.post(`${ENV.urls.instance}api/session/token`, {
+            token: url.searchParams.get('token')
+        });
+        await syncProfile();
+    } else if (ENV.auto_key && url.searchParams.has(ENV.auto_key)) {
+        await Net.post(`${ENV.urls.instance}api/session/key`, {
+            key: url.searchParams.get(ENV.auto_key)
+        });
+        await syncProfile();
     } else {
-        if (url.searchParams.has('token')) {
-            let query = new URLSearchParams;
-            query.set('token', url.searchParams.get('token'));
-
-            await Net.fetch(`${ENV.urls.instance}api/session/token`, {
-                method: 'POST',
-                body: query
-            });
-        } else if (ENV.auto_key && url.searchParams.has(ENV.auto_key)) {
-            let query = new URLSearchParams;
-            query.set('key', url.searchParams.get(ENV.auto_key));
-
-            await Net.fetch(`${ENV.urls.instance}api/session/key`, {
-                method: 'POST',
-                body: query
-            });
-        }
-
         await syncProfile();
     }
 

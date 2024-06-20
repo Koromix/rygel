@@ -170,6 +170,7 @@ public:
     bool PassThrough(StreamWriter *writer);
     bool PassThrough(Span<char> *out_buf);
     bool PassThrough(Span<const char> *out_buf) { return PassThrough((Span<char> *)out_buf); }
+    bool PassThrough(const char **out_str);
 
     void PushLogFilter();
 

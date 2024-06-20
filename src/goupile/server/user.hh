@@ -71,6 +71,7 @@ struct SessionStamp {
     bool authorized;
     std::atomic_bool develop;
     uint32_t permissions;
+    const char *lock;
 
     bool HasPermission(UserPermission perm) const { return permissions & (int)perm; };
 
@@ -88,6 +89,7 @@ enum class SessionConfirm {
 class SessionInfo: public RetainObject<SessionInfo> {
     mutable BucketArray<SessionStamp, 8> stamps;
     mutable HashTable<int64_t, SessionStamp *> stamps_map;
+    mutable BlockAllocator stamps_alloc;
 
 public:
     mutable std::shared_mutex mutex;
@@ -110,7 +112,7 @@ public:
     SessionStamp *GetStamp(const InstanceHolder *instance) const;
     void InvalidateStamps();
 
-    void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions);
+    void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *lock = nullptr);
 };
 
 bool LoginUserAuto(int64_t userid, const http_RequestInfo &request, http_IO *io);

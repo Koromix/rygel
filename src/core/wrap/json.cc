@@ -380,7 +380,20 @@ bool json_Parser::PassThrough(Span<char> *out_buf)
     if (!PassThrough(&st))
         return false;
 
+    buf.Grow(1);
+    buf.ptr[buf.len] = 0;
+
     *out_buf = buf.Leak().As<char>();
+    return true;
+}
+
+bool json_Parser::PassThrough(const char **out_str)
+{
+    Span<char> buf;
+    if (!PassThrough(&buf))
+        return false;
+
+    *out_str = buf.ptr;
     return true;
 }
 
