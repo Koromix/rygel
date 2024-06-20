@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, svg, until } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
 import { Base64, Sha256 } from '../../web/libjs/crypto.js';
 import * as IDB from '../../web/libjs/indexedDB.js';
@@ -1236,6 +1236,7 @@ async function runCodeAsync(title, code, args) {
 
         html: html,
         svg: svg,
+        until: until,
         LocalDate: LocalDate,
         LocalTime: LocalTime,
         PeriodPicker: PeriodPicker,
@@ -1278,6 +1279,7 @@ function runCodeSync(title, code, args) {
 
         html: html,
         svg: svg,
+        until: until,
         LocalDate: LocalDate,
         LocalTime: LocalTime,
         PeriodPicker: PeriodPicker,
