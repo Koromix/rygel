@@ -218,7 +218,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="text" class="fm_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
@@ -243,7 +243,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             <textarea id=${id} class="fm_input" style=${makeInputStyle(options)}
                    rows=${options.rows || 3} cols=${options.cols || 30}
                    placeholder=${options.placeholder || ''}
@@ -267,7 +267,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
@@ -299,7 +299,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
                    inputmode="none" autocomplete="new-password" .value=${value || ''}
@@ -352,7 +352,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="number" class="fm_input" style=${makeInputStyle(options)}
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
@@ -463,7 +463,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             <div class=${'fm_slider' + (value == null ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
@@ -562,7 +562,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
@@ -625,7 +625,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             <div style=${'display: inline-block; max-width: 100%; ' + makeInputStyle(options)}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 <select id=${id} class="fm_select" ?disabled=${options.disabled}
@@ -672,7 +672,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             <div class=${options.readonly ? 'fm_radio readonly' : 'fm_radio'}
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) => {
@@ -732,7 +732,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label ? html`<label for=${id}>${label}</label>` : ''}
+            ${label ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
@@ -816,7 +816,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             <div class=${options.readonly ? 'fm_check readonly' : 'fm_check'}
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) =>
@@ -927,7 +927,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'date' : 'text'}
                    class="fm_input" style=${makeInputStyle(options)}
@@ -991,7 +991,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_month ? 'month' : 'text'}
                    class="fm_input" style=${makeInputStyle(options)}
@@ -1053,7 +1053,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'time' : 'text'} step
                    class="fm_input" style=${makeInputStyle(options)}
@@ -1130,7 +1130,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             <input id=${id} type="file" size="${options.size || 30}"
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
@@ -1189,7 +1189,7 @@ function FormBuilder(state, model, readonly = false) {
 
         let id = makeID(key);
         let render = intf => renderWrappedWidget(intf, html`
-            ${label != null ? html`<label for=${id}>${label}</label>` : ''}
+            ${label != null ? html`<div class="fm_label"><label for=${id}>${label}</label></div>` : ''}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <span id="${id}" class="fm_calc">${text}</span>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}

@@ -261,7 +261,7 @@ function FormBuilder(state, model) {
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="text" class="fm_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
@@ -285,7 +285,7 @@ function FormBuilder(state, model) {
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             <textarea id=${id} class="fm_input" style=${makeInputStyle(options)}
                    rows=${options.rows || 3} cols=${options.cols || 30}
                    placeholder=${options.placeholder || ''}
@@ -308,7 +308,7 @@ function FormBuilder(state, model) {
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
@@ -339,7 +339,7 @@ function FormBuilder(state, model) {
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="password" class="fm_input" style=${makeInputStyle(options)}
                    inputmode="none" autocomplete="new-password" .value=${value || ''}
@@ -391,7 +391,7 @@ function FormBuilder(state, model) {
         });
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="number" class="fm_input" style=${makeInputStyle(options)}
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
@@ -501,7 +501,7 @@ function FormBuilder(state, model) {
         // with seemingly random px and em offsets. If you want to do better, be my guest :)
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             <div class=${'fm_slider' + (value == null ? ' missing' : '') + (options.readonly ? ' readonly' : '')}
                  style=${makeInputStyle(options)}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
@@ -600,7 +600,7 @@ function FormBuilder(state, model) {
         });
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
@@ -663,7 +663,7 @@ function FormBuilder(state, model) {
         });
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             <div style=${'display: inline-block; max-width: 100%; ' + makeInputStyle(options)}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 <select id=${id} class="fm_select" ?disabled=${options.disabled}
@@ -710,7 +710,7 @@ function FormBuilder(state, model) {
         let tabbed = false;
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             <div class=${options.readonly ? 'fm_radio readonly' : 'fm_radio'}
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) => {
@@ -770,7 +770,7 @@ function FormBuilder(state, model) {
         });
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             <div class=${options.readonly ? 'fm_enum readonly' : 'fm_enum'} id=${id}>
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
@@ -854,7 +854,7 @@ function FormBuilder(state, model) {
         });
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             <div class=${options.readonly ? 'fm_check readonly' : 'fm_check'}
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) =>
@@ -964,7 +964,7 @@ function FormBuilder(state, model) {
         });
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'date' : 'text'}
                    class="fm_input" style=${makeInputStyle(options)}
@@ -1027,7 +1027,7 @@ function FormBuilder(state, model) {
             value.day = null;
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_month ? 'month' : 'text'}
                    class="fm_input" style=${makeInputStyle(options)}
@@ -1088,7 +1088,7 @@ function FormBuilder(state, model) {
         });
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type=${has_input_date ? 'time' : 'text'} step
                    class="fm_input" style=${makeInputStyle(options)}
@@ -1164,7 +1164,7 @@ function FormBuilder(state, model) {
         let set_files = directive(SetFiles);
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             <input id=${id} type="file" size="${options.size || 30}"
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
@@ -1222,7 +1222,7 @@ function FormBuilder(state, model) {
         }
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf, id)}
+            ${makeLabel(intf)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <span id="${id}" class="fm_calc">${text}</span>
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
@@ -2006,6 +2006,8 @@ instead of:
         if (intf.label == null)
             return '';
 
+        let tags = Array.isArray(intf.options.tags) ? intf.options.tags : [];
+
         return html`
             <div class="fm_label">
                 <label for=${intf.id}>
@@ -2013,10 +2015,11 @@ instead of:
                     ${intf.options.annotate ? html`<span style="font-weight: normal;">(<a @click=${e => annotate(e, intf)}>annoter</a>)</span>` : ''}
                 </label>
 
-                <div class="fm_tags">
-                    ${Array.isArray(intf.options.tags) ? intf.options.tags.map(tag =>
-                        html` <span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</span>`) : ''}
-                </div>
+                ${tags.length ? html`
+                    <div class="fm_tags">
+                        ${tags.map(tag => html` <span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</span>`)}
+                    </div>
+                ` : ''}
             </div>
         `;
     }
