@@ -2,6 +2,12 @@
 
 ## Goupile 3.5
 
+### Goupile 3.5.3
+
+- Fix compatiblity with legacy server-side locks
+- Fix various client-side locking bugs
+- Allow scripts to use lit `until` directive
+
 ### Goupile 3.5.2
 
 - Fix unstyled widget labels in legacy instances
