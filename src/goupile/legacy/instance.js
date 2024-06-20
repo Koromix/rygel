@@ -231,7 +231,7 @@ function renderMenu() {
                     </div>
                 </div>
             ` : ''}
-            ${profile.lock != null ? html`
+            ${goupile.canUnlock() ? html`
                 <button class="icon lock"
                         @click=${UI.wrap(goupile.runUnlockDialog)}>Déverrouiller</button>
             ` : ''}

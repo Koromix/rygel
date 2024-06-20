@@ -31,6 +31,7 @@ let profile = {};
 let electron = (typeof process !== 'undefined' && typeof process.versions === 'object' &&
                 !!process.versions.electron);
 
+let can_unlock = false;
 let profile_keys = {};
 let confirm_promise;
 
@@ -241,7 +242,7 @@ async function syncProfile() {
         let response = await Net.fetch(`${ENV.urls.instance}api/session/profile`);
 
         let new_profile = await response.json();
-        await updateProfile(new_profile, true);
+        updateProfile(new_profile);
     } catch (err) {
         if (ENV.use_offline) {
             if (!(err instanceof NetworkError))
@@ -253,10 +254,10 @@ async function syncProfile() {
 
     // Client-side lock?
     {
-        let lock = await loadSessionValue('lock');
+        let lock = loadLocal('lock');
 
         if (lock?.instances == null) {
-            await deleteSessionValue('lock');
+            deleteLocal('lock');
             lock = null;
         }
 
@@ -276,7 +277,7 @@ async function syncProfile() {
                 keys: lock.keys,
                 lock: lock.lock
             };
-            await updateProfile(new_profile);
+            updateProfile(new_profile, true);
 
             return;
         }
@@ -391,7 +392,7 @@ async function runLoginScreen(e, initial) {
         }
     }
 
-    await updateProfile(new_profile);
+    updateProfile(new_profile);
 }
 
 async function runPasswordScreen(e, initial) {
@@ -674,7 +675,7 @@ async function loginOnline(username, password) {
         let new_profile = await response.json();
 
         // Release client-side lock
-        await deleteSessionValue('lock');
+        deleteLocal('lock');
 
         return new_profile;
     } else {
@@ -723,7 +724,7 @@ async function loginOffline(username, password) {
     }
 
     // Release client-side lock
-    await deleteSessionValue('lock');
+    deleteLocal('lock');
 
     return new_profile;
 }
@@ -737,8 +738,9 @@ async function deriveKey(password, salt) {
     return new Uint8Array(derived);
 }
 
-async function updateProfile(new_profile) {
+function updateProfile(new_profile, unlock = false) {
     profile = Object.assign({}, new_profile);
+    can_unlock = unlock;
 
     // Keep keys local to "hide" (as much as JS allows..) them
     if (profile.keys != null) {
@@ -762,8 +764,8 @@ async function logout(e) {
     try {
         await Net.post(`${ENV.urls.instance}api/session/logout`);
 
-        await updateProfile({});
-        await deleteSessionValue('lock');
+        updateProfile({});
+        deleteLocal('lock');
 
         // Clear state and start from fresh as a precaution
         let url = new URL(window.location.href);
@@ -839,7 +841,7 @@ async function lock(e, password, ctx = null) {
         lock: ctx
     };
 
-    await storeSessionValue('lock', lock);
+    storeLocal('lock', lock);
     Util.deleteCookie('session_rnd', '/');
 
     window.onbeforeunload = null;
@@ -850,7 +852,7 @@ async function lock(e, password, ctx = null) {
 async function unlock(e, password) {
     await confirmDangerousAction(e);
 
-    let lock = await loadSessionValue('lock');
+    let lock = loadLocal('lock');
     if (lock == null)
         throw new Error('Session is not locked');
 
@@ -864,7 +866,7 @@ async function unlock(e, password) {
         let session_rnd = await decryptSecretBox(lock.session_rnd, key);
 
         Util.setCookie('session_rnd', session_rnd, '/');
-        await deleteSessionValue('lock');
+        deleteLocal('lock');
 
         progress.success('Déverrouillage effectué');
     } catch (err) {
@@ -874,7 +876,7 @@ async function unlock(e, password) {
 
         if (lock.errors >= 5) {
             Log.error('Déverrouillage refusé, blocage de sécurité imminent');
-            await deleteSessionValue('lock');
+            deleteLocal('lock');
 
             setTimeout(() => {
                 window.onbeforeunload = null;
@@ -882,7 +884,7 @@ async function unlock(e, password) {
             }, 3000);
         } else {
             Log.error('Déverrouillage refusé');
-            await storeSessionValue('lock', lock);
+            storeLocal('lock', lock);
         }
 
         return;
@@ -901,6 +903,10 @@ function isLocked() {
 
     return false;
 };
+
+function canUnlock() {
+    return can_unlock;
+}
 
 function confirmDangerousAction(e) {
     if (controller == null)
@@ -987,7 +993,7 @@ async function openLocalDB() {
     return db;
 }
 
-function loadSessionValue(key) {
+function loadLocal(key) {
     key = ENV.urls.base + key;
 
     let json = localStorage.getItem(key);
@@ -997,14 +1003,14 @@ function loadSessionValue(key) {
     return JSON.parse(json);
 }
 
-function storeSessionValue(key, obj) {
+function storeLocal(key, obj) {
     key = ENV.urls.base + key;
-    obj = JSON.stringify(obj);
 
+    obj = JSON.stringify(obj);
     localStorage.setItem(key, obj);
 }
 
-function deleteSessionValue(key) {
+function deleteLocal(key) {
     key = ENV.urls.base + key;
     localStorage.removeItem(key);
 }
@@ -1065,6 +1071,7 @@ export {
     lock,
     unlock,
     isLocked,
+    canUnlock,
 
     hasPermission,
     confirmDangerousAction,

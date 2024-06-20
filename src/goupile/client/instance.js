@@ -196,8 +196,8 @@ async function runTasks(online) {
 }
 
 function renderMenu() {
-    let show_menu = (profile.lock == null && (route.page.menu.chain.length > 2 ||
-                                              route.page.menu.chain[0].children.length > 1));
+    let show_menu = !goupile.isLocked() && (route.page.menu.chain.length > 2 ||
+                                            route.page.menu.chain[0].children.length > 1);
     let menu_is_wide = isMenuWide(route.page.menu);
     let show_title = !show_menu;
 
@@ -219,7 +219,7 @@ function renderMenu() {
                     </div>
                 </div>
             ` : ''}
-            ${profile.lock != null ? html`
+            ${goupile.canUnlock() ? html`
                 <button class="icon lock"
                         @click=${UI.wrap(goupile.runUnlockDialog)}>Déverrouiller</button>
             ` : ''}
@@ -268,34 +268,31 @@ function renderMenu() {
                     </div>
                 </div>
             ` : ''}
-            ${profile.lock == null ? html`
-                <div class="drop right">
-                    <button class=${goupile.isLoggedOnline() ? 'icon online' : 'icon offline'}
-                            @click=${UI.deployMenu}>${profile.type !== 'auto' ? profile.username : ''}</button>
-                    <div>
-                        ${profile.type === 'auto' && profile.userid ? html`
-                            <button style="text-align: center;">${profile.username}</button>
+
+            <div class="drop right">
+                <button class=${goupile.isLoggedOnline() ? 'icon online' : 'icon offline'}
+                        @click=${UI.deployMenu}>${profile.type !== 'auto' ? profile.username : ''}</button>
+                <div>
+                    ${profile.type === 'auto' && profile.userid ? html`
+                        <button style="text-align: center;">${profile.username}</button>
+                        <hr/>
+                    ` : ''}
+                    ${profile.type === 'login' ? html`
+                        <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>Modifier mon mot de passe</button>
+                        <button @click=${UI.wrap(goupile.runResetTOTP)}>Configurer la double authentification</button>
+                        <hr/>
+                        ${goupile.hasPermission('data_export') ? html`
+                            <button @click=${UI.wrap(generateExportKey)}>Générer une clé d'export</button>
                             <hr/>
                         ` : ''}
-                        ${profile.type === 'login' ? html`
-                            <button @click=${UI.wrap(goupile.runChangePasswordDialog)}>Modifier mon mot de passe</button>
-                            <button @click=${UI.wrap(goupile.runResetTOTP)}>Configurer la double authentification</button>
-                            <hr/>
-                            ${goupile.hasPermission('data_export') ? html`
-                                <button @click=${UI.wrap(generateExportKey)}>Générer une clé d'export</button>
-                                <hr/>
-                            ` : ''}
-                        ` : ''}
-                        ${profile.root || goupile.hasPermission('build_admin') ? html`
-                            <button @click=${e => window.open('/admin/')}>Administration</button>
-                            <hr/>
-                        ` : ''}
-                        <button @click=${UI.wrap(goupile.logout)}>${profile.userid ? 'Se déconnecter' : 'Se connecter'}</button>
-                    </div>
+                    ` : ''}
+                    ${profile.root || goupile.hasPermission('build_admin') ? html`
+                        <button @click=${e => window.open('/admin/')}>Administration</button>
+                        <hr/>
+                    ` : ''}
+                    <button @click=${UI.wrap(goupile.logout)}>${profile.userid ? 'Se déconnecter' : 'Se connecter'}</button>
                 </div>
-            ` : ''}
-            ${profile.lock != null ?
-                html`<button class="icon online" @click=${UI.wrap(goupile.goToLogin)}>Se connecter</button>` : ''}
+            </div>
         </nav>
     `;
 }
@@ -725,8 +722,8 @@ function toggleTagFilter(tag) {
 }
 
 async function renderForm() {
-    let show_menu = (profile.lock == null && (route.page.menu.chain.length > 2 ||
-                                              route.page.menu.chain[0].children.length > 1));
+    let show_menu = !goupile.isLocked() && (route.page.menu.chain.length > 2 ||
+                                            route.page.menu.chain[0].children.length > 1);
     let menu_is_wide = isMenuWide(route.page.menu);
 
     return html`
@@ -849,8 +846,8 @@ async function renderPage() {
             triggerError(route.page.filename, err);
     }
 
-    let show_menu = (profile.lock == null && (route.page.menu.chain.length > 2 ||
-                                              route.page.menu.chain[0].children.length > 1));
+    let show_menu = !goupile.isLocked() && (route.page.menu.chain.length > 2 ||
+                                            route.page.menu.chain[0].children.length > 1);
     let menu_is_wide = isMenuWide(route.page.menu);
 
     // Quick access to page sections
