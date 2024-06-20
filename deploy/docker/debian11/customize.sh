@@ -14,4 +14,4 @@ echo "deb-src http://apt.llvm.org/bullseye/ llvm-toolchain-bullseye-17 main" >> 
 echo "deb http://deb.debian.org/debian bullseye-backports main" >> /etc/apt/sources.list
 
 apt update
-apt install -y clang-15 lld-15
+apt install -y clang-17 lld-17
