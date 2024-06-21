@@ -304,6 +304,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             }
         }
 
+        int64_t new_anchor = -1;
+
         bool success = instance->db->Transaction([&]() {
             int64_t now = GetUnixTime();
 
@@ -416,7 +418,6 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             }
 
             // Insert entry fragment
-            int64_t new_anchor;
             {
                 sq_Statement stmt;
                 if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
@@ -491,7 +492,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         if (!success)
             return;
 
-        io->AttachText(200, "{}", "application/json");
+        const char *json = Fmt(&io->allocator, "{ \"anchor\": %1 }", new_anchor).ptr;
+        io->AttachText(200, json, "application/json");
     });
 }
 
