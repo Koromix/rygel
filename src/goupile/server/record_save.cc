@@ -190,6 +190,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         } else if (key == "data") {
                             switch (parser.PeekToken()) {
                                 case json_TokenType::Null: {
+                                    parser.ParseNull();
+
                                     fragment.data = {};
                                     fragment.has_data = true;
                                 } break;
@@ -206,7 +208,10 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             }
                         } else if (key == "meta") {
                             switch (parser.PeekToken()) {
-                                case json_TokenType::Null: { fragment.meta = {}; } break;
+                                case json_TokenType::Null: {
+                                    parser.ParseNull();
+                                    fragment.meta = {}; 
+                                } break;
                                 case json_TokenType::StartObject: { parser.PassThrough(&fragment.meta); } break;
 
                                 default: {
