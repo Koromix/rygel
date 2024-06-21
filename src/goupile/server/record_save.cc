@@ -141,7 +141,6 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
     io->RunAsync([=]() {
         char tid[27];
         RecordFragment fragment = {};
-        bool has_deletes = false;
         {
             StreamReader st;
             if (!io->OpenForRead(Kibibytes(64), &st))
@@ -271,13 +270,6 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             return;
                         }
                     }
-
-                    if (!fragment.has_data) {
-                        has_deletes = true;
-
-                        fragment.meta = {};
-                        fragment.tags.len = 0;
-                    }
                 } else if (parser.IsValid()) {
                     LogError("Unexpected key '%1'", key);
                     io->AttachError(422);
@@ -400,11 +392,6 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                         return false;
                     }
                 }
-            }
-            if (has_deletes && !stamp->HasPermission(UserPermission::DataDelete)) {
-                LogError("You are not allowed to delete records");
-                io->AttachError(403);
-                return false;
             }
 
             // Apply constraints
