@@ -622,17 +622,18 @@ function renderData() {
                                 <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
                                 ${data_columns.map(col => {
                                     let status = computeStatus(col.item, row);
+                                    let summary = row.entries[col.item.store.key]?.summary;
                                     let url = col.item.url + `/${row.tid}`;
                                     let highlight = active && route.page.menu.chain.includes(col.item);
 
                                     if (status.complete) {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
-                                                        title=${col.item.title}><a href=${url}>Complet</a></td>`;
+                                                        title=${col.item.title}><a href=${url}>${summary ?? '✓\uFE0E Rempli'}</a></td>`;
                                     } else if (status.filled) {
                                         let progress = Math.floor(100 * status.filled / status.total);
 
                                         return html`<td class=${highlight ? 'partial active' : 'partial'}
-                                                        title=${col.item.title}><a href=${url}>${progress}%</a></td>`;
+                                                        title=${col.item.title}><a href=${url}>${summary ?? progress + '%'}</a></td>`;
                                     } else {
                                         return html`<td class=${highlight ? 'missing active' : 'missing'}
                                                         title=${col.item.title}><a href=${url}>Afficher</a></td>`;

@@ -287,12 +287,6 @@ html.small #ins_page { border-bottom-width: calc(2.8em + 12px); }
 
 #ins_data td:not(.active).partial a { color: #346bb8; }
 #ins_data td:not(.active).complete a { color: #298a6a; }
-#ins_data td.complete a::before {
-    padding-right: 8px;
-    font-size: 0.9em;
-    font-weight: bold;
-    content: '✓\FE0E';
-}
 
 /* -------------------- Misc -------------------- */
 

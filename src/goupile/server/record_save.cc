@@ -30,6 +30,7 @@ struct RecordFragment {
     char eid[27] = {};
     const char *store = nullptr;
     int64_t anchor = -1;
+    const char *summary = nullptr;
     bool has_data = false;
     Span<const char> data = {};
     Span<const char> meta = {};
@@ -186,6 +187,8 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
                             parser.ParseString(&fragment.store);
                         } else if (key == "anchor") {
                             parser.ParseInt(&fragment.anchor);
+                        } else if (key == "summary") {
+                            parser.SkipNull() || parser.ParseString(&fragment.summary);
                         } else if (key == "data") {
                             switch (parser.PeekToken()) {
                                 case json_TokenType::Null: {
@@ -413,12 +416,13 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             {
                 sq_Statement stmt;
                 if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
-                                                                         mtime, fs, data, meta, tags)
-                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                                                                         mtime, fs, summary, data, meta, tags)
+                                              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
                                               RETURNING anchor)",
                                               &stmt, prev_anchor > 0 ? sq_Binding(prev_anchor) : sq_Binding(), tid,
-                                              fragment.eid, session->userid, session->username, now, fragment.fs,
-                                              fragment.data, fragment.meta, TagsToJson(fragment.tags, &io->allocator)))
+                                              fragment.eid, session->userid, session->username, now,
+                                              fragment.fs,fragment.summary, fragment.data,
+                                              fragment.meta, TagsToJson(fragment.tags, &io->allocator)))
                     return false;
                 if (!stmt.GetSingleValue(&new_anchor))
                     return false;
@@ -428,19 +432,20 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
             int64_t e;
             {
                 sq_Statement stmt;
-                if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime,
-                                                                       store, sequence, deleted, data, meta, tags)
-                                              VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8, ?9)
+                if (!instance->db->Prepare(R"(INSERT INTO rec_entries (tid, eid, anchor, ctime, mtime, store,
+                                                                       sequence, deleted, summary, data, meta, tags)
+                                              VALUES (?1, ?2, ?3, ?4, ?4, ?5, -1, ?6, ?7, ?8, ?9, ?10)
                                               ON CONFLICT DO UPDATE SET anchor = excluded.anchor,
                                                                         mtime = excluded.mtime,
                                                                         deleted = excluded.deleted,
+                                                                        summary = excluded.summary,
                                                                         data = json_patch(data, excluded.data),
                                                                         meta = excluded.meta,
                                                                         tags = excluded.tags
                                               RETURNING rowid)",
                                            &stmt, tid, fragment.eid, new_anchor, now, fragment.store,
-                                           0 + !fragment.data.len, fragment.data, fragment.meta,
-                                           TagsToJson(fragment.tags, &io->allocator)))
+                                           0 + !fragment.data.len, fragment.summary, fragment.data,
+                                           fragment.meta, TagsToJson(fragment.tags, &io->allocator)))
                     return false;
                 if (!stmt.GetSingleValue(&e))
                     return false;
@@ -612,12 +617,12 @@ void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &reques
                 {
                     sq_Statement stmt;
                     if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (previous, tid, eid, userid, username,
-                                                                             mtime, fs, data, meta, tags)
-                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                                                                             mtime, fs, summary, data, meta, tags)
+                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
                                                   RETURNING anchor)",
                                                   &stmt, prev_anchor, tid,
                                                   eid, session->userid, session->username, now, nullptr,
-                                                  nullptr, nullptr, tags))
+                                                  nullptr, nullptr, nullptr, tags))
                         return false;
                     if (!stmt.GetSingleValue(&new_anchor))
                         return false;

@@ -50,6 +50,7 @@ struct RecordInfo {
     int64_t sequence = -1;
     Span<const char> tags = {};
 
+    const char *summary = nullptr;
     Span<const char> data = {};
     Span<const char> meta = {};
 };
@@ -84,8 +85,9 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
     if (filter.audit_anchor < 0) {
         sql.len += Fmt(sql.TakeAvailable(),
                        R"(SELECT t.rowid AS t, t.tid, t.locked,
-                                 e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime, e.store, e.sequence,
-                                 e.tags AS tags, IIF(?6 = 1, e.data, NULL) AS data, IIF(?7 = 1, e.meta, NULL) AS meta
+                                 e.rowid AS e, e.eid, e.deleted, e.anchor, e.ctime, e.mtime,
+                                 e.store, e.sequence, e.summary, e.tags AS tags,
+                                 IIF(?6 = 1, e.data, NULL) AS data, IIF(?7 = 1, e.meta, NULL) AS meta
                           FROM rec_threads t
                           INNER JOIN rec_entries e ON (e.tid = t.tid)
                           WHERE 1=1)").len;
@@ -111,13 +113,13 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
         RG_ASSERT(!filter.use_claims);
 
         sql.len += Fmt(sql.TakeAvailable(),
-                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, data, meta, tags) AS (
-                              SELECT 1, eid, anchor, mtime, data, meta, tags
+                       R"(WITH RECURSIVE rec (idx, eid, anchor, mtime, summary, data, meta, tags) AS (
+                              SELECT 1, eid, anchor, mtime, summary, data, meta, tags
                                   FROM rec_fragments
                                   WHERE (tid = ?1 OR ?1 IS NULL) AND
                                         anchor <= ?3 AND previous IS NULL
                               UNION ALL
-                              SELECT rec.idx + 1, f.eid, f.anchor, f.mtime,
+                              SELECT rec.idx + 1, f.eid, f.anchor, f.mtime, f.summary,
                                   IIF(?6 = 1, json_patch(rec.data, f.data), NULL) AS data,
                                   IIF(?7 = 1, json_patch(rec.meta, f.meta), NULL) AS meta,
                                   f.tags
@@ -128,7 +130,7 @@ bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const Recor
                           SELECT t.rowid AS t, t.tid, t.locked,
                                  e.rowid AS e, e.eid, IIF(rec.data IS NULL, 1, 0) AS deleted,
                                  rec.anchor, e.ctime, rec.mtime, e.store, e.sequence,
-                                 rec.tags, rec.data, rec.meta
+                                 rec.summary, rec.tags, rec.data, rec.meta
                               FROM rec
                               INNER JOIN rec_entries e ON (e.eid = rec.eid)
                               INNER JOIN rec_threads t ON (t.tid = e.tid)
@@ -221,11 +223,12 @@ again:
     cursor.mtime = sqlite3_column_int64(stmt, 8);
     cursor.store = (const char *)sqlite3_column_text(stmt, 9);
     cursor.sequence = sqlite3_column_int64(stmt, 10);
-    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 11), sqlite3_column_bytes(stmt, 11));
+    cursor.summary = (const char *)sqlite3_column_text(stmt, 11);
+    cursor.tags = MakeSpan((const char *)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12));
 
-    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 12), sqlite3_column_bytes(stmt, 12))
+    cursor.data = read_data ? MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13))
                             : MakeSpan((const char *)nullptr, 0);
-    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 13), sqlite3_column_bytes(stmt, 13))
+    cursor.meta = read_meta ? MakeSpan((const char *)sqlite3_column_text(stmt, 14), sqlite3_column_bytes(stmt, 14))
                             : MakeSpan((const char *)nullptr, 0);
 
     return true;
@@ -339,6 +342,11 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
             json.Key("ctime"); json.Int64(cursor->ctime);
             json.Key("mtime"); json.Int64(cursor->mtime);
             json.Key("sequence"); json.Int64(cursor->sequence);
+            if (cursor->summary) {
+                json.Key("summary"); json.String(cursor->summary);
+            } else {
+                json.Key("summary"); json.Null();
+            }
             json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
 
             json.EndObject();
@@ -470,6 +478,11 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             json.Key("ctime"); json.Int64(cursor->ctime);
             json.Key("mtime"); json.Int64(cursor->mtime);
             json.Key("sequence"); json.Int64(cursor->sequence);
+            if (cursor->summary) {
+                json.Key("summary"); json.String(cursor->summary);
+            } else {
+                json.Key("summary"); json.Null();
+            }
             json.Key("tags"); JsonRawOrNull(cursor->tags, &json);
 
             json.Key("data"); JsonRawOrNull(cursor->data, &json);
