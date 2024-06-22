@@ -265,6 +265,22 @@ bool sq_Database::RunMany(const char *sql)
     return true;
 }
 
+bool sq_Database::TableExists(const char *table)
+{
+    sq_Statement stmt;
+    if (!Prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?1", &stmt, table))
+        return false;
+    return stmt.Step();
+}
+
+bool sq_Database::ColumnExists(const char *table, const char *column)
+{
+    sq_Statement stmt;
+    if (!Prepare("SELECT name FROM pragma_table_info(?1) WHERE name = ?2", &stmt, table, column))
+        return false;
+    return stmt.Step();
+}
+
 bool sq_Database::BackupTo(const char *filename)
 {
     sq_Database dest_db;

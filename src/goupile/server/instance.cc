@@ -2192,6 +2192,10 @@ bool MigrateInstance(sq_Database *db, int target)
             } [[fallthrough]];
 
             case 114: {
+                if (!db->ColumnExists("rec_fragments", "page") &&
+                        !db->Run("ALTER TABLE rec_fragments ADD COLUMN page TEXT"))
+                    return false;
+
                 bool success = db->RunMany(R"(
                     DROP INDEX rec_fragments_t;
                     DROP INDEX rec_fragments_r;
@@ -2253,6 +2257,10 @@ bool MigrateInstance(sq_Database *db, int target)
             } [[fallthrough]];
 
             case 118: {
+                if (!db->ColumnExists("rec_fragments", "page") &&
+                        !db->Run("ALTER TABLE rec_fragments ADD COLUMN page TEXT"))
+                    return false;
+
                 bool success = db->RunMany(R"(
                     DROP INDEX rec_entries_ts;
                     DROP INDEX rec_entries_e;

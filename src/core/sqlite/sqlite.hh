@@ -191,6 +191,9 @@ public:
 
     bool RunMany(const char *sql);
 
+    bool TableExists(const char *table);
+    bool ColumnExists(const char *table, const char *column);
+
     bool BackupTo(const char *filename);
     bool Checkpoint(bool restart = false);
 
