@@ -2577,7 +2577,11 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)len);
 
                 while (buf.len) {
+#ifdef _WIN32
+                    Size write_len = _write(fd, buf.ptr, (unsigned int)buf.len);
+#else
                     Size write_len = RG_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
+#endif
                     if (write_len < 0) {
                         LogError("Failed to write to disk: %1", strerror(errno));
                         return (size_t)0;

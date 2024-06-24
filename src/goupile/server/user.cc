@@ -843,7 +843,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
     }
 
     io->RunAsync([=]() {
-        Span<const char> token;
+        Span<const char> token = {};
         {
             StreamReader st;
             if (!io->OpenForRead(Kibibytes(1), &st))
