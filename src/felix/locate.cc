@@ -459,7 +459,7 @@ const char *FindArduinoSdk()
 
             path.len = ConvertWin32WideToUtf8(buf_w, path);
             if (path.len < 0)
-                return false;
+                return nullptr;
 
             for (char &c: path) {
                 c = (c == '/') ? '\\' : c;
