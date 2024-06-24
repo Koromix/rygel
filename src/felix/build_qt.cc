@@ -207,11 +207,13 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
             if (build.compiler->platform == HostPlatform::Windows) {
                 const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5",
-                                          qt->libraries, lib_prefix, qt->version_major, component, import_extension).ptr;
+                                          qt->libraries, build.compiler->GetLibPrefix(), qt->version_major,
+                                          component, build.compiler->GetImportExtension()).ptr;
                 obj_filenames->Append(library);
             } else {
                 const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5.%6",
-                                          qt->libraries, lib_prefix, qt->version_major, component, import_extension, qt->version_major).ptr;
+                                          qt->libraries, build.compiler->GetLibPrefix(), qt->version_major,
+                                          component, build.compiler->GetImportExtension(), qt->version_major).ptr;
                 obj_filenames->Append(library);
             }
         }
@@ -240,13 +242,16 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
         // Add all plugins for simplicity unless only Core or Network are used
         if (link_plugins) {
-            EnumerateFiles(qt->plugins, archive_filter, 3, 512, &str_alloc, link_libraries);
+            char filter[32];
+            Fmt(filter, "*%1", build.compiler->GetArchiveExtension());
+
+            EnumerateFiles(qt->plugins, filter, 3, 512, &str_alloc, link_libraries);
 
             // Read plugin PRL files to add missing libraries
             for (Size i = prev_len, end = link_libraries->len; i < end; i++) {
                 const char *library = (*link_libraries)[i];
 
-                Span<const char> base = MakeSpan(library, strlen(library) - strlen(archive_filter) + 1);
+                Span<const char> base = MakeSpan(library, strlen(library) - strlen(filter) + 1);
                 const char *prl_filename = Fmt(&str_alloc, "%1.prl", base).ptr;
 
                 if (TestFile(prl_filename)) {
@@ -257,8 +262,9 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
 
         // Add explicit component libraries
         for (const char *component: target.qt_components) {
-            const char *library_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt->libraries, lib_prefix, qt->version_major, component, archive_filter + 1).ptr;
-            const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt->libraries, lib_prefix, qt->version_major, component).ptr;
+            const char *library_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4%5", qt->libraries, build.compiler->GetLibPrefix(), qt->version_major,
+                                                                             component, build.compiler->GetArchiveExtension()).ptr;
+            const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt->libraries, build.compiler->GetLibPrefix(), qt->version_major, component).ptr;
 
             obj_filenames->Append(library_filename);
 

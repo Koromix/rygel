@@ -436,6 +436,9 @@ public:
 
         RG_UNREACHABLE();
     }
+    const char *GetImportExtension() const override { return (platform == HostPlatform::Windows) ? ".lib" : ".a"; }
+    const char *GetLibPrefix() const override { return (platform == HostPlatform::Windows) ? "" : "lib"; }
+    const char *GetArchiveExtension() const override { return (platform == HostPlatform::Windows) ? ".lib" : ".a"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
@@ -1076,6 +1079,9 @@ public:
 
         RG_UNREACHABLE();
     }
+    const char *GetImportExtension() const override { return ".a"; }
+    const char *GetLibPrefix() const override { return "lib"; }
+    const char *GetArchiveExtension() const override { return ".a"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
@@ -1587,6 +1593,9 @@ public:
 
         RG_UNREACHABLE();
     }
+    const char *GetImportExtension() const override { return ".lib"; }
+    const char *GetLibPrefix() const override { return ""; }
+    const char *GetArchiveExtension() const override { return ".lib"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
@@ -1895,6 +1904,9 @@ public:
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType) const override { return ".js"; }
+    const char *GetImportExtension() const override { return ".a"; }
+    const char *GetLibPrefix() const override { return "lib"; }
+    const char *GetArchiveExtension() const override { return ".a"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
 
     bool GetCore(Span<const char *const>, Allocator *, const char **out_name,
@@ -2179,6 +2191,9 @@ public:
         RG_ASSERT(type == TargetType::Executable);
         return ".elf";
     }
+    const char *GetImportExtension() const override { return ".a"; }
+    const char *GetLibPrefix() const override { return "lib"; }
+    const char *GetArchiveExtension() const override { return ".a"; }
     const char *GetPostExtension(TargetType) const override { return ".hex"; }
 
     bool GetCore(Span<const char *const> definitions, Allocator *alloc, const char **out_name,

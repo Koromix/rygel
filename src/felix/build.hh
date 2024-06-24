@@ -101,11 +101,6 @@ class Builder {
     const char *cache_filename;
     const char *current_ns = "default";
 
-    // Platform-specific
-    const char *lib_prefix = nullptr;
-    const char *archive_filter = nullptr;
-    const char *import_extension = nullptr;
-
     // Qt stuff
     const QtInfo *qt = nullptr;
     bool missing_qt = false;

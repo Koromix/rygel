@@ -215,6 +215,9 @@ public:
 
     virtual const char *GetObjectExtension() const = 0;
     virtual const char *GetLinkExtension(TargetType type) const = 0;
+    virtual const char *GetImportExtension() const = 0;
+    virtual const char *GetLibPrefix() const = 0;
+    virtual const char *GetArchiveExtension() const = 0;
     virtual const char *GetPostExtension(TargetType type) const = 0;
 
     virtual bool GetCore(Span<const char *const> definitions, Allocator *alloc, const char **out_ns,

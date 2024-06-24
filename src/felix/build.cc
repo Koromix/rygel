@@ -171,16 +171,6 @@ Builder::Builder(const BuildSettings &build)
     shared_directory = Fmt(&str_alloc, "%1%/Shared", build.output_directory).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/FelixCache.bin", shared_directory).ptr;
 
-    if (build.compiler->platform == HostPlatform::Windows) {
-        archive_filter = "*.lib";
-        lib_prefix = "";
-        import_extension = ".lib";
-    } else {
-        archive_filter = "*.a";
-        lib_prefix = "lib";
-        import_extension = ".so";
-    }
-
     LoadCache();
 }
 
