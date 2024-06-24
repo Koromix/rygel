@@ -13,9 +13,11 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
-#define _CRT_RAND_S
 #include <stdlib.h>
 #include <string.h>
+
+#define RtlGenRandom SystemFunction036
+BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
 
 struct echo_context {
     HANDLE pipe;
@@ -76,7 +78,7 @@ static bool start_echo_thread(HANDLE desc, echo_direction dir, char *path, size_
     for (unsigned int i = 0; i < 8 && !handle_is_valid(ctx->pipe); i++) {
         unsigned int rnd;
 
-        rand_s(&rnd);
+        RtlGenRandom(&rnd, sizeof(rnd));
         snprintf(path, path_size, "\\\\.\\pipe\\tycommanderc-pipe-%04x", rnd);
 
         ctx->pipe = CreateNamedPipeA(path, PIPE_ACCESS_DUPLEX | FILE_FLAG_FIRST_PIPE_INSTANCE,

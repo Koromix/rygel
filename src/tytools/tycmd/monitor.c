@@ -88,7 +88,7 @@ static int redirect_stdout(int *routfd)
 {
     int outfd, r;
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(STDOUT_FILENO)
     int STDOUT_FILENO = _fileno(GetStdHandle(STD_OUTPUT_HANDLE));
     int STDERR_FILENO = _fileno(GetStdHandle(STD_ERROR_HANDLE));
 #endif

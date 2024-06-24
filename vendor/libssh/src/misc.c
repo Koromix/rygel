@@ -184,14 +184,14 @@ char *ssh_get_local_username(void)
     char *user;
 
     /* get the size */
-    GetUserName(NULL, &size);
+    GetUserNameA(NULL, &size);
 
     user = (char *) malloc(size);
     if (user == NULL) {
         return NULL;
     }
 
-    if (GetUserName(user, &size)) {
+    if (GetUserNameA(user, &size)) {
         return user;
     }
 
