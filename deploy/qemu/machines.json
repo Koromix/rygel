@@ -249,5 +249,26 @@
 
             "shutdown": "sudo shutdown -p now"
         }
+    },
+
+    "alpine_x64": {
+        "title": "Alpine x64",
+        "platform": "musl",
+
+        "qemu": {
+            "binary": "qemu-system-x86_64",
+            "arguments": ["-m", "2G", "-smp", 2, "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22212-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:22"],
+            "version": 1,
+
+            "disk": "disk.qcow2",
+
+            "ssh_port": 22212,
+            "vnc_port": 5922,
+
+            "username": "alpine",
+            "password": "alpine",
+
+            "shutdown": "doas poweroff"
+        }
     }
 }
