@@ -389,7 +389,7 @@ function snapshot() {
     console.log('>> Snapshot code...');
     copy_recursive(root_dir, snapshot_dir, make_path_filter([
         'src/core/base',
-        'src/core/xid',
+        'src/core/unicode',
         'src/cnoke',
         'src/koffi',
         'vendor/node-addon-api',

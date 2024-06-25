@@ -12,7 +12,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
-#include "src/core/xid/xid.hh"
+#include "src/core/unicode/xid.hh"
 #include "error.hh"
 #include "lexer.hh"
 #include "vendor/fast_float/fast_float.h"
