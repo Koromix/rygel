@@ -305,7 +305,7 @@
         }
     },
 
-    "macos_x64": {
+    "darwin_x64": {
         "title": "macOS x64",
 
         "info": {
@@ -327,7 +327,7 @@
         }
     },
 
-    "macos_arm64": {
+    "darwin_arm64": {
         "title": "macOS ARM64",
 
         "info": {

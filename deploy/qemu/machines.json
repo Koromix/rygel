@@ -253,7 +253,7 @@
 
     "alpine_x64": {
         "title": "Alpine x64",
-        "platform": "musl",
+        "platform": "linux",
 
         "qemu": {
             "binary": "qemu-system-x86_64",
@@ -274,7 +274,7 @@
 
     "alpine_arm64": {
         "title": "Alpine ARM64",
-        "platform": "musl",
+        "platform": "linux",
 
         "qemu": {
             "binary": "qemu-system-aarch64",

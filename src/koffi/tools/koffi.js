@@ -183,8 +183,7 @@ async function build() {
         for (let build of builds) {
             let machine = runner.machine(build.info.machine);
 
-            let binary_name = machine.platform + '_' + build.info.arch;
-            let binary_filename = build_dir + `/qemu/${version}/${binary_name}/koffi.node`;
+            let binary_filename = build_dir + `/qemu/${version}/${build.key}/koffi.node`;
 
             if (fs.existsSync(binary_filename)) {
                 runner.logSuccess(machine, `${build.title} > Status`);
@@ -222,9 +221,9 @@ async function build() {
         await Promise.all(builds.map(async build => {
             let machine = runner.machine(build.info.machine);
 
-            let binary_name = machine.platform + '_' + build.info.arch;
-            let src_dir = build.info.directory + `/bin/Koffi/${binary_name}`;
-            let dest_dir = build_dir + `/qemu/${version}/${binary_name}`;
+            let src_name = machine.platform + '_' + build.info.arch;
+            let src_dir = build.info.directory + `/bin/Koffi/${src_name}`;
+            let dest_dir = build_dir + `/qemu/${version}/${build.key}`;
 
             artifacts.push(dest_dir);
 
