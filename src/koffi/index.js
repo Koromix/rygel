@@ -61,38 +61,59 @@ try {
         case 'win32_ia32': { native = require('./build/koffi/win32_ia32/koffi.node'); } break;
         case 'win32_x64': { native = require('./build/koffi/win32_x64/koffi.node'); } break;
     }
-} catch (err) {
-    // Go on!
+} catch {
+    // We don't try to detect musl distributions, just fallback to it if the GNU build failed
+
+    try {
+        switch (triplet) {
+            case 'linux_armhf': { native = require('./build/koffi/musl_armhf/koffi.node'); } break;
+            case 'linux_arm64': { native = require('./build/koffi/musl_arm64/koffi.node'); } break;
+            case 'linux_ia32': { native = require('./build/koffi/musl_ia32/koffi.node'); } break;
+            case 'linux_riscv64d': { native = require('./build/koffi/musl_riscv64d/koffi.node'); } break;
+            case 'linux_x64': { native = require('./build/koffi/musl_x64/koffi.node'); } break;
+        }
+    } catch {
+        // Go on
+    }
 }
 
 // And now, search everywhere we know
 if (native == null) {
     let roots = [__dirname];
+    let pairs = [`${process.platform}_${arch}`];
 
     if (process.resourcesPath != null)
         roots.push(process.resourcesPath);
+    if (process.platform == 'linux')
+        pairs.push(`musl_${arch}`);
 
-    let names = [
-        `/build/koffi/${process.platform}_${arch}/koffi.node`,
-        `/koffi/${process.platform}_${arch}/koffi.node`,
-        `/node_modules/koffi/build/koffi/${process.platform}_${arch}/koffi.node`,
-        `/../../bin/Koffi/${process.platform}_${arch}/koffi.node`
-    ];
+    let filenames = roots.flatMap(root => pairs.flatMap(pair => [
+        `${root}/build/koffi/${pair}/koffi.node`,
+        `${root}/koffi/${pair}/koffi.node`,
+        `${root}/node_modules/koffi/build/koffi/${pair}/koffi.node`,
+        `${root}/../../bin/Koffi/${pair}/koffi.node`
+    ]));
 
-    for (let root of roots) {
-        for (let name of names) {
-            let filename = root + name;
+    let first_err = null;
 
-            if (fs.existsSync(filename)) {
-                // Trick so that webpack does not try to do anything with require() call
-                native = eval('require')(filename);
-                break;
-            }
+    for (let filename of filenames) {
+        if (!fs.existsSync(filename))
+            continue;
+
+        try {
+            // Trick so that webpack does not try to do anything with require() call
+            native = eval('require')(filename);
+        } catch (err) {
+            if (first_err == null)
+                first_err = err;
+            continue;
         }
 
-        if (native != null)
-            break;
+        break;
     }
+
+    if (first_err != null)
+        throw first_err;
 }
 
 if (native == null)

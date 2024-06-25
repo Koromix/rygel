@@ -45,31 +45,40 @@ let native = null;
 // Search everywhere we know
 {
     let roots = [__dirname];
+    let pairs = [`${process.platform}_${arch}`];
 
     if (process.resourcesPath != null)
         roots.push(process.resourcesPath);
+    if (process.platform == 'linux')
+        pairs.push(`musl_${arch}`);
 
-    let names = [
-        `/build/koffi/${process.platform}_${arch}/koffi.node`,
-        `/koffi/${process.platform}_${arch}/koffi.node`,
-        `/node_modules/koffi/build/koffi/${process.platform}_${arch}/koffi.node`,
-        `/../../bin/Koffi/${process.platform}_${arch}/koffi.node`
-    ];
+    let filenames = roots.flatMap(root => pairs.flatMap(pair => [
+        `${root}/build/koffi/${pair}/koffi.node`,
+        `${root}/koffi/${pair}/koffi.node`,
+        `${root}/node_modules/koffi/build/koffi/${pair}/koffi.node`,
+        `${root}/../../bin/Koffi/${pair}/koffi.node`
+    ]));
 
-    for (let root of roots) {
-        for (let name of names) {
-            let filename = root + name;
+    let first_err = null;
 
-            if (fs.existsSync(filename)) {
-                // Trick so that webpack does not try to do anything with require() call
-                native = eval('require')(filename);
-                break;
-            }
+    for (let filename of filenames) {
+        if (!fs.existsSync(filename))
+            continue;
+
+        try {
+            // Trick so that webpack does not try to do anything with require() call
+            native = eval('require')(filename);
+        } catch (err) {
+            if (first_err == null)
+                first_err = err;
+            continue;
         }
 
-        if (native != null)
-            break;
+        break;
     }
+
+    if (first_err != null)
+        throw first_err;
 }
 
 if (native == null)
