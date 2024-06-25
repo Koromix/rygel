@@ -67,7 +67,7 @@ private:
     void notifyLog(ty_log_level level, const QString &msg);
     void notifyStarted();
     void notifyFinished(bool success);
-    void notifyProgress(const QString &action, unsigned int value, unsigned int max);
+    void notifyProgress(const QString &action, uint64_t value, uint64_t max);
 
     void addTask(TaskInterface task);
     void executeTasks();

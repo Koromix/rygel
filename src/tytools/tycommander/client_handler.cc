@@ -384,7 +384,7 @@ void ClientHandler::notifyFinished(bool success)
         peer_->send({"exit", error_count_ ? "1" : "0"});
 }
 
-void ClientHandler::notifyProgress(const QString &action, unsigned int value, unsigned int max)
+void ClientHandler::notifyProgress(const QString &action, uint64_t value, uint64_t max)
 {
     if (tasks_.size() > 1) {
         if (!value)
