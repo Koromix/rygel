@@ -270,5 +270,26 @@
 
             "shutdown": "doas poweroff"
         }
+    },
+
+    "alpine_arm64": {
+        "title": "Alpine ARM64",
+        "platform": "musl",
+
+        "qemu": {
+            "binary": "qemu-system-aarch64",
+            "arguments": ["-M", "virt", "-m", "2G", "-smp", 2, "-cpu", "cortex-a57", "-drive", "if=pflash,format=raw,readonly,file=QEMU_EFI-pflash.raw", "-drive", "file=disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22213-:22", "-device", "virtio-net-device,netdev=mynet", "-vnc", "127.0.0.1:23"],
+            "version": 1,
+
+            "disk": "disk.qcow2",
+
+            "ssh_port": 22213,
+            "vnc_port": 5923,
+
+            "username": "alpine",
+            "password": "alpine",
+
+            "shutdown": "doas poweroff"
+        }
     }
 }
