@@ -200,8 +200,8 @@ function hasUnsavedData() {
     return form_state.hasChanged();
 }
 
-async function runTasks(online) {
-    if (online && ENV.sync_mode !== 'offline')
+async function runTasks(sync) {
+    if (sync && ENV.sync_mode !== 'offline')
         await mutex.chain(syncRecords);
 }
 
@@ -1892,6 +1892,8 @@ async function go(e, url = null, options = {}) {
 
             // Goodbye!
             if (!url.pathname.startsWith(`${ENV.urls.instance}main/`)) {
+                console.log(url.pathname, ENV.urls.instance);
+
                 if (hasUnsavedData())
                     await goupile.confirmDangerousAction(e);
 

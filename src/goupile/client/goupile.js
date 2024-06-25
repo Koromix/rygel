@@ -31,6 +31,8 @@ let profile = {};
 let electron = (typeof process !== 'undefined' && typeof process.versions === 'object' &&
                 !!process.versions.electron);
 
+let online = true;
+
 let can_unlock = false;
 let profile_keys = {};
 let confirm_promise;
@@ -87,32 +89,25 @@ async function start() {
         await syncProfile();
     }
 
-    // Run login dialogs
-    if (!profile.authorized)
-        await runLoginScreen(null, true);
-
-    // Adjust URLs based on user permissions
-    if (profile.instances != null) {
-        let instance = profile.instances.find(instance => url.pathname.startsWith(instance.url)) ||
-                       profile.instances[0];
-
-        ENV.key = instance.key;
-        ENV.title = instance.title;
-        ENV.urls.instance = instance.url;
-
-        if (!url.pathname.startsWith(instance.url))
-            url = new URL(instance.url, window.location.href);
+    // Authorize user
+    if (profile.authorized) {
+        url = await syncInstance();
+    } else {
+        url = await runLoginScreen(null, true);
     }
 
     // Run controller now
     try {
         await controller.init();
-        await initTasks();
 
         if (url.hash)
             current_hash = url.hash;
 
+        if (controller.runTasks != null)
+            await runTasks();
         await controller.go(null, url.href);
+
+        await initTasks();
     } catch (err) {
         Log.error(err);
 
@@ -236,6 +231,27 @@ function initNavigation() {
     });
 }
 
+async function syncInstance() {
+    let url = new URL(window.location.href);
+
+    if (profile.instances != null) {
+        let instance = profile.instances.find(instance => url.pathname.startsWith(instance.url)) ||
+                       profile.instances[0];
+
+        ENV.key = instance.key;
+        ENV.title = instance.title;
+        ENV.urls.instance = instance.url;
+
+        if (!url.pathname.startsWith(instance.url))
+            url = new URL(instance.url, window.location.href);
+
+        if (instance.key != profile.instance)
+            await syncProfile();
+    }
+
+    return url;
+}
+
 async function syncProfile() {
     // Ask server (if needed)
     try {
@@ -244,6 +260,9 @@ async function syncProfile() {
         let new_profile = await response.json();
         updateProfile(new_profile);
     } catch (err) {
+        if (err instanceof NetworkError)
+            online = false;
+
         if (ENV.use_offline) {
             if (!(err instanceof NetworkError))
                 Log.error(err);
@@ -322,19 +341,13 @@ async function initTasks() {
         });
         window.addEventListener('online', pingServer);
         window.addEventListener('offline', pingServer);
-        Net.changeHandler = async online => {
-            await runTasks();
-            controller.go();
-        };
-
-        await runTasks();
     }
 }
 
 async function runTasks() {
     try {
-        let online = Net.isOnline() && Util.getCookie('session_rnd') != null;
-        await controller.runTasks(online);
+        let sync = online && (Util.getCookie('session_rnd') != null);
+        await controller.runTasks(sync);
     } catch (err) {
         Log.error(err);
     }
@@ -343,56 +356,64 @@ async function runTasks() {
 async function pingServer() {
     try {
         let response = await Net.fetch(`${ENV.urls.instance}api/session/ping`);
-        Net.setOnline(response.ok);
+        online = response.ok;
     } catch (err) {
-        // Automatically set to offline
+        online = false;
     }
 }
 
 async function runLoginScreen(e, initial) {
     initial |= (profile.username == null);
 
-    let new_profile = profile;
     let password;
+    {
+        let new_profile = profile;
 
-    do {
-        try {
-            if (new_profile.confirm == null)
-                [new_profile, password] = await runPasswordScreen(e, initial);
-            if (new_profile.confirm == 'password') {
-                await runChangePassword(e, true);
-
-                new_profile = await Net.get(`${ENV.urls.instance}api/session/profile`);
+        do {
+            try {
+                if (new_profile.confirm == null)
+                    [new_profile, password] = await runPasswordScreen(e, initial);
+                if (new_profile.confirm == 'password') {
+                    await runChangePassword(e, true);
+                    new_profile = await Net.get(`${ENV.urls.instance}api/session/profile`);
+                }
+                if (new_profile.confirm != null)
+                    new_profile = await runConfirmScreen(e, initial, new_profile.confirm);
+            } catch (err) {
+                if (!err)
+                    throw err;
+                Log.error(err);
             }
-            if (new_profile.confirm != null)
-                new_profile = await runConfirmScreen(e, initial, new_profile.confirm);
-        } catch (err) {
-            if (!err)
-                throw err;
-            Log.error(err);
-        }
-    } while (!new_profile.authorized);
+        } while (!new_profile.authorized);
+
+        updateProfile(new_profile);
+    }
+
+    let url = await syncInstance();
 
     // Save for offline login
     if (ENV.use_offline) {
         let db = await openLocalDB();
 
-        if (new_profile.permissions['misc_offline']) {
+        if (profile.permissions['misc_offline']) {
+            let data = Object.assign({}, profile);
+            data.keys = Object.keys(profile_keys).reduce((obj, key) => { obj[key] = Base64.toBase64(profile_keys[key]); return obj }, {});
+
             let salt = nacl.randomBytes(24);
             let key = await deriveKey(password, salt);
-            let enc = await encryptSecretBox(new_profile, key);
+            let enc = await encryptSecretBox(data, key);
 
-            await db.saveWithKey('profiles', new_profile.username, {
+            await db.saveWithKey('profiles', profile.username, {
                 salt: Base64.toBase64(salt),
                 errors: 0,
                 profile: enc
             });
         } else {
-            await db.delete('profiles', new_profile.username);
+            await db.delete('profiles', profile.username);
         }
     }
 
-    updateProfile(new_profile);
+    return url;
 }
 
 async function runPasswordScreen(e, initial) {
@@ -640,8 +661,6 @@ function runUnlockDialog(e) {
 };
 
 async function login(username, password) {
-    let online = Net.isOnline();
-
     try {
         if (online || !ENV.use_offline) {
             let new_profile = await loginOnline(username, password);
@@ -654,6 +673,8 @@ async function login(username, password) {
         }
     } catch (err) {
         if ((err instanceof NetworkError) && online && ENV.use_offline) {
+            online = false;
+
             let new_profile = await loginOffline(username, password);
             return new_profile;
         } else {
@@ -790,8 +811,8 @@ async function goToLogin(e) {
 }
 
 function isLoggedOnline() {
-    let online = Net.isOnline() && profile.online;
-    return online;
+    let ret = online && profile.online;
+    return ret;
 }
 
 async function changeDevelopMode(enable) {

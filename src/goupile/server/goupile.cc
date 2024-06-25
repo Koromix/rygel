@@ -39,11 +39,11 @@
 namespace RG {
 
 struct RenderInfo {
-    const char *url;
+    const char *key;
     AssetInfo asset;
     int64_t time;
 
-    RG_HASHTABLE_HANDLER(RenderInfo, url);
+    RG_HASHTABLE_HANDLER(RenderInfo, key);
 };
 
 DomainHolder gp_domain;
@@ -234,7 +234,6 @@ static void InitAssets()
     for (const AssetInfo &asset: GetEmbedAssets()) {
         if (TestStr(asset.name, "src/goupile/client/goupile.html")) {
             assets_map.Set("/", &asset);
-            assets_for_cache.Append("/");
         } else if (TestStr(asset.name, "src/goupile/client/root.html")) {
             assets_root = &asset;
         } else if (TestStr(asset.name, "src/goupile/client/sw.js")) {
@@ -295,47 +294,54 @@ static void HandlePing(InstanceHolder *instance, const http_RequestInfo &request
     io->AttachText(200, "Pong!");
 }
 
-static void HandleFileStatic(const http_RequestInfo &, http_IO *io)
+static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &, http_IO *io)
 {
     http_JsonPageBuilder json;
     if (!json.Init(io))
         return;
 
+    const char *base_url = Fmt(&io->allocator, "/%1/", instance->key).ptr;
+
     json.StartArray();
-    for (const char *url: assets_for_cache) {
-        // Skip the leading slash
-        json.String(url + 1);
+    json.String(base_url);
+    for (const InstanceHolder *slave: instance->slaves) {
+        const char *url = Fmt(&io->allocator, "/%1/", slave->key).ptr;
+        json.String(url);
+    }
+    for (const char *path: assets_for_cache) {
+        const char *url = Fmt(&io->allocator, "/%1%2", instance->key, path).ptr;
+        json.String(url);
     }
     json.EndArray();
 
     json.Finish();
 }
 
-static const AssetInfo *RenderTemplate(const char *url, const AssetInfo &asset,
+static const AssetInfo *RenderTemplate(const char *key, const AssetInfo &asset,
                                        FunctionRef<void(Span<const char>, StreamWriter *)> func)
 {
     RenderInfo *render;
     {
         std::shared_lock<std::shared_mutex> lock_shr(render_mutex);
-        render = render_map.FindValue(url, nullptr);
+        render = render_map.FindValue(key, nullptr);
     }
 
     if (!render) {
         std::lock_guard<std::shared_mutex> lock_excl(render_mutex);
-        render = render_map.FindValue(url, nullptr);
+        render = render_map.FindValue(key, nullptr);
 
         if (!render) {
             Allocator *alloc;
             render = render_cache.AppendDefault(&alloc);
 
-            render->url = DuplicateString(url, alloc).ptr;
+            render->key = DuplicateString(key, alloc).ptr;
             render->asset = asset;
             render->asset.data = PatchFile(asset, alloc, func);
             render->time = GetMonotonicTime();
 
             render_map.Set(render);
 
-            LogDebug("Rendered '%1' with '%2'", url, asset.name);
+            LogDebug("Rendered '%1' with '%2'", key, asset.name);
         }
     }
 
@@ -353,7 +359,7 @@ static void PruneRenders()
         if (now - render.time < MaxRenderDelay)
             break;
 
-        render_map.Remove(render.url);
+        render_map.Remove(render.key);
         expired++;
     }
 
@@ -606,10 +612,10 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
             const InstanceHolder *master = instance->master;
             int64_t fs_version = master->fs_version.load(std::memory_order_relaxed);
 
-            char master_etag[64];
-            Fmt(master_etag, "%1_%2_%3_%4", shared_etag, (const void *)asset, master->unique, fs_version);
+            char instance_etag[64];
+            Fmt(instance_etag, "%1_%2_%3_%4", shared_etag, (const void *)asset, instance->unique, fs_version);
 
-            const AssetInfo *render = RenderTemplate(master_etag, *asset,
+            const AssetInfo *render = RenderTemplate(instance_etag, *asset,
                                                      [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
 
@@ -639,7 +645,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     json.Key("legacy"); json.Bool(master->legacy);
                     json.Key("demo"); json.Bool(gp_domain.config.demo_mode);
                     json.Key("version"); json.Int64(fs_version);
-                    json.Key("buster"); json.String(master_etag);
+                    json.Key("buster"); json.String(instance_etag);
                     json.Key("use_offline"); json.Bool(master->config.use_offline);
                     json.Key("data_remote"); json.Bool(master->config.data_remote);
                     if (master->config.auto_key) {
@@ -655,7 +661,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     Print(writer, "{{%1}}", expr);
                 }
             });
-            AttachStatic(*render, 0, master_etag, request, io);
+            AttachStatic(*render, 0, instance_etag, request, io);
 
             return;
         } else if (asset) {
@@ -696,7 +702,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
     } else if (TestStr(instance_url, "/api/change/export_key") && request.method == http_RequestMethod::Post) {
         HandleChangeExportKey(instance, request, io);
     } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
-         HandleFileStatic(request, io);
+         HandleFileStatic(instance, request, io);
     } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
          HandleFileList(instance, request, io);
     } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Put) {

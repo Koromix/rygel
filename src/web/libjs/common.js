@@ -715,9 +715,6 @@ class HttpError extends Error {
 const Net = new function() {
     let self = this;
 
-    let online = true;
-
-    this.changeHandler = online => {};
     this.retryHandler = code => false;
 
     this.fetch = async function(url, options = {}) {
@@ -746,7 +743,6 @@ const Net = new function() {
             try {
                 response = await fetch(url, options);
             } catch (err) {
-                self.setOnline(false);
                 throw new NetworkError;
             }
 
@@ -756,10 +752,8 @@ const Net = new function() {
             if (!response.ok) {
                 let retry = await self.retryHandler(response.status);
 
-                if (retry) {
-                    Net.setOnline(true);
+                if (retry)
                     continue;
-                }
             }
 
             return response;
@@ -833,14 +827,8 @@ const Net = new function() {
             script.type = 'text/javascript';
             script.src = url;
 
-            script.onload = e => {
-                self.setOnline(true);
-                resolve(script);
-            };
-            script.onerror = e => {
-                self.setOnline(false);
-                reject(new Error(`Failed to load '${url}' script`));
-            }
+            script.onload = e => resolve(script);
+            script.onerror = e => reject(new Error(`Failed to load '${url}' script`));
 
             document.head.appendChild(script);
         });
@@ -854,14 +842,6 @@ const Net = new function() {
 
         return img;
     };
-
-    this.setOnline = function(online2) {
-        if (online2 !== online) {
-            online = online2;
-            self.changeHandler(online);
-        }
-    };
-    this.isOnline = function() { return online; };
 
     this.readError = async function(response, nice = true) {
         let text = (await response.text()).trim();

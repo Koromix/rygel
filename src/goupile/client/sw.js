@@ -25,7 +25,7 @@ self.addEventListener('install', e => {
             caches.open(ENV.buster)
         ]);
 
-        await cache.addAll(assets.map(url => `${ENV.urls.base}${url}`));
+        await cache.addAll(assets);
         await cache.addAll(list.files.map(file => `${ENV.urls.files}${file.filename}`));
 
         // We need to cache application files with two URLs:
@@ -59,13 +59,24 @@ self.addEventListener('fetch', e => {
 
         // Try the cache
         if (e.request.method === 'GET' && url.pathname.startsWith(ENV.urls.base)) {
-            let path = url.pathname.substr(ENV.urls.base.length - 1);
+            let response = await caches.match(e.request);
 
-            if (path.match(/^\/(?:[a-z0-9_]+\/)?$/) || path.match(/^\/(?:[a-z0-9_]+\/)?main\//)) {
-                return await caches.match(ENV.urls.base) || await fetch(e.request);
-            } else {
-                return await caches.match(e.request) || await fetch(e.request);
+            if (response == null) {
+                let parts = url.pathname.split('/');
+
+                for (let i = parts.length - 1; i > 0; i--) {
+                    let path = parts.slice(0, i).join('/') + '/';
+                    let response = await caches.match(path);
+
+                    if (response != null)
+                        break;
+                }
             }
+
+            if (response == null)
+                response = await fetch(e.request);
+
+            return response;
         }
 
         return await fetch(e.request);

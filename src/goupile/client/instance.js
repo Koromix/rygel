@@ -190,8 +190,8 @@ function hasUnsavedData() {
     return form_state.hasChanged();
 }
 
-async function runTasks(online) {
-    if (profile.develop)
+async function runTasks(sync) {
+    if (profile.develop && sync)
         await uploadFsChanges();
 }
 
