@@ -376,7 +376,7 @@ async function runLoginScreen(e, initial) {
                 if (new_profile.confirm == null)
                     [new_profile, password] = await runPasswordScreen(e, initial);
                 if (new_profile.confirm == 'password') {
-                    await runChangePassword(e, true);
+                    await runChangePassword(e, new_profile.username);
                     new_profile = await Net.get(`${ENV.urls.instance}api/session/profile`);
                 }
                 if (new_profile.confirm != null)
@@ -537,9 +537,10 @@ async function runConfirmIdentity(e) {
     }
 }
 
-function runChangePasswordDialog(e) { return runChangePassword(e, false); };
+function runChangePasswordDialog(e) { return runChangePassword(e); }
 
-function runChangePassword(e, forced) {
+function runChangePassword(e, username = null) {
+    let forced = (username != null);
     let title = forced ? null : 'Changement de mot de passe';
 
     return UI.dialog(e, title, { fixed: forced }, (d, resolve, reject) => {
@@ -552,7 +553,7 @@ function runChangePassword(e, forced) {
             `);
         }
 
-        d.calc('username', 'Nom d\'utilisateur', profile.username);
+        d.calc('username', 'Nom d\'utilisateur', username ?? profile.username);
         if (!forced)
             d.password('*old_password', 'Ancien mot de passe');
         d.password('*new_password', 'Nouveau mot de passe');
