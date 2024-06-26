@@ -57,28 +57,33 @@ self.addEventListener('fetch', e => {
     e.respondWith(async function() {
         let url = new URL(e.request.url);
 
-        // Try the cache
         if (e.request.method === 'GET' && url.pathname.startsWith(ENV.urls.base)) {
-            let response = await caches.match(e.request);
+            // Try directly
+            {
+                let response = await caches.match(e.request);
 
-            if (response == null) {
+                if (response != null)
+                    return response;
+            }
+
+            // Try ancestor URLs
+            {
                 let parts = url.pathname.split('/');
 
-                for (let i = parts.length - 1; i > 0; i--) {
+                if (parts[2] == 'api' || parts[3] == 'api')
+                    parts.length = 0;
+
+                for (let i = parts.length - 1; i > 1; i--) {
                     let path = parts.slice(0, i).join('/') + '/';
                     let response = await caches.match(path);
 
                     if (response != null)
-                        break;
+                        return response;
                 }
             }
-
-            if (response == null)
-                response = await fetch(e.request);
-
-            return response;
         }
 
-        return await fetch(e.request);
+        let response = await fetch(e.request);
+        return response;
     }());
 });
