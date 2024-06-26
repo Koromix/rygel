@@ -229,6 +229,17 @@ static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *i
             const InstanceHolder *master = instance->master;
             const SessionStamp *stamp = session->GetStamp(instance);
 
+            if (!stamp) {
+                for (const InstanceHolder *slave: instance->slaves) {
+                    stamp = session->GetStamp(slave);
+
+                    if (stamp) {
+                        instance = slave;
+                        break;
+                    }
+                }
+            }
+
             if (stamp) {
                 json.Key("instance"); json.String(instance->key.ptr);
                 json.Key("authorized"); json.Bool(true);
