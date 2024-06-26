@@ -308,6 +308,8 @@ async function initTasks() {
         if (response.status === 401) {
             try {
                 await runConfirmIdentity();
+                setTimeout(() => controller.go(null, null));
+
                 return true;
             } catch (err) {
                 if (err != null)
@@ -346,7 +348,7 @@ async function initTasks() {
 
 async function runTasks() {
     try {
-        let sync = online && (Util.getCookie('session_rnd') != null);
+        let sync = online && (profile.online || profile.lock == null);
         await controller.runTasks(sync);
     } catch (err) {
         Log.error(err);

@@ -715,7 +715,7 @@ class HttpError extends Error {
 const Net = new function() {
     let self = this;
 
-    this.retryHandler = code => false;
+    this.retryHandler = response => false;
 
     this.fetch = async function(url, options = {}) {
         options = Object.assign({}, options);
@@ -750,7 +750,7 @@ const Net = new function() {
                 clearTimeout(timer);
 
             if (!response.ok) {
-                let retry = await self.retryHandler(response.status);
+                let retry = await self.retryHandler(response);
 
                 if (retry)
                     continue;
