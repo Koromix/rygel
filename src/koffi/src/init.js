@@ -20,6 +20,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 const fs = require('fs');
+const path = require('path');
 const util = require('util');
 const { get_napi_version, determine_arch } = require('../../cnoke/src/tools.js');
 const pkg = require('../package.json');
@@ -44,7 +45,7 @@ function detect() {
 
 function init(triplet, native) {
     if (native == null) {
-        let roots = [__dirname];
+        let roots = [path.join(__dirname, '..')];
         let triplets = [triplet];
 
         if (process.resourcesPath != null)
@@ -55,10 +56,10 @@ function init(triplet, native) {
         }
 
         let filenames = roots.flatMap(root => triplets.flatMap(triplet => [
-            `${root}/../build/koffi/${triplet}/koffi.node`,
-            `${root}/../koffi/${triplet}/koffi.node`,
-            `${root}/../node_modules/koffi/build/koffi/${triplet}/koffi.node`,
-            `${root}/../../../bin/Koffi/${triplet}/koffi.node`
+            `${root}/build/koffi/${triplet}/koffi.node`,
+            `${root}/koffi/${triplet}/koffi.node`,
+            `${root}/node_modules/koffi/build/koffi/${triplet}/koffi.node`,
+            `${root}/../../bin/Koffi/${triplet}/koffi.node`
         ]));
 
         let first_err = null;
