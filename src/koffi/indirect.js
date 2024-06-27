@@ -21,69 +21,9 @@
 
 'use strict';
 
-const fs = require('fs');
-const { get_napi_version, determine_arch } = require('../cnoke/src/tools.js');
-const { wrap } = require('./src/wrap.js');
-const pkg = require('./package.json');
+const { detect, init } = require('./src/init.js');
 
-if (process.versions.napi == null || process.versions.napi < pkg.cnoke.napi) {
-    let major = parseInt(process.versions.node, 10);
-    let required = get_napi_version(pkg.cnoke.napi, major);
+let triplet = detect();
+let mod = init(triplet, null);
 
-    if (required != null) {
-        throw new Error(`This engine is based on Node ${process.versions.node}, but ${pkg.name} requires Node >= ${required} in the Node ${major}.x branch (N-API >= ${pkg.cnoke.napi})`);
-    } else {
-        throw new Error(`This engine is based on Node ${process.versions.node}, but ${pkg.name} does not support the Node ${major}.x branch (N-API < ${pkg.cnoke.napi})`);
-    }
-}
-
-let arch = determine_arch();
-let triplet = `${process.platform}_${arch}`;
-
-let native = null;
-
-// Search everywhere we know
-{
-    let roots = [__dirname];
-    let pairs = [`${process.platform}_${arch}`];
-
-    if (process.resourcesPath != null)
-        roots.push(process.resourcesPath);
-    if (process.platform == 'linux')
-        pairs.push(`musl_${arch}`);
-
-    let filenames = roots.flatMap(root => pairs.flatMap(pair => [
-        `${root}/build/koffi/${pair}/koffi.node`,
-        `${root}/koffi/${pair}/koffi.node`,
-        `${root}/node_modules/koffi/build/koffi/${pair}/koffi.node`,
-        `${root}/../../bin/Koffi/${pair}/koffi.node`
-    ]));
-
-    let first_err = null;
-
-    for (let filename of filenames) {
-        if (!fs.existsSync(filename))
-            continue;
-
-        try {
-            // Trick so that webpack does not try to do anything with require() call
-            native = eval('require')(filename);
-        } catch (err) {
-            if (first_err == null)
-                first_err = err;
-            continue;
-        }
-
-        break;
-    }
-
-    if (first_err != null)
-        throw first_err;
-}
-
-if (native == null)
-    throw new Error('Cannot find the native Koffi module; did you bundle it correctly?');
-if (native.version != pkg.version)
-    throw new Error('Mismatched native Koffi modules');
-
-module.exports = wrap(native);
+module.exports = mod;
