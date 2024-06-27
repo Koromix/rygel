@@ -70,7 +70,8 @@ self.addEventListener('fetch', e => {
             {
                 let parts = url.pathname.split('/');
 
-                if (parts[2] == 'api' || parts[3] == 'api')
+                if (parts.find(part => part == 'api' || part == 'files' ||
+                                       part == 'static' || parts.includes('.')))
                     parts.length = 0;
 
                 for (let i = parts.length - 1; i > 1; i--) {
