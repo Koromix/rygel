@@ -1,5 +1,20 @@
 # Goupile changelog
 
+## Goupile 3.6
+
+### Goupile 3.6.0 (2024-06-28)
+
+- Add basic entry summary to replace old HID system
+- Show list of entries when normal users connect
+- Fix broken export endpoint for legacy instances
+- Fix various offline cache and profile sync bugs
+- Fix undefined username in initial password change dialog
+- Fix broken automatic relogin after expiration
+- Fix database migration error from some Goupile versions
+- Fix some parsing errors in save endpoints
+- Fix infinite spinner for late startup errors
+- Clean up lock related code in the client
+
 ## Goupile 3.5
 
 ### Goupile 3.5.3 (2024-06-20)

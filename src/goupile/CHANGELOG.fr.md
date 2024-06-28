@@ -1,5 +1,20 @@
 # Goupile changelog
 
+## Goupile 3.6
+
+### Goupile 3.6.0 (28/06/2024)
+
+- Ajout du système de `summary` remplacer les anciens identifiants HID
+- Afficher la liste des données lorsque des utilisateurs normaux se connectent
+- Correction de l'erreur 404 pour l'export des instances v2
+- Correction de divers bugs concernant le fonctionnement hors ligne et la synchronisation des profils
+- Correction du nom d'utilisateur non défini dans dans le dialogue de changement initial de mot de passe
+- Réparation de la fonctionnalité de reconnexion automatique après expiration
+- Correction d'une erreur de migration de base de données à partir de certaines versions de Goupile
+- Correction de quelques erreurs de parsage dans l'API de sauvegarde
+- Correction du chargement infini pour les erreurs de démarrage tardif
+- Nettoyage du code lié au verrouillage côté client
+
 ## Goupile 3.5
 
 ### Goupile 3.5.3 (20/06/2024)
