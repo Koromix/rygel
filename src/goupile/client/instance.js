@@ -1520,10 +1520,10 @@ async function go(e, url = null, options = {}) {
         }
 
         // Show form automatically?
-        if (url != null && !UI.isPanelActive('view') && !explicit_panels) {
+        if (context_change && !UI.isPanelActive('view') && !explicit_panels) {
             let show_view = true;
 
-            if (UI.isPanelActive('data') && !form_thread.saved && route.page == null)
+            if (UI.isPanelActive('data') && !form_thread.saved)
                 show_view = false;
 
             if (show_view) {
