@@ -34,6 +34,7 @@ function DataRemote() {
                 eid: entry.eid,
                 store: entry.store,
                 anchor: entry.anchor,
+                summary: entry.summary,
                 data: entry.data,
                 meta: entry.meta,
                 tags: entry.tags,

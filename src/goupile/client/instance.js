@@ -935,7 +935,7 @@ function addAutomaticActions(builder, model) {
                 form_builder.triggerErrors();
 
             await data_mutex.run(async () => {
-                await saveRecord(form_thread.tid, form_entry, form_data, form_meta.constraints);
+                await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
                 await openRecord(form_thread.tid, null, route.page);
                 data_threads = null;
             });
@@ -1492,7 +1492,7 @@ async function go(e, url = null, options = {}) {
                             d.action('Enregistrer', {}, async e => {
                                 try {
                                     form_builder.triggerErrors();
-                                    await saveRecord(form_thread.tid, form_entry, form_data, form_meta.constraints);
+                                    await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
                                 } catch (err) {
                                     reject(err);
                                 }
@@ -1963,9 +1963,10 @@ function runAnnotationDialog(e, intf) {
 }
 
 // Call with data_mutex locked
-async function saveRecord(tid, entry, data, constraints) {
+async function saveRecord(tid, entry, data, meta) {
     entry = Object.assign({}, entry);
 
+    entry.summary = meta.summary;
     entry.data = JSON.parse(JSON.stringify(data.raw, (k, v) => v != null ? v : null));
     entry.meta = data.exportNotes();
 
@@ -1981,7 +1982,7 @@ async function saveRecord(tid, entry, data, constraints) {
         entry.tags = Array.from(tags);
     }
 
-    await records.save(tid, entry, ENV.version, constraints);
+    await records.save(tid, entry, ENV.version, meta.constraints);
 
     if (!profile.userid)
         await goupile.syncProfile();

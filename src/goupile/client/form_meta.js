@@ -12,10 +12,15 @@
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
 function MetaModel() {
+    this.summary = null;
     this.constraints = {};
 }
 
-function MetaInterface(data, model) {
+function MetaInterface(data, meta) {
+    Object.defineProperties(this, {
+        summary: { get: () => meta.summary, set: summary => { meta.summary = summary; }, enumerable: true }
+    });
+
     this.constrain = function(key, types) {
         if (key.startsWith('__'))
             throw new Error('Keys must not start with \'__\'');
@@ -38,7 +43,7 @@ function MetaInterface(data, model) {
         if (!Object.values(constraint).some(value => value))
             throw new Error('Ignoring empty constraint');
 
-        model.constraints[key] = constraint;
+        meta.constraints[key] = constraint;
     };
 }
 
