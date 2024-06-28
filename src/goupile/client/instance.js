@@ -1662,7 +1662,8 @@ async function run(push_history = true) {
 
     // Don't mess with the editor when render accidently triggers a scroll event!
     ignore_page_scroll = performance.now();
-    UI.draw();
+
+    await UI.draw();
 }
 
 async function fetchCode(filename) {
