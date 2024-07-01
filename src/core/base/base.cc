@@ -4576,14 +4576,22 @@ bool NotifySystemd()
 
 #endif
 
-void InitRG()
+// ------------------------------------------------------------------------
+// Main
+// ------------------------------------------------------------------------
+
+int Main(int argc, char **argv);
+
+int RunApp(int argc, char **argv)
 {
 #if defined(_WIN32)
     // Use binary standard I/O
     _setmode(STDIN_FILENO, _O_BINARY);
     _setmode(STDOUT_FILENO, _O_BINARY);
     _setmode(STDERR_FILENO, _O_BINARY);
-#elif !defined(__wasi__)
+#endif
+
+#if !defined(_WIN32) && !defined(__wasi__)
     // Best effort
     setpgid(0, 0);
 
@@ -4610,6 +4618,8 @@ void InitRG()
     // so we want to cache the result as soon as possible.
     GetApplicationExecutable();
 #endif
+
+    return Main(argc, argv);
 }
 
 // ------------------------------------------------------------------------

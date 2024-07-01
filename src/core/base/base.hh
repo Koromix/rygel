@@ -4250,14 +4250,11 @@ bool NotifySystemd();
         return ret; \
     })()
 
-void InitRG();
-int Main(int argc, char **argv);
+// ------------------------------------------------------------------------
+// Main
+// ------------------------------------------------------------------------
 
-static inline int RunApp(int argc, char **argv)
-{
-    InitRG();
-    return Main(argc, argv);
-}
+int RunApp(int argc, char **argv);
 
 // ------------------------------------------------------------------------
 // Standard paths
