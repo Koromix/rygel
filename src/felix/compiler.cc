@@ -411,11 +411,7 @@ public:
         return true;
     }
 
-    const char *GetObjectExtension() const override
-    {
-        const char *ext = (platform == HostPlatform::Windows) ? ".obj" : ".o";
-        return ext;
-    }
+    const char *GetObjectExtension() const override { return (platform == HostPlatform::Windows) ? ".obj" : ".o"; }
     const char *GetLinkExtension(TargetType type) const override
     {
         if (platform == HostPlatform::WasmWasi) {
