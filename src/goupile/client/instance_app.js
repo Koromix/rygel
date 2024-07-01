@@ -161,7 +161,7 @@ function ApplicationBuilder(app) {
                 title: title,
                 url: current_store.url,
 
-                chain: (current_menu != null) ? current_menu.chain.slice() : [],
+                chain: current_menu?.chain.slice() ?? [],
                 children: [],
 
                 store: current_store,

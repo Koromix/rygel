@@ -510,7 +510,7 @@ function FormBuilder(state, model) {
                            min=${options.min} max=${options.max} step=${1 / Math.pow(10, options.decimals)}
                            .value=${value} data-value=${value}
                            placeholder=${options.placeholder || ''}
-                           ?disabled=${options.disabled} title=${value != null ? value.toFixed(options.decimals) : ''}
+                           ?disabled=${options.disabled} title=${value.toFixed?.(options.decimals) ?? ''}
                            @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
                            @dblclick=${e => handleSliderClick(e, key, value, options.min, options.max)}
                            @input=${e => handleSliderChange(e, key)}/>
@@ -775,7 +775,7 @@ function FormBuilder(state, model) {
                 ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
                 ${props.map((p, i) =>
                     html`<button type="button" data-value=${Util.valueToStr(p.value)}
-                                 .className=${value != null && value.includes(p.value) ? 'active' : ''}
+                                 .className=${value.includes?.(p.value) ? 'active' : ''}
                                  ?disabled=${options.disabled}
                                  @click=${e => handleMultiChange(e, key)}
                                  @keydown=${handleEnumOrMultiKey} tabindex=${i ? -1 : 0}>${p.label}</button>`)}
@@ -859,7 +859,7 @@ function FormBuilder(state, model) {
                  style=${makeRadioStyle(options)} id=${id}>
                 ${props.map((p, i) =>
                     html`<input type="checkbox" id=${`${id}.${i}`} value=${Util.valueToStr(p.value)}
-                                ?disabled=${options.disabled} .checked=${value != null && value.includes(p.value)}
+                                ?disabled=${options.disabled} .checked=${value.includes?.(p.value)}
                                 @click=${e => handleMultiCheckChange(e, key)}
                                 @keydown=${handleRadioOrCheckKey} tabindex=${i ? -1 : 0} />
                          <label for=${`${id}.${i}`}>${p.label}</label><br/>`)}

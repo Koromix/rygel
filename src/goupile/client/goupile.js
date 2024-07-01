@@ -193,7 +193,7 @@ function initNavigation() {
         let protect = true;
 
         window.onbeforeunload = e => {
-            if (protect && controller.hasUnsavedData != null && controller.hasUnsavedData()) {
+            if (protect && controller.hasUnsavedData?.()) {
                 e.returnValue = "NO!";
 
                 let remote = require('electron').remote;
@@ -217,7 +217,7 @@ function initNavigation() {
         };
     } else {
         window.onbeforeunload = e => {
-            if (controller.hasUnsavedData != null && controller.hasUnsavedData())
+            if (controller.hasUnsavedData?.())
                 return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
         };
     }
