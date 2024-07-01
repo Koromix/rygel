@@ -18,7 +18,7 @@
 #include "../server/user.hh"
 #include "records.hh"
 #include "src/core/wrap/json.hh"
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <io.h>
 #else
     #include <unistd.h>

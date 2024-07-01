@@ -888,7 +888,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", output_dir, url).ptr;
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
-#ifdef _WIN32
+#if defined(_WIN32)
             for (char &c: url.As<char>()) {
                 c = (c == '\\') ? '/' : c;
             }

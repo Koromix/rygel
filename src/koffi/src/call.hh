@@ -91,8 +91,8 @@ public:
 
     void Dispose();
 
-#ifdef UNITY_BUILD
-    #ifdef _MSC_VER
+#if defined(UNITY_BUILD)
+    #if defined(_MSC_VER)
         #define INLINE_IF_UNITY __forceinline
     #else
         #define INLINE_IF_UNITY __attribute__((always_inline)) inline
@@ -150,7 +150,7 @@ inline bool CallData::AllocStack(Size size, Size align, T **out_ptr)
         return false;
     }
 
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     MemSet(ptr, 0, delta);
 #endif
 
@@ -167,7 +167,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
     Size delta = size + (ptr - mem->heap.ptr);
 
     if (size < 4096 && delta <= mem->heap.len) [[likely]] {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
         MemSet(mem->heap.ptr, 0, delta);
 #endif
 
@@ -176,7 +176,7 @@ inline T *CallData::AllocHeap(Size size, Size align)
 
         return ptr;
     } else {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
         int flags = (int)AllocFlag::Zero;
 #else
         int flags = 0;

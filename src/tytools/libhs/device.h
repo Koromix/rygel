@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_DEVICE_H
+#if !defined(HS_DEVICE_H)
 #define HS_DEVICE_H
 
 #include "common.h"
@@ -61,7 +61,7 @@ typedef enum hs_device_type {
  * @sa hs_device_type
  */
 static const char *const hs_device_type_strings[] = {
-#ifdef __cplusplus
+#if defined(__cplusplus)
     nullptr,
 #else
     NULL,
@@ -135,7 +135,7 @@ struct hs_device {
             /** Maximum feature report size calculated from HID report descriptor. */
             size_t max_feature_len;
 
-#ifdef __linux__
+#if defined(__linux__)
             /** @cond */
             // Needed to work around a bug on old Linux kernels
             bool numbered_reports;

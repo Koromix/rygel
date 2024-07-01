@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_SYSTEM_H
+#if !defined(TY_SYSTEM_H)
 #define TY_SYSTEM_H
 
 #include "common.h"
@@ -17,14 +17,14 @@
 
 _HS_BEGIN_C
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define TY_PATH_SEPARATORS "\\/"
 #else
     #define TY_PATH_SEPARATORS "/"
 #endif
 #define TY_PATH_MAX_SIZE 4096
 
-#ifdef _WIN32
+#if defined(_WIN32)
 typedef void *ty_descriptor; // HANDLE
 #else
 typedef int ty_descriptor;

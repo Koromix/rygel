@@ -25,7 +25,7 @@
 #include "vendor/miniz/miniz.h"
 
 #include <time.h>
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <io.h>
 
     typedef unsigned int uid_t;
@@ -164,7 +164,7 @@ static bool CheckUserName(Span<const char> username)
     return true;
 }
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 static bool FindPosixUser(const char *username, uid_t *out_uid, gid_t *out_gid)
 {
     struct passwd pwd_buf;
@@ -194,7 +194,7 @@ again:
 }
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static bool ChangeFileOwner(const char *, uid_t, gid_t)
 {
@@ -249,7 +249,7 @@ static bool CreateInstance(DomainHolder *domain, const char *instance_key,
 
     uid_t owner_uid = 0;
     gid_t owner_gid = 0;
-#ifndef _WIN32
+#if !defined(_WIN32)
     {
         struct stat sb;
         if (stat(domain->config.database_filename, &sb) < 0) {
@@ -476,7 +476,7 @@ Options:
 
         %!..+--demo [<name>]%!0          Create default instance)", FelixTarget);
 
-#ifndef _WIN32
+#if !defined(_WIN32)
         PrintLn(st, R"(
     %!..+-o, --owner <owner>%!0          Change directory and file owner)");
 #endif
@@ -508,7 +508,7 @@ Options:
                 CopyString(opt.current_value, archive_key);
             } else if (opt.Test("--demo", OptionType::OptionalValue)) {
                 demo = opt.current_value ? opt.current_value : "demo";
-#ifndef _WIN32
+#if !defined(_WIN32)
             } else if (opt.Test("-o", "--owner", OptionType::Value)) {
                 change_owner = true;
 
@@ -1275,7 +1275,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
     {
         time_t mtime = (time_t)(GetUnixTime() / 1000);
 
-#ifdef _WIN32
+#if defined(_WIN32)
         struct tm mtime_tm;
         {
             errno_t err = _gmtime64_s(&mtime_tm, &mtime);
@@ -2577,7 +2577,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
                 Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)len);
 
                 while (buf.len) {
-#ifdef _WIN32
+#if defined(_WIN32)
                     Size write_len = _write(fd, buf.ptr, (unsigned int)buf.len);
 #else
                     Size write_len = RG_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
@@ -2626,7 +2626,7 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 
                 entry.key = DuplicateString(instance_key, &io->allocator).ptr;
                 entry.basename = MakeInstanceFileName("instances", instance_key, &io->allocator);
-#ifdef _WIN32
+#if defined(_WIN32)
                 for (Size i = 0; entry.basename[i]; i++) {
                     char *ptr = (char *)entry.basename;
                     int c = entry.basename[i];

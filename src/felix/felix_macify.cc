@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see https://www.gnu.org/licenses/.
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 
 #include "src/core/base/base.hh"
 #include "compiler.hh"

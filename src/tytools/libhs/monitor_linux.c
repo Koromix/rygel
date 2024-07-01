@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifdef __linux__
+#if defined(__linux__)
 
 #include "common_priv.h"
 #include <fcntl.h>
@@ -52,7 +52,7 @@ static pthread_mutex_t udev_init_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct udev *udev;
 static int common_eventfd = -1;
 
-#ifndef _GNU_SOURCE
+#if !defined(_GNU_SOURCE)
 int dup3(int oldfd, int newfd, int flags);
 #endif
 

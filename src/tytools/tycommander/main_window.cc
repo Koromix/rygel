@@ -37,7 +37,7 @@ MainWindow::MainWindow(QWidget *parent)
     setupUi(this);
     setWindowTitle(QApplication::applicationName());
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     /* Workaround for Qt OSX bug https://bugreports.qt.io/browse/QTBUG-34160
        The actions in menuRecentFirmwares are copied to menuRecentFirmwares2
        in updateFirmwareMenus(). */
@@ -48,7 +48,7 @@ MainWindow::MainWindow(QWidget *parent)
     menuUpload = new QMenu(this);
     menuUpload->addAction(actionUploadNew);
     menuUpload->addAction(actionDropFirmware);
-#ifdef __APPLE__
+#if defined(__APPLE__)
     menuUpload->addMenu(menuRecentFirmwares2);
 #else
     menuUpload->addMenu(menuRecentFirmwares);
@@ -66,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent)
     menuBoardContext->addAction(actionUpload);
     menuBoardContext->addAction(actionUploadNew);
     menuBoardContext->addAction(actionDropFirmware);
-#ifdef __APPLE__
+#if defined(__APPLE__)
     menuBoardContext->addMenu(menuRecentFirmwares3);
 #else
     menuBoardContext->addMenu(menuRecentFirmwares);
@@ -134,12 +134,12 @@ MainWindow::MainWindow(QWidget *parent)
     connect(actionPreferences, &QAction::triggered, this, &MainWindow::openPreferences);
 
     // About menu
-#ifdef WEBSITE_URL
+#if defined(WEBSITE_URL)
     connect(actionWebsite, &QAction::triggered, &AboutDialog::openWebsite);
 #else
     actionWebsite->setVisible(false);
 #endif
-#ifdef BUGS_URL
+#if defined(BUGS_URL)
     connect(actionReportBug, &QAction::triggered, &AboutDialog::openBugReports);
 #else
     actionReportBug->setVisible(false);
@@ -154,11 +154,11 @@ MainWindow::MainWindow(QWidget *parent)
        https://bugreports.qt.io/browse/QTBUG-15746 */
     connect(new QShortcut(Qt::CTRL | Qt::SHIFT | Qt::Key_Tab, this),
             &QShortcut::activated, this, &MainWindow::selectPreviousBoard);
-#ifdef _WIN32
+#if defined(_WIN32)
     connect(new QShortcut(Qt::CTRL | Qt::SHIFT | Qt::Key_F6, this),
             &QShortcut::activated, this, &MainWindow::selectPreviousBoard);
 #endif
-#ifdef __APPLE__
+#if defined(__APPLE__)
     connect(new QShortcut(Qt::CTRL | Qt::Key_BraceLeft, this),
             &QShortcut::activated, this, &MainWindow::selectPreviousBoard);
 #endif
@@ -196,7 +196,7 @@ MainWindow::MainWindow(QWidget *parent)
     auto spacer = new QWidget();
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     toolBar->addWidget(spacer);
-#ifdef __APPLE__
+#if defined(__APPLE__)
     actionBoardComboBox = nullptr;
 #else
     actionBoardComboBox = toolBar->addWidget(boardComboBox);
@@ -794,7 +794,7 @@ void MainWindow::updateFirmwareMenus()
         menuBrowseFirmware->setEnabled(false);
     }
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     menuRecentFirmwares2->clear();
     menuRecentFirmwares2->addActions(menuRecentFirmwares->actions());
     menuRecentFirmwares2->setEnabled(menuRecentFirmwares->isEnabled());

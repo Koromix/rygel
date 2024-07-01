@@ -42,7 +42,7 @@ void Monitor::loadSettings()
 {
     auto max_tasks = db_.get("maxTasks").toUInt();
     if (!max_tasks) {
-#ifdef _WIN32
+#if defined(_WIN32)
         if (hs_win32_version() >= HS_WIN32_VERSION_10) {
             /* Windows 10 is much faster to load drivers and make the device available, we
                can probably afford that. */

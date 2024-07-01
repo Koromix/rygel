@@ -13,10 +13,10 @@
 
 #include "src/core/base/base.hh"
 
-#ifndef NOMINMAX
+#if !defined(NOMINMAX)
     #define NOMINMAX
 #endif
-#ifndef WIN32_LEAN_AND_MEAN
+#if !defined(WIN32_LEAN_AND_MEAN)
     #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>

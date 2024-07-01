@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef _WIN32
+#if !defined(_WIN32)
     #include <signal.h>
     #include <sys/wait.h>
 #endif

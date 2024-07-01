@@ -27,454 +27,454 @@ struct ErrnoCodeInfo {
 };
 
 const ErrnoCodeInfo ErrnoCodes[] = {
-#ifdef E2BIG
+#if defined(E2BIG)
     {"E2BIG", E2BIG },
 #endif
-#ifdef EACCES
+#if defined(EACCES)
     {"EACCES", EACCES },
 #endif
-#ifdef EADDRINUSE
+#if defined(EADDRINUSE)
     {"EADDRINUSE", EADDRINUSE },
 #endif
-#ifdef EADDRNOTAVAIL
+#if defined(EADDRNOTAVAIL)
     {"EADDRNOTAVAIL", EADDRNOTAVAIL },
 #endif
-#ifdef EADV
+#if defined(EADV)
     {"EADV", EADV },
 #endif
-#ifdef EAFNOSUPPORT
+#if defined(EAFNOSUPPORT)
     {"EAFNOSUPPORT", EAFNOSUPPORT },
 #endif
-#ifdef EAGAIN
+#if defined(EAGAIN)
     {"EAGAIN", EAGAIN },
 #endif
-#ifdef EALREADY
+#if defined(EALREADY)
     {"EALREADY", EALREADY },
 #endif
-#ifdef EAUTH
+#if defined(EAUTH)
     {"EAUTH", EAUTH },
 #endif
-#ifdef EBADE
+#if defined(EBADE)
     {"EBADE", EBADE },
 #endif
-#ifdef EBADF
+#if defined(EBADF)
     {"EBADF", EBADF },
 #endif
-#ifdef EBADFD
+#if defined(EBADFD)
     {"EBADFD", EBADFD },
 #endif
-#ifdef EBADMSG
+#if defined(EBADMSG)
     {"EBADMSG", EBADMSG },
 #endif
-#ifdef EBADR
+#if defined(EBADR)
     {"EBADR", EBADR },
 #endif
-#ifdef EBADRPC
+#if defined(EBADRPC)
     {"EBADRPC", EBADRPC },
 #endif
-#ifdef EBADRQC
+#if defined(EBADRQC)
     {"EBADRQC", EBADRQC },
 #endif
-#ifdef EBADSLT
+#if defined(EBADSLT)
     {"EBADSLT", EBADSLT },
 #endif
-#ifdef EBFONT
+#if defined(EBFONT)
     {"EBFONT", EBFONT },
 #endif
-#ifdef EBUSY
+#if defined(EBUSY)
     {"EBUSY", EBUSY },
 #endif
-#ifdef ECANCELED
+#if defined(ECANCELED)
     {"ECANCELED", ECANCELED },
 #endif
-#ifdef ECAPMODE
+#if defined(ECAPMODE)
     {"ECAPMODE", ECAPMODE },
 #endif
-#ifdef ECHILD
+#if defined(ECHILD)
     {"ECHILD", ECHILD },
 #endif
-#ifdef ECHRNG
+#if defined(ECHRNG)
     {"ECHRNG", ECHRNG },
 #endif
-#ifdef ECOMM
+#if defined(ECOMM)
     {"ECOMM", ECOMM },
 #endif
-#ifdef ECONNABORTED
+#if defined(ECONNABORTED)
     {"ECONNABORTED", ECONNABORTED },
 #endif
-#ifdef ECONNREFUSED
+#if defined(ECONNREFUSED)
     {"ECONNREFUSED", ECONNREFUSED },
 #endif
-#ifdef ECONNRESET
+#if defined(ECONNRESET)
     {"ECONNRESET", ECONNRESET },
 #endif
-#ifdef EDEADLK
+#if defined(EDEADLK)
     {"EDEADLK", EDEADLK },
 #endif
-#ifdef EDEADLOCK
+#if defined(EDEADLOCK)
     {"EDEADLOCK", EDEADLOCK },
 #endif
-#ifdef EDESTADDRREQ
+#if defined(EDESTADDRREQ)
     {"EDESTADDRREQ", EDESTADDRREQ },
 #endif
-#ifdef EDOM
+#if defined(EDOM)
     {"EDOM", EDOM },
 #endif
-#ifdef EDOOFUS
+#if defined(EDOOFUS)
     {"EDOOFUS", EDOOFUS },
 #endif
-#ifdef EDOTDOT
+#if defined(EDOTDOT)
     {"EDOTDOT", EDOTDOT },
 #endif
-#ifdef EDQUOT
+#if defined(EDQUOT)
     {"EDQUOT", EDQUOT },
 #endif
-#ifdef EEXIST
+#if defined(EEXIST)
     {"EEXIST", EEXIST },
 #endif
-#ifdef EFAULT
+#if defined(EFAULT)
     {"EFAULT", EFAULT },
 #endif
-#ifdef EFBIG
+#if defined(EFBIG)
     {"EFBIG", EFBIG },
 #endif
-#ifdef EFTYPE
+#if defined(EFTYPE)
     {"EFTYPE", EFTYPE },
 #endif
-#ifdef EHOSTDOWN
+#if defined(EHOSTDOWN)
     {"EHOSTDOWN", EHOSTDOWN },
 #endif
-#ifdef EHOSTUNREACH
+#if defined(EHOSTUNREACH)
     {"EHOSTUNREACH", EHOSTUNREACH },
 #endif
-#ifdef EHWPOISON
+#if defined(EHWPOISON)
     {"EHWPOISON", EHWPOISON },
 #endif
-#ifdef EIDRM
+#if defined(EIDRM)
     {"EIDRM", EIDRM },
 #endif
-#ifdef EILSEQ
+#if defined(EILSEQ)
     {"EILSEQ", EILSEQ },
 #endif
-#ifdef EINPROGRESS
+#if defined(EINPROGRESS)
     {"EINPROGRESS", EINPROGRESS },
 #endif
-#ifdef EINTEGRITY
+#if defined(EINTEGRITY)
     {"EINTEGRITY", EINTEGRITY },
 #endif
-#ifdef EINTR
+#if defined(EINTR)
     {"EINTR", EINTR },
 #endif
-#ifdef EINVAL
+#if defined(EINVAL)
     {"EINVAL", EINVAL },
 #endif
-#ifdef EIO
+#if defined(EIO)
     {"EIO", EIO },
 #endif
-#ifdef EISCONN
+#if defined(EISCONN)
     {"EISCONN", EISCONN },
 #endif
-#ifdef EISDIR
+#if defined(EISDIR)
     {"EISDIR", EISDIR },
 #endif
-#ifdef EISNAM
+#if defined(EISNAM)
     {"EISNAM", EISNAM },
 #endif
-#ifdef EKEYEXPIRED
+#if defined(EKEYEXPIRED)
     {"EKEYEXPIRED", EKEYEXPIRED },
 #endif
-#ifdef EKEYREJECTED
+#if defined(EKEYREJECTED)
     {"EKEYREJECTED", EKEYREJECTED },
 #endif
-#ifdef EKEYREVOKED
+#if defined(EKEYREVOKED)
     {"EKEYREVOKED", EKEYREVOKED },
 #endif
-#ifdef EL2HLT
+#if defined(EL2HLT)
     {"EL2HLT", EL2HLT },
 #endif
-#ifdef EL2NSYNC
+#if defined(EL2NSYNC)
     {"EL2NSYNC", EL2NSYNC },
 #endif
-#ifdef EL3HLT
+#if defined(EL3HLT)
     {"EL3HLT", EL3HLT },
 #endif
-#ifdef EL3RST
+#if defined(EL3RST)
     {"EL3RST", EL3RST },
 #endif
-#ifdef ELIBACC
+#if defined(ELIBACC)
     {"ELIBACC", ELIBACC },
 #endif
-#ifdef ELIBBAD
+#if defined(ELIBBAD)
     {"ELIBBAD", ELIBBAD },
 #endif
-#ifdef ELIBEXEC
+#if defined(ELIBEXEC)
     {"ELIBEXEC", ELIBEXEC },
 #endif
-#ifdef ELIBMAX
+#if defined(ELIBMAX)
     {"ELIBMAX", ELIBMAX },
 #endif
-#ifdef ELIBSCN
+#if defined(ELIBSCN)
     {"ELIBSCN", ELIBSCN },
 #endif
-#ifdef ELNRNG
+#if defined(ELNRNG)
     {"ELNRNG", ELNRNG },
 #endif
-#ifdef ELOOP
+#if defined(ELOOP)
     {"ELOOP", ELOOP },
 #endif
-#ifdef EMEDIUMTYPE
+#if defined(EMEDIUMTYPE)
     {"EMEDIUMTYPE", EMEDIUMTYPE },
 #endif
-#ifdef EMFILE
+#if defined(EMFILE)
     {"EMFILE", EMFILE },
 #endif
-#ifdef EMLINK
+#if defined(EMLINK)
     {"EMLINK", EMLINK },
 #endif
-#ifdef EMSGSIZE
+#if defined(EMSGSIZE)
     {"EMSGSIZE", EMSGSIZE },
 #endif
-#ifdef EMULTIHOP
+#if defined(EMULTIHOP)
     {"EMULTIHOP", EMULTIHOP },
 #endif
-#ifdef ENAMETOOLONG
+#if defined(ENAMETOOLONG)
     {"ENAMETOOLONG", ENAMETOOLONG },
 #endif
-#ifdef ENAVAIL
+#if defined(ENAVAIL)
     {"ENAVAIL", ENAVAIL },
 #endif
-#ifdef ENEEDAUTH
+#if defined(ENEEDAUTH)
     {"ENEEDAUTH", ENEEDAUTH },
 #endif
-#ifdef ENETDOWN
+#if defined(ENETDOWN)
     {"ENETDOWN", ENETDOWN },
 #endif
-#ifdef ENETRESET
+#if defined(ENETRESET)
     {"ENETRESET", ENETRESET },
 #endif
-#ifdef ENETUNREACH
+#if defined(ENETUNREACH)
     {"ENETUNREACH", ENETUNREACH },
 #endif
-#ifdef ENFILE
+#if defined(ENFILE)
     {"ENFILE", ENFILE },
 #endif
-#ifdef ENOANO
+#if defined(ENOANO)
     {"ENOANO", ENOANO },
 #endif
-#ifdef ENOATTR
+#if defined(ENOATTR)
     {"ENOATTR", ENOATTR },
 #endif
-#ifdef ENOBUFS
+#if defined(ENOBUFS)
     {"ENOBUFS", ENOBUFS },
 #endif
-#ifdef ENOCSI
+#if defined(ENOCSI)
     {"ENOCSI", ENOCSI },
 #endif
-#ifdef ENODATA
+#if defined(ENODATA)
     {"ENODATA", ENODATA },
 #endif
-#ifdef ENODEV
+#if defined(ENODEV)
     {"ENODEV", ENODEV },
 #endif
-#ifdef ENOENT
+#if defined(ENOENT)
     {"ENOENT", ENOENT },
 #endif
-#ifdef ENOEXEC
+#if defined(ENOEXEC)
     {"ENOEXEC", ENOEXEC },
 #endif
-#ifdef ENOKEY
+#if defined(ENOKEY)
     {"ENOKEY", ENOKEY },
 #endif
-#ifdef ENOLCK
+#if defined(ENOLCK)
     {"ENOLCK", ENOLCK },
 #endif
-#ifdef ENOLINK
+#if defined(ENOLINK)
     {"ENOLINK", ENOLINK },
 #endif
-#ifdef ENOMEDIUM
+#if defined(ENOMEDIUM)
     {"ENOMEDIUM", ENOMEDIUM },
 #endif
-#ifdef ENOMEM
+#if defined(ENOMEM)
     {"ENOMEM", ENOMEM },
 #endif
-#ifdef ENOMSG
+#if defined(ENOMSG)
     {"ENOMSG", ENOMSG },
 #endif
-#ifdef ENONET
+#if defined(ENONET)
     {"ENONET", ENONET },
 #endif
-#ifdef ENOPKG
+#if defined(ENOPKG)
     {"ENOPKG", ENOPKG },
 #endif
-#ifdef ENOPROTOOPT
+#if defined(ENOPROTOOPT)
     {"ENOPROTOOPT", ENOPROTOOPT },
 #endif
-#ifdef ENOSPC
+#if defined(ENOSPC)
     {"ENOSPC", ENOSPC },
 #endif
-#ifdef ENOSR
+#if defined(ENOSR)
     {"ENOSR", ENOSR },
 #endif
-#ifdef ENOSTR
+#if defined(ENOSTR)
     {"ENOSTR", ENOSTR },
 #endif
-#ifdef ENOSYS
+#if defined(ENOSYS)
     {"ENOSYS", ENOSYS },
 #endif
-#ifdef ENOTBLK
+#if defined(ENOTBLK)
     {"ENOTBLK", ENOTBLK },
 #endif
-#ifdef ENOTCAPABLE
+#if defined(ENOTCAPABLE)
     {"ENOTCAPABLE", ENOTCAPABLE },
 #endif
-#ifdef ENOTCONN
+#if defined(ENOTCONN)
     {"ENOTCONN", ENOTCONN },
 #endif
-#ifdef ENOTDIR
+#if defined(ENOTDIR)
     {"ENOTDIR", ENOTDIR },
 #endif
-#ifdef ENOTEMPTY
+#if defined(ENOTEMPTY)
     {"ENOTEMPTY", ENOTEMPTY },
 #endif
-#ifdef ENOTNAM
+#if defined(ENOTNAM)
     {"ENOTNAM", ENOTNAM },
 #endif
-#ifdef ENOTRECOVERABLE
+#if defined(ENOTRECOVERABLE)
     {"ENOTRECOVERABLE", ENOTRECOVERABLE },
 #endif
-#ifdef ENOTSOCK
+#if defined(ENOTSOCK)
     {"ENOTSOCK", ENOTSOCK },
 #endif
-#ifdef ENOTSUP
+#if defined(ENOTSUP)
     {"ENOTSUP", ENOTSUP },
 #endif
-#ifdef ENOTTY
+#if defined(ENOTTY)
     {"ENOTTY", ENOTTY },
 #endif
-#ifdef ENOTUNIQ
+#if defined(ENOTUNIQ)
     {"ENOTUNIQ", ENOTUNIQ },
 #endif
-#ifdef ENXIO
+#if defined(ENXIO)
     {"ENXIO", ENXIO },
 #endif
-#ifdef EOPNOTSUPP
+#if defined(EOPNOTSUPP)
     {"EOPNOTSUPP", EOPNOTSUPP },
 #endif
-#ifdef EOTHER
+#if defined(EOTHER)
     {"EOTHER", EOTHER },
 #endif
-#ifdef EOVERFLOW
+#if defined(EOVERFLOW)
     {"EOVERFLOW", EOVERFLOW },
 #endif
-#ifdef EOWNERDEAD
+#if defined(EOWNERDEAD)
     {"EOWNERDEAD", EOWNERDEAD },
 #endif
-#ifdef EPERM
+#if defined(EPERM)
     {"EPERM", EPERM },
 #endif
-#ifdef EPFNOSUPPORT
+#if defined(EPFNOSUPPORT)
     {"EPFNOSUPPORT", EPFNOSUPPORT },
 #endif
-#ifdef EPIPE
+#if defined(EPIPE)
     {"EPIPE", EPIPE },
 #endif
-#ifdef EPROCLIM
+#if defined(EPROCLIM)
     {"EPROCLIM", EPROCLIM },
 #endif
-#ifdef EPROCUNAVAIL
+#if defined(EPROCUNAVAIL)
     {"EPROCUNAVAIL", EPROCUNAVAIL },
 #endif
-#ifdef EPROGMISMATCH
+#if defined(EPROGMISMATCH)
     {"EPROGMISMATCH", EPROGMISMATCH },
 #endif
-#ifdef EPROGUNAVAIL
+#if defined(EPROGUNAVAIL)
     {"EPROGUNAVAIL", EPROGUNAVAIL },
 #endif
-#ifdef EPROTO
+#if defined(EPROTO)
     {"EPROTO", EPROTO },
 #endif
-#ifdef EPROTONOSUPPORT
+#if defined(EPROTONOSUPPORT)
     {"EPROTONOSUPPORT", EPROTONOSUPPORT },
 #endif
-#ifdef EPROTOTYPE
+#if defined(EPROTOTYPE)
     {"EPROTOTYPE", EPROTOTYPE },
 #endif
-#ifdef ERANGE
+#if defined(ERANGE)
     {"ERANGE", ERANGE },
 #endif
-#ifdef EREMCHG
+#if defined(EREMCHG)
     {"EREMCHG", EREMCHG },
 #endif
-#ifdef EREMOTE
+#if defined(EREMOTE)
     {"EREMOTE", EREMOTE },
 #endif
-#ifdef EREMOTEIO
+#if defined(EREMOTEIO)
     {"EREMOTEIO", EREMOTEIO },
 #endif
-#ifdef ERESTART
+#if defined(ERESTART)
     {"ERESTART", ERESTART },
 #endif
-#ifdef ERFKILL
+#if defined(ERFKILL)
     {"ERFKILL", ERFKILL },
 #endif
-#ifdef EROFS
+#if defined(EROFS)
     {"EROFS", EROFS },
 #endif
-#ifdef ERPCMISMATCH
+#if defined(ERPCMISMATCH)
     {"ERPCMISMATCH", ERPCMISMATCH },
 #endif
-#ifdef ESHUTDOWN
+#if defined(ESHUTDOWN)
     {"ESHUTDOWN", ESHUTDOWN },
 #endif
-#ifdef ESOCKTNOSUPPORT
+#if defined(ESOCKTNOSUPPORT)
     {"ESOCKTNOSUPPORT", ESOCKTNOSUPPORT },
 #endif
-#ifdef ESPIPE
+#if defined(ESPIPE)
     {"ESPIPE", ESPIPE },
 #endif
-#ifdef ESRCH
+#if defined(ESRCH)
     {"ESRCH", ESRCH },
 #endif
-#ifdef ESRMNT
+#if defined(ESRMNT)
     {"ESRMNT", ESRMNT },
 #endif
-#ifdef ESTALE
+#if defined(ESTALE)
     {"ESTALE", ESTALE },
 #endif
-#ifdef ESTRPIPE
+#if defined(ESTRPIPE)
     {"ESTRPIPE", ESTRPIPE },
 #endif
-#ifdef ETIME
+#if defined(ETIME)
     {"ETIME", ETIME },
 #endif
-#ifdef ETIMEDOUT
+#if defined(ETIMEDOUT)
     {"ETIMEDOUT", ETIMEDOUT },
 #endif
-#ifdef ETOOMANYREFS
+#if defined(ETOOMANYREFS)
     {"ETOOMANYREFS", ETOOMANYREFS },
 #endif
-#ifdef ETXTBSY
+#if defined(ETXTBSY)
     {"ETXTBSY", ETXTBSY },
 #endif
-#ifdef EUCLEAN
+#if defined(EUCLEAN)
     {"EUCLEAN", EUCLEAN },
 #endif
-#ifdef EUNATCH
+#if defined(EUNATCH)
     {"EUNATCH", EUNATCH },
 #endif
-#ifdef EUSERS
+#if defined(EUSERS)
     {"EUSERS", EUSERS },
 #endif
-#ifdef EWOULDBLOCK
+#if defined(EWOULDBLOCK)
     {"EWOULDBLOCK", EWOULDBLOCK },
 #endif
-#ifdef EXDEV
+#if defined(EXDEV)
     {"EXDEV", EXDEV },
 #endif
-#ifdef EXFULL
+#if defined(EXFULL)
     {"EXFULL", EXFULL },
 #endif
-#ifdef STRUNCATE
+#if defined(STRUNCATE)
     {"STRUNCATE", STRUNCATE },
 #endif
 };

@@ -46,7 +46,7 @@ bool sb_IsSandboxSupported();
 class sb_SandboxBuilder final {
     RG_DELETE_COPY(sb_SandboxBuilder)
 
-#ifdef __linux__
+#if defined(__linux__)
     struct BindMount {
         const char *src;
         const char *dest;
@@ -73,7 +73,7 @@ public:
     void RevealPaths(Span<const char *const> paths, bool readonly);
     void MaskFiles(Span<const char *const> filenames);
 
-#ifdef __linux__
+#if defined(__linux__)
     void MountPath(const char *src, const char *dest, bool readonly);
     void FilterSyscalls(sb_FilterAction default_action, Span<const sb_FilterItem> items = {});
     void FilterSyscalls(Span<const sb_FilterItem> items);

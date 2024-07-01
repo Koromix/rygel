@@ -19,7 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef MIMETYPE
+#if !defined(MIMETYPE)
     #error Please define MIMETYPE() before including mimetypes.inc
 #endif
 

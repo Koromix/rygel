@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 
 #include "common.h"
 #include <time.h>
@@ -122,14 +122,14 @@ void ty_mutex_unlock(ty_mutex *mutex)
 
 int ty_cond_init(ty_cond *cond)
 {
-#ifndef __APPLE__
+#if !defined(__APPLE__)
     pthread_condattr_t attr;
 #endif
     int r;
 
     cond->init = false;
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     r = pthread_cond_init(&cond->cond, NULL);
 #else
     r = pthread_condattr_init(&attr);
@@ -171,7 +171,7 @@ bool ty_cond_wait(ty_cond *cond, ty_mutex *mutex, int timeout)
     int r;
 
     if (timeout >= 0) {
-#ifdef __APPLE__
+#if defined(__APPLE__)
         struct timespec ts;
 
         ts.tv_sec = (time_t)(timeout / 1000);

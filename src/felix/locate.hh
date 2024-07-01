@@ -22,7 +22,7 @@ struct QtInfo {
     const char *moc = nullptr;
     const char *rcc = nullptr;
     const char *uic = nullptr;
-#ifdef __APPLE__
+#if defined(__APPLE__)
     const char *macdeployqt = nullptr;
 #endif
 

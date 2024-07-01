@@ -124,7 +124,7 @@ class gui_Window {
 
     gui_State priv = {};
 
-#ifdef _WIN32
+#if defined(_WIN32)
     struct gui_Win32Window *window = nullptr;
 #else
     GLFWwindow *window = nullptr;

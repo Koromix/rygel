@@ -11,7 +11,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef _WIN32
+#if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 #else
@@ -180,7 +180,7 @@ int main(void)
         goto cleanup;
 
     sources[0].desc = hs_monitor_get_poll_handle(monitor);
-#ifdef _WIN32
+#if defined(_WIN32)
     sources[1].desc = GetStdHandle(STD_INPUT_HANDLE);
 #else
     sources[1].desc = STDIN_FILENO;
@@ -226,7 +226,7 @@ int main(void)
     } while (r >= 0 && !sources[1].ready);
 
     if (sources[1].ready) {
-#ifndef _WIN32
+#if !defined(_WIN32)
         tcflush(STDIN_FILENO, TCIFLUSH);
 #endif
         r = 0;

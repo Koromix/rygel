@@ -21,7 +21,7 @@ AboutDialog::AboutDialog(QWidget *parent, Qt::WindowFlags f)
     setWindowTitle(tr("About %1").arg(QApplication::applicationName()));
 
     connect(closeButton, &QPushButton::clicked, this, &AboutDialog::close);
-#ifdef BUGS_URL
+#if defined(BUGS_URL)
     connect(reportBugButton, &QPushButton::clicked, &AboutDialog::openBugReports);
 #else
     reportBugButton->hide();
@@ -31,21 +31,21 @@ AboutDialog::AboutDialog(QWidget *parent, Qt::WindowFlags f)
     versionLabel->setText(QString("%1\n%2")
                           .arg(QCoreApplication::applicationName(),
                                QCoreApplication::applicationVersion()));
-#ifdef WEBSITE_URL
+#if defined(WEBSITE_URL)
     websiteLabel->setText(QString("<a href=\"%1\">%1</a>").arg(WEBSITE_URL));
 #endif
 }
 
 void AboutDialog::openWebsite()
 {
-#ifdef WEBSITE_URL
+#if defined(WEBSITE_URL)
     QDesktopServices::openUrl(QUrl(WEBSITE_URL));
 #endif
 }
 
 void AboutDialog::openBugReports()
 {
-#ifdef BUGS_URL
+#if defined(BUGS_URL)
     QDesktopServices::openUrl(QUrl(BUGS_URL));
 #endif
 }

@@ -130,7 +130,7 @@ static ssize_t read_file(int64_t offset, uint8_t *buf, size_t len, void *udata)
     if (offset < 0) {
         offset = ctx->offset;
     } else if (offset != ctx->offset) {
-#ifdef _WIN32
+#if defined(_WIN32)
         r = _fseeki64(ctx->fp, offset, SEEK_SET);
 #else
         r = fseeko(ctx->fp, (off_t)offset, SEEK_SET);
@@ -198,7 +198,7 @@ int ty_firmware_load_file(const char *filename, FILE *fp, const char *format_nam
 
     if (!fp) {
 restart:
-#ifdef _WIN32
+#if defined(_WIN32)
         fp = fopen(filename, "rb");
 #else
         fp = fopen(filename, "rbe");

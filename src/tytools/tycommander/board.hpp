@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef BOARD_HH
+#if !defined(BOARD_HH)
 #define BOARD_HH
 
 #include <QFile>

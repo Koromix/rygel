@@ -25,14 +25,14 @@
 #include "src/core/request/curl.hh"
 #include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
-#ifndef _WIN32
+#if !defined(_WIN32)
     #include <sys/time.h>
     #include <sys/resource.h>
     #include <sys/types.h>
     #include <sys/socket.h>
     #include <netdb.h>
 #endif
-#ifdef __GLIBC__
+#if defined(__GLIBC__)
     #include <malloc.h>
 #endif
 
@@ -72,7 +72,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
     sb.RevealPaths(reveal_paths, false);
     sb.MaskFiles(mask_files);
 
-#ifdef __linux__
+#if defined(__linux__)
     // Force glibc to load all the NSS crap beforehand, so we don't need to
     // expose it in the sandbox...
     // What a bunch of crap. Why does all this need to use shared libraries??
@@ -754,7 +754,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
-#ifdef FELIX_HOT_ASSETS
+#if defined(FELIX_HOT_ASSETS)
     // This is not actually thread safe, because it may release memory from an asset
     // that is being used by another thread. This code only runs in development builds
     // and it pretty much never goes wrong so it is kind of OK.
@@ -942,7 +942,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         }
     }
 
-#ifndef _WIN32
+#if !defined(_WIN32)
     {
         const rlim_t max_nofile = 4096;
         struct rlimit lim;
@@ -1010,7 +1010,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     if (!daemon.Bind(gp_domain.config.http))
         return 1;
 
-#ifdef __linux__
+#if defined(__linux__)
     if (!NotifySystemd())
         return 1;
 #endif
@@ -1023,7 +1023,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
         sqlite3_temp_directory = sqlite3_mprintf("%s", gp_domain.config.tmp_directory);
 
         const char *const reveal_paths[] = {
-#ifdef FELIX_HOT_ASSETS
+#if defined(FELIX_HOT_ASSETS)
             // Needed for asset module
             GetApplicationDirectory(),
 #endif
@@ -1123,7 +1123,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             LogDebug("Prune template renders");
             PruneRenders();
 
-#ifdef __GLIBC__
+#if defined(__GLIBC__)
             // Actually release memory to the OS, because for some reason glibc doesn't want to
             // do this automatically even after 98% of the resident memory pool has been freed.
             LogDebug("Release memory (glibc)");

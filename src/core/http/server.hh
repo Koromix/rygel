@@ -22,11 +22,11 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#ifdef _WIN32
-    #ifndef NOMINMAX
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
         #define NOMINMAX
     #endif
-    #ifndef WIN32_LEAN_AND_MEAN
+    #if !defined(WIN32_LEAN_AND_MEAN)
         #define WIN32_LEAN_AND_MEAN
     #endif
 #endif
@@ -46,7 +46,7 @@ static const char *const http_ClientAddressModeNames[] = {
 };
 
 struct http_Config {
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__)
     SocketType sock_type = SocketType::IPv4;
 #else
     SocketType sock_type = SocketType::Dual;
@@ -80,7 +80,7 @@ class http_Daemon {
     int listen_fd = -1;
     http_ClientAddressMode client_addr_mode = http_ClientAddressMode::Socket;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     void *stop_handle = nullptr;
 #else
     int stop_pfd[2] = {-1, -1};
@@ -197,7 +197,7 @@ class http_IO {
     MHD_socket ws_fd;
     HeapArray<uint8_t> ws_buf;
     Size ws_offset;
-#ifdef _WIN32
+#if defined(_WIN32)
     void *ws_handle;
 #endif
 

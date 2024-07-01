@@ -141,7 +141,7 @@ int _hs_asprintf(char **strp, const char *fmt, ...)
     int r;
 
     va_start(ap, fmt);
-#ifdef HAVE_ASPRINTF
+#if defined(HAVE_ASPRINTF)
     r = vasprintf(strp, fmt, ap);
 #else
     r = _hs_vasprintf(strp, fmt, ap);
@@ -153,7 +153,7 @@ int _hs_asprintf(char **strp, const char *fmt, ...)
 
 int _hs_vasprintf(char **strp, const char *fmt, va_list ap)
 {
-#ifdef HAVE_ASPRINTF
+#if defined(HAVE_ASPRINTF)
     return vasprintf(strp, fmt, ap);
 #else
     va_list ap_copy;

@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_FIRMWARE_H
+#if !defined(TY_FIRMWARE_H)
 #define TY_FIRMWARE_H
 
 #include "common.h"

@@ -8,10 +8,10 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_COMMON_H
+#if !defined(TY_COMMON_H)
 #define TY_COMMON_H
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <malloc.h>
 #else
     #include <alloca.h>

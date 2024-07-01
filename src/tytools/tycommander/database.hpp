@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef DATABASE_HH
+#if !defined(DATABASE_HH)
 #define DATABASE_HH
 
 #include <QString>

@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_TIMER_H
+#if !defined(TY_TIMER_H)
 #define TY_TIMER_H
 
 #include "common.h"

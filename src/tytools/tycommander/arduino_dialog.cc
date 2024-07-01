@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <windows.h>
 #endif
 #include <QCoreApplication>
@@ -102,7 +102,7 @@ void ArduinoDialog::addError(const QString &msg)
 
 void ArduinoDialog::browseForArduino()
 {
-#ifdef __APPLE__
+#if defined(__APPLE__)
     auto path = QFileDialog::getOpenFileName(this, tr("Select Arduino application"), "",
                                              tr("Applications (*.app)"));
 #else
@@ -151,7 +151,7 @@ void ArduinoDialog::appendMessage(const QString &msg, const QTextCharFormat &fmt
 
 void ArduinoDialog::executeAsRoot(const QString &command)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     auto vista = QOperatingSystemVersion(QOperatingSystemVersion::Windows, 6, 0);
 
     if (QOperatingSystemVersion::current() >= vista) {
@@ -169,7 +169,7 @@ void ArduinoDialog::executeAsRoot(const QString &command)
                                              command, install_.absolutePath()), fmt);
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 void ArduinoDialog::installWithUAC(const QString &command)
 {

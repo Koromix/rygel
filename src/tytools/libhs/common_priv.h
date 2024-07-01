@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef _HS_COMMON_PRIV_H
+#if !defined(_HS_COMMON_PRIV_H)
 #define _HS_COMMON_PRIV_H
 
 #include "common.h"

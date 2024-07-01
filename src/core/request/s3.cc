@@ -28,7 +28,7 @@
 namespace RG {
 
 // Fix mess caused by windows.h (included by libcurl)
-#ifdef GetObject
+#if defined(GetObject)
     #undef GetObject
 #endif
 

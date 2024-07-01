@@ -17,11 +17,11 @@
 #include "git.hh"
 #include "target.hh"
 
-#ifdef _WIN32
-    #ifndef NOMINMAX
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
         #define NOMINMAX
     #endif
-    #ifndef WIN32_LEAN_AND_MEAN
+    #if !defined(WIN32_LEAN_AND_MEAN)
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <windows.h>
@@ -49,7 +49,7 @@ static int RunTarget(const char *target_filename, Span<const char *const> argume
     LogInfo("Run '%1'", target_filename);
     LogInfo("%!D..--------------------------------------------------%!0");
 
-#ifdef _WIN32
+#if defined(_WIN32)
     HeapArray<char> cmd;
 
     Fmt(&cmd, "\"%1\"", target_filename);
@@ -377,7 +377,7 @@ Supported compiler features:)");
         Print(st, R"(
 Felix can also run the following special commands:
     %!..+build%!0                        Build C and C++ projects %!D..(default)%!0)");
-#ifdef __APPLE__
+#if defined(__APPLE__)
         Print(st, R"(
     %!..+macify%!0                       Create macOS bundle app from binary)");
 #endif

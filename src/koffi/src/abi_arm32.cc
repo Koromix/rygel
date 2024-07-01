@@ -64,7 +64,7 @@ extern "C" napi_value CallSwitchStack(Napi::Function *func, size_t argc, napi_va
 
 static int IsHFA(const TypeInfo *type)
 {
-#ifdef __ARM_PCS_VFP
+#if defined(__ARM_PCS_VFP)
     bool float32 = false;
     bool float64 = false;
     int count = 0;
@@ -178,7 +178,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Array: { RG_UNREACHABLE(); } break;
             case PrimitiveKind::Float32:
             case PrimitiveKind::Float64: {
-#ifdef __ARM_PCS_VFP
+#if defined(__ARM_PCS_VFP)
                 bool vfp = !param.variadic;
 #else
                 bool vfp = false;
@@ -945,7 +945,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             }
 
             float f = GetNumber<float>(value);
-#ifdef __ARM_PCS_VFP
+#if defined(__ARM_PCS_VFP)
             MemCpy(&out_reg->d0, &f, 4);
 #else
             MemCpy(&out_reg->r0, &f, 4);
@@ -958,7 +958,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             }
 
             double d = GetNumber<double>(value);
-#ifdef __ARM_PCS_VFP
+#if defined(__ARM_PCS_VFP)
             out_reg->d0 = d;
 #else
             MemCpy(&out_reg->r0, &d, 8);

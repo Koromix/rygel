@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_INI_H
+#if !defined(TY_INI_H)
 #define TY_INI_H
 
 #include "common.h"

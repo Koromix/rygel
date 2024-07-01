@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
     #include <io.h>
@@ -37,7 +37,7 @@ static int monitor_directions = DIRECTION_INPUT | DIRECTION_OUTPUT;
 static bool monitor_reconnect = false;
 static int monitor_timeout_eof = 200;
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static bool monitor_fake_echo;
 
@@ -105,7 +105,7 @@ static int redirect_stdout(int *routfd)
     return 0;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static unsigned int __stdcall stdin_thread(void *udata)
 {
@@ -237,7 +237,7 @@ static int fill_descriptor_set(ty_descriptor_set *set, ty_board *board)
 
     if (monitor_directions & DIRECTION_INPUT)
         ty_board_interface_get_descriptors(iface, set, 2);
-#ifdef _WIN32
+#if defined(_WIN32)
     if (monitor_directions & DIRECTION_OUTPUT) {
         if (monitor_input_available) {
             ty_descriptor_set_add(set, monitor_input_available, 3);
@@ -316,7 +316,7 @@ restart:
                     return (int)r;
                 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
                 r = write(outfd, buf, (unsigned int)r);
 #else
                 r = write(outfd, buf, (size_t)r);
@@ -330,7 +330,7 @@ restart:
             } break;
 
             case 3: {
-#ifdef _WIN32
+#if defined(_WIN32)
                 if (monitor_input_available) {
                     if (monitor_input_ret < 0)
                         return (int)monitor_input_ret;
@@ -364,7 +364,7 @@ restart:
                     break;
                 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
                 if (monitor_fake_echo) {
                     r = write(outfd, buf, (unsigned int)r);
                     if (r < 0)
@@ -542,7 +542,7 @@ int monitor(int argc, char *argv[])
     }
 
     if (ty_standard_get_modes(TY_STREAM_INPUT) & TY_DESCRIPTOR_MODE_TERMINAL) {
-#ifdef _WIN32
+#if defined(_WIN32)
         if (monitor_term_flags & TY_TERMINAL_RAW && !(monitor_term_flags & TY_TERMINAL_SILENT)) {
             monitor_term_flags |= TY_TERMINAL_SILENT;
 
@@ -583,7 +583,7 @@ int monitor(int argc, char *argv[])
     r = loop(board, outfd);
 
 cleanup:
-#ifdef _WIN32
+#if defined(_WIN32)
     stop_stdin_thread();
 #endif
     ty_board_unref(board);

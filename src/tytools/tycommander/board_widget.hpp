@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef BOARD_WIDGET_HH
+#if !defined(BOARD_WIDGET_HH)
 #define BOARD_WIDGET_HH
 
 #include <QItemDelegate>

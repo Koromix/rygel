@@ -139,7 +139,7 @@ bool Builder::AddQtDirectories(const SourceFileInfo &src, HeapArray<const char *
     out_list->Append(qt->headers);
 
     for (const char *component: src.target->qt_components) {
-#ifdef _WIN32
+#if defined(_WIN32)
         // Probably never gonna be possible...
         RG_ASSERT(build.compiler->platform != HostPlatform::macOS);
 #else

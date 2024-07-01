@@ -67,7 +67,7 @@ if __name__ == "__main__":
         print('', file = f)
         print('const ErrnoCodeInfo ErrnoCodes[] = {', file = f)
         for code in ERROR_CODES:
-            print(f'#ifdef {code}', file = f)
+            print(f'#if defined({code})', file = f)
             code_str = '"' + code + '"'
             print('    {' + code_str + ', ' + code + ' },', file = f)
             print('#endif', file = f)

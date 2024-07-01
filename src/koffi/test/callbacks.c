@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <string.h>
-#ifdef _WIN32
+#if defined(_WIN32)
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
@@ -36,13 +36,13 @@
 #include <node_api.h>
 #include <uv.h>
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define EXPORT __declspec(dllexport)
 #else
     #define EXPORT __attribute__((visibility("default")))
 #endif
 #if defined(_M_IX86) || defined(__i386__)
-    #ifdef _MSC_VER
+    #if defined(_MSC_VER)
         #define FASTCALL __fastcall
         #define STDCALL __stdcall
     #else
@@ -171,7 +171,7 @@ EXPORT int CallIndirect(int x)
     return indirect_cb(x);
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 typedef struct CallContext {
     IntCallback *callback;

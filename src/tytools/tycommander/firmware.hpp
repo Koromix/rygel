@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef FIRMWARE_HH
+#if !defined(FIRMWARE_HH)
 #define FIRMWARE_HH
 
 #include <QString>

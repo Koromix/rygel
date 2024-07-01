@@ -122,7 +122,7 @@ int ty_models_load_patch(const char *filename)
 {
     static const char *default_names[] = {
         "tytools.ini",
-#ifndef _WIN32
+#if !defined(_WIN32)
         "TyTools.ini"
 #endif
     };

@@ -23,11 +23,11 @@
 #include "server.hh"
 #include "misc.hh"
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <io.h>
     #include <ws2tcpip.h>
 
-    #ifndef UNIX_PATH_MAX
+    #if !defined(UNIX_PATH_MAX)
         #define UNIX_PATH_MAX 108
     #endif
     typedef struct sockaddr_un {
@@ -193,7 +193,7 @@ bool http_Daemon::Start(const http_Config &config,
     // MHD flags
     int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME |
                 MHD_ALLOW_UPGRADE | MHD_USE_ERROR_LOG;
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     flags |= MHD_USE_DEBUG;
 #endif
 
@@ -210,7 +210,7 @@ bool http_Daemon::Start(const http_Config &config,
     mhd_options.Append({ MHD_OPTION_END, 0, nullptr });
     client_addr_mode = config.client_addr_mode;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     stop_handle = WSACreateEvent();
     if (!stop_handle) {
         LogError("CreateEvent() failed: %1", GetWin32ErrorString());
@@ -247,7 +247,7 @@ void http_Daemon::Stop()
     running = false;
 
     if (async) {
-#ifdef _WIN32
+#if defined(_WIN32)
         WSASetEvent(stop_handle);
 
         async->Sync();
@@ -293,7 +293,7 @@ static bool GetClientAddress(MHD_Connection *conn, http_ClientAddressMode addr_m
                 switch (saddr->sa_family) {
                     case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
                     case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
-#ifndef _WIN32
+#if !defined(_WIN32)
                     case AF_UNIX: {
                         CopyString("unix", out_address);
                         return true;
@@ -571,7 +571,7 @@ http_IO::~http_IO()
         func();
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     if (ws_handle) {
         WSACloseEvent(ws_handle);
     }
@@ -665,7 +665,7 @@ void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
 {
     RG_ASSERT(max_age >= 0);
 
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     max_age = 0;
 #endif
 

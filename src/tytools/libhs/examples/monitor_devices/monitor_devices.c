@@ -10,7 +10,7 @@
 
 #include <inttypes.h>
 #include <stdio.h>
-#ifdef _WIN32
+#if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 #else
@@ -88,7 +88,7 @@ int main(void)
        become ready (POLLIN) when there are pending events. */
     sources[0].desc = hs_monitor_get_poll_handle(monitor);
     /* We also want to poll the terminal/console input buffer, to exit on key presses. */
-#ifdef _WIN32
+#if defined(_WIN32)
     sources[1].desc = GetStdHandle(STD_INPUT_HANDLE);
 #else
     sources[1].desc = STDIN_FILENO;
@@ -109,7 +109,7 @@ int main(void)
     } while (r > 0 && !sources[1].ready);
 
     if (sources[1].ready) {
-#ifndef _WIN32
+#if !defined(_WIN32)
         /* Clear the terminal input buffer, just to avoid the extra return/characters from
            showing up when this program exits. This has nothing to do with libhs. */
         tcflush(STDIN_FILENO, TCIFLUSH);

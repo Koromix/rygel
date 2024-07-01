@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_OPTLINE_H
+#if !defined(TY_OPTLINE_H)
 #define TY_OPTLINE_H
 
 #include "common.h"

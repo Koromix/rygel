@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef uploader_window_HH
+#if !defined(uploader_window_HH)
 #define uploader_window_HH
 
 #include <QIdentityProxyModel>

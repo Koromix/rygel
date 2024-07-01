@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef ABOUT_HH
+#if !defined(ABOUT_HH)
 #define ABOUT_HH
 
 #include "../libty/common.h"

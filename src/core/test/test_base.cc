@@ -18,7 +18,7 @@
 #include <unordered_map>
 
 // Comparative benchmarks
-#ifdef _WIN32
+#if defined(_WIN32)
     extern "C" __declspec(dllimport) int __stdcall PathMatchSpecA(const char *pszFile, const char *pszSpec);
 #endif
 #include "musl/fnmatch.h"
@@ -121,7 +121,7 @@ TEST_FUNCTION("base/MatchPathName")
     CHECK_PATH_SPEC("", "", true);
     CHECK_PATH_SPEC("a", "a", true);
     CHECK_PATH_SPEC("a", "b", false);
-#ifdef _WIN32
+#if defined(_WIN32)
     CHECK_PATH_SPEC("a", "A", true);
 #else
     CHECK_PATH_SPEC("a", "A", false);
@@ -566,7 +566,7 @@ TEST_FUNCTION("base/PathCheck")
     TEST_EQ(PathIsAbsolute(""), false);
     TEST_EQ(PathIsAbsolute("/foo"), true);
     TEST_EQ(PathIsAbsolute("/"), true);
-#ifdef _WIN32
+#if defined(_WIN32)
     TEST_EQ(PathIsAbsolute("\\foo"), true);
     TEST_EQ(PathIsAbsolute("\\"), true);
     TEST_EQ(PathIsAbsolute("C:foo"), true); // Technically not absolute but it seems safer to deal with it this way
@@ -586,7 +586,7 @@ TEST_FUNCTION("base/PathCheck")
     TEST_EQ(PathContainsDotDot("foo/../bar"), true);
     TEST_EQ(PathContainsDotDot("foo../bar"), false);
     TEST_EQ(PathContainsDotDot("foo/./bar"), false);
-#ifdef _WIN32
+#if defined(_WIN32)
     TEST_EQ(PathContainsDotDot(".."), true);
     TEST_EQ(PathContainsDotDot("\\.."), true);
     TEST_EQ(PathContainsDotDot("\\..\\"), true);
@@ -738,7 +738,7 @@ BENCHMARK_FUNCTION("base/Fmt")
 {
     static const int iterations = 1600000;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     FILE *fp = fopen("\\\\.\\NUL", "wb");
     int fd = fileno(fp);
 #else
@@ -760,7 +760,7 @@ BENCHMARK_FUNCTION("base/Fmt")
         snprintf(buf, RG_SIZE(buf), "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 
-#ifndef _WIN32
+#if !defined(_WIN32)
     RunBenchmark("asprintf", iterations, [&](Size) {
         char *str = nullptr;
         int ret = asprintf(&str, "%d:%d:%g:%s:%p:%c:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
@@ -809,7 +809,7 @@ BENCHMARK_FUNCTION("base/MatchPathName")
 {
     static const int iterations = 3000000;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     RunBenchmark("PathMatchSpecA", iterations, [&](Size) {
         PathMatchSpecA("aaa/bbb", "a*/*b");
     });

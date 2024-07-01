@@ -18,7 +18,7 @@
 #include "goupile.hh"
 #include "user.hh"
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <io.h>
 #endif
 
@@ -519,7 +519,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         // Copy and commit to database
         instance->db->Transaction([&]() {
-#ifdef _WIN32
+#if defined(_WIN32)
             int64_t file_len = _lseeki64(fd, 0, SEEK_CUR);
 #else
             int64_t file_len = lseek(fd, 0, SEEK_CUR);

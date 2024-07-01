@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef SELECTOR_DIALOG_HH
+#if !defined(SELECTOR_DIALOG_HH)
 #define SELECTOR_DIALOG_HH
 
 #include <memory>

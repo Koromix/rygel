@@ -12,7 +12,7 @@
 #include <QFileInfo>
 #include <QPointer>
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 #endif
@@ -44,7 +44,7 @@ ClientHandler::ClientHandler(unique_ptr<SessionPeer> peer, QObject *parent)
     connect(peer_.get(), &SessionPeer::closed, this, &ClientHandler::closed);
     connect(peer_.get(), &SessionPeer::received, this, &ClientHandler::execute);
 
-#ifdef _WIN32
+#if defined(_WIN32)
     peer_->send({"allowsetforegroundwindow", QString::number(GetCurrentProcessId())});
 #endif
 }

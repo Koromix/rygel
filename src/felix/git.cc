@@ -14,7 +14,7 @@
 #include "src/core/base/base.hh"
 #include "git.hh"
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <io.h>
 #endif
 
@@ -223,7 +223,7 @@ bool GitVersioneer::Prepare(const char *root_directory)
             Span<const char> id = TrimStr(buf.As());
             const char *ref = filename + prefix_len;
 
-#ifdef _WIN32
+#if defined(_WIN32)
             char *ptr = (char *)ref;
 
             for (Size i = 0; ptr[i]; i++) {
@@ -485,7 +485,7 @@ bool GitVersioneer::ReadLooseAttributes(const char *filename, FunctionRef<bool(S
 
 static bool SeekFile(int fd, int64_t offset)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     int64_t ret = _lseeki64(fd, (int64_t)offset, SEEK_SET);
 #else
     int ret = lseek(fd, (off_t)offset, SEEK_SET);
@@ -504,7 +504,7 @@ static bool ReadSection(int fd, int64_t offset, Size len, void *out_ptr)
     if (!SeekFile(fd, offset))
         return false;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     Size read_len = _read(fd, out_ptr, (unsigned int)len);
 #else
     Size read_len = RG_RESTART_EINTR(read(fd, out_ptr, (size_t)len), < 0);

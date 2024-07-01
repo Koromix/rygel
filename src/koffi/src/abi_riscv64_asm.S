@@ -238,6 +238,6 @@ CallSwitchStack:
 
 #include "trampolines/gnu.inc"
 
-#ifdef __ELF__
+#if defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_COMMON_H
+#if !defined(HS_COMMON_H)
 #define HS_COMMON_H
 
 #include <stddef.h>
@@ -17,7 +17,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
     #define _HS_BEGIN_C extern "C" {
     #define _HS_END_C }
 #else
@@ -62,7 +62,7 @@ typedef struct hs_match_spec hs_match_spec;
     #define _HS_THREAD_LOCAL __thread
     #define _HS_ALIGN_OF(type)  __alignof__(type)
 
-    #ifdef __MINGW_PRINTF_FORMAT
+    #if defined(__MINGW_PRINTF_FORMAT)
         #define _HS_PRINTF_FORMAT(fmt, first) __attribute__((__format__(__MINGW_PRINTF_FORMAT, fmt, first)))
     #else
         #define _HS_PRINTF_FORMAT(fmt, first) __attribute__((__format__(__printf__, fmt, first)))
@@ -77,11 +77,11 @@ typedef struct hs_match_spec hs_match_spec;
     #error "This compiler is not supported"
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
     // HAVE_SSIZE_T is used this way by other projects
-    #ifndef HAVE_SSIZE_T
+    #if !defined(HAVE_SSIZE_T)
         #define HAVE_SSIZE_T
-        #ifdef _WIN64
+        #if defined(_WIN64)
 typedef __int64 ssize_t;
         #else
 typedef long ssize_t;

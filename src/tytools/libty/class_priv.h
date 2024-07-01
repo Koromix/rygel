@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_CLASS_PRIV_H
+#if !defined(TY_CLASS_PRIV_H)
 #define TY_CLASS_PRIV_H
 
 #include "common.h"

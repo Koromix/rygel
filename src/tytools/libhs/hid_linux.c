@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifdef __linux__
+#if defined(__linux__)
 
 #include "common_priv.h"
 #include <fcntl.h>

@@ -22,11 +22,11 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#ifdef _WIN32
-    #ifndef NOMINMAX
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
         #define NOMINMAX
     #endif
-    #ifndef WIN32_LEAN_AND_MEAN
+    #if !defined(WIN32_LEAN_AND_MEAN)
         #define WIN32_LEAN_AND_MEAN
     #endif
 #endif

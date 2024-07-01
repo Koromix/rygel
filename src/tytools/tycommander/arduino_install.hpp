@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef ARDUINO_INSTALL_HH
+#if !defined(ARDUINO_INSTALL_HH)
 #define ARDUINO_INSTALL_HH
 
 #include <QDir>

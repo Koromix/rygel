@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 
 #include "common_priv.h"
 #include <poll.h>
@@ -100,7 +100,7 @@ int hs_serial_set_config(hs_port *port, const hs_serial_config *config)
 
     if (config->parity) {
         tio.c_cflag &= (unsigned int)~(PARENB | PARODD);
-#ifdef CMSPAR
+#if defined(CMSPAR)
         tio.c_cflag &= (unsigned int)~CMSPAR;
 #endif
 
@@ -108,7 +108,7 @@ int hs_serial_set_config(hs_port *port, const hs_serial_config *config)
             case HS_SERIAL_CONFIG_PARITY_OFF: {} break;
             case HS_SERIAL_CONFIG_PARITY_EVEN: { tio.c_cflag |= PARENB; } break;
             case HS_SERIAL_CONFIG_PARITY_ODD: { tio.c_cflag |= PARENB | PARODD; } break;
-#ifdef CMSPAR
+#if defined(CMSPAR)
             case HS_SERIAL_CONFIG_PARITY_SPACE: { tio.c_cflag |= PARENB | CMSPAR; } break;
             case HS_SERIAL_CONFIG_PARITY_MARK: { tio.c_cflag |= PARENB | PARODD | CMSPAR; } break;
 #else
@@ -231,14 +231,14 @@ int hs_serial_get_config(hs_port *port, hs_serial_config *config)
 
     // FIXME: should we detect IGNPAR here?
     if (tio.c_cflag & PARENB) {
-#ifdef CMSPAR
+#if defined(CMSPAR)
         switch (tio.c_cflag & (PARODD | CMSPAR)) {
 #else
         switch (tio.c_cflag & PARODD) {
 #endif
             case 0: { config->parity = HS_SERIAL_CONFIG_PARITY_EVEN; } break;
             case PARODD: { config->parity = HS_SERIAL_CONFIG_PARITY_ODD; } break;
-#ifdef CMSPAR
+#if defined(CMSPAR)
             case CMSPAR: { config->parity = HS_SERIAL_CONFIG_PARITY_SPACE; } break;
             case CMSPAR | PARODD: { config->parity = HS_SERIAL_CONFIG_PARITY_MARK; } break;
 #endif

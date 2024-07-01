@@ -21,7 +21,7 @@
 #include "mco_classifier.hh"
 #include "mco_mapper.hh"
 #include "mco_pricing.hh"
-#ifndef LIBDRD_NO_WREN
+#if !defined(LIBDRD_NO_WREN)
     #include "mco_filter.hh"
 #endif
 #include "mco_dump.hh"

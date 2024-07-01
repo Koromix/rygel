@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TYUPLOADER_HH
+#if !defined(TYUPLOADER_HH)
 #define TYUPLOADER_HH
 
 #include <QApplication>

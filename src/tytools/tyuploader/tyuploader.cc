@@ -20,7 +20,7 @@
 #include "tyuploader.hpp"
 #include "uploader_window.hpp"
 
-#ifndef TYUPLOADER_TITLE
+#if !defined(TYUPLOADER_TITLE)
     #define TYUPLOADER_TITLE "TyUploader"
 #endif
 

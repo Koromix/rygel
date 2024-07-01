@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_MONITOR_H
+#if !defined(TY_MONITOR_H)
 #define TY_MONITOR_H
 
 #include "common.h"

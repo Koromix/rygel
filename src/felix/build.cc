@@ -19,7 +19,7 @@
 
 namespace RG {
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define MAX_COMMAND_LEN 4096
 #else
     #define MAX_COMMAND_LEN 32768
@@ -473,7 +473,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             target_filename = link_filename;
         }
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
         // Bundle macOS GUI apps
         if (build.compiler->platform == HostPlatform::macOS && target.qt_components.len) {
             const char *bundle_filename = Fmt(&str_alloc, "%1.app", target_filename).ptr;
@@ -717,7 +717,7 @@ bool Builder::Build(int jobs, bool verbose)
         // Clean up failed and temporary files
         // Windows has a tendency to hold file locks a bit longer than needed...
         // Try to delete files several times silently unless it's the last try.
-#ifdef _WIN32
+#if defined(_WIN32)
         if (clear_filenames.len) {
             PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
             RG_DEFER { PopLogFilter(); };
@@ -1094,7 +1094,7 @@ static Span<const char> ParseMakeFragment(Span<const char> remain, HeapArray<cha
             if (strchr(" $#:", c)) {
                 if (remain[i - 1] == '\\') {
                     (*out_frag)[out_frag->len - 1] = c;
-#ifdef _WIN32
+#if defined(_WIN32)
                 } else if (c == ':' && i == 1) {
                     // Absolute Windows paths start with [A-Z]:
                     // Some MinGW builds escape the colon, some don't. Tolerate both cases.

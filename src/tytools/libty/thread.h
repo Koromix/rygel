@@ -8,17 +8,17 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_THREAD_H
+#if !defined(TY_THREAD_H)
 #define TY_THREAD_H
 
 #include "common.h"
-#ifndef _WIN32
+#if !defined(_WIN32)
     #include <pthread.h>
 #endif
 
 _HS_BEGIN_C
 
-#ifdef _WIN32
+#if defined(_WIN32)
 typedef unsigned long ty_thread_id; // DWORD
 #else
 typedef pthread_t ty_thread_id;
@@ -26,7 +26,7 @@ typedef pthread_t ty_thread_id;
 
 typedef struct ty_thread {
     ty_thread_id thread_id;
-#ifdef _WIN32
+#if defined(_WIN32)
     void *h; // HANDLE
 #else
     bool init;
@@ -46,7 +46,7 @@ typedef struct ty_mutex {
 } ty_mutex;
 
 typedef struct ty_cond {
-#ifdef _WIN32
+#if defined(_WIN32)
     uintptr_t cv; // CONDITION_VARIABLE
 #else
     pthread_cond_t cond;

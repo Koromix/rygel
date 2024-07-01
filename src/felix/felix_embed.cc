@@ -87,7 +87,7 @@ Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(in
         const char *filename;
         while ((filename = opt.ConsumeNonOption())) {
             char *filename2 = NormalizePath(filename, &temp_alloc).ptr;
-#ifdef _WIN32
+#if defined(_WIN32)
             for (Size i = 0; filename2[i]; i++) {
                 filename2[i] = (filename2[i] == '\\' ? '/' : filename2[i]);
             }

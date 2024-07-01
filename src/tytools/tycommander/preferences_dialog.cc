@@ -72,7 +72,7 @@ void PreferencesDialog::refresh()
 {
     showTrayIconCheck->setEnabled(QSystemTrayIcon::isSystemTrayAvailable());
     showTrayIconCheck->setChecked(tyCommander->showTrayIcon());
-#ifndef __APPLE__
+#if !defined(__APPLE__)
     if (!showTrayIconCheck->isChecked())
         hideOnStartupCheck->setEnabled(false);
     connect(showTrayIconCheck, &QCheckBox::toggled, hideOnStartupCheck, &QCheckBox::setEnabled);

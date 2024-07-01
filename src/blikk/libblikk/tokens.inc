@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef TOKEN
+#if !defined(TOKEN)
     #error Please define TOKEN() before including tokens.inc
 #endif
 

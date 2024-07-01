@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_TASK_H
+#if !defined(TY_TASK_H)
 #define TY_TASK_H
 
 #include "common.h"

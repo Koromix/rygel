@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 
 #include "common_priv.h"
 #include <fcntl.h>
@@ -23,7 +23,7 @@
 int _hs_open_file_port(hs_device *dev, hs_port_mode mode, hs_port **rport)
 {
     hs_port *port;
-#ifdef __APPLE__
+#if defined(__APPLE__)
     unsigned int retry = 4;
 #endif
     int fd_flags;
@@ -69,7 +69,7 @@ restart:
                 r = hs_error(HS_ERROR_NOT_FOUND, "Device '%s' not found", dev->path);
             } break;
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
             /* On El Capitan (and maybe before), the open fails for some time (around 40 - 50 ms
                on my computer) after the device notification. */
             case EBUSY: {
@@ -125,7 +125,7 @@ restart:
             goto error;
         }
     }
-#ifdef __linux__
+#if defined(__linux__)
     else if (dev->type == HS_DEVICE_TYPE_HID) {
         port->u.file.numbered_hid_reports = dev->u.hid.numbered_reports;
     }

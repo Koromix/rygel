@@ -25,16 +25,16 @@
 #include "call.hh"
 #include "parser.hh"
 #include "util.hh"
-#ifdef _WIN32
+#if defined(_WIN32)
     #include "win32.hh"
 #endif
 #include "errno.inc"
 
-#ifdef _WIN32
-    #ifndef NOMINMAX
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
         #define NOMINMAX
     #endif
-    #ifndef WIN32_LEAN_AND_MEAN
+    #if !defined(WIN32_LEAN_AND_MEAN)
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <windows.h>
@@ -42,7 +42,7 @@
 #else
     #include <dlfcn.h>
     #include <sys/mman.h>
-    #ifndef MAP_STACK
+    #if !defined(MAP_STACK)
         #define MAP_STACK 0
     #endif
 #endif
@@ -888,7 +888,7 @@ static bool ParseClassicFunction(const Napi::CallbackInfo &info, FunctionInfo *o
         parameters = info[3u].As<Napi::Array>();
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     if (name.IsNumber()) {
         out_func->ordinal_name = name.As<Napi::Number>().Int32Value();
         name = name.ToString();
@@ -1051,7 +1051,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
         type->size = storage->size;
         type->align = storage->align;
     } else {
-#ifdef _WIN32
+#if defined(_WIN32)
         type->primitive = PrimitiveKind::Int32;
         type->size = 4;
         type->align = 4;
@@ -1307,7 +1307,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     RG_CRITICAL(mem->stack.ptr, "Failed to allocate %1 of memory", mem->stack.len);
 #endif
 
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__)
     // Make sure the SP points inside the MAP_STACK area, or (void) functions may crash on OpenBSD i386
     mem->stack.len -= 16;
 #endif
@@ -1316,7 +1316,7 @@ static InstanceMemory *AllocateMemory(InstanceData *instance, Size stack_size, S
     mem->stack0 = mem->stack;
 
     mem->heap.len = heap_size;
-#ifdef _WIN32
+#if defined(_WIN32)
     mem->heap.ptr = (uint8_t *)VirtualAlloc(nullptr, mem->heap.len, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
     mem->heap.ptr = (uint8_t *)mmap(nullptr, mem->heap.len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
@@ -1621,7 +1621,7 @@ static Napi::Value FindLibraryFunction(const Napi::CallbackInfo &info)
         func->parameters.Grow(32);
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     if (func->ordinal_name < 0) {
         if (func->decorated_name) {
             func->native = (void *)GetProcAddress((HMODULE)lib->module, func->decorated_name);
@@ -1674,7 +1674,7 @@ static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
         return env.Null();
     type = MakePointerType(instance, type);
 
-#ifdef _WIN32
+#if defined(_WIN32)
     void *ptr = (void *)GetProcAddress((HMODULE)lib->module, name.c_str());
 #else
     void *ptr = (void *)dlsym(lib->module, name.c_str());
@@ -1717,7 +1717,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-#ifndef _WIN32
+#if !defined(_WIN32)
     int flags = 0;
 
     if (info.Length() >= 2) {
@@ -1725,7 +1725,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
         flags |= options.Get("lazy").ToBoolean() ? RTLD_LAZY : RTLD_NOW;
         flags |= options.Get("global").ToBoolean() ? RTLD_GLOBAL : RTLD_LOCAL;
-#ifdef RTLD_DEEPBIND
+#if defined(RTLD_DEEPBIND)
         flags |= options.Get("deep").ToBoolean() ? RTLD_DEEPBIND : 0;
 #endif
     } else {
@@ -1740,7 +1740,7 @@ static Napi::Value LoadSharedLibrary(const Napi::CallbackInfo &info)
 
     // Load shared library
     void *module = nullptr;
-#ifdef _WIN32
+#if defined(_WIN32)
     if (info[0].IsString()) {
         std::string filename = info[0].As<Napi::String>();
         module = LoadWindowsLibrary(env, filename.c_str());
@@ -2071,7 +2071,7 @@ static Napi::Value ResetKoffi(const Napi::CallbackInfo &info)
 
 void LibraryHolder::Unload()
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     if (module && module != GetModuleHandle(nullptr)) {
         FreeLibrary((HMODULE)module);
     }
@@ -2119,7 +2119,7 @@ void FunctionInfo::Unref() const
 
 InstanceMemory::~InstanceMemory()
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     if (stack.ptr) {
         VirtualFree(stack.ptr, 0, MEM_RELEASE);
     }
@@ -2209,7 +2209,7 @@ static inline PrimitiveKind GetSignPrimitive(Size len, bool sign)
 
 static inline PrimitiveKind GetLittleEndianPrimitive(PrimitiveKind kind)
 {
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
     return (PrimitiveKind)((int)kind + 1);
 #else
     return kind;
@@ -2218,7 +2218,7 @@ static inline PrimitiveKind GetLittleEndianPrimitive(PrimitiveKind kind)
 
 static inline PrimitiveKind GetBigEndianPrimitive(PrimitiveKind kind)
 {
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
     return kind;
 #else
     return (PrimitiveKind)((int)kind + 1);
@@ -2234,7 +2234,7 @@ static InstanceData *CreateInstance()
 
     instance->debug = GetDebugFlag("DUMP_CALLS");
 
-#ifdef _WIN32
+#if defined(_WIN32)
     TEB *teb = GetTEB();
 
     instance->main_stack_max = teb->StackBase;

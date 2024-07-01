@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 
 #include "common_priv.h"
 #include <CoreFoundation/CFRunLoop.h>

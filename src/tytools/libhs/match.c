@@ -9,7 +9,7 @@
     See the LICENSE file for more details. */
 
 #include "common_priv.h"
-#ifndef _WIN32
+#if !defined(_WIN32)
     #include <sys/stat.h>
 #endif
 #include "match_priv.h"

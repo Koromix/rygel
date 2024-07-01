@@ -9,7 +9,7 @@
    See the LICENSE file for more details. */
 
 #include "common.h"
-#ifndef _WIN32
+#if !defined(_WIN32)
     #include <sys/stat.h>
 #endif
 #include <time.h>
@@ -651,7 +651,7 @@ static void unref_upload_firmware(void *ptr)
 
 static int64_t get_time(bool local)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     __time64_t now = 0;
     _time64(&now);
 
@@ -1091,7 +1091,7 @@ int ty_send_file(ty_board *board, const char *filename, ty_task **rtask)
     task->task_finalize = finalize_send_file;
 
 restart:
-#ifdef _WIN32
+#if defined(_WIN32)
     task->u.send_file.fp = fopen(filename, "rb");
 #else
     task->u.send_file.fp = fopen(filename, "rbe");
@@ -1121,7 +1121,7 @@ restart:
     }
 
     fseek(task->u.send_file.fp, 0, SEEK_END);
-#ifdef _WIN32
+#if defined(_WIN32)
     task->u.send_file.size = (size_t)_ftelli64(task->u.send_file.fp);
 #else
     task->u.send_file.size = (size_t)ftello(task->u.send_file.fp);

@@ -19,16 +19,16 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 #include "src/core/base/base.hh"
 #include "util.hh"
 #include "win32.hh"
 
-#ifndef NOMINMAX
+#if !defined(NOMINMAX)
     #define NOMINMAX
 #endif
-#ifndef WIN32_LEAN_AND_MEAN
+#if !defined(WIN32_LEAN_AND_MEAN)
     #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>

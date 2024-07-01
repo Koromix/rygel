@@ -624,7 +624,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         }
 
                         Span<char> path = Fmt(&temp_alloc, "/files%1", filename + relative_offset);
-#ifdef _WIN32
+#if defined(_WIN32)
                         for (char &c: path) {
                             c = (c == '\\') ? '/' : c;
                         }

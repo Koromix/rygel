@@ -24,7 +24,7 @@
 #include "vendor/mbedtls/include/mbedtls/sha1.h"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <io.h>
     #include <ws2tcpip.h>
 #else
@@ -50,7 +50,7 @@ void http_IO::HandleUpgrade(void *cls, struct MHD_Connection *, void *,
     std::lock_guard<std::mutex> lock(io->mutex);
 
     // Set non-blocking socket behavior
-#ifdef _WIN32
+#if defined(_WIN32)
     unsigned long mode = 1;
     if (ioctlsocket(fd, FIONBIO, &mode) < 0) {
         LogError("Failed to make socket non-blocking: %1", GetWin32ErrorString(WSAGetLastError()));
@@ -73,7 +73,7 @@ void http_IO::HandleUpgrade(void *cls, struct MHD_Connection *, void *,
     io->ws_buf.Append(MakeSpan((const uint8_t *)extra_in, (Size)extra_in_size));
     io->ws_offset = 0;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     io->ws_handle = WSACreateEvent();
     if (!io->ws_handle) {
         LogError("WSACreateEvent() failed: %1", GetWin32ErrorString(WSAGetLastError()));
@@ -202,7 +202,7 @@ bool http_IO::OpenForWriteWS(CompressionType encoding, StreamWriter *out_st)
 
 Size http_IO::ReadWS(Span<uint8_t> out_buf)
 {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     {
         std::unique_lock<std::mutex> lock(mutex);
         RG_ASSERT(state == State::WebSocket || state == State::Zombie);
@@ -324,7 +324,7 @@ pump:
         // Pump more data from the OS
         ws_buf.Grow(Kibibytes(1));
 
-#ifdef _WIN32
+#if defined(_WIN32)
         void *events[2] = {
             ws_handle,
             daemon->stop_handle
@@ -357,7 +357,7 @@ pump:
             if (errno == EWOULDBLOCK || errno == EAGAIN)
                 continue;
 
-#ifdef _WIN32
+#if defined(_WIN32)
             LogError("Failed to read from socket: %1", GetWin32ErrorString(WSAGetLastError()));
 #else
             LogError("Failed to read from socket: %1", strerror(errno));
@@ -374,7 +374,7 @@ pump:
 
 bool http_IO::WriteWS(Span<const uint8_t> buf)
 {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     {
         std::unique_lock<std::mutex> lock(mutex);
         RG_ASSERT(state == State::WebSocket || state == State::Zombie);
@@ -409,7 +409,7 @@ bool http_IO::WriteWS(Span<const uint8_t> buf)
         }
         opcode = 0;
 
-#ifdef _WIN32
+#if defined(_WIN32)
         if (send(ws_fd, (const char *)frame.data, (int)frame.len, 0) < 0) {
             LogError("Failed to write to socket: %1", GetWin32ErrorString(WSAGetLastError()));
             return false;

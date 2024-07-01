@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef ENHANCED_WIDGETS_HH
+#if !defined(ENHANCED_WIDGETS_HH)
 #define ENHANCED_WIDGETS_HH
 
 #include <QComboBox>

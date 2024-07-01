@@ -8,14 +8,14 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_PLATFORM_H
+#if !defined(HS_PLATFORM_H)
 #define HS_PLATFORM_H
 
 #include "common.h"
 
 _HS_BEGIN_C
 
-#ifdef _WIN32
+#if defined(_WIN32)
 /**
  * @ingroup misc
  * @brief Common Windows version numbers.
@@ -115,7 +115,7 @@ void hs_delay(unsigned int ms);
  */
 int hs_adjust_timeout(int timeout, uint64_t start);
 
-#ifdef __linux__
+#if defined(__linux__)
 /**
  * @ingroup misc
  * @brief Get the Linux kernel version as a composite decimal number.
@@ -132,7 +132,7 @@ int hs_adjust_timeout(int timeout, uint64_t start);
 uint32_t hs_linux_version(void);
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
 /**
  * @ingroup misc
  * @brief Format an error string using FormatMessage().
@@ -160,7 +160,7 @@ const char *hs_win32_strerror(unsigned long err);
 uint32_t hs_win32_version(void);
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 /**
  * @ingroup misc
  * @brief Get the Darwin version on Apple systems

@@ -1,7 +1,7 @@
 #ifndef	_FNMATCH_H
 #define	_FNMATCH_H
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 extern "C" {
 #endif
 
@@ -17,7 +17,7 @@ extern "C" {
 
 int fnmatch(const char *, const char *, int);
 
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif
 

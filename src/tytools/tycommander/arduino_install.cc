@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <windows.h>
 #endif
 #include <QCoreApplication>
@@ -130,7 +130,7 @@ bool ArduinoInstallation::restore()
         return false;
 
     if (arduino_legacy_) {
-#ifdef _WIN32
+#if defined(_WIN32)
         emit log(tr("Remove avrdude script '%1'").arg("hardware/tools/tyqt_avrdude.bat"));
         QFile::remove(arduinoPath("hardware/tools/tyqt_avrdude.bat"));
 #else
@@ -187,7 +187,7 @@ bool ArduinoInstallation::integrateLegacy()
     out << "\n## TyQt (legacy Arduino)\n";
     for (auto &model: models) {
         emit log(tr(" + Add TyCommander instructions for '%1'").arg(model));
-#ifdef _WIN32
+#if defined(_WIN32)
         out << QString("%1.upload.avrdude_wrapper=tyqt_avrdude.bat\n").arg(model);
 #else
         out << QString("%1.upload.avrdude_wrapper=tyqt_avrdude.sh\n").arg(model);
@@ -220,7 +220,7 @@ bool ArduinoInstallation::integrateLegacy()
 
 bool ArduinoInstallation::writeAvrdudeScript()
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     QFile script(arduinoPath("hardware/tools/tyqt_avrdude.bat"));
     emit log(tr("Write avrdude script to '%1'").arg(nicePath(script.fileName())));
 
@@ -274,7 +274,7 @@ void ArduinoInstallation::updateState()
         return;
 
     arduino_version_ = readVersion(arduinoPath("lib/version.txt"));
-#ifdef __APPLE__
+#if defined(__APPLE__)
     if (arduino_version_.isEmpty())
         arduino_version_ = readVersion(dir_.filePath("Contents/Resources/Java/lib/version.txt"));
 #endif
@@ -351,7 +351,7 @@ bool ArduinoInstallation::findMarker(const QString &filename, const QString &mar
 
 QString ArduinoInstallation::arduinoPath(const QString &path) const
 {
-#ifdef __APPLE__
+#if defined(__APPLE__)
     if (arduino_legacy_) {
         return dir_.filePath("Contents/Resources/Java/" + path);
     } else {

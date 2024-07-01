@@ -26,7 +26,7 @@ static bool ApplySandbox()
 
     sb_SandboxBuilder sb;
 
-#ifdef __linux__
+#if defined(__linux__)
     sb.FilterSyscalls(sb_FilterAction::Kill, {
         {"exit", sb_FilterAction::Allow},
         {"exit_group", sb_FilterAction::Allow},

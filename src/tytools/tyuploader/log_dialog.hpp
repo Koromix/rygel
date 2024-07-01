@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef LOG_DIALOG_HH
+#if !defined(LOG_DIALOG_HH)
 #define LOG_DIALOG_HH
 
 #include "ui_log_dialog.h"

@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
     #include <dbghelp.h>
@@ -26,7 +26,7 @@
 
 using namespace std;
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static void make_minidump(EXCEPTION_POINTERS *ex)
 {
@@ -123,7 +123,7 @@ static bool open_tycommanderc_bridge()
 
 int main(int argc, char *argv[])
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     SetUnhandledExceptionFilter(unhandled_exception_handler);
 #endif
 
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     qRegisterMetaType<RtcMode>("RtcMode");
 
     TyCommander app(argc, argv);
-#ifdef _WIN32
+#if defined(_WIN32)
     app.setClientConsole(open_tycommanderc_bridge());
 #else
     app.setClientConsole(ty_standard_get_modes(TY_STREAM_OUTPUT) != TY_DESCRIPTOR_MODE_DEVICE);

@@ -20,7 +20,7 @@
 namespace RG {
 
 // Fix mess caused by windows.h (included by libssh)
-#ifdef CreateDirectory
+#if defined(CreateDirectory)
     #undef CreateDirectory
 #endif
 
@@ -244,7 +244,7 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     int flags = _O_RDONLY;
 #else
     int flags = O_RDONLY;
@@ -284,7 +284,7 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     int flags = _O_RDONLY;
 #else
     int flags = O_RDONLY;
@@ -334,7 +334,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
     {
         tmp.len = Fmt(tmp.data, "%1/tmp/", config.path).len;
 
-#ifdef _WIN32
+#if defined(_WIN32)
         int flags = _O_WRONLY | _O_CREAT | _O_EXCL;
 #else
         int flags = O_WRONLY | O_CREAT | O_EXCL;

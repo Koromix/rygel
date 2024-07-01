@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_HID_H
+#if !defined(HS_HID_H)
 #define HS_HID_H
 
 #include "common.h"

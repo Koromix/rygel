@@ -18,7 +18,7 @@
 #include "src/core/sandbox/sandbox.hh"
 #include "src/core/wrap/json.hh"
 
-#ifdef __linux__
+#if defined(__linux__)
     #include <sys/types.h>
     #include <sys/stat.h>
     #include <sys/poll.h>
@@ -29,7 +29,7 @@
 
 namespace RG {
 
-#ifdef __linux__
+#if defined(__linux__)
 
 static Config config;
 static Size profile_idx = 0;
@@ -643,7 +643,7 @@ int Main(int argc, char **argv)
 
     if (TestStr(cmd, "set")) {
         return RunSet(arguments);
-#ifdef __linux__
+#if defined(__linux__)
     } else if (TestStr(cmd, "daemon")) {
         return RunDaemon(arguments);
 #endif

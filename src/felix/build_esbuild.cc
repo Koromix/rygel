@@ -55,7 +55,7 @@ bool Builder::PrepareEsbuild()
 
     // Build it if Go compiler is available
     {
-#ifdef _WIN32
+#if defined(_WIN32)
         const char *binary = Fmt(&str_alloc, "%1%/esbuild.exe", shared_directory).ptr;
 #else
         const char *binary = Fmt(&str_alloc, "%1%/esbuild", shared_directory).ptr;

@@ -36,7 +36,7 @@ void DescriptorNotifier::addDescriptorSet(ty_descriptor_set *set)
 void DescriptorNotifier::addDescriptor(ty_descriptor desc)
 {
     execute([=, this]() {
-#ifdef _WIN32
+#if defined(_WIN32)
         auto notifier = new QWinEventNotifier(desc, this);
         connect(notifier, &QWinEventNotifier::activated, this, &DescriptorNotifier::activated);
 #else

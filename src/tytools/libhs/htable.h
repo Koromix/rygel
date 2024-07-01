@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_HTABLE_H
+#if !defined(HS_HTABLE_H)
 #define HS_HTABLE_H
 
 #include "common.h"

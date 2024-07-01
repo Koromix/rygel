@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     #define SYMBOL(Symbol) _ ## Symbol
 #else
     #define SYMBOL(Symbol) Symbol
@@ -187,7 +187,7 @@ SYMBOL(ForwardCallXDD):
     movq %rsp, %rsi
     leaq 160(%rsp), %rdx
     leaq 112(%rsp), %rcx
-#ifdef __linux__
+#if defined(__linux__)
     call *RelayCallback@GOTPCREL(%rip)
 #else
     call SYMBOL(RelayCallback)
@@ -225,7 +225,7 @@ SYMBOL(ForwardCallXDD):
     movq %rsp, %rsi
     leaq 160(%rsp), %rdx
     leaq 112(%rsp), %rcx
-#ifdef __linux__
+#if defined(__linux__)
     call *RelayCallback@GOTPCREL(%rip)
 #else
     call SYMBOL(RelayCallback)
@@ -271,6 +271,6 @@ SYMBOL(CallSwitchStack):
 
 #include "trampolines/gnu.inc"
 
-#ifdef __ELF__
+#if defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

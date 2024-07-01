@@ -19,7 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef __linux__
+#if !defined(__linux__)
 
 #include "src/core/base/base.hh"
 #include "sandbox.hh"

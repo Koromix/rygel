@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 
 #include "common.h"
 #include <fcntl.h>
@@ -18,7 +18,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <termios.h>
-#ifdef __APPLE__
+#if defined(__APPLE__)
     #include <mach/mach_time.h>
     #include <mach-o/dyld.h>
     #include <sys/select.h>
@@ -64,7 +64,7 @@ ty_descriptor ty_standard_get_descriptor(ty_standard_stream std_stream)
     return std_stream;
 }
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 
 unsigned int ty_standard_get_paths(ty_standard_path std_path, const char *suffix,
                                    char (*rpaths)[TY_PATH_MAX_SIZE], unsigned int max_paths)

@@ -31,8 +31,8 @@ typedef int64_t Size;
 typedef int32_t Size;
 #endif
 
-#ifdef EXPORT
-    #ifdef _WIN32
+#if defined(EXPORT)
+    #if defined(_WIN32)
         #define EXPORT_SYMBOL __declspec(dllexport)
     #else
         #define EXPORT_SYMBOL __attribute__((visibility("default")))
@@ -40,7 +40,7 @@ typedef int32_t Size;
 #else
     #define EXPORT_SYMBOL
 #endif
-#ifdef __cplusplus
+#if defined(__cplusplus)
     #define EXTERN_SYMBOL extern "C"
 #else
     #define EXTERN_SYMBOL extern

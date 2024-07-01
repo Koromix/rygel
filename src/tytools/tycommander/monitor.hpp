@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef MONITOR_HH
+#if !defined(MONITOR_HH)
 #define MONITOR_HH
 
 #include <QAbstractListModel>

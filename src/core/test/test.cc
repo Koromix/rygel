@@ -94,7 +94,7 @@ int Main(int argc, char **argv)
         PrintLn();
     }
 
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     if (!pattern) {
         LogInfo("Benchmarks are disabled by default in debug builds");
     }
@@ -104,7 +104,7 @@ int Main(int argc, char **argv)
     for (Size i = 0; i < benchmarks.len; i++) {
         const BenchmarkInfo &bench = *benchmarks[i];
 
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
         bool enable = pattern && MatchPathSpec(bench.path, pattern);
 #else
         bool enable = !pattern || MatchPathSpec(bench.path, pattern);

@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     #define SYMBOL(Symbol) _ ## Symbol
 #else
     #define SYMBOL(Symbol) Symbol
@@ -28,7 +28,7 @@
 # Forward
 # ----------------------------
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 # Fix "arm64 function not 4-byte aligned" linker warnings
 .p2align 2
 #endif
@@ -237,6 +237,6 @@ SYMBOL(CallSwitchStack):
 
 #include "trampolines/gnu.inc"
 
-#ifdef __ELF__
+#if defined(__ELF__)
 .section .note.GNU-stack, "", %progbits
 #endif

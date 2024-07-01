@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef PREFERENCES_DIALOG_HH
+#if !defined(PREFERENCES_DIALOG_HH)
 #define PREFERENCES_DIALOG_HH
 
 #include "ui_preferences_dialog.h"

@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_MATCH_H
+#if !defined(HS_MATCH_H)
 #define HS_MATCH_H
 
 #include "common.h"

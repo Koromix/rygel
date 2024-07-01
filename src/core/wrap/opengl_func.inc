@@ -19,17 +19,17 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef OGL_FUNCTION
+#if !defined(OGL_FUNCTION)
     #error Please define OGL_FUNCTION() before including opengl_func.inc
 #endif
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 
 // Nothing to load (yet?)
 
 #else
 
-#ifndef _WIN32
+#if !defined(_WIN32)
     #define GL_GLEXT_LEGACY
     #include <GL/gl.h>
 #else
@@ -50,7 +50,7 @@ OGL_FUNCTION(gl_version >= 12, void, glTexSubImage3D, GLenum target, GLint level
 // OpenGL 1.3
 
 OGL_FUNCTION(gl_version >= 13, void, glActiveTexture, GLenum texture);
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
 OGL_FUNCTION(gl_version >= 13 && gl_compat, void, glClientActiveTexture, GLenum texture);
 #endif
 OGL_FUNCTION(gl_version >= 13, void, glCompressedTexImage1D, GLenum target, GLint level,
@@ -72,7 +72,7 @@ OGL_FUNCTION(gl_version >= 13, void, glCompressedTexSubImage3D, GLenum target, G
              GLsizei depth, GLenum format, GLsizei imageSize, const void *data);
 OGL_FUNCTION(gl_version >= 13, void, glGetCompressedTexImage, GLenum target, GLint level,
              void *img);
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
 OGL_FUNCTION(gl_version >= 13 && gl_compat, void, glLoadTransposeMatrixd, const GLdouble *m);
 OGL_FUNCTION(gl_version >= 13 && gl_compat, void, glLoadTransposeMatrixf, const GLfloat *m);
 OGL_FUNCTION(gl_version >= 13 && gl_compat, void, glMultTransposeMatrixd, const GLdouble *m);
@@ -147,7 +147,7 @@ OGL_FUNCTION(gl_version >= 14, void, glBlendColor, GLfloat red, GLfloat green, G
 OGL_FUNCTION(gl_version >= 14, void, glBlendEquation, GLenum mode);
 OGL_FUNCTION(gl_version >= 14, void, glBlendFuncSeparate, GLenum sfactorRGB, GLenum dfactorRGB,
              GLenum sfactorAlpha, GLenum dfactorAlpha);
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
 OGL_FUNCTION(gl_version >= 14 && gl_compat, void, glFogCoordPointer, GLenum type, GLsizei stride,
              const void *pointer);
 OGL_FUNCTION(gl_version >= 14 && gl_compat, void, glFogCoordd, GLdouble coord);
@@ -163,7 +163,7 @@ OGL_FUNCTION(gl_version >= 14, void, glPointParameterf, GLenum pname, GLfloat pa
 OGL_FUNCTION(gl_version >= 14, void, glPointParameterfv, GLenum pname, const GLfloat *params);
 OGL_FUNCTION(gl_version >= 14, void, glPointParameteri, GLenum pname, GLint param);
 OGL_FUNCTION(gl_version >= 14, void, glPointParameteriv, GLenum pname, const GLint *params);
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
 OGL_FUNCTION(gl_version >= 14 && gl_compat, void, glSecondaryColor3b, GLbyte red, GLbyte green,
              GLbyte blue);
 OGL_FUNCTION(gl_version >= 14 && gl_compat, void, glSecondaryColor3bv, const GLbyte *v);
@@ -577,7 +577,7 @@ OGL_FUNCTION(gl_version >= 32, void, glWaitSync, GLsync sync, GLbitfield flags, 
 OGL_FUNCTION(gl_version >= 33, void, glBindFragDataLocationIndexed, GLuint program,
              GLuint colorNumber, GLuint index, const GLchar *name);
 OGL_FUNCTION(gl_version >= 33, void, glBindSampler, GLuint unit, GLuint sampler);
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glColorP3ui, GLenum type, GLuint color);
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glColorP3uiv, GLenum type, const GLuint *color);
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glColorP4ui, GLenum type, GLuint color);
@@ -599,7 +599,7 @@ OGL_FUNCTION(gl_version >= 33, void, glGetSamplerParameterfv, GLuint sampler, GL
 OGL_FUNCTION(gl_version >= 33, void, glGetSamplerParameteriv, GLuint sampler, GLenum pname,
              GLint *params);
 OGL_FUNCTION(gl_version >= 33, GLboolean, glIsSampler, GLuint sampler);
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glMultiTexCoordP1ui, GLenum texture, GLenum type,
              GLuint coords);
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glMultiTexCoordP1uiv, GLenum texture, GLenum type,
@@ -632,7 +632,7 @@ OGL_FUNCTION(gl_version >= 33, void, glSamplerParameteri, GLuint sampler, GLenum
              GLint param);
 OGL_FUNCTION(gl_version >= 33, void, glSamplerParameteriv, GLuint sampler, GLenum pname,
              const GLint *param);
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glSecondaryColorP3ui, GLenum type, GLuint color);
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glSecondaryColorP3uiv, GLenum type,
              const GLuint *color);
@@ -666,7 +666,7 @@ OGL_FUNCTION(gl_version >= 33, void, glVertexAttribP4ui, GLuint index, GLenum ty
              GLboolean normalized, GLuint value);
 OGL_FUNCTION(gl_version >= 33, void, glVertexAttribP4uiv, GLuint index, GLenum type,
              GLboolean normalized, const GLuint *value);
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glVertexP2ui, GLenum type, GLuint value);
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glVertexP2uiv, GLenum type, const GLuint *value);
 OGL_FUNCTION(gl_version >= 33 && gl_compat, void, glVertexP3ui, GLenum type, GLuint value);

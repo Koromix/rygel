@@ -340,7 +340,7 @@ static void InitRoutes()
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
-#ifdef FELIX_HOT_ASSETS
+#if defined(FELIX_HOT_ASSETS)
     // This is not actually thread safe, because it may release memory from an asset
     // that is being used by another thread. This code only runs in development builds
     // and it pretty much never goes wrong so it is kind of OK.
@@ -577,7 +577,7 @@ Options:
     if (!daemon.Start(thop_config.http, HandleRequest))
         return 1;
 
-#ifdef __linux__
+#if defined(__linux__)
     if (!NotifySystemd())
         return 1;
 #endif

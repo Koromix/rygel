@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_LIBHS_H
+#if !defined(HS_LIBHS_H)
 #define HS_LIBHS_H
 
 /* This file provides both the interface and the implementation.
@@ -40,7 +40,7 @@
 
 #endif
 
-#ifdef HS_IMPLEMENTATION
+#if defined(HS_IMPLEMENTATION)
     #include "common_priv.h"
     #include "device_priv.h"
     #include "match_priv.h"

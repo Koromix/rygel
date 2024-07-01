@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TY_BOARD_H
+#if !defined(TY_BOARD_H)
 #define TY_BOARD_H
 
 #include "common.h"

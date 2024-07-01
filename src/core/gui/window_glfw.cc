@@ -19,7 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 
 #include "src/core/base/base.hh"
 #include "window.hh"

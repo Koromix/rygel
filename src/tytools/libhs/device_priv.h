@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef _HS_DEVICE_PRIV_H
+#if !defined(_HS_DEVICE_PRIV_H)
 #define _HS_DEVICE_PRIV_H
 
 #include "common_priv.h"
@@ -38,12 +38,12 @@ struct hs_port {
         struct {
             int fd;
 
-    #ifdef __linux__
+    #if defined(__linux__)
             bool numbered_hid_reports;
     #endif
         } file;
 
-    #ifdef __APPLE__
+    #if defined(__APPLE__)
         struct _hs_hid_darwin *hid;
     #endif
 #endif

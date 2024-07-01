@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_MONITOR_H
+#if !defined(HS_MONITOR_H)
 #define HS_MONITOR_H
 
 #include "common.h"

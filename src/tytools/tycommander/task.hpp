@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TASK_HH
+#if !defined(TASK_HH)
 #define TASK_HH
 
 #include <QMutex>

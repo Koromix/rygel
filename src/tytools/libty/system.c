@@ -22,7 +22,7 @@ void ty_descriptor_set_add(ty_descriptor_set *set, ty_descriptor desc, int id)
 {
     assert(set);
     assert(set->count < _HS_COUNTOF(set->desc));
-#ifdef _WIN32
+#if defined(_WIN32)
     assert(desc);
 #else
     assert(desc >= 0);

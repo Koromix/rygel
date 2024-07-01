@@ -12,7 +12,7 @@
 #include <QDataStream>
 #include <QDir>
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 #else
@@ -21,7 +21,7 @@
 
 #include "session_channel.hpp"
 
-#ifdef _WIN32
+#if defined(_WIN32)
 typedef BOOL WINAPI ProcessIdToSessionId_func(DWORD dwProcessId, DWORD *pSessionId);
 
 static ProcessIdToSessionId_func *ProcessIdToSessionId_ =
@@ -56,7 +56,7 @@ void SessionChannel::init(const QString &id)
     }
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 bool SessionChannel::lock()
 {

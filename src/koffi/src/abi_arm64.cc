@@ -25,7 +25,7 @@
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"
-#ifdef _WIN32
+#if defined(_WIN32)
     #include "win32.hh"
 #endif
 
@@ -135,7 +135,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
 
     int gpr_avail = 8;
     int vec_avail = 8;
-#ifdef _M_ARM64EC
+#if defined(_M_ARM64EC)
     if (func->variadic) {
         gpr_avail = 4;
     }
@@ -164,7 +164,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             case PrimitiveKind::String16:
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 if (param.variadic)
                     break;
 #endif
@@ -178,7 +178,7 @@ bool AnalyseFunction(Napi::Env, InstanceData *, FunctionInfo *func)
             case PrimitiveKind::Union: {
                 HfaInfo hfa = IsHFA(param.type);
 
-#ifdef _M_ARM64EC
+#if defined(_M_ARM64EC)
                 if (func->variadic) {
                     if (IsRegularSize(param.type->size, 8) && gpr_avail) {
                         param.gpr_count = 1;
@@ -282,7 +282,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
         gpr_ptr[8] = (uint64_t)return_ptr;
     }
 
-#ifdef _M_ARM64EC
+#if defined(_M_ARM64EC)
     if (func->variadic) {
         gpr_ptr[4] = (uint64_t)args_ptr;
         gpr_ptr[5] = 0;
@@ -294,7 +294,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
     }
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     #define PUSH_INTEGER(CType) \
         do { \
             if (!value.IsNumber() && !value.IsBigInt()) [[unlikely]] { \
@@ -370,7 +370,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
                 bool b = value.As<Napi::Boolean>();
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 if (param.gpr_count) [[likely]] {
                     *(gpr_ptr++) = (uint64_t)b;
                 } else {
@@ -400,7 +400,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (!PushString(value, param.directions, &str)) [[unlikely]]
                     return false;
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
                 *(const char **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str;
@@ -410,7 +410,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (!PushString16(value, param.directions, &str16)) [[unlikely]]
                     return false;
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
                 *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
@@ -420,7 +420,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
                     return false;
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
                 *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
@@ -450,7 +450,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                             return false;
                         gpr_ptr += param.gpr_count;
                     } else if (param.type->size) {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                         args_ptr = AlignUp(args_ptr, 8);
 #endif
                         if (!PushObject(obj, param.type, (uint8_t *)args_ptr))
@@ -466,7 +466,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
                         *(uint8_t **)(gpr_ptr++) = ptr;
                     } else {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                         args_ptr = AlignUp(args_ptr, 8);
 #endif
                         *(uint8_t **)(args_ptr++) = ptr;
@@ -488,13 +488,13 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (param.vec_count) [[likely]] {
                     MemSet((uint8_t *)vec_ptr + 4, 0, 4);
                     *(float *)(vec_ptr++) = f;
-#ifdef _WIN32
+#if defined(_WIN32)
                 } else if (param.gpr_count) {
                     MemSet((uint8_t *)gpr_ptr + 4, 0, 4);
                     *(float *)(gpr_ptr++) = f;
 #endif
                 } else {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                     args_ptr = AlignUp(args_ptr, 4);
                     *(float *)args_ptr = f;
                     args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
@@ -514,12 +514,12 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
                 if (param.vec_count) [[likely]] {
                     *(double *)(vec_ptr++) = d;
-#ifdef _WIN32
+#if defined(_WIN32)
                 } else if (param.gpr_count) {
                     *(double *)(gpr_ptr++) = d;
 #endif
                 } else {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                     args_ptr = AlignUp(args_ptr, 8);
 #endif
                     *(double *)(args_ptr++) = d;
@@ -543,7 +543,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                     return false;
                 }
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = param.gpr_count ? args_ptr : AlignUp(args_ptr, 8);
 #endif
                 *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++) = ptr;
@@ -563,7 +563,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func, void *native)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     TebManipulator teb;
 
     teb.AdjustStack(mem->stack0.end(), mem->stack0.ptr);
@@ -689,7 +689,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
     if (env.IsExceptionPending()) [[unlikely]]
         return;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     TEB *teb = GetTEB();
 
     // Restore previous stack limits at the end
@@ -738,7 +738,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
 
             case PrimitiveKind::Bool: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 bool b;
                 if (param.gpr_count) {
                     b = *(bool *)(gpr_ptr++);
@@ -754,7 +754,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int8: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     d = (double)*(int8_t *)(gpr_ptr++);
@@ -770,7 +770,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt8: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     d = (double)*(uint8_t *)(gpr_ptr++);
@@ -786,7 +786,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     d = (double)*(int16_t *)(gpr_ptr++);
@@ -803,7 +803,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int16S: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     int16_t v = *(int16_t *)(gpr_ptr++);
@@ -825,7 +825,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     d = (double)*(uint16_t *)(gpr_ptr++);
@@ -842,7 +842,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt16S: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     uint16_t v = *(uint16_t *)(gpr_ptr++);
@@ -864,7 +864,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     d = (double)*(int32_t *)(gpr_ptr++);
@@ -881,7 +881,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int32S: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     int32_t v = *(int32_t *)(gpr_ptr++);
@@ -903,7 +903,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     d = (double)*(uint32_t *)(gpr_ptr++);
@@ -920,7 +920,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt32S: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 double d;
                 if (param.gpr_count) {
                     uint32_t v = *(uint32_t *)(gpr_ptr++);
@@ -942,7 +942,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = AlignUp(args_ptr, 8);
 #endif
 
@@ -952,7 +952,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Int64S: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = AlignUp(args_ptr, 8);
 #endif
 
@@ -962,7 +962,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = AlignUp(args_ptr, 8);
 #endif
 
@@ -972,7 +972,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::UInt64S: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = AlignUp(args_ptr, 8);
 #endif
 
@@ -982,7 +982,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::String: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = AlignUp(args_ptr, 8);
 #endif
 
@@ -992,7 +992,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::String16: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = AlignUp(args_ptr, 8);
 #endif
 
@@ -1003,7 +1003,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                 args_ptr = AlignUp(args_ptr, 8);
 #endif
 
@@ -1040,7 +1040,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                         args_ptr += (param.type->size + 7) / 8;
                     }
                 } else {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                     args_ptr = AlignUp(args_ptr, 8);
 #endif
 
@@ -1055,12 +1055,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 float f;
                 if (param.vec_count) [[likely]] {
                     f = *(float *)(vec_ptr++);
-#ifdef _WIN32
+#if defined(_WIN32)
                 } else if (param.gpr_count) {
                     f = *(float *)(gpr_ptr++);
 #endif
                 } else {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                     args_ptr = AlignUp(args_ptr, 4);
                     f = *(float *)args_ptr;
                     args_ptr = (uint64_t *)((uint8_t *)args_ptr + 4);
@@ -1076,12 +1076,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 double d;
                 if (param.vec_count) [[likely]] {
                     d = *(double *)(vec_ptr++);
-#ifdef _WIN32
+#if defined(_WIN32)
                 } else if (param.gpr_count) {
                     d = *(double *)(gpr_ptr++);
 #endif
                 } else {
-#ifdef __APPLE__
+#if defined(__APPLE__)
                     args_ptr = AlignUp(args_ptr, 8);
 #endif
 

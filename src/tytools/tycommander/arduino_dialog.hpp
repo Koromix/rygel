@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef ARDUINO_DIALOG_HH
+#if !defined(ARDUINO_DIALOG_HH)
 #define ARDUINO_DIALOG_HH
 
 #include "arduino_install.hpp"
@@ -39,7 +39,7 @@ private:
     void appendMessage(const QString &msg, const QTextCharFormat &fmt = QTextCharFormat());
 
     void executeAsRoot(const QString &command);
-#ifdef _WIN32
+#if defined(_WIN32)
     void installWithUAC(const QString &command);
 #endif
 };

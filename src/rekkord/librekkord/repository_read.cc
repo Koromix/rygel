@@ -16,11 +16,11 @@
 #include "repository.hh"
 #include "priv_repository.hh"
 
-#ifdef _WIN32
-    #ifndef NOMINMAX
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
         #define NOMINMAX
     #endif
-    #ifndef WIN32_LEAN_AND_MEAN
+    #if !defined(WIN32_LEAN_AND_MEAN)
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <windows.h>
@@ -33,7 +33,7 @@
 namespace RG {
 
 // Fix mess caused by windows.h
-#ifdef CreateSymbolicLink
+#if defined(CreateSymbolicLink)
     #undef CreateSymbolicLink
 #endif
 
@@ -93,7 +93,7 @@ GetContext::GetContext(rk_Disk *disk, bool chown)
 {
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static bool ReserveFile(int fd, const char *filename, int64_t len)
 {

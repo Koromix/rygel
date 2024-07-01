@@ -9,7 +9,7 @@
    See the LICENSE file for more details. */
 
 #include "common.h"
-#ifdef _WIN32
+#if defined(_WIN32)
     // Need that for InterlockedX functions
     #include <windows.h>
 #endif
@@ -28,12 +28,12 @@ static _HS_THREAD_LOCAL unsigned int error_masks_count;
 
 static _HS_THREAD_LOCAL char last_error_msg[512];
 
-#ifdef FELIX
+#if defined(FELIX)
     extern const char *FelixTarget;
     extern const char *FelixVersion;
     extern const char *FelixCompiler;
 #else
-    #ifdef FELIX_TARGET
+    #if defined(FELIX_TARGET)
         const char *FelixTarget = RG_STRINGIFY(FELIX_TARGET);
     #else
         const char *FelixTarget = "????";
@@ -309,7 +309,7 @@ void ty_libhs_log_handler(hs_log_level level, int err, const char *log, void *ud
 
 void _ty_refcount_increase(unsigned int *rrefcount)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
     InterlockedIncrement((volatile long *)rrefcount);
 #else
     __atomic_add_fetch(rrefcount, 1, __ATOMIC_RELAXED);
@@ -318,7 +318,7 @@ void _ty_refcount_increase(unsigned int *rrefcount)
 
 unsigned int _ty_refcount_decrease(unsigned int *rrefcount)
 {
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
     return InterlockedDecrement((volatile long *)rrefcount);
 #else
     unsigned int refcount = __atomic_sub_fetch(rrefcount, 1, __ATOMIC_RELEASE);

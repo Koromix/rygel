@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 #include "common_priv.h"
 #define WIN32_LEAN_AND_MEAN

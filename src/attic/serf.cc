@@ -502,7 +502,7 @@ Options:
     if (!daemon.Start(config.http, HandleRequest))
         return 1;
 
-#ifdef __linux__
+#if defined(__linux__)
     if (!NotifySystemd())
         return 1;
 #endif

@@ -214,7 +214,7 @@ struct FunctionInfo {
 
     const char *name;
     const char *decorated_name; // Only set for some platforms/calling conventions
-#ifdef _WIN32
+#if defined(_WIN32)
     int ordinal_name = -1;
 #endif
     const LibraryHolder *lib = nullptr;
@@ -283,11 +283,11 @@ struct InstanceData {
     napi_threadsafe_function broker = nullptr;
 
     int last_errno = 0;
-#ifdef _WIN32
+#if defined(_WIN32)
     uint32_t last_error_win32 = 0;
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
     void *main_stack_max;
     void *main_stack_min;
 #endif

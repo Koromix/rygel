@@ -38,7 +38,7 @@ bool ogl_InitFunctions(void *(*get_proc_address)(const char *name))
         }
     }
 
-#ifndef OGL_NO_COMPAT
+#if !defined(OGL_NO_COMPAT)
     bool gl_compat;
     if (gl_version >= 32) {
         GLint profile;
@@ -136,7 +136,7 @@ GLuint ogl_BuildShader(const char *name, const char *vertex_src, const char *fra
 
 }
 
-#ifndef __EMSCRIPTEN__
+#if !defined(__EMSCRIPTEN__)
     #define OGL_FUNCTION(Cond, ...) \
         RG_FORCE_EXPAND(OGL_FUNCTION_PTR(__VA_ARGS__))
     #include "opengl_func.inc"

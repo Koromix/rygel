@@ -65,7 +65,7 @@ if __name__ == "__main__":
             f.write(line)
 
         print('', file = f)
-        print('#ifndef MIMETYPE', file = f)
+        print('#if !defined(MIMETYPE)', file = f)
         print('    #error Please define MIMETYPE() before including mimetypes.inc', file = f)
         print('#endif', file = f)
         print('', file = f)

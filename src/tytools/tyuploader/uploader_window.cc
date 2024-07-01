@@ -52,12 +52,12 @@ UploaderWindow::UploaderWindow(QWidget *parent)
     connect(actionQuit, &QAction::triggered, this, &TyUploader::quit);
 
     connect(actionOpenLog, &QAction::triggered, tyUploader, &TyUploader::showLogWindow);
-#ifdef WEBSITE_URL
+#if defined(WEBSITE_URL)
     connect(actionWebsite, &QAction::triggered, this, &UploaderWindow::openWebsite);
 #else
     actionWebsite->setVisible(false);
 #endif
-#ifdef BUGS_URL
+#if defined(BUGS_URL)
     connect(actionReportBug, &QAction::triggered, this, &UploaderWindow::openBugReports);
 #else
     actionReportBug->setVisible(false);
@@ -104,14 +104,14 @@ void UploaderWindow::uploadNewToCurrent()
 
 void UploaderWindow::openWebsite()
 {
-#ifdef WEBSITE_URL
+#if defined(WEBSITE_URL)
     QDesktopServices::openUrl(QUrl(WEBSITE_URL));
 #endif
 }
 
 void UploaderWindow::openBugReports()
 {
-#ifdef BUGS_URL
+#if defined(BUGS_URL)
     QDesktopServices::openUrl(QUrl(BUGS_URL));
 #endif
 }

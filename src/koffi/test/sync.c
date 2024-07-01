@@ -32,7 +32,7 @@
     typedef uint16_t char16_t;
     typedef uint32_t char32_t;
 #endif
-#ifdef _WIN32
+#if defined(_WIN32)
     #define NOMINMAX
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
@@ -43,13 +43,13 @@
     #include <pthread.h>
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define EXPORT __declspec(dllexport)
 #else
     #define EXPORT __attribute__((visibility("default")))
 #endif
 #if defined(_M_IX86) || defined(__i386__)
-    #ifdef _MSC_VER
+    #if defined(_MSC_VER)
         #define FASTCALL __fastcall
         #define STDCALL __stdcall
     #else
@@ -486,7 +486,7 @@ EXPORT void MakePolymorphBFG(int type, int x, double y, const char *str, void *p
     }
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 // Exported by DEF file
 const char *ReturnBigString(const char *str)
 #else

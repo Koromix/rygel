@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef CLIENT_HANDLER_HH
+#if !defined(CLIENT_HANDLER_HH)
 #define CLIENT_HANDLER_HH
 
 #include <QHash>

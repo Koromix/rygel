@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_ARRAY_H
+#if !defined(HS_ARRAY_H)
 #define HS_ARRAY_H
 
 #include "common.h"

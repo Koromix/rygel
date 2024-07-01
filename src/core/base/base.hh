@@ -42,14 +42,14 @@
 #include <thread>
 #include <type_traits>
 #include <utility>
-#ifdef _WIN32
-    #ifndef STDIN_FILENO
+#if defined(_WIN32)
+    #if !defined(STDIN_FILENO)
         #define STDIN_FILENO 0
     #endif
-    #ifndef STDOUT_FILENO
+    #if !defined(STDOUT_FILENO)
         #define STDOUT_FILENO 1
     #endif
-    #ifndef STDERR_FILENO
+    #if !defined(STDERR_FILENO)
         #define STDERR_FILENO 2
     #endif
 
@@ -57,11 +57,11 @@
 #else
     #include <unistd.h>
 #endif
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
     #define ENABLE_INTSAFE_SIGNED_FUNCTIONS
     #include <intsafe.h>
     #pragma intrinsic(_BitScanReverse)
-    #ifdef _WIN64
+    #if defined(_WIN64)
         #pragma intrinsic(_BitScanReverse64)
     #endif
     #if defined(_M_IX86) || defined(_M_X64)
@@ -78,7 +78,7 @@ namespace RG {
 // Config
 // ------------------------------------------------------------------------
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
     #define RG_DEBUG
 #endif
 
@@ -171,13 +171,13 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
     #define RG_POP_NO_WARNINGS \
         _Pragma("GCC diagnostic pop")
 
-    #ifndef SCNd8
+    #if !defined(SCNd8)
         #define SCNd8 "hhd"
     #endif
-    #ifndef SCNi8
+    #if !defined(SCNi8)
         #define SCNi8 "hhd"
     #endif
-    #ifndef SCNu8
+    #if !defined(SCNu8)
         #define SCNu8 "hhu"
     #endif
 #elif defined(_MSC_VER)
@@ -187,7 +187,7 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
     #error Compiler not supported
 #endif
 
-#ifdef __clang__
+#if defined(__clang__)
     #if __has_feature(address_sanitizer)
         #define __SANITIZE_ADDRESS__
     #endif
@@ -237,7 +237,7 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond);
             abort(); \
         } \
     } while (false)
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     #define RG_ASSERT(Cond) \
         do { \
             if (!(Cond)) [[unlikely]] { \
@@ -319,7 +319,7 @@ static constexpr inline int32_t ReverseBytes(int32_t i)
 static constexpr inline int64_t ReverseBytes(int64_t i)
     { return (int64_t)ReverseBytes((uint64_t)i); }
 
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
 template <typename T>
 constexpr T LittleEndian(T v) { return ReverseBytes(v); }
 template <typename T>
@@ -395,7 +395,7 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
     static inline int CountLeadingZeros(uint64_t u)
     {
         unsigned long leading_zero;
-    #ifdef _WIN64
+    #if defined(_WIN64)
         if (_BitScanReverse64(&leading_zero, u)) {
             return (int)(63 - leading_zero);
         } else {
@@ -424,7 +424,7 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
     static inline int CountTrailingZeros(uint64_t u)
     {
         unsigned long trailing_zero;
-    #ifdef _WIN64
+    #if defined(_WIN64)
         if (_BitScanForward64(&trailing_zero, u)) {
             return (int)trailing_zero;
         } else {
@@ -443,7 +443,7 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
 
     static inline int PopCount(uint32_t u)
     {
-    #ifdef _M_ARM64
+    #if defined(_M_ARM64)
         uint32_t count;
 
         u = u - ((u >> 1) & 0x55555555);
@@ -457,7 +457,7 @@ constexpr T BigEndian(T v) { return ReverseBytes(v); }
     }
     static inline int PopCount(uint64_t u)
     {
-    #ifdef _M_X64
+    #if defined(_M_X64)
         return (int)__popcnt64(u);
     #else
         int count = PopCount((uint32_t)(u >> 32)) + PopCount((uint32_t)u);
@@ -500,7 +500,7 @@ static inline void *MemCpy(void *dest, const void *src, Size len)
 {
     RG_ASSERT(len >= 0);
 
-#ifdef __clang__
+#if defined(__clang__)
     // LLVM guarantees sane behavior
     __builtin_memcpy(dest, src, (size_t)len);
 #else
@@ -514,7 +514,7 @@ static inline void *MemMove(void *dest, const void *src, Size len)
 {
     RG_ASSERT(len >= 0);
 
-#ifdef __clang__
+#if defined(__clang__)
     // LLVM guarantees sane behavior
     __builtin_memmove(dest, src, (size_t)len);
 #else
@@ -528,7 +528,7 @@ static inline void *MemSet(void *dest, int c, Size len)
 {
     RG_ASSERT(len >= 0);
 
-#ifdef __clang__
+#if defined(__clang__)
     // LLVM guarantees sane behavior
     __builtin_memset(dest, c, (size_t)len);
 #else
@@ -1265,7 +1265,7 @@ public:
     void ReleaseAll();
 };
 
-#ifndef __wasi__
+#if !defined(__wasi__)
 bool LockMemory(void *ptr, Size len);
 void UnlockMemory(void *ptr, Size len);
 #endif
@@ -3076,7 +3076,7 @@ DEFINE_INTEGER_HASH_TRAITS_32(short, constexpr);
 DEFINE_INTEGER_HASH_TRAITS_32(unsigned short, constexpr);
 DEFINE_INTEGER_HASH_TRAITS_32(int, constexpr);
 DEFINE_INTEGER_HASH_TRAITS_32(unsigned int, constexpr);
-#ifdef __LP64__
+#if defined(__LP64__)
     DEFINE_INTEGER_HASH_TRAITS_64(long, constexpr);
     DEFINE_INTEGER_HASH_TRAITS_64(unsigned long, constexpr);
 #else
@@ -3112,7 +3112,7 @@ static constexpr inline uint64_t HashStr(Span<const char> str)
         } :
 #endif
         [](const char *p) {
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
             uint64_t result = ((uint64_t)p[0] << 56) |
                               ((uint64_t)p[1] << 48) |
                               ((uint64_t)p[2] << 40) |
@@ -3455,7 +3455,7 @@ private:
 union LocalDate {
     int32_t value;
     struct {
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
         int16_t year;
         int8_t month;
         int8_t day;
@@ -3467,7 +3467,7 @@ union LocalDate {
     } st;
 
     LocalDate() = default;
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
     LocalDate(int16_t year, int8_t month, int8_t day)
         : st({ year, month, day }) { RG_ASSERT(IsValid()); }
 #else
@@ -3915,7 +3915,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
 }
 
 // Shortcut log functions
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     const char *DebugLogContext(const char *filename, int line);
 
     #define LogDebug(...) Log(LogLevel::Debug, DebugLogContext(__FILE__, __LINE__) __VA_OPT__(,) __VA_ARGS__)
@@ -3939,7 +3939,7 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
 void PushLogFilter(const std::function<LogFilterFunc> &func);
 void PopLogFilter();
 
-#ifdef _WIN32
+#if defined(_WIN32)
 bool RedirectLogToWindowsEvents(const char *name);
 #endif
 
@@ -3947,7 +3947,7 @@ bool RedirectLogToWindowsEvents(const char *name);
 // System
 // ------------------------------------------------------------------------
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define RG_PATH_SEPARATORS "\\/"
     #define RG_PATH_DELIMITER ';'
     #define RG_EXECUTABLE_EXTENSION ".exe"
@@ -3959,7 +3959,7 @@ bool RedirectLogToWindowsEvents(const char *name);
     #define RG_SHARED_LIBRARY_EXTENSION ".so"
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
 bool IsWin32Utf8();
 Size ConvertUtf8ToWin32Wide(Span<const char> str, Span<wchar_t> out_str_w);
 Size ConvertWin32WideToUtf8(const wchar_t *str_w, Span<char> out_str);
@@ -3968,7 +3968,7 @@ char *GetWin32ErrorString(uint32_t error_code = UINT32_MAX);
 
 static inline bool IsPathSeparator(char c)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     return c == '/' || c == '\\';
 #else
     return c == '/';
@@ -4143,9 +4143,9 @@ bool FlushFile(int fd, const char *filename);
 
 bool FileIsVt100(int fd);
 
-#ifndef __wasi__
+#if !defined(__wasi__)
 
-#ifdef _WIN32
+#if defined(_WIN32)
 enum class PipeMode {
     Byte,
     Message
@@ -4218,7 +4218,7 @@ bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output);
 
 void WaitDelay(int64_t delay);
 
-#ifndef __wasi__
+#if !defined(__wasi__)
 
 enum class WaitForResult {
     Interrupt,
@@ -4236,10 +4236,10 @@ void SignalWaitFor();
 
 int GetCoreCount();
 
-#ifndef _WIN32
+#if !defined(_WIN32)
 bool DropRootIdentity();
 #endif
-#ifdef __linux__
+#if defined(__linux__)
 bool NotifySystemd();
 #endif
 
@@ -4427,7 +4427,7 @@ int64_t GetRandomInt64(int64_t min, int64_t max);
 // Sockets
 // ------------------------------------------------------------------------
 
-#ifndef __wasi__
+#if !defined(__wasi__)
 
 enum class SocketType {
     Dual,
@@ -4465,7 +4465,7 @@ class Async {
     RG_DELETE_COPY(Async)
 
     bool stop_after_error;
-#ifndef __wasi__
+#if !defined(__wasi__)
     std::atomic_bool success { true };
     std::atomic_int remaining_tasks { 0 };
 
@@ -4925,7 +4925,7 @@ struct AssetInfo {
     RG_HASHTABLE_HANDLER(AssetInfo, name);
 };
 
-#ifdef FELIX_HOT_ASSETS
+#if defined(FELIX_HOT_ASSETS)
 
 bool ReloadAssets();
 Span<const AssetInfo> GetEmbedAssets();
@@ -5174,7 +5174,7 @@ class ConsolePrompter {
     int y = 0;
 
     const char *fake_input = "";
-#ifdef _WIN32
+#if defined(_WIN32)
     uint32_t surrogate_buf = 0;
 #endif
 

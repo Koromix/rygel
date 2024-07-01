@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef SESSION_CHANNEL_HH
+#if !defined(SESSION_CHANNEL_HH)
 #define SESSION_CHANNEL_HH
 
 #include <QLockFile>
@@ -57,7 +57,7 @@ private slots:
 class SessionChannel : public QObject {
     Q_OBJECT
 
-#ifdef _WIN32
+#if defined(_WIN32)
     void *mutex_ = nullptr; // HANDLE
 #else
     std::unique_ptr<QLockFile> lock_;

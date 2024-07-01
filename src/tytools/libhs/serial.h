@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef HS_SERIAL_H
+#if !defined(HS_SERIAL_H)
 #define HS_SERIAL_H
 
 #include "common.h"

@@ -9,7 +9,7 @@
    See the LICENSE file for more details. */
 
 #include "common_priv.h"
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
     #include <windows.h>
 #endif
 #include "device_priv.h"
@@ -20,7 +20,7 @@ hs_device *hs_device_ref(hs_device *dev)
 {
     assert(dev);
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
     InterlockedIncrement((long *)&dev->refcount);
 #else
     __atomic_fetch_add(&dev->refcount, 1, __ATOMIC_RELAXED);
@@ -31,7 +31,7 @@ hs_device *hs_device_ref(hs_device *dev)
 void hs_device_unref(hs_device *dev)
 {
     if (dev) {
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
         if (InterlockedDecrement((long *)&dev->refcount))
             return;
 #else
@@ -87,7 +87,7 @@ int hs_port_open(hs_device *dev, hs_port_mode mode, hs_port **rport)
     if (dev->status != HS_DEVICE_STATUS_ONLINE)
         return hs_error(HS_ERROR_NOT_FOUND, "Device '%s' is not connected", dev->path);
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     if (dev->type == HS_DEVICE_TYPE_HID)
         return _hs_darwin_open_hid_port(dev, mode, rport);
 #endif
@@ -100,7 +100,7 @@ void hs_port_close(hs_port *port)
     if (!port)
         return;
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     if (port->type == HS_DEVICE_TYPE_HID) {
         _hs_darwin_close_hid_port(port);
         return;
@@ -120,7 +120,7 @@ hs_handle hs_port_get_poll_handle(const hs_port *port)
 {
     assert(port);
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     if (port->type == HS_DEVICE_TYPE_HID)
         return _hs_darwin_get_hid_port_poll_handle(port);
 #endif

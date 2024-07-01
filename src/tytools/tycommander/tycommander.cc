@@ -17,7 +17,7 @@
 #include <QStringConverter>
 #include <QThread>
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
     #include <windows.h>
 #endif
@@ -31,7 +31,7 @@
 #include "task.hpp"
 #include "tycommander.hpp"
 
-#ifndef TYCOMMANDER_TITLE
+#if !defined(TYCOMMANDER_TITLE)
     #define TYCOMMANDER_TITLE "TyCommander"
 #endif
 
@@ -113,7 +113,7 @@ TyCommander::~TyCommander()
 
 QString TyCommander::clientFilePath()
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     return applicationDirPath() + "/TyCommanderC.exe";
 #else
     return applicationFilePath();
@@ -124,7 +124,7 @@ void TyCommander::loadSettings()
 {
     /* FIXME: Fix (most likely) broken behavior of hideOnStartup with
        Cmd+H on OSX when my MacBook is repaired. */
-#ifdef __APPLE__
+#if defined(__APPLE__)
     show_tray_icon_ = db_.get("UI/showTrayIcon", false).toBool();
     hide_on_startup_ = db_.get("UI/hideOnStartup", false).toBool();
 #else
@@ -213,7 +213,7 @@ int TyCommander::run(int argc, char *argv[])
         }
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     // TyCommanderC should not launch TyCommander, it's only a console interface
     if (command_.isEmpty() && client_console_) {
         showClientMessage(helpText());
@@ -520,7 +520,7 @@ void TyCommander::initCache(const QString &name, SettingsDatabase &cache)
     /* QStandardPaths adds organizationName()/applicationName() to the generic OS cache path,
        but we put our files in organizationName() to share them with tycmd. On Windows, Qt uses
        AppData/Local/organizationName()/applicationName()/cache so we need to special case that. */
-#ifdef _WIN32
+#if defined(_WIN32)
     auto path = QString("%1/../%2.ini")
                 .arg(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation), name);
 #else
@@ -581,7 +581,7 @@ void TyCommander::showClientError(const QString &msg)
 
 void TyCommander::trayActivated(QSystemTrayIcon::ActivationReason reason)
 {
-#ifndef __APPLE__
+#if !defined(__APPLE__)
     if (reason == QSystemTrayIcon::Trigger)
         setVisible(!visible());
 #else
@@ -643,7 +643,7 @@ void TyCommander::processServerAnswer(const QStringList &arguments)
             exit(0);
     } else if (cmd == "exit") {
         exit(parameters.value(0, "0").toInt());
-#ifdef _WIN32
+#if defined(_WIN32)
     } else if (cmd == "allowsetforegroundwindow") {
         if (parameters.count() < 1)
             goto error;

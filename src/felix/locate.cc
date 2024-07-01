@@ -15,11 +15,11 @@
 #include "compiler.hh"
 #include "locate.hh"
 #include "target.hh"
-#ifdef _WIN32
-    #ifndef NOMINMAX
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
         #define NOMINMAX
     #endif
-    #ifndef WIN32_LEAN_AND_MEAN
+    #if !defined(WIN32_LEAN_AND_MEAN)
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <windows.h>
@@ -270,7 +270,7 @@ const QtInfo *FindQtSdk(const Compiler *compiler)
                         qt.uic = TestFile(binary, FileType::File) ? binary : nullptr;
                     }
 
-    #ifdef __APPLE__
+    #if defined(__APPLE__)
                     if (!qt.macdeployqt) {
                         const char *binary = Fmt(&str_alloc, "%1%/macdeployqt", value).ptr;
                         qt.macdeployqt = TestFile(binary, FileType::File) ? binary : nullptr;
@@ -374,7 +374,7 @@ const WasiSdkInfo *FindWasiSdk()
 
     static const TestPath test_paths[] = {
         { "WASI_SDK_PATH", "" },
-#ifndef _WIN32
+#if !defined(_WIN32)
         { nullptr, "/opt/wasi-sdk" },
         { nullptr, "/usr/share/wasi-sdk" },
         { nullptr, "/usr/local/share/wasi-sdk" },
@@ -440,7 +440,7 @@ const char *FindArduinoSdk()
 
     std::lock_guard<std::mutex> lock(mutex);
 
-#ifdef _WIN32
+#if defined(_WIN32)
     {
         wchar_t buf_w[2048];
         DWORD buf_w_len = RG_LEN(buf_w);
@@ -482,12 +482,12 @@ const char *FindArduinoSdk()
 
     static const TestPath test_paths[] = {
         { "ARDUINO_PATH", "" },
-#ifndef _WIN32
+#if !defined(_WIN32)
         { nullptr, "/opt/arduino" },
         { nullptr, "/usr/share/arduino" },
         { nullptr, "/usr/local/share/arduino" },
         { "HOME",  "/.local/share/arduino" },
-#ifdef __APPLE__
+#if defined(__APPLE__)
         { nullptr, "/Applications/Arduino.app/Contents/Java" }
 #endif
 #endif

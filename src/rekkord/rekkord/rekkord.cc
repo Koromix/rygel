@@ -15,7 +15,7 @@
 #include "src/core/request/curl.hh"
 #include "rekkord.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
-#ifndef _WIN32
+#if !defined(_WIN32)
     #include <sys/time.h>
     #include <sys/resource.h>
 #endif
@@ -104,7 +104,7 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return 1;
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     _setmaxstdio(4096);
 #else
     {

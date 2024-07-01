@@ -26,10 +26,10 @@
 #endif
 
 #if defined(_WIN32)
-    #ifndef NOMINMAX
+    #if !defined(NOMINMAX)
         #define NOMINMAX
     #endif
-    #ifndef WIN32_LEAN_AND_MEAN
+    #if !defined(WIN32_LEAN_AND_MEAN)
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <ws2tcpip.h>
@@ -40,11 +40,11 @@
     #include <sys/stat.h>
     #include <direct.h>
     #include <shlobj.h>
-    #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+    #if !defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
         #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
     #endif
 
-    #ifndef UNIX_PATH_MAX
+    #if !defined(UNIX_PATH_MAX)
         #define UNIX_PATH_MAX 108
     #endif
     typedef struct sockaddr_un {
@@ -52,7 +52,7 @@
         char sun_path[UNIX_PATH_MAX];
     } SOCKADDR_UN, *PSOCKADDR_UN;
 
-    #ifdef __MINGW32__
+    #if defined(__MINGW32__)
         // Some MinGW distributions set it to 0 by default
         int _CRT_glob = 1;
     #endif
@@ -93,10 +93,10 @@
 
     extern char **environ;
 #endif
-#ifdef __linux__
+#if defined(__linux__)
     #include <sys/syscall.h>
 #endif
-#ifdef __APPLE__
+#if defined(__APPLE__)
     #include <sys/random.h>
     #include <mach-o/dyld.h>
 #endif
@@ -105,7 +105,7 @@
     #include <sys/param.h>
     #include <sys/sysctl.h>
 #endif
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
     #include <emscripten.h>
 #endif
 #include <chrono>
@@ -118,8 +118,8 @@ namespace RG {
 // Utility
 // ------------------------------------------------------------------------
 
-#ifndef FELIX
-    #ifdef FELIX_TARGET
+#if !defined(FELIX)
+    #if defined(FELIX_TARGET)
         const char *FelixTarget = RG_STRINGIFY(FELIX_TARGET);
     #else
         const char *FelixTarget = "????";
@@ -572,7 +572,7 @@ LocalDate &LocalDate::operator--()
 // Time
 // ------------------------------------------------------------------------
 
-#ifdef _WIN32
+#if defined(_WIN32)
 static int64_t FileTimeToUnixTime(FILETIME ft)
 {
     int64_t time = ((int64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
@@ -627,7 +627,7 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode)
 {
     TimeSpec spec = {};
 
-#ifdef _WIN32
+#if defined(_WIN32)
     __time64_t time64 = time / 1000;
 
     struct tm ti = {};
@@ -686,7 +686,7 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode)
 
 bool CopyString(const char *str, Span<char> buf)
 {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     RG_ASSERT(buf.len > 0);
 #else
     if (!buf.len) [[unlikely]]
@@ -708,7 +708,7 @@ bool CopyString(const char *str, Span<char> buf)
 
 bool CopyString(Span<const char> str, Span<char> buf)
 {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     RG_ASSERT(buf.len > 0);
 #else
     if (!buf.len) [[unlikely]]
@@ -817,7 +817,7 @@ static Span<char> FormatUnsignedToSmallHex(uint64_t value, char out_buf[32])
     return MakeSpan(out_buf + offset, 32 - offset);
 }
 
-#ifdef JKJ_HEADER_DRAGONBOX
+#if defined(JKJ_HEADER_DRAGONBOX)
 static Size FakeFloatPrecision(Span<char> buf, int K, int min_prec, int max_prec, int *out_K)
 {
     RG_ASSERT(min_prec >= 0);
@@ -949,7 +949,7 @@ static Span<char> ExponentiateFloat(Span<char> buf, int K, int min_prec, int max
 template <typename T>
 Span<const char> FormatFloatingPoint(T value, bool non_zero, int min_prec, int max_prec, char out_buf[128])
 {
-#ifdef JKJ_HEADER_DRAGONBOX
+#if defined(JKJ_HEADER_DRAGONBOX)
     if (non_zero) {
         auto v = jkj::dragonbox::to_decimal(value, jkj::dragonbox::policy::sign::ignore);
 
@@ -976,7 +976,7 @@ Span<const char> FormatFloatingPoint(T value, bool non_zero, int min_prec, int m
         return buf;
     }
 #else
-    #ifdef _MSC_VER
+    #if defined(_MSC_VER)
         #pragma message("Cannot format floating point values correctly without Dragonbox")
     #else
         #warning Cannot format floating point values correctly without Dragonbox
@@ -1467,7 +1467,7 @@ static inline Size ProcessAnsiSpecifier(const char *spec, bool vt100, AppendFunc
 
 end:
     if (!valid) {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
         LogDebug("Format string contains invalid ANSI specifier");
 #endif
         return idx;
@@ -1484,7 +1484,7 @@ end:
 template <typename AppendFunc>
 static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100, AppendFunc append)
 {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     bool invalid_marker = false;
     uint32_t unused_arguments = ((uint32_t)1 << args.len) - 1;
 #endif
@@ -1517,7 +1517,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100
             idx--;
             if (idx < args.len) {
                 ProcessArg<AppendFunc>(args[idx], append);
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
                 unused_arguments &= ~((uint32_t)1 << idx);
             } else {
                 invalid_marker = true;
@@ -1535,18 +1535,18 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100
         } else if (marker_ptr[1]) {
             append(marker_ptr[0]);
             fmt_ptr = marker_ptr + 1;
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
             invalid_marker = true;
 #endif
         } else {
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
             invalid_marker = true;
 #endif
             break;
         }
     }
 
-#ifdef RG_DEBUG
+#if defined(RG_DEBUG)
     if (invalid_marker && unused_arguments) {
         PrintLn(StdErr, "\nLog format string '%1' has invalid markers and unused arguments", fmt);
     } else if (unused_arguments) {
@@ -1692,7 +1692,7 @@ static thread_local Size log_filters_len;
 
 const char *GetEnv(const char *name)
 {
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
     // Each accessed environment variable is kept in memory and thus leaked once
     static HashMap<const char *, const char *> values;
 
@@ -1743,7 +1743,7 @@ bool GetDebugFlag(const char *name)
     }
 }
 
-#ifndef NDEBUG
+#if !defined(NDEBUG)
 const char *DebugLogContext(const char *filename, int line)
 {
     static thread_local LocalArray<char, 1024> buf;
@@ -1810,7 +1810,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
         }
     }
 
-#ifndef __wasi__
+#if !defined(__wasi__)
     static std::mutex mutex;
     std::unique_lock<std::mutex> lock(mutex);
 #endif
@@ -1851,7 +1851,7 @@ void PopLogFilter()
     delete log_filters[--log_filters_len];
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 bool RedirectLogToWindowsEvents(const char *name)
 {
     static HANDLE log = nullptr;
@@ -1903,7 +1903,7 @@ bool RedirectLogToWindowsEvents(const char *name)
 // System
 // ------------------------------------------------------------------------
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static bool win32_utf8 = (GetACP() == CP_UTF8);
 
@@ -2401,7 +2401,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
             }
 
             FileType file_type;
-#ifdef _DIRENT_HAVE_D_TYPE
+#if defined(_DIRENT_HAVE_D_TYPE)
             if (dent->d_type != DT_UNKNOWN) {
                 switch (dent->d_type) {
                     case DT_DIR: { file_type = FileType::Directory; } break;
@@ -2410,7 +2410,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
                     case DT_BLK:
                     case DT_CHR: { file_type = FileType::Device; } break;
                     case DT_FIFO: { file_type = FileType::Pipe; } break;
-#ifndef __wasi__
+#if !defined(__wasi__)
                     case DT_SOCK: { file_type = FileType::Socket; } break;
 #endif
 
@@ -2550,7 +2550,7 @@ static Size MatchPathItem(const char *path, const char *spec)
                     return -1;
             } break;
 
-#ifdef _WIN32
+#if defined(_WIN32)
             case '\\':
             case '/': {
                 if (!IsPathSeparator(path[i]))
@@ -2661,7 +2661,7 @@ bool FindExecutableInPath(Span<const char> paths, const char *name, Allocator *a
         LocalArray<char, 4096> buf;
         buf.len = Fmt(buf.data, "%1%/%2", path, name).len;
 
-#ifdef _WIN32
+#if defined(_WIN32)
         static const Span<const char> extensions[] = { ".com", ".exe", ".bat", ".cmd" };
 
         for (Span<const char> ext: extensions) {
@@ -2704,7 +2704,7 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
         return true;
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     LocalArray<char, 16384> env_buf;
     Span<const char> paths;
     if (win32_utf8) {
@@ -2737,7 +2737,7 @@ bool FindExecutableInPath(const char *name, Allocator *alloc, const char **out_p
 
 bool SetWorkingDirectory(const char *directory)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     if (!win32_utf8) {
         wchar_t directory_w[4096];
         if (ConvertUtf8ToWin32Wide(directory, directory_w) < 0)
@@ -2764,7 +2764,7 @@ const char *GetWorkingDirectory()
 {
     static thread_local char buf[4096];
 
-#ifdef _WIN32
+#if defined(_WIN32)
     if (!win32_utf8) {
         wchar_t buf_w[RG_SIZE(buf)];
         DWORD ret = GetCurrentDirectoryW(RG_SIZE(buf_w), buf_w);
@@ -3009,7 +3009,7 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
 
 bool PathIsAbsolute(const char *path)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     if (IsAsciiAlpha(path[0]) && path[1] == ':')
         return true;
 #endif
@@ -3018,7 +3018,7 @@ bool PathIsAbsolute(const char *path)
 }
 bool PathIsAbsolute(Span<const char> path)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     if (path.len >= 2 && IsAsciiAlpha(path[0]) && path[1] == ':')
         return true;
 #endif
@@ -3054,7 +3054,7 @@ static bool CheckForDumbTerm()
     return dumb;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silent, int *out_fd)
 {
@@ -3448,7 +3448,7 @@ bool FlushFile(int fd, const char *filename)
 {
     RG_ASSERT(filename);
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     if (fsync(fd) < 0 && errno != EINVAL && errno != ENOTSUP) {
 #else
     if (fsync(fd) < 0 && errno != EINVAL) {
@@ -3468,7 +3468,7 @@ bool FileIsVt100(int fd)
     if (CheckForDumbTerm())
         return false;
 
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
     static bool win32 = ([]() {
         int win32 = EM_ASM_INT({
             try {
@@ -3572,9 +3572,9 @@ bool EnsureDirectoryExists(const char *filename)
     return MakeDirectoryRec(directory);
 }
 
-#ifndef __wasi__
+#if !defined(__wasi__)
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static HANDLE console_ctrl_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 static bool ignore_ctrl_event = false;
@@ -3982,7 +3982,7 @@ static void DefaultSignalHandler(int signal)
 
 bool CreatePipe(int pfd[2])
 {
-#ifdef __APPLE__
+#if defined(__APPLE__)
     if (pipe(pfd) < 0) {
         LogError("Failed to create pipe: %1", strerror(errno));
         return false;
@@ -4332,7 +4332,7 @@ bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
 
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static HANDLE wait_msg_event = CreateEvent(nullptr, TRUE, FALSE, nullptr);
 
@@ -4407,7 +4407,7 @@ void WaitDelay(int64_t delay)
     }
 }
 
-#ifndef __wasi__
+#if !defined(__wasi__)
 
 WaitForResult WaitForInterrupt(int64_t timeout)
 {
@@ -4516,7 +4516,7 @@ error:
 
 #endif
 
-#ifdef __linux__
+#if defined(__linux__)
 
 bool NotifySystemd()
 {
@@ -4613,7 +4613,7 @@ int RunApp(int argc, char **argv)
     });
 #endif
 
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__)
     // This can depend on PATH, which could change during execution
     // so we want to cache the result as soon as possible.
     GetApplicationExecutable();
@@ -4626,7 +4626,7 @@ int RunApp(int argc, char **argv)
 // Standard paths
 // ------------------------------------------------------------------------
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 const char *GetUserConfigPath(const char *name, Allocator *alloc)
 {
@@ -4714,7 +4714,7 @@ const char *GetUserConfigPath(const char *name, Allocator *alloc)
         path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
     } else if (home) {
         path = Fmt(alloc, "%1%/.config/%2", home, name).ptr;
-#ifndef __wasi__
+#if !defined(__wasi__)
     } else if (!getuid()) {
         path = Fmt(alloc, "/root/.config/%1", name).ptr;
 #endif
@@ -4739,7 +4739,7 @@ const char *GetUserCachePath(const char *name, Allocator *alloc)
         path = Fmt(alloc, "%1%/%2", xdg, name).ptr;
     } else if (home) {
         path = Fmt(alloc, "%1%/.cache/%2", home, name).ptr;
-#ifndef __wasi__
+#if !defined(__wasi__)
     } else if (!getuid()) {
         path = Fmt(alloc, "/root/.cache/%1", name).ptr;
 #endif
@@ -4794,7 +4794,7 @@ const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
             return filename;
         },
         GetUserConfigPath,
-#ifndef _WIN32
+#if !defined(_WIN32)
         GetSystemConfigPath
 #endif
     };
@@ -5154,7 +5154,7 @@ bool ParseVersion(Span<const char> str, int parts, int multiplier,
 
 static thread_local Size rnd_remain;
 static thread_local int64_t rnd_time;
-#ifndef _WIN32
+#if !defined(_WIN32)
 static thread_local pid_t rnd_pid;
 #endif
 static thread_local uint32_t rnd_state[16];
@@ -5255,7 +5255,7 @@ static void RunChaCha20(uint32_t state[16], uint8_t out_buf[64])
 
 void ZeroMemorySafe(void *ptr, Size len)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     SecureZeroMemory(ptr, (SIZE_T)len);
 #else
     MemSet(ptr, 0, len);
@@ -5270,7 +5270,7 @@ void FillRandomSafe(void *out_buf, Size len)
     // Reseed every 4 megabytes, or every hour, or after a fork
     reseed |= (rnd_remain <= 0);
     reseed |= (GetMonotonicTime() - rnd_time > 3600 * 1000);
-#ifndef _WIN32
+#if !defined(_WIN32)
     reseed |= (getpid() != rnd_pid);
 #endif
 
@@ -5298,7 +5298,7 @@ restart:
 
         rnd_remain = Mebibytes(4);
         rnd_time = GetMonotonicTime();
-#ifndef _WIN32
+#if !defined(_WIN32)
         rnd_pid = getpid();
 #endif
 
@@ -5416,7 +5416,7 @@ int64_t GetRandomInt64(int64_t min, int64_t max)
 // Sockets
 // ------------------------------------------------------------------------
 
-#ifndef __wasi__
+#if !defined(__wasi__)
 
 int OpenIPSocket(SocketType type, int port, SocketMode mode)
 {
@@ -5431,7 +5431,7 @@ int OpenIPSocket(SocketType type, int port, SocketMode mode)
         case SocketMode::FreeDatagrams: { flags = SOCK_DGRAM; } break;
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     SOCKET fd = socket(family, flags, 0);
     if (fd == INVALID_SOCKET) {
         LogError("Failed to create AF_INET socket: %1", strerror(errno));
@@ -5604,7 +5604,7 @@ int ConnectToUnixSocket(const char *path, SocketMode mode)
 
 void CloseSocket(int fd)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     shutdown((SOCKET)fd, SD_BOTH);
     closesocket((SOCKET)fd);
 #else
@@ -5619,7 +5619,7 @@ void CloseSocket(int fd)
 // Tasks
 // ------------------------------------------------------------------------
 
-#ifndef __wasi__
+#if !defined(__wasi__)
 
 struct Task {
     Async *async;
@@ -5753,7 +5753,7 @@ AsyncPool::AsyncPool(int threads, bool leak)
     refcount = leak;
 }
 
-#ifdef _WIN32
+#if defined(_WIN32)
 
 static DWORD WINAPI RunWorkerWin32(void *udata)
 {
@@ -5785,7 +5785,7 @@ void AsyncPool::RegisterAsync()
                 worker->pool = this;
                 worker->idx = i;
 
-#ifdef _WIN32
+#if defined(_WIN32)
                 // Our worker threads may exit after main() has returned (or exit has been called),
                 // which can trigger crashes in _Cnd_do_broadcast_at_thread_exit() because it
                 // tries to dereference destroyed stuff. It turns out that std::thread calls this
@@ -6304,7 +6304,7 @@ int64_t StreamReader::ComputeRawLen()
         } break;
 
         case SourceType::File: {
-#ifdef _WIN32
+#if defined(_WIN32)
             struct __stat64 sb;
             if (_fstat64(source.u.file.fd, &sb) < 0)
                 return -1;
@@ -6360,7 +6360,7 @@ Size StreamReader::ReadRaw(Size max_len, void *out_buf)
         } break;
 
         case SourceType::File: {
-#ifdef _WIN32
+#if defined(_WIN32)
             max_len = std::min(max_len, (Size)UINT_MAX);
             read_len = _read(source.u.file.fd, out_buf, (unsigned int)max_len);
 #else
@@ -6533,7 +6533,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
             dest.u.file.unlink_on_error = true;
         }
 
-#ifdef O_TMPFILE
+#if defined(O_TMPFILE)
         {
             static bool has_proc = !access("/proc/self/fd", X_OK);
 
@@ -6684,7 +6684,7 @@ bool StreamWriter::Close(bool implicit)
                 }
 
                 if (IsValid()) {
-#ifdef O_TMPFILE
+#if defined(O_TMPFILE)
                     if (!dest.u.file.tmp_filename) {
                         bool linked = false;
 
@@ -6802,7 +6802,7 @@ bool StreamWriter::FlushBuffer()
               dest.type == DestinationType::LineFile);
 
     while (dest.u.file.buf_used) {
-#ifdef _WIN32
+#if defined(_WIN32)
         Size write_len = _write(dest.u.file.fd, dest.u.file.buf.ptr, (unsigned int)dest.u.file.buf_used);
 #else
         Size write_len = RG_RESTART_EINTR(write(dest.u.file.fd, dest.u.file.buf.ptr, (size_t)dest.u.file.buf_used), < 0);
@@ -6903,7 +6903,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
         case DestinationType::DirectFile: {
             while (buf.len) {
-#ifdef _WIN32
+#if defined(_WIN32)
                 unsigned int int_len = (unsigned int)std::min(buf.len, (Size)UINT_MAX);
                 Size write_len = _write(dest.u.file.fd, buf.ptr, int_len);
 #else
@@ -7083,7 +7083,7 @@ bool IniParser::NextInSection(IniProperty *out_prop)
 // Assets
 // ------------------------------------------------------------------------
 
-#ifdef FELIX_HOT_ASSETS
+#if defined(FELIX_HOT_ASSETS)
 
 static char assets_filename[4096];
 static int64_t assets_last_check = -1;
@@ -7099,7 +7099,7 @@ bool ReloadAssets()
     // Make asset library filename
     if (!assets_filename[0]) {
         Span<const char> prefix = GetApplicationExecutable();
-#ifdef _WIN32
+#if defined(_WIN32)
         SplitStrReverse(prefix, '.', &prefix);
 #endif
 
@@ -7117,7 +7117,7 @@ bool ReloadAssets()
         assets_last_check = file_info.mtime;
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     HMODULE h;
     if (win32_utf8) {
         h = LoadLibraryA(assets_filename);
@@ -7560,7 +7560,7 @@ static bool EnableRawMode()
 static void DisableRawMode()
 {
     if (input_is_raw) {
-#ifdef _WIN32
+#if defined(_WIN32)
         input_is_raw = !SetConsoleMode(stdin_handle, input_orig_mode);
 #elif !defined(__wasm__)
         input_is_raw = !(tcsetattr(STDIN_FILENO, TCSAFLUSH, &input_orig_tio) >= 0);
@@ -8172,7 +8172,7 @@ int32_t ConsolePrompter::ReadChar()
         return c;
     }
 
-#ifdef _WIN32
+#if defined(_WIN32)
     HANDLE h = (HANDLE)_get_osfhandle(STDIN_FILENO);
 
     for (;;) {

@@ -8,10 +8,10 @@
 
    See the LICENSE file for more details. */
 
-#ifndef DESCRIPTOR_NOTIFIER_HH
+#if !defined(DESCRIPTOR_NOTIFIER_HH)
 #define DESCRIPTOR_NOTIFIER_HH
 
-#ifdef _WIN32
+#if defined(_WIN32)
     #include <QWinEventNotifier>
 #else
     #include <QSocketNotifier>
@@ -25,7 +25,7 @@
 class DescriptorNotifier : public QObject {
     Q_OBJECT
 
-#ifdef _WIN32
+#if defined(_WIN32)
     std::vector<QWinEventNotifier *> notifiers_;
 #else
     std::vector<QSocketNotifier *> notifiers_;

@@ -116,7 +116,7 @@ int ty_ini_walk(const char *filename, ty_ini_callback_func *f, void *udata)
     int r;
 
 restart:
-#ifdef _WIN32
+#if defined(_WIN32)
     fp = fopen(filename, "rb");
 #else
     fp = fopen(filename, "rbe");

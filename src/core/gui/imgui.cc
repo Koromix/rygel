@@ -33,7 +33,7 @@ namespace RG {
 extern "C" const AssetInfo RobotoMediumTtf;
 
 static const char *const ImGuiVertexCode =
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 R"!(#version 300 es
 
     precision highp float;
@@ -58,7 +58,7 @@ R"!(uniform mat4 ProjMtx;
 )!";
 
 static const char *const ImGuiFragmentCode =
-#ifdef __EMSCRIPTEN__
+#if defined(__EMSCRIPTEN__)
 R"!(#version 300 es
 
     precision mediump float;

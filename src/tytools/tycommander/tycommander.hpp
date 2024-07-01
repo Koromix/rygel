@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef TYCOMMANDER_HH
+#if !defined(TYCOMMANDER_HH)
 #define TYCOMMANDER_HH
 
 #include <QAction>
@@ -51,7 +51,7 @@ class TyCommander : public QApplication {
     QSystemTrayIcon tray_icon_;
     QMenu tray_menu_;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     bool client_console_ = false;
 #else
     bool client_console_ = true;

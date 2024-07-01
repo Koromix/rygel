@@ -237,7 +237,7 @@ public:
 
                 if (compiler->architecture == HostArchitecture::Unknown) {
                     compiler->architecture = architecture;
-#ifdef _WIN32
+#if defined(_WIN32)
                 } else {
                     switch (compiler->architecture) {
                         case HostArchitecture::x86: { compiler->target = "-m32"; } break;
@@ -309,7 +309,7 @@ public:
                 if (PathIsAbsolute(compiler->ld)) {
                     Fmt(cmd, "\"%1\" --version", compiler->ld);
                 } else {
-#ifdef _WIN32
+#if defined(_WIN32)
                     Fmt(cmd, "\"%1-link\" --version", compiler->ld);
 #else
                     Fmt(cmd, "\"ld.%1\" --version", compiler->ld);
@@ -979,7 +979,7 @@ public:
 
                 if (compiler->architecture == HostArchitecture::Unknown) {
                     compiler->architecture = architecture;
-#ifdef __x86_64__
+#if defined(__x86_64__)
                 } else if (architecture == HostArchitecture::x86_64 &&
                            compiler->architecture == HostArchitecture::x86) {
                     compiler->m32 = true;
@@ -1476,7 +1476,7 @@ public:
     void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 };
 
-#ifdef _WIN32
+#if defined(_WIN32)
 class MsCompiler final: public Compiler {
     const char *cl;
     const char *rc;
@@ -2497,7 +2497,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             } else {
                 LocalArray<const char *, 4> ccs;
 
-#ifdef __linux__
+#if defined(__linux__)
                 switch (spec.architecture) {
                     case HostArchitecture::x86: { ccs.Append("i686-linux-gnu-gcc"); } break;
                     case HostArchitecture::x86_64: { ccs.Append("x86_64-linux-gnu-gcc"); } break;
@@ -2537,7 +2537,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
                 }
 
                 spec.ld = "bfd";
-#ifdef _WIN32
+#if defined(_WIN32)
             } else if (TestStr(spec.ld, "link")) {
                 if (!FindExecutableInPath("link")) {
                     LogError("Cannot find linker 'link.exe' in PATH");
@@ -2559,7 +2559,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
             return ClangCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
         } else if (IdentifyCompiler(spec.cc, "gcc")) {
             return GnuCompiler::Create(spec.platform, spec.architecture, spec.cc, spec.ld);
-#ifdef _WIN32
+#if defined(_WIN32)
         } else if (IdentifyCompiler(spec.cc, "cl")) {
             if (spec.ld) {
                 LogError("Cannot use custom linker with MSVC compiler");
@@ -2599,7 +2599,7 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         }
 
         return ClangCompiler::Create(spec.platform, HostArchitecture::Web32, spec.cc, nullptr, sdk->sysroot);
-#ifdef __linux__
+#if defined(__linux__)
     } else if (spec.platform == HostPlatform::Windows) {
         if (!spec.cc) {
             if (spec.architecture == HostArchitecture::Unknown) {

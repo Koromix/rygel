@@ -8,7 +8,7 @@
 
    See the LICENSE file for more details. */
 
-#ifndef MAIN_WINDOW_HH
+#if !defined(MAIN_WINDOW_HH)
 #define MAIN_WINDOW_HH
 
 #include <QHash>
@@ -38,7 +38,7 @@ class MainWindow : public QMainWindow, private Ui::MainWindow {
     QMenu *menuEnableSerial;
     QAction *actionClearRecentFirmwares = nullptr;
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     // See MainWindow::MainWindow() in main_window.cc for more information about that
     QMenu *menuRecentFirmwares2;
     QMenu *menuRecentFirmwares3;

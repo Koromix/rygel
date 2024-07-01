@@ -147,11 +147,11 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 entry->kind = (int16_t)RawFile::Kind::File;
                                 entry->size = LittleEndian(file_info.size);
                             } break;
-#ifndef _WIN32
+#if !defined(_WIN32)
                             case FileType::Link: { entry->kind = (int16_t)RawFile::Kind::Link; } break;
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32)
                             case FileType::Link:
 #endif
                             case FileType::Device:
@@ -252,7 +252,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     } break;
 
                     case RawFile::Kind::Link: {
-#ifdef _WIN32
+#if defined(_WIN32)
                         RG_UNREACHABLE();
 #else
                         async.Run([=, this]() {
@@ -564,7 +564,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         {
             bool changed = false;
 
-#ifdef _WIN32
+#if defined(_WIN32)
             for (char &c: name) {
                 c = (c == '\\') ? '/' : c;
             }

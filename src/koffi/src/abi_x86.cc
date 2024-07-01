@@ -25,7 +25,7 @@
 #include "ffi.hh"
 #include "call.hh"
 #include "util.hh"
-#ifdef _WIN32
+#if defined(_WIN32)
     #include "win32.hh"
 #endif
 
@@ -89,7 +89,7 @@ bool AnalyseFunction(Napi::Env env, InstanceData *instance, FunctionInfo *func)
     #endif
 #endif
     }
-#ifndef _WIN32
+#if !defined(_WIN32)
     if (fast && !func->ret.trivial) {
         func->ret.fast = 1;
         fast--;
@@ -322,7 +322,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
 void CallData::Execute(const FunctionInfo *func, void *native)
 {
-#ifdef _WIN32
+#if defined(_WIN32)
     TebManipulator teb;
 
     teb.AdjustStack(mem->stack0.end(), mem->stack0.ptr);
@@ -444,7 +444,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
     if (env.IsExceptionPending()) [[unlikely]]
         return;
 
-#ifdef _WIN32
+#if defined(_WIN32)
     TEB *teb = GetTEB();
 
     // Restore previous stack limits at the end
@@ -475,7 +475,7 @@ void CallData::Relay(Size idx, uint8_t *, uint8_t *caller_sp, bool switch_stack,
     if (proto->convention == CallConvention::Stdcall) {
         out_reg->ret_pop = (int)proto->args_size;
     } else {
-#ifdef _WIN32
+#if defined(_WIN32)
         out_reg->ret_pop = 0;
 #else
         out_reg->ret_pop = return_ptr ? 4 : 0;

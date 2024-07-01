@@ -21,7 +21,7 @@ namespace RG {
 union mco_GhmRootCode {
     int32_t value;
     struct {
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
         int8_t cmd;
         char type;
         int8_t seq;
@@ -35,7 +35,7 @@ union mco_GhmRootCode {
     } parts;
 
     mco_GhmRootCode() = default;
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
     constexpr mco_GhmRootCode(int8_t cmd, char type, int8_t seq)
         : parts { cmd, type, seq, 0 } {}
 #else
@@ -116,7 +116,7 @@ union mco_GhmRootCode {
 union mco_GhmCode {
     int32_t value;
     struct {
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
         int8_t cmd;
         char type;
         int8_t seq;
@@ -130,7 +130,7 @@ union mco_GhmCode {
     } parts;
 
     mco_GhmCode() = default;
-#ifdef RG_BIG_ENDIAN
+#if defined(RG_BIG_ENDIAN)
     constexpr mco_GhmCode(int8_t cmd, char type, int8_t seq, char mode)
         : parts { cmd, type, seq, mode } {}
 #else
