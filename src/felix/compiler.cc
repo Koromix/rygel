@@ -436,7 +436,7 @@ public:
 
         RG_UNREACHABLE();
     }
-    const char *GetImportExtension() const override { return (platform == HostPlatform::Windows) ? ".lib" : ".a"; }
+    const char *GetImportExtension() const override { return (platform == HostPlatform::Windows) ? ".lib" : ".so"; }
     const char *GetLibPrefix() const override { return (platform == HostPlatform::Windows) ? "" : "lib"; }
     const char *GetArchiveExtension() const override { return (platform == HostPlatform::Windows) ? ".lib" : ".a"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
@@ -1079,7 +1079,7 @@ public:
 
         RG_UNREACHABLE();
     }
-    const char *GetImportExtension() const override { return ".a"; }
+    const char *GetImportExtension() const override { return ".so"; }
     const char *GetLibPrefix() const override { return "lib"; }
     const char *GetArchiveExtension() const override { return ".a"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
@@ -1904,7 +1904,7 @@ public:
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType) const override { return ".js"; }
-    const char *GetImportExtension() const override { return ".a"; }
+    const char *GetImportExtension() const override { return ".so"; }
     const char *GetLibPrefix() const override { return "lib"; }
     const char *GetArchiveExtension() const override { return ".a"; }
     const char *GetPostExtension(TargetType) const override { return nullptr; }
@@ -2191,7 +2191,7 @@ public:
         RG_ASSERT(type == TargetType::Executable);
         return ".elf";
     }
-    const char *GetImportExtension() const override { return ".a"; }
+    const char *GetImportExtension() const override { return ".so"; }
     const char *GetLibPrefix() const override { return "lib"; }
     const char *GetArchiveExtension() const override { return ".a"; }
     const char *GetPostExtension(TargetType) const override { return ".hex"; }
