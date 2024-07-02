@@ -825,7 +825,8 @@ bool s3_Session::DetermineRegion(const char *url)
 CURL *s3_Session::InitConnection()
 {
     CURL *curl = curl_Init();
-
+    if (!curl)
+        return nullptr;
     curl_easy_setopt(curl, CURLOPT_SHARE, share);
 
     return curl;
