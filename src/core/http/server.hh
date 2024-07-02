@@ -222,7 +222,7 @@ public:
 
     void AttachResponse(int code, MHD_Response *new_response);
     void AttachText(int code, Span<const char> str, const char *mime_type = "text/plain");
-    bool AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
+    bool AttachBinary(int code, Span<const uint8_t> data, const char *mime_type = nullptr,
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = nullptr);
     bool AttachFile(int code, const char *filename, const char *mime_type = nullptr);

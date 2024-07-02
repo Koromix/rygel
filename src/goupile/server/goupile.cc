@@ -570,7 +570,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
 
         Fmt(&buf, "%1/?", request.url);
         MHD_get_connection_values(request.conn, MHD_GET_ARGUMENT_KIND, [](void *udata, enum MHD_ValueKind,
-                                                                     const char *key, const char *value) {
+                                                                          const char *key, const char *value) {
             HeapArray<char> *buf = (HeapArray<char> *)udata;
 
             EncodeUrlSafe(key, nullptr, buf);

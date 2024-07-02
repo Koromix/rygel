@@ -4087,8 +4087,13 @@ bool TestFile(const char *filename);
 bool TestFile(const char *filename, FileType type);
 bool IsDirectory(const char *filename);
 
-bool MatchPathName(const char *path, const char *spec);
-bool MatchPathSpec(const char *path, const char *spec);
+#if defined(_WIN32)
+bool MatchPathName(const char *path, const char *spec, bool case_sensitive = false);
+bool MatchPathSpec(const char *path, const char *spec, bool case_sensitive = false);
+#else
+bool MatchPathName(const char *path, const char *spec, bool case_sensitive = true);
+bool MatchPathSpec(const char *path, const char *spec, bool case_sensitive = true);
+#endif
 
 bool FindExecutableInPath(const char *path, const char *name,
                           Allocator *alloc = nullptr, const char **out_path = nullptr);

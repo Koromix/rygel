@@ -13,6 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/http/http.hh"
+#include "src/core/request/curl.hh"
 
 namespace RG {
 
@@ -24,9 +25,13 @@ struct HttpHeader {
 struct Config {
     http_Config http { 8000 };
 
-    const char *root_directory = ".";
+    const char *root_directory = nullptr;
     bool auto_index = true;
     bool auto_html = true;
+
+    const char *proxy_url = nullptr;
+    bool proxy_first = false;
+
     HeapArray<HttpHeader> headers;
 
     bool set_etag = true;
@@ -49,8 +54,12 @@ bool Config::Validate() const
         LogError("HTTP MaxAge must be >= 0");
         valid = false;
     }
-    if (!TestFile(config.root_directory, FileType::Directory)) {
-        LogError("Root directory '%1' does not exist", config.root_directory);
+    if (!root_directory && !proxy_url) {
+        LogError("Neither file nor reverse proxy is configured");
+        valid = false;
+    }
+    if (root_directory && !TestFile(root_directory, FileType::Directory)) {
+        LogError("Root directory '%1' does not exist", root_directory);
         valid = false;
     }
 
@@ -88,6 +97,17 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                         valid &= ParseDuration(prop.value, &config.max_age);
                     } else if (prop.key == "ETag") {
                         valid &= ParseBool(prop.value, &config.set_etag);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Proxy") {
+                do {
+                    if (prop.key == "RemoteUrl") {
+                        config.proxy_url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "ProxyFirst") {
+                        valid &= ParseBool(prop.value, &config.proxy_first);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -324,21 +344,10 @@ R"(<!DOCTYPE html>
     });
 }
 
-static void HandleRequest(const http_RequestInfo &request, http_IO *io)
+static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
 {
-    RG_ASSERT(StartsWith(request.url, "/"));
-
-    // Security check
-    if (PathContainsDotDot(request.url)) {
-        LogError("Unsafe URL containing '..' components");
-        io->AttachError(403);
-        return;
-    }
-
-    // Add configured headers
-    for (const HttpHeader &header: config.headers) {
-        io->AddHeader(header.key, header.value);
-    }
+    if (!config.root_directory)
+        return false;
 
     Span<const char> relative_url = TrimStrLeft(request.url, "/\\").ptr;
     Span<const char> filename = NormalizePath(relative_url, config.root_directory, &io->allocator);
@@ -355,27 +364,27 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             }
         }
 
-        if (stat != StatResult::Success) {
-            switch (stat) {
-                case StatResult::Success: { RG_UNREACHABLE(); } break;
+        switch (stat) {
+            case StatResult::Success: {} break;
 
-                case StatResult::MissingPath: { io->AttachError(404); } break;
-                case StatResult::AccessDenied: { io->AttachError(403); } break;
-                case StatResult::OtherError: { /* 500 */ } break;
-            }
-
-            return;
+            case StatResult::MissingPath: return false;
+            case StatResult::AccessDenied: {
+                io->AttachError(403);
+                return true;
+            } break;
+            case StatResult::OtherError: return true;
         }
     }
 
     if (file_info.type == FileType::File) {
         ServeFile(filename.ptr, file_info, request, io);
+        return true;
     } else if (file_info.type == FileType::Directory) {
         if (!EndsWith(request.url, "/")) {
             const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
             io->AddHeader("Location", redirect);
             io->AttachNothing(302);
-            return;
+            return true;
         }
 
         const char *index_filename = Fmt(&io->allocator, "%1/index.html", filename).ptr;
@@ -385,17 +394,165 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         if (StatFile(index_filename, (int)StatFlag::SilentMissing, &index_info) == StatResult::Success &&
                 index_info.type == FileType::File) {
             ServeFile(index_filename, index_info, request, io);
+            return true;
         } else if (config.auto_index) {
             ServeIndex(filename.ptr, request, io);
+            return true;
         } else {
             LogError("Cannot access directory without index.html");
             io->AttachError(403);
-            return;
+            return true;
         }
-    } else if (file_info.type != FileType::File) {
+    } else {
+        io->AttachError(403);
+        return true;
+    }
+}
+
+static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
+{
+    if (!config.proxy_url)
+        return false;
+
+    static const char *const OmitHeaders[] = {
+        "Host",
+        "Referer",
+        "Sec-*",
+        "server"
+    };
+
+    CURL *curl = curl_Init();
+    if (!curl)
+        return false;
+    RG_DEFER { curl_easy_cleanup(curl); };
+
+    const char *relative_url = TrimStrLeft(request.url, '/').ptr;
+    const char *url = Fmt(&io->allocator, "%1%2", config.proxy_url, relative_url).ptr;
+
+    struct RelayContext {
+        http_IO *io;
+
+        struct {
+            HeapArray<curl_slist> headers;
+        } request;
+
+        struct {
+            HeapArray<HttpHeader> headers;
+            HeapArray<uint8_t> data;
+        } response;
+    };
+    RelayContext ctx;
+    ctx.io = io;
+    ctx.response.data.allocator = &io->allocator;
+
+    // Copy client headers
+    {
+        MHD_get_connection_values(request.conn, MHD_HEADER_KIND, [](void *udata, enum MHD_ValueKind,
+                                                                    const char *key, const char *value) {
+            RelayContext *ctx = (RelayContext *)udata;
+
+            bool skip = std::any_of(std::begin(OmitHeaders), std::end(OmitHeaders),
+                                    [&](const char *pattern) { return MatchPathName(key, pattern, false); });
+
+            if (!skip) {
+                char *header = Fmt(&ctx->io->allocator, "%1: %2", key, value).ptr;
+                ctx->request.headers.Append({ .data = header, .next = nullptr });
+            }
+
+            return MHD_YES;
+        }, &ctx);
+
+        for (Size i = 0; i < ctx.request.headers.len - 1; i++) {
+            ctx.request.headers[i].next = &ctx.request.headers[i + 1];
+        }
+    }
+
+    // Set CURL options
+    {
+        bool success = true;
+
+        success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
+        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, ctx.request.headers.ptr);
+
+        success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
+                                     +[](char *ptr, size_t, size_t nmemb, void *udata) {
+            RelayContext *ctx = (RelayContext *)udata;
+            http_IO *io = ctx->io;
+
+            Span<const char> remain = MakeSpan(ptr, (Size)nmemb);
+
+            const char *key = DuplicateString(TrimStr(SplitStr(remain, ':', &remain)), &io->allocator).ptr;
+            const char *value = DuplicateString(TrimStr(remain), &io->allocator).ptr;
+
+            bool skip = std::any_of(std::begin(OmitHeaders), std::end(OmitHeaders),
+                                    [&](const char *pattern) { return MatchPathName(key, pattern, false); });
+
+            if (!skip) {
+                ctx->response.headers.Append({ key, value });
+            }
+
+            return nmemb;
+        });
+        success &= !curl_easy_setopt(curl, CURLOPT_HEADERDATA, &ctx);
+
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
+                                     +[](char *ptr, size_t, size_t nmemb, void *udata) {
+            RelayContext *ctx = (RelayContext *)udata;
+
+            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
+            ctx->response.data.Append(buf);
+
+            return nmemb;
+        });
+        success &= !curl_easy_setopt(curl, CURLOPT_WRITEDATA, &ctx);
+
+        if (!success) {
+            LogError("Failed to set libcurl options");
+            return -1;
+        }
+    }
+
+    int status = curl_Perform(curl, "HTTP");
+    if (status < 0) {
+        io->AttachError(502);
+        return true;
+    }
+    if (status == 404)
+        return false;
+
+    io->AttachBinary(status, ctx.response.data.Leak());
+
+    for (const HttpHeader &header: ctx.response.headers) {
+        io->AddHeader(header.key, header.value);
+    }
+
+    return true;
+}
+
+static void HandleRequest(const http_RequestInfo &request, http_IO *io)
+{
+    RG_ASSERT(StartsWith(request.url, "/"));
+
+    // Security check
+    if (PathContainsDotDot(request.url)) {
+        LogError("Unsafe URL containing '..' components");
         io->AttachError(403);
         return;
     }
+
+    // Add configured headers
+    for (const HttpHeader &header: config.headers) {
+        io->AddHeader(header.key, header.value);
+    }
+
+    if (config.proxy_first && HandleProxy(request, io))
+        return;
+    if (HandleLocal(request, io))
+        return;
+    if (!config.proxy_first && HandleProxy(request, io))
+        return;
+
+    io->AttachError(404);
 }
 
 int Main(int argc, char **argv)
@@ -418,6 +575,10 @@ Options:
 
     %!..+-p, --port <port>%!0            Change web server port
                                  %!D..(default: %3)%!0
+
+        %!..+--proxy <url>%!0            Reverse proxy unknown URLs to this server
+        %!..+--proxy_first%!0            Prefer proxy URLs to local files
+
         %!..+--enable_sab%!0             Set headers for SharedArrayBuffer support
 
     %!..+-v, --verbose%!0                Log served requests)",
@@ -448,6 +609,11 @@ Options:
         }
     }
 
+    if (curl_global_init(CURL_GLOBAL_ALL)) {
+        LogError("Failed to initialize libcurl");
+        return 1;
+    }
+
     // Load config
     if (!explicit_config && !TestFile(config_filename)) {
         config_filename = nullptr;
@@ -465,6 +631,10 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
+            } else if (opt.Test("--proxy", OptionType::Value)) {
+                config.proxy_url = opt.current_value;
+            } else if (opt.Test("--proxy_first")) {
+                config.proxy_first = true;
             } else if (opt.Test("--enable_sab")) {
                 Size j = 0;
                 for (Size i = 0; i < config.headers.len; i++) {
@@ -489,6 +659,10 @@ Options:
 
         const char *root_directory = opt.ConsumeNonOption();
         config.root_directory = root_directory ? root_directory : config.root_directory;
+
+        if (!config_filename && !config.root_directory && !config.proxy_url) {
+            config.root_directory = ".";
+        }
 
         opt.LogUnusedArguments();
 

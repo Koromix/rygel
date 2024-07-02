@@ -2552,22 +2552,16 @@ static Size MatchPathItem(const char *path, const char *spec)
 
 #if defined(_WIN32)
             case '\\':
+#endif
             case '/': {
                 if (!IsPathSeparator(path[i]))
                     return -1;
             } break;
 
             default: {
-                // XXX: Use proper Unicode/locale case-folding? Or is this enough?
-                if (LowerAscii(path[i]) != LowerAscii(spec[i]))
-                    return -1;
-            } break;
-#else
-            default: {
                 if (path[i] != spec[i])
                     return -1;
             } break;
-#endif
         }
 
         i++;
@@ -2576,11 +2570,44 @@ static Size MatchPathItem(const char *path, const char *spec)
     return i;
 }
 
-bool MatchPathName(const char *path, const char *spec)
+static Size MatchPathItemI(const char *path, const char *spec)
+{
+    Size i = 0;
+
+    while (spec[i] && spec[i] != '*') {
+        switch (spec[i]) {
+            case '?': {
+                if (!path[i] || IsPathSeparator(path[i]))
+                    return -1;
+            } break;
+
+#if defined(_WIN32)
+            case '\\':
+#endif
+            case '/': {
+                if (!IsPathSeparator(path[i]))
+                    return -1;
+            } break;
+
+            default: {
+                // XXX: Use proper Unicode/locale case-folding? Or is this enough?
+
+                if (LowerAscii(path[i]) != LowerAscii(spec[i]))
+                    return -1;
+            } break;
+        }
+
+        i++;
+    }
+
+    return i;
+}
+
+bool MatchPathName(const char *path, const char *spec, bool case_sensitive)
 {
     // Match head
     {
-        Size match_len = MatchPathItem(path, spec);
+        Size match_len = case_sensitive ? MatchPathItem(path, spec) : MatchPathItemI(path, spec);
 
         if (match_len < 0) {
             return false;
@@ -2605,7 +2632,7 @@ bool MatchPathName(const char *path, const char *spec)
         }
 
         for (;;) {
-            Size match_len = MatchPathItem(path, spec);
+            Size match_len = case_sensitive ? MatchPathItem(path, spec) : MatchPathItemI(path, spec);
 
             // We need to be greedy for the last wildcard, or we may not reach the tail
             if (match_len < 0 || (spec == tail && path[match_len])) {
@@ -2626,14 +2653,14 @@ bool MatchPathName(const char *path, const char *spec)
     return true;
 }
 
-bool MatchPathSpec(const char *path, const char *spec)
+bool MatchPathSpec(const char *path, const char *spec, bool case_sensitive)
 {
     Span<const char> path2 = path;
 
     do {
         const char *it = SplitStrReverseAny(path2, RG_PATH_SEPARATORS, &path2).ptr;
 
-        if (MatchPathName(it, spec))
+        if (MatchPathName(it, spec, case_sensitive))
             return true;
     } while (path2.len);
 
