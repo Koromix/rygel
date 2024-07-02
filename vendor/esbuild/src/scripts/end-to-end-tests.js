@@ -8069,7 +8069,7 @@ for (const flags of [[], ['--bundle']]) {
         }
       }`,
     }),
-    test(['in.js', '--outfile=node.js', '--bundle', '--platform=node'].concat(flags), {
+    test(['in.js', '--outfile=node.js', '--bundle', '--platform=node', '--packages=bundle'].concat(flags), {
       'in.js': `import abc from 'pkg'; if (abc !== 'module') throw 'fail'`,
       'node_modules/pkg/default.js': `module.exports = 'default'`,
       'node_modules/pkg/module.js': `export default 'module'`,
@@ -8104,6 +8104,53 @@ for (const flags of [[], ['--bundle']]) {
           ".": {
             "module": "./module.js",
             "default": "./default.js"
+          }
+        }
+      }`,
+    }),
+    test(['in.js', '--outfile=node.js', '--bundle', '--platform=node', '--packages=external', '--format=esm'].concat(flags), {
+      'in.js': `import abc from 'pkg'; if (abc !== 'import') throw 'fail'`,
+      'node_modules/pkg/fail.js': `TEST FAILED`, // This package should not be bundled
+      'node_modules/pkg/require.cjs': `module.exports = 'require'`,
+      'node_modules/pkg/import.mjs': `export default 'import'`,
+      'node_modules/pkg/package.json': `{
+        "exports": {
+          ".": {
+            "module": "./fail.js",
+            "import": "./import.mjs",
+            "require": "./require.cjs"
+          }
+        }
+      }`,
+    }),
+    test(['in.js', '--outfile=node.js', '--bundle', '--platform=node', '--packages=external', '--format=cjs'].concat(flags), {
+      'in.js': `import abc from 'pkg'; if (abc !== 'require') throw 'fail'`,
+      'node_modules/pkg/fail.js': `TEST FAILED`, // This package should not be bundled
+      'node_modules/pkg/require.cjs': `module.exports = 'require'`,
+      'node_modules/pkg/import.mjs': `export default 'import'`,
+      'node_modules/pkg/package.json': `{
+        "exports": {
+          ".": {
+            "module": "./fail.js",
+            "import": "./import.mjs",
+            "require": "./require.cjs"
+          }
+        }
+      }`,
+    }),
+
+    // Check the default behavior of "--platform=node"
+    test(['in.js', '--outfile=node.js', '--bundle', '--platform=node', '--format=esm'].concat(flags), {
+      'in.js': `import abc from 'pkg'; if (abc !== 'module') throw 'fail'`,
+      'node_modules/pkg/module.js': `export default 'module'`,
+      'node_modules/pkg/require.cjs': `module.exports = 'require'`,
+      'node_modules/pkg/import.mjs': `export default 'import'`,
+      'node_modules/pkg/package.json': `{
+        "exports": {
+          ".": {
+            "module": "./module.js",
+            "import": "./import.mjs",
+            "require": "./require.cjs"
           }
         }
       }`,
@@ -8798,6 +8845,80 @@ for (const flags of [[], '--supported:async-await=false']) {
             var result = err
           }
           if (result.message !== 'x') throw 'fail: x (2)'
+        }
+      `,
+    }, { async: true }),
+
+    // From https://github.com/microsoft/TypeScript/pull/58624
+    test(['in.ts', '--outfile=node.js', '--supported:using=false', '--format=esm'].concat(flags), {
+      'in.ts': `
+        Symbol.asyncDispose ||= Symbol.for('Symbol.asyncDispose')
+        Symbol.dispose ||= Symbol.for('Symbol.dispose')
+        export const output: any[] = [];
+        export async function main() {
+          const promiseDispose = new Promise<void>((resolve) => {
+            setTimeout(() => {
+              output.push("y dispose promise body");
+              resolve();
+            }, 0);
+          });
+          {
+            await using x = {
+              async [Symbol.asyncDispose]() {
+                output.push("x asyncDispose body");
+              },
+            };
+            await using y = {
+              [Symbol.dispose]() {
+                output.push("y dispose body");
+                return promiseDispose;
+              },
+            };
+          }
+          output.push("body");
+          await promiseDispose;
+          return output;
+        }
+        export let async = async () => {
+          const output = await main()
+          const expected = [
+            "y dispose body",
+            "x asyncDispose body",
+            "body",
+            "y dispose promise body",
+          ]
+          if (output.join(',') !== expected.join(',')) throw 'fail: ' + output
+        }
+      `,
+    }, { async: true }),
+    test(['in.ts', '--outfile=node.js', '--supported:using=false', '--format=esm'].concat(flags), {
+      'in.ts': `
+        Symbol.dispose ||= Symbol.for('Symbol.dispose')
+        export const output: any[] = [];
+        export async function main() {
+          const interleave = Promise.resolve().then(() => { output.push("interleave"); });
+          try {
+            await using x = {
+              [Symbol.dispose]() {
+                output.push("dispose");
+                throw null;
+              },
+            };
+          }
+          catch {
+            output.push("catch");
+          }
+          await interleave;
+          return output;
+        }
+        export let async = async () => {
+          const output = await main()
+          const expected = [
+            "dispose",
+            "interleave",
+            "catch",
+        ]
+          if (output.join(',') !== expected.join(',')) throw 'fail: ' + output
         }
       `,
     }, { async: true }),

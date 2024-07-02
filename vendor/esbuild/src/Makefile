@@ -20,7 +20,7 @@ test-all:
 	@$(MAKE) --no-print-directory -j6 test-common test-deno ts-type-tests test-wasm-node test-wasm-browser lib-typecheck test-yarnpnp
 
 check-go-version:
-	@go version | grep ' go1\.20\.12 ' || (echo 'Please install Go version 1.20.12' && false)
+	@go version | grep ' go1\.22\.4 ' || (echo 'Please install Go version 1.22.4' && false)
 
 # Note: Don't add "-race" here by default. The Go race detector is currently
 # only supported on the following configurations:
@@ -304,8 +304,10 @@ platform-all:
 		platform-linux-x64 \
 		platform-netbsd-x64 \
 		platform-neutral \
+		platform-openbsd-arm64 \
 		platform-openbsd-x64 \
 		platform-sunos-x64 \
+		platform-wasi-preview1 \
 		platform-wasm \
 		platform-win32-arm64 \
 		platform-win32-ia32 \
@@ -322,6 +324,10 @@ platform-win32-ia32: version-go
 platform-win32-arm64: version-go
 	node scripts/esbuild.js npm/@esbuild/win32-arm64/package.json --version
 	CGO_ENABLED=0 GOOS=windows GOARCH=arm64 go build $(GO_FLAGS) -o npm/@esbuild/win32-arm64/esbuild.exe ./cmd/esbuild
+
+platform-wasi-preview1: version-go
+	node scripts/esbuild.js npm/@esbuild/wasi-preview1/package.json --version
+	CGO_ENABLED=0 GOOS=wasip1 GOARCH=wasm go build $(GO_FLAGS) -o npm/@esbuild/wasi-preview1/esbuild.wasm ./cmd/esbuild
 
 platform-unixlike: version-go
 	@test -n "$(GOOS)" || (echo "The environment variable GOOS must be provided" && false)
@@ -356,6 +362,9 @@ platform-freebsd-arm64:
 
 platform-netbsd-x64:
 	@$(MAKE) --no-print-directory GOOS=netbsd GOARCH=amd64 NPMDIR=npm/@esbuild/netbsd-x64 platform-unixlike
+
+platform-openbsd-arm64:
+	@$(MAKE) --no-print-directory GOOS=openbsd GOARCH=arm64 NPMDIR=npm/@esbuild/openbsd-arm64 platform-unixlike
 
 platform-openbsd-x64:
 	@$(MAKE) --no-print-directory GOOS=openbsd GOARCH=amd64 NPMDIR=npm/@esbuild/openbsd-x64 platform-unixlike
@@ -428,12 +437,13 @@ publish-all: check-go-version
 		publish-win32-x64 \
 		publish-win32-ia32 \
 		publish-win32-arm64 \
-		publish-sunos-x64
+		publish-wasi-preview1
 
 	@echo Enter one-time password:
 	@read OTP && OTP="$$OTP" $(MAKE) --no-print-directory -j4 \
 		publish-freebsd-x64 \
 		publish-freebsd-arm64 \
+		publish-openbsd-arm64 \
 		publish-openbsd-x64 \
 		publish-netbsd-x64
 
@@ -462,7 +472,8 @@ publish-all: check-go-version
 	@read OTP && OTP="$$OTP" $(MAKE) --no-print-directory -j4 \
 		publish-aix-ppc64 \
 		publish-linux-ppc64 \
-		publish-linux-s390x
+		publish-linux-s390x \
+		publish-sunos-x64
 
 	# Do these last to avoid race conditions
 	@echo Enter one-time password:
@@ -482,6 +493,9 @@ publish-win32-ia32: platform-win32-ia32
 
 publish-win32-arm64: platform-win32-arm64
 	test -n "$(OTP)" && cd npm/@esbuild/win32-arm64 && npm publish --otp="$(OTP)"
+
+publish-wasi-preview1: platform-wasi-preview1
+	test -n "$(OTP)" && cd npm/@esbuild/wasi-preview1 && npm publish --otp="$(OTP)"
 
 publish-aix-ppc64: platform-aix-ppc64
 	test -n "$(OTP)" && cd npm/@esbuild/aix-ppc64 && npm publish --otp="$(OTP)"
@@ -509,6 +523,9 @@ publish-freebsd-arm64: platform-freebsd-arm64
 
 publish-netbsd-x64: platform-netbsd-x64
 	test -n "$(OTP)" && cd npm/@esbuild/netbsd-x64 && npm publish --otp="$(OTP)"
+
+publish-openbsd-arm64: platform-openbsd-arm64
+	test -n "$(OTP)" && cd npm/@esbuild/openbsd-arm64 && npm publish --otp="$(OTP)"
 
 publish-openbsd-x64: platform-openbsd-x64
 	test -n "$(OTP)" && cd npm/@esbuild/openbsd-x64 && npm publish --otp="$(OTP)"
@@ -602,8 +619,10 @@ validate-builds:
 	@$(MAKE) --no-print-directory TARGET=platform-linux-s390x    SCOPE=@esbuild/ PACKAGE=linux-s390x     SUBPATH=bin/esbuild  validate-build
 	@$(MAKE) --no-print-directory TARGET=platform-linux-x64      SCOPE=@esbuild/ PACKAGE=linux-x64       SUBPATH=bin/esbuild  validate-build
 	@$(MAKE) --no-print-directory TARGET=platform-netbsd-x64     SCOPE=@esbuild/ PACKAGE=netbsd-x64      SUBPATH=bin/esbuild  validate-build
+	@$(MAKE) --no-print-directory TARGET=platform-openbsd-arm64  SCOPE=@esbuild/ PACKAGE=openbsd-arm64   SUBPATH=bin/esbuild  validate-build
 	@$(MAKE) --no-print-directory TARGET=platform-openbsd-x64    SCOPE=@esbuild/ PACKAGE=openbsd-x64     SUBPATH=bin/esbuild  validate-build
 	@$(MAKE) --no-print-directory TARGET=platform-sunos-x64      SCOPE=@esbuild/ PACKAGE=sunos-x64       SUBPATH=bin/esbuild  validate-build
+	@$(MAKE) --no-print-directory TARGET=platform-wasi-preview1  SCOPE=@esbuild/ PACKAGE=wasi-preview1   SUBPATH=esbuild.wasm validate-build
 	@$(MAKE) --no-print-directory TARGET=platform-wasm                           PACKAGE=esbuild-wasm    SUBPATH=esbuild.wasm validate-build
 	@$(MAKE) --no-print-directory TARGET=platform-win32-arm64    SCOPE=@esbuild/ PACKAGE=win32-arm64     SUBPATH=esbuild.exe  validate-build
 	@$(MAKE) --no-print-directory TARGET=platform-win32-ia32     SCOPE=@esbuild/ PACKAGE=win32-ia32      SUBPATH=esbuild.exe  validate-build
@@ -613,6 +632,7 @@ clean:
 	go clean -cache
 	go clean -testcache
 	rm -f esbuild
+	rm -f npm/@esbuild/wasi-preview1/esbuild.wasm
 	rm -f npm/@esbuild/win32-arm64/esbuild.exe
 	rm -f npm/@esbuild/win32-ia32/esbuild.exe
 	rm -f npm/@esbuild/win32-x64/esbuild.exe
@@ -635,6 +655,7 @@ clean:
 	rm -rf npm/@esbuild/linux-s390x/bin
 	rm -rf npm/@esbuild/linux-x64/bin
 	rm -rf npm/@esbuild/netbsd-x64/bin
+	rm -rf npm/@esbuild/openbsd-arm64/bin
 	rm -rf npm/@esbuild/openbsd-x64/bin
 	rm -rf npm/@esbuild/sunos-x64/bin
 	rm -rf npm/esbuild-wasm/esm

@@ -28,7 +28,13 @@ import (
 // "esbuild" executable such as the lack of auxiliary flags (e.g. "--help" and
 // "--version") but it is otherwise exactly the same code.
 func Run(osArgs []string) int {
-	return runImpl(osArgs)
+	return runImpl(osArgs, []api.Plugin{})
+}
+
+// This is similar to "Run()" but also takes an array of plugins to be used
+// during the build process.
+func RunWithPlugins(osArgs []string, plugins []api.Plugin) int {
+	return runImpl(osArgs, plugins)
 }
 
 // This parses an array of strings into an options object suitable for passing

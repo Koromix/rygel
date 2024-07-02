@@ -7,7 +7,7 @@ const ESBUILD_BINARY_PATH = esbuild.buildBinary()
 const rootDir = path.join(__dirname, '..', 'require', 'yarnpnp')
 
 function run(command) {
-  console.log('\n\033[37m' + '$ ' + command + '\033[0m')
+  console.log('\n\x1B[37m' + '$ ' + command + '\x1B[0m')
   child_process.execSync(command, { cwd: rootDir, stdio: 'inherit' })
 }
 
