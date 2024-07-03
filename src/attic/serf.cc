@@ -587,7 +587,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
     RG_ASSERT(StartsWith(request.url, "/"));
 
-    // Security check
+    // Security checks
+    if (request.method != http_RequestMethod::Get) {
+        LogError("Only GET requests are allowed");
+        io->AttachError(405);
+        return;
+    }
     if (PathContainsDotDot(request.url)) {
         LogError("Unsafe URL containing '..' components");
         io->AttachError(403);
