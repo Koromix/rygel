@@ -2,7 +2,7 @@
 
 Serf is a **small HTTP server made for local testing**. It can serve static files and you can customize the headers with a simple config file.
 
-Here is an example configuration file:
+Here is an example configuration file for serving local files:
 
 ```ini
 [HTTP]
@@ -28,7 +28,7 @@ Cross-Origin-Embedder-Policy = require-corp
 Cross-Origin-Opener-Policy = same-origin
 ```
 
-On this file exits, run serf with `serf -C serf.ini`. If you don't specify the file explicitly, serf will try to find one from its application directory (i.e. the directory where the executable resides).
+Once this file exists, run serf with `serf -C serf.ini`. If you don't specify the file explicitly, serf will try to find one from its application directory (i.e. the directory where the executable resides).
 
 Run `serf --help` for more information.
 
