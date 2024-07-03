@@ -25,7 +25,7 @@ if NOT ERRORLEVEL 1 (
     copy %BUILD%\felix.exe %BINARY% >NUL
 
     echo Cleaning up...
-    timeout /T 2 /NOBREAK >NUL
+    "%windir%\system32\timeout.exe" /T 2 /NOBREAK >NUL
     del /Q %TEMP%\*
     rmdir /Q %TEMP%
 
@@ -42,7 +42,7 @@ if NOT ERRORLEVEL 1 (
     copy %BUILD%\felix.exe %BINARY% >NUL
 
     echo Cleaning up...
-    timeout /T 2 /NOBREAK >NUL
+    "%windir%\system32\timeout.exe" /T 2 /NOBREAK >NUL
     del /Q %TEMP%\*
     rmdir /Q %TEMP%
 
@@ -58,7 +58,7 @@ if NOT ERRORLEVEL 1 (
     copy %BUILD%\felix.exe %BINARY% >NUL
 
     echo Cleaning up...
-    timeout /T 2 /NOBREAK >NUL
+    "%windir%\system32\timeout.exe" /T 2 /NOBREAK >NUL
     del /Q %TEMP%\*
     rmdir /Q %TEMP%
 
