@@ -1414,7 +1414,9 @@ public:
                 }
 
                 Fmt(&buf, " -static-libgcc -static-libstdc++");
-                if (!(features & (int)CompileFeature::StaticRuntime)) {
+                if (features & (int)CompileFeature::StaticRuntime) {
+                    Fmt(&buf, " -lssp");
+                } else {
                     Fmt(&buf, " -Wl,-Bstatic -lstdc++ -lpthread -lssp -Wl,-Bdynamic");
                 }
             } break;
