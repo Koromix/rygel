@@ -27,6 +27,7 @@ struct Config {
 
     const char *root_directory = nullptr;
     bool auto_index = true;
+    bool explicit_index = false;
     bool auto_html = true;
 
     const char *proxy_url = nullptr;
@@ -111,6 +112,15 @@ bool Config::Validate()
         valid = false;
     }
     if (proxy_url) {
+        if (auto_index) {
+            if (explicit_index) {
+                LogError("AutoIndex is not allowed when a reverse proxy is configured");
+                valid = false;
+            } else {
+                auto_index = false;
+            }
+        }
+
         const char *url = NormalizeURL(proxy_url, &str_alloc);
 
         proxy_url = url ? url : proxy_url;
@@ -144,7 +154,11 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                     if (prop.key == "RootDirectory") {
                         config.root_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                     } else if (prop.key == "AutoIndex") {
-                        valid &= ParseBool(prop.value, &config.auto_index);
+                        if (ParseBool(prop.value, &config.auto_index)) {
+                            config.explicit_index = true;
+                        } else {
+                            valid = false;
+                        }
                     } else if (prop.key == "AutoHtml") {
                         valid &= ParseBool(prop.value, &config.auto_html);
                     } else if (prop.key == "MaxAge") {
@@ -453,9 +467,7 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
             ServeIndex(filename.ptr, request, io);
             return true;
         } else {
-            LogError("Cannot access directory without index.html");
-            io->AttachError(403);
-            return true;
+            return false;
         }
     } else {
         io->AttachError(403);
