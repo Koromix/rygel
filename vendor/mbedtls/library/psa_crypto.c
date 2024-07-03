@@ -8262,6 +8262,12 @@ psa_status_t psa_crypto_init(void)
         return PSA_SUCCESS;
     }
 
+#if defined(MBEDTLS_THREADING_WIN32)
+    mbedtls_mutex_init(&mbedtls_threading_key_slot_mutex);
+    mbedtls_mutex_init(&mbedtls_threading_psa_globaldata_mutex);
+    mbedtls_mutex_init(&mbedtls_threading_psa_rngdata_mutex);
+#endif
+
     status = mbedtls_psa_crypto_init_subsystem(PSA_CRYPTO_SUBSYSTEM_DRIVER_WRAPPERS);
     if (status != PSA_SUCCESS) {
         goto exit;

@@ -133,7 +133,7 @@ index 85db243f2..4d93bcc66 100644
  #if defined(MBEDTLS_THREADING_ALT)
  static int threading_mutex_fail(mbedtls_threading_mutex_t *mutex)
  {
-@@ -180,7 +235,7 @@ void mbedtls_threading_free_alt(void)
+@@ -180,9 +235,9 @@ void mbedtls_threading_free_alt(void)
  #ifndef MUTEX_INIT
  #define MUTEX_INIT
  #endif
@@ -141,4 +141,24 @@ index 85db243f2..4d93bcc66 100644
 +#if defined(MBEDTLS_FS_IO) && !defined(_WIN32)
  mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex MUTEX_INIT;
  #endif
- #if defined(THREADING_USE_GMTIME)
+-#if defined(THREADING_USE_GMTIME)
++#if defined(THREADING_USE_GMTIME) && !defined(_WIN32)
+ mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex MUTEX_INIT;
+ #endif
+diff --git a/vendor/mbedtls/library/psa_crypto.c b/vendor/mbedtls/library/psa_crypto.c
+index 969c695ac..344da381f 100644
+--- a/vendor/mbedtls/library/psa_crypto.c
++++ b/vendor/mbedtls/library/psa_crypto.c
+@@ -8262,6 +8262,12 @@ psa_status_t psa_crypto_init(void)
+         return PSA_SUCCESS;
+     }
+ 
++#if defined(MBEDTLS_THREADING_WIN32)
++    mbedtls_mutex_init(&mbedtls_threading_key_slot_mutex);
++    mbedtls_mutex_init(&mbedtls_threading_psa_globaldata_mutex);
++    mbedtls_mutex_init(&mbedtls_threading_psa_rngdata_mutex);
++#endif
++
+     status = mbedtls_psa_crypto_init_subsystem(PSA_CRYPTO_SUBSYSTEM_DRIVER_WRAPPERS);
+     if (status != PSA_SUCCESS) {
+         goto exit;

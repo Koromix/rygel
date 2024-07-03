@@ -238,7 +238,7 @@ void mbedtls_threading_free_alt(void)
 #if defined(MBEDTLS_FS_IO) && !defined(_WIN32)
 mbedtls_threading_mutex_t mbedtls_threading_readdir_mutex MUTEX_INIT;
 #endif
-#if defined(THREADING_USE_GMTIME)
+#if defined(THREADING_USE_GMTIME) && !defined(_WIN32)
 mbedtls_threading_mutex_t mbedtls_threading_gmtime_mutex MUTEX_INIT;
 #endif
 #if defined(MBEDTLS_PSA_CRYPTO_C)
