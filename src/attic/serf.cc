@@ -40,12 +40,60 @@ struct Config {
 
     BlockAllocator str_alloc;
 
-    bool Validate() const;
+    bool Validate();
 };
 
 static Config config;
 
-bool Config::Validate() const
+static const char *NormalizeURL(const char *url, Allocator *alloc)
+{
+    CURLU *h = curl_url();
+    RG_DEFER { curl_url_cleanup(h); };
+
+    // Parse URL
+    {
+        CURLUcode ret = curl_url_set(h, CURLUPART_URL, url, CURLU_NON_SUPPORT_SCHEME);
+        if (ret == CURLUE_OUT_OF_MEMORY)
+            RG_BAD_ALLOC();
+        if (ret != CURLUE_OK) {
+            LogError("Malformed URL '%1'", url);
+            return nullptr;
+        }
+    }
+
+    char *scheme = nullptr;
+    {
+        CURLUcode ret = curl_url_get(h, CURLUPART_SCHEME, &scheme, 0);
+        if (ret == CURLUE_OUT_OF_MEMORY)
+            RG_BAD_ALLOC();
+    }
+    RG_DEFER { curl_free(scheme); };
+
+    if (scheme && !TestStr(scheme, "http") && !TestStr(scheme, "https")) {
+        LogError("Unsupported proxy scheme '%1'", scheme);
+        return nullptr;
+    }
+
+    const char *normalized = nullptr;
+    {
+        char *buf = nullptr;
+        CURLUcode ret = curl_url_get(h, CURLUPART_URL, &buf, 0);
+        if (ret == CURLUE_OUT_OF_MEMORY)
+            RG_BAD_ALLOC();
+        RG_DEFER { curl_free(buf); };
+
+        normalized = DuplicateString(buf, alloc).ptr;
+    }
+
+    if (!EndsWith(normalized, "/")) {
+        LogError("Proxy URL '%1' should end with '/'", normalized);
+        return nullptr;
+    }
+
+    return normalized;
+}
+
+bool Config::Validate()
 {
     bool valid = true;
 
@@ -61,6 +109,12 @@ bool Config::Validate() const
     if (root_directory && !TestFile(root_directory, FileType::Directory)) {
         LogError("Root directory '%1' does not exist", root_directory);
         valid = false;
+    }
+    if (proxy_url) {
+        const char *url = NormalizeURL(proxy_url, &str_alloc);
+
+        proxy_url = url ? url : proxy_url;
+        valid &= !!url;
     }
 
     return valid;
