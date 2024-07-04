@@ -56,8 +56,8 @@ struct http_Config {
 
     int max_connections = 2048;
     int64_t idle_timeout = 60000;
-    int threads = std::max(GetCoreCount(), 4);
-    int async_threads = std::max(GetCoreCount() * 4, 16);
+    int threads = std::clamp(GetCoreCount(), 8, 16);
+    int async_threads = std::max(GetCoreCount() * 4, 64);
     http_ClientAddressMode client_addr_mode = http_ClientAddressMode::Socket;
 
     BlockAllocator str_alloc;

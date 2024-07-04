@@ -193,6 +193,7 @@ bool http_Daemon::Start(const http_Config &config,
     // MHD flags
     int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME |
                 MHD_ALLOW_UPGRADE | MHD_USE_ERROR_LOG;
+
 #if defined(RG_DEBUG)
     flags |= MHD_USE_DEBUG;
 #endif

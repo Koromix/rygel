@@ -32,7 +32,9 @@ struct Config {
 
     const char *proxy_url = nullptr;
     bool proxy_first = false;
-    int proxy_timeout = 5000;
+    int connect_timeout = 1000;
+    int connect_retries = 2;
+    int max_time = 60000;
 
     HeapArray<HttpHeader> headers;
 
@@ -131,6 +133,21 @@ bool Config::Validate()
     return valid;
 }
 
+static bool ParseTimeout(Span<const char> value, int *out_timeout)
+{
+    int64_t timeout;
+
+    if (!ParseDuration(value, &timeout))
+        return false;
+    if (timeout > INT_MAX) {
+        LogError("Duration value is too high");
+        return false;
+    }
+
+    *out_timeout = (int)timeout;
+    return true;
+}
+
 static bool LoadConfig(StreamReader *st, Config *out_config)
 {
     Config config;
@@ -177,8 +194,17 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                         config.proxy_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "ProxyFirst") {
                         valid &= ParseBool(prop.value, &config.proxy_first);
-                    } else if (prop.key == "Timeout") {
-                        valid &= ParseDuration(prop.value, &config.proxy_timeout);
+                    } else if (prop.key == "ConnectTimeout") {
+                        valid &= ParseTimeout(prop.value, &config.connect_timeout);
+                    } else if (prop.key == "RetryCount") {
+                        if (ParseInt(prop.value, &config.connect_retries)) {
+                            if (config.connect_retries < 0) {
+                                LogError("Invalid RetryCount value");
+                                valid = false;
+                            }
+                        }
+                    } else if (prop.key == "MaxTime") {
+                        valid &= ParseTimeout(prop.value, &config.max_time);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -541,7 +567,8 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         bool success = true;
 
         success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
-        success &= !curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)config.proxy_timeout);
+        success &= !curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, (long)config.connect_timeout);
+        success &= !curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)config.max_time);
         success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, ctx.request.headers.ptr);
 
         success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
@@ -582,7 +609,31 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         }
     }
 
-    int status = curl_Perform(curl, "HTTP");
+    int status = 0;
+    for (int i = 0; i <= config.connect_retries; i++) {
+        if (i) {
+            int delay = 200 + 200 * (1 << i);
+            delay += !!i * GetRandomInt(0, delay / 2);
+
+            WaitDelay(delay);
+        }
+
+        int64_t start = GetMonotonicTime();
+
+        status = curl_Perform(curl, "HTTP");
+
+        if (status == CURLE_COULDNT_RESOLVE_PROXY ||
+                status == CURLE_COULDNT_RESOLVE_HOST ||
+                status == CURLE_COULDNT_CONNECT ||
+                status == CURLE_SSL_CONNECT_ERROR)
+            continue;
+        if (status == CURLE_OPERATION_TIMEDOUT &&
+                GetMonotonicTime() - start < config.max_time)
+            continue;
+
+        break;
+    }
+
     if (status < 0) {
         io->AttachError(502);
         return true;
@@ -590,11 +641,10 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
     if (status == 404)
         return false;
 
-    io->AttachBinary(status, ctx.response.data.Leak());
-
     for (const HttpHeader &header: ctx.response.headers) {
         io->AddHeader(header.key, header.value);
     }
+    io->AttachBinary(status, ctx.response.data.Leak());
 
     return true;
 }
