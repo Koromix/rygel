@@ -32,6 +32,7 @@ struct Config {
 
     const char *proxy_url = nullptr;
     bool proxy_first = false;
+    int proxy_timeout = 5000;
 
     HeapArray<HttpHeader> headers;
 
@@ -176,6 +177,8 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                         config.proxy_url = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else if (prop.key == "ProxyFirst") {
                         valid &= ParseBool(prop.value, &config.proxy_first);
+                    } else if (prop.key == "Timeout") {
+                        valid &= ParseDuration(prop.value, &config.proxy_timeout);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -538,6 +541,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         bool success = true;
 
         success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
+        success &= !curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)config.proxy_timeout);
         success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, ctx.request.headers.ptr);
 
         success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
