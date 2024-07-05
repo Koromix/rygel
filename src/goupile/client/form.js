@@ -1191,6 +1191,8 @@ function FormBuilder(state, model) {
         options = expandOptions(options);
         key = decodeKey(key, options);
 
+        options.mandatory = false;
+
         if (Number.isNaN(value) || value == null)
             value = undefined;
         if (value != null && typeof value !== 'string' &&
@@ -1239,6 +1241,8 @@ function FormBuilder(state, model) {
 
     this.output = function(content, options = {}) {
         options = expandOptions(options);
+
+        options.mandatory = false;
 
         // This helps avoid garbage output when the user types 'page.output(html);'
         if (content != null && content !== html && content !== svg) {
