@@ -611,6 +611,9 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
     int status = 0;
     for (int i = 0; i <= config.connect_retries; i++) {
+        ctx.response.headers.Clear();
+        ctx.response.data.Clear();
+
         if (i) {
             int delay = 200 + 200 * (1 << i);
             delay += !!i * GetRandomInt(0, delay / 2);
