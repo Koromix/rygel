@@ -248,7 +248,7 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
 
         if (client_etag && TestStr(client_etag, etag)) {
             if (config.verbose) {
-                LogInfo("Serving file '%1' (cache)", filename);
+                LogInfo("Serving '%1' with 304 (valid cache ETag)", request.url, filename);
             }
 
             io->AttachEmpty(304);
@@ -257,7 +257,7 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
     }
 
     if (config.verbose) {
-        LogInfo("Serving file '%1'", filename);
+        LogInfo("Serving '%1' with '%2'", request.url, filename);
     }
 
     // Send the file
@@ -294,6 +294,10 @@ static void WriteURL(Span<const char> str, StreamWriter *writer) {
 
 static void ServeIndex(const char *dirname, const http_RequestInfo &request, http_IO *io)
 {
+    if (config.verbose) {
+        LogInfo("Serving '%1' with auto-index of '%2'", request.url, dirname);
+    }
+
     static Span<const char> IndexTemplate =
 R"(<!DOCTYPE html>
 <html>
@@ -353,10 +357,6 @@ R"(<!DOCTYPE html>
     </body>
 </html>
 )";
-
-    if (config.verbose) {
-        LogInfo("Serving index for '%1'", dirname);
-    }
 
     io->RunAsync([=]() {
         HeapArray<Span<const char>> names;
@@ -624,12 +624,17 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         break;
     }
 
+    if (status == 404)
+        return false;
+
+    if (config.verbose) {
+        LogInfo("Proxying '%1' from '%2'", request.url, url);
+    }
+
     if (status < 0) {
         io->AttachError(502);
         return true;
     }
-    if (status == 404)
-        return false;
 
     io->AttachBinary(status, ctx.data.Leak());
     for (const http_KeyValue &header: ctx.headers) {
@@ -667,7 +672,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     if (!config.proxy_first && HandleProxy(request, io))
         return;
 
-    io->AttachError(404);
+    LogInfo("Cannot find anything to serve '%1'", request.url);
+    io->AttachError(404, nullptr);
 }
 
 int Main(int argc, char **argv)
