@@ -28,7 +28,7 @@ struct Config {
     const char *proxy_url = nullptr;
     bool proxy_first = false;
     int connect_timeout = 5000;
-    int connect_retries = 2;
+    int connect_retries = 3;
     int max_time = 60000;
 
     HeapArray<http_KeyValue> headers;
@@ -602,7 +602,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         ctx.data.Clear();
 
         if (i) {
-            int delay = 200 + 200 * (1 << i);
+            int delay = 200 + 100 * (1 << i);
             delay += !!i * GetRandomInt(0, delay / 2);
 
             WaitDelay(delay);
