@@ -275,12 +275,11 @@ static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *et
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
     if (client_etag && TestStr(client_etag, etag)) {
-        MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
-        io->AttachResponse(304, response);
+        io->AttachEmpty(304);
     } else {
         const char *mimetype = GetMimeType(GetPathExtension(asset.name));
 
-        io->AttachBinary(200, asset.data, mimetype, asset.compression_type);
+        io->AttachAsset(200, asset.data, mimetype, asset.compression_type);
         io->AddCachingHeaders(max_age, etag);
     }
 }
@@ -378,7 +377,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
     if (!admin_url[0]) {
         const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
         io->AddHeader("Location", redirect);
-        io->AttachNothing(302);
+        io->AttachEmpty(302);
         return;
     }
 
@@ -568,22 +567,20 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
     if (!instance_url[0]) {
         HeapArray<char> buf(&io->allocator);
 
+        HeapArray<http_KeyValue> pairs;
+        request.ListGetValues(&io->allocator, &pairs);
+
         Fmt(&buf, "%1/?", request.url);
-        MHD_get_connection_values(request.conn, MHD_GET_ARGUMENT_KIND, [](void *udata, enum MHD_ValueKind,
-                                                                          const char *key, const char *value) {
-            HeapArray<char> *buf = (HeapArray<char> *)udata;
-
-            EncodeUrlSafe(key, nullptr, buf);
-            buf->Append('=');
-            EncodeUrlSafe(value, nullptr, buf);
-            buf->Append('&');
-
-            return MHD_YES;
-        }, &buf);
+        for (const http_KeyValue &pair: pairs) {
+            EncodeUrlSafe(pair.key, nullptr, &buf);
+            buf.Append('=');
+            EncodeUrlSafe(pair.value, nullptr, &buf);
+            buf.Append('&');
+        }
         buf.ptr[buf.len - 1] = 0;
 
         io->AddHeader("Location", buf.ptr);
-        io->AttachNothing(302);
+        io->AttachEmpty(302);
         return;
     }
 

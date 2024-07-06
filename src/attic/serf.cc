@@ -17,11 +17,6 @@
 
 namespace RG {
 
-struct HttpHeader {
-    const char *key;
-    const char *value;
-};
-
 struct Config {
     http_Config http { 8000 };
 
@@ -36,7 +31,7 @@ struct Config {
     int connect_retries = 2;
     int max_time = 60000;
 
-    HeapArray<HttpHeader> headers;
+    HeapArray<http_KeyValue> headers;
 
     bool set_etag = true;
     int64_t max_age = 0;
@@ -212,7 +207,7 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                 } while (ini.NextInSection(&prop));
             } else if (prop.section == "Headers") {
                 do {
-                    HttpHeader header = {};
+                    http_KeyValue header = {};
 
                     header.key = DuplicateString(prop.key, &config.str_alloc).ptr;
                     header.value = DuplicateString(prop.value, &config.str_alloc).ptr;
@@ -256,8 +251,7 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
                 LogInfo("Serving file '%1' (cache)", filename);
             }
 
-            MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
-            io->AttachResponse(304, response);
+            io->AttachEmpty(304);
             return;
         }
     }
@@ -480,7 +474,7 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
         if (!EndsWith(request.url, "/")) {
             const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
             io->AddHeader("Location", redirect);
-            io->AttachNothing(302);
+            io->AttachEmpty(302);
             return true;
         }
 
@@ -523,44 +517,37 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
     const char *relative_url = TrimStrLeft(request.url, '/').ptr;
     const char *url = Fmt(&io->allocator, "%1%2", config.proxy_url, relative_url).ptr;
+    HeapArray<curl_slist> curl_headers;
+
+    // Copy client headers
+    {
+        HeapArray<http_KeyValue> headers;
+        request.ListHeaderValues(&io->allocator, &headers);
+
+        for (const http_KeyValue &header: headers) {
+            bool skip = std::any_of(std::begin(OmitHeaders), std::end(OmitHeaders),
+                                    [&](const char *pattern) { return MatchPathName(header.key, pattern, false); });
+
+            if (!skip) {
+                char *str = Fmt(&io->allocator, "%1: %2", header.key, header.value).ptr;
+                curl_headers.Append({ .data = str, .next = nullptr });
+            }
+        }
+
+        for (Size i = 0; i < curl_headers.len - 1; i++) {
+            curl_headers[i].next = &curl_headers[i + 1];
+        }
+    }
 
     struct RelayContext {
         http_IO *io;
 
-        struct {
-            HeapArray<curl_slist> headers;
-        } request;
-
-        struct {
-            HeapArray<HttpHeader> headers;
-            HeapArray<uint8_t> data;
-        } response;
+        HeapArray<http_KeyValue> headers;
+        HeapArray<uint8_t> data;
     };
     RelayContext ctx;
     ctx.io = io;
-    ctx.response.data.allocator = &io->allocator;
-
-    // Copy client headers
-    {
-        MHD_get_connection_values(request.conn, MHD_HEADER_KIND, [](void *udata, enum MHD_ValueKind,
-                                                                    const char *key, const char *value) {
-            RelayContext *ctx = (RelayContext *)udata;
-
-            bool skip = std::any_of(std::begin(OmitHeaders), std::end(OmitHeaders),
-                                    [&](const char *pattern) { return MatchPathName(key, pattern, false); });
-
-            if (!skip) {
-                char *header = Fmt(&ctx->io->allocator, "%1: %2", key, value).ptr;
-                ctx->request.headers.Append({ .data = header, .next = nullptr });
-            }
-
-            return MHD_YES;
-        }, &ctx);
-
-        for (Size i = 0; i < ctx.request.headers.len - 1; i++) {
-            ctx.request.headers[i].next = &ctx.request.headers[i + 1];
-        }
-    }
+    ctx.data.allocator = &io->allocator;
 
     // Set CURL options
     {
@@ -569,7 +556,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         success &= !curl_easy_setopt(curl, CURLOPT_URL, url);
         success &= !curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, (long)config.connect_timeout);
         success &= !curl_easy_setopt(curl, CURLOPT_TIMEOUT_MS, (long)config.max_time);
-        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, ctx.request.headers.ptr);
+        success &= !curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curl_headers.ptr);
 
         success &= !curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION,
                                      +[](char *ptr, size_t, size_t nmemb, void *udata) {
@@ -585,7 +572,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
                                     [&](const char *pattern) { return MatchPathName(key, pattern, false); });
 
             if (!skip) {
-                ctx->response.headers.Append({ key, value });
+                ctx->headers.Append({ key, value });
             }
 
             return nmemb;
@@ -597,7 +584,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
             RelayContext *ctx = (RelayContext *)udata;
 
             Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)nmemb);
-            ctx->response.data.Append(buf);
+            ctx->data.Append(buf);
 
             return nmemb;
         });
@@ -611,8 +598,8 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
     int status = 0;
     for (int i = 0; i <= config.connect_retries; i++) {
-        ctx.response.headers.Clear();
-        ctx.response.data.Clear();
+        ctx.headers.Clear();
+        ctx.data.Clear();
 
         if (i) {
             int delay = 200 + 200 * (1 << i);
@@ -644,10 +631,10 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
     if (status == 404)
         return false;
 
-    for (const HttpHeader &header: ctx.response.headers) {
+    io->AttachBinary(status, ctx.data.Leak());
+    for (const http_KeyValue &header: ctx.headers) {
         io->AddHeader(header.key, header.value);
     }
-    io->AttachBinary(status, ctx.response.data.Leak());
 
     return true;
 }
@@ -669,7 +656,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // Add configured headers
-    for (const HttpHeader &header: config.headers) {
+    for (const http_KeyValue &header: config.headers) {
         io->AddHeader(header.key, header.value);
     }
 
@@ -766,7 +753,7 @@ Options:
             } else if (opt.Test("--enable_sab")) {
                 Size j = 0;
                 for (Size i = 0; i < config.headers.len; i++) {
-                    const HttpHeader &header = config.headers[i];
+                    const http_KeyValue &header = config.headers[i];
                     config.headers[j] = header;
 
                     bool keep = !TestStrI(header.key, "Cross-Origin-Opener-Policy") &&

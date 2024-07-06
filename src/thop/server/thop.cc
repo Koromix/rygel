@@ -382,8 +382,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     {
         const char *etag = request.GetHeaderValue("If-None-Match");
         if (etag && TestStr(etag, thop_etag)) {
-            MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
-            io->AttachResponse(304, response);
+            io->AttachEmpty(304);
             return;
         }
     }
@@ -400,7 +399,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 if (request.url[offset] != thop_config.base_url[offset]) {
                     if (!request.url[offset] && thop_config.base_url[offset] == '/' && !thop_config.base_url[offset + 1]) {
                         io->AddHeader("Location", thop_config.base_url);
-                        io->AttachNothing(301);
+                        io->AttachEmpty(301);
                         return;
                     } else {
                         io->AttachError(404);
@@ -437,8 +436,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Execute route
     switch (route->type) {
         case Route::Type::Asset: {
-            io->AttachBinary(200, route->u.st.asset.data, route->u.st.mime_type,
-                             route->u.st.asset.compression_type);
+            io->AttachAsset(200, route->u.st.asset.data, route->u.st.mime_type, route->u.st.asset.compression_type);
             io->AddCachingHeaders(thop_config.max_age, thop_etag);
         } break;
 

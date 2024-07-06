@@ -45,6 +45,11 @@ static const char *const http_ClientAddressModeNames[] = {
     "X-Real-IP"
 };
 
+struct http_KeyValue {
+    const char *key;
+    const char *value;
+};
+
 struct http_Config {
 #if defined(__OpenBSD__)
     SocketType sock_type = SocketType::IPv4;
@@ -147,6 +152,9 @@ struct http_RequestInfo {
         { return MHD_lookup_connection_value(conn, MHD_GET_ARGUMENT_KIND, key); }
     const char *GetCookieValue(const char *key) const
         { return MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, key); }
+
+    void ListGetValues(Allocator *alloc, HeapArray<http_KeyValue> *out_pairs) const;
+    void ListHeaderValues(Allocator *alloc, HeapArray<http_KeyValue> *out_pairs) const;
 };
 
 enum class http_WebSocketFlag {
@@ -220,15 +228,13 @@ public:
                          bool http_only = false);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
-    void AttachResponse(int code, MHD_Response *new_response);
     void AttachText(int code, Span<const char> str, const char *mime_type = "text/plain");
-    bool AttachBinary(int code, Span<const uint8_t> data, const char *mime_type = nullptr,
+    void AttachBinary(int code, Span<const uint8_t> data, const char *mime_type = nullptr);
+    bool AttachAsset(int code, Span<const uint8_t> data, const char *mime_type = nullptr,
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = nullptr);
     bool AttachFile(int code, const char *filename, const char *mime_type = nullptr);
-    void AttachNothing(int code);
-
-    void ResetResponse();
+    void AttachEmpty(int code);
 
     // These must be run in async context (with RunAsync)
     bool OpenForRead(Size max_len, StreamReader *out_st);
@@ -246,6 +252,8 @@ public:
     void AddFinalizer(const std::function<void()> &func);
 
 private:
+    void AttachResponse(int code, MHD_Response *new_response);
+
     void PushLogFilter();
 
     Size Read(Span<uint8_t> out_buf);

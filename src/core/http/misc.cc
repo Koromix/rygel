@@ -188,11 +188,6 @@ bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)
     return true;
 }
 
-static void ReleaseDataCallback(void *ptr)
-{
-    ReleaseRaw(nullptr, ptr, -1);
-}
-
 bool http_JsonPageBuilder::Init(http_IO *io)
 {
     RG_ASSERT(!this->io);
@@ -213,14 +208,11 @@ void http_JsonPageBuilder::Finish()
     bool success = st.Close();
     RG_ASSERT(success);
 
-    MHD_Response *response =
-        MHD_create_response_from_buffer_with_free_callback((size_t)buf.len, buf.ptr,
-                                                           ReleaseDataCallback);
-    buf.Leak();
+    Span<const uint8_t> data = buf.TrimAndLeak();
+    io->AddFinalizer([=]() { ReleaseSpan(nullptr, data); });
 
-    io->AttachResponse(200, response);
+    io->AttachBinary(200, data, "application/json");
     io->AddEncodingHeader(encoding);
-    io->AddHeader("Content-Type", "application/json");
 }
 
 }

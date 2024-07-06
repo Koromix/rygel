@@ -561,9 +561,43 @@ void http_Daemon::RequestCompleted(void *, MHD_Connection *, void **con_cls, MHD
     }
 }
 
-http_IO::http_IO()
+static void ListConnectionValues(MHD_Connection *conn, MHD_ValueKind kind,
+                                 Allocator *alloc, HeapArray<http_KeyValue> *out_pairs)
 {
-    ResetResponse();
+    struct ListContext {
+        Allocator *alloc;
+        HeapArray<http_KeyValue> *pairs;
+    };
+    ListContext ctx;
+    ctx.alloc = alloc;
+    ctx.pairs = out_pairs;
+
+    MHD_get_connection_values(conn, kind, [](void *udata, enum MHD_ValueKind, const char *key, const char *value) {
+        ListContext *ctx = (ListContext *)udata;
+
+        http_KeyValue pair;
+        pair.key = DuplicateString(key, ctx->alloc).ptr;
+        pair.value = DuplicateString(value, ctx->alloc).ptr;
+
+        ctx->pairs->Append(pair);
+
+        return MHD_YES;
+    }, &ctx);
+}
+
+void http_RequestInfo::ListGetValues(Allocator *alloc, HeapArray<http_KeyValue> *out_pairs) const
+{
+    ListConnectionValues(conn, MHD_GET_ARGUMENT_KIND, alloc, out_pairs);
+}
+
+void http_RequestInfo::ListHeaderValues(Allocator *alloc, HeapArray<http_KeyValue> *out_pairs) const
+{
+    ListConnectionValues(conn, MHD_HEADER_KIND, alloc, out_pairs);
+}
+
+http_IO::http_IO()
+    : response(MHD_create_response_empty((MHD_ResponseFlags)0))
+{
 }
 
 http_IO::~http_IO()
@@ -682,30 +716,6 @@ void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
     }
 }
 
-void http_IO::ResetResponse()
-{
-    code = -1;
-
-    MHD_destroy_response(response);
-    response = MHD_create_response_empty((MHD_ResponseFlags)0);
-}
-
-void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
-{
-    RG_ASSERT(new_code >= 0);
-
-    code = new_code;
-
-    MHD_move_response_headers(response, new_response);
-    MHD_destroy_response(response);
-    response = new_response;
-
-    if (async_func_response) {
-        async_func = {};
-        async_func_response = false;
-    }
-}
-
 void http_IO::AttachText(int code, Span<const char> str, const char *mime_type)
 {
     MHD_Response *response =
@@ -715,8 +725,20 @@ void http_IO::AttachText(int code, Span<const char> str, const char *mime_type)
     AddHeader("Content-Type", mime_type);
 }
 
-bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_type,
-                           CompressionType src_encoding)
+void http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_type)
+{
+    MHD_Response *response =
+        MHD_create_response_from_buffer(data.len, (void *)data.ptr, MHD_RESPMEM_PERSISTENT);
+
+    AttachResponse(code, response);
+
+    if (mime_type) {
+        AddHeader("Content-Type", mime_type);
+    }
+}
+
+bool http_IO::AttachAsset(int code, Span<const uint8_t> data, const char *mime_type,
+                          CompressionType src_encoding)
 {
     CompressionType dest_encoding;
     if (!NegociateEncoding(src_encoding, &dest_encoding))
@@ -724,7 +746,7 @@ bool http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_
 
     if (dest_encoding != src_encoding) {
         if (request.headers_only) {
-            AttachNothing(code);
+            AttachEmpty(code);
             AddEncodingHeader(dest_encoding);
         } else {
             if (data.len > Mebibytes(16)) {
@@ -799,15 +821,9 @@ bool http_IO::AttachFile(int code, const char *filename, const char *mime_type)
     return true;
 }
 
-void http_IO::AttachNothing(int code)
+void http_IO::AttachEmpty(int code)
 {
-    // We don't want libmicrohttpd to send Content-Length, so we use a callback response
-    const auto null_callback = [](void *, uint64_t, char *, size_t) {
-        return (ssize_t)MHD_CONTENT_READER_END_OF_STREAM;
-    };
-
-    MHD_Response *response =
-        MHD_create_response_from_callback(MHD_SIZE_UNKNOWN, Kilobytes(16), null_callback, nullptr, nullptr);
+    MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
     AttachResponse(code, response);
 }
 
@@ -882,6 +898,22 @@ bool http_IO::OpenForWrite(int code, Size len, CompressionType encoding, StreamW
 void http_IO::AddFinalizer(const std::function<void()> &func)
 {
     finalizers.Append(func);
+}
+
+void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
+{
+    RG_ASSERT(new_code >= 0);
+
+    code = new_code;
+
+    MHD_move_response_headers(response, new_response);
+    MHD_destroy_response(response);
+    response = new_response;
+
+    if (async_func_response) {
+        async_func = {};
+        async_func_response = false;
+    }
 }
 
 void http_IO::PushLogFilter()

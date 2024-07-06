@@ -1425,7 +1425,7 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
         png = buf.Leak();
     }
 
-    io->AttachBinary(200, png, "image/png");
+    io->AttachAsset(200, png, "image/png");
     io->AddHeader("X-TOTP-SecretKey", session->secret);
     io->AddCachingHeaders(0, nullptr);
 }

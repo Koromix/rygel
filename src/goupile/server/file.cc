@@ -162,8 +162,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
 
         if (client_etag && TestStr(client_etag, sha256)) {
-            MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
-            io->AttachResponse(304, response);
+            io->AttachEmpty(304);
             return true;
         }
         if (client_sha256 && !TestStr(client_sha256, sha256)) {
@@ -211,9 +210,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
             return true;
         }
 
-        MHD_Response *response =
-            MHD_create_response_from_buffer((size_t)src_len, (void *)ptr, MHD_RESPMEM_PERSISTENT);
-        io->AttachResponse(200, response);
+        io->AttachBinary(200, MakeSpan(ptr, src_len));
         io->AddEncodingHeader(dest_encoding);
         AddMimeTypeHeader(filename.ptr, io);
 

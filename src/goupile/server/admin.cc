@@ -1109,7 +1109,7 @@ void HandleDemo(const http_RequestInfo &request, http_IO *io)
 
     const char *redirect = Fmt(&io->allocator, "/%1/", name).ptr;
     io->AddHeader("Location", redirect);
-    io->AttachNothing(302);
+    io->AttachEmpty(302);
 }
 
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
