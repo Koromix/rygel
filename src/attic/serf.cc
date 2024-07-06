@@ -60,30 +60,13 @@ static const char *NormalizeURL(const char *url, Allocator *alloc)
         }
     }
 
-    char *scheme = nullptr;
-    {
-        CURLUcode ret = curl_url_get(h, CURLUPART_SCHEME, &scheme, 0);
-        if (ret == CURLUE_OUT_OF_MEMORY)
-            RG_BAD_ALLOC();
-    }
-    RG_DEFER { curl_free(scheme); };
+    const char *scheme = curl_GetUrlPartStr(h, CURLUPART_SCHEME, alloc).ptr;
+    const char *normalized = curl_GetUrlPartStr(h, CURLUPART_URL, alloc).ptr;
 
     if (scheme && !TestStr(scheme, "http") && !TestStr(scheme, "https")) {
         LogError("Unsupported proxy scheme '%1'", scheme);
         return nullptr;
     }
-
-    const char *normalized = nullptr;
-    {
-        char *buf = nullptr;
-        CURLUcode ret = curl_url_get(h, CURLUPART_URL, &buf, 0);
-        if (ret == CURLUE_OUT_OF_MEMORY)
-            RG_BAD_ALLOC();
-        RG_DEFER { curl_free(buf); };
-
-        normalized = DuplicateString(buf, alloc).ptr;
-    }
-
     if (!EndsWith(normalized, "/")) {
         LogError("Proxy URL '%1' should end with '/'", normalized);
         return nullptr;
