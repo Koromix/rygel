@@ -27,7 +27,7 @@ struct Config {
 
     const char *proxy_url = nullptr;
     bool proxy_first = false;
-    int connect_timeout = 1000;
+    int connect_timeout = 5000;
     int connect_retries = 2;
     int max_time = 60000;
 
