@@ -612,12 +612,12 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
         status = curl_Perform(curl, "HTTP");
 
-        if (status == CURLE_COULDNT_RESOLVE_PROXY ||
-                status == CURLE_COULDNT_RESOLVE_HOST ||
-                status == CURLE_COULDNT_CONNECT ||
-                status == CURLE_SSL_CONNECT_ERROR)
+        if (status == -CURLE_COULDNT_RESOLVE_PROXY ||
+                status == -CURLE_COULDNT_RESOLVE_HOST ||
+                status == -CURLE_COULDNT_CONNECT ||
+                status == -CURLE_SSL_CONNECT_ERROR)
             continue;
-        if (status == CURLE_OPERATION_TIMEDOUT &&
+        if (status == -CURLE_OPERATION_TIMEDOUT &&
                 GetMonotonicTime() - start < config.max_time)
             continue;
 
