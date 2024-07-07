@@ -47,8 +47,8 @@ function PpnpsProvider() {
 
         entries = data.rows;
         entries.sort((entry1, entry2) => {
-            let wide1 = entry1.rayon?.startsWith('France');
-            let wide2 = entry2.rayon?.startsWith('France');
+            let wide1 = entry1.rayon?.startsWith?.('France');
+            let wide2 = entry2.rayon?.startsWith?.('France');
 
             return wide1 - wide2;
         });
@@ -151,10 +151,10 @@ function PpnpsProvider() {
                         <div class="toggle"><a @click=${e => toggleGroup(e, true)}>cocher</a> | <a @click=${e => toggleGroup(e, false)}>décocher</a></div>
 
                         <label><input type="checkbox"
-                                      data-filter="this.public?.includes('Adultes')"
+                                      data-filter="this.public?.includes?.('Adultes')"
                                       checked />Adultes</label>
                         <label><input type="checkbox"
-                                      data-filter="this.public?.includes('Enfants')"
+                                      data-filter="this.public?.includes?.('Enfants')"
                                       checked />Enfants</label>
                         <label><input type="checkbox"
                                       data-filter="this.public == null"
@@ -247,7 +247,7 @@ function PpnpsProvider() {
                 total++;
 
                 if (filters.every(filtre => filtre(entry))) {
-                    let wide = entry.rayon?.startsWith('France');
+                    let wide = entry.rayon?.startsWith?.('France');
                     let icon = icons[entry.categorie];
 
                     if (icon == null) {

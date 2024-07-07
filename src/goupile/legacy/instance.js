@@ -561,7 +561,7 @@ function renderData() {
                 <div style="flex: 1;"></div>
                 <label>
                     Date de création :
-                    <input type="date" .value=${data_date.toString?.() ?? ''}
+                    <input type="date" .value=${data_date != null ? data_date.toString() : ''}
                            @input=${e => { data_date = e.target.value ? dates.parse(e.target.value) : null; run(); }} />
                 </label>
                 <div style="flex: 1;"></div>
