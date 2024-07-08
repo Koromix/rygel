@@ -33,6 +33,17 @@ CURL *curl_Init()
         RG_BAD_ALLOC();
     RG_DEFER_N(err_guard) { curl_easy_cleanup(curl); };
 
+    if (!curl_Reset(curl))
+        return nullptr;
+
+    err_guard.Disable();
+    return curl;
+}
+
+bool curl_Reset(CURL *curl)
+{
+    curl_easy_reset(curl);
+
     bool success = true;
 
     // Give embedded CA store to curl
@@ -62,11 +73,10 @@ CURL *curl_Init()
 
     if (!success) {
         LogError("Failed to set libcurl options");
-        return nullptr;
+        return false;
     }
 
-    err_guard.Disable();
-    return curl;
+    return true;
 }
 
 int curl_Perform(CURL *curl, const char *reason)

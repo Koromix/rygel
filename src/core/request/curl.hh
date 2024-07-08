@@ -35,6 +35,8 @@
 namespace RG {
 
 CURL *curl_Init();
+bool curl_Reset(CURL *curl);
+
 int curl_Perform(CURL *curl, const char *reason);
 
 Span<const char> curl_GetUrlPartStr(CURLU *h, CURLUPart part, Allocator *alloc);

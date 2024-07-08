@@ -44,6 +44,8 @@ struct Config {
 
 static Config config;
 
+static thread_local CURL *curl = nullptr;
+
 static const char *NormalizeURL(const char *url, Allocator *alloc)
 {
     CURLU *h = curl_url();
@@ -493,10 +495,15 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         "server"
     };
 
-    CURL *curl = curl_Init();
-    if (!curl)
-        return false;
-    RG_DEFER { curl_easy_cleanup(curl); };
+    if (curl) {
+        if (!curl_Reset(curl))
+            return false;
+    } else {
+        curl = curl_Init();
+        if (!curl)
+            return false;
+        atexit([] { curl_easy_cleanup(curl); });
+    }
 
     const char *relative_url = TrimStrLeft(request.url, '/').ptr;
     const char *url = Fmt(&io->allocator, "%1%2", config.proxy_url, relative_url).ptr;
