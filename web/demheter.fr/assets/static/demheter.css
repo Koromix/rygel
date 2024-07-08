@@ -28,6 +28,8 @@ main a:not(:has(> img)):hover { color: var(--color, black); }
 
 h1 { border-bottom: 1px solid #ccc; }
 
+span[title] { border-bottom: 1px dotted #383838; }
+
 .schema {
     display: block;
     margin: 2em auto;
