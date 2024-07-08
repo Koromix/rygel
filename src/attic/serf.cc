@@ -582,7 +582,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
         if (!success) {
             LogError("Failed to set libcurl options");
-            return -1;
+            return true;
         }
     }
 
