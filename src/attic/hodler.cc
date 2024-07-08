@@ -1011,7 +1011,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
     return true;
 }
 
-int Main(int argc, char *argv[])
+int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
