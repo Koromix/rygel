@@ -43,6 +43,9 @@ class http_Daemon::RequestHandler {
     http_Daemon *daemon;
 
     int event_fd = -1;
+    std::shared_mutex wake_mutex;
+    bool wake_needed = false;
+
     BucketArray<http_IO *, 2048> clients;
 
 public:
@@ -249,8 +252,8 @@ bool http_Daemon::Start(const http_Config &config,
     if (listen_fd < 0 && !Bind(config))
         return false;
 
-    int fronts = GetCoreCount() * 2;
-    int backs = GetCoreCount() * 2;
+    int fronts = GetCoreCount();
+    int backs = GetCoreCount() * 4;
     async = new Async(fronts + backs);
 
     for (Size i = 0; i < fronts; i++) {
@@ -704,7 +707,13 @@ bool http_Daemon::RequestHandler::Run()
 
         clients.RemoveFirst(removed);
 
-        if (now - busy > 200) {
+        if (now - busy > 1000) {
+            // Wake me up from the kernel if needed
+            {
+                std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
+                wake_needed = true;
+            }
+
             if (poll(pfds.ptr, pfds.len, -1) < 0) {
                 LogError("Failed to poll descriptors: %1", strerror(errno));
                 return false;
@@ -719,9 +728,17 @@ bool http_Daemon::RequestHandler::Run()
 
 void http_Daemon::RequestHandler::Wake()
 {
-    uint64_t one = 1;
-    ssize_t ret = write(event_fd, &one, RG_SIZE(one));
-    (void)ret;
+    std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
+
+    if (wake_needed) {
+        lock_shr.unlock();
+
+        uint64_t one = 1;
+        ssize_t ret = write(event_fd, &one, RG_SIZE(one));
+        (void)ret;
+
+        wake_needed = false;
+    }
 }
 
 http_IO::http_IO(RequestHandler *handler, int fd)
