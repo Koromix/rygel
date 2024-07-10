@@ -23,6 +23,8 @@
 
 #include "src/core/base/base.hh"
 
+struct sockaddr;
+
 namespace RG {
 
 enum class http_ClientAddressMode {
@@ -186,6 +188,8 @@ private:
     ~http_IO();
 
     PrepareStatus Prepare();
+
+    bool InitAddress(struct sockaddr *sa);
     bool InitAddress(http_ClientAddressMode addr_mode);
 
     void Reset();

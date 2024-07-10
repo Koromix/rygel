@@ -610,6 +610,10 @@ bool http_Daemon::RequestHandler::Run()
                 }
 
                 http_IO *client = new http_IO(this, fd);
+                if (!client->InitAddress((sockaddr *)&ss)) {
+                    delete client;
+                    continue;
+                }
                 clients.Append(client);
 
                 busy = now;
@@ -643,7 +647,7 @@ bool http_Daemon::RequestHandler::Run()
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
-                    if (!client->addr[0] && !client->InitAddress(addr_mode)) {
+                    if (!client->InitAddress(addr_mode)) {
                         client->keepalive = false;
                         client->SendText(400, "Malformed request");
 
@@ -879,39 +883,34 @@ http_IO::PrepareStatus http_IO::Prepare()
     return PrepareStatus::Ready;
 }
 
+bool http_IO::InitAddress(struct sockaddr *sa)
+{
+    int family = sa->sa_family;
+    void *ptr = nullptr;
+
+    switch (family) {
+        case AF_INET: { ptr = &((sockaddr_in *)sa)->sin_addr; } break;
+        case AF_INET6: { ptr = &((sockaddr_in6 *)sa)->sin6_addr; } break;
+        case AF_UNIX: {
+            CopyString("unix", addr);
+            return true;
+        } break;
+
+        default: { RG_UNREACHABLE(); } break;
+    }
+
+    if (!inet_ntop(family, ptr, addr, RG_SIZE(addr))) {
+        LogError("Cannot convert network address to text");
+        return false;
+    }
+
+    return true;
+}
+
 bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
 {
     switch (addr_mode) {
-        case http_ClientAddressMode::Socket: {
-            sockaddr_storage ss;
-            socklen_t ss_len = RG_SIZE(ss);
-
-            if (getsockname(fd, (sockaddr *)&ss, &ss_len) < 0) {
-                LogError("Failed to retrieve socket name: %1", strerror(errno));
-                return false;
-            }
-
-            int family = ss.ss_family;
-            void *ptr = nullptr;
-
-            switch (ss.ss_family) {
-                case AF_INET: { ptr = &((sockaddr_in *)&ss)->sin_addr; } break;
-                case AF_INET6: { ptr = &((sockaddr_in6 *)&ss)->sin6_addr; } break;
-                case AF_UNIX: {
-                    CopyString("unix", addr);
-                    return true;
-                } break;
-
-                default: { RG_UNREACHABLE(); } break;
-            }
-
-            if (!inet_ntop(family, ptr, addr, RG_SIZE(addr))) {
-                LogError("Cannot convert network address to text");
-                return false;
-            }
-
-            return true;
-        } break;
+        case http_ClientAddressMode::Socket: { /* Keep socket address */ } break;
 
         case http_ClientAddressMode::XForwardedFor: {
             const char *str = request.FindHeader("X-Forwarded-For");
@@ -930,8 +929,6 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
                 LogError("Excessively long client address in X-Forwarded-For header");
                 return false;
             }
-
-            return true;
         } break;
 
         case http_ClientAddressMode::XRealIP: {
@@ -951,12 +948,10 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
                 LogError("Excessively long client address in X-Forwarded-For header");
                 return false;
             }
-
-            return true;
         } break;
     }
 
-    RG_UNREACHABLE();
+    return true;
 }
 
 void http_IO::Reset()
