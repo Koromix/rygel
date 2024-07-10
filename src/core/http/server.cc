@@ -454,6 +454,7 @@ void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> 
     Print(&writer, "%1 %2 %3\r\n", protocol, status, ErrorMessages.FindValue(status, "Unknown"));
 
     if (keepalive) {
+        Print(&writer, "Connection: keep-alive\r\n");
         Print(&writer, "Keep-Alive: timeout=%1, max=%2\r\n", KeepAliveDelay / 1000, KeepAliveCount);
     } else {
         Print(&writer, "Connection: close\r\n");
