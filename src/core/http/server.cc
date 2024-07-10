@@ -238,7 +238,7 @@ bool http_Daemon::Start(const http_Config &config,
                         std::function<void(const http_RequestInfo &request, http_IO *io)> func,
                         bool log_socket)
 {
-    RG_ASSERT(!async);
+    RG_ASSERT(!front);
     RG_ASSERT(func);
 
     // Validate configuration
@@ -254,20 +254,16 @@ bool http_Daemon::Start(const http_Config &config,
     if (listen_fd < 0 && !Bind(config))
         return false;
 
-    int fronts = GetCoreCount();
-    int backs = GetCoreCount() * 4;
-    async = new Async(fronts + backs);
-
-    for (Size i = 0; i < fronts; i++) {
-        RequestHandler *handler = new RequestHandler(this);
-        handlers.Append(handler);
-    }
-
     handle_func = func;
 
+    // We use separate workers to decode requests and run user handling
+    front = new Async;
+    back = new Async(GetCoreCount() * 4);
+
     // Run request handlers
-    for (RequestHandler *handler: handlers) {
-        async->Run([=] { return handler->Run(); });
+    for (Size i = 0; i < front->GetWorkerCount(); i++) {
+        RequestHandler *handler = new RequestHandler(this);
+        front->Run([=] { return handler->Run(); });
     }
 
     if (log_socket) {
@@ -288,17 +284,18 @@ void http_Daemon::Stop()
     shutdown(listen_fd, SHUT_RD);
 
     // Wait for everyone to wind down
-    if (async) {
-        async->Sync();
+    if (front) {
+        front->Sync();
 
-        delete async;
-        async = nullptr;
+        delete front;
+        front = nullptr;
     }
+    if (back) {
+        back->Sync();
 
-    for (RequestHandler *handler: handlers) {
-        delete handler;
+        delete back;
+        back = nullptr;
     }
-    handlers.Clear();
 
     CloseSocket(listen_fd);
     listen_fd = -1;
@@ -584,10 +581,13 @@ bool http_Daemon::RequestHandler::Run()
 {
     RG_ASSERT(event_fd < 0);
 
+    // Deal with self
+    RG_DEFER { delete this; };
+
     int listen_fd = daemon->listen_fd;
     http_ClientAddressMode addr_mode = daemon->addr_mode;
 
-    Async async(daemon->async);
+    Async async(daemon->back);
     BucketArray<http_IO *, 2048> clients;
 
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);

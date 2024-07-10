@@ -5784,6 +5784,11 @@ bool Async::Sync()
     return success;
 }
 
+int Async::GetWorkerCount()
+{
+    return pool->GetWorkerCount();
+}
+
 bool Async::IsTaskRunning()
 {
     return async_running_task;
@@ -5792,11 +5797,6 @@ bool Async::IsTaskRunning()
 int Async::GetWorkerIdx()
 {
     return async_running_worker_idx;
-}
-
-int Async::GetWorkerCount()
-{
-    return async_running_pool->GetWorkerCount();
 }
 
 AsyncPool::AsyncPool(int threads, bool leak)

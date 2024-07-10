@@ -70,8 +70,9 @@ class http_Daemon {
     int listen_fd = -1;
     http_ClientAddressMode addr_mode = http_ClientAddressMode::Socket;
 
-    Async *async = nullptr;
-    HeapArray<RequestHandler *> handlers;
+    Async *front = nullptr;
+    Async *back = nullptr;
+
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 
 public:

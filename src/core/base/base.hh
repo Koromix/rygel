@@ -4505,9 +4505,10 @@ public:
     void Run(const std::function<bool()> &f);
     bool Sync();
 
+    int GetWorkerCount();
+
     static bool IsTaskRunning();
     static int GetWorkerIdx();
-    static int GetWorkerCount();
 
     friend class AsyncPool;
 };
