@@ -429,30 +429,53 @@ void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> 
 {
     RG_ASSERT(!response.sent);
 
-    StreamWriter writer;
-
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
-    writer.Open(write, "<http>");
+    StreamWriter writer(write, "<http>");
+
+    LocalArray<char, 32768> intro;
 
     const char *protocol = (version == 11) ? "HTTP/1.1" : "HTTP/1.0";
-    Print(&writer, "%1 %2 %3\r\n", protocol, status, ErrorMessages.FindValue(status, "Unknown"));
+    const char *details = ErrorMessages.FindValue(status, "Unknown");
 
     if (keepalive) {
-        Print(&writer, "Connection: keep-alive\r\n");
-        Print(&writer, "Keep-Alive: timeout=%1, max=%2\r\n", KeepAliveDelay / 1000, KeepAliveCount);
+        intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
+                                                "Connection: keep-alive\r\n"
+                                                "Keep-Alive: timeout=%4, max=%5\r\n",
+                         protocol, status, details, KeepAliveDelay / 1000, KeepAliveCount).len;
     } else {
-        Print(&writer, "Connection: close\r\n");
+        intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
+                                                "Connection: close\r\n",
+                         protocol, status, details).len;
     }
 
     for (const http_KeyValue &header: response.headers) {
-        Print(&writer, "%1: %2\r\n", header.key, header.value);
+        intro.len += Fmt(intro.TakeAvailable(), "%1: %2\r\n", header.key, header.value).len;
     }
 
     if (len >= 0) {
-        Print(&writer, "Content-Length: %1\r\n\r\n", len);
+        intro.len += Fmt(intro.TakeAvailable(), "Content-Length: %1\r\n\r\n", len).len;
+
+        if (!intro.Available()) [[unlikely]] {
+            LogError("Excessive length for response headers");
+
+            keepalive = false;
+            goto exit;
+        }
+
+        writer.Write(intro);
+
         func(fd, &writer);
     } else {
-        Print(&writer, "Transfer-Encoding: chunked\r\n\r\n");
+        intro.len += Fmt(intro.TakeAvailable(), "Transfer-Encoding: chunked\r\n\r\n").len;
+
+        if (!intro.Available()) [[unlikely]] {
+            LogError("Excessive length for response headers");
+
+            keepalive = false;
+            goto exit;
+        }
+
+        writer.Write(intro);
 
         const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
         StreamWriter chunker(chunk, "<http>");
@@ -461,12 +484,13 @@ void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> 
         writer.Write("0\r\n\r\n");
     }
 
-    int off = 0;
-    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &off, sizeof(off));
-
     keepalive &= writer.IsValid();
 
+exit:
     response.sent = true;
+
+    int off = 0;
+    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &off, sizeof(off));
 }
 
 void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
