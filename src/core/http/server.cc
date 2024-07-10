@@ -765,8 +765,8 @@ http_IO *http_Daemon::RequestHandler::CreateClient(int fd, struct sockaddr *sa)
         client = new http_IO(this);
     }
 
-    if (!client->Init(fd, sa)) {
-        pool.Append(client);
+    if (!client->Init(fd, sa)) [[unlikely]] {
+        delete client;
         return nullptr;
     }
 
