@@ -913,7 +913,9 @@ http_IO::PrepareStatus http_IO::Prepare()
         if (TestStr(method, "HEAD")) {
             request.method = http_RequestMethod::Get;
             request.headers_only = true;
-        } else if (!OptionToEnumI(http_RequestMethodNames, method, &request.method)) {
+        } else if (OptionToEnumI(http_RequestMethodNames, method, &request.method)) {
+            request.headers_only = false;
+        } else {
             SendError(405);
             return PrepareStatus::Error;
         }
@@ -1104,9 +1106,10 @@ void http_IO::Reset()
 
     version = 10;
     keepalive = false;
-    request = {};
+    request.headers.RemoveFrom(0);
 
-    response = {};
+    response.headers.RemoveFrom(0);
+    response.finalizers.RemoveFrom(0);
 
     ready = false;
 }

@@ -113,9 +113,10 @@ struct http_KeyValue {
 struct http_RequestInfo {
     http_RequestMethod method = http_RequestMethod::Get;
     bool headers_only = false;
-    const char *url = nullptr;
-    HeapArray<http_KeyValue> headers;
     const char *client_addr = nullptr;
+    const char *url = nullptr;
+
+    HeapArray<http_KeyValue> headers;
 
     const char *FindHeader(const char *key) const;
     const char *FindGetValue(const char *key) const;
