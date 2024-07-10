@@ -957,7 +957,7 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
 void http_IO::Reset()
 {
     buf.RemoveFrom(0);
-    allocator.ReleaseAll();
+    allocator.Reset();
 
     intro = {};
     extra = {};

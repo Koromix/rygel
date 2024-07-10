@@ -1184,6 +1184,7 @@ public:
     LinkedAllocator& operator=(LinkedAllocator &&other);
 
     void ReleaseAll();
+    void ReleaseAllExcept(void *ptr);
 
     void *Allocate(Size size, unsigned int flags = 0) override;
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
@@ -1225,7 +1226,7 @@ public:
 
 protected:
     void CopyFrom(BlockAllocatorBase *other);
-    void ForgetCurrentBlock();
+    void *ResetCurrent();
 
     virtual LinkedAllocator *GetAllocator() = 0;
 
@@ -1246,7 +1247,7 @@ public:
     BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
     BlockAllocator& operator=(BlockAllocator &&other);
 
-    void ReleaseAll();
+    void Reset();
 };
 
 class IndirectBlockAllocator final: public BlockAllocatorBase {
@@ -1262,7 +1263,7 @@ public:
     IndirectBlockAllocator(IndirectBlockAllocator &&other) { *this = std::move(other); }
     IndirectBlockAllocator& operator=(IndirectBlockAllocator &&other);
 
-    void ReleaseAll();
+    void Reset();
 };
 
 #if !defined(__wasi__)

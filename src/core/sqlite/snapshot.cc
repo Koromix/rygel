@@ -352,7 +352,7 @@ bool sq_CollectSnapshots(Span<const char *> filenames, sq_SnapshotSet *out_set)
 
     RG_DEFER_N(out_guard) {
         out_set->snapshots.Clear();
-        out_set->str_alloc.ReleaseAll();
+        out_set->str_alloc.Reset();
     };
 
     HashMap<const char *, Size> snapshots_map;

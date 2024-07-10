@@ -207,6 +207,36 @@ void LinkedAllocator::ReleaseAll()
     list = {};
 }
 
+void LinkedAllocator::ReleaseAllExcept(void *ptr)
+{
+    if (!ptr) {
+        ReleaseAll();
+        return;
+    }
+
+    Bucket *keep = PointerToBucket(ptr);
+
+    if (list.next == &keep->head) {
+        list.next = keep->head.next;
+    }
+    if (list.prev == &keep->head) {
+        list.prev = keep->head.prev;
+    }
+    if (keep->head.next) {
+        keep->head.next->prev = keep->head.prev;
+    }
+    if (keep->head.prev) {
+        keep->head.prev->next = keep->head.next;
+    }
+
+    ReleaseAll();
+
+    list.prev = &keep->head;
+    list.next = &keep->head;
+    keep->head.prev = nullptr;
+    keep->head.next = nullptr;
+}
+
 void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
     Bucket *bucket = (Bucket *)AllocateRaw(allocator, RG_SIZE(Node) + size, flags);
@@ -392,10 +422,16 @@ void BlockAllocatorBase::CopyFrom(BlockAllocatorBase *other)
     last_alloc = other->last_alloc;
 }
 
-void BlockAllocatorBase::ForgetCurrentBlock()
+void *BlockAllocatorBase::ResetCurrent()
 {
-    current_bucket = nullptr;
     last_alloc = nullptr;
+
+    if (current_bucket) {
+        current_bucket->used = 0;
+        return current_bucket;
+    } else {
+        return nullptr;
+    }
 }
 
 BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
@@ -406,10 +442,10 @@ BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
     return *this;
 }
 
-void BlockAllocator::ReleaseAll()
+void BlockAllocator::Reset()
 {
-    ForgetCurrentBlock();
-    allocator.ReleaseAll();
+    void *ptr = ResetCurrent();
+    allocator.ReleaseAllExcept(ptr);
 }
 
 IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator &&other)
@@ -420,10 +456,10 @@ IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator
     return *this;
 }
 
-void IndirectBlockAllocator::ReleaseAll()
+void IndirectBlockAllocator::Reset()
 {
-    ForgetCurrentBlock();
-    allocator->ReleaseAll();
+    void *ptr = ResetCurrent();
+    allocator->ReleaseAllExcept(ptr);
 }
 
 #if defined(_WIN32)
@@ -6177,7 +6213,7 @@ bool StreamReader::Close(bool implicit)
     source.eof = false;
     eof = false;
     raw_len = -1;
-    str_alloc.ReleaseAll();
+    str_alloc.Reset();
 
     return ret;
 }
@@ -6797,7 +6833,7 @@ bool StreamWriter::Close(bool implicit)
     filename = nullptr;
     error = true;
     dest.type = DestinationType::Memory;
-    str_alloc.ReleaseAll();
+    str_alloc.Reset();
 
     return ret;
 }
@@ -7180,7 +7216,7 @@ bool ReloadAssets()
     // We are not allowed to fail from now on
     assets.Clear();
     assets_map.Clear();
-    assets_alloc.ReleaseAll();
+    assets_alloc.Reset();
 
     for (const AssetInfo &asset: *lib_assets) {
         AssetInfo asset_copy;

@@ -1086,7 +1086,7 @@ static WrenForeignMethodFn BindForeignMethod(WrenVM *, const char *,
 
 bool mco_WrenRunner::Init(const char *expression, Size max_results)
 {
-    vm_alloc.ReleaseAll();
+    vm_alloc.Reset();
 
     // Init Wren VM
     {

@@ -117,7 +117,7 @@ bool ssh_Config::Validate() const
 
 void ssh_Config::Clone(ssh_Config *out_config) const
 {
-    out_config->str_alloc.ReleaseAll();
+    out_config->str_alloc.Reset();
 
     out_config->host = host ? DuplicateString(host, &out_config->str_alloc).ptr : nullptr;
     out_config->port = port;
