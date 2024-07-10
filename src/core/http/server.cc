@@ -537,7 +537,9 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
             Size sent = sendfile(sock, fd, &offset, (size_t)send);
 
             if (sent < 0) {
-                LogError("Failed to send file: %1", strerror(errno));
+                if (errno != EPIPE) {
+                    LogError("Failed to send file: %1", strerror(errno));
+                }
                 return;
             }
 
