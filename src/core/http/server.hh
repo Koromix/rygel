@@ -192,6 +192,9 @@ private:
 
     PrepareStatus Prepare();
 
+    bool WriteDirect(Span<const uint8_t> data);
+    bool WriteChunked(Span<const uint8_t> data);
+
     void Reset();
     void Close();
 

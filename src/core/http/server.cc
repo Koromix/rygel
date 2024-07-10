@@ -428,27 +428,11 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
 void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> func)
 {
     RG_ASSERT(!response.sent);
-    RG_ASSERT(len >= 0);
 
-    const auto write = [&, this](Span<const uint8_t> buf) {
-        while (buf.len) {
-            Size sent = send(fd, buf.ptr, buf.len, MSG_MORE);
+    StreamWriter writer;
 
-            if (sent < 0) {
-                if (errno != EPIPE) {
-                    LogError("Failed to send to client: %1", strerror(errno));
-                }
-                return false;
-            }
-
-            buf.ptr += sent;
-            buf.len -= sent;
-        }
-
-        return true;
-    };
-
-    StreamWriter writer(write, "<http>");
+    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
+    writer.Open(write, "<http>");
 
     const char *protocol = (version == 11) ? "HTTP/1.1" : "HTTP/1.0";
     Print(&writer, "%1 %2 %3\r\n", protocol, status, ErrorMessages.FindValue(status, "Unknown"));
@@ -464,9 +448,18 @@ void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> 
         Print(&writer, "%1: %2\r\n", header.key, header.value);
     }
 
-    Print(&writer, "Content-Length: %1\r\n", len);
-    Print(&writer, "\r\n");
-    func(fd, &writer);
+    if (len >= 0) {
+        Print(&writer, "Content-Length: %1\r\n\r\n", len);
+        func(fd, &writer);
+    } else {
+        Print(&writer, "Transfer-Encoding: chunked\r\n\r\n");
+
+        const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
+        StreamWriter chunker(chunk, "<http>");
+
+        func(-1, &chunker);
+        writer.Write("0\r\n\r\n");
+    }
 
     int off = 0;
     setsockopt(fd, IPPROTO_TCP, TCP_CORK, &off, sizeof(off));
@@ -1018,6 +1011,61 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
                 return false;
             }
         } break;
+    }
+
+    return true;
+}
+
+bool http_IO::WriteDirect(Span<const uint8_t> data)
+{
+    while (data.len) {
+        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE);
+
+        if (sent < 0) {
+            if (errno != EPIPE) {
+                LogError("Failed to send to client: %1", strerror(errno));
+            }
+            return false;
+        }
+
+        data.ptr += sent;
+        data.len -= sent;
+    }
+
+    return true;
+}
+
+bool http_IO::WriteChunked(Span<const uint8_t> data)
+{
+    while (data.len) {
+        LocalArray<uint8_t, 16384> buf;
+
+        Size copy_len = std::min(RG_SIZE(buf.data) - 8, data.len);
+
+        buf.len = 8 + copy_len;
+        Fmt(buf.As<char>(), "%1\r\n", FmtHex(copy_len).Pad0(-4));
+        MemCpy(buf.data + 6, data.ptr, copy_len);
+        buf.data[6 + copy_len + 0] = '\r';
+        buf.data[6 + copy_len + 1] = '\n';
+
+        Span<const uint8_t> remain = buf;
+
+        do {
+            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE);
+
+            if (sent < 0) {
+                if (errno != EPIPE) {
+                    LogError("Failed to send to client: %1", strerror(errno));
+                }
+                return false;
+            }
+
+            remain.ptr += sent;
+            remain.len -= sent;
+         } while (remain.len);
+
+        data.ptr += copy_len;
+        data.len -= copy_len;
     }
 
     return true;
