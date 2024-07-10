@@ -917,6 +917,7 @@ http_IO::PrepareStatus http_IO::Prepare()
             SendError(405);
             return PrepareStatus::Error;
         }
+        request.client_addr = addr;
 
         Span<char> query;
         url = SplitStr(url, '?', &query);
