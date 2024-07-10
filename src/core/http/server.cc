@@ -760,7 +760,9 @@ http_IO *http_Daemon::RequestHandler::CreateClient(int fd, struct sockaddr *sa)
         int idx = GetRandomInt(0, pool.len);
 
         client = pool[idx];
-        std::swap(pool[idx], pool.data[--pool.len]);
+
+        std::swap(pool[idx], pool[pool.len - 1]);
+        pool.len--;
     } else {
         client = new http_IO(this);
     }
