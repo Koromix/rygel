@@ -662,7 +662,7 @@ bool http_Daemon::RequestHandler::Run()
             http_IO::PrepareStatus ret = client->Prepare();
 
             switch (ret) {
-                case http_IO::PrepareStatus::Incomplete: {
+                case http_IO::PrepareStatus::Waiting: {
                     struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
                     pfds.Append(pfd);
                 } break;
@@ -824,7 +824,7 @@ http_IO::PrepareStatus http_IO::Prepare()
             }
             if (read < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
-                    return PrepareStatus::Incomplete;
+                    return PrepareStatus::Waiting;
                 if (errno == ECONNRESET)
                     return PrepareStatus::Error;
 

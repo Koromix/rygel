@@ -126,7 +126,7 @@ class http_IO {
     RG_DELETE_COPY(http_IO)
 
     enum class PrepareStatus {
-        Incomplete,
+        Waiting,
         Ready,
         Busy,
         Closed,
