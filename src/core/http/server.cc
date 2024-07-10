@@ -54,8 +54,8 @@ private:
     void Wake();
 };
 
-static const int KeepAliveCount = 200;
-static const int KeepAliveDelay = 5000;
+static const int KeepAliveCount = 1000;
+static const int KeepAliveDelay = 20000;
 
 static RG_CONSTINIT ConstMap<128, int, const char *> ErrorMessages = {
     { 100, "Continue" },
