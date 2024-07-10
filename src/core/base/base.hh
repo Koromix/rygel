@@ -1161,20 +1161,15 @@ void ReleaseSpan(Allocator *alloc, Span<T> mem)
 }
 
 class LinkedAllocator final: public Allocator {
-    struct Node {
-        Node *prev;
-        Node *next;
-    };
     struct Bucket {
-         // Keep head first or stuff will break
-        Node head;
+        Bucket *prev;
+        Bucket *next;
         uint8_t data[];
     };
 
     Allocator *allocator;
-    // We want allocators to be memmovable, which means we can't use a circular linked list.
-    // Even though it makes the code less nice.
-    Node list = {};
+
+    Bucket *list = nullptr;
 
 public:
     LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
@@ -1190,7 +1185,7 @@ public:
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
     void Release(const void *ptr, Size size) override;
 
-    bool IsUsed() const { return list.next; }
+    bool IsUsed() const { return list; }
 
 private:
     static Bucket *PointerToBucket(void *ptr);

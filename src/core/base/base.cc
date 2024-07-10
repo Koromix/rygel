@@ -191,20 +191,25 @@ LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
 {
     ReleaseAll();
     list = other.list;
-    other.list = {};
+    other.list = nullptr;
 
     return *this;
 }
 
 void LinkedAllocator::ReleaseAll()
 {
-    Node *head = list.next;
-    while (head) {
-        Node *next = head->next;
-        ReleaseRaw(allocator, head, -1);
-        head = next;
-    }
-    list = {};
+    if (!list)
+        return;
+
+    Bucket *bucket = list;
+
+    do {
+        Bucket *next = bucket->next;
+        ReleaseRaw(allocator, bucket, -1);
+        bucket = next;
+    } while (bucket != list);
+
+    list = nullptr;
 }
 
 void LinkedAllocator::ReleaseAllExcept(void *ptr)
@@ -215,43 +220,30 @@ void LinkedAllocator::ReleaseAllExcept(void *ptr)
     }
 
     Bucket *keep = PointerToBucket(ptr);
+    Bucket *bucket = keep->next;
 
-    if (list.next == &keep->head) {
-        list.next = keep->head.next;
-    }
-    if (list.prev == &keep->head) {
-        list.prev = keep->head.prev;
-    }
-    if (keep->head.next) {
-        keep->head.next->prev = keep->head.prev;
-    }
-    if (keep->head.prev) {
-        keep->head.prev->next = keep->head.next;
+    while (bucket != keep) {
+        Bucket *next = bucket->next;
+        ReleaseRaw(allocator, bucket, -1);
+        bucket = next;
     }
 
-    ReleaseAll();
+    list = keep;
 
-    list.prev = &keep->head;
-    list.next = &keep->head;
-    keep->head.prev = nullptr;
-    keep->head.next = nullptr;
+    keep->prev = keep;
+    keep->next = keep;
 }
 
 void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
-    Bucket *bucket = (Bucket *)AllocateRaw(allocator, RG_SIZE(Node) + size, flags);
+    Bucket *bucket = (Bucket *)AllocateRaw(allocator, RG_SIZE(Bucket) + size, flags);
 
-    if (list.prev) {
-        list.prev->next = &bucket->head;
-        bucket->head.prev = list.prev;
-        bucket->head.next = nullptr;
-        list.prev = &bucket->head;
-    } else {
-        list.prev = &bucket->head;
-        list.next = &bucket->head;
-        bucket->head.prev = nullptr;
-        bucket->head.next = nullptr;
-    }
+    list = list ? list : bucket;
+
+    bucket->prev = list;
+    bucket->next = list->prev;
+    bucket->prev->next = bucket;
+    bucket->next->prev = bucket;
 
     return (void *)bucket->data;
 }
@@ -265,19 +257,19 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
         ptr = nullptr;
     } else {
         Bucket *bucket = PointerToBucket(ptr);
+        bool single = (bucket->next == bucket);
 
-        bucket = (Bucket *)ResizeRaw(allocator, bucket, RG_SIZE(Node) + old_size,
-                                                        RG_SIZE(Node) + new_size, flags);
+        bucket = (Bucket *)ResizeRaw(allocator, bucket, RG_SIZE(Bucket) + old_size,
+                                                        RG_SIZE(Bucket) + new_size, flags);
 
-        if (bucket->head.next) {
-            bucket->head.next->prev = &bucket->head;
+        list = bucket;
+
+        if (single) {
+            bucket->prev = bucket;
+            bucket->next = bucket;
         } else {
-            list.prev = &bucket->head;
-        }
-        if (bucket->head.prev) {
-            bucket->head.prev->next = &bucket->head;
-        } else {
-            list.next = &bucket->head;
+            bucket->prev->next = bucket;
+            bucket->next->prev = bucket;
         }
 
         ptr = (void *)bucket->data;
@@ -288,22 +280,18 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
 
 void LinkedAllocator::Release(const void *ptr, Size size)
 {
-    if (ptr) {
-        Bucket *bucket = PointerToBucket((void *)ptr);
+    if (!ptr)
+        return;
 
-        if (bucket->head.next) {
-            bucket->head.next->prev = bucket->head.prev;
-        } else {
-            list.prev = bucket->head.prev;
-        }
-        if (bucket->head.prev) {
-            bucket->head.prev->next = bucket->head.next;
-        } else {
-            list.next = bucket->head.next;
-        }
+    Bucket *bucket = PointerToBucket((void *)ptr);
+    bool single = (bucket->next == bucket);
 
-        ReleaseRaw(allocator, bucket, RG_SIZE(Bucket) + size);
-    }
+    list = single ? nullptr : bucket->next;
+
+    bucket->prev->next = bucket->next;
+    bucket->next->prev = bucket->prev;
+
+    ReleaseRaw(allocator, bucket, RG_SIZE(Bucket) + size);
 }
 
 LinkedAllocator::Bucket *LinkedAllocator::PointerToBucket(void *ptr)
