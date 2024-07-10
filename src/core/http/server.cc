@@ -290,6 +290,9 @@ void http_Daemon::Stop()
         async = nullptr;
     }
 
+    for (RequestHandler *handler: handlers) {
+        delete handler;
+    }
     handlers.Clear();
 
     CloseSocket(listen_fd);
@@ -792,7 +795,7 @@ http_IO::PrepareStatus http_IO::Prepare()
 
         buf.len = pos - 4;
         buf.ptr[buf.len] = 0;
-        intro = buf.Leak().As<char>();
+        intro = buf.As<char>();
     }
 
     Span<char> remain = intro;
