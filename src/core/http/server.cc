@@ -46,8 +46,6 @@ class http_Daemon::RequestHandler {
     std::shared_mutex wake_mutex;
     bool wake_needed = false;
 
-    BucketArray<http_IO *, 2048> clients;
-
 public:
     RequestHandler(http_Daemon *daemon) : daemon(daemon) {}
 
@@ -569,15 +567,24 @@ bool http_Daemon::RequestHandler::Run()
     RG_ASSERT(event_fd < 0);
 
     int listen_fd = daemon->listen_fd;
-    Async *async = daemon->async;
     http_ClientAddressMode addr_mode = daemon->addr_mode;
+
+    Async async(daemon->async);
+    BucketArray<http_IO *, 2048> clients;
 
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (event_fd < 0) {
         LogError("Failed to create eventfd: %1", strerror(errno));
         return false;
     }
+
     RG_DEFER {
+        async.Sync();
+
+        for (const http_IO *client: clients) {
+            delete client;
+        };
+
         CloseDescriptor(event_fd);
         event_fd = -1;
     };
@@ -668,7 +675,7 @@ bool http_Daemon::RequestHandler::Run()
                     client->keepalive &= (--client->count <= 0) || (now <= client->timeout);
 
                     if (client->keepalive) {
-                        async->Run([=, this] {
+                        async.Run([=, this] {
                             daemon->handle_func(client->request, client);
 
                             client->Reset();
@@ -679,7 +686,7 @@ bool http_Daemon::RequestHandler::Run()
                     } else {
                         forget(it);
 
-                        async->Run([=, this] {
+                        async.Run([=, this] {
                             daemon->handle_func(client->request, client);
                             delete client;
 
