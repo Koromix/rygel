@@ -185,7 +185,7 @@ public:
 
 private:
     http_IO(RequestHandler *handler);
-    ~http_IO();
+    ~http_IO() { Close(); }
 
     bool Init(int fd, struct sockaddr *sa);
     bool InitAddress(http_ClientAddressMode addr_mode);

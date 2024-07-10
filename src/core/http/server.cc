@@ -466,10 +466,6 @@ void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> 
 
     keepalive &= writer.IsValid();
 
-    for (const auto &finalize: response.finalizers) {
-        finalize();
-    }
-
     response.sent = true;
 }
 
@@ -788,11 +784,6 @@ http_IO::http_IO(RequestHandler *handler)
     timeout = GetMonotonicTime() + KeepAliveDelay;
 }
 
-http_IO::~http_IO()
-{
-    CloseSocket(fd);
-}
-
 http_IO::PrepareStatus http_IO::Prepare()
 {
     if (ready)
@@ -1076,6 +1067,10 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
 
 void http_IO::Reset()
 {
+    for (const auto &finalize: response.finalizers) {
+        finalize();
+    }
+
     buf.RemoveFrom(0);
     allocator.Reset();
 
@@ -1093,6 +1088,10 @@ void http_IO::Reset()
 
 void http_IO::Close()
 {
+    for (const auto &finalize: response.finalizers) {
+        finalize();
+    }
+
     CloseSocket(fd);
     fd = -1;
 
