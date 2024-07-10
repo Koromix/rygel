@@ -198,8 +198,10 @@ EXPORT int sym_int = 0;
 EXPORT const char *sym_str = NULL;
 EXPORT int sym_int3[3] = { 0, 0, 0 };
 
-static char16_t *write_ptr;
-static int write_max;
+static char16_t *write_ptr16;
+static int write_max16;
+static char32_t *write_ptr32;
+static int write_max32;
 
 EXPORT void CallFree(void *ptr)
 {
@@ -510,6 +512,19 @@ EXPORT const char *PrintFmt(const char *fmt, ...)
     return ptr;
 }
 
+EXPORT const wchar_t *PrintFmtWide(const wchar_t *fmt, ...)
+{
+    const int size = 256;
+    wchar_t *ptr = malloc(size);
+
+    va_list ap;
+    va_start(ap, fmt);
+    vswprintf(ptr, size, fmt, ap);
+    va_end(ap);
+
+    return ptr;
+}
+
 size_t Length16(const char16_t *str)
 {
     size_t len = 0;
@@ -783,6 +798,26 @@ EXPORT size_t UpperCaseStrAscii16(const char16_t *str, char16_t *out)
     return len;
 }
 
+EXPORT size_t UpperCaseStrAscii32(const char32_t *str, char32_t *out)
+{
+    size_t len = 0;
+
+    while (str[len]) {
+        char32_t c = str[len];
+
+        if (c >= 'a' && c <= 'z') {
+            out[len] = (char32_t)(c - 32);
+        } else {
+            out[len] = c;
+        }
+
+        len++;
+    }
+    out[len] = 0;
+
+    return len;
+}
+
 EXPORT void ChangeDirectory(const char *dirname)
 {
     chdir(dirname);
@@ -975,24 +1010,44 @@ EXPORT void GetSymbolInt3(int out[3])
     out[2] = sym_int3[2];
 }
 
-EXPORT void WriteConfigure(char16_t *buf, int max)
+EXPORT void WriteConfigure16(char16_t *buf, int max)
 {
     assert(max > 0);
 
-    write_ptr = buf;
-    write_max = max - 1;
+    write_ptr16 = buf;
+    write_max16 = max - 1;
 }
 
-EXPORT void WriteString(const char16_t *str)
+EXPORT void WriteString16(const char16_t *str)
 {
     int len = 0;
 
-    while (str[len] && len < write_max) {
-        write_ptr[len] = str[len];
+    while (str[len] && len < write_max16) {
+        write_ptr16[len] = str[len];
         len++;
     }
 
-    write_ptr[len] = 0;
+    write_ptr16[len] = 0;
+}
+
+EXPORT void WriteConfigure32(char32_t *buf, int max)
+{
+    assert(max > 0);
+
+    write_ptr32 = buf;
+    write_max32 = max - 1;
+}
+
+EXPORT void WriteString32(const char32_t *str)
+{
+    int len = 0;
+
+    while (str[len] && len < write_max32) {
+        write_ptr32[len] = str[len];
+        len++;
+    }
+
+    write_ptr32[len] = 0;
 }
 
 EXPORT bool ReturnBool(int cond)

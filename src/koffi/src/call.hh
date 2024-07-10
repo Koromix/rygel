@@ -42,6 +42,7 @@ class alignas(8) CallData {
             Buffer,
             String,
             String16,
+            String32,
             Object
         };
 
@@ -117,6 +118,8 @@ public:
     Size PushStringValue(Napi::Value value, const char **out_str);
     bool PushString16(Napi::Value value, int directions, const char16_t **out_str16);
     Size PushString16Value(Napi::Value value, const char16_t **out_str16);
+    bool PushString32(Napi::Value value, int directions, const char32_t **out_str32);
+    Size PushString32Value(Napi::Value value, const char32_t **out_str32);
     bool PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origin);
     bool PushNormalArray(Napi::Array array, Size len, const TypeInfo *type, uint8_t *origin);
     void PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo *type, uint8_t *origin);

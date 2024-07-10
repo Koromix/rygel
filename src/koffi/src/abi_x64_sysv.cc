@@ -121,6 +121,7 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
         case PrimitiveKind::UInt64S:
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
             classes[0] = MergeClasses(classes[0], RegisterClass::Integer);
@@ -326,6 +327,13 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
 
                 *(const char16_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str16;
             } break;
+            case PrimitiveKind::String32: {
+                const char32_t *str32;
+                if (!PushString32(value, param.directions, &str32)) [[unlikely]]
+                    return false;
+
+                *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++) = str32;
+            } break;
             case PrimitiveKind::Pointer: {
                 void *ptr;
                 if (!PushPointer(value, param.type, param.directions, &ptr)) [[unlikely]]
@@ -458,6 +466,7 @@ void CallData::Execute(const FunctionInfo *func, void *native)
         case PrimitiveKind::UInt64S:
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: { result.u64 = PERFORM_CALL(GG).rax; } break;
         case PrimitiveKind::Record:
@@ -509,6 +518,7 @@ Napi::Value CallData::Complete(const FunctionInfo *func)
         case PrimitiveKind::UInt64S: return NewBigInt(env, ReverseBytes(result.u64));
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
             Napi::Value wrapper = WrapPointer(env, instance, func->ret.type, result.ptr);
@@ -674,6 +684,12 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 Napi::Value arg = str16 ? Napi::String::New(env, str16) : env.Null();
                 arguments.Append(arg);
             } break;
+            case PrimitiveKind::String32: {
+                const char32_t *str32 = *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
+
+                Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
+                arguments.Append(arg);
+            } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
                 void *ptr2 = *(void **)((param.gpr_count ? gpr_ptr : args_ptr)++);
@@ -808,6 +824,13 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
                 return;
 
             out_reg->rax = (uint64_t)str16;
+        } break;
+        case PrimitiveKind::String32: {
+            const char32_t *str32;
+            if (!PushString32(value, 1, &str32)) [[unlikely]]
+                return;
+
+            out_reg->rax = (uint64_t)str32;
         } break;
         case PrimitiveKind::Pointer: {
             uint8_t *ptr;

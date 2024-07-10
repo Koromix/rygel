@@ -18,6 +18,7 @@ int16, int16_t                | Number (integer) | 2     | Signed     |
 uint16, uint16_t              | Number (integer) | 2     | Unsigned   |
 short                         | Number (integer) | 2     | Signed     |
 ushort, unsigned short        | Number (integer) | 2     | Unsigned   |
+char32, char32_t              | Number (integer) | 4     | Signed     |
 int32, int32_t                | Number (integer) | 4     | Signed     |
 uint32, uint32_t              | Number (integer) | 4     | Unsigned   |
 int                           | Number (integer) | 4     | Signed     |
@@ -35,18 +36,20 @@ Koffi also accepts BigInt values when converting from JS to C integers. If the v
 
 Koffi defines a few more types that can change size depending on the OS and the architecture:
 
-C type           | JS type          | Signedness | Note
----------------- | ---------------- | ---------- | ------------------------------------------------
-bool             | Boolean          |            | Usually one byte
-long             | Number (integer) | Signed     | 4 or 8 bytes depending on platform (LP64, LLP64)
-ulong            | Number (integer) | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
-unsigned long    | Number (integer) | Unsigned   | 4 or 8 bytes depending on platform (LP64, LLP64)
-intptr           | Number (integer) | Signed     | 4 or 8 bytes depending on register width
-intptr_t         | Number (integer) | Signed     | 4 or 8 bytes depending on register width
-uintptr          | Number (integer) | Unsigned   | 4 or 8 bytes depending on register width
-uintptr_t        | Number (integer) | Unsigned   | 4 or 8 bytes depending on register width
-str, string      | String           |            | JS strings are converted to and from UTF-8
-str16, string16  | String           |            | JS strings are converted to and from UTF-16 (LE)
+C type           | JS type          | Signedness  | Note
+---------------- | ---------------- | ----------- | ------------------------------------------------
+bool             | Boolean          |             | Usually one byte
+long             | Number (integer) | Signed      | 4 or 8 bytes depending on platform (LP64, LLP64)
+ulong            | Number (integer) | Unsigned    | 4 or 8 bytes depending on platform (LP64, LLP64)
+unsigned long    | Number (integer) | Unsigned    | 4 or 8 bytes depending on platform (LP64, LLP64)
+intptr           | Number (integer) | Signed      | 4 or 8 bytes depending on register width
+intptr_t         | Number (integer) | Signed      | 4 or 8 bytes depending on register width
+uintptr          | Number (integer) | Unsigned    | 4 or 8 bytes depending on register width
+uintptr_t        | Number (integer) | Unsigned    | 4 or 8 bytes depending on register width
+wchar_t          | Number (integer) | *Undefined* | 2 bytes on Windows, 4 bytes Linux, macOS, BSD
+str, string      | String           |             | JS strings are converted to and from UTF-8
+str16, string16  | String           |             | JS strings are converted to and from UTF-16 (LE)
+str32, string32  | String           |             | JS strings are converted to and from UTF-32 (LE)
 
 Primitive types can be specified by name (in a string) or through `koffi.types`:
 
@@ -368,8 +371,9 @@ Koffi can also convert JS strings to fixed-sized arrays in the following cases:
 
 - **char arrays** are filled with the UTF-8 encoded string, truncated if needed. The buffer is always NUL-terminated.
 - **char16 (or char16_t) arrays** are filled with the UTF-16 encoded string, truncated if needed. The buffer is always NUL-terminated.
+- **char32 (or char32_t) arrays** are filled with the UTF-32 encoded string, truncated if needed. The buffer is always NUL-terminated.
 
-The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16 and char16_t arrays, but you can also explicitly ask for this with the `String` array hint (e.g. `koffi.array('char', 8, 'String')`).
+The reverse case is also true, Koffi can convert a C fixed-size buffer to a JS string. This happens by default for char, char16_t and char32_t arrays, but you can also explicitly ask for this with the `String` array hint (e.g. `koffi.array('char', 8, 'String')`).
 
 ### Dynamic arrays (pointers)
 

@@ -196,6 +196,15 @@ T GetNumber(Napi::Value value)
 }
 
 template <typename T>
+Size NullTerminatedLength(const T *ptr)
+{
+    Size len = 0;
+    while (ptr[len]) {
+        len++;
+    }
+    return len;
+}
+template <typename T>
 Size NullTerminatedLength(const T *ptr, Size max)
 {
     Size len = 0;
@@ -204,6 +213,10 @@ Size NullTerminatedLength(const T *ptr, Size max)
     }
     return len;
 }
+
+Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len);
+static inline Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr)
+    { return MakeStringFromUTF32(env, ptr, NullTerminatedLength(ptr)); }
 
 Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type);
 void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type);

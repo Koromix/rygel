@@ -81,6 +81,7 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
         case PrimitiveKind::UInt64S:
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
         case PrimitiveKind::Float32:
         case PrimitiveKind::Float64: {} break;
 
@@ -634,6 +635,8 @@ bool CanPassType(const TypeInfo *type, int directions)
             return true;
         if (type->primitive == PrimitiveKind::String16)
             return true;
+        if (type->primitive == PrimitiveKind::String32)
+            return true;
 
         return false;
     } else {
@@ -806,6 +809,34 @@ int GetTypedArrayType(const TypeInfo *type)
     RG_UNREACHABLE();
 }
 
+Napi::String MakeStringFromUTF32(Napi::Env env, const char32_t *ptr, Size len)
+{
+    HeapArray<char16_t> buf;
+    buf.Reserve(len * 2);
+
+    for (Size i = 0; i < len; i++) {
+        char32_t uc = ptr[i];
+
+        if (uc < 0xFFFF) {
+            if (uc < 0xD800 || uc > 0xDFFF) {
+                buf.Append((char16_t)uc);
+            } else {
+                buf.Append('?');
+            }
+        } else if (uc < 0x10FFFF) {
+            uc -= 0x0010000UL;
+
+            buf.Append((char16_t)((uc >> 10) + 0xD800));
+            buf.Append((char16_t)((uc & 0x3FFul) + 0xDC00));
+        } else {
+            buf.Append('?');
+        }
+    }
+
+    Napi::String str = Napi::String::New(env, buf.ptr, buf.len);
+    return str;
+}
+
 Napi::Object DecodeObject(Napi::Env env, const uint8_t *origin, const TypeInfo *type)
 {
     // We can't decode unions because we don't know which member is valid
@@ -914,6 +945,10 @@ void DecodeObject(Napi::Object obj, const uint8_t *origin, const TypeInfo *type)
             case PrimitiveKind::String16: {
                 const char16_t *str16 = *(const char16_t **)src;
                 obj.Set(member.name, str16 ? Napi::String::New(env, str16) : env.Null());
+            } break;
+            case PrimitiveKind::String32: {
+                const char32_t *str32 = *(const char32_t **)src;
+                obj.Set(member.name, str32 ? MakeStringFromUTF32(env, str32) : env.Null());
             } break;
             case PrimitiveKind::Pointer:
             case PrimitiveKind::Callback: {
@@ -1039,7 +1074,17 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
         case PrimitiveKind::Int16S: { POP_NUMBER_ARRAY_SWAP(Int16Array, int16_t); } break;
         case PrimitiveKind::UInt16: { POP_NUMBER_ARRAY(Uint16Array, uint16_t); } break;
         case PrimitiveKind::UInt16S: { POP_NUMBER_ARRAY_SWAP(Uint16Array, uint16_t); } break;
-        case PrimitiveKind::Int32: { POP_NUMBER_ARRAY(Int32Array, int32_t); } break;
+        case PrimitiveKind::Int32: {
+            if (type->hint == ArrayHint::String) {
+                const char32_t *ptr = (const char32_t *)origin;
+                Size count = NullTerminatedLength(ptr, len);
+
+                Napi::String str = MakeStringFromUTF32(env, ptr, count);
+                return str;
+            }
+
+            POP_NUMBER_ARRAY(Int32Array, int32_t);
+        } break;
         case PrimitiveKind::Int32S: { POP_NUMBER_ARRAY_SWAP(Int32Array, int32_t); } break;
         case PrimitiveKind::UInt32: { POP_NUMBER_ARRAY(Uint32Array, uint32_t); } break;
         case PrimitiveKind::UInt32S: { POP_NUMBER_ARRAY_SWAP(Uint32Array, uint32_t); } break;
@@ -1077,6 +1122,12 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
             POP_ARRAY({
                 const char16_t *str16 = *(const char16_t **)src;
                 array.Set(i, str16 ? Napi::String::New(env, str16) : env.Null());
+            });
+        } break;
+        case PrimitiveKind::String32: {
+            POP_ARRAY({
+                const char32_t *str32 = *(const char32_t **)src;
+                array.Set(i, str32 ? MakeStringFromUTF32(env, str32) : env.Null());
             });
         } break;
         case PrimitiveKind::Pointer:
@@ -1197,6 +1248,7 @@ void DecodeNormalArray(Napi::Array array, const uint8_t *origin, const TypeInfo 
         } break;
         case PrimitiveKind::String:
         case PrimitiveKind::String16:
+        case PrimitiveKind::String32:
         case PrimitiveKind::Pointer:
         case PrimitiveKind::Callback: {
             POP_ARRAY({
@@ -1293,6 +1345,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
 
     if (len && type->primitive != PrimitiveKind::String &&
                type->primitive != PrimitiveKind::String16 &&
+               type->primitive != PrimitiveKind::String32 &&
                type->primitive != PrimitiveKind::Prototype) {
         if (*len >= 0) {
             type = MakeArrayType(instance, type, *len);
@@ -1306,6 +1359,11 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
                 case PrimitiveKind::Int16:
                 case PrimitiveKind::UInt16: {
                     Size count = NullTerminatedLength((const char16_t *)ptr, RG_SIZE_MAX);
+                    type = MakeArrayType(instance, type, count);
+                } break;
+                case PrimitiveKind::Int32:
+                case PrimitiveKind::UInt32: {
+                    Size count = NullTerminatedLength((const char32_t *)ptr, RG_SIZE_MAX);
                     type = MakeArrayType(instance, type, count);
                 } break;
 
@@ -1373,6 +1431,15 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             } else {
                 const char16_t *str16 = *(const char16_t **)ptr;
                 return str16 ? Napi::String::New(env, str16) : env.Null();
+            }
+        } break;
+        case PrimitiveKind::String32: {
+            if (len) {
+                const char32_t *str32 = *(const char32_t **)ptr;
+                return str32 ? MakeStringFromUTF32(env, str32, *len) : env.Null();
+            } else {
+                const char32_t *str32 = *(const char32_t **)ptr;
+                return str32 ? MakeStringFromUTF32(env, str32) : env.Null();
             }
         } break;
         case PrimitiveKind::Pointer:
@@ -1464,6 +1531,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
 
     if (len && type->primitive != PrimitiveKind::String &&
                type->primitive != PrimitiveKind::String16 &&
+               type->primitive != PrimitiveKind::String32 &&
                type->primitive != PrimitiveKind::Prototype) {
         if (*len < 0) [[unlikely]] {
             ThrowError<Napi::TypeError>(env, "Automatic (negative) length is only supported when decoding");
@@ -1534,6 +1602,12 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
             if (!call.PushString16(value, 1, &str16)) [[unlikely]]
                 return false;
             *(const char16_t **)origin = str16;
+        } break;
+        case PrimitiveKind::String32: {
+            const char32_t *str32;
+            if (!call.PushString32(value, 1, &str32)) [[unlikely]]
+                return false;
+            *(const char32_t **)origin = str32;
         } break;
         case PrimitiveKind::Pointer: {
             void *ptr;

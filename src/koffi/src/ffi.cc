@@ -676,7 +676,8 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
 
     if (type->primitive != PrimitiveKind::Pointer &&
             type->primitive != PrimitiveKind::String &&
-            type->primitive != PrimitiveKind::String16) {
+            type->primitive != PrimitiveKind::String16 &&
+            type->primitive != PrimitiveKind::String32) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", type->name);
         return env.Null();
     }
@@ -1922,7 +1923,8 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     if (type->primitive != PrimitiveKind::Pointer &&
             type->primitive != PrimitiveKind::Callback &&
             type->primitive != PrimitiveKind::String &&
-            type->primitive != PrimitiveKind::String16) [[unlikely]] {
+            type->primitive != PrimitiveKind::String16 &&
+            type->primitive != PrimitiveKind::String32) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Only pointer or string types can be used for casting");
         return env.Null();
     }
@@ -2171,7 +2173,10 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
     if (IsInteger(type) || IsFloat(type)) {
         type->flags |= (int)TypeFlag::HasTypedArray;
     }
-    if (TestStr(type->name, "char") || TestStr(type->name, "char16") || TestStr(type->name, "char16_t")) {
+    if (TestStr(type->name, "char") ||
+            TestStr(type->name, "char16") || TestStr(type->name, "char16_t") ||
+            TestStr(type->name, "char32") || TestStr(type->name, "char32_t") ||
+            TestStr(type->name, "wchar") || TestStr(type->name, "wchar_t")) {
         type->flags |= (int)TypeFlag::IsCharLike;
     }
 
@@ -2329,6 +2334,12 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         RegisterPrimitiveType(env, types, {"char"}, PrimitiveKind::Int8, 1, 1);
         RegisterPrimitiveType(env, types, {"unsigned char", "uchar"}, PrimitiveKind::UInt8, 1, 1);
         RegisterPrimitiveType(env, types, {"char16_t", "char16"}, PrimitiveKind::Int16, 2, 2);
+        RegisterPrimitiveType(env, types, {"char32_t", "char32"}, PrimitiveKind::Int32, 4, 4);
+        if (RG_SIZE(wchar_t) == 2) {
+            RegisterPrimitiveType(env, types, {"wchar_t", "wchar"}, PrimitiveKind::Int16, 2, 2);
+        } else if (RG_SIZE(wchar_t) == 4) {
+            RegisterPrimitiveType(env, types, {"wchar_t", "wchar"}, PrimitiveKind::Int32, 4, 4);
+        }
         RegisterPrimitiveType(env, types, {"int16_t", "int16"}, PrimitiveKind::Int16, 2, 2);
         RegisterPrimitiveType(env, types, {"int16_le_t", "int16_le"}, GetLittleEndianPrimitive(PrimitiveKind::Int16), 2, 2);
         RegisterPrimitiveType(env, types, {"int16_be_t", "int16_be"}, GetBigEndianPrimitive(PrimitiveKind::Int16), 2, 2);
@@ -2362,12 +2373,20 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         RegisterPrimitiveType(env, types, {"double", "float64"}, PrimitiveKind::Float64, 8, alignof(double));
         RegisterPrimitiveType(env, types, {"char *", "str", "string"}, PrimitiveKind::String, RG_SIZE(void *), alignof(void *), "char");
         RegisterPrimitiveType(env, types, {"char16_t *", "char16 *", "str16", "string16"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *), "char16_t");
+        RegisterPrimitiveType(env, types, {"char32_t *", "char32 *", "str32", "string32"}, PrimitiveKind::String32, RG_SIZE(void *), alignof(void *), "char32_t");
+        if (RG_SIZE(wchar_t) == 2) {
+            RegisterPrimitiveType(env, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String16, RG_SIZE(void *), alignof(void *), "wchar_t");
+        } else if (RG_SIZE(wchar_t) == 4) {
+            RegisterPrimitiveType(env, types, {"wchar_t *", "wchar *"}, PrimitiveKind::String32, RG_SIZE(void *), alignof(void *), "wchar_t");
+        }
 
         instance->void_type = instance->types_map.FindValue("void", nullptr);
         instance->char_type = instance->types_map.FindValue("char", nullptr);
         instance->char16_type = instance->types_map.FindValue("char16", nullptr);
+        instance->char32_type = instance->types_map.FindValue("char32", nullptr);
         instance->str_type = instance->types_map.FindValue("char *", nullptr);
         instance->str16_type = instance->types_map.FindValue("char16_t *", nullptr);
+        instance->str32_type = instance->types_map.FindValue("char32_t *", nullptr);
 
         instance->base_types_len = instance->types.len;
     }
