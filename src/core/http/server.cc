@@ -35,27 +35,23 @@
 #include <netinet/tcp.h>
 #include <sys/stat.h>
 #include <sys/sendfile.h>
+#include <sys/eventfd.h>
 
 namespace RG {
 
 class http_Daemon::RequestHandler {
     http_Daemon *daemon;
-    int pipe[2];
 
-    std::atomic_bool run { true };
-
+    int event_fd = -1;
     BucketArray<http_IO *, 2048> clients;
 
 public:
-    RequestHandler(http_Daemon *daemon, int pipe[2])
-        : daemon(daemon), pipe { pipe[0], pipe[1] } {}
-    ~RequestHandler();
+    RequestHandler(http_Daemon *daemon) : daemon(daemon) {}
 
     bool Run();
-    void Stop();
 
-    bool Wake();
-    bool Delegate(Span<const int> fds);
+private:
+    void Wake();
 };
 
 static const int KeepAliveCount = 200;
@@ -253,69 +249,16 @@ bool http_Daemon::Start(const http_Config &config,
     if (listen_fd < 0 && !Bind(config))
         return false;
 
-    int jobs = 1 + GetCoreCount() * 4;
-    async = new Async(jobs);
+    int fronts = GetCoreCount() * 2;
+    int backs = GetCoreCount() * 2;
+    async = new Async(fronts + backs);
 
-    for (Size i = 0; i < GetCoreCount(); i++) {
-        int fds[2];
-        if (pipe2(fds, O_CLOEXEC | O_NONBLOCK) < 0) {
-            LogError("Failed to create pipe: %1", strerror(errno));
-            return 1;
-        }
-
-        RequestHandler *handler = new RequestHandler(this, fds);
+    for (Size i = 0; i < fronts; i++) {
+        RequestHandler *handler = new RequestHandler(this);
         handlers.Append(handler);
     }
 
     handle_func = func;
-
-    // Dispatch new clients
-    async->Run([this] {
-        Size idx = 0;
-
-        for (;;) {
-            LocalArray<int, 256> fds;
-            static_assert(RG_SIZE(fds.data) <= PIPE_BUF);
-
-            do {
-                sockaddr_storage addr;
-                socklen_t addr_len = RG_SIZE(addr);
-
-                int fd = accept4(listen_fd, (sockaddr *)&addr, &addr_len, SOCK_CLOEXEC);
-
-                if (fd < 0) {
-                    if (errno == EINVAL)
-                        return true;
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                        break;
-
-                    LogError("Failed to accept client: %1", strerror(errno));
-                    return false;
-                }
-
-                fds.Append(fd);
-            } while (fds.Available());
-
-            if (fds.len) {
-                if (!handlers[idx]->Delegate(fds))
-                    return false;
-
-                idx = (idx + 1) % handlers.len;
-            } else {
-                struct pollfd pfd = { listen_fd, POLLIN, 0 };
-
-                if (poll(&pfd, 1, -1) < 0) {
-                    LogError("Failed to poll descriptors: %1", strerror(errno));
-                    return false;
-                }
-
-                if (pfd.revents & POLLHUP)
-                    return true;
-            }
-        }
-
-        return true;
-    });
 
     // Run request handlers
     for (RequestHandler *handler: handlers) {
@@ -336,12 +279,8 @@ bool http_Daemon::Start(const http_Config &config,
 
 void http_Daemon::Stop()
 {
-    // Wake up threads
+    // Wake up everyone
     shutdown(listen_fd, SHUT_RD);
-    for (RequestHandler *handler: handlers) {
-        handler->Stop();
-    }
-    handlers.Clear();
 
     // Wait for everyone to wind down
     if (async) {
@@ -350,6 +289,8 @@ void http_Daemon::Stop()
         delete async;
         async = nullptr;
     }
+
+    handlers.Clear();
 
     CloseSocket(listen_fd);
     listen_fd = -1;
@@ -615,53 +556,72 @@ void http_IO::AddFinalizer(const std::function<void()> &func)
     response.finalizers.Append(func);
 }
 
-http_Daemon::RequestHandler::~RequestHandler()
-{
-    CloseDescriptor(pipe[0]);
-    CloseDescriptor(pipe[1]);
-}
-
 bool http_Daemon::RequestHandler::Run()
 {
-    HeapArray<struct pollfd> pfds;
+    RG_ASSERT(event_fd < 0);
 
-    struct pollfd pfd = { pipe[0], POLLIN, 0 };
-    pfds.Append(pfd);
+    int listen_fd = daemon->listen_fd;
+    Async *async = daemon->async;
+    http_ClientAddressMode addr_mode = daemon->addr_mode;
+
+    event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (event_fd < 0) {
+        LogError("Failed to create eventfd: %1", strerror(errno));
+        return false;
+    }
+    RG_DEFER {
+        CloseDescriptor(event_fd);
+        event_fd = -1;
+    };
+
+    HeapArray<struct pollfd> pfds = {
+        { listen_fd, POLLIN, 0 },
+        { event_fd, POLLIN, 0 }
+    };
 
     int64_t busy = 0;
 
-    while (run) {
+    for (;;) {
         int64_t now = GetMonotonicTime();
 
-        pfds.RemoveFrom(1);
-        pfds[0].revents = 0;
+        pfds.RemoveFrom(2);
 
-        // Read queued clients
-        do {
-            int fds[256];
-            static_assert(sizeof(fds) <= PIPE_BUF);
+        if (pfds[0].revents & POLLHUP)
+            return true;
+        if (pfds[0].revents & POLLIN) {
+            sockaddr_storage ss;
+            socklen_t ss_len = RG_SIZE(ss);
 
-            Size ret = read(pipe[0], &fds, RG_SIZE(fds));
-            if (ret < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) 
-                    break;
+            // Accept queued clients
+            for (Size i = 0; i < 64; i++) {
+                int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 
-                LogError("Failed to read from pipe: %1", strerror(errno));
-                return false;
-            }
-            RG_ASSERT(ret % RG_SIZE(int) == 0);
+                if (fd < 0) {
+                    if (errno == EINVAL)
+                        return true;
 
-            for (Size i = 0; i < ret / 4; i++) {
-                int fd = fds[i];
+                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                        pfds[0].revents &= ~POLLIN;
+                        break;
+                    }
 
-                if (fd >= 0) {
-                    http_IO *client = new http_IO(this, fd);
-                    clients.Append(client);
+                    LogError("Failed to accept client: %1", strerror(errno));
+                    return false;
                 }
-            }
 
-            busy = now;
-        } while (false);
+                http_IO *client = new http_IO(this, fd);
+                clients.Append(client);
+
+                busy = now;
+            }
+        }
+
+        // Clear eventfd
+        if (pfds[1].revents & POLLIN) {
+            uint64_t dummy = 0;
+            ssize_t ret = read(event_fd, &dummy, RG_SIZE(dummy));
+            (void)ret;
+        }
 
         auto begin = clients.begin();
         Size removed = 0;
@@ -683,7 +643,7 @@ bool http_Daemon::RequestHandler::Run()
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
-                    if (!client->addr[0] && !client->InitAddress(daemon->addr_mode)) {
+                    if (!client->addr[0] && !client->InitAddress(addr_mode)) {
                         client->keepalive = false;
                         client->SendText(400, "Malformed request");
 
@@ -696,7 +656,7 @@ bool http_Daemon::RequestHandler::Run()
                     client->keepalive &= (--client->count <= 0) || (now <= client->timeout);
 
                     if (client->keepalive) {
-                        daemon->async->Run([=, this] {
+                        async->Run([=, this] {
                             daemon->handle_func(client->request, client);
 
                             client->Reset();
@@ -707,7 +667,7 @@ bool http_Daemon::RequestHandler::Run()
                     } else {
                         forget(it);
 
-                        daemon->async->Run([=, this] {
+                        async->Run([=, this] {
                             daemon->handle_func(client->request, client);
                             delete client;
 
@@ -745,35 +705,14 @@ bool http_Daemon::RequestHandler::Run()
         }
     }
 
-    return true;
+    RG_UNREACHABLE();
 }
 
-void http_Daemon::RequestHandler::Stop()
+void http_Daemon::RequestHandler::Wake()
 {
-    run = false;
-    Wake();
-}
-
-bool http_Daemon::RequestHandler::Wake()
-{
-    int fd = -1;
-    Size ret = write(pipe[1], &fd, RG_SIZE(fd));
-
-    if (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
-        LogError("Failed to wake request handler: %1", strerror(errno));
-        return false;
-    }
-
-    return true;
-}
-
-bool http_Daemon::RequestHandler::Delegate(Span<const int> fds)
-{
-    Size size = fds.len * RG_SIZE(int);
-    Size ret = write(pipe[1], fds.ptr, size);
+    uint64_t one = 1;
+    ssize_t ret = write(event_fd, &one, RG_SIZE(one));
     (void)ret;
-
-    return true;
 }
 
 http_IO::http_IO(RequestHandler *handler, int fd)
