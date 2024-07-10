@@ -20,14 +20,6 @@
         <div class="mission">Télé-expertise</div>
         <div class="mission">Participation aux RCP</div>
     </div>
-    <div>
-        <div class="name">Charlotte GLEMAREC</div>
-        <img src="{{ ASSET static/equipe/charlotte_glemarec.jpg }}" alt="" />
-        <div class="title">Chargée de projet</div>
-        <div class="mission">Coordinatrice</div>
-        <div class="mission">Animatrice du réseau</div>
-        <div class="mission">Suivi et évaluation de la mise en place du dispositif</div>
-    </div>
 </div>
 
 <div class="team">
