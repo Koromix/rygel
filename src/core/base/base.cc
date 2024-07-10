@@ -5979,7 +5979,7 @@ void AsyncPool::RunTasks(int worker_idx)
 
             RunTask(&task);
         } else {
-            worker_idx = (++worker_idx < workers.len) ? worker_idx : 0;
+            worker_idx = GetRandomInt(0, workers.len);
         }
     }
 }
