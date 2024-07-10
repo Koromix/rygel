@@ -38,8 +38,7 @@
   "directories": {},
   "gypfile": false,
   "homepage": "https://github.com/nodejs/node-api-headers",
-  "keywords": [
-  ],
+  "keywords": [],
   "license": "MIT",
   "main": "index.js",
   "name": "node-api-headers",
@@ -54,6 +53,6 @@
     "write-symbols": "node --no-warnings scripts/write-symbols.js",
     "write-win32-def": "node --no-warnings scripts/write-win32-def.js"
   },
-  "version": "1.1.0",
+  "version": "1.2.0",
   "support": true
 }

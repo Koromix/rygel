@@ -160,7 +160,7 @@ async function main() {
         },
     });
 
-    console.log(`Update headers from nodejs/node tag ${tag}`);
+    console.log(`feat: update headers from nodejs/node tag ${tag}`);
 
     const files = ['js_native_api_types.h', 'js_native_api.h', 'node_api_types.h', 'node_api.h'];
 
