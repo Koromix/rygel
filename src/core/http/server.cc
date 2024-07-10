@@ -809,15 +809,7 @@ http_IO::PrepareStatus http_IO::Prepare()
 
         while (!complete) {
             Size read = recv(fd, buf.end(), buf.Available(), MSG_DONTWAIT);
-            if (!read) {
-                if (!buf.len) {
-                    Close();
-                    return PrepareStatus::Closed;
-                }
 
-                LogError("Malformed HTTP request");
-                return PrepareStatus::Error;
-            }
             if (read < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     return PrepareStatus::Waiting;
@@ -827,6 +819,17 @@ http_IO::PrepareStatus http_IO::Prepare()
                 LogError("Read failed: %1 %2", strerror(errno), errno);
                 return PrepareStatus::Error;
             }
+
+            if (!read) {
+                if (!buf.len) {
+                    Close();
+                    return PrepareStatus::Closed;
+                }
+
+                LogError("Malformed HTTP request");
+                return PrepareStatus::Error;
+            }
+
             buf.len += read;
 
             for (;;) {
@@ -1019,7 +1022,7 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
 bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     while (data.len) {
-        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE);
+        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
 
         if (sent < 0) {
             if (errno != EPIPE) {
@@ -1051,7 +1054,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         Span<const uint8_t> remain = buf;
 
         do {
-            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE);
+            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
 
             if (sent < 0) {
                 if (errno != EPIPE) {
