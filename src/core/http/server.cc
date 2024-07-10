@@ -46,13 +46,17 @@ class http_Daemon::RequestHandler {
     std::shared_mutex wake_mutex;
     bool wake_needed = false;
 
+    LocalArray<http_IO *, 64> pool;
+
 public:
     RequestHandler(http_Daemon *daemon) : daemon(daemon) {}
 
     bool Run();
+    void Wake();
 
 private:
-    void Wake();
+    http_IO *CreateClient(int fd, struct sockaddr *sa);
+    void CloseClient(http_IO *client);
 };
 
 static const int KeepAliveCount = 1000;
@@ -577,16 +581,22 @@ bool http_Daemon::RequestHandler::Run()
         LogError("Failed to create eventfd: %1", strerror(errno));
         return false;
     }
+    RG_DEFER {
+        CloseDescriptor(event_fd);
+        event_fd = -1;
+    };
 
+    // Delete remaining clients when function exits
     RG_DEFER {
         async.Sync();
 
         for (const http_IO *client: clients) {
             delete client;
         };
-
-        CloseDescriptor(event_fd);
-        event_fd = -1;
+        for (const http_IO *client: pool) {
+            delete client;
+        }
+        pool.Clear();
     };
 
     HeapArray<struct pollfd> pfds = {
@@ -624,11 +634,7 @@ bool http_Daemon::RequestHandler::Run()
                     return false;
                 }
 
-                http_IO *client = new http_IO(this, fd);
-                if (!client->InitAddress((sockaddr *)&ss)) {
-                    delete client;
-                    continue;
-                }
+                http_IO *client = CreateClient(fd, (sockaddr *)&ss);
                 clients.Append(client);
 
                 busy = now;
@@ -667,7 +673,7 @@ bool http_Daemon::RequestHandler::Run()
                         client->SendText(400, "Malformed request");
 
                         forget(it);
-                        delete client;
+                        CloseClient(client);
 
                         break;
                     }
@@ -684,11 +690,9 @@ bool http_Daemon::RequestHandler::Run()
                             return true;
                         });
                     } else {
-                        forget(it);
-
                         async.Run([=, this] {
                             daemon->handle_func(client->request, client);
-                            delete client;
+                            client->Close();
 
                             return true;
                         });
@@ -699,7 +703,7 @@ bool http_Daemon::RequestHandler::Run()
 
                 case http_IO::PrepareStatus::Closed: {
                     forget(it);
-                    delete client;
+                    CloseClient(client);
                 } break;
 
                 case http_IO::PrepareStatus::Error: {
@@ -707,7 +711,7 @@ bool http_Daemon::RequestHandler::Run()
                     client->SendText(400, "Malformed request");
 
                     forget(it);
-                    delete client;
+                    CloseClient(client);
                 } break;
             }
         }
@@ -748,8 +752,39 @@ void http_Daemon::RequestHandler::Wake()
     }
 }
 
-http_IO::http_IO(RequestHandler *handler, int fd)
-    : handler(handler), fd(fd)
+http_IO *http_Daemon::RequestHandler::CreateClient(int fd, struct sockaddr *sa)
+{
+    http_IO *client = nullptr;
+
+    if (pool.len) {
+        int idx = GetRandomInt(0, pool.len);
+
+        client = pool[idx];
+        std::swap(pool[idx], pool.data[--pool.len]);
+    } else {
+        client = new http_IO(this);
+    }
+
+    if (!client->Init(fd, sa)) {
+        pool.Append(client);
+        return nullptr;
+    }
+
+    return client;
+}
+
+void http_Daemon::RequestHandler::CloseClient(http_IO *client)
+{
+    if (pool.Available()) {
+        pool.Append(client);
+        client->Reset();
+    } else {
+        delete client;
+    }
+}
+
+http_IO::http_IO(RequestHandler *handler)
+    : handler(handler)
 {
     Reset();
 
@@ -912,8 +947,10 @@ http_IO::PrepareStatus http_IO::Prepare()
     return PrepareStatus::Ready;
 }
 
-bool http_IO::InitAddress(struct sockaddr *sa)
+bool http_IO::Init(int fd, struct sockaddr *sa)
 {
+    this->fd = fd;
+
     int family = sa->sa_family;
     void *ptr = nullptr;
 

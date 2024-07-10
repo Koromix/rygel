@@ -184,13 +184,13 @@ public:
     void AddFinalizer(const std::function<void()> &func);
 
 private:
-    http_IO(RequestHandler *handler, int fd);
+    http_IO(RequestHandler *handler);
     ~http_IO();
 
-    PrepareStatus Prepare();
-
-    bool InitAddress(struct sockaddr *sa);
+    bool Init(int fd, struct sockaddr *sa);
     bool InitAddress(http_ClientAddressMode addr_mode);
+
+    PrepareStatus Prepare();
 
     void Reset();
     void Close();
