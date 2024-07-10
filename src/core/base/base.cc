@@ -5418,7 +5418,11 @@ void FastRandom::Fill(void *out_buf, Size len)
 int FastRandom::GetInt(int min, int max)
 {
     int range = max - min;
-    RG_ASSERT(range >= 2);
+
+    if (range < 2) [[unlikely]] {
+        RG_ASSERT(range >= 1);
+        return min;
+    }
 
     unsigned int treshold = (UINT_MAX - UINT_MAX % range);
 
@@ -5434,7 +5438,11 @@ int FastRandom::GetInt(int min, int max)
 int64_t FastRandom::GetInt64(int64_t min, int64_t max)
 {
     int64_t range = max - min;
-    RG_ASSERT(range >= 2);
+
+    if (range < 2) [[unlikely]] {
+        RG_ASSERT(range >= 1);
+        return min;
+    }
 
     uint64_t treshold = (UINT64_MAX - UINT64_MAX % range);
 
