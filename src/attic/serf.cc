@@ -489,7 +489,11 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         "Host",
         "Referer",
         "Sec-*",
-        "server"
+        "server",
+        "Connection",
+        "Keep-Alive",
+        "Content-Length",
+        "Transfer-Encoding"
     };
 
     if (curl) {
@@ -544,16 +548,25 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
             RelayContext *ctx = (RelayContext *)udata;
             http_IO *io = ctx->io;
 
-            Span<const char> remain = MakeSpan(ptr, (Size)nmemb);
+            char *separator = (char *)memchr(ptr, ':', nmemb);
+            if (!separator)
+                return nmemb;
+            char *end = ptr + nmemb;
 
-            const char *key = DuplicateString(TrimStr(SplitStr(remain, ':', &remain)), io->Allocator()).ptr;
-            const char *value = DuplicateString(TrimStr(remain), io->Allocator()).ptr;
+            Span<char> key = MakeSpan(ptr, separator - ptr);
+            Span<char> value = TrimStr(MakeSpan(separator + 1, end - separator - 1));
+
+            // Needed to use MatchPathName
+            key.ptr[key.len] = 0;
 
             bool skip = std::any_of(std::begin(OmitHeaders), std::end(OmitHeaders),
-                                    [&](const char *pattern) { return MatchPathName(key, pattern, false); });
+                                    [&](const char *pattern) { return MatchPathName(key.ptr, pattern, false); });
 
             if (!skip) {
-                ctx->headers.Append({ key, value });
+                key = DuplicateString(key, io->Allocator());
+                value = DuplicateString(value, io->Allocator());
+
+                ctx->headers.Append({ key.ptr, value.ptr });
             }
 
             return nmemb;
