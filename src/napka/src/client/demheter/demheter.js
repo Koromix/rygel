@@ -102,7 +102,7 @@ function DemheterProvider() {
                         cluster: (entry.type == 'Psychologue') ? '#d352a3' : null,
                         priority: 1 + (entry.type == 'Centre') + !!entry.demheter,
                         icon: getEntryIcon(entry),
-                        size: (entry.type == 'Centre') ? 48 : 40,
+                        size: (entry.type == 'Centre') ? 64 : 40,
                         clickable: true
                     };
 
