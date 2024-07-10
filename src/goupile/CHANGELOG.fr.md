@@ -2,6 +2,11 @@
 
 ## Goupile 3.6
 
+### Goupile 3.6.1 (10/07/2024)
+
+- Exposition de l'objet thread dans les scripts pour accéder aux données d'autres pages
+- Retrait de l'affichage des marqueurs obligatoires sur les widgets de calcul
+
 ### Goupile 3.6.0 (28/06/2024)
 
 - Ajout du système de `summary` remplacer les anciens identifiants HID

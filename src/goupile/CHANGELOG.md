@@ -2,6 +2,11 @@
 
 ## Goupile 3.6
 
+### Goupile 3.6.1 (2024-07-10)
+
+- Expose thread object in user scripts to access sibling entries
+- Fix mandatory markers showing up on calc widgets
+
 ### Goupile 3.6.0 (2024-06-28)
 
 - Add basic entry summary to replace old HID system
