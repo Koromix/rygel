@@ -651,7 +651,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             case PrimitiveKind::String32: {
                 const char32_t *str32 = *(const char32_t **)((param.gpr_count ? gpr_ptr : args_ptr)++);
 
-                Napi::Value arg = str32 ? Napi::String::New(env, str32) : env.Null();
+                Napi::Value arg = str32 ? MakeStringFromUTF32(env, str32) : env.Null();
                 arguments.Append(arg);
             } break;
             case PrimitiveKind::Pointer:

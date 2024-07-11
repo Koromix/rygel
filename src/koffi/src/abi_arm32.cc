@@ -914,7 +914,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
         } break;
         case PrimitiveKind::String32: {
             const char32_t *str32;
-            if (!PushString32(value, 1, &str16)) [[unlikely]]
+            if (!PushString32(value, 1, &str32)) [[unlikely]]
                 return;
 
             out_reg->r0 = (uint32_t)str32;
