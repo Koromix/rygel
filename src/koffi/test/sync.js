@@ -436,7 +436,7 @@ async function test() {
     }
 
     // Variadic with wchar_t!
-    {
+    if (detect_glibc() || process.platform == 'win32') {
         let fmt = (process.platform == 'win32') ? 'foo %d %g %S %s' : 'foo %d %g %s %ls';
         let ptr = PrintFmtWide(fmt, 'int', 200, 'double', 1.5, 'str', 'BAR', 'wchar_t *', '\u{1F600} ><');
 
@@ -956,4 +956,13 @@ function check_text(ptr, expect) {
 function check_text16(ptr, expect) {
     let str = koffi.decode(ptr, 'char16', -1);
     assert.equal(str, expect);
+}
+
+function detect_glibc() {
+    if (process.platform != 'linux')
+        return false;
+    if (process.report.getReport().header?.glibcVersionRuntime == null)
+        return false;
+
+    return true;
 }
