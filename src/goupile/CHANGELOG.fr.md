@@ -2,7 +2,7 @@
 
 ## Goupile 3.6
 
-### Goupile 3.6.2 (2024-07-11)
+### Goupile 3.6.2 (11/07/2024)
 
 - Correction de bugs de navigation dans goupile (notamment le bouton "Ajouter" qui fonctionne mal)
 
