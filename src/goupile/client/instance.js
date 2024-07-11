@@ -251,20 +251,23 @@ function renderMenu() {
             </button>` : ''}
             ${app.panels.data && (!UI.isPanelActive('view') || form_thread.saved) ? html`
                 <div style="width: 15px;"></div>
-                <button class="icon new" @click=${UI.wrap(e => go(e, route.page.url))}>Ajouter</button>
+                <button class="icon new" @click=${UI.wrap(e => go(e, route.page.menu.chain[0].url))}>Ajouter</button>
             ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
 
             ${!goupile.isLocked() && profile.instances == null ?
-                html`<button class="icon lines" @click=${UI.wrap(e => go(e, ENV.urls.instance))}>${ENV.title}</button>` : ''}
+                html`<button class="icon lines" @click=${UI.wrap(e => togglePanels(true, profile.develop ? 'view' : false))}>${ENV.title}</button>` : ''}
             ${!goupile.isLocked() && profile.instances != null ? html`
                 <div class="drop right" @click=${UI.deployMenu}>
                     <button class="icon lines" @click=${UI.deployMenu}>${ENV.title}</button>
                     <div>
-                        ${profile.instances.slice().sort(Util.makeComparator(instance => instance.name))
-                                           .map(instance =>
-                            html`<button class=${instance.url === ENV.urls.instance ? 'active' : ''}
-                                         @click=${UI.wrap(e => go(e, instance.url))}>${instance.name}</button>`)}
+                        ${profile.instances.slice().sort(Util.makeComparator(instance => instance.name)).map(instance => {
+                            if (instance.url === ENV.urls.instance) {
+                                return html`<button class="active" @click=${UI.wrap(e => togglePanels(true, profile.develop ? 'view' : false))}>${ENV.title}</button>`;
+                            } else {
+                                return html`<button @click=${UI.wrap(e => go(e, instance.url))}>${instance.name}</button>`;
+                            }
+                        })}
                     </div>
                 </div>
             ` : ''}
@@ -1473,6 +1476,7 @@ async function go(e, url = null, options = {}) {
             }
         }
 
+        let first_page = (route.page == null);
         let context_change = (new_route.tid != route.tid ||
                               new_route.anchor != route.anchor ||
                               new_route.page != route.page);
@@ -1521,16 +1525,9 @@ async function go(e, url = null, options = {}) {
         }
 
         // Show form automatically?
-        if (context_change && !UI.isPanelActive('view') && !explicit_panels) {
-            let show_view = true;
-
-            if (UI.isPanelActive('data') && !form_thread.saved)
-                show_view = false;
-
-            if (show_view) {
-                UI.togglePanel('data', false);
-                UI.togglePanel('view', true);
-            }
+        if (!UI.isPanelActive('view') && url != null && !explicit_panels && !first_page) {
+            UI.togglePanel('data', false);
+            UI.togglePanel('view', true);
         }
     });
 
@@ -1652,8 +1649,10 @@ async function run(push_history = true) {
         let url = contextualizeURL(route.page.url, form_thread);
         let panels = UI.getPanels().join('|');
 
-        if (!profile.develop && panels == 'view')
-            panels = null;
+        if (!profile.develop) {
+            if (!form_thread.saved || panels == 'view')
+                panels = null;
+        }
 
         url = Util.pasteURL(url, { p: panels });
         goupile.syncHistory(url, push_history);
