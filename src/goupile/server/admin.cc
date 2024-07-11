@@ -1264,11 +1264,7 @@ static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = 
     };
 
     HeapArray<BackupEntry> entries;
-    RG_DEFER {
-        for (const BackupEntry &entry: entries) {
-            UnlinkFile(entry.filename);
-        }
-    };
+    RG_DEFER { for (const BackupEntry &entry: entries) UnlinkFile(entry.filename); };
 
     // Make archive filename
     const char *archive_filename;

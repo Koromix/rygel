@@ -423,11 +423,7 @@ By default, the first of the following config files will be used:
         LogError("Failed to insert low-level keyboard hook: %1", GetWin32ErrorString());
         return 1;
     }
-    RG_DEFER {
-        if (hook) {
-            UnhookWindowsHookEx(hook);
-        }
-    };
+    RG_DEFER { if (hook) UnhookWindowsHookEx(hook); };
 
     // Unfortunately, Windows sometimes disconnects our hook for no good reason
     if (!SetTimer(main_hwnd, WM_APP_REHOOK, 30000, nullptr)) {
