@@ -89,13 +89,13 @@
 
         "qemu": {
             "binary": "qemu-system-riscv64",
-            "arguments": ["-machine", "virt", "-cpu", "rv64", "-m", "2G", "-smp", 2, "-device", "virtio-blk-device,drive=hd", "-drive", "file=disk.qcow2,if=none,id=hd", "-device", "virtio-net-device,netdev=net", "-netdev", "user,id=net,hostfwd=tcp::22212-:22", "-bios", "fw_jump.elf", "-kernel", "uboot.elf", "-append", "root=LABEL=rootfs console=ttyS0", "-vnc", "127.0.0.1:22"],
+            "arguments": ["-machine", "virt", "-cpu", "rv64", "-m", "2G", "-smp", 2, "-device", "virtio-blk-device,drive=hd", "-drive", "file=disk.qcow2,if=none,id=hd", "-netdev", "user,id=mynet,hostfwd=tcp::22214-:22", "-device", "virtio-net-device,netdev=mynet", "-bios", "fw_jump.elf", "-kernel", "uboot.elf", "-append", "root=LABEL=rootfs console=ttyS0", "-vnc", "127.0.0.1:24"],
             "version": 1,
 
             "disk": "disk.qcow2",
 
-            "ssh_port": 22212,
-            "vnc_port": 5912,
+            "ssh_port": 22214,
+            "vnc_port": 5924,
 
             "username": "debian",
             "password": "debian",
