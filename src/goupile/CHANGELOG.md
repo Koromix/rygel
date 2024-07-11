@@ -2,6 +2,10 @@
 
 ## Goupile 3.6
 
+### Goupile 3.6.2 (2024-07-11)
+
+- Fix navigation bugs in goupile (including main "Add" button not working)
+
 ### Goupile 3.6.1 (2024-07-10)
 
 - Expose thread object in user scripts to access sibling entries

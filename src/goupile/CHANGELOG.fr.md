@@ -2,6 +2,10 @@
 
 ## Goupile 3.6
 
+### Goupile 3.6.2 (2024-07-11)
+
+- Correction de bugs de navigation dans goupile (notamment le bouton "Ajouter" qui fonctionne mal)
+
 ### Goupile 3.6.1 (10/07/2024)
 
 - Exposition de l'objet thread dans les scripts pour accéder aux données d'autres pages
