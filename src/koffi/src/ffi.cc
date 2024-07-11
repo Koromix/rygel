@@ -46,6 +46,7 @@
         #define MAP_STACK 0
     #endif
 #endif
+#include <wchar.h>
 
 #include <napi.h>
 

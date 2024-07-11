@@ -23,6 +23,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <wchar.h>
 #include <inttypes.h>
 #include <string.h>
 #include <stdarg.h>
