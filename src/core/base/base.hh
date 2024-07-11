@@ -2084,6 +2084,16 @@ public:
 
         return it;
     }
+    T *Append(T &&value)
+    {
+        RG_ASSERT(len < N);
+
+        T *it = data + len;
+        *it = std::move(value);
+        len++;
+
+        return it;
+    }
     T *Append(Span<const T> values)
     {
         RG_ASSERT(values.len <= N - len);
@@ -2286,6 +2296,17 @@ public:
             new (ptr + len) T;
         }
         ptr[len++] = value;
+        return first;
+    }
+    T *Append(T &&value)
+    {
+        Grow();
+
+        T *first = ptr + len;
+        if constexpr(!std::is_trivial<T>::value) {
+            new (ptr + len) T;
+        }
+        ptr[len++] = std::move(value);
         return first;
     }
     T *Append(Span<const T> values)
