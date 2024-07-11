@@ -220,7 +220,8 @@ Size CallData::PushStringValue(Napi::Value value, const char **out_str)
         status = napi_get_value_string_utf8(env, value, nullptr, 0, &len);
         RG_ASSERT(status == napi_ok);
 
-        buf = AllocateSpan<char>(&call_alloc, (Size)len + 1);
+        len++;
+        buf = AllocateSpan<char>(&call_alloc, (Size)len);
 
         status = napi_get_value_string_utf8(env, value, buf.ptr, (size_t)buf.len, &len);
         RG_ASSERT(status == napi_ok);
@@ -307,7 +308,8 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
         status = napi_get_value_string_utf16(env, value, nullptr, 0, &len);
         RG_ASSERT(status == napi_ok);
 
-        buf = AllocateSpan<char16_t>(&call_alloc, ((Size)len + 1) * 2);
+        len++;
+        buf = AllocateSpan<char16_t>(&call_alloc, (Size)len);
 
         status = napi_get_value_string_utf16(env, value, buf.ptr, (size_t)buf.len, &len);
         RG_ASSERT(status == napi_ok);
