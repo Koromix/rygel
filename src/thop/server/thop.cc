@@ -19,7 +19,7 @@
 #include "mco_casemix.hh"
 #include "mco_info.hh"
 #include "user.hh"
-#include "src/core/http/http.hh"
+#include "src/core/http/legacy/http.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {

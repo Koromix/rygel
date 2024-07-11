@@ -21,7 +21,7 @@
 #include "record.hh"
 #include "user.hh"
 #include "../legacy/records.hh"
-#include "src/core/http/http.hh"
+#include "src/core/http/legacy/http.hh"
 #include "src/core/request/curl.hh"
 #include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"

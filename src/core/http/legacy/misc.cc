@@ -170,18 +170,18 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
 
 bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)
 {
-    const char *str1 = request.FindHeader("X-Requested-With");
-    const char *str2 = request.FindHeader("Sec-Fetch-Site");
+    const char *str1 = request.GetHeaderValue("X-Requested-With");
+    const char *str2 = request.GetHeaderValue("Sec-Fetch-Site");
 
     if (!str1 || !TestStr(str1, "XMLHTTPRequest")) {
         LogError("Anti-CSRF header is missing");
-        io->SendError(403);
+        io->AttachError(403);
         return false;
     }
 
     if (str2 && !TestStr(str2, "same-origin")) {
         LogError("Denying cross-origin request");
-        io->SendError(403);
+        io->AttachError(403);
         return false;
     }
 
@@ -211,8 +211,8 @@ void http_JsonPageBuilder::Finish()
     Span<const uint8_t> data = buf.TrimAndLeak();
     io->AddFinalizer([=]() { ReleaseSpan(nullptr, data); });
 
+    io->AttachBinary(200, data, "application/json");
     io->AddEncodingHeader(encoding);
-    io->SendBinary(200, data, "application/json");
 }
 
 }

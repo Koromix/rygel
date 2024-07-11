@@ -17,7 +17,7 @@
 #include "instance.hh"
 #include "message.hh"
 #include "user.hh"
-#include "src/core/http/http.hh"
+#include "src/core/http/legacy/http.hh"
 #include "src/core/password/otp.hh"
 #include "src/core/password/password.hh"
 #include "src/core/wrap/qrcode.hh"

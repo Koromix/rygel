@@ -23,29 +23,111 @@
 #include "server.hh"
 #include "misc.hh"
 
-#if defined(_WIN32)
-    #include <io.h>
-    #include <ws2tcpip.h>
-
-    #if !defined(UNIX_PATH_MAX)
-        #define UNIX_PATH_MAX 108
-    #endif
-    typedef struct sockaddr_un {
-        ADDRESS_FAMILY sun_family;
-        char sun_path[UNIX_PATH_MAX];
-    } SOCKADDR_UN, *PSOCKADDR_UN;
-#else
-    #include <sys/stat.h>
-    #include <sys/socket.h>
-    #include <sys/un.h>
-    #include <sys/uio.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-    #include <fcntl.h>
-    #include <poll.h>
-#endif
+#include <fcntl.h>
+#include <unistd.h>
+#include <poll.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/stat.h>
+#include <sys/sendfile.h>
 
 namespace RG {
+
+class http_Daemon::RequestHandler {
+    http_Daemon *daemon;
+    int pipe[2];
+
+    std::atomic_bool run { true };
+
+    BucketArray<http_IO *, 2048> clients;
+
+public:
+    RequestHandler(http_Daemon *daemon, int pipe[2])
+        : daemon(daemon), pipe { pipe[0], pipe[1] } {}
+    ~RequestHandler();
+
+    bool Run();
+    void Stop();
+
+    bool Wake();
+    bool Delegate(Span<const int> fds);
+};
+
+static const int KeepAliveCount = 200;
+static const int KeepAliveDelay = 5000;
+
+static RG_CONSTINIT ConstMap<128, int, const char *> ErrorMessages = {
+    { 100, "Continue" },
+    { 101, "Switching Protocols" },
+    { 102, "Processing" },
+    { 103, "Early Hints" },
+    { 200, "OK" },
+    { 201, "Created" },
+    { 202, "Accepted" },
+    { 203, "Non-Authoritative Information" },
+    { 204, "No Content" },
+    { 205, "Reset Content" },
+    { 206, "Partial Content" },
+    { 207, "Multi-Status" },
+    { 208, "Already Reported" },
+    { 226, "IM Used" },
+    { 300, "Multiple Choices" },
+    { 301, "Moved Permanently" },
+    { 302, "Found" },
+    { 303, "See Other" },
+    { 304, "Not Modified" },
+    { 305, "Use Proxy" },
+    { 306, "Switch Proxy" },
+    { 307, "Temporary Redirect" },
+    { 308, "Permanent Redirect" },
+    { 400, "Bad Request" },
+    { 401, "Unauthorized" },
+    { 402, "Payment Required" },
+    { 403, "Forbidden" },
+    { 404, "Not Found" },
+    { 405, "Method Not Allowed" },
+    { 406, "Not Acceptable" },
+    { 407, "Proxy Authentication Required" },
+    { 408, "Request Timeout" },
+    { 409, "Conflict" },
+    { 410, "Gone" },
+    { 411, "Length Required" },
+    { 412, "Precondition Failed" },
+    { 413, "Content Too Large" },
+    { 414, "URI Too Long" },
+    { 415, "Unsupported Media Type" },
+    { 416, "Range Not Satisfiable" },
+    { 417, "Expectation Failed" },
+    { 421, "Misdirected Request" },
+    { 422, "Unprocessable Content" },
+    { 423, "Locked" },
+    { 424, "Failed Dependency" },
+    { 425, "Too Early" },
+    { 426, "Upgrade Required" },
+    { 428, "Precondition Required" },
+    { 429, "Too Many Requests" },
+    { 431, "Request Header Fields Too Large" },
+    { 449, "Reply With" },
+    { 450, "Blocked by Windows Parental Controls" },
+    { 451, "Unavailable For Legal Reasons" },
+    { 500, "Internal Server Error" },
+    { 501, "Not Implemented" },
+    { 502, "Bad Gateway" },
+    { 503, "Service Unavailable" },
+    { 504, "Gateway Timeout" },
+    { 505, "HTTP Version Not Supported" },
+    { 506, "Variant Also Negotiates" },
+    { 507, "Insufficient Storage" },
+    { 508, "Loop Detected" },
+    { 509, "Bandwidth Limit Exceeded" },
+    { 510, "Not Extended" },
+    { 511, "Network Authentication Required" }
+};
 
 bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
 {
@@ -61,16 +143,8 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         return true;
     } else if (key == "Port") {
         return ParseInt(value, &port);
-    } else if (key == "MaxConnections") {
-        return ParseInt(value, &max_connections);
-    } else if (key == "IdleTimeout") {
-        return ParseDuration(value, &idle_timeout);
-    } else if (key == "Threads") {
-        return ParseInt(value, &threads);
-    } else if (key == "AsyncThreads") {
-        return ParseInt(value, &async_threads);
     } else if (key == "ClientAddress") {
-        if (!OptionToEnumI(http_ClientAddressModeNames, value, &client_addr_mode)) {
+        if (!OptionToEnumI(http_ClientAddressModeNames, value, &addr_mode)) {
             LogError("Unknown client address mode '%1'", value);
             return false;
         }
@@ -124,29 +198,12 @@ bool http_Config::Validate() const
         LogError("HTTP port %1 is invalid (range: 1 - %2)", port, UINT16_MAX);
         valid = false;
     }
-    if (max_connections < 0) {
-        LogError("HTTP max connections cannot be negative (%1)", max_connections);
-        valid = false;
-    }
-    if (idle_timeout < 0) {
-        LogError("HTTP idle timeout cannot be negative (%1)", idle_timeout);
-        valid = false;
-    }
-    if (threads <= 0 || threads > 128) {
-        LogError("HTTP threads %1 is invalid (range: 1 - 128)", threads);
-        valid = false;
-    }
-    if (async_threads <= 0) {
-        LogError("HTTP async threads %1 is invalid (minimum: 1)", async_threads);
-        valid = false;
-    }
 
     return valid;
 }
 
 bool http_Daemon::Bind(const http_Config &config)
 {
-    RG_ASSERT(!daemon);
     RG_ASSERT(listen_fd < 0);
 
     // Validate configuration
@@ -167,6 +224,12 @@ bool http_Daemon::Bind(const http_Config &config)
         return false;
     }
 
+    // Use non-blocking accept
+    int flags = fcntl(listen_fd, F_GETFL, 0);
+    fcntl(listen_fd, F_SETFL, flags | O_NONBLOCK);
+
+    addr_mode = config.addr_mode;
+
     return true;
 }
 
@@ -174,14 +237,14 @@ bool http_Daemon::Start(const http_Config &config,
                         std::function<void(const http_RequestInfo &request, http_IO *io)> func,
                         bool log_socket)
 {
-    RG_ASSERT(!daemon);
+    RG_ASSERT(!async);
     RG_ASSERT(func);
 
     // Validate configuration
     if (!config.Validate())
         return false;
 
-    if (config.client_addr_mode == http_ClientAddressMode::Socket) {
+    if (config.addr_mode == http_ClientAddressMode::Socket) {
         LogInfo("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-IP "
                 "if you run this behind a reverse proxy that sets one of these headers.");
     }
@@ -190,46 +253,74 @@ bool http_Daemon::Start(const http_Config &config,
     if (listen_fd < 0 && !Bind(config))
         return false;
 
-    // MHD flags
-    int flags = MHD_USE_AUTO_INTERNAL_THREAD | MHD_ALLOW_SUSPEND_RESUME |
-                MHD_ALLOW_UPGRADE | MHD_USE_ERROR_LOG;
+    int jobs = 1 + GetCoreCount() * 4;
+    async = new Async(jobs);
 
-#if defined(RG_DEBUG)
-    flags |= MHD_USE_DEBUG;
-#endif
+    for (Size i = 0; i < GetCoreCount(); i++) {
+        int fds[2];
+        if (pipe2(fds, O_CLOEXEC | O_NONBLOCK) < 0) {
+            LogError("Failed to create pipe: %1", strerror(errno));
+            return 1;
+        }
 
-    // MHD options
-    LocalArray<MHD_OptionItem, 16> mhd_options;
-    mhd_options.Append({ MHD_OPTION_LISTEN_SOCKET, listen_fd, nullptr });
-    if (config.threads > 1) {
-        mhd_options.Append({ MHD_OPTION_THREAD_POOL_SIZE, config.threads, nullptr });
+        RequestHandler *handler = new RequestHandler(this, fds);
+        handlers.Append(handler);
     }
-    if (config.max_connections) {
-        mhd_options.Append({ MHD_OPTION_CONNECTION_LIMIT, config.max_connections, nullptr });
-    }
-    mhd_options.Append({ MHD_OPTION_CONNECTION_TIMEOUT, (intptr_t)(config.idle_timeout / 1000), nullptr });
-    mhd_options.Append({ MHD_OPTION_END, 0, nullptr });
-    client_addr_mode = config.client_addr_mode;
-
-#if defined(_WIN32)
-    stop_handle = WSACreateEvent();
-    if (!stop_handle) {
-        LogError("CreateEvent() failed: %1", GetWin32ErrorString());
-        return false;
-    }
-#else
-    if (!CreatePipe(stop_pfd))
-        return false;
-#endif
 
     handle_func = func;
-    async = new Async(config.async_threads - 1);
 
-    running = true;
-    daemon = MHD_start_daemon(flags, 0, nullptr, nullptr,
-                              &http_Daemon::HandleRequest, this,
-                              MHD_OPTION_NOTIFY_COMPLETED, &http_Daemon::RequestCompleted, this,
-                              MHD_OPTION_ARRAY, mhd_options.data, MHD_OPTION_END);
+    // Dispatch new clients
+    async->Run([this] {
+        Size idx = 0;
+
+        for (;;) {
+            LocalArray<int, 256> fds;
+            static_assert(RG_SIZE(fds.data) <= PIPE_BUF);
+
+            do {
+                sockaddr_storage addr;
+                socklen_t addr_len = RG_SIZE(addr);
+
+                int fd = accept4(listen_fd, (sockaddr *)&addr, &addr_len, SOCK_CLOEXEC);
+
+                if (fd < 0) {
+                    if (errno == EINVAL)
+                        return true;
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
+                        break;
+
+                    LogError("Failed to accept client: %1", strerror(errno));
+                    return false;
+                }
+
+                fds.Append(fd);
+            } while (fds.Available());
+
+            if (fds.len) {
+                if (!handlers[idx]->Delegate(fds))
+                    return false;
+
+                idx = (idx + 1) % handlers.len;
+            } else {
+                struct pollfd pfd = { listen_fd, POLLIN, 0 };
+
+                if (poll(&pfd, 1, -1) < 0) {
+                    LogError("Failed to poll descriptors: %1", strerror(errno));
+                    return false;
+                }
+
+                if (pfd.revents & POLLHUP)
+                    return true;
+            }
+        }
+
+        return true;
+    });
+
+    // Run request handlers
+    for (RequestHandler *handler: handlers) {
+        async->Run([=] { return handler->Run(); });
+    }
 
     if (log_socket) {
         if (config.sock_type == SocketType::Unix) {
@@ -240,431 +331,60 @@ bool http_Daemon::Start(const http_Config &config,
         }
     }
 
-    return daemon;
+    return true;
 }
 
 void http_Daemon::Stop()
 {
-    running = false;
+    // Wake up threads
+    shutdown(listen_fd, SHUT_RD);
+    for (RequestHandler *handler: handlers) {
+        handler->Stop();
+    }
+    handlers.Clear();
 
+    // Wait for everyone to wind down
     if (async) {
-#if defined(_WIN32)
-        WSASetEvent(stop_handle);
-
         async->Sync();
+
         delete async;
-
-        WSACloseEvent(stop_handle);
-#else
-        char dummy = 0;
-        RG_IGNORE write(stop_pfd[1], &dummy, 1);
-
-        async->Sync();
-        delete async;
-
-        close(stop_pfd[0]);
-        close(stop_pfd[1]);
-#endif
+        async = nullptr;
     }
 
-    if (daemon) {
-        MHD_stop_daemon(daemon);
-    } else if (listen_fd >= 0) {
-        CloseSocket(listen_fd);
-    }
+    CloseSocket(listen_fd);
     listen_fd = -1;
-
-    async = nullptr;
-    daemon = nullptr;
 }
 
-static bool GetClientAddress(MHD_Connection *conn, http_ClientAddressMode addr_mode, Span<char> out_address)
+const char *http_RequestInfo::FindHeader(const char *key) const
 {
-    RG_ASSERT(out_address.len);
-
-    switch (addr_mode) {
-        case http_ClientAddressMode::Socket: {
-            int family;
-            void *addr;
-            {
-                sockaddr *saddr =
-                    MHD_get_connection_info(conn, MHD_CONNECTION_INFO_CLIENT_ADDRESS)->client_addr;
-
-                family = saddr->sa_family;
-                switch (saddr->sa_family) {
-                    case AF_INET: { addr = &((sockaddr_in *)saddr)->sin_addr; } break;
-                    case AF_INET6: { addr = &((sockaddr_in6 *)saddr)->sin6_addr; } break;
-#if !defined(_WIN32)
-                    case AF_UNIX: {
-                        CopyString("unix", out_address);
-                        return true;
-                    } break;
-#endif
-
-                    default: { RG_UNREACHABLE(); } break;
-                }
-            }
-
-            if (!inet_ntop(family, addr, out_address.ptr, out_address.len)) {
-                LogError("Cannot convert network address to text");
-                return false;
-            }
-
-            return true;
-        } break;
-
-        case http_ClientAddressMode::XForwardedFor: {
-            const char *str = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "X-Forwarded-For");
-            if (!str) {
-                LogError("X-Forwarded-For header is missing but is required by the configuration");
-                return false;
-            }
-
-            Span<const char> addr = TrimStr(SplitStr(str, ','));
-
-            if (!addr.len) [[unlikely]] {
-                LogError("Empty client address in X-Forwarded-For header");
-                return false;
-            }
-            if (!CopyString(addr, out_address)) [[unlikely]] {
-                LogError("Excessively long client address in X-Forwarded-For header");
-                return false;
-            }
-
-            return true;
-        } break;
-
-        case http_ClientAddressMode::XRealIP: {
-            const char *str = MHD_lookup_connection_value(conn, MHD_HEADER_KIND, "X-Real-IP");
-            if (!str) {
-                LogError("X-Real-IP header is missing but is required by the configuration");
-                return false;
-            }
-
-            Span<const char> addr = TrimStr(str);
-
-            if (!addr.len) [[unlikely]] {
-                LogError("Empty client address in X-Forwarded-For header");
-                return false;
-            }
-            if (!CopyString(addr, out_address)) [[unlikely]] {
-                LogError("Excessively long client address in X-Forwarded-For header");
-                return false;
-            }
-
-            return true;
-        } break;
+    for (const http_KeyValue &header: headers) {
+        if (TestStrI(header.key, key))
+            return header.value;
     }
 
-    RG_UNREACHABLE();
+    return nullptr;
 }
 
-MHD_Result http_Daemon::HandleRequest(void *cls, MHD_Connection *conn, const char *url, const char *method,
-                                      const char *, const char *upload_data, size_t *upload_data_size,
-                                      void **con_cls)
+const char *http_RequestInfo::FindGetValue(const char *) const
 {
-    http_Daemon *daemon = (http_Daemon *)cls;
-    http_IO *io = *(http_IO **)con_cls;
-
-    if (!daemon->running) [[unlikely]] {
-        const char *msg = "Server is shutting down";
-
-        MHD_Response *response = MHD_create_response_from_buffer(strlen(msg), (void *)msg, MHD_RESPMEM_PERSISTENT);
-        RG_DEFER { MHD_destroy_response(response); };
-
-        return MHD_queue_response(conn, 503, response);
-    }
-
-    bool first_call = !io;
-
-    // Init request data
-    if (first_call) {
-        io = new http_IO;
-        *con_cls = io;
-
-        io->daemon = daemon;
-        io->request.conn = conn;
-        io->request.url = url;
-
-        // Is that even possible? Dunno, but make sure it never happens!
-        if (url[0] != '/') [[unlikely]] {
-            io->AttachError(400);
-            return MHD_queue_response(conn, (unsigned int)io->code, io->response);
-        }
-
-        if (TestStr(method, "HEAD")) {
-            io->request.method = http_RequestMethod::Get;
-            io->request.headers_only = true;
-        } else if (!OptionToEnumI(http_RequestMethodNames, method, &io->request.method)) {
-            io->AttachError(405);
-            return MHD_queue_response(conn, (unsigned int)io->code, io->response);
-        }
-        if (!GetClientAddress(conn, daemon->client_addr_mode, io->request.client_addr)) {
-            io->AttachError(422);
-            return MHD_queue_response(conn, (unsigned int)io->code, io->response);
-        }
-    }
-
-    // There may be some kind of async runner
-    std::lock_guard<std::mutex> lock(io->mutex);
-    http_RequestInfo *request = &io->request;
-
-    io->PushLogFilter();
-    RG_DEFER { PopLogFilter(); };
-
-    // Run handler (sync first, and than async handlers if any)
-    if (io->state == http_IO::State::Sync) {
-        daemon->handle_func(*request, io);
-        io->state = http_IO::State::Idle;
-    }
-    daemon->RunNextAsync(io);
-
-    // Handle read/suspend while async handler is running
-    if (io->state == http_IO::State::Async) {
-        if (*upload_data_size) {
-            if (io->read_len < io->read_buf.len) {
-                // Read upload data and give it to async handler
-                RG_ASSERT(io->read_buf.IsValid());
-
-                Size copy_len = std::min(io->read_buf.len - io->read_len, (Size)*upload_data_size);
-                MemCpy(io->read_buf.ptr + io->read_len, upload_data, copy_len);
-
-                io->read_len += copy_len;
-                *upload_data_size -= copy_len;
-            }
-        } else {
-            io->read_eof = !first_call;
-        }
-
-        // Try in all cases, even if not needed... too much spinning beats deadlock
-        io->read_cv.notify_one();
-    }
-
-    // Handle write or attached response (if any)
-    if (io->force_queue) {
-        io->Resume();
-        return MHD_queue_response(conn, (unsigned int)io->code, io->response);
-    } else if (io->state == http_IO::State::Idle) {
-        if (io->code < 0) {
-            // Default to internal error (if nothing else)
-            io->AttachError(500);
-        }
-        return MHD_queue_response(conn, (unsigned int)io->code, io->response);
-    } else {
-        // We must not suspend on first call because libmicrohttpd will call us back the same
-        // way if we do so, with *upload_data_size = 0. Which means we'd have no reliable way
-        // to differenciate between this first call and end of upload (request body).
-        if (!first_call && io->read_len == io->read_buf.len) {
-            io->Suspend();
-        }
-        return MHD_YES;
-    }
+    LogDebug("Not implemented");
+    return nullptr;
 }
 
-ssize_t http_Daemon::HandleWrite(void *cls, uint64_t, char *buf, size_t max)
+const char *http_RequestInfo::FindCookie(const char *) const
 {
-    http_IO *io = (http_IO *)cls;
-    http_Daemon *daemon = io->daemon;
-
-    std::unique_lock<std::mutex> lock(io->mutex);
-
-    daemon->RunNextAsync(io);
-
-    // Can't read anymore!
-    RG_ASSERT(!io->read_buf.len);
-
-    if (io->write_buf.len) {
-        Size copy_len = std::min(io->write_buf.len - io->write_offset, (Size)max);
-        MemCpy(buf, io->write_buf.ptr + io->write_offset, copy_len);
-
-        io->write_offset += copy_len;
-
-        if (io->write_offset >= io->write_buf.len) {
-            io->write_buf.RemoveFrom(0);
-            io->write_offset = 0;
-
-            io->write_cv.notify_one();
-        }
-
-        return copy_len;
-    } else if (io->write_eof) {
-        return MHD_CONTENT_READER_END_OF_STREAM;
-    } else if (io->state != http_IO::State::Async) {
-        // StreamWriter::Close() has not be closed, could be a late error
-        LogError("Truncated HTTP response stream");
-        return MHD_CONTENT_READER_END_WITH_ERROR;
-    } else {
-        // I tried to suspend here, but it triggered assert errors from libmicrohttpd,
-        // and I don't know if it's not allowed, or if there's a bug. Need to investigate.
-        return 0;
-    }
+    LogDebug("Not implemented");
+    return nullptr;
 }
 
-// Call with io->mutex locked
-void http_Daemon::RunNextAsync(http_IO *io)
+void http_IO::AddHeader(Span<const char> key, Span<const char> value)
 {
-    if (io->state == http_IO::State::Idle && io->async_func) {
-        std::function<void()> func;
-        std::swap(io->async_func, func);
+    http_KeyValue header = {};
 
-        async->Run([=, this]() {
-            io->PushLogFilter();
-            RG_DEFER { PopLogFilter(); };
+    header.key = DuplicateString(key, &allocator).ptr;
+    header.value = DuplicateString(value, &allocator).ptr;
 
-            if (running) [[likely]] {
-                func();
-            }
-
-            std::unique_lock<std::mutex> lock(io->mutex);
-
-            if (io->state == http_IO::State::Zombie) {
-                lock.unlock();
-                delete io;
-            } else {
-                if (io->ws_urh && !io->async_func) {
-                    MHD_upgrade_action(io->ws_urh, MHD_UPGRADE_ACTION_CLOSE);
-                    io->suspended = false;
-                }
-
-                io->state = http_IO::State::Idle;
-                io->Resume();
-            }
-
-            return true;
-        });
-
-        io->state = http_IO::State::Async;
-    }
-}
-
-void http_Daemon::RequestCompleted(void *, MHD_Connection *, void **con_cls, MHD_RequestTerminationCode)
-{
-    http_IO *io = *(http_IO **)con_cls;
-
-    if (io) {
-        std::unique_lock<std::mutex> lock(io->mutex);
-
-        if (io->state == http_IO::State::Async || io->state == http_IO::State::WebSocket) {
-            io->state = http_IO::State::Zombie;
-
-            if (io->ws_urh) {
-                MHD_upgrade_action(io->ws_urh, MHD_UPGRADE_ACTION_CLOSE);
-            }
-
-            io->read_cv.notify_one();
-            io->write_cv.notify_one();
-            io->ws_cv.notify_one();
-        } else {
-            lock.unlock();
-            delete io;
-        }
-    }
-}
-
-static void ListConnectionValues(MHD_Connection *conn, MHD_ValueKind kind,
-                                 Allocator *alloc, HeapArray<http_KeyValue> *out_pairs)
-{
-    struct ListContext {
-        Allocator *alloc;
-        HeapArray<http_KeyValue> *pairs;
-    };
-    ListContext ctx;
-    ctx.alloc = alloc;
-    ctx.pairs = out_pairs;
-
-    MHD_get_connection_values(conn, kind, [](void *udata, enum MHD_ValueKind, const char *key, const char *value) {
-        ListContext *ctx = (ListContext *)udata;
-
-        http_KeyValue pair;
-        pair.key = DuplicateString(key, ctx->alloc).ptr;
-        pair.value = DuplicateString(value, ctx->alloc).ptr;
-
-        ctx->pairs->Append(pair);
-
-        return MHD_YES;
-    }, &ctx);
-}
-
-void http_RequestInfo::ListGetValues(Allocator *alloc, HeapArray<http_KeyValue> *out_pairs) const
-{
-    ListConnectionValues(conn, MHD_GET_ARGUMENT_KIND, alloc, out_pairs);
-}
-
-void http_RequestInfo::ListHeaderValues(Allocator *alloc, HeapArray<http_KeyValue> *out_pairs) const
-{
-    ListConnectionValues(conn, MHD_HEADER_KIND, alloc, out_pairs);
-}
-
-http_IO::http_IO()
-    : response(MHD_create_response_empty((MHD_ResponseFlags)0))
-{
-}
-
-http_IO::~http_IO()
-{
-    for (const auto &func: finalizers) {
-        func();
-    }
-
-#if defined(_WIN32)
-    if (ws_handle) {
-        WSACloseEvent(ws_handle);
-    }
-#endif
-
-    MHD_destroy_response(response);
-}
-
-bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_encoding)
-{
-    const char *accept_str = request.GetHeaderValue("Accept-Encoding");
-    uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
-
-    if (acceptable_encodings & (1 << (int)preferred)) {
-        *out_encoding = preferred;
-        return true;
-    } else if (acceptable_encodings) {
-        int clz = 31 - CountLeadingZeros(acceptable_encodings);
-        *out_encoding = (CompressionType)clz;
-
-        return true;
-    } else {
-        AttachError(406);
-        return false;
-    }
-}
-
-bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding)
-{
-    const char *accept_str = request.GetHeaderValue("Accept-Encoding");
-    uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
-
-    if (acceptable_encodings & (1 << (int)preferred1)) {
-        *out_encoding = preferred1;
-        return true;
-    } else if (acceptable_encodings & (1 << (int)preferred2)) {
-        *out_encoding = preferred2;
-        return true;
-    } else if (acceptable_encodings) {
-        int clz = 31 - CountLeadingZeros(acceptable_encodings);
-        *out_encoding = (CompressionType)clz;
-
-        return true;
-    } else {
-        AttachError(406);
-        return false;
-    }
-}
-
-void http_IO::RunAsync(std::function<void()> func)
-{
-    async_func = func;
-    async_func_response = false;
-}
-
-void http_IO::AddHeader(const char *key, const char *value)
-{
-    MHD_add_response_header(response, key, value);
+    response.headers.Append(header);
 }
 
 void http_IO::AddEncodingHeader(CompressionType encoding)
@@ -679,8 +399,7 @@ void http_IO::AddEncodingHeader(CompressionType encoding)
     }
 }
 
-void http_IO::AddCookieHeader(const char *path, const char *name, const char *value,
-                              bool http_only)
+void http_IO::AddCookieHeader(const char *path, const char *name, const char *value, bool http_only)
 {
     LocalArray<char, 1024> buf;
 
@@ -716,306 +435,614 @@ void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
     }
 }
 
-void http_IO::AttachText(int code, Span<const char> str, const char *mime_type)
+bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_encoding)
 {
-    MHD_Response *response =
-        MHD_create_response_from_buffer(str.len, (void *)str.ptr, MHD_RESPMEM_PERSISTENT);
+    const char *accept_str = request.FindHeader("Accept-Encoding");
+    uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
 
-    AttachResponse(code, response);
-    AddHeader("Content-Type", mime_type);
-}
+    if (acceptable_encodings & (1 << (int)preferred)) {
+        *out_encoding = preferred;
+        return true;
+    } else if (acceptable_encodings) {
+        int clz = 31 - CountLeadingZeros(acceptable_encodings);
+        *out_encoding = (CompressionType)clz;
 
-void http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_type)
-{
-    MHD_Response *response =
-        MHD_create_response_from_buffer(data.len, (void *)data.ptr, MHD_RESPMEM_PERSISTENT);
-
-    AttachResponse(code, response);
-
-    if (mime_type) {
-        AddHeader("Content-Type", mime_type);
+        return true;
+    } else {
+        SendError(406);
+        return false;
     }
 }
 
-bool http_IO::AttachAsset(int code, Span<const uint8_t> data, const char *mime_type,
-                          CompressionType src_encoding)
+bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding)
 {
-    CompressionType dest_encoding;
-    if (!NegociateEncoding(src_encoding, &dest_encoding))
+    const char *accept_str = request.FindHeader("Accept-Encoding");
+    uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
+
+    if (acceptable_encodings & (1 << (int)preferred1)) {
+        *out_encoding = preferred1;
+        return true;
+    } else if (acceptable_encodings & (1 << (int)preferred2)) {
+        *out_encoding = preferred2;
+        return true;
+    } else if (acceptable_encodings) {
+        int clz = 31 - CountLeadingZeros(acceptable_encodings);
+        *out_encoding = (CompressionType)clz;
+
+        return true;
+    } else {
+        SendError(406);
         return false;
+    }
+}
 
-    if (dest_encoding != src_encoding) {
-        if (request.headers_only) {
-            AttachEmpty(code);
-            AddEncodingHeader(dest_encoding);
-        } else {
-            if (data.len > Mebibytes(16)) {
-                static const char *msg = "Refusing excessive content-encoding conversion size";
+void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> func)
+{
+    RG_ASSERT(!response.sent);
+    RG_ASSERT(len >= 0);
 
-                LogError(msg);
-                AttachError(415, msg);
+    const auto write = [&, this](Span<const uint8_t> buf) {
+        while (buf.len) {
+            Size sent = send(fd, buf.ptr, buf.len, MSG_MORE);
 
+            if (sent < 0) {
+                if (errno != EPIPE) {
+                    LogError("Failed to send to client: %1", strerror(errno));
+                }
                 return false;
             }
 
-            RunAsync([=, this]() {
-                StreamReader reader(data, nullptr, src_encoding);
-
-                StreamWriter writer;
-                if (!OpenForWrite(code, -1, dest_encoding, &writer))
-                    return;
-                AddEncodingHeader(dest_encoding);
-
-                if (!SpliceStream(&reader, -1, &writer))
-                    return;
-                writer.Close();
-            });
-            async_func_response = true;
+            buf.ptr += sent;
+            buf.len -= sent;
         }
+
+        return true;
+    };
+
+    StreamWriter writer(write, "<http>");
+
+    const char *protocol = (version == 11) ? "HTTP/1.1" : "HTTP/1.0";
+    Print(&writer, "%1 %2 %3\r\n", protocol, status, ErrorMessages.FindValue(status, "Unknown"));
+
+    if (keepalive) {
+        Print(&writer, "Keep-Alive: timeout=%1, max=%2\r\n", KeepAliveDelay / 1000, KeepAliveCount);
     } else {
-        MHD_Response *response =
-            MHD_create_response_from_buffer((size_t)data.len, (void *)data.ptr, MHD_RESPMEM_PERSISTENT);
-        AttachResponse(code, response);
-        AddEncodingHeader(dest_encoding);
+        Print(&writer, "Connection: close\r\n");
     }
 
-    if (mime_type) {
-        AddHeader("Content-Type", mime_type);
+    for (const http_KeyValue &header: response.headers) {
+        Print(&writer, "%1: %2\r\n", header.key, header.value);
     }
 
-    return true;
+    Print(&writer, "Content-Length: %1\r\n", len);
+    Print(&writer, "\r\n");
+    func(fd, &writer);
+
+    int off = 0;
+    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &off, sizeof(off));
+
+    keepalive &= writer.IsValid();
+
+    for (const auto &finalize: response.finalizers) {
+        finalize();
+    }
+
+    response.sent = true;
 }
 
-void http_IO::AttachError(int code, const char *details)
+void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
 {
+    RG_ASSERT(mimetype);
+    AddHeader("Content-Type", mimetype);
+
+    Send(status, text.len, [&](int, StreamWriter *writer) {
+        writer->Write(text);
+    });
+}
+
+void http_IO::SendBinary(int status, Span<const uint8_t> data, const char *mimetype)
+{
+    if (mimetype) {
+        AddHeader("Content-Type", mimetype);
+    }
+
+    Send(status, data.len, [&](int, StreamWriter *writer) {
+        writer->Write(data);
+    });
+}
+
+void http_IO::SendError(int status, const char *details)
+{
+    const char *last_err = nullptr; // XXX
+
     if (!details) {
-        details = (code < 500 && last_err) ? last_err : "";
+        details = (status < 500 && last_err) ? last_err : "";
     }
 
-    Span<char> page = Fmt(&allocator, "Error %1: %2\n%3", code,
-                          MHD_get_reason_phrase_for((unsigned int)code), details);
-
-    MHD_Response *response = MHD_create_response_from_buffer((size_t)page.len, page.ptr, MHD_RESPMEM_PERSISTENT);
-    AttachResponse(code, response);
-
-    AddHeader("Content-Type", "text/plain");
+    Span<char> text = Fmt(&allocator, "Error %1: %2\n%3", status,
+                          ErrorMessages.FindValue(status, "Unknown"), details);
+    SendText(status, text);
 }
 
-bool http_IO::AttachFile(int code, const char *filename, const char *mime_type)
+bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
 {
-    FileInfo file_info;
-    if (StatFile(filename, &file_info) != StatResult::Success)
-        return false;
-
     int fd = OpenFile(filename, (int)OpenFlag::Read);
     if (fd < 0)
         return false;
+    RG_DEFER { CloseDescriptor(fd); };
 
-    MHD_Response *response = MHD_create_response_from_fd((uint64_t)file_info.size, fd);
-    AttachResponse(code, response);
-
-    if (mime_type) {
-        AddHeader("Content-Type", mime_type);
+    struct stat sb;
+    if (fstat(fd, &sb) < 0)
+        return false;
+    if (!S_ISREG(sb.st_mode)) {
+        LogError("Not a regular file: %1", filename);
+        return false;
     }
+    int64_t len = (int64_t)sb.st_size;
+
+    if (mimetype) {
+        AddHeader("Content-Type", mimetype);
+    }
+
+    Send(status, len, [&](int sock, StreamWriter *) {
+        off_t offset = 0;
+        int64_t remain = len;
+
+        while (remain) {
+            Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+            Size sent = sendfile(sock, fd, &offset, (size_t)send);
+
+            if (sent < 0) {
+                LogError("Failed to send file: %1", strerror(errno));
+                return;
+            }
+
+            remain -= sent;
+        }
+    });
 
     return true;
 }
 
-void http_IO::AttachEmpty(int code)
+void http_IO::SendEmpty(int status)
 {
-    MHD_Response *response = MHD_create_response_empty((MHD_ResponseFlags)0);
-    AttachResponse(code, response);
-}
-
-bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
-{
-    RG_ASSERT(state != State::Sync && state != State::WebSocket);
-
-    // Only allow Gzip for now, to reduce attack surface
-    CompressionType compression_type = CompressionType::None;
-    {
-        const char *content_str = request.GetHeaderValue("Content-Encoding");
-
-        if (content_str) {
-            if (max_len < 0) {
-                LogError("Refusing Content-Encoding without server limit");
-                AttachError(400);
-                return false;
-            }
-
-            if (TestStr(content_str, "gzip")) {
-                compression_type = CompressionType::Gzip;
-            } else {
-                LogError("Refusing Content-Encoding value other than gzip");
-                AttachError(400);
-                return false;
-            }
-        }
-    }
-
-    // Precheck with Content-Length for quick dismissal, but even
-    // if the header is missing the StreamReader will enforce the limit.
-    if (max_len >= 0) {
-        if (const char *str = request.GetHeaderValue("Content-Length"); str) {
-            Size len;
-            if (!ParseInt(str, &len)) [[unlikely]] {
-                AttachError(400);
-                return false;
-            }
-            if (len < 0) [[unlikely]] {
-                LogError("Refusing negative Content-Length");
-                AttachError(400);
-                return  false;
-            }
-
-            if (len > max_len) {
-                LogError("HTTP body is too big (max = %1)", FmtDiskSize(max_len));
-                AttachError(413);
-                return false;
-            }
-        }
-    }
-
-    bool success = out_st->Open([this](Span<uint8_t> out_buf) { return Read(out_buf); }, "<http>", compression_type);
-    RG_ASSERT(success);
-
-    out_st->SetReadLimit(max_len);
-
-    return true;
-}
-
-bool http_IO::OpenForWrite(int code, Size len, CompressionType encoding, StreamWriter *out_st)
-{
-    RG_ASSERT(state != State::Sync && state != State::WebSocket);
-
-    write_code = code;
-    write_len = (len >= 0) ? (uint64_t)len : MHD_SIZE_UNKNOWN;
-
-    bool success = out_st->Open([this](Span<const uint8_t> buf) { return Write(buf); }, "<http>", encoding);
-    return success;
+    Send(status, 0, [](int, StreamWriter *) {});
 }
 
 void http_IO::AddFinalizer(const std::function<void()> &func)
 {
-    finalizers.Append(func);
+    RG_ASSERT(!response.sent);
+    response.finalizers.Append(func);
 }
 
-void http_IO::AttachResponse(int new_code, MHD_Response *new_response)
+http_Daemon::RequestHandler::~RequestHandler()
 {
-    RG_ASSERT(new_code >= 0);
-
-    code = new_code;
-
-    MHD_move_response_headers(response, new_response);
-    MHD_destroy_response(response);
-    response = new_response;
-
-    if (async_func_response) {
-        async_func = {};
-        async_func_response = false;
-    }
+    CloseDescriptor(pipe[0]);
+    CloseDescriptor(pipe[1]);
 }
 
-void http_IO::PushLogFilter()
+bool http_Daemon::RequestHandler::Run()
 {
-    // This log filter does two things: it keeps a copy of the last log error message,
-    // and it sets the log context to the client address (for log file).
-    RG::PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
-        if (level == LogLevel::Error) {
-            last_err = DuplicateString(msg, &allocator).ptr;
+    HeapArray<struct pollfd> pfds;
+
+    struct pollfd pfd = { pipe[0], POLLIN, 0 };
+    pfds.Append(pfd);
+
+    int64_t busy = 0;
+
+    while (run) {
+        int64_t now = GetMonotonicTime();
+
+        pfds.RemoveFrom(1);
+        pfds[0].revents = 0;
+
+        // Read queued clients
+        do {
+            int fds[256];
+            static_assert(sizeof(fds) <= PIPE_BUF);
+
+            Size ret = read(pipe[0], &fds, RG_SIZE(fds));
+            if (ret < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) 
+                    break;
+
+                LogError("Failed to read from pipe: %1", strerror(errno));
+                return false;
+            }
+            RG_ASSERT(ret % RG_SIZE(int) == 0);
+
+            for (Size i = 0; i < ret / 4; i++) {
+                int fd = fds[i];
+
+                if (fd >= 0) {
+                    http_IO *client = new http_IO(this, fd);
+                    clients.Append(client);
+                }
+            }
+
+            busy = now;
+        } while (false);
+
+        auto begin = clients.begin();
+        Size removed = 0;
+
+        const auto forget = [&](auto it) {
+            std::swap(*begin, *it);
+            begin++;
+            removed++;
+        };
+
+        for (auto it = begin; it != clients.end(); it++) {
+            http_IO *client = *it;
+            http_IO::PrepareStatus ret = client->Prepare();
+
+            switch (ret) {
+                case http_IO::PrepareStatus::Incomplete: {
+                    struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
+                    pfds.Append(pfd);
+                } break;
+
+                case http_IO::PrepareStatus::Ready: {
+                    if (!client->addr[0] && !client->InitAddress(daemon->addr_mode)) {
+                        client->keepalive = false;
+                        client->SendText(400, "Malformed request");
+
+                        forget(it);
+                        delete client;
+
+                        break;
+                    }
+
+                    client->keepalive &= (--client->count <= 0) || (now <= client->timeout);
+
+                    if (client->keepalive) {
+                        daemon->async->Run([=, this] {
+                            daemon->handle_func(client->request, client);
+
+                            client->Reset();
+                            Wake();
+
+                            return true;
+                        });
+                    } else {
+                        forget(it);
+
+                        daemon->async->Run([=, this] {
+                            daemon->handle_func(client->request, client);
+                            delete client;
+
+                            return true;
+                        });
+                    }
+                } break;
+
+                case http_IO::PrepareStatus::Busy: {} break;
+
+                case http_IO::PrepareStatus::Closed: {
+                    forget(it);
+                    delete client;
+                } break;
+
+                case http_IO::PrepareStatus::Error: {
+                    client->keepalive = false;
+                    client->SendText(400, "Malformed request");
+
+                    forget(it);
+                    delete client;
+                } break;
+            }
         }
 
-        char ctx_buf[512];
-        Fmt(ctx_buf, "%1%2: ", ctx ? ctx : "", request.client_addr);
+        clients.RemoveFirst(removed);
 
-        func(level, ctx_buf, msg);
-    });
+        if (now - busy > 200) {
+            if (poll(pfds.ptr, pfds.len, -1) < 0) {
+                LogError("Failed to poll descriptors: %1", strerror(errno));
+                return false;
+            }
+
+            busy = GetMonotonicTime();
+        }
+    }
+
+    return true;
 }
 
-Size http_IO::Read(Span<uint8_t> out_buf)
+void http_Daemon::RequestHandler::Stop()
 {
-    std::unique_lock<std::mutex> lock(mutex);
-
-    RG_ASSERT(state != State::Sync);
-
-    // Set read buffer
-    read_buf = out_buf;
-    read_len = 0;
-    RG_DEFER {
-        read_buf = {};
-        read_len = 0;
-    };
-
-    // Wait for libmicrohttpd
-    while (state == State::Async && !read_len && !read_eof) {
-        if (!daemon->running) {
-            LogError("Server is shutting down");
-            return false;
-        }
-
-        Resume();
-        read_cv.wait(lock);
-    }
-    if (state == State::Zombie) {
-        LogError("Connection aborted while reading");
-        return -1;
-    }
-
-    return read_len;
+    run = false;
+    Wake();
 }
 
-bool http_IO::Write(Span<const uint8_t> buf)
+bool http_Daemon::RequestHandler::Wake()
 {
-    std::unique_lock<std::mutex> lock(mutex);
+    int fd = -1;
+    Size ret = write(pipe[1], &fd, RG_SIZE(fd));
 
-    RG_ASSERT(state != State::Sync);
-    RG_ASSERT(!write_eof);
-
-    if (!force_queue) {
-        MHD_Response *new_response =
-            MHD_create_response_from_callback(write_len, Kilobytes(16),
-                                              &http_Daemon::HandleWrite, this, nullptr);
-        AttachResponse(write_code, new_response);
-
-        force_queue = true;
-    }
-
-    // Make sure we switch to write state
-    Resume();
-
-    write_eof |= !buf.len;
-    while (state == State::Async && write_buf.len >= Kilobytes(4)) {
-        if (!daemon->running) {
-            LogError("Server is shutting down");
-            return false;
-        }
-
-        write_cv.wait(lock);
-    }
-    write_buf.Append(buf);
-
-    if (!write_eof && state == State::Zombie) {
-        LogError("Connection aborted while writing");
+    if (ret < 0 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        LogError("Failed to wake request handler: %1", strerror(errno));
         return false;
     }
 
     return true;
 }
 
-void http_IO::Suspend()
+bool http_Daemon::RequestHandler::Delegate(Span<const int> fds)
 {
-    if (!suspended) {
-        MHD_suspend_connection(request.conn);
-        suspended = true;
-    }
+    Size size = fds.len * RG_SIZE(int);
+    Size ret = write(pipe[1], fds.ptr, size);
+    (void)ret;
+
+    return true;
 }
 
-void http_IO::Resume()
+http_IO::http_IO(RequestHandler *handler, int fd)
+    : handler(handler), fd(fd)
 {
-    if (suspended) {
-        MHD_resume_connection(request.conn);
-        suspended = false;
+    Reset();
+
+    count = KeepAliveCount;
+    timeout = GetMonotonicTime() + KeepAliveDelay;
+}
+
+http_IO::~http_IO()
+{
+    CloseSocket(fd);
+}
+
+http_IO::PrepareStatus http_IO::Prepare()
+{
+    if (ready)
+        return PrepareStatus::Busy;
+    if (fd < 0)
+        return PrepareStatus::Closed;
+
+    // Gather request line and headers
+    {
+        Size pos = std::max(buf.len - 3, (Size)0);
+        bool complete = false;
+
+        buf.Grow(Mebibytes(2));
+
+        while (!complete) {
+            Size read = recv(fd, buf.end(), buf.Available(), MSG_DONTWAIT);
+            if (!read) {
+                if (!buf.len) {
+                    Close();
+                    return PrepareStatus::Closed;
+                }
+
+                LogError("Malformed HTTP request");
+                return PrepareStatus::Error;
+            }
+            if (read < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    return PrepareStatus::Incomplete;
+                if (errno == ECONNRESET)
+                    return PrepareStatus::Error;
+
+                LogError("Read failed: %1 %2", strerror(errno), errno);
+                return PrepareStatus::Error;
+            }
+            buf.len += read;
+
+            for (;;) {
+                uint8_t *next = (uint8_t *)memchr(buf.ptr + pos, '\r', buf.len - pos);
+                pos = next ? next - buf.ptr : buf.len;
+
+                if (buf.len - pos < 4)
+                    break;
+
+                if (buf[pos] == '\r' && buf[pos + 1] == '\n' &&
+                        buf[pos + 2] == '\r' && buf[pos + 3] == '\n') {
+                    pos += 4;
+                    complete = true;
+
+                    break;
+                }
+
+                pos++;
+            }
+        }
+
+        extra = MakeSpan(buf.ptr + pos, buf.len - pos);
+
+        buf.len = pos - 4;
+        buf.ptr[buf.len] = 0;
+        intro = buf.Leak().As<char>();
     }
+
+    Span<char> remain = intro;
+
+    // Parse request line
+    {
+        Span<char> line = SplitStrLine(remain, &remain);
+
+        Span<char> method = SplitStr(line, ' ', &line);
+        Span<char> url = SplitStr(line, ' ', &line);
+        Span<char> protocol = SplitStr(line, ' ', &line);
+
+        for (char &c: method) {
+            c = UpperAscii(c);
+        }
+
+        if (!method.len) {
+            SendError(400, "Empty HTTP method");
+            return PrepareStatus::Error;
+        }
+        if (!StartsWith(url, "/")) {
+            SendError(400, "Invalid request URL");
+            return PrepareStatus::Error;
+        }
+        if (TestStrI(protocol, "HTTP/1.0")) {
+            version = 10;
+            keepalive = false;
+        } else if (TestStrI(protocol, "HTTP/1.1")) {
+            version = 11;
+            keepalive = true;
+        } else {
+            SendError(400, "Invalid HTTP version");
+            return PrepareStatus::Error;
+        }
+        if (line.len) {
+            SendError(400, "Unexpected data after request line");
+            return PrepareStatus::Error;
+        }
+
+        if (TestStr(method, "HEAD")) {
+            request.method = http_RequestMethod::Get;
+            request.headers_only = true;
+        } else if (!OptionToEnumI(http_RequestMethodNames, method, &request.method)) {
+            SendError(405);
+            return PrepareStatus::Error;
+        }
+
+        Span<char> query;
+        url = SplitStr(url, '?', &query);
+
+        url.ptr[url.len] = 0;
+        request.url = url.ptr;
+    }
+
+    // Parse headers
+    while (remain.len) {
+        http_KeyValue header = {};
+
+        Span<char> line = SplitStrLine(remain, &remain);
+
+        Span<char> key = TrimStrRight(SplitStr(line, ':', &line));
+        if (line.ptr == key.end()) {
+            LogError("Malformed header line");
+            return PrepareStatus::Error;
+        }
+        Span<char> value = TrimStr(line);
+
+        bool upper = true;
+        for (char &c: key.As<char>()) {
+            c = upper ? UpperAscii(c) : LowerAscii(c);
+            upper = (c == '-');
+        }
+
+        key.ptr[key.len] = 0;
+        value.ptr[value.len] = 0;
+
+        header.key = key.ptr;
+        header.value = value.ptr;
+
+        request.headers.Append(header);
+
+        if (TestStrI(key, "Connection")) {
+            keepalive = !TestStrI(value, "close");
+        }
+    }
+
+    ready = true;
+    return PrepareStatus::Ready;
+}
+
+bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
+{
+    switch (addr_mode) {
+        case http_ClientAddressMode::Socket: {
+            sockaddr_storage ss;
+            socklen_t ss_len = RG_SIZE(ss);
+
+            if (getsockname(fd, (sockaddr *)&ss, &ss_len) < 0) {
+                LogError("Failed to retrieve socket name: %1", strerror(errno));
+                return false;
+            }
+
+            int family = ss.ss_family;
+            void *ptr = nullptr;
+
+            switch (ss.ss_family) {
+                case AF_INET: { ptr = &((sockaddr_in *)&ss)->sin_addr; } break;
+                case AF_INET6: { ptr = &((sockaddr_in6 *)&ss)->sin6_addr; } break;
+                case AF_UNIX: {
+                    CopyString("unix", addr);
+                    return true;
+                } break;
+
+                default: { RG_UNREACHABLE(); } break;
+            }
+
+            if (!inet_ntop(family, ptr, addr, RG_SIZE(addr))) {
+                LogError("Cannot convert network address to text");
+                return false;
+            }
+
+            return true;
+        } break;
+
+        case http_ClientAddressMode::XForwardedFor: {
+            const char *str = request.FindHeader("X-Forwarded-For");
+            if (!str) {
+                LogError("X-Forwarded-For header is missing but is required by the configuration");
+                return false;
+            }
+
+            Span<const char> trimmed = TrimStr(SplitStr(str, ','));
+
+            if (!trimmed.len) [[unlikely]] {
+                LogError("Empty client address in X-Forwarded-For header");
+                return false;
+            }
+            if (!CopyString(trimmed, addr)) [[unlikely]] {
+                LogError("Excessively long client address in X-Forwarded-For header");
+                return false;
+            }
+
+            return true;
+        } break;
+
+        case http_ClientAddressMode::XRealIP: {
+            const char *str = request.FindHeader("X-Real-IP");
+            if (!str) {
+                LogError("X-Real-IP header is missing but is required by the configuration");
+                return false;
+            }
+
+            Span<const char> trimmed = TrimStr(str);
+
+            if (!trimmed.len) [[unlikely]] {
+                LogError("Empty client address in X-Forwarded-For header");
+                return false;
+            }
+            if (!CopyString(trimmed, addr)) [[unlikely]] {
+                LogError("Excessively long client address in X-Forwarded-For header");
+                return false;
+            }
+
+            return true;
+        } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
+void http_IO::Reset()
+{
+    buf.RemoveFrom(0);
+    allocator.ReleaseAll();
+
+    intro = {};
+    extra = {};
+
+    version = 10;
+    keepalive = false;
+    request = {};
+
+    response = {};
+
+    ready = false;
+}
+
+void http_IO::Close()
+{
+    CloseSocket(fd);
+    fd = -1;
+
+    ready = false;
 }
 
 }

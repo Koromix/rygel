@@ -225,18 +225,18 @@ static bool LoadConfig(const char *filename, Config *out_config)
 
 static void ServeFile(const char *filename, const FileInfo &file_info, const http_RequestInfo &request, http_IO *io)
 {
-    const char *etag = config.set_etag ? Fmt(&io->allocator, "%1-%2", file_info.mtime, file_info.size).ptr : nullptr;
+    const char *etag = config.set_etag ? Fmt(io->Allocator(), "%1-%2", file_info.mtime, file_info.size).ptr : nullptr;
 
     // Handle ETag caching
     if (etag) {
-        const char *client_etag = request.GetHeaderValue("If-None-Match");
+        const char *client_etag = request.FindHeader("If-None-Match");
 
         if (client_etag && TestStr(client_etag, etag)) {
             if (config.verbose) {
                 LogInfo("Serving '%1' with 304 (valid cache ETag)", request.url, filename);
             }
 
-            io->AttachEmpty(304);
+            io->SendEmpty(304);
             return;
         }
     }
@@ -247,8 +247,8 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
 
     // Send the file
     const char *mimetype = GetMimeType(GetPathExtension(filename));
-    io->AttachFile(200, filename, mimetype);
     io->AddCachingHeaders(config.max_age, etag);
+    io->SendFile(200, filename, mimetype);
 }
 
 static void WriteContent(Span<const char> str, StreamWriter *writer) {
@@ -343,81 +343,78 @@ R"(<!DOCTYPE html>
 </html>
 )";
 
-    io->RunAsync([=]() {
-        HeapArray<Span<const char>> names;
-        {
-            EnumResult ret = EnumerateDirectory(dirname, nullptr, 4096,
-                                                [&](const char *basename, FileType file_type) {
-                Span<const char> filename = Fmt(&io->allocator, "%1%2", basename, file_type == FileType::Directory ? "/" : "");
-                names.Append(filename);
+    HeapArray<Span<const char>> names;
+    {
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, 4096,
+                                            [&](const char *basename, FileType file_type) {
+            Span<const char> filename = Fmt(io->Allocator(), "%1%2", basename, file_type == FileType::Directory ? "/" : "");
+            names.Append(filename);
 
-                return true;
-            });
-
-            if (ret != EnumResult::Success) {
-                switch (ret) {
-                    case EnumResult::Success: { RG_UNREACHABLE(); } break;
-
-                    case EnumResult::MissingPath: { io->AttachError(404); } break;
-                    case EnumResult::AccessDenied: { io->AttachError(403); } break;
-                    case EnumResult::PartialEnum: {
-                        LogError("Too many files");
-                        io->AttachError(413);
-                    } break;
-                    case EnumResult::CallbackFail:
-                    case EnumResult::OtherError: { /* 500 */ } break;
-                }
-
-                return;
-            }
-        }
-
-        std::sort(names.begin(), names.end(), [](Span<const char> name1, Span<const char> name2) {
-            bool is_directory1 = EndsWith(name1, "/");
-            bool is_directory2 = EndsWith(name2, "/");
-
-            if (is_directory1 != is_directory2) {
-                return is_directory1;
-            } else {
-                return CmpStr(name1, name2) < 0;
-            }
+            return true;
         });
 
-        StreamWriter st;
-        if (!io->OpenForWrite(200, -1, &st))
+        if (ret != EnumResult::Success) {
+            switch (ret) {
+                case EnumResult::Success: { RG_UNREACHABLE(); } break;
+
+                case EnumResult::MissingPath: { io->SendError(404); } break;
+                case EnumResult::AccessDenied: { io->SendError(403); } break;
+                case EnumResult::PartialEnum: {
+                    LogError("Too many files");
+                    io->SendError(413);
+                } break;
+                case EnumResult::CallbackFail:
+                case EnumResult::OtherError: { /* 500 */ } break;
+            }
+
             return;
+        }
+    }
 
-        PatchFile(IndexTemplate.As<const uint8_t>(), &st, [&](Span<const char> expr, StreamWriter *writer) {
-            Span<const char> key = TrimStr(expr);
+    std::sort(names.begin(), names.end(), [](Span<const char> name1, Span<const char> name2) {
+        bool is_directory1 = EndsWith(name1, "/");
+        bool is_directory2 = EndsWith(name2, "/");
 
-            if (key == "TITLE") {
-                Span<const char> stripped = TrimStrRight(request.url, "/");
-                Span<const char> title = Fmt(&io->allocator, "%1/", SplitStrReverseAny(stripped, RG_PATH_SEPARATORS));
-
-                WriteContent(title, writer);
-            } else if (key == "NAV") {
-                bool root = TestStr(request.url, "/");
-
-                PrintLn(writer, "        <a href=\"..\"%1>(go back)</a>", root ? " style=\"visibility: hidden;\"" : "");
-                PrintLn(writer, "        %1", request.url);
-            } else if (key == "MAIN") {
-                if (names.len) {
-                    writer->Write("        <ul>\n");
-                    for (Span<const char> name: names) {
-                        const char *cls = EndsWith(name, "/") ? "directory" : "file";
-
-                        Print(writer, "            <li class=\"%1\"><a href=\"", cls); WriteURL(name, writer); writer->Write("\">");
-                        WriteContent(name, writer); writer->Write("</a></li>\n");
-                    }
-                    writer->Write("        </ul>");
-                } else {
-                    writer->Write("Empty directory");
-                }
-            } else {
-                Print(writer, "{{%1}}", expr);
-            }
-        });
+        if (is_directory1 != is_directory2) {
+            return is_directory1;
+        } else {
+            return CmpStr(name1, name2) < 0;
+        }
     });
+
+    Span<const uint8_t> page = PatchFile(IndexTemplate.As<const uint8_t>(), io->Allocator(),
+                                         [&](Span<const char> expr, StreamWriter *writer) {
+        Span<const char> key = TrimStr(expr);
+
+        if (key == "TITLE") {
+            Span<const char> stripped = TrimStrRight(request.url, "/");
+            Span<const char> title = Fmt(io->Allocator(), "%1/", SplitStrReverseAny(stripped, RG_PATH_SEPARATORS));
+
+            WriteContent(title, writer);
+        } else if (key == "NAV") {
+            bool root = TestStr(request.url, "/");
+
+            PrintLn(writer, "        <a href=\"..\"%1>(go back)</a>", root ? " style=\"visibility: hidden;\"" : "");
+            PrintLn(writer, "        %1", request.url);
+        } else if (key == "MAIN") {
+            if (names.len) {
+                writer->Write("        <ul>\n");
+                for (Span<const char> name: names) {
+                    const char *cls = EndsWith(name, "/") ? "directory" : "file";
+
+                    Print(writer, "            <li class=\"%1\"><a href=\"", cls); WriteURL(name, writer); writer->Write("\">");
+                    WriteContent(name, writer); writer->Write("</a></li>\n");
+                }
+                writer->Write("        </ul>");
+            } else {
+                writer->Write("Empty directory");
+            }
+        } else {
+            Print(writer, "{{%1}}", expr);
+        }
+    });
+
+    io->SendBinary(200, page, "text/html");
 }
 
 static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
@@ -426,7 +423,7 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
         return false;
 
     Span<const char> relative_url = TrimStrLeft(request.url, "/\\").ptr;
-    Span<const char> filename = NormalizePath(relative_url, config.root_directory, &io->allocator);
+    Span<const char> filename = NormalizePath(relative_url, config.root_directory, io->Allocator());
 
     FileInfo file_info;
     {
@@ -435,7 +432,7 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
         if (config.auto_html) {
             if (stat == StatResult::MissingPath && !EndsWith(filename, "/")
                                                 && !GetPathExtension(filename).len) {
-                filename = Fmt(&io->allocator, "%1.html", filename).ptr;
+                filename = Fmt(io->Allocator(), "%1.html", filename).ptr;
                 stat = StatFile(filename.ptr, (int)StatFlag::SilentMissing, &file_info);
             }
         }
@@ -445,7 +442,7 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
 
             case StatResult::MissingPath: return false;
             case StatResult::AccessDenied: {
-                io->AttachError(403);
+                io->SendError(403);
                 return true;
             } break;
             case StatResult::OtherError: return true;
@@ -457,13 +454,13 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
         return true;
     } else if (file_info.type == FileType::Directory) {
         if (!EndsWith(request.url, "/")) {
-            const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
+            const char *redirect = Fmt(io->Allocator(), "%1/", request.url).ptr;
             io->AddHeader("Location", redirect);
-            io->AttachEmpty(302);
+            io->SendEmpty(302);
             return true;
         }
 
-        const char *index_filename = Fmt(&io->allocator, "%1/index.html", filename).ptr;
+        const char *index_filename = Fmt(io->Allocator(), "%1/index.html", filename).ptr;
 
         FileInfo index_info;
 
@@ -478,7 +475,7 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
             return false;
         }
     } else {
-        io->AttachError(403);
+        io->SendError(403);
         return true;
     }
 }
@@ -506,27 +503,21 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
     }
 
     const char *relative_url = TrimStrLeft(request.url, '/').ptr;
-    const char *url = Fmt(&io->allocator, "%1%2", config.proxy_url, relative_url).ptr;
+    const char *url = Fmt(io->Allocator(), "%1%2", config.proxy_url, relative_url).ptr;
     HeapArray<curl_slist> curl_headers;
 
     // Copy client headers
-    {
-        HeapArray<http_KeyValue> headers;
-        request.ListHeaderValues(&io->allocator, &headers);
+    for (const http_KeyValue &header: request.headers) {
+        bool skip = std::any_of(std::begin(OmitHeaders), std::end(OmitHeaders),
+                                [&](const char *pattern) { return MatchPathName(header.key, pattern, false); });
 
-        for (const http_KeyValue &header: headers) {
-            bool skip = std::any_of(std::begin(OmitHeaders), std::end(OmitHeaders),
-                                    [&](const char *pattern) { return MatchPathName(header.key, pattern, false); });
-
-            if (!skip) {
-                char *str = Fmt(&io->allocator, "%1: %2", header.key, header.value).ptr;
-                curl_headers.Append({ .data = str, .next = nullptr });
-            }
+        if (!skip) {
+            char *str = Fmt(io->Allocator(), "%1: %2", header.key, header.value).ptr;
+            curl_headers.Append({ .data = str, .next = nullptr });
         }
-
-        for (Size i = 0; i < curl_headers.len - 1; i++) {
-            curl_headers[i].next = &curl_headers[i + 1];
-        }
+    }
+    for (Size i = 0; i < curl_headers.len - 1; i++) {
+        curl_headers[i].next = &curl_headers[i + 1];
     }
 
     struct RelayContext {
@@ -537,7 +528,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
     };
     RelayContext ctx;
     ctx.io = io;
-    ctx.data.allocator = &io->allocator;
+    ctx.data.allocator = io->Allocator();
 
     // Set CURL options
     {
@@ -555,8 +546,8 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
             Span<const char> remain = MakeSpan(ptr, (Size)nmemb);
 
-            const char *key = DuplicateString(TrimStr(SplitStr(remain, ':', &remain)), &io->allocator).ptr;
-            const char *value = DuplicateString(TrimStr(remain), &io->allocator).ptr;
+            const char *key = DuplicateString(TrimStr(SplitStr(remain, ':', &remain)), io->Allocator()).ptr;
+            const char *value = DuplicateString(TrimStr(remain), io->Allocator()).ptr;
 
             bool skip = std::any_of(std::begin(OmitHeaders), std::end(OmitHeaders),
                                     [&](const char *pattern) { return MatchPathName(key, pattern, false); });
@@ -622,14 +613,14 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
     }
 
     if (status < 0) {
-        io->AttachError(502);
+        io->SendError(502);
         return true;
     }
 
-    io->AttachBinary(status, ctx.data.Leak());
     for (const http_KeyValue &header: ctx.headers) {
         io->AddHeader(header.key, header.value);
     }
+    io->SendBinary(status, ctx.data.Leak());
 
     return true;
 }
@@ -641,12 +632,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Security checks
     if (request.method != http_RequestMethod::Get) {
         LogError("Only GET requests are allowed");
-        io->AttachError(405);
+        io->SendError(405);
         return;
     }
     if (PathContainsDotDot(request.url)) {
         LogError("Unsafe URL containing '..' components");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -663,7 +654,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         return;
 
     LogInfo("Cannot find anything to serve '%1'", request.url);
-    io->AttachError(404, nullptr);
+    io->SendError(404);
 }
 
 int Main(int argc, char **argv)

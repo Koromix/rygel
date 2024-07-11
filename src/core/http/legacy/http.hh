@@ -23,3 +23,4 @@
 
 #include "server.hh"
 #include "misc.hh"
+#include "session.hh"
