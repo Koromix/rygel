@@ -151,7 +151,7 @@
         "platform": "freebsd",
 
         "qemu": {
-            "binary": "qemu-system-x86_64",
+            "binary": "qemu-system-i386",
             "arguments": ["-m", "1G", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22207-:22", "-device", "e1000,netdev=mynet", "-vnc", "127.0.0.1:17"],
             "version": 4,
 
