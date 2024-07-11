@@ -72,10 +72,10 @@ These machines are not included directly in this repository (for license and siz
 For example, if you want to run the tests on Debian ARM64, run the following commands:
 
 ```sh
-cd deploy/qemu/machines/
+cd deploy/qemu/
 
 wget -q -O- https://koromix.dev/files/machines/qemu_debian_arm64.tar.zst | zstd -d | tar xv
-sha256sum -c --ignore-missing sha256sum.txt
+b3sum -c b3sum.txt
 ```
 
 Note that the machine disk content may change each time the machine runs, so the checksum test will fail once a machine has been used at least once.
