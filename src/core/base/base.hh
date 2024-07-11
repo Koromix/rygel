@@ -1161,15 +1161,20 @@ void ReleaseSpan(Allocator *alloc, Span<T> mem)
 }
 
 class LinkedAllocator final: public Allocator {
+    struct Node {
+        Node *prev;
+        Node *next;
+    };
     struct Bucket {
-        Bucket *prev;
-        Bucket *next;
+         // Keep head first or stuff will break
+        Node head;
         uint8_t data[];
     };
 
     Allocator *allocator;
-
-    Bucket *list = nullptr;
+    // We want allocators to be memmovable, which means we can't use a circular linked list.
+    // Even though it makes the code less nice.
+    Node list = {};
 
 public:
     LinkedAllocator(Allocator *alloc = nullptr) : allocator(alloc) {}
@@ -1179,13 +1184,12 @@ public:
     LinkedAllocator& operator=(LinkedAllocator &&other);
 
     void ReleaseAll();
-    void ReleaseAllExcept(void *ptr);
 
     void *Allocate(Size size, unsigned int flags = 0) override;
     void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
     void Release(const void *ptr, Size size) override;
 
-    bool IsUsed() const { return list; }
+    bool IsUsed() const { return list.next; }
 
 private:
     static Bucket *PointerToBucket(void *ptr);
@@ -1221,7 +1225,7 @@ public:
 
 protected:
     void CopyFrom(BlockAllocatorBase *other);
-    void *ResetCurrent();
+    void ForgetCurrentBlock();
 
     virtual LinkedAllocator *GetAllocator() = 0;
 
@@ -1242,7 +1246,7 @@ public:
     BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
     BlockAllocator& operator=(BlockAllocator &&other);
 
-    void Reset();
+    void ReleaseAll();
 };
 
 class IndirectBlockAllocator final: public BlockAllocatorBase {
@@ -1258,7 +1262,7 @@ public:
     IndirectBlockAllocator(IndirectBlockAllocator &&other) { *this = std::move(other); }
     IndirectBlockAllocator& operator=(IndirectBlockAllocator &&other);
 
-    void Reset();
+    void ReleaseAll();
 };
 
 #if !defined(__wasi__)

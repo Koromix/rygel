@@ -623,7 +623,7 @@ static bool HandleServerData()
 
         if (key == "profiles") {
             profiles.Clear();
-            profiles_alloc.Reset();
+            profiles_alloc.ReleaseAll();
 
             parser.ParseArray();
             while (parser.InArray()) {

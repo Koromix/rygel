@@ -1099,7 +1099,7 @@ void http_IO::Reset()
     }
 
     buf.RemoveFrom(0);
-    allocator.Reset();
+    allocator.ReleaseAll();
 
     intro = {};
     extra = {};

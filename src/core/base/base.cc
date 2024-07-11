@@ -191,59 +191,37 @@ LinkedAllocator& LinkedAllocator::operator=(LinkedAllocator &&other)
 {
     ReleaseAll();
     list = other.list;
-    other.list = nullptr;
+    other.list = {};
 
     return *this;
 }
 
 void LinkedAllocator::ReleaseAll()
 {
-    if (!list)
-        return;
-
-    Bucket *bucket = list;
-
-    do {
-        Bucket *next = bucket->next;
-        ReleaseRaw(allocator, bucket, -1);
-        bucket = next;
-    } while (bucket != list);
-
-    list = nullptr;
-}
-
-void LinkedAllocator::ReleaseAllExcept(void *ptr)
-{
-    if (!ptr) {
-        ReleaseAll();
-        return;
+    Node *head = list.next;
+    while (head) {
+        Node *next = head->next;
+        ReleaseRaw(allocator, head, -1);
+        head = next;
     }
-
-    Bucket *keep = PointerToBucket(ptr);
-    Bucket *bucket = keep->next;
-
-    while (bucket != keep) {
-        Bucket *next = bucket->next;
-        ReleaseRaw(allocator, bucket, -1);
-        bucket = next;
-    }
-
-    list = keep;
-
-    keep->prev = keep;
-    keep->next = keep;
+    list = {};
 }
 
 void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
     Bucket *bucket = (Bucket *)AllocateRaw(allocator, RG_SIZE(Bucket) + size, flags);
 
-    list = list ? list : bucket;
-
-    bucket->prev = list;
-    bucket->next = list->prev;
-    bucket->prev->next = bucket;
-    bucket->next->prev = bucket;
+    if (list.prev) {
+        list.prev->next = &bucket->head;
+        bucket->head.prev = list.prev;
+        bucket->head.next = nullptr;
+        list.prev = &bucket->head;
+    } else {
+        list.prev = &bucket->head;
+        list.next = &bucket->head;
+        bucket->head.prev = nullptr;
+        bucket->head.next = nullptr;
+    }
 
     return (void *)bucket->data;
 }
@@ -257,19 +235,19 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
         ptr = nullptr;
     } else {
         Bucket *bucket = PointerToBucket(ptr);
-        bool single = (bucket->next == bucket);
 
         bucket = (Bucket *)ResizeRaw(allocator, bucket, RG_SIZE(Bucket) + old_size,
                                                         RG_SIZE(Bucket) + new_size, flags);
 
-        list = bucket;
-
-        if (single) {
-            bucket->prev = bucket;
-            bucket->next = bucket;
+        if (bucket->head.next) {
+            bucket->head.next->prev = &bucket->head;
         } else {
-            bucket->prev->next = bucket;
-            bucket->next->prev = bucket;
+            list.prev = &bucket->head;
+        }
+        if (bucket->head.prev) {
+            bucket->head.prev->next = &bucket->head;
+        } else {
+            list.next = &bucket->head;
         }
 
         ptr = (void *)bucket->data;
@@ -280,18 +258,22 @@ void *LinkedAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned 
 
 void LinkedAllocator::Release(const void *ptr, Size size)
 {
-    if (!ptr)
-        return;
+    if (ptr) {
+        Bucket *bucket = PointerToBucket((void *)ptr);
 
-    Bucket *bucket = PointerToBucket((void *)ptr);
-    bool single = (bucket->next == bucket);
+        if (bucket->head.next) {
+            bucket->head.next->prev = bucket->head.prev;
+        } else {
+            list.prev = bucket->head.prev;
+        }
+        if (bucket->head.prev) {
+            bucket->head.prev->next = bucket->head.next;
+        } else {
+            list.next = bucket->head.next;
+        }
 
-    list = single ? nullptr : bucket->next;
-
-    bucket->prev->next = bucket->next;
-    bucket->next->prev = bucket->prev;
-
-    ReleaseRaw(allocator, bucket, RG_SIZE(Bucket) + size);
+        ReleaseRaw(allocator, bucket, RG_SIZE(Bucket) + size);
+    }
 }
 
 LinkedAllocator::Bucket *LinkedAllocator::PointerToBucket(void *ptr)
@@ -410,16 +392,10 @@ void BlockAllocatorBase::CopyFrom(BlockAllocatorBase *other)
     last_alloc = other->last_alloc;
 }
 
-void *BlockAllocatorBase::ResetCurrent()
+void BlockAllocatorBase::ForgetCurrentBlock()
 {
+    current_bucket = nullptr;
     last_alloc = nullptr;
-
-    if (current_bucket) {
-        current_bucket->used = 0;
-        return current_bucket;
-    } else {
-        return nullptr;
-    }
 }
 
 BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
@@ -430,10 +406,10 @@ BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
     return *this;
 }
 
-void BlockAllocator::Reset()
+void BlockAllocator::ReleaseAll()
 {
-    void *ptr = ResetCurrent();
-    allocator.ReleaseAllExcept(ptr);
+    ForgetCurrentBlock();
+    allocator.ReleaseAll();
 }
 
 IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator &&other)
@@ -444,10 +420,10 @@ IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator
     return *this;
 }
 
-void IndirectBlockAllocator::Reset()
+void IndirectBlockAllocator::ReleaseAll()
 {
-    void *ptr = ResetCurrent();
-    allocator->ReleaseAllExcept(ptr);
+    ForgetCurrentBlock();
+    allocator->ReleaseAll();
 }
 
 #if defined(_WIN32)
@@ -6209,7 +6185,7 @@ bool StreamReader::Close(bool implicit)
     source.eof = false;
     eof = false;
     raw_len = -1;
-    str_alloc.Reset();
+    str_alloc.ReleaseAll();
 
     return ret;
 }
@@ -6829,7 +6805,7 @@ bool StreamWriter::Close(bool implicit)
     filename = nullptr;
     error = true;
     dest.type = DestinationType::Memory;
-    str_alloc.Reset();
+    str_alloc.ReleaseAll();
 
     return ret;
 }
@@ -7212,7 +7188,7 @@ bool ReloadAssets()
     // We are not allowed to fail from now on
     assets.Clear();
     assets_map.Clear();
-    assets_alloc.Reset();
+    assets_alloc.ReleaseAll();
 
     for (const AssetInfo &asset: *lib_assets) {
         AssetInfo asset_copy;

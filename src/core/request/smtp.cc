@@ -51,7 +51,7 @@ bool smtp_Sender::Init(const smtp_Config &config)
     if (!config.Validate())
         return false;
 
-    str_alloc.Reset();
+    str_alloc.ReleaseAll();
     this->config.url = DuplicateString(config.url, &str_alloc).ptr;
     this->config.username = DuplicateString(config.username, &str_alloc).ptr;
     this->config.password = DuplicateString(config.password, &str_alloc).ptr;

@@ -50,7 +50,7 @@ public:
     void Clear()
     {
         entries.Clear();
-        str_alloc.Reset();
+        str_alloc.ReleaseAll();
     }
 };
 

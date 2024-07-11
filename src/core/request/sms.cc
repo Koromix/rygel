@@ -55,7 +55,7 @@ bool sms_Sender::Init(const sms_Config &config)
     if (!config.Validate())
         return false;
 
-    str_alloc.Reset();
+    str_alloc.ReleaseAll();
     this->config.provider = config.provider;
     this->config.authid = DuplicateString(config.authid, &str_alloc).ptr;
     this->config.token = DuplicateString(config.token, &str_alloc).ptr;
