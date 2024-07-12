@@ -5914,8 +5914,12 @@ void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
     }
 
     // Limit queue size (back pressure)
-    while (pending_tasks >= RG_ASYNC_MAX_PENDING_TASKS) {
-        RunTasks(0);
+    if (pending_tasks >= RG_ASYNC_MAX_PENDING_TASKS) {
+        int worker_idx = async_running_worker_idx;
+
+        do {
+            RunTasks(worker_idx);
+        } while (pending_tasks >= RG_ASYNC_MAX_PENDING_TASKS);
     }
 }
 
