@@ -240,7 +240,7 @@
         }
     },
 
-    "windows_i386": {
+    "win32_i386": {
         "title": "Windows i386",
 
         "info": {
@@ -267,7 +267,7 @@
         }
     },
 
-    "windows_x64": {
+    "win32_x64": {
         "title": "Windows x64",
 
         "info": {
@@ -294,7 +294,7 @@
         }
     },
 
-    "windows_arm64": {
+    "win32_arm64": {
         "title": "Windows ARM64",
 
         "info": {
