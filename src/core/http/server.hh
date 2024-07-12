@@ -140,6 +140,10 @@ class http_IO {
     int fd;
     char addr[65];
 
+    int64_t start;
+    int count;
+    int timeout;
+
     HeapArray<uint8_t> buf;
     Span<char> intro;
     Span<uint8_t> extra;
@@ -154,9 +158,6 @@ class http_IO {
         HeapArray<std::function<void()>> finalizers;
         bool sent = false;
     } response;
-
-    int count;
-    int64_t timeout;
 
     BlockAllocator allocator;
 
@@ -185,10 +186,10 @@ public:
     void AddFinalizer(const std::function<void()> &func);
 
 private:
-    http_IO(RequestHandler *handler);
+    http_IO(RequestHandler *handler) : handler(handler) { Reset(); }
     ~http_IO() { Close(); }
 
-    bool Init(int fd, struct sockaddr *sa);
+    bool Init(int fd, int64_t start, struct sockaddr *sa);
     bool InitAddress(http_ClientAddressMode addr_mode);
 
     PrepareStatus Prepare();

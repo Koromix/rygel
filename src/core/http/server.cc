@@ -55,12 +55,11 @@ public:
     void Wake();
 
 private:
-    http_IO *CreateClient(int fd, struct sockaddr *sa);
+    http_IO *CreateClient(int fd, int64_t start, struct sockaddr *sa);
     void CloseClient(http_IO *client);
 };
 
-static const int KeepAliveCount = 1000;
-static const int KeepAliveDelay = 20000;
+static const int KeepAliveDelay = 5000;
 static const int WorkersPerHandler = 4;
 static const int PollAfterIdle = 1000;
 
@@ -424,8 +423,8 @@ void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> 
     if (keepalive) {
         intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
                                                 "Connection: keep-alive\r\n"
-                                                "Keep-Alive: timeout=%4, max=%5\r\n",
-                         protocol, status, details, KeepAliveDelay / 1000, KeepAliveCount).len;
+                                                "Keep-Alive: timeout=%4\r\n",
+                         protocol, status, details, timeout / 1000).len;
     } else {
         intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
                                                 "Connection: close\r\n",
@@ -635,7 +634,7 @@ bool http_Daemon::RequestHandler::Run()
                     return false;
                 }
 
-                http_IO *client = CreateClient(fd, (sockaddr *)&ss);
+                http_IO *client = CreateClient(fd, now, (sockaddr *)&ss);
                 clients.Append(client);
 
                 busy = now;
@@ -671,7 +670,8 @@ bool http_Daemon::RequestHandler::Run()
                         break;
                     }
 
-                    client->keepalive &= (--client->count <= 0) || (now <= client->timeout);
+                    client->timeout = KeepAliveDelay - (now - client->start);
+                    client->keepalive &= (client->timeout >= 0);
 
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerHandler;
@@ -698,10 +698,7 @@ bool http_Daemon::RequestHandler::Run()
                 } break;
 
                 case http_IO::PrepareStatus::Busy: { keep.Append(client); } break;
-
-                case http_IO::PrepareStatus::Closed: {
-                    CloseClient(client);
-                } break;
+                case http_IO::PrepareStatus::Closed: { CloseClient(client); } break;
 
                 case http_IO::PrepareStatus::Error: {
                     client->keepalive = false;
@@ -749,7 +746,7 @@ void http_Daemon::RequestHandler::Wake()
     }
 }
 
-http_IO *http_Daemon::RequestHandler::CreateClient(int fd, struct sockaddr *sa)
+http_IO *http_Daemon::RequestHandler::CreateClient(int fd, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
 
@@ -764,7 +761,7 @@ http_IO *http_Daemon::RequestHandler::CreateClient(int fd, struct sockaddr *sa)
         client = new http_IO(this);
     }
 
-    if (!client->Init(fd, sa)) [[unlikely]] {
+    if (!client->Init(fd, start, sa)) [[unlikely]] {
         delete client;
         return nullptr;
     }
@@ -780,15 +777,6 @@ void http_Daemon::RequestHandler::CloseClient(http_IO *client)
     } else {
         delete client;
     }
-}
-
-http_IO::http_IO(RequestHandler *handler)
-    : handler(handler)
-{
-    Reset();
-
-    count = KeepAliveCount;
-    timeout = GetMonotonicTime() + KeepAliveDelay;
 }
 
 http_IO::PrepareStatus http_IO::Prepare()
@@ -947,7 +935,7 @@ http_IO::PrepareStatus http_IO::Prepare()
     return PrepareStatus::Ready;
 }
 
-bool http_IO::Init(int fd, struct sockaddr *sa)
+bool http_IO::Init(int fd, int64_t start, struct sockaddr *sa)
 {
     this->fd = fd;
 
@@ -969,6 +957,9 @@ bool http_IO::Init(int fd, struct sockaddr *sa)
         LogError("Cannot convert network address to text");
         return false;
     }
+
+    this->start = start;
+    this->timeout = KeepAliveDelay;
 
     return true;
 }
