@@ -2602,7 +2602,7 @@ public:
                 DeleteBucket(buckets[i]);
             }
             MemMove(&buckets[0], &buckets[end_bucket_idx],
-                        (buckets.len - end_bucket_idx) * RG_SIZE(Bucket *));
+                    (buckets.len - end_bucket_idx) * RG_SIZE(Bucket *));
             buckets.RemoveLast(end_bucket_idx);
         }
 
