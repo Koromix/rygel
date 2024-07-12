@@ -1110,6 +1110,7 @@ void http_IO::Reset()
 
     response.headers.RemoveFrom(0);
     response.finalizers.RemoveFrom(0);
+    response.sent = false;
 
     ready = false;
 }
