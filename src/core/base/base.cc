@@ -5704,6 +5704,7 @@ class AsyncPool {
     int refcount = 0;
 
     int async_count = 0;
+    std::atomic_uint next_worker { 0 };
     HeapArray<WorkerData> workers;
     std::atomic_int pending_tasks { 0 };
 
@@ -5716,6 +5717,7 @@ public:
     void UnregisterAsync();
 
     void AddTask(Async *async, const std::function<bool()> &func);
+    void AddTask(Async *async, int worker_idx, const std::function<bool()> &func);
 
     void RunWorker(int worker_idx);
     void SyncOn(Async *async);
@@ -5776,6 +5778,11 @@ Async::~Async()
 void Async::Run(const std::function<bool()> &func)
 {
     pool->AddTask(this, func);
+}
+
+void Async::Run(int worker, const std::function<bool()> &func)
+{
+    pool->AddTask(this, worker, func);
 }
 
 bool Async::Sync()
@@ -5885,41 +5892,39 @@ void AsyncPool::UnregisterAsync()
 
 void AsyncPool::AddTask(Async *async, const std::function<bool()> &func)
 {
-    if (async_running_pool != async->pool) {
-        for (;;) {
-            int idx = GetRandomInt(0, (int)workers.len);
-            WorkerData *worker = &workers[idx];
-
-            std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);
-            if (lock_queue.owns_lock()) {
-                worker->tasks.Append({ async, func });
-                break;
-            }
-        }
+    if (async_running_pool != this) {
+        int worker_idx = (next_worker++ % (int)workers.len);
+        AddTask(async, worker_idx, func);
     } else {
-        WorkerData *worker = &workers[async_running_worker_idx];
+        AddTask(async, async_running_worker_idx, func);
+    }
+}
 
+void AsyncPool::AddTask(Async *async, int worker_idx, const std::function<bool()> &func)
+{
+    WorkerData *worker = &workers[worker_idx];
+
+    // Add the task damn it
+    {
         std::lock_guard<std::mutex> lock_queue(worker->queue_mutex);
         worker->tasks.Append({ async, func });
     }
 
     async->remaining_tasks++;
 
-    // Wake up workers and syncing threads (extra help)
-    if (!pending_tasks++) {
-        std::lock_guard<std::mutex> lock_pool(pool_mutex);
+    int prev_pending = pending_tasks++;
 
-        pending_cv.notify_all();
-        sync_cv.notify_all();
-    }
-
-    // Limit queue size (back pressure)
-    if (pending_tasks >= RG_ASYNC_MAX_PENDING_TASKS) {
+    if (prev_pending >= RG_ASYNC_MAX_PENDING_TASKS) {
         int worker_idx = async_running_worker_idx;
 
         do {
             RunTasks(worker_idx);
         } while (pending_tasks >= RG_ASYNC_MAX_PENDING_TASKS);
+    } else if (!prev_pending) {
+        std::lock_guard<std::mutex> lock_pool(pool_mutex);
+
+        pending_cv.notify_all();
+        sync_cv.notify_all();
     }
 }
 
@@ -6030,6 +6035,14 @@ Async::~Async()
 }
 
 void Async::Run(const std::function<bool()> &func)
+{
+    if (!success && stop_after_error)
+        return;
+
+    success &= !!func();
+}
+
+void Async::Run(int, const std::function<bool()> &func)
 {
     if (!success && stop_after_error)
         return;

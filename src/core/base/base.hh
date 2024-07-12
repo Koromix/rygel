@@ -99,7 +99,7 @@ namespace RG {
 
 #define RG_ASYNC_MAX_THREADS 2048
 #define RG_ASYNC_MAX_IDLE_TIME 10000
-#define RG_ASYNC_MAX_PENDING_TASKS 1024
+#define RG_ASYNC_MAX_PENDING_TASKS 2048
 
 #define RG_FIBER_DEFAULT_STACK_SIZE Kibibytes(128)
 
@@ -4503,6 +4503,7 @@ public:
     ~Async();
 
     void Run(const std::function<bool()> &f);
+    void Run(int worker, const std::function<bool()> &f);
     bool Sync();
 
     int GetWorkerCount();

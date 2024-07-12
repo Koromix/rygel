@@ -46,7 +46,7 @@ class http_Daemon::RequestHandler {
     std::shared_mutex wake_mutex;
     bool wake_needed = false;
 
-    LocalArray<http_IO *, 64> pool;
+    LocalArray<http_IO *, 256> pool;
 
 public:
     RequestHandler(http_Daemon *daemon) : daemon(daemon) {}
@@ -61,6 +61,7 @@ private:
 
 static const int KeepAliveCount = 1000;
 static const int KeepAliveDelay = 20000;
+static const int WorkersPerHandler = 4;
 
 static RG_CONSTINIT ConstMap<128, int, const char *> ErrorMessages = {
     { 100, "Continue" },
@@ -238,7 +239,7 @@ bool http_Daemon::Start(const http_Config &config,
                         std::function<void(const http_RequestInfo &request, http_IO *io)> func,
                         bool log_socket)
 {
-    RG_ASSERT(!front);
+    RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
     // Validate configuration
@@ -256,14 +257,10 @@ bool http_Daemon::Start(const http_Config &config,
 
     handle_func = func;
 
-    // We use separate workers to decode requests and run user handling
-    front = new Async;
-    back = new Async(GetCoreCount() * 4);
-
     // Run request handlers
-    for (Size i = 0; i < front->GetWorkerCount(); i++) {
+    for (Size i = 0; i < async.GetWorkerCount(); i++) {
         RequestHandler *handler = new RequestHandler(this);
-        front->Run([=] { return handler->Run(); });
+        async.Run([=] { return handler->Run(); });
     }
 
     if (log_socket) {
@@ -280,25 +277,14 @@ bool http_Daemon::Start(const http_Config &config,
 
 void http_Daemon::Stop()
 {
-    // Wake up everyone
+    // Shut everything down
     shutdown(listen_fd, SHUT_RD);
-
-    // Wait for everyone to wind down
-    if (front) {
-        front->Sync();
-
-        delete front;
-        front = nullptr;
-    }
-    if (back) {
-        back->Sync();
-
-        delete back;
-        back = nullptr;
-    }
+    async.Sync();
 
     CloseSocket(listen_fd);
     listen_fd = -1;
+
+    handle_func = {};
 }
 
 const char *http_RequestInfo::FindHeader(const char *key) const
@@ -587,7 +573,7 @@ bool http_Daemon::RequestHandler::Run()
     int listen_fd = daemon->listen_fd;
     http_ClientAddressMode addr_mode = daemon->addr_mode;
 
-    Async async(daemon->back);
+    Async async(1 + WorkersPerHandler);
     BucketArray<http_IO *, 2048> clients;
 
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
@@ -618,6 +604,7 @@ bool http_Daemon::RequestHandler::Run()
         { event_fd, POLLIN, 0 }
     };
 
+    int next_worker = 0;
     int64_t busy = 0;
 
     for (;;) {
@@ -694,8 +681,11 @@ bool http_Daemon::RequestHandler::Run()
 
                     client->keepalive &= (--client->count <= 0) || (now <= client->timeout);
 
+                    int worker_idx = 1 + next_worker;
+                    next_worker = (next_worker + 1) % WorkersPerHandler;
+
                     if (client->keepalive) {
-                        async.Run([=, this] {
+                        async.Run(worker_idx, [=, this] {
                             daemon->handle_func(client->request, client);
 
                             client->Reset();
@@ -704,7 +694,7 @@ bool http_Daemon::RequestHandler::Run()
                             return true;
                         });
                     } else {
-                        async.Run([=, this] {
+                        async.Run(worker_idx, [=, this] {
                             daemon->handle_func(client->request, client);
                             client->Close();
 
