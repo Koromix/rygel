@@ -574,7 +574,9 @@ bool http_Daemon::RequestHandler::Run()
     http_ClientAddressMode addr_mode = daemon->addr_mode;
 
     Async async(1 + WorkersPerHandler);
-    BucketArray<http_IO *, 2048> clients;
+
+    HeapArray<http_IO *> clients;
+    HeapArray<http_IO *> keep;
 
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (event_fd < 0) {
@@ -649,23 +651,16 @@ bool http_Daemon::RequestHandler::Run()
             (void)ret;
         }
 
-        auto begin = clients.begin();
-        Size removed = 0;
-
-        const auto forget = [&](auto it) {
-            std::swap(*begin, *it);
-            begin++;
-            removed++;
-        };
-
-        for (auto it = begin; it != clients.end(); it++) {
-            http_IO *client = *it;
+        for (Size i = 0; i < clients.len; i++) {
+            http_IO *client = clients[i];
             http_IO::PrepareStatus ret = client->Prepare();
 
             switch (ret) {
                 case http_IO::PrepareStatus::Waiting: {
                     struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
                     pfds.Append(pfd);
+
+                    keep.Append(client);
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
@@ -673,7 +668,6 @@ bool http_Daemon::RequestHandler::Run()
                         client->keepalive = false;
                         client->SendText(400, "Malformed request");
 
-                        forget(it);
                         CloseClient(client);
 
                         break;
@@ -701,12 +695,13 @@ bool http_Daemon::RequestHandler::Run()
                             return true;
                         });
                     }
+
+                    keep.Append(client);
                 } break;
 
-                case http_IO::PrepareStatus::Busy: {} break;
+                case http_IO::PrepareStatus::Busy: { keep.Append(client); } break;
 
                 case http_IO::PrepareStatus::Closed: {
-                    forget(it);
                     CloseClient(client);
                 } break;
 
@@ -714,13 +709,13 @@ bool http_Daemon::RequestHandler::Run()
                     client->keepalive = false;
                     client->SendText(400, "Malformed request");
 
-                    forget(it);
                     CloseClient(client);
                 } break;
             }
         }
 
-        clients.RemoveFirst(removed);
+        std::swap(clients, keep);
+        keep.RemoveFrom(0);
 
         if (now - busy > 1000) {
             // Wake me up from the kernel if needed
