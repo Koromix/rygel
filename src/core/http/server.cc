@@ -408,7 +408,7 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
     }
 }
 
-void http_IO::Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> func)
+void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *)> func)
 {
     RG_ASSERT(!response.sent);
 

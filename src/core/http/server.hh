@@ -174,7 +174,7 @@ public:
                          bool http_only = false);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
-    void Send(int status, Size len, FunctionRef<void(int, StreamWriter *)> func);
+    void Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *)> func);
     void SendText(int status, Span<const char> text, const char *mimetype = "text/plain");
     void SendBinary(int status, Span<const uint8_t> data, const char *mimetype = nullptr);
     bool SendAsset(int status, Span<const uint8_t> data, const char *mimetype = nullptr,
