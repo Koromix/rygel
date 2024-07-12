@@ -121,7 +121,7 @@ bool s3_Config::Validate() const
 
 void s3_Config::Clone(s3_Config *out_config) const
 {
-    out_config->str_alloc.ReleaseAll();
+    out_config->str_alloc.Reset();
 
     out_config->scheme = scheme ? DuplicateString(scheme, &out_config->str_alloc).ptr : nullptr;
     out_config->host = host ? DuplicateString(host, &out_config->str_alloc).ptr : nullptr;

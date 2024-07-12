@@ -234,7 +234,7 @@ static void InitRoutes()
     LogInfo("Init routes");
 
     routes.Clear();
-    routes_alloc.ReleaseAll();
+    routes_alloc.Reset();
 
     const auto add_asset_route = [&](http_RequestMethod method, const char *url,
                                      Route::Matching matching, const AssetInfo &asset) {
