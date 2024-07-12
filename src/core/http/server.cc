@@ -62,6 +62,7 @@ private:
 static const int KeepAliveCount = 1000;
 static const int KeepAliveDelay = 20000;
 static const int WorkersPerHandler = 4;
+static const int PollAfterIdle = 1000;
 
 static RG_CONSTINIT ConstMap<128, int, const char *> ErrorMessages = {
     { 100, "Continue" },
@@ -627,11 +628,8 @@ bool http_Daemon::RequestHandler::Run()
                 if (fd < 0) {
                     if (errno == EINVAL)
                         return true;
-
-                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                        pfds[0].revents &= ~POLLIN;
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
                         break;
-                    }
 
                     LogError("Failed to accept client: %1", strerror(errno));
                     return false;
@@ -717,7 +715,7 @@ bool http_Daemon::RequestHandler::Run()
         std::swap(clients, keep);
         keep.RemoveFrom(0);
 
-        if (now - busy > 1000) {
+        if (now - busy > PollAfterIdle) {
             // Wake me up from the kernel if needed
             {
                 std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
