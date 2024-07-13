@@ -658,13 +658,15 @@ bool http_Daemon::RequestHandler::Run()
 
             switch (ret) {
                 case http_IO::PrepareStatus::Waiting: {
+                    keep.Append(client);
+
                     struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
                     pfds.Append(pfd);
-
-                    keep.Append(client);
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
+                    keep.Append(client);
+
                     if (!client->InitAddress(addr_mode)) {
                         client->request.keepalive = false;
                         client->SendText(400, "Malformed HTTP request");
@@ -696,14 +698,14 @@ bool http_Daemon::RequestHandler::Run()
                             return true;
                         });
                     }
-
-                    keep.Append(client);
                 } break;
 
                 case http_IO::PrepareStatus::Busy: { keep.Append(client); } break;
                 case http_IO::PrepareStatus::Closed: { DestroyClient(client); } break;
 
                 case http_IO::PrepareStatus::Error: {
+                    keep.Append(client);
+
                     client->request.keepalive = false;
                     client->SendText(400, "Malformed request");
                     client->Close();
