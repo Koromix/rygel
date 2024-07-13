@@ -97,6 +97,11 @@ fn new_build() -> cc::Build {
     if !is_windows_msvc() {
         build.flag("-std=c11");
     }
+    // Do NOT trigger a rebuild any time the env changes (e.g. $PATH).
+    // This prevents all downstream crates from being rebuilt when `cargo check`
+    // or `cargo build` are run in different environments, like Rust Analyzer
+    // vs. in the terminal vs. in a Git pre-commit hook.
+    build.emit_rerun_if_env_changed(false);
     build
 }
 
@@ -240,6 +245,23 @@ fn build_neon_c_intrinsics() {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // As of Rust 1.80, unrecognized config names are warnings. Give Cargo all of our config names.
+    let all_cfgs = [
+        "blake3_sse2_ffi",
+        "blake3_sse2_rust",
+        "blake3_sse41_ffi",
+        "blake3_sse41_rust",
+        "blake3_avx2_ffi",
+        "blake3_avx2_rust",
+        "blake3_avx512_ffi",
+        "blake3_neon",
+    ];
+    for cfg_name in all_cfgs {
+        // TODO: Switch this whole file to the new :: syntax when our MSRV reaches 1.77.
+        // https://doc.rust-lang.org/cargo/reference/build-scripts.html#outputs-of-the-build-script
+        println!("cargo:rustc-check-cfg=cfg({cfg_name}, values(none()))");
+    }
+
     if is_pure() && is_neon() {
         panic!("It doesn't make sense to enable both \"pure\" and \"neon\".");
     }
