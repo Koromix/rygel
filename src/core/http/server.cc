@@ -56,7 +56,7 @@ public:
 
 private:
     http_IO *CreateClient(int fd, int64_t start, struct sockaddr *sa);
-    void CloseClient(http_IO *client);
+    void DestroyClient(http_IO *client);
 };
 
 static const int KeepAliveDelay = 5000;
@@ -421,10 +421,10 @@ void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *
 
     LocalArray<char, 32768> intro;
 
-    const char *protocol = (version == 11) ? "HTTP/1.1" : "HTTP/1.0";
+    const char *protocol = (request.version == 11) ? "HTTP/1.1" : "HTTP/1.0";
     const char *details = ErrorMessages.FindValue(status, "Unknown");
 
-    if (keepalive) {
+    if (request.keepalive) {
         intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
                                                 "Connection: keep-alive\r\n"
                                                 "Keep-Alive: timeout=%4\r\n",
@@ -445,7 +445,7 @@ void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *
         if (!intro.Available()) [[unlikely]] {
             LogError("Excessive length for response headers");
 
-            keepalive = false;
+            request.keepalive = false;
             goto exit;
         }
 
@@ -458,7 +458,7 @@ void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *
         if (!intro.Available()) [[unlikely]] {
             LogError("Excessive length for response headers");
 
-            keepalive = false;
+            request.keepalive = false;
             goto exit;
         }
 
@@ -471,7 +471,7 @@ void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *
         writer.Write("0\r\n\r\n");
     }
 
-    keepalive &= writer.IsValid();
+    request.keepalive &= writer.IsValid();
 
 exit:
     response.sent = true;
@@ -666,21 +666,20 @@ bool http_Daemon::RequestHandler::Run()
 
                 case http_IO::PrepareStatus::Ready: {
                     if (!client->InitAddress(addr_mode)) {
-                        client->keepalive = false;
-                        client->SendText(400, "Malformed request");
-
-                        CloseClient(client);
+                        client->request.keepalive = false;
+                        client->SendText(400, "Malformed HTTP request");
+                        client->Close();
 
                         break;
                     }
 
                     client->timeout = KeepAliveDelay - (now - client->start);
-                    client->keepalive &= (client->timeout >= 0);
+                    client->request.keepalive &= (client->timeout >= 0);
 
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerHandler;
 
-                    if (client->keepalive) {
+                    if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
                             daemon->handle_func(client->request, client);
 
@@ -702,13 +701,12 @@ bool http_Daemon::RequestHandler::Run()
                 } break;
 
                 case http_IO::PrepareStatus::Busy: { keep.Append(client); } break;
-                case http_IO::PrepareStatus::Closed: { CloseClient(client); } break;
+                case http_IO::PrepareStatus::Closed: { DestroyClient(client); } break;
 
                 case http_IO::PrepareStatus::Error: {
-                    client->keepalive = false;
+                    client->request.keepalive = false;
                     client->SendText(400, "Malformed request");
-
-                    CloseClient(client);
+                    client->Close();
                 } break;
             }
         }
@@ -773,7 +771,7 @@ http_IO *http_Daemon::RequestHandler::CreateClient(int fd, int64_t start, struct
     return client;
 }
 
-void http_Daemon::RequestHandler::CloseClient(http_IO *client)
+void http_Daemon::RequestHandler::DestroyClient(http_IO *client)
 {
     if (pool.Available()) {
         pool.Append(client);
@@ -792,26 +790,46 @@ http_IO::PrepareStatus http_IO::Prepare()
 
     // Gather request line and headers
     {
-        Size pos = std::max(buf.len - 3, (Size)0);
         bool complete = false;
 
-        buf.Grow(Mebibytes(2));
+        incoming.buf.Grow(Mebibytes(2));
 
-        while (!complete) {
-            Size read = recv(fd, buf.end(), buf.Available(), MSG_DONTWAIT);
+        for (;;) {
+            Size read = recv(fd, incoming.buf.end(), incoming.buf.Available(), MSG_DONTWAIT);
+            int error = errno;
+
+            incoming.buf.len += std::max(read, (Size)0);
+
+            for (;;) {
+                uint8_t *next = (uint8_t *)memchr(incoming.buf.ptr + incoming.pos, '\r', incoming.buf.len - incoming.pos);
+                incoming.pos = next ? next - incoming.buf.ptr : incoming.buf.len;
+
+                if (incoming.buf.len - incoming.pos < 4)
+                    break;
+
+                if (incoming.buf[incoming.pos] == '\r' && incoming.buf[incoming.pos + 1] == '\n' &&
+                        incoming.buf[incoming.pos + 2] == '\r' && incoming.buf[incoming.pos + 3] == '\n') {
+                    incoming.pos += 4;
+                    complete = true;
+
+                    break;
+                }
+
+                incoming.pos++;
+            }
+            if (complete)
+                break;
 
             if (read < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                if (error == EAGAIN || error == EWOULDBLOCK)
                     return PrepareStatus::Waiting;
-                if (errno == ECONNRESET)
+                if (error == ECONNRESET)
                     return PrepareStatus::Error;
 
-                LogError("Read failed: %1 %2", strerror(errno), errno);
+                LogError("Read failed: %1 %2", strerror(error), error);
                 return PrepareStatus::Error;
-            }
-
-            if (!read) {
-                if (!buf.len) {
+            } else if (!read) {
+                if (!incoming.buf.len) {
                     Close();
                     return PrepareStatus::Closed;
                 }
@@ -819,36 +837,15 @@ http_IO::PrepareStatus http_IO::Prepare()
                 LogError("Malformed HTTP request");
                 return PrepareStatus::Error;
             }
-
-            buf.len += read;
-
-            for (;;) {
-                uint8_t *next = (uint8_t *)memchr(buf.ptr + pos, '\r', buf.len - pos);
-                pos = next ? next - buf.ptr : buf.len;
-
-                if (buf.len - pos < 4)
-                    break;
-
-                if (buf[pos] == '\r' && buf[pos + 1] == '\n' &&
-                        buf[pos + 2] == '\r' && buf[pos + 3] == '\n') {
-                    pos += 4;
-                    complete = true;
-
-                    break;
-                }
-
-                pos++;
-            }
         }
 
-        extra = MakeSpan(buf.ptr + pos, buf.len - pos);
+        RG_ASSERT(complete);
 
-        buf.len = pos - 4;
-        buf.ptr[buf.len] = 0;
-        intro = buf.As<char>();
+        incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos - 4);
+        incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos, incoming.buf.len - incoming.pos);
     }
 
-    Span<char> remain = intro;
+    Span<char> remain = incoming.intro;
 
     // Parse request line
     {
@@ -871,11 +868,11 @@ http_IO::PrepareStatus http_IO::Prepare()
             return PrepareStatus::Error;
         }
         if (TestStrI(protocol, "HTTP/1.0")) {
-            version = 10;
-            keepalive = false;
+            request.version = 10;
+            request.keepalive = false;
         } else if (TestStrI(protocol, "HTTP/1.1")) {
-            version = 11;
-            keepalive = true;
+            request.version = 11;
+            request.keepalive = true;
         } else {
             SendError(400, "Invalid HTTP version");
             return PrepareStatus::Error;
@@ -931,7 +928,7 @@ http_IO::PrepareStatus http_IO::Prepare()
         request.headers.Append(header);
 
         if (TestStrI(key, "Connection")) {
-            keepalive = !TestStrI(value, "close");
+            request.keepalive = !TestStrI(value, "close");
         }
     }
 
@@ -1076,16 +1073,15 @@ void http_IO::Reset()
         finalize();
     }
 
-    buf.RemoveFrom(0);
+    MemMove(incoming.buf.ptr, incoming.extra.ptr, incoming.extra.len);
+    incoming.buf.RemoveFrom(incoming.extra.len);
+    incoming.pos = 0;
+    incoming.intro = {};
+    incoming.extra = {};
+
     allocator.Reset();
 
-    intro = {};
-    extra = {};
-
-    version = 10;
-    keepalive = false;
     request.headers.RemoveFrom(0);
-
     response.headers.RemoveFrom(0);
     response.finalizers.RemoveFrom(0);
     response.sent = false;

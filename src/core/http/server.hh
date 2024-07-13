@@ -111,6 +111,8 @@ struct http_KeyValue {
 };
 
 struct http_RequestInfo {
+    int version = 10;
+    bool keepalive = false;
     http_RequestMethod method = http_RequestMethod::Get;
     bool headers_only = false;
     const char *client_addr = nullptr;
@@ -144,13 +146,14 @@ class http_IO {
     int count;
     int timeout;
 
-    HeapArray<uint8_t> buf;
-    Span<char> intro;
-    Span<uint8_t> extra;
+    struct {
+        HeapArray<uint8_t> buf;
+        Size pos = 0;
+        Span<char> intro = {};
+        Span<uint8_t> extra = {};
+    } incoming;
 
     std::atomic_bool ready;
-    int version;
-    bool keepalive;
     http_RequestInfo request;
 
     struct {
