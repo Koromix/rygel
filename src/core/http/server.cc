@@ -412,6 +412,10 @@ void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *
 {
     RG_ASSERT(!response.sent);
 
+    if (request.headers_only) {
+        func = [](int, StreamWriter *) {};
+    }
+
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
     StreamWriter writer(write, "<http>");
 
