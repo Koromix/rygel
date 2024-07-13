@@ -494,7 +494,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             }
 
             // Help command find qmake
-            out_cmd->env_variables.Push({ "QMAKE_PATH", qt->qmake });
+            cmd.env_variables.Append({ "QMAKE_PATH", qt->qmake });
 
             const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", GetLastDirectoryAndName(bundle_filename)).ptr;
             AppendNode(text, bundle_filename, cmd, target_filename);

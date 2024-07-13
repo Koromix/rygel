@@ -244,8 +244,8 @@ Options:
     if (!compiler)
         return 1;
 
-    QtInfo qt = {};
-    if (!FindQtSdk(compiler.get(), &temp_alloc, &qt))
+    const QtInfo *qt = FindQtSdk(compiler.get());
+    if (!qt)
         return 1;
 
     if (TestFile(output_bundle)) {
@@ -303,7 +303,7 @@ Options:
 
     // Run macdeployqt file
     {
-        const char *cmd_line = Fmt(&temp_alloc, "\"%1\" \"%2\"", qt.macdeployqt, output_bundle).ptr;
+        const char *cmd_line = Fmt(&temp_alloc, "\"%1\" \"%2\"", qt->macdeployqt, output_bundle).ptr;
 
         HeapArray<char> output;
         if (!ReadCommandOutput(cmd_line, &output)) {
