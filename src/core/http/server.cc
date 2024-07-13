@@ -629,7 +629,6 @@ bool http_Daemon::RequestHandler::Run()
     Async async(1 + WorkersPerHandler);
 
     HeapArray<http_IO *> clients;
-    HeapArray<http_IO *> keep;
 
 #if defined(__linux__)
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
@@ -733,21 +732,20 @@ bool http_Daemon::RequestHandler::Run()
 #endif
         }
 
-        for (Size i = 0; i < clients.len; i++) {
+        Size keep = 0;
+        for (Size i = 0; i < clients.len; i++, keep++) {
+            clients[keep] = clients[i];
+
             http_IO *client = clients[i];
             http_IO::PrepareStatus ret = client->Prepare();
 
             switch (ret) {
                 case http_IO::PrepareStatus::Waiting: {
-                    keep.Append(client);
-
                     struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
                     pfds.Append(pfd);
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
-                    keep.Append(client);
-
                     if (!client->InitAddress(addr_mode)) {
                         client->request.keepalive = false;
                         client->SendText(400, "Malformed HTTP request");
@@ -781,21 +779,21 @@ bool http_Daemon::RequestHandler::Run()
                     }
                 } break;
 
-                case http_IO::PrepareStatus::Busy: { keep.Append(client); } break;
-                case http_IO::PrepareStatus::Closed: { DestroyClient(client); } break;
+                case http_IO::PrepareStatus::Busy: {} break;
 
                 case http_IO::PrepareStatus::Error: {
-                    keep.Append(client);
-
                     client->request.keepalive = false;
                     client->SendText(400, "Malformed request");
                     client->Close();
                 } break;
+
+                case http_IO::PrepareStatus::Closed: {
+                    DestroyClient(client);
+                    keep--;
+                } break;
             }
         }
-
-        std::swap(clients, keep);
-        keep.RemoveFrom(0);
+        clients.len = keep;
 
         if (now - busy > PollAfterIdle) {
             // Wake me up from the kernel if needed
