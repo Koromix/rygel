@@ -118,7 +118,7 @@ static HostArchitecture ParseTarget(Span<const char> output)
             continue;
 
         if (key == "Target") {
-            if (StartsWith(value, "x86_64-") || StartsWith(value, "x86-64-")) {
+            if (StartsWith(value, "x86_64-") || StartsWith(value, "x86-64-")  || StartsWith(value, "amd64-")) {
                 return HostArchitecture::x86_64;
             } else if (StartsWith(value, "i386-") || StartsWith(value, "i486-") || StartsWith(value, "i586-") ||
                        StartsWith(value, "i686-") || StartsWith(value, "x86-")) {
