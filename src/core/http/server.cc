@@ -34,17 +34,29 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/stat.h>
-#include <sys/sendfile.h>
-#include <sys/eventfd.h>
+#if defined(__linux__)
+    #include <sys/sendfile.h>
+    #include <sys/eventfd.h>
+#elif defined(__FreeBSD__)
+    #include <sys/uio.h>
+#endif
 
 namespace RG {
 
 class http_Daemon::RequestHandler {
     http_Daemon *daemon;
 
+#if defined(__linux__)
     int event_fd = -1;
+#else
+    int pipe_fd[2] = { -1, -1 };
+#endif
     std::shared_mutex wake_mutex;
     bool wake_needed = false;
+
+#if defined(__APPLE__)
+    std::atomic_bool run { true };
+#endif
 
     LocalArray<http_IO *, 256> pool;
 
@@ -53,6 +65,10 @@ public:
 
     bool Run();
     void Wake();
+
+#if defined(__APPLE__)
+    void Stop();
+#endif
 
 private:
     http_IO *CreateClient(int fd, int64_t start, struct sockaddr *sa);
@@ -260,6 +276,8 @@ bool http_Daemon::Start(const http_Config &config,
     // Run request handlers
     for (Size i = 0; i < async.GetWorkerCount(); i++) {
         RequestHandler *handler = new RequestHandler(this);
+        handlers.Append(handler);
+
         async.Run([=] { return handler->Run(); });
     }
 
@@ -279,7 +297,20 @@ void http_Daemon::Stop()
 {
     // Shut everything down
     shutdown(listen_fd, SHUT_RD);
+
+#if defined(__APPLE__)
+    // On macOS, the shutdown() does not wake up poll()
+    for (RequestHandler *handler: handlers) {
+        handler->Stop();
+    }
+#endif
+
     async.Sync();
+
+    for (RequestHandler *handler: handlers) {
+        delete handler;
+    }
+    handlers.Clear();
 
     CloseSocket(listen_fd);
     listen_fd = -1;
@@ -408,13 +439,23 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
     }
 }
 
-void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *)> func)
+void http_IO::Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
 {
     RG_ASSERT(!response.sent);
 
     if (request.headers_only) {
-        func = [](int, StreamWriter *) {};
+        func = [](int, StreamWriter *) { return true; };
     }
+
+#if !defined(__linux__)
+    // On Linux with use MSG_MORE in send() calls to skip one syscall
+    SetSocketCork(true);
+#endif
+
+    RG_DEFER { 
+        response.sent = true;
+        SetSocketCork(false);
+    };
 
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
     StreamWriter writer(write, "<http>");
@@ -446,12 +487,12 @@ void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *
             LogError("Excessive length for response headers");
 
             request.keepalive = false;
-            goto exit;
+            return;
         }
 
         writer.Write(intro);
 
-        func(fd, &writer);
+        request.keepalive &= func(fd, &writer);
     } else {
         intro.len += Fmt(intro.TakeAvailable(), "Transfer-Encoding: chunked\r\n\r\n").len;
 
@@ -459,7 +500,7 @@ void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *
             LogError("Excessive length for response headers");
 
             request.keepalive = false;
-            goto exit;
+            return;
         }
 
         writer.Write(intro);
@@ -467,17 +508,14 @@ void http_IO::Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *
         const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
         StreamWriter chunker(chunk, "<http>");
 
-        func(-1, &chunker);
-        writer.Write("0\r\n\r\n");
+        if (func(-1, &chunker)) {
+            writer.Write("0\r\n\r\n");
+        } else {
+            request.keepalive = false;
+        }
     }
 
     request.keepalive &= writer.IsValid();
-
-exit:
-    response.sent = true;
-
-    int off = 0;
-    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &off, sizeof(off));
 }
 
 void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
@@ -485,9 +523,7 @@ void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
     RG_ASSERT(mimetype);
     AddHeader("Content-Type", mimetype);
 
-    Send(status, text.len, [&](int, StreamWriter *writer) {
-        writer->Write(text);
-    });
+    Send(status, text.len, [&](int, StreamWriter *writer) { return writer->Write(text); });
 }
 
 void http_IO::SendBinary(int status, Span<const uint8_t> data, const char *mimetype)
@@ -496,9 +532,7 @@ void http_IO::SendBinary(int status, Span<const uint8_t> data, const char *mimet
         AddHeader("Content-Type", mimetype);
     }
 
-    Send(status, data.len, [&](int, StreamWriter *writer) {
-        writer->Write(data);
-    });
+    Send(status, data.len, [&](int, StreamWriter *writer) { return writer->Write(data); });
 }
 
 void http_IO::SendError(int status, const char *details)
@@ -511,7 +545,7 @@ void http_IO::SendError(int status, const char *details)
 
     Span<char> text = Fmt(&allocator, "Error %1: %2\n%3", status,
                           ErrorMessages.FindValue(status, "Unknown"), details);
-    SendText(status, text);
+    return SendText(status, text);
 }
 
 bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
@@ -534,31 +568,45 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
         AddHeader("Content-Type", mimetype);
     }
 
+#if defined(__linux__) || defined(__FreeBSD__)
     Send(status, len, [&](int sock, StreamWriter *) {
         off_t offset = 0;
         int64_t remain = len;
 
         while (remain) {
             Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+
+#if defined(__linux__)
             Size sent = sendfile(sock, fd, &offset, (size_t)send);
+#else
+            Size sent = sendfile(fd, sock, offset, (size_t)send, nullptr, &offset, 0);
+#endif
 
             if (sent < 0) {
                 if (errno != EPIPE) {
                     LogError("Failed to send file: %1", strerror(errno));
                 }
-                return;
+                return false;
             }
 
             remain -= sent;
         }
+
+        return true;
     });
+#else
+    Send(status, len, [&](int, StreamWriter *writer) {
+        StreamReader reader(fd, filename);
+        return SpliceStream(&reader, -1, writer);
+    });
+#endif
 
     return true;
 }
 
 void http_IO::SendEmpty(int status)
 {
-    Send(status, 0, [](int, StreamWriter *) {});
+    Send(status, 0, [](int, StreamWriter *) { return true; });
 }
 
 void http_IO::AddFinalizer(const std::function<void()> &func)
@@ -569,10 +617,11 @@ void http_IO::AddFinalizer(const std::function<void()> &func)
 
 bool http_Daemon::RequestHandler::Run()
 {
+#if defined(__linux__)
     RG_ASSERT(event_fd < 0);
-
-    // Deal with self
-    RG_DEFER { delete this; };
+#else
+    RG_ASSERT(pipe_fd[0] < 0);
+#endif
 
     int listen_fd = daemon->listen_fd;
     http_ClientAddressMode addr_mode = daemon->addr_mode;
@@ -582,6 +631,7 @@ bool http_Daemon::RequestHandler::Run()
     HeapArray<http_IO *> clients;
     HeapArray<http_IO *> keep;
 
+#if defined(__linux__)
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (event_fd < 0) {
         LogError("Failed to create eventfd: %1", strerror(errno));
@@ -591,6 +641,17 @@ bool http_Daemon::RequestHandler::Run()
         CloseDescriptor(event_fd);
         event_fd = -1;
     };
+#else
+    if (!CreatePipe(pipe_fd))
+        return false;
+    RG_DEFER {
+        CloseDescriptor(pipe_fd[0]);
+        CloseDescriptor(pipe_fd[1]);
+
+        pipe_fd[0] = -1;
+        pipe_fd[1] = -1;
+    };
+#endif
 
     // Delete remaining clients when function exits
     RG_DEFER {
@@ -607,7 +668,11 @@ bool http_Daemon::RequestHandler::Run()
 
     HeapArray<struct pollfd> pfds = {
         { listen_fd, POLLIN, 0 },
+#if defined(__linux__)
         { event_fd, POLLIN, 0 }
+#else
+        { pipe_fd[0], POLLIN, 0 }
+#endif
     };
 
     int next_worker = 0;
@@ -620,13 +685,23 @@ bool http_Daemon::RequestHandler::Run()
 
         if (pfds[0].revents & POLLHUP)
             return true;
+#if defined(__APPLE__)
+        if (!run)
+            return true;
+#endif
+
         if (pfds[0].revents & POLLIN) {
             sockaddr_storage ss;
             socklen_t ss_len = RG_SIZE(ss);
 
             // Accept queued clients
             for (Size i = 0; i < 64; i++) {
+#if defined(SOCK_CLOEXEC)
                 int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+#else
+                int fd = accept(listen_fd, (sockaddr *)&ss, &ss_len);
+                fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
 
                 if (fd < 0) {
                     if (errno == EINVAL)
@@ -647,9 +722,15 @@ bool http_Daemon::RequestHandler::Run()
 
         // Clear eventfd
         if (pfds[1].revents & POLLIN) {
+#if defined(__linux__)
             uint64_t dummy = 0;
             ssize_t ret = read(event_fd, &dummy, RG_SIZE(dummy));
             (void)ret;
+#else
+            uint8_t buf[1024];
+            ssize_t ret = read(pipe_fd[0], &buf, RG_SIZE(buf));
+            (void)ret;
+#endif
         }
 
         for (Size i = 0; i < clients.len; i++) {
@@ -742,13 +823,29 @@ void http_Daemon::RequestHandler::Wake()
     if (wake_needed) {
         lock_shr.unlock();
 
+#if defined(__linux__)
         uint64_t one = 1;
         ssize_t ret = write(event_fd, &one, RG_SIZE(one));
         (void)ret;
+#else
+        char x = 'x';
+        ssize_t ret = write(pipe_fd[1], &x, RG_SIZE(x));
+        (void)ret;
+#endif
 
         wake_needed = false;
     }
 }
+
+#if defined(__APPLE__)
+
+void http_Daemon::RequestHandler::Stop()
+{
+    run = false;
+    Wake();
+}
+
+#endif
 
 http_IO *http_Daemon::RequestHandler::CreateClient(int fd, int64_t start, struct sockaddr *sa)
 {
@@ -1017,7 +1114,11 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
 bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     while (data.len) {
+#if defined(__linux__)
         Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
+#else
+        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
+#endif
 
         if (sent < 0) {
             if (errno != EPIPE) {
@@ -1049,7 +1150,11 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         Span<const uint8_t> remain = buf;
 
         do {
+#if defined(__linux__)
             Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
+#else
+            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
+#endif
 
             if (sent < 0) {
                 if (errno != EPIPE) {
@@ -1101,6 +1206,17 @@ void http_IO::Close()
     fd = -1;
 
     ready = false;
+}
+
+void http_IO::SetSocketCork(bool cork)
+{
+#if defined(TCP_CORK)
+    int flag = cork;
+    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
+#elif defined(TCP_NOPUSH)
+    int flag = cork;
+    setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
+#endif
 }
 
 }

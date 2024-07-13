@@ -71,6 +71,7 @@ class http_Daemon {
     http_ClientAddressMode addr_mode = http_ClientAddressMode::Socket;
 
     Async async;
+    HeapArray<RequestHandler *> handlers;
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 
@@ -177,7 +178,7 @@ public:
                          bool http_only = false);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
-    void Send(int status, int64_t len, FunctionRef<void(int, StreamWriter *)> func);
+    void Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *)> func);
     void SendText(int status, Span<const char> text, const char *mimetype = "text/plain");
     void SendBinary(int status, Span<const uint8_t> data, const char *mimetype = nullptr);
     bool SendAsset(int status, Span<const uint8_t> data, const char *mimetype = nullptr,
@@ -202,6 +203,8 @@ private:
 
     void Reset();
     void Close();
+
+    void SetSocketCork(bool cork);
 
     friend class http_Daemon;
     friend class http_Daemon::RequestHandler;
