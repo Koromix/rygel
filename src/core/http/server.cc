@@ -24,16 +24,35 @@
 #include "misc.hh"
 
 #include <fcntl.h>
-#include <unistd.h>
-#include <poll.h>
 #include <limits.h>
 #include <sys/types.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/stat.h>
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
+        #define NOMINMAX
+    #endif
+    #if !defined(WIN32_LEAN_AND_MEAN)
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <ws2tcpip.h>
+    #include <io.h>
+
+    #if !defined(UNIX_PATH_MAX)
+        #define UNIX_PATH_MAX 108
+    #endif
+    typedef struct sockaddr_un {
+        ADDRESS_FAMILY sun_family;
+        char sun_path[UNIX_PATH_MAX];
+    } SOCKADDR_UN, *PSOCKADDR_UN;
+#else
+    #include <poll.h>
+    #include <sys/socket.h>
+    #include <sys/un.h>
+    #include <arpa/inet.h>
+    #include <netinet/in.h>
+    #include <netinet/tcp.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
+#endif
 #if defined(__linux__)
     #include <sys/sendfile.h>
     #include <sys/eventfd.h>
@@ -49,15 +68,16 @@ class http_Daemon::RequestHandler {
 #if defined(__linux__)
     int event_fd = -1;
 #else
-    int pipe_fd[2] = { -1, -1 };
+    int pair_fd[2] = { -1, -1 };
 #endif
     std::shared_mutex wake_mutex;
     bool wake_needed = false;
 
-#if defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__)
     std::atomic_bool run { true };
 #endif
 
+    HeapArray<http_IO *> clients;
     LocalArray<http_IO *, 256> pool;
 
 public:
@@ -66,7 +86,7 @@ public:
     bool Run();
     void Wake();
 
-#if defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__)
     void Stop();
 #endif
 
@@ -146,6 +166,202 @@ static RG_CONSTINIT ConstMap<128, int, const char *> ErrorMessages = {
     { 510, "Not Extended" },
     { 511, "Network Authentication Required" }
 };
+
+static void SetSocketNonBlock(int fd, bool enable)
+{
+#if defined(_WIN32)
+    unsigned long mode = enable;
+    ioctlsocket(fd, FIONBIO, &mode);
+#else
+    int flags = fcntl(fd, F_GETFL, 0);
+    flags |= ApplyMask(flags, O_NONBLOCK, enable);
+    fcntl(fd, F_SETFL, flags);
+#endif
+}
+
+void SetSocketCork(int fd, bool cork)
+{
+#if defined(TCP_CORK)
+    int flag = cork;
+    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
+#elif defined(TCP_NOPUSH)
+    int flag = cork;
+    setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
+#elif defined(_WIN32)
+    int flag = !cork;
+    setsockopt((SOCKET)fd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
+
+    send((SOCKET)fd, nullptr, 0, 0);
+#else
+    int flag = !cork;
+    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+
+    send(fd, nullptr, 0, 0);
+#endif
+}
+
+#if defined(_WIN32)
+
+int TranslateWinSockError()
+{
+    int error = WSAGetLastError();
+
+    switch (error) {
+        case WSAEACCES: return EADDRINUSE;
+        case WSAEADDRINUSE: return EADDRINUSE;
+        case WSAEADDRNOTAVAIL: return EADDRNOTAVAIL;
+        case WSAEALREADY: return EALREADY;
+        case WSAEBADF: return EBADF;
+        case WSAECONNABORTED: return ECONNABORTED;
+        case WSAECONNREFUSED: return ECONNREFUSED;
+        case WSAECONNRESET: return ECONNRESET;
+        case WSAEDESTADDRREQ: return EDESTADDRREQ;
+        // case WSAEDQUOT: return EDQUOT;
+        case WSAEFAULT: return EFAULT;
+        case WSAEHOSTDOWN: return ETIMEDOUT;
+        case WSAEHOSTUNREACH: return EHOSTUNREACH;
+        case WSAEINPROGRESS: return EINPROGRESS;
+        case WSAEINTR: return EINTR;
+        case WSAEINVAL: return EINVAL;
+        case WSAEISCONN: return EISCONN;
+        case WSAELOOP: return ELOOP;
+        case WSAEMFILE: return EMFILE;
+        case WSAEMSGSIZE: return EMSGSIZE;
+        case WSAENAMETOOLONG: return ENAMETOOLONG;
+        case WSAENETDOWN: return ENETDOWN;
+        case WSAENETRESET: return ENETRESET;
+        case WSAENETUNREACH: return ENETUNREACH;
+        case WSAENOBUFS: return ENOBUFS;
+        case WSAENOPROTOOPT: return ENOPROTOOPT;
+        case WSAENOTCONN: return ENOTCONN;
+        case WSAENOTEMPTY: return ENOTEMPTY;
+        case WSAENOTSOCK: return ENOTSOCK;
+        case WSAEOPNOTSUPP: return EOPNOTSUPP;
+        // case WSAEPFNOSUPPORT: return EPFNOSUPPORT;
+        // case WSAEPROCLIM: return EPROCLIM;
+        case WSAEPROTONOSUPPORT: return EPROTONOSUPPORT;
+        case WSAEPROTOTYPE: return EPROTOTYPE;
+        case WSAEREMOTE: return EINVAL;
+        case WSAESHUTDOWN: return EPIPE;
+        // case WSAESOCKTNOSUPPORT: return ESOCKTNOSUPPORT;
+        case WSAESTALE: return EINVAL;
+        case WSAETIMEDOUT: return ETIMEDOUT;
+        // case WSAETOOMANYREFS: return ETOOMANYREFS;
+        // case WSAEUSERS: return EUSERS;
+        case WSAEWOULDBLOCK: return EAGAIN;
+    }
+
+    return error;
+}
+
+static bool CreateSocketPair(int out_sockets[2])
+{
+    SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listen_sock == INVALID_SOCKET) {
+        LogError("Failed to create TCP socket: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+    RG_DEFER { closesocket(listen_sock); };
+
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    // Bind socket to random port
+    {
+        int reuse = 1;
+        socklen_t addr_len = RG_SIZE(addr);
+
+        if (setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, RG_SIZE(reuse)) == SOCKET_ERROR) {
+            LogError("setsockopt() failed: %1", strerror(TranslateWinSockError()));
+            return false;
+        }
+        if (bind(listen_sock, (struct sockaddr *)&addr, addr_len) == SOCKET_ERROR) {
+            LogError("Failed to bind TCP socket: %1", strerror(TranslateWinSockError()));
+            return false;
+        }
+        if (getsockname(listen_sock, (struct sockaddr *)&addr, &addr_len) == SOCKET_ERROR) {
+            LogError("Failed to get socket name: %1", strerror(TranslateWinSockError()));
+            return false;
+        }
+
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    }
+
+    if (listen(listen_sock, 1) == SOCKET_ERROR) {
+        LogError("Failed to listen on socket: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+
+    SOCKET socks[2] = { INVALID_SOCKET, INVALID_SOCKET };
+
+    RG_DEFER_N(err_guard) {
+        closesocket(socks[0]);
+        closesocket(socks[1]);
+    };
+
+    socks[0] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (socks[0] == INVALID_SOCKET) {
+        LogError("Failed to create TCP socket: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+    if (connect(socks[0], (struct sockaddr *)&addr, RG_SIZE(addr)) == SOCKET_ERROR) {
+        LogError("Failed to connect TCP socket pair: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+
+    socks[1] = accept(listen_sock, nullptr, nullptr);
+    if (socks[1] == INVALID_SOCKET) {
+        LogError("Failed to accept TCP socket pair: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+
+    SetSocketNonBlock(socks[0], true);
+    SetSocketNonBlock(socks[1], true);
+
+    err_guard.Disable();
+    out_sockets[0] = (int)socks[0];
+    out_sockets[1] = (int)socks[1];
+    return true;
+}
+
+#elif !defined(__linux__)
+
+static bool CreateSocketPair(int out_sockets[2])
+{
+    int socks[2] = { -1, -1 };
+
+    RG_DEFER_N(err_guard) {
+        CloseDescriptor(socks[0]);
+        CloseDescriptor(socks[1]);
+    };
+
+#if defined(SOCK_CLOEXEC)
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0, socks) < 0) {
+        LogError("Failed to create socket pair: %1", strerror(errno));
+        return false;
+    }
+#else
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, socks) < 0) {
+        LogError("Failed to create socket pair: %1", strerror(errno));
+        return false;
+    }
+
+    fcntl(socks[0], F_SETFD, FD_CLOEXEC);
+    fcntl(socks[1], F_SETFD, FD_CLOEXEC);
+    SetSocketNonBlock(socks[0], true);
+    SetSocketNonBlock(socks[1], true);
+#endif
+
+    err_guard.Disable();
+    out_sockets[0] = (int)socks[0];
+    out_sockets[1] = (int)socks[1];
+    return true;
+}
+
+#endif
 
 bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span<const char> root_directory)
 {
@@ -238,13 +454,15 @@ bool http_Daemon::Bind(const http_Config &config)
         return false;
 
     if (listen(listen_fd, 1024) < 0) {
+#if defined(_WIN32)
+        errno = TranslateWinSockError();
+#endif
+
         LogError("Failed to listen on socket: %1", strerror(errno));
         return false;
     }
 
-    // Use non-blocking accept
-    int flags = fcntl(listen_fd, F_GETFL, 0);
-    fcntl(listen_fd, F_SETFL, flags | O_NONBLOCK);
+    SetSocketNonBlock(listen_fd, true);
 
     addr_mode = config.addr_mode;
 
@@ -296,10 +514,14 @@ bool http_Daemon::Start(const http_Config &config,
 void http_Daemon::Stop()
 {
     // Shut everything down
+#if defined(_WIN32)
+    shutdown(listen_fd, SD_RECEIVE);
+#else
     shutdown(listen_fd, SHUT_RD);
+#endif
 
-#if defined(__APPLE__)
-    // On macOS, the shutdown() does not wake up poll()
+#if defined(_WIN32) || defined(__APPLE__)
+    // On Windows and macOS, the shutdown() does not wake up poll()
     for (RequestHandler *handler: handlers) {
         handler->Stop();
     }
@@ -447,14 +669,15 @@ void http_IO::Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *
         func = [](int, StreamWriter *) { return true; };
     }
 
+    SetSocketNonBlock(fd, false);
 #if !defined(__linux__)
     // On Linux with use MSG_MORE in send() calls to skip one syscall
-    SetSocketCork(true);
+    SetSocketCork(fd, true);
 #endif
 
     RG_DEFER { 
         response.sent = true;
-        SetSocketCork(false);
+        SetSocketCork(fd, false);
     };
 
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
@@ -555,14 +778,14 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
         return false;
     RG_DEFER { CloseDescriptor(fd); };
 
-    struct stat sb;
-    if (fstat(fd, &sb) < 0)
+    FileInfo file_info;
+    if (StatFile(fd, filename, &file_info) != StatResult::Success)
         return false;
-    if (!S_ISREG(sb.st_mode)) {
-        LogError("Not a regular file: %1", filename);
+    if (file_info.type != FileType::File) {
+        LogError("Cannot serve non-regular file '%1'", filename);
         return false;
     }
-    int64_t len = (int64_t)sb.st_size;
+    int64_t len = file_info.size;
 
     if (mimetype) {
         AddHeader("Content-Type", mimetype);
@@ -620,15 +843,13 @@ bool http_Daemon::RequestHandler::Run()
 #if defined(__linux__)
     RG_ASSERT(event_fd < 0);
 #else
-    RG_ASSERT(pipe_fd[0] < 0);
+    RG_ASSERT(pair_fd[0] < 0);
 #endif
 
     int listen_fd = daemon->listen_fd;
     http_ClientAddressMode addr_mode = daemon->addr_mode;
 
     Async async(1 + WorkersPerHandler);
-
-    HeapArray<http_IO *> clients;
 
 #if defined(__linux__)
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
@@ -641,14 +862,14 @@ bool http_Daemon::RequestHandler::Run()
         event_fd = -1;
     };
 #else
-    if (!CreatePipe(pipe_fd))
+    if (!CreateSocketPair(pair_fd))
         return false;
     RG_DEFER {
-        CloseDescriptor(pipe_fd[0]);
-        CloseDescriptor(pipe_fd[1]);
+        CloseSocket(pair_fd[0]);
+        CloseSocket(pair_fd[1]);
 
-        pipe_fd[0] = -1;
-        pipe_fd[1] = -1;
+        pair_fd[0] = -1;
+        pair_fd[1] = -1;
     };
 #endif
 
@@ -662,15 +883,21 @@ bool http_Daemon::RequestHandler::Run()
         for (const http_IO *client: pool) {
             delete client;
         }
+
+        clients.Clear();
         pool.Clear();
     };
 
     HeapArray<struct pollfd> pfds = {
-        { listen_fd, POLLIN, 0 },
 #if defined(__linux__)
+        { listen_fd, POLLIN, 0 },
         { event_fd, POLLIN, 0 }
+#elif defined(_WIN32)
+        { (SOCKET)listen_fd, POLLIN, 0 },
+        { (SOCKET)pair_fd[0], POLLIN, 0 }
 #else
-        { pipe_fd[0], POLLIN, 0 }
+        { listen_fd, POLLIN, 0 },
+        { pair_fd[0], POLLIN, 0 }
 #endif
     };
 
@@ -684,7 +911,7 @@ bool http_Daemon::RequestHandler::Run()
 
         if (pfds[0].revents & POLLHUP)
             return true;
-#if defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__)
         if (!run)
             return true;
 #endif
@@ -695,20 +922,35 @@ bool http_Daemon::RequestHandler::Run()
 
             // Accept queued clients
             for (Size i = 0; i < 64; i++) {
-#if defined(SOCK_CLOEXEC)
-                int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+#if defined(_WIN32)
+                SOCKET sock = accept((SOCKET)listen_fd, (sockaddr *)&ss, &ss_len);
+                int fd = (sock != INVALID_SOCKET) ? (int)sock : -1;
+
+                if (fd >= 0) {
+                    SetSocketNonBlock(fd, true);
+                }
+#elif defined(SOCK_CLOEXEC)
+                int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC | SOCK_NONBLOCK);
 #else
                 int fd = accept(listen_fd, (sockaddr *)&ss, &ss_len);
-                fcntl(fd, F_SETFD, FD_CLOEXEC);
+
+                if (fd >= 0) {
+                    fcntl(fd, F_SETFD, FD_CLOEXEC);
+                    SetSocketNonBlock(fd, true);
+                }
 #endif
 
                 if (fd < 0) {
+#if defined(_WIN32)
+                    errno = TranslateWinSockError();
+#endif
+
                     if (errno == EINVAL)
                         return true;
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
                         break;
 
-                    LogError("Failed to accept client: %1", strerror(errno));
+                    LogError("Failed to accept client: %1 %2", strerror(errno), errno);
                     return false;
                 }
 
@@ -723,11 +965,11 @@ bool http_Daemon::RequestHandler::Run()
         if (pfds[1].revents & POLLIN) {
 #if defined(__linux__)
             uint64_t dummy = 0;
-            ssize_t ret = read(event_fd, &dummy, RG_SIZE(dummy));
+            Size ret = read(event_fd, &dummy, RG_SIZE(dummy));
             (void)ret;
 #else
-            uint8_t buf[1024];
-            ssize_t ret = read(pipe_fd[0], &buf, RG_SIZE(buf));
+            char buf[1024];
+            Size ret = recv(pair_fd[0], buf, RG_SIZE(buf), 0);
             (void)ret;
 #endif
         }
@@ -741,8 +983,13 @@ bool http_Daemon::RequestHandler::Run()
 
             switch (ret) {
                 case http_IO::PrepareStatus::Waiting: {
+#if defined(_WIN32)
+                    struct pollfd pfd = { (SOCKET)client->Descriptor(), POLLIN, 0 };
+                    pfds.Append(pfd);
+#else
                     struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
                     pfds.Append(pfd);
+#endif
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
@@ -802,10 +1049,19 @@ bool http_Daemon::RequestHandler::Run()
                 wake_needed = true;
             }
 
+#if defined(_WIN32)
+            if (WSAPoll(pfds.ptr, (unsigned long)pfds.len, -1) < 0) {
+                errno = TranslateWinSockError();
+
+                LogError("Failed to poll descriptors: %1", strerror(errno));
+                return false;
+            }
+#else
             if (poll(pfds.ptr, pfds.len, -1) < 0) {
                 LogError("Failed to poll descriptors: %1", strerror(errno));
                 return false;
             }
+#endif
 
             busy = GetMonotonicTime();
         }
@@ -823,11 +1079,11 @@ void http_Daemon::RequestHandler::Wake()
 
 #if defined(__linux__)
         uint64_t one = 1;
-        ssize_t ret = write(event_fd, &one, RG_SIZE(one));
+        Size ret = write(event_fd, &one, RG_SIZE(one));
         (void)ret;
 #else
         char x = 'x';
-        ssize_t ret = write(pipe_fd[1], &x, RG_SIZE(x));
+        Size ret = send(pair_fd[1], &x, RG_SIZE(x), 0);
         (void)ret;
 #endif
 
@@ -835,7 +1091,7 @@ void http_Daemon::RequestHandler::Wake()
     }
 }
 
-#if defined(__APPLE__)
+#if defined(_WIN32) || defined(__APPLE__)
 
 void http_Daemon::RequestHandler::Stop()
 {
@@ -892,7 +1148,14 @@ http_IO::PrepareStatus http_IO::Prepare()
         incoming.buf.Grow(Mebibytes(2));
 
         for (;;) {
-            Size read = recv(fd, incoming.buf.end(), incoming.buf.Available(), MSG_DONTWAIT);
+#if defined(_WIN32)
+            Size read = recv((SOCKET)fd, (char *)incoming.buf.end(), (int)incoming.buf.Available(), 0);
+            errno = TranslateWinSockError();
+#else
+            Size read = recv(fd, incoming.buf.end(), incoming.buf.Available(), 0);
+#endif
+
+            // We'll need it later
             int error = errno;
 
             incoming.buf.len += std::max(read, (Size)0);
@@ -923,7 +1186,7 @@ http_IO::PrepareStatus http_IO::Prepare()
                 if (error == ECONNRESET)
                     return PrepareStatus::Error;
 
-                LogError("Read failed: %1 %2", strerror(error), error);
+                LogError("Read failed: %1", strerror(error));
                 return PrepareStatus::Error;
             } else if (!read) {
                 if (!incoming.buf.len) {
@@ -1114,11 +1377,18 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
     while (data.len) {
 #if defined(__linux__)
         Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
+#elif defined(_WIN32)
+        int len = (int)std::min(data.len, (Size)INT_MAX);
+        Size sent = send((SOCKET)fd, (const char *)data.ptr, len, 0);
 #else
         Size sent = send(fd, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
 #endif
 
         if (sent < 0) {
+#if defined(_WIN32)
+            errno = TranslateWinSockError();
+#endif
+
             if (errno != EPIPE) {
                 LogError("Failed to send to client: %1", strerror(errno));
             }
@@ -1150,11 +1420,18 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         do {
 #if defined(__linux__)
             Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
+#elif defined(_WIN32)
+            int len = (int)std::min(remain.len, (Size)INT_MAX);
+            Size sent = send((SOCKET)fd, (const char *)remain.ptr, len, 0);
 #else
             Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
 #endif
 
             if (sent < 0) {
+#if defined(_WIN32)
+                errno = TranslateWinSockError();
+#endif
+
                 if (errno != EPIPE) {
                     LogError("Failed to send to client: %1", strerror(errno));
                 }
@@ -1204,17 +1481,6 @@ void http_IO::Close()
     fd = -1;
 
     ready = false;
-}
-
-void http_IO::SetSocketCork(bool cork)
-{
-#if defined(TCP_CORK)
-    int flag = cork;
-    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
-#elif defined(TCP_NOPUSH)
-    int flag = cork;
-    setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
-#endif
 }
 
 }

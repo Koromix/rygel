@@ -2037,46 +2037,8 @@ static inline FileType FileAttributesToType(uint32_t attr)
     }
 }
 
-StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
+static StatResult StatHandle(HANDLE h, const char *filename, FileInfo *out_info)
 {
-    // We don't detect symbolic links, but since they are much less of a hazard
-    // than on POSIX systems we care a lot less about them.
-
-    HANDLE h;
-    if (win32_utf8) {
-        h = CreateFileA(filename, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                        nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-    } else {
-        wchar_t filename_w[4096];
-        if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
-            return StatResult::OtherError;
-
-        h = CreateFileW(filename_w, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                        nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-    }
-    if (h == INVALID_HANDLE_VALUE) {
-        DWORD err = GetLastError();
-
-        switch (err) {
-            case ERROR_FILE_NOT_FOUND:
-            case ERROR_PATH_NOT_FOUND: {
-                if (!(flags & (int)StatFlag::SilentMissing)) {
-                    LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
-                }
-                return StatResult::MissingPath;
-            } break;
-            case ERROR_ACCESS_DENIED: {
-                LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
-                return StatResult::AccessDenied;
-            }
-            default: {
-                LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
-                return StatResult::OtherError;
-            } break;
-        }
-    }
-    RG_DEFER { CloseHandle(h); };
-
     BY_HANDLE_FILE_INFORMATION attr;
     if (!GetFileInformationByHandle(h, &attr)) {
         LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString());
@@ -2092,6 +2054,54 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
     out_info->gid = 0;
 
     return StatResult::Success;
+}
+
+StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *out_info)
+{
+    // We don't detect symbolic links, but since they are much less of a hazard
+    // than on POSIX systems we care a lot less about them.
+
+    if (fd < 0) {
+        HANDLE h;
+        if (win32_utf8) {
+            h = CreateFileA(filename, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+        } else {
+            wchar_t filename_w[4096];
+            if (ConvertUtf8ToWin32Wide(filename, filename_w) < 0)
+                return StatResult::OtherError;
+
+            h = CreateFileW(filename_w, 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                            nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+        }
+        if (h == INVALID_HANDLE_VALUE) {
+            DWORD err = GetLastError();
+
+            switch (err) {
+                case ERROR_FILE_NOT_FOUND:
+                case ERROR_PATH_NOT_FOUND: {
+                    if (!(flags & (int)StatFlag::SilentMissing)) {
+                        LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                    }
+                    return StatResult::MissingPath;
+                } break;
+                case ERROR_ACCESS_DENIED: {
+                    LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                    return StatResult::AccessDenied;
+                }
+                default: {
+                    LogError("Cannot stat file '%1': %2", filename, GetWin32ErrorString(err));
+                    return StatResult::OtherError;
+                } break;
+            }
+        }
+        RG_DEFER { CloseHandle(h); };
+
+        return StatHandle(h, filename, out_info);
+    } else {
+        HANDLE h = (HANDLE)_get_osfhandle(fd);
+        return StatHandle(h, filename, out_info);
+    }
 }
 
 bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags)
@@ -2229,14 +2239,23 @@ static FileType FileModeToType(mode_t mode)
     }
 }
 
-StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
+StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *out_info)
 {
+    const char *pathname = filename;
+
 #if defined(__linux__) && defined(STATX_TYPE) && !defined(CORE_NO_STATX)
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
     int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
+    if (fd >= 0) {
+        pathname = "";
+        stat_flags |= AT_EMPTY_PATH;
+    } else {
+        fd = AT_FDCWD;
+    }
+
     struct statx sxb;
-    if (statx(AT_FDCWD, filename, stat_flags, stat_mask, &sxb) < 0) {
+    if (statx(fd, pathname, stat_flags, stat_mask, &sxb) < 0) {
         switch (errno) {
             case ENOENT: {
                 if (!(flags & (int)StatFlag::SilentMissing)) {
@@ -2275,8 +2294,15 @@ StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info
 #else
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
 
+    if (fd >= 0) {
+        pathname = "";
+        stat_flags |= AT_EMPTY_PATH;
+    } else {
+        fd = AT_FDCWD;
+    }
+
     struct stat sb;
-    if (fstatat(AT_FDCWD, filename, &sb, stat_flags) < 0) {
+    if (fstatat(fd, pathname, &sb, stat_flags) < 0) {
         switch (errno) {
             case ENOENT: {
                 if (!(flags & (int)StatFlag::SilentMissing)) {
@@ -5663,6 +5689,9 @@ int ConnectToUnixSocket(const char *path, SocketMode mode)
 
 void CloseSocket(int fd)
 {
+    if (fd < 0)
+        return;
+
 #if defined(_WIN32)
     shutdown((SOCKET)fd, SD_BOTH);
     closesocket((SOCKET)fd);

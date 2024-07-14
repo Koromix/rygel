@@ -4072,9 +4072,14 @@ enum class StatResult {
     OtherError
 };
 
-StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info);
+StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *out_info);
+
+static inline StatResult StatFile(int fd, const char *filename, FileInfo *out_info)
+    { return StatFile(fd, filename, 0, out_info); }
+static inline StatResult StatFile(const char *filename, unsigned int flags, FileInfo *out_info)
+    { return StatFile(-1, filename, flags, out_info); }
 static inline StatResult StatFile(const char *filename, FileInfo *out_info)
-    { return StatFile(filename, 0, out_info); }
+    { return StatFile(-1, filename, 0, out_info); }
 
 enum class RenameFlag {
     Overwrite = 1 << 0,

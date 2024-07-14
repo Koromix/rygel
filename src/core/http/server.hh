@@ -204,8 +204,6 @@ private:
     void Reset();
     void Close();
 
-    void SetSocketCork(bool cork);
-
     friend class http_Daemon;
     friend class http_Daemon::RequestHandler;
 };
