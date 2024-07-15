@@ -175,26 +175,26 @@ static void SetSocketNonBlock(int fd, bool enable)
     ioctlsocket(fd, FIONBIO, &mode);
 #else
     int flags = fcntl(fd, F_GETFL, 0);
-    flags |= ApplyMask(flags, O_NONBLOCK, enable);
+    flags = ApplyMask(flags, O_NONBLOCK, enable);
     fcntl(fd, F_SETFL, flags);
 #endif
 }
 
-void SetSocketCork(int fd, bool cork)
+void SetSocketDelay(int fd, bool delay)
 {
 #if defined(TCP_CORK)
-    int flag = cork;
+    int flag = delay;
     setsockopt(fd, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
 #elif defined(TCP_NOPUSH)
-    int flag = cork;
+    int flag = delay;
     setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
 #elif defined(_WIN32)
-    int flag = !cork;
+    int flag = !delay;
     setsockopt((SOCKET)fd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
 
     send((SOCKET)fd, nullptr, 0, 0);
 #else
-    int flag = !cork;
+    int flag = !delay;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
 
     send(fd, nullptr, 0, 0);
@@ -651,8 +651,10 @@ bool http_Daemon::RequestHandler::Run()
                 if (fd >= 0) {
                     SetSocketNonBlock(fd, true);
                 }
-#elif defined(SOCK_CLOEXEC)
-                int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC | SOCK_NONBLOCK);
+#elif defined(MSG_DONTWAIT)
+                // Platforms with MSG_DONTWAIT also have SOCK_CLOEXEC, so test one and use
+                // the other to make the code simpler.
+                int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 #else
                 int fd = accept(listen_fd, (sockaddr *)&ss, &ss_len);
 
@@ -987,15 +989,18 @@ void http_IO::Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *
         func = [](int, StreamWriter *) { return true; };
     }
 
+#if !defined(MSG_DONTWAIT)
     SetSocketNonBlock(fd, false);
+    RG_DEFER { SetSocketNonBlock(fd, true); };
+#endif
 #if !defined(__linux__)
-    // On Linux with use MSG_MORE in send() calls to skip one syscall
-    SetSocketCork(fd, true);
+    // On Linux, use MSG_MORE in send() calls to set TCP_CORK without additional syscall
+    SetSocketDelay(fd, true);
 #endif
 
     RG_DEFER { 
         response.sent = true;
-        SetSocketCork(fd, false);
+        SetSocketDelay(fd, false);
     };
 
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
@@ -1233,6 +1238,8 @@ http_IO::PrepareStatus http_IO::Prepare()
 #if defined(_WIN32)
             Size read = recv((SOCKET)fd, (char *)incoming.buf.end(), (int)incoming.buf.Available(), 0);
             errno = TranslateWinSockError();
+#elif defined(MSG_DONTWAIT)
+            Size read = recv(fd, incoming.buf.end(), incoming.buf.Available(), MSG_DONTWAIT);
 #else
             Size read = recv(fd, incoming.buf.end(), incoming.buf.Available(), 0);
 #endif
