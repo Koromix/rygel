@@ -63,7 +63,7 @@
 
 namespace RG {
 
-class http_Daemon::RequestHandler {
+class http_Daemon::Dispatcher {
     http_Daemon *daemon;
 
 #if defined(__linux__)
@@ -82,7 +82,7 @@ class http_Daemon::RequestHandler {
     LocalArray<http_IO *, 256> pool;
 
 public:
-    RequestHandler(http_Daemon *daemon) : daemon(daemon) {}
+    Dispatcher(http_Daemon *daemon) : daemon(daemon) {}
 
     bool Run();
     void Wake();
@@ -497,12 +497,12 @@ bool http_Daemon::Start(const http_Config &config,
 
     handle_func = func;
 
-    // Run request handlers
+    // Run request dispatchers
     for (Size i = 0; i < async.GetWorkerCount(); i++) {
-        RequestHandler *handler = new RequestHandler(this);
-        handlers.Append(handler);
+        Dispatcher *dispatcher = new Dispatcher(this);
+        dispatchers.Append(dispatcher);
 
-        async.Run([=] { return handler->Run(); });
+        async.Run([=] { return dispatcher->Run(); });
     }
 
     if (log_socket) {
@@ -528,17 +528,17 @@ void http_Daemon::Stop()
 
 #if defined(_WIN32) || defined(__APPLE__)
     // On Windows and macOS, the shutdown() does not wake up poll()
-    for (RequestHandler *handler: handlers) {
-        handler->Stop();
+    for (Dispatcher *dispatcher: dispatchers) {
+        dispatcher->Stop();
     }
 #endif
 
     async.Sync();
 
-    for (RequestHandler *handler: handlers) {
-        delete handler;
+    for (Dispatcher *dispatcher: dispatchers) {
+        delete dispatcher;
     }
-    handlers.Clear();
+    dispatchers.Clear();
 
     CloseSocket(listen_fd);
     listen_fd = -1;
@@ -565,7 +565,7 @@ void http_Daemon::RunHandler(http_IO *client)
     handle_func(client->request, client);
 }
 
-bool http_Daemon::RequestHandler::Run()
+bool http_Daemon::Dispatcher::Run()
 {
 #if defined(__linux__)
     RG_ASSERT(event_fd < 0);
@@ -797,7 +797,7 @@ bool http_Daemon::RequestHandler::Run()
     RG_UNREACHABLE();
 }
 
-void http_Daemon::RequestHandler::Wake()
+void http_Daemon::Dispatcher::Wake()
 {
     std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
 
@@ -820,7 +820,7 @@ void http_Daemon::RequestHandler::Wake()
 
 #if defined(_WIN32) || defined(__APPLE__)
 
-void http_Daemon::RequestHandler::Stop()
+void http_Daemon::Dispatcher::Stop()
 {
     run = false;
     Wake();
@@ -828,7 +828,7 @@ void http_Daemon::RequestHandler::Stop()
 
 #endif
 
-http_IO *http_Daemon::RequestHandler::CreateClient(int fd, int64_t start, struct sockaddr *sa)
+http_IO *http_Daemon::Dispatcher::CreateClient(int fd, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
 
@@ -851,7 +851,7 @@ http_IO *http_Daemon::RequestHandler::CreateClient(int fd, int64_t start, struct
     return client;
 }
 
-void http_Daemon::RequestHandler::DestroyClient(http_IO *client)
+void http_Daemon::Dispatcher::DestroyClient(http_IO *client)
 {
     if (pool.Available()) {
         pool.Append(client);

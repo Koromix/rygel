@@ -65,13 +65,13 @@ class http_IO;
 class http_Daemon {
     RG_DELETE_COPY(http_Daemon)
 
-    class RequestHandler;
+    class Dispatcher;
 
     int listen_fd = -1;
     http_ClientAddressMode addr_mode = http_ClientAddressMode::Socket;
 
     Async async;
-    HeapArray<RequestHandler *> handlers;
+    HeapArray<Dispatcher *> dispatchers;
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 
@@ -209,7 +209,7 @@ private:
     void Close();
 
     friend class http_Daemon;
-    friend class http_Daemon::RequestHandler;
+    friend class http_Daemon::Dispatcher;
 };
 
 }
