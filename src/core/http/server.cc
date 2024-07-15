@@ -55,9 +55,10 @@
     #include <unistd.h>
 #endif
 #if defined(__linux__)
-    #include <sys/sendfile.h>
     #include <sys/eventfd.h>
+    #include <sys/sendfile.h>
 #elif defined(__FreeBSD__)
+    #include <sys/eventfd.h>
     #include <sys/uio.h>
 #endif
 
@@ -66,7 +67,7 @@ namespace RG {
 class http_Daemon::Dispatcher {
     http_Daemon *daemon;
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
     int event_fd = -1;
 #else
     int pair_fd[2] = { -1, -1 };
@@ -339,7 +340,7 @@ static bool CreateSocketPair(int out_sockets[2])
     return true;
 }
 
-#elif !defined(__linux__)
+#elif !defined(__linux__) && !defined(__FreeBSD__)
 
 static bool CreateSocketPair(int out_sockets[2])
 {
@@ -573,7 +574,7 @@ void http_Daemon::RunHandler(http_IO *client)
 
 bool http_Daemon::Dispatcher::Run()
 {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
     RG_ASSERT(event_fd < 0);
 #else
     RG_ASSERT(pair_fd[0] < 0);
@@ -584,7 +585,7 @@ bool http_Daemon::Dispatcher::Run()
 
     Async async(1 + WorkersPerHandler);
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
     if (event_fd < 0) {
         LogError("Failed to create eventfd: %1", strerror(errno));
@@ -622,7 +623,7 @@ bool http_Daemon::Dispatcher::Run()
     };
 
     HeapArray<struct pollfd> pfds = {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
         { listen_fd, POLLIN, 0 },
         { event_fd, POLLIN, 0 }
 #elif defined(_WIN32)
@@ -704,7 +705,7 @@ bool http_Daemon::Dispatcher::Run()
 
         // Clear eventfd
         if (pfds[1].revents & POLLIN) {
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
             uint64_t dummy = 0;
             Size ret = read(event_fd, &dummy, RG_SIZE(dummy));
             (void)ret;
@@ -818,7 +819,7 @@ void http_Daemon::Dispatcher::Wake()
     if (wake_needed) {
         lock_shr.unlock();
 
-#if defined(__linux__)
+#if defined(__linux__) || defined(__FreeBSD__)
         uint64_t one = 1;
         Size ret = write(event_fd, &one, RG_SIZE(one));
         (void)ret;
