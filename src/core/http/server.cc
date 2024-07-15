@@ -193,6 +193,12 @@ void SetSocketDelay(int fd, bool delay)
 #elif defined(TCP_NOPUSH)
     int flag = delay;
     setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
+
+#if defined(__APPLE__)
+    if (push) {
+        send(fd, nullptr, 0, 0);
+    }
+#endif
 #elif defined(_WIN32)
     int flag = !delay;
     setsockopt((SOCKET)fd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
