@@ -541,6 +541,302 @@ void http_Daemon::Stop()
     handle_func = {};
 }
 
+bool http_Daemon::RequestHandler::Run()
+{
+#if defined(__linux__)
+    RG_ASSERT(event_fd < 0);
+#else
+    RG_ASSERT(pair_fd[0] < 0);
+#endif
+
+    int listen_fd = daemon->listen_fd;
+    http_ClientAddressMode addr_mode = daemon->addr_mode;
+
+    Async async(1 + WorkersPerHandler);
+
+#if defined(__linux__)
+    event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
+    if (event_fd < 0) {
+        LogError("Failed to create eventfd: %1", strerror(errno));
+        return false;
+    }
+    RG_DEFER {
+        CloseDescriptor(event_fd);
+        event_fd = -1;
+    };
+#else
+    if (!CreateSocketPair(pair_fd))
+        return false;
+    RG_DEFER {
+        CloseSocket(pair_fd[0]);
+        CloseSocket(pair_fd[1]);
+
+        pair_fd[0] = -1;
+        pair_fd[1] = -1;
+    };
+#endif
+
+    // Delete remaining clients when function exits
+    RG_DEFER {
+        async.Sync();
+
+        for (const http_IO *client: clients) {
+            delete client;
+        };
+        for (const http_IO *client: pool) {
+            delete client;
+        }
+
+        clients.Clear();
+        pool.Clear();
+    };
+
+    HeapArray<struct pollfd> pfds = {
+#if defined(__linux__)
+        { listen_fd, POLLIN, 0 },
+        { event_fd, POLLIN, 0 }
+#elif defined(_WIN32)
+        { (SOCKET)listen_fd, POLLIN, 0 },
+        { (SOCKET)pair_fd[0], POLLIN, 0 }
+#else
+        { listen_fd, POLLIN, 0 },
+        { pair_fd[0], POLLIN, 0 }
+#endif
+    };
+
+    int next_worker = 0;
+    int64_t busy = 0;
+
+    for (;;) {
+        int64_t now = GetMonotonicTime();
+
+        pfds.RemoveFrom(2);
+
+        if (pfds[0].revents & POLLHUP)
+            return true;
+#if defined(_WIN32) || defined(__APPLE__)
+        if (!run)
+            return true;
+#endif
+
+        if (pfds[0].revents & POLLIN) {
+            sockaddr_storage ss;
+            socklen_t ss_len = RG_SIZE(ss);
+
+            // Accept queued clients
+            for (Size i = 0; i < 64; i++) {
+#if defined(_WIN32)
+                SOCKET sock = accept((SOCKET)listen_fd, (sockaddr *)&ss, &ss_len);
+                int fd = (sock != INVALID_SOCKET) ? (int)sock : -1;
+
+                if (fd >= 0) {
+                    SetSocketNonBlock(fd, true);
+                }
+#elif defined(SOCK_CLOEXEC)
+                int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC | SOCK_NONBLOCK);
+#else
+                int fd = accept(listen_fd, (sockaddr *)&ss, &ss_len);
+
+                if (fd >= 0) {
+                    fcntl(fd, F_SETFD, FD_CLOEXEC);
+                    SetSocketNonBlock(fd, true);
+                }
+#endif
+
+                if (fd < 0) {
+#if defined(_WIN32)
+                    errno = TranslateWinSockError();
+#endif
+
+                    if (errno == EINVAL)
+                        return true;
+                    if (errno == EAGAIN || errno == EWOULDBLOCK)
+                        break;
+
+                    LogError("Failed to accept client: %1 %2", strerror(errno), errno);
+                    return false;
+                }
+
+                http_IO *client = CreateClient(fd, now, (sockaddr *)&ss);
+                clients.Append(client);
+
+                busy = now;
+            }
+        }
+
+        // Clear eventfd
+        if (pfds[1].revents & POLLIN) {
+#if defined(__linux__)
+            uint64_t dummy = 0;
+            Size ret = read(event_fd, &dummy, RG_SIZE(dummy));
+            (void)ret;
+#else
+            char buf[1024];
+            Size ret = recv(pair_fd[0], buf, RG_SIZE(buf), 0);
+            (void)ret;
+#endif
+        }
+
+        Size keep = 0;
+        for (Size i = 0; i < clients.len; i++, keep++) {
+            clients[keep] = clients[i];
+
+            http_IO *client = clients[i];
+            http_IO::PrepareStatus ret = client->Prepare();
+
+            switch (ret) {
+                case http_IO::PrepareStatus::Waiting: {
+#if defined(_WIN32)
+                    struct pollfd pfd = { (SOCKET)client->Descriptor(), POLLIN, 0 };
+                    pfds.Append(pfd);
+#else
+                    struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
+                    pfds.Append(pfd);
+#endif
+                } break;
+
+                case http_IO::PrepareStatus::Ready: {
+                    if (!client->InitAddress(addr_mode)) {
+                        client->request.keepalive = false;
+                        client->SendText(400, "Malformed HTTP request");
+                        client->Close();
+
+                        break;
+                    }
+
+                    client->timeout = KeepAliveDelay - (now - client->start);
+                    client->request.keepalive &= (client->timeout >= 0);
+
+                    int worker_idx = 1 + next_worker;
+                    next_worker = (next_worker + 1) % WorkersPerHandler;
+
+                    if (client->request.keepalive) {
+                        async.Run(worker_idx, [=, this] {
+                            daemon->handle_func(client->request, client);
+
+                            client->Reset();
+                            Wake();
+
+                            return true;
+                        });
+                    } else {
+                        async.Run(worker_idx, [=, this] {
+                            daemon->handle_func(client->request, client);
+                            client->Close();
+
+                            return true;
+                        });
+                    }
+                } break;
+
+                case http_IO::PrepareStatus::Busy: {} break;
+
+                case http_IO::PrepareStatus::Error: {
+                    client->request.keepalive = false;
+                    client->SendText(400, "Malformed request");
+                    client->Close();
+                } break;
+
+                case http_IO::PrepareStatus::Closed: {
+                    DestroyClient(client);
+                    keep--;
+                } break;
+            }
+        }
+        clients.len = keep;
+
+        if (now - busy > PollAfterIdle) {
+            // Wake me up from the kernel if needed
+            {
+                std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
+                wake_needed = true;
+            }
+
+#if defined(_WIN32)
+            if (WSAPoll(pfds.ptr, (unsigned long)pfds.len, -1) < 0) {
+                errno = TranslateWinSockError();
+
+                LogError("Failed to poll descriptors: %1", strerror(errno));
+                return false;
+            }
+#else
+            if (poll(pfds.ptr, pfds.len, -1) < 0) {
+                LogError("Failed to poll descriptors: %1", strerror(errno));
+                return false;
+            }
+#endif
+
+            busy = GetMonotonicTime();
+        }
+    }
+
+    RG_UNREACHABLE();
+}
+
+void http_Daemon::RequestHandler::Wake()
+{
+    std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
+
+    if (wake_needed) {
+        lock_shr.unlock();
+
+#if defined(__linux__)
+        uint64_t one = 1;
+        Size ret = write(event_fd, &one, RG_SIZE(one));
+        (void)ret;
+#else
+        char x = 'x';
+        Size ret = send(pair_fd[1], &x, RG_SIZE(x), 0);
+        (void)ret;
+#endif
+
+        wake_needed = false;
+    }
+}
+
+#if defined(_WIN32) || defined(__APPLE__)
+
+void http_Daemon::RequestHandler::Stop()
+{
+    run = false;
+    Wake();
+}
+
+#endif
+
+http_IO *http_Daemon::RequestHandler::CreateClient(int fd, int64_t start, struct sockaddr *sa)
+{
+    http_IO *client = nullptr;
+
+    if (pool.len) {
+        int idx = GetRandomInt(0, pool.len);
+
+        client = pool[idx];
+
+        std::swap(pool[idx], pool[pool.len - 1]);
+        pool.len--;
+    } else {
+        client = new http_IO(this);
+    }
+
+    if (!client->Init(fd, start, sa)) [[unlikely]] {
+        delete client;
+        return nullptr;
+    }
+
+    return client;
+}
+
+void http_Daemon::RequestHandler::DestroyClient(http_IO *client)
+{
+    if (pool.Available()) {
+        pool.Append(client);
+        client->Reset();
+    } else {
+        delete client;
+    }
+}
+
 const char *http_RequestInfo::FindHeader(const char *key) const
 {
     for (const http_KeyValue &header: headers) {
@@ -864,302 +1160,6 @@ void http_IO::AddFinalizer(const std::function<void()> &func)
 {
     RG_ASSERT(!response.sent);
     response.finalizers.Append(func);
-}
-
-bool http_Daemon::RequestHandler::Run()
-{
-#if defined(__linux__)
-    RG_ASSERT(event_fd < 0);
-#else
-    RG_ASSERT(pair_fd[0] < 0);
-#endif
-
-    int listen_fd = daemon->listen_fd;
-    http_ClientAddressMode addr_mode = daemon->addr_mode;
-
-    Async async(1 + WorkersPerHandler);
-
-#if defined(__linux__)
-    event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-    if (event_fd < 0) {
-        LogError("Failed to create eventfd: %1", strerror(errno));
-        return false;
-    }
-    RG_DEFER {
-        CloseDescriptor(event_fd);
-        event_fd = -1;
-    };
-#else
-    if (!CreateSocketPair(pair_fd))
-        return false;
-    RG_DEFER {
-        CloseSocket(pair_fd[0]);
-        CloseSocket(pair_fd[1]);
-
-        pair_fd[0] = -1;
-        pair_fd[1] = -1;
-    };
-#endif
-
-    // Delete remaining clients when function exits
-    RG_DEFER {
-        async.Sync();
-
-        for (const http_IO *client: clients) {
-            delete client;
-        };
-        for (const http_IO *client: pool) {
-            delete client;
-        }
-
-        clients.Clear();
-        pool.Clear();
-    };
-
-    HeapArray<struct pollfd> pfds = {
-#if defined(__linux__)
-        { listen_fd, POLLIN, 0 },
-        { event_fd, POLLIN, 0 }
-#elif defined(_WIN32)
-        { (SOCKET)listen_fd, POLLIN, 0 },
-        { (SOCKET)pair_fd[0], POLLIN, 0 }
-#else
-        { listen_fd, POLLIN, 0 },
-        { pair_fd[0], POLLIN, 0 }
-#endif
-    };
-
-    int next_worker = 0;
-    int64_t busy = 0;
-
-    for (;;) {
-        int64_t now = GetMonotonicTime();
-
-        pfds.RemoveFrom(2);
-
-        if (pfds[0].revents & POLLHUP)
-            return true;
-#if defined(_WIN32) || defined(__APPLE__)
-        if (!run)
-            return true;
-#endif
-
-        if (pfds[0].revents & POLLIN) {
-            sockaddr_storage ss;
-            socklen_t ss_len = RG_SIZE(ss);
-
-            // Accept queued clients
-            for (Size i = 0; i < 64; i++) {
-#if defined(_WIN32)
-                SOCKET sock = accept((SOCKET)listen_fd, (sockaddr *)&ss, &ss_len);
-                int fd = (sock != INVALID_SOCKET) ? (int)sock : -1;
-
-                if (fd >= 0) {
-                    SetSocketNonBlock(fd, true);
-                }
-#elif defined(SOCK_CLOEXEC)
-                int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC | SOCK_NONBLOCK);
-#else
-                int fd = accept(listen_fd, (sockaddr *)&ss, &ss_len);
-
-                if (fd >= 0) {
-                    fcntl(fd, F_SETFD, FD_CLOEXEC);
-                    SetSocketNonBlock(fd, true);
-                }
-#endif
-
-                if (fd < 0) {
-#if defined(_WIN32)
-                    errno = TranslateWinSockError();
-#endif
-
-                    if (errno == EINVAL)
-                        return true;
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                        break;
-
-                    LogError("Failed to accept client: %1 %2", strerror(errno), errno);
-                    return false;
-                }
-
-                http_IO *client = CreateClient(fd, now, (sockaddr *)&ss);
-                clients.Append(client);
-
-                busy = now;
-            }
-        }
-
-        // Clear eventfd
-        if (pfds[1].revents & POLLIN) {
-#if defined(__linux__)
-            uint64_t dummy = 0;
-            Size ret = read(event_fd, &dummy, RG_SIZE(dummy));
-            (void)ret;
-#else
-            char buf[1024];
-            Size ret = recv(pair_fd[0], buf, RG_SIZE(buf), 0);
-            (void)ret;
-#endif
-        }
-
-        Size keep = 0;
-        for (Size i = 0; i < clients.len; i++, keep++) {
-            clients[keep] = clients[i];
-
-            http_IO *client = clients[i];
-            http_IO::PrepareStatus ret = client->Prepare();
-
-            switch (ret) {
-                case http_IO::PrepareStatus::Waiting: {
-#if defined(_WIN32)
-                    struct pollfd pfd = { (SOCKET)client->Descriptor(), POLLIN, 0 };
-                    pfds.Append(pfd);
-#else
-                    struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
-                    pfds.Append(pfd);
-#endif
-                } break;
-
-                case http_IO::PrepareStatus::Ready: {
-                    if (!client->InitAddress(addr_mode)) {
-                        client->request.keepalive = false;
-                        client->SendText(400, "Malformed HTTP request");
-                        client->Close();
-
-                        break;
-                    }
-
-                    client->timeout = KeepAliveDelay - (now - client->start);
-                    client->request.keepalive &= (client->timeout >= 0);
-
-                    int worker_idx = 1 + next_worker;
-                    next_worker = (next_worker + 1) % WorkersPerHandler;
-
-                    if (client->request.keepalive) {
-                        async.Run(worker_idx, [=, this] {
-                            daemon->handle_func(client->request, client);
-
-                            client->Reset();
-                            Wake();
-
-                            return true;
-                        });
-                    } else {
-                        async.Run(worker_idx, [=, this] {
-                            daemon->handle_func(client->request, client);
-                            client->Close();
-
-                            return true;
-                        });
-                    }
-                } break;
-
-                case http_IO::PrepareStatus::Busy: {} break;
-
-                case http_IO::PrepareStatus::Error: {
-                    client->request.keepalive = false;
-                    client->SendText(400, "Malformed request");
-                    client->Close();
-                } break;
-
-                case http_IO::PrepareStatus::Closed: {
-                    DestroyClient(client);
-                    keep--;
-                } break;
-            }
-        }
-        clients.len = keep;
-
-        if (now - busy > PollAfterIdle) {
-            // Wake me up from the kernel if needed
-            {
-                std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
-                wake_needed = true;
-            }
-
-#if defined(_WIN32)
-            if (WSAPoll(pfds.ptr, (unsigned long)pfds.len, -1) < 0) {
-                errno = TranslateWinSockError();
-
-                LogError("Failed to poll descriptors: %1", strerror(errno));
-                return false;
-            }
-#else
-            if (poll(pfds.ptr, pfds.len, -1) < 0) {
-                LogError("Failed to poll descriptors: %1", strerror(errno));
-                return false;
-            }
-#endif
-
-            busy = GetMonotonicTime();
-        }
-    }
-
-    RG_UNREACHABLE();
-}
-
-void http_Daemon::RequestHandler::Wake()
-{
-    std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
-
-    if (wake_needed) {
-        lock_shr.unlock();
-
-#if defined(__linux__)
-        uint64_t one = 1;
-        Size ret = write(event_fd, &one, RG_SIZE(one));
-        (void)ret;
-#else
-        char x = 'x';
-        Size ret = send(pair_fd[1], &x, RG_SIZE(x), 0);
-        (void)ret;
-#endif
-
-        wake_needed = false;
-    }
-}
-
-#if defined(_WIN32) || defined(__APPLE__)
-
-void http_Daemon::RequestHandler::Stop()
-{
-    run = false;
-    Wake();
-}
-
-#endif
-
-http_IO *http_Daemon::RequestHandler::CreateClient(int fd, int64_t start, struct sockaddr *sa)
-{
-    http_IO *client = nullptr;
-
-    if (pool.len) {
-        int idx = GetRandomInt(0, pool.len);
-
-        client = pool[idx];
-
-        std::swap(pool[idx], pool[pool.len - 1]);
-        pool.len--;
-    } else {
-        client = new http_IO(this);
-    }
-
-    if (!client->Init(fd, start, sa)) [[unlikely]] {
-        delete client;
-        return nullptr;
-    }
-
-    return client;
-}
-
-void http_Daemon::RequestHandler::DestroyClient(http_IO *client)
-{
-    if (pool.Available()) {
-        pool.Append(client);
-        client->Reset();
-    } else {
-        delete client;
-    }
 }
 
 http_IO::PrepareStatus http_IO::Prepare()
