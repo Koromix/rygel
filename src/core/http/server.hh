@@ -183,7 +183,10 @@ public:
                          bool http_only = false);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
-    void Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *)> func);
+    void Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func);
+    void Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
+        { Send(status, CompressionType::None, len, func); }
+
     void SendText(int status, Span<const char> text, const char *mimetype = "text/plain");
     void SendBinary(int status, Span<const uint8_t> data, const char *mimetype = nullptr);
     void SendAsset(int status, Span<const uint8_t> data, const char *mimetype = nullptr,

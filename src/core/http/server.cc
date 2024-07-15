@@ -981,7 +981,7 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
     }
 }
 
-void http_IO::Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
+void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
 {
     RG_ASSERT(!response.sent);
 
@@ -1022,6 +1022,15 @@ void http_IO::Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *
                          protocol, status, details).len;
     }
 
+    switch (encoding) {
+        case CompressionType::None: {} break;
+        case CompressionType::Zlib: { intro.len += Fmt(intro.TakeAvailable(), "Content-Encoding: deflate\r\n").len; } break;
+        case CompressionType::Gzip: { intro.len += Fmt(intro.TakeAvailable(), "Content-Encoding: gzip\r\n").len; } break;
+        case CompressionType::Brotli: { intro.len += Fmt(intro.TakeAvailable(), "Content-Encoding: br\r\n").len; } break;
+        case CompressionType::LZ4: { RG_UNREACHABLE(); } break;
+        case CompressionType::Zstd: { intro.len += Fmt(intro.TakeAvailable(), "Content-Encoding: zstd\r\n").len; } break;
+    }
+
     for (const http_KeyValue &header: response.headers) {
         intro.len += Fmt(intro.TakeAvailable(), "%1: %2\r\n", header.key, header.value).len;
     }
@@ -1038,6 +1047,11 @@ void http_IO::Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *
 
         writer.Write(intro);
 
+        if (encoding != CompressionType::None) {
+            writer.Close();
+            writer.Open(write, "<http>", encoding);
+        }
+
         request.keepalive &= func(fd, &writer);
     } else {
         intro.len += Fmt(intro.TakeAvailable(), "Transfer-Encoding: chunked\r\n\r\n").len;
@@ -1052,16 +1066,17 @@ void http_IO::Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *
         writer.Write(intro);
 
         const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
-        StreamWriter chunker(chunk, "<http>");
+        StreamWriter chunker(chunk, "<http>", encoding);
 
         if (func(-1, &chunker)) {
+            request.keepalive &= chunker.Close();
             writer.Write("0\r\n\r\n");
         } else {
             request.keepalive = false;
         }
     }
 
-    request.keepalive &= writer.IsValid();
+    request.keepalive &= writer.Close();
 }
 
 void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
@@ -1095,7 +1110,6 @@ void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimety
             return;
         }
 
-        AddEncodingHeader(dest_encoding);
         if (mimetype) {
             AddHeader("Content-Type", mimetype);
         }
@@ -1104,14 +1118,13 @@ void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimety
             SendEmpty(status);
         } else {
             StreamReader reader(data, nullptr, src_encoding);
-            Send(status, -1, [&](int, StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
+            Send(status, dest_encoding, -1, [&](int, StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
         }
     } else {
         if (mimetype) {
             AddHeader("Content-Type", mimetype);
         }
 
-        AddEncodingHeader(dest_encoding);
         SendBinary(status, data);
     }
 }
