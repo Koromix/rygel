@@ -1,6 +1,6 @@
 [package]
 name = "blake3"
-version = "1.5.2"
+version = "1.5.3"
 authors = ["Jack O'Connor <oconnor663@gmail.com>", "Samuel Neves"]
 description = "the BLAKE3 hash function"
 repository = "https://github.com/BLAKE3-team/BLAKE3"
@@ -41,8 +41,6 @@ mmap = ["std", "dep:memmap2"]
 
 # Implement the zeroize::Zeroize trait for types in this crate.
 zeroize = ["dep:zeroize", "arrayvec/zeroize"]
-
-serde = ["dep:serde", "dep:serde_bytes"]
 
 # This crate implements traits from the RustCrypto project, exposed here as the
 # "traits-preview" feature. However, these traits aren't stable, and they're
@@ -105,7 +103,6 @@ digest = { version = "0.10.1", features = [ "mac" ], optional = true }
 memmap2 = { version = "0.9", optional = true }
 rayon-core = { version = "1.12.1", optional = true }
 serde = { version = "1.0", default-features = false, features = ["derive"], optional = true }
-serde_bytes = { version = "0.11.15", optional = true }
 zeroize = { version = "1", default-features = false, features = ["zeroize_derive"], optional = true }
 
 [dev-dependencies]
