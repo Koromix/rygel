@@ -86,6 +86,9 @@ public:
 
     void Stop();
 
+private:
+    void RunHandler(http_IO *client);
+
     friend class http_IO;
 };
 
@@ -156,6 +159,8 @@ class http_IO {
 
     std::atomic_bool ready;
     http_RequestInfo request;
+
+    const char *last_err = nullptr;
 
     struct {
         HeapArray<http_KeyValue> headers;

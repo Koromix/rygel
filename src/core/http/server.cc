@@ -541,6 +541,25 @@ void http_Daemon::Stop()
     handle_func = {};
 }
 
+void http_Daemon::RunHandler(http_IO *client)
+{
+    // This log filter does two things: it keeps a copy of the last log error message,
+    // and it sets the log context to the client address (for log file).
+    PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
+        if (level == LogLevel::Error) {
+            client->last_err = DuplicateString(msg, &client->allocator).ptr;
+        }
+
+        char ctx_buf[512];
+        Fmt(ctx_buf, "%1%2: ", ctx ? ctx : "", client->request.client_addr);
+
+        func(level, ctx_buf, msg);
+    });
+    RG_DEFER { PopLogFilter(); };
+
+    handle_func(client->request, client);
+}
+
 bool http_Daemon::RequestHandler::Run()
 {
 #if defined(__linux__)
@@ -712,7 +731,7 @@ bool http_Daemon::RequestHandler::Run()
 
                     if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
-                            daemon->handle_func(client->request, client);
+                            daemon->RunHandler(client);
 
                             client->Reset();
                             Wake();
@@ -721,7 +740,7 @@ bool http_Daemon::RequestHandler::Run()
                         });
                     } else {
                         async.Run(worker_idx, [=, this] {
-                            daemon->handle_func(client->request, client);
+                            daemon->RunHandler(client);
                             client->Close();
 
                             return true;
@@ -1057,8 +1076,6 @@ void http_IO::SendBinary(int status, Span<const uint8_t> data, const char *mimet
 
 void http_IO::SendError(int status, const char *details)
 {
-    const char *last_err = nullptr; // XXX
-
     if (!details) {
         details = (status < 500 && last_err) ? last_err : "";
     }
@@ -1489,12 +1506,13 @@ void http_IO::Reset()
     incoming.intro = {};
     incoming.extra = {};
 
-    allocator.Reset();
-
     request.headers.RemoveFrom(0);
     response.headers.RemoveFrom(0);
     response.finalizers.RemoveFrom(0);
     response.sent = false;
+    last_err = nullptr;
+
+    allocator.Reset();
 
     ready = false;
 }
