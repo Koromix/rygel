@@ -61,11 +61,13 @@ async function main() {
 
     // List matching machines
     if (config.patterns.length) {
+        let machines = runner.machines;
+
         for (let pattern of config.patterns) {
             let re = make_wildcard_pattern(pattern);
             let match = false;
 
-            for (let machine of runner.machines) {
+            for (let machine of machines) {
                 if (machine.key.match(re) || machine.title.match(re)) {
                     runner.select(machine);
                     match = true;
