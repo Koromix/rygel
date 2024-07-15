@@ -185,13 +185,13 @@ static void SetSocketNonBlock(int fd, bool enable)
 #endif
 }
 
-void SetSocketDelay(int fd, bool delay)
+void SetSocketPush(int fd, bool push)
 {
 #if defined(TCP_CORK)
-    int flag = delay;
+    int flag = !push;
     setsockopt(fd, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
 #elif defined(TCP_NOPUSH)
-    int flag = delay;
+    int flag = !push;
     setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
 
 #if defined(__APPLE__)
@@ -200,12 +200,12 @@ void SetSocketDelay(int fd, bool delay)
     }
 #endif
 #elif defined(_WIN32)
-    int flag = !delay;
+    int flag = push;
     setsockopt((SOCKET)fd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
 
     send((SOCKET)fd, nullptr, 0, 0);
 #else
-    int flag = !delay;
+    int flag = push;
     setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
 
     send(fd, nullptr, 0, 0);
@@ -664,6 +664,14 @@ bool http_Daemon::Dispatcher::Run()
                 }
 #elif defined(SOCK_CLOEXEC)
                 int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+
+#if defined(TCP_NOPUSH) && !defined(TCP_CORK)
+                if (fd >= 0) {
+                    // Disable Nagle algorithm on platforms with better options
+                    int flag = 1;
+                    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+                }
+#endif
 #else
                 int fd = accept(listen_fd, (sockaddr *)&ss, &ss_len);
 
@@ -1004,12 +1012,12 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
 #endif
 #if !defined(__linux__)
     // On Linux, use MSG_MORE in send() calls to set TCP_CORK without additional syscall
-    SetSocketDelay(fd, true);
+    SetSocketPush(fd, false);
 #endif
 
     RG_DEFER { 
         response.sent = true;
-        SetSocketDelay(fd, false);
+        SetSocketPush(fd, true);
     };
 
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
