@@ -1178,15 +1178,13 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
         AddHeader("Content-Type", mimetype);
     }
 
-#if defined(__linux__) || defined(__FreeBSD__)
+#if defined(__linux__)
     Send(status, len, [&](int sock, StreamWriter *) {
         off_t offset = 0;
         int64_t remain = len;
 
         while (remain) {
             Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
-
-#if defined(__linux__)
             Size sent = RG_RESTART_EINTR(sendfile(sock, fd, &offset, (size_t)send), < 0);
 
             if (sent < 0) {
@@ -1197,10 +1195,22 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
             }
 
             remain -= sent;
-#else
-            off_t sent = 0;
+        }
 
-            if (RG_RESTART_EINTR(sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0), < 0) < 0) {
+        return true;
+    });
+#elif defined(__FreeBSD__)
+    Send(status, len, [&](int sock, StreamWriter *) {
+        off_t offset = 0;
+        int64_t remain = len;
+
+        while (remain) {
+            Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+
+            off_t sent = 0;
+            int ret = RG_RESTART_EINTR(sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0), < 0);
+
+            if (ret < 0) {
                 if (errno != EPIPE) {
                     LogError("Failed to send file: %1", strerror(errno));
                 }
@@ -1209,7 +1219,6 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
 
             offset += sent;
             remain -= (Size)sent;
-#endif
         }
 
         return true;
