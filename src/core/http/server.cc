@@ -799,7 +799,7 @@ bool http_Daemon::Dispatcher::Run()
                 return false;
             }
 #else
-            if (poll(pfds.ptr, pfds.len, -1) < 0) {
+            if (RG_RESTART_EINTR(poll(pfds.ptr, pfds.len, -1), < 0) < 0) {
                 LogError("Failed to poll descriptors: %1", strerror(errno));
                 return false;
             }
@@ -821,11 +821,11 @@ void http_Daemon::Dispatcher::Wake()
 
 #if defined(__linux__) || defined(__FreeBSD__)
         uint64_t one = 1;
-        Size ret = write(event_fd, &one, RG_SIZE(one));
+        Size ret = RG_RESTART_EINTR(write(event_fd, &one, RG_SIZE(one)), < 0);
         (void)ret;
 #else
         char x = 'x';
-        Size ret = send(pair_fd[1], &x, RG_SIZE(x), 0);
+        Size ret = RG_RESTART_EINTR(send(pair_fd[1], &x, RG_SIZE(x), 0), < 0);
         (void)ret;
 #endif
 
@@ -1187,7 +1187,7 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
             Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
 
 #if defined(__linux__)
-            Size sent = sendfile(sock, fd, &offset, (size_t)send);
+            Size sent = RG_RESTART_EINTR(sendfile(sock, fd, &offset, (size_t)send), < 0);
 
             if (sent < 0) {
                 if (errno != EPIPE) {
@@ -1200,7 +1200,7 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
 #else
             off_t sent = 0;
 
-            if (sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0) < 0) {
+            if (RG_RESTART_EINTR(sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0), < 0) < 0) {
                 if (errno != EPIPE) {
                     LogError("Failed to send file: %1", strerror(errno));
                 }
@@ -1280,9 +1280,9 @@ http_IO::PrepareStatus http_IO::Prepare()
             Size read = recv((SOCKET)fd, (char *)incoming.buf.end(), (int)incoming.buf.Available(), 0);
             errno = TranslateWinSockError();
 #elif defined(MSG_DONTWAIT)
-            Size read = recv(fd, incoming.buf.end(), incoming.buf.Available(), MSG_DONTWAIT);
+            Size read = RG_RESTART_EINTR(recv(fd, incoming.buf.end(), incoming.buf.Available(), MSG_DONTWAIT), < 0);
 #else
-            Size read = recv(fd, incoming.buf.end(), incoming.buf.Available(), 0);
+            Size read = RG_RESTART_EINTR(recv(fd, incoming.buf.end(), incoming.buf.Available(), 0), < 0);
 #endif
 
             // We'll need it later
@@ -1505,13 +1505,13 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
 bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     while (data.len) {
-#if defined(__linux__)
-        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
-#elif defined(_WIN32)
+#if defined(_WIN32)
         int len = (int)std::min(data.len, (Size)INT_MAX);
         Size sent = send((SOCKET)fd, (const char *)data.ptr, len, 0);
+#elif defined(__linux__)
+        Size sent = RG_RESTART_EINTR(send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL), < 0);
 #else
-        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
+        Size sent = RG_RESTART_EINTR(send(fd, data.ptr, (size_t)data.len, MSG_NOSIGNAL), < 0);
 #endif
 
         if (sent < 0) {
@@ -1548,13 +1548,13 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         Span<const uint8_t> remain = buf;
 
         do {
-#if defined(__linux__)
-            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
-#elif defined(_WIN32)
+#if defined(_WIN32)
             int len = (int)std::min(remain.len, (Size)INT_MAX);
             Size sent = send((SOCKET)fd, (const char *)remain.ptr, len, 0);
+#elif defined(__linux__)
+            Size sent = RG_RESTART_EINTR(send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL), < 0);
 #else
-            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
+            Size sent = RG_RESTART_EINTR(send(fd, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL), < 0);
 #endif
 
             if (sent < 0) {
