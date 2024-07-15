@@ -840,7 +840,7 @@ http_IO *http_Daemon::RequestHandler::CreateClient(int fd, int64_t start, struct
         std::swap(pool[idx], pool[pool.len - 1]);
         pool.len--;
     } else {
-        client = new http_IO(this);
+        client = new http_IO();
     }
 
     if (!client->Init(fd, start, sa)) [[unlikely]] {

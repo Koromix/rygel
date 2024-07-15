@@ -140,14 +140,10 @@ class http_IO {
         Error
     };
 
-    using RequestHandler = http_Daemon::RequestHandler;
-    RequestHandler *handler;
-
     int fd;
     char addr[65];
 
     int64_t start;
-    int count;
     int timeout;
 
     struct {
@@ -198,7 +194,7 @@ public:
     void AddFinalizer(const std::function<void()> &func);
 
 private:
-    http_IO(RequestHandler *handler) : handler(handler) { Reset(); }
+    http_IO() { Reset(); }
     ~http_IO() { Close(); }
 
     bool Init(int fd, int64_t start, struct sockaddr *sa);
