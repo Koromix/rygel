@@ -880,6 +880,8 @@ const char *http_RequestInfo::FindCookie(const char *) const
 
 void http_IO::AddHeader(Span<const char> key, Span<const char> value)
 {
+    RG_ASSERT(!response.sent);
+
     http_KeyValue header = {};
 
     header.key = DuplicateString(key, &allocator).ptr;
@@ -1072,6 +1074,41 @@ void http_IO::SendBinary(int status, Span<const uint8_t> data, const char *mimet
     }
 
     Send(status, data.len, [&](int, StreamWriter *writer) { return writer->Write(data); });
+}
+
+void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimetype,
+                        CompressionType src_encoding)
+{
+    CompressionType dest_encoding;
+    if (!NegociateEncoding(src_encoding, &dest_encoding))
+        return;
+
+    if (dest_encoding != src_encoding) {
+        if (data.len > Mebibytes(16)) {
+            LogError("Refusing excessive Content-Encoding conversion size");
+            SendError(415);
+            return;
+        }
+
+        AddEncodingHeader(dest_encoding);
+        if (mimetype) {
+            AddHeader("Content-Type", mimetype);
+        }
+
+        if (request.headers_only) {
+            SendEmpty(status);
+        } else {
+            StreamReader reader(data, nullptr, src_encoding);
+            Send(status, -1, [&](int, StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
+        }
+    } else {
+        if (mimetype) {
+            AddHeader("Content-Type", mimetype);
+        }
+
+        AddEncodingHeader(dest_encoding);
+        SendBinary(status, data);
+    }
 }
 
 void http_IO::SendError(int status, const char *details)

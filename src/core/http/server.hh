@@ -186,8 +186,8 @@ public:
     void Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *)> func);
     void SendText(int status, Span<const char> text, const char *mimetype = "text/plain");
     void SendBinary(int status, Span<const uint8_t> data, const char *mimetype = nullptr);
-    bool SendAsset(int status, Span<const uint8_t> data, const char *mimetype = nullptr,
-                   CompressionType compression_type = CompressionType::None);
+    void SendAsset(int status, Span<const uint8_t> data, const char *mimetype = nullptr,
+                   CompressionType src_encoding = CompressionType::None);
     void SendError(int status, const char *details = nullptr);
     bool SendFile(int status, const char *filename, const char *mimetype = nullptr);
     void SendEmpty(int status);
