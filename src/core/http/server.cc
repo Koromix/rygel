@@ -34,6 +34,7 @@
         #define WIN32_LEAN_AND_MEAN
     #endif
     #include <ws2tcpip.h>
+    #include <mswsock.h>
     #include <io.h>
 
     #if !defined(UNIX_PATH_MAX)
@@ -813,6 +814,33 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
             }
 
             remain -= sent;
+        }
+
+        return true;
+    });
+#elif defined(_WIN32)
+    Send(status, len, [&](int sock, StreamWriter *) {
+        HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+        if (len) {
+            for (;;) {
+                DWORD send = (DWORD)std::min(len, (Size)UINT32_MAX);
+                BOOL success = TransmitFile((SOCKET)sock, h, send, 0, nullptr, nullptr, 0);
+
+                if (!success) {
+                    LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
+                    return false;
+                }
+
+                len -= (Size)send;
+                if (!len)
+                    break;
+
+                if (!SetFilePointerEx(h, { .QuadPart = send }, nullptr, FILE_CURRENT)) {
+                    LogError("Failed to send file: %1", GetWin32ErrorString());
+                    return false;
+                }
+            }
         }
 
         return true;
