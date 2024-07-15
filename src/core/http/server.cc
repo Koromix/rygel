@@ -1528,7 +1528,7 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
             errno = TranslateWinSockError();
 #endif
 
-            if (errno != EPIPE) {
+            if (errno != EPIPE && errno != ECONNRESET) {
                 LogError("Failed to send to client: %1", strerror(errno));
             }
             return false;
@@ -1571,7 +1571,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
                 errno = TranslateWinSockError();
 #endif
 
-                if (errno != EPIPE) {
+                if (errno != EPIPE && errno != ECONNRESET) {
                     LogError("Failed to send to client: %1", strerror(errno));
                 }
                 return false;
