@@ -183,9 +183,12 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
 
 static const char *FindEsbuild(const char *path, [[maybe_unused]] Allocator *alloc)
 {
-    if (!path) {
+    // Try environment first
+    {
         const char *str = GetEnv("ESBUILD_PATH");
-        path = (str && str[0]) ? str : ".";
+
+        if (str && str[0])
+            return str;
     }
 
     FileInfo file_info;
