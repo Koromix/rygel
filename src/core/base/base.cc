@@ -2241,9 +2241,9 @@ static FileType FileModeToType(mode_t mode)
 
 StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *out_info)
 {
+#if defined(__linux__) && defined(STATX_TYPE) && !defined(CORE_NO_STATX)
     const char *pathname = filename;
 
-#if defined(__linux__) && defined(STATX_TYPE) && !defined(CORE_NO_STATX)
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
     int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
@@ -2294,15 +2294,10 @@ StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *
 #else
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
 
-    if (fd >= 0) {
-        pathname = "";
-        stat_flags |= AT_EMPTY_PATH;
-    } else {
-        fd = AT_FDCWD;
-    }
-
     struct stat sb;
-    if (fstatat(fd, pathname, &sb, stat_flags) < 0) {
+    int ret = (fd >= 0) ? fstat(fd, &sb) : fstatat(AT_FDCWD, filename, &sb, stat_flags);
+
+    if (ret < 0) {
         switch (errno) {
             case ENOENT: {
                 if (!(flags & (int)StatFlag::SilentMissing)) {
