@@ -1188,9 +1188,6 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
 
 #if defined(__linux__)
             Size sent = sendfile(sock, fd, &offset, (size_t)send);
-#else
-            Size sent = sendfile(fd, sock, offset, (size_t)send, nullptr, &offset, 0);
-#endif
 
             if (sent < 0) {
                 if (errno != EPIPE) {
@@ -1200,6 +1197,19 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
             }
 
             remain -= sent;
+#else
+            off_t sent = 0;
+
+            if (sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0) < 0) {
+                if (errno != EPIPE) {
+                    LogError("Failed to send file: %1", strerror(errno));
+                }
+                return false;
+            }
+
+            offset += sent;
+            remain -= (Size)sent;
+#endif
         }
 
         return true;
