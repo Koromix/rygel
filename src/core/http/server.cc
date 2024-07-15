@@ -168,6 +168,11 @@ static RG_CONSTINIT ConstMap<128, int, const char *> ErrorMessages = {
     { 511, "Network Authentication Required" }
 };
 
+// Make things work on macOS
+#if defined(MSG_DONTWAIT) && !defined(SOCK_CLOEXEC)
+    #undef MSG_DONTWAIT
+#endif
+
 static void SetSocketNonBlock(int fd, bool enable)
 {
 #if defined(_WIN32)
@@ -651,9 +656,7 @@ bool http_Daemon::RequestHandler::Run()
                 if (fd >= 0) {
                     SetSocketNonBlock(fd, true);
                 }
-#elif defined(MSG_DONTWAIT)
-                // Platforms with MSG_DONTWAIT also have SOCK_CLOEXEC, so test one and use
-                // the other to make the code simpler.
+#elif defined(SOCK_CLOEXEC)
                 int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 #else
                 int fd = accept(listen_fd, (sockaddr *)&ss, &ss_len);
