@@ -466,13 +466,8 @@ public:
     {
         RG_ASSERT(alloc);
 
-        if (platform == HostPlatform::Windows) {
-            const char *cache_filename = Fmt(alloc, "%1.pch", pch_filename).ptr;
-            return cache_filename;
-        } else {
-            const char *cache_filename = Fmt(alloc, "%1.gch", pch_filename).ptr;
-            return cache_filename;
-        }
+        const char *cache_filename = Fmt(alloc, "%1.pch", pch_filename).ptr;
+        return cache_filename;
     }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
@@ -511,8 +506,8 @@ public:
             Fmt(&buf, " -o \"%1\"", dest_filename);
         } else {
             switch (src_type) {
-                case SourceType::C: { Fmt(&buf, " -x c-header -Xclang -fno-pch-timestamp"); } break;
-                case SourceType::Cxx: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp"); } break;
+                case SourceType::C: { Fmt(&buf, " -x c-header -Xclang -fno-pch-timestamp -o \"%1.pch\"", src_filename); } break;
+                case SourceType::Cxx: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp -o \"%1.pch\"", src_filename); } break;
                 case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
@@ -692,7 +687,7 @@ public:
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
         if (pch_filename) {
-            Fmt(&buf, " -include \"%1\"", pch_filename);
+            Fmt(&buf, " -include \"%1\" -include-pch \"%1.pch\"", pch_filename);
         }
         for (const char *definition: definitions) {
             Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
