@@ -1185,9 +1185,12 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
 
         while (remain) {
             Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
-            Size sent = RG_RESTART_EINTR(sendfile(sock, fd, &offset, (size_t)send), < 0);
+            Size sent = sendfile(sock, fd, &offset, (size_t)send);
 
             if (sent < 0) {
+                if (errno == EINTR)
+                    continue;
+
                 if (errno != EPIPE) {
                     LogError("Failed to send file: %1", strerror(errno));
                 }
@@ -1208,9 +1211,12 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
             Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
 
             off_t sent = 0;
-            int ret = RG_RESTART_EINTR(sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0), < 0);
+            int ret = sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0);
 
             if (ret < 0) {
+                if (errno == EINTR)
+                    continue;
+
                 if (errno != EPIPE) {
                     LogError("Failed to send file: %1", strerror(errno));
                 }
@@ -1518,12 +1524,15 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
         int len = (int)std::min(data.len, (Size)INT_MAX);
         Size sent = send((SOCKET)fd, (const char *)data.ptr, len, 0);
 #elif defined(__linux__)
-        Size sent = RG_RESTART_EINTR(send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL), < 0);
+        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
 #else
-        Size sent = RG_RESTART_EINTR(send(fd, data.ptr, (size_t)data.len, MSG_NOSIGNAL), < 0);
+        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
 #endif
 
         if (sent < 0) {
+            if (errno == EINTR)
+                continue;
+
 #if defined(_WIN32)
             errno = TranslateWinSockError();
 #endif
@@ -1561,12 +1570,15 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
             int len = (int)std::min(remain.len, (Size)INT_MAX);
             Size sent = send((SOCKET)fd, (const char *)remain.ptr, len, 0);
 #elif defined(__linux__)
-            Size sent = RG_RESTART_EINTR(send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL), < 0);
+            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
 #else
-            Size sent = RG_RESTART_EINTR(send(fd, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL), < 0);
+            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
 #endif
 
             if (sent < 0) {
+                if (errno == EINTR)
+                    continue;
+
 #if defined(_WIN32)
                 errno = TranslateWinSockError();
 #endif
