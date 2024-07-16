@@ -35,7 +35,7 @@ main a:not(:has(> img)):hover {
     align-items: center;
 }
 #me > img {
-    width: 209px;
+    width: 226px;
     height: 300px;
 }
 #me > div { flex: 1; }
