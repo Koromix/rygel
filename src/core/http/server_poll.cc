@@ -929,24 +929,24 @@ http_IO::PrepareStatus http_IO::Prepare()
     {
         bool complete = false;
 
-        incoming.buf.Grow(Mebibytes(2));
+        incoming.buf.Grow(Mebibytes(1));
 
         for (;;) {
+            Size available = incoming.buf.Available() - 1;
+
 #if defined(_WIN32)
-            Size read = recv((SOCKET)fd, (char *)incoming.buf.end(), (int)incoming.buf.Available(), 0);
+            Size read = recv((SOCKET)fd, (char *)incoming.buf.end(), (int)available, 0);
             errno = TranslateWinSockError();
 #elif defined(MSG_DONTWAIT)
-            Size read = RG_RESTART_EINTR(recv(fd, incoming.buf.end(), incoming.buf.Available(), MSG_DONTWAIT), < 0);
+            Size read = RG_RESTART_EINTR(recv(fd, incoming.buf.end(), available, MSG_DONTWAIT), < 0);
 #else
-            Size read = RG_RESTART_EINTR(recv(fd, incoming.buf.end(), incoming.buf.Available(), 0), < 0);
+            Size read = RG_RESTART_EINTR(recv(fd, incoming.buf.end(), available, 0), < 0);
 #endif
 
-            // We'll need it later
-            int error = errno;
-
             incoming.buf.len += std::max(read, (Size)0);
+            incoming.buf.ptr[incoming.buf.len] = 0;
 
-            for (;;) {
+            while (incoming.buf.len - incoming.pos >= 4) {
                 uint8_t *next = (uint8_t *)memchr(incoming.buf.ptr + incoming.pos, '\r', incoming.buf.len - incoming.pos);
                 incoming.pos = next ? next - incoming.buf.ptr : incoming.buf.len;
 
@@ -956,14 +956,19 @@ http_IO::PrepareStatus http_IO::Prepare()
                     return PrepareStatus::Error;
                 }
 
-                if (incoming.buf.len - incoming.pos < 4)
-                    break;
+                const char *end = (const char *)incoming.buf.ptr + incoming.pos;
 
-                if (incoming.buf[incoming.pos] == '\r' && incoming.buf[incoming.pos + 1] == '\n' &&
-                        incoming.buf[incoming.pos + 2] == '\r' && incoming.buf[incoming.pos + 3] == '\n') {
-                    incoming.pos += 4;
+                if (end[0] == '\r' && end[1] == '\n' && end[2] == '\r' && end[3] == '\n') {
+                    incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
+                    incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 4, incoming.buf.len - incoming.pos - 4);
+
                     complete = true;
+                    break;
+                } else if (end[0] == '\n' && end[1] == '\n') {
+                    incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
+                    incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 2, incoming.buf.len - incoming.pos - 2);
 
+                    complete = true;
                     break;
                 }
 
@@ -973,12 +978,12 @@ http_IO::PrepareStatus http_IO::Prepare()
                 break;
 
             if (read < 0) {
-                if (error == EAGAIN || error == EWOULDBLOCK)
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
                     return PrepareStatus::Waiting;
-                if (error == ECONNRESET)
+                if (errno == ECONNRESET)
                     return PrepareStatus::Error;
 
-                LogError("Read failed: %1", strerror(error));
+                LogError("Read failed: %1", strerror(errno));
                 return PrepareStatus::Error;
             } else if (!read) {
                 if (!incoming.buf.len) {
@@ -992,9 +997,6 @@ http_IO::PrepareStatus http_IO::Prepare()
         }
 
         RG_ASSERT(complete);
-
-        incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos - 4);
-        incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos, incoming.buf.len - incoming.pos);
     }
 
     if (!ParseRequest(incoming.intro))
