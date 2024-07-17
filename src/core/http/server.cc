@@ -535,7 +535,7 @@ bool http_IO::ParseRequest(Span<char> intro)
         if (TestStr(method, "HEAD")) {
             request.method = http_RequestMethod::Get;
             request.headers_only = true;
-        } else if (OptionToEnumI(http_RequestMethodNames, method, &request.method)) {
+        } else if (OptionToEnum(http_RequestMethodNames, method, &request.method)) {
             request.headers_only = false;
         } else {
             LogError("Unsupported HTTP method '%1'", method);
