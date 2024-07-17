@@ -490,14 +490,14 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
     return true;
 }
 
-static inline bool IsHeaderKeyValid(Span<const char> key)
+static inline bool IsFieldKeyValid(Span<const char> key)
 {
     static RG_CONSTINIT Bitset<256> ValidCharacter = {
-        0x21, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2a, 0x2b, 0x2d, 0x2e, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35,
-        0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c,
-        0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5e, 0x5f,
-        0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
-        0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7c, 0x7e
+        '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '0', '1', '2', '3', '4', '5',
+        '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+        'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '^', '_',
+        '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+        'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '|', '~'
     };
 
     if (!key.len)
@@ -507,16 +507,15 @@ static inline bool IsHeaderKeyValid(Span<const char> key)
     return valid;
 }
 
-static inline bool IsHeaderValueValid(Span<const char> key)
+static inline bool IsFieldValueValid(Span<const char> key)
 {
     static RG_CONSTINIT Bitset<256> ValidCharacter = {
-        0x09, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e,
-        0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e,
-        0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e,
-        0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e,
-        0x5f, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e,
-        0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e,
-        0x7f
+        ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
+        '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+        'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_',
+        '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+        'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'
     };
 
     bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacter.Test((uint8_t)c); });
@@ -597,12 +596,12 @@ bool http_IO::ParseRequest(Span<char> intro)
             SendError(400);
             return false;
         }
-        if (!key.len || !IsHeaderKeyValid(key)) [[unlikely]] {
+        if (!key.len || !IsFieldKeyValid(key)) [[unlikely]] {
             LogError("Malformed header key");
             SendError(400);
             return false;
         }
-        if (!IsHeaderValueValid(value)) {
+        if (!IsFieldValueValid(value)) {
             LogError("Malformed header value");
             SendError(400);
             return false;
@@ -621,6 +620,17 @@ bool http_IO::ParseRequest(Span<char> intro)
             while (remain.len) {
                 Span<char> name = TrimStr(SplitStr(remain, '=', &remain));
                 Span<char> value = TrimStr(SplitStr(remain, ';', &remain));
+
+                if (!IsFieldKeyValid(name)) [[unlikely]] {
+                    LogError("Malformed cookie name");
+                    SendError(400);
+                    return false;
+                }
+                if (!IsFieldValueValid(value)) [[unlikely]] {
+                    LogError("Malformed cookie value");
+                    SendError(400);
+                    return false;
+                }
 
                 name.ptr[name.len] = 0;
                 value.ptr[value.len] = 0;
