@@ -129,6 +129,7 @@ struct http_RequestInfo {
     const char *url = nullptr;
 
     HeapArray<http_KeyValue> headers;
+    HeapArray<http_KeyValue> cookies;
 
     const char *FindHeader(const char *key) const;
     const char *FindGetValue(const char *key) const;

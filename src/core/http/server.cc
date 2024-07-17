@@ -226,9 +226,13 @@ const char *http_RequestInfo::FindGetValue(const char *) const
     return nullptr;
 }
 
-const char *http_RequestInfo::FindCookie(const char *) const
+const char *http_RequestInfo::FindCookie(const char *key) const
 {
-    LogDebug("Not implemented");
+    for (const http_KeyValue &cookie: cookies) {
+        if (TestStr(cookie.key, key))
+            return cookie.value;
+    }
+
     return nullptr;
 }
 
@@ -549,8 +553,6 @@ bool http_IO::ParseRequest(Span<char> intro)
 
     // Parse headers
     while (intro.len) {
-        http_KeyValue header = {};
-
         Span<char> line = SplitStrLine(intro, &intro);
 
         Span<char> key = TrimStrRight(SplitStr(line, ':', &line));
@@ -567,16 +569,25 @@ bool http_IO::ParseRequest(Span<char> intro)
             upper = (c == '-');
         }
 
-        key.ptr[key.len] = 0;
-        value.ptr[value.len] = 0;
+        if (TestStr(key, "Cookie")) {
+            Span<char> remain = value;
 
-        header.key = key.ptr;
-        header.value = value.ptr;
+            while (remain.len) {
+                Span<char> name = TrimStr(SplitStr(remain, '=', &remain));
+                Span<char> value = TrimStr(SplitStr(remain, ';', &remain));
 
-        request.headers.Append(header);
+                name.ptr[name.len] = 0;
+                value.ptr[value.len] = 0;
 
-        if (TestStrI(key, "Connection")) {
+                request.cookies.Append({ name.ptr, value.ptr });
+            }
+        } else if (TestStrI(key, "Connection")) {
             keepalive = !TestStrI(value, "close");
+        } else {
+            key.ptr[key.len] = 0;
+            value.ptr[value.len] = 0;
+
+            request.headers.Append({ key.ptr, value.ptr });
         }
     }
 
@@ -597,6 +608,8 @@ void http_IO::Reset()
     incoming.extra = {};
 
     request.headers.RemoveFrom(0);
+    request.cookies.RemoveFrom(0);
+
     response.headers.RemoveFrom(0);
     response.finalizers.RemoveFrom(0);
     response.sent = false;
