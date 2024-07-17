@@ -530,6 +530,12 @@ bool http_IO::ParseRequest(Span<char> intro)
     {
         Span<char> line = SplitStrLine(intro, &intro);
 
+        if (std::any_of(line.begin(), line.end(), [](char c) { return c == 0; })) {
+            LogError("Request line contains NUL characters");
+            SendError(400);
+            return false;
+        }
+
         Span<char> method = SplitStr(line, ' ', &line);
         Span<char> url = SplitStr(line, ' ', &line);
         Span<char> protocol = SplitStr(line, ' ', &line);
