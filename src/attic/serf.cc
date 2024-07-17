@@ -233,7 +233,7 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
 
         if (client_etag && TestStr(client_etag, etag)) {
             if (config.verbose) {
-                LogInfo("Serving '%1' with 304 (valid cache ETag)", request.url, filename);
+                LogInfo("Serving '%1' with 304 (valid cache ETag)", request.path, filename);
             }
 
             io->SendEmpty(304);
@@ -242,7 +242,7 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
     }
 
     if (config.verbose) {
-        LogInfo("Serving '%1' with '%2'", request.url, filename);
+        LogInfo("Serving '%1' with '%2'", request.path, filename);
     }
 
     // Send the file
@@ -280,7 +280,7 @@ static void WriteURL(Span<const char> str, StreamWriter *writer) {
 static void ServeIndex(const char *dirname, const http_RequestInfo &request, http_IO *io)
 {
     if (config.verbose) {
-        LogInfo("Serving '%1' with auto-index of '%2'", request.url, dirname);
+        LogInfo("Serving '%1' with auto-index of '%2'", request.path, dirname);
     }
 
     static Span<const char> IndexTemplate =
@@ -387,15 +387,15 @@ R"(<!DOCTYPE html>
         Span<const char> key = TrimStr(expr);
 
         if (key == "TITLE") {
-            Span<const char> stripped = TrimStrRight(request.url, "/");
+            Span<const char> stripped = TrimStrRight(request.path, "/");
             Span<const char> title = Fmt(io->Allocator(), "%1/", SplitStrReverseAny(stripped, RG_PATH_SEPARATORS));
 
             WriteContent(title, writer);
         } else if (key == "NAV") {
-            bool root = TestStr(request.url, "/");
+            bool root = TestStr(request.path, "/");
 
             PrintLn(writer, "        <a href=\"..\"%1>(go back)</a>", root ? " style=\"visibility: hidden;\"" : "");
-            PrintLn(writer, "        %1", request.url);
+            PrintLn(writer, "        %1", request.path);
         } else if (key == "MAIN") {
             if (names.len) {
                 writer->Write("        <ul>\n");
@@ -422,7 +422,7 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
     if (!config.root_directory)
         return false;
 
-    Span<const char> relative_url = TrimStrLeft(request.url, "/\\").ptr;
+    Span<const char> relative_url = TrimStrLeft(request.path, "/\\").ptr;
     Span<const char> filename = NormalizePath(relative_url, config.root_directory, io->Allocator());
 
     FileInfo file_info;
@@ -453,8 +453,8 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
         ServeFile(filename.ptr, file_info, request, io);
         return true;
     } else if (file_info.type == FileType::Directory) {
-        if (!EndsWith(request.url, "/")) {
-            const char *redirect = Fmt(io->Allocator(), "%1/", request.url).ptr;
+        if (!EndsWith(request.path, "/")) {
+            const char *redirect = Fmt(io->Allocator(), "%1/", request.path).ptr;
             io->AddHeader("Location", redirect);
             io->SendEmpty(302);
             return true;
@@ -506,7 +506,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         atexit([] { curl_easy_cleanup(curl); });
     }
 
-    const char *relative_url = TrimStrLeft(request.url, '/').ptr;
+    const char *relative_url = TrimStrLeft(request.path, '/').ptr;
     const char *url = Fmt(io->Allocator(), "%1%2", config.proxy_url, relative_url).ptr;
     HeapArray<curl_slist> curl_headers;
 
@@ -622,7 +622,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         return false;
 
     if (config.verbose) {
-        LogInfo("Proxying '%1' from '%2'", request.url, url);
+        LogInfo("Proxying '%1' from '%2'", request.path, url);
     }
 
     if (status < 0) {
@@ -640,7 +640,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 {
-    RG_ASSERT(StartsWith(request.url, "/"));
+    RG_ASSERT(StartsWith(request.path, "/"));
 
     // Security checks
     if (request.method != http_RequestMethod::Get) {
@@ -648,7 +648,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         io->SendError(405);
         return;
     }
-    if (PathContainsDotDot(request.url)) {
+    if (PathContainsDotDot(request.path)) {
         LogError("Unsafe URL containing '..' components");
         io->SendError(403);
         return;
@@ -666,7 +666,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     if (!config.proxy_first && HandleProxy(request, io))
         return;
 
-    LogInfo("Cannot find anything to serve '%1'", request.url);
+    LogInfo("Cannot find anything to serve '%1'", request.path);
     io->SendError(404);
 }
 

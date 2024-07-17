@@ -578,10 +578,10 @@ bool http_IO::ParseRequest(Span<char> intro)
         request.client_addr = addr;
 
         Span<char> query;
-        url = SplitStr(url, '?', &query);
+        Span<char> path = SplitStr(url, '?', &query);
 
-        url.ptr[url.len] = 0;
-        request.url = url.ptr;
+        path.ptr[path.len] = 0;
+        request.path = path.ptr;
     }
 
     // Parse headers

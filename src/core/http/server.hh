@@ -126,7 +126,7 @@ struct http_RequestInfo {
     http_RequestMethod method = http_RequestMethod::Get;
     bool headers_only = false;
     const char *client_addr = nullptr;
-    const char *url = nullptr;
+    const char *path = nullptr;
 
     HeapArray<http_KeyValue> headers;
     HeapArray<http_KeyValue> cookies;
