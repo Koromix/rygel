@@ -213,7 +213,7 @@ void http_Daemon::RunHandler(http_IO *client)
 const char *http_RequestInfo::FindHeader(const char *key) const
 {
     for (const http_KeyValue &header: headers) {
-        if (TestStrI(header.key, key))
+        if (TestStr(header.key, key))
             return header.value;
     }
 
@@ -486,6 +486,39 @@ bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
     return true;
 }
 
+static inline bool IsHeaderKeyValid(Span<const char> key)
+{
+    static RG_CONSTINIT Bitset<256> ValidCharacter = {
+        0x21, 0x23, 0x24, 0x25, 0x26, 0x27, 0x2a, 0x2b, 0x2d, 0x2e, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35,
+        0x36, 0x37, 0x38, 0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c,
+        0x4d, 0x4e, 0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5e, 0x5f,
+        0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e, 0x6f,
+        0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7c, 0x7e
+    };
+
+    if (!key.len)
+        return false;
+
+    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacter.Test((uint8_t)c); });
+    return valid;
+}
+
+static inline bool IsHeaderValueValid(Span<const char> key)
+{
+    static RG_CONSTINIT Bitset<256> ValidCharacter = {
+        0x09, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e,
+        0x2f, 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x3b, 0x3c, 0x3d, 0x3e,
+        0x3f, 0x40, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b, 0x4c, 0x4d, 0x4e,
+        0x4f, 0x50, 0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59, 0x5a, 0x5b, 0x5c, 0x5d, 0x5e,
+        0x5f, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x6b, 0x6c, 0x6d, 0x6e,
+        0x6f, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76, 0x77, 0x78, 0x79, 0x7a, 0x7b, 0x7c, 0x7d, 0x7e,
+        0x7f
+    };
+
+    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacter.Test((uint8_t)c); });
+    return valid;
+}
+
 bool http_IO::ParseRequest(Span<char> intro)
 {
     bool keepalive = false;
@@ -515,10 +548,10 @@ bool http_IO::ParseRequest(Span<char> intro)
             SendError(400);
             return false;
         }
-        if (TestStrI(protocol, "HTTP/1.0")) {
+        if (TestStr(protocol, "HTTP/1.0")) {
             request.version = 10;
             keepalive = false;
-        } else if (TestStrI(protocol, "HTTP/1.1")) {
+        } else if (TestStr(protocol, "HTTP/1.1")) {
             request.version = 11;
             keepalive = true;
         } else {
@@ -555,14 +588,26 @@ bool http_IO::ParseRequest(Span<char> intro)
     while (intro.len) {
         Span<char> line = SplitStrLine(intro, &intro);
 
-        Span<char> key = TrimStrRight(SplitStr(line, ':', &line));
-        if (line.ptr == key.end()) {
-            LogError("Malformed header line");
+        Span<char> key = SplitStr(line, ':', &line);
+        Span<char> value = TrimStr(line);
+
+        if (line.ptr == key.end()) [[unlikely]] {
+            LogError("Missing colon in header line");
             SendError(400);
             return false;
         }
-        Span<char> value = TrimStr(line);
+        if (!key.len || !IsHeaderKeyValid(key)) [[unlikely]] {
+            LogError("Malformed header key");
+            SendError(400);
+            return false;
+        }
+        if (!IsHeaderValueValid(value)) {
+            LogError("Malformed header value");
+            SendError(400);
+            return false;
+        }
 
+        // Canonicalize header key
         bool upper = true;
         for (char &c: key.As<char>()) {
             c = upper ? UpperAscii(c) : LowerAscii(c);
@@ -581,7 +626,7 @@ bool http_IO::ParseRequest(Span<char> intro)
 
                 request.cookies.Append({ name.ptr, value.ptr });
             }
-        } else if (TestStrI(key, "Connection")) {
+        } else if (TestStr(key, "Connection")) {
             keepalive = !TestStrI(value, "close");
         } else {
             key.ptr[key.len] = 0;

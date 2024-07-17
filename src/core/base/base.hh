@@ -745,6 +745,17 @@ public:
     static constexpr Size Bits = N;
     size_t data[(N + RG_BITS(size_t) - 1) / RG_BITS(size_t)] = {};
 
+    constexpr Bitset() = default;
+    constexpr Bitset(std::initializer_list<Size> bits)
+    {
+        for (Size idx: bits) {
+            Size offset = idx / (RG_SIZE(size_t) * 8);
+            size_t mask = (size_t)1 << (idx % (RG_SIZE(size_t) * 8));
+
+            data[offset] |= mask;
+        }
+    }
+
     void Clear()
     {
         MemSet(data, 0, RG_SIZE(data));
