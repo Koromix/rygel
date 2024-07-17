@@ -38,6 +38,12 @@ static const char *const http_ClientAddressModeNames[] = {
     "X-Real-IP"
 };
 
+extern RG_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages;
+
+static const int http_KeepAliveDelay = 5000;
+static const int http_WorkersPerHandler = 4;
+static const int http_PollAfterIdle = 1000;
+
 struct http_Config {
 #if defined(__OpenBSD__)
     SocketType sock_type = SocketType::IPv4;
@@ -183,13 +189,13 @@ public:
     void Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
         { Send(status, CompressionType::None, len, func); }
 
+    void SendEmpty(int status);
     void SendText(int status, Span<const char> text, const char *mimetype = "text/plain");
     void SendBinary(int status, Span<const uint8_t> data, const char *mimetype = nullptr);
     void SendAsset(int status, Span<const uint8_t> data, const char *mimetype = nullptr,
                    CompressionType src_encoding = CompressionType::None);
-    void SendError(int status, const char *details = nullptr);
+    void SendError(int status, const char *msg = nullptr);
     bool SendFile(int status, const char *filename, const char *mimetype = nullptr);
-    void SendEmpty(int status);
 
     void AddFinalizer(const std::function<void()> &func);
 
@@ -201,6 +207,7 @@ private:
     bool InitAddress(http_ClientAddressMode addr_mode);
 
     PrepareStatus Prepare();
+    bool ParseRequest(Span<char> request);
 
     bool WriteDirect(Span<const uint8_t> data);
     bool WriteChunked(Span<const uint8_t> data);
