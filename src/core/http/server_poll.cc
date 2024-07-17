@@ -572,7 +572,7 @@ bool http_Daemon::Dispatcher::Run()
                 case http_IO::PrepareStatus::Ready: {
                     if (!client->InitAddress(addr_mode)) {
                         client->request.keepalive = false;
-                        client->SendText(400, "Malformed HTTP request");
+                        client->SendError(400);
                         client->Close();
 
                         break;
@@ -606,8 +606,9 @@ bool http_Daemon::Dispatcher::Run()
                 case http_IO::PrepareStatus::Busy: {} break;
 
                 case http_IO::PrepareStatus::Error: {
-                    client->request.keepalive = false;
-                    client->SendText(400, "Malformed request");
+                    if (!client->response.sent) {
+                        client->SendError(400);
+                    }
                     client->Close();
                 } break;
 
@@ -949,6 +950,12 @@ http_IO::PrepareStatus http_IO::Prepare()
                 uint8_t *next = (uint8_t *)memchr(incoming.buf.ptr + incoming.pos, '\r', incoming.buf.len - incoming.pos);
                 incoming.pos = next ? next - incoming.buf.ptr : incoming.buf.len;
 
+                if (incoming.pos >= http_MaxRequestSize) [[unlikely]] {
+                    LogError("Excessive request size");
+                    SendError(413);
+                    return PrepareStatus::Error;
+                }
+
                 if (incoming.buf.len - incoming.pos < 4)
                     break;
 
@@ -979,7 +986,7 @@ http_IO::PrepareStatus http_IO::Prepare()
                     return PrepareStatus::Closed;
                 }
 
-                LogError("Malformed HTTP request");
+                LogError("Malformed or truncated HTTP request");
                 return PrepareStatus::Error;
             }
         }

@@ -44,6 +44,10 @@ static const int http_KeepAliveDelay = 5000;
 static const int http_WorkersPerHandler = 4;
 static const int http_PollAfterIdle = 1000;
 
+static const int http_MaxRequestSize = Kibibytes(32);
+static const int http_MaxRequestHeaders = 64;
+static const int http_MaxRequestCookies = 64;
+
 struct http_Config {
 #if defined(__OpenBSD__)
     SocketType sock_type = SocketType::IPv4;

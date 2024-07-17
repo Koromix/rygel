@@ -523,9 +523,6 @@ bool http_IO::ParseRequest(Span<char> intro)
 {
     bool keepalive = false;
 
-    // Close connection if something fails here
-    request.keepalive = false;
-
     // Parse request line
     {
         Span<char> line = SplitStrLine(intro, &intro);
@@ -624,6 +621,12 @@ bool http_IO::ParseRequest(Span<char> intro)
                 name.ptr[name.len] = 0;
                 value.ptr[value.len] = 0;
 
+                if (request.cookies.len >= http_MaxRequestCookies) [[unlikely]] {
+                    LogError("Too many cookies, server limit is %1", http_MaxRequestCookies);
+                    SendError(413);
+                    return false;
+                }
+
                 request.cookies.Append({ name.ptr, value.ptr });
             }
         } else if (TestStr(key, "Connection")) {
@@ -631,6 +634,12 @@ bool http_IO::ParseRequest(Span<char> intro)
         } else {
             key.ptr[key.len] = 0;
             value.ptr[value.len] = 0;
+
+            if (request.headers.len >= http_MaxRequestHeaders) [[unlikely]] {
+                LogError("Too many headers, server limit is %1", http_MaxRequestHeaders);
+                SendError(413);
+                return false;
+            }
 
             request.headers.Append({ key.ptr, value.ptr });
         }
@@ -652,6 +661,7 @@ void http_IO::Reset()
     incoming.intro = {};
     incoming.extra = {};
 
+    request.keepalive = false;
     request.headers.RemoveFrom(0);
     request.cookies.RemoveFrom(0);
 
