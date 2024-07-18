@@ -404,12 +404,6 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
                 renamed = true;
                 break;
             }
-
-            if (sftp_get_error(conn->sftp) != SSH_FX_FILE_ALREADY_EXISTS) {
-                LogError("Failed to rename '%1' to '%2': %3", tmp.data, filename.data, sftp_GetErrorString(conn->sftp));
-                return -1;
-            }
-
         }
 
         if (!renamed) {
