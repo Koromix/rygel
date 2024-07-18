@@ -192,6 +192,8 @@ bool rk_Disk::RebuildCache()
         return false;
     }
 
+    LogInfo("Rebuilding local cache...");
+
     BlockAllocator temp_alloc;
 
     if (!cache_db.Run("DELETE FROM objects"))
@@ -1114,6 +1116,11 @@ bool rk_Disk::OpenCache(Span<const uint8_t> id)
         });
         if (!success)
             return false;
+    }
+
+    if (!version && !RebuildCache()) {
+        cache_db.Close();
+        return false;
     }
 
     return true;
