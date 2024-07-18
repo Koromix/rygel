@@ -980,8 +980,6 @@ http_IO::PrepareStatus http_IO::Prepare()
             if (read < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK)
                     return PrepareStatus::Waiting;
-                if (errno == ECONNRESET)
-                    return PrepareStatus::Error;
 
                 // This probably never happens (non-blocking read) but who knows
                 if (errno == EINTR)
