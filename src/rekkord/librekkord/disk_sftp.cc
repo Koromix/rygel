@@ -162,7 +162,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
                     if (sftp_dir_eof(dir))
                         break;
 
-                    LogError("Failed to enumerate directory '%1': %2", config.path, ssh_get_error(conn->ssh));
+                    LogError("Failed to enumerate directory '%1': %2", config.path, sftp_GetErrorString(conn->sftp));
                     return false;
                 }
 
@@ -174,7 +174,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
             }
         } else {
             if (sftp_mkdir(conn->sftp, config.path, 0755) < 0) {
-                LogError("Cannot create directory '%1': %2", config.path, ssh_get_error(conn->ssh));
+                LogError("Cannot create directory '%1': %2", config.path, sftp_GetErrorString(conn->sftp));
                 return false;
             }
         }
@@ -186,7 +186,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
             const char *path = Fmt(&temp_alloc, "%1/%2", config.path, suffix).ptr;
 
             if (sftp_mkdir(conn->sftp, path, 0755) < 0) {
-                LogError("Cannot create directory '%1': %2", path, ssh_get_error(conn->ssh));
+                LogError("Cannot create directory '%1': %2", path, sftp_GetErrorString(conn->sftp));
                 return false;
             }
             directories.Append(path);
@@ -217,7 +217,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
                 GET_CONNECTION(conn, false);
 
                 if (sftp_mkdir(conn->sftp, path, 0755) < 0) {
-                    LogError("Cannot create directory '%1': %2", path, ssh_get_error(conn->ssh));
+                    LogError("Cannot create directory '%1': %2", path, sftp_GetErrorString(conn->sftp));
                     return false;
                 }
 
@@ -252,7 +252,7 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
 
     sftp_file file = sftp_open(conn->sftp, filename.data, flags, 0);
     if (!file) {
-        LogError("Cannot open file '%1': %2", filename, ssh_get_error(conn->ssh));
+        LogError("Cannot open file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
         return -1;
     }
     RG_DEFER { sftp_close(file); };
@@ -262,7 +262,7 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     while (total_len < out_buf.len) {
         ssize_t bytes = sftp_read(file, out_buf.ptr + total_len, out_buf.len - total_len);
         if (bytes < 0) {
-            LogError("Failed to read file '%1': %2", filename, ssh_get_error(conn->ssh));
+            LogError("Failed to read file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
             return -1;
         }
 
@@ -292,7 +292,7 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
 
     sftp_file file = sftp_open(conn->sftp, filename.data, flags, 0);
     if (!file) {
-        LogError("Cannot open file '%1': %2", filename, ssh_get_error(conn->ssh));
+        LogError("Cannot open file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
         return -1;
     }
     RG_DEFER { sftp_close(file); };
@@ -304,7 +304,7 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
 
         ssize_t bytes = sftp_read(file, out_buf->end(), out_buf->Available());
         if (bytes < 0) {
-            LogError("Failed to read file '%1': %2", filename, ssh_get_error(conn->ssh));
+            LogError("Failed to read file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
             return -1;
         }
 
@@ -348,8 +348,8 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
             if (file) {
                 tmp.len += len;
                 break;
-            } else if (ssh_get_error_code(conn->sftp) != SSH_FX_FILE_ALREADY_EXISTS) {
-                LogError("Failed to open '%1': %2", tmp.data, ssh_get_error(conn->ssh));
+            } else if (sftp_get_error(conn->sftp) != SSH_FX_FILE_ALREADY_EXISTS) {
+                LogError("Failed to open '%1': %2", tmp.data, sftp_GetErrorString(conn->sftp));
                 return -1;
             }
         }
@@ -370,7 +370,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
             ssize_t bytes = sftp_write(file, buf.ptr, (size_t)buf.len);
 
             if (bytes < 0) {
-                LogError("Failed to write to '%1': %2", tmp, ssh_get_error(conn->ssh));
+                LogError("Failed to write to '%1': %2", tmp, sftp_GetErrorString(conn->sftp));
                 return false;
             }
 
@@ -385,19 +385,35 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
 
     // Finalize file
     if (sftp_fsync(file) < 0) {
-        LogError("Failed to flush '%1': %2", tmp, ssh_get_error(conn->ssh));
+        LogError("Failed to flush '%1': %2", tmp, sftp_GetErrorString(conn->sftp));
         return -1;
     }
     sftp_close(file);
     file_guard.Disable();
 
-    // Atomic rename
+    // Atomic rename is not supported by older SSH servers, and the error code is unhelpful (Generic failure)
     if (sftp_rename(conn->sftp, tmp.data, filename.data) < 0) {
-        sftp_attributes attr = sftp_stat(conn->sftp, filename.data);
-        RG_DEFER { sftp_attributes_free(attr); };
+        bool renamed = false;
 
-        if (!attr) {
-            LogError("Failed to rename '%1' to '%2'", tmp.data, filename.data);
+        for (int i = 0; i < 10; i++) {
+            WaitDelay(100);
+
+            sftp_unlink(conn->sftp, filename.data);
+
+            if (!sftp_rename(conn->sftp, tmp.data, filename.data)) {
+                renamed = true;
+                break;
+            }
+
+            if (sftp_get_error(conn->sftp) != SSH_FX_FILE_ALREADY_EXISTS) {
+                LogError("Failed to rename '%1' to '%2': %3", tmp.data, filename.data, sftp_GetErrorString(conn->sftp));
+                return -1;
+            }
+
+        }
+
+        if (!renamed) {
+            LogError("Failed to rename '%1' to '%2': %3", tmp.data, filename.data, sftp_GetErrorString(conn->sftp));
             return -1;
         }
     }
@@ -417,7 +433,7 @@ bool SftpDisk::DeleteRaw(const char *path)
 
     if (sftp_unlink(conn->sftp, filename.data) < 0 &&
             sftp_get_error(conn->sftp) != SSH_FX_NO_SUCH_FILE) {
-        LogError("Failed to delete file '%1': %2", filename, ssh_get_error(conn->ssh));
+        LogError("Failed to delete file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
         return false;
     }
 
@@ -446,7 +462,7 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
 
     sftp_dir dir = sftp_opendir(conn->sftp, dirname.data);
     if (!dir) {
-        LogError("Failed to enumerate directory '%1': %2", dirname, ssh_get_error(conn->ssh));
+        LogError("Failed to enumerate directory '%1': %2", dirname, sftp_GetErrorString(conn->sftp));
         return false;
     }
     RG_DEFER { sftp_closedir(dir); };
@@ -464,7 +480,7 @@ bool SftpDisk::ListRaw(SftpDisk::ListContext *ctx, const char *path)
             if (sftp_dir_eof(dir))
                 break;
 
-            LogError("Failed to enumerate directory '%1': %2", dirname, ssh_get_error(conn->ssh));
+            LogError("Failed to enumerate directory '%1': %2", dirname, sftp_GetErrorString(conn->sftp));
             return false;
         }
 
@@ -520,7 +536,7 @@ StatResult SftpDisk::TestRaw(const char *path)
                 return StatResult::AccessDenied;
             } break;
             default: {
-                LogError("Failed to stat file '%1': %2", filename, ssh_get_error(conn->ssh));
+                LogError("Failed to stat file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
                 return StatResult::OtherError;
             } break;
         }
@@ -542,7 +558,7 @@ bool SftpDisk::CreateDirectory(const char *path)
 
     if (sftp_mkdir(conn->sftp, filename.data, 0755) < 0 &&
             sftp_get_error(conn->sftp) != SSH_FX_FILE_ALREADY_EXISTS) {
-        LogError("Failed to create directory '%1': %2", filename, ssh_get_error(conn->ssh));
+        LogError("Failed to create directory '%1': %2", filename, sftp_GetErrorString(conn->sftp));
         return false;
     }
 
@@ -558,7 +574,7 @@ bool SftpDisk::DeleteDirectory(const char *path)
 
     if (sftp_rmdir(conn->sftp, filename.data) < 0 &&
             sftp_get_error(conn->sftp) != SSH_FX_NO_SUCH_FILE) {
-        LogError("Failed to delete directory '%1': %2", filename, ssh_get_error(conn->ssh));
+        LogError("Failed to delete directory '%1': %2", filename, sftp_GetErrorString(conn->sftp));
         return false;
     }
 
