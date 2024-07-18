@@ -41,7 +41,7 @@ static const char *const http_ClientAddressModeNames[] = {
 extern RG_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages;
 
 static const int http_KeepAliveDelay = 5000;
-static const int http_WorkersPerHandler = 4;
+static const int http_WorkersPerDispatcher = 4;
 static const int http_PollAfterIdle = 1000;
 
 static const int http_MaxRequestSize = Kibibytes(32);

@@ -418,7 +418,7 @@ bool http_Daemon::Dispatcher::Run()
     int listen_fd = daemon->listen_fd;
     http_ClientAddressMode addr_mode = daemon->addr_mode;
 
-    Async async(1 + http_WorkersPerHandler);
+    Async async(1 + http_WorkersPerDispatcher);
 
 #if defined(__linux__) || defined(__FreeBSD__)
     event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
@@ -582,7 +582,7 @@ bool http_Daemon::Dispatcher::Run()
                     client->request.keepalive &= (client->timeout >= 0);
 
                     int worker_idx = 1 + next_worker;
-                    next_worker = (next_worker + 1) % http_WorkersPerHandler;
+                    next_worker = (next_worker + 1) % http_WorkersPerDispatcher;
 
                     if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
