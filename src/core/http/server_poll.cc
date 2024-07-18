@@ -938,9 +938,9 @@ http_IO::PrepareStatus http_IO::Prepare()
             Size read = recv((SOCKET)fd, (char *)incoming.buf.end(), (int)available, 0);
             errno = TranslateWinSockError();
 #elif defined(MSG_DONTWAIT)
-            Size read = RG_RESTART_EINTR(recv(fd, incoming.buf.end(), available, MSG_DONTWAIT), < 0);
+            Size read = recv(fd, incoming.buf.end(), available, MSG_DONTWAIT);
 #else
-            Size read = RG_RESTART_EINTR(recv(fd, incoming.buf.end(), available, 0), < 0);
+            Size read = recv(fd, incoming.buf.end(), available, 0);
 #endif
 
             incoming.buf.len += std::max(read, (Size)0);
@@ -982,6 +982,10 @@ http_IO::PrepareStatus http_IO::Prepare()
                     return PrepareStatus::Waiting;
                 if (errno == ECONNRESET)
                     return PrepareStatus::Error;
+
+                // This probably never happens (non-blocking read) but who knows
+                if (errno == EINTR)
+                    continue;
 
                 LogError("Read failed: %1", strerror(errno));
                 return PrepareStatus::Error;
