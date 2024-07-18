@@ -6,6 +6,16 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.18
+
+- Rebuild local cache when ID changes
+- Fix silent SSH overwrite fails in rekkord commands
+- Normalize and check mount point ahead of time
+- Fix crash after `rekkord mount` exit due to destructor ordering
+- Use capitalized attribute names in XML outputs
+- Adjust open mode required for advanced commands
+- Protect rekkord secrets with mlock() and zero erase
+
 ### Rekkord 0.17
 
 - Optimize tag storage and listing
