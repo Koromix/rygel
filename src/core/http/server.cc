@@ -697,6 +697,23 @@ void http_IO::Rearm(int64_t start)
     ready = false;
 }
 
+bool http_IO::IsPreparing() const
+{
+    bool preparing = incoming.buf.len || (request_start == socket_start);
+    return preparing;
+}
+
+int64_t http_IO::GetTimeout(int64_t now) const
+{
+    if (IsPreparing()) {
+        int64_t timeout = http_WaitTimeout - now + request_start;
+        return timeout;
+    } else {
+        int64_t timeout = http_KeepAliveTime - now + socket_start;
+        return timeout;
+    }
+}
+
 void http_IO::Close()
 {
     for (const auto &finalize: response.finalizers) {

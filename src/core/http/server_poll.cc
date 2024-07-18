@@ -561,17 +561,12 @@ bool http_Daemon::Dispatcher::Run()
             http_IO::PrepareStatus ret = client->Prepare(now);
 
             switch (ret) {
-                case http_IO::PrepareStatus::Waiting: {
-#if defined(_WIN32)
-                    struct pollfd pfd = { (SOCKET)client->Descriptor(), POLLIN, 0 };
+                case http_IO::PrepareStatus::Incoming: {
+                    struct pollfd pfd = { (decltype(pollfd::fd))client->Descriptor(), POLLIN, 0 };
                     pfds.Append(pfd);
-#else
-                    struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
-                    pfds.Append(pfd);
-#endif
 
-                    unsigned int delay = (unsigned int)(now - client->request_start);
-                    timeout = std::min(timeout, (unsigned int)http_WaitTimeout - delay);
+                    int64_t delay = std::max((int64_t)0, client->GetTimeout(now));
+                    timeout = std::min(timeout, (unsigned int)delay);
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
@@ -985,12 +980,18 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
 
             if (read < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    if (now - request_start > http_WaitTimeout) [[unlikely]] {
-                        LogError("Timed out while waiting for HTTP request");
-                        return PrepareStatus::Error;
+                    int64_t timeout = GetTimeout(now);
+
+                    if (timeout < 0) [[unlikely]] {
+                        if (IsPreparing()) {
+                            LogError("Timed out while waiting for HTTP request");
+                        }
+
+                        Close();
+                        return PrepareStatus::Closed;
                     }
 
-                    return PrepareStatus::Waiting;
+                    return PrepareStatus::Incoming;
                 }
 
                 // This probably never happens (non-blocking read) but who knows

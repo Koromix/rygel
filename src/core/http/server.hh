@@ -146,7 +146,7 @@ class http_IO {
     RG_DELETE_COPY(http_IO)
 
     enum class PrepareStatus {
-        Waiting,
+        Incoming,
         Ready,
         Busy,
         Closed,
@@ -220,6 +220,10 @@ private:
     bool WriteChunked(Span<const uint8_t> data);
 
     void Rearm(int64_t start);
+
+    bool IsPreparing() const;
+    int64_t GetTimeout(int64_t now) const;
+
     void Close();
 
     friend class http_Daemon;
