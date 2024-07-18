@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.19
+
+- Reduce intempestive rekkord cache rebuilds
+- Drop buggy error code check in SFTP code
+- Always run cache rebuild inside transaction
+
 ### Rekkord 0.18
 
 - Rebuild local cache when ID changes
