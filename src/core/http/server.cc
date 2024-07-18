@@ -437,7 +437,8 @@ bool http_IO::Init(int fd, int64_t start, struct sockaddr *sa)
         return false;
     }
 
-    this->timeout = start + http_KeepAliveDelay;
+    socket_start = start;
+    request_start = start;
 
     return true;
 }
@@ -668,11 +669,13 @@ bool http_IO::ParseRequest(Span<char> intro)
     return true;
 }
 
-void http_IO::Reset()
+void http_IO::Rearm(int64_t start)
 {
     for (const auto &finalize: response.finalizers) {
         finalize();
     }
+
+    request_start = start;
 
     MemMove(incoming.buf.ptr, incoming.extra.ptr, incoming.extra.len);
     incoming.buf.RemoveFrom(incoming.extra.len);

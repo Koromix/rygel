@@ -40,9 +40,11 @@ static const char *const http_ClientAddressModeNames[] = {
 
 extern RG_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages;
 
-static const int http_KeepAliveDelay = 20000;
 static const int http_WorkersPerDispatcher = 4;
 static const int http_PollAfterIdle = 1000;
+
+static const int http_KeepAliveTime = 20000;
+static const int http_WaitTimeout = 10000;
 
 static const int http_MaxRequestSize = Kibibytes(32);
 static const int http_MaxRequestHeaders = 64;
@@ -153,7 +155,9 @@ class http_IO {
 
     int fd;
     char addr[65];
-    int64_t timeout;
+
+    int64_t socket_start;
+    int64_t request_start;
 
     struct {
         HeapArray<uint8_t> buf;
@@ -203,19 +207,19 @@ public:
     void AddFinalizer(const std::function<void()> &func);
 
 private:
-    http_IO() { Reset(); }
+    http_IO() { Rearm(0); }
     ~http_IO() { Close(); }
 
     bool Init(int fd, int64_t start, struct sockaddr *sa);
     bool InitAddress(http_ClientAddressMode addr_mode);
 
-    PrepareStatus Prepare();
+    PrepareStatus Prepare(int64_t now);
     bool ParseRequest(Span<char> request);
 
     bool WriteDirect(Span<const uint8_t> data);
     bool WriteChunked(Span<const uint8_t> data);
 
-    void Reset();
+    void Rearm(int64_t start);
     void Close();
 
     friend class http_Daemon;

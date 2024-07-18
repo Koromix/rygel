@@ -552,11 +552,13 @@ bool http_Daemon::Dispatcher::Run()
         }
 
         Size keep = 0;
+        unsigned int timeout = UINT_MAX;
+
         for (Size i = 0; i < clients.len; i++, keep++) {
             clients[keep] = clients[i];
 
             http_IO *client = clients[i];
-            http_IO::PrepareStatus ret = client->Prepare();
+            http_IO::PrepareStatus ret = client->Prepare(now);
 
             switch (ret) {
                 case http_IO::PrepareStatus::Waiting: {
@@ -567,6 +569,9 @@ bool http_Daemon::Dispatcher::Run()
                     struct pollfd pfd = { client->Descriptor(), POLLIN, 0 };
                     pfds.Append(pfd);
 #endif
+
+                    unsigned int delay = (unsigned int)(now - client->request_start);
+                    timeout = std::min(timeout, (unsigned int)http_WaitTimeout - delay);
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
@@ -578,7 +583,7 @@ bool http_Daemon::Dispatcher::Run()
                         break;
                     }
 
-                    client->request.keepalive &= (now < client->timeout);
+                    client->request.keepalive &= (now < client->socket_start + http_KeepAliveTime);
 
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % http_WorkersPerDispatcher;
@@ -587,7 +592,7 @@ bool http_Daemon::Dispatcher::Run()
                         async.Run(worker_idx, [=, this] {
                             daemon->RunHandler(client);
 
-                            client->Reset();
+                            client->Rearm(now);
                             Wake();
 
                             return true;
@@ -626,15 +631,18 @@ bool http_Daemon::Dispatcher::Run()
                 wake_needed = true;
             }
 
+            // The timeout is unsigned to make it easier to use with std::min() without dealing
+            // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
+
 #if defined(_WIN32)
-            if (WSAPoll(pfds.ptr, (unsigned long)pfds.len, -1) < 0) {
+            if (WSAPoll(pfds.ptr, (unsigned long)pfds.len, (int)timeout) < 0) {
                 errno = TranslateWinSockError();
 
                 LogError("Failed to poll descriptors: %1", strerror(errno));
                 return false;
             }
 #else
-            if (RG_RESTART_EINTR(poll(pfds.ptr, pfds.len, -1), < 0) < 0) {
+            if (RG_RESTART_EINTR(poll(pfds.ptr, pfds.len, (int)timeout), < 0) < 0) {
                 LogError("Failed to poll descriptors: %1", strerror(errno));
                 return false;
             }
@@ -705,7 +713,7 @@ void http_Daemon::Dispatcher::DestroyClient(http_IO *client)
 {
     if (pool.Available()) {
         pool.Append(client);
-        client->Reset();
+        client->Rearm(0);
     } else {
         delete client;
     }
@@ -916,7 +924,7 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
     return true;
 }
 
-http_IO::PrepareStatus http_IO::Prepare()
+http_IO::PrepareStatus http_IO::Prepare(int64_t now)
 {
     if (ready)
         return PrepareStatus::Busy;
@@ -976,8 +984,14 @@ http_IO::PrepareStatus http_IO::Prepare()
                 break;
 
             if (read < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    if (now - request_start > http_WaitTimeout) [[unlikely]] {
+                        LogError("Timed out while waiting for HTTP request");
+                        return PrepareStatus::Error;
+                    }
+
                     return PrepareStatus::Waiting;
+                }
 
                 // This probably never happens (non-blocking read) but who knows
                 if (errno == EINTR)
@@ -991,7 +1005,7 @@ http_IO::PrepareStatus http_IO::Prepare()
                     return PrepareStatus::Closed;
                 }
 
-                LogError("Malformed or truncated HTTP request");
+                LogError("Client closed connection with unfinished request");
                 return PrepareStatus::Error;
             }
         }
