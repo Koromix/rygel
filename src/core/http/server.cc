@@ -437,8 +437,7 @@ bool http_IO::Init(int fd, int64_t start, struct sockaddr *sa)
         return false;
     }
 
-    this->start = start;
-    this->timeout = http_KeepAliveDelay;
+    this->timeout = start + http_KeepAliveDelay;
 
     return true;
 }

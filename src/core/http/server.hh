@@ -153,9 +153,7 @@ class http_IO {
 
     int fd;
     char addr[65];
-
-    int64_t start;
-    int timeout;
+    int64_t timeout;
 
     struct {
         HeapArray<uint8_t> buf;

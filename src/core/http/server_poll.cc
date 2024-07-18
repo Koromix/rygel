@@ -578,8 +578,7 @@ bool http_Daemon::Dispatcher::Run()
                         break;
                     }
 
-                    client->timeout = http_KeepAliveDelay - (now - client->start);
-                    client->request.keepalive &= (client->timeout >= 0);
+                    client->request.keepalive &= (now < client->timeout);
 
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % http_WorkersPerDispatcher;
@@ -744,9 +743,8 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
 
     if (request.keepalive) {
         intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
-                                                "Connection: keep-alive\r\n"
-                                                "Keep-Alive: timeout=%4\r\n",
-                         protocol, status, details, timeout / 1000).len;
+                                                "Connection: keep-alive\r\n",
+                         protocol, status, details).len;
     } else {
         intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
                                                 "Connection: close\r\n",
