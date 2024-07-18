@@ -395,8 +395,9 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
     if (sftp_rename(conn->sftp, tmp.data, filename.data) < 0) {
         bool renamed = false;
 
-        for (int i = 0; i < 10; i++) {
-            WaitDelay(100);
+        for (int i = 0; i < 20; i++) {
+            int rnd = GetRandomInt(50, 100);
+            WaitDelay(rnd);
 
             sftp_unlink(conn->sftp, filename.data);
 
