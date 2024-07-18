@@ -303,17 +303,20 @@ bool rk_Disk::RebuildCache()
 
     BlockAllocator temp_alloc;
 
-    if (!cache_db.Run("DELETE FROM objects"))
-        return false;
-    if (!cache_db.Run("DELETE FROM stats"))
-        return false;
-
-    bool success = ListRaw(nullptr, [&](const char *path) {
-        if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
-                             ON CONFLICT (key) DO NOTHING)", path))
+    bool success = cache_db.Transaction([&]() {
+        if (!cache_db.Run("DELETE FROM objects"))
+            return false;
+        if (!cache_db.Run("DELETE FROM stats"))
             return false;
 
-        return true;
+        bool success = ListRaw(nullptr, [&](const char *path) {
+            if (!cache_db.Run(R"(INSERT INTO objects (key) VALUES (?1)
+                                 ON CONFLICT (key) DO NOTHING)", path))
+                return false;
+
+            return true;
+        });
+        return success;
     });
     if (!success)
         return false;
