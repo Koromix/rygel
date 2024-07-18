@@ -156,8 +156,8 @@ bool http_Daemon::Bind(const http_Config &config)
     switch (config.sock_type) {
         case SocketType::Dual:
         case SocketType::IPv4:
-        case SocketType::IPv6: { listen_fd = OpenIPSocket(config.sock_type, config.port); } break;
-        case SocketType::Unix: { listen_fd = OpenUnixSocket(config.unix_path); } break;
+        case SocketType::IPv6: { listen_fd = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM); } break;
+        case SocketType::Unix: { listen_fd = OpenUnixSocket(config.unix_path, SOCK_STREAM); } break;
     }
     if (listen_fd < 0)
         return false;

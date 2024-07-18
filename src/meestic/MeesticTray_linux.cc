@@ -712,7 +712,7 @@ Options:
 
     while (run) {
         // Open Meestic socket
-        meestic_fd = ConnectToUnixSocket(socket_filename);
+        meestic_fd = ConnectToUnixSocket(socket_filename, SOCK_STREAM);
         if (meestic_fd < 0)
             return 1;
         RG_DEFER { close(meestic_fd); };

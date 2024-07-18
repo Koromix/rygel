@@ -4481,16 +4481,10 @@ static const char *const SocketTypeNames[] = {
     "Unix"
 };
 
-enum class SocketMode {
-    ConnectStream,
-    ConnectDatagrams,
-    FreeDatagrams
-};
+int OpenIPSocket(SocketType type, int port, int flags);
 
-int OpenIPSocket(SocketType type, int port, SocketMode mode = SocketMode::ConnectStream);
-
-int OpenUnixSocket(const char *path, SocketMode mode = SocketMode::ConnectStream);
-int ConnectToUnixSocket(const char *path, SocketMode mode = SocketMode::ConnectStream);
+int OpenUnixSocket(const char *path, int flags);
+int ConnectToUnixSocket(const char *path, int flags);
 
 void CloseSocket(int fd);
 

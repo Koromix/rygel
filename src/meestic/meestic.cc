@@ -407,7 +407,7 @@ By default, the first of the following config files will be used:
     RG_DEFER { CloseLightDevice(port); };
 
     // Open control socket
-    int listen_fd = OpenUnixSocket(socket_filename);
+    int listen_fd = OpenUnixSocket(socket_filename, SOCK_STREAM);
     if (listen_fd < 0)
         return 1;
     RG_DEFER { close(listen_fd); };

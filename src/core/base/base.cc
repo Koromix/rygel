@@ -5498,18 +5498,11 @@ int64_t GetRandomInt64(int64_t min, int64_t max)
 
 #if !defined(__wasi__)
 
-int OpenIPSocket(SocketType type, int port, SocketMode mode)
+int OpenIPSocket(SocketType type, int port, int flags)
 {
     RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
     int family = (type == SocketType::IPv4) ? AF_INET : AF_INET6;
-
-    int flags = 0;
-    switch (mode) {
-        case SocketMode::ConnectStream: { flags = SOCK_STREAM; } break;
-        case SocketMode::ConnectDatagrams: { RG_UNREACHABLE(); } break;
-        case SocketMode::FreeDatagrams: { flags = SOCK_DGRAM; } break;
-    }
 
 #if defined(_WIN32)
     SOCKET fd = socket(family, flags, 0);
@@ -5576,15 +5569,8 @@ int OpenIPSocket(SocketType type, int port, SocketMode mode)
     return (int)fd;
 }
 
-int OpenUnixSocket(const char *path, SocketMode mode)
+int OpenUnixSocket(const char *path, int flags)
 {
-    int flags = 0;
-    switch (mode) {
-        case SocketMode::ConnectStream: { flags = SOCK_STREAM; } break;
-        case SocketMode::ConnectDatagrams: { flags = SOCK_SEQPACKET; } break;
-        case SocketMode::FreeDatagrams: { flags = SOCK_DGRAM; } break;
-    }
-
 #if defined(_WIN32)
     SOCKET fd = socket(AF_UNIX, flags, 0);
     if (fd == INVALID_SOCKET) {
@@ -5630,15 +5616,8 @@ int OpenUnixSocket(const char *path, SocketMode mode)
     return (int)fd;
 }
 
-int ConnectToUnixSocket(const char *path, SocketMode mode)
+int ConnectToUnixSocket(const char *path, int flags)
 {
-    int flags = 0;
-    switch (mode) {
-        case SocketMode::ConnectStream: { flags = SOCK_STREAM; } break;
-        case SocketMode::ConnectDatagrams: { flags = SOCK_SEQPACKET; } break;
-        case SocketMode::FreeDatagrams: { flags = SOCK_DGRAM; } break;
-    }
-
 #if defined(_WIN32)
     SOCKET fd = socket(AF_UNIX, flags, 0);
     if (fd == INVALID_SOCKET) {
