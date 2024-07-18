@@ -177,7 +177,7 @@ bool rk_Disk::ChangeID()
     return true;
 }
 
-bool rk_Disk::OpenCache()
+sq_Database *rk_Disk::OpenCache()
 {
     cache_db.Close();
 
@@ -197,26 +197,26 @@ bool rk_Disk::OpenCache()
     const char *cache_dir = GetUserCachePath("rekkord", &str_alloc);
     if (!cache_dir) {
         LogError("Cannot find user cache path");
-        return false;
+        return nullptr;
     }
     if (!MakeDirectory(cache_dir, false))
-        return false;
+        return nullptr;
 
     const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(cache_id, FmtType::SmallHex, "").Pad0(-2)).ptr;
     LogDebug("Cache file: %1", cache_filename);
 
     if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return false;
+        return nullptr;
     if (!cache_db.SetWAL(true))
-        return false;
+        return nullptr;
 
     int version;
     if (!cache_db.GetUserVersion(&version))
-        return false;
+        return nullptr;
 
     if (version > CacheVersion) {
         LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
-        return false;
+        return nullptr;
     } else if (version < CacheVersion) {
         bool success = cache_db.Transaction([&]() {
             switch (version) {
@@ -285,11 +285,12 @@ bool rk_Disk::OpenCache()
 
         if (!success) {
             cache_db.Close();
-            return false;
+            return nullptr;
         }
     }
 
-    return true;
+    RG_ASSERT(cache_db.IsValid());
+    return &cache_db;
 }
 
 bool rk_Disk::RebuildCache()

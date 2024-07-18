@@ -36,6 +36,7 @@ enum class PutResult {
 
 class PutContext {
     rk_Disk *disk;
+    sq_Database *db;
 
     Span<const uint8_t> salt;
     uint64_t salt64;
@@ -49,7 +50,7 @@ class PutContext {
     std::atomic_int big_semaphore { FileBigLimit };
 
 public:
-    PutContext(rk_Disk *disk);
+    PutContext(rk_Disk *disk, sq_Database *db);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_len = nullptr);
@@ -71,8 +72,8 @@ static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t 
     blake3_hasher_finalize(&hasher, out_hash->hash, RG_SIZE(out_hash->hash));
 }
 
-PutContext::PutContext(rk_Disk *disk)
-    : disk(disk), salt(disk->GetSalt()),
+PutContext::PutContext(rk_Disk *disk, sq_Database *db)
+    : disk(disk), db(db), salt(disk->GetSalt()),
       dir_async(disk->GetThreads()), file_async(disk->GetThreads())
 {
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
@@ -82,8 +83,6 @@ PutContext::PutContext(rk_Disk *disk)
 PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs)
 {
     BlockAllocator temp_alloc;
-
-    sq_Database *db = disk->GetCache();
 
     struct PendingDirectory {
         Size parent_idx = -1;
@@ -533,7 +532,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         return false;
     }
 
-    if (!disk->OpenCache())
+    sq_Database *db = disk->OpenCache();
+    if (!db)
         return false;
 
     Span<const uint8_t> salt = disk->GetSalt();
@@ -545,7 +545,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     header->time = LittleEndian(GetUnixTime());
     CopyString(settings.name ? settings.name : "", header->name);
 
-    PutContext put(disk);
+    PutContext put(disk, db);
 
     // Process snapshot entries
     for (const char *filename: filenames) {

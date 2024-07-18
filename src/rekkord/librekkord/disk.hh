@@ -109,12 +109,11 @@ public:
         return pkey;
     }
 
-    sq_Database *GetCache() { return &cache_db; }
     int GetThreads() const { return threads; }
 
     bool ChangeID();
 
-    bool OpenCache();
+    sq_Database *OpenCache();
     bool RebuildCache();
 
     bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
