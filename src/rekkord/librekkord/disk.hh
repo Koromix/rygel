@@ -70,6 +70,7 @@ class rk_Disk {
 protected:
     const char *url = nullptr;
 
+    uint8_t id[32];
     uint8_t cache_id[32];
 
     rk_DiskMode mode = rk_DiskMode::Secure;
@@ -112,6 +113,8 @@ public:
     int GetThreads() const { return threads; }
 
     bool ChangeID();
+
+    bool OpenCache();
     bool RebuildCache();
 
     bool InitUser(const char *username, const char *full_pwd, const char *write_pwd, bool force);
@@ -154,7 +157,6 @@ private:
 
     bool CheckRepository();
 
-    bool OpenCache(Span<const uint8_t> id);
     void ClearCache();
 };
 

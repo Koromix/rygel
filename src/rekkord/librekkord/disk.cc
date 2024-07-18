@@ -83,13 +83,9 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
         }
     }
 
-    // Open local cache
-    {
-        uint8_t id[32];
-        if (!ReadSecret("rekkord", id))
-            return false;
-        OpenCache(id);
-    }
+    // Get cache ID
+    if (!ReadSecret("rekkord", id))
+        return false;
 
     err_guard.Disable();
     return true;
@@ -117,13 +113,9 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
     MemCpy(skey, key.ptr, key.len);
     crypto_scalarmult_base(pkey, skey);
 
-    // Open local cache
-    {
-        uint8_t id[32];
-        if (!ReadSecret("rekkord", id))
-            return false;
-        OpenCache(id);
-    }
+    // Get cache ID
+    if (!ReadSecret("rekkord", id))
+        return false;
 
     err_guard.Disable();
     return true;
@@ -173,14 +165,129 @@ bool rk_Disk::ChangeID()
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Full || mode == rk_DiskMode::WriteOnly);
 
-    uint8_t id[32];
-    randombytes_buf(id, RG_SIZE(id));
+    uint8_t new_id[32];
+    randombytes_buf(new_id, RG_SIZE(new_id));
 
-    if (!WriteSecret("rekkord", id, true))
+    if (!WriteSecret("rekkord", new_id, true))
         return false;
 
+    MemCpy(id, new_id, RG_SIZE(id));
     cache_db.Close();
-    OpenCache(id);
+
+    return true;
+}
+
+bool rk_Disk::OpenCache()
+{
+    cache_db.Close();
+
+    // Combine repository URL and ID to create secure ID
+    {
+        static_assert(RG_SIZE(cache_id) == crypto_hash_sha256_BYTES);
+
+        crypto_hash_sha256_state state;
+        crypto_hash_sha256_init(&state);
+
+        crypto_hash_sha256_update(&state, id, RG_SIZE(id));
+        crypto_hash_sha256_update(&state, (const uint8_t *)url, strlen(url));
+
+        crypto_hash_sha256_final(&state, cache_id);
+    }
+
+    const char *cache_dir = GetUserCachePath("rekkord", &str_alloc);
+    if (!cache_dir) {
+        LogError("Cannot find user cache path");
+        return false;
+    }
+    if (!MakeDirectory(cache_dir, false))
+        return false;
+
+    const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(cache_id, FmtType::SmallHex, "").Pad0(-2)).ptr;
+    LogDebug("Cache file: %1", cache_filename);
+
+    if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+    if (!cache_db.SetWAL(true))
+        return false;
+
+    int version;
+    if (!cache_db.GetUserVersion(&version))
+        return false;
+
+    if (version > CacheVersion) {
+        LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
+        return false;
+    } else if (version < CacheVersion) {
+        bool success = cache_db.Transaction([&]() {
+            switch (version) {
+                case 0: {
+                    bool success = cache_db.RunMany(R"(
+                        CREATE TABLE objects (
+                            key TEXT NOT NULL
+                        );
+                        CREATE UNIQUE INDEX objects_k ON objects (key);
+                    )");
+                    if (!success)
+                        return false;
+                } [[fallthrough]];
+
+                case 1: {
+                    bool success = cache_db.RunMany(R"(
+                        CREATE TABLE stats (
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            mode INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            id BLOB NOT NULL
+                        );
+                        CREATE UNIQUE INDEX stats_p ON stats (path);
+                    )");
+                    if (!success)
+                        return false;
+                } [[fallthrough]];
+
+                case 2: {
+                    bool success = cache_db.RunMany(R"(
+                        ALTER TABLE stats RENAME COLUMN id TO hash;
+                    )");
+                    if (!success)
+                        return false;
+                } [[fallthrough]];
+
+                case 3: {
+                    bool success = cache_db.RunMany(R"(
+                        DROP TABLE stats;
+
+                        CREATE TABLE stats (
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            btime INEGER NOT NULL,
+                            mode INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            hash BLOB NOT NULL
+                        );
+                        CREATE UNIQUE INDEX stats_p ON stats (path);
+                    )");
+                    if (!success)
+                        return false;
+                } // [[fallthrough]];
+
+                static_assert(CacheVersion == 4);
+            }
+
+            if (!version && !RebuildCache())
+                return false;
+            if (!cache_db.SetUserVersion(CacheVersion))
+                return false;
+
+            return true;
+        });
+
+        if (!success) {
+            cache_db.Close();
+            return false;
+        }
+    }
 
     return true;
 }
@@ -778,16 +885,10 @@ bool rk_Disk::InitDefault(const char *full_pwd, const char *write_pwd)
     crypto_box_keypair(pkey, skey);
 
     // Generate random ID for local cache
-    {
-        uint8_t id[32];
-        randombytes_buf(id, RG_SIZE(id));
-
-        if (!WriteSecret("rekkord", id, false))
-            return false;
-        names.Append("rekkord");
-
-        OpenCache(id);
-    }
+    randombytes_buf(id, RG_SIZE(id));
+    if (!WriteSecret("rekkord", id, false))
+        return false;
+    names.Append("rekkord");
 
     // Write key files
     if (!WriteKey("keys/default/full", full_pwd, skey))
@@ -1008,122 +1109,6 @@ bool rk_Disk::CheckRepository()
     }
 
     RG_UNREACHABLE();
-}
-
-bool rk_Disk::OpenCache(Span<const uint8_t> id)
-{
-    RG_ASSERT(id.len >= 16);
-    RG_ASSERT(!cache_db.IsValid());
-
-    // Combine repository URL and ID to create secure ID
-    {
-        static_assert(RG_SIZE(cache_id) == crypto_hash_sha256_BYTES);
-
-        crypto_hash_sha256_state state;
-        crypto_hash_sha256_init(&state);
-
-        crypto_hash_sha256_update(&state, id.ptr, (size_t)id.len);
-        crypto_hash_sha256_update(&state, (const uint8_t *)url, strlen(url));
-
-        crypto_hash_sha256_final(&state, cache_id);
-    }
-
-    const char *cache_dir = GetUserCachePath("rekkord", &str_alloc);
-    if (!cache_dir) {
-        LogError("Cannot find user cache path");
-        return false;
-    }
-    if (!MakeDirectory(cache_dir, false))
-        return false;
-
-    const char *cache_filename = Fmt(&str_alloc, "%1%/%2.db", cache_dir, FmtSpan(cache_id, FmtType::SmallHex, "").Pad0(-2)).ptr;
-    LogDebug("Cache file: %1", cache_filename);
-
-    if (!cache_db.Open(cache_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
-        return false;
-    if (!cache_db.SetWAL(true))
-        return false;
-
-    int version;
-    if (!cache_db.GetUserVersion(&version))
-        return false;
-
-    if (version > CacheVersion) {
-        LogError("Cache schema is too recent (%1, expected %2)", version, CacheVersion);
-        return false;
-    } else if (version < CacheVersion) {
-        bool success = cache_db.Transaction([&]() {
-            switch (version) {
-                case 0: {
-                    bool success = cache_db.RunMany(R"(
-                        CREATE TABLE objects (
-                            key TEXT NOT NULL
-                        );
-                        CREATE UNIQUE INDEX objects_k ON objects (key);
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 1: {
-                    bool success = cache_db.RunMany(R"(
-                        CREATE TABLE stats (
-                            path TEXT NOT NULL,
-                            mtime INTEGER NOT NULL,
-                            mode INTEGER NOT NULL,
-                            size INTEGER NOT NULL,
-                            id BLOB NOT NULL
-                        );
-                        CREATE UNIQUE INDEX stats_p ON stats (path);
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 2: {
-                    bool success = cache_db.RunMany(R"(
-                        ALTER TABLE stats RENAME COLUMN id TO hash;
-                    )");
-                    if (!success)
-                        return false;
-                } [[fallthrough]];
-
-                case 3: {
-                    bool success = cache_db.RunMany(R"(
-                        DROP TABLE stats;
-
-                        CREATE TABLE stats (
-                            path TEXT NOT NULL,
-                            mtime INTEGER NOT NULL,
-                            btime INEGER NOT NULL,
-                            mode INTEGER NOT NULL,
-                            size INTEGER NOT NULL,
-                            hash BLOB NOT NULL
-                        );
-                        CREATE UNIQUE INDEX stats_p ON stats (path);
-                    )");
-                    if (!success)
-                        return false;
-                } // [[fallthrough]];
-
-                static_assert(CacheVersion == 4);
-            }
-
-            if (!cache_db.SetUserVersion(CacheVersion))
-                return false;
-
-            return true;
-        });
-        if (!success)
-            return false;
-    }
-
-    if (!version && !RebuildCache()) {
-        cache_db.Close();
-        return false;
-    }
-
-    return true;
 }
 
 void rk_Disk::ClearCache()
