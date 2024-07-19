@@ -6,6 +6,10 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.20 (2024-07-19)
+
+- Fix error when using `rekkord build_cache`
+
 ### Rekkord 0.19 (2024-07-18)
 
 - Reduce intempestive rekkord cache rebuilds
