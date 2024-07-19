@@ -132,6 +132,8 @@ Options:
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     LogInfo();
 
+    if (!disk->OpenCache())
+        return 1;
     if (!disk->RebuildCache())
         return 1;
     LogInfo("Done");
