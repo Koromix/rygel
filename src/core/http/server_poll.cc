@@ -634,7 +634,7 @@ bool http_Daemon::Dispatcher::Run()
                 return false;
             }
 #else
-            if (RG_RESTART_EINTR(poll(pfds.ptr, pfds.len, (int)timeout), < 0) < 0) {
+            if (poll(pfds.ptr, pfds.len, (int)timeout) < 0 && errno != EINTR) {
                 LogError("Failed to poll descriptors: %1", strerror(errno));
                 return false;
             }
