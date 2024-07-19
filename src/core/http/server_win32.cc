@@ -19,52 +19,44 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#if !defined(_WIN32)
+#if defined(_WIN32)
 
 #include "src/core/base/base.hh"
 #include "server.hh"
 #include "misc.hh"
 
+#if !defined(NOMINMAX)
+    #define NOMINMAX
+#endif
+#if !defined(WIN32_LEAN_AND_MEAN)
+    #define WIN32_LEAN_AND_MEAN
+#endif
 #include <fcntl.h>
 #include <limits.h>
 #include <sys/types.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#if defined(__linux__)
-    #include <sys/eventfd.h>
-    #include <sys/sendfile.h>
-#elif defined(__FreeBSD__)
-    #include <sys/eventfd.h>
-    #include <sys/uio.h>
+#include <ws2tcpip.h>
+#include <mswsock.h>
+#include <io.h>
+
+#if !defined(UNIX_PATH_MAX)
+    #define UNIX_PATH_MAX 108
 #endif
+typedef struct sockaddr_un {
+    ADDRESS_FAMILY sun_family;
+    char sun_path[UNIX_PATH_MAX];
+} SOCKADDR_UN, *PSOCKADDR_UN;
 
 namespace RG {
-
-// Make things work on macOS
-#if defined(MSG_DONTWAIT) && !defined(SOCK_CLOEXEC)
-    #undef MSG_DONTWAIT
-#endif
 
 class http_Daemon::Dispatcher {
     http_Daemon *daemon;
 
-#if defined(__linux__) || defined(__FreeBSD__)
-    int event_fd = -1;
-#else
     int pair_fd[2] = { -1, -1 };
-#endif
     std::shared_mutex wake_mutex;
     bool wake_up = false;
     bool wake_interrupt = false;
 
-#if defined(__APPLE__)
     std::atomic_bool run { true };
-#endif
 
     HeapArray<http_IO *> clients;
     LocalArray<http_IO *, 256> pool;
@@ -75,9 +67,7 @@ public:
     bool Run();
     void Wake();
 
-#if defined(__APPLE__)
     void Stop();
-#endif
 
 private:
     http_IO *CreateClient(int fd, int64_t start, struct sockaddr *sa);
@@ -86,31 +76,141 @@ private:
 
 static void SetSocketNonBlock(int fd, bool enable)
 {
-    int flags = fcntl(fd, F_GETFL, 0);
-    flags = ApplyMask(flags, O_NONBLOCK, enable);
-    fcntl(fd, F_SETFL, flags);
+    unsigned long mode = enable;
+    ioctlsocket(fd, FIONBIO, &mode);
 }
 
 void SetSocketPush(int fd, bool push)
 {
-#if defined(TCP_CORK)
-    int flag = !push;
-    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
-#elif defined(TCP_NOPUSH)
-    int flag = !push;
-    setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
-
-#if defined(__APPLE__)
-    if (push) {
-        send(fd, nullptr, 0, 0);
-    }
-#endif
-#else
     int flag = push;
-    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+    setsockopt((SOCKET)fd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
 
-    send(fd, nullptr, 0, 0);
-#endif
+    send((SOCKET)fd, nullptr, 0, 0);
+}
+
+int TranslateWinSockError()
+{
+    int error = WSAGetLastError();
+
+    switch (error) {
+        case WSAEACCES: return EADDRINUSE;
+        case WSAEADDRINUSE: return EADDRINUSE;
+        case WSAEADDRNOTAVAIL: return EADDRNOTAVAIL;
+        case WSAEALREADY: return EALREADY;
+        case WSAEBADF: return EBADF;
+        case WSAECONNABORTED: return ECONNABORTED;
+        case WSAECONNREFUSED: return ECONNREFUSED;
+        case WSAECONNRESET: return ECONNRESET;
+        case WSAEDESTADDRREQ: return EDESTADDRREQ;
+        // case WSAEDQUOT: return EDQUOT;
+        case WSAEFAULT: return EFAULT;
+        case WSAEHOSTDOWN: return ETIMEDOUT;
+        case WSAEHOSTUNREACH: return EHOSTUNREACH;
+        case WSAEINPROGRESS: return EINPROGRESS;
+        case WSAEINTR: return EINTR;
+        case WSAEINVAL: return EINVAL;
+        case WSAEISCONN: return EISCONN;
+        case WSAELOOP: return ELOOP;
+        case WSAEMFILE: return EMFILE;
+        case WSAEMSGSIZE: return EMSGSIZE;
+        case WSAENAMETOOLONG: return ENAMETOOLONG;
+        case WSAENETDOWN: return ENETDOWN;
+        case WSAENETRESET: return ENETRESET;
+        case WSAENETUNREACH: return ENETUNREACH;
+        case WSAENOBUFS: return ENOBUFS;
+        case WSAENOPROTOOPT: return ENOPROTOOPT;
+        case WSAENOTCONN: return ENOTCONN;
+        case WSAENOTEMPTY: return ENOTEMPTY;
+        case WSAENOTSOCK: return ENOTSOCK;
+        case WSAEOPNOTSUPP: return EOPNOTSUPP;
+        // case WSAEPFNOSUPPORT: return EPFNOSUPPORT;
+        // case WSAEPROCLIM: return EPROCLIM;
+        case WSAEPROTONOSUPPORT: return EPROTONOSUPPORT;
+        case WSAEPROTOTYPE: return EPROTOTYPE;
+        case WSAEREMOTE: return EINVAL;
+        case WSAESHUTDOWN: return EPIPE;
+        // case WSAESOCKTNOSUPPORT: return ESOCKTNOSUPPORT;
+        case WSAESTALE: return EINVAL;
+        case WSAETIMEDOUT: return ETIMEDOUT;
+        // case WSAETOOMANYREFS: return ETOOMANYREFS;
+        // case WSAEUSERS: return EUSERS;
+        case WSAEWOULDBLOCK: return EAGAIN;
+    }
+
+    return error;
+}
+
+static bool CreateSocketPair(int out_sockets[2])
+{
+    SOCKET listen_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (listen_sock == INVALID_SOCKET) {
+        LogError("Failed to create TCP socket: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+    RG_DEFER { closesocket(listen_sock); };
+
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    addr.sin_port = 0;
+
+    // Bind socket to random port
+    {
+        int reuse = 1;
+        socklen_t addr_len = RG_SIZE(addr);
+
+        if (setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, RG_SIZE(reuse)) == SOCKET_ERROR) {
+            LogError("setsockopt() failed: %1", strerror(TranslateWinSockError()));
+            return false;
+        }
+        if (bind(listen_sock, (struct sockaddr *)&addr, addr_len) == SOCKET_ERROR) {
+            LogError("Failed to bind TCP socket: %1", strerror(TranslateWinSockError()));
+            return false;
+        }
+        if (getsockname(listen_sock, (struct sockaddr *)&addr, &addr_len) == SOCKET_ERROR) {
+            LogError("Failed to get socket name: %1", strerror(TranslateWinSockError()));
+            return false;
+        }
+
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    }
+
+    if (listen(listen_sock, 1) == SOCKET_ERROR) {
+        LogError("Failed to listen on socket: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+
+    SOCKET socks[2] = { INVALID_SOCKET, INVALID_SOCKET };
+
+    RG_DEFER_N(err_guard) {
+        closesocket(socks[0]);
+        closesocket(socks[1]);
+    };
+
+    socks[0] = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    if (socks[0] == INVALID_SOCKET) {
+        LogError("Failed to create TCP socket: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+    if (connect(socks[0], (struct sockaddr *)&addr, RG_SIZE(addr)) == SOCKET_ERROR) {
+        LogError("Failed to connect TCP socket pair: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+
+    socks[1] = accept(listen_sock, nullptr, nullptr);
+    if (socks[1] == INVALID_SOCKET) {
+        LogError("Failed to accept TCP socket pair: %1", strerror(TranslateWinSockError()));
+        return false;
+    }
+
+    SetSocketNonBlock(socks[0], true);
+    SetSocketNonBlock(socks[1], true);
+
+    err_guard.Disable();
+    out_sockets[0] = (int)socks[0];
+    out_sockets[1] = (int)socks[1];
+    return true;
 }
 
 bool http_Daemon::Bind(const http_Config &config)
@@ -131,6 +231,8 @@ bool http_Daemon::Bind(const http_Config &config)
         return false;
 
     if (listen(listen_fd, 1024) < 0) {
+        errno = TranslateWinSockError();
+
         LogError("Failed to listen on socket: %1", strerror(errno));
         return false;
     }
@@ -187,14 +289,12 @@ bool http_Daemon::Start(const http_Config &config,
 void http_Daemon::Stop()
 {
     // Shut everything down
-    shutdown(listen_fd, SHUT_RD);
+    shutdown(listen_fd, SD_RECEIVE);
 
-#if defined(__APPLE__)
-    // On macOS, the shutdown() does not wake up poll()
+    // On Windows, the shutdown() does not wake up poll()
     for (Dispatcher *dispatcher: dispatchers) {
         dispatcher->Stop();
     }
-#endif
 
     async.Sync();
 
@@ -211,38 +311,22 @@ void http_Daemon::Stop()
 
 bool http_Daemon::Dispatcher::Run()
 {
-#if defined(__linux__) || defined(__FreeBSD__)
-    RG_ASSERT(event_fd < 0);
-#else
     RG_ASSERT(pair_fd[0] < 0);
-#endif
 
     int listen_fd = daemon->listen_fd;
     http_ClientAddressMode addr_mode = daemon->addr_mode;
 
     Async async(1 + http_WorkersPerDispatcher);
 
-#if defined(__linux__) || defined(__FreeBSD__)
-    event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-    if (event_fd < 0) {
-        LogError("Failed to create eventfd: %1", strerror(errno));
-        return false;
-    }
-    RG_DEFER {
-        CloseDescriptor(event_fd);
-        event_fd = -1;
-    };
-#else
-    if (!CreatePipe(pair_fd))
+    if (!CreateSocketPair(pair_fd))
         return false;
     RG_DEFER {
-        CloseDescriptor(pair_fd[0]);
-        CloseDescriptor(pair_fd[1]);
+        CloseSocket(pair_fd[0]);
+        CloseSocket(pair_fd[1]);
 
         pair_fd[0] = -1;
         pair_fd[1] = -1;
     };
-#endif
 
     // Delete remaining clients when function exits
     RG_DEFER {
@@ -260,13 +344,8 @@ bool http_Daemon::Dispatcher::Run()
     };
 
     HeapArray<struct pollfd> pfds = {
-#if defined(__linux__) || defined(__FreeBSD__)
-        { listen_fd, POLLIN, 0 },
-        { event_fd, POLLIN, 0 }
-#else
-        { listen_fd, POLLIN, 0 },
-        { pair_fd[0], POLLIN, 0 }
-#endif
+        { (SOCKET)listen_fd, POLLIN, 0 },
+        { (SOCKET)pair_fd[0], POLLIN, 0 }
     };
 
     int next_worker = 0;
@@ -278,10 +357,8 @@ bool http_Daemon::Dispatcher::Run()
 
         if (pfds[0].revents & POLLHUP)
             return true;
-#if defined(__APPLE__)
         if (!run)
             return true;
-#endif
 
         if (pfds[0].revents & POLLIN) {
             sockaddr_storage ss;
@@ -289,26 +366,16 @@ bool http_Daemon::Dispatcher::Run()
 
             // Accept queued clients
             for (Size i = 0; i < 64; i++) {
-#if defined(SOCK_CLOEXEC)
-                int fd = accept4(listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
-
-#if defined(TCP_NOPUSH) && !defined(TCP_CORK)
-                if (fd >= 0) {
-                    // Disable Nagle algorithm on platforms with better options
-                    int flag = 1;
-                    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-                }
-#endif
-#else
-                int fd = accept(listen_fd, (sockaddr *)&ss, &ss_len);
+                SOCKET sock = accept((SOCKET)listen_fd, (sockaddr *)&ss, &ss_len);
+                int fd = (sock != INVALID_SOCKET) ? (int)sock : -1;
 
                 if (fd >= 0) {
-                    fcntl(fd, F_SETFD, FD_CLOEXEC);
                     SetSocketNonBlock(fd, true);
                 }
-#endif
 
                 if (fd < 0) {
+                    errno = TranslateWinSockError();
+
                     if (errno == EINVAL)
                         return true;
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -325,15 +392,9 @@ bool http_Daemon::Dispatcher::Run()
 
         // Clear eventfd
         if (pfds[1].revents & POLLIN) {
-#if defined(__linux__) || defined(__FreeBSD__)
-            uint64_t dummy = 0;
-            Size ret = read(event_fd, &dummy, RG_SIZE(dummy));
-            (void)ret;
-#else
             char buf[4096];
-            Size ret = read(pair_fd[0], buf, RG_SIZE(buf));
+            Size ret = recv(pair_fd[0], buf, RG_SIZE(buf), 0);
             (void)ret;
-#endif
         }
 
         Size keep = 0;
@@ -432,9 +493,11 @@ bool http_Daemon::Dispatcher::Run()
 
         // The timeout is unsigned to make it easier to use with std::min() without dealing
         // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
-        int ready = poll(pfds.ptr, pfds.len, (int)timeout);
+        int ready = WSAPoll(pfds.ptr, (unsigned long)pfds.len, (int)timeout);
 
-        if (ready < 0 && errno != EINTR) [[unlikely]] {
+        if (ready < 0) [[unlikely]] {
+            errno = TranslateWinSockError();
+
             LogError("Failed to poll descriptors: %1", strerror(errno));
             return false;
         }
@@ -462,26 +525,16 @@ void http_Daemon::Dispatcher::Wake()
 
     lock_shr.unlock();
 
-#if defined(__linux__) || defined(__FreeBSD__)
-    uint64_t one = 1;
-    Size ret = RG_RESTART_EINTR(write(event_fd, &one, RG_SIZE(one)), < 0);
-    (void)ret;
-#else
     char x = 'x';
     Size ret = RG_RESTART_EINTR(send(pair_fd[1], &x, RG_SIZE(x), 0), < 0);
     (void)ret;
-#endif
 }
-
-#if defined(__APPLE__)
 
 void http_Daemon::Dispatcher::Stop()
 {
     run = false;
     Wake();
 }
-
-#endif
 
 http_IO *http_Daemon::Dispatcher::CreateClient(int fd, int64_t start, struct sockaddr *sa)
 {
@@ -525,17 +578,13 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
         func = [](int, StreamWriter *) { return true; };
     }
 
-#if !defined(MSG_DONTWAIT)
     SetSocketNonBlock(fd, false);
-    RG_DEFER { SetSocketNonBlock(fd, true); };
-#endif
-#if !defined(MSG_MORE)
-    // On Linux, use MSG_MORE in send() calls to set TCP_CORK without additional syscall
     SetSocketPush(fd, false);
-#endif
 
-    RG_DEFER { 
+    RG_DEFER {
         response.sent = true;
+
+        SetSocketNonBlock(fd, true);
         SetSocketPush(fd, true);
     };
 
@@ -634,63 +683,32 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
         AddHeader("Content-Type", mimetype);
     }
 
-#if defined(__linux__)
     Send(status, len, [&](int sock, StreamWriter *) {
-        off_t offset = 0;
-        int64_t remain = len;
+        HANDLE h = (HANDLE)_get_osfhandle(fd);
 
-        while (remain) {
-            Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
-            Size sent = sendfile(sock, fd, &offset, (size_t)send);
+        if (len) {
+            for (;;) {
+                DWORD send = (DWORD)std::min(len, (Size)UINT32_MAX);
+                BOOL success = TransmitFile((SOCKET)sock, h, send, 0, nullptr, nullptr, 0);
 
-            if (sent < 0) {
-                if (errno == EINTR)
-                    continue;
-
-                if (errno != EPIPE) {
-                    LogError("Failed to send file: %1", strerror(errno));
+                if (!success) {
+                    LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
+                    return false;
                 }
-                return false;
-            }
 
-            remain -= sent;
+                len -= (Size)send;
+                if (!len)
+                    break;
+
+                if (!SetFilePointerEx(h, { .QuadPart = send }, nullptr, FILE_CURRENT)) {
+                    LogError("Failed to send file: %1", GetWin32ErrorString());
+                    return false;
+                }
+            }
         }
 
         return true;
     });
-#elif defined(__FreeBSD__)
-    Send(status, len, [&](int sock, StreamWriter *) {
-        off_t offset = 0;
-        int64_t remain = len;
-
-        while (remain) {
-            Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
-
-            off_t sent = 0;
-            int ret = sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0);
-
-            if (ret < 0) {
-                if (errno == EINTR)
-                    continue;
-
-                if (errno != EPIPE) {
-                    LogError("Failed to send file: %1", strerror(errno));
-                }
-                return false;
-            }
-
-            offset += sent;
-            remain -= (Size)sent;
-        }
-
-        return true;
-    });
-#else
-    Send(status, len, [&](int, StreamWriter *writer) {
-        StreamReader reader(fd, filename);
-        return SpliceStream(&reader, -1, writer);
-    });
-#endif
 
     return true;
 }
@@ -711,11 +729,7 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
         for (;;) {
             Size available = incoming.buf.Available() - 1;
 
-#if defined(MSG_DONTWAIT)
-            Size read = recv(fd, incoming.buf.end(), available, MSG_DONTWAIT);
-#else
-            Size read = recv(fd, incoming.buf.end(), available, 0);
-#endif
+            Size read = recv((SOCKET)fd, (char *)incoming.buf.end(), (int)available, 0);
 
             incoming.buf.len += std::max(read, (Size)0);
             incoming.buf.ptr[incoming.buf.len] = 0;
@@ -752,6 +766,8 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
                 break;
 
             if (read < 0) {
+                errno = TranslateWinSockError();
+
                 switch (errno) {
                     // This probably never happens (non-blocking read) but who knows
                     case EINTR: continue;
@@ -800,15 +816,14 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
 bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     while (data.len) {
-#if defined(MSG_MORE)
-        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
-#else
-        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
-#endif
+        int len = (int)std::min(data.len, (Size)INT_MAX);
+        Size sent = send((SOCKET)fd, (const char *)data.ptr, len, 0);
 
         if (sent < 0) {
             if (errno == EINTR)
                 continue;
+
+            errno = TranslateWinSockError();
 
             if (errno != EPIPE && errno != ECONNRESET) {
                 LogError("Failed to send to client: %1", strerror(errno));
@@ -839,15 +854,14 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         Span<const uint8_t> remain = buf;
 
         do {
-#if defined(MSG_MORE)
-            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
-#else
-            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
-#endif
+            int len = (int)std::min(remain.len, (Size)INT_MAX);
+            Size sent = send((SOCKET)fd, (const char *)remain.ptr, len, 0);
 
             if (sent < 0) {
                 if (errno == EINTR)
                     continue;
+
+                errno = TranslateWinSockError();
 
                 if (errno != EPIPE && errno != ECONNRESET) {
                     LogError("Failed to send to client: %1", strerror(errno));
