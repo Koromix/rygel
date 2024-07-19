@@ -77,7 +77,8 @@ class http_Daemon::Dispatcher {
     int pair_fd[2] = { -1, -1 };
 #endif
     std::shared_mutex wake_mutex;
-    bool wake_needed = false;
+    bool wake_up = false;
+    bool wake_interrupt = false;
 
 #if defined(_WIN32) || defined(__APPLE__)
     std::atomic_bool run { true };
@@ -549,6 +550,12 @@ bool http_Daemon::Dispatcher::Run()
             Size ret = recv(pair_fd[0], buf, RG_SIZE(buf), 0);
             (void)ret;
 #endif
+
+            for (http_IO *client: clients) {
+                client->pfd_idx = -1;
+            }
+
+            busy = now;
         }
 
         Size keep = 0;
@@ -633,27 +640,39 @@ bool http_Daemon::Dispatcher::Run()
             // Wake me up from the kernel if needed
             {
                 std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
-                wake_needed = true;
+
+                if (wake_up) {
+                    wake_up = false;
+                    continue;
+                }
+
+                wake_interrupt = true;
             }
 
             // The timeout is unsigned to make it easier to use with std::min() without dealing
             // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
 
 #if defined(_WIN32)
-            if (WSAPoll(pfds.ptr, (unsigned long)pfds.len, (int)timeout) < 0) {
+            int ready = WSAPoll(pfds.ptr, (unsigned long)pfds.len, (int)timeout);
+
+            if (ready < 0) [[unlikely]] {
                 errno = TranslateWinSockError();
 
                 LogError("Failed to poll descriptors: %1", strerror(errno));
                 return false;
             }
 #else
-            if (poll(pfds.ptr, pfds.len, (int)timeout) < 0 && errno != EINTR) {
+            int ready = poll(pfds.ptr, pfds.len, (int)timeout);
+
+            if (ready < 0 && errno != EINTR) [[unlikely]] {
                 LogError("Failed to poll descriptors: %1", strerror(errno));
                 return false;
             }
 #endif
 
-            busy = GetMonotonicTime();
+            if (ready > 1 || !pfds[0].revents) {
+                busy = GetMonotonicTime();
+            }
         }
     }
 
@@ -662,11 +681,20 @@ bool http_Daemon::Dispatcher::Run()
 
 void http_Daemon::Dispatcher::Wake()
 {
-    std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
+    // Fast path (prevent pool)
+    {
+        std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
 
-    if (wake_needed) {
-        lock_shr.unlock();
+        wake_up = true;
 
+        if (!wake_interrupt)
+            return;
+    }
+
+    // Slow path, interrupt poll with event fd or self-pipe
+    std::unique_lock<std::shared_mutex> lock_excl(wake_mutex, std::try_to_lock);
+
+    if (lock_excl.owns_lock()) {
 #if defined(__linux__) || defined(__FreeBSD__)
         uint64_t one = 1;
         Size ret = RG_RESTART_EINTR(write(event_fd, &one, RG_SIZE(one)), < 0);
@@ -676,8 +704,6 @@ void http_Daemon::Dispatcher::Wake()
         Size ret = RG_RESTART_EINTR(send(pair_fd[1], &x, RG_SIZE(x), 0), < 0);
         (void)ret;
 #endif
-
-        wake_needed = false;
     }
 }
 

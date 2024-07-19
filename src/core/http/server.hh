@@ -41,7 +41,7 @@ static const char *const http_ClientAddressModeNames[] = {
 extern RG_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages;
 
 static const int http_WorkersPerDispatcher = 4;
-static const int http_PollAfterIdle = 1000;
+static const int http_PollAfterIdle = 200;
 
 static const int http_KeepAliveTime = 20000;
 static const int http_WaitTimeout = 10000;
