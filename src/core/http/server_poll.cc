@@ -472,7 +472,6 @@ bool http_Daemon::Dispatcher::Run()
     };
 
     int next_worker = 0;
-    int64_t busy = 0;
 
     for (;;) {
         int64_t now = GetMonotonicTime();
@@ -534,8 +533,6 @@ bool http_Daemon::Dispatcher::Run()
 
                 http_IO *client = CreateClient(fd, now, (sockaddr *)&ss);
                 clients.Append(client);
-
-                busy = now;
             }
         }
 
@@ -546,39 +543,37 @@ bool http_Daemon::Dispatcher::Run()
             Size ret = read(event_fd, &dummy, RG_SIZE(dummy));
             (void)ret;
 #else
-            char buf[1024];
+            char buf[4096];
             Size ret = recv(pair_fd[0], buf, RG_SIZE(buf), 0);
             (void)ret;
 #endif
-
-            for (http_IO *client: clients) {
-                client->pfd_idx = -1;
-            }
-
-            busy = now;
         }
 
         Size keep = 0;
         unsigned int timeout = UINT_MAX;
 
+        // Process clients
         for (Size i = 0; i < clients.len; i++, keep++) {
             clients[keep] = clients[i];
 
             http_IO *client = clients[i];
             Size pfd_idx = client->pfd_idx;
 
-            if (pfd_idx >= 0) {
-                client->pfd_idx = -1;
+            http_IO::PrepareStatus status = http_IO::PrepareStatus::Incoming;
 
+            if (pfd_idx >= 0) {
                 const struct pollfd &pfd = pfds.ptr[pfd_idx];
 
-                if (!pfd.revents)
-                    continue;
+                if (pfd.revents) {
+                    status = client->Prepare(now);
+                }
+
+                client->pfd_idx = -1;
+            } else {
+                status = client->Prepare(now);
             }
 
-            http_IO::PrepareStatus ret = client->Prepare(now);
-
-            switch (ret) {
+            switch (status) {
                 case http_IO::PrepareStatus::Incoming: {
                     client->pfd_idx = pfds.len;
 
@@ -636,42 +631,43 @@ bool http_Daemon::Dispatcher::Run()
         }
         clients.len = keep;
 
-        if (now - busy > http_PollAfterIdle) {
-            // Wake me up from the kernel if needed
-            {
-                std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
+        // Wake me up from the kernel if needed
+        {
+            std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
 
-                if (wake_up) {
-                    wake_up = false;
-                    continue;
-                }
-
-                wake_interrupt = true;
+            if (wake_up) {
+                wake_up = false;
+                continue;
             }
 
-            // The timeout is unsigned to make it easier to use with std::min() without dealing
-            // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
+            wake_interrupt = true;
+        }
+
+        // The timeout is unsigned to make it easier to use with std::min() without dealing
+        // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
 
 #if defined(_WIN32)
-            int ready = WSAPoll(pfds.ptr, (unsigned long)pfds.len, (int)timeout);
+        int ready = WSAPoll(pfds.ptr, (unsigned long)pfds.len, (int)timeout);
 
-            if (ready < 0) [[unlikely]] {
-                errno = TranslateWinSockError();
+        if (ready < 0) [[unlikely]] {
+            errno = TranslateWinSockError();
 
-                LogError("Failed to poll descriptors: %1", strerror(errno));
-                return false;
-            }
+            LogError("Failed to poll descriptors: %1", strerror(errno));
+            return false;
+        }
 #else
-            int ready = poll(pfds.ptr, pfds.len, (int)timeout);
+        int ready = poll(pfds.ptr, pfds.len, (int)timeout);
 
-            if (ready < 0 && errno != EINTR) [[unlikely]] {
-                LogError("Failed to poll descriptors: %1", strerror(errno));
-                return false;
-            }
+        if (ready < 0 && errno != EINTR) [[unlikely]] {
+            LogError("Failed to poll descriptors: %1", strerror(errno));
+            return false;
+        }
 #endif
 
-            if (ready > 1 || !pfds[0].revents) {
-                busy = GetMonotonicTime();
+        if (!ready) {
+            // Process everyone after a timeout
+            for (http_IO *client: clients) {
+                client->pfd_idx = -1;
             }
         }
     }
@@ -681,30 +677,25 @@ bool http_Daemon::Dispatcher::Run()
 
 void http_Daemon::Dispatcher::Wake()
 {
-    // Fast path (prevent pool)
-    {
-        std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
+    std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
 
-        wake_up = true;
+    wake_up = true;
 
-        if (!wake_interrupt)
-            return;
-    }
+    // Fast path (prevent poll)
+    if (!wake_interrupt)
+        return;
 
-    // Slow path, interrupt poll with event fd or self-pipe
-    std::unique_lock<std::shared_mutex> lock_excl(wake_mutex, std::try_to_lock);
+    lock_shr.unlock();
 
-    if (lock_excl.owns_lock()) {
 #if defined(__linux__) || defined(__FreeBSD__)
-        uint64_t one = 1;
-        Size ret = RG_RESTART_EINTR(write(event_fd, &one, RG_SIZE(one)), < 0);
-        (void)ret;
+    uint64_t one = 1;
+    Size ret = RG_RESTART_EINTR(write(event_fd, &one, RG_SIZE(one)), < 0);
+    (void)ret;
 #else
-        char x = 'x';
-        Size ret = RG_RESTART_EINTR(send(pair_fd[1], &x, RG_SIZE(x), 0), < 0);
-        (void)ret;
+    char x = 'x';
+    Size ret = RG_RESTART_EINTR(send(pair_fd[1], &x, RG_SIZE(x), 0), < 0);
+    (void)ret;
 #endif
-    }
 }
 
 #if defined(_WIN32) || defined(__APPLE__)
