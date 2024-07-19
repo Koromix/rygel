@@ -22,6 +22,10 @@
 #include "src/core/base/base.hh"
 #include "curl.hh"
 
+#if !defined(_WIN32)
+    #include <fcntl.h>
+#endif
+
 namespace RG {
 
 extern "C" const AssetInfo CacertPem;
@@ -69,6 +73,13 @@ bool curl_Reset(CURL *curl)
     // conversion to a C-style function pointers.
     success &= !curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,
                                  +[](char *, size_t size, size_t nmemb, void *) { return size * nmemb; });
+#endif
+
+#if !defined(_WIN32)
+    success &= !curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION, +[](void *, curl_socket_t fd, curlsocktype) {
+        fcntl(fd, F_SETFD, FD_CLOEXEC);
+        return (int)CURL_SOCKOPT_OK;
+    });
 #endif
 
     if (!success) {
