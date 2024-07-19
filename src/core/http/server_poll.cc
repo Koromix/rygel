@@ -476,7 +476,7 @@ bool http_Daemon::Dispatcher::Run()
     for (;;) {
         int64_t now = GetMonotonicTime();
 
-        pfds.RemoveFrom(2);
+        pfds.len = 2;
 
         if (pfds[0].revents & POLLHUP)
             return true;
@@ -558,10 +558,23 @@ bool http_Daemon::Dispatcher::Run()
             clients[keep] = clients[i];
 
             http_IO *client = clients[i];
+            Size pfd_idx = client->pfd_idx;
+
+            if (pfd_idx >= 0) {
+                client->pfd_idx = -1;
+
+                const struct pollfd &pfd = pfds.ptr[pfd_idx];
+
+                if (!pfd.revents)
+                    continue;
+            }
+
             http_IO::PrepareStatus ret = client->Prepare(now);
 
             switch (ret) {
                 case http_IO::PrepareStatus::Incoming: {
+                    client->pfd_idx = pfds.len;
+
                     struct pollfd pfd = { (decltype(pollfd::fd))client->Descriptor(), POLLIN, 0 };
                     pfds.Append(pfd);
 
@@ -697,6 +710,7 @@ http_IO *http_Daemon::Dispatcher::CreateClient(int fd, int64_t start, struct soc
         delete client;
         return nullptr;
     }
+    client->pfd_idx = -1;
 
     return client;
 }

@@ -166,6 +166,8 @@ class http_IO {
         Span<uint8_t> extra = {};
     } incoming;
 
+    Size pfd_idx = -1;
+
     std::atomic_bool ready;
     http_RequestInfo request;
 
