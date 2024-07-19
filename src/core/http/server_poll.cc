@@ -604,14 +604,11 @@ bool http_Daemon::Dispatcher::Run()
 
                 case http_IO::PrepareStatus::Busy: {} break;
 
-                case http_IO::PrepareStatus::Error: {
-                    if (!client->response.sent) {
-                        client->SendError(400);
-                    }
+                case http_IO::PrepareStatus::Close: {
                     client->Close();
-                } break;
+                } [[fallthrough]];
 
-                case http_IO::PrepareStatus::Closed: {
+                case http_IO::PrepareStatus::Unused: {
                     DestroyClient(client);
                     keep--;
                 } break;
@@ -924,7 +921,7 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
     if (ready)
         return PrepareStatus::Busy;
     if (fd < 0)
-        return PrepareStatus::Closed;
+        return PrepareStatus::Unused;
 
     // Gather request line and headers
     {
@@ -954,7 +951,7 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
                 if (incoming.pos >= http_MaxRequestSize) [[unlikely]] {
                     LogError("Excessive request size");
                     SendError(413);
-                    return PrepareStatus::Error;
+                    return PrepareStatus::Close;
                 }
 
                 const char *end = (const char *)incoming.buf.ptr + incoming.pos;
@@ -979,35 +976,38 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
                 break;
 
             if (read < 0) {
-                if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                    int64_t timeout = GetTimeout(now);
+                switch (errno) {
+                    // This probably never happens (non-blocking read) but who knows
+                    case EINTR: continue;
 
-                    if (timeout < 0) [[unlikely]] {
-                        if (IsPreparing()) {
-                            LogError("Timed out while waiting for HTTP request");
+#if EAGAIN != EWOULDBLOCK
+                    case EAGAIN:
+#endif
+                    case EWOULDBLOCK: {
+                        int64_t timeout = GetTimeout(now);
+
+                        if (timeout < 0) [[unlikely]] {
+                            if (IsPreparing()) {
+                                LogError("Timed out while waiting for HTTP request");
+                            }
+                            return PrepareStatus::Close;
                         }
 
-                        Close();
-                        return PrepareStatus::Closed;
-                    }
+                        return PrepareStatus::Incoming;
+                    } break;
 
-                    return PrepareStatus::Incoming;
+                    case ECONNRESET: return PrepareStatus::Close;
+
+                    default: {
+                        LogError("Read failed: %1", strerror(errno));
+                        return PrepareStatus::Close;
+                    } break;
                 }
-
-                // This probably never happens (non-blocking read) but who knows
-                if (errno == EINTR)
-                    continue;
-
-                LogError("Read failed: %1", strerror(errno));
-                return PrepareStatus::Error;
             } else if (!read) {
-                if (!incoming.buf.len) {
-                    Close();
-                    return PrepareStatus::Closed;
+                if (incoming.buf.len) {
+                    LogError("Client closed connection with unfinished request");
                 }
-
-                LogError("Client closed connection with unfinished request");
-                return PrepareStatus::Error;
+                return PrepareStatus::Close;
             }
         }
 
@@ -1015,7 +1015,7 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
     }
 
     if (!ParseRequest(incoming.intro))
-        return PrepareStatus::Error;
+        return PrepareStatus::Close;
 
     ready = true;
     return PrepareStatus::Ready;

@@ -149,8 +149,8 @@ class http_IO {
         Incoming,
         Ready,
         Busy,
-        Closed,
-        Error
+        Close,
+        Unused
     };
 
     int fd;
