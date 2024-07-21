@@ -4412,6 +4412,23 @@ bool ParseDate(Span<const char> date_str, LocalDate *out_date, unsigned int flag
 
 bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags = RG_DEFAULT_PARSE_FLAGS,
                    Span<const char> *out_remaining = nullptr);
+static inline bool ParseDuration(Span<const char> str, int *out_duration,
+                                 unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr)
+{
+    int64_t duration = 0;
+    if (!ParseDuration(str, &duration, flags, out_remaining))
+        return false;
+
+    if (duration > INT_MAX) [[unlikely]] {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Duration value is too high");
+        }
+        return false;
+    }
+
+    *out_duration = (int)duration;
+    return true;
+}
 
 bool ParseVersion(Span<const char> str, int parts, int multiplier, int64_t *out_duration,
                   unsigned int flags = RG_DEFAULT_PARSE_FLAGS, Span<const char> *out_remaining = nullptr);

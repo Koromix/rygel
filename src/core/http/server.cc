@@ -139,6 +139,21 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         }
 
         return true;
+    } else if (key == "IdleTimeout") {
+        return ParseDuration(value, &idle_timeout);
+    } else if (key == "KeepAliveTime") {
+        if (value == "Disabled") {
+            keepalive_time = 0;
+            return true;
+        } else {
+            return ParseDuration(value, &keepalive_time);
+        }
+    } else if (key == "MaxRequestSize") {
+        return ParseSize(value, &max_request_size);
+    } else if (key == "MaxRequestHeaders") {
+        return ParseInt(value, &max_request_headers);
+    } else if (key == "MaxRequestCookies") {
+        return ParseInt(value, &max_request_cookies);
     }
 
     LogError("Unknown HTTP property '%1'", key);
@@ -188,7 +203,51 @@ bool http_Config::Validate() const
         valid = false;
     }
 
+    if (idle_timeout < 1000) {
+        LogError("HTTP IdleTimeout must be >= 1 sec");
+        return false;
+    }
+    if (keepalive_time && keepalive_time < 5000) {
+        LogError("HTTP KeepAliveTime must be >= 5 sec (or Disabled)");
+        return false;
+    }
+
+    if (max_request_size < 1024) {
+        LogError("MaxRequestSize must be >= 1 kB");
+        valid = false;
+    }
+    if (max_request_cookies < 16) {
+        LogError("MaxRequestHeaders must be >= 16");
+        valid = false;
+    }
+    if (max_request_cookies < 0) {
+        LogError("MaxRequestCookies must be >= 0");
+        valid = false;
+    }
+
     return valid;
+}
+
+bool http_Daemon::InitConfig(const http_Config &config)
+{
+    if (!config.Validate())
+        return false;
+
+    if (config.addr_mode == http_ClientAddressMode::Socket) {
+        LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-IP "
+                   "if you run this behind a reverse proxy that sets one of these headers.");
+    }
+
+    addr_mode = config.addr_mode;
+
+    idle_timeout = config.idle_timeout;
+    keepalive_time = config.keepalive_time;
+
+    max_request_size = config.max_request_size;
+    max_request_headers = config.max_request_headers;
+    max_request_cookies = config.max_request_cookies;
+
+    return true;
 }
 
 void http_Daemon::RunHandler(http_IO *client)
@@ -443,9 +502,9 @@ bool http_IO::Init(int fd, int64_t start, struct sockaddr *sa)
     return true;
 }
 
-bool http_IO::InitAddress(http_ClientAddressMode addr_mode)
+bool http_IO::InitAddress()
 {
-    switch (addr_mode) {
+    switch (daemon->addr_mode) {
         case http_ClientAddressMode::Socket: { /* Keep socket address */ } break;
 
         case http_ClientAddressMode::XForwardedFor: {
@@ -641,8 +700,8 @@ bool http_IO::ParseRequest(Span<char> intro)
                 name.ptr[name.len] = 0;
                 value.ptr[value.len] = 0;
 
-                if (request.cookies.len >= http_MaxRequestCookies) [[unlikely]] {
-                    LogError("Too many cookies, server limit is %1", http_MaxRequestCookies);
+                if (request.cookies.len >= daemon->max_request_cookies) [[unlikely]] {
+                    LogError("Too many cookies, server limit is %1", daemon->max_request_cookies);
                     SendError(413);
                     return false;
                 }
@@ -655,8 +714,8 @@ bool http_IO::ParseRequest(Span<char> intro)
             key.ptr[key.len] = 0;
             value.ptr[value.len] = 0;
 
-            if (request.headers.len >= http_MaxRequestHeaders) [[unlikely]] {
-                LogError("Too many headers, server limit is %1", http_MaxRequestHeaders);
+            if (request.headers.len >= daemon->max_request_headers) [[unlikely]] {
+                LogError("Too many headers, server limit is %1", daemon->max_request_headers);
                 SendError(413);
                 return false;
             }
@@ -706,10 +765,10 @@ bool http_IO::IsPreparing() const
 int64_t http_IO::GetTimeout(int64_t now) const
 {
     if (IsPreparing()) {
-        int64_t timeout = http_WaitTimeout - now + request_start;
+        int64_t timeout = daemon->idle_timeout - now + request_start;
         return timeout;
     } else {
-        int64_t timeout = http_KeepAliveTime - now + socket_start;
+        int64_t timeout = daemon->keepalive_time - now + socket_start;
         return timeout;
     }
 }

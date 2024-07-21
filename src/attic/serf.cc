@@ -113,21 +113,6 @@ bool Config::Validate()
     return valid;
 }
 
-static bool ParseTimeout(Span<const char> value, int *out_timeout)
-{
-    int64_t timeout;
-
-    if (!ParseDuration(value, &timeout))
-        return false;
-    if (timeout > INT_MAX) {
-        LogError("Duration value is too high");
-        return false;
-    }
-
-    *out_timeout = (int)timeout;
-    return true;
-}
-
 static bool LoadConfig(StreamReader *st, Config *out_config)
 {
     Config config;
@@ -175,7 +160,7 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                     } else if (prop.key == "ProxyFirst") {
                         valid &= ParseBool(prop.value, &config.proxy_first);
                     } else if (prop.key == "ConnectTimeout") {
-                        valid &= ParseTimeout(prop.value, &config.connect_timeout);
+                        valid &= ParseDuration(prop.value, &config.connect_timeout);
                     } else if (prop.key == "RetryCount") {
                         if (ParseInt(prop.value, &config.connect_retries)) {
                             if (config.connect_retries < 0) {
@@ -184,7 +169,7 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                             }
                         }
                     } else if (prop.key == "MaxTime") {
-                        valid &= ParseTimeout(prop.value, &config.max_time);
+                        valid &= ParseDuration(prop.value, &config.max_time);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -787,9 +772,11 @@ Options:
     }
 
     LogInfo("Init HTTP server");
+
     http_Daemon daemon;
-    if (!daemon.Start(config.http, HandleRequest))
+    if (!daemon.Bind(config.http))
         return 1;
+    daemon.Start(HandleRequest);
 
 #if defined(__linux__)
     if (!NotifySystemd())

@@ -48,6 +48,8 @@ typedef struct sockaddr_un {
 
 namespace RG {
 
+static const int WorkersPerDispatcher = 4;
+
 class http_Daemon::Dispatcher {
     http_Daemon *daemon;
 
@@ -213,12 +215,11 @@ static bool CreateSocketPair(int out_sockets[2])
     return true;
 }
 
-bool http_Daemon::Bind(const http_Config &config)
+bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
     RG_ASSERT(listen_fd < 0);
 
-    // Validate configuration
-    if (!config.Validate())
+    if (!InitConfig(config))
         return false;
 
     switch (config.sock_type) {
@@ -239,30 +240,23 @@ bool http_Daemon::Bind(const http_Config &config)
 
     SetSocketNonBlock(listen_fd, true);
 
-    addr_mode = config.addr_mode;
+    if (log_addr) {
+        if (config.sock_type == SocketType::Unix) {
+            LogInfo("Listening on socket '%!..+%1%!0' (Unix stack)", config.unix_path);
+        } else {
+            LogInfo("Listening on %!..+http://localhost:%1/%!0 (%2 stack)",
+                    config.port, SocketTypeNames[(int)config.sock_type]);
+        }
+    }
 
     return true;
 }
 
-bool http_Daemon::Start(const http_Config &config,
-                        std::function<void(const http_RequestInfo &request, http_IO *io)> func,
-                        bool log_socket)
+void http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
+    RG_ASSERT(listen_fd >= 0);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
-
-    // Validate configuration
-    if (!config.Validate())
-        return false;
-
-    if (config.addr_mode == http_ClientAddressMode::Socket) {
-        LogInfo("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-IP "
-                "if you run this behind a reverse proxy that sets one of these headers.");
-    }
-
-    // Prepare socket (if not done yet)
-    if (listen_fd < 0 && !Bind(config))
-        return false;
 
     handle_func = func;
 
@@ -273,17 +267,6 @@ bool http_Daemon::Start(const http_Config &config,
 
         async.Run([=] { return dispatcher->Run(); });
     }
-
-    if (log_socket) {
-        if (config.sock_type == SocketType::Unix) {
-            LogInfo("Listening on socket '%!..+%1%!0' (Unix stack)", config.unix_path);
-        } else {
-            LogInfo("Listening on %!..+http://localhost:%1/%!0 (%2 stack)",
-                    config.port, SocketTypeNames[(int)config.sock_type]);
-        }
-    }
-
-    return true;
 }
 
 void http_Daemon::Stop()
@@ -313,10 +296,7 @@ bool http_Daemon::Dispatcher::Run()
 {
     RG_ASSERT(pair_fd[0] < 0);
 
-    int listen_fd = daemon->listen_fd;
-    http_ClientAddressMode addr_mode = daemon->addr_mode;
-
-    Async async(1 + http_WorkersPerDispatcher);
+    Async async(1 + WorkersPerDispatcher);
 
     if (!CreateSocketPair(pair_fd))
         return false;
@@ -344,7 +324,7 @@ bool http_Daemon::Dispatcher::Run()
     };
 
     HeapArray<struct pollfd> pfds = {
-        { (SOCKET)listen_fd, POLLIN, 0 },
+        { (SOCKET)daemon->listen_fd, POLLIN, 0 },
         { (SOCKET)pair_fd[0], POLLIN, 0 }
     };
 
@@ -366,7 +346,7 @@ bool http_Daemon::Dispatcher::Run()
 
             // Accept queued clients
             for (Size i = 0; i < 64; i++) {
-                SOCKET sock = accept((SOCKET)listen_fd, (sockaddr *)&ss, &ss_len);
+                SOCKET sock = accept((SOCKET)daemon->listen_fd, (sockaddr *)&ss, &ss_len);
                 int fd = (sock != INVALID_SOCKET) ? (int)sock : -1;
 
                 if (fd >= 0) {
@@ -433,7 +413,7 @@ bool http_Daemon::Dispatcher::Run()
                 } break;
 
                 case http_IO::PrepareStatus::Ready: {
-                    if (!client->InitAddress(addr_mode)) {
+                    if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
                         client->Close();
@@ -441,10 +421,10 @@ bool http_Daemon::Dispatcher::Run()
                         break;
                     }
 
-                    client->request.keepalive &= (now < client->socket_start + http_KeepAliveTime);
+                    client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
 
                     int worker_idx = 1 + next_worker;
-                    next_worker = (next_worker + 1) % http_WorkersPerDispatcher;
+                    next_worker = (next_worker + 1) % WorkersPerDispatcher;
 
                     if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
@@ -548,7 +528,7 @@ http_IO *http_Daemon::Dispatcher::CreateClient(int fd, int64_t start, struct soc
         std::swap(pool[idx], pool[pool.len - 1]);
         pool.len--;
     } else {
-        client = new http_IO();
+        client = new http_IO(daemon);
     }
 
     if (!client->Init(fd, start, sa)) [[unlikely]] {
@@ -738,7 +718,7 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
                 uint8_t *next = (uint8_t *)memchr(incoming.buf.ptr + incoming.pos, '\r', incoming.buf.len - incoming.pos);
                 incoming.pos = next ? next - incoming.buf.ptr : incoming.buf.len;
 
-                if (incoming.pos >= http_MaxRequestSize) [[unlikely]] {
+                if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
                     LogError("Excessive request size");
                     SendError(413);
                     return PrepareStatus::Close;

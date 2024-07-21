@@ -40,15 +40,6 @@ static const char *const http_ClientAddressModeNames[] = {
 
 extern RG_CONSTINIT ConstMap<128, int, const char *> http_ErrorMessages;
 
-static const int http_WorkersPerDispatcher = 4;
-
-static const int http_KeepAliveTime = 20000;
-static const int http_WaitTimeout = 10000;
-
-static const int http_MaxRequestSize = Kibibytes(32);
-static const int http_MaxRequestHeaders = 64;
-static const int http_MaxRequestCookies = 64;
-
 struct http_Config {
 #if defined(__OpenBSD__)
     SocketType sock_type = SocketType::IPv4;
@@ -59,6 +50,13 @@ struct http_Config {
     const char *unix_path = nullptr;
 
     http_ClientAddressMode addr_mode = http_ClientAddressMode::Socket;
+
+    int idle_timeout = 10000;
+    int keepalive_time = 20000;
+
+    Size max_request_size = Kibibytes(32);
+    int max_request_headers = 64;
+    int max_request_cookies = 64;
 
     BlockAllocator str_alloc;
 
@@ -79,7 +77,15 @@ class http_Daemon {
     class Dispatcher;
 
     int listen_fd = -1;
-    http_ClientAddressMode addr_mode = http_ClientAddressMode::Socket;
+
+    http_ClientAddressMode addr_mode;
+
+    int idle_timeout;
+    int keepalive_time;
+
+    Size max_request_size;
+    int max_request_headers;
+    int max_request_cookies;
 
     Async async;
     HeapArray<Dispatcher *> dispatchers;
@@ -90,14 +96,14 @@ public:
     http_Daemon() {}
     ~http_Daemon() { Stop(); }
 
-    bool Bind(const http_Config &config);
-    bool Start(const http_Config &config,
-               std::function<void(const http_RequestInfo &request, http_IO *io)> func,
-               bool log_socket = true);
+    bool Bind(const http_Config &config, bool log_addr = true);
+    void Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func);
 
     void Stop();
 
 private:
+    bool InitConfig(const http_Config &config);
+
     void RunHandler(http_IO *client);
 
     friend class http_IO;
@@ -151,6 +157,8 @@ class http_IO {
         Close,
         Unused
     };
+
+    http_Daemon *daemon;
 
     int fd;
     char addr[65];
@@ -208,11 +216,11 @@ public:
     void AddFinalizer(const std::function<void()> &func);
 
 private:
-    http_IO() { Rearm(0); }
+    http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(0); }
     ~http_IO() { Close(); }
 
     bool Init(int fd, int64_t start, struct sockaddr *sa);
-    bool InitAddress(http_ClientAddressMode addr_mode);
+    bool InitAddress();
 
     PrepareStatus Prepare(int64_t now);
     bool ParseRequest(Span<char> request);
