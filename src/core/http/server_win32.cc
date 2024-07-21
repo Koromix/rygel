@@ -81,8 +81,8 @@ struct IndirectFunctions {
     LPFN_DISCONNECTEX DisconnectEx;
 };
 
-class http_Daemon::Dispatcher {
-    RG_DELETE_COPY(Dispatcher);
+class http_Dispatcher {
+    RG_DELETE_COPY(http_Dispatcher);
 
     http_Daemon *daemon;
     HANDLE iocp;
@@ -94,8 +94,8 @@ class http_Daemon::Dispatcher {
     LocalArray<http_IO *, 256> free_clients;
 
 public:
-    Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn) : daemon(daemon), iocp(iocp), fn(fn) {}
-    ~Dispatcher() { Close(); }
+    http_Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn) : daemon(daemon), iocp(iocp), fn(fn) {}
+    ~http_Dispatcher() { Close(); }
 
     bool Init();
     bool Run();
@@ -166,7 +166,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
             iocp = nullptr;
         }
 
-        for (Dispatcher *dispatcher: dispatchers) {
+        for (http_Dispatcher *dispatcher: dispatchers) {
             delete dispatcher;
         }
         dispatchers.Clear();
@@ -221,7 +221,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
     }
 
     for (Size i = 1; i < async->GetWorkerCount(); i++) {
-        Dispatcher *dispatcher = new Dispatcher(this, iocp, fn);
+        http_Dispatcher *dispatcher = new http_Dispatcher(this, iocp, fn);
         dispatchers.Append(dispatcher);
 
         if (!dispatcher->Init())
@@ -233,7 +233,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 
     handle_func = func;
 
-    for (Dispatcher *dispatcher: dispatchers) {
+    for (http_Dispatcher *dispatcher: dispatchers) {
         async->Run([=] { return dispatcher->Run(); });
     }
 
@@ -253,7 +253,7 @@ void http_Daemon::Stop()
         async = nullptr;
     }
 
-    for (Dispatcher *dispatcher: dispatchers) {
+    for (http_Dispatcher *dispatcher: dispatchers) {
         delete dispatcher;
     }
     dispatchers.Clear();
@@ -275,7 +275,7 @@ static SocketData *SocketFromOverlapped(void *ptr)
     return (SocketData *)(data - offsetof(SocketData, overlapped));
 }
 
-bool http_Daemon::Dispatcher::Init()
+bool http_Dispatcher::Init()
 {
     RG_DEFER_N(err_guard) { Close(); };
 
@@ -288,7 +288,7 @@ bool http_Daemon::Dispatcher::Init()
     return true;
 }
 
-bool http_Daemon::Dispatcher::Run()
+bool http_Dispatcher::Run()
 {
     Async async(1 + WorkersPerDispatcher);
 
@@ -442,7 +442,7 @@ bool http_Daemon::Dispatcher::Run()
     RG_UNREACHABLE();
 }
 
-bool http_Daemon::Dispatcher::PostAccept()
+bool http_Dispatcher::PostAccept()
 {
     SocketData *socket = InitSocket();
     if (!socket)
@@ -470,7 +470,7 @@ retry:
     return true;
 }
 
-bool http_Daemon::Dispatcher::PostRead(SocketData *socket)
+bool http_Dispatcher::PostRead(SocketData *socket)
 {
     RG_ASSERT(socket->op == PendingOperation::None);
     RG_ASSERT(socket->client);
@@ -499,7 +499,7 @@ bool http_Daemon::Dispatcher::PostRead(SocketData *socket)
     return true;
 }
 
-SocketData *http_Daemon::Dispatcher::InitSocket()
+SocketData *http_Dispatcher::InitSocket()
 {
     SocketData *socket = nullptr;
 
@@ -530,7 +530,7 @@ SocketData *http_Daemon::Dispatcher::InitSocket()
     return socket;
 }
 
-void http_Daemon::Dispatcher::DisconnectSocket(SocketData *socket)
+void http_Dispatcher::DisconnectSocket(SocketData *socket)
 {
     RG_ASSERT(socket->op == PendingOperation::None);
 
@@ -554,7 +554,7 @@ void http_Daemon::Dispatcher::DisconnectSocket(SocketData *socket)
     free_sockets.Append(socket);
 }
 
-void http_Daemon::Dispatcher::DestroySocket(SocketData *socket)
+void http_Dispatcher::DestroySocket(SocketData *socket)
 {
     // Filter it out from our array of reusable sockets
     Size j = 0;
@@ -567,7 +567,7 @@ void http_Daemon::Dispatcher::DestroySocket(SocketData *socket)
     delete socket;
 }
 
-http_IO *http_Daemon::Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
+http_IO *http_Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
 
@@ -590,7 +590,7 @@ http_IO *http_Daemon::Dispatcher::InitClient(int fd, int64_t start, struct socka
     return client;
 }
 
-void http_Daemon::Dispatcher::ParkClient(http_IO *client)
+void http_Dispatcher::ParkClient(http_IO *client)
 {
     if (free_clients.Available()) {
         free_clients.Append(client);
@@ -600,7 +600,7 @@ void http_Daemon::Dispatcher::ParkClient(http_IO *client)
     }
 }
 
-void http_Daemon::Dispatcher::Close()
+void http_Dispatcher::Close()
 {
     for (SocketData *socket: sockets) {
         delete socket;

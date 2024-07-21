@@ -52,7 +52,7 @@ namespace RG {
 
 static const int WorkersPerDispatcher = 4;
 
-class http_Daemon::Dispatcher {
+class http_Dispatcher {
     http_Daemon *daemon;
 
 #if defined(__linux__) || defined(__FreeBSD__)
@@ -72,7 +72,7 @@ class http_Daemon::Dispatcher {
     LocalArray<http_IO *, 256> free_clients;
 
 public:
-    Dispatcher(http_Daemon *daemon) : daemon(daemon) {}
+    http_Dispatcher(http_Daemon *daemon) : daemon(daemon) {}
 
     bool Run();
     void Wake();
@@ -162,7 +162,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 
     // Run request dispatchers
     for (Size i = 1; i < async->GetWorkerCount(); i++) {
-        Dispatcher *dispatcher = new Dispatcher(this);
+        http_Dispatcher *dispatcher = new http_Dispatcher(this);
         dispatchers.Append(dispatcher);
 
         async->Run([=] { return dispatcher->Run(); });
@@ -178,7 +178,7 @@ void http_Daemon::Stop()
 
 #if defined(__APPLE__)
     // On macOS, the shutdown() does not wake up poll()
-    for (Dispatcher *dispatcher: dispatchers) {
+    for (http_Dispatcher *dispatcher: dispatchers) {
         dispatcher->Stop();
     }
 #endif
@@ -190,7 +190,7 @@ void http_Daemon::Stop()
         async = nullptr;
     }
 
-    for (Dispatcher *dispatcher: dispatchers) {
+    for (http_Dispatcher *dispatcher: dispatchers) {
         delete dispatcher;
     }
     dispatchers.Clear();
@@ -201,7 +201,7 @@ void http_Daemon::Stop()
     handle_func = {};
 }
 
-bool http_Daemon::Dispatcher::Run()
+bool http_Dispatcher::Run()
 {
 #if defined(__linux__) || defined(__FreeBSD__)
     RG_ASSERT(event_fd < 0);
@@ -439,7 +439,7 @@ bool http_Daemon::Dispatcher::Run()
     RG_UNREACHABLE();
 }
 
-void http_Daemon::Dispatcher::Wake()
+void http_Dispatcher::Wake()
 {
     std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
 
@@ -464,7 +464,7 @@ void http_Daemon::Dispatcher::Wake()
 
 #if defined(__APPLE__)
 
-void http_Daemon::Dispatcher::Stop()
+void http_Dispatcher::Stop()
 {
     run = false;
     Wake();
@@ -472,7 +472,7 @@ void http_Daemon::Dispatcher::Stop()
 
 #endif
 
-http_IO *http_Daemon::Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
+http_IO *http_Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
 
@@ -496,7 +496,7 @@ http_IO *http_Daemon::Dispatcher::InitClient(int fd, int64_t start, struct socka
     return client;
 }
 
-void http_Daemon::Dispatcher::ParkClient(http_IO *client)
+void http_Dispatcher::ParkClient(http_IO *client)
 {
     if (free_clients.Available()) {
         free_clients.Append(client);

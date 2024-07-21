@@ -70,11 +70,10 @@ struct http_Config {
 
 struct http_RequestInfo;
 class http_IO;
+class http_Dispatcher;
 
 class http_Daemon {
     RG_DELETE_COPY(http_Daemon)
-
-    class Dispatcher;
 
     int listen_fd = -1;
 
@@ -93,7 +92,7 @@ class http_Daemon {
     int max_request_cookies;
 
     Async *async = nullptr;
-    HeapArray<Dispatcher *> dispatchers;
+    HeapArray<http_Dispatcher *> dispatchers;
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 
@@ -111,6 +110,7 @@ private:
 
     void RunHandler(http_IO *client);
 
+    friend class http_Dispatcher;
     friend class http_IO;
 };
 
@@ -244,7 +244,7 @@ private:
     void Close();
 
     friend class http_Daemon;
-    friend class http_Daemon::Dispatcher;
+    friend class http_Dispatcher;
 };
 
 }
