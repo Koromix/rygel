@@ -1767,12 +1767,12 @@ bool GetDebugFlag(const char *name)
     }
 }
 
-#if !defined(NDEBUG)
+#if defined(RG_DEBUG)
 const char *DebugLogContext(const char *filename, int line)
 {
     static thread_local LocalArray<char, 1024> buf;
 
-    buf.len = Fmt(buf.data, "  [%1:%2] ", filename, line).len;
+    buf.len = Fmt(buf.data, "[%1:%2] ", filename, line).len;
 
     if (buf.len > 32) {
         char *ptr = buf.end() - 32;
