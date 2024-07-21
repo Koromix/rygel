@@ -4498,8 +4498,17 @@ static const char *const SocketTypeNames[] = {
     "Unix"
 };
 
-int OpenIPSocket(SocketType type, int port, int flags);
+#if defined(_WIN32)
+    #define SOCK_OVERLAPPED 256
+#endif
 
+int CreateSocket(SocketType type, int flags);
+
+#if defined(_WIN32)
+int TranslateWinSockError(int error = INT_MAX);
+#endif
+
+int OpenIPSocket(SocketType type, int port, int flags);
 int OpenUnixSocket(const char *path, int flags);
 int ConnectToUnixSocket(const char *path, int flags);
 

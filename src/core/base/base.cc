@@ -5498,33 +5498,164 @@ int64_t GetRandomInt64(int64_t min, int64_t max)
 
 #if !defined(__wasi__)
 
+#if defined(_WIN32)
+
+int CreateSocket(SocketType type, int flags)
+{
+    int family;
+
+    switch (type) {
+        case SocketType::Dual:
+        case SocketType::IPv6: { family = AF_INET6; } break;
+        case SocketType::IPv4: { family = AF_INET; } break;
+        case SocketType::Unix: { family = AF_UNIX; } break;
+    }
+
+    bool overlapped = (flags & SOCK_OVERLAPPED);
+    flags &= ~SOCK_OVERLAPPED;
+
+    SOCKET sock = WSASocketA(family, flags, 0, nullptr, 0, overlapped ? WSA_FLAG_OVERLAPPED : 0);
+    if (sock == INVALID_SOCKET) {
+        errno = TranslateWinSockError();
+
+        LogError("Failed to create IP socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { closesocket(sock); };
+
+    int exclusive = 1;
+    setsockopt(sock, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&exclusive, sizeof(exclusive));
+
+    if (type == SocketType::Dual || type == SocketType::IPv6) {
+        int v6only = (type == SocketType::IPv6);
+
+        if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&v6only, sizeof(v6only)) < 0) {
+            errno = TranslateWinSockError();
+
+            LogError("Failed to change dual-stack socket option: %1", strerror(errno));
+            return -1;
+        }
+    }
+
+    err_guard.Disable();
+    return (int)sock;
+}
+
+int TranslateWinSockError(int error)
+{
+    if (error == INT_MAX) {
+        error = WSAGetLastError();
+    }
+
+    switch (error) {
+        case WSAEACCES: return EADDRINUSE;
+        case WSAEADDRINUSE: return EADDRINUSE;
+        case WSAEADDRNOTAVAIL: return EADDRNOTAVAIL;
+        case WSAEALREADY: return EALREADY;
+        case WSAEBADF: return EBADF;
+        case WSAECONNABORTED: return ECONNABORTED;
+        case WSAECONNREFUSED: return ECONNREFUSED;
+        case WSAECONNRESET: return ECONNRESET;
+        case WSAEDESTADDRREQ: return EDESTADDRREQ;
+        // case WSAEDQUOT: return EDQUOT;
+        case WSAEFAULT: return EFAULT;
+        case WSAEHOSTDOWN: return ETIMEDOUT;
+        case WSAEHOSTUNREACH: return EHOSTUNREACH;
+        case WSAEINPROGRESS: return EINPROGRESS;
+        case WSAEINTR: return EINTR;
+        case WSAEINVAL: return EINVAL;
+        case WSAEISCONN: return EISCONN;
+        case WSAELOOP: return ELOOP;
+        case WSAEMFILE: return EMFILE;
+        case WSAEMSGSIZE: return EMSGSIZE;
+        case WSAENAMETOOLONG: return ENAMETOOLONG;
+        case WSAENETDOWN: return ENETDOWN;
+        case WSAENETRESET: return ENETRESET;
+        case WSAENETUNREACH: return ENETUNREACH;
+        case WSAENOBUFS: return ENOBUFS;
+        case WSAENOPROTOOPT: return ENOPROTOOPT;
+        case WSAENOTCONN: return ENOTCONN;
+        case WSAENOTEMPTY: return ENOTEMPTY;
+        case WSAENOTSOCK: return ENOTSOCK;
+        case WSAEOPNOTSUPP: return EOPNOTSUPP;
+        // case WSAEPFNOSUPPORT: return EPFNOSUPPORT;
+        // case WSAEPROCLIM: return EPROCLIM;
+        case WSAEPROTONOSUPPORT: return EPROTONOSUPPORT;
+        case WSAEPROTOTYPE: return EPROTOTYPE;
+        case WSAEREMOTE: return EINVAL;
+        case WSAESHUTDOWN: return EPIPE;
+        // case WSAESOCKTNOSUPPORT: return ESOCKTNOSUPPORT;
+        case WSAESTALE: return EINVAL;
+        case WSAETIMEDOUT: return ETIMEDOUT;
+        // case WSAETOOMANYREFS: return ETOOMANYREFS;
+        // case WSAEUSERS: return EUSERS;
+        case WSAEWOULDBLOCK: return EAGAIN;
+    }
+
+    return error;
+}
+
+#else
+
+int CreateSocket(SocketType type, int flags)
+{
+    int family;
+
+    switch (type) {
+        case SocketType::Dual:
+        case SocketType::IPv6: { family = AF_INET6; } break;
+        case SocketType::IPv4: { family = AF_INET; } break;
+        case SocketType::Unix: { family = AF_UNIX; } break;
+    }
+
+#if defined(SOCK_CLOEXEC)
+    flags |= SOCK_CLOEXEC;
+#endif
+
+    int sock = socket(family, flags, 0);
+    if (sock < 0) {
+        LogError("Failed to create AF_INET socket: %1", strerror(errno));
+        return -1;
+    }
+    RG_DEFER_N(err_guard) { close(sock); };
+
+#if !defined(SOCK_CLOEXEC)
+    fcntl(sock, F_SETFD, FD_CLOEXEC);
+#endif
+
+    int reuse = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+    if (type == SocketType::Dual || type == SocketType::IPv6) {
+        int v6only = (type == SocketType::IPv6);
+
+#if defined(__OpenBSD__)
+        if (!v6only) {
+            LogError("Dual-stack sockets are not supported on OpenBSD");
+            return -1;
+        }
+#else
+        if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only)) < 0) {
+            LogError("Failed to change dual-stack socket option: %1", strerror(errno));
+            return -1;
+        }
+#endif
+    }
+
+    err_guard.Disable();
+    return (int)sock;
+}
+
+#endif
+
 int OpenIPSocket(SocketType type, int port, int flags)
 {
     RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
 
-    int family = (type == SocketType::IPv4) ? AF_INET : AF_INET6;
-
-#if defined(_WIN32)
-    SOCKET fd = socket(family, flags, 0);
-    if (fd == INVALID_SOCKET) {
-        LogError("Failed to create AF_INET socket: %1", strerror(errno));
+    int sock = CreateSocket(type, flags);
+    if (sock < 0)
         return -1;
-    }
-    RG_DEFER_N(err_guard) { closesocket(fd); };
-
-    int exclusive = 1;
-    setsockopt(fd, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&exclusive, sizeof(exclusive));
-#else
-    int fd = socket(family, flags, 0);
-    if (fd < 0) {
-        LogError("Failed to create AF_INET socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { close(fd); };
-
-    int reuse = 1;
-    setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-#endif
+    RG_DEFER_N(err_guard) { CloseSocket(sock); };
 
     if (type == SocketType::IPv4) {
         struct sockaddr_in addr = {};
@@ -5533,132 +5664,91 @@ int OpenIPSocket(SocketType type, int port, int flags)
         addr.sin_port = htons((uint16_t)port);
         addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+#if defined(_WIN32)
+            errno = TranslateWinSockError();
+#endif
+
             LogError("Failed to bind to port %1: %2", port, strerror(errno));
             return -1;
         }
     } else {
         struct sockaddr_in6 addr = {};
-        int v6only = (type == SocketType::IPv6);
 
         addr.sin6_family = AF_INET6;
         addr.sin6_port = htons((uint16_t)port);
         addr.sin6_addr = IN6ADDR_ANY_INIT;
 
+        if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 #if defined(_WIN32)
-        if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&v6only, sizeof(v6only)) < 0) {
-#elif defined(__OpenBSD__)
-        if (!v6only) {
-            LogError("Dual-stack sockets are not supported on OpenBSD");
-            return -1;
-        } else if (false) {
-#else
-        if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &v6only, sizeof(v6only)) < 0) {
+            errno = TranslateWinSockError();
 #endif
-            LogError("Failed to change dual-stack socket option: %1", strerror(errno));
-            return -1;
-        }
 
-        if (bind(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
             LogError("Failed to bind to port %1: %2", port, strerror(errno));
             return -1;
         }
     }
 
     err_guard.Disable();
-    return (int)fd;
+    return sock;
 }
 
 int OpenUnixSocket(const char *path, int flags)
 {
-#if defined(_WIN32)
-    SOCKET fd = socket(AF_UNIX, flags, 0);
-    if (fd == INVALID_SOCKET) {
-        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { closesocket(fd); };
-#elif defined(__APPLE__)
-    int fd = (int)socket(AF_UNIX, flags, 0);
-    if (fd < 0) {
-        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { close(fd); };
-
-    fcntl(fd, F_SETFD, FD_CLOEXEC);
-#else
-    flags |= SOCK_CLOEXEC;
-
-    int fd = (int)socket(AF_UNIX, flags, 0);
-    if (fd < 0) {
-        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { close(fd); };
-#endif
-
     struct sockaddr_un addr = {};
+
     addr.sun_family = AF_UNIX;
     if (!CopyString(path, addr.sun_path)) {
         LogError("Excessive UNIX socket path length");
         return -1;
     }
 
+    int sock = CreateSocket(SocketType::Unix, flags);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+
     unlink(path);
-    if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+    if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+#if defined(_WIN32)
+        errno = TranslateWinSockError();
+#endif
+
         LogError("Failed to bind socket to '%1': %2", path, strerror(errno));
         return -1;
     }
     chmod(path, 0666);
 
     err_guard.Disable();
-    return (int)fd;
+    return sock;
 }
 
 int ConnectToUnixSocket(const char *path, int flags)
 {
-#if defined(_WIN32)
-    SOCKET fd = socket(AF_UNIX, flags, 0);
-    if (fd == INVALID_SOCKET) {
-        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { closesocket(fd); };
-#elif defined(__APPLE__)
-    int fd = (int)socket(AF_UNIX, flags, 0);
-    if (fd < 0) {
-        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { close(fd); };
-
-    fcntl(fd, F_SETFD, FD_CLOEXEC);
-#else
-    flags |= SOCK_CLOEXEC;
-
-    int fd = (int)socket(AF_UNIX, flags, 0);
-    if (fd < 0) {
-        LogError("Failed to create AF_UNIX socket: %1", strerror(errno));
-        return -1;
-    }
-    RG_DEFER_N(err_guard) { close(fd); };
-#endif
-
     struct sockaddr_un addr = {};
+
     addr.sun_family = AF_UNIX;
     if (!CopyString(path, addr.sun_path)) {
         LogError("Excessive UNIX socket path length");
         return -1;
     }
 
-    if (connect(fd, (struct sockaddr *)&addr, RG_SIZE(addr)) < 0) {
+    int sock = CreateSocket(SocketType::Unix, flags);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+
+    if (connect(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+#if defined(_WIN32)
+        errno = TranslateWinSockError();
+#endif
+
         LogError("Failed to connect to '%1': %2", path, strerror(errno));
         return -1;
     }
 
     err_guard.Disable();
-    return (int)fd;
+    return sock;
 }
 
 void CloseSocket(int fd)

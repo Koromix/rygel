@@ -69,7 +69,7 @@ class http_Daemon::Dispatcher {
 #endif
 
     HeapArray<http_IO *> clients;
-    LocalArray<http_IO *, 256> pool;
+    LocalArray<http_IO *, 256> free_clients;
 
 public:
     Dispatcher(http_Daemon *daemon) : daemon(daemon) {}
@@ -82,8 +82,8 @@ public:
 #endif
 
 private:
-    http_IO *CreateClient(int fd, int64_t start, struct sockaddr *sa);
-    void DestroyClient(http_IO *client);
+    http_IO *InitClient(int fd, int64_t start, struct sockaddr *sa);
+    void ParkClient(http_IO *client);
 };
 
 static void SetSocketNonBlock(int fd, bool enable)
@@ -150,21 +150,25 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     return true;
 }
 
-void http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
+bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
     RG_ASSERT(listen_fd >= 0);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
+    async = new Async(1 + GetCoreCount());
+
     handle_func = func;
 
     // Run request dispatchers
-    for (Size i = 0; i < async.GetWorkerCount(); i++) {
+    for (Size i = 1; i < async->GetWorkerCount(); i++) {
         Dispatcher *dispatcher = new Dispatcher(this);
         dispatchers.Append(dispatcher);
 
-        async.Run([=] { return dispatcher->Run(); });
+        async->Run([=] { return dispatcher->Run(); });
     }
+
+    return true;
 }
 
 void http_Daemon::Stop()
@@ -179,7 +183,12 @@ void http_Daemon::Stop()
     }
 #endif
 
-    async.Sync();
+    if (async) {
+        async->Sync();
+
+        delete async;
+        async = nullptr;
+    }
 
     for (Dispatcher *dispatcher: dispatchers) {
         delete dispatcher;
@@ -231,12 +240,12 @@ bool http_Daemon::Dispatcher::Run()
         for (const http_IO *client: clients) {
             delete client;
         };
-        for (const http_IO *client: pool) {
+        for (const http_IO *client: free_clients) {
             delete client;
         }
 
         clients.Clear();
-        pool.Clear();
+        free_clients.Clear();
     };
 
     HeapArray<struct pollfd> pfds = {
@@ -298,7 +307,7 @@ bool http_Daemon::Dispatcher::Run()
                     return false;
                 }
 
-                http_IO *client = CreateClient(fd, now, (sockaddr *)&ss);
+                http_IO *client = InitClient(fd, now, (sockaddr *)&ss);
                 clients.Append(client);
             }
         }
@@ -391,7 +400,7 @@ bool http_Daemon::Dispatcher::Run()
                 } [[fallthrough]];
 
                 case http_IO::PrepareStatus::Unused: {
-                    DestroyClient(client);
+                    ParkClient(client);
                     keep--;
                 } break;
             }
@@ -463,17 +472,17 @@ void http_Daemon::Dispatcher::Stop()
 
 #endif
 
-http_IO *http_Daemon::Dispatcher::CreateClient(int fd, int64_t start, struct sockaddr *sa)
+http_IO *http_Daemon::Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
 
-    if (pool.len) {
-        int idx = GetRandomInt(0, pool.len);
+    if (free_clients.len) {
+        int idx = GetRandomInt(0, free_clients.len);
 
-        client = pool[idx];
+        client = free_clients[idx];
 
-        std::swap(pool[idx], pool[pool.len - 1]);
-        pool.len--;
+        std::swap(free_clients[idx], free_clients[free_clients.len - 1]);
+        free_clients.len--;
     } else {
         client = new http_IO(daemon);
     }
@@ -487,10 +496,10 @@ http_IO *http_Daemon::Dispatcher::CreateClient(int fd, int64_t start, struct soc
     return client;
 }
 
-void http_Daemon::Dispatcher::DestroyClient(http_IO *client)
+void http_Daemon::Dispatcher::ParkClient(http_IO *client)
 {
-    if (pool.Available()) {
-        pool.Append(client);
+    if (free_clients.Available()) {
+        free_clients.Append(client);
         client->Rearm(0);
     } else {
         delete client;
@@ -686,11 +695,10 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
     {
         bool complete = false;
 
-        incoming.buf.Grow(Mebibytes(1));
-
         for (;;) {
-            Size available = incoming.buf.Available() - 1;
+            incoming.buf.Grow(Mebibytes(1));
 
+            Size available = incoming.buf.Available() - 1;
 #if defined(MSG_DONTWAIT)
             Size read = recv(fd, incoming.buf.end(), available, MSG_DONTWAIT);
 #else

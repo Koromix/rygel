@@ -238,6 +238,7 @@ bool http_Daemon::InitConfig(const http_Config &config)
                    "if you run this behind a reverse proxy that sets one of these headers.");
     }
 
+    sock_type = config.sock_type;
     addr_mode = config.addr_mode;
 
     idle_timeout = config.idle_timeout;
@@ -779,8 +780,10 @@ void http_IO::Close()
         finalize();
     }
 
+#if !defined(_WIN32)
     CloseSocket(fd);
     fd = -1;
+#endif
 
     ready = false;
 }

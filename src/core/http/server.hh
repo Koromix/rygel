@@ -78,6 +78,11 @@ class http_Daemon {
 
     int listen_fd = -1;
 
+#if defined(_WIN32)
+    void *iocp = nullptr; // HANDLE
+#endif
+
+    SocketType sock_type;
     http_ClientAddressMode addr_mode;
 
     int idle_timeout;
@@ -87,7 +92,7 @@ class http_Daemon {
     int max_request_headers;
     int max_request_cookies;
 
-    Async async;
+    Async *async = nullptr;
     HeapArray<Dispatcher *> dispatchers;
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
@@ -97,7 +102,7 @@ public:
     ~http_Daemon() { Stop(); }
 
     bool Bind(const http_Config &config, bool log_addr = true);
-    void Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func);
+    bool Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func);
 
     void Stop();
 
@@ -173,7 +178,9 @@ class http_IO {
         Span<uint8_t> extra = {};
     } incoming;
 
+#if !defined(_WIN32)
     Size pfd_idx = -1;
+#endif
 
     std::atomic_bool ready;
     http_RequestInfo request;
@@ -189,6 +196,8 @@ class http_IO {
     BlockAllocator allocator;
 
 public:
+    ~http_IO() { Close(); }
+
     int Descriptor() const { return fd; }
     RG::Allocator *Allocator() { return &allocator; }
 
@@ -217,7 +226,6 @@ public:
 
 private:
     http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(0); }
-    ~http_IO() { Close(); }
 
     bool Init(int fd, int64_t start, struct sockaddr *sa);
     bool InitAddress();

@@ -776,7 +776,8 @@ Options:
     http_Daemon daemon;
     if (!daemon.Bind(config.http))
         return 1;
-    daemon.Start(HandleRequest);
+    if (!daemon.Start(HandleRequest))
+        return 1;
 
 #if defined(__linux__)
     if (!NotifySystemd())
