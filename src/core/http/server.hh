@@ -75,7 +75,7 @@ class http_Dispatcher;
 class http_Daemon {
     RG_DELETE_COPY(http_Daemon)
 
-    int listen_fd = -1;
+    int listener = -1;
 
 #if defined(_WIN32)
     void *iocp = nullptr; // HANDLE
@@ -159,13 +159,12 @@ class http_IO {
         Incoming,
         Ready,
         Busy,
-        Close,
-        Unused
+        Close
     };
 
     http_Daemon *daemon;
 
-    int fd;
+    int sock;
     char addr[65];
 
     int64_t socket_start;
@@ -177,10 +176,6 @@ class http_IO {
         Span<char> intro = {};
         Span<uint8_t> extra = {};
     } incoming;
-
-#if !defined(_WIN32)
-    Size pfd_idx = -1;
-#endif
 
     std::atomic_bool ready;
     http_RequestInfo request;
@@ -196,9 +191,9 @@ class http_IO {
     BlockAllocator allocator;
 
 public:
-    ~http_IO() { Close(); }
+    ~http_IO();
 
-    int Descriptor() const { return fd; }
+    int Descriptor() const { return sock; }
     RG::Allocator *Allocator() { return &allocator; }
 
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
@@ -240,8 +235,6 @@ private:
 
     bool IsPreparing() const;
     int64_t GetTimeout(int64_t now) const;
-
-    void Close();
 
     friend class http_Daemon;
     friend class http_Dispatcher;

@@ -108,7 +108,7 @@ private:
     void DisconnectSocket(SocketData *socket);
     void DestroySocket(SocketData *socket);
 
-    http_IO *InitClient(int fd, int64_t start, struct sockaddr *sa);
+    http_IO *InitClient(int sock, int64_t start, struct sockaddr *sa);
     void ParkClient(http_IO *client);
 
     void Close();
@@ -116,7 +116,7 @@ private:
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
-    RG_ASSERT(listen_fd < 0);
+    RG_ASSERT(listener < 0);
 
     if (!InitConfig(config))
         return false;
@@ -124,13 +124,13 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     switch (config.sock_type) {
         case SocketType::Dual:
         case SocketType::IPv4:
-        case SocketType::IPv6: { listen_fd = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM | SOCK_OVERLAPPED); } break;
-        case SocketType::Unix: { listen_fd = OpenUnixSocket(config.unix_path, SOCK_STREAM | SOCK_OVERLAPPED); } break;
+        case SocketType::IPv6: { listener = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM | SOCK_OVERLAPPED); } break;
+        case SocketType::Unix: { listener = OpenUnixSocket(config.unix_path, SOCK_STREAM | SOCK_OVERLAPPED); } break;
     }
-    if (listen_fd < 0)
+    if (listener < 0)
         return false;
 
-    if (listen(listen_fd, 256) < 0) {
+    if (listen(listener, 256) < 0) {
         errno = TranslateWinSockError();
 
         LogError("Failed to listen on socket: %1", strerror(errno));
@@ -151,7 +151,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 
 bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
-    RG_ASSERT(listen_fd >= 0);
+    RG_ASSERT(listener >= 0);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
@@ -175,7 +175,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
     // Heuristic found on MDN
     async = new Async(1 + 2 * GetCoreCount());
 
-    iocp = CreateIoCompletionPort((HANDLE)(uintptr_t)listen_fd, nullptr, 1, 0);
+    iocp = CreateIoCompletionPort((HANDLE)(uintptr_t)listener, nullptr, 1, 0);
     if (!iocp) {
         LogError("Failed to create I/O completion port: %1", GetWin32ErrorString());
         return false;
@@ -189,7 +189,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 
         DWORD dummy;
 
-        if (WSAIoctl((SOCKET)listen_fd, SIO_GET_EXTENSION_FUNCTION_POINTER,
+        if (WSAIoctl((SOCKET)listener, SIO_GET_EXTENSION_FUNCTION_POINTER,
                      (void *)&AcceptExGuid, RG_SIZE(AcceptExGuid), 
                      &fn.AcceptEx, RG_SIZE(fn.AcceptEx),
                      &dummy, nullptr, nullptr) == SOCKET_ERROR) {
@@ -199,7 +199,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
             return false;
         }
 
-        if (WSAIoctl((SOCKET)listen_fd, SIO_GET_EXTENSION_FUNCTION_POINTER,
+        if (WSAIoctl((SOCKET)listener, SIO_GET_EXTENSION_FUNCTION_POINTER,
                      (void *)&GetAcceptExSockaddrsGuid, RG_SIZE(GetAcceptExSockaddrsGuid), 
                      &fn.GetAcceptExSockaddrs, RG_SIZE(fn.GetAcceptExSockaddrs),
                      &dummy, nullptr, nullptr) == SOCKET_ERROR) {
@@ -209,7 +209,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
             return false;
         }
 
-        if (WSAIoctl((SOCKET)listen_fd, SIO_GET_EXTENSION_FUNCTION_POINTER,
+        if (WSAIoctl((SOCKET)listener, SIO_GET_EXTENSION_FUNCTION_POINTER,
                      (void *)&DisconnectExGuid, RG_SIZE(DisconnectExGuid), 
                      &fn.DisconnectEx, RG_SIZE(fn.DisconnectEx),
                      &dummy, nullptr, nullptr) == SOCKET_ERROR) {
@@ -258,8 +258,8 @@ void http_Daemon::Stop()
     }
     dispatchers.Clear();
 
-    CloseSocket(listen_fd);
-    listen_fd = -1;
+    CloseSocket(listener);
+    listener = -1;
 
     if (iocp) {
         CloseHandle(iocp);
@@ -335,7 +335,7 @@ bool http_Dispatcher::Run()
                 }
 
                 socket->connected = true;
-                setsockopt(socket->sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&daemon->listen_fd, RG_SIZE(daemon->listen_fd));
+                setsockopt(socket->sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&daemon->listener, RG_SIZE(daemon->listener));
 
                 sockaddr *local_addr = nullptr;
                 sockaddr *remote_addr = nullptr;
@@ -346,10 +346,9 @@ bool http_Dispatcher::Run()
                                         &local_addr, &local_len, &remote_addr, &remote_len);
 
                 http_IO *client = InitClient(socket->sock, now, remote_addr);
-
                 socket->client.reset(client);
 
-                if (!PostRead(socket)) {
+                if (!socket->client || !PostRead(socket)) [[unlikely]] {
                     DisconnectSocket(socket);
                     continue;
                 }
@@ -432,8 +431,6 @@ bool http_Dispatcher::Run()
                     case http_IO::PrepareStatus::Busy: {} break;
 
                     case http_IO::PrepareStatus::Close: { DisconnectSocket(socket); } break;
-
-                    case http_IO::PrepareStatus::Unused: { RG_UNREACHABLE(); } break;
                 }
             } break;
         }
@@ -452,7 +449,7 @@ bool http_Dispatcher::PostAccept()
     DWORD received = 0;
 
 retry:
-    if (!fn.AcceptEx((SOCKET)daemon->listen_fd, (SOCKET)socket->sock, socket->accept, 0,
+    if (!fn.AcceptEx((SOCKET)daemon->listener, (SOCKET)socket->sock, socket->accept, 0,
                      AcceptAddressLen, AcceptAddressLen, &received, &socket->overlapped) &&
             WSAGetLastError() != ERROR_IO_PENDING) {
         errno = TranslateWinSockError();
@@ -567,7 +564,7 @@ void http_Dispatcher::DestroySocket(SocketData *socket)
     delete socket;
 }
 
-http_IO *http_Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
+http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
 
@@ -582,7 +579,7 @@ http_IO *http_Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
         client = new http_IO(daemon);
     }
 
-    if (!client->Init(fd, start, sa)) [[unlikely]] {
+    if (!client->Init(sock, start, sa)) [[unlikely]] {
         delete client;
         return nullptr;
     }
@@ -593,8 +590,8 @@ http_IO *http_Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
 void http_Dispatcher::ParkClient(http_IO *client)
 {
     if (free_clients.Available()) {
-        free_clients.Append(client);
         client->Rearm(0);
+        free_clients.Append(client);
     } else {
         delete client;
     }
@@ -672,7 +669,7 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
             writer.Open(write, "<http>", encoding);
         }
 
-        request.keepalive &= func(fd, &writer);
+        request.keepalive &= func(sock, &writer);
     } else {
         intro.len += Fmt(intro.TakeAvailable(), "Transfer-Encoding: chunked\r\n\r\n").len;
 
@@ -751,10 +748,10 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
 
 http_IO::PrepareStatus http_IO::Prepare(int64_t now)
 {
+    RG_ASSERT(sock >= 0);
+
     if (ready)
         return PrepareStatus::Busy;
-    if (fd < 0)
-        return PrepareStatus::Unused;
 
     bool complete = false;
 
@@ -801,7 +798,7 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     while (data.len) {
         int len = (int)std::min(data.len, (Size)INT_MAX);
-        Size sent = send((SOCKET)fd, (const char *)data.ptr, len, 0);
+        Size sent = send((SOCKET)sock, (const char *)data.ptr, len, 0);
 
         if (sent < 0) {
             if (errno == EINTR)
@@ -839,7 +836,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
 
         do {
             int len = (int)std::min(remain.len, (Size)INT_MAX);
-            Size sent = send((SOCKET)fd, (const char *)remain.ptr, len, 0);
+            Size sent = send((SOCKET)sock, (const char *)remain.ptr, len, 0);
 
             if (sent < 0) {
                 if (errno == EINTR)

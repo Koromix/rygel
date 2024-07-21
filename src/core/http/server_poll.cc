@@ -52,6 +52,12 @@ namespace RG {
 
 static const int WorkersPerDispatcher = 4;
 
+struct SocketData {
+    int sock = -1;
+    int pfd_idx = -1;
+    http_IO *client = nullptr;
+};
+
 class http_Dispatcher {
     http_Daemon *daemon;
 
@@ -68,7 +74,7 @@ class http_Dispatcher {
     std::atomic_bool run { true };
 #endif
 
-    HeapArray<http_IO *> clients;
+    HeapArray<SocketData> sockets;
     LocalArray<http_IO *, 256> free_clients;
 
 public:
@@ -82,42 +88,42 @@ public:
 #endif
 
 private:
-    http_IO *InitClient(int fd, int64_t start, struct sockaddr *sa);
+    http_IO *InitClient(int sock, int64_t start, struct sockaddr *sa);
     void ParkClient(http_IO *client);
 };
 
-static void SetSocketNonBlock(int fd, bool enable)
+static void SetSocketNonBlock(int sock, bool enable)
 {
-    int flags = fcntl(fd, F_GETFL, 0);
+    int flags = fcntl(sock, F_GETFL, 0);
     flags = ApplyMask(flags, O_NONBLOCK, enable);
-    fcntl(fd, F_SETFL, flags);
+    fcntl(sock, F_SETFL, flags);
 }
 
-void SetSocketPush(int fd, bool push)
+void SetSocketPush(int sock, bool push)
 {
 #if defined(TCP_CORK)
     int flag = !push;
-    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
+    setsockopt(sock, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
 #elif defined(TCP_NOPUSH)
     int flag = !push;
-    setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
+    setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
 
 #if defined(__APPLE__)
     if (push) {
-        send(fd, nullptr, 0, 0);
+        send(sock, nullptr, 0, 0);
     }
 #endif
 #else
     int flag = push;
-    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
 
-    send(fd, nullptr, 0, 0);
+    send(sock, nullptr, 0, 0);
 #endif
 }
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
-    RG_ASSERT(listen_fd < 0);
+    RG_ASSERT(listener < 0);
 
     if (!InitConfig(config))
         return false;
@@ -125,18 +131,18 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     switch (config.sock_type) {
         case SocketType::Dual:
         case SocketType::IPv4:
-        case SocketType::IPv6: { listen_fd = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM); } break;
-        case SocketType::Unix: { listen_fd = OpenUnixSocket(config.unix_path, SOCK_STREAM); } break;
+        case SocketType::IPv6: { listener = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM); } break;
+        case SocketType::Unix: { listener = OpenUnixSocket(config.unix_path, SOCK_STREAM); } break;
     }
-    if (listen_fd < 0)
+    if (listener < 0)
         return false;
 
-    if (listen(listen_fd, 1024) < 0) {
+    if (listen(listener, 1024) < 0) {
         LogError("Failed to listen on socket: %1", strerror(errno));
         return false;
     }
 
-    SetSocketNonBlock(listen_fd, true);
+    SetSocketNonBlock(listener, true);
 
     if (log_addr) {
         if (config.sock_type == SocketType::Unix) {
@@ -152,7 +158,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 
 bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
-    RG_ASSERT(listen_fd >= 0);
+    RG_ASSERT(listener >= 0);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
@@ -174,7 +180,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 void http_Daemon::Stop()
 {
     // Shut everything down
-    shutdown(listen_fd, SHUT_RD);
+    shutdown(listener, SHUT_RD);
 
 #if defined(__APPLE__)
     // On macOS, the shutdown() does not wake up poll()
@@ -195,8 +201,8 @@ void http_Daemon::Stop()
     }
     dispatchers.Clear();
 
-    CloseSocket(listen_fd);
-    listen_fd = -1;
+    CloseSocket(listener);
+    listener = -1;
 
     handle_func = {};
 }
@@ -237,23 +243,24 @@ bool http_Dispatcher::Run()
     RG_DEFER {
         async.Sync();
 
-        for (const http_IO *client: clients) {
-            delete client;
-        };
-        for (const http_IO *client: free_clients) {
+        for (SocketData &socket: sockets) {
+            close(socket.sock);
+            delete socket.client;
+        }
+        for (http_IO *client: free_clients) {
             delete client;
         }
 
-        clients.Clear();
+        sockets.Clear();
         free_clients.Clear();
     };
 
     HeapArray<struct pollfd> pfds = {
 #if defined(__linux__) || defined(__FreeBSD__)
-        { daemon->listen_fd, POLLIN, 0 },
+        { daemon->listener, POLLIN, 0 },
         { event_fd, POLLIN, 0 }
 #else
-        { daemon->listen_fd, POLLIN, 0 },
+        { daemon->listener, POLLIN, 0 },
         { pair_fd[0], POLLIN, 0 }
 #endif
     };
@@ -279,25 +286,25 @@ bool http_Dispatcher::Run()
             // Accept queued clients
             for (Size i = 0; i < 64; i++) {
 #if defined(SOCK_CLOEXEC)
-                int fd = accept4(daemon->listen_fd, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+                int sock = accept4(daemon->listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 
 #if defined(TCP_NOPUSH) && !defined(TCP_CORK)
-                if (fd >= 0) {
+                if (sock >= 0) {
                     // Disable Nagle algorithm on platforms with better options
                     int flag = 1;
-                    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+                    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
                 }
 #endif
 #else
-                int fd = accept(daemon->listen_fd, (sockaddr *)&ss, &ss_len);
+                int sock = accept(daemon->listener, (sockaddr *)&ss, &ss_len);
 
-                if (fd >= 0) {
-                    fcntl(fd, F_SETFD, FD_CLOEXEC);
-                    SetSocketNonBlock(fd, true);
+                if (sock >= 0) {
+                    fcntl(sock, F_SETFD, FD_CLOEXEC);
+                    SetSocketNonBlock(sock, true);
                 }
 #endif
 
-                if (fd < 0) {
+                if (sock < 0) {
                     if (errno == EINVAL)
                         return true;
                     if (errno == EAGAIN || errno == EWOULDBLOCK)
@@ -307,8 +314,15 @@ bool http_Dispatcher::Run()
                     return false;
                 }
 
-                http_IO *client = InitClient(fd, now, (sockaddr *)&ss);
-                clients.Append(client);
+                SocketData *socket = sockets.AppendDefault();
+
+                socket->sock = sock;
+                socket->client = InitClient(sock, now, (sockaddr *)&ss);
+
+                if (!socket->client) {
+                    sockets.RemoveLast(1);
+                    continue;
+                }
             }
         }
 
@@ -329,31 +343,40 @@ bool http_Dispatcher::Run()
         unsigned int timeout = UINT_MAX;
 
         // Process clients
-        for (Size i = 0; i < clients.len; i++, keep++) {
-            clients[keep] = clients[i];
+        for (Size i = 0; i < sockets.len; i++, keep++) {
+            sockets[keep] = sockets[i];
 
-            http_IO *client = clients[i];
-            Size pfd_idx = client->pfd_idx;
+            SocketData *socket = &sockets[keep];
+            http_IO *client = socket->client;
+
+            const auto disconnect = [&]() {
+                close(socket->sock);
+
+                ParkClient(socket->client);
+                socket->client = nullptr;
+
+                keep--;
+            };
 
             http_IO::PrepareStatus status = http_IO::PrepareStatus::Incoming;
 
-            if (pfd_idx >= 0) {
-                const struct pollfd &pfd = pfds.ptr[pfd_idx];
+            if (socket->pfd_idx >= 0) {
+                const struct pollfd &pfd = pfds.ptr[socket->pfd_idx];
 
                 if (pfd.revents) {
                     status = client->Prepare(now);
                 }
 
-                client->pfd_idx = -1;
+                socket->pfd_idx = -1;
             } else {
                 status = client->Prepare(now);
             }
 
             switch (status) {
                 case http_IO::PrepareStatus::Incoming: {
-                    client->pfd_idx = pfds.len;
+                    socket->pfd_idx = pfds.len;
 
-                    struct pollfd pfd = { (decltype(pollfd::fd))client->Descriptor(), POLLIN, 0 };
+                    struct pollfd pfd = { socket->sock, POLLIN, 0 };
                     pfds.Append(pfd);
 
                     int64_t delay = std::max((int64_t)0, client->GetTimeout(now));
@@ -364,7 +387,7 @@ bool http_Dispatcher::Run()
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
-                        client->Close();
+                        disconnect();
 
                         break;
                     }
@@ -386,7 +409,9 @@ bool http_Dispatcher::Run()
                     } else {
                         async.Run(worker_idx, [=, this] {
                             daemon->RunHandler(client);
-                            client->Close();
+
+                            client->ready = false;
+                            shutdown(client->sock, SHUT_RD);
 
                             return true;
                         });
@@ -395,17 +420,10 @@ bool http_Dispatcher::Run()
 
                 case http_IO::PrepareStatus::Busy: {} break;
 
-                case http_IO::PrepareStatus::Close: {
-                    client->Close();
-                } [[fallthrough]];
-
-                case http_IO::PrepareStatus::Unused: {
-                    ParkClient(client);
-                    keep--;
-                } break;
+                case http_IO::PrepareStatus::Close: { disconnect(); } break;
             }
         }
-        clients.len = keep;
+        sockets.len = keep;
 
         // Wake me up from the kernel if needed
         {
@@ -430,8 +448,8 @@ bool http_Dispatcher::Run()
 
         if (!ready) {
             // Process everyone after a timeout
-            for (http_IO *client: clients) {
-                client->pfd_idx = -1;
+            for (SocketData &socket: sockets) {
+                socket.pfd_idx = -1;
             }
         }
     }
@@ -472,7 +490,7 @@ void http_Dispatcher::Stop()
 
 #endif
 
-http_IO *http_Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
+http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
 
@@ -487,11 +505,10 @@ http_IO *http_Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
         client = new http_IO(daemon);
     }
 
-    if (!client->Init(fd, start, sa)) [[unlikely]] {
+    if (!client->Init(sock, start, sa)) [[unlikely]] {
         delete client;
         return nullptr;
     }
-    client->pfd_idx = -1;
 
     return client;
 }
@@ -499,8 +516,8 @@ http_IO *http_Dispatcher::InitClient(int fd, int64_t start, struct sockaddr *sa)
 void http_Dispatcher::ParkClient(http_IO *client)
 {
     if (free_clients.Available()) {
-        free_clients.Append(client);
         client->Rearm(0);
+        free_clients.Append(client);
     } else {
         delete client;
     }
@@ -515,17 +532,17 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     }
 
 #if !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(fd, false);
-    RG_DEFER { SetSocketNonBlock(fd, true); };
+    SetSocketNonBlock(sock, false);
+    RG_DEFER { SetSocketNonBlock(sock, true); };
 #endif
 #if !defined(MSG_MORE)
     // On Linux, use MSG_MORE in send() calls to set TCP_CORK without additional syscall
-    SetSocketPush(fd, false);
+    SetSocketPush(sock, false);
 #endif
 
     RG_DEFER { 
         response.sent = true;
-        SetSocketPush(fd, true);
+        SetSocketPush(sock, true);
     };
 
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
@@ -576,7 +593,7 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
             writer.Open(write, "<http>", encoding);
         }
 
-        request.keepalive &= func(fd, &writer);
+        request.keepalive &= func(sock, &writer);
     } else {
         intro.len += Fmt(intro.TakeAvailable(), "Transfer-Encoding: chunked\r\n\r\n").len;
 
@@ -688,8 +705,6 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
 {
     if (ready)
         return PrepareStatus::Busy;
-    if (fd < 0)
-        return PrepareStatus::Unused;
 
     // Gather request line and headers
     {
@@ -700,9 +715,9 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
 
             Size available = incoming.buf.Available() - 1;
 #if defined(MSG_DONTWAIT)
-            Size read = recv(fd, incoming.buf.end(), available, MSG_DONTWAIT);
+            Size read = recv(sock, incoming.buf.end(), available, MSG_DONTWAIT);
 #else
-            Size read = recv(fd, incoming.buf.end(), available, 0);
+            Size read = recv(sock, incoming.buf.end(), available, 0);
 #endif
 
             incoming.buf.len += std::max(read, (Size)0);
@@ -789,9 +804,9 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     while (data.len) {
 #if defined(MSG_MORE)
-        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
+        Size sent = send(sock, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
 #else
-        Size sent = send(fd, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
+        Size sent = send(sock, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
 #endif
 
         if (sent < 0) {
@@ -828,9 +843,9 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
 
         do {
 #if defined(MSG_MORE)
-            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
+            Size sent = send(sock, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
 #else
-            Size sent = send(fd, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
+            Size sent = send(sock, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
 #endif
 
             if (sent < 0) {

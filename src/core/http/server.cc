@@ -300,6 +300,13 @@ const char *http_RequestInfo::FindCookie(const char *key) const
     return nullptr;
 }
 
+http_IO::~http_IO()
+{
+    for (const auto &finalize: response.finalizers) {
+        finalize();
+    }
+}
+
 void http_IO::AddHeader(Span<const char> key, Span<const char> value)
 {
     RG_ASSERT(!response.sent);
@@ -474,9 +481,9 @@ void http_IO::AddFinalizer(const std::function<void()> &func)
     response.finalizers.Append(func);
 }
 
-bool http_IO::Init(int fd, int64_t start, struct sockaddr *sa)
+bool http_IO::Init(int sock, int64_t start, struct sockaddr *sa)
 {
-    this->fd = fd;
+    this->sock = sock;
 
     int family = sa->sa_family;
     void *ptr = nullptr;
@@ -772,20 +779,6 @@ int64_t http_IO::GetTimeout(int64_t now) const
         int64_t timeout = daemon->keepalive_time - now + socket_start;
         return timeout;
     }
-}
-
-void http_IO::Close()
-{
-    for (const auto &finalize: response.finalizers) {
-        finalize();
-    }
-
-#if !defined(_WIN32)
-    CloseSocket(fd);
-    fd = -1;
-#endif
-
-    ready = false;
 }
 
 }
