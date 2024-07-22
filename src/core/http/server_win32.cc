@@ -48,9 +48,7 @@ typedef struct sockaddr_un {
 
 namespace RG {
 
-static const Size AcceptReceiveLen = Kibibytes(4);
 static const Size AcceptAddressLen = 2 * sizeof(SOCKADDR_STORAGE) + 16;
-
 static const int ParallelConnections = 256;
 
 enum class PendingOperation {
@@ -67,7 +65,7 @@ struct http_Socket {
 
     PendingOperation op = PendingOperation::None;
     OVERLAPPED overlapped = {};
-    HeapArray<uint8_t> buf;
+    uint8_t accept[2 * AcceptAddressLen];
 
     std::unique_ptr<http_IO> client = nullptr;
 
@@ -307,12 +305,10 @@ bool http_Dispatcher::PostAccept()
         return false;
     RG_DEFER_N(err_guard) { DisconnectSocket(socket); };
 
-    socket->buf.AppendDefault(AcceptReceiveLen + 2 * AcceptAddressLen);
-
     DWORD dummy = 0;
 
 retry:
-    if (!fn.AcceptEx((SOCKET)daemon->listener, (SOCKET)socket->sock, socket->buf.ptr, AcceptReceiveLen,
+    if (!fn.AcceptEx((SOCKET)daemon->listener, (SOCKET)socket->sock, socket->accept, 0,
                      AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
             WSAGetLastError() != ERROR_IO_PENDING) {
         errno = TranslateWinSockError();
@@ -377,7 +373,7 @@ bool http_Dispatcher::Run()
                 int local_len;
                 int remote_len;
 
-                fn.GetAcceptExSockaddrs(socket->buf.ptr, AcceptReceiveLen, AcceptAddressLen, AcceptAddressLen,
+                fn.GetAcceptExSockaddrs(socket->accept, 0, AcceptAddressLen, AcceptAddressLen,
                                         &local_addr, &local_len, &remote_addr, &remote_len);
 
                 http_IO *client = InitClient(socket, now, remote_addr);
@@ -387,10 +383,9 @@ bool http_Dispatcher::Run()
                 }
                 socket->client.reset(client);
 
-                socket->buf.len = (Size)transferred;
-                std::swap(socket->buf, client->incoming.buf);
-
-                ProcessClient(now, socket, client);
+                if (!PostRead(socket)) {
+                    DisconnectSocket(socket);
+                }
             } break;
 
             case PendingOperation::Disconnect: {
@@ -546,8 +541,6 @@ void http_Dispatcher::DisconnectSocket(http_Socket *socket)
         http_IO *client = socket->client.release();
         ParkClient(client);
     }
-
-    socket->buf.RemoveFrom(0);
 
     if (!fn.DisconnectEx((SOCKET)socket->sock, &socket->overlapped, TF_REUSE_SOCKET, 0) &&
             WSAGetLastError() != ERROR_IO_PENDING) {
