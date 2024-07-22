@@ -5514,7 +5514,7 @@ int CreateSocket(SocketType type, int flags)
     bool overlapped = (flags & SOCK_OVERLAPPED);
     flags &= ~SOCK_OVERLAPPED;
 
-    SOCKET sock = WSASocketA(family, flags, 0, nullptr, 0, overlapped ? WSA_FLAG_OVERLAPPED : 0);
+    SOCKET sock = WSASocketW(family, flags, 0, nullptr, 0, overlapped ? WSA_FLAG_OVERLAPPED : 0);
     if (sock == INVALID_SOCKET) {
         errno = TranslateWinSockError();
 
@@ -6081,7 +6081,7 @@ void AsyncPool::RunTasks(int worker_idx)
 
             RunTask(&task);
         } else {
-            worker_idx = GetRandomInt(0, workers.len);
+            worker_idx = GetRandomInt(0, (int)workers.len);
         }
     }
 }

@@ -501,7 +501,7 @@ SocketData *http_Dispatcher::InitSocket()
     SocketData *socket = nullptr;
 
     if (free_sockets.len) {
-        int idx = GetRandomInt(0, free_sockets.len);
+        int idx = GetRandomInt(0, (int)free_sockets.len);
 
         socket = free_sockets[idx];
 
@@ -569,7 +569,7 @@ http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *s
     http_IO *client = nullptr;
 
     if (free_clients.len) {
-        int idx = GetRandomInt(0, free_clients.len);
+        int idx = GetRandomInt(0, (int)free_clients.len);
 
         client = free_clients[idx];
 
