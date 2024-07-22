@@ -41,6 +41,8 @@
 #elif defined(__FreeBSD__)
     #include <sys/eventfd.h>
     #include <sys/uio.h>
+#elif defined(__APPLE__)
+    #include <sys/uio.h>
 #endif
 
 namespace RG {
@@ -541,7 +543,7 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     SetSocketPush(socket->sock, false);
 #endif
 
-    RG_DEFER { 
+    RG_DEFER {
         response.sent = true;
         SetSocketPush(socket->sock, true);
     };
@@ -602,33 +604,57 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         return true;
     });
-#elif defined(__FreeBSD__)
-    Send(status, len, [&](int sock, StreamWriter *) {
-        off_t offset = 0;
-        int64_t remain = len;
+#elif defined(__FreeBSD__) || defined(__APPLE__)
+    SetSocketPush(socket->sock, false);
 
-        while (remain) {
-            Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+    RG_DEFER {
+        response.sent = true;
+        SetSocketPush(socket->sock, true);
+    }
 
-            off_t sent = 0;
-            int ret = sendfile(fd, sock, offset, (size_t)send, nullptr, &sent, 0);
+    Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
-            if (ret < 0) {
-                if (errno == EINTR)
-                    continue;
+    struct iovec header = {};
+    struct sf_hdtr hdtr = { &header, 1, nullptr, 0 };
 
-                if (errno != EPIPE) {
-                    LogError("Failed to send file: %1", strerror(errno));
-                }
-                return false;
-            }
+    off_t offset = 0;
+    int64_t remain = intro.len + len;
 
-            offset += sent;
-            remain -= (Size)sent;
+    // Send intro and file in one go
+    while (remain) {
+        if (offset < intro.len) {
+            header.iov_base = (void *)(intro.ptr + offset);
+            header.iov_len = (size_t)(intro.len - offset);
+        } else {
+            hdtr.headers = nullptr;
+            hdtr.hdr_cnt = 0;
         }
 
-        return true;
-    });
+        Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+
+#if defined(__FreeBSD__)
+        off_t sent = 0;
+        int ret = sendfile(fd, socket->sock, offset, (size_t)send, &hdtr, &sent, 0);
+#else
+        off_t sent = (off_t)send;
+        int ret = sendfile(fd, socket->sock, offset, &sent, &hdtr, 0);
+#endif
+
+        if (ret < 0 && errno != EINTR) {
+            if (errno != EPIPE) {
+                LogError("Failed to send file: %1", strerror(errno));
+            }
+            return;
+        }
+
+        if (!ret && !send) [[unlikely]] {
+            LogError("Truncated file sent");
+            return;
+        }
+
+        offset += sent;
+        remain -= (int64_t)sent;
+    }
 #else
     Send(status, len, [&](int, StreamWriter *writer) {
         StreamReader reader(fd, filename);
