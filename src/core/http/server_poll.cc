@@ -114,10 +114,7 @@ void SetSocketPush(int sock, bool push)
     }
 #endif
 #else
-    int flag = push;
-    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-
-    send(sock, nullptr, 0, 0);
+    #error Cannot use either TCP_CORK or TCP_NOPUSH
 #endif
 }
 

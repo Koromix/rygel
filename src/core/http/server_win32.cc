@@ -119,6 +119,16 @@ private:
     void ParkClient(http_IO *client);
 };
 
+static void SetSocketPush(int sock, bool push)
+{
+    int flag = push;
+    setsockopt((SOCKET)sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
+
+    if (push) {
+        send(sock, nullptr, 0, 0);
+    }
+}
+
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
     RG_ASSERT(listener < 0);
@@ -351,8 +361,7 @@ bool http_Dispatcher::Run()
                 socket->connected = true;
                 setsockopt(socket->sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&daemon->listener, RG_SIZE(daemon->listener));
 
-                int one = 1;
-                setsockopt(socket->sock, IPPROTO_TCP, TCP_NODELAY, (char *)&one, RG_SIZE(one));
+                SetSocketPush(socket->sock, false);
 
                 sockaddr *local_addr = nullptr;
                 sockaddr *remote_addr = nullptr;
@@ -626,7 +635,11 @@ void http_Dispatcher::ParkClient(http_IO *client)
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
 {
     RG_ASSERT(!response.sent);
-    RG_DEFER { response.sent = true; };
+
+    RG_DEFER {
+        SetSocketPush(sock, true);
+        response.sent = true;
+    };
 
     if (request.headers_only) {
         func = [](int, StreamWriter *) { return true; };
@@ -663,7 +676,11 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
     RG_ASSERT(!response.sent);
-    RG_DEFER { response.sent = true; };
+
+    RG_DEFER {
+        SetSocketPush(sock, true);
+        response.sent = true;
+    };
 
     HANDLE h = (HANDLE)_get_osfhandle(fd);
     int64_t offset = 0;
