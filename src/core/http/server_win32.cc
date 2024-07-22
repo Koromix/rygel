@@ -626,12 +626,11 @@ void http_Dispatcher::ParkClient(http_IO *client)
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
 {
     RG_ASSERT(!response.sent);
+    RG_DEFER { response.sent = true; };
 
     if (request.headers_only) {
         func = [](int, StreamWriter *) { return true; };
     }
-
-    RG_DEFER { response.sent = true; };
 
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
     StreamWriter writer(write, "<http>");
@@ -663,32 +662,49 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
 
 bool http_IO::SendFile(int status, int fd, int64_t len)
 {
-    Send(status, len, [&](int sock, StreamWriter *) {
-        HANDLE h = (HANDLE)_get_osfhandle(fd);
+    RG_ASSERT(!response.sent);
+    RG_DEFER { response.sent = true; };
 
-        if (len) {
-            for (;;) {
-                DWORD send = (DWORD)std::min(len, (Size)UINT32_MAX);
-                BOOL success = TransmitFile((SOCKET)sock, h, send, 0, nullptr, nullptr, 0);
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    int64_t offset = 0;
 
-                if (!success) {
-                    LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
-                    return false;
-                }
+    Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
-                len -= (Size)send;
-                if (!len)
-                    break;
+    len += intro.len;
 
-                if (!SetFilePointerEx(h, { .QuadPart = send }, nullptr, FILE_CURRENT)) {
-                    LogError("Failed to send file: %1", GetWin32ErrorString());
-                    return false;
-                }
-            }
+    // Send intro and file in one go
+    {
+        TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
+        DWORD send = (DWORD)std::min(len, (Size)UINT32_MAX);
+
+        BOOL success = TransmitFile((SOCKET)sock, h, 0, 0, nullptr, &tbuf, 0);
+
+        if (!success) [[unlikely]] {
+            LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
+            return false;
         }
 
-        return true;
-    });
+        offset += send - intro.len;
+        len -= (Size)send;
+    }
+
+    while (len) {
+        if (!SetFilePointerEx(h, { .QuadPart = offset }, nullptr, FILE_BEGIN)) {
+            LogError("Failed to send file: %1", GetWin32ErrorString());
+            return false;
+        }
+
+        DWORD send = (DWORD)std::min(len, (Size)UINT32_MAX);
+        BOOL success = TransmitFile((SOCKET)sock, h, 0, 0, nullptr, nullptr, 0);
+
+        if (!success) [[unlikely]] {
+            LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
+            return false;
+        }
+
+        offset += (Size)send;
+        len -= (Size)send;
+    }
 
     return true;
 }
