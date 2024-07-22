@@ -99,7 +99,7 @@ static void SetSocketNonBlock(int sock, bool enable)
     fcntl(sock, F_SETFL, flags);
 }
 
-void SetSocketPush(int sock, bool push)
+static void SetSocketPush(int sock, bool push)
 {
 #if defined(TCP_CORK)
     int flag = !push;
