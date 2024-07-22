@@ -358,22 +358,22 @@ bool http_Dispatcher::Run()
                 keep--;
             };
 
-            http_IO::PrepareStatus status = http_IO::PrepareStatus::Incoming;
+            http_IO::RequestStatus status = http_IO::RequestStatus::Incomplete;
 
             if (socket->pfd_idx >= 0) {
                 const struct pollfd &pfd = pfds.ptr[socket->pfd_idx];
 
                 if (pfd.revents) {
-                    status = client->Prepare(now);
+                    status = client->ProcessIncoming(now);
                 }
 
                 socket->pfd_idx = -1;
             } else {
-                status = client->Prepare(now);
+                status = client->ProcessIncoming(now);
             }
 
             switch (status) {
-                case http_IO::PrepareStatus::Incoming: {
+                case http_IO::RequestStatus::Incomplete: {
                     socket->pfd_idx = pfds.len;
 
                     struct pollfd pfd = { socket->sock, POLLIN, 0 };
@@ -383,7 +383,7 @@ bool http_Dispatcher::Run()
                     timeout = std::min(timeout, (unsigned int)delay);
                 } break;
 
-                case http_IO::PrepareStatus::Ready: {
+                case http_IO::RequestStatus::Ready: {
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
@@ -418,9 +418,9 @@ bool http_Dispatcher::Run()
                     }
                 } break;
 
-                case http_IO::PrepareStatus::Busy: {} break;
+                case http_IO::RequestStatus::Busy: {} break;
 
-                case http_IO::PrepareStatus::Close: { disconnect(); } break;
+                case http_IO::RequestStatus::Close: { disconnect(); } break;
             }
         }
         sockets.len = keep;
@@ -548,46 +548,10 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
     StreamWriter writer(write, "<http>");
 
-    LocalArray<char, 32768> intro;
-
-    const char *protocol = (request.version == 11) ? "HTTP/1.1" : "HTTP/1.0";
-    const char *details = http_ErrorMessages.FindValue(status, "Unknown");
-
-    if (request.keepalive) {
-        intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
-                                                "Connection: keep-alive\r\n",
-                         protocol, status, details).len;
-    } else {
-        intro.len += Fmt(intro.TakeAvailable(), "%1 %2 %3\r\n"
-                                                "Connection: close\r\n",
-                         protocol, status, details).len;
-    }
-
-    switch (encoding) {
-        case CompressionType::None: {} break;
-        case CompressionType::Zlib: { intro.len += Fmt(intro.TakeAvailable(), "Content-Encoding: deflate\r\n").len; } break;
-        case CompressionType::Gzip: { intro.len += Fmt(intro.TakeAvailable(), "Content-Encoding: gzip\r\n").len; } break;
-        case CompressionType::Brotli: { intro.len += Fmt(intro.TakeAvailable(), "Content-Encoding: br\r\n").len; } break;
-        case CompressionType::LZ4: { RG_UNREACHABLE(); } break;
-        case CompressionType::Zstd: { intro.len += Fmt(intro.TakeAvailable(), "Content-Encoding: zstd\r\n").len; } break;
-    }
-
-    for (const http_KeyValue &header: response.headers) {
-        intro.len += Fmt(intro.TakeAvailable(), "%1: %2\r\n", header.key, header.value).len;
-    }
+    Span<const char> intro = PrepareResponse(status, encoding, len);
+    writer.Write(intro);
 
     if (len >= 0) {
-        intro.len += Fmt(intro.TakeAvailable(), "Content-Length: %1\r\n\r\n", len).len;
-
-        if (!intro.Available()) [[unlikely]] {
-            LogError("Excessive length for response headers");
-
-            request.keepalive = false;
-            return;
-        }
-
-        writer.Write(intro);
-
         if (encoding != CompressionType::None) {
             writer.Close();
             writer.Open(write, "<http>", encoding);
@@ -595,17 +559,6 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
 
         request.keepalive &= func(sock, &writer);
     } else {
-        intro.len += Fmt(intro.TakeAvailable(), "Transfer-Encoding: chunked\r\n\r\n").len;
-
-        if (!intro.Available()) [[unlikely]] {
-            LogError("Excessive length for response headers");
-
-            request.keepalive = false;
-            return;
-        }
-
-        writer.Write(intro);
-
         const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
         StreamWriter chunker(chunk, "<http>", encoding);
 
@@ -701,10 +654,10 @@ bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
     return true;
 }
 
-http_IO::PrepareStatus http_IO::Prepare(int64_t now)
+http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
 {
     if (ready)
-        return PrepareStatus::Busy;
+        return RequestStatus::Busy;
 
     // Gather request line and headers
     {
@@ -730,7 +683,7 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
                 if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
                     LogError("Excessive request size");
                     SendError(413);
-                    return PrepareStatus::Close;
+                    return RequestStatus::Close;
                 }
 
                 const char *end = (const char *)incoming.buf.ptr + incoming.pos;
@@ -769,24 +722,24 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
                             if (IsPreparing()) {
                                 LogError("Timed out while waiting for HTTP request");
                             }
-                            return PrepareStatus::Close;
+                            return RequestStatus::Close;
                         }
 
-                        return PrepareStatus::Incoming;
+                        return RequestStatus::Incomplete;
                     } break;
 
-                    case ECONNRESET: return PrepareStatus::Close;
+                    case ECONNRESET: return RequestStatus::Close;
 
                     default: {
                         LogError("Read failed: %1", strerror(errno));
-                        return PrepareStatus::Close;
+                        return RequestStatus::Close;
                     } break;
                 }
             } else if (!read) {
                 if (incoming.buf.len) {
                     LogError("Client closed connection with unfinished request");
                 }
-                return PrepareStatus::Close;
+                return RequestStatus::Close;
             }
         }
 
@@ -794,10 +747,10 @@ http_IO::PrepareStatus http_IO::Prepare(int64_t now)
     }
 
     if (!ParseRequest(incoming.intro))
-        return PrepareStatus::Close;
+        return RequestStatus::Close;
 
     ready = true;
-    return PrepareStatus::Ready;
+    return RequestStatus::Ready;
 }
 
 bool http_IO::WriteDirect(Span<const uint8_t> data)

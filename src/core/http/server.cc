@@ -736,6 +736,39 @@ bool http_IO::ParseRequest(Span<char> intro)
     return true;
 }
 
+Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, int64_t len)
+{
+    HeapArray<char> buf(&allocator);
+    buf.Grow(Kibibytes(2));
+
+    const char *protocol = (request.version == 11) ? "HTTP/1.1" : "HTTP/1.0";
+    const char *details = http_ErrorMessages.FindValue(status, "Unknown");
+    const char *connection = request.keepalive ? "keep-alive" : "close";
+
+    Fmt(&buf, "%1 %2 %3\r\nConnection: %4\r\n", protocol, status, details, connection);
+
+    switch (encoding) {
+        case CompressionType::None: {} break;
+        case CompressionType::Zlib: { Fmt(&buf, "Content-Encoding: deflate\r\n"); } break;
+        case CompressionType::Gzip: { Fmt(&buf, "Content-Encoding: gzip\r\n"); } break;
+        case CompressionType::Brotli: { Fmt(&buf, "Content-Encoding: br\r\n"); } break;
+        case CompressionType::LZ4: { RG_UNREACHABLE(); } break;
+        case CompressionType::Zstd: { Fmt(&buf, "Content-Encoding: zstd\r\n"); } break;
+    }
+
+    for (const http_KeyValue &header: response.headers) {
+        Fmt(&buf, "%1: %2\r\n", header.key, header.value);
+    }
+
+    if (len >= 0) {
+        Fmt(&buf, "Content-Length: %1\r\n\r\n", len);
+    } else {
+        Fmt(&buf, "Transfer-Encoding: chunked\r\n\r\n");
+    }
+
+    return buf.TrimAndLeak();
+}
+
 void http_IO::Rearm(int64_t start)
 {
     for (const auto &finalize: response.finalizers) {
