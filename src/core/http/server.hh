@@ -188,7 +188,7 @@ class http_IO {
         bool sent = false;
     } response;
 
-    BlockAllocator allocator;
+    BlockAllocator allocator { Kibibytes(16) };
 
 public:
     ~http_IO();
