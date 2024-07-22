@@ -230,10 +230,18 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
         LogInfo("Serving '%1' with '%2'", request.path, filename);
     }
 
+    int fd = OpenFile(filename, (int)OpenFlag::Read);
+    if (fd < 0)
+        return;
+    RG_DEFER { CloseDescriptor(fd); };
+
     // Send the file
     const char *mimetype = GetMimeType(GetPathExtension(filename));
     io->AddCachingHeaders(config.max_age, etag);
-    io->SendFile(200, filename, mimetype);
+    if (mimetype) {
+        io->AddHeader("Content-Type", mimetype);
+    }
+    io->SendFile(200, fd, file_info.size);
 }
 
 static void WriteContent(Span<const char> str, StreamWriter *writer) {
