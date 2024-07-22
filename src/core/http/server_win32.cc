@@ -558,25 +558,24 @@ void http_Dispatcher::DisconnectSocket(SocketData *socket)
 {
     RG_ASSERT(socket->op == PendingOperation::None);
 
-    if (socket->connected && !fn.DisconnectEx((SOCKET)socket->sock, &socket->overlapped, TF_REUSE_SOCKET, 0)) {
-        if (WSAGetLastError() == ERROR_IO_PENDING) {
-            socket->op = PendingOperation::Disconnect;
-            return;
-        }
-
-        errno = TranslateWinSockError();
-
-        LogError("Failed to reuse socket: %1", strerror(errno));
-        DestroySocket(socket);
-    }
-
     if (socket->client) {
         http_IO *client = socket->client.release();
         ParkClient(client);
     }
+
     socket->buf.RemoveFrom(0);
 
-    free_sockets.Append(socket);
+    if (socket->connected) {
+        if (!fn.DisconnectEx((SOCKET)socket->sock, &socket->overlapped, TF_REUSE_SOCKET, 0) &&
+                WSAGetLastError() != ERROR_IO_PENDING) {
+            errno = TranslateWinSockError();
+
+            LogError("Failed to reuse socket: %1", strerror(errno));
+            DestroySocket(socket);
+        }
+
+        socket->op = PendingOperation::Disconnect;
+    }
 }
 
 void http_Dispatcher::DestroySocket(SocketData *socket)
