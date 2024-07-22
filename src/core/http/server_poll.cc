@@ -573,26 +573,8 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     request.keepalive &= writer.Close();
 }
 
-bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
+bool http_IO::SendFile(int status, int fd, int64_t len)
 {
-    int fd = OpenFile(filename, (int)OpenFlag::Read);
-    if (fd < 0)
-        return false;
-    RG_DEFER { CloseDescriptor(fd); };
-
-    FileInfo file_info;
-    if (StatFile(fd, filename, &file_info) != StatResult::Success)
-        return false;
-    if (file_info.type != FileType::File) {
-        LogError("Cannot serve non-regular file '%1'", filename);
-        return false;
-    }
-    int64_t len = file_info.size;
-
-    if (mimetype) {
-        AddHeader("Content-Type", mimetype);
-    }
-
 #if defined(__linux__)
     Send(status, len, [&](int sock, StreamWriter *) {
         off_t offset = 0;

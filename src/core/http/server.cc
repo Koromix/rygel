@@ -475,6 +475,28 @@ void http_IO::SendError(int status, const char *msg)
     return SendText(status, text);
 }
 
+bool http_IO::SendFile(int status, const char *filename, const char *mimetype)
+{
+    int fd = OpenFile(filename, (int)OpenFlag::Read);
+    if (fd < 0)
+        return false;
+    RG_DEFER { CloseDescriptor(fd); };
+
+    FileInfo file_info;
+    if (StatFile(fd, filename, &file_info) != StatResult::Success)
+        return false;
+    if (file_info.type != FileType::File) {
+        LogError("Cannot serve non-regular file '%1'", filename);
+        return false;
+    }
+
+    if (mimetype) {
+        AddHeader("Content-Type", mimetype);
+    }
+
+    return SendFile(status, fd, file_info.size);
+}
+
 void http_IO::AddFinalizer(const std::function<void()> &func)
 {
     RG_ASSERT(!response.sent);
