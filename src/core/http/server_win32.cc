@@ -58,8 +58,8 @@ enum class PendingOperation {
     None,
     Accept,
     Disconnect,
-    WantDisconnect,
-    Read
+    Read,
+    Done
 };
 
 struct SocketData {
@@ -382,11 +382,6 @@ bool http_Dispatcher::Run()
                 free_sockets.Append(socket);
             } break;
 
-            case PendingOperation::WantDisconnect: {
-                RG_ASSERT(success);
-                DisconnectSocket(socket);
-            } break;
-
             case PendingOperation::Read: {
                 RG_ASSERT(socket->client);
 
@@ -401,6 +396,22 @@ bool http_Dispatcher::Run()
                 client->incoming.buf.ptr[client->incoming.buf.len] = 0;
 
                 ProcessClient(now, socket, client);
+            } break;
+
+            case PendingOperation::Done: {
+                RG_ASSERT(success);
+
+                http_IO *client = socket->client.get();
+
+                if (client->request.keepalive) {
+                    client->Rearm(now);
+
+                    if (!PostRead(socket)) {
+                        DisconnectSocket(socket);
+                    }
+                } else {
+                    DisconnectSocket(socket);
+                }
             } break;
         }
     }
@@ -435,29 +446,14 @@ void http_Dispatcher::ProcessClient(int64_t now, SocketData *socket, http_IO *cl
             int worker_idx = 1 + next_worker;
             next_worker = (next_worker + 1) % WorkersPerDispatcher;
 
-            if (client->request.keepalive) {
-                async.Run(worker_idx, [=, this] {
-                    daemon->RunHandler(client);
+            async.Run(worker_idx, [=, this] {
+                daemon->RunHandler(client);
 
-                    client->Rearm(now);
+                socket->op = PendingOperation::Done;
+                PostQueuedCompletionStatus(iocp, 0, 1, &socket->overlapped);
 
-                    if (!PostRead(socket)) {
-                        socket->op = PendingOperation::WantDisconnect;
-                        PostQueuedCompletionStatus(iocp, 0, 1, &socket->overlapped);
-                    }
-
-                    return true;
-                });
-            } else {
-                async.Run(worker_idx, [=, this] {
-                    daemon->RunHandler(client);
-
-                    socket->op = PendingOperation::WantDisconnect;
-                    PostQueuedCompletionStatus(iocp, 0, 1, &socket->overlapped);
-
-                    return true;
-                });
-            }
+                return true;
+            });
         } break;
 
         case http_IO::RequestStatus::Busy: {} break;
