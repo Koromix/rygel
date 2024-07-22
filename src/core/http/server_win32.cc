@@ -51,8 +51,7 @@ namespace RG {
 static const Size AcceptReceiveLen = Kibibytes(4);
 static const Size AcceptAddressLen = 2 * sizeof(SOCKADDR_STORAGE) + 16;
 
-static const int MinSockets = 16;
-static const int MaxSockets = 128;
+static const int ParallelConnections = 256;
 static const int WorkersPerDispatcher = 4;
 
 enum class PendingOperation {
@@ -178,7 +177,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
         dispatchers.Clear();
     };
 
-    // Heuristic found on MDN
+    // Heuristic found on MSDN
     async = new Async(1 + 2 * GetCoreCount());
 
     iocp = CreateIoCompletionPort((HANDLE)(uintptr_t)listener, nullptr, 1, 0);
@@ -285,7 +284,7 @@ bool http_Dispatcher::Init()
 {
     RG_DEFER_N(err_guard) { Cleanup(); };
 
-    for (Size i = 0; i < MinSockets; i++) {
+    for (Size i = 0; i < ParallelConnections; i++) {
         if (!PostAccept())
             return false;
     }
