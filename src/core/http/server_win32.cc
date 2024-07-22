@@ -98,17 +98,15 @@ class http_Dispatcher {
 
 public:
     http_Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn) : daemon(daemon), iocp(iocp), fn(fn) {}
-    ~http_Dispatcher() { Cleanup(); }
+    ~http_Dispatcher();
 
-    bool Init();
-    void Cleanup();
+    bool PostAccept();
 
     bool Run();
 
 private:
     void ProcessClient(int64_t now, SocketData *socket, http_IO *client);
 
-    bool PostAccept();
     bool PostRead(SocketData *socket);
 
     SocketData *InitSocket();
@@ -238,12 +236,14 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
     for (Size i = 1; i < async->GetWorkerCount(); i++) {
         http_Dispatcher *dispatcher = new http_Dispatcher(this, iocp, fn);
         dispatchers.Append(dispatcher);
-
-        if (!dispatcher->Init())
+    }
+    for (Size i = 0; i < ParallelConnections; i++) {
+        http_Dispatcher *dispatcher = dispatchers[i % dispatchers.len];
+        if (!dispatcher->PostAccept())
             return false;
     }
 
-    // Can fail anymore
+    // Cannot fail anymore
     err_guard.Disable();
 
     handle_func = func;
@@ -290,20 +290,7 @@ static SocketData *SocketFromOverlapped(void *ptr)
     return (SocketData *)(data - offsetof(SocketData, overlapped));
 }
 
-bool http_Dispatcher::Init()
-{
-    RG_DEFER_N(err_guard) { Cleanup(); };
-
-    for (Size i = 0; i < ParallelConnections; i++) {
-        if (!PostAccept())
-            return false;
-    }
-
-    err_guard.Disable();
-    return true;
-}
-
-void http_Dispatcher::Cleanup()
+http_Dispatcher::~http_Dispatcher()
 {
     for (SocketData *socket: sockets) {
         delete socket;
@@ -315,6 +302,36 @@ void http_Dispatcher::Cleanup()
     sockets.Clear();
     free_sockets.Clear();
     free_clients.Clear();
+}
+
+bool http_Dispatcher::PostAccept()
+{
+    SocketData *socket = InitSocket();
+    if (!socket)
+        return false;
+    RG_DEFER_N(err_guard) { DisconnectSocket(socket); };
+
+    socket->buf.AppendDefault(AcceptReceiveLen + 2 * AcceptAddressLen);
+
+    DWORD dummy = 0;
+
+retry:
+    if (!fn.AcceptEx((SOCKET)daemon->listener, (SOCKET)socket->sock, socket->buf.ptr, AcceptReceiveLen,
+                     AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
+            WSAGetLastError() != ERROR_IO_PENDING) {
+        errno = TranslateWinSockError();
+
+        if (errno == ECONNRESET)
+            goto retry;
+
+        LogError("Failed to issue socket accept operation: %1", strerror(errno));
+        return false;
+    }
+
+    socket->op = PendingOperation::Accept;
+    err_guard.Disable();
+
+    return true;
 }
 
 bool http_Dispatcher::Run()
@@ -472,36 +489,6 @@ void http_Dispatcher::ProcessClient(int64_t now, SocketData *socket, http_IO *cl
 
         case http_IO::RequestStatus::Close: { DisconnectSocket(socket); } break;
     }
-}
-
-bool http_Dispatcher::PostAccept()
-{
-    SocketData *socket = InitSocket();
-    if (!socket)
-        return false;
-    RG_DEFER_N(err_guard) { DisconnectSocket(socket); };
-
-    socket->buf.AppendDefault(AcceptReceiveLen + 2 * AcceptAddressLen);
-
-    DWORD dummy = 0;
-
-retry:
-    if (!fn.AcceptEx((SOCKET)daemon->listener, (SOCKET)socket->sock, socket->buf.ptr, AcceptReceiveLen,
-                     AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
-            WSAGetLastError() != ERROR_IO_PENDING) {
-        errno = TranslateWinSockError();
-
-        if (errno == ECONNRESET)
-            goto retry;
-
-        LogError("Failed to issue socket accept operation: %1", strerror(errno));
-        return false;
-    }
-
-    socket->op = PendingOperation::Accept;
-    err_guard.Disable();
-
-    return true;
 }
 
 bool http_Dispatcher::PostRead(SocketData *socket)
