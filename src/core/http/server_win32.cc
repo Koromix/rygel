@@ -58,8 +58,7 @@ enum class PendingOperation {
     None,
     Accept,
     Disconnect,
-    Read,
-    Done
+    Read
 };
 
 struct SocketData {
@@ -92,9 +91,6 @@ class http_Dispatcher {
     HeapArray<SocketData *> free_sockets;
 
     LocalArray<http_IO *, 256> free_clients;
-
-    Async async { 1 + WorkersPerDispatcher };
-    int next_worker = 0;
 
 public:
     http_Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn) : daemon(daemon), iocp(iocp), fn(fn) {}
@@ -186,7 +182,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
     };
 
     // Heuristic found on MSDN
-    async = new Async(1 + 2 * GetCoreCount());
+    async = new Async(1 + 4 * GetCoreCount());
 
     iocp = CreateIoCompletionPort((HANDLE)(uintptr_t)listener, nullptr, 1, 0);
     if (!iocp) {
@@ -336,10 +332,6 @@ retry:
 
 bool http_Dispatcher::Run()
 {
-    next_worker = 0;
-
-    RG_DEFER { async.Sync(); };
-
     for (;;) {
         DWORD transferred;
         uintptr_t key;
@@ -426,22 +418,6 @@ bool http_Dispatcher::Run()
 
                 ProcessClient(now, socket, client);
             } break;
-
-            case PendingOperation::Done: {
-                RG_ASSERT(success);
-
-                http_IO *client = socket->client.get();
-
-                if (client->request.keepalive) {
-                    client->Rearm(now);
-
-                    if (!PostRead(socket)) {
-                        DisconnectSocket(socket);
-                    }
-                } else {
-                    DisconnectSocket(socket);
-                }
-            } break;
         }
     }
 
@@ -472,17 +448,17 @@ void http_Dispatcher::ProcessClient(int64_t now, SocketData *socket, http_IO *cl
 
             client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
 
-            int worker_idx = 1 + next_worker;
-            next_worker = (next_worker + 1) % WorkersPerDispatcher;
+            daemon->RunHandler(client);
 
-            async.Run(worker_idx, [=, this] {
-                daemon->RunHandler(client);
+            if (client->request.keepalive) {
+                client->Rearm(now);
 
-                socket->op = PendingOperation::Done;
-                PostQueuedCompletionStatus(iocp, 0, 1, &socket->overlapped);
-
-                return true;
-            });
+                if (!PostRead(socket)) {
+                    DisconnectSocket(socket);
+                }
+            } else {
+                DisconnectSocket(socket);
+            }
         } break;
 
         case http_IO::RequestStatus::Busy: {} break;
