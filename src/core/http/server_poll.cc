@@ -573,7 +573,7 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     request.keepalive &= writer.Close();
 }
 
-bool http_IO::SendFile(int status, int fd, int64_t len)
+void http_IO::SendFile(int status, int fd, int64_t len)
 {
 #if defined(__linux__)
     Send(status, len, [&](int sock, StreamWriter *) {
@@ -632,8 +632,6 @@ bool http_IO::SendFile(int status, int fd, int64_t len)
         return SpliceStream(&reader, -1, writer);
     });
 #endif
-
-    return true;
 }
 
 http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)

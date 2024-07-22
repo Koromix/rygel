@@ -660,7 +660,7 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     request.keepalive &= writer.Close();
 }
 
-bool http_IO::SendFile(int status, int fd, int64_t len)
+void http_IO::SendFile(int status, int fd, int64_t len)
 {
     RG_ASSERT(!response.sent);
     RG_DEFER { response.sent = true; };
@@ -681,7 +681,7 @@ bool http_IO::SendFile(int status, int fd, int64_t len)
 
         if (!success) [[unlikely]] {
             LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
-            return false;
+            return;
         }
 
         offset += send - intro.len;
@@ -691,7 +691,7 @@ bool http_IO::SendFile(int status, int fd, int64_t len)
     while (len) {
         if (!SetFilePointerEx(h, { .QuadPart = offset }, nullptr, FILE_BEGIN)) {
             LogError("Failed to send file: %1", GetWin32ErrorString());
-            return false;
+            return;
         }
 
         DWORD send = (DWORD)std::min(len, (Size)UINT32_MAX);
@@ -699,14 +699,12 @@ bool http_IO::SendFile(int status, int fd, int64_t len)
 
         if (!success) [[unlikely]] {
             LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
-            return false;
+            return;
         }
 
         offset += (Size)send;
         len -= (Size)send;
     }
-
-    return true;
 }
 
 http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)

@@ -215,8 +215,8 @@ public:
     void SendAsset(int status, Span<const uint8_t> data, const char *mimetype = nullptr,
                    CompressionType src_encoding = CompressionType::None);
     void SendError(int status, const char *msg = nullptr);
-    bool SendFile(int status, const char *filename, const char *mimetype = nullptr);
-    bool SendFile(int status, int fd, int64_t len);
+    void SendFile(int status, const char *filename, const char *mimetype = nullptr);
+    void SendFile(int status, int fd, int64_t len);
 
     void AddFinalizer(const std::function<void()> &func);
 
