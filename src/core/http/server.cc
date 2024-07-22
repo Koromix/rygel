@@ -480,7 +480,7 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
     int fd = OpenFile(filename, (int)OpenFlag::Read);
     if (fd < 0)
         return;
-    RG_DEFER { CloseDescriptor(fd); };
+    RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
 
     FileInfo file_info;
     if (StatFile(fd, filename, &file_info) != StatResult::Success)
@@ -494,6 +494,7 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
         AddHeader("Content-Type", mimetype);
     }
 
+    err_guard.Disable();
     SendFile(status, fd, file_info.size);
 }
 
@@ -503,9 +504,9 @@ void http_IO::AddFinalizer(const std::function<void()> &func)
     response.finalizers.Append(func);
 }
 
-bool http_IO::Init(int sock, int64_t start, struct sockaddr *sa)
+bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
-    this->sock = sock;
+    this->socket = socket;
 
     int family = sa->sa_family;
     void *ptr = nullptr;

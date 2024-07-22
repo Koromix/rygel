@@ -52,7 +52,7 @@ namespace RG {
 
 static const int WorkersPerDispatcher = 4;
 
-struct SocketData {
+struct http_Socket {
     int sock = -1;
     int pfd_idx = -1;
     http_IO *client = nullptr;
@@ -74,7 +74,7 @@ class http_Dispatcher {
     std::atomic_bool run { true };
 #endif
 
-    HeapArray<SocketData> sockets;
+    HeapArray<http_Socket> sockets;
     LocalArray<http_IO *, 256> free_clients;
 
 public:
@@ -88,7 +88,7 @@ public:
 #endif
 
 private:
-    http_IO *InitClient(int sock, int64_t start, struct sockaddr *sa);
+    http_IO *InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa);
     void ParkClient(http_IO *client);
 };
 
@@ -240,7 +240,7 @@ bool http_Dispatcher::Run()
     RG_DEFER {
         async.Sync();
 
-        for (SocketData &socket: sockets) {
+        for (http_Socket &socket: sockets) {
             close(socket.sock);
             delete socket.client;
         }
@@ -311,10 +311,10 @@ bool http_Dispatcher::Run()
                     return false;
                 }
 
-                SocketData *socket = sockets.AppendDefault();
+                http_Socket *socket = sockets.AppendDefault();
 
                 socket->sock = sock;
-                socket->client = InitClient(sock, now, (sockaddr *)&ss);
+                socket->client = InitClient(socket, now, (sockaddr *)&ss);
 
                 if (!socket->client) {
                     sockets.RemoveLast(1);
@@ -343,7 +343,7 @@ bool http_Dispatcher::Run()
         for (Size i = 0; i < sockets.len; i++, keep++) {
             sockets[keep] = sockets[i];
 
-            SocketData *socket = &sockets[keep];
+            http_Socket *socket = &sockets[keep];
             http_IO *client = socket->client;
 
             const auto disconnect = [&]() {
@@ -408,7 +408,7 @@ bool http_Dispatcher::Run()
                             daemon->RunHandler(client);
 
                             client->ready = false;
-                            shutdown(client->sock, SHUT_RD);
+                            shutdown(client->socket->sock, SHUT_RD);
 
                             return true;
                         });
@@ -445,7 +445,7 @@ bool http_Dispatcher::Run()
 
         if (!ready) {
             // Process everyone after a timeout
-            for (SocketData &socket: sockets) {
+            for (http_Socket &socket: sockets) {
                 socket.pfd_idx = -1;
             }
         }
@@ -487,7 +487,7 @@ void http_Dispatcher::Stop()
 
 #endif
 
-http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *sa)
+http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
 
@@ -502,7 +502,7 @@ http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *s
         client = new http_IO(daemon);
     }
 
-    if (!client->Init(sock, start, sa)) [[unlikely]] {
+    if (!client->Init(socket, start, sa)) [[unlikely]] {
         delete client;
         return nullptr;
     }
@@ -513,7 +513,9 @@ http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *s
 void http_Dispatcher::ParkClient(http_IO *client)
 {
     if (free_clients.Available()) {
+        client->socket = nullptr;
         client->Rearm(-1);
+
         free_clients.Append(client);
     } else {
         delete client;
@@ -529,17 +531,17 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     }
 
 #if !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(sock, false);
-    RG_DEFER { SetSocketNonBlock(sock, true); };
+    SetSocketNonBlock(socket->sock, false);
+    RG_DEFER { SetSocketNonBlock(socket->sock, true); };
 #endif
 #if !defined(MSG_MORE)
     // On Linux, use MSG_MORE in send() calls to set TCP_CORK without additional syscall
-    SetSocketPush(sock, false);
+    SetSocketPush(socket->sock, false);
 #endif
 
     RG_DEFER { 
         response.sent = true;
-        SetSocketPush(sock, true);
+        SetSocketPush(socket->sock, true);
     };
 
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
@@ -554,7 +556,7 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
             writer.Open(write, "<http>", encoding);
         }
 
-        request.keepalive &= func(sock, &writer);
+        request.keepalive &= func(socket->sock, &writer);
     } else {
         const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
         StreamWriter chunker(chunk, "<http>", encoding);
@@ -572,6 +574,8 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
+    RG_DEFER { close(fd); };
+
 #if defined(__linux__)
     Send(status, len, [&](int sock, StreamWriter *) {
         off_t offset = 0;
@@ -645,9 +649,9 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
 
             Size available = incoming.buf.Available() - 1;
 #if defined(MSG_DONTWAIT)
-            Size read = recv(sock, incoming.buf.end(), available, MSG_DONTWAIT);
+            Size read = recv(socket->sock, incoming.buf.end(), available, MSG_DONTWAIT);
 #else
-            Size read = recv(sock, incoming.buf.end(), available, 0);
+            Size read = recv(socket->sock, incoming.buf.end(), available, 0);
 #endif
 
             incoming.buf.len += std::max(read, (Size)0);
@@ -705,6 +709,7 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
                         return RequestStatus::Incomplete;
                     } break;
 
+                    case EPIPE:
                     case ECONNRESET: return RequestStatus::Close;
 
                     default: {
@@ -734,9 +739,9 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     while (data.len) {
 #if defined(MSG_MORE)
-        Size sent = send(sock, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
+        Size sent = send(socket->sock, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
 #else
-        Size sent = send(sock, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
+        Size sent = send(socket->sock, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
 #endif
 
         if (sent < 0) {
@@ -773,9 +778,9 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
 
         do {
 #if defined(MSG_MORE)
-            Size sent = send(sock, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
+            Size sent = send(socket->sock, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
 #else
-            Size sent = send(sock, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
+            Size sent = send(socket->sock, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
 #endif
 
             if (sent < 0) {

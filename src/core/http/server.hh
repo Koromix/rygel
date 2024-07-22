@@ -70,7 +70,9 @@ struct http_Config {
 
 struct http_RequestInfo;
 class http_IO;
+
 class http_Dispatcher;
+struct http_Socket;
 
 class http_Daemon {
     RG_DELETE_COPY(http_Daemon)
@@ -164,7 +166,7 @@ class http_IO {
 
     http_Daemon *daemon;
 
-    int sock;
+    http_Socket *socket;
     char addr[65];
 
     int64_t socket_start;
@@ -193,7 +195,6 @@ class http_IO {
 public:
     ~http_IO();
 
-    int Descriptor() const { return sock; }
     RG::Allocator *Allocator() { return &allocator; }
 
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
@@ -223,7 +224,7 @@ public:
 private:
     http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(0); }
 
-    bool Init(int fd, int64_t start, struct sockaddr *sa);
+    bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
     bool InitAddress();
 
     RequestStatus ProcessIncoming(int64_t now);
