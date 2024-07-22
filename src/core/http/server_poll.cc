@@ -516,7 +516,7 @@ http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *s
 void http_Dispatcher::ParkClient(http_IO *client)
 {
     if (free_clients.Available()) {
-        client->Rearm(0);
+        client->Rearm(-1);
         free_clients.Append(client);
     } else {
         delete client;

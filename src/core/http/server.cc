@@ -744,8 +744,12 @@ void http_IO::Rearm(int64_t start)
 
     request_start = start;
 
-    MemMove(incoming.buf.ptr, incoming.extra.ptr, incoming.extra.len);
-    incoming.buf.RemoveFrom(incoming.extra.len);
+    if (start >= 0) {
+        MemMove(incoming.buf.ptr, incoming.extra.ptr, incoming.extra.len);
+        incoming.buf.RemoveFrom(incoming.extra.len);
+    } else {
+        incoming.buf.RemoveFrom(0);
+    }
     incoming.pos = 0;
     incoming.intro = {};
     incoming.extra = {};

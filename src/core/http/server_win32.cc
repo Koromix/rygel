@@ -48,6 +48,7 @@ typedef struct sockaddr_un {
 
 namespace RG {
 
+static const Size AcceptReceiveLen = Kibibytes(4);
 static const Size AcceptAddressLen = 2 * sizeof(SOCKADDR_STORAGE) + 16;
 
 static const int MinSockets = 16;
@@ -68,7 +69,7 @@ struct SocketData {
 
     PendingOperation op = PendingOperation::None;
     OVERLAPPED overlapped = {};
-    uint8_t accept[2 * AcceptAddressLen];
+    HeapArray<uint8_t> buf;
 
     std::unique_ptr<http_IO> client = nullptr;
 
@@ -93,14 +94,21 @@ class http_Dispatcher {
 
     LocalArray<http_IO *, 256> free_clients;
 
+    Async async { 1 + WorkersPerDispatcher };
+    int next_worker = 0;
+
 public:
     http_Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn) : daemon(daemon), iocp(iocp), fn(fn) {}
-    ~http_Dispatcher() { Close(); }
+    ~http_Dispatcher() { Cleanup(); }
 
     bool Init();
+    void Cleanup();
+
     bool Run();
 
 private:
+    void ProcessClient(int64_t now, SocketData *socket, http_IO *client);
+
     bool PostAccept();
     bool PostRead(SocketData *socket);
 
@@ -110,8 +118,6 @@ private:
 
     http_IO *InitClient(int sock, int64_t start, struct sockaddr *sa);
     void ParkClient(http_IO *client);
-
-    void Close();
 };
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
@@ -277,7 +283,7 @@ static SocketData *SocketFromOverlapped(void *ptr)
 
 bool http_Dispatcher::Init()
 {
-    RG_DEFER_N(err_guard) { Close(); };
+    RG_DEFER_N(err_guard) { Cleanup(); };
 
     for (Size i = 0; i < MinSockets; i++) {
         if (!PostAccept())
@@ -288,16 +294,25 @@ bool http_Dispatcher::Init()
     return true;
 }
 
+void http_Dispatcher::Cleanup()
+{
+    for (SocketData *socket: sockets) {
+        delete socket;
+    }
+    for (http_IO *client: free_clients) {
+        delete client;
+    }
+
+    sockets.Clear();
+    free_sockets.Clear();
+    free_clients.Clear();
+}
+
 bool http_Dispatcher::Run()
 {
-    Async async(1 + WorkersPerDispatcher);
+    next_worker = 0;
 
-    RG_DEFER {
-        async.Sync();
-        Close();
-    };
-
-    int next_worker = 0;
+    RG_DEFER { async.Sync(); };
 
     for (;;) {
         DWORD transferred;
@@ -342,16 +357,20 @@ bool http_Dispatcher::Run()
                 int local_len;
                 int remote_len;
 
-                fn.GetAcceptExSockaddrs(socket->accept, 0, AcceptAddressLen, AcceptAddressLen,
+                fn.GetAcceptExSockaddrs(socket->buf.ptr, AcceptReceiveLen, AcceptAddressLen, AcceptAddressLen,
                                         &local_addr, &local_len, &remote_addr, &remote_len);
 
                 http_IO *client = InitClient(socket->sock, now, remote_addr);
-                socket->client.reset(client);
-
-                if (!socket->client || !PostRead(socket)) [[unlikely]] {
+                if (!client) [[unlikely]] {
                     DisconnectSocket(socket);
                     continue;
                 }
+                socket->client.reset(client);
+
+                socket->buf.len = (Size)transferred;
+                std::swap(socket->buf, client->incoming.buf);
+
+                ProcessClient(now, socket, client);
             } break;
 
             case PendingOperation::Disconnect: {
@@ -370,6 +389,8 @@ bool http_Dispatcher::Run()
             } break;
 
             case PendingOperation::Read: {
+                RG_ASSERT(socket->client);
+
                 if (!success) [[unlikely]] {
                     DisconnectSocket(socket);
                     continue;
@@ -380,63 +401,70 @@ bool http_Dispatcher::Run()
                 client->incoming.buf.len += (Size)transferred;
                 client->incoming.buf.ptr[client->incoming.buf.len] = 0;
 
-                http_IO::PrepareStatus status = socket->client->Prepare(now);
-
-                switch (status) {
-                    case http_IO::PrepareStatus::Incoming: {
-                        if (!PostRead(socket)) {
-                            DisconnectSocket(socket);
-                        }
-                    } break;
-
-                    case http_IO::PrepareStatus::Ready: {
-                        if (!client->InitAddress()) {
-                            client->request.keepalive = false;
-                            client->SendError(400);
-                            DisconnectSocket(socket);
-
-                            break;
-                        }
-
-                        client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
-
-                        int worker_idx = 1 + next_worker;
-                        next_worker = (next_worker + 1) % WorkersPerDispatcher;
-
-                        if (client->request.keepalive) {
-                            async.Run(worker_idx, [=, this] {
-                                daemon->RunHandler(client);
-
-                                client->Rearm(now);
-
-                                if (!PostRead(socket)) {
-                                    socket->op = PendingOperation::WantDisconnect;
-                                    PostQueuedCompletionStatus(iocp, 0, 1, &socket->overlapped);
-                                }
-
-                                return true;
-                            });
-                        } else {
-                            async.Run(worker_idx, [=, this] {
-                                daemon->RunHandler(client);
-
-                                socket->op = PendingOperation::WantDisconnect;
-                                PostQueuedCompletionStatus(iocp, 0, 1, &socket->overlapped);
-
-                                return true;
-                            });
-                        }
-                    } break;
-
-                    case http_IO::PrepareStatus::Busy: {} break;
-
-                    case http_IO::PrepareStatus::Close: { DisconnectSocket(socket); } break;
-                }
+                ProcessClient(now, socket, client);
             } break;
         }
     }
 
     RG_UNREACHABLE();
+}
+
+void http_Dispatcher::ProcessClient(int64_t now, SocketData *socket, http_IO *client)
+{
+    RG_ASSERT(client == socket->client.get());
+
+    http_IO::PrepareStatus status = client->Prepare(now);
+
+    switch (status) {
+        case http_IO::PrepareStatus::Incoming: {
+            if (!PostRead(socket)) {
+                DisconnectSocket(socket);
+            }
+        } break;
+
+        case http_IO::PrepareStatus::Ready: {
+            if (!client->InitAddress()) {
+                client->request.keepalive = false;
+                client->SendError(400);
+                DisconnectSocket(socket);
+
+                break;
+            }
+
+            client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
+
+            int worker_idx = 1 + next_worker;
+            next_worker = (next_worker + 1) % WorkersPerDispatcher;
+
+            if (client->request.keepalive) {
+                async.Run(worker_idx, [=, this] {
+                    daemon->RunHandler(client);
+
+                    client->Rearm(now);
+
+                    if (!PostRead(socket)) {
+                        socket->op = PendingOperation::WantDisconnect;
+                        PostQueuedCompletionStatus(iocp, 0, 1, &socket->overlapped);
+                    }
+
+                    return true;
+                });
+            } else {
+                async.Run(worker_idx, [=, this] {
+                    daemon->RunHandler(client);
+
+                    socket->op = PendingOperation::WantDisconnect;
+                    PostQueuedCompletionStatus(iocp, 0, 1, &socket->overlapped);
+
+                    return true;
+                });
+            }
+        } break;
+
+        case http_IO::PrepareStatus::Busy: {} break;
+
+        case http_IO::PrepareStatus::Close: { DisconnectSocket(socket); } break;
+    }
 }
 
 bool http_Dispatcher::PostAccept()
@@ -446,11 +474,13 @@ bool http_Dispatcher::PostAccept()
         return false;
     RG_DEFER_N(err_guard) { DisconnectSocket(socket); };
 
-    DWORD received = 0;
+    socket->buf.AppendDefault(AcceptReceiveLen + 2 * AcceptAddressLen);
+
+    DWORD dummy = 0;
 
 retry:
-    if (!fn.AcceptEx((SOCKET)daemon->listener, (SOCKET)socket->sock, socket->accept, 0,
-                     AcceptAddressLen, AcceptAddressLen, &received, &socket->overlapped) &&
+    if (!fn.AcceptEx((SOCKET)daemon->listener, (SOCKET)socket->sock, socket->buf.ptr, AcceptReceiveLen,
+                     AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
             WSAGetLastError() != ERROR_IO_PENDING) {
         errno = TranslateWinSockError();
 
@@ -469,6 +499,9 @@ retry:
 
 bool http_Dispatcher::PostRead(SocketData *socket)
 {
+    if (socket->op == PendingOperation::Read)
+        return true;
+
     RG_ASSERT(socket->op == PendingOperation::None);
     RG_ASSERT(socket->client);
 
@@ -547,21 +580,16 @@ void http_Dispatcher::DisconnectSocket(SocketData *socket)
         http_IO *client = socket->client.release();
         ParkClient(client);
     }
+    socket->buf.RemoveFrom(0);
 
     free_sockets.Append(socket);
 }
 
 void http_Dispatcher::DestroySocket(SocketData *socket)
 {
-    // Filter it out from our array of reusable sockets
-    Size j = 0;
-    for (Size i = 0; i < sockets.len; i++) {
-        sockets[j] = sockets[i];
-        j += (sockets[i] != socket);
-    }
-    sockets.len = j;
-
-    delete socket;
+    // XXX: leak
+    closesocket(socket->sock);
+    socket->sock = -1;
 }
 
 http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *sa)
@@ -590,25 +618,11 @@ http_IO *http_Dispatcher::InitClient(int sock, int64_t start, struct sockaddr *s
 void http_Dispatcher::ParkClient(http_IO *client)
 {
     if (free_clients.Available()) {
-        client->Rearm(0);
+        client->Rearm(-1);
         free_clients.Append(client);
     } else {
         delete client;
     }
-}
-
-void http_Dispatcher::Close()
-{
-    for (SocketData *socket: sockets) {
-        delete socket;
-    }
-    for (http_IO *client: free_clients) {
-        delete client;
-    }
-
-    sockets.Clear();
-    free_sockets.Clear();
-    free_clients.Clear();
 }
 
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
