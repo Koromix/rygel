@@ -351,6 +351,9 @@ bool http_Dispatcher::Run()
                 socket->connected = true;
                 setsockopt(socket->sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&daemon->listener, RG_SIZE(daemon->listener));
 
+                int one = 1;
+                setsockopt(socket->sock, IPPROTO_TCP, TCP_NODELAY, (char *)&one, RG_SIZE(one));
+
                 sockaddr *local_addr = nullptr;
                 sockaddr *remote_addr = nullptr;
                 int local_len;
