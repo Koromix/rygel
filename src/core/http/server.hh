@@ -94,7 +94,7 @@ class http_Daemon {
     int max_request_cookies;
 
     Async *async = nullptr;
-    HeapArray<http_Dispatcher *> dispatchers;
+    http_Dispatcher *dispatcher = nullptr;
 
     std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
 

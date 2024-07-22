@@ -85,9 +85,10 @@ class http_Dispatcher {
     HANDLE iocp;
     IndirectFunctions fn;
 
+    std::mutex mutex;
+
     HeapArray<http_Socket *> sockets;
     HeapArray<http_Socket *> free_sockets;
-
     LocalArray<http_IO *, 256> free_clients;
 
 public:
@@ -173,10 +174,10 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
             iocp = nullptr;
         }
 
-        for (http_Dispatcher *dispatcher: dispatchers) {
+        if (dispatcher) {
             delete dispatcher;
+            dispatcher = nullptr;
         }
-        dispatchers.Clear();
     };
 
     // Heuristic found on MSDN
@@ -227,12 +228,10 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
         }
     }
 
-    for (Size i = 1; i < async->GetWorkerCount(); i++) {
-        http_Dispatcher *dispatcher = new http_Dispatcher(this, iocp, fn);
-        dispatchers.Append(dispatcher);
-    }
+    dispatcher = new http_Dispatcher(this, iocp, fn);
+
+    // Prepare sockets
     for (Size i = 0; i < ParallelConnections; i++) {
-        http_Dispatcher *dispatcher = dispatchers[i % dispatchers.len];
         if (!dispatcher->PostAccept())
             return false;
     }
@@ -242,8 +241,8 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 
     handle_func = func;
 
-    for (http_Dispatcher *dispatcher: dispatchers) {
-        async->Run([=] { return dispatcher->Run(); });
+    for (Size i = 1; i < async->GetWorkerCount(); i++) {
+        async->Run([this] { return dispatcher->Run(); });
     }
 
     return true;
@@ -251,7 +250,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 
 void http_Daemon::Stop()
 {
-    for (Size i = 0; i < dispatchers.len; i++) {
+    for (Size i = 0; i < async->GetWorkerCount(); i++) {
         PostQueuedCompletionStatus(iocp, 0, 0, nullptr);
     }
 
@@ -262,10 +261,10 @@ void http_Daemon::Stop()
         async = nullptr;
     }
 
-    for (http_Dispatcher *dispatcher: dispatchers) {
+    if (dispatcher) {
         delete dispatcher;
+        dispatcher = nullptr;
     }
-    dispatchers.Clear();
 
     CloseSocket(listener);
     listener = -1;
@@ -395,6 +394,8 @@ bool http_Dispatcher::Run()
                 }
 
                 socket->connected = false;
+
+                std::lock_guard<std::mutex> lock(mutex);
                 free_sockets.Append(socket);
             } break;
 
@@ -465,7 +466,6 @@ void http_Dispatcher::ProcessClient(int64_t now, http_Socket *socket, http_IO *c
         } break;
 
         case http_IO::RequestStatus::Busy: {} break;
-
         case http_IO::RequestStatus::Close: { DisconnectSocket(socket); } break;
     }
 }
@@ -503,29 +503,39 @@ bool http_Dispatcher::PostRead(http_Socket *socket)
 
 http_Socket *http_Dispatcher::InitSocket()
 {
-    http_Socket *socket = nullptr;
+    // Try to reuse socket
+    {
+        std::lock_guard<std::mutex> lock(mutex);
 
-    if (free_sockets.len) {
-        int idx = GetRandomInt(0, (int)free_sockets.len);
+        if (free_sockets.len) {
+            int idx = GetRandomInt(0, (int)free_sockets.len);
 
-        socket = free_sockets[idx];
+            http_Socket *socket = free_sockets[idx];
 
-        std::swap(free_sockets[idx], free_sockets[free_sockets.len - 1]);
-        free_sockets.len--;
-    } else {
-        socket = new http_Socket();
-        RG_DEFER_N(err_guard) { delete socket; };
+            std::swap(free_sockets[idx], free_sockets[free_sockets.len - 1]);
+            free_sockets.len--;
 
-        socket->sock = CreateSocket(daemon->sock_type, SOCK_STREAM | SOCK_OVERLAPPED);
-        if (socket->sock < 0)
-            return nullptr;
-
-        if (!CreateIoCompletionPort((HANDLE)(uintptr_t)socket->sock, iocp, 1, 0)) {
-            LogError("Failed to associate socket with IOCP: %1", GetWin32ErrorString());
-            return nullptr;
+            return socket;
         }
+    }
 
-        err_guard.Disable();
+    http_Socket *socket = new http_Socket();
+    RG_DEFER_N(err_guard) { delete socket; };
+
+    socket->sock = CreateSocket(daemon->sock_type, SOCK_STREAM | SOCK_OVERLAPPED);
+    if (socket->sock < 0)
+        return nullptr;
+
+    if (!CreateIoCompletionPort((HANDLE)(uintptr_t)socket->sock, iocp, 1, 0)) {
+        LogError("Failed to associate socket with IOCP: %1", GetWin32ErrorString());
+        return nullptr;
+    }
+
+    err_guard.Disable();
+
+    // Add to global list
+    {
+        std::lock_guard<std::mutex> lock(mutex);
         sockets.Append(socket);
     }
 
@@ -559,25 +569,34 @@ void http_Dispatcher::DisconnectSocket(http_Socket *socket)
 
 void http_Dispatcher::DestroySocket(http_Socket *socket)
 {
-    // XXX: Leak
+    std::lock_guard<std::mutex> lock(mutex);
 
-    closesocket(socket->sock);
-    socket->sock = -1;
+    Size j = 0;
+    for (Size i = 0; i < sockets.len; i++) {
+        sockets[j] = sockets[i];
+        j += (socket != sockets[i]);
+    }
+    sockets.len = j;
+
+    delete socket;
 }
 
 http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     http_IO *client = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(mutex);
 
-    if (free_clients.len) {
-        int idx = GetRandomInt(0, (int)free_clients.len);
+        if (free_clients.len) {
+            int idx = GetRandomInt(0, (int)free_clients.len);
 
-        client = free_clients[idx];
+            client = free_clients[idx];
 
-        std::swap(free_clients[idx], free_clients[free_clients.len - 1]);
-        free_clients.len--;
-    } else {
-        client = new http_IO(daemon);
+            std::swap(free_clients[idx], free_clients[free_clients.len - 1]);
+            free_clients.len--;
+        } else {
+            client = new http_IO(daemon);
+        }
     }
 
     if (!client->Init(socket, start, sa)) [[unlikely]] {
@@ -590,6 +609,8 @@ http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct 
 
 void http_Dispatcher::ParkClient(http_IO *client)
 {
+    std::lock_guard<std::mutex> lock(mutex);
+
     if (free_clients.Available()) {
         client->socket = nullptr;
         client->Rearm(-1);

@@ -60,6 +60,7 @@ struct http_Socket {
 
 class http_Dispatcher {
     http_Daemon *daemon;
+    http_Dispatcher *next;
 
 #if defined(__linux__) || defined(__FreeBSD__)
     int event_fd = -1;
@@ -78,7 +79,7 @@ class http_Dispatcher {
     LocalArray<http_IO *, 256> free_clients;
 
 public:
-    http_Dispatcher(http_Daemon *daemon) : daemon(daemon) {}
+    http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next) : daemon(daemon), next(next) {}
 
     bool Run();
     void Wake();
@@ -90,6 +91,8 @@ public:
 private:
     http_IO *InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa);
     void ParkClient(http_IO *client);
+
+    friend class http_Daemon;
 };
 
 static void SetSocketNonBlock(int sock, bool enable)
@@ -165,8 +168,8 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 
     // Run request dispatchers
     for (Size i = 1; i < async->GetWorkerCount(); i++) {
-        http_Dispatcher *dispatcher = new http_Dispatcher(this);
-        dispatchers.Append(dispatcher);
+        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher);
+        this->dispatcher = dispatcher;
 
         async->Run([=] { return dispatcher->Run(); });
     }
@@ -181,8 +184,8 @@ void http_Daemon::Stop()
 
 #if defined(__APPLE__)
     // On macOS, the shutdown() does not wake up poll()
-    for (http_Dispatcher *dispatcher: dispatchers) {
-        dispatcher->Stop();
+    for (http_Dispatcher *it = dispatcher; it; it = it->next) {
+        it->Stop();
     }
 #endif
 
@@ -193,10 +196,11 @@ void http_Daemon::Stop()
         async = nullptr;
     }
 
-    for (http_Dispatcher *dispatcher: dispatchers) {
+    while (dispatcher) {
+        http_Dispatcher *next = dispatcher->next;
         delete dispatcher;
+        dispatcher = next;
     }
-    dispatchers.Clear();
 
     CloseSocket(listener);
     listener = -1;
@@ -348,9 +352,7 @@ bool http_Dispatcher::Run()
 
             const auto disconnect = [&]() {
                 close(socket->sock);
-
                 ParkClient(socket->client);
-                socket->client = nullptr;
 
                 keep--;
             };
@@ -407,8 +409,8 @@ bool http_Dispatcher::Run()
                         async.Run(worker_idx, [=, this] {
                             daemon->RunHandler(client);
 
-                            client->ready = false;
                             shutdown(client->socket->sock, SHUT_RD);
+                            client->ready = false;
 
                             return true;
                         });
