@@ -2627,6 +2627,56 @@ public:
         len -= count;
     }
 
+    void RemoveFrom(const iterator_type &it)
+    {
+        if (it == end())
+            return;
+        if (it == begin()) {
+            Clear();
+            return;
+        }
+
+        DeleteValues(it, end());
+
+        Size delete_idx = it.bucket_idx + !!it.bucket_offset;
+        for (Size i = delete_idx; i < buckets.len; i++) {
+            DeleteBucket(buckets[i]);
+        }
+        buckets.RemoveFrom(delete_idx);
+
+        len = (it.bucket_idx * BucketSize) + it.bucket_offset - offset;
+
+        RG_ASSERT(it == end());
+    }
+    void RemoveFrom(const Iterator<const BucketArray<T, BucketSize>> &it) { return RemoveFrom((iterator_type)it); }
+
+    void RemoveUntil(const iterator_type &it)
+    {
+        if (it == begin())
+            return;
+        if (it == end()) {
+            Clear();
+            return;
+        }
+
+        DeleteValues(begin(), it);
+
+        if (it.bucket_idx) {
+            for (Size i = 0; i < it.bucket_idx; i++) {
+                DeleteBucket(buckets[i]);
+            }
+            MemMove(&buckets[0], &buckets[it.bucket_idx],
+                    (buckets.len - it.bucket_idx) * RG_SIZE(Bucket *));
+            buckets.RemoveLast(it.bucket_idx);
+        }
+
+        Size count = it.bucket_idx * BucketSize + it.bucket_offset - offset;
+
+        offset = (offset + count) % BucketSize;
+        len -= count;
+    }
+    void RemoveUntil(const Iterator<const BucketArray<T, BucketSize>> &it) { return RemoveUntil((iterator_type)it); }
+
     void Trim()
     {
         buckets.Trim();
