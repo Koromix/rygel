@@ -359,6 +359,8 @@ bool http_Dispatcher::Run()
                 socket->process = true;
             }
         }
+
+        events.len = ready;
     }
 
     RG_UNREACHABLE();
