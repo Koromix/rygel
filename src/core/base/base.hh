@@ -4330,9 +4330,11 @@ void SignalWaitFor();
 
 int GetCoreCount();
 
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__wasi__)
+bool RaiseMaximumOpenFiles(int limit = -1);
 bool DropRootIdentity();
 #endif
+
 #if defined(__linux__)
 bool NotifySystemd();
 #endif

@@ -721,6 +721,11 @@ Options:
         return 1;
     }
 
+#if !defined(_WIN32)
+    // Increase maximum number of open file descriptors (up to hard limit)
+    RaiseMaximumOpenFiles();
+#endif
+
     // Load config
     if (!explicit_config && !TestFile(config_filename)) {
         config_filename = nullptr;

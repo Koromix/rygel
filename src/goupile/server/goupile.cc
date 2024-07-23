@@ -27,7 +27,6 @@
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #if !defined(_WIN32)
     #include <sys/time.h>
-    #include <sys/resource.h>
     #include <sys/types.h>
     #include <sys/socket.h>
     #include <netdb.h>
@@ -940,27 +939,8 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     }
 
 #if !defined(_WIN32)
-    {
-        const rlim_t max_nofile = 4096;
-        struct rlimit lim;
-
-        // Increase maximum number of open file descriptors
-        if (getrlimit(RLIMIT_NOFILE, &lim) >= 0) {
-            if (lim.rlim_cur < max_nofile) {
-                lim.rlim_cur = std::min(max_nofile, lim.rlim_max);
-
-                if (setrlimit(RLIMIT_NOFILE, &lim) >= 0) {
-                    if (lim.rlim_cur < max_nofile) {
-                        LogError("Maximum number of open descriptors is low: %1 (recommended: %2)", lim.rlim_cur, max_nofile);
-                    }
-                } else {
-                    LogError("Could not raise RLIMIT_NOFILE to %1: %2", max_nofile, strerror(errno));
-                }
-            }
-        } else {
-            LogError("getrlimit(RLIMIT_NOFILE) failed: %1", strerror(errno));
-        }
-    }
+    // Increase maximum number of open file descriptors
+    RaiseMaximumOpenFiles(4096);
 #endif
 
     LogInfo("Init assets");

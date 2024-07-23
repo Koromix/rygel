@@ -81,6 +81,7 @@
     #include <spawn.h>
     #include <sys/ioctl.h>
     #include <sys/mman.h>
+    #include <sys/resource.h>
     #include <sys/stat.h>
     #include <sys/types.h>
     #include <sys/socket.h>
@@ -4556,6 +4557,36 @@ int GetCoreCount()
 }
 
 #if !defined(_WIN32) && !defined(__wasi__)
+
+bool RaiseMaximumOpenFiles(int limit)
+{
+    struct rlimit lim;
+
+    if (getrlimit(RLIMIT_NOFILE, &lim) < 0) {
+        LogError("getrlimit(RLIMIT_NOFILE) failed: %1", strerror(errno));
+        return false;
+    }
+
+    if (limit < 0) {
+        limit = (int)lim.rlim_max;
+    }
+
+    if (lim.rlim_cur >= (rlim_t)limit)
+        return true;
+
+    lim.rlim_cur = std::min((rlim_t)limit, lim.rlim_max);
+
+    if (setrlimit(RLIMIT_NOFILE, &lim) < 0) {
+        LogError("Could not raise RLIMIT_NOFILE: %2", strerror(errno));
+        return false;
+    }
+
+    if (lim.rlim_cur < (rlim_t)limit) {
+        LogWarning("Maximum number of open descriptors is low: %1 (recommended: %2)", lim.rlim_cur, limit);
+    }
+
+    return true;
+}
 
 bool DropRootIdentity()
 {
