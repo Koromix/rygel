@@ -2410,6 +2410,12 @@ public:
         {
             if (++bucket_offset >= BucketSize) {
                 bucket_idx++;
+                bucket_offset = 0;
+
+                // Allow iterator to go before start temporarily
+                if (bucket_idx < 0) [[unlikely]]
+                    return *this;
+
                 if (next_bucket) {
                     // We support deletion of all values up to (and including) the current one.
                     // When the user does that, some or all front buckets may be gone, but we can
@@ -2419,7 +2425,6 @@ public:
                         bucket_idx--;
                     }
                 }
-                bucket_offset = 0;
 
                 bucket = GetBucketSafe(bucket_idx);
                 next_bucket = GetBucketSafe(bucket_idx + 1);
@@ -2437,13 +2442,14 @@ public:
         Iterator &operator--()
         {
             if (--bucket_offset < 0) {
-                RG_ASSERT(bucket_idx > 0);
-
                 bucket_idx--;
                 bucket_offset = BucketSize - 1;
 
-                bucket = GetBucketSafe(bucket_idx);
-                next_bucket = GetBucketSafe(bucket_idx + 1);
+                // Allow iterator to go before start temporarily
+                if (bucket_idx >= 0) [[unlikely]] {
+                    bucket = (bucket_idx >= 0) ? GetBucketSafe(bucket_idx) : nullptr;
+                    next_bucket = (bucket_idx >= 0) ? GetBucketSafe(bucket_idx + 1) : nullptr;
+                }
             }
 
             return *this;
