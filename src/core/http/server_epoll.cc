@@ -297,17 +297,17 @@ bool http_Dispatcher::Run()
                 keep--;
             };
 
-            http_IO::RequestStatus status = socket->process ? client->ProcessIncoming(now)
-                                                            : http_IO::RequestStatus::Incomplete;
+            http_IO::PrepareStatus status = socket->process ? client->ProcessIncoming(now)
+                                                            : http_IO::PrepareStatus::Incomplete;
             socket->process = false;
 
             switch (status) {
-                case http_IO::RequestStatus::Incomplete: {
+                case http_IO::PrepareStatus::Incomplete: {
                     int64_t delay = std::max((int64_t)0, client->GetTimeout(now));
                     timeout = std::min(timeout, (unsigned int)delay);
                 } break;
 
-                case http_IO::RequestStatus::Ready: {
+                case http_IO::PrepareStatus::Ready: {
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
@@ -348,7 +348,7 @@ bool http_Dispatcher::Run()
                     }
                 } break;
 
-                case http_IO::RequestStatus::Close: { disconnect(); } break;
+                case http_IO::PrepareStatus::Close: { disconnect(); } break;
             }
         }
         sockets.len = keep;
@@ -532,7 +532,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     });
 }
 
-http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
+http_IO::PrepareStatus http_IO::ProcessIncoming(int64_t now)
 {
     RG_ASSERT(!ready);
 
@@ -556,7 +556,7 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
                 if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
                     LogError("Excessive request size");
                     SendError(413);
-                    return RequestStatus::Close;
+                    return PrepareStatus::Close;
                 }
 
                 const char *end = (const char *)incoming.buf.ptr + incoming.pos;
@@ -592,25 +592,25 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
                             if (IsPreparing()) {
                                 LogError("Timed out while waiting for HTTP request");
                             }
-                            return RequestStatus::Close;
+                            return PrepareStatus::Close;
                         }
 
-                        return RequestStatus::Incomplete;
+                        return PrepareStatus::Incomplete;
                     } break;
 
                     case EPIPE:
-                    case ECONNRESET: return RequestStatus::Close;
+                    case ECONNRESET: return PrepareStatus::Close;
 
                     default: {
                         LogError("Read failed: %1 (%2) %3", strerror(errno), socket->sock, socket);
-                        return RequestStatus::Close;
+                        return PrepareStatus::Close;
                     } break;
                 }
             } else if (!read) {
                 if (incoming.buf.len) {
                     LogError("Client closed connection with unfinished request");
                 }
-                return RequestStatus::Close;
+                return PrepareStatus::Close;
             }
         }
 
@@ -618,10 +618,10 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
     }
 
     if (!ParseRequest(incoming.intro))
-        return RequestStatus::Close;
+        return PrepareStatus::Close;
 
     ready = true;
-    return RequestStatus::Ready;
+    return PrepareStatus::Ready;
 }
 
 bool http_IO::WriteDirect(Span<const uint8_t> data)

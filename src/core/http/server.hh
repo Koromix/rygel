@@ -157,10 +157,9 @@ struct http_RequestInfo {
 class http_IO {
     RG_DELETE_COPY(http_IO)
 
-    enum class RequestStatus {
+    enum class PrepareStatus {
         Incomplete,
         Ready,
-        Busy,
         Close
     };
 
@@ -226,7 +225,7 @@ private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
     bool InitAddress();
 
-    RequestStatus ProcessIncoming(int64_t now);
+    PrepareStatus ProcessIncoming(int64_t now);
 
     bool ParseRequest(Span<char> request);
     Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len);

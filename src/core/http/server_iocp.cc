@@ -470,16 +470,16 @@ void http_Dispatcher::ProcessClient(int64_t now, http_Socket *socket, http_IO *c
 {
     RG_ASSERT(client == socket->client.get());
 
-    http_IO::RequestStatus status = client->ProcessIncoming(now);
+    http_IO::PrepareStatus status = client->ProcessIncoming(now);
 
     switch (status) {
-        case http_IO::RequestStatus::Incomplete: {
+        case http_IO::PrepareStatus::Incomplete: {
             if (!PostRead(socket)) {
                 DisconnectSocket(socket);
             }
         } break;
 
-        case http_IO::RequestStatus::Ready: {
+        case http_IO::PrepareStatus::Ready: {
             if (!client->InitAddress()) {
                 client->request.keepalive = false;
                 client->SendError(400);
@@ -492,8 +492,7 @@ void http_Dispatcher::ProcessClient(int64_t now, http_Socket *socket, http_IO *c
             daemon->RunHandler(client);
         } break;
 
-        case http_IO::RequestStatus::Busy: {} break;
-        case http_IO::RequestStatus::Close: { DisconnectSocket(socket); } break;
+        case http_IO::PrepareStatus::Close: { DisconnectSocket(socket); } break;
     }
 }
 
@@ -778,12 +777,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     }
 }
 
-http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
+http_IO::PrepareStatus http_IO::ProcessIncoming(int64_t now)
 {
     RG_ASSERT(socket);
-
-    if (ready)
-        return RequestStatus::Busy;
+    RG_ASSERT(!ready);
 
     bool complete = false;
 
@@ -795,7 +792,7 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
         if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
             LogError("Excessive request size");
             SendError(413);
-            return RequestStatus::Close;
+            return PrepareStatus::Close;
         }
 
         const char *end = (const char *)incoming.buf.ptr + incoming.pos;
@@ -818,12 +815,12 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
     }
 
     if (!complete)
-        return RequestStatus::Incomplete;
+        return PrepareStatus::Incomplete;
     if (!ParseRequest(incoming.intro))
-        return RequestStatus::Close;
+        return PrepareStatus::Close;
 
     ready = true;
-    return RequestStatus::Ready;
+    return PrepareStatus::Ready;
 }
 
 bool http_IO::WriteDirect(Span<const uint8_t> data)
