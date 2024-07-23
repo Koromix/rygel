@@ -139,7 +139,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
-    async = new Async(1 + GetCoreCount());
+    async = new Async(1 + 4 * GetCoreCount());
 
     handle_func = func;
 
