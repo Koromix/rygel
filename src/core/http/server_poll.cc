@@ -610,7 +610,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     RG_DEFER {
         response.sent = true;
         SetSocketPush(socket->sock, true);
-    }
+    };
 
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
