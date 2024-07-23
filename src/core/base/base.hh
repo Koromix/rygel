@@ -4566,6 +4566,9 @@ int CreateSocket(SocketType type, int flags);
 int TranslateWinSockError(int error = INT_MAX);
 #endif
 
+bool BindIPSocket(int sock, SocketType type, int port);
+bool BindUnixSocket(int sock, const char *path);
+
 int OpenIPSocket(SocketType type, int port, int flags);
 int OpenUnixSocket(const char *path, int flags);
 int ConnectToUnixSocket(const char *path, int flags);

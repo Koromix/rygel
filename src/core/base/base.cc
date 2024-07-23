@@ -5679,14 +5679,9 @@ int CreateSocket(SocketType type, int flags)
 
 #endif
 
-int OpenIPSocket(SocketType type, int port, int flags)
+bool BindIPSocket(int sock, SocketType type, int port)
 {
     RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
-
-    int sock = CreateSocket(type, flags);
-    if (sock < 0)
-        return -1;
-    RG_DEFER_N(err_guard) { CloseSocket(sock); };
 
     if (type == SocketType::IPv4) {
         struct sockaddr_in addr = {};
@@ -5701,7 +5696,7 @@ int OpenIPSocket(SocketType type, int port, int flags)
 #endif
 
             LogError("Failed to bind to port %1: %2", port, strerror(errno));
-            return -1;
+            return false;
         }
     } else {
         struct sockaddr_in6 addr = {};
@@ -5716,28 +5711,22 @@ int OpenIPSocket(SocketType type, int port, int flags)
 #endif
 
             LogError("Failed to bind to port %1: %2", port, strerror(errno));
-            return -1;
+            return false;
         }
     }
 
-    err_guard.Disable();
-    return sock;
+    return true;
 }
 
-int OpenUnixSocket(const char *path, int flags)
+bool BindUnixSocket(int sock, const char *path)
 {
     struct sockaddr_un addr = {};
 
     addr.sun_family = AF_UNIX;
     if (!CopyString(path, addr.sun_path)) {
         LogError("Excessive UNIX socket path length");
-        return -1;
+        return false;
     }
-
-    int sock = CreateSocket(SocketType::Unix, flags);
-    if (sock < 0)
-        return -1;
-    RG_DEFER_N(err_guard) { CloseSocket(sock); };
 
     unlink(path);
     if (bind(sock, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
@@ -5746,9 +5735,38 @@ int OpenUnixSocket(const char *path, int flags)
 #endif
 
         LogError("Failed to bind socket to '%1': %2", path, strerror(errno));
-        return -1;
+        return false;
     }
     chmod(path, 0666);
+
+    return true;
+}
+
+int OpenIPSocket(SocketType type, int port, int flags)
+{
+    RG_ASSERT(type == SocketType::Dual || type == SocketType::IPv4 || type == SocketType::IPv6);
+
+    int sock = CreateSocket(type, flags);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+
+    if (!BindIPSocket(sock, type, port))
+        return -1;
+
+    err_guard.Disable();
+    return sock;
+}
+
+int OpenUnixSocket(const char *path, int flags)
+{
+    int sock = CreateSocket(SocketType::Unix, flags);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { CloseSocket(sock); };
+
+    if (!BindUnixSocket(sock, path))
+        return -1;
 
     err_guard.Disable();
     return sock;
