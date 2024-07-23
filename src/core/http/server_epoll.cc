@@ -48,7 +48,7 @@ static const int WorkersPerDispatcher = 4;
 
 struct http_Socket {
     int sock = -1;
-    bool busy = false;
+    bool process = false;
 
     http_IO client;
 
@@ -66,6 +66,7 @@ class http_Dispatcher {
 
     HeapArray<http_Socket *> sockets;
     LocalArray<http_Socket *, 256> free_sockets;
+    HashSet<void *> busy_sockets;
 
 public:
     http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next) : daemon(daemon), next(next) {}
@@ -75,6 +76,7 @@ public:
 private:
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
+    void IgnoreSocket(http_Socket *socket);
 
     bool AddEpollDescriptor(int fd, uint32_t events, int value);
     bool AddEpollDescriptor(int fd, uint32_t events, void *ptr);
@@ -202,6 +204,10 @@ bool http_Dispatcher::Run()
         for (http_Socket *socket: free_sockets) {
             delete socket;
         }
+        for (void *ptr: busy_sockets.table) {
+            http_Socket *socket = (http_Socket *)ptr;
+            delete socket;
+        }
 
         sockets.Clear();
         free_sockets.Clear();
@@ -239,7 +245,6 @@ bool http_Dispatcher::Run()
                     }
 
                     http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
-                    socket->busy = true;
 
                     if (!socket) [[unlikely]] {
                         close(sock);
@@ -250,7 +255,14 @@ bool http_Dispatcher::Run()
                 }
             } else {
                 http_Socket *socket = (http_Socket *)ev.data.ptr;
-                socket->busy = true;
+                void **ptr = busy_sockets.Find(socket);
+
+                if (ptr) {
+                    sockets.Append(socket);
+                    busy_sockets.Remove(ptr);
+                }
+
+                socket->process = true;
             }
         }
 
@@ -268,10 +280,14 @@ bool http_Dispatcher::Run()
                 ParkSocket(socket);
                 keep--;
             };
+            const auto ignore = [&]() {
+                IgnoreSocket(socket);
+                keep--;
+            };
 
-            http_IO::RequestStatus status = socket->busy ? client->ProcessIncoming(now)
-                                                         : http_IO::RequestStatus::Incomplete;
-            socket->busy = false;
+            http_IO::RequestStatus status = socket->process ? client->ProcessIncoming(now)
+                                                            : http_IO::RequestStatus::Incomplete;
+            socket->process = false;
 
             switch (status) {
                 case http_IO::RequestStatus::Incomplete: {
@@ -280,8 +296,6 @@ bool http_Dispatcher::Run()
                 } break;
 
                 case http_IO::RequestStatus::Ready: {
-                    DeleteEpollDescriptor(socket->sock);
-
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
@@ -294,6 +308,8 @@ bool http_Dispatcher::Run()
 
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerDispatcher;
+
+                    ignore();
 
                     if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
@@ -320,8 +336,6 @@ bool http_Dispatcher::Run()
                     }
                 } break;
 
-                case http_IO::RequestStatus::Busy: {} break;
-
                 case http_IO::RequestStatus::Close: { disconnect(); } break;
             }
         }
@@ -342,7 +356,7 @@ bool http_Dispatcher::Run()
         if (!ready) {
             // Process everyone after a timeout
             for (http_Socket *socket: sockets) {
-                socket->busy = true;
+                socket->process = true;
             }
         }
     }
@@ -393,6 +407,12 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
     } else {
         delete socket;
     }
+}
+
+void http_Dispatcher::IgnoreSocket(http_Socket *socket)
+{
+    DeleteEpollDescriptor(socket->sock);
+    busy_sockets.Set(socket);
 }
 
 bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, int value)
@@ -500,8 +520,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
 http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
 {
-    if (ready)
-        return RequestStatus::Busy;
+    RG_ASSERT(!ready);
 
     // Gather request line and headers
     {
