@@ -77,7 +77,7 @@ struct http_Socket;
 class http_Daemon {
     RG_DELETE_COPY(http_Daemon)
 
-    int listener = -1;
+    HeapArray<int> listeners;
 
 #if defined(_WIN32)
     void *iocp = nullptr; // HANDLE

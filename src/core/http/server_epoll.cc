@@ -62,6 +62,8 @@ class http_Dispatcher {
     http_Daemon *daemon;
     http_Dispatcher *next;
 
+    int listener;
+
     int epoll_fd = -1;
 
     HeapArray<http_Socket *> sockets;
@@ -69,7 +71,8 @@ class http_Dispatcher {
     HashSet<void *> busy_sockets;
 
 public:
-    http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next) : daemon(daemon), next(next) {}
+    http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next, int listener)
+        : daemon(daemon), next(next), listener(listener) {}
 
     bool Run();
 
@@ -100,10 +103,13 @@ static void SetSocketPush(int sock, bool push)
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
-    RG_ASSERT(listener < 0);
+    RG_ASSERT(!listeners.len);
 
     if (!InitConfig(config))
         return false;
+
+    int listener = -1;
+    RG_DEFER_N(err_guard) { CloseDescriptor(listener); };
 
     switch (config.sock_type) {
         case SocketType::Dual:
@@ -114,12 +120,14 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     if (listener < 0)
         return false;
 
-    if (listen(listener, 1024) < 0) {
+    if (listen(listener, 200) < 0) {
         LogError("Failed to listen on socket: %1", strerror(errno));
         return false;
     }
-
     SetSocketNonBlock(listener, true);
+
+    listeners.Append(listener);
+    err_guard.Disable();
 
     if (log_addr) {
         if (config.sock_type == SocketType::Unix) {
@@ -135,17 +143,17 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 
 bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
-    RG_ASSERT(listener >= 0);
+    RG_ASSERT(listeners.len == 1);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
-    async = new Async(1 + 4 * GetCoreCount());
+    async = new Async(1 + 2 * GetCoreCount());
 
     handle_func = func;
 
     // Run request dispatchers
-    for (Size i = 1; i < async->GetWorkerCount(); i++) {
-        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher);
+    for (int i = 1; i < async->GetWorkerCount(); i++) {
+        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listeners[0]);
         this->dispatcher = dispatcher;
 
         async->Run([=] { return dispatcher->Run(); });
@@ -157,7 +165,9 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 void http_Daemon::Stop()
 {
     // Shut everything down
-    shutdown(listener, SHUT_RD);
+    for (int listener: listeners) {
+        shutdown(listener, SHUT_RD);
+    }
 
     if (async) {
         async->Sync();
@@ -172,8 +182,10 @@ void http_Daemon::Stop()
         dispatcher = next;
     }
 
-    CloseSocket(listener);
-    listener = -1;
+    for (int listener: listeners) {
+        CloseSocket(listener);
+    }
+    listeners.Clear();
 
     handle_func = {};
 }
@@ -213,7 +225,7 @@ bool http_Dispatcher::Run()
         free_sockets.Clear();
     };
 
-    if (!AddEpollDescriptor(daemon->listener, EPOLLIN | EPOLLEXCLUSIVE, 0))
+    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLEXCLUSIVE, 0))
         return false;
 
     HeapArray<struct epoll_event> events;
@@ -231,8 +243,8 @@ bool http_Dispatcher::Run()
                 socklen_t ss_len = RG_SIZE(ss);
 
                 // Accept queued clients
-                for (int i = 0; i < 64; i++) {
-                    int sock = accept4(daemon->listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+                for (int i = 0; i < 8; i++) {
+                    int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 
                     if (sock < 0) {
                         if (errno == EINVAL)

@@ -35,28 +35,19 @@
 #include <netinet/tcp.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#if defined(__FreeBSD__)
-    #include <sys/eventfd.h>
-    #include <sys/uio.h>
-#elif defined(__APPLE__)
-    #include <sys/uio.h>
-#endif
+#include <sys/event.h>
+#include <sys/uio.h>
 
 namespace RG {
 
 // Sane platform
 static_assert(EAGAIN == EWOULDBLOCK);
 
-// Make things work on macOS
-#if defined(MSG_DONTWAIT) && !defined(SOCK_CLOEXEC)
-    #undef MSG_DONTWAIT
-#endif
-
 static const int WorkersPerDispatcher = 4;
 
 struct http_Socket {
     int sock = -1;
-    int pfd_idx = -1;
+    bool process = false;
 
     http_IO client;
 
@@ -64,18 +55,16 @@ struct http_Socket {
     ~http_Socket() { CloseDescriptor(sock); }
 };
 
+static_assert(EAGAIN == EWOULDBLOCK);
+
 class http_Dispatcher {
     http_Daemon *daemon;
     http_Dispatcher *next;
 
-#if defined(__FreeBSD__)
-    int event_fd = -1;
-#else
+    int listener;
+
+    int kqueue_fd = -1;
     int pair_fd[2] = { -1, -1 };
-#endif
-    std::shared_mutex wake_mutex;
-    bool wake_up = false;
-    bool wake_interrupt = false;
 
 #if defined(__APPLE__)
     std::atomic_bool run { true };
@@ -83,12 +72,16 @@ class http_Dispatcher {
 
     HeapArray<http_Socket *> sockets;
     LocalArray<http_Socket *, 256> free_sockets;
+    HashSet<void *> busy_sockets;
+
+    HeapArray<struct kevent> next_changes;
 
 public:
-    http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next) : daemon(daemon), next(next) {}
+    http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next, int listener)
+        : daemon(daemon), next(next), listener(listener) {}
 
     bool Run();
-    void Wake();
+    void Wake(http_Socket *socket);
 
 #if defined(__APPLE__)
     void Stop();
@@ -97,6 +90,9 @@ public:
 private:
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
+    void IgnoreSocket(http_Socket *socket);
+
+    void AddEventChange(short filter, int fd, uint16_t flags, void *ptr);
 
     friend class http_Daemon;
 };
@@ -110,45 +106,77 @@ static void SetSocketNonBlock(int sock, bool enable)
 
 static void SetSocketPush(int sock, bool push)
 {
-#if defined(TCP_CORK)
-    int flag = !push;
-    setsockopt(sock, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
-#elif defined(TCP_NOPUSH)
     int flag = !push;
     setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
 
 #if defined(__APPLE__)
     if (push) {
-        send(sock, nullptr, 0, 0);
+        send(sock, nullptr, 0, MSG_NOSIGNAL);
     }
-#endif
-#else
-    #error Cannot use either TCP_CORK or TCP_NOPUSH
 #endif
 }
 
-bool http_Daemon::Bind(const http_Config &config, bool log_addr)
+static int CreateListenSocket(const http_Config &config)
 {
-    RG_ASSERT(listener < 0);
+    int sock = CreateSocket(config.sock_type, SOCK_STREAM);
+    if (sock < 0)
+        return -1;
+    RG_DEFER_N(err_guard) { close(sock); };
 
-    if (!InitConfig(config))
-        return false;
+#if defined(SO_REUSEPORT_LB)
+    int reuse = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT_LB, &reuse, sizeof(reuse));
+#else
+    int reuse = 1;
+    setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &reuse, sizeof(reuse));
+ #endif
 
     switch (config.sock_type) {
         case SocketType::Dual:
         case SocketType::IPv4:
-        case SocketType::IPv6: { listener = OpenIPSocket(config.sock_type, config.port, SOCK_STREAM); } break;
-        case SocketType::Unix: { listener = OpenUnixSocket(config.unix_path, SOCK_STREAM); } break;
+        case SocketType::IPv6: {
+            if (!BindIPSocket(sock, config.sock_type, config.port))
+                return -1;
+        } break;
+        case SocketType::Unix: {
+            if (!BindUnixSocket(sock, config.unix_path))
+                return -1;
+        } break;
     }
-    if (listener < 0)
-        return false;
 
-    if (listen(listener, 1024) < 0) {
+    if (listen(sock, 200) < 0) {
         LogError("Failed to listen on socket: %1", strerror(errno));
-        return false;
+        return -1;
     }
 
-    SetSocketNonBlock(listener, true);
+    SetSocketNonBlock(sock, true);
+
+    err_guard.Disable();
+    return sock;
+}
+
+bool http_Daemon::Bind(const http_Config &config, bool log_addr)
+{
+    RG_ASSERT(!listeners.len);
+
+    if (!InitConfig(config))
+        return false;
+
+    RG_DEFER_N(err_guard) {
+        for (int listener: listeners) {
+            close(listener);
+        }
+        listeners.Clear();
+    };
+
+    Size workers = 2 * GetCoreCount();
+
+    for (Size i = 0; i < workers; i++) {
+        int listener = CreateListenSocket(config);
+        if (listener < 0)
+            return false;
+        listeners.Append(listener);
+    }
 
     if (log_addr) {
         if (config.sock_type == SocketType::Unix) {
@@ -159,22 +187,23 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         }
     }
 
+    err_guard.Disable();
     return true;
 }
 
 bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
-    RG_ASSERT(listener >= 0);
+    RG_ASSERT(listeners.len);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
-    async = new Async(1 + GetCoreCount());
+    async = new Async(1 + listeners.len);
 
     handle_func = func;
 
     // Run request dispatchers
-    for (Size i = 1; i < async->GetWorkerCount(); i++) {
-        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher);
+    for (int listener: listeners) {
+        http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listener);
         this->dispatcher = dispatcher;
 
         async->Run([=] { return dispatcher->Run(); });
@@ -186,7 +215,9 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 void http_Daemon::Stop()
 {
     // Shut everything down
-    shutdown(listener, SHUT_RD);
+    for (int listener: listeners) {
+        shutdown(listener, SHUT_RD);
+    }
 
 #if defined(__APPLE__)
     // On macOS, the shutdown() does not wake up poll()
@@ -208,33 +239,40 @@ void http_Daemon::Stop()
         dispatcher = next;
     }
 
-    CloseSocket(listener);
-    listener = -1;
+    for (int listener: listeners) {
+        CloseSocket(listener);
+    }
+    listeners.Clear();
 
     handle_func = {};
 }
 
 bool http_Dispatcher::Run()
 {
-#if defined(__FreeBSD__)
-    RG_ASSERT(event_fd < 0);
-#else
-    RG_ASSERT(pair_fd[0] < 0);
-#endif
+    RG_ASSERT(kqueue_fd < 0);
 
     Async async(1 + WorkersPerDispatcher);
 
 #if defined(__FreeBSD__)
-    event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-    if (event_fd < 0) {
-        LogError("Failed to create eventfd: %1", strerror(errno));
+    kqueue_fd = kqueuex(KQUEUE_CLOEXEC);
+#elif defined(__OpenBSD__)
+    kqueue_fd = kqueue1(O_CLOEXEC);
+#else
+    kqueue_fd = kqueue();
+
+    if (kqueue_fd >= 0) {
+        fcntl(kqueue_fd, F_SETFD, FD_CLOEXEC);
+    }
+#endif
+    if (kqueue_fd < 0) {
+        LogError("Failed to initialize kqueue: %1", strerror(errno));
         return false;
     }
     RG_DEFER {
-        CloseDescriptor(event_fd);
-        event_fd = -1;
+        CloseDescriptor(kqueue_fd);
+        kqueue_fd = -1;
     };
-#else
+
     if (!CreatePipe(pair_fd))
         return false;
     RG_DEFER {
@@ -244,7 +282,6 @@ bool http_Dispatcher::Run()
         pair_fd[0] = -1;
         pair_fd[1] = -1;
     };
-#endif
 
     // Delete remaining clients when function exits
     RG_DEFER {
@@ -256,92 +293,100 @@ bool http_Dispatcher::Run()
         for (http_Socket *socket: free_sockets) {
             delete socket;
         }
+        for (void *ptr: busy_sockets.table) {
+            http_Socket *socket = (http_Socket *)ptr;
+            delete socket;
+        }
 
         sockets.Clear();
         free_sockets.Clear();
+
+        next_changes.Clear();
     };
 
-    HeapArray<struct pollfd> pfds = {
-#if defined(__FreeBSD__)
-        { daemon->listener, POLLIN, 0 },
-        { event_fd, POLLIN, 0 }
-#else
-        { daemon->listener, POLLIN, 0 },
-        { pair_fd[0], POLLIN, 0 }
-#endif
-    };
+    AddEventChange(EVFILT_READ, listener, EV_ADD, nullptr);
+    AddEventChange(EVFILT_READ, pair_fd[0], EV_ADD, nullptr);
 
+    HeapArray<struct kevent> changes;
+    HeapArray<struct kevent> events;
     int next_worker = 0;
 
     for (;;) {
         int64_t now = GetMonotonicTime();
 
-        pfds.len = 2;
+        for (const struct kevent &ev: events) {
+            if (ev.ident == (uintptr_t)listener) {
+                if (ev.flags & EV_EOF) [[unlikely]]
+                    return true;
 
-        if (pfds[0].revents & POLLHUP)
-            return true;
-#if defined(__APPLE__)
-        if (!run)
-            return true;
-#endif
+                for (int i = 0; i < 8; i++) {
+                    sockaddr_storage ss;
+                    socklen_t ss_len = RG_SIZE(ss);
 
-        if (pfds[0].revents & POLLIN) {
-            sockaddr_storage ss;
-            socklen_t ss_len = RG_SIZE(ss);
-
-            // Accept queued clients
-            for (Size i = 0; i < 64; i++) {
 #if defined(SOCK_CLOEXEC)
-                int sock = accept4(daemon->listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+                    int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 
-#if defined(TCP_NOPUSH) && !defined(TCP_CORK)
-                if (sock >= 0) {
-                    // Disable Nagle algorithm on platforms with better options
-                    int flag = 1;
-                    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-                }
+#if defined(TCP_NOPUSH)
+                    if (sock >= 0) {
+                        // Disable Nagle algorithm on platforms with better options
+                        int flag = 1;
+                        setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+                    }
 #endif
 #else
-                int sock = accept(daemon->listener, (sockaddr *)&ss, &ss_len);
+                    int sock = accept(daemon->listener, (sockaddr *)&ss, &ss_len);
 
-                if (sock >= 0) {
-                    fcntl(sock, F_SETFD, FD_CLOEXEC);
-                    SetSocketNonBlock(sock, true);
-                }
+                    if (sock >= 0) {
+                        fcntl(sock, F_SETFD, FD_CLOEXEC);
+                        SetSocketNonBlock(sock, true);
+                    }
 #endif
 
-                if (sock < 0) {
-                    if (errno == EINVAL)
-                        return true;
-                    if (errno == EAGAIN)
+                    if (sock < 0) {
+                        if (errno == EINVAL)
+                            return true;
+                        if (errno == EAGAIN)
+                            break;
+
+                        LogError("Failed to accept client: %1", strerror(errno));
+                        return false;
+                    }
+
+                    http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
+
+                    if (!socket) [[unlikely]] {
+                        close(sock);
+                        continue;
+                    }
+
+                    sockets.Append(socket);
+                }
+            } else if (ev.ident == (uintptr_t)pair_fd[0]) {
+                for (;;) {
+                    uintptr_t addr = 0;
+                    Size ret = RG_RESTART_EINTR(read(pair_fd[0], &addr, RG_SIZE(addr)), < 0);
+
+                    if (ret < 0)
                         break;
 
-                    LogError("Failed to accept client: %1 %2", strerror(errno), errno);
-                    return false;
+                    RG_ASSERT(ret == RG_SIZE(void *));
+                    http_Socket *socket = (http_Socket *)addr;
+
+                    if (socket) [[likely]] {
+                        void **ptr = busy_sockets.Find(socket);
+
+                        if (ptr) {
+                            sockets.Append(socket);
+                            busy_sockets.Remove(socket);
+                        }
+
+                        AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE | EV_CLEAR, socket);
+                    }
                 }
-
-                http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
-
-                if (!socket) [[unlikely]] {
-                    close(sock);
-                    continue;
-                }
-
-                sockets.Append(socket);
+            } else {
+                http_Socket *socket = (http_Socket *)ev.udata;
+                socket->process = true;
             }
-        }
-
-        // Clear eventfd
-        if (pfds[1].revents & POLLIN) {
-#if defined(__FreeBSD__)
-            uint64_t dummy = 0;
-            Size ret = read(event_fd, &dummy, RG_SIZE(dummy));
-            (void)ret;
-#else
-            char buf[4096];
-            Size ret = read(pair_fd[0], buf, RG_SIZE(buf));
-            (void)ret;
-#endif
         }
 
         Size keep = 0;
@@ -358,28 +403,17 @@ bool http_Dispatcher::Run()
                 ParkSocket(socket);
                 keep--;
             };
+            const auto ignore = [&]() {
+                IgnoreSocket(socket);
+                keep--;
+            };
 
-            http_IO::RequestStatus status = http_IO::RequestStatus::Incomplete;
-
-            if (socket->pfd_idx >= 0) {
-                const struct pollfd &pfd = pfds.ptr[socket->pfd_idx];
-
-                if (pfd.revents) {
-                    status = client->ProcessIncoming(now);
-                }
-
-                socket->pfd_idx = -1;
-            } else {
-                status = client->ProcessIncoming(now);
-            }
+            http_IO::RequestStatus status = socket->process ? client->ProcessIncoming(now)
+                                                            : http_IO::RequestStatus::Incomplete;
+            socket->process = false;
 
             switch (status) {
                 case http_IO::RequestStatus::Incomplete: {
-                    socket->pfd_idx = pfds.len;
-
-                    struct pollfd pfd = { socket->sock, POLLIN, 0 };
-                    pfds.Append(pfd);
-
                     int64_t delay = std::max((int64_t)0, client->GetTimeout(now));
                     timeout = std::min(timeout, (unsigned int)delay);
                 } break;
@@ -398,49 +432,44 @@ bool http_Dispatcher::Run()
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerDispatcher;
 
+                    ignore();
+
                     if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
                             daemon->RunHandler(client);
-
                             client->Rearm(now);
-                            Wake();
+
+                            Wake(socket);
 
                             return true;
                         });
                     } else {
                         async.Run(worker_idx, [=, this] {
                             daemon->RunHandler(client);
-
-                            shutdown(client->socket->sock, SHUT_RD);
                             client->Rearm(-1);
+
+                            shutdown(socket->sock, SHUT_RD);
+                            Wake(socket);
 
                             return true;
                         });
                     }
                 } break;
 
-                case http_IO::RequestStatus::Busy: {} break;
-
                 case http_IO::RequestStatus::Close: { disconnect(); } break;
             }
         }
         sockets.len = keep;
 
-        // Wake me up from the kernel if needed
-        {
-            std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
+        events.RemoveFrom(0);
+        events.AppendDefault(2 + sockets.len);
 
-            if (wake_up) {
-                wake_up = false;
-                continue;
-            }
+        // We need to be able to add events while kqueue is running, hence the dance
+        changes.RemoveFrom(0);
+        std::swap(next_changes, changes);
 
-            wake_interrupt = true;
-        }
-
-        // The timeout is unsigned to make it easier to use with std::min() without dealing
-        // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
-        int ready = poll(pfds.ptr, pfds.len, (int)timeout);
+        struct timespec ts = { timeout / 1000, (timeout % 1000) * 1000000 };
+        int ready = kevent(kqueue_fd, changes.ptr, (int)changes.len, events.ptr, (int)events.len, &ts);
 
         if (ready < 0 && errno != EINTR) [[unlikely]] {
             LogError("Failed to poll descriptors: %1", strerror(errno));
@@ -450,35 +479,21 @@ bool http_Dispatcher::Run()
         if (!ready) {
             // Process everyone after a timeout
             for (http_Socket *socket: sockets) {
-                socket->pfd_idx = -1;
+                socket->process = true;
             }
         }
+
+        events.len = ready;
     }
 
     RG_UNREACHABLE();
 }
 
-void http_Dispatcher::Wake()
+void http_Dispatcher::Wake(http_Socket *socket)
 {
-    std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
-
-    wake_up = true;
-
-    // Fast path (prevent poll)
-    if (!wake_interrupt)
-        return;
-
-    lock_shr.unlock();
-
-#if defined(__FreeBSD__)
-    uint64_t one = 1;
-    Size ret = RG_RESTART_EINTR(write(event_fd, &one, RG_SIZE(one)), < 0);
+    uintptr_t addr = (uintptr_t)socket;
+    Size ret = RG_RESTART_EINTR(write(pair_fd[1], &addr, RG_SIZE(addr)), < 0);
     (void)ret;
-#else
-    char x = 'x';
-    Size ret = RG_RESTART_EINTR(send(pair_fd[1], &x, RG_SIZE(x), 0), < 0);
-    (void)ret;
-#endif
 }
 
 #if defined(__APPLE__)
@@ -486,7 +501,7 @@ void http_Dispatcher::Wake()
 void http_Dispatcher::Stop()
 {
     run = false;
-    Wake();
+    Wake(nullptr);
 }
 
 #endif
@@ -508,11 +523,13 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
     socket->sock = sock;
 
-    if (!socket->client.Init(socket, start, sa)) [[unlikely]] {
-        delete socket;
-        return nullptr;
-    }
+    RG_DEFER_N(err_guard) { delete socket; };
 
+    if (!socket->client.Init(socket, start, sa)) [[unlikely]]
+        return nullptr;
+    AddEventChange(EVFILT_READ, sock, EV_ADD | EV_CLEAR, socket);
+
+    err_guard.Disable();
     return socket;
 }
 
@@ -529,6 +546,20 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
     } else {
         delete socket;
     }
+}
+
+void http_Dispatcher::IgnoreSocket(http_Socket *socket)
+{
+    AddEventChange(EVFILT_READ, socket->sock, EV_DISABLE, socket);
+    busy_sockets.Set(socket);
+}
+
+void http_Dispatcher::AddEventChange(short filter, int fd, uint16_t flags, void *ptr)
+{
+    struct kevent ev;
+    EV_SET(&ev, fd, filter, flags, 0, 0, ptr);
+
+    next_changes.Append(ev);
 }
 
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
@@ -583,6 +614,11 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     RG_DEFER { close(fd); };
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
+#if !defined(MSG_DONTWAIT)
+    SetSocketNonBlock(socket->sock, false);
+    RG_DEFER { SetSocketNonBlock(socket->sock, true); };
+#endif
+
     SetSocketPush(socket->sock, false);
 
     RG_DEFER {
@@ -621,6 +657,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         if (ret < 0 && errno != EINTR) {
             if (errno != EPIPE) {
                 LogError("Failed to send file: %1", strerror(errno));
+
             }
             return;
         }
@@ -643,8 +680,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
 http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
 {
-    if (ready)
-        return RequestStatus::Busy;
+    RG_ASSERT(!ready);
 
     // Gather request line and headers
     {

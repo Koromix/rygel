@@ -90,6 +90,8 @@ class http_Dispatcher {
     HANDLE iocp;
     IndirectFunctions fn;
 
+    int listener;
+
     std::mutex socket_mutex;
     std::atomic_int pending_accepts { 0 };
     HeapArray<http_Socket *> sockets;
@@ -99,7 +101,8 @@ class http_Dispatcher {
     LocalArray<http_IO *, 256> free_clients;
 
 public:
-    http_Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn) : daemon(daemon), iocp(iocp), fn(fn) {}
+    http_Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn, int listener)
+        : daemon(daemon), iocp(iocp), fn(fn), listener(listener) {}
     ~http_Dispatcher();
 
     bool Run();
@@ -133,10 +136,13 @@ static void SetSocketPush(int sock, bool push)
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
-    RG_ASSERT(listener < 0);
+    RG_ASSERT(!listeners.len);
 
     if (!InitConfig(config))
         return false;
+
+    int listener = -1;
+    RG_DEFER_N(err_guard) { CloseDescriptor(listener); };
 
     switch (config.sock_type) {
         case SocketType::Dual:
@@ -147,12 +153,13 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     if (listener < 0)
         return false;
 
-    if (listen(listener, 256) < 0) {
-        errno = TranslateWinSockError();
-
+    if (listen(listener, 200) < 0) {
         LogError("Failed to listen on socket: %1", strerror(errno));
         return false;
     }
+
+    listeners.Append(listener);
+    err_guard.Disable();
 
     if (log_addr) {
         if (config.sock_type == SocketType::Unix) {
@@ -168,9 +175,11 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 
 bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
 {
-    RG_ASSERT(listener >= 0);
+    RG_ASSERT(listeners.len == 1);
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
+
+    int listener = listeners[0];
 
     RG_DEFER_N(err_guard) {
         if (async) {
@@ -237,7 +246,7 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
         }
     }
 
-    dispatcher = new http_Dispatcher(this, iocp, fn);
+    dispatcher = new http_Dispatcher(this, iocp, fn, listener);
 
     // Prepare sockets
     for (Size i = 0; i < BaseAccepts; i++) {
@@ -275,8 +284,10 @@ void http_Daemon::Stop()
         dispatcher = nullptr;
     }
 
-    CloseSocket(listener);
-    listener = -1;
+    for (int listener: listeners) {
+        CloseSocket(listener);
+    }
+    listeners.Clear();
 
     if (iocp) {
         CloseHandle(iocp);
@@ -343,7 +354,7 @@ bool http_Dispatcher::Run()
                 }
 
                 socket->connected = true;
-                setsockopt(socket->sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&daemon->listener, RG_SIZE(daemon->listener));
+                setsockopt(socket->sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&listener, RG_SIZE(listener));
 
                 SetSocketPush(socket->sock, false);
 
@@ -518,7 +529,7 @@ bool http_Dispatcher::PostAccept()
 retry:
 
     DWORD dummy = 0;
-    if (!fn.AcceptEx((SOCKET)daemon->listener, (SOCKET)socket->sock, socket->accept, 0,
+    if (!fn.AcceptEx((SOCKET)listener, (SOCKET)socket->sock, socket->accept, 0,
                      AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
             WSAGetLastError() != ERROR_IO_PENDING) {
         errno = TranslateWinSockError();
