@@ -19,7 +19,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-#if !defined(__linux__) && !defined(_WIN32)
+#if defined(__linux__)
 
 #include "src/core/base/base.hh"
 #include "server.hh"
@@ -35,28 +35,20 @@
 #include <netinet/tcp.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#if defined(__FreeBSD__)
-    #include <sys/eventfd.h>
-    #include <sys/uio.h>
-#elif defined(__APPLE__)
-    #include <sys/uio.h>
-#endif
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <sys/sendfile.h>
 
 namespace RG {
 
 // Sane platform
 static_assert(EAGAIN == EWOULDBLOCK);
 
-// Make things work on macOS
-#if defined(MSG_DONTWAIT) && !defined(SOCK_CLOEXEC)
-    #undef MSG_DONTWAIT
-#endif
-
 static const int WorkersPerDispatcher = 4;
 
 struct http_Socket {
     int sock = -1;
-    int pfd_idx = -1;
+    bool busy = false;
 
     http_IO client;
 
@@ -64,22 +56,13 @@ struct http_Socket {
     ~http_Socket() { CloseDescriptor(sock); }
 };
 
+static_assert(EAGAIN == EWOULDBLOCK);
+
 class http_Dispatcher {
     http_Daemon *daemon;
     http_Dispatcher *next;
 
-#if defined(__FreeBSD__)
-    int event_fd = -1;
-#else
-    int pair_fd[2] = { -1, -1 };
-#endif
-    std::shared_mutex wake_mutex;
-    bool wake_up = false;
-    bool wake_interrupt = false;
-
-#if defined(__APPLE__)
-    std::atomic_bool run { true };
-#endif
+    int epoll_fd = -1;
 
     HeapArray<http_Socket *> sockets;
     LocalArray<http_Socket *, 256> free_sockets;
@@ -88,15 +71,14 @@ public:
     http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next) : daemon(daemon), next(next) {}
 
     bool Run();
-    void Wake();
-
-#if defined(__APPLE__)
-    void Stop();
-#endif
 
 private:
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
+
+    bool AddEpollDescriptor(int fd, uint32_t events, int value);
+    bool AddEpollDescriptor(int fd, uint32_t events, void *ptr);
+    void DeleteEpollDescriptor(int fd);
 
     friend class http_Daemon;
 };
@@ -110,21 +92,8 @@ static void SetSocketNonBlock(int sock, bool enable)
 
 static void SetSocketPush(int sock, bool push)
 {
-#if defined(TCP_CORK)
     int flag = !push;
     setsockopt(sock, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
-#elif defined(TCP_NOPUSH)
-    int flag = !push;
-    setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
-
-#if defined(__APPLE__)
-    if (push) {
-        send(sock, nullptr, 0, 0);
-    }
-#endif
-#else
-    #error Cannot use either TCP_CORK or TCP_NOPUSH
-#endif
 }
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
@@ -188,13 +157,6 @@ void http_Daemon::Stop()
     // Shut everything down
     shutdown(listener, SHUT_RD);
 
-#if defined(__APPLE__)
-    // On macOS, the shutdown() does not wake up poll()
-    for (http_Dispatcher *it = dispatcher; it; it = it->next) {
-        it->Stop();
-    }
-#endif
-
     if (async) {
         async->Sync();
 
@@ -216,35 +178,19 @@ void http_Daemon::Stop()
 
 bool http_Dispatcher::Run()
 {
-#if defined(__FreeBSD__)
-    RG_ASSERT(event_fd < 0);
-#else
-    RG_ASSERT(pair_fd[0] < 0);
-#endif
+    RG_ASSERT(epoll_fd < 0);
 
     Async async(1 + WorkersPerDispatcher);
 
-#if defined(__FreeBSD__)
-    event_fd = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
-    if (event_fd < 0) {
-        LogError("Failed to create eventfd: %1", strerror(errno));
+    epoll_fd = epoll_create1(EPOLL_CLOEXEC);
+    if (epoll_fd < 0) {
+        LogError("Failed to initialize epoll: %1", strerror(errno));
         return false;
     }
     RG_DEFER {
-        CloseDescriptor(event_fd);
-        event_fd = -1;
+        CloseDescriptor(epoll_fd);
+        epoll_fd = -1;
     };
-#else
-    if (!CreatePipe(pair_fd))
-        return false;
-    RG_DEFER {
-        CloseDescriptor(pair_fd[0]);
-        CloseDescriptor(pair_fd[1]);
-
-        pair_fd[0] = -1;
-        pair_fd[1] = -1;
-    };
-#endif
 
     // Delete remaining clients when function exits
     RG_DEFER {
@@ -261,87 +207,51 @@ bool http_Dispatcher::Run()
         free_sockets.Clear();
     };
 
-    HeapArray<struct pollfd> pfds = {
-#if defined(__FreeBSD__)
-        { daemon->listener, POLLIN, 0 },
-        { event_fd, POLLIN, 0 }
-#else
-        { daemon->listener, POLLIN, 0 },
-        { pair_fd[0], POLLIN, 0 }
-#endif
-    };
+    if (!AddEpollDescriptor(daemon->listener, EPOLLIN | EPOLLEXCLUSIVE, 0))
+        return false;
 
+    HeapArray<struct epoll_event> events;
     int next_worker = 0;
 
     for (;;) {
         int64_t now = GetMonotonicTime();
 
-        pfds.len = 2;
+        for (const struct epoll_event &ev: events) {
+            if (ev.data.fd == 0) {
+                if (ev.events & EPOLLHUP) [[unlikely]]
+                    return true;
 
-        if (pfds[0].revents & POLLHUP)
-            return true;
-#if defined(__APPLE__)
-        if (!run)
-            return true;
-#endif
+                sockaddr_storage ss;
+                socklen_t ss_len = RG_SIZE(ss);
 
-        if (pfds[0].revents & POLLIN) {
-            sockaddr_storage ss;
-            socklen_t ss_len = RG_SIZE(ss);
+                // Accept queued clients
+                for (int i = 0; i < 64; i++) {
+                    int sock = accept4(daemon->listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
 
-            // Accept queued clients
-            for (Size i = 0; i < 64; i++) {
-#if defined(SOCK_CLOEXEC)
-                int sock = accept4(daemon->listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+                    if (sock < 0) {
+                        if (errno == EINVAL)
+                            return true;
+                        if (errno == EAGAIN)
+                            break;
 
-#if defined(TCP_NOPUSH) && !defined(TCP_CORK)
-                if (sock >= 0) {
-                    // Disable Nagle algorithm on platforms with better options
-                    int flag = 1;
-                    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+                        LogError("Failed to accept client: %1 %2", strerror(errno), errno);
+                        return false;
+                    }
+
+                    http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
+                    socket->busy = true;
+
+                    if (!socket) [[unlikely]] {
+                        close(sock);
+                        continue;
+                    }
+
+                    sockets.Append(socket);
                 }
-#endif
-#else
-                int sock = accept(daemon->listener, (sockaddr *)&ss, &ss_len);
-
-                if (sock >= 0) {
-                    fcntl(sock, F_SETFD, FD_CLOEXEC);
-                    SetSocketNonBlock(sock, true);
-                }
-#endif
-
-                if (sock < 0) {
-                    if (errno == EINVAL)
-                        return true;
-                    if (errno == EAGAIN)
-                        break;
-
-                    LogError("Failed to accept client: %1 %2", strerror(errno), errno);
-                    return false;
-                }
-
-                http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
-
-                if (!socket) [[unlikely]] {
-                    close(sock);
-                    continue;
-                }
-
-                sockets.Append(socket);
+            } else {
+                http_Socket *socket = (http_Socket *)ev.data.ptr;
+                socket->busy = true;
             }
-        }
-
-        // Clear eventfd
-        if (pfds[1].revents & POLLIN) {
-#if defined(__FreeBSD__)
-            uint64_t dummy = 0;
-            Size ret = read(event_fd, &dummy, RG_SIZE(dummy));
-            (void)ret;
-#else
-            char buf[4096];
-            Size ret = read(pair_fd[0], buf, RG_SIZE(buf));
-            (void)ret;
-#endif
         }
 
         Size keep = 0;
@@ -359,32 +269,19 @@ bool http_Dispatcher::Run()
                 keep--;
             };
 
-            http_IO::RequestStatus status = http_IO::RequestStatus::Incomplete;
-
-            if (socket->pfd_idx >= 0) {
-                const struct pollfd &pfd = pfds.ptr[socket->pfd_idx];
-
-                if (pfd.revents) {
-                    status = client->ProcessIncoming(now);
-                }
-
-                socket->pfd_idx = -1;
-            } else {
-                status = client->ProcessIncoming(now);
-            }
+            http_IO::RequestStatus status = socket->busy ? client->ProcessIncoming(now)
+                                                         : http_IO::RequestStatus::Incomplete;
+            socket->busy = false;
 
             switch (status) {
                 case http_IO::RequestStatus::Incomplete: {
-                    socket->pfd_idx = pfds.len;
-
-                    struct pollfd pfd = { socket->sock, POLLIN, 0 };
-                    pfds.Append(pfd);
-
                     int64_t delay = std::max((int64_t)0, client->GetTimeout(now));
                     timeout = std::min(timeout, (unsigned int)delay);
                 } break;
 
                 case http_IO::RequestStatus::Ready: {
+                    DeleteEpollDescriptor(socket->sock);
+
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
@@ -401,18 +298,22 @@ bool http_Dispatcher::Run()
                     if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
                             daemon->RunHandler(client);
-
                             client->Rearm(now);
-                            Wake();
+
+                            if (!AddEpollDescriptor(socket->sock, EPOLLIN | EPOLLET, socket)) [[unlikely]] {
+                                // It will fail and get collected and closed eventually
+                                shutdown(socket->sock, SHUT_RD);
+                            }
 
                             return true;
                         });
                     } else {
                         async.Run(worker_idx, [=, this] {
                             daemon->RunHandler(client);
-
-                            shutdown(client->socket->sock, SHUT_RD);
                             client->Rearm(-1);
+
+                            AddEpollDescriptor(socket->sock, EPOLLIN, socket);
+                            shutdown(socket->sock, SHUT_RD);
 
                             return true;
                         });
@@ -426,21 +327,12 @@ bool http_Dispatcher::Run()
         }
         sockets.len = keep;
 
-        // Wake me up from the kernel if needed
-        {
-            std::lock_guard<std::shared_mutex> lock_excl(wake_mutex);
-
-            if (wake_up) {
-                wake_up = false;
-                continue;
-            }
-
-            wake_interrupt = true;
-        }
+        events.RemoveFrom(0);
+        events.AppendDefault(2 + sockets.len);
 
         // The timeout is unsigned to make it easier to use with std::min() without dealing
         // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
-        int ready = poll(pfds.ptr, pfds.len, (int)timeout);
+        int ready = epoll_wait(epoll_fd, events.ptr, events.len, (int)timeout);
 
         if (ready < 0 && errno != EINTR) [[unlikely]] {
             LogError("Failed to poll descriptors: %1", strerror(errno));
@@ -450,46 +342,13 @@ bool http_Dispatcher::Run()
         if (!ready) {
             // Process everyone after a timeout
             for (http_Socket *socket: sockets) {
-                socket->pfd_idx = -1;
+                socket->busy = true;
             }
         }
     }
 
     RG_UNREACHABLE();
 }
-
-void http_Dispatcher::Wake()
-{
-    std::shared_lock<std::shared_mutex> lock_shr(wake_mutex);
-
-    wake_up = true;
-
-    // Fast path (prevent poll)
-    if (!wake_interrupt)
-        return;
-
-    lock_shr.unlock();
-
-#if defined(__FreeBSD__)
-    uint64_t one = 1;
-    Size ret = RG_RESTART_EINTR(write(event_fd, &one, RG_SIZE(one)), < 0);
-    (void)ret;
-#else
-    char x = 'x';
-    Size ret = RG_RESTART_EINTR(send(pair_fd[1], &x, RG_SIZE(x), 0), < 0);
-    (void)ret;
-#endif
-}
-
-#if defined(__APPLE__)
-
-void http_Dispatcher::Stop()
-{
-    run = false;
-    Wake();
-}
-
-#endif
 
 http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
 {
@@ -508,16 +367,21 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
     socket->sock = sock;
 
-    if (!socket->client.Init(socket, start, sa)) [[unlikely]] {
-        delete socket;
-        return nullptr;
-    }
+    RG_DEFER_N(err_guard) { delete socket; };
 
+    if (!socket->client.Init(socket, start, sa)) [[unlikely]]
+        return nullptr;
+    if (!AddEpollDescriptor(sock, EPOLLIN | EPOLLET, socket)) [[unlikely]]
+        return nullptr;
+
+    err_guard.Disable();
     return socket;
 }
 
 void http_Dispatcher::ParkSocket(http_Socket *socket)
 {
+    DeleteEpollDescriptor(socket->sock);
+
     if (free_sockets.Available()) {
         close(socket->sock);
         socket->sock = -1;
@@ -531,6 +395,39 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
     }
 }
 
+bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, int value)
+{
+    RG_ASSERT(value < 4096);
+
+    struct epoll_event ev = { events, { .fd = value }};
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0 && errno != EEXIST) {
+        LogError("Failed to add descriptor to epoll: %1", strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, void *ptr)
+{
+    RG_ASSERT((uintptr_t)ptr >= 4096);
+
+    struct epoll_event ev = { events, { .ptr = ptr }};
+
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0 && errno != EEXIST) {
+        LogError("Failed to add descriptor to epoll: %1", strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+void http_Dispatcher::DeleteEpollDescriptor(int fd)
+{
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
+}
+
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
 {
     RG_ASSERT(!response.sent);
@@ -538,12 +435,6 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     if (request.headers_only) {
         func = [](int, StreamWriter *) { return true; };
     }
-
-#if !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(socket->sock, false);
-    RG_DEFER { SetSocketNonBlock(socket->sock, true); };
-#endif
-    SetSocketPush(socket->sock, false);
 
     RG_DEFER {
         response.sent = true;
@@ -582,63 +473,29 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 {
     RG_DEFER { close(fd); };
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
-    SetSocketPush(socket->sock, false);
+    Send(status, len, [&](int sock, StreamWriter *) {
+        off_t offset = 0;
+        int64_t remain = len;
 
-    RG_DEFER {
-        response.sent = true;
-        SetSocketPush(socket->sock, true);
-    };
+        while (remain) {
+            Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+            Size sent = sendfile(sock, fd, &offset, (size_t)send);
 
-    Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
+            if (sent < 0) {
+                if (errno == EINTR)
+                    continue;
 
-    struct iovec header = {};
-    struct sf_hdtr hdtr = { &header, 1, nullptr, 0 };
-
-    off_t offset = 0;
-    int64_t remain = intro.len + len;
-
-    // Send intro and file in one go
-    while (remain) {
-        if (offset < intro.len) {
-            header.iov_base = (void *)(intro.ptr + offset);
-            header.iov_len = (size_t)(intro.len - offset);
-        } else {
-            hdtr.headers = nullptr;
-            hdtr.hdr_cnt = 0;
-        }
-
-        Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
-
-#if defined(__FreeBSD__)
-        off_t sent = 0;
-        int ret = sendfile(fd, socket->sock, offset, (size_t)send, &hdtr, &sent, 0);
-#else
-        off_t sent = (off_t)send;
-        int ret = sendfile(fd, socket->sock, offset, &sent, &hdtr, 0);
-#endif
-
-        if (ret < 0 && errno != EINTR) {
-            if (errno != EPIPE) {
-                LogError("Failed to send file: %1", strerror(errno));
+                if (errno != EPIPE) {
+                    LogError("Failed to send file: %1", strerror(errno));
+                }
+                return false;
             }
-            return;
+
+            remain -= sent;
         }
 
-        if (!ret && !send) [[unlikely]] {
-            LogError("Truncated file sent");
-            return;
-        }
-
-        offset += sent;
-        remain -= (int64_t)sent;
-    }
-#else
-    Send(status, len, [&](int, StreamWriter *writer) {
-        StreamReader reader(fd, filename);
-        return SpliceStream(&reader, -1, writer);
+        return true;
     });
-#endif
 }
 
 http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
@@ -654,11 +511,7 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
             incoming.buf.Grow(Mebibytes(1));
 
             Size available = incoming.buf.Available() - 1;
-#if defined(MSG_DONTWAIT)
             Size read = recv(socket->sock, incoming.buf.end(), available, MSG_DONTWAIT);
-#else
-            Size read = recv(socket->sock, incoming.buf.end(), available, 0);
-#endif
 
             incoming.buf.len += std::max(read, (Size)0);
             incoming.buf.ptr[incoming.buf.len] = 0;
@@ -741,7 +594,7 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
 bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     while (data.len) {
-        Size sent = send(socket->sock, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
+        Size sent = send(socket->sock, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
 
         if (sent < 0) {
             if (errno == EINTR)
@@ -776,7 +629,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         Span<const uint8_t> remain = buf;
 
         do {
-            Size sent = send(socket->sock, remain.ptr, (size_t)remain.len, MSG_NOSIGNAL);
+            Size sent = send(socket->sock, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
 
             if (sent < 0) {
                 if (errno == EINTR)
