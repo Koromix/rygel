@@ -57,7 +57,11 @@ static const int WorkersPerDispatcher = 4;
 struct http_Socket {
     int sock = -1;
     int pfd_idx = -1;
-    http_IO *client = nullptr;
+
+    http_IO client;
+
+    http_Socket(http_Daemon *daemon) : client(daemon) {}
+    ~http_Socket() { CloseDescriptor(sock); }
 };
 
 class http_Dispatcher {
@@ -77,8 +81,8 @@ class http_Dispatcher {
     std::atomic_bool run { true };
 #endif
 
-    HeapArray<http_Socket> sockets;
-    LocalArray<http_IO *, 256> free_clients;
+    HeapArray<http_Socket *> sockets;
+    LocalArray<http_Socket *, 256> free_sockets;
 
 public:
     http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next) : daemon(daemon), next(next) {}
@@ -91,8 +95,8 @@ public:
 #endif
 
 private:
-    http_IO *InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa);
-    void ParkClient(http_IO *client);
+    http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
+    void ParkSocket(http_Socket *socket);
 
     friend class http_Daemon;
 };
@@ -246,16 +250,15 @@ bool http_Dispatcher::Run()
     RG_DEFER {
         async.Sync();
 
-        for (http_Socket &socket: sockets) {
-            close(socket.sock);
-            delete socket.client;
+        for (http_Socket *socket: sockets) {
+            delete socket;
         }
-        for (http_IO *client: free_clients) {
-            delete client;
+        for (http_Socket *socket: free_sockets) {
+            delete socket;
         }
 
         sockets.Clear();
-        free_clients.Clear();
+        free_sockets.Clear();
     };
 
     HeapArray<struct pollfd> pfds = {
@@ -317,15 +320,14 @@ bool http_Dispatcher::Run()
                     return false;
                 }
 
-                http_Socket *socket = sockets.AppendDefault();
+                http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
 
-                socket->sock = sock;
-                socket->client = InitClient(socket, now, (sockaddr *)&ss);
-
-                if (!socket->client) {
-                    sockets.RemoveLast(1);
+                if (!socket) [[unlikely]] {
+                    close(sock);
                     continue;
                 }
+
+                sockets.Append(socket);
             }
         }
 
@@ -349,13 +351,11 @@ bool http_Dispatcher::Run()
         for (Size i = 0; i < sockets.len; i++, keep++) {
             sockets[keep] = sockets[i];
 
-            http_Socket *socket = &sockets[keep];
-            http_IO *client = socket->client;
+            http_Socket *socket = sockets[i];
+            http_IO *client = &socket->client;
 
             const auto disconnect = [&]() {
-                close(socket->sock);
-                ParkClient(socket->client);
-
+                ParkSocket(socket);
                 keep--;
             };
 
@@ -388,6 +388,8 @@ bool http_Dispatcher::Run()
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
+
+                        LogWarning("X");
                         disconnect();
 
                         break;
@@ -412,7 +414,7 @@ bool http_Dispatcher::Run()
                             daemon->RunHandler(client);
 
                             shutdown(client->socket->sock, SHUT_RD);
-                            client->ready = false;
+                            client->Rearm(-1);
 
                             return true;
                         });
@@ -449,8 +451,8 @@ bool http_Dispatcher::Run()
 
         if (!ready) {
             // Process everyone after a timeout
-            for (http_Socket &socket: sockets) {
-                socket.pfd_idx = -1;
+            for (http_Socket *socket: sockets) {
+                socket->pfd_idx = -1;
             }
         }
     }
@@ -491,38 +493,43 @@ void http_Dispatcher::Stop()
 
 #endif
 
-http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa)
+http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
 {
-    http_IO *client = nullptr;
+    http_Socket *socket = nullptr;
 
-    if (free_clients.len) {
-        int idx = GetRandomInt(0, (int)free_clients.len);
+    if (free_sockets.len) {
+        int idx = GetRandomInt(0, (int)free_sockets.len);
 
-        client = free_clients[idx];
+        socket = free_sockets[idx];
 
-        std::swap(free_clients[idx], free_clients[free_clients.len - 1]);
-        free_clients.len--;
+        std::swap(free_sockets[idx], free_sockets[free_sockets.len - 1]);
+        free_sockets.len--;
     } else {
-        client = new http_IO(daemon);
+        socket = new http_Socket(daemon);
     }
 
-    if (!client->Init(socket, start, sa)) [[unlikely]] {
-        delete client;
+    socket->sock = sock;
+
+    if (!socket->client.Init(socket, start, sa)) [[unlikely]] {
+        delete socket;
         return nullptr;
     }
 
-    return client;
+    return socket;
 }
 
-void http_Dispatcher::ParkClient(http_IO *client)
+void http_Dispatcher::ParkSocket(http_Socket *socket)
 {
-    if (free_clients.Available()) {
-        client->socket = nullptr;
-        client->Rearm(-1);
+    if (free_sockets.Available()) {
+        close(socket->sock);
+        socket->sock = -1;
 
-        free_clients.Append(client);
+        socket->client.socket = nullptr;
+        socket->client.Rearm(-1);
+
+        free_sockets.Append(socket);
     } else {
-        delete client;
+        delete socket;
     }
 }
 
@@ -741,7 +748,7 @@ http_IO::RequestStatus http_IO::ProcessIncoming(int64_t now)
                     case ECONNRESET: return RequestStatus::Close;
 
                     default: {
-                        LogError("Read failed: %1", strerror(errno));
+                        LogError("Read failed: %1 (%2) %3", strerror(errno), socket->sock, socket);
                         return RequestStatus::Close;
                     } break;
                 }

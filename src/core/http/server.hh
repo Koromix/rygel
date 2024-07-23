@@ -193,6 +193,7 @@ class http_IO {
     BlockAllocator allocator { Kibibytes(16) };
 
 public:
+    http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(0); }
     ~http_IO();
 
     RG::Allocator *Allocator() { return &allocator; }
@@ -222,8 +223,6 @@ public:
     void AddFinalizer(const std::function<void()> &func);
 
 private:
-    http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(0); }
-
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
     bool InitAddress();
 
