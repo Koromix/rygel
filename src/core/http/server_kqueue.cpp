@@ -88,6 +88,8 @@ public:
 #endif
 
 private:
+    http_IO::PrepareStatus ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client);
+
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
     void IgnoreSocket(http_Socket *socket);
@@ -408,7 +410,7 @@ bool http_Dispatcher::Run()
                 keep--;
             };
 
-            http_IO::PrepareStatus status = socket->process ? client->ProcessIncoming(now)
+            http_IO::PrepareStatus status = socket->process ? ProcessIncoming(now, socket, client)
                                                             : http_IO::PrepareStatus::Incomplete;
             socket->process = false;
 
@@ -487,6 +489,58 @@ bool http_Dispatcher::Run()
     }
 
     RG_UNREACHABLE();
+}
+
+http_IO::PrepareStatus http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client)
+{
+    client->incoming.buf.Grow(Mebibytes(1));
+
+    Size available = client->incoming.buf.Available() - 1;
+
+restart:
+#if defined(MSG_DONTWAIT)
+    Size read = recv(socket->sock, client->incoming.buf.end(), available, MSG_DONTWAIT);
+#else
+    Size read = recv(socket->sock, client->incoming.buf.end(), available, 0);
+#endif
+
+    if (read < 0) {
+        switch (errno) {
+            // This probably never happens (non-blocking read) but who knows
+            case EINTR: goto restart;
+
+            case EAGAIN: {
+                int64_t timeout = client->GetTimeout(now);
+
+                if (timeout < 0) [[unlikely]] {
+                    if (client->IsPreparing()) {
+                        LogError("Timed out while waiting for HTTP request");
+                    }
+                    return http_IO::PrepareStatus::Close;
+                }
+
+                return http_IO::PrepareStatus::Incomplete;
+            } break;
+
+            case EPIPE:
+            case ECONNRESET: return http_IO::PrepareStatus::Close;
+
+            default: {
+                LogError("Read failed: %1", strerror(errno));
+                return http_IO::PrepareStatus::Close;
+            } break;
+        }
+    } else if (!read) {
+        if (client->incoming.buf.len) {
+            LogError("Client closed connection with unfinished request");
+        }
+        return http_IO::PrepareStatus::Close;
+    }
+
+    client->incoming.buf.len += read;
+    client->incoming.buf.ptr[client->incoming.buf.len] = 0;
+
+    return client->ParseRequest();
 }
 
 void http_Dispatcher::Wake(http_Socket *socket)
@@ -676,102 +730,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         return SpliceStream(&reader, -1, writer);
     });
 #endif
-}
-
-http_IO::PrepareStatus http_IO::ProcessIncoming(int64_t now)
-{
-    RG_ASSERT(!ready);
-
-    // Gather request line and headers
-    {
-        bool complete = false;
-
-        for (;;) {
-            incoming.buf.Grow(Mebibytes(1));
-
-            Size available = incoming.buf.Available() - 1;
-#if defined(MSG_DONTWAIT)
-            Size read = recv(socket->sock, incoming.buf.end(), available, MSG_DONTWAIT);
-#else
-            Size read = recv(socket->sock, incoming.buf.end(), available, 0);
-#endif
-
-            incoming.buf.len += std::max(read, (Size)0);
-            incoming.buf.ptr[incoming.buf.len] = 0;
-
-            while (incoming.buf.len - incoming.pos >= 4) {
-                uint8_t *next = (uint8_t *)memchr(incoming.buf.ptr + incoming.pos, '\r', incoming.buf.len - incoming.pos);
-                incoming.pos = next ? next - incoming.buf.ptr : incoming.buf.len;
-
-                if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
-                    LogError("Excessive request size");
-                    SendError(413);
-                    return PrepareStatus::Close;
-                }
-
-                const char *end = (const char *)incoming.buf.ptr + incoming.pos;
-
-                if (end[0] == '\r' && end[1] == '\n' && end[2] == '\r' && end[3] == '\n') {
-                    incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
-                    incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 4, incoming.buf.len - incoming.pos - 4);
-
-                    complete = true;
-                    break;
-                } else if (end[0] == '\n' && end[1] == '\n') {
-                    incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
-                    incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 2, incoming.buf.len - incoming.pos - 2);
-
-                    complete = true;
-                    break;
-                }
-
-                incoming.pos++;
-            }
-            if (complete)
-                break;
-
-            if (read < 0) {
-                switch (errno) {
-                    // This probably never happens (non-blocking read) but who knows
-                    case EINTR: continue;
-
-                    case EAGAIN: {
-                        int64_t timeout = GetTimeout(now);
-
-                        if (timeout < 0) [[unlikely]] {
-                            if (IsPreparing()) {
-                                LogError("Timed out while waiting for HTTP request");
-                            }
-                            return PrepareStatus::Close;
-                        }
-
-                        return PrepareStatus::Incomplete;
-                    } break;
-
-                    case EPIPE:
-                    case ECONNRESET: return PrepareStatus::Close;
-
-                    default: {
-                        LogError("Read failed: %1 (%2) %3", strerror(errno), socket->sock, socket);
-                        return PrepareStatus::Close;
-                    } break;
-                }
-            } else if (!read) {
-                if (incoming.buf.len) {
-                    LogError("Client closed connection with unfinished request");
-                }
-                return PrepareStatus::Close;
-            }
-        }
-
-        RG_ASSERT(complete);
-    }
-
-    if (!ParseRequest(incoming.intro))
-        return PrepareStatus::Close;
-
-    ready = true;
-    return PrepareStatus::Ready;
 }
 
 bool http_IO::WriteDirect(Span<const uint8_t> data)

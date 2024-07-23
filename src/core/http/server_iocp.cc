@@ -470,7 +470,7 @@ void http_Dispatcher::ProcessClient(int64_t now, http_Socket *socket, http_IO *c
 {
     RG_ASSERT(client == socket->client.get());
 
-    http_IO::PrepareStatus status = client->ProcessIncoming(now);
+    http_IO::PrepareStatus status = client->ParseRequest();
 
     switch (status) {
         case http_IO::PrepareStatus::Incomplete: {
@@ -775,52 +775,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         offset += (Size)send;
         len -= (Size)send;
     }
-}
-
-http_IO::PrepareStatus http_IO::ProcessIncoming(int64_t now)
-{
-    RG_ASSERT(socket);
-    RG_ASSERT(!ready);
-
-    bool complete = false;
-
-    // Gather request line and headers
-    while (incoming.buf.len - incoming.pos >= 4) {
-        uint8_t *next = (uint8_t *)memchr(incoming.buf.ptr + incoming.pos, '\r', incoming.buf.len - incoming.pos);
-        incoming.pos = next ? next - incoming.buf.ptr : incoming.buf.len;
-
-        if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
-            LogError("Excessive request size");
-            SendError(413);
-            return PrepareStatus::Close;
-        }
-
-        const char *end = (const char *)incoming.buf.ptr + incoming.pos;
-
-        if (end[0] == '\r' && end[1] == '\n' && end[2] == '\r' && end[3] == '\n') {
-            incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
-            incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 4, incoming.buf.len - incoming.pos - 4);
-
-            complete = true;
-            break;
-        } else if (end[0] == '\n' && end[1] == '\n') {
-            incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
-            incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 2, incoming.buf.len - incoming.pos - 2);
-
-            complete = true;
-            break;
-        }
-
-        incoming.pos++;
-    }
-
-    if (!complete)
-        return PrepareStatus::Incomplete;
-    if (!ParseRequest(incoming.intro))
-        return PrepareStatus::Close;
-
-    ready = true;
-    return PrepareStatus::Ready;
 }
 
 bool http_IO::WriteDirect(Span<const uint8_t> data)

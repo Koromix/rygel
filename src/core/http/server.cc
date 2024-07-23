@@ -608,18 +608,54 @@ static inline bool IsFieldValueValid(Span<const char> key)
     return valid;
 }
 
-bool http_IO::ParseRequest(Span<char> intro)
+http_IO::PrepareStatus http_IO::ParseRequest()
 {
+    bool complete = false;
     bool keepalive = false;
+
+    // Find end of request headers (CRLF+CRLF)
+    while (incoming.buf.len - incoming.pos >= 4) {
+        uint8_t *next = (uint8_t *)memchr(incoming.buf.ptr + incoming.pos, '\r', incoming.buf.len - incoming.pos);
+        incoming.pos = next ? next - incoming.buf.ptr : incoming.buf.len;
+
+        if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
+            LogError("Excessive request size");
+            SendError(413);
+            return PrepareStatus::Close;
+        }
+
+        const char *end = (const char *)incoming.buf.ptr + incoming.pos;
+
+        if (end[0] == '\r' && end[1] == '\n' && end[2] == '\r' && end[3] == '\n') {
+            incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
+            incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 4, incoming.buf.len - incoming.pos - 4);
+
+            complete = true;
+            break;
+        } else if (end[0] == '\n' && end[1] == '\n') {
+            incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
+            incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 2, incoming.buf.len - incoming.pos - 2);
+
+            complete = true;
+            break;
+        }
+
+        incoming.pos++;
+    }
+
+    if (!complete)
+        return PrepareStatus::Incomplete;
+
+    Span<char> remain = incoming.intro;
 
     // Parse request line
     {
-        Span<char> line = SplitStrLine(intro, &intro);
+        Span<char> line = SplitStrLine(remain, &remain);
 
         if (std::any_of(line.begin(), line.end(), [](char c) { return c == 0; })) {
             LogError("Request line contains NUL characters");
             SendError(400);
-            return false;
+            return PrepareStatus::Close;
         }
 
         Span<char> method = SplitStr(line, ' ', &line);
@@ -633,12 +669,12 @@ bool http_IO::ParseRequest(Span<char> intro)
         if (!method.len) {
             LogError("Empty HTTP method");
             SendError(400);
-            return false;
+            return PrepareStatus::Close;
         }
         if (!StartsWith(url, "/")) {
             LogError("Invalid request URL");
             SendError(400);
-            return false;
+            return PrepareStatus::Close;
         }
         if (TestStr(protocol, "HTTP/1.0")) {
             request.version = 10;
@@ -649,12 +685,12 @@ bool http_IO::ParseRequest(Span<char> intro)
         } else {
             LogError("Invalid HTTP version");
             SendError(400);
-            return false;
+            return PrepareStatus::Close;
         }
         if (line.len) {
             LogError("Unexpected data after request line");
             SendError(400);
-            return false;
+            return PrepareStatus::Close;
         }
 
         if (TestStr(method, "HEAD")) {
@@ -665,7 +701,7 @@ bool http_IO::ParseRequest(Span<char> intro)
         } else {
             LogError("Unsupported HTTP method '%1'", method);
             SendError(405);
-            return false;
+            return PrepareStatus::Close;
         }
         request.client_addr = addr;
 
@@ -677,8 +713,8 @@ bool http_IO::ParseRequest(Span<char> intro)
     }
 
     // Parse headers
-    while (intro.len) {
-        Span<char> line = SplitStrLine(intro, &intro);
+    while (remain.len) {
+        Span<char> line = SplitStrLine(remain, &remain);
 
         Span<char> key = SplitStr(line, ':', &line);
         Span<char> value = TrimStr(line);
@@ -686,17 +722,17 @@ bool http_IO::ParseRequest(Span<char> intro)
         if (line.ptr == key.end()) [[unlikely]] {
             LogError("Missing colon in header line");
             SendError(400);
-            return false;
+            return PrepareStatus::Close;
         }
         if (!key.len || !IsFieldKeyValid(key)) [[unlikely]] {
             LogError("Malformed header key");
             SendError(400);
-            return false;
+            return PrepareStatus::Close;
         }
         if (!IsFieldValueValid(value)) {
             LogError("Malformed header value");
             SendError(400);
-            return false;
+            return PrepareStatus::Close;
         }
 
         // Canonicalize header key
@@ -716,12 +752,12 @@ bool http_IO::ParseRequest(Span<char> intro)
                 if (!IsFieldKeyValid(name)) [[unlikely]] {
                     LogError("Malformed cookie name");
                     SendError(400);
-                    return false;
+                    return PrepareStatus::Close;
                 }
                 if (!IsFieldValueValid(value)) [[unlikely]] {
                     LogError("Malformed cookie value");
                     SendError(400);
-                    return false;
+                    return PrepareStatus::Close;
                 }
 
                 name.ptr[name.len] = 0;
@@ -730,7 +766,7 @@ bool http_IO::ParseRequest(Span<char> intro)
                 if (request.cookies.len >= daemon->max_request_cookies) [[unlikely]] {
                     LogError("Too many cookies, server limit is %1", daemon->max_request_cookies);
                     SendError(413);
-                    return false;
+                    return PrepareStatus::Close;
                 }
 
                 request.cookies.Append({ name.ptr, value.ptr });
@@ -744,15 +780,17 @@ bool http_IO::ParseRequest(Span<char> intro)
             if (request.headers.len >= daemon->max_request_headers) [[unlikely]] {
                 LogError("Too many headers, server limit is %1", daemon->max_request_headers);
                 SendError(413);
-                return false;
+                return PrepareStatus::Close;
             }
 
             request.headers.Append({ key.ptr, value.ptr });
         }
     }
 
+    // Set at the end so any error before would lead to "Connection: close"
     request.keepalive = keepalive;
-    return true;
+
+    return PrepareStatus::Ready;
 }
 
 Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, int64_t len)
@@ -816,8 +854,6 @@ void http_IO::Rearm(int64_t start)
     last_err = nullptr;
 
     allocator.Reset();
-
-    ready = false;
 }
 
 bool http_IO::IsPreparing() const

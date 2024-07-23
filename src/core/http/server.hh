@@ -178,7 +178,6 @@ class http_IO {
         Span<uint8_t> extra = {};
     } incoming;
 
-    std::atomic_bool ready;
     http_RequestInfo request;
 
     const char *last_err = nullptr;
@@ -225,9 +224,7 @@ private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
     bool InitAddress();
 
-    PrepareStatus ProcessIncoming(int64_t now);
-
-    bool ParseRequest(Span<char> request);
+    PrepareStatus ParseRequest();
     Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len);
 
     bool WriteDirect(Span<const uint8_t> data);
