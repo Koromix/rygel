@@ -695,7 +695,7 @@ inline constexpr int binary_format<double>::smallest_power_of_ten() {
 }
 template <>
 inline constexpr int binary_format<float>::smallest_power_of_ten() {
-  return -65;
+  return -64;
 }
 
 template <> inline constexpr size_t binary_format<double>::max_digits() {
@@ -1068,24 +1068,6 @@ uint64_t simd_read8_to_u64(UC const*) {
   return 0;
 }
 
-
-fastfloat_really_inline FASTFLOAT_CONSTEXPR20
-void write_u64(uint8_t *chars, uint64_t val) {
-  if (cpp20_and_in_constexpr()) {
-    for(int i = 0; i < 8; ++i) {
-      *chars = uint8_t(val);
-      val >>= 8;
-      ++chars;
-    }
-    return;
-  }
-#if FASTFLOAT_IS_BIG_ENDIAN == 1
-  // Need to read as-if the number was in little-endian order.
-  val = byteswap(val);
-#endif
-  ::memcpy(chars, &val, sizeof(uint64_t));
-}
-
 // credit  @aqrit
 fastfloat_really_inline FASTFLOAT_CONSTEXPR14
 uint32_t parse_eight_digits_unrolled(uint64_t val) {
@@ -1312,7 +1294,7 @@ parsed_number_string_t<UC> parse_number_string(UC const *p, UC const * pend, par
       ++p;
     }
     if ((p == pend) || !is_integer(*p)) {
-      if(!(fmt & chars_format::fixed)) {
+      if(!(fmt & chars_format::fixed) || (fmt & FASTFLOAT_JSONFMT)) {
         // We are in error.
         return answer;
       }
@@ -2318,8 +2300,9 @@ adjusted_mantissa compute_float(int64_t q, uint64_t w)  noexcept  {
   // but in practice, we can win big with the compute_product_approximation if its additional branch
   // is easily predicted. Which is best is data specific.
   int upperbit = int(product.high >> 63);
+  int shift = upperbit + 64 - binary::mantissa_explicit_bits() - 3;
 
-  answer.mantissa = product.high >> (upperbit + 64 - binary::mantissa_explicit_bits() - 3);
+  answer.mantissa = product.high >> shift;
 
   answer.power2 = int32_t(detail::power(int32_t(q)) + upperbit - lz - binary::minimum_exponent());
   if (answer.power2 <= 0) { // we have a subnormal?
@@ -2355,7 +2338,7 @@ adjusted_mantissa compute_float(int64_t q, uint64_t w)  noexcept  {
     // To be in-between two floats we need that in doing
     //   answer.mantissa = product.high >> (upperbit + 64 - binary::mantissa_explicit_bits() - 3);
     // ... we dropped out only zeroes. But if this happened, then we can go back!!!
-    if((answer.mantissa  << (upperbit + 64 - binary::mantissa_explicit_bits() - 3)) ==  product.high) {
+    if((answer.mantissa  << shift) ==  product.high) {
       answer.mantissa &= ~uint64_t(1);          // flip it so that we do not round up
     }
   }
@@ -3605,35 +3588,20 @@ from_chars_result_t<UC> from_chars(UC const * first, UC const * last,
   return from_chars_caller<T>::call(first, last, value, parse_options_t<UC>(fmt));
 }
 
+/**
+ * This function overload takes parsed_number_string_t structure that is created and populated
+ * either by from_chars_advanced function taking chars range and parsing options
+ * or other parsing custom function implemented by user.
+ */
 template<typename T, typename UC>
 FASTFLOAT_CONSTEXPR20
-from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
-                                      T &value, parse_options_t<UC> options)  noexcept  {
+from_chars_result_t<UC> from_chars_advanced(parsed_number_string_t<UC>& pns,
+                                      T &value)  noexcept  {
 
   static_assert (is_supported_float_type<T>(), "only some floating-point types are supported");
   static_assert (is_supported_char_type<UC>(), "only char, wchar_t, char16_t and char32_t are supported");
 
   from_chars_result_t<UC> answer;
-#ifdef FASTFLOAT_SKIP_WHITE_SPACE  // disabled by default
-  while ((first != last) && fast_float::is_space(uint8_t(*first))) {
-    first++;
-  }
-#endif
-  if (first == last) {
-    answer.ec = std::errc::invalid_argument;
-    answer.ptr = first;
-    return answer;
-  }
-  parsed_number_string_t<UC> pns = parse_number_string<UC>(first, last, options);
-  if (!pns.valid) {
-    if (options.format & chars_format::no_infnan) {
-      answer.ec = std::errc::invalid_argument;
-      answer.ptr = first;
-      return answer;
-    } else {
-      return detail::parse_infnan(first, last, value);
-    }
-  }
 
   answer.ec = std::errc(); // be optimistic
   answer.ptr = pns.lastmatch;
@@ -3692,6 +3660,40 @@ from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
     answer.ec = std::errc::result_out_of_range;
   }
   return answer;
+}
+
+template<typename T, typename UC>
+FASTFLOAT_CONSTEXPR20
+from_chars_result_t<UC> from_chars_advanced(UC const * first, UC const * last,
+                                      T &value, parse_options_t<UC> options)  noexcept  {
+
+  static_assert (is_supported_float_type<T>(), "only some floating-point types are supported");
+  static_assert (is_supported_char_type<UC>(), "only char, wchar_t, char16_t and char32_t are supported");
+
+  from_chars_result_t<UC> answer;
+#ifdef FASTFLOAT_SKIP_WHITE_SPACE  // disabled by default
+  while ((first != last) && fast_float::is_space(uint8_t(*first))) {
+    first++;
+  }
+#endif
+  if (first == last) {
+    answer.ec = std::errc::invalid_argument;
+    answer.ptr = first;
+    return answer;
+  }
+  parsed_number_string_t<UC> pns = parse_number_string<UC>(first, last, options);
+  if (!pns.valid) {
+    if (options.format & chars_format::no_infnan) {
+      answer.ec = std::errc::invalid_argument;
+      answer.ptr = first;
+      return answer;
+    } else {
+      return detail::parse_infnan(first, last, value);
+    }
+  }
+
+  // call overload that takes parsed_number_string_t directly.
+  return from_chars_advanced(pns, value);
 }
 
 
