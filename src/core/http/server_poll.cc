@@ -388,8 +388,6 @@ bool http_Dispatcher::Run()
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
-
-                        LogWarning("X");
                         disconnect();
 
                         break;
