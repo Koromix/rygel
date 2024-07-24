@@ -21,8 +21,8 @@
 
 #include "src/core/base/base.hh"
 #include "server.hh"
-#include "vendor/mbedtls/include/mbedtls/sha1.h"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
+#include "vendor/sha1/sha1.h"
 
 #if defined(_WIN32)
     #include <io.h>
@@ -152,7 +152,7 @@ bool http_IO::UpgradeToWS(unsigned int flags)
         uint8_t hash[20];
 
         full_key.len = Fmt(full_key.data, "%1%2", key_str, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").len;
-        mbedtls_sha1((const uint8_t *)full_key.data, full_key.len, hash);
+        SHA1((char *)hash, full_key.data, (uint32_t)full_key.len);
         sodium_bin2base64(accept_str, RG_SIZE(accept_str), hash, RG_SIZE(hash), sodium_base64_VARIANT_ORIGINAL);
     }
 
