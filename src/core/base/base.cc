@@ -5631,7 +5631,7 @@ int TranslateWinSockError(int error)
 
 int CreateSocket(SocketType type, int flags)
 {
-    int family;
+    int family = 0;
 
     switch (type) {
         case SocketType::Dual:
