@@ -7171,7 +7171,11 @@ bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
 
     int64_t total_len = 0;
     do {
-        LocalArray<uint8_t, 16384> buf;
+        // This also happens to be the maximum chunk size (0xFFFF) in our HTTP chunk
+        // transfer implementation. musl now defaults to 128k stack size, and we ask
+        // for 1 MiB with PT_GNU_STACK (using linker flag -z stack-size) anyway.
+        LocalArray<uint8_t, 65535> buf;
+
         buf.len = reader->Read(buf.data);
         if (buf.len < 0)
             return false;
