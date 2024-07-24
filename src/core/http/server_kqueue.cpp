@@ -726,7 +726,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     }
 #else
     Send(status, len, [&](int, StreamWriter *writer) {
-        StreamReader reader(fd, filename);
+        StreamReader reader(fd, "<file>");
         return SpliceStream(&reader, -1, writer);
     });
 #endif
