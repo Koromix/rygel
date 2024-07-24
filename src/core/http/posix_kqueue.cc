@@ -221,8 +221,6 @@ bool http_Dispatcher::Run()
     Async async(1 + WorkersPerDispatcher);
 
 #if defined(__FreeBSD__)
-    kqueue_fd = kqueuex(KQUEUE_CLOEXEC);
-#elif defined(__OpenBSD__)
     kqueue_fd = kqueue1(O_CLOEXEC);
 #else
     kqueue_fd = kqueue();
