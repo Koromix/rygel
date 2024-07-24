@@ -23,6 +23,7 @@
 
 #include "src/core/base/base.hh"
 #include "server.hh"
+#include "posix.hh"
 #include "misc.hh"
 
 #include <fcntl.h>
@@ -36,27 +37,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/epoll.h>
-#include <sys/eventfd.h>
-#include <sys/sendfile.h>
 
 namespace RG {
 
-// Sane platform
-static_assert(EAGAIN == EWOULDBLOCK);
-
 static const int WorkersPerDispatcher = 4;
-
-struct http_Socket {
-    int sock = -1;
-    bool process = false;
-
-    http_IO client;
-
-    http_Socket(http_Daemon *daemon) : client(daemon) {}
-    ~http_Socket() { CloseDescriptor(sock); }
-};
-
-static_assert(EAGAIN == EWOULDBLOCK);
 
 class http_Dispatcher {
     http_Daemon *daemon;
@@ -89,19 +73,6 @@ private:
 
     friend class http_Daemon;
 };
-
-static void SetSocketNonBlock(int sock, bool enable)
-{
-    int flags = fcntl(sock, F_GETFL, 0);
-    flags = ApplyMask(flags, O_NONBLOCK, enable);
-    fcntl(sock, F_SETFL, flags);
-}
-
-static void SetSocketPush(int sock, bool push)
-{
-    int flag = !push;
-    setsockopt(sock, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
-}
 
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
@@ -510,199 +481,6 @@ bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, void *ptr)
 void http_Dispatcher::DeleteEpollDescriptor(int fd)
 {
     epoll_ctl(epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
-}
-
-void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
-{
-    RG_ASSERT(!response.sent);
-
-    if (request.headers_only) {
-        func = [](int, StreamWriter *) { return true; };
-    }
-
-    RG_DEFER {
-        response.sent = true;
-        SetSocketPush(socket->sock, true);
-    };
-
-    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
-    StreamWriter writer(write, "<http>");
-
-    Span<const char> intro = PrepareResponse(status, encoding, len);
-    writer.Write(intro);
-
-    if (len >= 0) {
-        if (encoding != CompressionType::None) {
-            writer.Close();
-            writer.Open(write, "<http>", encoding);
-        }
-
-        request.keepalive &= func(socket->sock, &writer);
-    } else {
-        const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
-        StreamWriter chunker(chunk, "<http>", encoding);
-
-        if (func(-1, &chunker)) {
-            request.keepalive &= chunker.Close();
-            writer.Write("0\r\n\r\n");
-        } else {
-            request.keepalive = false;
-        }
-    }
-
-    request.keepalive &= writer.Close();
-}
-
-void http_IO::SendFile(int status, int fd, int64_t len)
-{
-    RG_DEFER { close(fd); };
-
-    Send(status, len, [&](int sock, StreamWriter *) {
-        off_t offset = 0;
-        int64_t remain = len;
-
-        while (remain) {
-            Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
-            Size sent = sendfile(sock, fd, &offset, (size_t)send);
-
-            if (sent < 0) {
-                if (errno == EINTR)
-                    continue;
-
-                if (errno != EPIPE) {
-                    LogError("Failed to send file: %1", strerror(errno));
-                }
-                return false;
-            }
-
-            remain -= sent;
-        }
-
-        return true;
-    });
-}
-
-bool http_IO::WriteDirect(Span<const uint8_t> data)
-{
-    while (data.len) {
-        Size sent = send(socket->sock, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
-
-        if (sent < 0) {
-            if (errno == EINTR)
-                continue;
-
-            if (errno != EPIPE && errno != ECONNRESET) {
-                LogError("Failed to send to client: %1", strerror(errno));
-            }
-            return false;
-        }
-
-        data.ptr += sent;
-        data.len -= sent;
-    }
-
-    return true;
-}
-
-bool http_IO::WriteChunked(Span<const uint8_t> data)
-{
-    // StreamWriter should never send us an empty buffer
-    RG_ASSERT(data.len > 0);
-
-    if (data.len > (Size)16 * 0xFFFF) [[unlikely]] {
-        do {
-            Size take = std::min((Size)16 * 0xFFFF, data.len);
-            Span<const uint8_t> frag = data.Take(0, take);
-
-            if (!WriteChunked(frag))
-                return false;
-
-            data.ptr += take;
-            data.len -= take;
-        } while (data.len);
-
-        return true;
-    }
-
-    char full[6] = { 'F', 'F', 'F', 'F', '\r', '\n' };
-    char last[6] = { 0, 0, 0, 0, '\r', '\n' };
-    char tail[2] = { '\r', '\n' };
-
-    LocalArray<struct iovec, 3 * 16> parts;
-    Size remain = 0;
-
-    while (data.len >= 0xFFFF) {
-        remain += 0xFFFF + RG_SIZE(full) + RG_SIZE(tail);
-
-        parts.Append({ full, RG_SIZE(full) });
-        parts.Append({ (void *)data.ptr, 0xFFFF });
-        parts.Append({ tail, RG_SIZE(tail) });
-
-        data.ptr += 0xFFFF;
-        data.len -= 0xFFFF;
-    }
-
-    if (data.len) {
-        static const char literals[] = "0123456789ABCDEF";
-
-        last[0] = literals[((size_t)data.len >> 12) & 0xF];
-        last[1] = literals[((size_t)data.len >> 8) & 0xF];
-        last[2] = literals[((size_t)data.len >> 4) & 0xF];
-        last[3] = literals[((size_t)data.len >> 0) & 0xF];
-
-        remain += data.len + RG_SIZE(last) + RG_SIZE(tail);
-
-        parts.Append({ last, RG_SIZE(last) });
-        parts.Append({ (void *)data.ptr, (size_t)data.len });
-        parts.Append({ tail, RG_SIZE(tail) });
-    }
-
-    struct msghdr msg = {
-        .msg_name = nullptr,
-        .msg_namelen = 0,
-        .msg_iov = parts.data,
-        .msg_iovlen = (size_t)parts.len,
-        .msg_control = nullptr,
-        .msg_controllen = 0,
-        .msg_flags = 0
-    };
-
-    for (;;) {
-        Size sent = sendmsg(socket->sock, &msg, MSG_MORE | MSG_NOSIGNAL);
-
-        if (sent < 0) {
-            if (errno == EINTR)
-                continue;
-
-            if (errno != EPIPE && errno != ECONNRESET) {
-                LogError("Failed to send to client: %1", strerror(errno));
-            }
-            return false;
-        }
-
-        if (sent == remain)
-            break;
-        remain -= sent;
-
-        for (;;) {
-            struct iovec *part = msg.msg_iov;
-
-            if (part->iov_len > (size_t)sent) {
-                part->iov_base = (uint8_t *)part->iov_base + sent;
-                part->iov_len -= (size_t)sent;
-
-                break;
-            }
-
-            msg.msg_iov++;
-            msg.msg_iovlen--;
-            sent -= (Size)part->iov_len;
-
-            RG_ASSERT(msg.msg_iovlen > 0);
-        }
-    }
-
-    return true;
 }
 
 }

@@ -124,16 +124,6 @@ private:
     friend class http_Daemon;
 };
 
-static void SetSocketPush(int sock, bool push)
-{
-    int flag = push;
-    setsockopt((SOCKET)sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
-
-    if (push) {
-        send(sock, nullptr, 0, 0);
-    }
-}
-
 bool http_Daemon::Bind(const http_Config &config, bool log_addr)
 {
     RG_ASSERT(!listeners.len);
@@ -355,8 +345,6 @@ bool http_Dispatcher::Run()
 
                 socket->connected = true;
                 setsockopt(socket->sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT, (char *)&listener, RG_SIZE(listener));
-
-                SetSocketPush(socket->sock, false);
 
                 sockaddr *local_addr = nullptr;
                 sockaddr *remote_addr = nullptr;
@@ -668,8 +656,10 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     RG_ASSERT(socket);
     RG_ASSERT(!response.sent);
 
+    SetSocketRetain(socket->sock, true);
+
     RG_DEFER {
-        SetSocketPush(socket->sock, true);
+        SetSocketRetain(socket->sock, false);
         response.sent = true;
 
         socket->op = PendingOperation::Done;
@@ -712,14 +702,17 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 {
     RG_ASSERT(socket);
     RG_ASSERT(!response.sent);
+    RG_ASSERT(len >= 0);
 
     bool async = true;
+
+    SetSocketRetain(socket->sock, true);
 
     RG_DEFER {
         response.sent = true;
 
         if (!async) {
-            SetSocketPush(socket->sock, true);
+            SetSocketRetain(socket->sock, false);
 
             socket->op = PendingOperation::Done;
             PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);

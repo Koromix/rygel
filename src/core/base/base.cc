@@ -88,6 +88,7 @@
     #include <sys/un.h>
     #include <sys/wait.h>
     #include <netinet/in.h>
+    #include <netinet/tcp.h>
     #include <arpa/inet.h>
     #include <termios.h>
     #include <time.h>
@@ -5798,6 +5799,33 @@ int ConnectToUnixSocket(const char *path, int flags)
 
     err_guard.Disable();
     return sock;
+}
+
+void SetSocketNonBlock(int sock, bool enable)
+{
+    int flags = fcntl(sock, F_GETFL, 0);
+    flags = ApplyMask(flags, O_NONBLOCK, enable);
+    fcntl(sock, F_SETFL, flags);
+}
+
+void SetSocketRetain(int sock, bool retain)
+{
+#if defined(TCP_CORK)
+    int flag = retain;
+    setsockopt(sock, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
+#elif defined(TCP_NOPUSH)
+    int flag = retain;
+    setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
+
+#if defined(__APPLE__)
+    if (!retain) {
+        send(sock, nullptr, 0, MSG_NOSIGNAL);
+    }
+#endif
+#else
+    int flag = !retain;
+    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+#endif
 }
 
 void CloseSocket(int fd)

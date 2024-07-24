@@ -4573,6 +4573,9 @@ int OpenIPSocket(SocketType type, int port, int flags);
 int OpenUnixSocket(const char *path, int flags);
 int ConnectToUnixSocket(const char *path, int flags);
 
+void SetSocketNonBlock(int sock, bool enable);
+void SetSocketRetain(int sock, bool retain);
+
 void CloseSocket(int fd);
 
 #endif
