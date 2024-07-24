@@ -268,6 +268,10 @@ void http_Daemon::RunHandler(http_IO *client)
     RG_DEFER { PopLogFilter(); };
 
     handle_func(client->request, client);
+
+    if (!client->response.sent) [[unlikely]] {
+        client->SendError(500);
+    }
 }
 
 const char *http_RequestInfo::FindHeader(const char *key) const
