@@ -606,8 +606,8 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
 
 bool http_IO::WriteChunked(Span<const uint8_t> data)
 {
-    if (!data.len)
-        return true;
+    // StreamWriter should never send us an empty buffer
+    RG_ASSERT(data.len > 0);
 
     if (data.len > (Size)16 * 0xFFFF) [[unlikely]] {
         do {
