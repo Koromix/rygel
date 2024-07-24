@@ -679,7 +679,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
 #undef TRY
 
-    LogInfo("Cannot find anything to serve '%1'", request.path);
+    if (config.proxy_url && config.root_directory) {
+        LogError("Cannot find any source for '%1'", request.path);
+    }
     io->SendError(404);
 }
 
