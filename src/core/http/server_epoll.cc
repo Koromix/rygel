@@ -606,38 +606,100 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
 
 bool http_IO::WriteChunked(Span<const uint8_t> data)
 {
-    while (data.len) {
-        LocalArray<uint8_t, 16384> buf;
+    if (!data.len)
+        return true;
 
-        Size copy_len = std::min(RG_SIZE(buf.data) - 8, data.len);
-
-        buf.len = 8 + copy_len;
-        Fmt(buf.As<char>(), "%1\r\n", FmtHex(copy_len).Pad0(-4));
-        MemCpy(buf.data + 6, data.ptr, copy_len);
-        buf.data[6 + copy_len + 0] = '\r';
-        buf.data[6 + copy_len + 1] = '\n';
-
-        Span<const uint8_t> remain = buf;
-
+    if (data.len > (Size)16 * 0xFFFF) [[unlikely]] {
         do {
-            Size sent = send(socket->sock, remain.ptr, (size_t)remain.len, MSG_MORE | MSG_NOSIGNAL);
+            Size take = std::min((Size)16 * 0xFFFF, data.len);
+            Span<const uint8_t> frag = data.Take(0, take);
 
-            if (sent < 0) {
-                if (errno == EINTR)
-                    continue;
-
-                if (errno != EPIPE && errno != ECONNRESET) {
-                    LogError("Failed to send to client: %1", strerror(errno));
-                }
+            if (!WriteChunked(frag))
                 return false;
+
+            data.ptr += take;
+            data.len -= take;
+        } while (data.len);
+
+        return true;
+    }
+
+    char full[6] = { 'F', 'F', 'F', 'F', '\r', '\n' };
+    char last[6] = { 0, 0, 0, 0, '\r', '\n' };
+    char tail[2] = { '\r', '\n' };
+
+    LocalArray<struct iovec, 3 * 16> parts;
+    Size remain = 0;
+
+    while (data.len >= 0xFFFF) {
+        remain += 0xFFFF + RG_SIZE(full) + RG_SIZE(tail);
+
+        parts.Append({ full, RG_SIZE(full) });
+        parts.Append({ (void *)data.ptr, 0xFFFF });
+        parts.Append({ tail, RG_SIZE(tail) });
+
+        data.ptr += 0xFFFF;
+        data.len -= 0xFFFF;
+    }
+
+    if (data.len) {
+        static const char literals[] = "0123456789ABCDEF";
+
+        last[0] = literals[((size_t)data.len >> 12) & 0xF];
+        last[1] = literals[((size_t)data.len >> 8) & 0xF];
+        last[2] = literals[((size_t)data.len >> 4) & 0xF];
+        last[3] = literals[((size_t)data.len >> 0) & 0xF];
+
+        remain += data.len + RG_SIZE(last) + RG_SIZE(tail);
+
+        parts.Append({ last, RG_SIZE(last) });
+        parts.Append({ (void *)data.ptr, (size_t)data.len });
+        parts.Append({ tail, RG_SIZE(tail) });
+    }
+
+    struct msghdr msg = {
+        .msg_name = nullptr,
+        .msg_namelen = 0,
+        .msg_iov = parts.data,
+        .msg_iovlen = (size_t)parts.len,
+        .msg_control = nullptr,
+        .msg_controllen = 0,
+        .msg_flags = 0
+    };
+
+    for (;;) {
+        Size sent = sendmsg(socket->sock, &msg, MSG_MORE | MSG_NOSIGNAL);
+
+        if (sent < 0) {
+            if (errno == EINTR)
+                continue;
+
+            if (errno != EPIPE && errno != ECONNRESET) {
+                LogError("Failed to send to client: %1", strerror(errno));
+            }
+            return false;
+        }
+
+        if (sent == remain)
+            break;
+        remain -= sent;
+
+        for (;;) {
+            struct iovec *part = msg.msg_iov;
+
+            if (part->iov_len > (size_t)sent) {
+                part->iov_base = (uint8_t *)part->iov_base + sent;
+                part->iov_len -= (size_t)sent;
+
+                break;
             }
 
-            remain.ptr += sent;
-            remain.len -= sent;
-         } while (remain.len);
+            msg.msg_iov++;
+            msg.msg_iovlen--;
+            sent -= (Size)part->iov_len;
 
-        data.ptr += copy_len;
-        data.len -= copy_len;
+            RG_ASSERT(msg.msg_iovlen > 0);
+        }
     }
 
     return true;
