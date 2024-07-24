@@ -42,6 +42,12 @@ struct Config {
     bool Validate();
 };
 
+enum class HandlerResult {
+    Done,
+    Missing,
+    Error
+};
+
 static Config config;
 
 static thread_local CURL *curl = nullptr;
@@ -409,10 +415,9 @@ R"(<!DOCTYPE html>
     io->SendBinary(200, page, "text/html");
 }
 
-static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
+static HandlerResult HandleLocal(const http_RequestInfo &request, http_IO *io)
 {
-    if (!config.root_directory)
-        return false;
+    RG_ASSERT(config.root_directory);
 
     Span<const char> relative_url = TrimStrLeft(request.path, "/\\").ptr;
     Span<const char> filename = NormalizePath(relative_url, config.root_directory, io->Allocator());
@@ -432,24 +437,24 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
         switch (stat) {
             case StatResult::Success: {} break;
 
-            case StatResult::MissingPath: return false;
+            case StatResult::MissingPath: return HandlerResult::Missing;
             case StatResult::AccessDenied: {
                 io->SendError(403);
-                return true;
+                return HandlerResult::Done;
             } break;
-            case StatResult::OtherError: return true;
+            case StatResult::OtherError: return HandlerResult::Error;
         }
     }
 
     if (file_info.type == FileType::File) {
         ServeFile(filename.ptr, file_info, request, io);
-        return true;
+        return HandlerResult::Done;
     } else if (file_info.type == FileType::Directory) {
         if (!EndsWith(request.path, "/")) {
             const char *redirect = Fmt(io->Allocator(), "%1/", request.path).ptr;
             io->AddHeader("Location", redirect);
             io->SendEmpty(302);
-            return true;
+            return HandlerResult::Done;
         }
 
         const char *index_filename = Fmt(io->Allocator(), "%1/index.html", filename).ptr;
@@ -459,23 +464,23 @@ static bool HandleLocal(const http_RequestInfo &request, http_IO *io)
         if (StatFile(index_filename, (int)StatFlag::SilentMissing, &index_info) == StatResult::Success &&
                 index_info.type == FileType::File) {
             ServeFile(index_filename, index_info, request, io);
-            return true;
+            return HandlerResult::Done;
         } else if (config.auto_index) {
             ServeIndex(filename.ptr, request, io);
-            return true;
+            return HandlerResult::Done;
         } else {
-            return false;
+            io->SendError(403);
+            return HandlerResult::Done;
         }
     } else {
         io->SendError(403);
-        return true;
+        return HandlerResult::Done;
     }
 }
 
-static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
+static HandlerResult HandleProxy(const http_RequestInfo &request, http_IO *io, bool relay404)
 {
-    if (!config.proxy_url)
-        return false;
+    RG_ASSERT(config.proxy_url);
 
     static const char *const OmitHeaders[] = {
         "Host",
@@ -490,11 +495,11 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
     if (curl) {
         if (!curl_Reset(curl))
-            return false;
+            return HandlerResult::Error;
     } else {
         curl = curl_Init();
         if (!curl)
-            return false;
+            return HandlerResult::Error;
         atexit([] { curl_easy_cleanup(curl); });
     }
 
@@ -578,7 +583,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
         if (!success) {
             LogError("Failed to set libcurl options");
-            return true;
+            return HandlerResult::Error;
         }
     }
 
@@ -610,8 +615,8 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
         break;
     }
 
-    if (status == 404)
-        return false;
+    if (status == 404 && !relay404)
+        return HandlerResult::Missing;
 
     if (config.verbose) {
         LogInfo("Proxying '%1' from '%2'", request.path, url);
@@ -619,7 +624,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
 
     if (status < 0) {
         io->SendError(502);
-        return true;
+        return HandlerResult::Done;
     }
 
     for (const http_KeyValue &header: ctx.headers) {
@@ -627,7 +632,7 @@ static bool HandleProxy(const http_RequestInfo &request, http_IO *io)
     }
     io->SendBinary(status, ctx.data.Leak());
 
-    return true;
+    return HandlerResult::Done;
 }
 
 static void HandleRequest(const http_RequestInfo &request, http_IO *io)
@@ -651,12 +656,28 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         io->AddHeader(header.key, header.value);
     }
 
-    if (config.proxy_first && HandleProxy(request, io))
-        return;
-    if (HandleLocal(request, io))
-        return;
-    if (!config.proxy_first && HandleProxy(request, io))
-        return;
+#define TRY(Call) \
+        do { \
+            HandlerResult ret = (Call); \
+             \
+            switch (ret) { \
+                case HandlerResult::Done: return; \
+                case HandlerResult::Missing: break; \
+                case HandlerResult::Error: { \
+                    io->SendError(500); \
+                    return; \
+                } break; \
+            } \
+        } while (false)
+
+    if (config.proxy_url && config.proxy_first)
+        TRY(HandleProxy(request, io, !config.root_directory));
+    if (config.root_directory)
+        TRY(HandleLocal(request, io));
+    if (config.proxy_url && !config.proxy_first)
+        TRY(HandleProxy(request, io, !config.root_directory));
+
+#undef TRY
 
     LogInfo("Cannot find anything to serve '%1'", request.path);
     io->SendError(404);
