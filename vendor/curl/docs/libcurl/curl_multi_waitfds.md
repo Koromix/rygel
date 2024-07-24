@@ -11,11 +11,12 @@ See-also:
   - curl_multi_fdset (3)
 Protocol:
   - All
+Added-in: 8.8.0
 ---
 
 # NAME
 
-curl_multi_waitfds - extracts file descriptor information from a multi handle
+curl_multi_waitfds - extract file descriptor information from a multi handle
 
 # SYNOPSIS
 
@@ -50,6 +51,8 @@ be checked for being ready to read or write.
 The client code can pass *size* equal to zero just to get the number of the
 descriptors and allocate appropriate storage for them to be used in a
 subsequent function call.
+
+# %PROTOCOLS%
 
 # EXAMPLE
 
@@ -99,9 +102,7 @@ int main(void)
 }
 ~~~
 
-# AVAILABILITY
-
-Added in 8.8.0
+# %AVAILABILITY%
 
 # RETURN VALUE
 
