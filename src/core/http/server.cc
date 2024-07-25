@@ -857,7 +857,11 @@ void http_IO::Rearm(int64_t start)
     response.sent = false;
     last_err = nullptr;
 
-    allocator.Reset();
+    if (start >= 0) {
+        allocator.Reset();
+    } else {
+        allocator.ReleaseAll();
+    }
 }
 
 bool http_IO::IsPreparing() const

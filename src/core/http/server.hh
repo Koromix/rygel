@@ -188,7 +188,7 @@ class http_IO {
         bool sent = false;
     } response;
 
-    BlockAllocator allocator { Kibibytes(16) };
+    BlockAllocator allocator { Kibibytes(8) };
 
 public:
     http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(0); }
