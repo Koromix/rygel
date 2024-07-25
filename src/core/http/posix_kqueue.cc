@@ -55,7 +55,7 @@ class http_Dispatcher {
 #endif
 
     HeapArray<http_Socket *> sockets;
-    LocalArray<http_Socket *, 256> free_sockets;
+    LocalArray<http_Socket *, 64> free_sockets;
     HashSet<void *> busy_sockets;
 
     HeapArray<struct kevent> next_changes;
