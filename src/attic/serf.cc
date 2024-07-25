@@ -645,11 +645,6 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
         io->SendError(405);
         return;
     }
-    if (PathContainsDotDot(request.path)) {
-        LogError("Unsafe URL containing '..' components");
-        io->SendError(403);
-        return;
-    }
 
     // Add configured headers
     for (const http_KeyValue &header: config.headers) {

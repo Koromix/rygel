@@ -714,6 +714,12 @@ http_IO::PrepareStatus http_IO::ParseRequest()
 
         path.ptr[path.len] = 0;
         request.path = path.ptr;
+
+        if (PathContainsDotDot(request.path)) {
+            LogError("Unsafe URL containing '..' components");
+            SendError(403);
+            return PrepareStatus::Close;
+        }
     }
 
     // Parse headers
