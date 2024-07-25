@@ -2,6 +2,12 @@
 
 ## Goupile 3.6
 
+### Goupile 3.6.3 (26/07/2024)
+
+- Correction d'un crash possible lors de l'envoi de mails
+- Mise à disposition de fonctions de fonctions de hachage et CRC32 aux scripts
+- Mise à disposition de fonctions utilitaires aux scripts
+
 ### Goupile 3.6.2 (11/07/2024)
 
 - Correction de bugs de navigation dans goupile (notamment le bouton "Ajouter" qui fonctionne mal)

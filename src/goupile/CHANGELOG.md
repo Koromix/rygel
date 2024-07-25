@@ -2,6 +2,12 @@
 
 ## Goupile 3.6
 
+### Goupile 3.6.3 (2024-07-26)
+
+- Fix a possible crash when sending mails
+- Expose hash and CRC32 functions to scripts
+- Expose more utility functions to scripts
+
 ### Goupile 3.6.2 (2024-07-11)
 
 - Fix navigation bugs in goupile (including main "Add" button not working)
