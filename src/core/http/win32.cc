@@ -60,7 +60,7 @@ enum class PendingOperation {
     Read,
     Done,
 
-    MoreAccept,
+    CreateSockets,
     Exit
 };
 
@@ -72,9 +72,16 @@ struct http_Socket {
     OVERLAPPED overlapped = {};
     uint8_t accept[2 * AcceptAddressLen];
 
-    std::unique_ptr<http_IO> client = nullptr;
+    http_IO *client = nullptr;
 
-    ~http_Socket() { closesocket(sock); };
+    ~http_Socket()
+    {
+        closesocket(sock);
+
+        if (client) {
+            delete client;
+        }
+    };
 };
 
 struct IndirectFunctions {
@@ -92,13 +99,9 @@ class http_Dispatcher {
 
     int listener;
 
-    std::mutex socket_mutex;
     std::atomic_int pending_accepts { 0 };
+    std::atomic_int create_accepts { 0 };
     HeapArray<http_Socket *> sockets;
-    HeapArray<http_Socket *> free_sockets;
-
-    std::mutex client_mutex;
-    LocalArray<http_IO *, 256> free_clients;
 
 public:
     http_Dispatcher(http_Daemon *daemon, HANDLE iocp, IndirectFunctions fn, int listener)
@@ -110,16 +113,14 @@ public:
 private:
     void ProcessClient(int64_t now, http_Socket *socket, http_IO *client);
 
-    // Call with mutex locked (or before Run)
-    bool PostAccept();
-
+    bool PostAccept(http_Socket *socket);
     bool PostRead(http_Socket *socket);
 
+    http_Socket *InitSocket();
     void DisconnectSocket(http_Socket *socket);
     void DestroySocket(http_Socket *socket);
 
     http_IO *InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa);
-    void ParkClient(http_IO *client);
 
     friend class http_Daemon;
 };
@@ -240,7 +241,9 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
 
     // Prepare sockets
     for (Size i = 0; i < BaseAccepts; i++) {
-        if (!dispatcher->PostAccept())
+        http_Socket *socket = dispatcher->InitSocket();
+
+        if (!dispatcher->PostAccept(socket))
             return false;
     }
 
@@ -298,13 +301,8 @@ http_Dispatcher::~http_Dispatcher()
     for (http_Socket *socket: sockets) {
         delete socket;
     }
-    for (http_IO *client: free_clients) {
-        delete client;
-    }
 
     sockets.Clear();
-    free_sockets.Clear();
-    free_clients.Clear();
 }
 
 bool http_Dispatcher::Run()
@@ -335,7 +333,11 @@ bool http_Dispatcher::Run()
                 socket->op = PendingOperation::None;
 
                 if (--pending_accepts < min_accepts) {
-                    PostQueuedCompletionStatus(iocp, 0, (int)PendingOperation::MoreAccept, nullptr);
+                    bool post = !create_accepts.fetch_add(1);
+
+                    if (post) {
+                        PostQueuedCompletionStatus(iocp, 0, (int)PendingOperation::CreateSockets, nullptr);
+                    }
                 }
 
                 if (!success) {
@@ -359,7 +361,9 @@ bool http_Dispatcher::Run()
                     DisconnectSocket(socket);
                     continue;
                 }
-                socket->client.reset(client);
+
+                RG_ASSERT(!socket->client);
+                socket->client = client;
 
                 if (!PostRead(socket)) {
                     DisconnectSocket(socket);
@@ -377,8 +381,9 @@ bool http_Dispatcher::Run()
 
                 socket->connected = false;
 
-                std::lock_guard<std::mutex> lock(socket_mutex);
-                free_sockets.Append(socket);
+                if (!PostAccept(socket)) [[unlikely]] {
+                    DestroySocket(socket);
+                }
             } break;
 
             case PendingOperation::Read: {
@@ -392,7 +397,7 @@ bool http_Dispatcher::Run()
                     continue;
                 }
 
-                http_IO *client = socket->client.get();
+                http_IO *client = socket->client;
 
                 client->incoming.buf.len += (Size)transferred;
                 client->incoming.buf.ptr[client->incoming.buf.len] = 0;
@@ -411,7 +416,7 @@ bool http_Dispatcher::Run()
                     continue;
                 }
 
-                http_IO *client = socket->client.get();
+                http_IO *client = socket->client;
 
                 if (client->request.keepalive) {
                     client->Rearm(now);
@@ -424,23 +429,36 @@ bool http_Dispatcher::Run()
                 }
             } break;
 
-            case PendingOperation::MoreAccept: {
-                std::unique_lock<std::mutex> lock(socket_mutex);
-
+            case PendingOperation::CreateSockets: {
+                int needed = std::clamp(4 * create_accepts.load(), 64, MaxAccepts - pending_accepts);
                 int failures = 0;
-                int target = std::min(pending_accepts + 32, MaxAccepts);
 
-                while (pending_accepts < target) {
-                    if (!PostAccept()) {
-                        failures++;
+                Size prev_len = sockets.len;
+
+                for (int i = 0; i < needed; i++) {
+                    http_Socket *socket = InitSocket();
+
+                    if (!PostAccept(socket)) [[unlikely]] {
+                        if (++failures >= 8) {
+                            LogError("System starvation, giving up");
+                            return false;
+                        }
+
                         WaitDelay(20);
                     }
-
-                    if (failures >= 8) {
-                        LogError("System starvation, giving up");
-                        return false;
-                    }
                 }
+
+                Size j = 0;
+                for (Size i = 0; i < prev_len; i++) {
+                    sockets[j] = sockets[i];
+                    j += (sockets[i]->sock >= 0);
+                }
+                for (Size i = prev_len; i < sockets.len; i++, j++) {
+                    sockets[j] = sockets[i];
+                }
+                sockets.len = j;
+
+                create_accepts = 0;
             } break;
 
             case PendingOperation::Exit: {
@@ -456,7 +474,7 @@ bool http_Dispatcher::Run()
 
 void http_Dispatcher::ProcessClient(int64_t now, http_Socket *socket, http_IO *client)
 {
-    RG_ASSERT(client == socket->client.get());
+    RG_ASSERT(client == socket->client);
 
     http_IO::PrepareStatus status = client->ParseRequest();
 
@@ -484,38 +502,11 @@ void http_Dispatcher::ProcessClient(int64_t now, http_Socket *socket, http_IO *c
     }
 }
 
-bool http_Dispatcher::PostAccept()
+bool http_Dispatcher::PostAccept(http_Socket *socket)
 {
-    http_Socket *socket = nullptr;
-    RG_DEFER_N(err_guard) { DisconnectSocket(socket); };
-
-    if (free_sockets.len) {
-        int idx = GetRandomInt(0, (int)free_sockets.len);
-
-        socket = free_sockets[idx];
-
-        std::swap(free_sockets[idx], free_sockets[free_sockets.len - 1]);
-        free_sockets.len--;
-    } else {
-        socket = new http_Socket();
-        RG_DEFER_N(err_guard) { delete socket; };
-
-        socket->sock = CreateSocket(daemon->sock_type, SOCK_STREAM | SOCK_OVERLAPPED);
-        if (socket->sock < 0)
-            return false;
-
-        if (!CreateIoCompletionPort((HANDLE)(uintptr_t)socket->sock, iocp, 0, 0)) {
-            LogError("Failed to associate socket with IOCP: %1", GetWin32ErrorString());
-            return false;
-        }
-
-        err_guard.Disable();
-        sockets.Append(socket);
-    }
+    DWORD dummy = 0;
 
 retry:
-
-    DWORD dummy = 0;
     if (!fn.AcceptEx((SOCKET)listener, (SOCKET)socket->sock, socket->accept, 0,
                      AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
             WSAGetLastError() != ERROR_IO_PENDING) {
@@ -531,7 +522,6 @@ retry:
     socket->op = PendingOperation::Accept;
     pending_accepts++;
 
-    err_guard.Disable();
     return true;
 }
 
@@ -543,7 +533,7 @@ bool http_Dispatcher::PostRead(http_Socket *socket)
     RG_ASSERT(socket->op == PendingOperation::None);
     RG_ASSERT(socket->client);
 
-    http_IO *client = socket->client.get();
+    http_IO *client = socket->client;
 
     client->incoming.buf.Grow(Mebibytes(1));
 
@@ -566,6 +556,27 @@ bool http_Dispatcher::PostRead(http_Socket *socket)
     return true;
 }
 
+// Only call from one thread at a time
+http_Socket *http_Dispatcher::InitSocket()
+{
+    http_Socket *socket = new http_Socket();
+    RG_DEFER_N(err_guard) { delete socket; };
+
+    socket->sock = CreateSocket(daemon->sock_type, SOCK_STREAM | SOCK_OVERLAPPED);
+    if (socket->sock < 0)
+        return nullptr;
+
+    if (!CreateIoCompletionPort((HANDLE)(uintptr_t)socket->sock, iocp, 0, 0)) {
+        LogError("Failed to associate socket with IOCP: %1", GetWin32ErrorString());
+        return nullptr;
+    }
+
+    err_guard.Disable();
+    sockets.Append(socket);
+
+    return socket;
+}
+
 void http_Dispatcher::DisconnectSocket(http_Socket *socket)
 {
     if (!socket)
@@ -575,8 +586,8 @@ void http_Dispatcher::DisconnectSocket(http_Socket *socket)
     RG_ASSERT(socket->connected);
 
     if (socket->client) {
-        http_IO *client = socket->client.release();
-        ParkClient(client);
+        delete socket->client;
+        socket->client = nullptr;
     }
 
     if (!fn.DisconnectEx((SOCKET)socket->sock, &socket->overlapped, TF_REUSE_SOCKET, 0) &&
@@ -599,35 +610,27 @@ void http_Dispatcher::DestroySocket(http_Socket *socket)
     if (!socket)
         return;
 
-    std::lock_guard<std::mutex> lock(socket_mutex);
+    socket->~http_Socket();
+    socket->sock = -1;
+    socket->connected = false;
+    socket->op = PendingOperation::None;
 
-    Size j = 0;
-    for (Size i = 0; i < sockets.len; i++) {
-        sockets[j] = sockets[i];
-        j += (socket != sockets[i]);
+    // If anything fails (should be very rare), we're temporarily leaking the struct until
+    // a cleanup happens when more sockets are created (see PendingOperation::CreateSockets).
+
+    socket->sock = CreateSocket(daemon->sock_type, SOCK_STREAM | SOCK_OVERLAPPED);
+    if (socket->sock < 0)
+        return;
+
+    if (!CreateIoCompletionPort((HANDLE)(uintptr_t)socket->sock, iocp, 0, 0)) {
+        LogError("Failed to associate socket with IOCP: %1", GetWin32ErrorString());
+        return;
     }
-    sockets.len = j;
-
-    delete socket;
 }
 
 http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
-    http_IO *client = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(client_mutex);
-
-        if (free_clients.len) {
-            int idx = GetRandomInt(0, (int)free_clients.len);
-
-            client = free_clients[idx];
-
-            std::swap(free_clients[idx], free_clients[free_clients.len - 1]);
-            free_clients.len--;
-        } else {
-            client = new http_IO(daemon);
-        }
-    }
+    http_IO *client = new http_IO(daemon);
 
     if (!client->Init(socket, start, sa)) [[unlikely]] {
         delete client;
@@ -635,20 +638,6 @@ http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct 
     }
 
     return client;
-}
-
-void http_Dispatcher::ParkClient(http_IO *client)
-{
-    std::lock_guard<std::mutex> lock(client_mutex);
-
-    if (free_clients.Available()) {
-        client->socket = nullptr;
-        client->Rearm(-1);
-
-        free_clients.Append(client);
-    } else {
-        delete client;
-    }
 }
 
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
