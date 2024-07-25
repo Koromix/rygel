@@ -5803,9 +5803,14 @@ int ConnectToUnixSocket(const char *path, int flags)
 
 void SetSocketNonBlock(int sock, bool enable)
 {
+#if defined(_WIN32)
+    unsigned long mode = enable;
+    ioctlsocket(sock, FIONBIO, &mode);
+#else
     int flags = fcntl(sock, F_GETFL, 0);
     flags = ApplyMask(flags, O_NONBLOCK, enable);
     fcntl(sock, F_SETFL, flags);
+#endif
 }
 
 void SetSocketRetain(int sock, bool retain)
@@ -5822,6 +5827,9 @@ void SetSocketRetain(int sock, bool retain)
         send(sock, nullptr, 0, MSG_NOSIGNAL);
     }
 #endif
+#elif defined(_WIN32)
+    int flag = !retain;
+    setsockopt((SOCKET)sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
 #else
     int flag = !retain;
     setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
