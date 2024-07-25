@@ -379,7 +379,10 @@ bool http_Dispatcher::Run()
 
                 socket->connected = false;
 
-                if (!PostAccept(socket)) [[unlikely]] {
+                bool reuse = create_accepts.load(std::memory_order_relaxed) > 4 ||
+                             pending_accepts.load(std::memory_order_relaxed) < BaseAccepts * 2;
+
+                if (!reuse || !PostAccept(socket)) {
                     DestroySocket(socket);
                 }
             } break;
