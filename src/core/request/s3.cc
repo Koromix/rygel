@@ -639,7 +639,7 @@ bool s3_Session::PutObject(Span<const char> key, Span<const uint8_t> data, const
                 remain->ptr += (Size)give;
                 remain->len -= (Size)give;
 
-                return give;
+                return (size_t)give;
             });
             success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &remain);
             success &= !curl_easy_setopt(curl, CURLOPT_INFILESIZE_LARGE, (curl_off_t)remain.len);

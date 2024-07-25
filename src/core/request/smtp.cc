@@ -203,7 +203,7 @@ bool smtp_Sender::Send(const char *to, const smtp_MailContent &content)
             payload->ptr += copy_len;
             payload->len -= (Size)copy_len;
 
-            return copy_len;
+            return (size_t)copy_len;
         });
         success &= !curl_easy_setopt(curl, CURLOPT_READDATA, &payload);
         success &= !curl_easy_setopt(curl, CURLOPT_UPLOAD, 1L);
