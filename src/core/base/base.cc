@@ -424,6 +424,12 @@ void *BlockAllocatorBase::ResetCurrent()
     }
 }
 
+void BlockAllocatorBase::ForgetCurrent()
+{
+    current_bucket = nullptr;
+    last_alloc = nullptr;
+}
+
 BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
 {
     allocator.operator=(std::move(other.allocator));
@@ -438,6 +444,12 @@ void BlockAllocator::Reset()
     allocator.ReleaseAllExcept(ptr);
 }
 
+void BlockAllocator::ReleaseAll()
+{
+    ForgetCurrent();
+    allocator.ReleaseAll();
+}
+
 IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator &&other)
 {
     allocator->operator=(std::move(*other.allocator));
@@ -450,6 +462,12 @@ void IndirectBlockAllocator::Reset()
 {
     void *ptr = ResetCurrent();
     allocator->ReleaseAllExcept(ptr);
+}
+
+void IndirectBlockAllocator::ReleaseAll()
+{
+    ForgetCurrent();
+    allocator->ReleaseAll();
 }
 
 #if defined(_WIN32)

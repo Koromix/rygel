@@ -1233,6 +1233,7 @@ public:
 protected:
     void CopyFrom(BlockAllocatorBase *other);
     void *ResetCurrent();
+    void ForgetCurrent();
 
     virtual LinkedAllocator *GetAllocator() = 0;
 
@@ -1254,6 +1255,7 @@ public:
     BlockAllocator& operator=(BlockAllocator &&other);
 
     void Reset();
+    void ReleaseAll();
 };
 
 class IndirectBlockAllocator final: public BlockAllocatorBase {
@@ -1270,6 +1272,7 @@ public:
     IndirectBlockAllocator& operator=(IndirectBlockAllocator &&other);
 
     void Reset();
+    void ReleaseAll();
 };
 
 #if !defined(__wasi__)
