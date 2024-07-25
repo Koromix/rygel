@@ -240,12 +240,15 @@ void *LinkedAllocator::Allocate(Size size, unsigned int flags)
 {
     Bucket *bucket = (Bucket *)AllocateRaw(allocator, RG_SIZE(Bucket) + size, flags);
 
+    bucket->prev = bucket;
+    bucket->next = bucket;
+
     list = list ? list : bucket;
 
     bucket->prev = list;
-    bucket->next = list->prev;
-    bucket->prev->next = bucket;
-    bucket->next->prev = bucket;
+    bucket->next = list->next;
+    list->next->prev = bucket;
+    list->next = bucket;
 
     return (void *)bucket->data;
 }
@@ -364,6 +367,7 @@ void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsign
             ptr = ResizeRaw(alloc, ptr, old_size, new_size, flags);
         } else {
             void *new_ptr = Allocate(new_size, flags & ~(int)AllocFlag::Zero);
+
             if (new_size > old_size) {
                 MemCpy(new_ptr, ptr, old_size);
 
