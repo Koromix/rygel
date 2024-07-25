@@ -632,8 +632,9 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                         }
 
                         enabled_targets.Append({ &target });
-                        match = true;
                     }
+
+                    match = true;
                 }
             }
 
@@ -646,12 +647,14 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                     if (inserted) {
                         if (src.target->TestPlatforms(compiler->platform)) {
                             enabled_sources.Append(&src);
-                            match = true;
                         } else {
-                            LogError("Cannot build '%1' for platform '%2' (ignoring)",
+                            LogError("Cannot build '%1' for platform '%2'",
                                      src.filename, HostPlatformNames[(int)compiler->platform]);
+                            valid = false;
                         }
                     }
+
+                    match = true;
                 }
             }
 
