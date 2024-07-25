@@ -13,7 +13,7 @@
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net } from '../../web/libjs/common.js';
-import { Sha256 } from '../../web/libjs/crypto.js';
+import { Sha256 } from '../../web/libjs/mixer.js';
 import * as UI from './ui.js';
 
 function InstancePublisher() {

@@ -13,7 +13,7 @@
 
 import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
-import { Sha256 } from '../../web/libjs/crypto.js';
+import { Sha256 } from '../../web/libjs/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';

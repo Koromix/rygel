@@ -13,7 +13,7 @@
 
 import { render, html, svg, until } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
-import { Base64, Sha256 } from '../../web/libjs/crypto.js';
+import { Base64, Sha256 } from '../../web/libjs/mixer.js';
 import * as IDB from '../../web/libjs/indexedDB.js';
 import { ApplicationInfo, FormInfo, PageInfo, ApplicationBuilder } from './instance_app.js';
 import * as goupile from '../client/goupile.js';

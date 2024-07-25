@@ -13,7 +13,7 @@
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, NetworkError } from '../../web/libjs/common.js';
-import { Base64 } from '../../web/libjs/crypto.js';
+import { Base64 } from '../../web/libjs/mixer.js';
 import * as IDB from '../../web/libjs/indexedDB.js';
 import * as UI from './ui.js';
 import * as AdminController from './admin.js';
