@@ -48,8 +48,8 @@ typedef struct sockaddr_un {
 
 namespace RG {
 
-static const int BaseAccepts = 256;
-static const int MaxAccepts = 2048;
+static const int BaseAccepts = 512;
+static const int MaxAccepts = 16384;
 
 static const Size AcceptAddressLen = 2 * sizeof(SOCKADDR_STORAGE) + 16;
 
@@ -307,8 +307,6 @@ http_Dispatcher::~http_Dispatcher()
 
 bool http_Dispatcher::Run()
 {
-    int min_accepts = (BaseAccepts >> 1) + (BaseAccepts >> 2); // 75% (if power of two)
-
     for (;;) {
         DWORD transferred;
         uintptr_t key;
@@ -332,7 +330,7 @@ bool http_Dispatcher::Run()
                 RG_ASSERT(socket);
                 socket->op = PendingOperation::None;
 
-                if (--pending_accepts < min_accepts) {
+                if (--pending_accepts < BaseAccepts) {
                     bool post = !create_accepts.fetch_add(1);
 
                     if (post) {
@@ -430,23 +428,29 @@ bool http_Dispatcher::Run()
             } break;
 
             case PendingOperation::CreateSockets: {
-                int needed = std::clamp(4 * create_accepts.load(), 64, MaxAccepts - pending_accepts);
-                int failures = 0;
-
                 Size prev_len = sockets.len;
 
-                for (int i = 0; i < needed; i++) {
-                    http_Socket *socket = InitSocket();
+                do {
+                    int pending = pending_accepts;
+                    int target = std::clamp(pending + 4 * create_accepts.load(), BaseAccepts + 64, MaxAccepts - pending);
 
-                    if (!PostAccept(socket)) [[unlikely]] {
-                        if (++failures >= 8) {
-                            LogError("System starvation, giving up");
-                            return false;
+                    int failures = 0;
+
+                    for (int i = pending; i < target; i++) {
+                        http_Socket *socket = InitSocket();
+
+                        if (!PostAccept(socket)) [[unlikely]] {
+                            if (++failures >= 8) {
+                                LogError("System starvation, giving up");
+                                return false;
+                            }
+
+                            WaitDelay(20);
                         }
-
-                        WaitDelay(20);
                     }
-                }
+
+                    create_accepts = 0;
+                } while (pending_accepts < BaseAccepts);
 
                 Size j = 0;
                 for (Size i = 0; i < prev_len; i++) {
@@ -457,8 +461,6 @@ bool http_Dispatcher::Run()
                     sockets[j] = sockets[i];
                 }
                 sockets.len = j;
-
-                create_accepts = 0;
             } break;
 
             case PendingOperation::Exit: {
