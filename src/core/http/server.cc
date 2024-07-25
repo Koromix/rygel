@@ -612,6 +612,19 @@ static inline bool IsFieldValueValid(Span<const char> key)
     return valid;
 }
 
+static inline int ParseHexadecimalChar(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else {
+        return -1;
+    }
+}
+
 http_IO::PrepareStatus http_IO::ParseRequest()
 {
     bool complete = false;
@@ -708,6 +721,40 @@ http_IO::PrepareStatus http_IO::ParseRequest()
             return PrepareStatus::Close;
         }
         request.client_addr = addr;
+
+        // Decode URL
+        {
+            Size j = 0;
+
+            for (Size i = 0; i < url.len; i++, j++) {
+                url[j] = url[i];
+
+                if (url[i] == '%') {
+                    // This code explictly assumes it is safe to access the two bytes beyond the
+                    // end for performance reasons. It holds true in our case because request lines
+                    // end with ' HTTP/1.x'.
+
+                    int high = ParseHexadecimalChar(url.ptr[++i]);
+                    int low = ParseHexadecimalChar(url.ptr[++i]);
+
+                    if (high < 0 || low < 0) [[unlikely]] {
+                        LogError("Malformed encoding in URL");
+                        SendError(400);
+                        return PrepareStatus::Close;
+                    }
+
+                    url[j] = (char)((high << 4) | low);
+                }
+            }
+
+            url.len = j;
+        }
+
+        if (!IsValidUtf8(url)) {
+            LogError("URL is not valid UTF-8");
+            SendError(400);
+            return PrepareStatus::Close;
+        }
 
         Span<char> query;
         Span<char> path = SplitStr(url, '?', &query);

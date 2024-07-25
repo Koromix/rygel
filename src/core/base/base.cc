@@ -778,6 +778,23 @@ Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
     return MakeSpan(new_str, str.len);
 }
 
+bool IsValidUtf8(Span<const char> str)
+{
+    Size i = 0;
+
+    while (i < str.len) {
+        int32_t uc;
+        Size bytes = DecodeUtf8(str, i, &uc);
+
+        if (!bytes) [[unlikely]]
+            return false;
+
+        i += bytes;
+    }
+
+    return i == str.len;
+}
+
 // ------------------------------------------------------------------------
 // Format
 // ------------------------------------------------------------------------
