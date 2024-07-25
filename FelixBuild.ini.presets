@@ -42,6 +42,10 @@ Features = Warnings, DebugInfo, OptimizeSpeed, LTO
 Host = :clang:lld
 Features = Warnings, OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
+[DebugParanoid]
+Template = Paranoid
+Features = +DebugInfo
+
 [EmscriptenNode]
 Host = Emscripten/Node
 Features = Warnings, DebugInfo, OptimizeSpeed
