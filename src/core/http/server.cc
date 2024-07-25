@@ -274,6 +274,16 @@ void http_Daemon::RunHandler(http_IO *client)
     }
 }
 
+const char *http_RequestInfo::FindGetValue(const char *key) const
+{
+    for (const http_KeyValue &value: values) {
+        if (TestStr(value.key, key))
+            return value.value;
+    }
+
+    return nullptr;
+}
+
 const char *http_RequestInfo::FindHeader(const char *key) const
 {
     for (const http_KeyValue &header: headers) {
@@ -281,12 +291,6 @@ const char *http_RequestInfo::FindHeader(const char *key) const
             return header.value;
     }
 
-    return nullptr;
-}
-
-const char *http_RequestInfo::FindGetValue(const char *) const
-{
-    LogDebug("Not implemented");
     return nullptr;
 }
 
@@ -625,6 +629,105 @@ static inline int ParseHexadecimalChar(char c)
     }
 }
 
+static Size DecodePath(Span<char> str)
+{
+    Size j = 0;
+    for (Size i = 0; i < str.len; i++, j++) {
+        str[j] = str[i];
+
+        if (str[i] == '%') {
+            // This code explictly assumes it is safe to access the two bytes beyond the
+            // end for performance reasons. It holds true in our case because request lines
+            // end with ' HTTP/1.x'.
+
+            int high = ParseHexadecimalChar(str.ptr[++i]);
+            int low = ParseHexadecimalChar(str.ptr[++i]);
+
+            if (high < 0 || low < 0) [[unlikely]] {
+                LogError("Malformed %%-encoding value in URL path");
+                return -1;
+            }
+
+            str[j] = (char)((high << 4) | low);
+        }
+    }
+    str.len = j;
+
+    if (!IsValidUtf8(str)) {
+        LogError("Invalid UTF-8 in URL path");
+        return -1;
+    }
+
+    return str.len;
+}
+
+static Size DecodeQueryComponent(Span<char> str)
+{
+    Size j = 0;
+    for (Size i = 0; i < str.len; i++, j++) {
+        str[j] = str[i];
+
+        if (str[i] == '+') {
+            str[j] = ' ';
+        } else if (str[i] == '%') {
+            // This code explictly assumes it is safe to access the two bytes beyond the
+            // end for performance reasons. It holds true in our case because request lines
+            // end with ' HTTP/1.x'.
+
+            int high = ParseHexadecimalChar(str.ptr[++i]);
+            int low = ParseHexadecimalChar(str.ptr[++i]);
+
+            if (high < 0 || low < 0) [[unlikely]] {
+
+                return -1;
+            }
+
+            str[j] = (char)((high << 4) | low);
+        }
+    }
+    str.len = j;
+
+    if (!IsValidUtf8(str)) {
+        LogError("Invalid UTF-8 in query string");
+        return -1;
+    }
+
+    return str.len;
+}
+
+static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
+{
+    str = SplitStr(str, '#');
+
+    while (str.len) {
+        Span<char> frag = SplitStr(str, '&', &str);
+
+        if (frag.len) {
+            http_KeyValue pair;
+
+            Span<char> value;
+            Span<char> key = SplitStr(frag, '=', &value);
+
+            key.len = DecodeQueryComponent(key);
+            if (key.len < 0)
+                return false;
+            value.len = DecodeQueryComponent(value);
+            if (key.len < 0 || value.len < 0)
+                return false;
+
+            key.ptr[key.len] = 0;
+            value.ptr[value.len] = 0;
+            pair.key = key.ptr;
+            pair.value = value.ptr;
+
+            LogDebug("GET %1 = %2", pair.key, pair.value);
+            out_values->Append(pair);
+        }
+    }
+
+    return true;
+}
+
 http_IO::PrepareStatus http_IO::ParseRequest()
 {
     bool complete = false;
@@ -722,49 +825,25 @@ http_IO::PrepareStatus http_IO::ParseRequest()
         }
         request.client_addr = addr;
 
-        // Decode URL
-        {
-            Size j = 0;
-
-            for (Size i = 0; i < url.len; i++, j++) {
-                url[j] = url[i];
-
-                if (url[i] == '%') {
-                    // This code explictly assumes it is safe to access the two bytes beyond the
-                    // end for performance reasons. It holds true in our case because request lines
-                    // end with ' HTTP/1.x'.
-
-                    int high = ParseHexadecimalChar(url.ptr[++i]);
-                    int low = ParseHexadecimalChar(url.ptr[++i]);
-
-                    if (high < 0 || low < 0) [[unlikely]] {
-                        LogError("Malformed encoding in URL");
-                        SendError(400);
-                        return PrepareStatus::Close;
-                    }
-
-                    url[j] = (char)((high << 4) | low);
-                }
-            }
-
-            url.len = j;
-        }
-
-        if (!IsValidUtf8(url)) {
-            LogError("URL is not valid UTF-8");
-            SendError(400);
-            return PrepareStatus::Close;
-        }
-
         Span<char> query;
         Span<char> path = SplitStr(url, '?', &query);
 
+        path.len = DecodePath(path);
+        if (path.len < 0) {
+            SendError(400);
+            return PrepareStatus::Close;
+        }
         path.ptr[path.len] = 0;
         request.path = path.ptr;
 
         if (PathContainsDotDot(request.path)) {
             LogError("Unsafe URL containing '..' components");
             SendError(403);
+            return PrepareStatus::Close;
+        }
+
+        if (!DecodeQuery(query, &request.values)) {
+            SendError(400);
             return PrepareStatus::Close;
         }
     }
