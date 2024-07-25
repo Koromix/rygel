@@ -535,7 +535,7 @@ bool http_Dispatcher::PostRead(http_Socket *socket)
 
     http_IO *client = socket->client;
 
-    client->incoming.buf.Grow(Mebibytes(1));
+    client->incoming.buf.Grow(Kibibytes(8));
 
     WSABUF buf = { (unsigned long)client->incoming.buf.Available() - 1, (char *)client->incoming.buf.end() };
     DWORD received = 0;

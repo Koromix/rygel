@@ -456,7 +456,7 @@ bool http_Dispatcher::Run()
 
 http_IO::PrepareStatus http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client)
 {
-    client->incoming.buf.Grow(Mebibytes(1));
+    client->incoming.buf.Grow(Kibibytes(8));
 
     Size available = client->incoming.buf.Available() - 1;
 
