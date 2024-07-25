@@ -150,6 +150,8 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         }
     } else if (key == "MaxRequestSize") {
         return ParseSize(value, &max_request_size);
+    } else if (key == "MaxUrlLength") {
+        return ParseSize(value, &max_url_len);
     } else if (key == "MaxRequestHeaders") {
         return ParseInt(value, &max_request_headers);
     } else if (key == "MaxRequestCookies") {
@@ -216,6 +218,10 @@ bool http_Config::Validate() const
         LogError("MaxRequestSize must be >= 1 kB");
         valid = false;
     }
+    if (max_url_len < 512) {
+        LogError("MaxUrlLength must be >= 512 B");
+        valid = false;
+    }
     if (max_request_cookies < 16) {
         LogError("MaxRequestHeaders must be >= 16");
         valid = false;
@@ -245,6 +251,7 @@ bool http_Daemon::InitConfig(const http_Config &config)
     keepalive_time = config.keepalive_time;
 
     max_request_size = config.max_request_size;
+    max_url_len = config.max_url_len;
     max_request_headers = config.max_request_headers;
     max_request_cookies = config.max_request_cookies;
 
@@ -792,7 +799,12 @@ http_IO::PrepareStatus http_IO::ParseRequest()
             return PrepareStatus::Close;
         }
         if (!StartsWith(url, "/")) {
-            LogError("Invalid request URL");
+            LogError("Request URL does not start with '/'");
+            SendError(400);
+            return PrepareStatus::Close;
+        }
+        if (url.len > daemon->max_url_len) {
+            LogError("Request URL is too long");
             SendError(400);
             return PrepareStatus::Close;
         }

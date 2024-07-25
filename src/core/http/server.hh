@@ -54,7 +54,8 @@ struct http_Config {
     int idle_timeout = 10000;
     int keepalive_time = 20000;
 
-    Size max_request_size = Kibibytes(32);
+    Size max_request_size = Kilobytes(40);
+    Size max_url_len = Kilobytes(20);
     int max_request_headers = 64;
     int max_request_cookies = 64;
 
@@ -90,6 +91,7 @@ class http_Daemon {
     int keepalive_time;
 
     Size max_request_size;
+    Size max_url_len;
     int max_request_headers;
     int max_request_cookies;
 
