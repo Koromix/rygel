@@ -13,7 +13,7 @@
 
 import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
-import { Sha256 } from '../../web/libjs/mixer.js';
+import * as mixer from '../../web/libjs/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
@@ -1149,7 +1149,7 @@ async function handleFileChange(filename) {
     let buffer = code_buffers.get(filename);
     let code = buffer.session.doc.getValue();
     let blob = new Blob([code]);
-    let sha256 = await Sha256.async(blob);
+    let sha256 = await mixer.Sha256.async(blob);
 
     let key = `${profile.userid}/${filename}`;
 
@@ -1713,7 +1713,7 @@ async function fetchCode(filename) {
 function updateBuffer(filename, code, version = null) {
     let buffer = code_buffers.get(filename);
 
-    let sha256 = Sha256(code);
+    let sha256 = mixer.Sha256(code);
 
     if (buffer == null) {
         buffer = {
@@ -1794,6 +1794,7 @@ async function buildScript(code, variables) {
         svg: svg,
         LocalDate: LocalDate,
         LocalTime: LocalTime,
+        crypto: mixer,
 
         dates: LocalDate, // Deprecated
         times: LocalTime // Deprecated

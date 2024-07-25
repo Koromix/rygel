@@ -13,7 +13,7 @@
 
 import { render, html, svg, until } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
-import { Base64, Sha256 } from '../../web/libjs/mixer.js';
+import * as mixer from '../../web/libjs/mixer.js';
 import * as IDB from '../../web/libjs/indexedDB.js';
 import { ApplicationInfo, FormInfo, PageInfo, ApplicationBuilder } from './instance_app.js';
 import * as goupile from '../client/goupile.js';
@@ -949,7 +949,9 @@ function renderPage() {
                     }
                     Object.assign(ptr, values);
                 }
-            }
+            },
+
+            crypto: mixer
         });
 
         new_hid = meta.hid;
@@ -1240,6 +1242,7 @@ async function runCodeAsync(title, code, args) {
         LocalDate: LocalDate,
         LocalTime: LocalTime,
         PeriodPicker: PeriodPicker,
+        crypto: mixer,
 
         dates: LocalDate, // Deprecated
         times: LocalTime // Deprecated
@@ -1633,7 +1636,7 @@ async function handleFileChange(filename) {
     let buffer = code_buffers.get(filename);
     let code = buffer.session.doc.getValue();
     let blob = new Blob([code]);
-    let sha256 = await Sha256.async(blob);
+    let sha256 = await mixer.Sha256.async(blob);
 
     let key = `${profile.userid}:${filename}`;
 
@@ -2377,7 +2380,7 @@ async function fetchCode(filename) {
         let buffer = code_buffers.get(filename);
 
         if (buffer == null) {
-            let sha256 = Sha256(code);
+            let sha256 = mixer.Sha256(code);
 
             buffer = {
                 code: code,
@@ -2387,7 +2390,7 @@ async function fetchCode(filename) {
             };
             code_buffers.set(filename, buffer);
         } else {
-            let sha256 = Sha256(code);
+            let sha256 = mixer.Sha256(code);
 
             if (buffer.session != null && sha256 !== buffer.sha256) {
                 ignore_editor_change = true;
@@ -3044,7 +3047,7 @@ function encryptBackup(obj) {
     if (key == null)
         throw new Error('Cannot encrypt backup without local key');
 
-    let backup_key = Base64.toBytes(ENV.backup_key);
+    let backup_key = mixer.Base64.toBytes(ENV.backup_key);
     return encryptBox(obj, backup_key, key);
 };
 
@@ -3058,15 +3061,15 @@ function encryptSecretBox(obj, key) {
 
     let enc = {
         format: 2,
-        nonce: Base64.toBase64(nonce),
-        box: Base64.toBase64(box)
+        nonce: mixer.Base64.toBase64(nonce),
+        box: mixer.Base64.toBase64(box)
     };
     return enc;
 }
 
 function decryptSecretBox(enc, key) {
-    let nonce = Base64.toBytes(enc.nonce);
-    let box = Base64.toBytes(enc.box);
+    let nonce = mixer.Base64.toBytes(enc.nonce);
+    let box = mixer.Base64.toBytes(enc.box);
 
     let message = nacl.secretbox.open(box, nonce, key);
     if (message == null)
@@ -3076,7 +3079,7 @@ function decryptSecretBox(enc, key) {
     if (enc.format >= 2) {
         json = (new TextDecoder()).decode(message);
     } else {
-        json = window.atob(Base64.toBase64(message));
+        json = window.atob(mixer.Base64.toBase64(message));
     }
     let obj = JSON.parse(json);
 
@@ -3093,8 +3096,8 @@ function encryptBox(obj, public_key, secret_key) {
 
     let enc = {
         format: 2,
-        nonce: Base64.toBase64(nonce),
-        box: Base64.toBase64(box)
+        nonce: mixer.Base64.toBase64(nonce),
+        box: mixer.Base64.toBase64(box)
     };
     return enc;
 }
