@@ -1236,6 +1236,7 @@ async function runCodeAsync(title, code, args) {
         net: Net,
         ui: UI,
 
+        render: render,
         html: html,
         svg: svg,
         until: until,
@@ -1280,6 +1281,7 @@ function runCodeSync(title, code, args) {
         net: Net,
         ui: UI,
 
+        render: render,
         html: html,
         svg: svg,
         until: until,

@@ -1790,8 +1790,15 @@ async function buildScript(code, variables) {
     let base = {
         goupile: goupile,
         profile: profile,
+
+        render: render,
         html: html,
         svg: svg,
+
+        Util: Util,
+        Net: Net,
+        Log: Log,
+        UI: UI,
         LocalDate: LocalDate,
         LocalTime: LocalTime,
         crypto: mixer,
