@@ -5862,12 +5862,11 @@ void SetSocketRetain(int sock, bool retain)
         send(sock, nullptr, 0, MSG_NOSIGNAL);
     }
 #endif
-#elif defined(_WIN32)
-    int flag = !retain;
-    setsockopt((SOCKET)sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(flag));
 #else
-    int flag = !retain;
-    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+    // Nothing to see here
+
+    (void)sock;
+    (void)retain;
 #endif
 }
 

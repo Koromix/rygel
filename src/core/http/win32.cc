@@ -650,10 +650,7 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
     RG_ASSERT(socket);
     RG_ASSERT(!response.sent);
 
-    SetSocketRetain(socket->sock, true);
-
     RG_DEFER {
-        SetSocketRetain(socket->sock, false);
         response.sent = true;
 
         socket->op = PendingOperation::Done;
@@ -700,14 +697,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     bool async = true;
 
-    SetSocketRetain(socket->sock, true);
-
     RG_DEFER {
         response.sent = true;
 
         if (!async) {
-            SetSocketRetain(socket->sock, false);
-
             socket->op = PendingOperation::Done;
             PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
         }
