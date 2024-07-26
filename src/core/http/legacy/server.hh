@@ -228,12 +228,12 @@ public:
                          bool http_only = false);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
-    void AttachText(int code, Span<const char> str, const char *mime_type = "text/plain");
-    void AttachBinary(int code, Span<const uint8_t> data, const char *mime_type = nullptr);
-    bool AttachAsset(int code, Span<const uint8_t> data, const char *mime_type = nullptr,
+    void AttachText(int code, Span<const char> str, const char *mimetype = "text/plain");
+    void AttachBinary(int code, Span<const uint8_t> data, const char *mimetype = nullptr);
+    bool AttachAsset(int code, Span<const uint8_t> data, const char *mimetype = nullptr,
                       CompressionType compression_type = CompressionType::None);
     void AttachError(int code, const char *details = nullptr);
-    bool AttachFile(int code, const char *filename, const char *mime_type = nullptr);
+    bool AttachFile(int code, const char *filename, const char *mimetype = nullptr);
     void AttachEmpty(int code);
 
     // These must be run in async context (with RunAsync)

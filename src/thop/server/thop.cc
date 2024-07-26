@@ -47,7 +47,7 @@ struct Route {
     union {
         struct {
             AssetInfo asset;
-            const char *mime_type;
+            const char *mimetype;
         } st;
 
         void (*func)(const http_RequestInfo &request, const User *user, http_IO *io);
@@ -245,7 +245,7 @@ static void InitRoutes()
         route.matching = matching;
         route.type = Route::Type::Asset;
         route.u.st.asset = asset;
-        route.u.st.mime_type = GetMimeType(GetPathExtension(asset.name));
+        route.u.st.mimetype = GetMimeType(GetPathExtension(asset.name));
 
         routes.Set(route);
     };
@@ -436,7 +436,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Execute route
     switch (route->type) {
         case Route::Type::Asset: {
-            io->AttachAsset(200, route->u.st.asset.data, route->u.st.mime_type, route->u.st.asset.compression_type);
+            io->AttachAsset(200, route->u.st.asset.data, route->u.st.mimetype, route->u.st.asset.compression_type);
             io->AddCachingHeaders(thop_config.max_age, thop_etag);
         } break;
 

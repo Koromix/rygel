@@ -716,28 +716,28 @@ void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
     }
 }
 
-void http_IO::AttachText(int code, Span<const char> str, const char *mime_type)
+void http_IO::AttachText(int code, Span<const char> str, const char *mimetype)
 {
     MHD_Response *response =
         MHD_create_response_from_buffer(str.len, (void *)str.ptr, MHD_RESPMEM_PERSISTENT);
 
     AttachResponse(code, response);
-    AddHeader("Content-Type", mime_type);
+    AddHeader("Content-Type", mimetype);
 }
 
-void http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mime_type)
+void http_IO::AttachBinary(int code, Span<const uint8_t> data, const char *mimetype)
 {
     MHD_Response *response =
         MHD_create_response_from_buffer(data.len, (void *)data.ptr, MHD_RESPMEM_PERSISTENT);
 
     AttachResponse(code, response);
 
-    if (mime_type) {
-        AddHeader("Content-Type", mime_type);
+    if (mimetype) {
+        AddHeader("Content-Type", mimetype);
     }
 }
 
-bool http_IO::AttachAsset(int code, Span<const uint8_t> data, const char *mime_type,
+bool http_IO::AttachAsset(int code, Span<const uint8_t> data, const char *mimetype,
                           CompressionType src_encoding)
 {
     CompressionType dest_encoding;
@@ -779,8 +779,8 @@ bool http_IO::AttachAsset(int code, Span<const uint8_t> data, const char *mime_t
         AddEncodingHeader(dest_encoding);
     }
 
-    if (mime_type) {
-        AddHeader("Content-Type", mime_type);
+    if (mimetype) {
+        AddHeader("Content-Type", mimetype);
     }
 
     return true;
@@ -801,7 +801,7 @@ void http_IO::AttachError(int code, const char *details)
     AddHeader("Content-Type", "text/plain");
 }
 
-bool http_IO::AttachFile(int code, const char *filename, const char *mime_type)
+bool http_IO::AttachFile(int code, const char *filename, const char *mimetype)
 {
     FileInfo file_info;
     if (StatFile(filename, &file_info) != StatResult::Success)
@@ -814,8 +814,8 @@ bool http_IO::AttachFile(int code, const char *filename, const char *mime_type)
     MHD_Response *response = MHD_create_response_from_fd((uint64_t)file_info.size, fd);
     AttachResponse(code, response);
 
-    if (mime_type) {
-        AddHeader("Content-Type", mime_type);
+    if (mimetype) {
+        AddHeader("Content-Type", mimetype);
     }
 
     return true;

@@ -84,10 +84,10 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 
 static void AddMimeTypeHeader(const char *filename, http_IO *io)
 {
-   const char *mime_type = GetMimeType(GetPathExtension(filename), nullptr);
+   const char *mimetype = GetMimeType(GetPathExtension(filename), nullptr);
 
-    if (mime_type) {
-        io->AddHeader("Content-Type", mime_type);
+    if (mimetype) {
+        io->AddHeader("Content-Type", mimetype);
     }
 }
 
@@ -245,16 +245,16 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
                 LocalArray<Span<const char>, RG_LEN(ranges.data) * 2> boundaries;
                 Size total_len = 0;
                 {
-                    const char *mime_type = GetMimeType(GetPathExtension(filename), nullptr);
+                    const char *mimetype = GetMimeType(GetPathExtension(filename), nullptr);
 
                     for (Size i = 0; i < ranges.len; i++) {
                         const http_ByteRange &range = ranges[i];
 
                         Span<const char> before;
-                        if (mime_type) {
+                        if (mimetype) {
                             before = Fmt(&io->allocator, "Content-Type: %1\r\n"
                                                          "Content-Range: bytes %2-%3/%4\r\n\r\n",
-                                         mime_type, range.start, range.end - 1, src_len);
+                                         mimetype, range.start, range.end - 1, src_len);
                         } else {
                             before = Fmt(&io->allocator, "Content-Range: bytes %1-%2/%3\r\n\r\n",
                                          range.start, range.end - 1, src_len);

@@ -8653,7 +8653,7 @@ bool PromptYN(const char *prompt, bool *out_value)
 
 const char *GetMimeType(Span<const char> extension, const char *default_type)
 {
-    static const HashMap<Span<const char>, const char *> mime_types = {
+    static const HashMap<Span<const char>, const char *> mimetypes = {
         #define MIMETYPE(Extension, MimeType) { (Extension), (MimeType) },
         #include "mimetypes.inc"
 
@@ -8662,7 +8662,8 @@ const char *GetMimeType(Span<const char> extension, const char *default_type)
 
     char lower[32];
     {
-        Span<const char truncated = extension.Take(0, std::min(extension.len, (Size)16));
+        Size take = std::min(extension.len, (Size)16);
+        Span<const char> truncated = extension.Take(0, take);
 
         for (Size i = 0; i < truncated.len; i++) {
             lower[i] = LowerAscii(truncated[i]);
@@ -8670,14 +8671,14 @@ const char *GetMimeType(Span<const char> extension, const char *default_type)
         lower[truncated.len] = 0;
     }
 
-    const char *mime_type = mime_types.FindValue(lower, nullptr);
+    const char *mimetype = mimetypes.FindValue(lower, nullptr);
 
-    if (!mime_type) {
+    if (!mimetype) {
         LogError("Unknown MIME type for extension '%1'", extension);
-        mime_type = default_type;
+        mimetype = default_type;
     }
 
-    return mime_type;
+    return mimetype;
 }
 
 bool CanCompressFile(const char *filename)
@@ -8713,13 +8714,13 @@ bool CanCompressFile(const char *filename)
     if (TestStrI(extension, ".db") || TestStrI(extension, ".sqlite3"))
         return false;
 
-    const char *mime_type = GetMimeType(extension);
+    const char *mimetype = GetMimeType(extension);
 
-    if (StartsWith(mime_type, "video/"))
+    if (StartsWith(mimetype, "video/"))
         return false;
-    if (StartsWith(mime_type, "audio/"))
+    if (StartsWith(mimetype, "audio/"))
         return false;
-    if (StartsWith(mime_type, "image/") && !TestStr(mime_type, "image/svg+xml"))
+    if (StartsWith(mimetype, "image/") && !TestStr(mimetype, "image/svg+xml"))
         return false;
 
     return true;
