@@ -793,6 +793,11 @@ http_IO::PrepareStatus http_IO::ParseRequest()
             c = UpperAscii(c);
         }
 
+        if (line.len) {
+            LogError("Unexpected data after request line");
+            SendError(400);
+            return PrepareStatus::Close;
+        }
         if (!method.len) {
             LogError("Empty HTTP method");
             SendError(400);
@@ -816,11 +821,6 @@ http_IO::PrepareStatus http_IO::ParseRequest()
             keepalive = true;
         } else {
             LogError("Invalid HTTP version");
-            SendError(400);
-            return PrepareStatus::Close;
-        }
-        if (line.len) {
-            LogError("Unexpected data after request line");
             SendError(400);
             return PrepareStatus::Close;
         }
