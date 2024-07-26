@@ -722,14 +722,14 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     // Send intro and file in one go
     {
         DWORD send = (DWORD)std::min(len, (Size)INT32_MAX - 1);
-        BOOL success = TransmitFile((SOCKET)socket->sock, h, 0, 0, async ? &socket->overlapped : nullptr, &tbuf, 0);
+        BOOL success = TransmitFile((SOCKET)socket->sock, h, send, 0, async ? &socket->overlapped : nullptr, &tbuf, 0);
 
         if (!success && WSAGetLastError() != ERROR_IO_PENDING) [[unlikely]] {
             LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
             return;
         }
 
-        offset += send - intro.len;
+        offset += send;
         len -= (Size)send;
     }
 
@@ -746,8 +746,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
-        DWORD send = (DWORD)std::min(len, (Size)UINT32_MAX);
-        BOOL success = TransmitFile((SOCKET)socket->sock, h, 0, 0, nullptr, nullptr, 0);
+        DWORD send = (DWORD)std::min(len, (Size)INT32_MAX - 1);
+        BOOL success = TransmitFile((SOCKET)socket->sock, h, send, 0, nullptr, nullptr, 0);
 
         if (!success) [[unlikely]] {
             LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
