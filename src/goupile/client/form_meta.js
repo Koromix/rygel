@@ -13,12 +13,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
+
 function MetaModel() {
     this.summary = null;
     this.constraints = {};
+    this.signup = null;
 }
 
-function MetaInterface(data, meta) {
+function MetaInterface(page, data, meta) {
+    let url = makeCompleteURL(page.url);
+
     Object.defineProperties(this, {
         summary: { get: () => meta.summary, set: summary => { meta.summary = summary; }, enumerable: true }
     });
@@ -47,6 +52,32 @@ function MetaInterface(data, meta) {
 
         meta.constraints[key] = constraint;
     };
+
+    this.signUp = function(to, subject, content, text = null) {
+        let div = document.createElement('div');
+        render(content, div);
+
+        content = div.innerHTML;
+
+        if (text == null)
+            text = content.innerText;
+
+        meta.signup = {
+            url: url,
+            to: to,
+            subject: subject,
+            html: content,
+            text: text
+        };
+    };
+
+    function makeCompleteURL(url) {
+        if (!(url instanceof URL))
+            url = new URL(url, window.location.href);
+
+        url = url.protocol + '//' + url.host + url.pathname;
+        return url;
+    }
 }
 
 export {

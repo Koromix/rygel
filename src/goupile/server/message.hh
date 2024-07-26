@@ -22,6 +22,7 @@ namespace RG {
 
 class InstanceHolder;
 struct smtp_Config;
+struct smtp_MailContent;
 struct sms_Config;
 
 bool InitSMTP(const smtp_Config &config);

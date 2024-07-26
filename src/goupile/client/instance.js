@@ -827,7 +827,7 @@ async function renderPage() {
         await func({
             app: app,
             form: builder,
-            meta: new MetaInterface(form_data, meta),
+            meta: new MetaInterface(route.page, form_data, meta),
             thread: form_thread.entries,
             values: form_state.values
         });
@@ -2006,7 +2006,7 @@ async function saveRecord(tid, entry, data, meta) {
         entry.tags = Array.from(tags);
     }
 
-    await records.save(tid, entry, ENV.version, meta.constraints);
+    await records.save(tid, entry, ENV.version, meta.constraints, meta.signup);
 
     if (!profile.userid)
         await goupile.syncProfile();
