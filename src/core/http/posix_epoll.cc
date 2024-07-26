@@ -61,7 +61,7 @@ public:
     bool Run();
 
 private:
-    http_IO::PrepareStatus ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client);
+    http_RequestStatus ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client);
 
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
@@ -270,17 +270,17 @@ bool http_Dispatcher::Run()
                 keep--;
             };
 
-            http_IO::PrepareStatus status = socket->process ? ProcessIncoming(now, socket, client)
-                                                            : http_IO::PrepareStatus::Incomplete;
+            http_RequestStatus status = socket->process ? ProcessIncoming(now, socket, client)
+                                                            : http_RequestStatus::Incomplete;
             socket->process = false;
 
             switch (status) {
-                case http_IO::PrepareStatus::Incomplete: {
+                case http_RequestStatus::Incomplete: {
                     int64_t delay = std::max((int64_t)0, client->GetTimeout(now));
                     timeout = std::min(timeout, (unsigned int)delay);
                 } break;
 
-                case http_IO::PrepareStatus::Ready: {
+                case http_RequestStatus::Ready: {
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
@@ -313,15 +313,17 @@ bool http_Dispatcher::Run()
                             daemon->RunHandler(client);
                             client->Rearm(-1);
 
-                            AddEpollDescriptor(socket->sock, EPOLLIN, socket);
                             shutdown(socket->sock, SHUT_RD);
+                            AddEpollDescriptor(socket->sock, EPOLLIN, socket);
 
                             return true;
                         });
                     }
                 } break;
 
-                case http_IO::PrepareStatus::Close: { disconnect(); } break;
+                case http_RequestStatus::Busy: { /* Should be rare */ } break;
+
+                case http_RequestStatus::Close: { disconnect(); } break;
             }
         }
         sockets.len = keep;
@@ -351,8 +353,11 @@ bool http_Dispatcher::Run()
     RG_UNREACHABLE();
 }
 
-http_IO::PrepareStatus http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client)
+http_RequestStatus http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client)
 {
+    if (client->working)
+        return http_RequestStatus::Busy;
+
     client->incoming.buf.Grow(Kibibytes(8));
 
     Size available = client->incoming.buf.Available() - 1;
@@ -372,25 +377,25 @@ restart:
                     if (client->IsPreparing()) {
                         LogError("Timed out while waiting for HTTP request");
                     }
-                    return http_IO::PrepareStatus::Close;
+                    return http_RequestStatus::Close;
                 }
 
-                return http_IO::PrepareStatus::Incomplete;
+                return http_RequestStatus::Incomplete;
             } break;
 
             case EPIPE:
-            case ECONNRESET: return http_IO::PrepareStatus::Close;
+            case ECONNRESET: return http_RequestStatus::Close;
 
             default: {
                 LogError("Read failed: %1 (%2) %3", strerror(errno), socket->sock, socket);
-                return http_IO::PrepareStatus::Close;
+                return http_RequestStatus::Close;
             } break;
         }
     } else if (!read) {
         if (client->incoming.buf.len) {
             LogError("Client closed connection with unfinished request");
         }
-        return http_IO::PrepareStatus::Close;
+        return http_RequestStatus::Close;
     }
 
     client->incoming.buf.len += read;

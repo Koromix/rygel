@@ -157,14 +157,15 @@ struct http_RequestInfo {
     const char *FindCookie(const char *key) const;
 };
 
+enum class http_RequestStatus {
+    Incomplete,
+    Ready,
+    Busy,
+    Close
+};
+
 class http_IO {
     RG_DELETE_COPY(http_IO)
-
-    enum class PrepareStatus {
-        Incomplete,
-        Ready,
-        Close
-    };
 
     http_Daemon *daemon;
 
@@ -181,6 +182,7 @@ class http_IO {
         Span<uint8_t> extra = {};
     } incoming;
 
+    std::atomic_bool working { false };
     http_RequestInfo request;
 
     const char *last_err = nullptr;
@@ -227,7 +229,7 @@ private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
     bool InitAddress();
 
-    PrepareStatus ParseRequest();
+    http_RequestStatus ParseRequest();
     Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len);
 
     bool WriteDirect(Span<const uint8_t> data);

@@ -111,7 +111,7 @@ public:
     bool Run();
 
 private:
-    void ProcessClient(int64_t now, http_Socket *socket, http_IO *client);
+    void ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client, Size received);
 
     bool PostAccept(http_Socket *socket);
     bool PostRead(http_Socket *socket);
@@ -400,10 +400,7 @@ bool http_Dispatcher::Run()
 
                 http_IO *client = socket->client;
 
-                client->incoming.buf.len += (Size)transferred;
-                client->incoming.buf.ptr[client->incoming.buf.len] = 0;
-
-                ProcessClient(now, socket, client);
+                ProcessIncoming(now, socket, client, (Size)transferred);
             } break;
 
             case PendingOperation::Done: {
@@ -477,20 +474,23 @@ bool http_Dispatcher::Run()
     RG_UNREACHABLE();
 }
 
-void http_Dispatcher::ProcessClient(int64_t now, http_Socket *socket, http_IO *client)
+void http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client, Size received)
 {
     RG_ASSERT(client == socket->client);
 
-    http_IO::PrepareStatus status = client->ParseRequest();
+    client->incoming.buf.len += received;
+    client->incoming.buf.ptr[client->incoming.buf.len] = 0;
+
+    http_RequestStatus status = client->ParseRequest();
 
     switch (status) {
-        case http_IO::PrepareStatus::Incomplete: {
+        case http_RequestStatus::Incomplete: {
             if (!PostRead(socket)) {
                 DisconnectSocket(socket);
             }
         } break;
 
-        case http_IO::PrepareStatus::Ready: {
+        case http_RequestStatus::Ready: {
             if (!client->InitAddress()) {
                 client->request.keepalive = false;
                 client->SendError(400);
@@ -503,7 +503,9 @@ void http_Dispatcher::ProcessClient(int64_t now, http_Socket *socket, http_IO *c
             daemon->RunHandler(client);
         } break;
 
-        case http_IO::PrepareStatus::Close: { DisconnectSocket(socket); } break;
+        case http_RequestStatus::Busy: { /* Should be rare */ } break;
+
+        case http_RequestStatus::Close: { DisconnectSocket(socket); } break;
     }
 }
 
