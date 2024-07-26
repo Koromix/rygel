@@ -931,7 +931,7 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
                     parser.ParseString(&email);
                 } else if (TestStr(key, "sms")) {
                     parser.ParseString(&sms);
-                } else if (TestStr(key, "id")) {
+                } else if (TestStr(key, "tid") || TestStr(key, "id")) {
                     parser.ParseString(&tid);
                 } else if (TestStr(key, "username")) {
                     parser.ParseString(&username);
