@@ -96,7 +96,7 @@ async function initApp() {
     try {
         let new_app = await runMainScript();
 
-        new_app.homepage = new_app.pages[0];
+        new_app.homepage = new_app.pages.find(page => page.key == new_app.homepage) ?? null;
         app = Util.deepFreeze(new_app);
     } catch (err) {
         let new_app = new ApplicationInfo(profile);
@@ -105,7 +105,6 @@ async function initApp() {
         // For simplicity, a lot of code assumes at least one page exists
         builder.form('default', 'Défaut', 'Page par défaut');
 
-        new_app.homepage = new_app.pages[0];
         app = Util.deepFreeze(new_app);
 
         editor_filename = 'main.js';
@@ -1414,8 +1413,14 @@ async function go(e, url = null, options = {}) {
         if (url != null) {
             if (!(url instanceof URL))
                 url = new URL(url, window.location.href);
-            if (url.pathname === ENV.urls.instance)
-                url = new URL(app.homepage.url, window.location.href);
+
+            if (route.page == null && url.pathname == ENV.urls.instance) {
+                let page = app.homepage ?? app.pages[0];
+                url = new URL(page.url, window.location.href);
+
+                if (app.homepage != null)
+                    url.searchParams.set('p', 'view');
+            }
             goupile.setCurrentHash(url.hash);
 
             if (!url.pathname.endsWith('/'))
@@ -1439,7 +1444,7 @@ async function go(e, url = null, options = {}) {
             new_route.page = app.pages.find(page => page.key == key);
             if (new_route.page == null) {
                 Log.error(`La page '${key}' n'existe pas`);
-                new_route.page = app.homepage;
+                new_route.page = app.homepage ?? app.pages[0];
             }
 
             let [tid, anchor] = what ? what.split('@') : [null, null];
