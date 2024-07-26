@@ -8660,7 +8660,17 @@ const char *GetMimeType(Span<const char> extension, const char *default_type)
         { "", "application/octet-stream" }
     };
 
-    const char *mime_type = mime_types.FindValue(extension, nullptr);
+    char lower[32];
+    {
+        Span<const char truncated = extension.Take(0, std::min(extension.len, (Size)16));
+
+        for (Size i = 0; i < truncated.len; i++) {
+            lower[i] = LowerAscii(truncated[i]);
+        }
+        lower[truncated.len] = 0;
+    }
+
+    const char *mime_type = mime_types.FindValue(lower, nullptr);
 
     if (!mime_type) {
         LogError("Unknown MIME type for extension '%1'", extension);
