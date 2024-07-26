@@ -2180,6 +2180,17 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
+    EnumResult ret = EnumerateDirectory(dirname, filter, max_files,
+                                        [&](const char *basename, const FileInfo &file_info) {
+        return func(basename, file_info.type);
+    });
+
+    return ret;
+}
+
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, const FileInfo &)> func)
+{
     if (filter) {
         RG_ASSERT(!strpbrk(filter, RG_PATH_SEPARATORS));
     } else {
@@ -2198,8 +2209,8 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
             return EnumResult::OtherError;
     }
 
-    WIN32_FIND_DATAW find_data;
-    HANDLE handle = FindFirstFileExW(find_filter_w, FindExInfoBasic, &find_data,
+    WIN32_FIND_DATAW attr;
+    HANDLE handle = FindFirstFileExW(find_filter_w, FindExInfoBasic, &attr,
                                      FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
     if (handle == INVALID_HANDLE_VALUE) {
         DWORD err = GetLastError();
@@ -2230,8 +2241,8 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
 
     Size count = 0;
     do {
-        if ((find_data.cFileName[0] == '.' && !find_data.cFileName[1]) ||
-                (find_data.cFileName[0] == '.' && find_data.cFileName[1] == '.' && !find_data.cFileName[2]))
+        if ((attr.cFileName[0] == '.' && !attr.cFileName[1]) ||
+                (attr.cFileName[0] == '.' && attr.cFileName[1] == '.' && !attr.cFileName[2]))
             continue;
 
         if (count++ >= max_files && max_files >= 0) [[unlikely]] {
@@ -2240,14 +2251,22 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
         }
 
         char filename[512];
-        if (ConvertWin32WideToUtf8(find_data.cFileName, filename) < 0)
+        if (ConvertWin32WideToUtf8(attr.cFileName, filename) < 0)
             return EnumResult::OtherError;
 
-        FileType file_type = FileAttributesToType(find_data.dwFileAttributes);
+        FileInfo file_info = {};
 
-        if (!func(filename, file_type))
+        file_info.type = FileAttributesToType(attr.dwFileAttributes);
+        file_info.size = ((uint64_t)attr.nFileSizeHigh << 32) | attr.nFileSizeLow;
+        file_info.mtime = FileTimeToUnixTime(attr.ftLastWriteTime);
+        file_info.btime = FileTimeToUnixTime(attr.ftCreationTime);
+        file_info.mode = (file_info.type == FileType::Directory) ? 0755 : 0644;
+        file_info.uid = 0;
+        file_info.gid = 0;
+
+        if (!func(filename, file_info))
             return EnumResult::CallbackFail;
-    } while (FindNextFileW(handle, &find_data));
+    } while (FindNextFileW(handle, &attr));
 
     if (GetLastError() != ERROR_NO_MORE_FILES) {
         LogError("Error while enumerating directory '%1': %2", dirname,
@@ -2280,7 +2299,7 @@ static FileType FileModeToType(mode_t mode)
     }
 }
 
-StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *out_info)
+static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, unsigned int flags, FileInfo *out_info)
 {
 #if defined(__linux__) && defined(STATX_TYPE) && !defined(CORE_NO_STATX)
     const char *pathname = filename;
@@ -2288,7 +2307,7 @@ StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
     int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
-    if (fd >= 0) {
+    if (fd >= 0 && !fd_is_directory) {
         pathname = "";
         stat_flags |= AT_EMPTY_PATH;
     } else {
@@ -2394,6 +2413,11 @@ StatResult StatFile(int fd, const char *filename, unsigned int flags, FileInfo *
 #endif
 
     return StatResult::Success;
+}
+
+StatResult StatFile(int fd, const char *path, unsigned int flags, FileInfo *out_info)
+{
+    return StatAt(fd, false, path, flags, out_info);
 }
 
 static bool SyncFileDirectory(const char *filename)
@@ -2518,6 +2542,58 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
             }
 
             if (!func(dent->d_name, file_type))
+                return EnumResult::CallbackFail;
+        }
+
+        errno = 0;
+    }
+
+    if (errno) {
+        LogError("Error while enumerating directory '%1': %2", dirname, strerror(errno));
+        return EnumResult::OtherError;
+    }
+
+    return EnumResult::Success;
+}
+
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, const FileInfo &)> func)
+{
+    DIR *dirp = RG_RESTART_EINTR(opendir(dirname), == nullptr);
+    if (!dirp) {
+        LogError("Cannot enumerate directory '%1': %2", dirname, strerror(errno));
+
+        switch (errno) {
+            case ENOENT: return EnumResult::MissingPath;
+            case EACCES: return EnumResult::AccessDenied;
+            default: return EnumResult::OtherError;
+        }
+    }
+    RG_DEFER { closedir(dirp); };
+
+    // Avoid random failure in empty directories
+    errno = 0;
+
+    Size count = 0;
+    dirent *dent;
+    while ((dent = readdir(dirp))) {
+        if ((dent->d_name[0] == '.' && !dent->d_name[1]) ||
+                (dent->d_name[0] == '.' && dent->d_name[1] == '.' && !dent->d_name[2]))
+            continue;
+
+        if (!filter || !fnmatch(filter, dent->d_name, FNM_PERIOD)) {
+            if (count++ >= max_files && max_files >= 0) [[unlikely]] {
+                LogError("Partial enumation of directory '%1'", dirname);
+                return EnumResult::PartialEnum;
+            }
+
+            FileInfo file_info;
+            StatResult ret = StatAt(dirfd(dirp), true, dent->d_name, (int)StatFlag::SilentMissing, &file_info);
+
+            if (ret != StatResult::Success)
+                continue;
+
+            if (!func(dent->d_name, file_info))
                 return EnumResult::CallbackFail;
         }
 

@@ -4173,6 +4173,9 @@ enum class EnumResult {
 
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func);
+EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
+                              FunctionRef<bool(const char *, const FileInfo &)> func);
+
 bool EnumerateFiles(const char *dirname, const char *filter, Size max_depth, Size max_files,
                     Allocator *str_alloc, HeapArray<const char *> *out_files);
 bool IsDirectoryEmpty(const char *dirname);

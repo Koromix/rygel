@@ -318,16 +318,15 @@ R"(<!DOCTYPE html>
             }
             a:hover { text-decoration: underline; }
 
-            ul {
-                padding-left: 1em;
-                color: #24579d;
+            table {
+                width: 100%;
+                table-layout: fixed;
             }
-            li > a { color: inherit; }
-            li.directory {
-                color: #383838;
-                list-style-type: disc;
+            table td:last-child {
+                width: 100px;
+                text-align: right;
             }
-            li.file { list-style-type: circle; }
+            tr.directory a { color: #383838; }
         </style>
     </head>
     <body>
@@ -341,12 +340,23 @@ R"(<!DOCTYPE html>
 </html>
 )";
 
-    HeapArray<Span<const char>> names;
+    struct EntryData {
+        Span<const char> name;
+        bool is_directory;
+        int64_t size;
+    };
+
+    HeapArray<EntryData> entries;
     {
         EnumResult ret = EnumerateDirectory(dirname, nullptr, 4096,
-                                            [&](const char *basename, FileType file_type) {
-            Span<const char> filename = Fmt(io->Allocator(), "%1%2", basename, file_type == FileType::Directory ? "/" : "");
-            names.Append(filename);
+                                            [&](const char *basename, const FileInfo &file_info) {
+            EntryData entry = {};
+
+            entry.name = Fmt(io->Allocator(), "%1%2", basename, file_info.type == FileType::Directory ? "/" : "");
+            entry.is_directory = (file_info.type == FileType::Directory);
+            entry.size = file_info.size;
+
+            entries.Append(entry);
 
             return true;
         });
@@ -369,14 +379,11 @@ R"(<!DOCTYPE html>
         }
     }
 
-    std::sort(names.begin(), names.end(), [](Span<const char> name1, Span<const char> name2) {
-        bool is_directory1 = EndsWith(name1, "/");
-        bool is_directory2 = EndsWith(name2, "/");
-
-        if (is_directory1 != is_directory2) {
-            return is_directory1;
+    std::sort(entries.begin(), entries.end(), [](const EntryData &entry1, const EntryData &entry2) {
+        if (entry1.is_directory != entry2.is_directory) {
+            return entry1.is_directory;
         } else {
-            return CmpStr(name1, name2) < 0;
+            return CmpStr(entry1.name, entry2.name) < 0;
         }
     });
 
@@ -395,15 +402,24 @@ R"(<!DOCTYPE html>
             PrintLn(writer, "        <a href=\"..\"%1>(go back)</a>", root ? " style=\"visibility: hidden;\"" : "");
             PrintLn(writer, "        %1", request.path);
         } else if (key == "MAIN") {
-            if (names.len) {
-                writer->Write("        <ul>\n");
-                for (Span<const char> name: names) {
-                    const char *cls = EndsWith(name, "/") ? "directory" : "file";
+            if (entries.len) {
+                writer->Write("        <table>\n");
+                for (const EntryData &entry: entries) {
+                    const char *cls = entry.is_directory ? "directory" : "file";
 
-                    Print(writer, "            <li class=\"%1\"><a href=\"", cls); WriteURL(name, writer); writer->Write("\">");
-                    WriteContent(name, writer); writer->Write("</a></li>\n");
+                    Print(writer, "            <tr class=\"%1\">", cls);
+                    Print(writer, "                <td><a href=\"");
+                    WriteURL(entry.name, writer); writer->Write("\">"); WriteContent(entry.name, writer);
+                    writer->Write("</a></li>\n");
+                    if (!entry.is_directory) {
+                        Print(writer, "                <td>%1</td>", FmtDiskSize(entry.size));
+                    } else {
+                        Print(writer, "                <td></td>");
+                    }
+                    Print(writer, "            </tr>");
+
                 }
-                writer->Write("        </ul>");
+                writer->Write("        </table>");
             } else {
                 writer->Write("Empty directory");
             }
