@@ -73,7 +73,7 @@ struct http_Socket {
     OVERLAPPED overlapped = {};
 
     uint8_t accept[2 * AcceptAddressLen];
-    std::function<void()> execute;
+    std::function<void(DWORD)> execute;
 
     http_IO *client = nullptr;
 
@@ -214,7 +214,6 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
                      &fn.AcceptEx, RG_SIZE(fn.AcceptEx),
                      &dummy, nullptr, nullptr) == SOCKET_ERROR) {
             errno = TranslateWinSockError();
-
             LogError("Failed to load AcceptEx() function: %1", strerror(errno));
             return false;
         }
@@ -224,7 +223,6 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
                      &fn.GetAcceptExSockaddrs, RG_SIZE(fn.GetAcceptExSockaddrs),
                      &dummy, nullptr, nullptr) == SOCKET_ERROR) {
             errno = TranslateWinSockError();
-
             LogError("Failed to load GetAcceptExSockaddrs() function: %1", strerror(errno));
             return false;
         }
@@ -234,7 +232,6 @@ bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http
                      &fn.DisconnectEx, RG_SIZE(fn.DisconnectEx),
                      &dummy, nullptr, nullptr) == SOCKET_ERROR) {
             errno = TranslateWinSockError();
-
             LogError("Failed to load DisconnectEx() function: %1", strerror(errno));
             return false;
         }
@@ -417,7 +414,7 @@ bool http_Dispatcher::Run()
                     continue;
                 }
 
-                socket->execute();
+                socket->execute(transferred);
             } break;
 
             case PendingOperation::Done: {
@@ -535,7 +532,7 @@ bool http_Dispatcher::PostAccept(http_Socket *socket)
 retry:
     if (!fn.AcceptEx((SOCKET)listener, (SOCKET)socket->sock, socket->accept, 0,
                      AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
-            WSAGetLastError() != ERROR_IO_PENDING) {
+            WSAGetLastError() != WSA_IO_PENDING) {
         errno = TranslateWinSockError();
 
         if (errno == ECONNRESET)
@@ -569,9 +566,8 @@ bool http_Dispatcher::PostRead(http_Socket *socket)
     socket->op = PendingOperation::Read;
 
     if (WSARecv((SOCKET)socket->sock, &buf, 1, &received, &flags, &socket->overlapped, nullptr) &&
-            WSAGetLastError() != ERROR_IO_PENDING) {
+            WSAGetLastError() != WSA_IO_PENDING) {
         errno = TranslateWinSockError();
-
         if (errno != ENOTCONN && errno != ECONNRESET) {
             LogError("Failed to read from socket: %1", strerror(errno));
         }
@@ -618,15 +614,12 @@ void http_Dispatcher::DisconnectSocket(http_Socket *socket)
     socket->op = PendingOperation::Disconnect;
 
     if (!fn.DisconnectEx((SOCKET)socket->sock, &socket->overlapped, TF_REUSE_SOCKET, 0) &&
-            WSAGetLastError() != ERROR_IO_PENDING) {
+            WSAGetLastError() != WSA_IO_PENDING) {
         errno = TranslateWinSockError();
-
         if (errno != ENOTCONN) {
             LogError("Failed to reuse socket: %1", strerror(errno));
         }
-
         DestroySocket(socket);
-        return;
     }
 }
 
@@ -711,6 +704,8 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
+    static const Size MaxSend = INT32_MAX - 1;
+
     RG_ASSERT(socket);
     RG_ASSERT(!response.sent);
     RG_ASSERT(len >= 0);
@@ -720,40 +715,44 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     // Async operation
     AddFinalizer([=]() { CloseDescriptor(fd); });
 
-    HANDLE h = (HANDLE)_get_osfhandle(fd);
-    int64_t offset = 0;
-
     // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
     TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
 
-    DWORD send = (DWORD)std::min(len, (Size)INT32_MAX - 1);
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+    int64_t offset = -intro.len;
+    int64_t remain = intro.len + len;
 
-    offset += send;
-    len -= (Size)send;
+    if (remain > MaxSend) {
+        socket->execute = [=, this](DWORD transferred) mutable {
+            offset += (Size)transferred;
+            remain -= (Size)transferred;
 
-    if (len) {
-        socket->execute = [=, this]() mutable {
-            if (!len) {
+            if (offset < 0) [[unlikely]] {
+                LogError("TransmitFile() stopped too early");
+
+                request.keepalive = false;
                 socket->op = PendingOperation::Done;
                 PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
 
                 return;
             }
 
+            socket->op = remain ? PendingOperation::Execute : PendingOperation::Done;
             socket->overlapped.OffsetHigh = (DWORD)(offset >> 32);
             socket->overlapped.Offset = (DWORD)(offset & 0xFFFFFFFFu);
 
-            DWORD send = (DWORD)std::min(len, (Size)INT32_MAX - 1);
-
-            offset += (Size)send;
-            len -= (Size)send;
+            DWORD send = (DWORD)std::min(remain, MaxSend);
 
             if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &socket->overlapped, nullptr, 0) &&
-                    GetLastError() == ERROR_IO_PENDING) [[unlikely]] {
+                    WSAGetLastError() != WSA_IO_PENDING) [[unlikely]] {
                 errno = TranslateWinSockError();
-
                 LogError("Failed to send file: %1", strerror(errno));
+
+                request.keepalive = false;
+                socket->op = PendingOperation::Done;
+                PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
+
                 return;
             }
         };
@@ -762,12 +761,19 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         socket->op = PendingOperation::Done;
     }
 
-    if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &socket->overlapped, &tbuf, 0) &&
-            WSAGetLastError() != ERROR_IO_PENDING) [[unlikely]] {
-        errno = TranslateWinSockError();
+    socket->overlapped.OffsetHigh = 0;
+    socket->overlapped.Offset = 0;
 
+    DWORD send = (DWORD)std::min(remain, MaxSend) - intro.len;
+
+    if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &socket->overlapped, &tbuf, 0) &&
+            WSAGetLastError() != WSA_IO_PENDING) [[unlikely]] {
+        errno = TranslateWinSockError();
         LogError("Failed to send file: %1", strerror(errno));
-        return;
+
+        request.keepalive = false;
+        socket->op = PendingOperation::Done;
+        PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
     }
 }
 
@@ -782,7 +788,6 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
                 continue;
 
             errno = TranslateWinSockError();
-
             if (errno != ENOTCONN && errno != ECONNRESET) {
                 LogError("Failed to send to client: %1", strerror(errno));
             }
@@ -820,7 +825,6 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
                     continue;
 
                 errno = TranslateWinSockError();
-
                 if (errno != ENOTCONN && errno != ECONNRESET) {
                     LogError("Failed to send to client: %1", strerror(errno));
                 }
