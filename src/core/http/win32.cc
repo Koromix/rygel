@@ -23,7 +23,6 @@
 
 #include "src/core/base/base.hh"
 #include "server.hh"
-#include "misc.hh"
 
 #if !defined(NOMINMAX)
     #define NOMINMAX

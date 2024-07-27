@@ -24,7 +24,6 @@
 #include "src/core/base/base.hh"
 #include "server.hh"
 #include "posix.hh"
-#include "misc.hh"
 
 #include <fcntl.h>
 #include <limits.h>
