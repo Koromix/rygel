@@ -58,6 +58,7 @@ enum class PendingOperation {
     Accept,
     Disconnect,
     Read,
+    Execute,
     Done,
 
     CreateSockets,
@@ -70,7 +71,9 @@ struct http_Socket {
 
     PendingOperation op = PendingOperation::None;
     OVERLAPPED overlapped = {};
+
     uint8_t accept[2 * AcceptAddressLen];
+    std::function<void()> execute;
 
     http_IO *client = nullptr;
 
@@ -403,6 +406,20 @@ bool http_Dispatcher::Run()
                 ProcessIncoming(now, socket, client, (Size)transferred);
             } break;
 
+            case PendingOperation::Execute: {
+                RG_ASSERT(socket);
+                RG_ASSERT(socket->client);
+
+                socket->op = PendingOperation::None;
+
+                if (!success) [[unlikely]] {
+                    DisconnectSocket(socket);
+                    continue;
+                }
+
+                socket->execute();
+            } break;
+
             case PendingOperation::Done: {
                 RG_ASSERT(socket);
                 RG_ASSERT(socket->client);
@@ -698,65 +715,59 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     RG_ASSERT(!response.sent);
     RG_ASSERT(len >= 0);
 
-    bool async = true;
+    RG_DEFER { response.sent = true; };
 
-    RG_DEFER {
-        response.sent = true;
-
-        if (!async) {
-            socket->op = PendingOperation::Done;
-            PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
-        }
-    };
-
+    // Async operation
     AddFinalizer([=]() { CloseDescriptor(fd); });
 
     HANDLE h = (HANDLE)_get_osfhandle(fd);
     int64_t offset = 0;
 
+    // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
     TRANSMIT_FILE_BUFFERS tbuf = { (void *)intro.ptr, (DWORD)intro.len, nullptr, 0 };
-    Size total = intro.len + len;
 
-    async = (total <= INT32_MAX - 1);
+    DWORD send = (DWORD)std::min(len, (Size)INT32_MAX - 1);
 
-    // Send intro and file in one go
-    {
-        DWORD send = (DWORD)std::min(len, (Size)INT32_MAX - 1);
-        BOOL success = TransmitFile((SOCKET)socket->sock, h, send, 0, async ? &socket->overlapped : nullptr, &tbuf, 0);
+    offset += send;
+    len -= (Size)send;
 
-        if (!success && WSAGetLastError() != ERROR_IO_PENDING) [[unlikely]] {
-            LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
-            return;
-        }
+    if (len) {
+        socket->execute = [=, this]() mutable {
+            if (!len) {
+                socket->op = PendingOperation::Done;
+                PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
 
-        offset += send;
-        len -= (Size)send;
-    }
+                return;
+            }
 
-    if (async) {
-        RG_ASSERT(!len);
+            socket->overlapped.OffsetHigh = (DWORD)(offset >> 32);
+            socket->overlapped.Offset = (DWORD)(offset & 0xFFFFFFFFu);
 
+            DWORD send = (DWORD)std::min(len, (Size)INT32_MAX - 1);
+
+            offset += (Size)send;
+            len -= (Size)send;
+
+            if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &socket->overlapped, nullptr, 0) &&
+                    GetLastError() == ERROR_IO_PENDING) [[unlikely]] {
+                errno = TranslateWinSockError();
+
+                LogError("Failed to send file: %1", strerror(errno));
+                return;
+            }
+        };
+        socket->op = PendingOperation::Execute;
+    } else {
         socket->op = PendingOperation::Done;
-        return;
     }
 
-    while (len) {
-        if (!SetFilePointerEx(h, { .QuadPart = offset }, nullptr, FILE_BEGIN)) {
-            LogError("Failed to send file: %1", GetWin32ErrorString());
-            return;
-        }
+    if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &socket->overlapped, &tbuf, 0) &&
+            WSAGetLastError() != ERROR_IO_PENDING) [[unlikely]] {
+        errno = TranslateWinSockError();
 
-        DWORD send = (DWORD)std::min(len, (Size)INT32_MAX - 1);
-        BOOL success = TransmitFile((SOCKET)socket->sock, h, send, 0, nullptr, nullptr, 0);
-
-        if (!success) [[unlikely]] {
-            LogError("Failed to send file: %1", strerror(TranslateWinSockError()));
-            return;
-        }
-
-        offset += (Size)send;
-        len -= (Size)send;
+        LogError("Failed to send file: %1", strerror(errno));
+        return;
     }
 }
 
