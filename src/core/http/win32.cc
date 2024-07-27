@@ -513,6 +513,8 @@ bool http_Dispatcher::PostAccept(http_Socket *socket)
 {
     DWORD dummy = 0;
 
+    socket->op = PendingOperation::Accept;
+
 retry:
     if (!fn.AcceptEx((SOCKET)listener, (SOCKET)socket->sock, socket->accept, 0,
                      AcceptAddressLen, AcceptAddressLen, &dummy, &socket->overlapped) &&
@@ -526,7 +528,6 @@ retry:
         return false;
     }
 
-    socket->op = PendingOperation::Accept;
     pending_accepts++;
 
     return true;
@@ -548,6 +549,8 @@ bool http_Dispatcher::PostRead(http_Socket *socket)
     DWORD received = 0;
     DWORD flags = 0;
 
+    socket->op = PendingOperation::Read;
+
     if (WSARecv((SOCKET)socket->sock, &buf, 1, &received, &flags, &socket->overlapped, nullptr) &&
             WSAGetLastError() != ERROR_IO_PENDING) {
         errno = TranslateWinSockError();
@@ -557,8 +560,6 @@ bool http_Dispatcher::PostRead(http_Socket *socket)
         }
         return false;
     }
-
-    socket->op = PendingOperation::Read;
 
     return true;
 }
@@ -597,6 +598,8 @@ void http_Dispatcher::DisconnectSocket(http_Socket *socket)
         socket->client = nullptr;
     }
 
+    socket->op = PendingOperation::Disconnect;
+
     if (!fn.DisconnectEx((SOCKET)socket->sock, &socket->overlapped, TF_REUSE_SOCKET, 0) &&
             WSAGetLastError() != ERROR_IO_PENDING) {
         errno = TranslateWinSockError();
@@ -608,8 +611,6 @@ void http_Dispatcher::DisconnectSocket(http_Socket *socket)
         DestroySocket(socket);
         return;
     }
-
-    socket->op = PendingOperation::Disconnect;
 }
 
 void http_Dispatcher::DestroySocket(http_Socket *socket)
