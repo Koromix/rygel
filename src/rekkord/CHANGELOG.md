@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.21 (2024-07-28)
+
+- Update to LZ4 1.10.0
+- Use higher LZ4 compression level by default
+- Add setting to change LZ4 compression level
+
 ### Rekkord 0.20 (2024-07-19)
 
 - Fix error when using `rekkord build_cache`
