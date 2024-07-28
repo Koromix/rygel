@@ -36,6 +36,7 @@ struct rk_Config {
     ssh_Config ssh;
 
     int threads = -1;
+    int compression_level = 4;
 
     BlockAllocator str_alloc;
 

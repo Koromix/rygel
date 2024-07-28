@@ -13,6 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "config.hh"
+#include "vendor/lz4/lib/lz4hc.h"
 
 namespace RG {
 
@@ -192,6 +193,15 @@ bool rk_LoadConfig(StreamReader *st, rk_Config *out_config)
                     } else if (prop.key == "Password") {
                         config.password = DuplicateString(prop.value, &config.str_alloc).ptr;
                         ZeroMemorySafe((void *)prop.value.ptr, prop.value.len);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Settings") {
+                do {
+                    if (prop.key == "CompressionLevel") {
+                        valid &= ParseInt(prop.value, &config.compression_level);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;

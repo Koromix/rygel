@@ -150,8 +150,8 @@ bool LZ4Compressor::Write(Span<const uint8_t> buf)
     size_t needed = LZ4F_compressBound((size_t)buf.len, &prefs);
     dynamic_buf.Grow((Size)needed);
 
-    size_t ret = LZ4F_compressUpdate(encoder, dynamic_buf.end(), (size_t)(dynamic_buf.capacity - dynamic_buf.len),
-                                     buf.ptr, (size_t)buf.len, nullptr);
+    size_t available = (size_t)dynamic_buf.Available();
+    size_t ret = LZ4F_compressUpdate(encoder, dynamic_buf.end(), available, buf.ptr, (size_t)buf.len, nullptr);
 
     if (LZ4F_isError(ret)) {
         LogError("Failed to write LZ4 stream for '%1': %2", GetFileName(), LZ4F_getErrorName(ret));

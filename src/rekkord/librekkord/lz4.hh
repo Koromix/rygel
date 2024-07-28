@@ -14,6 +14,8 @@
 #pragma once
 
 #include "src/core/base/base.hh"
+#include "vendor/lz4/lib/lz4.h"
+#include "vendor/lz4/lib/lz4hc.h"
 #include "vendor/lz4/lib/lz4frame.h"
 
 namespace RG {
@@ -45,7 +47,7 @@ public:
     EncodeLZ4();
     ~EncodeLZ4();
 
-    bool Start();
+    bool Start(int level);
 
     bool Append(Span<const uint8_t> buf);
     bool Flush(bool complete, FunctionRef<Size(Span<const uint8_t>)> func);

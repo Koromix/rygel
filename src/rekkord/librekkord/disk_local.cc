@@ -21,7 +21,7 @@ static const int MaxPathSize = 4096 - 128;
 
 class LocalDisk: public rk_Disk {
 public:
-    LocalDisk(const char *path, int threads);
+    LocalDisk(const char *path, const rk_OpenSettings &settings);
     ~LocalDisk() override;
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
@@ -39,12 +39,8 @@ public:
     bool DeleteDirectory(const char *path) override;
 };
 
-LocalDisk::LocalDisk(const char *path, int threads)
+LocalDisk::LocalDisk(const char *path, const rk_OpenSettings &settings)
 {
-    if (threads < 0) {
-        threads = 32 * GetCoreCount();
-    }
-
     Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &str_alloc);
 
     // Sanity checks
@@ -55,7 +51,9 @@ LocalDisk::LocalDisk(const char *path, int threads)
 
     // We're good!
     url = directory.ptr;
-    this->threads = threads;
+
+    threads = (settings.threads > 0) ? settings.threads : (32 * GetCoreCount());
+    compression_level = settings.compression_level;
 }
 
 LocalDisk::~LocalDisk()
@@ -288,9 +286,9 @@ bool LocalDisk::DeleteDirectory(const char *path)
     return UnlinkDirectory(filename.data);
 }
 
-std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads)
+std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, const rk_OpenSettings &settings)
 {
-    std::unique_ptr<rk_Disk> disk = std::make_unique<LocalDisk>(path, threads);
+    std::unique_ptr<rk_Disk> disk = std::make_unique<LocalDisk>(path, settings);
 
     if (!disk->GetURL())
         return nullptr;

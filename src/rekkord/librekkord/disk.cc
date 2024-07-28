@@ -644,7 +644,7 @@ Size rk_Disk::WriteBlob(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
 
         // Initialize compression
         EncodeLZ4 lz4;
-        if (!lz4.Start())
+        if (!lz4.Start(compression_level))
             return false;
 
         // Encrypt blob data
@@ -1138,10 +1138,15 @@ std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate)
     const char *username = authenticate ? config.username : nullptr;
     const char *password = authenticate ? config.password : nullptr;
 
+    rk_OpenSettings settings = {
+        .threads = config.threads,
+        .compression_level = config.compression_level
+    };
+
     switch (config.type) {
-        case rk_DiskType::Local: return rk_OpenLocalDisk(config.url, username, password, config.threads);
-        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, username, password, config.threads);
-        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, username, password, config.threads);
+        case rk_DiskType::Local: return rk_OpenLocalDisk(config.url, username, password, settings);
+        case rk_DiskType::SFTP: return rk_OpenSftpDisk(config.ssh, username, password, settings);
+        case rk_DiskType::S3: return rk_OpenS3Disk(config.s3, username, password, settings);
     }
 
     RG_UNREACHABLE();

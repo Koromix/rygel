@@ -56,7 +56,7 @@ class SftpDisk: public rk_Disk {
     HeapArray<ConnectionData *> connections;
 
 public:
-    SftpDisk(const ssh_Config &config, int threads);
+    SftpDisk(const ssh_Config &config, const rk_OpenSettings &settings);
     ~SftpDisk() override;
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
@@ -80,12 +80,8 @@ private:
     bool ListRaw(ListContext *ctx, const char *path);
 };
 
-SftpDisk::SftpDisk(const ssh_Config &config, int threads)
+SftpDisk::SftpDisk(const ssh_Config &config, const rk_OpenSettings &settings)
 {
-    if (threads < 0) {
-        threads = std::max(32, 4 * GetCoreCount());
-    }
-
     config.Clone(&this->config);
 
     if (!this->config.path || !this->config.path[0]) {
@@ -110,7 +106,9 @@ SftpDisk::SftpDisk(const ssh_Config &config, int threads)
     } else {
         url = Fmt(&str_alloc, "sftp://%1@%2/%3", config.username, config.host, config.path ? config.path : "").ptr;
     }
-    this->threads = threads;
+
+    threads = (settings.threads > 0) ? settings.threads : std::max(32, 4 * GetCoreCount());
+    compression_level = settings.compression_level;
 }
 
 SftpDisk::~SftpDisk()
@@ -657,9 +655,9 @@ void SftpDisk::ReleaseConnection(ConnectionData *conn)
     thread_conn = nullptr;
 }
 
-std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, int threads)
+std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings)
 {
-    std::unique_ptr<rk_Disk> disk = std::make_unique<SftpDisk>(config, threads);
+    std::unique_ptr<rk_Disk> disk = std::make_unique<SftpDisk>(config, settings);
 
     if (!disk->GetURL())
         return nullptr;

@@ -22,7 +22,7 @@ class S3Disk: public rk_Disk {
     s3_Session s3;
 
 public:
-    S3Disk(const s3_Config &config, int threads);
+    S3Disk(const s3_Config &config, const rk_OpenSettings &settings);
     ~S3Disk() override;
 
     bool Init(const char *full_pwd, const char *write_pwd) override;
@@ -40,19 +40,17 @@ public:
     bool DeleteDirectory(const char *path) override;
 };
 
-S3Disk::S3Disk(const s3_Config &config, int threads)
+S3Disk::S3Disk(const s3_Config &config, const rk_OpenSettings &settings)
 {
-    // S3 is slow unless you use parallelism
-    if (threads < 0) {
-        threads = std::max(32, 4 * GetCoreCount());
-    }
-
     if (!s3.Open(config))
         return;
 
     // We're good!
     url = s3.GetURL();
-    this->threads = threads;
+
+    // S3 is slow unless you use parallelism
+    threads = (settings.threads > 0) ? settings.threads : std::max(32, 4 * GetCoreCount());
+    compression_level = settings.compression_level;
 }
 
 S3Disk::~S3Disk()
@@ -126,9 +124,9 @@ bool S3Disk::DeleteDirectory(const char *)
     return true;
 }
 
-std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, int threads)
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings)
 {
-    std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config, threads);
+    std::unique_ptr<rk_Disk> disk = std::make_unique<S3Disk>(config, settings);
 
     if (!disk->GetURL())
         return nullptr;

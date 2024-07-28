@@ -82,6 +82,7 @@ protected:
     std::mutex cache_mutex;
     int cache_misses = 0;
     int threads = 1;
+    int compression_level = 0;
 
     BlockAllocator str_alloc;
 
@@ -159,11 +160,16 @@ private:
     void ClearCache();
 };
 
+struct rk_OpenSettings {
+    int threads = -1;
+    int compression_level = 4;
+};
+
 std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate);
 
-std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, int threads = -1);
-std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, int threads = -1);
-std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, int threads = -1);
+std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username, const char *pwd, const rk_OpenSettings &settings);
+std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings);
+std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings);
 
 bool rk_ParseHash(const char *str, rk_Hash *out_hash);
 

@@ -90,11 +90,16 @@ EncodeLZ4::~EncodeLZ4()
     LZ4F_freeCompressionContext(encoder);
 }
 
-bool EncodeLZ4::Start()
+bool EncodeLZ4::Start(int level)
 {
     dynamic_buf.Grow(LZ4F_HEADER_SIZE_MAX);
 
-    size_t ret = LZ4F_compressBegin(encoder, dynamic_buf.end(), dynamic_buf.capacity - dynamic_buf.len, nullptr);
+    LZ4F_preferences_t prefs = LZ4F_INIT_PREFERENCES;
+    prefs.compressionLevel = level;
+
+    size_t available = (size_t)dynamic_buf.Available();
+    size_t ret = LZ4F_compressBegin(encoder, dynamic_buf.end(), available, &prefs);
+
     if (LZ4F_isError(ret)) {
         LogError("Failed to start LZ4 stream: %1", LZ4F_getErrorName(ret));
         return false;
@@ -113,8 +118,8 @@ bool EncodeLZ4::Append(Span<const uint8_t> buf)
     size_t needed = LZ4F_compressBound((size_t)buf.len, nullptr);
     dynamic_buf.Grow((Size)needed);
 
-    size_t ret = LZ4F_compressUpdate(encoder, dynamic_buf.end(), (size_t)(dynamic_buf.capacity - dynamic_buf.len),
-                                     buf.ptr, (size_t)buf.len, nullptr);
+    size_t available = (size_t)dynamic_buf.Available();
+    size_t ret = LZ4F_compressUpdate(encoder, dynamic_buf.end(), available, buf.ptr, (size_t)buf.len, nullptr);
 
     if (LZ4F_isError(ret)) {
         LogError("Failed to write LZ4 stream: %1", LZ4F_getErrorName(ret));
