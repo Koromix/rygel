@@ -7314,29 +7314,26 @@ StreamCompressorHelper::StreamCompressorHelper(CompressionType compression_type,
     CompressorFunctions[(int)compression_type] = func;
 }
 
-bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf)
 {
+    RG_ASSERT(buf.len >= Kibibytes(2));
+
     if (!reader->IsValid())
         return false;
 
     int64_t total_len = 0;
     do {
-        // This also happens to be the maximum chunk size (0xFFFF) in our HTTP chunk
-        // transfer implementation. musl now defaults to 128k stack size, and we ask
-        // for 1 MiB with PT_GNU_STACK (using linker flag -z stack-size) anyway.
-        LocalArray<uint8_t, 65535> buf;
-
-        buf.len = reader->Read(buf.data);
-        if (buf.len < 0)
+        Size read_len = reader->Read(buf);
+        if (read_len < 0)
             return false;
 
-        if (max_len >= 0 && buf.len > max_len - total_len) [[unlikely]] {
+        if (max_len >= 0 && read_len > max_len - total_len) [[unlikely]] {
             LogError("File '%1' is too large (limit = %2)", reader->GetFileName(), FmtDiskSize(max_len));
             return false;
         }
-        total_len += buf.len;
+        total_len += read_len;
 
-        if (!writer->Write(buf))
+        if (!writer->Write(buf.ptr, read_len))
             return false;
     } while (!reader->IsEOF());
 

@@ -4999,7 +4999,20 @@ public:
     } \
     static StreamCompressorHelper RG_UNIQUE_NAME(CreateCompressorHelper)((Type), RG_UNIQUE_NAME(CreateCompressor))
 
-bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer);
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf);
+
+template<Size S = 65535>
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
+{
+    static_assert(S >= Kibibytes(2) && S <= Kibibytes(96));
+
+    // The default size happens to be the maximum chunk size (0xFFFF) in our HTTP chunk
+    // transfer implementation. musl now defaults to 128k stack size, and we ask
+    // for 1 MiB with PT_GNU_STACK (using linker flag -z stack-size) anyway.
+    uint8_t buf[S];
+
+    return SpliceStream(reader, max_len, writer, buf);
+}
 
 bool IsCompressorAvailable(CompressionType compression_type);
 bool IsDecompressorAvailable(CompressionType compression_type);
