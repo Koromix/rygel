@@ -133,7 +133,7 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
     } else if (key == "Port") {
         return ParseInt(value, &port);
     } else if (key == "ClientAddress") {
-        if (!OptionToEnumI(http_ClientAddressModeNames, value, &addr_mode)) {
+        if (!OptionToEnumI(http_AddressModeNames, value, &addr_mode)) {
             LogError("Unknown client address mode '%1'", value);
             return false;
         }
@@ -239,7 +239,7 @@ bool http_Daemon::InitConfig(const http_Config &config)
     if (!config.Validate())
         return false;
 
-    if (config.addr_mode == http_ClientAddressMode::Socket) {
+    if (config.addr_mode == http_AddressMode::Socket) {
         LogWarning("You may want to %!.._set HTTP.ClientAddress%!0 to X-Forwarded-For or X-Real-IP "
                    "if you run this behind a reverse proxy that sets one of these headers.");
     }
@@ -676,9 +676,9 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 bool http_IO::InitAddress()
 {
     switch (daemon->addr_mode) {
-        case http_ClientAddressMode::Socket: { /* Keep socket address */ } break;
+        case http_AddressMode::Socket: { /* Keep socket address */ } break;
 
-        case http_ClientAddressMode::XForwardedFor: {
+        case http_AddressMode::XForwardedFor: {
             const char *str = request.FindHeader("X-Forwarded-For");
             if (!str) {
                 LogError("X-Forwarded-For header is missing but is required by the configuration");
@@ -697,7 +697,7 @@ bool http_IO::InitAddress()
             }
         } break;
 
-        case http_ClientAddressMode::XRealIP: {
+        case http_AddressMode::XRealIP: {
             const char *str = request.FindHeader("X-Real-IP");
             if (!str) {
                 LogError("X-Real-IP header is missing but is required by the configuration");

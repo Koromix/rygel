@@ -27,12 +27,12 @@ struct sockaddr;
 
 namespace RG {
 
-enum class http_ClientAddressMode {
+enum class http_AddressMode {
     Socket,
     XForwardedFor,
     XRealIP
 };
-static const char *const http_ClientAddressModeNames[] = {
+static const char *const http_AddressModeNames[] = {
     "Socket",
     "X-Forwarded-For",
     "X-Real-IP"
@@ -49,7 +49,7 @@ struct http_Config {
     int port = 8888;
     const char *unix_path = nullptr;
 
-    http_ClientAddressMode addr_mode = http_ClientAddressMode::Socket;
+    http_AddressMode addr_mode = http_AddressMode::Socket;
 
     int idle_timeout = 10000;
     int keepalive_time = 20000;
@@ -85,7 +85,7 @@ class http_Daemon {
 #endif
 
     SocketType sock_type;
-    http_ClientAddressMode addr_mode;
+    http_AddressMode addr_mode;
 
     int idle_timeout;
     int keepalive_time;
