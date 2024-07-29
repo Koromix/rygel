@@ -2307,11 +2307,13 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
     int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
-    if (fd >= 0 && !fd_is_directory) {
-        pathname = "";
-        stat_flags |= AT_EMPTY_PATH;
-    } else {
-        fd = AT_FDCWD;
+    if (!fd_is_directory) {
+        if (fd >= 0) {
+            pathname = "";
+            stat_flags |= AT_EMPTY_PATH;
+        } else {
+            fd = AT_FDCWD;
+        }
     }
 
     struct statx sxb;
@@ -2590,10 +2592,7 @@ EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_
             FileInfo file_info;
             StatResult ret = StatAt(dirfd(dirp), true, dent->d_name, (int)StatFlag::SilentMissing, &file_info);
 
-            if (ret != StatResult::Success)
-                continue;
-
-            if (!func(dent->d_name, file_info))
+            if (ret == StatResult::Success && !func(dent->d_name, file_info))
                 return EnumResult::CallbackFail;
         }
 
