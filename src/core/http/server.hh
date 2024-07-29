@@ -190,7 +190,10 @@ class http_IO {
     struct {
         HeapArray<http_KeyValue> headers;
         HeapArray<std::function<void()>> finalizers;
-        bool sent = false;
+
+        bool started = false;
+        Size expected = 0;
+        Size sent = 0;
     } response;
 
     BlockAllocator allocator { Kibibytes(8) };
@@ -210,8 +213,10 @@ public:
                          bool http_only = false);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
-    void Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func);
-    void Send(int status, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
+    bool OpenForRead(Size max_len, StreamReader *out_st);
+
+    void Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(StreamWriter *)> func);
+    void Send(int status, int64_t len, FunctionRef<bool(StreamWriter *)> func)
         { Send(status, CompressionType::None, len, func); }
 
     void SendEmpty(int status);
@@ -222,6 +227,10 @@ public:
     void SendError(int status, const char *msg = nullptr);
     void SendFile(int status, const char *filename, const char *mimetype = nullptr);
     void SendFile(int status, int fd, int64_t len);
+
+    bool OpenForWrite(int status, CompressionType encoding, Size len, StreamWriter *out_st);
+    bool OpenForWrite(int status, Size len, StreamWriter *out_st)
+        { return OpenForWrite(status, CompressionType::None, len, out_st); }
 
     void AddFinalizer(const std::function<void()> &func);
 

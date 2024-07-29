@@ -657,62 +657,19 @@ http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct 
     return client;
 }
 
-void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
-{
-    RG_ASSERT(socket);
-    RG_ASSERT(!response.sent);
-
-    RG_DEFER {
-        response.sent = true;
-
-        socket->op = PendingOperation::Done;
-        PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
-    };
-
-    if (request.headers_only) {
-        func = [](int, StreamWriter *) { return true; };
-    }
-
-    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
-    StreamWriter writer(write, "<http>");
-
-    Span<const char> intro = PrepareResponse(status, encoding, len);
-    writer.Write(intro);
-
-    if (len >= 0) {
-        if (encoding != CompressionType::None) {
-            writer.Close();
-            writer.Open(write, "<http>", encoding);
-        }
-
-        request.keepalive &= func(socket->sock, &writer);
-    } else {
-        const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
-        StreamWriter chunker(chunk, "<http>", encoding);
-
-        if (func(-1, &chunker)) {
-            request.keepalive &= chunker.Close();
-            writer.Write("0\r\n\r\n");
-        } else {
-            request.keepalive = false;
-        }
-    }
-
-    request.keepalive &= writer.Close();
-}
-
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
     static const Size MaxSend = INT32_MAX - 1;
 
     RG_ASSERT(socket);
-    RG_ASSERT(!response.sent);
+    RG_ASSERT(!response.started);
     RG_ASSERT(len >= 0);
-
-    RG_DEFER { response.sent = true; };
 
     // Async operation
     AddFinalizer([=]() { CloseDescriptor(fd); });
+
+    response.started = true;
+    response.expected = len;
 
     // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
@@ -731,6 +688,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
                 LogError("TransmitFile() stopped too early");
 
                 request.keepalive = false;
+
                 socket->op = PendingOperation::Done;
                 PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
 
@@ -749,6 +707,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
                 LogError("Failed to send file: %1", strerror(errno));
 
                 request.keepalive = false;
+
                 socket->op = PendingOperation::Done;
                 PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
 
@@ -771,21 +730,19 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         LogError("Failed to send file: %1", strerror(errno));
 
         request.keepalive = false;
+
         socket->op = PendingOperation::Done;
         PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
     }
 }
 
-bool http_IO::WriteDirect(Span<const uint8_t> data)
+static bool SendFull(int sock, Span<const uint8_t> buf)
 {
-    while (data.len) {
-        int len = (int)std::min(data.len, (Size)INT_MAX);
-        Size sent = send((SOCKET)socket->sock, (const char *)data.ptr, len, 0);
+    while (buf.len) {
+        int len = (int)std::min(buf.len, (Size)INT_MAX);
+        Size sent = send((SOCKET)sock, (const char *)buf.ptr, len, 0);
 
         if (sent < 0) {
-            if (errno == EINTR)
-                continue;
-
             errno = TranslateWinSockError();
             if (errno != ENOTCONN && errno != ECONNRESET) {
                 LogError("Failed to send to client: %1", strerror(errno));
@@ -793,8 +750,29 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
             return false;
         }
 
-        data.ptr += sent;
-        data.len -= sent;
+        buf.ptr += sent;
+        buf.len -= sent;
+    }
+
+    return true;
+}
+
+bool http_IO::WriteDirect(Span<const uint8_t> data)
+{
+    if (!data.len) {
+        bool success = (response.expected < 0 || response.sent == response.expected);
+
+        request.keepalive &= success;
+
+        socket->op = PendingOperation::Done;
+        PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
+
+        return success;
+    }
+
+    if (!SendFull(socket->sock, data)) {
+        request.keepalive = false;
+        return false;
     }
 
     return true;
@@ -802,7 +780,21 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
 
 bool http_IO::WriteChunked(Span<const uint8_t> data)
 {
-    while (data.len) {
+    if (!data.len) {
+        bool success = (response.expected < 0 || response.sent == response.expected);
+
+        uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
+        success &= SendFull(socket->sock, end);
+
+        request.keepalive &= success;
+
+        socket->op = PendingOperation::Done;
+        PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
+
+        return success;
+    }
+
+    do {
         LocalArray<uint8_t, 16384> buf;
 
         Size copy_len = std::min(RG_SIZE(buf.data) - 8, data.len);
@@ -813,30 +805,16 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         buf.data[6 + copy_len + 0] = '\r';
         buf.data[6 + copy_len + 1] = '\n';
 
-        Span<const uint8_t> remain = buf;
-
-        do {
-            int len = (int)std::min(remain.len, (Size)INT_MAX);
-            Size sent = send((SOCKET)socket->sock, (const char *)remain.ptr, len, 0);
-
-            if (sent < 0) {
-                if (errno == EINTR)
-                    continue;
-
-                errno = TranslateWinSockError();
-                if (errno != ENOTCONN && errno != ECONNRESET) {
-                    LogError("Failed to send to client: %1", strerror(errno));
-                }
-                return false;
-            }
-
-            remain.ptr += sent;
-            remain.len -= sent;
-         } while (remain.len);
+        if (!SendFull(socket->sock, buf)) {
+            request.keepalive = false;
+            return false;
+        }
 
         data.ptr += copy_len;
         data.len -= copy_len;
-    }
+
+        response.sent += copy_len;
+    } while (data.len);
 
     return true;
 }

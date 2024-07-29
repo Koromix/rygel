@@ -276,7 +276,7 @@ void http_Daemon::RunHandler(http_IO *client)
 
     handle_func(client->request, client);
 
-    if (!client->response.sent) [[unlikely]] {
+    if (!client->response.started) [[unlikely]] {
         client->SendError(500);
     }
 }
@@ -320,7 +320,7 @@ http_IO::~http_IO()
 
 void http_IO::AddHeader(Span<const char> key, Span<const char> value)
 {
-    RG_ASSERT(!response.sent);
+    RG_ASSERT(!response.started);
 
     http_KeyValue header = {};
 
@@ -419,9 +419,35 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
     }
 }
 
+void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(StreamWriter *)> func)
+{
+    RG_ASSERT(socket);
+    RG_ASSERT(!response.started);
+
+    // HEAD quick path
+    if (request.headers_only) {
+        const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
+        StreamWriter writer(write, "<http>");
+
+        Span<const char> intro = PrepareResponse(status, encoding, len);
+        writer.Write(intro);
+
+        request.keepalive &= writer.Close();
+
+        return;
+    }
+
+    StreamWriter writer;
+    if (!OpenForWrite(status, encoding, len, &writer)) [[unlikely]]
+        return;
+
+    request.keepalive &= func(&writer);
+    request.keepalive &= writer.Close();
+}
+
 void http_IO::SendEmpty(int status)
 {
-    Send(status, 0, [](int, StreamWriter *) { return true; });
+    Send(status, 0, [](StreamWriter *) { return true; });
 }
 
 void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
@@ -429,7 +455,7 @@ void http_IO::SendText(int status, Span<const char> text, const char *mimetype)
     RG_ASSERT(mimetype);
     AddHeader("Content-Type", mimetype);
 
-    Send(status, text.len, [&](int, StreamWriter *writer) { return writer->Write(text); });
+    Send(status, text.len, [&](StreamWriter *writer) { return writer->Write(text); });
 }
 
 void http_IO::SendBinary(int status, Span<const uint8_t> data, const char *mimetype)
@@ -438,7 +464,7 @@ void http_IO::SendBinary(int status, Span<const uint8_t> data, const char *mimet
         AddHeader("Content-Type", mimetype);
     }
 
-    Send(status, data.len, [&](int, StreamWriter *writer) { return writer->Write(data); });
+    Send(status, data.len, [&](StreamWriter *writer) { return writer->Write(data); });
 }
 
 void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimetype,
@@ -463,7 +489,7 @@ void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimety
             SendEmpty(status);
         } else {
             StreamReader reader(data, nullptr, src_encoding);
-            Send(status, dest_encoding, -1, [&](int, StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
+            Send(status, dest_encoding, -1, [&](StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
         }
     } else {
         if (mimetype) {
@@ -511,7 +537,7 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
 
 void http_IO::AddFinalizer(const std::function<void()> &func)
 {
-    RG_ASSERT(!response.sent);
+    RG_ASSERT(!response.started);
     response.finalizers.Append(func);
 }
 
@@ -1010,7 +1036,9 @@ void http_IO::Rearm(int64_t start)
 
     response.headers.RemoveFrom(0);
     response.finalizers.RemoveFrom(0);
-    response.sent = false;
+    response.started = false;
+    response.expected = 0;
+    response.sent = 0;
     last_err = nullptr;
 
     if (start >= 0) {

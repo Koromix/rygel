@@ -47,88 +47,118 @@ namespace RG {
 // Sane platform
 static_assert(EAGAIN == EWOULDBLOCK);
 
-void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(int, StreamWriter *)> func)
+bool http_IO::OpenForWrite(int status, CompressionType encoding, Size len, StreamWriter *out_st)
 {
     RG_ASSERT(socket);
-    RG_ASSERT(!response.sent);
+    RG_ASSERT(!response.started);
+    RG_ASSERT(!request.headers_only);
 
-    if (request.headers_only) {
-        func = [](int, StreamWriter *) { return true; };
-    }
+    response.started = true;
+    response.expected = len;
 
 #if !defined(MSG_DONTWAIT)
     SetSocketNonBlock(socket->sock, false);
-    RG_DEFER { SetSocketNonBlock(socket->sock, true); };
 #endif
-
 #if !defined(MSG_MORE)
     SetSocketRetain(socket->sock, true);
 #endif
-    RG_DEFER {
-        response.sent = true;
-        SetSocketRetain(socket->sock, false);
-    };
-
-    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
-    StreamWriter writer(write, "<http>");
 
     Span<const char> intro = PrepareResponse(status, encoding, len);
-    writer.Write(intro);
+    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
+
+    out_st->Open(write, "<http>");
+    out_st->Write(intro);
 
     if (len >= 0) {
-        if (encoding != CompressionType::None) {
-            writer.Close();
-            writer.Open(write, "<http>", encoding);
-        }
+        if (encoding == CompressionType::None)
+            return true;
 
-        request.keepalive &= func(socket->sock, &writer);
+        out_st->Close();
+        return out_st->Open(write, "<http>", encoding);
     } else {
         const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
-        StreamWriter chunker(chunk, "<http>", encoding);
 
-        if (func(-1, &chunker)) {
-            request.keepalive &= chunker.Close();
-            writer.Write("0\r\n\r\n");
-        } else {
-            request.keepalive = false;
+        out_st->Close();
+        return out_st->Open(chunk, "<http>", encoding);
+    }
+}
+
+static bool SendFull(int sock, Span<const uint8_t> buf)
+{
+    while (buf.len) {
+#if defined(MSG_MORE)
+        Size sent = send(sock, buf.ptr, (size_t)buf.len, MSG_MORE | MSG_NOSIGNAL);
+#else
+        Size sent = send(sock, buf.ptr, (size_t)buf.len, MSG_NOSIGNAL);
+#endif
+
+        if (sent < 0) {
+            if (errno == EINTR)
+                continue;
+
+            if (errno != EPIPE && errno != ECONNRESET) {
+                LogError("Failed to send to client: %1", strerror(errno));
+            }
+            return false;
         }
+
+        buf.ptr += sent;
+        buf.len -= sent;
     }
 
-    request.keepalive &= writer.Close();
+    return true;
 }
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
     RG_ASSERT(socket);
-    RG_ASSERT(!response.sent);
+    RG_ASSERT(!response.started);
     RG_ASSERT(len >= 0);
 
     RG_DEFER { close(fd); };
 
+    response.started = true;
+    response.expected = len;
+
 #if defined(__linux__)
-    Send(status, len, [&](int sock, StreamWriter *) {
-        off_t offset = 0;
-        int64_t remain = len;
+    RG_DEFER { SetSocketRetain(socket->sock, false); };
 
-        while (remain) {
-            Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
-            Size sent = sendfile(sock, fd, &offset, (size_t)send);
+    Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
-            if (sent < 0) {
-                if (errno == EINTR)
-                    continue;
+    if (!SendFull(socket->sock, intro.As<uint8_t>())) {
+        request.keepalive = false;
+        return;
+    }
 
-                if (errno != EPIPE) {
-                    LogError("Failed to send file: %1", strerror(errno));
-                }
-                return false;
+    off_t offset = 0;
+    int64_t remain = len;
+
+    while (remain) {
+        Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+        Size sent = sendfile(socket->sock, fd, &offset, (size_t)send);
+
+        if (sent < 0) {
+            if (errno == EINTR)
+                continue;
+
+            if (errno != EPIPE) {
+                LogError("Failed to send file: %1", strerror(errno));
             }
 
-            remain -= sent;
+            request.keepalive = false;
+            return;
         }
 
-        return true;
-    });
+        if (!sent) [[unlikely]] {
+            LogError("Truncated file sent");
+
+            request.keepalive = false;
+            return;
+        }
+
+        offset += sent;
+        remain -= sent;
+    }
 #elif defined(__FreeBSD__) || defined(__APPLE__)
 #if !defined(MSG_DONTWAIT)
     SetSocketNonBlock(socket->sock, false);
@@ -136,11 +166,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 #endif
 
     SetSocketRetain(socket->sock, true);
-
-    RG_DEFER {
-        response.sent = true;
-        SetSocketRetain(socket->sock, false);
-    };
+    RG_DEFER { SetSocketRetain(socket->sock, false); };
 
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
@@ -173,13 +199,16 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         if (ret < 0 && errno != EINTR) {
             if (errno != EPIPE) {
                 LogError("Failed to send file: %1", strerror(errno));
-
             }
+
+            request.keepalive = false;
             return;
         }
 
-        if (!ret && !send) [[unlikely]] {
+        if (!ret && !sent) [[unlikely]] {
             LogError("Truncated file sent");
+
+            request.keepalive = false;
             return;
         }
 
@@ -187,13 +216,17 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         remain -= (int64_t)sent;
     }
 #else
-    Send(status, len, [&](int, StreamWriter *writer) {
+    Send(status, len, [&](StreamWriter *writer) {
         StreamReader reader(fd, "<file>");
 
-        if (!SpliceStream(&reader, len, writer))
+        if (!SpliceStream(&reader, len, writer)) {
+            request.keepalive = false;
             return false;
+        }
         if (writer->IsValid() && writer->GetRawWritten() < len) {
             LogError("File was truncated while sending");
+
+            request.keepalive = false;
             return false;
         }
 
@@ -204,25 +237,21 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
 bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
-    while (data.len) {
-#if defined(MSG_MORE)
-        Size sent = send(socket->sock, data.ptr, (size_t)data.len, MSG_MORE | MSG_NOSIGNAL);
-#else
-        Size sent = send(socket->sock, data.ptr, (size_t)data.len, MSG_NOSIGNAL);
+    if (!data.len) {
+        bool success = (response.expected < 0 || response.sent == response.expected);
+
+        SetSocketRetain(socket->sock, false);
+#if !defined(MSG_DONTWAIT)
+        SetSocketNonBlock(socket->sock, false);
 #endif
 
-        if (sent < 0) {
-            if (errno == EINTR)
-                continue;
+        request.keepalive &= success;
+        return success;
+    }
 
-            if (errno != EPIPE && errno != ECONNRESET) {
-                LogError("Failed to send to client: %1", strerror(errno));
-            }
-            return false;
-        }
-
-        data.ptr += sent;
-        data.len -= sent;
+    if (!SendFull(socket->sock, data)) {
+        request.keepalive = false;
+        return false;
     }
 
     return true;
@@ -230,8 +259,20 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
 
 bool http_IO::WriteChunked(Span<const uint8_t> data)
 {
-    // StreamWriter should never send us an empty buffer
-    RG_ASSERT(data.len > 0);
+    if (!data.len) {
+        bool success = (response.expected < 0 || response.sent == response.expected);
+
+        uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
+        success &= SendFull(socket->sock, end);
+
+        SetSocketRetain(socket->sock, false);
+#if !defined(MSG_DONTWAIT)
+        SetSocketNonBlock(socket->sock, false);
+#endif
+
+        request.keepalive &= success;
+        return success;
+    }
 
     if (data.len > (Size)16 * 0xFFFF) [[unlikely]] {
         do {
@@ -305,6 +346,8 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
             if (errno != EPIPE && errno != ECONNRESET) {
                 LogError("Failed to send to client: %1", strerror(errno));
             }
+
+            request.keepalive = false;
             return false;
         }
 
