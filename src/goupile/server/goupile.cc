@@ -21,7 +21,7 @@
 #include "record.hh"
 #include "user.hh"
 #include "../legacy/records.hh"
-#include "src/core/http/legacy/http.hh"
+#include "src/core/http/http.hh"
 #include "src/core/request/curl.hh"
 #include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
@@ -271,15 +271,15 @@ static void InitAssets()
 static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *etag,
                          const http_RequestInfo &request, http_IO *io)
 {
-    const char *client_etag = request.GetHeaderValue("If-None-Match");
+    const char *client_etag = request.FindHeader("If-None-Match");
 
     if (client_etag && TestStr(client_etag, etag)) {
-        io->AttachEmpty(304);
+        io->SendEmpty(304);
     } else {
         const char *mimetype = GetMimeType(GetPathExtension(asset.name));
 
-        io->AttachAsset(200, asset.data, mimetype, asset.compression_type);
         io->AddCachingHeaders(max_age, etag);
+        io->SendAsset(200, asset.data, mimetype, asset.compression_type);
     }
 }
 
@@ -289,7 +289,7 @@ static void HandlePing(InstanceHolder *instance, const http_RequestInfo &request
     GetNormalSession(instance, request, io);
 
     io->AddCachingHeaders(0, nullptr);
-    io->AttachText(200, "Pong!");
+    io->SendText(200, "Pong!");
 }
 
 static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &, http_IO *io)
@@ -298,16 +298,16 @@ static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &,
     if (!json.Init(io))
         return;
 
-    const char *base_url = Fmt(&io->allocator, "/%1/", instance->key).ptr;
+    const char *base_url = Fmt(io->Allocator(), "/%1/", instance->key).ptr;
 
     json.StartArray();
     json.String(base_url);
     for (const InstanceHolder *slave: instance->slaves) {
-        const char *url = Fmt(&io->allocator, "/%1/", slave->key).ptr;
+        const char *url = Fmt(io->Allocator(), "/%1/", slave->key).ptr;
         json.String(url);
     }
     for (const char *path: assets_for_cache) {
-        const char *url = Fmt(&io->allocator, "/%1%2", instance->key, path).ptr;
+        const char *url = Fmt(io->Allocator(), "/%1%2", instance->key, path).ptr;
         json.String(url);
     }
     json.EndArray();
@@ -369,14 +369,16 @@ static void PruneRenders()
 
 static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
 {
-    RG_ASSERT(StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin"));
-    const char *admin_url = request.url + 6;
+    RG_ASSERT(StartsWith(request.path, "/admin/") || TestStr(request.path, "/admin"));
+    const char *admin_url = request.path + 6;
 
     // Missing trailing slash, redirect
     if (!admin_url[0]) {
-        const char *redirect = Fmt(&io->allocator, "%1/", request.url).ptr;
+        const char *redirect = Fmt(io->Allocator(), "%1/", request.path).ptr;
+
         io->AddHeader("Location", redirect);
-        io->AttachEmpty(302);
+        io->SendEmpty(302);
+
         return;
     }
 
@@ -386,7 +388,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
             const AssetInfo *asset = assets_map.FindValue(admin_url, nullptr);
             RG_ASSERT(asset);
 
-            const AssetInfo *render = RenderTemplate(request.url, *asset,
+            const AssetInfo *render = RenderTemplate(request.path, *asset,
                                                      [&](Span<const char> expr, StreamWriter *writer) {
                 Span<const char> key = TrimStr(expr);
 
@@ -509,7 +511,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
     } else if (TestStr(admin_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
         HandleSendSMS(nullptr, request, io);
     } else {
-        io->AttachError(404);
+        io->SendError(404);
     }
 }
 
@@ -532,14 +534,14 @@ static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArr
 static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
 {
     InstanceHolder *instance = nullptr;
-    const char *instance_url = request.url;
+    const char *instance_url = request.path;
 
     // Find relevant instance
     for (int i = 0; i < 2 && instance_url[0]; i++) {
         Size offset = SplitStr(instance_url + 1, '/').len + 1;
 
         const char *new_url = instance_url + offset;
-        Span<const char> new_key = MakeSpan(request.url + 1, new_url - request.url - 1);
+        Span<const char> new_key = MakeSpan(request.path + 1, new_url - request.path - 1);
 
         InstanceHolder *ref = gp_domain.Ref(new_key);
         if (!ref)
@@ -556,7 +558,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
             break;
     }
     if (!instance) {
-        io->AttachError(404);
+        io->SendError(404);
         return;
     }
     io->AddFinalizer([=]() { instance->Unref(); });
@@ -564,22 +566,20 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
     // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
     // problems with query strings being erased without question.
     if (!instance_url[0]) {
-        HeapArray<char> buf(&io->allocator);
+        HeapArray<char> buf(io->Allocator());
 
-        HeapArray<http_KeyValue> pairs;
-        request.ListGetValues(&io->allocator, &pairs);
-
-        Fmt(&buf, "%1/?", request.url);
-        for (const http_KeyValue &pair: pairs) {
-            EncodeUrlSafe(pair.key, nullptr, &buf);
+        Fmt(&buf, "%1/?", request.path);
+        for (const http_KeyValue &value: request.values) {
+            EncodeUrlSafe(value.key, nullptr, &buf);
             buf.Append('=');
-            EncodeUrlSafe(pair.value, nullptr, &buf);
+            EncodeUrlSafe(value.value, nullptr, &buf);
             buf.Append('&');
         }
         buf.ptr[buf.len - 1] = 0;
 
         io->AddHeader("Location", buf.ptr);
-        io->AttachEmpty(302);
+        io->SendEmpty(302);
+
         return;
     }
 
@@ -744,7 +744,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
     } else if (TestStr(instance_url, "/api/send/tokenize") && request.method == http_RequestMethod::Post) {
         HandleSendTokenize(instance, request, io);
     } else {
-        io->AttachError(404);
+        io->SendError(404);
     }
 }
 
@@ -769,16 +769,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 #endif
 
     if (gp_domain.config.require_host) {
-        const char *host = request.GetHeaderValue("Host");
+        const char *host = request.FindHeader("Host");
 
         if (!host) {
             LogError("Request is missing required Host header");
-            io->AttachError(400);
+            io->SendError(400);
             return;
         }
         if (!TestStr(host, gp_domain.config.require_host)) {
             LogError("Unexpected Host header '%1'", host);
-            io->AttachError(403);
+            io->SendError(403);
             return;
         }
     }
@@ -791,7 +791,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // If new base URLs are added besides "/admin", RunCreateInstance() must be modified
     // to forbid the instance key.
-    if (TestStr(request.url, "/")) {
+    if (TestStr(request.path, "/")) {
         if (gp_domain.config.demo_mode) {
             HandleDemo(request, io);
         } else {
@@ -811,12 +811,12 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             });
             AttachStatic(*render, 0, shared_etag, request, io);
         }
-    } else if (TestStr(request.url, "/favicon.png")) {
+    } else if (TestStr(request.path, "/favicon.png")) {
         const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
         RG_ASSERT(asset);
 
         AttachStatic(*asset, 0, shared_etag, request, io);
-    } else if (StartsWith(request.url, "/admin/") || TestStr(request.url, "/admin")) {
+    } else if (StartsWith(request.path, "/admin/") || TestStr(request.path, "/admin")) {
         HandleAdminRequest(request, io);
     } else {
         HandleInstanceRequest(request, io);
@@ -1025,7 +1025,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
     WaitForInterrupt(0);
 
     // Run!
-    if (!daemon.Start(gp_domain.config.http, HandleRequest))
+    if (!daemon.Start(HandleRequest))
         return 1;
 
     // Run periodic tasks until exit

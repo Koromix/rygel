@@ -221,8 +221,8 @@ private:
     {
         int64_t now = GetMonotonicTime();
 
-        const char *session_key = request.GetCookieValue("session_key");
-        const char *session_rnd = request.GetCookieValue("session_rnd");
+        const char *session_key = request.FindCookie("session_key");
+        const char *session_rnd = request.FindCookie("session_rnd");
         if (!session_key) {
             *out_mismatch = false;
             return nullptr;

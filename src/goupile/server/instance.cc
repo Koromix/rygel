@@ -661,10 +661,10 @@ bool MigrateInstance(sq_Database *db, int target)
                     success &= db->Run(sql, "Application.DemoUser", nullptr);
                     success &= db->Run(sql, "HTTP.SocketType", SocketTypeNames[(int)fake1.http.sock_type]);
                     success &= db->Run(sql, "HTTP.Port", fake1.http.port);
-                    success &= db->Run(sql, "HTTP.MaxConnections", fake1.http.max_connections);
+                    success &= db->Run(sql, "HTTP.MaxConnections", -1);
                     success &= db->Run(sql, "HTTP.IdleTimeout", fake1.http.idle_timeout);
-                    success &= db->Run(sql, "HTTP.Threads", fake1.http.threads);
-                    success &= db->Run(sql, "HTTP.AsyncThreads", fake1.http.async_threads);
+                    success &= db->Run(sql, "HTTP.Threads", -1);
+                    success &= db->Run(sql, "HTTP.AsyncThreads", -1);
                     success &= db->Run(sql, "HTTP.BaseUrl", nullptr);
                     success &= db->Run(sql, "HTTP.MaxAge", 900);
                 }

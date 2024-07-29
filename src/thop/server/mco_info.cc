@@ -24,25 +24,25 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
 {
     LocalDate date = {};
     {
-        const char *date_str = request.GetQueryValue("date");
+        const char *date_str = request.FindGetValue("date");
 
         if (!date_str) {
             LogError("Missing 'date' parameter");
-            io->AttachError(422);
+            io->SendError(422);
             return nullptr;
         }
         if (!ParseDate(date_str, &date)) {
-            io->AttachError(422);
+            io->SendError(422);
             return nullptr;
         }
     }
 
     drd_Sector sector = drd_Sector::Public;
     if (out_sector) {
-        const char *sector_str = request.GetQueryValue("sector");
+        const char *sector_str = request.FindGetValue("sector");
         if (!sector_str) {
             LogError("Missing 'sector' parameter");
-            io->AttachError(422);
+            io->SendError(422);
             return nullptr;
         } else if (TestStr(sector_str, "public")) {
             sector = drd_Sector::Public;
@@ -50,7 +50,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
             sector = drd_Sector::Private;
         } else {
             LogError("Invalid 'sector' parameter");
-            io->AttachError(422);
+            io->SendError(422);
             return nullptr;
         }
     }
@@ -58,7 +58,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
     const mco_TableIndex *index = mco_table_set.FindIndex(date);
     if (!index || index->limit_dates[0] != date) {
         LogError("No table index for date '%1'", date);
-        io->AttachError(404);
+        io->SendError(404);
         return nullptr;
     }
 
@@ -76,12 +76,12 @@ void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO 
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
-        const char *spec_str = request.GetQueryValue("spec");
+        const char *spec_str = request.FindGetValue("spec");
         if (spec_str && spec_str[0]) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
                 LogError("Invalid diagnosis list specifier '%1'", spec_str);
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
         }
@@ -131,12 +131,12 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
-        const char *spec_str = request.GetQueryValue("spec");
+        const char *spec_str = request.FindGetValue("spec");
         if (spec_str && spec_str[0]) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
                 LogError("Invalid procedure list specifier '%1'", spec_str);
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
         }
@@ -534,7 +534,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO 
     ctx.ghm_nodes = index->ghm_nodes;
 
     // Diagnosis?
-    if (const char *code = request.GetQueryValue("diag"); code && code[0]) {
+    if (const char *code = request.FindGetValue("diag"); code && code[0]) {
         if (TestStr(code, "*")) {
             ctx.ignore_diagnoses = true;
         } else {
@@ -542,7 +542,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO 
                 drd_DiagnosisCode::Parse(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (!diag.IsValid()) {
                 LogError("Invalid CIM-10 code '%1'", code);
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
 
@@ -551,14 +551,14 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO 
             }
             if (!ctx.diagnoses.len) {
                 LogError("Unknown diagnosis '%1'", code);
-                io->AttachError(404);
+                io->SendError(404);
                 return;
             }
         }
     }
 
     // Procedure?
-    if (const char *code = request.GetQueryValue("proc"); code && code[0]) {
+    if (const char *code = request.FindGetValue("proc"); code && code[0]) {
         if (TestStr(code, "*")) {
             ctx.ignore_procedures = true;
         } else {
@@ -566,7 +566,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO 
                 drd_ProcedureCode::Parse(code, RG_DEFAULT_PARSE_FLAGS & ~(int)ParseFlag::Log);
             if (!proc.IsValid()) {
                 LogError("Invalid CCAM code '%1'", code);
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
 
@@ -576,7 +576,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO 
             }
             if (!ctx.procedures.len) {
                 LogError("Unknown procedure '%1'", code);
-                io->AttachError(404);
+                io->SendError(404);
                 return;
             }
         }

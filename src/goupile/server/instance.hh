@@ -14,7 +14,7 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "src/core/http/legacy/http.hh"
+#include "src/core/http/http.hh"
 #include "src/core/sqlite/sqlite.hh"
 #include "user.hh"
 

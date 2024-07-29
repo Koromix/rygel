@@ -17,7 +17,7 @@
 #include "instance.hh"
 #include "message.hh"
 #include "user.hh"
-#include "src/core/http/legacy/http.hh"
+#include "src/core/http/http.hh"
 #include "src/core/password/otp.hh"
 #include "src/core/password/password.hh"
 #include "src/core/wrap/qrcode.hh"
@@ -359,7 +359,7 @@ bool LoginUserAuto(int64_t userid, const http_RequestInfo &request, http_IO *io)
     if (!stmt.Step()) {
         if (stmt.IsValid()) {
             LogError("User ID %1 does not exist");
-            io->AttachError(404);
+            io->SendError(404);
         }
         return false;
     }
@@ -528,186 +528,184 @@ static bool CheckPasswordComplexity(const SessionInfo &session, Span<const char>
 
 void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    io->RunAsync([=]() mutable {
-        const char *username = nullptr;
-        Span<const char> password = {};
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *username = nullptr;
+    Span<const char> password = {};
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "username") {
-                    parser.ParseString(&username);
-                } else if (key == "password") {
-                    parser.ParseString(&password);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "username") {
+                parser.ParseString(&username);
+            } else if (key == "password") {
+                parser.ParseString(&password);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check for missing values
-        if (!username || !password.ptr) {
-            LogError("Missing 'username' or 'password' parameter");
-            io->AttachError(422);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
-        if (password.len > pwd_MaxLength) {
-            LogError("Excessive password length");
-            io->AttachError(422);
-            return;
-        }
+    }
 
-        // We use this to extend/fix the response delay in case of error
-        int64_t now = GetMonotonicTime();
+    // Check for missing values
+    if (!username || !password.ptr) {
+        LogError("Missing 'username' or 'password' parameter");
+        io->SendError(422);
+        return;
+    }
+    if (password.len > pwd_MaxLength) {
+        LogError("Excessive password length");
+        io->SendError(422);
+        return;
+    }
 
-        sq_Statement stmt;
-        if (instance) {
-            InstanceHolder *master = instance->master;
+    // We use this to extend/fix the response delay in case of error
+    int64_t now = GetMonotonicTime();
 
-            if (!instance->slaves.len) {
-                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                    u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
-                                                    u.local_key, u.confirm, u.secret, p.permissions
-                                             FROM dom_users u
-                                             INNER JOIN dom_permissions p ON (p.userid = u.userid)
-                                             INNER JOIN dom_instances i ON (i.instance = p.instance)
-                                             LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
-                                                                             a.permissions & ?3)
-                                             WHERE u.username = ?1 AND i.instance = ?2 AND
-                                                   p.permissions > 0)", &stmt))
-                    return;
-                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+    sq_Statement stmt;
+    if (instance) {
+        InstanceHolder *master = instance->master;
 
-                stmt.Run();
-            }
-
-            if (!stmt.IsRow() && master->slaves.len) {
-                instance = master;
-
-                if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
-                                                    u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
-                                                    u.local_key, u.confirm, u.secret
-                                             FROM dom_users u
-                                             INNER JOIN dom_permissions p ON (p.userid = u.userid)
-                                             INNER JOIN dom_instances i ON (i.instance = p.instance)
-                                             LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
-                                                                             a.permissions & ?3)
-                                             WHERE u.username = ?1 AND i.master = ?2 AND
-                                                   p.permissions > 0)", &stmt))
-                    return;
-                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
-
-                stmt.Run();
-            }
-        } else {
+        if (!instance->slaves.len) {
             if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
                                                 u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
-                                                u.local_key, u.confirm, u.secret
+                                                u.local_key, u.confirm, u.secret, p.permissions
                                          FROM dom_users u
+                                         INNER JOIN dom_permissions p ON (p.userid = u.userid)
+                                         INNER JOIN dom_instances i ON (i.instance = p.instance)
                                          LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
-                                                                         a.permissions & ?2)
-                                         WHERE u.username = ?1 AND (u.root = 1 OR
-                                                                    a.permissions IS NOT NULL))", &stmt))
+                                                                         a.permissions & ?3)
+                                         WHERE u.username = ?1 AND i.instance = ?2 AND
+                                               p.permissions > 0)", &stmt))
                 return;
             sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
-            sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
+            sqlite3_bind_text(stmt, 2, instance->key.ptr, (int)instance->key.len, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
             stmt.Run();
         }
 
-        if (stmt.IsRow()) {
-            int64_t userid = sqlite3_column_int64(stmt, 0);
-            const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
-            bool change_password = (sqlite3_column_int(stmt, 2) == 1);
-            bool root = (sqlite3_column_int(stmt, 3) == 1);
-            bool admin = root || (sqlite3_column_int(stmt, 4) == 1);
-            const char *local_key = (const char *)sqlite3_column_text(stmt, 5);
-            const char *confirm = (const char *)sqlite3_column_text(stmt, 6);
-            const char *secret = (const char *)sqlite3_column_text(stmt, 7);
+        if (!stmt.IsRow() && master->slaves.len) {
+            instance = master;
 
-            if (CountEvents(request.client_addr, username) >= BanThreshold) {
-                LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
-                io->AttachError(403);
+            if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
+                                                u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
+                                                u.local_key, u.confirm, u.secret
+                                         FROM dom_users u
+                                         INNER JOIN dom_permissions p ON (p.userid = u.userid)
+                                         INNER JOIN dom_instances i ON (i.instance = p.instance)
+                                         LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                                         a.permissions & ?3)
+                                         WHERE u.username = ?1 AND i.master = ?2 AND
+                                               p.permissions > 0)", &stmt))
                 return;
-            }
+            sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, master->key.ptr, (int)master->key.len, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
-            if (password_hash && crypto_pwhash_str_verify(password_hash, password.ptr, (size_t)password.len) == 0) {
-                int64_t time = GetUnixTime();
+            stmt.Run();
+        }
+    } else {
+        if (!gp_domain.db.Prepare(R"(SELECT u.userid, u.password_hash, u.change_password,
+                                            u.root, IIF(a.permissions IS NOT NULL, 1, 0) AS admin,
+                                            u.local_key, u.confirm, u.secret
+                                     FROM dom_users u
+                                     LEFT JOIN dom_permissions a ON (a.userid = u.userid AND
+                                                                     a.permissions & ?2)
+                                     WHERE u.username = ?1 AND (u.root = 1 OR
+                                                                a.permissions IS NOT NULL))", &stmt))
+            return;
+        sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 2, (int)UserPermission::BuildAdmin);
 
-                if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                         VALUES (?1, ?2, ?3, ?4))",
-                                      time, request.client_addr, "login", username))
-                    return;
+        stmt.Run();
+    }
 
-                RetainPtr<SessionInfo> session;
-                if (!confirm) {
+    if (stmt.IsRow()) {
+        int64_t userid = sqlite3_column_int64(stmt, 0);
+        const char *password_hash = (const char *)sqlite3_column_text(stmt, 1);
+        bool change_password = (sqlite3_column_int(stmt, 2) == 1);
+        bool root = (sqlite3_column_int(stmt, 3) == 1);
+        bool admin = root || (sqlite3_column_int(stmt, 4) == 1);
+        const char *local_key = (const char *)sqlite3_column_text(stmt, 5);
+        const char *confirm = (const char *)sqlite3_column_text(stmt, 6);
+        const char *secret = (const char *)sqlite3_column_text(stmt, 7);
+
+        if (CountEvents(request.client_addr, username) >= BanThreshold) {
+            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+            io->SendError(403);
+            return;
+        }
+
+        if (password_hash && crypto_pwhash_str_verify(password_hash, password.ptr, (size_t)password.len) == 0) {
+            int64_t time = GetUnixTime();
+
+            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                                     VALUES (?1, ?2, ?3, ?4))",
+                                  time, request.client_addr, "login", username))
+                return;
+
+            RetainPtr<SessionInfo> session;
+            if (!confirm) {
+                session = CreateUserSession(SessionType::Login, userid, username, local_key);
+            } else if (TestStr(confirm, "TOTP")) {
+                if (secret) {
+                    if (strlen(secret) >= RG_SIZE(SessionInfo::secret)) {
+                        // Should never happen, but let's be careful
+                        LogError("Session secret is too big");
+                        return;
+                    }
+
                     session = CreateUserSession(SessionType::Login, userid, username, local_key);
-                } else if (TestStr(confirm, "TOTP")) {
-                    if (secret) {
-                        if (strlen(secret) >= RG_SIZE(SessionInfo::secret)) {
-                            // Should never happen, but let's be careful
-                            LogError("Session secret is too big");
-                            return;
-                        }
-
-                        session = CreateUserSession(SessionType::Login, userid, username, local_key);
-                        session->confirm = SessionConfirm::TOTP;
-                        CopyString(secret, session->secret);
-                    } else {
-                        session = CreateUserSession(SessionType::Login, userid, username, local_key);
-                        session->confirm = SessionConfirm::QRcode;
-                    }
+                    session->confirm = SessionConfirm::TOTP;
+                    CopyString(secret, session->secret);
                 } else {
-                    LogError("Invalid confirmation method '%1'", confirm);
-                    return;
+                    session = CreateUserSession(SessionType::Login, userid, username, local_key);
+                    session->confirm = SessionConfirm::QRcode;
                 }
-
-                if (session) [[likely]] {
-                    session->is_root = root;
-                    session->is_admin = admin;
-
-                    if (!instance && (root || admin)) {
-                        session->admin_until = GetMonotonicTime() + 1200 * 1000;
-                    }
-
-                    session->change_password = change_password;
-
-                    sessions.Open(request, io, session);
-                    WriteProfileJson(session.GetRaw(), instance, request, io);
-                }
-
-                return;
             } else {
-                RegisterEvent(request.client_addr, username);
+                LogError("Invalid confirmation method '%1'", confirm);
+                return;
             }
-        }
 
-        if (stmt.IsValid()) {
-            // Enforce constant delay if authentification fails
-            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-            WaitDelay(safety_delay);
+            if (session) [[likely]] {
+                session->is_root = root;
+                session->is_admin = admin;
 
-            LogError("Invalid username or password");
-            io->AttachError(403);
+                if (!instance && (root || admin)) {
+                    session->admin_until = GetMonotonicTime() + 1200 * 1000;
+                }
+
+                session->change_password = change_password;
+
+                sessions.Open(request, io, session);
+                WriteProfileJson(session.GetRaw(), instance, request, io);
+            }
+
+            return;
+        } else {
+            RegisterEvent(request.client_addr, username);
         }
-    });
+    }
+
+    if (stmt.IsValid()) {
+        // Enforce constant delay if authentification fails
+        int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+        WaitDelay(safety_delay);
+
+        LogError("Invalid username or password");
+        io->SendError(403);
+    }
 }
 
 static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, SessionType type, const char *key,
@@ -839,238 +837,234 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
 {
     if (!instance->config.token_key) {
         LogError("This instance does not use tokens");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        Span<const char> token = {};
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    Span<const char> token = {};
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "token") {
-                    parser.ParseString(&token);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "token") {
+                parser.ParseString(&token);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
 
-        // Check for missing values
-        if (!token.ptr) {
-            LogError("Missing 'token' parameter");
-            io->AttachError(422);
+    // Check for missing values
+    if (!token.ptr) {
+        LogError("Missing 'token' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    // Decode Base64
+    Span<uint8_t> cypher;
+    {
+        cypher = AllocateSpan<uint8_t>(io->Allocator(), token.len / 2 + 1);
+
+        size_t cypher_len;
+        if (sodium_hex2bin(cypher.ptr, (size_t)cypher.len, token.ptr, (size_t)token.len,
+                           nullptr, &cypher_len, nullptr) != 0) {
+            LogError("Failed to unseal token");
+            io->SendError(403);
+            return;
+        }
+        if (cypher_len < crypto_box_SEALBYTES) {
+            LogError("Failed to unseal token");
+            io->SendError(403);
             return;
         }
 
-        // Decode Base64
-        Span<uint8_t> cypher;
-        {
-            cypher = AllocateSpan<uint8_t>(&io->allocator, token.len / 2 + 1);
+        cypher.len = (Size)cypher_len;
+    }
 
-            size_t cypher_len;
-            if (sodium_hex2bin(cypher.ptr, (size_t)cypher.len, token.ptr, (size_t)token.len,
-                               nullptr, &cypher_len, nullptr) != 0) {
-                LogError("Failed to unseal token");
-                io->AttachError(403);
-                return;
-            }
-            if (cypher_len < crypto_box_SEALBYTES) {
-                LogError("Failed to unseal token");
-                io->AttachError(403);
-                return;
-            }
+    // Decode token
+    Span<uint8_t> json;
+    {
+        json = AllocateSpan<uint8_t>(io->Allocator(), cypher.len - crypto_box_SEALBYTES);
 
-            cypher.len = (Size)cypher_len;
-        }
-
-        // Decode token
-        Span<uint8_t> json;
-        {
-            json = AllocateSpan<uint8_t>(&io->allocator, cypher.len - crypto_box_SEALBYTES);
-
-            if (crypto_box_seal_open((uint8_t *)json.ptr, cypher.ptr, cypher.len,
-                                     instance->config.token_pkey, instance->config.token_skey) != 0) {
-                LogError("Failed to unseal token");
-                io->AttachError(403);
-                return;
-            }
-        }
-
-        // Parse JSON
-        const char *email = nullptr;
-        const char *sms = nullptr;
-        const char *tid = nullptr;
-        const char *username = nullptr;
-        HeapArray<const char *> claims;
-        const char *lock = nullptr;
-        {
-            StreamReader st(json);
-            json_Parser parser(&st, &io->allocator);
-
-            parser.ParseObject();
-            while (parser.InObject()) {
-                const char *key = "";
-                parser.ParseKey(&key);
-
-                if (TestStr(key, "email")) {
-                    parser.ParseString(&email);
-                } else if (TestStr(key, "sms")) {
-                    parser.ParseString(&sms);
-                } else if (TestStr(key, "id")) {
-                    parser.ParseString(&tid);
-                } else if (TestStr(key, "username")) {
-                    parser.ParseString(&username);
-                } else if (TestStr(key, "claims")) {
-                    parser.ParseArray();
-                    while (parser.InArray()) {
-                        const char *claim = "";
-                        parser.ParseString(&claim);
-                        claims.Append(claim);
-                    }
-                } else if (TestStr(key, "lock")) {
-                    if (instance->legacy) {
-                        parser.ParseString(&lock);
-                    } else {
-                        parser.PassThrough(&lock);
-                    }
-                } else if (parser.IsValid()) {
-                    LogError("Unknown key '%1' in token JSON", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Check token values
-        {
-            bool valid = true;
-
-            if (email && !email[0]) {
-                LogError("Empty email address");
-                valid = false;
-            }
-            if (sms && !sms[0]) {
-                LogError("Empty SMS phone number");
-                valid = false;
-            }
-            if (!tid || !tid[0]) {
-                LogError("Missing or empty token id");
-                valid = false;
-            }
-            if (!username || !username[0]) {
-                username = tid;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        if (email || sms) {
-            // Avoid confirmation event (spam for mails, and SMS are costly)
-            RegisterEvent(request.client_addr, tid);
-        }
-
-        if (CountEvents(request.client_addr, tid) >= BanThreshold) {
-            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
-            io->AttachError(403);
+        if (crypto_box_seal_open((uint8_t *)json.ptr, cypher.ptr, cypher.len,
+                                 instance->config.token_pkey, instance->config.token_skey) != 0) {
+            LogError("Failed to unseal token");
+            io->SendError(403);
             return;
         }
+    }
 
-        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, username, email, sms, lock);
-        if (!session)
-            return;
+    // Parse JSON
+    const char *email = nullptr;
+    const char *sms = nullptr;
+    const char *tid = nullptr;
+    const char *username = nullptr;
+    HeapArray<const char *> claims;
+    const char *lock = nullptr;
+    {
+        StreamReader st(json);
+        json_Parser parser(&st, io->Allocator());
 
-        if (claims.len) {
-            bool success = instance->db->Transaction([&]() {
-                RG_ASSERT(session->userid < 0);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            const char *key = "";
+            parser.ParseKey(&key);
 
-                for (const char *claim: claims) {
-                    if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
-                                              ON CONFLICT DO NOTHING)", -session->userid, claim))
-                        return false;
+            if (TestStr(key, "email")) {
+                parser.ParseString(&email);
+            } else if (TestStr(key, "sms")) {
+                parser.ParseString(&sms);
+            } else if (TestStr(key, "id")) {
+                parser.ParseString(&tid);
+            } else if (TestStr(key, "username")) {
+                parser.ParseString(&username);
+            } else if (TestStr(key, "claims")) {
+                parser.ParseArray();
+                while (parser.InArray()) {
+                    const char *claim = "";
+                    parser.ParseString(&claim);
+                    claims.Append(claim);
                 }
-
-                return true;
-            });
-            if (!success) {
-                // The FOREIGN KEY check is deferred so the error happens on COMMIT
-                LogError("Token contains invalid claims");
-                io->AttachError(422);
+            } else if (TestStr(key, "lock")) {
+                if (instance->legacy) {
+                    parser.ParseString(&lock);
+                } else {
+                    parser.PassThrough(&lock);
+                }
+            } else if (parser.IsValid()) {
+                LogError("Unknown key '%1' in token JSON", key);
+                io->SendError(422);
                 return;
             }
         }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
 
-        sessions.Open(request, io, session);
+    // Check token values
+    {
+        bool valid = true;
 
-        io->AttachText(200, "{}", "application/json");
-    });
+        if (email && !email[0]) {
+            LogError("Empty email address");
+            valid = false;
+        }
+        if (sms && !sms[0]) {
+            LogError("Empty SMS phone number");
+            valid = false;
+        }
+        if (!tid || !tid[0]) {
+            LogError("Missing or empty token id");
+            valid = false;
+        }
+        if (!username || !username[0]) {
+            username = tid;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    if (email || sms) {
+        // Avoid confirmation event (spam for mails, and SMS are costly)
+        RegisterEvent(request.client_addr, tid);
+    }
+
+    if (CountEvents(request.client_addr, tid) >= BanThreshold) {
+        LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+        io->SendError(403);
+        return;
+    }
+
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, username, email, sms, lock);
+    if (!session)
+        return;
+
+    if (claims.len) {
+        bool success = instance->db->Transaction([&]() {
+            RG_ASSERT(session->userid < 0);
+
+            for (const char *claim: claims) {
+                if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
+                                          ON CONFLICT DO NOTHING)", -session->userid, claim))
+                    return false;
+            }
+
+            return true;
+        });
+        if (!success) {
+            // The FOREIGN KEY check is deferred so the error happens on COMMIT
+            LogError("Token contains invalid claims");
+            io->SendError(422);
+            return;
+        }
+    }
+
+    sessions.Open(request, io, session);
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    io->RunAsync([=]() {
-        const char *session_key = nullptr;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *session_key = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "key") {
-                    parser.ParseString(&session_key);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "key") {
+                parser.ParseString(&session_key);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check for missing values
-        if (!session_key) {
-            LogError("Missing 'key' parameter");
-            io->AttachError(422);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
+    }
 
-        RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key, nullptr, nullptr, nullptr);
-        if (!session)
-            return;
+    // Check for missing values
+    if (!session_key) {
+        LogError("Missing 'key' parameter");
+        io->SendError(422);
+        return;
+    }
 
-        sessions.Open(request, io, session);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key, nullptr, nullptr, nullptr);
+    if (!session)
+        return;
 
-        io->AttachText(200, "{}", "application/json");
-    });
+    sessions.Open(request, io, session);
+
+    io->SendText(200, "{}", "application/json");
 }
 
 static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
@@ -1092,14 +1086,14 @@ static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
 
         if (replay) {
             LogError("Please wait for the next code");
-            io->AttachError(403);
+            io->SendError(403);
             return false;
         }
 
         return true;
     } else {
         LogError("Code is incorrect");
-        io->AttachError(403);
+        io->SendError(403);
         return false;
     }
 }
@@ -1110,7 +1104,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
     if (!session) {
         LogError("Session is closed");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -1118,105 +1112,103 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
     if (session->confirm == SessionConfirm::None) {
         LogError("Session does not need confirmation");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *code = nullptr;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *code = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "code") {
-                    parser.ParseString(&code);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "code") {
+                parser.ParseString(&code);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check for missing values
-        if (!code) {
-            LogError("Missing 'code' parameter");
-            io->AttachError(422);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
+    }
 
-        if (CountEvents(request.client_addr, session->username) >= BanThreshold) {
-            LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
-            io->AttachError(403);
-            return;
-        }
+    // Check for missing values
+    if (!code) {
+        LogError("Missing 'code' parameter");
+        io->SendError(422);
+        return;
+    }
 
-        // Immediate confirmation looks weird
-        WaitDelay(800);
+    if (CountEvents(request.client_addr, session->username) >= BanThreshold) {
+        LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
+        io->SendError(403);
+        return;
+    }
 
-        switch (session->confirm) {
-            case SessionConfirm::None: { RG_UNREACHABLE(); } break;
+    // Immediate confirmation looks weird
+    WaitDelay(800);
 
-            case SessionConfirm::Mail:
-            case SessionConfirm::SMS: {
-                if (TestStr(code, session->secret)) {
-                    session->confirm = SessionConfirm::None;
-                    sodium_memzero(session->secret, RG_SIZE(session->secret));
+    switch (session->confirm) {
+        case SessionConfirm::None: { RG_UNREACHABLE(); } break;
 
-                    WriteProfileJson(session.GetRaw(), instance, request, io);
-                } else {
-                    const EventInfo *event = RegisterEvent(request.client_addr, session->username);
+        case SessionConfirm::Mail:
+        case SessionConfirm::SMS: {
+            if (TestStr(code, session->secret)) {
+                session->confirm = SessionConfirm::None;
+                sodium_memzero(session->secret, RG_SIZE(session->secret));
 
-                    if (event->count >= BanThreshold) {
-                        sessions.Close(request, io);
-                        LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
-                        io->AttachError(403);
-                    }
+                WriteProfileJson(session.GetRaw(), instance, request, io);
+            } else {
+                const EventInfo *event = RegisterEvent(request.client_addr, session->username);
+
+                if (event->count >= BanThreshold) {
+                    sessions.Close(request, io);
+                    LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
+                    io->SendError(403);
                 }
-            } break;
+            }
+        } break;
 
-            case SessionConfirm::TOTP:
-            case SessionConfirm::QRcode: {
-                if (CheckTotp(*session, instance, code, request, io)) {
-                    if (session->confirm == SessionConfirm::QRcode) {
-                        if (!gp_domain.db.Run("UPDATE dom_users SET secret = ?2 WHERE userid = ?1",
-                                              session->userid, session->secret))
-                            return;
-                    }
-
-                    session->confirm = SessionConfirm::None;
-                    sodium_memzero(session->secret, RG_SIZE(session->secret));
-
-                    WriteProfileJson(session.GetRaw(), instance, request, io);
-                } else {
-                    const EventInfo *event = RegisterEvent(request.client_addr, session->username);
-
-                    if (event->count >= BanThreshold) {
-                        sessions.Close(request, io);
-                        LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
-                        io->AttachError(403);
-                    }
+        case SessionConfirm::TOTP:
+        case SessionConfirm::QRcode: {
+            if (CheckTotp(*session, instance, code, request, io)) {
+                if (session->confirm == SessionConfirm::QRcode) {
+                    if (!gp_domain.db.Run("UPDATE dom_users SET secret = ?2 WHERE userid = ?1",
+                                          session->userid, session->secret))
+                        return;
                 }
-            } break;
-        }
-    });
+
+                session->confirm = SessionConfirm::None;
+                sodium_memzero(session->secret, RG_SIZE(session->secret));
+
+                WriteProfileJson(session.GetRaw(), instance, request, io);
+            } else {
+                const EventInfo *event = RegisterEvent(request.client_addr, session->username);
+
+                if (event->count >= BanThreshold) {
+                    sessions.Close(request, io);
+                    LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
+                    io->SendError(403);
+                }
+            }
+        } break;
+    }
 }
 
 void HandleSessionLogout(const http_RequestInfo &request, http_IO *io)
 {
     sessions.Close(request, io);
-    io->AttachText(200, "{}", "application/json");
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -1231,7 +1223,7 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
 
@@ -1239,145 +1231,143 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
 
     if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
     if (session->confirm != SessionConfirm::None && !session->change_password) {
         LogError("You must be fully logged in before you do that");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *old_password = nullptr;
-        const char *new_password = nullptr;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *old_password = nullptr;
+    const char *new_password = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "old_password") {
-                    parser.SkipNull() || parser.ParseString(&old_password);
-                } else if (key == "new_password") {
-                    parser.ParseString(&new_password);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "old_password") {
+                parser.SkipNull() || parser.ParseString(&old_password);
+            } else if (key == "new_password") {
+                parser.ParseString(&new_password);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check missing values
-        {
-            bool valid = true;
-
-            if (!old_password && !session->change_password) {
-                LogError("Missing 'old_password' parameter");
-                valid = false;
-            }
-            if (!new_password) {
-                LogError("Missing 'new_password' parameter");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
         }
-        RG_ASSERT(old_password || session->change_password);
+    }
 
-        // Complex enough?
-        if (!CheckPasswordComplexity(*session, new_password)) {
-            io->AttachError(422);
+    // Check missing values
+    {
+        bool valid = true;
+
+        if (!old_password && !session->change_password) {
+            LogError("Missing 'old_password' parameter");
+            valid = false;
+        }
+        if (!new_password) {
+            LogError("Missing 'new_password' parameter");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+    RG_ASSERT(old_password || session->change_password);
+
+    // Complex enough?
+    if (!CheckPasswordComplexity(*session, new_password)) {
+        io->SendError(422);
+        return;
+    }
+
+    // Authenticate with old password
+    {
+        // We use this to extend/fix the response delay in case of error
+        int64_t now = GetMonotonicTime();
+
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
+                                     WHERE userid = ?1)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User does not exist");
+                io->SendError(404);
+            }
             return;
         }
 
-        // Authenticate with old password
-        {
-            // We use this to extend/fix the response delay in case of error
-            int64_t now = GetMonotonicTime();
+        const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
 
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
-                                         WHERE userid = ?1)", &stmt))
-                return;
-            sqlite3_bind_int64(stmt, 1, session->userid);
+        if (old_password) {
+            if (!password_hash || crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
+                // Enforce constant delay if authentification fails
+                int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+                WaitDelay(safety_delay);
 
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("User does not exist");
-                    io->AttachError(404);
-                }
+                LogError("Invalid password");
+                io->SendError(403);
                 return;
             }
 
-            const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
-
-            if (old_password) {
-                if (!password_hash || crypto_pwhash_str_verify(password_hash, old_password, strlen(old_password)) < 0) {
-                    // Enforce constant delay if authentification fails
-                    int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-                    WaitDelay(safety_delay);
-
-                    LogError("Invalid password");
-                    io->AttachError(403);
-                    return;
-                }
-
-                if (TestStr(new_password, old_password)) {
-                    LogError("You cannot reuse the same password");
-                    io->AttachError(422);
-                    return;
-                }
-            } else {
-                if (password_hash && crypto_pwhash_str_verify(password_hash, new_password, strlen(new_password)) == 0) {
-                    LogError("You cannot reuse the same password");
-                    io->AttachError(422);
-                    return;
-                }
+            if (TestStr(new_password, old_password)) {
+                LogError("You cannot reuse the same password");
+                io->SendError(422);
+                return;
             }
-        }
-
-        // Hash password
-        char new_hash[PasswordHashBytes];
-        if (!HashPassword(new_password, new_hash))
-            return;
-
-        bool success = gp_domain.db.Transaction([&]() {
-            int64_t time = GetUnixTime();
-
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                     VALUES (?1, ?2, ?3, ?4))",
-                                  time, request.client_addr, "change_password", session->username))
-                return false;
-            if (!gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2, change_password = 0 WHERE userid = ?1",
-                                  session->userid, new_hash))
-                return false;
-
-            return true;
-        });
-        if (!success)
-            return;
-
-        if (session->change_password) {
-            session->change_password = false;
-            WriteProfileJson(session.GetRaw(), instance, request, io);
         } else {
-            io->AttachText(200, "{}", "application/json");
+            if (password_hash && crypto_pwhash_str_verify(password_hash, new_password, strlen(new_password)) == 0) {
+                LogError("You cannot reuse the same password");
+                io->SendError(422);
+                return;
+            }
         }
+    }
+
+    // Hash password
+    char new_hash[PasswordHashBytes];
+    if (!HashPassword(new_password, new_hash))
+        return;
+
+    bool success = gp_domain.db.Transaction([&]() {
+        int64_t time = GetUnixTime();
+
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                                 VALUES (?1, ?2, ?3, ?4))",
+                              time, request.client_addr, "change_password", session->username))
+            return false;
+        if (!gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2, change_password = 0 WHERE userid = ?1",
+                              session->userid, new_hash))
+            return false;
+
+        return true;
     });
+    if (!success)
+        return;
+
+    if (session->change_password) {
+        session->change_password = false;
+        WriteProfileJson(session.GetRaw(), instance, request, io);
+    } else {
+        io->SendText(200, "{}", "application/json");
+    }
 }
 
 // This does not make any persistent change and it needs to return an image
@@ -1388,7 +1378,7 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("Session is closed");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -1396,25 +1386,25 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
 
     if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
     if (session->confirm != SessionConfirm::None && session->confirm != SessionConfirm::QRcode) {
         LogError("Cannot generate QR code in this situation");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
     pwd_GenerateSecret(session->secret);
 
     const char *url = pwd_GenerateHotpUrl(gp_domain.config.title, session->username, gp_domain.config.title,
-                                          pwd_HotpAlgorithm::SHA1, session->secret, 6, &io->allocator);
+                                          pwd_HotpAlgorithm::SHA1, session->secret, 6, io->Allocator());
     if (!url)
         return;
 
     Span<const uint8_t> png;
     {
-        HeapArray<uint8_t> buf(&io->allocator);
+        HeapArray<uint8_t> buf(io->Allocator());
 
         StreamWriter st(&buf);
         if (!qr_EncodeTextToPng(url, 0, &st))
@@ -1425,9 +1415,10 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
         png = buf.Leak();
     }
 
-    io->AttachAsset(200, png, "image/png");
     io->AddHeader("X-TOTP-SecretKey", session->secret);
     io->AddCachingHeaders(0, nullptr);
+
+    io->SendAsset(200, png, "image/png");
 }
 
 void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
@@ -1436,7 +1427,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
 
@@ -1444,125 +1435,123 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
 
     if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
     if (session->confirm != SessionConfirm::None) {
         LogError("You must be fully logged in before you do that");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *password = nullptr;
-        const char *code = nullptr;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
-
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
-
-                if (key == "password") {
-                    parser.ParseString(&password);
-                } else if (key == "code") {
-                    parser.ParseString(&code);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Check for missing values
-        {
-            bool valid = true;
-
-            if (!password) {
-                LogError("Missing 'password' parameter");
-                valid = false;
-            }
-            if (!code) {
-                LogError("Missing 'code' parameter");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // We use this to extend/fix the response delay in case of error
-        int64_t now = GetMonotonicTime();
-
-        // Authenticate with password
-        {
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
-                                         WHERE userid = ?1)", &stmt))
-                return;
-            sqlite3_bind_int64(stmt, 1, session->userid);
-
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("User does not exist");
-                    io->AttachError(404);
-                }
-                return;
-            }
-
-            const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
-
-            if (!password_hash || crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
-                // Enforce constant delay if authentification fails
-                int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-                WaitDelay(safety_delay);
-
-                LogError("Invalid password");
-                io->AttachError(403);
-                return;
-            }
-        }
-
-        // Check user knows secret
-        if (!CheckTotp(*session, nullptr, code, request, io))
+    const char *password = nullptr;
+    const char *code = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
             return;
+        json_Parser parser(&st, io->Allocator());
 
-        bool success = gp_domain.db.Transaction([&]() {
-            int64_t time = GetUnixTime();
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
-                                     VALUES (?1, ?2, ?3, ?4))",
-                                  time, request.client_addr, "change_totp", session->username))
-                return false;
-            if (!gp_domain.db.Run("UPDATE dom_users SET confirm = 'TOTP', secret = ?2 WHERE userid = ?1",
-                                  session->userid, session->secret))
-                return false;
-
-            return true;
-        });
-        if (!success)
+            if (key == "password") {
+                parser.ParseString(&password);
+            } else if (key == "code") {
+                parser.ParseString(&code);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
+        }
+    }
 
-        io->AttachText(200, "{}", "application/json");
+    // Check for missing values
+    {
+        bool valid = true;
+
+        if (!password) {
+            LogError("Missing 'password' parameter");
+            valid = false;
+        }
+        if (!code) {
+            LogError("Missing 'code' parameter");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // We use this to extend/fix the response delay in case of error
+    int64_t now = GetMonotonicTime();
+
+    // Authenticate with password
+    {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT password_hash FROM dom_users
+                                     WHERE userid = ?1)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User does not exist");
+                io->SendError(404);
+            }
+            return;
+        }
+
+        const char *password_hash = (const char *)sqlite3_column_text(stmt, 0);
+
+        if (!password_hash || crypto_pwhash_str_verify(password_hash, password, strlen(password)) < 0) {
+            // Enforce constant delay if authentification fails
+            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+            WaitDelay(safety_delay);
+
+            LogError("Invalid password");
+            io->SendError(403);
+            return;
+        }
+    }
+
+    // Check user knows secret
+    if (!CheckTotp(*session, nullptr, code, request, io))
+        return;
+
+    bool success = gp_domain.db.Transaction([&]() {
+        int64_t time = GetUnixTime();
+
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username)
+                                 VALUES (?1, ?2, ?3, ?4))",
+                              time, request.client_addr, "change_totp", session->username))
+            return false;
+        if (!gp_domain.db.Run("UPDATE dom_users SET confirm = 'TOTP', secret = ?2 WHERE userid = ?1",
+                              session->userid, session->secret))
+            return false;
+
+        return true;
     });
+    if (!success)
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
     if (instance->master != instance) {
         LogError("Cannot change mode through slave instance");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -1571,55 +1560,53 @@ void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request,
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (session->type != SessionType::Login) {
         LogError("This account does not have a profile");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        bool develop = stamp->develop;
+    bool develop = stamp->develop;
 
-        // Read changes
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    // Read changes
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "develop") {
-                    parser.SkipNull() || parser.ParseBool(&develop);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "develop") {
+                parser.SkipNull() || parser.ParseBool(&develop);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check permissions
-        if (develop && !stamp->HasPermission(UserPermission::BuildCode)) {
-            LogError("User is not allowed to code");
-            io->AttachError(403);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
+    }
 
-        stamp->develop = develop;
+    // Check permissions
+    if (develop && !stamp->HasPermission(UserPermission::BuildCode)) {
+        LogError("User is not allowed to code");
+        io->SendError(403);
+        return;
+    }
 
-        io->AttachText(200, "{}", "application/json");
-    });
+    stamp->develop = develop;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleChangeExportKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -1628,16 +1615,16 @@ void HandleChangeExportKey(InstanceHolder *instance, const http_RequestInfo &req
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->HasPermission(instance, UserPermission::DataExport)) {
         LogError("User is not allowed to export data");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    Span<char> key_buf = AllocateSpan<char>(&io->allocator, 45);
+    Span<char> key_buf = AllocateSpan<char>(io->Allocator(), 45);
 
     // Generate export key
     {

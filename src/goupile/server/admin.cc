@@ -1092,7 +1092,7 @@ void HandleDemo(const http_RequestInfo &request, http_IO *io)
 
             int error;
             if (!CreateInstance(&gp_domain, name, name, userid, permissions, true, &error)) {
-                io->AttachError(error);
+                io->SendError(error);
                 return false;
             }
         }
@@ -1107,9 +1107,9 @@ void HandleDemo(const http_RequestInfo &request, http_IO *io)
     if (!LoginUserAuto(userid, request, io))
         return;
 
-    const char *redirect = Fmt(&io->allocator, "/%1/", name).ptr;
+    const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;
     io->AddHeader("Location", redirect);
-    io->AttachEmpty(302);
+    io->SendEmpty(302);
 }
 
 void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
@@ -1118,132 +1118,130 @@ void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to create instances");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
     if (gp_domain.CountInstances() >= MaxInstancesPerDomain) {
         LogError("This domain has too many instances");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *instance_key = nullptr;
-        const char *name = nullptr;
-        bool demo = false;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *instance_key = nullptr;
+    const char *name = nullptr;
+    bool demo = false;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "key") {
-                    parser.ParseString(&instance_key);
-                } else if (key == "name") {
-                    parser.SkipNull() || parser.ParseString(&name);
-                } else if (key == "demo") {
-                    parser.ParseBool(&demo);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "key") {
+                parser.ParseString(&instance_key);
+            } else if (key == "name") {
+                parser.SkipNull() || parser.ParseString(&name);
+            } else if (key == "demo") {
+                parser.ParseBool(&demo);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
 
-        // Check missing or invalid values
-        {
-            bool valid = true;
+    // Check missing or invalid values
+    {
+        bool valid = true;
 
-            if (!instance_key) {
-                LogError("Missing 'key' parameter");
-                valid = false;
-            } else if (!CheckInstanceKey(instance_key)) {
-                valid = false;
-            }
-            if (!name) {
-                name = instance_key;
-            } else if (!name[0]) {
-                LogError("Application name cannot be empty");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
+        if (!instance_key) {
+            LogError("Missing 'key' parameter");
+            valid = false;
+        } else if (!CheckInstanceKey(instance_key)) {
+            valid = false;
+        }
+        if (!name) {
+            name = instance_key;
+        } else if (!name[0]) {
+            LogError("Application name cannot be empty");
+            valid = false;
         }
 
-        // Can this admin user touch this instance?
-        if (!session->IsRoot()) {
-            if (!strchr(instance_key, '/')) {
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Can this admin user touch this instance?
+    if (!session->IsRoot()) {
+        if (!strchr(instance_key, '/')) {
+            LogError("Instance '%1' does not exist", instance_key);
+            io->SendError(404);
+            return;
+        }
+
+        Span<const char> master = SplitStr(instance_key, '/');
+
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                     WHERE userid = ?1 AND instance = ?2 AND
+                                           permissions & ?3)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
                 LogError("Instance '%1' does not exist", instance_key);
-                io->AttachError(404);
-                return;
+                io->SendError(404);
             }
+            return;
+        }
+    }
 
-            Span<const char> master = SplitStr(instance_key, '/');
+    bool success = gp_domain.db.Transaction([&]() {
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                 VALUES (?1, ?2, ?3, ?4, ?5))",
+                              time, request.client_addr, "create_instance", session->username,
+                              instance_key))
+            return false;
 
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                         WHERE userid = ?1 AND instance = ?2 AND
-                                               permissions & ?3)", &stmt))
-                return;
-            sqlite3_bind_int64(stmt, 1, session->userid);
-            sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
-            sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+        uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
 
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("Instance '%1' does not exist", instance_key);
-                    io->AttachError(404);
-                }
-                return;
-            }
+        int error;
+        if (!CreateInstance(&gp_domain, instance_key, name, session->userid, permissions, demo, &error)) {
+            io->SendError(error);
+            return false;
         }
 
-        bool success = gp_domain.db.Transaction([&]() {
-            // Log action
-            int64_t time = GetUnixTime();
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5))",
-                                  time, request.client_addr, "create_instance", session->username,
-                                  instance_key))
-                return false;
-
-            uint32_t permissions = (1u << RG_LEN(UserPermissionNames)) - 1;
-
-            int error;
-            if (!CreateInstance(&gp_domain, instance_key, name, session->userid, permissions, demo, &error)) {
-                io->AttachError(error);
-                return false;
-            }
-
-            return true;
-        });
-        if (!success)
-            return;
-
-        if (!gp_domain.SyncInstance(instance_key))
-            return;
-
-        io->AttachText(200, "{}", "application/json");
+        return true;
     });
+    if (!success)
+        return;
+
+    if (!gp_domain.SyncInstance(instance_key))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 static bool ArchiveInstances(const InstanceHolder *filter, bool *out_conflict = nullptr)
@@ -1464,156 +1462,154 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to delete instances");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *instance_key = nullptr;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *instance_key = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "instance") {
-                    parser.ParseString(&instance_key);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "instance") {
+                parser.ParseString(&instance_key);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check missing values
-        if (!instance_key) {
-            LogError("Missing 'instance' parameter");
-            io->AttachError(422);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
+    }
 
-        InstanceHolder *instance = gp_domain.Ref(instance_key);
-        if (!instance) {
-            LogError("Instance '%1' does not exist", instance_key);
-            io->AttachError(404);
+    // Check missing values
+    if (!instance_key) {
+        LogError("Missing 'instance' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    if (!instance) {
+        LogError("Instance '%1' does not exist", instance_key);
+        io->SendError(404);
+        return;
+    }
+    RG_DEFER_N(ref_guard) { instance->Unref(); };
+
+    // Can this admin user touch this instance?
+    if (!session->IsRoot()) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                     WHERE userid = ?1 AND instance = ?2 AND
+                                           permissions & ?3)", &stmt))
             return;
-        }
-        RG_DEFER_N(ref_guard) { instance->Unref(); };
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
-        // Can this admin user touch this instance?
-        if (!session->IsRoot()) {
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                         WHERE userid = ?1 AND instance = ?2 AND
-                                               permissions & ?3)", &stmt))
-                return;
-            sqlite3_bind_int64(stmt, 1, session->userid);
-            sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
-            sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
-
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("Instance '%1' does not exist", instance_key);
-                    io->AttachError(404);
-                }
-                return;
-            }
-        }
-
-        bool conflict;
-        if (!ArchiveInstances(instance, &conflict)) {
-            if (conflict) {
-                io->AttachError(409, "Archive already exists");
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->SendError(404);
             }
             return;
         }
+    }
 
-        // Copy filenames to avoid use-after-free
-        HeapArray<const char *> unlink_filenames;
-        {
-            for (const InstanceHolder *slave: instance->slaves) {
-                const char *filename = DuplicateString(sqlite3_db_filename(*slave->db, "main"), &io->allocator).ptr;
-                unlink_filenames.Append(filename);
-            }
+    bool conflict;
+    if (!ArchiveInstances(instance, &conflict)) {
+        if (conflict) {
+            io->SendError(409, "Archive already exists");
+        }
+        return;
+    }
 
-            const char *filename = DuplicateString(sqlite3_db_filename(*instance->db, "main"), &io->allocator).ptr;
+    // Copy filenames to avoid use-after-free
+    HeapArray<const char *> unlink_filenames;
+    {
+        for (const InstanceHolder *slave: instance->slaves) {
+            const char *filename = DuplicateString(sqlite3_db_filename(*slave->db, "main"), io->Allocator()).ptr;
             unlink_filenames.Append(filename);
         }
 
-        bool success = gp_domain.db.Transaction([&]() {
-            int64_t time = GetUnixTime();
+        const char *filename = DuplicateString(sqlite3_db_filename(*instance->db, "main"), io->Allocator()).ptr;
+        unlink_filenames.Append(filename);
+    }
 
-            for (Size i = instance->slaves.len - 1; i >= 0; i--) {
-                InstanceHolder *slave = instance->slaves[i];
+    bool success = gp_domain.db.Transaction([&]() {
+        int64_t time = GetUnixTime();
 
-                if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                         VALUES (?1, ?2, ?3, ?4, ?5))",
-                                      time, request.client_addr, "delete_instance", session->username,
-                                      slave->key))
-                    return false;
-                if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", slave->key))
-                    return false;
-            }
+        for (Size i = instance->slaves.len - 1; i >= 0; i--) {
+            InstanceHolder *slave = instance->slaves[i];
 
             if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
                                      VALUES (?1, ?2, ?3, ?4, ?5))",
                                   time, request.client_addr, "delete_instance", session->username,
-                                  instance_key))
+                                  slave->key))
                 return false;
-            if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", instance_key))
+            if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", slave->key))
                 return false;
-
-            // Don't use instance after that!
-            instance->Unref();
-            instance = nullptr;
-            ref_guard.Disable();
-
-            return true;
-        });
-        if (!success)
-            return;
-
-        if (!gp_domain.SyncInstance(instance_key))
-            return;
-
-        bool complete = true;
-        for (const char *filename: unlink_filenames) {
-            // Not much we can do if this fails to succeed anyway; the backup is okay and the
-            // instance is deleted. We're mostly successful and we can't go back.
-
-            // Switch off WAL to make sure new databases with the same name don't get into trouble
-            sq_Database db;
-            if (!db.Open(filename, SQLITE_OPEN_READWRITE)) {
-                complete = false;
-                continue;
-            }
-            if (!db.RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
-                               PRAGMA journal_mode = DELETE;)")) {
-                complete = false;
-                continue;
-            }
-            db.Close();
-
-            complete &= UnlinkFile(filename);
         }
 
-        io->AttachText(complete ? 200 : 202, "{}", "application/json");
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                 VALUES (?1, ?2, ?3, ?4, ?5))",
+                              time, request.client_addr, "delete_instance", session->username,
+                              instance_key))
+            return false;
+        if (!gp_domain.db.Run("DELETE FROM dom_instances WHERE instance = ?1", instance_key))
+            return false;
+
+        // Don't use instance after that!
+        instance->Unref();
+        instance = nullptr;
+        ref_guard.Disable();
+
+        return true;
     });
+    if (!success)
+        return;
+
+    if (!gp_domain.SyncInstance(instance_key))
+        return;
+
+    bool complete = true;
+    for (const char *filename: unlink_filenames) {
+        // Not much we can do if this fails to succeed anyway; the backup is okay and the
+        // instance is deleted. We're mostly successful and we can't go back.
+
+        // Switch off WAL to make sure new databases with the same name don't get into trouble
+        sq_Database db;
+        if (!db.Open(filename, SQLITE_OPEN_READWRITE)) {
+            complete = false;
+            continue;
+        }
+        if (!db.RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
+                           PRAGMA journal_mode = DELETE;)")) {
+            complete = false;
+            continue;
+        }
+        db.Close();
+
+        complete &= UnlinkFile(filename);
+    }
+
+    io->SendText(complete ? 200 : 202, "{}", "application/json");
 }
 
 void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
@@ -1622,173 +1618,171 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to configure instances");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *instance_key = nullptr;
-        decltype(InstanceHolder::config) config;
-        bool change_use_offline = false;
-        bool change_data_remote = false;
-        bool change_allow_guests = false;
-        int64_t fs_version = -1;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(4), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *instance_key = nullptr;
+    decltype(InstanceHolder::config) config;
+    bool change_use_offline = false;
+    bool change_data_remote = false;
+    bool change_allow_guests = false;
+    int64_t fs_version = -1;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(4), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "instance") {
-                    parser.ParseString(&instance_key);
-                } else if (key == "name") {
-                    parser.SkipNull() || parser.ParseString(&config.name);
-                } else if (key == "use_offline") {
-                    if (!parser.SkipNull()) {
-                        parser.ParseBool(&config.use_offline);
-                        change_use_offline = true;
-                    }
-                } else if (key == "data_remote") {
-                    if (!parser.SkipNull()) {
-                        parser.ParseBool(&config.data_remote);
-                        change_data_remote = true;
-                    }
-                } else if (key == "token_key") {
-                    parser.SkipNull() || parser.ParseString(&config.token_key);
-                } else if (key == "auto_key") {
-                    parser.SkipNull() || parser.ParseString(&config.auto_key);
-                } else if (key == "allow_guests") {
-                    if (!parser.SkipNull()) {
-                        parser.ParseBool(&config.allow_guests);
-                        change_allow_guests = true;
-                    }
-                } else if (key == "fs_version") {
-                    parser.SkipNull() || parser.ParseInt(&fs_version);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
+            if (key == "instance") {
+                parser.ParseString(&instance_key);
+            } else if (key == "name") {
+                parser.SkipNull() || parser.ParseString(&config.name);
+            } else if (key == "use_offline") {
+                if (!parser.SkipNull()) {
+                    parser.ParseBool(&config.use_offline);
+                    change_use_offline = true;
                 }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            } else if (key == "data_remote") {
+                if (!parser.SkipNull()) {
+                    parser.ParseBool(&config.data_remote);
+                    change_data_remote = true;
+                }
+            } else if (key == "token_key") {
+                parser.SkipNull() || parser.ParseString(&config.token_key);
+            } else if (key == "auto_key") {
+                parser.SkipNull() || parser.ParseString(&config.auto_key);
+            } else if (key == "allow_guests") {
+                if (!parser.SkipNull()) {
+                    parser.ParseBool(&config.allow_guests);
+                    change_allow_guests = true;
+                }
+            } else if (key == "fs_version") {
+                parser.SkipNull() || parser.ParseInt(&fs_version);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check missing or invalid values
-        {
-            bool valid = true;
-
-            if (!instance_key) {
-                LogError("Missing 'instance' parameter");
-                valid = false;
-            }
-            if (config.name && !config.name[0]) {
-                LogError("Application name cannot be empty");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        InstanceHolder *instance = gp_domain.Ref(instance_key);
-        if (!instance) {
-            LogError("Instance '%1' does not exist", instance_key);
-            io->AttachError(404);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
-        RG_DEFER_N(ref_guard) { instance->Unref(); };
+    }
 
-        // Can this admin user touch this instance?
-        if (!session->IsRoot()) {
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                         WHERE userid = ?1 AND instance = ?2 AND
-                                               permissions & ?3)", &stmt))
-                return;
-            sqlite3_bind_int64(stmt, 1, session->userid);
-            sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
-            sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+    // Check missing or invalid values
+    {
+        bool valid = true;
 
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("Instance '%1' does not exist", instance_key);
-                    io->AttachError(404);
-                }
-                return;
-            }
+        if (!instance_key) {
+            LogError("Missing 'instance' parameter");
+            valid = false;
+        }
+        if (config.name && !config.name[0]) {
+            LogError("Application name cannot be empty");
+            valid = false;
         }
 
-        // Write new configuration to database
-        bool success = instance->db->Transaction([&]() {
-            // Log action
-            int64_t time = GetUnixTime();
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5))",
-                                  time, request.client_addr, "edit_instance", session->username,
-                                  instance_key))
-                return false;
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
 
-            const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
-            bool success = true;
+    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    if (!instance) {
+        LogError("Instance '%1' does not exist", instance_key);
+        io->SendError(404);
+        return;
+    }
+    RG_DEFER_N(ref_guard) { instance->Unref(); };
 
-            success &= !config.name || instance->db->Run(sql, "Name", config.name);
-            if (instance->master == instance) {
-                success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
-                success &= !change_data_remote || instance->db->Run(sql, "DataRemote", 0 + config.data_remote);
-                success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
-                success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
-                success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
+    // Can this admin user touch this instance?
+    if (!session->IsRoot()) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                     WHERE userid = ?1 AND instance = ?2 AND
+                                           permissions & ?3)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
 
-                if (fs_version > 0) {
-                    success &= instance->db->Run(sql, "FsVersion", fs_version);
-
-                    // Copy to test version
-                    if (!instance->db->Run(R"(UPDATE fs_versions SET mtime = copy.mtime,
-                                                                     userid = copy.userid,
-                                                                     username = copy.username
-                                                  FROM (SELECT mtime, userid, username FROM fs_versions WHERE version = ?1) AS copy)",
-                                           fs_version))
-                        return false;
-                    if (!instance->db->Run(R"(DELETE FROM fs_index WHERE version = 0)"))
-                        return false;
-                    if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                                                  SELECT 0, filename, sha256 FROM fs_index WHERE version = ?1)", fs_version))
-                        return false;
-                }
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->SendError(404);
             }
-            if (!success)
-                return false;
+            return;
+        }
+    }
 
-            // Don't use instance after that!
-            instance->Unref();
-            instance = nullptr;
-            ref_guard.Disable();
+    // Write new configuration to database
+    bool success = instance->db->Transaction([&]() {
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                 VALUES (?1, ?2, ?3, ?4, ?5))",
+                              time, request.client_addr, "edit_instance", session->username,
+                              instance_key))
+            return false;
 
-            return true;
-        });
+        const char *sql = "UPDATE fs_settings SET value = ?2 WHERE key = ?1";
+        bool success = true;
+
+        success &= !config.name || instance->db->Run(sql, "Name", config.name);
+        if (instance->master == instance) {
+            success &= !change_use_offline || instance->db->Run(sql, "UseOffline", 0 + config.use_offline);
+            success &= !change_data_remote || instance->db->Run(sql, "DataRemote", 0 + config.data_remote);
+            success &= !config.token_key || instance->db->Run(sql, "TokenKey", config.token_key);
+            success &= !config.auto_key || instance->db->Run(sql, "AutoKey", config.auto_key);
+            success &= !change_allow_guests || instance->db->Run(sql, "AllowGuests", 0 + config.allow_guests);
+
+            if (fs_version > 0) {
+                success &= instance->db->Run(sql, "FsVersion", fs_version);
+
+                // Copy to test version
+                if (!instance->db->Run(R"(UPDATE fs_versions SET mtime = copy.mtime,
+                                                                 userid = copy.userid,
+                                                                 username = copy.username
+                                              FROM (SELECT mtime, userid, username FROM fs_versions WHERE version = ?1) AS copy)",
+                                       fs_version))
+                    return false;
+                if (!instance->db->Run(R"(DELETE FROM fs_index WHERE version = 0)"))
+                    return false;
+                if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                              SELECT 0, filename, sha256 FROM fs_index WHERE version = ?1)", fs_version))
+                    return false;
+            }
+        }
         if (!success)
-            return;
+            return false;
 
-        if (!gp_domain.SyncInstance(instance_key))
-            return;
+        // Don't use instance after that!
+        instance->Unref();
+        instance = nullptr;
+        ref_guard.Disable();
 
-        io->AttachText(200, "{}", "application/json");
+        return true;
     });
+    if (!success)
+        return;
+
+    if (!gp_domain.SyncInstance(instance_key))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
@@ -1797,12 +1791,12 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to list instances");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -1824,7 +1818,7 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
 
         while (stmt.Step()) {
             const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
-            allowed_masters.Set(DuplicateString(instance_key, &io->allocator).ptr);
+            allowed_masters.Set(DuplicateString(instance_key, io->Allocator()).ptr);
         }
     }
 
@@ -1869,174 +1863,172 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to delete users");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        int64_t userid = -1;
-        const char *instance = nullptr;
-        uint32_t permissions = UINT32_MAX;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    int64_t userid = -1;
+    const char *instance = nullptr;
+    uint32_t permissions = UINT32_MAX;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "userid") {
-                    parser.ParseInt(&userid);
-                } else if (key == "instance") {
-                    parser.ParseString(&instance);
-                } else if (key == "permissions") {
-                    if (!parser.SkipNull()) {
-                        permissions = 0;
+            if (key == "userid") {
+                parser.ParseInt(&userid);
+            } else if (key == "instance") {
+                parser.ParseString(&instance);
+            } else if (key == "permissions") {
+                if (!parser.SkipNull()) {
+                    permissions = 0;
 
-                        parser.ParseArray();
-                        while (parser.InArray()) {
-                            Span<const char> str = {};
-                            parser.ParseString(&str);
+                    parser.ParseArray();
+                    while (parser.InArray()) {
+                        Span<const char> str = {};
+                        parser.ParseString(&str);
 
-                            char perm[128];
-                            json_ConvertFromJsonName(str, perm);
+                        char perm[128];
+                        json_ConvertFromJsonName(str, perm);
 
-                            if (!OptionToFlagI(UserPermissionNames, perm, &permissions)) {
-                                LogError("Unknown permission '%1'", str);
-                                io->AttachError(422);
-                                return;
-                            }
+                        if (!OptionToFlagI(UserPermissionNames, perm, &permissions)) {
+                            LogError("Unknown permission '%1'", str);
+                            io->SendError(422);
+                            return;
                         }
                     }
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
                 }
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
             }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing values
+    {
+        bool valid = true;
+
+        if (userid < 0) {
+            LogError("Missing or invalid 'userid' parameter");
+            valid = false;
+        }
+        if (!instance) {
+            LogError("Missing 'instance' parameter");
+            valid = false;
+        }
+        if (permissions == UINT32_MAX) {
+            LogError("Missing 'permissions' parameter");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Does instance exist?
+    {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
+            return;
+        sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
+
+        if (stmt.Step() && !session->IsRoot()) {
+            Span<const char> master = SplitStr(instance, '/');
+
+            if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                         WHERE userid = ?1 AND instance = ?2 AND
+                                               permissions & ?3)", &stmt))
+                return;
+            sqlite3_bind_int64(stmt, 1, session->userid);
+            sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
+            sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+
+            stmt.Step();
+        }
+
+        if (!stmt.IsRow()) {
+            if (stmt.IsValid()) {
+                LogError("Instance '%1' does not exist", instance);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
+    // Does user exist?
+    const char *username;
+    {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare("SELECT root, username FROM dom_users WHERE userid = ?1", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, userid);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User ID '%1' does not exist", userid);
+                io->SendError(404);
+            }
+            return;
+        }
+
+        if (!session->IsRoot()) {
+            bool is_root = (sqlite3_column_int(stmt, 0) == 1);
+
+            if (is_root) {
+                LogError("User ID '%1' does not exist", userid);
+                io->SendError(404);
                 return;
             }
         }
 
-        // Check missing values
-        {
-            bool valid = true;
+        username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
+    }
 
-            if (userid < 0) {
-                LogError("Missing or invalid 'userid' parameter");
-                valid = false;
-            }
-            if (!instance) {
-                LogError("Missing 'instance' parameter");
-                valid = false;
-            }
-            if (permissions == UINT32_MAX) {
-                LogError("Missing 'permissions' parameter");
-                valid = false;
-            }
+    gp_domain.db.Transaction([&]() {
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                 VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7))",
+                              time, request.client_addr, "assign_user", session->username,
+                              instance, username, permissions))
+            return false;
 
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Does instance exist?
-        {
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT instance FROM dom_instances WHERE instance = ?1", &stmt))
-                return;
-            sqlite3_bind_text(stmt, 1, instance, -1, SQLITE_STATIC);
-
-            if (stmt.Step() && !session->IsRoot()) {
-                Span<const char> master = SplitStr(instance, '/');
-
-                if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
-                                             WHERE userid = ?1 AND instance = ?2 AND
-                                                   permissions & ?3)", &stmt))
-                    return;
-                sqlite3_bind_int64(stmt, 1, session->userid);
-                sqlite3_bind_text(stmt, 2, master.ptr, (int)master.len, SQLITE_STATIC);
-                sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
-
-                stmt.Step();
-            }
-
-            if (!stmt.IsRow()) {
-                if (stmt.IsValid()) {
-                    LogError("Instance '%1' does not exist", instance);
-                    io->AttachError(404);
-                }
-                return;
-            }
-        }
-
-        // Does user exist?
-        const char *username;
-        {
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT root, username FROM dom_users WHERE userid = ?1", &stmt))
-                return;
-            sqlite3_bind_int64(stmt, 1, userid);
-
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("User ID '%1' does not exist", userid);
-                    io->AttachError(404);
-                }
-                return;
-            }
-
-            if (!session->IsRoot()) {
-                bool is_root = (sqlite3_column_int(stmt, 0) == 1);
-
-                if (is_root) {
-                    LogError("User ID '%1' does not exist", userid);
-                    io->AttachError(404);
-                    return;
-                }
-            }
-
-            username = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &io->allocator).ptr;
-        }
-
-        gp_domain.db.Transaction([&]() {
-            // Log action
-            int64_t time = GetUnixTime();
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5 || '+' || ?6 || ':' || ?7))",
-                                  time, request.client_addr, "assign_user", session->username,
-                                  instance, username, permissions))
+        // Adjust permissions
+        if (permissions) {
+            if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, userid, permissions)
+                                     VALUES (?1, ?2, ?3)
+                                     ON CONFLICT (instance, userid) DO UPDATE SET permissions = excluded.permissions)",
+                                  instance, userid, permissions))
                 return false;
+        } else {
+            if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1 AND userid = ?2",
+                                  instance, userid))
+                return false;
+        }
 
-            // Adjust permissions
-            if (permissions) {
-                if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (instance, userid, permissions)
-                                         VALUES (?1, ?2, ?3)
-                                         ON CONFLICT (instance, userid) DO UPDATE SET permissions = excluded.permissions)",
-                                      instance, userid, permissions))
-                    return false;
-            } else {
-                if (!gp_domain.db.Run("DELETE FROM dom_permissions WHERE instance = ?1 AND userid = ?2",
-                                      instance, userid))
-                    return false;
-            }
+        InvalidateUserStamps(userid);
 
-            InvalidateUserStamps(userid);
-
-            io->AttachText(200, "{}", "application/json");
-            return true;
-        });
+        io->SendText(200, "{}", "application/json");
+        return true;
     });
 }
 
@@ -2046,26 +2038,26 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to list users");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    const char *instance_key = request.GetQueryValue("instance");
+    const char *instance_key = request.FindGetValue("instance");
     if (!instance_key) {
         LogError("Missing 'instance' parameter");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
 
     InstanceHolder *instance = gp_domain.Ref(instance_key);
     if (!instance) {
         LogError("Instance '%1' does not exist", instance_key);
-        io->AttachError(404);
+        io->SendError(404);
         return;
     }
     RG_DEFER { instance->Unref(); };
@@ -2084,7 +2076,7 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
                 LogError("Instance '%1' does not exist", instance_key);
-                io->AttachError(404);
+                io->SendError(404);
             }
             return;
         }
@@ -2147,26 +2139,27 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsRoot()) {
         LogError("Non-root users are not allowed to create archives");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
+    // Do the work
+    {
         bool conflict;
         if (!ArchiveInstances(nullptr, &conflict)) {
             if (conflict) {
-                io->AttachError(409, "Archive already exists");
+                io->SendError(409, "Archive already exists");
             }
             return;
         }
+    }
 
-        io->AttachText(200, "{}", "application/json");
-    });
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
@@ -2175,72 +2168,70 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsRoot()) {
         LogError("Non-root users are not allowed to delete archives");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *basename = nullptr;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *basename = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "filename") {
-                    parser.ParseString(&basename);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "filename") {
+                parser.ParseString(&basename);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check missing values
-        if (!basename) {
-            LogError("Missing 'filename' parameter");
-            io->AttachError(422);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
+    }
 
-        // Safety checks
-        if (PathIsAbsolute(basename)) {
-            LogError("Path must not be absolute");
-            io->AttachError(403);
-            return;
-        }
-        if (PathContainsDotDot(basename)) {
-            LogError("Path must not contain any '..' component");
-            io->AttachError(403);
-            return;
-        }
+    // Check missing values
+    if (!basename) {
+        LogError("Missing 'filename' parameter");
+        io->SendError(422);
+        return;
+    }
 
-        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+    // Safety checks
+    if (PathIsAbsolute(basename)) {
+        LogError("Path must not be absolute");
+        io->SendError(403);
+        return;
+    }
+    if (PathContainsDotDot(basename)) {
+        LogError("Path must not contain any '..' component");
+        io->SendError(403);
+        return;
+    }
 
-        if (!TestFile(filename, FileType::File)) {
-            io->AttachError(404);
-            return;
-        }
-        if (!UnlinkFile(filename))
-            return;
+    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
-        io->AttachText(200, "{}", "application/json");
-    });
+    if (!TestFile(filename, FileType::File)) {
+        io->SendError(404);
+        return;
+    }
+    if (!UnlinkFile(filename))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
@@ -2249,12 +2240,12 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsRoot()) {
         LogError("Root user needs to confirm identity");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
 
@@ -2303,47 +2294,44 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsRoot()) {
         LogError("Non-root users are not allowed to download archives");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    const char *basename = request.url + 26;
+    const char *basename = request.path + 26;
 
     // Safety checks
-    if (!StartsWith(request.url, "/admin/api/archives/files/")) {
+    if (!StartsWith(request.path, "/admin/api/archives/files/")) {
         LogError("Malformed or missing filename");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
     if (!basename[0] || strpbrk(basename, RG_PATH_SEPARATORS)) {
         LogError("Filename cannot be empty or contain path separators");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
     if (GetPathExtension(basename) != ".goarch" &&
             GetPathExtension(basename) != ".goupilearchive") {
         LogError("Path must end with '.goarch' or '.goupilearchive' extension");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
-
-    if (!io->AttachFile(200, filename)) {
-        io->AttachError(404, "Cannot find this archive");
-        return;
-    }
+    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
     // Ask browser to download
     {
-        const char *disposition = Fmt(&io->allocator, "attachment; filename=\"%1\"", basename).ptr;
+        const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1\"", basename).ptr;
         io->AddHeader("Content-Disposition", disposition);
     }
+
+    io->SendFile(200, filename);
 }
 
 void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
@@ -2352,67 +2340,65 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsRoot()) {
         LogError("Non-root users are not allowed to upload archives");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    const char *basename = request.url + 26;
+    const char *basename = request.path + 26;
 
-    if (!StartsWith(request.url, "/admin/api/archives/files/")) {
+    if (!StartsWith(request.path, "/admin/api/archives/files/")) {
         LogError("Malformed or missing filename");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
     if (!basename[0] || strpbrk(basename, RG_PATH_SEPARATORS)) {
         LogError("Filename cannot be empty or contain path separators");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
     if (GetPathExtension(basename) != ".goarch" &&
             GetPathExtension(basename) != ".goupilearchive") {
         LogError("Path must end with '.goarch' or '.goupilearchive' extension");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+    const char *filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
 
-        StreamWriter writer;
-        if (!writer.Open(filename, (int)StreamWriterFlag::Exclusive |
-                                   (int)StreamWriterFlag::Atomic)) {
-            if (errno == EEXIST) {
-                LogError("An archive already exists with this name");
-                io->AttachError(409);
-            }
-            return;
+    StreamWriter writer;
+    if (!writer.Open(filename, (int)StreamWriterFlag::Exclusive |
+                               (int)StreamWriterFlag::Atomic)) {
+        if (errno == EEXIST) {
+            LogError("An archive already exists with this name");
+            io->SendError(409);
         }
+        return;
+    }
 
-        StreamReader reader;
-        if (!io->OpenForRead(Megabytes(512), &reader))
+    StreamReader reader;
+    if (!io->OpenForRead(Megabytes(512), &reader))
+        return;
+
+    // Read and store
+    do {
+        LocalArray<uint8_t, 16384> buf;
+        buf.len = reader.Read(buf.data);
+        if (buf.len < 0)
             return;
 
-        // Read and store
-        do {
-            LocalArray<uint8_t, 16384> buf;
-            buf.len = reader.Read(buf.data);
-            if (buf.len < 0)
-                return;
-
-            if (!writer.Write(buf))
-                return;
-        } while (!reader.IsEOF());
-
-        if (!writer.Close())
+        if (!writer.Write(buf))
             return;
+    } while (!reader.IsEOF());
 
-        io->AttachText(200, "{}", "application/json");
-    });
+    if (!writer.Close())
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
@@ -2421,378 +2407,376 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsRoot()) {
         LogError("Non-root users are not allowed to upload archives");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *basename = nullptr;
-        const char *decrypt_key = nullptr;
-        bool restore_users = false;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *basename = nullptr;
+    const char *decrypt_key = nullptr;
+    bool restore_users = false;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "filename") {
-                    parser.ParseString(&basename);
-                } else if (key == "key") {
-                    parser.ParseString(&decrypt_key);
-                } else if (key == "users") {
-                    parser.ParseBool(&restore_users);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "filename") {
+                parser.ParseString(&basename);
+            } else if (key == "key") {
+                parser.ParseString(&decrypt_key);
+            } else if (key == "users") {
+                parser.ParseBool(&restore_users);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check missing values
-        {
-            bool valid = true;
-
-            if (!basename) {
-                LogError("Missing 'filename' parameter");
-                valid = false;
-            }
-            if (!decrypt_key) {
-                LogError("Missing 'key' parameter");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Safety checks
-        if (PathIsAbsolute(basename)) {
-            LogError("Path must not be absolute");
-            io->AttachError(403);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
-        if (PathContainsDotDot(basename)) {
-            LogError("Path must not contain any '..' component");
-            io->AttachError(403);
+    }
+
+    // Check missing values
+    {
+        bool valid = true;
+
+        if (!basename) {
+            LogError("Missing 'filename' parameter");
+            valid = false;
+        }
+        if (!decrypt_key) {
+            LogError("Missing 'key' parameter");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
             return;
         }
-        if (GetPathExtension(basename) != ".goarch" &&
-                GetPathExtension(basename) != ".goupilearchive") {
-            LogError("Path must end with '.goarch' or '.goupilearchive' extension");
-            io->AttachError(403);
+    }
+
+    // Safety checks
+    if (PathIsAbsolute(basename)) {
+        LogError("Path must not be absolute");
+        io->SendError(403);
+        return;
+    }
+    if (PathContainsDotDot(basename)) {
+        LogError("Path must not contain any '..' component");
+        io->SendError(403);
+        return;
+    }
+    if (GetPathExtension(basename) != ".goarch" &&
+            GetPathExtension(basename) != ".goupilearchive") {
+        LogError("Path must end with '.goarch' or '.goupilearchive' extension");
+        io->SendError(403);
+        return;
+    }
+
+    // Create directory for instance files
+    const char *tmp_directory = CreateUniqueDirectory(gp_domain.config.tmp_directory, nullptr, io->Allocator());
+    HeapArray<const char *> tmp_filenames;
+    RG_DEFER {
+        for (const char *filename: tmp_filenames) {
+            UnlinkFile(filename);
+        }
+        if (tmp_directory) {
+            UnlinkDirectory(tmp_directory);
+        }
+    };
+
+    // Extract archive to unencrypted ZIP file
+    const char *extract_filename;
+    {
+        const char *src_filename = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
+
+        int fd = -1;
+        extract_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+        if (!extract_filename)
+            return;
+        tmp_filenames.Append(extract_filename);
+        RG_DEFER { CloseDescriptor(fd); };
+
+        StreamReader reader(src_filename);
+        StreamWriter writer(fd, extract_filename);
+        if (!reader.IsValid()) {
+            if (errno == ENOENT) {
+                LogError("Archive '%1' does not exist", basename);
+                io->SendError(404);
+            }
             return;
         }
+        if (!writer.IsValid())
+            return;
 
-        // Create directory for instance files
-        const char *tmp_directory = CreateUniqueDirectory(gp_domain.config.tmp_directory, nullptr, &io->allocator);
-        HeapArray<const char *> tmp_filenames;
-        RG_DEFER {
-            for (const char *filename: tmp_filenames) {
-                UnlinkFile(filename);
+        UnsealResult ret = UnsealArchive(&reader, &writer, decrypt_key);
+        if (ret != UnsealResult::Success) {
+            if (reader.IsValid()) {
+                io->SendError(ret == UnsealResult::WrongKey ? 403 : 422);
             }
-            if (tmp_directory) {
-                UnlinkDirectory(tmp_directory);
-            }
-        };
-
-        // Extract archive to unencrypted ZIP file
-        const char *extract_filename;
-        {
-            const char *src_filename = Fmt(&io->allocator, "%1%/%2", gp_domain.config.archive_directory, basename).ptr;
-
-            int fd = -1;
-            extract_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", &io->allocator, &fd);
-            if (!extract_filename)
-                return;
-            tmp_filenames.Append(extract_filename);
-            RG_DEFER { CloseDescriptor(fd); };
-
-            StreamReader reader(src_filename);
-            StreamWriter writer(fd, extract_filename);
-            if (!reader.IsValid()) {
-                if (errno == ENOENT) {
-                    LogError("Archive '%1' does not exist", basename);
-                    io->AttachError(404);
-                }
-                return;
-            }
-            if (!writer.IsValid())
-                return;
-
-            UnsealResult ret = UnsealArchive(&reader, &writer, decrypt_key);
-            if (ret != UnsealResult::Success) {
-                if (reader.IsValid()) {
-                    io->AttachError(ret == UnsealResult::WrongKey ? 403 : 422);
-                }
-                return;
-            }
-            if (!writer.Close())
-                return;
-        }
-
-        // Open ZIP file
-        mz_zip_archive zip;
-        mz_zip_zero_struct(&zip);
-        if (!mz_zip_reader_init_file(&zip, extract_filename, 0)) {
-            LogError("Failed to open ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
             return;
         }
-        RG_DEFER { mz_zip_reader_end(&zip); };
+        if (!writer.Close())
+            return;
+    }
 
-        // Extract and open archived main database (goupile.db)
-        sq_Database main_db;
-        {
-            int fd = -1;
-            const char *main_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", &io->allocator, &fd);
-            if (!main_filename)
-                return;
-            tmp_filenames.Append(main_filename);
-            RG_DEFER { CloseDescriptor(fd); };
+    // Open ZIP file
+    mz_zip_archive zip;
+    mz_zip_zero_struct(&zip);
+    if (!mz_zip_reader_init_file(&zip, extract_filename, 0)) {
+        LogError("Failed to open ZIP archive: %1", mz_zip_get_error_string(zip.m_last_error));
+        return;
+    }
+    RG_DEFER { mz_zip_reader_end(&zip); };
 
-            int success = mz_zip_reader_extract_file_to_callback(&zip, "goupile.db", [](void *udata, mz_uint64, const void *ptr, size_t len) {
-                RG_ASSERT(len <= RG_SIZE_MAX);
+    // Extract and open archived main database (goupile.db)
+    sq_Database main_db;
+    {
+        int fd = -1;
+        const char *main_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+        if (!main_filename)
+            return;
+        tmp_filenames.Append(main_filename);
+        RG_DEFER { CloseDescriptor(fd); };
 
-                int fd = *(int *)udata;
-                Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)len);
+        int success = mz_zip_reader_extract_file_to_callback(&zip, "goupile.db", [](void *udata, mz_uint64, const void *ptr, size_t len) {
+            RG_ASSERT(len <= RG_SIZE_MAX);
 
-                while (buf.len) {
+            int fd = *(int *)udata;
+            Span<const uint8_t> buf = MakeSpan((const uint8_t *)ptr, (Size)len);
+
+            while (buf.len) {
 #if defined(_WIN32)
-                    Size write_len = _write(fd, buf.ptr, (unsigned int)buf.len);
+                Size write_len = _write(fd, buf.ptr, (unsigned int)buf.len);
 #else
-                    Size write_len = RG_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
+                Size write_len = RG_RESTART_EINTR(write(fd, buf.ptr, (size_t)buf.len), < 0);
 #endif
-                    if (write_len < 0) {
-                        LogError("Failed to write to disk: %1", strerror(errno));
-                        return (size_t)0;
-                    }
-
-                    buf.ptr += write_len;
-                    buf.len -= write_len;
+                if (write_len < 0) {
+                    LogError("Failed to write to disk: %1", strerror(errno));
+                    return (size_t)0;
                 }
 
-                return len;
-            }, &fd, 0);
-            if (!success) {
-                if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
-                    LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
-                }
-                return;
+                buf.ptr += write_len;
+                buf.len -= write_len;
             }
 
-            if (!main_db.Open(main_filename, SQLITE_OPEN_READWRITE))
-                return;
-            if (!MigrateDomain(&main_db, nullptr))
-                return;
+            return len;
+        }, &fd, 0);
+        if (!success) {
+            if (zip.m_last_error != MZ_ZIP_WRITE_CALLBACK_FAILED) {
+                LogError("Failed to extract 'goupile.db' from archive: %1", mz_zip_get_error_string(zip.m_last_error));
+            }
+            return;
         }
 
-        struct RestoreEntry {
-            const char *key;
-            const char *basename;
-            const char *filename;
-        };
+        if (!main_db.Open(main_filename, SQLITE_OPEN_READWRITE))
+            return;
+        if (!MigrateDomain(&main_db, nullptr))
+            return;
+    }
 
-        // Gather information from goupile.db
-        HeapArray<RestoreEntry> entries;
-        {
-            sq_Statement stmt;
-            if (!main_db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
-                return;
+    struct RestoreEntry {
+        const char *key;
+        const char *basename;
+        const char *filename;
+    };
 
-            while (stmt.Step()) {
-                const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
+    // Gather information from goupile.db
+    HeapArray<RestoreEntry> entries;
+    {
+        sq_Statement stmt;
+        if (!main_db.Prepare("SELECT instance, master FROM dom_instances ORDER BY instance", &stmt))
+            return;
 
-                RestoreEntry entry = {};
+        while (stmt.Step()) {
+            const char *instance_key = (const char *)sqlite3_column_text(stmt, 0);
 
-                entry.key = DuplicateString(instance_key, &io->allocator).ptr;
-                entry.basename = MakeInstanceFileName("instances", instance_key, &io->allocator);
+            RestoreEntry entry = {};
+
+            entry.key = DuplicateString(instance_key, io->Allocator()).ptr;
+            entry.basename = MakeInstanceFileName("instances", instance_key, io->Allocator());
 #if defined(_WIN32)
-                for (Size i = 0; entry.basename[i]; i++) {
-                    char *ptr = (char *)entry.basename;
-                    int c = entry.basename[i];
+            for (Size i = 0; entry.basename[i]; i++) {
+                char *ptr = (char *)entry.basename;
+                int c = entry.basename[i];
 
-                    ptr[i] = (char)(c == '\\' ? '/' : c);
-                }
+                ptr[i] = (char)(c == '\\' ? '/' : c);
+            }
 #endif
-                entry.filename = MakeInstanceFileName(tmp_directory, instance_key, &io->allocator);
+            entry.filename = MakeInstanceFileName(tmp_directory, instance_key, io->Allocator());
 
-                entries.Append(entry);
-                tmp_filenames.Append(entry.filename);
-            }
-            if (!stmt.IsValid())
-                return;
+            entries.Append(entry);
+            tmp_filenames.Append(entry.filename);
+        }
+        if (!stmt.IsValid())
+            return;
+    }
+
+    // Extract and migrate individual database files
+    for (const RestoreEntry &entry: entries) {
+        if (!mz_zip_reader_extract_file_to_file(&zip, entry.basename, entry.filename, 0)) {
+            LogError("Failed to extract '%1' from archive: %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
+            return;
         }
 
-        // Extract and migrate individual database files
+        if (!MigrateInstance(entry.filename))
+            return;
+    }
+
+    // Save current instances
+    {
+        bool conflict;
+        if (!ArchiveInstances(nullptr, &conflict)) {
+            if (conflict) {
+                io->SendError(409, "Archive already exists");
+            }
+            return;
+        }
+    }
+
+    // Prepare for cleanup up of old instance directory
+    const char *swap_directory = nullptr;
+    RG_DEFER {
+        if (swap_directory) {
+            EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType) {
+                filename = Fmt(io->Allocator(), "%1%/%2", swap_directory, filename).ptr;
+                UnlinkFile(filename);
+
+                return true;
+            });
+            UnlinkDirectory(swap_directory);
+        }
+    };
+
+    // Replace running instances
+    bool success = gp_domain.db.Transaction([&]() {
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                 VALUES (?1, ?2, ?3, ?4, ?5))",
+                              time, request.client_addr, "restore", session->username,
+                              basename))
+            return false;
+
+        if (!gp_domain.db.Run("DELETE FROM dom_instances"))
+            return false;
+        if (!gp_domain.SyncAll())
+            return false;
         for (const RestoreEntry &entry: entries) {
-            if (!mz_zip_reader_extract_file_to_file(&zip, entry.basename, entry.filename, 0)) {
-                LogError("Failed to extract '%1' from archive: %2", entry.basename, mz_zip_get_error_string(zip.m_last_error));
-                return;
-            }
-
-            if (!MigrateInstance(entry.filename))
-                return;
+            if (!gp_domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", entry.key))
+                return false;
         }
 
-        // Save current instances
-        {
-            bool conflict;
-            if (!ArchiveInstances(nullptr, &conflict)) {
-                if (conflict) {
-                    io->AttachError(409, "Archive already exists");
+        // It would be much better to do this by ATTACHing the old database and do the copy
+        // in SQL. Unfortunately this triggers memory problems in SQLite Multiple Ciphers and
+        // I don't have time to investigate this right now.
+        if (restore_users) {
+            bool success = gp_domain.db.RunMany(R"(
+                DELETE FROM dom_permissions;
+                DELETE FROM dom_users;
+                DELETE FROM sqlite_sequence WHERE name = 'dom_users';
+            )");
+            if (!success)
+                return false;
+
+            // Copy users
+            {
+                sq_Statement stmt;
+                if (!main_db.Prepare(R"(SELECT userid, username, password_hash,
+                                               root, local_key, email, phone
+                                        FROM dom_users)", &stmt))
+                    return false;
+
+                while (stmt.Step()) {
+                    int64_t userid = sqlite3_column_int64(stmt, 0);
+                    const char *username = (const char *)sqlite3_column_text(stmt, 1);
+                    const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
+                    int root = sqlite3_column_int(stmt, 3);
+                    const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
+                    const char *email = (const char *)sqlite3_column_text(stmt, 5);
+                    const char *phone = (const char *)sqlite3_column_text(stmt, 6);
+
+                    if (!gp_domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
+                                                                    root, local_key, email, phone)
+                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
+                                          userid, username, password_hash, root, local_key, email, phone))
+                        return false;
                 }
-                return;
-            }
-        }
-
-        // Prepare for cleanup up of old instance directory
-        const char *swap_directory = nullptr;
-        RG_DEFER {
-            if (swap_directory) {
-                EnumerateDirectory(swap_directory, nullptr, -1, [&](const char *filename, FileType) {
-                    filename = Fmt(&io->allocator, "%1%/%2", swap_directory, filename).ptr;
-                    UnlinkFile(filename);
-
-                    return true;
-                });
-                UnlinkDirectory(swap_directory);
-            }
-        };
-
-        // Replace running instances
-        bool success = gp_domain.db.Transaction([&]() {
-            // Log action
-            int64_t time = GetUnixTime();
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5))",
-                                  time, request.client_addr, "restore", session->username,
-                                  basename))
-                return false;
-
-            if (!gp_domain.db.Run("DELETE FROM dom_instances"))
-                return false;
-            if (!gp_domain.SyncAll())
-                return false;
-            for (const RestoreEntry &entry: entries) {
-                if (!gp_domain.db.Run("INSERT INTO dom_instances (instance) VALUES (?1)", entry.key))
+                if (!stmt.IsValid())
                     return false;
             }
 
-            // It would be much better to do this by ATTACHing the old database and do the copy
-            // in SQL. Unfortunately this triggers memory problems in SQLite Multiple Ciphers and
-            // I don't have time to investigate this right now.
-            if (restore_users) {
-                bool success = gp_domain.db.RunMany(R"(
-                    DELETE FROM dom_permissions;
-                    DELETE FROM dom_users;
-                    DELETE FROM sqlite_sequence WHERE name = 'dom_users';
-                )");
-                if (!success)
+            // Copy permissions
+            {
+                sq_Statement stmt;
+                if (!main_db.Prepare("SELECT userid, instance, permissions FROM dom_permissions", &stmt))
                     return false;
 
-                // Copy users
-                {
-                    sq_Statement stmt;
-                    if (!main_db.Prepare(R"(SELECT userid, username, password_hash,
-                                                   root, local_key, email, phone
-                                            FROM dom_users)", &stmt))
-                        return false;
+                while (stmt.Step()) {
+                    int64_t userid = sqlite3_column_int64(stmt, 0);
+                    const char *instance_key = (const char *)sqlite3_column_text(stmt, 1);
+                    int64_t permissions = sqlite3_column_int(stmt, 2);
 
-                    while (stmt.Step()) {
-                        int64_t userid = sqlite3_column_int64(stmt, 0);
-                        const char *username = (const char *)sqlite3_column_text(stmt, 1);
-                        const char *password_hash = (const char *)sqlite3_column_text(stmt, 2);
-                        int root = sqlite3_column_int(stmt, 3);
-                        const char *local_key = (const char *)sqlite3_column_text(stmt, 4);
-                        const char *email = (const char *)sqlite3_column_text(stmt, 5);
-                        const char *phone = (const char *)sqlite3_column_text(stmt, 6);
-
-                        if (!gp_domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                                        root, local_key, email, phone)
-                                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
-                                              userid, username, password_hash, root, local_key, email, phone))
-                            return false;
-                    }
-                    if (!stmt.IsValid())
+                    if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
+                                             VALUES (?1, ?2, ?3))",
+                                          userid, instance_key, permissions))
                         return false;
                 }
-
-                // Copy permissions
-                {
-                    sq_Statement stmt;
-                    if (!main_db.Prepare("SELECT userid, instance, permissions FROM dom_permissions", &stmt))
-                        return false;
-
-                    while (stmt.Step()) {
-                        int64_t userid = sqlite3_column_int64(stmt, 0);
-                        const char *instance_key = (const char *)sqlite3_column_text(stmt, 1);
-                        int64_t permissions = sqlite3_column_int(stmt, 2);
-
-                        if (!gp_domain.db.Run(R"(INSERT INTO dom_permissions (userid, instance, permissions)
-                                                 VALUES (?1, ?2, ?3))",
-                                              userid, instance_key, permissions))
-                            return false;
-                    }
-                    if (!stmt.IsValid())
-                        return false;
-                }
+                if (!stmt.IsValid())
+                    return false;
             }
+        }
 
 #if defined(__linux__) && defined(RENAME_EXCHANGE)
-            if (renameat2(AT_FDCWD, gp_domain.config.instances_directory,
-                          AT_FDCWD, tmp_directory, RENAME_EXCHANGE) < 0) {
-                LogDebug("Failed to swap directories atomically: %1", strerror(errno));
+        if (renameat2(AT_FDCWD, gp_domain.config.instances_directory,
+                      AT_FDCWD, tmp_directory, RENAME_EXCHANGE) < 0) {
+            LogDebug("Failed to swap directories atomically: %1", strerror(errno));
 
 #else
-            if (true) {
+        if (true) {
 #endif
-                swap_directory = Fmt(&io->allocator, "%1%/%2", gp_domain.config.tmp_directory, FmtRandom(24)).ptr;
+            swap_directory = Fmt(io->Allocator(), "%1%/%2", gp_domain.config.tmp_directory, FmtRandom(24)).ptr;
 
-                unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
+            unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
 
-                // Non atomic swap but it is hard to do better here
-                if (!RenameFile(gp_domain.config.instances_directory, swap_directory, flags))
-                    return false;
-                if (!RenameFile(tmp_directory, gp_domain.config.instances_directory, flags)) {
-                    // If this goes wrong, we're completely screwed :)
-                    // At least on Linux we have some hope to avoid this problem
-                    RenameFile(swap_directory, gp_domain.config.instances_directory, flags);
-                    return false;
-                }
-            } else {
-                swap_directory = tmp_directory;
+            // Non atomic swap but it is hard to do better here
+            if (!RenameFile(gp_domain.config.instances_directory, swap_directory, flags))
+                return false;
+            if (!RenameFile(tmp_directory, gp_domain.config.instances_directory, flags)) {
+                // If this goes wrong, we're completely screwed :)
+                // At least on Linux we have some hope to avoid this problem
+                RenameFile(swap_directory, gp_domain.config.instances_directory, flags);
+                return false;
             }
+        } else {
+            swap_directory = tmp_directory;
+        }
 
-            RG_ASSERT(tmp_filenames.len == entries.len + 2);
-            tmp_filenames.RemoveFrom(2);
-            tmp_directory = nullptr;
+        RG_ASSERT(tmp_filenames.len == entries.len + 2);
+        tmp_filenames.RemoveFrom(2);
+        tmp_directory = nullptr;
 
-            return true;
-        });
-        if (!success)
-            return;
-
-        if (!gp_domain.SyncAll(true))
-            return;
-
-        io->AttachText(200, "{}", "application/json");
+        return true;
     });
+    if (!success)
+        return;
+
+    if (!gp_domain.SyncAll(true))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
@@ -2801,146 +2785,144 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to create users");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *username = nullptr;
-        const char *password = nullptr;
-        bool change_password = true;
-        bool confirm = false;
-        const char *email = nullptr;
-        const char *phone = nullptr;
-        bool root = false;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(4), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *username = nullptr;
+    const char *password = nullptr;
+    bool change_password = true;
+    bool confirm = false;
+    const char *email = nullptr;
+    const char *phone = nullptr;
+    bool root = false;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(4), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "username") {
-                    parser.ParseString(&username);
-                } else if (key == "password") {
-                    parser.ParseString(&password);
-                } else if (key == "change_password") {
-                    parser.ParseBool(&change_password);
-                } else if (key == "confirm") {
-                    parser.ParseBool(&confirm);
-                } else if (key == "email") {
-                    parser.ParseString(&email);
-                } else if (key == "phone") {
-                    parser.ParseString(&phone);
-                } else if (key == "root") {
-                    parser.ParseBool(&root);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "username") {
+                parser.ParseString(&username);
+            } else if (key == "password") {
+                parser.ParseString(&password);
+            } else if (key == "change_password") {
+                parser.ParseBool(&change_password);
+            } else if (key == "confirm") {
+                parser.ParseBool(&confirm);
+            } else if (key == "email") {
+                parser.ParseString(&email);
+            } else if (key == "phone") {
+                parser.ParseString(&phone);
+            } else if (key == "root") {
+                parser.ParseBool(&root);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check missing or invalid values
-        {
-            bool valid = true;
-
-            if (!username || !password) {
-                LogError("Missing 'username' or 'password' parameter");
-                valid = false;
-            }
-            if (username && !CheckUserName(username)) {
-                valid = false;
-            }
-            if (password && !password[0]) {
-                LogError("Empty password");
-                valid = false;
-            }
-            if (email && !strchr(email, '@')) {
-                LogError("Invalid email address format");
-                valid = false;
-            }
-            if (phone && phone[0] != '+') {
-                LogError("Invalid phone number format (prefix is mandatory)");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Safety checks
-        if (root && !session->IsRoot()) {
-            LogError("You cannot create a root user");
-            io->AttachError(403);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
+    }
 
-        // Hash password
-        char hash[PasswordHashBytes];
-        if (!HashPassword(password, hash))
-            return;
+    // Check missing or invalid values
+    {
+        bool valid = true;
 
-        // Create local key
-        char local_key[45];
-        {
-            uint8_t buf[32];
-            FillRandomSafe(buf);
-            sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+        if (!username || !password) {
+            LogError("Missing 'username' or 'password' parameter");
+            valid = false;
+        }
+        if (username && !CheckUserName(username)) {
+            valid = false;
+        }
+        if (password && !password[0]) {
+            LogError("Empty password");
+            valid = false;
+        }
+        if (email && !strchr(email, '@')) {
+            LogError("Invalid email address format");
+            valid = false;
+        }
+        if (phone && phone[0] != '+') {
+            LogError("Invalid phone number format (prefix is mandatory)");
+            valid = false;
         }
 
-        gp_domain.db.Transaction([&]() {
-            // Check for existing user
-            {
-                sq_Statement stmt;
-                if (!gp_domain.db.Prepare("SELECT userid FROM dom_users WHERE username = ?1", &stmt))
-                    return false;
-                sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
 
-                if (stmt.Step()) {
-                    LogError("User '%1' already exists", username);
-                    io->AttachError(409);
-                    return false;
-                } else if (!stmt.IsValid()) {
-                    return false;
-                }
+    // Safety checks
+    if (root && !session->IsRoot()) {
+        LogError("You cannot create a root user");
+        io->SendError(403);
+        return;
+    }
+
+    // Hash password
+    char hash[PasswordHashBytes];
+    if (!HashPassword(password, hash))
+        return;
+
+    // Create local key
+    char local_key[45];
+    {
+        uint8_t buf[32];
+        FillRandomSafe(buf);
+        sodium_bin2base64(local_key, RG_SIZE(local_key), buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+    }
+
+    gp_domain.db.Transaction([&]() {
+        // Check for existing user
+        {
+            sq_Statement stmt;
+            if (!gp_domain.db.Prepare("SELECT userid FROM dom_users WHERE username = ?1", &stmt))
+                return false;
+            sqlite3_bind_text(stmt, 1, username, -1, SQLITE_STATIC);
+
+            if (stmt.Step()) {
+                LogError("User '%1' already exists", username);
+                io->SendError(409);
+                return false;
+            } else if (!stmt.IsValid()) {
+                return false;
             }
+        }
 
-            // Log action
-            int64_t time = GetUnixTime();
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5))",
-                                  time, request.client_addr, "create_user", session->username,
-                                  username))
-                return false;
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                 VALUES (?1, ?2, ?3, ?4, ?5))",
+                              time, request.client_addr, "create_user", session->username,
+                              username))
+            return false;
 
-            // Create user
-            if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, change_password,
-                                                            email, phone, root, local_key, confirm)
-                                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
-                                  username, hash, 0 + change_password, email, phone, 0 + root, local_key,
-                                  confirm ? "TOTP" : nullptr))
-                return false;
+        // Create user
+        if (!gp_domain.db.Run(R"(INSERT INTO dom_users (username, password_hash, change_password,
+                                                        email, phone, root, local_key, confirm)
+                                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8))",
+                              username, hash, 0 + change_password, email, phone, 0 + root, local_key,
+                              confirm ? "TOTP" : nullptr))
+            return false;
 
-            io->AttachText(200, "{}", "application/json");
-            return true;
-        });
+        io->SendText(200, "{}", "application/json");
+        return true;
     });
 }
 
@@ -2950,175 +2932,173 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to edit users");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        int64_t userid = -1;
-        const char *username = nullptr;
-        const char *password = nullptr;
-        bool change_password = true;
-        bool confirm = false, set_confirm = false;
-        bool reset_secret = false;
-        const char *email = nullptr;
-        const char *phone = nullptr;
-        bool root = false, set_root = false;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(4), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    int64_t userid = -1;
+    const char *username = nullptr;
+    const char *password = nullptr;
+    bool change_password = true;
+    bool confirm = false, set_confirm = false;
+    bool reset_secret = false;
+    const char *email = nullptr;
+    const char *phone = nullptr;
+    bool root = false, set_root = false;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(4), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "userid") {
-                    parser.ParseInt(&userid);
-                } else if (key == "username") {
-                    parser.SkipNull() || parser.ParseString(&username);
-                } else if (key == "password") {
-                    parser.SkipNull() || parser.ParseString(&password);
-                } else if (key == "change_password") {
-                    parser.SkipNull() || parser.ParseBool(&change_password);
-                } else if (key == "confirm") {
-                    if (!parser.SkipNull()) {
-                        parser.ParseBool(&confirm);
-                        set_confirm = true;
-                    }
-                } else if (key == "reset_secret") {
-                    parser.SkipNull() || parser.ParseBool(&reset_secret);
-                } else if (key == "email") {
-                    parser.SkipNull() || parser.ParseString(&email);
-                } else if (key == "phone") {
-                    parser.SkipNull() || parser.ParseString(&phone);
-                } else if (key == "root") {
-                    if (!parser.SkipNull()) {
-                        parser.ParseBool(&root);
-                        set_root = true;
-                    }
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
+            if (key == "userid") {
+                parser.ParseInt(&userid);
+            } else if (key == "username") {
+                parser.SkipNull() || parser.ParseString(&username);
+            } else if (key == "password") {
+                parser.SkipNull() || parser.ParseString(&password);
+            } else if (key == "change_password") {
+                parser.SkipNull() || parser.ParseBool(&change_password);
+            } else if (key == "confirm") {
+                if (!parser.SkipNull()) {
+                    parser.ParseBool(&confirm);
+                    set_confirm = true;
                 }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            } else if (key == "reset_secret") {
+                parser.SkipNull() || parser.ParseBool(&reset_secret);
+            } else if (key == "email") {
+                parser.SkipNull() || parser.ParseString(&email);
+            } else if (key == "phone") {
+                parser.SkipNull() || parser.ParseString(&phone);
+            } else if (key == "root") {
+                if (!parser.SkipNull()) {
+                    parser.ParseBool(&root);
+                    set_root = true;
+                }
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check missing or invalid values
-        {
-            bool valid = true;
-
-            if (userid < 0) {
-                LogError("Missing or invalid 'userid' parameter");
-                valid = false;
-            }
-            if (username && !CheckUserName(username)) {
-                valid = false;
-            }
-            if (password && !password[0]) {
-                LogError("Empty password");
-                valid = false;
-            }
-            if (email && email[0] && !strchr(email, '@')) {
-                LogError("Invalid email address format");
-                valid = false;
-            }
-            if (phone && phone[0] && phone[0] != '+') {
-                LogError("Invalid phone number format (prefix is mandatory)");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Safety checks
-        if (root && !session->IsRoot()) {
-            LogError("You cannot create a root user");
-            io->AttachError(403);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
-        if (userid == session->userid && set_root && root != session->is_root) {
-            LogError("You cannot change your root privileges");
-            io->AttachError(403);
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (userid < 0) {
+            LogError("Missing or invalid 'userid' parameter");
+            valid = false;
+        }
+        if (username && !CheckUserName(username)) {
+            valid = false;
+        }
+        if (password && !password[0]) {
+            LogError("Empty password");
+            valid = false;
+        }
+        if (email && email[0] && !strchr(email, '@')) {
+            LogError("Invalid email address format");
+            valid = false;
+        }
+        if (phone && phone[0] && phone[0] != '+') {
+            LogError("Invalid phone number format (prefix is mandatory)");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Safety checks
+    if (root && !session->IsRoot()) {
+        LogError("You cannot create a root user");
+        io->SendError(403);
+        return;
+    }
+    if (userid == session->userid && set_root && root != session->is_root) {
+        LogError("You cannot change your root privileges");
+        io->SendError(403);
+        return;
+    }
+
+    // Hash password
+    char hash[PasswordHashBytes];
+    if (password && !HashPassword(password, hash))
+        return;
+
+    // Check for existing user
+    {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare("SELECT root FROM dom_users WHERE userid = ?1", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, userid);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User ID '%1' does not exist", userid);
+                io->SendError(404);
+            }
             return;
         }
 
-        // Hash password
-        char hash[PasswordHashBytes];
-        if (password && !HashPassword(password, hash))
-            return;
+        if (!session->IsRoot()) {
+            bool is_root = (sqlite3_column_int(stmt, 0) == 1);
 
-        // Check for existing user
-        {
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT root FROM dom_users WHERE userid = ?1", &stmt))
+            if (is_root) {
+                LogError("User ID '%1' does not exist", userid);
+                io->SendError(404);
                 return;
-            sqlite3_bind_int64(stmt, 1, userid);
-
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("User ID '%1' does not exist", userid);
-                    io->AttachError(404);
-                }
-                return;
-            }
-
-            if (!session->IsRoot()) {
-                bool is_root = (sqlite3_column_int(stmt, 0) == 1);
-
-                if (is_root) {
-                    LogError("User ID '%1' does not exist", userid);
-                    io->AttachError(404);
-                    return;
-                }
             }
         }
+    }
 
-        gp_domain.db.Transaction([&]() {
-            // Log action
-            int64_t time = GetUnixTime();
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5))",
-                                  time, request.client_addr, "edit_user", session->username,
-                                  username))
-                return false;
+    gp_domain.db.Transaction([&]() {
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                 VALUES (?1, ?2, ?3, ?4, ?5))",
+                              time, request.client_addr, "edit_user", session->username,
+                              username))
+            return false;
 
-            // Edit user
-            if (username && !gp_domain.db.Run("UPDATE dom_users SET username = ?2 WHERE userid = ?1", userid, username))
-                return false;
-            if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
-                return false;
-            if (change_password && !gp_domain.db.Run("UPDATE dom_users SET change_password = ?2 WHERE userid = ?1", userid, 0 + change_password))
-                return false;
-            if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm ? "TOTP" : nullptr))
-                return false;
-            if (reset_secret && !gp_domain.db.Run("UPDATE dom_users SET secret = NULL WHERE userid = ?1", userid))
-                return false;
-            if (email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
-                return false;
-            if (phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
-                return false;
-            if (set_root && !gp_domain.db.Run("UPDATE dom_users SET root = ?2 WHERE userid = ?1", userid, 0 + root))
-                return false;
+        // Edit user
+        if (username && !gp_domain.db.Run("UPDATE dom_users SET username = ?2 WHERE userid = ?1", userid, username))
+            return false;
+        if (password && !gp_domain.db.Run("UPDATE dom_users SET password_hash = ?2 WHERE userid = ?1", userid, hash))
+            return false;
+        if (change_password && !gp_domain.db.Run("UPDATE dom_users SET change_password = ?2 WHERE userid = ?1", userid, 0 + change_password))
+            return false;
+        if (set_confirm && !gp_domain.db.Run("UPDATE dom_users SET confirm = ?2 WHERE userid = ?1", userid, confirm ? "TOTP" : nullptr))
+            return false;
+        if (reset_secret && !gp_domain.db.Run("UPDATE dom_users SET secret = NULL WHERE userid = ?1", userid))
+            return false;
+        if (email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
+            return false;
+        if (phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
+            return false;
+        if (set_root && !gp_domain.db.Run("UPDATE dom_users SET root = ?2 WHERE userid = ?1", userid, 0 + root))
+            return false;
 
-            io->AttachText(200, "{}", "application/json");
-            return true;
-        });
+        io->SendText(200, "{}", "application/json");
+        return true;
     });
 }
 
@@ -3128,102 +3108,100 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to delete users");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        int64_t userid = -1;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    int64_t userid = -1;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "userid") {
-                    parser.ParseInt(&userid);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "userid") {
+                parser.ParseInt(&userid);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
 
-        // Check missing values
-        if (userid < 0) {
-            LogError("Missing or invalid 'userid' parameter");
-            io->AttachError(422);
+    // Check missing values
+    if (userid < 0) {
+        LogError("Missing or invalid 'userid' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    // Safety checks
+    if (userid == session->userid) {
+        LogError("You cannot delete yourself");
+        io->SendError(403);
+        return;
+    }
+
+    // Get user information
+    const char *username;
+    const char *local_key;
+    {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare("SELECT username, local_key, root FROM dom_users WHERE userid = ?1", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, userid);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("User ID '%1' does not exist", userid);
+                io->SendError(404);
+            }
             return;
         }
 
-        // Safety checks
-        if (userid == session->userid) {
-            LogError("You cannot delete yourself");
-            io->AttachError(403);
-            return;
-        }
+        if (!session->IsRoot()) {
+            bool is_root = (sqlite3_column_int(stmt, 2) == 1);
 
-        // Get user information
-        const char *username;
-        const char *local_key;
-        {
-            sq_Statement stmt;
-            if (!gp_domain.db.Prepare("SELECT username, local_key, root FROM dom_users WHERE userid = ?1", &stmt))
-                return;
-            sqlite3_bind_int64(stmt, 1, userid);
-
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("User ID '%1' does not exist", userid);
-                    io->AttachError(404);
-                }
+            if (is_root) {
+                LogError("User ID '%1' does not exist", userid);
+                io->SendError(404);
                 return;
             }
-
-            if (!session->IsRoot()) {
-                bool is_root = (sqlite3_column_int(stmt, 2) == 1);
-
-                if (is_root) {
-                    LogError("User ID '%1' does not exist", userid);
-                    io->AttachError(404);
-                    return;
-                }
-            }
-
-            username = DuplicateString((const char *)sqlite3_column_text(stmt, 0), &io->allocator).ptr;
-            local_key = DuplicateString((const char *)sqlite3_column_text(stmt, 1), &io->allocator).ptr;
         }
 
-        gp_domain.db.Transaction([&]() {
-            // Log action
-            int64_t time = GetUnixTime();
-            if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
-                                     VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6))",
-                                  time, request.client_addr, "delete_user", session->username,
-                                  username, local_key))
-                return false;
+        username = DuplicateString((const char *)sqlite3_column_text(stmt, 0), io->Allocator()).ptr;
+        local_key = DuplicateString((const char *)sqlite3_column_text(stmt, 1), io->Allocator()).ptr;
+    }
 
-            if (!gp_domain.db.Run("DELETE FROM dom_users WHERE userid = ?1", userid))
-                return false;
+    gp_domain.db.Transaction([&]() {
+        // Log action
+        int64_t time = GetUnixTime();
+        if (!gp_domain.db.Run(R"(INSERT INTO adm_events (time, address, type, username, details)
+                                 VALUES (?1, ?2, ?3, ?4, ?5 || ':' || ?6))",
+                              time, request.client_addr, "delete_user", session->username,
+                              username, local_key))
+            return false;
 
-            io->AttachText(200, "{}", "application/json");
-            return true;
-        });
+        if (!gp_domain.db.Run("DELETE FROM dom_users WHERE userid = ?1", userid))
+            return false;
+
+        io->SendText(200, "{}", "application/json");
+        return true;
     });
 }
 
@@ -3233,12 +3211,12 @@ void HandleUserList(const http_RequestInfo &request, http_IO *io)
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->IsAdmin()) {
         LogError("Non-admin users are not allowed to list users");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 

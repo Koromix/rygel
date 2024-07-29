@@ -321,69 +321,67 @@ void PruneSessions()
 
 void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
 {
-    io->RunAsync([=]() {
-        const char *username = nullptr;
-        const char *password = nullptr;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Kibibytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    const char *username = nullptr;
+    const char *password = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
 
-                if (key == "username") {
-                    parser.ParseString(&username);
-                } else if (key == "password") {
-                    parser.ParseString(&password);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (key == "username") {
+                parser.ParseString(&username);
+            } else if (key == "password") {
+                parser.ParseString(&password);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
                 return;
             }
         }
-
-        // Check for missing values
-        if (!username || !password) {
-            LogError("Missing 'username' or 'password' parameter");
-            io->AttachError(422);
+        if (!parser.IsValid()) {
+            io->SendError(422);
             return;
         }
+    }
 
-        int64_t now = GetMonotonicTime();
+    // Check for missing values
+    if (!username || !password) {
+        LogError("Missing 'username' or 'password' parameter");
+        io->SendError(422);
+        return;
+    }
 
-        // Find and validate user
-        const User *user = thop_user_set.FindUser(username);
-        if (!user || !user->password_hash ||
-                crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0) {
-            int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
-            WaitDelay(safety_delay);
+    int64_t now = GetMonotonicTime();
 
-            LogError("Incorrect username or password");
-            io->AttachError(403);
-            return;
-        }
+    // Find and validate user
+    const User *user = thop_user_set.FindUser(username);
+    if (!user || !user->password_hash ||
+            crypto_pwhash_str_verify(user->password_hash, password, strlen(password)) != 0) {
+        int64_t safety_delay = std::max(2000 - GetMonotonicTime() + now, (int64_t)0);
+        WaitDelay(safety_delay);
 
-        // Create session
-        RetainPtr<const User> udata((User *)user, [](User *) {});
-        sessions.Open(request, io, udata);
+        LogError("Incorrect username or password");
+        io->SendError(403);
+        return;
+    }
 
-        io->AttachText(200, "{}", "application/json");
-    });
+    // Create session
+    RetainPtr<const User> udata((User *)user, [](User *) {});
+    sessions.Open(request, io, udata);
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleLogout(const http_RequestInfo &request, const User *, http_IO *io)
 {
     sessions.Close(request, io);
-    io->AttachText(200, "{}", "application/json");
+    io->SendText(200, "{}", "application/json");
 }
 
 }

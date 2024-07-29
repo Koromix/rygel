@@ -30,7 +30,7 @@ void HandleLegacyLoad(InstanceHolder *instance, const http_RequestInfo &request,
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -39,24 +39,24 @@ void HandleLegacyLoad(InstanceHolder *instance, const http_RequestInfo &request,
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!stamp) {
         LogError("User is not allowed to load data");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
     int64_t anchor;
-    if (const char *str = request.GetQueryValue("anchor"); str) {
+    if (const char *str = request.FindGetValue("anchor"); str) {
         if (!ParseInt(str, &anchor)) {
-            io->AttachError(422);
+            io->SendError(422);
             return;
         }
     } else {
         LogError("Missing 'userid' parameter");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
 
@@ -173,7 +173,7 @@ void HandleLegacySave(InstanceHolder *instance, const http_RequestInfo &request,
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -182,12 +182,12 @@ void HandleLegacySave(InstanceHolder *instance, const http_RequestInfo &request,
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!stamp || !stamp->HasPermission(UserPermission::DataEdit)) {
         LogError("User is not allowed to save data");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -204,302 +204,300 @@ void HandleLegacySave(InstanceHolder *instance, const http_RequestInfo &request,
         RG_ASSERT(session->userid < 0);
     }
 
-    io->RunAsync([=]() {
-        HeapArray<SaveRecord> records;
+    HeapArray<SaveRecord> records;
 
-        // Parse records from JSON
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Megabytes(256), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    // Parse records from JSON
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Megabytes(256), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseArray();
-            while (parser.InArray()) {
-                SaveRecord *record = records.AppendDefault();
+        parser.ParseArray();
+        while (parser.InArray()) {
+            SaveRecord *record = records.AppendDefault();
 
-                parser.ParseObject();
-                while (parser.InObject()) {
-                    Span<const char> key = {};
-                    parser.ParseKey(&key);
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> key = {};
+                parser.ParseKey(&key);
 
-                    if (key == "form") {
-                        parser.ParseString(&record->form);
-                    } else if (key == "ulid") {
-                        parser.ParseString(&record->ulid);
-                    } else if (key == "hid") {
-                        switch (parser.PeekToken()) {
-                            case json_TokenType::Null: {
-                                parser.ParseNull();
-                                record->hid = nullptr;
-                            } break;
-                            case json_TokenType::Number: {
-                                int64_t value;
-                                parser.ParseInt(&value);
-                                record->hid = Fmt(&io->allocator, "%1", value).ptr;
-                            } break;
-                            default: {
-                                parser.ParseString(&record->hid);
-                            } break;
-                        }
-                    } else if (key == "parent") {
-                        if (parser.PeekToken() == json_TokenType::Null) {
+                if (key == "form") {
+                    parser.ParseString(&record->form);
+                } else if (key == "ulid") {
+                    parser.ParseString(&record->ulid);
+                } else if (key == "hid") {
+                    switch (parser.PeekToken()) {
+                        case json_TokenType::Null: {
                             parser.ParseNull();
-                            record->parent.ulid = nullptr;
-                            record->parent.version = -1;
-                        } else {
-                            parser.ParseObject();
-                            while (parser.InObject()) {
-                                Span<const char> key2 = {};
-                                parser.ParseKey(&key2);
+                            record->hid = nullptr;
+                        } break;
+                        case json_TokenType::Number: {
+                            int64_t value;
+                            parser.ParseInt(&value);
+                            record->hid = Fmt(io->Allocator(), "%1", value).ptr;
+                        } break;
+                        default: {
+                            parser.ParseString(&record->hid);
+                        } break;
+                    }
+                } else if (key == "parent") {
+                    if (parser.PeekToken() == json_TokenType::Null) {
+                        parser.ParseNull();
+                        record->parent.ulid = nullptr;
+                        record->parent.version = -1;
+                    } else {
+                        parser.ParseObject();
+                        while (parser.InObject()) {
+                            Span<const char> key2 = {};
+                            parser.ParseKey(&key2);
 
-                                if (key2 == "ulid") {
-                                    parser.ParseString(&record->parent.ulid);
-                                } else if (key2 == "version") {
-                                    parser.ParseInt(&record->parent.version);
-                                } else if (parser.IsValid()) {
-                                    LogError("Unknown key '%1' in parent object", key2);
-                                    io->AttachError(422);
-                                    return;
-                                }
-                            }
-
-                            if (!record->parent.ulid || record->parent.version < 0) [[unlikely]] {
-                                LogError("Missing or invalid parent ULID or version");
-                                io->AttachError(422);
+                            if (key2 == "ulid") {
+                                parser.ParseString(&record->parent.ulid);
+                            } else if (key2 == "version") {
+                                parser.ParseInt(&record->parent.version);
+                            } else if (parser.IsValid()) {
+                                LogError("Unknown key '%1' in parent object", key2);
+                                io->SendError(422);
                                 return;
                             }
                         }
-                    } else if (key == "fragments") {
-                        parser.ParseArray();
-                        while (parser.InArray()) {
-                            SaveRecord::Fragment *fragment = record->fragments.AppendDefault();
 
-                            parser.ParseObject();
-                            while (parser.InObject()) {
-                                Span<const char> key2 = {};
-                                parser.ParseKey(&key2);
+                        if (!record->parent.ulid || record->parent.version < 0) [[unlikely]] {
+                            LogError("Missing or invalid parent ULID or version");
+                            io->SendError(422);
+                            return;
+                        }
+                    }
+                } else if (key == "fragments") {
+                    parser.ParseArray();
+                    while (parser.InArray()) {
+                        SaveRecord::Fragment *fragment = record->fragments.AppendDefault();
 
-                                if (key2 == "type") {
-                                    parser.ParseString(&fragment->type);
-                                } else if (key2 == "mtime") {
-                                    parser.ParseString(&fragment->mtime);
-                                } else if (key2 == "fs") {
-                                    parser.ParseInt(&fragment->fs);
-                                } else if (key2 == "page") {
-                                    if (parser.PeekToken() == json_TokenType::Null) {
-                                        parser.ParseNull();
-                                        fragment->page = nullptr;
-                                    } else {
-                                        parser.ParseString(&fragment->page);
-                                    }
-                                } else if (key2 == "json") {
-                                    parser.ParseString(&fragment->json);
-                                } else if (key2 == "tags") {
-                                    parser.ParseString(&fragment->tags);
-                                } else if (parser.IsValid()) {
-                                    LogError("Unknown key '%1' in fragment object", key2);
-                                    io->AttachError(422);
-                                    return;
+                        parser.ParseObject();
+                        while (parser.InObject()) {
+                            Span<const char> key2 = {};
+                            parser.ParseKey(&key2);
+
+                            if (key2 == "type") {
+                                parser.ParseString(&fragment->type);
+                            } else if (key2 == "mtime") {
+                                parser.ParseString(&fragment->mtime);
+                            } else if (key2 == "fs") {
+                                parser.ParseInt(&fragment->fs);
+                            } else if (key2 == "page") {
+                                if (parser.PeekToken() == json_TokenType::Null) {
+                                    parser.ParseNull();
+                                    fragment->page = nullptr;
+                                } else {
+                                    parser.ParseString(&fragment->page);
                                 }
-                            }
-
-                            if (!fragment->type || !fragment->mtime || fragment->fs < 0) [[unlikely]] {
-                                LogError("Missing type, mtime or FS in fragment object");
-                                io->AttachError(422);
-                                return;
-                            }
-                            if (!TestStr(fragment->type, "save") && !TestStr(fragment->type, "delete")) [[unlikely]] {
-                                LogError("Invalid fragment type '%1'", fragment->type);
-                                io->AttachError(422);
-                                return;
-                            }
-                            if (TestStr(fragment->type, "save") && (!fragment->page || !fragment->json.IsValid() ||
-                                                                                       !fragment->tags.IsValid())) {
-                                LogError("Fragment 'save' is missing page or JSON data");
-                                io->AttachError(422);
+                            } else if (key2 == "json") {
+                                parser.ParseString(&fragment->json);
+                            } else if (key2 == "tags") {
+                                parser.ParseString(&fragment->tags);
+                            } else if (parser.IsValid()) {
+                                LogError("Unknown key '%1' in fragment object", key2);
+                                io->SendError(422);
                                 return;
                             }
                         }
-                    } else if (parser.IsValid()) {
-                        LogError("Unknown key '%1' in record object", key);
-                        io->AttachError(422);
-                        return;
+
+                        if (!fragment->type || !fragment->mtime || fragment->fs < 0) [[unlikely]] {
+                            LogError("Missing type, mtime or FS in fragment object");
+                            io->SendError(422);
+                            return;
+                        }
+                        if (!TestStr(fragment->type, "save") && !TestStr(fragment->type, "delete")) [[unlikely]] {
+                            LogError("Invalid fragment type '%1'", fragment->type);
+                            io->SendError(422);
+                            return;
+                        }
+                        if (TestStr(fragment->type, "save") && (!fragment->page || !fragment->json.IsValid() ||
+                                                                                   !fragment->tags.IsValid())) {
+                            LogError("Fragment 'save' is missing page or JSON data");
+                            io->SendError(422);
+                            return;
+                        }
+                    }
+                } else if (parser.IsValid()) {
+                    LogError("Unknown key '%1' in record object", key);
+                    io->SendError(422);
+                    return;
+                }
+            }
+
+            if (!record->form || !record->ulid) [[unlikely]] {
+                LogError("Missing form or ULID in record object");
+                io->SendError(422);
+                return;
+            }
+
+            record->deleted = record->fragments.len &&
+                              TestStr(record->fragments[record->fragments.len - 1].type, "delete");
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Save to database
+    bool success = instance->db->Transaction([&]() {
+        for (const SaveRecord &record: records) {
+            // Retrieve root ULID
+            char root_ulid[32];
+            if (record.parent.ulid) {
+                sq_Statement stmt;
+                if (!instance->db->Prepare("SELECT root_ulid FROM rec_entries WHERE ulid = ?1", &stmt))
+                    return false;
+                sqlite3_bind_text(stmt, 1, record.parent.ulid, -1, SQLITE_STATIC);
+
+                if (!stmt.Step()) {
+                    if (stmt.IsValid()) {
+                        LogError("Parent record '%1' does not exist", record.parent.ulid);
+                        continue;
+                    } else {
+                        return false;
                     }
                 }
 
-                if (!record->form || !record->ulid) [[unlikely]] {
-                    LogError("Missing form or ULID in record object");
-                    io->AttachError(422);
-                    return;
+                CopyString((const char *)sqlite3_column_text(stmt, 0), root_ulid);
+            } else {
+                CopyString(record.ulid, root_ulid);
+            }
+
+            // Reject restricted users
+            if (!stamp->HasPermission(UserPermission::DataLoad)) {
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(SELECT e.rowid, c.rowid FROM rec_entries e
+                                              LEFT JOIN ins_claims c ON (c.userid = ?1 AND c.ulid = e.ulid)
+                                              WHERE e.ulid = ?2)", &stmt))
+                    return false;
+                sqlite3_bind_int64(stmt, 1, -session->userid);
+                sqlite3_bind_text(stmt, 2, root_ulid, -1, SQLITE_STATIC);
+
+                if (stmt.Step()) {
+                    if (sqlite3_column_type(stmt, 1) != SQLITE_INTEGER) {
+                        LogError("You are not allowed to alter this record");
+                        return false;
+                    }
+                } else if (stmt.IsValid()) {
+                    if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
+                                              ON CONFLICT DO NOTHING)",
+                                           -session->userid, root_ulid))
+                        return false;
+                } else {
+                    return false;
+                }
+            }
+
+            // Save record fragments
+            int64_t anchor = -1;
+            if (record.fragments.len) {
+                for (Size i = 0; i < record.fragments.len; i++) {
+                    const SaveRecord::Fragment &fragment = record.fragments[i];
+
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (ulid, version, type, userid, username,
+                                                                             mtime, fs, page, json, tags)
+                                                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+                                                  ON CONFLICT DO NOTHING
+                                                  RETURNING anchor)",
+                                          &stmt, record.ulid, i + 1, fragment.type, session->userid, session->username,
+                                          fragment.mtime, fragment.fs, fragment.page, fragment.json, fragment.tags.ptr))
+                        return false;
+
+                    if (!stmt.GetSingleValue(&anchor)) {
+                        if (!stmt.IsValid())
+                            return false;
+
+                        LogDebug("Ignoring conflicting fragment %1", i);
+                    }
+                }
+            } else {
+                sq_Statement stmt;
+                if (!instance->db->Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments'", &stmt))
+                    return false;
+
+                if (stmt.Step()) {
+                    anchor = sqlite3_column_int64(stmt, 0) + 1;
+                } else if (stmt.IsValid()) {
+                    anchor = 1;
+                } else {
+                    return false;
+                }
+            }
+            if (anchor < 0)
+                continue;
+
+            // Insert or update record entry
+            int64_t sequence;
+            int64_t rowid;
+            {
+                sq_Statement stmt;
+                if (!instance->db->Prepare(R"(INSERT INTO rec_entries (ulid, sequence, hid, form, parent_ulid,
+                                                                       parent_version, root_ulid, anchor, deleted)
+                                              VALUES (?1, -1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+                                              ON CONFLICT (ulid) DO UPDATE SET hid = IFNULL(excluded.hid, hid),
+                                                                               anchor = excluded.anchor,
+                                                                               deleted = excluded.deleted
+                                              RETURNING sequence, rowid)", &stmt))
+                    return false;
+                sqlite3_bind_text(stmt, 1, record.ulid, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 2, record.hid, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 3, record.form, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 4, record.parent.ulid, -1, SQLITE_STATIC);
+                if (record.parent.version >= 0) {
+                    sqlite3_bind_int64(stmt, 5, record.parent.version);
+                } else {
+                    sqlite3_bind_null(stmt, 5);
+                }
+                sqlite3_bind_text(stmt, 6, root_ulid, -1, SQLITE_STATIC);
+                sqlite3_bind_int64(stmt, 7, anchor);
+                sqlite3_bind_int(stmt, 8, 0 + record.deleted);
+
+                if (!stmt.Step()) {
+                    RG_ASSERT(!stmt.IsValid());
+                    return false;
                 }
 
-                record->deleted = record->fragments.len &&
-                                  TestStr(record->fragments[record->fragments.len - 1].type, "delete");
+                sequence = sqlite3_column_int64(stmt, 0);
+                rowid = sqlite3_column_int64(stmt, 1);
             }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
-                return;
+
+            // Update sequence counter
+            if (sequence < 0) {
+                int64_t counter;
+                {
+                    sq_Statement stmt;
+                    if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
+                                                  VALUES ('record', ?1, 1)
+                                                  ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
+                                                  RETURNING counter)", &stmt, record.form))
+                        return false;
+                    if (!stmt.GetSingleValue(&counter))
+                        return false;
+                }
+
+                if (record.hid) {
+                    if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1",
+                                           rowid, counter))
+                        return false;
+                } else {
+                    if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2, hid = ?2 WHERE rowid = ?1",
+                                           rowid, counter, counter))
+                        return false;
+                }
             }
         }
 
-        // Save to database
-        bool success = instance->db->Transaction([&]() {
-            for (const SaveRecord &record: records) {
-                // Retrieve root ULID
-                char root_ulid[32];
-                if (record.parent.ulid) {
-                    sq_Statement stmt;
-                    if (!instance->db->Prepare("SELECT root_ulid FROM rec_entries WHERE ulid = ?1", &stmt))
-                        return false;
-                    sqlite3_bind_text(stmt, 1, record.parent.ulid, -1, SQLITE_STATIC);
-
-                    if (!stmt.Step()) {
-                        if (stmt.IsValid()) {
-                            LogError("Parent record '%1' does not exist", record.parent.ulid);
-                            continue;
-                        } else {
-                            return false;
-                        }
-                    }
-
-                    CopyString((const char *)sqlite3_column_text(stmt, 0), root_ulid);
-                } else {
-                    CopyString(record.ulid, root_ulid);
-                }
-
-                // Reject restricted users
-                if (!stamp->HasPermission(UserPermission::DataLoad)) {
-                    sq_Statement stmt;
-                    if (!instance->db->Prepare(R"(SELECT e.rowid, c.rowid FROM rec_entries e
-                                                  LEFT JOIN ins_claims c ON (c.userid = ?1 AND c.ulid = e.ulid)
-                                                  WHERE e.ulid = ?2)", &stmt))
-                        return false;
-                    sqlite3_bind_int64(stmt, 1, -session->userid);
-                    sqlite3_bind_text(stmt, 2, root_ulid, -1, SQLITE_STATIC);
-
-                    if (stmt.Step()) {
-                        if (sqlite3_column_type(stmt, 1) != SQLITE_INTEGER) {
-                            LogError("You are not allowed to alter this record");
-                            return false;
-                        }
-                    } else if (stmt.IsValid()) {
-                        if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
-                                                  ON CONFLICT DO NOTHING)",
-                                               -session->userid, root_ulid))
-                            return false;
-                    } else {
-                        return false;
-                    }
-                }
-
-                // Save record fragments
-                int64_t anchor = -1;
-                if (record.fragments.len) {
-                    for (Size i = 0; i < record.fragments.len; i++) {
-                        const SaveRecord::Fragment &fragment = record.fragments[i];
-
-                        sq_Statement stmt;
-                        if (!instance->db->Prepare(R"(INSERT INTO rec_fragments (ulid, version, type, userid, username,
-                                                                                 mtime, fs, page, json, tags)
-                                                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
-                                                      ON CONFLICT DO NOTHING
-                                                      RETURNING anchor)",
-                                              &stmt, record.ulid, i + 1, fragment.type, session->userid, session->username,
-                                              fragment.mtime, fragment.fs, fragment.page, fragment.json, fragment.tags.ptr))
-                            return false;
-
-                        if (!stmt.GetSingleValue(&anchor)) {
-                            if (!stmt.IsValid())
-                                return false;
-
-                            LogDebug("Ignoring conflicting fragment %1", i);
-                        }
-                    }
-                } else {
-                    sq_Statement stmt;
-                    if (!instance->db->Prepare("SELECT seq FROM sqlite_sequence WHERE name = 'rec_fragments'", &stmt))
-                        return false;
-
-                    if (stmt.Step()) {
-                        anchor = sqlite3_column_int64(stmt, 0) + 1;
-                    } else if (stmt.IsValid()) {
-                        anchor = 1;
-                    } else {
-                        return false;
-                    }
-                }
-                if (anchor < 0)
-                    continue;
-
-                // Insert or update record entry
-                int64_t sequence;
-                int64_t rowid;
-                {
-                    sq_Statement stmt;
-                    if (!instance->db->Prepare(R"(INSERT INTO rec_entries (ulid, sequence, hid, form, parent_ulid,
-                                                                           parent_version, root_ulid, anchor, deleted)
-                                                  VALUES (?1, -1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-                                                  ON CONFLICT (ulid) DO UPDATE SET hid = IFNULL(excluded.hid, hid),
-                                                                                   anchor = excluded.anchor,
-                                                                                   deleted = excluded.deleted
-                                                  RETURNING sequence, rowid)", &stmt))
-                        return false;
-                    sqlite3_bind_text(stmt, 1, record.ulid, -1, SQLITE_STATIC);
-                    sqlite3_bind_text(stmt, 2, record.hid, -1, SQLITE_STATIC);
-                    sqlite3_bind_text(stmt, 3, record.form, -1, SQLITE_STATIC);
-                    sqlite3_bind_text(stmt, 4, record.parent.ulid, -1, SQLITE_STATIC);
-                    if (record.parent.version >= 0) {
-                        sqlite3_bind_int64(stmt, 5, record.parent.version);
-                    } else {
-                        sqlite3_bind_null(stmt, 5);
-                    }
-                    sqlite3_bind_text(stmt, 6, root_ulid, -1, SQLITE_STATIC);
-                    sqlite3_bind_int64(stmt, 7, anchor);
-                    sqlite3_bind_int(stmt, 8, 0 + record.deleted);
-
-                    if (!stmt.Step()) {
-                        RG_ASSERT(!stmt.IsValid());
-                        return false;
-                    }
-
-                    sequence = sqlite3_column_int64(stmt, 0);
-                    rowid = sqlite3_column_int64(stmt, 1);
-                }
-
-                // Update sequence counter
-                if (sequence < 0) {
-                    int64_t counter;
-                    {
-                        sq_Statement stmt;
-                        if (!instance->db->Prepare(R"(INSERT INTO seq_counters (type, key, counter)
-                                                      VALUES ('record', ?1, 1)
-                                                      ON CONFLICT (type, key) DO UPDATE SET counter = counter + 1
-                                                      RETURNING counter)", &stmt, record.form))
-                            return false;
-                        if (!stmt.GetSingleValue(&counter))
-                            return false;
-                    }
-
-                    if (record.hid) {
-                        if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2 WHERE rowid = ?1",
-                                               rowid, counter))
-                            return false;
-                    } else {
-                        if (!instance->db->Run("UPDATE rec_entries SET sequence = ?2, hid = ?2 WHERE rowid = ?1",
-                                               rowid, counter, counter))
-                            return false;
-                    }
-                }
-            }
-
-            return true;
-        });
-        if (!success)
-            return;
-
-        io->AttachText(200, "Done!");
+        return true;
     });
+    if (!success)
+        return;
+
+    io->SendText(200, "Done!");
 }
 
 class RecordExporter {
@@ -1054,7 +1052,7 @@ void HandleLegacyExport(InstanceHolder *instance, const http_RequestInfo &reques
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -1062,17 +1060,17 @@ void HandleLegacyExport(InstanceHolder *instance, const http_RequestInfo &reques
 
     if (!session || !session->HasPermission(instance, UserPermission::DataExport)) {
         const InstanceHolder *master = instance->master;
-        const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
+        const char *export_key = !instance->slaves.len ? request.FindHeader("X-Export-Key") : nullptr;
 
         if (!export_key) {
             if (!session) {
                 LogError("User is not logged in");
-                io->AttachError(401);
+                io->SendError(401);
             } else {
                 RG_ASSERT(!session->HasPermission(instance, UserPermission::DataExport));
 
                 LogError("User is not allowed to export data");
-                io->AttachError(403);
+                io->SendError(403);
             }
             return;
         }
@@ -1090,56 +1088,54 @@ void HandleLegacyExport(InstanceHolder *instance, const http_RequestInfo &reques
             return;
         if (!(permissions & (int)UserPermission::DataExport)) {
             LogError("Export key is not valid");
-            io->AttachError(403);
+            io->SendError(403);
             return;
         }
     }
 
-    io->RunAsync([=]() {
-        sq_Statement stmt;
-        if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.ulid, e.hid, lower(e.form), f.type, f.mtime, f.json FROM rec_entries e
-                                      INNER JOIN rec_entries r ON (r.ulid = e.root_ulid)
-                                      INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
-                                      WHERE r.deleted = 0
-                                      ORDER BY f.anchor)", &stmt))
-            return;
+    sq_Statement stmt;
+    if (!instance->db->Prepare(R"(SELECT e.root_ulid, e.ulid, e.hid, lower(e.form), f.type, f.mtime, f.json FROM rec_entries e
+                                  INNER JOIN rec_entries r ON (r.ulid = e.root_ulid)
+                                  INNER JOIN rec_fragments f ON (f.ulid = e.ulid)
+                                  WHERE r.deleted = 0
+                                  ORDER BY f.anchor)", &stmt))
+        return;
 
-        const char *export_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", &io->allocator);
-        RG_DEFER { UnlinkFile(export_filename); };
+    const char *export_filename = CreateUniqueFile(gp_domain.config.tmp_directory, "", ".tmp", io->Allocator());
+    RG_DEFER { UnlinkFile(export_filename); };
 
-        RecordExporter exporter(instance);
+    RecordExporter exporter(instance);
 
-        while (stmt.Step()) {
-            const char *root_ulid = (const char *)sqlite3_column_text(stmt, 0);
-            const char *ulid = (const char *)sqlite3_column_text(stmt, 1);
-            const char *hid = (const char *)sqlite3_column_text(stmt, 2);
-            const char *form = (const char *)sqlite3_column_text(stmt, 3);
-            const char *type = (const char *)sqlite3_column_text(stmt, 4);
-            const char *mtime = (const char *)sqlite3_column_text(stmt, 5);
+    while (stmt.Step()) {
+        const char *root_ulid = (const char *)sqlite3_column_text(stmt, 0);
+        const char *ulid = (const char *)sqlite3_column_text(stmt, 1);
+        const char *hid = (const char *)sqlite3_column_text(stmt, 2);
+        const char *form = (const char *)sqlite3_column_text(stmt, 3);
+        const char *type = (const char *)sqlite3_column_text(stmt, 4);
+        const char *mtime = (const char *)sqlite3_column_text(stmt, 5);
 
-            if (TestStr(type, "save")) {
-                Span<const char> json = MakeSpan((const char *)sqlite3_column_blob(stmt, 6),
-                                                 sqlite3_column_bytes(stmt, 6));
-                if (!exporter.Parse(root_ulid, ulid, hid, form, mtime, json))
-                    return;
-            }
+        if (TestStr(type, "save")) {
+            Span<const char> json = MakeSpan((const char *)sqlite3_column_blob(stmt, 6),
+                                             sqlite3_column_bytes(stmt, 6));
+            if (!exporter.Parse(root_ulid, ulid, hid, form, mtime, json))
+                return;
         }
-        if (!stmt.IsValid())
-            return;
+    }
+    if (!stmt.IsValid())
+        return;
 
-        if (!exporter.Export(export_filename))
-            return;
-        if (!io->AttachFile(200, export_filename))
-            return;
+    if (!exporter.Export(export_filename))
+        return;
 
-        // Ask browser to download
-        {
-            int64_t time = GetUnixTime();
-            const char *disposition = Fmt(&io->allocator, "attachment; filename=\"%1_%2.db\"",
-                                                          instance->key, FmtTimeISO(DecomposeTime(time))).ptr;
-            io->AddHeader("Content-Disposition", disposition);
-        }
-    });
+    // Ask browser to download
+    {
+        int64_t time = GetUnixTime();
+        const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1_%2.db\"",
+                                                       instance->key, FmtTimeISO(DecomposeTime(time))).ptr;
+        io->AddHeader("Content-Disposition", disposition);
+    }
+
+    io->SendFile(200, export_filename);
 }
 
 }

@@ -19,7 +19,7 @@
 #include "mco_casemix.hh"
 #include "mco_info.hh"
 #include "user.hh"
-#include "src/core/http/legacy/http.hh"
+#include "src/core/http/http.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
@@ -144,7 +144,7 @@ static void ProduceStructures(const http_RequestInfo &, const User *user, http_I
 {
     if (!user) {
         LogError("Not allowed to query structures");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -355,16 +355,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 #endif
 
     if (thop_config.require_host) {
-        const char *host = request.GetHeaderValue("Host");
+        const char *host = request.FindGetValue("Host");
 
         if (!host) {
             LogError("Request is missing required Host header");
-            io->AttachError(400);
+            io->SendError(400);
             return;
         }
         if (!TestStr(host, thop_config.require_host)) {
             LogError("Unexpected Host header '%1'", host);
-            io->AttachError(403);
+            io->SendError(403);
             return;
         }
     }
@@ -380,9 +380,9 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // Handle server-side cache validation (ETag)
     {
-        const char *etag = request.GetHeaderValue("If-None-Match");
+        const char *etag = request.FindGetValue("If-None-Match");
         if (etag && TestStr(etag, thop_etag)) {
-            io->AttachEmpty(304);
+            io->SendEmpty(304);
             return;
         }
     }
@@ -396,13 +396,13 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
             // Trim URL prefix (base_url setting)
             while (thop_config.base_url[offset]) {
-                if (request.url[offset] != thop_config.base_url[offset]) {
-                    if (!request.url[offset] && thop_config.base_url[offset] == '/' && !thop_config.base_url[offset + 1]) {
+                if (request.path[offset] != thop_config.base_url[offset]) {
+                    if (!request.path[offset] && thop_config.base_url[offset] == '/' && !thop_config.base_url[offset + 1]) {
                         io->AddHeader("Location", thop_config.base_url);
-                        io->AttachEmpty(301);
+                        io->SendEmpty(301);
                         return;
                     } else {
-                        io->AttachError(404);
+                        io->SendError(404);
                         return;
                     }
                 }
@@ -410,7 +410,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                 offset++;
             }
 
-            url = request.url + offset - 1;
+            url = request.path + offset - 1;
         }
 
         route = routes.Find(url);
@@ -427,7 +427,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             }
 
             if (!route) {
-                io->AttachError(404);
+                io->SendError(404);
                 return;
             }
         }
@@ -436,8 +436,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // Execute route
     switch (route->type) {
         case Route::Type::Asset: {
-            io->AttachAsset(200, route->u.st.asset.data, route->u.st.mimetype, route->u.st.asset.compression_type);
             io->AddCachingHeaders(thop_config.max_age, thop_etag);
+            io->SendAsset(200, route->u.st.asset.data, route->u.st.mimetype, route->u.st.asset.compression_type);
         } break;
 
         case Route::Type::Function: {
@@ -572,7 +572,9 @@ Options:
     // Run!
     LogInfo("Init HTTP server");
     http_Daemon daemon;
-    if (!daemon.Start(thop_config.http, HandleRequest))
+    if (!daemon.Bind(thop_config.http))
+        return 1;
+    if (!daemon.Start(HandleRequest))
         return 1;
 
 #if defined(__linux__)

@@ -28,14 +28,14 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 {
     if (instance->master != instance) {
         LogError("Cannot list files through slave instance");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
     int64_t fs_version;
-    if (const char *str = request.GetQueryValue("version"); str) {
+    if (const char *str = request.FindGetValue("version"); str) {
         if (!ParseInt(str, &fs_version)) {
-            io->AttachError(422);
+            io->SendError(422);
             return;
         }
 
@@ -44,7 +44,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
 
             if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
                 LogError("You cannot access pages in development");
-                io->AttachError(403);
+                io->SendError(403);
                 return;
             }
         }
@@ -94,13 +94,13 @@ static void AddMimeTypeHeader(const char *filename, http_IO *io)
 // Returns true when request has been handled (file exists or an error has occured)
 bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
 {
-    const char *url = request.url + 1 + instance->key.len;
+    const char *url = request.path + 1 + instance->key.len;
 
-    RG_ASSERT(url <= request.url + strlen(request.url));
+    RG_ASSERT(url <= request.path + strlen(request.path));
     RG_ASSERT(url[0] == '/');
 
-    const char *client_etag = request.GetHeaderValue("If-None-Match");
-    const char *client_sha256 = request.GetQueryValue("sha256");
+    const char *client_etag = request.FindHeader("If-None-Match");
+    const char *client_sha256 = request.FindGetValue("sha256");
 
     // Handle special paths
     if (TestStr(url, "/favicon.png")) {
@@ -114,7 +114,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         return false;
     if (instance->master != instance) {
         LogError("Cannot get files through slave instance");
-        io->AttachError(403);
+        io->SendError(403);
         return true;
     }
 
@@ -131,7 +131,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
                 if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
                     LogError("You cannot access pages in development");
-                    io->AttachError(403);
+                    io->SendError(403);
                     return true;
                 }
             }
@@ -162,12 +162,12 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         const char *sha256 = (const char *)sqlite3_column_text(stmt, 2);
 
         if (client_etag && TestStr(client_etag, sha256)) {
-            io->AttachEmpty(304);
+            io->SendEmpty(304);
             return true;
         }
         if (client_sha256 && !TestStr(client_sha256, sha256)) {
             LogError("Fetch refused because of sha256 mismatch");
-            io->AttachError(409);
+            io->SendError(409);
             return true;
         }
 
@@ -202,17 +202,18 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     if (dest_encoding == src_encoding && src_len <= 65536) {
         RG_DEFER { sqlite3_blob_close(src_blob); };
 
-        uint8_t *ptr = (uint8_t *)AllocateRaw(&io->allocator, src_len);
-        io->AddFinalizer([=] { ReleaseRaw(&io->allocator, ptr, src_len); });
+        uint8_t *ptr = (uint8_t *)AllocateRaw(io->Allocator(), src_len);
+        io->AddFinalizer([=] { ReleaseRaw(io->Allocator(), ptr, src_len); });
 
         if (sqlite3_blob_read(src_blob, ptr, (int)src_len, 0) != SQLITE_OK) {
             LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
             return true;
         }
 
-        io->AttachBinary(200, MakeSpan(ptr, src_len));
         io->AddEncodingHeader(dest_encoding);
         AddMimeTypeHeader(filename.ptr, io);
+
+        io->SendBinary(200, MakeSpan(ptr, src_len));
 
         return true;
     }
@@ -220,113 +221,79 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     // The blob needs to remain valid until the end of connection
     io->AddFinalizer([=]() { sqlite3_blob_close(src_blob); });
 
-    io->RunAsync([=]() mutable {
-        // Handle range requests
-        if (src_encoding == CompressionType::None && dest_encoding == src_encoding) {
-            LocalArray<http_ByteRange, 16> ranges;
-            {
-                const char *str = request.GetHeaderValue("Range");
+    // Handle range requests
+    if (src_encoding == CompressionType::None && dest_encoding == src_encoding) {
+        LocalArray<http_ByteRange, 16> ranges;
+        {
+            const char *str = request.FindHeader("Range");
 
-                if (str && !http_ParseRange(str, src_len, &ranges)) {
-                    io->AttachError(416);
-                    return;
-                }
+            if (str && !http_ParseRange(str, src_len, &ranges)) {
+                io->SendError(416);
+                return true;
+            }
+        }
+
+        if (ranges.len >= 2) {
+            char boundary[17];
+            {
+                uint64_t buf;
+                FillRandomSafe(&buf, RG_SIZE(buf));
+                Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
             }
 
-            if (ranges.len >= 2) {
-                char boundary[17];
-                {
-                    uint64_t buf;
-                    FillRandomSafe(&buf, RG_SIZE(buf));
-                    Fmt(boundary, "%1", FmtHex(buf).Pad0(-16));
-                }
-
-                // Boundary strings
-                LocalArray<Span<const char>, RG_LEN(ranges.data) * 2> boundaries;
-                Size total_len = 0;
-                {
-                    const char *mimetype = GetMimeType(GetPathExtension(filename), nullptr);
-
-                    for (Size i = 0; i < ranges.len; i++) {
-                        const http_ByteRange &range = ranges[i];
-
-                        Span<const char> before;
-                        if (mimetype) {
-                            before = Fmt(&io->allocator, "Content-Type: %1\r\n"
-                                                         "Content-Range: bytes %2-%3/%4\r\n\r\n",
-                                         mimetype, range.start, range.end - 1, src_len);
-                        } else {
-                            before = Fmt(&io->allocator, "Content-Range: bytes %1-%2/%3\r\n\r\n",
-                                         range.start, range.end - 1, src_len);
-                        }
-
-                        Span<const char> after;
-                        if (i < ranges.len - 1) {
-                            after = Fmt(&io->allocator, "\r\n--%1\r\n", boundary);
-                        } else {
-                            after = Fmt(&io->allocator, "\r\n--%1--\r\n", boundary);
-                        }
-
-                        boundaries.Append(before);
-                        boundaries.Append(after);
-
-                        total_len += before.len;
-                        total_len += range.end - range.start;
-                        total_len += after.len;
-                    }
-                }
-
-                StreamWriter writer;
-                if (!io->OpenForWrite(206, total_len, dest_encoding, &writer))
-                    return;
-                io->AddEncodingHeader(dest_encoding);
-
-                // Range header
-                {
-                    char buf[512];
-                    io->AddHeader("Content-Type", Fmt(buf, "multipart/byteranges; boundary=%1", boundary).ptr);
-                }
+            // Boundary strings
+            LocalArray<Span<const char>, RG_LEN(ranges.data) * 2> boundaries;
+            Size total_len = 0;
+            {
+                const char *mimetype = GetMimeType(GetPathExtension(filename), nullptr);
 
                 for (Size i = 0; i < ranges.len; i++) {
                     const http_ByteRange &range = ranges[i];
-                    Size range_len = range.end - range.start;
 
-                    writer.Write(boundaries[i * 2]);
-
-                    Size offset = 0;
-                    while (offset < range_len) {
-                        uint8_t buf[16384];
-                        Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
-
-                        if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
-                            LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
-                            return;
-                        }
-
-                        writer.Write(buf, copy_len);
-                        offset += copy_len;
+                    Span<const char> before;
+                    if (mimetype) {
+                        before = Fmt(io->Allocator(), "Content-Type: %1\r\n"
+                                                      "Content-Range: bytes %2-%3/%4\r\n\r\n",
+                                     mimetype, range.start, range.end - 1, src_len);
+                    } else {
+                        before = Fmt(io->Allocator(), "Content-Range: bytes %1-%2/%3\r\n\r\n",
+                                     range.start, range.end - 1, src_len);
                     }
 
-                    writer.Write(boundaries[i * 2 + 1]);
-                }
-                writer.Close();
+                    Span<const char> after;
+                    if (i < ranges.len - 1) {
+                        after = Fmt(io->Allocator(), "\r\n--%1\r\n", boundary);
+                    } else {
+                        after = Fmt(io->Allocator(), "\r\n--%1--\r\n", boundary);
+                    }
 
-                return;
-            } else if (ranges.len == 1) {
-                const http_ByteRange &range = ranges[0];
+                    boundaries.Append(before);
+                    boundaries.Append(after);
+
+                    total_len += before.len;
+                    total_len += range.end - range.start;
+                    total_len += after.len;
+                }
+            }
+
+            // Add headers
+            {
+                char buf[512];
+                Fmt(buf, "multipart/byteranges; boundary=%1", boundary);
+
+                io->AddEncodingHeader(dest_encoding);
+                io->AddHeader("Content-Type", buf);
+            }
+
+            StreamWriter writer;
+            if (!io->OpenForWrite(206, dest_encoding, total_len, &writer))
+                return true;
+
+            for (Size i = 0; i < ranges.len; i++) {
+                const http_ByteRange &range = ranges[i];
                 Size range_len = range.end - range.start;
 
-                StreamWriter writer;
-                if (!io->OpenForWrite(206, range_len, dest_encoding, &writer))
-                    return;
-                io->AddEncodingHeader(dest_encoding);
-                AddMimeTypeHeader(filename.ptr, io);
-
-                // Range header
-                {
-                    char buf[512];
-                    io->AddHeader("Content-Range", Fmt(buf, "bytes %1-%2/%3", range.start, range.end - 1, src_len).ptr);
-                }
+                writer.Write(boundaries[i * 2]);
 
                 Size offset = 0;
                 while (offset < range_len) {
@@ -335,56 +302,92 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
                     if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
                         LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
-                        return;
+                        return true;
                     }
 
                     writer.Write(buf, copy_len);
                     offset += copy_len;
                 }
-                writer.Close();
 
-                return;
-            } else {
-                io->AddHeader("Accept-Ranges", "bytes");
-
-                // Go on with default code path
+                writer.Write(boundaries[i * 2 + 1]);
             }
-        }
+            writer.Close();
 
-        // Default path, for big files and/or transcoding (Gzip to None, etc.)
-        {
+            return true;
+        } else if (ranges.len == 1) {
+            const http_ByteRange &range = ranges[0];
+            Size range_len = range.end - range.start;
+
+            // Add headers
+            {
+                char buf[512];
+                Fmt(buf, "bytes %1-%2/%3", range.start, range.end - 1, src_len);
+
+                io->AddHeader("Content-Range", buf);
+                io->AddEncodingHeader(dest_encoding);
+                AddMimeTypeHeader(filename.ptr, io);
+            }
+
             StreamWriter writer;
-            if (src_encoding == dest_encoding) {
-                src_encoding = CompressionType::None;
-
-                if (!io->OpenForWrite(200, src_len, CompressionType::None, &writer))
-                    return;
-            } else {
-                if (!io->OpenForWrite(200, -1, dest_encoding, &writer))
-                    return;
-            }
-
-            io->AddEncodingHeader(dest_encoding);
-            AddMimeTypeHeader(filename.ptr, io);
+            if (!io->OpenForWrite(206, dest_encoding, range_len, &writer))
+                return  true;
 
             Size offset = 0;
-            StreamReader reader([&](Span<uint8_t> buf) {
-                Size copy_len = std::min(src_len - offset, buf.len);
+            while (offset < range_len) {
+                uint8_t buf[16384];
+                Size copy_len = std::min(range_len - offset, RG_SIZE(buf));
 
-                if (sqlite3_blob_read(src_blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
+                if (sqlite3_blob_read(src_blob, buf, (int)copy_len, (int)(range.start + offset)) != SQLITE_OK) {
                     LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
-                    return (Size)-1;
+                    return true;
                 }
 
+                writer.Write(buf, copy_len);
                 offset += copy_len;
-                return copy_len;
-            }, filename.ptr, src_encoding);
-
-            // Not much we can do at this stage in case of error. Client will get truncated data.
-            SpliceStream(&reader, -1, &writer);
+            }
             writer.Close();
+
+            return true;
+        } else {
+            io->AddHeader("Accept-Ranges", "bytes");
+
+            // Go on with default code path
         }
-    });
+    }
+
+    // Default path, for big files and/or transcoding (Gzip to None, etc.)
+    {
+        io->AddEncodingHeader(dest_encoding);
+        AddMimeTypeHeader(filename.ptr, io);
+
+        StreamWriter writer;
+        if (src_encoding == dest_encoding) {
+            src_encoding = CompressionType::None;
+
+            if (!io->OpenForWrite(200, src_len, &writer))
+                return true;
+        } else {
+            if (!io->OpenForWrite(200, dest_encoding, -1, &writer))
+                return true;
+        }
+
+        Size offset = 0;
+        StreamReader reader([&](Span<uint8_t> buf) {
+            Size copy_len = std::min(src_len - offset, buf.len);
+
+            if (sqlite3_blob_read(src_blob, buf.ptr, (int)copy_len, (int)offset) != SQLITE_OK) {
+                LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
+                return (Size)-1;
+            }
+
+            offset += copy_len;
+            return copy_len;
+        }, filename.ptr, src_encoding);
+
+        // Not much we can do at this stage in case of error. Client will get truncated data.
+        SpliceStream(&reader, -1, &writer);
+        writer.Close();
+    }
 
     return true;
 }
@@ -411,31 +414,31 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to upload files");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    const char *url = request.url + 1 + instance->key.len;
+    const char *url = request.path + 1 + instance->key.len;
     const char *filename = url + 7;
-    const char *client_sha256 = request.GetQueryValue("sha256");
+    const char *client_sha256 = request.FindGetValue("sha256");
 
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
     if (!filename[0]) {
         LogError("Empty filename");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
     if (client_sha256 && !CheckSha256(client_sha256)) {
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
 
@@ -453,136 +456,133 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
                                    filename, client_sha256))
                 return;
 
-            io->AttachText(200, "{}", "application/json");
+            io->SendText(200, "{}", "application/json");
             return;
         } else if (!stmt.IsValid()) {
             return;
         }
     }
 
-    io->RunAsync([=]() {
-        // Create temporary file
-        int fd = -1;
-        const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp",
-                                                    &io->allocator, &fd);
-        if (!tmp_filename)
+    // Create temporary file
+    int fd = -1;
+    const char *tmp_filename = CreateUniqueFile(gp_domain.config.tmp_directory, nullptr, ".tmp", io->Allocator(), &fd);
+    if (!tmp_filename)
+        return;
+    RG_DEFER {
+        CloseDescriptor(fd);
+        UnlinkFile(tmp_filename);
+    };
+
+    CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
+                                                                    : CompressionType::None;
+
+    // Read and compress request body
+    Size total_len = 0;
+    char sha256[65];
+    {
+        StreamWriter writer(fd, "<temp>", 0, compression_type);
+        StreamReader reader;
+        if (!io->OpenForRead(instance->config.max_file_size, &reader))
             return;
-        RG_DEFER {
-            CloseDescriptor(fd);
-            UnlinkFile(tmp_filename);
-        };
 
-        CompressionType compression_type = CanCompressFile(filename) ? CompressionType::Gzip
-                                                                        : CompressionType::None;
+        crypto_hash_sha256_state state;
+        crypto_hash_sha256_init(&state);
 
-        // Read and compress request body
-        Size total_len = 0;
-        char sha256[65];
-        {
-            StreamWriter writer(fd, "<temp>", 0, compression_type);
-            StreamReader reader;
-            if (!io->OpenForRead(instance->config.max_file_size, &reader))
+        do {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = reader.Read(buf.data);
+            if (buf.len < 0)
+                return;
+            total_len += buf.len;
+
+            if (!writer.Write(buf))
                 return;
 
-            crypto_hash_sha256_state state;
-            crypto_hash_sha256_init(&state);
-
-            do {
-                LocalArray<uint8_t, 16384> buf;
-                buf.len = reader.Read(buf.data);
-                if (buf.len < 0)
-                    return;
-                total_len += buf.len;
-
-                if (!writer.Write(buf))
-                    return;
-
-                crypto_hash_sha256_update(&state, buf.data, buf.len);
-            } while (!reader.IsEOF());
-            if (!writer.Close())
-                return;
-
-            uint8_t hash[crypto_hash_sha256_BYTES];
-            crypto_hash_sha256_final(&state, hash);
-            FormatSha256(hash, sha256);
-        }
-
-        // Don't lie to me :)
-        if (client_sha256 && !TestStr(sha256, client_sha256)) {
-            LogError("Upload refused because of sha256 mismatch");
-            io->AttachError(409);
+            crypto_hash_sha256_update(&state, buf.data, buf.len);
+        } while (!reader.IsEOF());
+        if (!writer.Close())
             return;
-        }
 
-        // Copy and commit to database
-        instance->db->Transaction([&]() {
+        uint8_t hash[crypto_hash_sha256_BYTES];
+        crypto_hash_sha256_final(&state, hash);
+        FormatSha256(hash, sha256);
+    }
+
+    // Don't lie to me :)
+    if (client_sha256 && !TestStr(sha256, client_sha256)) {
+        LogError("Upload refused because of sha256 mismatch");
+        io->SendError(409);
+        return;
+    }
+
+    // Copy and commit to database
+    instance->db->Transaction([&]() {
 #if defined(_WIN32)
-            int64_t file_len = _lseeki64(fd, 0, SEEK_CUR);
+        int64_t file_len = _lseeki64(fd, 0, SEEK_CUR);
 #else
-            int64_t file_len = lseek(fd, 0, SEEK_CUR);
+        int64_t file_len = lseek(fd, 0, SEEK_CUR);
 #endif
 
-            if (lseek(fd, 0, SEEK_SET) < 0) {
-                LogError("lseek('<temp>') failed: %1", strerror(errno));
+        if (lseek(fd, 0, SEEK_SET) < 0) {
+            LogError("lseek('<temp>') failed: %1", strerror(errno));
+            return false;
+        }
+
+        int64_t mtime = GetUnixTime();
+
+        int64_t rowid;
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
+                                          VALUES (?1, ?2, ?3, ?4, ?5)
+                                          RETURNING rowid)",
+                                       &stmt, sha256, mtime, CompressionTypeNames[(int)compression_type],
+                                       total_len, sq_Binding::Zeroblob(file_len)))
+                return false;
+            if (!stmt.GetSingleValue(&rowid))
+                return false;
+        }
+
+        sqlite3_blob *blob;
+        if (sqlite3_blob_open(*instance->db, "main", "fs_objects", "blob", rowid, 1, &blob) != SQLITE_OK) {
+            LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
+            return false;
+        }
+        RG_DEFER { sqlite3_blob_close(blob); };
+
+        StreamReader reader(fd, "<temp>");
+        int64_t read_len = 0;
+
+        do {
+            LocalArray<uint8_t, 16384> buf;
+            buf.len = reader.Read(buf.data);
+            if (buf.len < 0)
+                return false;
+
+            if (buf.len + read_len > file_len) {
+                LogError("Temporary file size has changed (bigger)");
                 return false;
             }
-
-            int64_t mtime = GetUnixTime();
-
-            int64_t rowid;
-            {
-                sq_Statement stmt;
-                if (!instance->db->Prepare(R"(INSERT INTO fs_objects (sha256, mtime, compression, size, blob)
-                                              VALUES (?1, ?2, ?3, ?4, ?5)
-                                              RETURNING rowid)",
-                                           &stmt, sha256, mtime, CompressionTypeNames[(int)compression_type],
-                                           total_len, sq_Binding::Zeroblob(file_len)))
-                    return false;
-                if (!stmt.GetSingleValue(&rowid))
-                    return false;
-            }
-
-            sqlite3_blob *blob;
-            if (sqlite3_blob_open(*instance->db, "main", "fs_objects", "blob", rowid, 1, &blob) != SQLITE_OK) {
+            if (sqlite3_blob_write(blob, buf.data, (int)buf.len, (int)read_len) != SQLITE_OK) {
                 LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
                 return false;
             }
-            RG_DEFER { sqlite3_blob_close(blob); };
 
-            StreamReader reader(fd, "<temp>");
-            int64_t read_len = 0;
+            read_len += buf.len;
+        } while (!reader.IsEOF());
+        if (read_len < file_len) {
+            LogError("Temporary file size has changed (truncated)");
+            return false;
+        }
 
-            do {
-                LocalArray<uint8_t, 16384> buf;
-                buf.len = reader.Read(buf.data);
-                if (buf.len < 0)
-                    return false;
+        if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                  VALUES (0, ?1, ?2)
+                                  ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
+                               filename, sha256))
+            return false;
 
-                if (buf.len + read_len > file_len) {
-                    LogError("Temporary file size has changed (bigger)");
-                    return false;
-                }
-                if (sqlite3_blob_write(blob, buf.data, (int)buf.len, (int)read_len) != SQLITE_OK) {
-                    LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
-                    return false;
-                }
-
-                read_len += buf.len;
-            } while (!reader.IsEOF());
-            if (read_len < file_len) {
-                LogError("Temporary file size has changed (truncated)");
-                return false;
-            }
-
-            if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                                      VALUES (0, ?1, ?2)
-                                      ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
-                                   filename, sha256))
-                return false;
-
-            io->AttachText(200, "{}", "application/json");
-            return true;
-        });
+        io->SendText(200, "{}", "application/json");
+        return true;
     });
 }
 
@@ -592,31 +592,31 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to delete files");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    const char *url = request.url + 1 + instance->key.len;
+    const char *url = request.path + 1 + instance->key.len;
     const char *filename = url + 7;
-    const char *client_sha256 = request.GetQueryValue("sha256");
+    const char *client_sha256 = request.FindGetValue("sha256");
 
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
     if (!filename[0]) {
         LogError("Empty filename");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
     if (client_sha256 && !CheckSha256(client_sha256)) {
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
 
@@ -634,15 +634,15 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 
                 if (!TestStr(sha256, client_sha256)) {
                     LogError("Deletion refused because of sha256 mismatch");
-                    io->AttachError(409);
+                    io->SendError(409);
                     return false;
                 }
             }
 
-            io->AttachText(200, "{}", "application/json");
+            io->SendText(200, "{}", "application/json");
             return true;
         } else if (stmt.IsValid()) {
-            io->AttachError(404);
+            io->SendError(404);
             return false;
         } else {
             return false;
@@ -656,19 +656,19 @@ void HandleFileHistory(InstanceHolder *instance, const http_RequestInfo &request
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to consult file history");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    const char *filename = request.GetQueryValue("filename");
+    const char *filename = request.FindGetValue("filename");
     if (!filename) {
         LogError("Missing 'filename' parameter");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
 
@@ -682,7 +682,7 @@ void HandleFileHistory(InstanceHolder *instance, const http_RequestInfo &request
     if (!stmt.Step()) {
         if (stmt.IsValid()) {
             LogError("File '%1' does not exist", filename);
-            io->AttachError(404);
+            io->SendError(404);
         }
         return;
     }
@@ -712,72 +712,70 @@ void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to restore file");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        const char *filename = nullptr;
-        const char *sha256 = nullptr;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Megabytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
-
-            parser.ParseObject();
-            while (parser.InObject()) {
-                Span<const char> key = {};
-                parser.ParseKey(&key);
-
-                if (key == "filename") {
-                    parser.ParseString(&filename);
-                } else if (key == "sha256") {
-                    parser.ParseString(&sha256);
-                } else if (parser.IsValid()) {
-                    LogError("Unexpected key '%1'", key);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        // Check missing or invalid values
-        {
-            bool valid = true;
-
-            if (!filename || !filename[0]) {
-                LogError("Missing or empty 'filename' value");
-                valid = false;
-            }
-            if (!sha256 || !sha256[0]) {
-                LogError("Missing or empty 'sha256' value");
-                valid = false;
-            }
-
-            if (!valid) {
-                io->AttachError(422);
-                return;
-            }
-        }
-
-        if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                                  VALUES (0, ?1, ?2)
-                                  ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
-                               filename, sha256))
+    const char *filename = nullptr;
+    const char *sha256 = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Megabytes(1), &st))
             return;
+        json_Parser parser(&st, io->Allocator());
 
-        io->AttachText(200, "{}", "application/json");
-    });
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "filename") {
+                parser.ParseString(&filename);
+            } else if (key == "sha256") {
+                parser.ParseString(&sha256);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (!filename || !filename[0]) {
+            LogError("Missing or empty 'filename' value");
+            valid = false;
+        }
+        if (!sha256 || !sha256[0]) {
+            LogError("Missing or empty 'sha256' value");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                              VALUES (0, ?1, ?2)
+                              ON CONFLICT DO UPDATE SET sha256 = excluded.sha256)",
+                           filename, sha256))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
@@ -786,28 +784,28 @@ void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, 
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->HasPermission(instance, UserPermission::BuildCode)) {
         LogError("User is not allowed to publish a new version");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
     int64_t from_version = 0;
     int64_t to_version = 0;
-    if (request.GetQueryValue("from") || request.GetQueryValue("to")) {
+    if (request.FindGetValue("from") || request.FindGetValue("to")) {
         bool valid = true;
 
-        if (const char *str = request.GetQueryValue("from"); str) {
+        if (const char *str = request.FindGetValue("from"); str) {
             valid &= ParseInt(str, &from_version);
         } else {
             LogError("Missing 'from' parameter");
             valid = false;
         }
 
-        if (const char *str = request.GetQueryValue("to"); str) {
+        if (const char *str = request.FindGetValue("to"); str) {
             valid &= ParseInt(str, &to_version);
         } else {
             LogError("Missing 'to' parameter");
@@ -815,7 +813,7 @@ void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, 
         }
 
         if (!valid) {
-            io->AttachError(422);
+            io->SendError(422);
             return;
         }
     } else {
@@ -901,118 +899,116 @@ void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->HasPermission(instance, UserPermission::BuildPublish)) {
         LogError("User is not allowed to publish a new version");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    io->RunAsync([=]() {
-        HashMap<const char *, const char *> files;
-        {
-            StreamReader st;
-            if (!io->OpenForRead(Megabytes(1), &st))
-                return;
-            json_Parser parser(&st, &io->allocator);
+    HashMap<const char *, const char *> files;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Megabytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
 
-            parser.ParseObject();
-            while (parser.InObject()) {
-                const char *filename = "";
-                const char *sha256 = "";
+        parser.ParseObject();
+        while (parser.InObject()) {
+            const char *filename = "";
+            const char *sha256 = "";
 
-                parser.ParseKey(&filename);
-                parser.ParseString(&sha256);
+            parser.ParseKey(&filename);
+            parser.ParseString(&sha256);
 
-                bool inserted;
-                files.TrySet(filename, sha256, &inserted);
+            bool inserted;
+            files.TrySet(filename, sha256, &inserted);
 
-                if (!inserted) {
-                    LogError("Duplicate file '%1'", filename);
-                    io->AttachError(422);
-                    return;
-                }
-            }
-            if (!parser.IsValid()) {
-                io->AttachError(422);
+            if (!inserted) {
+                LogError("Duplicate file '%1'", filename);
+                io->SendError(422);
                 return;
             }
         }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
 
-        int64_t version = -1;
+    int64_t version = -1;
 
-        bool success = instance->db->Transaction([&]() {
-            int64_t mtime = GetUnixTime();
+    bool success = instance->db->Transaction([&]() {
+        int64_t mtime = GetUnixTime();
 
-            // Create new version
-            {
-                sq_Statement stmt;
-                if (!instance->db->Prepare(R"(INSERT INTO fs_versions (mtime, userid, username, atomic)
-                                              VALUES (?1, ?2, ?3, 1)
-                                              RETURNING version)",
-                                           &stmt, mtime, session->userid, session->username))
-                    return false;
-                if (!stmt.GetSingleValue(&version))
-                    return false;
+        // Create new version
+        {
+            sq_Statement stmt;
+            if (!instance->db->Prepare(R"(INSERT INTO fs_versions (mtime, userid, username, atomic)
+                                          VALUES (?1, ?2, ?3, 1)
+                                          RETURNING version)",
+                                       &stmt, mtime, session->userid, session->username))
+                return false;
+            if (!stmt.GetSingleValue(&version))
+                return false;
+        }
+
+        for (const auto &file: files.table) {
+            if (!file.key[0]) {
+                LogError("Empty filenames are not allowed");
+                io->SendError(403);
+                return false;
+            }
+            if (PathContainsDotDot(file.key)) {
+                LogError("File name must not contain any '..' component");
+                io->SendError(403);
+                return false;
+            }
+            if (!CheckSha256(file.value)) {
+                io->SendError(422);
+                return false;
             }
 
-            for (const auto &file: files.table) {
-                if (!file.key[0]) {
-                    LogError("Empty filenames are not allowed");
-                    io->AttachError(403);
-                    return false;
-                }
-                if (PathContainsDotDot(file.key)) {
-                    LogError("File name must not contain any '..' component");
-                    io->AttachError(403);
-                    return false;
-                }
-                if (!CheckSha256(file.value)) {
-                    io->AttachError(422);
-                    return false;
-                }
-
-                if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                                          VALUES (?1, ?2, ?3))",
-                                       version, file.key, file.value)) {
-                    if (sqlite3_extended_errcode(*instance->db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
-                        LogError("Object '%1' does not exist", file.value);
-                        io->AttachError(404);
-                    }
-
-                    return false;
-                }
-            }
-
-            // Copy to test version
-            if (!instance->db->Run(R"(UPDATE fs_versions SET mtime = ?1, userid = ?2, username = ?3
-                                      WHERE version = 0)",
-                                   mtime, session->userid, session->username))
-                return false;
-            if (!instance->db->Run(R"(DELETE FROM fs_index WHERE version = 0)"))
-                return false;
             if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
-                                          SELECT 0, filename, sha256 FROM fs_index WHERE version = ?1)", version))
+                                      VALUES (?1, ?2, ?3))",
+                                   version, file.key, file.value)) {
+                if (sqlite3_extended_errcode(*instance->db) == SQLITE_CONSTRAINT_FOREIGNKEY) {
+                    LogError("Object '%1' does not exist", file.value);
+                    io->SendError(404);
+                }
+
                 return false;
+            }
+        }
 
-            if (!instance->db->Run("UPDATE fs_settings SET value = ?1 WHERE key = 'FsVersion'", version))
-                return false;
+        // Copy to test version
+        if (!instance->db->Run(R"(UPDATE fs_versions SET mtime = ?1, userid = ?2, username = ?3
+                                  WHERE version = 0)",
+                               mtime, session->userid, session->username))
+            return false;
+        if (!instance->db->Run(R"(DELETE FROM fs_index WHERE version = 0)"))
+            return false;
+        if (!instance->db->Run(R"(INSERT INTO fs_index (version, filename, sha256)
+                                      SELECT 0, filename, sha256 FROM fs_index WHERE version = ?1)", version))
+            return false;
 
-            const char *json = Fmt(&io->allocator, "{\"version\": %1}", version).ptr;
-            io->AttachText(200, json, "application/json");
+        if (!instance->db->Run("UPDATE fs_settings SET value = ?1 WHERE key = 'FsVersion'", version))
+            return false;
 
-            return true;
-        });
-        if (!success)
-            return;
+        const char *json = Fmt(io->Allocator(), "{\"version\": %1}", version).ptr;
+        io->SendText(200, json, "application/json");
 
-        RG_ASSERT(version >= 0);
-        if (!instance->SyncViews(gp_domain.config.view_directory))
-            return;
-        instance->fs_version = version;
+        return true;
     });
+    if (!success)
+        return;
+
+    RG_ASSERT(version >= 0);
+    if (!instance->SyncViews(gp_domain.config.view_directory))
+        return;
+    instance->fs_version = version;
 }
 
 }

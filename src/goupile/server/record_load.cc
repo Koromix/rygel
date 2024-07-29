@@ -247,7 +247,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -256,32 +256,32 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!stamp) {
         LogError("User is not allowed to list data");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
     int64_t anchor = -1;
     bool allow_deleted = false;
     {
-        if (const char *str = request.GetQueryValue("anchor"); str) {
+        if (const char *str = request.FindGetValue("anchor"); str) {
             if (!ParseInt(str, &anchor)) {
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
             if (anchor <= 0) {
                 LogError("Anchor must be a positive number");
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
         }
 
-        if (const char *str = request.GetQueryValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
-            io->AttachError(422);
+        if (const char *str = request.FindGetValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
+            io->SendError(422);
             return;
         }
 
@@ -289,12 +289,12 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
                 !stamp->HasPermission(UserPermission::DataAudit)) {
             if (anchor >= 0) {
                 LogError("User is not allowed to access historical data");
-                io->AttachError(403);
+                io->SendError(403);
                 return;
             }
             if (allow_deleted) {
                 LogError("User is not allowed to access deleted data");
-                io->AttachError(403);
+                io->SendError(403);
                 return;
             }
         }
@@ -366,7 +366,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -375,12 +375,12 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!stamp) {
         LogError("User is not allowed to load data");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -388,27 +388,27 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
     int64_t anchor = -1;
     bool allow_deleted = false;
     {
-        tid = request.GetQueryValue("tid");
+        tid = request.FindGetValue("tid");
         if (!tid) {
             LogError("Missing 'tid' parameter");
-            io->AttachError(422);
+            io->SendError(422);
             return;
         }
 
-        if (const char *str = request.GetQueryValue("anchor"); str) {
+        if (const char *str = request.FindGetValue("anchor"); str) {
             if (!ParseInt(str, &anchor)) {
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
             if (anchor <= 0) {
                 LogError("Anchor must be a positive number");
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
         }
 
-        if (const char *str = request.GetQueryValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
-            io->AttachError(422);
+        if (const char *str = request.FindGetValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
+            io->SendError(422);
             return;
         }
 
@@ -416,12 +416,12 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
                 !stamp->HasPermission(UserPermission::DataAudit)) {
             if (anchor >= 0) {
                 LogError("User is not allowed to access historical data");
-                io->AttachError(403);
+                io->SendError(403);
                 return;
             }
             if (allow_deleted) {
                 LogError("User is not allowed to access deleted data");
-                io->AttachError(403);
+                io->SendError(403);
                 return;
             }
         }
@@ -445,7 +445,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
     if (!walker.Next()) {
         if (walker.IsValid()) {
             LogError("Thread '%1' does not exist", tid);
-            io->AttachError(404);
+            io->SendError(404);
         }
         return;
     }
@@ -503,7 +503,7 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -511,19 +511,19 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
 
     if (!session) {
         LogError("User is not logged in");
-        io->AttachError(401);
+        io->SendError(401);
         return;
     }
     if (!session->HasPermission(instance, UserPermission::DataAudit)) {
         LogError("User is not allowed to audit data");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
-    const char *tid = request.GetQueryValue("tid");
+    const char *tid = request.FindGetValue("tid");
     if (!tid) {
         LogError("Missing 'tid' parameter");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
 
@@ -540,7 +540,7 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
     if (!stmt.Step()) {
         if (stmt.IsValid()) {
             LogError("Thread '%1' does not exist", tid);
-            io->AttachError(404);
+            io->SendError(404);
         }
         return;
     }
@@ -574,13 +574,13 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
     // Check permissions
     {
-        const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
+        const char *export_key = !instance->slaves.len ? request.FindHeader("X-Export-Key") : nullptr;
 
         if (export_key) {
             const InstanceHolder *master = instance->master;
@@ -598,7 +598,7 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
                 return;
             if (!(permissions & (int)UserPermission::DataExport)) {
                 LogError("Export key is not valid");
-                io->AttachError(403);
+                io->SendError(403);
                 return;
             }
         } else {
@@ -606,11 +606,11 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
 
            if (!session) {
                 LogError("User is not logged in");
-                io->AttachError(401);
+                io->SendError(401);
                 return;
             } else if (!session->HasPermission(instance, UserPermission::DataExport)) {
                 LogError("User is not allowed to export data");
-                io->AttachError(403);
+                io->SendError(403);
                 return;
             }
         }
@@ -619,26 +619,26 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
     int64_t from = 0;
     int64_t to = -1;
     {
-        if (const char *str = request.GetQueryValue("from"); str) {
+        if (const char *str = request.FindGetValue("from"); str) {
             if (!ParseInt(str, &from)) {
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
             if (from < 0) {
                 LogError("From must be 0 or a positive number");
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
         }
 
-        if (const char *str = request.GetQueryValue("to"); str) {
+        if (const char *str = request.FindGetValue("to"); str) {
             if (!ParseInt(str, &to)) {
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
             if (to <= from) {
                 LogError("To must be greater than from");
-                io->AttachError(422);
+                io->SendError(422);
                 return;
             }
         }

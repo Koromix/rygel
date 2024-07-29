@@ -23,10 +23,10 @@ namespace RG {
 static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
                               http_IO *io, LocalDate *out_start_date, LocalDate *out_end_date)
 {
-    const char *str = request.GetQueryValue(key);
+    const char *str = request.FindGetValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        io->AttachError(422);
+        io->SendError(422);
         return false;
     }
 
@@ -54,23 +54,23 @@ static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
 
 invalid:
     LogError("Invalid date range '%1'", str);
-    io->AttachError(422);
+    io->SendError(422);
     return false;
 }
 
 static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *key,
                                  http_IO *io, mco_DispenseMode *out_dispense_mode)
 {
-    const char *str = request.GetQueryValue(key);
+    const char *str = request.FindGetValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        io->AttachError(422);
+        io->SendError(422);
         return false;
     }
 
     if (!OptionToEnumI(mco_DispenseModeOptions, str, out_dispense_mode)) {
         LogError("Invalid '%1' parameter value '%2'", key, str);
-        io->AttachError(422);
+        io->SendError(422);
         return false;
     }
 
@@ -80,10 +80,10 @@ static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *ke
 static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char *key,
                                      http_IO *io, bool *out_apply_coefficient)
 {
-    const char *str = request.GetQueryValue(key);
+    const char *str = request.FindGetValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        io->AttachError(422);
+        io->SendError(422);
         return false;
     }
 
@@ -94,7 +94,7 @@ static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char
         apply_coefficient = false;
     } else {
         LogError("Invalid '%1' parameter value '%2'", key, str);
-        io->AttachError(422);
+        io->SendError(422);
         return false;
     }
 
@@ -105,16 +105,16 @@ static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char
 static bool GetQueryGhmRoot(const http_RequestInfo &request, const char *key,
                             http_IO *io, mco_GhmRootCode *out_ghm_root)
 {
-    const char *str = request.GetQueryValue(key);
+    const char *str = request.FindGetValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
-        io->AttachError(422);
+        io->SendError(422);
         return false;
     }
 
     mco_GhmRootCode ghm_root = mco_GhmRootCode::Parse(str);
     if (!ghm_root.IsValid()) {
-        io->AttachError(422);
+        io->SendError(422);
         return false;
     }
 
@@ -401,7 +401,7 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
 {
     if (!user || !user->CheckPermission(UserPermission::McoCasemix)) {
         LogError("Not allowed to query MCO aggregations");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -414,16 +414,16 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     mco_GhmRootCode ghm_root = {};
     if (!GetQueryDateRange(request, "period", io, &period[0], &period[1]))
         return;
-    if (request.GetQueryValue("diff")) {
+    if (request.FindGetValue("diff")) {
         if (!GetQueryDateRange(request, "diff", io, &diff[0], &diff[1]))
             return;
     }
-    filter = request.GetQueryValue("filter");
+    filter = request.FindGetValue("filter");
     if (!GetQueryDispenseMode(request, "dispense_mode", io, &dispense_mode))
         return;
     if (!GetQueryApplyCoefficient(request, "apply_coefficient", io, &apply_coefficient))
         return;
-    if (request.GetQueryValue("ghm_root")) {
+    if (request.FindGetValue("ghm_root")) {
         if (!GetQueryGhmRoot(request, "ghm_root", io, &ghm_root))
             return;
     }
@@ -431,17 +431,17 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     // Check errors and permissions
     if (diff[0].value && period[0] < diff[1] && period[1] > diff[0]) {
         LogError("Parameters 'period' and 'diff' must not overlap");
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
     if (!user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
     if (filter && !user->CheckPermission(UserPermission::McoFilter)) {
         LogError("User is not allowed to use filters");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -482,11 +482,11 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
         };
 
         if (!aggregate_period(period[0], period[1], 1)) {
-            io->AttachError(422);
+            io->SendError(422);
             return;
         }
         if (diff[0].value && !aggregate_period(diff[0], diff[1], -1)) {
-            io->AttachError(422);
+            io->SendError(422);
             return;
         }
 
@@ -570,7 +570,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
     if (!user || !user->CheckPermission(UserPermission::McoCasemix) ||
                  !user->CheckPermission(UserPermission::McoResults)) {
         LogError("Not allowed to query MCO results");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -584,7 +584,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
         return;
     if (!GetQueryGhmRoot(request, "ghm_root", io, &ghm_root))
         return;
-    filter = request.GetQueryValue("filter");
+    filter = request.FindGetValue("filter");
     if (!GetQueryDispenseMode(request, "dispense_mode", io, &dispense_mode))
         return;
     if (!GetQueryApplyCoefficient(request, "apply_coefficient", io, &apply_coefficent))
@@ -593,12 +593,12 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
     // Check permissions
     if (!user->CheckMcoDispenseMode(dispense_mode)) {
         LogError("User is not allowed to use this dispensation mode");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
     if (filter && !user->CheckPermission(UserPermission::McoFilter)) {
         LogError("User is not allowed to use filters");
-        io->AttachError(403);
+        io->SendError(403);
         return;
     }
 
@@ -784,7 +784,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
         }
     });
     if (!success) {
-        io->AttachError(422);
+        io->SendError(422);
         return;
     }
     json.EndArray();
