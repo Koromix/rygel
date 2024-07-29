@@ -727,7 +727,6 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
             pair.key = key.ptr;
             pair.value = value.ptr;
 
-            LogDebug("GET %1 = %2", pair.key, pair.value);
             out_values->Append(pair);
         }
     }
