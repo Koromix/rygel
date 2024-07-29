@@ -657,6 +657,49 @@ http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct 
     return client;
 }
 
+Size http_IO::ReadDirect(Span<uint8_t> data)
+{
+    Size total = 0;
+
+    if (incoming.extra.len) {
+        Size copy_len = std::min(std::min(incoming.extra.len, data.len), incoming.remaining);
+
+        MemCpy(data.ptr, incoming.extra.ptr, copy_len);
+        incoming.extra.ptr += copy_len;
+        incoming.extra.len -= copy_len;
+
+        total += copy_len;
+        incoming.remaining -= copy_len;
+
+        if (copy_len == data.len)
+            return total;
+
+        data.ptr += copy_len;
+        data.len -= copy_len;
+    }
+
+    if (!incoming.remaining)
+        return total;
+
+    int max = (int)std::min(std::min(data.len, incoming.remaining), (Size)INT_MAX);
+    Size read = recv((SOCKET)socket->sock, (char *)data.ptr, max, 0);
+
+    if (read < 0) {
+        errno = TranslateWinSockError();
+        if (errno != ENOTCONN && errno != ECONNRESET) {
+            LogError("Failed to send to client: %1", strerror(errno));
+        }
+
+        request.keepalive = false;
+        return -1;
+    }
+
+    total += read;
+    incoming.remaining -= read;
+
+    return total;
+}
+
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
     static const Size MaxSend = INT32_MAX - 1;

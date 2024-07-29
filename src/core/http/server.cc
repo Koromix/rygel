@@ -318,6 +318,76 @@ http_IO::~http_IO()
     }
 }
 
+bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
+{
+    RG_ASSERT(socket);
+    RG_ASSERT(!incoming.reading);
+
+    // Only allow Gzip for now, to reduce attack surface
+    CompressionType compression_type = CompressionType::None;
+    if (const char *str = request.FindHeader("Content-Encoding"); str) {
+        if (max_len < 0) {
+            LogError("Refusing Content-Encoding without server limit");
+            SendError(400);
+            return false;
+        }
+
+        if (TestStr(str, "gzip")) {
+            compression_type = CompressionType::Gzip;
+        } else {
+            LogError("Refusing Content-Encoding value other than gzip");
+            SendError(400);
+            return false;
+        }
+    }
+
+    // Require explicit length, which is not-HTTP/1.1 compliant but it will do for now
+    Size len;
+    if (const char *str = request.FindHeader("Content-Length"); str) {
+        if (!ParseInt(str, &len)) [[unlikely]] {
+            SendError(400);
+            return false;
+        }
+        if (len < 0) [[unlikely]] {
+            LogError("Refusing negative Content-Length");
+            SendError(400);
+            return false;
+        }
+    } else {
+        LogError("Refusing request without explicit Content-Length");
+        SendError(400);
+        return false;
+    }
+
+    // See comment before about Content-Length
+    if (const char *transfer = request.FindHeader("Transfer-Encoding"); transfer && transfer[0]) {
+        LogError("Refusing request with Transfer-Encoding");
+        SendError(400);
+        return false;
+    }
+
+    if (max_len >= 0 && len > max_len) {
+        LogError("HTTP body is too big (max = %1)", FmtDiskSize(max_len));
+        SendError(413);
+        return false;
+    }
+
+    incoming.reading = true;
+    incoming.remaining = len;
+
+#if !defined(_WIN32) && !defined(MSG_DONTWAIT)
+    SetSocketNonBlock(socket->sock, false);
+#endif
+
+    bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>", compression_type);
+    RG_ASSERT(success);
+
+    // Additional precaution
+    out_st->SetReadLimit(max_len);
+
+    return true;
+}
+
 void http_IO::AddHeader(Span<const char> key, Span<const char> value)
 {
     RG_ASSERT(!response.started);
@@ -419,6 +489,42 @@ bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType pref
     }
 }
 
+bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, StreamWriter *out_st)
+{
+    RG_ASSERT(socket);
+    RG_ASSERT(!response.started);
+    RG_ASSERT(!request.headers_only);
+
+    response.started = true;
+    response.expected = len;
+
+#if !defined(_WIN32) && !defined(MSG_DONTWAIT)
+    SetSocketNonBlock(socket->sock, false);
+#endif
+#if !defined(_WIN32) && !defined(MSG_MORE)
+    SetSocketRetain(socket->sock, true);
+#endif
+
+    Span<const char> intro = PrepareResponse(status, encoding, len);
+    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
+
+    out_st->Open(write, "<http>");
+    out_st->Write(intro);
+
+    if (len >= 0) {
+        if (encoding == CompressionType::None)
+            return true;
+
+        out_st->Close();
+        return out_st->Open(write, "<http>", encoding);
+    } else {
+        const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
+
+        out_st->Close();
+        return out_st->Open(chunk, "<http>", encoding);
+    }
+}
+
 void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(StreamWriter *)> func)
 {
     RG_ASSERT(socket);
@@ -492,11 +598,8 @@ void http_IO::SendAsset(int status, Span<const uint8_t> data, const char *mimety
             Send(status, dest_encoding, -1, [&](StreamWriter *writer) { return SpliceStream(&reader, -1, writer); });
         }
     } else {
-        if (mimetype) {
-            AddHeader("Content-Type", mimetype);
-        }
-
-        SendBinary(status, data);
+        AddEncodingHeader(dest_encoding);
+        SendBinary(status, data, mimetype);
     }
 }
 
@@ -1029,6 +1132,8 @@ void http_IO::Rearm(int64_t start)
     incoming.pos = 0;
     incoming.intro = {};
     incoming.extra = {};
+    incoming.reading = false;
+    incoming.remaining = 0;
 
     request.keepalive = false;
     request.headers.RemoveFrom(0);

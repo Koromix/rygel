@@ -47,40 +47,51 @@ namespace RG {
 // Sane platform
 static_assert(EAGAIN == EWOULDBLOCK);
 
-bool http_IO::OpenForWrite(int status, CompressionType encoding, Size len, StreamWriter *out_st)
+Size http_IO::ReadDirect(Span<uint8_t> data)
 {
-    RG_ASSERT(socket);
-    RG_ASSERT(!response.started);
-    RG_ASSERT(!request.headers_only);
+    Size total = 0;
 
-    response.started = true;
-    response.expected = len;
+    if (incoming.extra.len) {
+        Size copy_len = std::min(std::min(incoming.extra.len, data.len), incoming.remaining);
 
-#if !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(socket->sock, false);
-#endif
-#if !defined(MSG_MORE)
-    SetSocketRetain(socket->sock, true);
-#endif
+        MemCpy(data.ptr, incoming.extra.ptr, copy_len);
+        incoming.extra.ptr += copy_len;
+        incoming.extra.len -= copy_len;
 
-    Span<const char> intro = PrepareResponse(status, encoding, len);
-    const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
+        total += copy_len;
+        incoming.remaining -= copy_len;
 
-    out_st->Open(write, "<http>");
-    out_st->Write(intro);
+        if (copy_len == data.len)
+            return total;
 
-    if (len >= 0) {
-        if (encoding == CompressionType::None)
-            return true;
-
-        out_st->Close();
-        return out_st->Open(write, "<http>", encoding);
-    } else {
-        const auto chunk = [this](Span<const uint8_t> buf) { return WriteChunked(buf); };
-
-        out_st->Close();
-        return out_st->Open(chunk, "<http>", encoding);
+        data.ptr += copy_len;
+        data.len -= copy_len;
     }
+
+    if (!incoming.remaining)
+        return total;
+
+    Size max = std::min(data.len, incoming.remaining);
+
+restart:
+    Size read = recv(socket->sock, data.ptr, max, 0);
+
+    if (read < 0) {
+        if (errno == EINTR)
+            goto restart;
+
+        if (errno != EPIPE && errno != ECONNRESET) {
+            LogError("Failed to send to client: %1", strerror(errno));
+        }
+
+        request.keepalive = false;
+        return -1;
+    }
+
+    total += read;
+    incoming.remaining -= read;
+
+    return total;
 }
 
 static bool SendFull(int sock, Span<const uint8_t> buf)

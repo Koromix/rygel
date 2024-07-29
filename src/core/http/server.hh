@@ -180,6 +180,9 @@ class http_IO {
         Size pos = 0;
         Span<char> intro = {};
         Span<uint8_t> extra = {};
+
+        bool reading = false;
+        int64_t remaining = 0;
     } incoming;
 
     std::atomic_bool working { false };
@@ -192,8 +195,8 @@ class http_IO {
         HeapArray<std::function<void()>> finalizers;
 
         bool started = false;
-        Size expected = 0;
-        Size sent = 0;
+        int64_t expected = 0;
+        int64_t sent = 0;
     } response;
 
     BlockAllocator allocator { Kibibytes(8) };
@@ -207,13 +210,17 @@ public:
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
     bool NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding);
 
+    bool OpenForRead(int64_t max_len, StreamReader *out_st);
+
     void AddHeader(Span<const char> key, Span<const char> value);
     void AddEncodingHeader(CompressionType encoding);
     void AddCookieHeader(const char *path, const char *name, const char *value,
                          bool http_only = false);
     void AddCachingHeaders(int64_t max_age, const char *etag = nullptr);
 
-    bool OpenForRead(Size max_len, StreamReader *out_st);
+    bool OpenForWrite(int status, CompressionType encoding, int64_t len, StreamWriter *out_st);
+    bool OpenForWrite(int status, int64_t len, StreamWriter *out_st)
+        { return OpenForWrite(status, CompressionType::None, len, out_st); }
 
     void Send(int status, CompressionType encoding, int64_t len, FunctionRef<bool(StreamWriter *)> func);
     void Send(int status, int64_t len, FunctionRef<bool(StreamWriter *)> func)
@@ -228,10 +235,6 @@ public:
     void SendFile(int status, const char *filename, const char *mimetype = nullptr);
     void SendFile(int status, int fd, int64_t len);
 
-    bool OpenForWrite(int status, CompressionType encoding, Size len, StreamWriter *out_st);
-    bool OpenForWrite(int status, Size len, StreamWriter *out_st)
-        { return OpenForWrite(status, CompressionType::None, len, out_st); }
-
     void AddFinalizer(const std::function<void()> &func);
 
 private:
@@ -240,6 +243,8 @@ private:
 
     http_RequestStatus ParseRequest();
     Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len);
+
+    Size ReadDirect(Span<uint8_t> data);
 
     bool WriteDirect(Span<const uint8_t> data);
     bool WriteChunked(Span<const uint8_t> data);
