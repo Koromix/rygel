@@ -593,7 +593,7 @@ bool http_IO::InitAddress()
 
 static inline bool IsFieldKeyValid(Span<const char> key)
 {
-    static RG_CONSTINIT Bitset<256> ValidCharacter = {
+    static RG_CONSTINIT Bitset<256> ValidCharacters = {
         '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '0', '1', '2', '3', '4', '5',
         '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
         'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '^', '_',
@@ -604,13 +604,13 @@ static inline bool IsFieldKeyValid(Span<const char> key)
     if (!key.len)
         return false;
 
-    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacter.Test((uint8_t)c); });
+    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacters.Test((uint8_t)c); });
     return valid;
 }
 
 static inline bool IsFieldValueValid(Span<const char> key)
 {
-    static RG_CONSTINIT Bitset<256> ValidCharacter = {
+    static RG_CONSTINIT Bitset<256> ValidCharacters = {
         ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
         '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
@@ -619,7 +619,7 @@ static inline bool IsFieldValueValid(Span<const char> key)
         'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'
     };
 
-    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacter.Test((uint8_t)c); });
+    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacters.Test((uint8_t)c); });
     return valid;
 }
 
@@ -641,6 +641,11 @@ static Size DecodePath(Span<char> str)
     Size j = 0;
     for (Size i = 0; i < str.len; i++, j++) {
         str[j] = str[i];
+
+        if (!str[i]) [[unlikely]] {
+            LogError("Unexpected NUL byte in HTTP request line");
+            return -1;
+        }
 
         if (str[i] == '%') {
             // This code explictly assumes it is safe to access the two bytes beyond the
@@ -673,6 +678,11 @@ static Size DecodeQueryComponent(Span<char> str)
     Size j = 0;
     for (Size i = 0; i < str.len; i++, j++) {
         str[j] = str[i];
+
+        if (!str[i]) [[unlikely]] {
+            LogError("Unexpected NUL byte in HTTP request line");
+            return -1;
+        }
 
         if (str[i] == '+') {
             str[j] = ' ';
