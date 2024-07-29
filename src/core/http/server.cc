@@ -771,8 +771,8 @@ static Size DecodePath(Span<char> str)
     for (Size i = 0; i < str.len; i++, j++) {
         str[j] = str[i];
 
-        if (!str[i]) [[unlikely]] {
-            LogError("Unexpected NUL byte in HTTP request line");
+        if (IsAsciiControl(str[i])) [[unlikely]] {
+            LogError("Unexpected control character in HTTP request line");
             return -1;
         }
 
@@ -808,8 +808,8 @@ static Size DecodeQueryComponent(Span<char> str)
     for (Size i = 0; i < str.len; i++, j++) {
         str[j] = str[i];
 
-        if (!str[i]) [[unlikely]] {
-            LogError("Unexpected NUL byte in HTTP request line");
+        if (IsAsciiControl(str[i])) [[unlikely]] {
+            LogError("Unexpected control character in HTTP request line");
             return -1;
         }
 
