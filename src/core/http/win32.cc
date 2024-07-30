@@ -74,6 +74,7 @@ struct http_Socket {
     uint8_t accept[2 * AcceptAddressLen];
     std::function<void(DWORD)> execute;
 
+    std::mutex mutex;
     http_IO *client = nullptr;
 
     ~http_Socket()
@@ -113,7 +114,7 @@ public:
     bool Run();
 
 private:
-    void ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client, Size received);
+    void ProcessIncoming(int64_t now, http_Socket *socket, Size received);
 
     bool PostAccept(http_Socket *socket);
     bool PostRead(http_Socket *socket);
@@ -323,10 +324,12 @@ bool http_Dispatcher::Run()
         PendingOperation op = socket ? socket->op : (PendingOperation)key;
 
         switch (op) {
-            case PendingOperation::None: {} break;
+            case PendingOperation::None: { RG_UNREACHABLE(); } break;
 
             case PendingOperation::Accept: {
                 RG_ASSERT(socket);
+
+                std::lock_guard<std::mutex> lock(socket->mutex);
                 socket->op = PendingOperation::None;
 
                 if (--pending_accepts < BaseAccepts) {
@@ -369,6 +372,8 @@ bool http_Dispatcher::Run()
 
             case PendingOperation::Disconnect: {
                 RG_ASSERT(socket);
+
+                std::lock_guard<std::mutex> lock(socket->mutex);
                 socket->op = PendingOperation::None;
 
                 if (!success) [[unlikely]] {
@@ -388,8 +393,8 @@ bool http_Dispatcher::Run()
 
             case PendingOperation::Read: {
                 RG_ASSERT(socket);
-                RG_ASSERT(socket->client);
 
+                std::lock_guard<std::mutex> lock(socket->mutex);
                 socket->op = PendingOperation::None;
 
                 if (!success) [[unlikely]] {
@@ -397,15 +402,13 @@ bool http_Dispatcher::Run()
                     continue;
                 }
 
-                http_IO *client = socket->client;
-
-                ProcessIncoming(now, socket, client, (Size)transferred);
+                ProcessIncoming(now, socket, (Size)transferred);
             } break;
 
             case PendingOperation::Execute: {
                 RG_ASSERT(socket);
-                RG_ASSERT(socket->client);
 
+                std::lock_guard<std::mutex> lock(socket->mutex);
                 socket->op = PendingOperation::None;
 
                 if (!success) [[unlikely]] {
@@ -418,8 +421,8 @@ bool http_Dispatcher::Run()
 
             case PendingOperation::Done: {
                 RG_ASSERT(socket);
-                RG_ASSERT(socket->client);
 
+                std::lock_guard<std::mutex> lock(socket->mutex);
                 socket->op = PendingOperation::None;
 
                 if (!success) [[unlikely]] {
@@ -487,9 +490,9 @@ bool http_Dispatcher::Run()
     RG_UNREACHABLE();
 }
 
-void http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client, Size received)
+void http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, Size received)
 {
-    RG_ASSERT(client == socket->client);
+    http_IO *client = socket->client;
 
     client->incoming.buf.len += received;
     client->incoming.buf.ptr[client->incoming.buf.len] = 0;
@@ -765,7 +768,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     socket->overlapped.OffsetHigh = 0;
     socket->overlapped.Offset = 0;
 
-    DWORD send = (DWORD)std::min(remain, MaxSend) - intro.len;
+    DWORD send = (DWORD)(std::min(remain, MaxSend) - intro.len);
 
     if (!TransmitFile((SOCKET)socket->sock, h, send, 0, &socket->overlapped, &tbuf, 0) &&
             WSAGetLastError() != WSA_IO_PENDING) [[unlikely]] {
