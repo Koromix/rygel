@@ -341,39 +341,13 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
         }
     }
 
-    // Require explicit length, which is not-HTTP/1.1 compliant but it will do for now
-    Size len;
-    if (const char *str = request.FindHeader("Content-Length"); str) {
-        if (!ParseInt(str, &len)) [[unlikely]] {
-            SendError(400);
-            return false;
-        }
-        if (len < 0) [[unlikely]] {
-            LogError("Refusing negative Content-Length");
-            SendError(400);
-            return false;
-        }
-    } else {
-        LogError("Refusing request without explicit Content-Length");
-        SendError(400);
-        return false;
-    }
-
-    // See comment before about Content-Length
-    if (const char *transfer = request.FindHeader("Transfer-Encoding"); transfer && transfer[0]) {
-        LogError("Refusing request with Transfer-Encoding");
-        SendError(400);
-        return false;
-    }
-
-    if (max_len >= 0 && len > max_len) {
+    if (max_len >= 0 && request.body_len > max_len) {
         LogError("HTTP body is too big (max = %1)", FmtDiskSize(max_len));
         SendError(413);
         return false;
     }
 
     incoming.reading = true;
-    incoming.remaining = len;
 
 #if !defined(_WIN32) && !defined(MSG_DONTWAIT)
     SetSocketNonBlock(socket->sock, false);
@@ -494,6 +468,18 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     RG_ASSERT(socket);
     RG_ASSERT(!response.started);
     RG_ASSERT(!request.headers_only);
+
+    // Unfortunately, we need to discard the whole body before we can respond, even if it
+    // was not used / we don't care about it. But do it within limits, and ignore otherwise.
+    {
+        int64_t remaining = request.body_len - incoming.read;
+        int64_t discard = incoming.read + std::min(remaining, (int64_t)Mebibytes(32));
+
+        while (incoming.read < discard) {
+            uint8_t buf[65535];
+            ReadDirect(buf);
+        }
+    }
 
     response.started = true;
     response.expected = len;
@@ -1030,6 +1016,21 @@ http_RequestStatus http_IO::ParseRequest()
             upper = (c == '-');
         }
 
+        // Append to list of headers
+        {
+            key.ptr[key.len] = 0;
+            value.ptr[value.len] = 0;
+
+            if (request.headers.len >= daemon->max_request_headers) [[unlikely]] {
+                LogError("Too many headers, server limit is %1", daemon->max_request_headers);
+                SendError(413);
+                return http_RequestStatus::Close;
+            }
+
+            request.headers.Append({ key.ptr, value.ptr });
+        }
+
+        // Handle special headers
         if (TestStr(key, "Cookie")) {
             Span<char> remain = value;
 
@@ -1061,17 +1062,26 @@ http_RequestStatus http_IO::ParseRequest()
             }
         } else if (TestStr(key, "Connection")) {
             keepalive = !TestStrI(value, "close");
-        } else {
-            key.ptr[key.len] = 0;
-            value.ptr[value.len] = 0;
-
-            if (request.headers.len >= daemon->max_request_headers) [[unlikely]] {
-                LogError("Too many headers, server limit is %1", daemon->max_request_headers);
-                SendError(413);
+        } else if(TestStr(key, "Content-Length")) {
+            if (!ParseInt(value, &request.body_len)) [[unlikely]] {
+                SendError(400);
                 return http_RequestStatus::Close;
             }
 
-            request.headers.Append({ key.ptr, value.ptr });
+            if (request.body_len < 0) [[unlikely]] {
+                LogError("Negative Content-Length is not valid");
+                SendError(400);
+                return http_RequestStatus::Close;
+            }
+            if (request.body_len && request.method == http_RequestMethod::Get) [[unlikely]] {
+                LogError("Refusing to process GET request with body");
+                SendError(400);
+                return http_RequestStatus::Close;
+            }
+        } else if (TestStr(key, "Transfer-Encoding")) {
+            LogError("Requests with Transfer-Encoding are not supported");
+            SendError(501);
+            return http_RequestStatus::Close;
         }
     }
 
@@ -1132,12 +1142,13 @@ void http_IO::Rearm(int64_t start)
     incoming.pos = 0;
     incoming.intro = {};
     incoming.extra = {};
+    incoming.read = 0;
     incoming.reading = false;
-    incoming.remaining = 0;
 
     request.keepalive = false;
     request.headers.RemoveFrom(0);
     request.cookies.RemoveFrom(0);
+    request.body_len = 0;
 
     response.headers.RemoveFrom(0);
     response.finalizers.RemoveFrom(0);

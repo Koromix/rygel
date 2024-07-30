@@ -147,6 +147,7 @@ struct http_RequestInfo {
     bool headers_only = false;
     const char *client_addr = nullptr;
     const char *path = nullptr;
+    int64_t body_len = 0;
 
     HeapArray<http_KeyValue> values;
     HeapArray<http_KeyValue> headers;
@@ -181,8 +182,8 @@ class http_IO {
         Span<char> intro = {};
         Span<uint8_t> extra = {};
 
+        int64_t read = 0;
         bool reading = false;
-        int64_t remaining = 0;
     } incoming;
 
     std::atomic_bool working { false };

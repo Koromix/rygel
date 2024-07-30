@@ -52,14 +52,15 @@ Size http_IO::ReadDirect(Span<uint8_t> data)
     Size total = 0;
 
     if (incoming.extra.len) {
-        Size copy_len = std::min(std::min(incoming.extra.len, data.len), incoming.remaining);
+        int64_t remaining = request.body_len - incoming.read;
+        Size copy_len = (Size)std::min((int64_t)std::min(incoming.extra.len, data.len), remaining);
 
         MemCpy(data.ptr, incoming.extra.ptr, copy_len);
         incoming.extra.ptr += copy_len;
         incoming.extra.len -= copy_len;
 
         total += copy_len;
-        incoming.remaining -= copy_len;
+        incoming.read += copy_len;
 
         if (copy_len == data.len)
             return total;
@@ -68,13 +69,15 @@ Size http_IO::ReadDirect(Span<uint8_t> data)
         data.len -= copy_len;
     }
 
-    if (!incoming.remaining)
+    if (incoming.read == request.body_len)
         return total;
+    RG_ASSERT(incoming.read < request.body_len);
 
-    Size max = std::min(data.len, incoming.remaining);
+    int64_t remaining = request.body_len - incoming.read;
+    Size limit = (Size)std::min((int64_t)data.len, remaining);
 
 restart:
-    Size read = recv(socket->sock, data.ptr, max, 0);
+    Size read = recv(socket->sock, data.ptr, limit, 0);
 
     if (read < 0) {
         if (errno == EINTR)
@@ -89,7 +92,7 @@ restart:
     }
 
     total += read;
-    incoming.remaining -= read;
+    incoming.read += read;
 
     return total;
 }
