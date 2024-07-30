@@ -17,16 +17,24 @@
 
 namespace RG {
 
+enum class SourceType {
+    Local,
+    Remote
+};
+
+struct SourceInfo {
+    SourceType type;
+    const char *path;
+};
+
 struct Config {
     http_Config http { 8000 };
 
-    const char *root_directory = nullptr;
+    HeapArray<SourceInfo> sources;
+
     bool auto_index = true;
     bool explicit_index = false;
     bool auto_html = true;
-
-    const char *proxy_url = nullptr;
-    bool proxy_first = false;
     int connect_timeout = 5000;
     int connect_retries = 3;
     int max_time = 60000;
@@ -39,7 +47,9 @@ struct Config {
 
     BlockAllocator str_alloc;
 
-    bool Validate();
+    void AppendSource(const char *path);
+
+    bool Validate(bool require_sources = true);
 };
 
 enum class HandlerResult {
@@ -83,7 +93,25 @@ static const char *NormalizeURL(const char *url, Allocator *alloc)
     return normalized;
 }
 
-bool Config::Validate()
+static bool LooksLikeURL(const char *path)
+{
+    while (IsAsciiAlphaOrDigit(path[0])) {
+        path++;
+    }
+    return StartsWith(path, "://");
+}
+
+void Config::AppendSource(const char *path)
+{
+    SourceInfo src = {};
+
+    src.type = LooksLikeURL(path) ? SourceType::Remote : SourceType::Local;
+    src.path = DuplicateString(path, &str_alloc).ptr;
+
+    config.sources.Append(src);
+}
+
+bool Config::Validate(bool require_sources)
 {
     bool valid = true;
 
@@ -92,28 +120,45 @@ bool Config::Validate()
         LogError("HTTP MaxAge must be >= 0");
         valid = false;
     }
-    if (!root_directory && !proxy_url) {
-        LogError("Neither file nor reverse proxy is configured");
+
+    if (require_sources && !sources.len) {
+        LogError("No source is configured");
         valid = false;
     }
-    if (root_directory && !TestFile(root_directory, FileType::Directory)) {
-        LogError("Root directory '%1' does not exist", root_directory);
-        valid = false;
+    for (SourceInfo &src: sources) {
+        switch (src.type) {
+            case SourceType::Local: {
+                if (!TestFile(src.path, FileType::Directory)) {
+                    LogError("Directory '%1' does not exist", src.path);
+                    valid = false;
+                }
+            } break;
+
+            case SourceType::Remote: {
+                const char *normalized = NormalizeURL(src.path, &str_alloc);
+
+                src.path = normalized ? normalized : src.path;
+                valid &= !!normalized;
+            } break;
+        }
     }
-    if (proxy_url) {
-        if (auto_index) {
+
+    if (auto_index) {
+        if (sources.len > 1) {
             if (explicit_index) {
-                LogError("AutoIndex is not allowed when a reverse proxy is configured");
+                LogError("AutoIndex is not allowed when multiple sources are configured");
+                valid = false;
+            } else {
+                auto_index = false;
+            }
+        } else if (sources.len == 1 && sources[0].type != SourceType::Local) {
+            if (explicit_index) {
+                LogError("AutoIndex is not allowed when a non-local source is used");
                 valid = false;
             } else {
                 auto_index = false;
             }
         }
-
-        const char *url = NormalizeURL(proxy_url, &str_alloc);
-
-        proxy_url = url ? url : proxy_url;
-        valid &= !!url;
     }
 
     return valid;
@@ -138,11 +183,9 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                 do {
                     valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
                 } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Files") {
+            } else if (prop.section == "Settings") {
                 do {
-                    if (prop.key == "RootDirectory") {
-                        config.root_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
-                    } else if (prop.key == "AutoIndex") {
+                    if (prop.key == "AutoIndex") {
                         if (ParseBool(prop.value, &config.auto_index)) {
                             config.explicit_index = true;
                         } else {
@@ -154,17 +197,6 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                         valid &= ParseDuration(prop.value, &config.max_age);
                     } else if (prop.key == "ETag") {
                         valid &= ParseBool(prop.value, &config.set_etag);
-                    } else {
-                        LogError("Unknown attribute '%1'", prop.key);
-                        valid = false;
-                    }
-                } while (ini.NextInSection(&prop));
-            } else if (prop.section == "Proxy") {
-                do {
-                    if (prop.key == "RemoteUrl") {
-                        config.proxy_url = DuplicateString(prop.value, &config.str_alloc).ptr;
-                    } else if (prop.key == "ProxyFirst") {
-                        valid &= ParseBool(prop.value, &config.proxy_first);
                     } else if (prop.key == "ConnectTimeout") {
                         valid &= ParseDuration(prop.value, &config.connect_timeout);
                     } else if (prop.key == "RetryCount") {
@@ -176,6 +208,15 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
                         }
                     } else if (prop.key == "MaxTime") {
                         valid &= ParseDuration(prop.value, &config.max_time);
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "Sources") {
+                do {
+                    if (prop.key == "Source") {
+                        config.AppendSource(prop.value.ptr);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -201,7 +242,7 @@ static bool LoadConfig(StreamReader *st, Config *out_config)
         return false;
 
     // Default values
-    if (!config.Validate())
+    if (!config.Validate(false))
         return false;
 
     std::swap(*out_config, config);
@@ -431,12 +472,10 @@ R"(<!DOCTYPE html>
     io->SendBinary(200, page, "text/html");
 }
 
-static HandlerResult HandleLocal(const http_RequestInfo &request, http_IO *io)
+static HandlerResult HandleLocal(const http_RequestInfo &request, http_IO *io, const char *dirname)
 {
-    RG_ASSERT(config.root_directory);
-
     Span<const char> relative_url = TrimStrLeft(request.path, "/\\").ptr;
-    Span<const char> filename = NormalizePath(relative_url, config.root_directory, io->Allocator());
+    Span<const char> filename = NormalizePath(relative_url, dirname, io->Allocator());
 
     FileInfo file_info;
     {
@@ -494,10 +533,8 @@ static HandlerResult HandleLocal(const http_RequestInfo &request, http_IO *io)
     }
 }
 
-static HandlerResult HandleProxy(const http_RequestInfo &request, http_IO *io, bool relay404)
+static HandlerResult HandleProxy(const http_RequestInfo &request, http_IO *io, const char *proxy_url, bool relay404)
 {
-    RG_ASSERT(config.proxy_url);
-
     static const char *const OmitHeaders[] = {
         "Host",
         "Referer",
@@ -520,7 +557,7 @@ static HandlerResult HandleProxy(const http_RequestInfo &request, http_IO *io, b
     }
 
     const char *relative_url = TrimStrLeft(request.path, '/').ptr;
-    const char *url = Fmt(io->Allocator(), "%1%2", config.proxy_url, relative_url).ptr;
+    const char *url = Fmt(io->Allocator(), "%1%2", proxy_url, relative_url).ptr;
     HeapArray<curl_slist> curl_headers;
 
     // Copy client headers
@@ -681,16 +718,16 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
             } \
         } while (false)
 
-    if (config.proxy_url && config.proxy_first)
-        TRY(HandleProxy(request, io, !config.root_directory));
-    if (config.root_directory)
-        TRY(HandleLocal(request, io));
-    if (config.proxy_url && !config.proxy_first)
-        TRY(HandleProxy(request, io, !config.root_directory));
+    for (const SourceInfo &src: config.sources) {
+        switch (src.type) {
+            case SourceType::Local: { TRY(HandleLocal(request, io, src.path)); } break;
+            case SourceType::Remote: { TRY(HandleProxy(request, io, src.path, config.sources.len == 1)); } break;
+        }
+    }
 
 #undef TRY
 
-    if (config.proxy_url && config.root_directory) {
+    if (config.sources.len > 1) {
         LogError("Cannot find any source for '%1'", request.path);
     }
     io->SendError(404);
@@ -708,7 +745,7 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [options] [root]%!0
+R"(Usage: %!..+%1 [options] [path or URL...]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -716,9 +753,6 @@ Options:
 
     %!..+-p, --port <port>%!0            Change web server port
                                  %!D..(default: %3)%!0
-
-        %!..+--proxy <url>%!0            Reverse proxy unknown URLs to this server
-        %!..+--proxy_first%!0            Prefer proxy URLs to local files
 
         %!..+--enable_sab%!0             Set headers for SharedArrayBuffer support
 
@@ -777,10 +811,6 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
-            } else if (opt.Test("--proxy", OptionType::Value)) {
-                config.proxy_url = opt.current_value;
-            } else if (opt.Test("--proxy_first")) {
-                config.proxy_first = true;
             } else if (opt.Test("--enable_sab")) {
                 Size j = 0;
                 for (Size i = 0; i < config.headers.len; i++) {
@@ -803,14 +833,15 @@ Options:
             }
         }
 
-        const char *root_directory = opt.ConsumeNonOption();
-        config.root_directory = root_directory ? root_directory : config.root_directory;
+        const char *arg = opt.ConsumeNonOption();
 
-        if (!config_filename && !config.root_directory && !config.proxy_url) {
-            config.root_directory = ".";
+        if (arg) {
+            do {
+                config.AppendSource(arg);
+            } while ((arg = opt.ConsumeNonOption()));
+        } else {
+            config.sources.Append({ SourceType::Local, "." });
         }
-
-        opt.LogUnusedArguments();
 
         // We may have changed some stuff (such as HTTP port), so revalidate
         if (!config.Validate())
