@@ -605,7 +605,6 @@ void http_Dispatcher::DisconnectSocket(http_Socket *socket)
     if (!socket)
         return;
 
-    RG_ASSERT(socket->op == PendingOperation::None);
     RG_ASSERT(socket->connected);
 
     if (socket->client) {
