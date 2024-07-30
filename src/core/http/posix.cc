@@ -170,7 +170,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
-        offset += sent;
         remain -= sent;
     }
 #elif defined(__FreeBSD__) || defined(__APPLE__)
