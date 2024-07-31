@@ -5648,7 +5648,7 @@ int64_t GetRandomInt64(int64_t min, int64_t max)
 
 int CreateSocket(SocketType type, int flags)
 {
-    int family;
+    int family = 0;
 
     switch (type) {
         case SocketType::Dual:
