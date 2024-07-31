@@ -108,7 +108,7 @@ void Config::AppendSource(const char *path)
     src.type = LooksLikeURL(path) ? SourceType::Remote : SourceType::Local;
     src.path = DuplicateString(path, &str_alloc).ptr;
 
-    config.sources.Append(src);
+    sources.Append(src);
 }
 
 bool Config::Validate(bool require_sources)
@@ -839,7 +839,7 @@ Options:
             do {
                 config.AppendSource(arg);
             } while ((arg = opt.ConsumeNonOption()));
-        } else {
+        } else if (!config.sources.len) {
             config.sources.Append({ SourceType::Local, "." });
         }
 
