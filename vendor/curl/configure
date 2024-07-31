@@ -21702,6 +21702,8 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
   fi
 
 
+case $host_os in
+  darwin*)
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking to see if the compiler supports __builtin_available()" >&5
 printf %s "checking to see if the compiler supports __builtin_available()... " >&6; }
@@ -21737,6 +21739,8 @@ printf "%s\n" "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
+    ;;
+esac
 
  if test "$curl_cv_native_windows" = "yes" && test -n "${RC}"; then
   HAVE_WINDRES_TRUE=
@@ -27498,7 +27502,7 @@ printf "%s\n" "$as_me: detected GnuTLS version $version" >&6;}
 printf "%s\n" "$as_me: Added $gtlslib to CURL_LIBRARY_PATH" >&6;}
           fi
         fi
-        LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE gnutls"
+        LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE gnutls nettle"
       fi
 
     fi

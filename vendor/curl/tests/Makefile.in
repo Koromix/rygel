@@ -543,7 +543,7 @@ CLEANFILES = .http.pid .https.pid .ftp.pid .ftps.pid $(MANDISTPAGES)
 @CROSSCOMPILING_FALSE@TEST_NF = -a -p ~flaky ~timing-dependent
 
 # special CI target derived from nonflaky with CI-specific flags
-@CROSSCOMPILING_FALSE@TEST_CI = $(TEST_NF) -rm
+@CROSSCOMPILING_FALSE@TEST_CI = $(TEST_NF) -r -rm
 all: all-recursive
 
 .SUFFIXES:

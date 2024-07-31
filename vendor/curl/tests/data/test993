@@ -4,25 +4,14 @@
 POP3
 Clear Text
 LIST
-SLOWDOWN
 </keywords>
 </info>
 
 #
 # Server-side
 <reply>
-# We use SLOWDOWN to really exercise the end-of-body parsing over multiple
-# packets
-<servercmd>
-SLOWDOWN
-</servercmd>
-# When doing LIST, we get the default list output hard-coded in the test
-# POP3 server
 <data>
-1 100
-2 4294967400
-3 200
-</data>
+%repeat[1000 x 95 328485%0d%0a]%</data>
 </reply>
 
 #
@@ -32,7 +21,7 @@ SLOWDOWN
 pop3
 </server>
 <name>
-POP3 LIST messages from *SLOW* server
+POP3 LIST 1000 messages
 </name>
 <command>
 pop3://%HOSTIP:%POP3PORT/ -u user:secret
