@@ -106,12 +106,17 @@ public:
 
     bool Bind(const http_Config &config, bool log_addr = true);
     bool Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func);
-
     void Stop();
 
 private:
-    bool InitConfig(const http_Config &config);
+    void StartRead(http_Socket *socket);
+    void StartWrite(http_Socket *socket);
+    void EndWrite(http_Socket *socket);
 
+    Size ReadSocket(http_Socket *socket, Span<uint8_t> buf);
+    bool WriteSocket(http_Socket *socket, Span<const uint8_t> buf);
+
+    bool InitConfig(const http_Config &config);
     void RunHandler(http_IO *client);
 
     friend class http_Dispatcher;
@@ -245,14 +250,13 @@ private:
     http_RequestStatus ParseRequest();
     Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len);
 
-    Size ReadDirect(Span<uint8_t> data);
-
-    bool WriteDirect(Span<const uint8_t> data);
-    bool WriteChunked(Span<const uint8_t> data);
+    Size ReadDirect(Span<uint8_t> buf);
+    bool WriteDirect(Span<const uint8_t> buf);
+    bool WriteChunked(Span<const uint8_t> buf);
 
     void Rearm(int64_t start);
 
-    bool IsPreparing() const;
+    bool IsKeptAlive() const;
     int64_t GetTimeout(int64_t now) const;
 
     friend class http_Daemon;

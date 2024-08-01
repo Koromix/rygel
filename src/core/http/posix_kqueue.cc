@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 #include "server.hh"
-#include "posix.hh"
+#include "posix_priv.hh"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -56,7 +56,6 @@ class http_Dispatcher {
 
     HeapArray<http_Socket *> sockets;
     LocalArray<http_Socket *, 64> free_sockets;
-    HashSet<void *> busy_sockets;
 
     HeapArray<struct kevent> next_changes;
 
@@ -72,11 +71,8 @@ public:
 #endif
 
 private:
-    http_RequestStatus ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client);
-
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
-    void IgnoreSocket(http_Socket *socket);
 
     void AddEventChange(short filter, int fd, uint16_t flags, void *ptr);
 
@@ -214,6 +210,23 @@ void http_Daemon::Stop()
     handle_func = {};
 }
 
+void http_Daemon::StartRead(http_Socket *socket)
+{
+    SetSocketNonBlock(socket->sock, false);
+}
+
+void http_Daemon::StartWrite(http_Socket *socket)
+{
+    SetSocketNonBlock(socket->sock, false);
+    SetSocketRetain(socket->sock, true);
+}
+
+void http_Daemon::EndWrite(http_Socket *socket)
+{
+    SetSocketNonBlock(socket->sock, true);
+    SetSocketRetain(socket->sock, false);
+}
+
 bool http_Dispatcher::Run()
 {
     RG_ASSERT(kqueue_fd < 0);
@@ -256,10 +269,6 @@ bool http_Dispatcher::Run()
             delete socket;
         }
         for (http_Socket *socket: free_sockets) {
-            delete socket;
-        }
-        for (void *ptr: busy_sockets.table) {
-            http_Socket *socket = (http_Socket *)ptr;
             delete socket;
         }
 
@@ -338,13 +347,6 @@ bool http_Dispatcher::Run()
                     http_Socket *socket = (http_Socket *)addr;
 
                     if (socket) [[likely]] {
-                        void **ptr = busy_sockets.Find(socket);
-
-                        if (ptr) {
-                            sockets.Append(socket);
-                            busy_sockets.Remove(socket);
-                        }
-
                         AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE | EV_CLEAR, socket);
                     }
                 }
@@ -368,14 +370,36 @@ bool http_Dispatcher::Run()
                 ParkSocket(socket);
                 keep--;
             };
-            const auto ignore = [&]() {
-                IgnoreSocket(socket);
-                keep--;
-            };
 
-            http_RequestStatus status = socket->process ? ProcessIncoming(now, socket, client)
-                                                            : http_RequestStatus::Incomplete;
-            socket->process = false;
+            http_RequestStatus status = http_RequestStatus::Incomplete;
+
+            if (socket->process) {
+                socket->process = false;
+
+                if (!client->working) [[likely]] {
+                    client->incoming.buf.Grow(Kibibytes(8));
+
+                    Size available = client->incoming.buf.Available() - 1;
+                    Size bytes = recv(socket->sock, client->incoming.buf.ptr, (size_t)available, 0);
+
+                    if (bytes > 0) {
+                        client->incoming.buf.len += bytes;
+                        client->incoming.buf.ptr[client->incoming.buf.len] = 0;
+
+                        status = client->ParseRequest();
+                    } else if (!bytes) {
+                        if (!client->IsKeptAlive()) {
+                            LogError("Connection closed unexpectedly");
+                        }
+                        status = http_RequestStatus::Close;
+                    } else if (errno != EAGAIN) {
+                        LogError("Connection failed: %1", strerror(errno));
+                        status = http_RequestStatus::Close;
+                    }
+                } else {
+                    status = http_RequestStatus::Busy;
+                }
+            }
 
             switch (status) {
                 case http_RequestStatus::Incomplete: {
@@ -397,7 +421,7 @@ bool http_Dispatcher::Run()
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerDispatcher;
 
-                    ignore();
+                    AddEventChange(EVFILT_READ, socket->sock, EV_DISABLE, socket);
 
                     if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
@@ -454,61 +478,6 @@ bool http_Dispatcher::Run()
     }
 
     RG_UNREACHABLE();
-}
-
-http_RequestStatus http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client)
-{
-    if (client->working)
-        return http_RequestStatus::Busy;
-
-    client->incoming.buf.Grow(Kibibytes(8));
-
-    Size available = client->incoming.buf.Available() - 1;
-
-restart:
-#if defined(MSG_DONTWAIT)
-    Size read = recv(socket->sock, client->incoming.buf.end(), available, MSG_DONTWAIT);
-#else
-    Size read = recv(socket->sock, client->incoming.buf.end(), available, 0);
-#endif
-
-    if (read < 0) {
-        switch (errno) {
-            // This probably never happens (non-blocking read) but who knows
-            case EINTR: goto restart;
-
-            case EAGAIN: {
-                int64_t timeout = client->GetTimeout(now);
-
-                if (timeout < 0) [[unlikely]] {
-                    if (client->IsPreparing()) {
-                        LogError("Timed out while waiting for HTTP request");
-                    }
-                    return http_RequestStatus::Close;
-                }
-
-                return http_RequestStatus::Incomplete;
-            } break;
-
-            case EPIPE:
-            case ECONNRESET: return http_RequestStatus::Close;
-
-            default: {
-                LogError("Read failed: %1", strerror(errno));
-                return http_RequestStatus::Close;
-            } break;
-        }
-    } else if (!read) {
-        if (client->incoming.buf.len) {
-            LogError("Client closed connection with unfinished request");
-        }
-        return http_RequestStatus::Close;
-    }
-
-    client->incoming.buf.len += read;
-    client->incoming.buf.ptr[client->incoming.buf.len] = 0;
-
-    return client->ParseRequest();
 }
 
 void http_Dispatcher::Wake(http_Socket *socket)
@@ -568,12 +537,6 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
     } else {
         delete socket;
     }
-}
-
-void http_Dispatcher::IgnoreSocket(http_Socket *socket)
-{
-    AddEventChange(EVFILT_READ, socket->sock, EV_DISABLE, socket);
-    busy_sockets.Set(socket);
 }
 
 void http_Dispatcher::AddEventChange(short filter, int fd, uint16_t flags, void *ptr)

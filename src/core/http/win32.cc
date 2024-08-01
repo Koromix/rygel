@@ -114,8 +114,6 @@ public:
     bool Run();
 
 private:
-    void ProcessIncoming(int64_t now, http_Socket *socket, Size received);
-
     bool PostAccept(http_Socket *socket);
     bool PostRead(http_Socket *socket);
 
@@ -290,6 +288,59 @@ void http_Daemon::Stop()
     handle_func = {};
 }
 
+void http_Daemon::StartRead(http_Socket *)
+{
+    // Nothing to do
+}
+
+void http_Daemon::StartWrite(http_Socket *)
+{
+    // Nothing to do
+}
+
+void http_Daemon::EndWrite(http_Socket *socket)
+{
+    socket->op = PendingOperation::Done;
+    PostQueuedCompletionStatus(iocp, 0, 0, &socket->overlapped);
+}
+
+Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
+{
+    int len = (int)std::min(buf.len, (Size)INT_MAX);
+    Size bytes = recv((SOCKET)socket->sock, (char *)buf.ptr, len, 0);
+
+    if (bytes < 0) {
+        errno = TranslateWinSockError();
+        if (errno != ENOTCONN && errno != ECONNRESET) {
+            LogError("Failed to read from client: %1", strerror(errno));
+        }
+        return -1;
+    }
+
+    return bytes;
+}
+
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
+{
+    while (buf.len) {
+        int len = (int)std::min(buf.len, (Size)INT_MAX);
+        int bytes = send(socket->sock, (char *)buf.ptr, len, 0);
+
+        if (bytes < 0) {
+            errno = TranslateWinSockError();
+            if (errno != ENOTCONN && errno != ECONNRESET) {
+                LogError("Failed to send to client: %1", strerror(errno));
+            }
+            return false;
+        }
+
+        buf.ptr += bytes;
+        buf.len -= bytes;
+    }
+
+    return true;
+}
+
 static http_Socket *SocketFromOverlapped(void *ptr)
 {
     uint8_t *data = (uint8_t *)ptr;
@@ -402,7 +453,37 @@ bool http_Dispatcher::Run()
                     continue;
                 }
 
-                ProcessIncoming(now, socket, (Size)transferred);
+                http_IO *client = socket->client;
+
+                client->incoming.buf.len += (Size)transferred;
+                client->incoming.buf.ptr[client->incoming.buf.len] = 0;
+
+                http_RequestStatus status = client->ParseRequest();
+
+                switch (status) {
+                    case http_RequestStatus::Incomplete: {
+                        if (!PostRead(socket)) {
+                            DisconnectSocket(socket);
+                        }
+                    } break;
+
+                    case http_RequestStatus::Ready: {
+                        if (!client->InitAddress()) {
+                            client->request.keepalive = false;
+                            client->SendError(400);
+                            DisconnectSocket(socket);
+
+                            break;
+                        }
+
+                        client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
+                        daemon->RunHandler(client);
+                    } break;
+
+                    case http_RequestStatus::Busy: { /* Should be rare */ } break;
+
+                    case http_RequestStatus::Close: { DisconnectSocket(socket); } break;
+                }
             } break;
 
             case PendingOperation::Execute: {
@@ -488,41 +569,6 @@ bool http_Dispatcher::Run()
     }
 
     RG_UNREACHABLE();
-}
-
-void http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, Size received)
-{
-    http_IO *client = socket->client;
-
-    client->incoming.buf.len += received;
-    client->incoming.buf.ptr[client->incoming.buf.len] = 0;
-
-    http_RequestStatus status = client->ParseRequest();
-
-    switch (status) {
-        case http_RequestStatus::Incomplete: {
-            if (!PostRead(socket)) {
-                DisconnectSocket(socket);
-            }
-        } break;
-
-        case http_RequestStatus::Ready: {
-            if (!client->InitAddress()) {
-                client->request.keepalive = false;
-                client->SendError(400);
-                DisconnectSocket(socket);
-
-                break;
-            }
-
-            client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
-            daemon->RunHandler(client);
-        } break;
-
-        case http_RequestStatus::Busy: { /* Should be rare */ } break;
-
-        case http_RequestStatus::Close: { DisconnectSocket(socket); } break;
-    }
 }
 
 bool http_Dispatcher::PostAccept(http_Socket *socket)
@@ -659,53 +705,6 @@ http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct 
     return client;
 }
 
-Size http_IO::ReadDirect(Span<uint8_t> data)
-{
-    Size total = 0;
-
-    if (incoming.extra.len) {
-        int64_t remaining = request.body_len - incoming.read;
-        Size copy_len = (Size)std::min((int64_t)std::min(incoming.extra.len, data.len), remaining);
-
-        MemCpy(data.ptr, incoming.extra.ptr, copy_len);
-        incoming.extra.ptr += copy_len;
-        incoming.extra.len -= copy_len;
-
-        total += copy_len;
-        incoming.read += copy_len;
-
-        if (copy_len == data.len)
-            return total;
-
-        data.ptr += copy_len;
-        data.len -= copy_len;
-    }
-
-    if (incoming.read == request.body_len)
-        return total;
-    RG_ASSERT(incoming.read < request.body_len);
-
-    int64_t remaining = request.body_len - incoming.read;
-    int limit = (int)std::min(std::min((int64_t)data.len, remaining), (int64_t)INT_MAX);
-
-    Size read = recv((SOCKET)socket->sock, (char *)data.ptr, limit, 0);
-
-    if (read < 0) {
-        errno = TranslateWinSockError();
-        if (errno != ENOTCONN && errno != ECONNRESET) {
-            LogError("Failed to send to client: %1", strerror(errno));
-        }
-
-        request.keepalive = false;
-        return -1;
-    }
-
-    total += read;
-    incoming.read += read;
-
-    return total;
-}
-
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
     static const Size MaxSend = INT32_MAX - 1;
@@ -785,55 +784,13 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     }
 }
 
-static bool SendFull(int sock, Span<const uint8_t> buf)
-{
-    while (buf.len) {
-        int len = (int)std::min(buf.len, (Size)INT_MAX);
-        Size sent = send((SOCKET)sock, (const char *)buf.ptr, len, 0);
-
-        if (sent < 0) {
-            errno = TranslateWinSockError();
-            if (errno != ENOTCONN && errno != ECONNRESET) {
-                LogError("Failed to send to client: %1", strerror(errno));
-            }
-            return false;
-        }
-
-        buf.ptr += sent;
-        buf.len -= sent;
-    }
-
-    return true;
-}
-
-bool http_IO::WriteDirect(Span<const uint8_t> data)
-{
-    if (!data.len) {
-        bool success = (response.expected < 0 || response.sent == response.expected);
-
-        request.keepalive &= success;
-
-        socket->op = PendingOperation::Done;
-        PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
-
-        return success;
-    }
-
-    if (!SendFull(socket->sock, data)) {
-        request.keepalive = false;
-        return false;
-    }
-
-    return true;
-}
-
 bool http_IO::WriteChunked(Span<const uint8_t> data)
 {
     if (!data.len) {
         bool success = (response.expected < 0 || response.sent == response.expected);
 
         uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
-        success &= SendFull(socket->sock, end);
+        success &= daemon->WriteSocket(socket, end);
 
         request.keepalive &= success;
 
@@ -854,7 +811,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         buf.data[6 + copy_len + 0] = '\r';
         buf.data[6 + copy_len + 1] = '\n';
 
-        if (!SendFull(socket->sock, buf)) {
+        if (!daemon->WriteSocket(socket, buf)) {
             request.keepalive = false;
             return false;
         }

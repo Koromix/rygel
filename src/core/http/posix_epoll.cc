@@ -23,7 +23,7 @@
 
 #include "src/core/base/base.hh"
 #include "server.hh"
-#include "posix.hh"
+#include "posix_priv.hh"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -51,7 +51,6 @@ class http_Dispatcher {
 
     HeapArray<http_Socket *> sockets;
     LocalArray<http_Socket *, 64> free_sockets;
-    HashSet<void *> busy_sockets;
 
 public:
     http_Dispatcher(http_Daemon *daemon, http_Dispatcher *next, int listener)
@@ -60,13 +59,9 @@ public:
     bool Run();
 
 private:
-    http_RequestStatus ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client);
-
     http_Socket *InitSocket(int sock, int64_t start, struct sockaddr *sa);
     void ParkSocket(http_Socket *socket);
-    void IgnoreSocket(http_Socket *socket);
 
-    bool AddEpollDescriptor(int fd, uint32_t events, int value);
     bool AddEpollDescriptor(int fd, uint32_t events, void *ptr);
     void DeleteEpollDescriptor(int fd);
 
@@ -162,6 +157,21 @@ void http_Daemon::Stop()
     handle_func = {};
 }
 
+void http_Daemon::StartRead(http_Socket *)
+{
+    // Nothing to do
+}
+
+void http_Daemon::StartWrite(http_Socket *)
+{
+    // Nothing to do
+}
+
+void http_Daemon::EndWrite(http_Socket *)
+{
+    // Nothing to do
+}
+
 bool http_Dispatcher::Run()
 {
     RG_ASSERT(epoll_fd < 0);
@@ -188,17 +198,12 @@ bool http_Dispatcher::Run()
         for (http_Socket *socket: free_sockets) {
             delete socket;
         }
-        for (void *ptr: busy_sockets.table) {
-            http_Socket *socket = (http_Socket *)ptr;
-            delete socket;
-        }
 
         sockets.Clear();
         free_sockets.Clear();
     };
 
-    if (!AddEpollDescriptor(listener, EPOLLIN | EPOLLEXCLUSIVE, 0))
-        return false;
+    AddEpollDescriptor(listener, EPOLLIN | EPOLLEXCLUSIVE, nullptr);
 
     HeapArray<struct epoll_event> events;
     int next_worker = 0;
@@ -207,7 +212,7 @@ bool http_Dispatcher::Run()
         int64_t now = GetMonotonicTime();
 
         for (const struct epoll_event &ev: events) {
-            if (ev.data.fd == 0) {
+            if (!ev.data.fd) {
                 if (ev.events & EPOLLHUP) [[unlikely]]
                     return true;
 
@@ -239,13 +244,6 @@ bool http_Dispatcher::Run()
                 }
             } else {
                 http_Socket *socket = (http_Socket *)ev.data.ptr;
-                void **ptr = busy_sockets.Find(socket);
-
-                if (ptr) {
-                    sockets.Append(socket);
-                    busy_sockets.Remove(ptr);
-                }
-
                 socket->process = true;
             }
         }
@@ -264,14 +262,36 @@ bool http_Dispatcher::Run()
                 ParkSocket(socket);
                 keep--;
             };
-            const auto ignore = [&]() {
-                IgnoreSocket(socket);
-                keep--;
-            };
 
-            http_RequestStatus status = socket->process ? ProcessIncoming(now, socket, client)
-                                                            : http_RequestStatus::Incomplete;
-            socket->process = false;
+            http_RequestStatus status = http_RequestStatus::Incomplete;
+
+            if (socket->process) {
+                socket->process = false;
+
+                if (!client->working) [[likely]] {
+                    client->incoming.buf.Grow(Kibibytes(8));
+
+                    Size available = client->incoming.buf.Available() - 1;
+                    Size bytes = recv(socket->sock, client->incoming.buf.ptr, available, MSG_DONTWAIT);
+
+                    if (bytes > 0) {
+                        client->incoming.buf.len += bytes;
+                        client->incoming.buf.ptr[client->incoming.buf.len] = 0;
+
+                        status = client->ParseRequest();
+                    } else if (!bytes) {
+                        if (!client->IsKeptAlive()) {
+                            LogError("Connection closed unexpectedly");
+                        }
+                        status = http_RequestStatus::Close;
+                    } else if (errno != EAGAIN) {
+                        LogError("Connection failed: %1", strerror(errno));
+                        status = http_RequestStatus::Close;
+                    }
+                } else {
+                    status = http_RequestStatus::Busy;
+                }
+            }
 
             switch (status) {
                 case http_RequestStatus::Incomplete: {
@@ -293,17 +313,14 @@ bool http_Dispatcher::Run()
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerDispatcher;
 
-                    ignore();
+                    DeleteEpollDescriptor(socket->sock);
 
                     if (client->request.keepalive) {
                         async.Run(worker_idx, [=, this] {
                             daemon->RunHandler(client);
                             client->Rearm(now);
 
-                            if (!AddEpollDescriptor(socket->sock, EPOLLIN | EPOLLET, socket)) [[unlikely]] {
-                                // It will fail and get collected and closed eventually
-                                shutdown(socket->sock, SHUT_RD);
-                            }
+                            AddEpollDescriptor(socket->sock, EPOLLIN | EPOLLET, socket);
 
                             return true;
                         });
@@ -339,68 +356,10 @@ bool http_Dispatcher::Run()
             return false;
         }
 
-        if (!ready) {
-            // Process everyone after a timeout
-            for (http_Socket *socket: sockets) {
-                socket->process = true;
-            }
-        }
-
         events.len = ready;
     }
 
     RG_UNREACHABLE();
-}
-
-http_RequestStatus http_Dispatcher::ProcessIncoming(int64_t now, http_Socket *socket, http_IO *client)
-{
-    if (client->working)
-        return http_RequestStatus::Busy;
-
-    client->incoming.buf.Grow(Kibibytes(8));
-
-    Size available = client->incoming.buf.Available() - 1;
-
-restart:
-    Size read = recv(socket->sock, client->incoming.buf.end(), available, MSG_DONTWAIT);
-
-    if (read < 0) {
-        switch (errno) {
-            // This probably never happens (non-blocking read) but who knows
-            case EINTR: goto restart;
-
-            case EAGAIN: {
-                int64_t timeout = client->GetTimeout(now);
-
-                if (timeout < 0) [[unlikely]] {
-                    if (client->IsPreparing()) {
-                        LogError("Timed out while waiting for HTTP request");
-                    }
-                    return http_RequestStatus::Close;
-                }
-
-                return http_RequestStatus::Incomplete;
-            } break;
-
-            case EPIPE:
-            case ECONNRESET: return http_RequestStatus::Close;
-
-            default: {
-                LogError("Read failed: %1 (%2) %3", strerror(errno), socket->sock, socket);
-                return http_RequestStatus::Close;
-            } break;
-        }
-    } else if (!read) {
-        if (client->incoming.buf.len) {
-            LogError("Client closed connection with unfinished request");
-        }
-        return http_RequestStatus::Close;
-    }
-
-    client->incoming.buf.len += read;
-    client->incoming.buf.ptr[client->incoming.buf.len] = 0;
-
-    return client->ParseRequest();
 }
 
 http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockaddr *sa)
@@ -448,30 +407,8 @@ void http_Dispatcher::ParkSocket(http_Socket *socket)
     }
 }
 
-void http_Dispatcher::IgnoreSocket(http_Socket *socket)
-{
-    DeleteEpollDescriptor(socket->sock);
-    busy_sockets.Set(socket);
-}
-
-bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, int value)
-{
-    RG_ASSERT(value < 4096);
-
-    struct epoll_event ev = { events, { .fd = value }};
-
-    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0 && errno != EEXIST) {
-        LogError("Failed to add descriptor to epoll: %1", strerror(errno));
-        return false;
-    }
-
-    return true;
-}
-
 bool http_Dispatcher::AddEpollDescriptor(int fd, uint32_t events, void *ptr)
 {
-    RG_ASSERT((uintptr_t)ptr >= 4096);
-
     struct epoll_event ev = { events, { .ptr = ptr }};
 
     if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, fd, &ev) < 0 && errno != EEXIST) {

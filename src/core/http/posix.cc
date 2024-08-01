@@ -24,7 +24,7 @@
 #include "src/core/base/base.hh"
 #include "server.hh"
 #include "misc.hh"
-#include "posix.hh"
+#include "posix_priv.hh"
 
 #include <fcntl.h>
 #include <limits.h>
@@ -47,66 +47,36 @@ namespace RG {
 // Sane platform
 static_assert(EAGAIN == EWOULDBLOCK);
 
-Size http_IO::ReadDirect(Span<uint8_t> data)
+Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
 {
-    Size total = 0;
-
-    if (incoming.extra.len) {
-        int64_t remaining = request.body_len - incoming.read;
-        Size copy_len = (Size)std::min((int64_t)std::min(incoming.extra.len, data.len), remaining);
-
-        MemCpy(data.ptr, incoming.extra.ptr, copy_len);
-        incoming.extra.ptr += copy_len;
-        incoming.extra.len -= copy_len;
-
-        total += copy_len;
-        incoming.read += copy_len;
-
-        if (copy_len == data.len)
-            return total;
-
-        data.ptr += copy_len;
-        data.len -= copy_len;
-    }
-
-    if (incoming.read == request.body_len)
-        return total;
-    RG_ASSERT(incoming.read < request.body_len);
-
-    int64_t remaining = request.body_len - incoming.read;
-    Size limit = (Size)std::min((int64_t)data.len, remaining);
-
 restart:
-    Size read = recv(socket->sock, data.ptr, limit, 0);
+    Size bytes = recv(socket->sock, buf.ptr, (size_t)buf.len, 0);
 
-    if (read < 0) {
+    if (bytes < 0) {
         if (errno == EINTR)
             goto restart;
 
         if (errno != EPIPE && errno != ECONNRESET) {
-            LogError("Failed to send to client: %1", strerror(errno));
+            LogError("Failed to read from client: %1", strerror(errno));
         }
-
-        request.keepalive = false;
         return -1;
     }
 
-    total += read;
-    incoming.read += read;
-
-    return total;
+    return bytes;
 }
 
-static bool SendFull(int sock, Span<const uint8_t> buf)
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 {
-    while (buf.len) {
+    int flags = MSG_NOSIGNAL;
+
 #if defined(MSG_MORE)
-        Size sent = send(sock, buf.ptr, (size_t)buf.len, MSG_MORE | MSG_NOSIGNAL);
-#else
-        Size sent = send(sock, buf.ptr, (size_t)buf.len, MSG_NOSIGNAL);
+    flags |= MSG_MORE;
 #endif
 
-        if (sent < 0) {
+    while (buf.len) {
+        Size bytes = send(socket->sock, buf.ptr, (size_t)buf.len, flags);
+
+        if (bytes < 0) {
             if (errno == EINTR)
                 continue;
 
@@ -116,8 +86,8 @@ static bool SendFull(int sock, Span<const uint8_t> buf)
             return false;
         }
 
-        buf.ptr += sent;
-        buf.len -= sent;
+        buf.ptr += bytes;
+        buf.len -= bytes;
     }
 
     return true;
@@ -134,12 +104,14 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     response.started = true;
     response.expected = len;
 
-#if defined(__linux__)
-    RG_DEFER { SetSocketRetain(socket->sock, false); };
+#if !defined(MSG_DONTWAIT)
+    SetSocketNonBlock(socket->sock, false);
+#endif
 
+#if defined(__linux__)
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
-    if (!SendFull(socket->sock, intro.As<uint8_t>())) {
+    if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
         request.keepalive = false;
         return;
     }
@@ -173,14 +145,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         remain -= sent;
     }
 #elif defined(__FreeBSD__) || defined(__APPLE__)
-#if !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(socket->sock, false);
-    RG_DEFER { SetSocketNonBlock(socket->sock, true); };
-#endif
-
-    SetSocketRetain(socket->sock, true);
-    RG_DEFER { SetSocketRetain(socket->sock, false); };
-
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
     struct iovec header = {};
@@ -248,40 +212,15 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 #endif
 }
 
-bool http_IO::WriteDirect(Span<const uint8_t> data)
-{
-    if (!data.len) {
-        bool success = (response.expected < 0 || response.sent == response.expected);
-
-        SetSocketRetain(socket->sock, false);
-#if !defined(MSG_DONTWAIT)
-        SetSocketNonBlock(socket->sock, false);
-#endif
-
-        request.keepalive &= success;
-        return success;
-    }
-
-    if (!SendFull(socket->sock, data)) {
-        request.keepalive = false;
-        return false;
-    }
-
-    return true;
-}
-
 bool http_IO::WriteChunked(Span<const uint8_t> data)
 {
     if (!data.len) {
         bool success = (response.expected < 0 || response.sent == response.expected);
 
         uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
-        success &= SendFull(socket->sock, end);
+        success &= daemon->WriteSocket(socket, end);
 
         SetSocketRetain(socket->sock, false);
-#if !defined(MSG_DONTWAIT)
-        SetSocketNonBlock(socket->sock, false);
-#endif
 
         request.keepalive &= success;
         return success;

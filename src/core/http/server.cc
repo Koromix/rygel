@@ -347,11 +347,9 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
         return false;
     }
 
-    incoming.reading = true;
+    daemon->StartRead(socket);
 
-#if !defined(_WIN32) && !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(socket->sock, false);
-#endif
+    incoming.reading = true;
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>", compression_type);
     RG_ASSERT(success);
@@ -469,6 +467,8 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     RG_ASSERT(!response.started);
     RG_ASSERT(!request.headers_only);
 
+    daemon->StartWrite(socket);
+
     // Unfortunately, we need to discard the whole body before we can respond, even if it
     // was not used / we don't care about it. But do it within limits, and ignore otherwise.
     {
@@ -483,13 +483,6 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
 
     response.started = true;
     response.expected = len;
-
-#if !defined(_WIN32) && !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(socket->sock, false);
-#endif
-#if !defined(_WIN32) && !defined(MSG_MORE)
-    SetSocketRetain(socket->sock, true);
-#endif
 
     Span<const char> intro = PrepareResponse(status, encoding, len);
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
@@ -1125,6 +1118,60 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
     return buf.TrimAndLeak();
 }
 
+Size http_IO::ReadDirect(Span<uint8_t> buf)
+{
+    Size start_len = buf.len;
+
+    if (incoming.extra.len) {
+        int64_t remaining = request.body_len - incoming.read;
+        Size copy_len = (Size)std::min((int64_t)std::min(incoming.extra.len, buf.len), remaining);
+
+        MemCpy(buf.ptr, incoming.extra.ptr, copy_len);
+        incoming.extra.ptr += copy_len;
+        incoming.extra.len -= copy_len;
+
+        buf.ptr += copy_len;
+        buf.len -= copy_len;
+    }
+
+    buf.len = std::min((int64_t)buf.len, request.body_len - incoming.read);
+
+    while (buf.len) {
+        Size bytes = daemon->ReadSocket(socket, buf);
+
+        if (bytes < 0)
+            return -1;
+        if (!bytes) {
+            LogError("Connection closed unexpectedly");
+            return -1;
+        }
+
+        buf.ptr += bytes;
+        buf.len -= bytes;
+    }
+
+    return start_len - buf.len;
+}
+
+bool http_IO::WriteDirect(Span<const uint8_t> data)
+{
+    if (!data.len) {
+        bool success = (response.expected < 0 || response.sent == response.expected);
+
+        request.keepalive &= success;
+        daemon->EndWrite(socket);
+
+        return success;
+    }
+
+    if (!daemon->WriteSocket(socket, data)) {
+        request.keepalive = false;
+        return false;
+    }
+
+    return true;
+}
+
 void http_IO::Rearm(int64_t start)
 {
     for (const auto &finalize: response.finalizers) {
@@ -1166,19 +1213,19 @@ void http_IO::Rearm(int64_t start)
     working = false;
 }
 
-bool http_IO::IsPreparing() const
+bool http_IO::IsKeptAlive() const
 {
     bool preparing = incoming.buf.len || (request_start == socket_start);
-    return preparing;
+    return !preparing;
 }
 
 int64_t http_IO::GetTimeout(int64_t now) const
 {
-    if (IsPreparing()) {
-        int64_t timeout = daemon->idle_timeout - now + request_start;
+    if (IsKeptAlive()) {
+        int64_t timeout = daemon->keepalive_time - now + socket_start;
         return timeout;
     } else {
-        int64_t timeout = daemon->keepalive_time - now + socket_start;
+        int64_t timeout = daemon->idle_timeout - now + request_start;
         return timeout;
     }
 }
