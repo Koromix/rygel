@@ -399,9 +399,13 @@ bool http_Dispatcher::Run()
         // with the default value -1. If it stays at UINT_MAX, the (int) cast results in -1.
         int ready = epoll_wait(epoll_fd, events.ptr, events.len, (int)timeout);
 
-        if (ready < 0 && errno != EINTR) [[unlikely]] {
-            LogError("Failed to poll descriptors: %1", strerror(errno));
-            return false;
+        if (ready < 0) {
+            if (errno != EINTR) {
+                LogError("Failed to poll descriptors: %1", strerror(errno));
+                return false;
+            }
+
+            ready = 0;
         }
 
         events.len = ready;

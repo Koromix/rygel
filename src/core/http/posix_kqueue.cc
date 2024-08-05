@@ -546,9 +546,13 @@ bool http_Dispatcher::Run()
         struct timespec ts = { timeout / 1000, (timeout % 1000) * 1000000 };
         int ready = kevent(kqueue_fd, changes.ptr, (int)changes.len, events.ptr, (int)events.len, &ts);
 
-        if (ready < 0 && errno != EINTR) [[unlikely]] {
-            LogError("Failed to poll descriptors: %1", strerror(errno));
-            return false;
+        if (ready < 0) {
+            if (errno != EINTR) {
+                LogError("Failed to poll descriptors: %1", strerror(errno));
+                return false;
+            }
+
+            ready = 0;
         }
 
         events.len = ready;
