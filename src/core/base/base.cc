@@ -2301,11 +2301,8 @@ static FileType FileModeToType(mode_t mode)
 
 static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, unsigned int flags, FileInfo *out_info)
 {
-#if defined(__linux__) && defined(STATX_TYPE) && !defined(CORE_NO_STATX)
     const char *pathname = filename;
-
     int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
-    int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
     if (!fd_is_directory) {
         if (fd >= 0) {
@@ -2315,6 +2312,9 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
             fd = AT_FDCWD;
         }
     }
+
+#if defined(__linux__) && defined(STATX_TYPE) && !defined(CORE_NO_STATX)
+    int stat_mask = STATX_TYPE | STATX_MODE | STATX_MTIME | STATX_BTIME | STATX_SIZE;
 
     struct statx sxb;
     if (statx(fd, pathname, stat_flags, stat_mask, &sxb) < 0) {
@@ -2354,10 +2354,8 @@ static StatResult StatAt(int fd, bool fd_is_directory, const char *filename, uns
     out_info->uid = sxb.stx_uid;
     out_info->gid = sxb.stx_gid;
 #else
-    int stat_flags = (flags & (int)StatFlag::FollowSymlink) ? 0 : AT_SYMLINK_NOFOLLOW;
-
     struct stat sb;
-    int ret = (fd >= 0) ? fstat(fd, &sb) : fstatat(AT_FDCWD, filename, &sb, stat_flags);
+    int ret = fstatat(fd, pathname, &sb, stat_flags);
 
     if (ret < 0) {
         switch (errno) {
