@@ -263,39 +263,41 @@ bool http_Dispatcher::Run()
                 keep--;
             };
 
-            http_RequestStatus status = http_RequestStatus::Incomplete;
+            http_RequestStatus status = http_RequestStatus::Busy;
 
             if (socket->process) {
                 socket->process = false;
 
-                if (!client->working) [[likely]] {
-                    client->incoming.buf.Grow(Kibibytes(8));
+                client->incoming.buf.Grow(Kibibytes(8));
 
-                    Size available = client->incoming.buf.Available() - 1;
-                    Size bytes = recv(socket->sock, client->incoming.buf.ptr, available, MSG_DONTWAIT);
+                Size available = client->incoming.buf.Available() - 1;
+                Size bytes = recv(socket->sock, client->incoming.buf.ptr, available, MSG_DONTWAIT);
 
-                    if (bytes > 0) {
-                        client->incoming.buf.len += bytes;
-                        client->incoming.buf.ptr[client->incoming.buf.len] = 0;
+                if (bytes > 0) {
+                    client->incoming.buf.len += bytes;
+                    client->incoming.buf.ptr[client->incoming.buf.len] = 0;
 
-                        status = client->ParseRequest();
-                    } else if (!bytes) {
-                        if (!client->IsKeptAlive()) {
-                            LogError("Connection closed unexpectedly");
-                        }
-                        status = http_RequestStatus::Close;
-                    } else if (errno != EAGAIN) {
-                        LogError("Connection failed: %1", strerror(errno));
-                        status = http_RequestStatus::Close;
+                    status = client->ParseRequest();
+                } else if (!bytes) {
+                    if (!client->IsKeptAlive()) {
+                        LogError("Connection closed unexpectedly");
                     }
-                } else {
-                    status = http_RequestStatus::Busy;
+                    status = http_RequestStatus::Close;
+                } else if (errno != EAGAIN) {
+                    LogError("Connection failed: %1", strerror(errno));
+                    status = http_RequestStatus::Close;
                 }
             }
 
             switch (status) {
-                case http_RequestStatus::Incomplete: {
-                    int64_t delay = std::max((int64_t)0, client->GetTimeout(now));
+                case http_RequestStatus::Busy: {
+                    int delay = (int)(client->timeout_at.load() - now);
+
+                    if (delay <= 0) {
+                        shutdown(socket->sock, SHUT_RDWR);
+                        break;
+                    }
+
                     timeout = std::min(timeout, (unsigned int)delay);
                 } break;
 
@@ -336,8 +338,6 @@ bool http_Dispatcher::Run()
                         });
                     }
                 } break;
-
-                case http_RequestStatus::Busy: { /* Should be rare */ } break;
 
                 case http_RequestStatus::Close: { disconnect(); } break;
             }
@@ -392,8 +392,6 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
 void http_Dispatcher::ParkSocket(http_Socket *socket)
 {
-    DeleteEpollDescriptor(socket->sock);
-
     if (free_sockets.Available()) {
         close(socket->sock);
         socket->sock = -1;

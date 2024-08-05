@@ -461,7 +461,7 @@ bool http_Dispatcher::Run()
                 http_RequestStatus status = client->ParseRequest();
 
                 switch (status) {
-                    case http_RequestStatus::Incomplete: {
+                    case http_RequestStatus::Busy: {
                         if (!PostRead(socket)) {
                             DisconnectSocket(socket);
                         }
@@ -479,8 +479,6 @@ bool http_Dispatcher::Run()
                         client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
                         daemon->RunHandler(client);
                     } break;
-
-                    case http_RequestStatus::Busy: { /* Should be rare */ } break;
 
                     case http_RequestStatus::Close: { DisconnectSocket(socket); } break;
                 }

@@ -62,6 +62,8 @@ restart:
         return -1;
     }
 
+    socket->client.timeout_at = GetMonotonicTime() + idle_timeout;
+
     return bytes;
 }
 
@@ -74,7 +76,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 #endif
 
     while (buf.len) {
-        Size bytes = send(socket->sock, buf.ptr, (size_t)buf.len, flags);
+        Size len = std::min(buf.len, Mebibytes(2));
+        Size bytes = send(socket->sock, buf.ptr, len, flags);
 
         if (bytes < 0) {
             if (errno == EINTR)
@@ -85,6 +88,8 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
             }
             return false;
         }
+
+        socket->client.timeout_at = GetMonotonicTime() + send_timeout;
 
         buf.ptr += bytes;
         buf.len -= bytes;
@@ -120,7 +125,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     int64_t remain = len;
 
     while (remain) {
-        Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+        Size send = (Size)std::min(remain, (int64_t)Mebibytes(2));
         Size sent = sendfile(socket->sock, fd, &offset, (size_t)send);
 
         if (sent < 0) {
@@ -163,7 +168,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             hdtr.hdr_cnt = 0;
         }
 
-        Size send = (Size)std::min(remain, (int64_t)RG_SIZE_MAX);
+        Size send = (Size)std::min(remain, (int64_t)Mebibytes(2));
 
 #if defined(__FreeBSD__)
         off_t sent = 0;

@@ -53,6 +53,7 @@ struct http_Config {
 
     int idle_timeout = 10000;
     int keepalive_time = 20000;
+    int send_timeout = 10000;
 
     Size max_request_size = Kilobytes(40);
     Size max_url_len = Kilobytes(20);
@@ -89,6 +90,7 @@ class http_Daemon {
 
     int idle_timeout;
     int keepalive_time;
+    int send_timeout;
 
     Size max_request_size;
     Size max_url_len;
@@ -164,9 +166,8 @@ struct http_RequestInfo {
 };
 
 enum class http_RequestStatus {
-    Incomplete,
-    Ready,
     Busy,
+    Ready,
     Close
 };
 
@@ -180,6 +181,7 @@ class http_IO {
 
     int64_t socket_start;
     int64_t request_start;
+    std::atomic_int64_t timeout_at;
 
     struct {
         HeapArray<uint8_t> buf;
@@ -191,7 +193,6 @@ class http_IO {
         bool reading = false;
     } incoming;
 
-    std::atomic_bool working { false };
     http_RequestInfo request;
 
     const char *last_err = nullptr;
@@ -257,7 +258,6 @@ private:
     void Rearm(int64_t start);
 
     bool IsKeptAlive() const;
-    int64_t GetTimeout(int64_t now) const;
 
     friend class http_Daemon;
     friend class http_Dispatcher;

@@ -148,6 +148,8 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         } else {
             return ParseDuration(value, &keepalive_time);
         }
+    } else if (key == "SendTimeout") {
+        return ParseDuration(value, &send_timeout);
     } else if (key == "MaxRequestSize") {
         return ParseSize(value, &max_request_size);
     } else if (key == "MaxUrlLength") {
@@ -211,6 +213,10 @@ bool http_Config::Validate() const
     }
     if (keepalive_time && keepalive_time < 5000) {
         LogError("HTTP KeepAliveTime must be >= 5 sec (or Disabled)");
+        return false;
+    }
+    if (send_timeout < 10000) {
+        LogError("HTTP SendTimeout must be >= 10 sec");
         return false;
     }
 
@@ -350,6 +356,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     daemon->StartRead(socket);
 
     incoming.reading = true;
+    timeout_at = GetMonotonicTime() + daemon->send_timeout;
 
     bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>", compression_type);
     RG_ASSERT(success);
@@ -648,6 +655,7 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 
     socket_start = start;
     request_start = start;
+    timeout_at = start + daemon->idle_timeout;
 
     return true;
 }
@@ -854,8 +862,6 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
 
 http_RequestStatus http_IO::ParseRequest()
 {
-    RG_ASSERT(!working);
-
     bool complete = false;
     bool keepalive = false;
 
@@ -890,7 +896,7 @@ http_RequestStatus http_IO::ParseRequest()
     }
 
     if (!complete)
-        return http_RequestStatus::Incomplete;
+        return http_RequestStatus::Busy;
 
     Span<char> remain = incoming.intro;
 
@@ -1081,7 +1087,6 @@ http_RequestStatus http_IO::ParseRequest()
     // Set at the end so any error before would lead to "Connection: close"
     request.keepalive = keepalive;
 
-    working = true;
     return http_RequestStatus::Ready;
 }
 
@@ -1179,6 +1184,7 @@ void http_IO::Rearm(int64_t start)
     }
 
     request_start = start;
+    timeout_at = socket_start + daemon->keepalive_time;
 
     if (start >= 0) {
         MemMove(incoming.buf.ptr, incoming.extra.ptr, incoming.extra.len);
@@ -1209,25 +1215,12 @@ void http_IO::Rearm(int64_t start)
     } else {
         allocator.ReleaseAll();
     }
-
-    working = false;
 }
 
 bool http_IO::IsKeptAlive() const
 {
-    bool preparing = incoming.buf.len || (request_start == socket_start);
-    return !preparing;
-}
-
-int64_t http_IO::GetTimeout(int64_t now) const
-{
-    if (IsKeptAlive()) {
-        int64_t timeout = daemon->keepalive_time - now + socket_start;
-        return timeout;
-    } else {
-        int64_t timeout = daemon->idle_timeout - now + request_start;
-        return timeout;
-    }
+    bool waiting = !incoming.buf.len && (request_start > socket_start);
+    return waiting;
 }
 
 }
