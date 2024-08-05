@@ -6269,7 +6269,7 @@ void AsyncPool::RunTasks(int worker_idx)
         WorkerData *worker = &workers[worker_idx];
         std::unique_lock<std::mutex> lock_queue(worker->queue_mutex, std::try_to_lock);
 
-        if (lock_queue.owns_lock() && worker->tasks.len) {
+        if (lock_queue.owns_lock() && worker->tasks.count) {
             Task task = std::move(worker->tasks[0]);
 
             worker->tasks.RemoveFirst();

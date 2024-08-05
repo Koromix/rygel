@@ -215,7 +215,7 @@ static bool ParseFeatureString(Span<const char> str, uint32_t *out_enable, uint3
 
 bool TargetSetBuilder::LoadIni(StreamReader *st)
 {
-    RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
 
     IniParser ini(st);
     ini.PushLogFilter();
@@ -423,7 +423,7 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
 // We steal stuff from TargetConfig so it's not reusable after that
 const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
-    RG_DEFER_NC(out_guard, len = set.targets.len) { set.targets.RemoveFrom(len); };
+    RG_DEFER_NC(out_guard, count = set.targets.count) { set.targets.RemoveFrom(count); };
 
     // Heavy type, so create it directly in HeapArray
     TargetInfo *target = set.targets.AppendDefault();

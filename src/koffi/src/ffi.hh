@@ -264,7 +264,7 @@ struct InstanceData {
     BucketArray<TypeInfo> types;
     HashMap<const char *, const TypeInfo *> types_map;
     BucketArray<FunctionInfo> callbacks;
-    Size base_types_len;
+    Size base_types_count;
 
     bool debug;
 

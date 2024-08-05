@@ -241,10 +241,10 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     Napi::Object obj = info[named].As<Napi::Object>();
     Napi::Array keys = GetOwnPropertyNames(obj);
 
-    RG_DEFER_NC(err_guard, len = instance->types.len) {
-        Size start = len + !named;
+    RG_DEFER_NC(err_guard, count = instance->types.count) {
+        Size start = count + !named;
 
-        for (Size i = start; i < instance->types.len; i++) {
+        for (Size i = start; i < instance->types.count; i++) {
             const TypeInfo *it = &instance->types[i];
             const TypeInfo **ptr = instance->types_map.Find(it->name);
 
@@ -253,7 +253,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
             }
         }
 
-        instance->types.RemoveFrom(len);
+        instance->types.RemoveFrom(count);
     };
 
     TypeInfo *type = instance->types.AppendDefault();
@@ -264,7 +264,7 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
         if (!MapType(env, instance, type, type->name))
             return env.Null();
     } else {
-        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
     type->primitive = PrimitiveKind::Record;
@@ -387,10 +387,10 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     Napi::Object obj = info[named].As<Napi::Object>();
     Napi::Array keys = GetOwnPropertyNames(obj);
 
-    RG_DEFER_NC(err_guard, len = instance->types.len) {
-        Size start = len + !named;
+    RG_DEFER_NC(err_guard, count = instance->types.count) {
+        Size start = count + !named;
 
-        for (Size i = start; i < instance->types.len; i++) {
+        for (Size i = start; i < instance->types.count; i++) {
             const TypeInfo *it = &instance->types[i];
             const TypeInfo **ptr = instance->types_map.Find(it->name);
 
@@ -399,7 +399,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
             }
         }
 
-        instance->types.RemoveFrom(len);
+        instance->types.RemoveFrom(count);
     };
 
     TypeInfo *type = instance->types.AppendDefault();
@@ -410,7 +410,7 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
         if (!MapType(env, instance, type, type->name))
             return env.Null();
     } else {
-        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+        type->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
     }
 
     type->primitive = PrimitiveKind::Union;
@@ -538,7 +538,7 @@ static Napi::Value CreateOpaqueType(const Napi::CallbackInfo &info)
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
 
     type->primitive = PrimitiveKind::Void;
     type->size = 0;
@@ -1034,7 +1034,7 @@ static Napi::Value CreateEnumType(const Napi::CallbackInfo &info)
     RG_DEFER_N(err_guard) { instance->types.RemoveLast(1); };
 
     type->name = named ? DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr
-                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.len).ptr;
+                       : Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.count).ptr;
 
     Napi::Object values = Napi::Object::New(env);
 
@@ -2048,7 +2048,7 @@ static Napi::Value ResetKoffi(const Napi::CallbackInfo &info)
         instance->broker = nullptr;
     }
 
-    instance->types.RemoveFrom(instance->base_types_len);
+    instance->types.RemoveFrom(instance->base_types_count);
 
     {
         HashSet<const void *> base_types;
@@ -2389,7 +2389,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         instance->str16_type = instance->types_map.FindValue("char16_t *", nullptr);
         instance->str32_type = instance->types_map.FindValue("char32_t *", nullptr);
 
-        instance->base_types_len = instance->types.len;
+        instance->base_types_count = instance->types.count;
     }
 
     // Expose internal Node stuff

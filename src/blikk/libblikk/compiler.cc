@@ -415,22 +415,22 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
     RG_DEFER_NC(err_guard, globals_len = program->globals.len,
                            sources_len = program->sources.len,
                            prev_main_offset = main_offset,
-                           variables_len = program->variables.len,
-                           functions_len = program->functions.len,
+                           variables_count = program->variables.count,
+                           functions_count = program->functions.count,
                            ro_len = program->ro.len,
-                           function_types_len = program->function_types.len,
-                           array_types_len = program->array_types.len,
-                           record_types_len = program->record_types.len,
-                           enum_types_len = program->enum_types.len,
-                           bare_types_len = program->bare_types.len) {
+                           function_types_count = program->function_types.count,
+                           array_types_count = program->array_types.count,
+                           record_types_count = program->record_types.count,
+                           enum_types_count = program->enum_types.count,
+                           bare_types_count = program->bare_types.count) {
         program->main.RemoveFrom(prev_main_len);
         program->globals.RemoveFrom(globals_len);
         program->sources.RemoveFrom(sources_len);
 
         main_offset = prev_main_offset;
-        DestroyVariables(variables_len);
+        DestroyVariables(variables_count);
 
-        for (Size i = functions_len; i < program->functions.len; i++) {
+        for (Size i = functions_count; i < program->functions.count; i++) {
             bk_FunctionInfo *func = &program->functions[i];
             bk_FunctionInfo **it = program->functions_map.Find(func->name);
 
@@ -447,15 +447,15 @@ bool bk_Parser::Parse(const bk_TokenizedFile &file, bk_CompileReport *out_report
                 }
             }
         }
-        program->functions.RemoveFrom(functions_len);
+        program->functions.RemoveFrom(functions_count);
 
         program->ro.RemoveFrom(ro_len);
 
-        DestroyTypes(&program->function_types, function_types_len);
-        DestroyTypes(&program->array_types, array_types_len);
-        DestroyTypes(&program->record_types, record_types_len);
-        DestroyTypes(&program->enum_types, enum_types_len);
-        DestroyTypes(&program->bare_types, bare_types_len);
+        DestroyTypes(&program->function_types, function_types_count);
+        DestroyTypes(&program->array_types, array_types_count);
+        DestroyTypes(&program->record_types, record_types_count);
+        DestroyTypes(&program->enum_types, enum_types_count);
+        DestroyTypes(&program->bare_types, bare_types_count);
     };
 
     this->file = &file;
@@ -653,7 +653,7 @@ void bk_Parser::AddOpaque(const char *name)
 
 void bk_Parser::Preparse(Span<const Size> positions)
 {
-    RG_ASSERT(!forwards.len);
+    RG_ASSERT(!forwards.count);
 
     for (Size i = positions.len - 1; i >= 0; i--) {
         Size fwd_pos = positions[i];
@@ -710,12 +710,12 @@ bool bk_Parser::ParseBlock(bool end_with_else)
 
     bool recurse = RecurseInc();
     RG_DEFER_C(prev_offset = *offset_ptr,
-               variables_len = program->variables.len) {
+               variables_count = program->variables.count) {
         RecurseDec();
         depth--;
 
         EmitPop(*offset_ptr - prev_offset);
-        DestroyVariables(variables_len);
+        DestroyVariables(variables_count);
         *offset_ptr = prev_offset;
     };
 
@@ -1074,7 +1074,7 @@ void bk_Parser::ParseFunction(ForwardInfo *fwd, bool record)
         Size func_offset = 0;
 
         RG_DEFER_C(prev_func = current_func,
-                   prev_variables = program->variables.len,
+                   prev_variables = program->variables.count,
                    prev_offset = offset_ptr,
                    prev_src = src,
                    prev_ir = ir) {
@@ -1621,7 +1621,7 @@ void bk_Parser::ParseFor()
     }
 
     // Destroy iterator and range values
-    DestroyVariables(program->variables.len - 1);
+    DestroyVariables(program->variables.count - 1);
     *offset_ptr -= 3;
 }
 
@@ -3296,7 +3296,7 @@ const char *bk_Parser::GetVariableKind(const bk_VariableInfo *var, bool capitali
 
 void bk_Parser::DestroyVariables(Size first_idx)
 {
-    for (Size i = program->variables.len - 1; i >= first_idx; i--) {
+    for (Size i = program->variables.count - 1; i >= first_idx; i--) {
         const bk_VariableInfo &var = program->variables[i];
         bk_VariableInfo **ptr = program->variables_map.Find(var.name);
 
@@ -3321,7 +3321,7 @@ void bk_Parser::DestroyVariables(Size first_idx)
 template <typename T>
 void bk_Parser::DestroyTypes(BucketArray<T> *types, Size first_idx)
 {
-    for (Size i = types->len - 1; i >= first_idx; i--) {
+    for (Size i = types->count - 1; i >= first_idx; i--) {
         const bk_TypeInfo &type = (*types)[i];
         const bk_TypeInfo **ptr = program->types_map.Find(type.signature);
 

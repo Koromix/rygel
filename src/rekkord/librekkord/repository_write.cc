@@ -107,7 +107,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         PendingDirectory *pending0 = pending_directories.AppendDefault();
         pending0->dirname = src_dirname;
 
-        for (Size i = 0; i < pending_directories.len; i++) {
+        for (Size i = 0; i < pending_directories.count; i++) {
             PendingDirectory *pending = &pending_directories[i];
 
             EnumResult ret = EnumerateDirectory(pending->dirname, nullptr, -1,
@@ -310,7 +310,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
 
     // Finalize and upload directory blobs
     async.Run([&]() {
-        for (Size i = pending_directories.len - 1; i >= 0; i--) {
+        for (Size i = pending_directories.count - 1; i >= 0; i--) {
             PendingDirectory *pending = &pending_directories[i];
 
             int64_t len_64le = LittleEndian(pending->total_len.load());

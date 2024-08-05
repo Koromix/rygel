@@ -161,8 +161,8 @@ static bool ToggleProfile(int delta)
         next_idx += delta;
 
         if (next_idx < 0) {
-            next_idx = config.profiles.len - 1;
-        } else if (next_idx >= config.profiles.len) {
+            next_idx = config.profiles.count - 1;
+        } else if (next_idx >= config.profiles.count) {
             next_idx = 0;
         }
     } while (config.profiles[next_idx].manual);
@@ -265,7 +265,7 @@ static bool HandleClientData(int fd)
             int64_t idx;
             if (!parser.ParseInt(&idx))
                 return false;
-            if (idx < 0 || idx >= config.profiles.len) {
+            if (idx < 0 || idx >= config.profiles.count) {
                 LogError("Client asked for invalid profile");
                 return false;
             }
@@ -370,7 +370,7 @@ By default, the first of the following config files will be used:
         if (!LoadConfig(config_filename, &config))
             return 1;
 
-        if (config.profiles.len >= 128) {
+        if (config.profiles.count >= 128) {
             LogError("Too many profiles (maximum = 128)");
             return 1;
         }

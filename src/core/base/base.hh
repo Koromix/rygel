@@ -2482,7 +2482,7 @@ public:
 
     HeapArray<Bucket *> buckets;
     Size offset = 0;
-    Size len = 0;
+    Size count = 0;
 
     typedef T value_type;
     typedef Iterator<BucketArray> iterator_type;
@@ -2510,14 +2510,14 @@ public:
         ClearBucketsAndValues();
 
         offset = 0;
-        len = 0;
+        count = 0;
     }
 
     iterator_type begin() { return iterator_type(this, 0, offset); }
     Iterator<const BucketArray<T, BucketSize>> begin() const { return Iterator<const BucketArray>(this, 0, offset); }
     iterator_type end()
     {
-        Size end_idx = offset + len;
+        Size end_idx = offset + count;
         Size bucket_idx = end_idx / BucketSize;
         Size bucket_offset = end_idx % BucketSize;
 
@@ -2525,7 +2525,7 @@ public:
     }
     Iterator<const BucketArray<T, BucketSize>> end() const
     {
-        Size end_idx = offset + len;
+        Size end_idx = offset + count;
         Size bucket_idx = end_idx / BucketSize;
         Size bucket_offset = end_idx % BucketSize;
 
@@ -2534,7 +2534,7 @@ public:
 
     const T &operator[](Size idx) const
     {
-        RG_ASSERT(idx >= 0 && idx < len);
+        RG_ASSERT(idx >= 0 && idx < count);
 
         idx += offset;
         Size bucket_idx = idx / BucketSize;
@@ -2546,8 +2546,8 @@ public:
 
     T *AppendDefault(Allocator **out_alloc = nullptr)
     {
-        Size bucket_idx = (offset + len) / BucketSize;
-        Size bucket_offset = (offset + len) % BucketSize;
+        Size bucket_idx = (offset + count) / BucketSize;
+        Size bucket_offset = (offset + count) % BucketSize;
 
         if (bucket_idx >= buckets.len) {
             Bucket *new_bucket = AllocateOne<Bucket>(buckets.allocator);
@@ -2560,7 +2560,7 @@ public:
         T *first = buckets[bucket_idx]->values + bucket_offset;
         new (first) T();
 
-        len++;
+        count++;
 
         if (out_alloc) {
             *out_alloc = &buckets[bucket_idx]->allocator;
@@ -2577,9 +2577,9 @@ public:
 
     void RemoveFrom(Size from)
     {
-        RG_ASSERT(from >= 0 && from <= len);
+        RG_ASSERT(from >= 0 && from <= count);
 
-        if (from == len)
+        if (from == count)
             return;
         if (!from) {
             Clear();
@@ -2599,24 +2599,24 @@ public:
         }
         buckets.RemoveFrom(delete_idx);
 
-        len = from;
+        count = from;
     }
-    void RemoveLast(Size count = 1)
+    void RemoveLast(Size n = 1)
     {
-        RG_ASSERT(count >= 0 && count <= len);
-        RemoveFrom(len - count);
+        RG_ASSERT(n >= 0 && n <= count);
+        RemoveFrom(count - n);
     }
 
-    void RemoveFirst(Size count = 1)
+    void RemoveFirst(Size n = 1)
     {
-        RG_ASSERT(count >= 0 && count <= len);
+        RG_ASSERT(n >= 0 && n <= count);
 
-        if (count == len) {
+        if (n == count) {
             Clear();
             return;
         }
 
-        Size end_idx = offset + count;
+        Size end_idx = offset + n;
         Size end_bucket_idx = end_idx / BucketSize;
         Size end_bucket_offset = end_idx % BucketSize;
 
@@ -2632,8 +2632,8 @@ public:
             buckets.RemoveLast(end_bucket_idx);
         }
 
-        offset = (offset + count) % BucketSize;
-        len -= count;
+        offset = (offset + n) % BucketSize;
+        count -= n;
     }
 
     void RemoveFrom(const iterator_type &it)
@@ -2653,7 +2653,7 @@ public:
         }
         buckets.RemoveFrom(delete_idx);
 
-        len = (it.bucket_idx * BucketSize) + it.bucket_offset - offset;
+        count = (it.bucket_idx * BucketSize) + it.bucket_offset - offset;
 
         RG_ASSERT(it == end());
     }
@@ -2682,7 +2682,7 @@ public:
         Size count = it.bucket_idx * BucketSize + it.bucket_offset - offset;
 
         offset = (offset + count) % BucketSize;
-        len -= count;
+        count -= count;
     }
     void RemoveUntil(const Iterator<const BucketArray<T, BucketSize>> &it) { return RemoveUntil((iterator_type)it); }
 

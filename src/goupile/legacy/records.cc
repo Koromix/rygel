@@ -721,7 +721,7 @@ bool RecordExporter::Export(const char *filename)
         if (!db.Prepare(sql.ptr, &stmt))
             return false;
 
-        for (Size i = 0; i < table.rows.len; i++) {
+        for (Size i = 0; i < table.rows.count; i++) {
             stmt.Reset();
 
             Span<const char> ulid = SplitStr(table.rows[i].ulid, '.');
@@ -957,7 +957,7 @@ RecordExporter::Column *RecordExporter::GetColumn(RecordExporter::Table *table, 
 
         table->columns_map.Set(col);
 
-        if (table->columns.len > 1) {
+        if (table->columns.count > 1) {
             if (table->prev_name) {
                 Column *it = table->columns_map.FindValue(table->prev_name, nullptr);
 
@@ -1000,7 +1000,7 @@ RecordExporter::Column *RecordExporter::GetColumn(RecordExporter::Table *table, 
 
     col->name = name;
     col->prev_name = table->prev_name;
-    col->values.AppendDefault(table->rows.len - col->values.len);
+    col->values.AppendDefault(table->rows.count - col->values.len);
 
     table->prev_name = name;
 
@@ -1033,13 +1033,13 @@ RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const 
         row->root_ulid = DuplicateString(root_ulid, &str_alloc).ptr;
         row->ulid = DuplicateString(ulid, &str_alloc).ptr;
         row->hid = hid && hid[0] ? DuplicateString(hid, &str_alloc).ptr : nullptr;
-        row->idx = table->rows.len - 1;
+        row->idx = table->rows.count - 1;
         CopyString(mtime, row->ctime);
 
         table->rows_map.Set(row);
 
         for (Column &col: table->columns) {
-            col.values.AppendDefault(table->rows.len - col.values.len);
+            col.values.AppendDefault(table->rows.count - col.values.len);
         }
     }
 

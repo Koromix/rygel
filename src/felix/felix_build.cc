@@ -603,7 +603,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     TargetSet target_set;
     if (!LoadTargetSet(config_filename, compiler->platform, compiler->architecture, &target_set))
         return 1;
-    if (!target_set.targets.len) {
+    if (!target_set.targets.count) {
         LogError("Configuration file does not contain any target");
         return 1;
     }

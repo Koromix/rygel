@@ -117,7 +117,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 valid &= CheckLightSettings(profile->settings);
 
                 if (default_name && TestStr(default_name, profile->name)) {
-                    config.default_idx = config.profiles.len - 1;
+                    config.default_idx = config.profiles.count - 1;
                     default_name = nullptr;
                 }
             } else {
@@ -140,7 +140,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     if (!ini.IsValid() || !valid)
         return false;
 
-    if (!config.profiles.len) {
+    if (!config.profiles.count) {
         LogError("Config file contains no profile");
         return false;
     }
