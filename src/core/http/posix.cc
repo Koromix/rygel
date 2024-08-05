@@ -51,9 +51,11 @@ restart:
         if (errno == EINTR)
             goto restart;
 
-        if (errno != EPIPE && errno != ECONNRESET) {
+        if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
             LogError("Failed to read from client: %1", strerror(errno));
         }
+
+        socket->client.request.keepalive = false;
         return -1;
     }
 
@@ -78,9 +80,11 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
             if (errno == EINTR)
                 continue;
 
-            if (errno != EPIPE && errno != ECONNRESET) {
+            if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
                 LogError("Failed to send to client: %1", strerror(errno));
             }
+
+            socket->client.request.keepalive = false;
             return false;
         }
 
@@ -176,7 +180,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
             if (errno == EINTR)
                 continue;
 
-            if (errno != EPIPE && errno != ECONNRESET) {
+            if (errno != EINVAL && errno != EPIPE && errno != ECONNRESET) {
                 LogError("Failed to send to client: %1", strerror(errno));
             }
 
