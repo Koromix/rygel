@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/event.h>
+#include <sys/uio.h>
 
 namespace RG {
 
@@ -225,6 +226,87 @@ void http_Daemon::EndWrite(http_Socket *socket)
 {
     SetDescriptorNonBlock(socket->sock, true);
     SetDescriptorRetain(socket->sock, false);
+}
+
+void http_IO::SendFile(int status, int fd, int64_t len)
+{
+    RG_ASSERT(socket);
+    RG_ASSERT(!response.started);
+    RG_ASSERT(len >= 0);
+
+    RG_DEFER { close(fd); };
+
+    response.started = true;
+    response.expected = len;
+
+    SetDescriptorNonBlock(socket->sock, false);
+
+#if defined(__FreeBSD__) || defined(__APPLE__)
+    Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
+
+    struct iovec header = {};
+    struct sf_hdtr hdtr = { &header, 1, nullptr, 0 };
+
+    off_t offset = 0;
+    int64_t remain = intro.len + len;
+
+    // Send intro and file in one go
+    while (remain) {
+        if (offset < intro.len) {
+            header.iov_base = (void *)(intro.ptr + offset);
+            header.iov_len = (size_t)(intro.len - offset);
+        } else {
+            hdtr.headers = nullptr;
+            hdtr.hdr_cnt = 0;
+        }
+
+        Size send = (Size)std::min(remain, (int64_t)Mebibytes(2));
+
+#if defined(__FreeBSD__)
+        off_t sent = 0;
+        int ret = sendfile(fd, socket->sock, offset, (size_t)send, &hdtr, &sent, 0);
+#else
+        off_t sent = (off_t)send;
+        int ret = sendfile(fd, socket->sock, offset, &sent, &hdtr, 0);
+#endif
+
+        if (ret < 0 && errno != EINTR) {
+            if (errno != EPIPE) {
+                LogError("Failed to send file: %1", strerror(errno));
+            }
+
+            request.keepalive = false;
+            return;
+        }
+
+        if (!ret && !sent) [[unlikely]] {
+            LogError("Truncated file sent");
+
+            request.keepalive = false;
+            return;
+        }
+
+        offset += sent;
+        remain -= (int64_t)sent;
+    }
+#else
+    Send(status, len, [&](StreamWriter *writer) {
+        StreamReader reader(fd, "<file>");
+
+        if (!SpliceStream(&reader, len, writer)) {
+            request.keepalive = false;
+            return false;
+        }
+        if (writer->IsValid() && writer->GetRawWritten() < len) {
+            LogError("File was truncated while sending");
+
+            request.keepalive = false;
+            return false;
+        }
+
+        return true;
+    });
+#endif
 }
 
 bool http_Dispatcher::Run()

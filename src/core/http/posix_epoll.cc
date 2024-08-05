@@ -36,6 +36,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <sys/sendfile.h>
 
 namespace RG {
 
@@ -170,6 +171,54 @@ void http_Daemon::StartWrite(http_Socket *)
 void http_Daemon::EndWrite(http_Socket *)
 {
     // Nothing to do
+}
+
+void http_IO::SendFile(int status, int fd, int64_t len)
+{
+    RG_ASSERT(socket);
+    RG_ASSERT(!response.started);
+    RG_ASSERT(len >= 0);
+
+    RG_DEFER { close(fd); };
+
+    response.started = true;
+    response.expected = len;
+
+    Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
+
+    if (!daemon->WriteSocket(socket, intro.As<uint8_t>())) {
+        request.keepalive = false;
+        return;
+    }
+
+    off_t offset = 0;
+    int64_t remain = len;
+
+    while (remain) {
+        Size send = (Size)std::min(remain, (int64_t)Mebibytes(2));
+        Size sent = sendfile(socket->sock, fd, &offset, (size_t)send);
+
+        if (sent < 0) {
+            if (errno == EINTR)
+                continue;
+
+            if (errno != EPIPE) {
+                LogError("Failed to send file: %1", strerror(errno));
+            }
+
+            request.keepalive = false;
+            return;
+        }
+
+        if (!sent) [[unlikely]] {
+            LogError("Truncated file sent");
+
+            request.keepalive = false;
+            return;
+        }
+
+        remain -= sent;
+    }
 }
 
 bool http_Dispatcher::Run()
