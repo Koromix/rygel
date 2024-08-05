@@ -516,7 +516,7 @@ EXPORT const char *PrintFmt(const char *fmt, ...)
 EXPORT const wchar_t *PrintFmtWide(const wchar_t *fmt, ...)
 {
     const int size = 256;
-    wchar_t *ptr = malloc(size);
+    wchar_t *ptr = malloc(size * sizeof(wchar_t));
 
     va_list ap;
     va_start(ap, fmt);
