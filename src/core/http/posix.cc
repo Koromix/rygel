@@ -105,7 +105,7 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     response.expected = len;
 
 #if !defined(MSG_DONTWAIT)
-    SetSocketNonBlock(socket->sock, false);
+    SetDescriptorNonBlock(socket->sock, false);
 #endif
 
 #if defined(__linux__)
@@ -220,7 +220,7 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
         success &= daemon->WriteSocket(socket, end);
 
-        SetSocketRetain(socket->sock, false);
+        SetDescriptorRetain(socket->sock, false);
 
         request.keepalive &= success;
         return success;

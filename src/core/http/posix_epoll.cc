@@ -91,7 +91,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         LogError("Failed to listen on socket: %1", strerror(errno));
         return false;
     }
-    SetSocketNonBlock(listener, true);
+    SetDescriptorNonBlock(listener, true);
 
     listeners.Append(listener);
     err_guard.Disable();

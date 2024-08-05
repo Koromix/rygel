@@ -5915,30 +5915,30 @@ int ConnectToUnixSocket(const char *path, int flags)
     return sock;
 }
 
-void SetSocketNonBlock(int sock, bool enable)
+void SetDescriptorNonBlock(int fd, bool enable)
 {
 #if defined(_WIN32)
     unsigned long mode = enable;
-    ioctlsocket(sock, FIONBIO, &mode);
+    ioctlsocket((SOCKET)fd, FIONBIO, &mode);
 #else
-    int flags = fcntl(sock, F_GETFL, 0);
+    int flags = fcntl(fd, F_GETFL, 0);
     flags = ApplyMask(flags, O_NONBLOCK, enable);
-    fcntl(sock, F_SETFL, flags);
+    fcntl(fd, F_SETFL, flags);
 #endif
 }
 
-void SetSocketRetain(int sock, bool retain)
+void SetDescriptorRetain(int fd, bool retain)
 {
 #if defined(TCP_CORK)
     int flag = retain;
-    setsockopt(sock, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
+    setsockopt(fd, IPPROTO_TCP, TCP_CORK, &flag, sizeof(flag));
 #elif defined(TCP_NOPUSH)
     int flag = retain;
-    setsockopt(sock, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
+    setsockopt(fd, IPPROTO_TCP, TCP_NOPUSH, &flag, sizeof(flag));
 
 #if defined(__APPLE__)
     if (!retain) {
-        send(sock, nullptr, 0, MSG_NOSIGNAL);
+        send(fd, nullptr, 0, MSG_NOSIGNAL);
     }
 #endif
 #else

@@ -112,7 +112,7 @@ static int CreateListenSocket(const http_Config &config)
         return -1;
     }
 
-    SetSocketNonBlock(sock, true);
+    SetDescriptorNonBlock(sock, true);
 
     err_guard.Disable();
     return sock;
@@ -212,19 +212,19 @@ void http_Daemon::Stop()
 
 void http_Daemon::StartRead(http_Socket *socket)
 {
-    SetSocketNonBlock(socket->sock, false);
+    SetDescriptorNonBlock(socket->sock, false);
 }
 
 void http_Daemon::StartWrite(http_Socket *socket)
 {
-    SetSocketNonBlock(socket->sock, false);
-    SetSocketRetain(socket->sock, true);
+    SetDescriptorNonBlock(socket->sock, false);
+    SetDescriptorRetain(socket->sock, true);
 }
 
 void http_Daemon::EndWrite(http_Socket *socket)
 {
-    SetSocketNonBlock(socket->sock, true);
-    SetSocketRetain(socket->sock, false);
+    SetDescriptorNonBlock(socket->sock, true);
+    SetDescriptorRetain(socket->sock, false);
 }
 
 bool http_Dispatcher::Run()
@@ -312,7 +312,7 @@ bool http_Dispatcher::Run()
 
                     if (sock >= 0) {
                         fcntl(sock, F_SETFD, FD_CLOEXEC);
-                        SetSocketNonBlock(sock, true);
+                        SetDescriptorNonBlock(sock, true);
                     }
 #endif
 
