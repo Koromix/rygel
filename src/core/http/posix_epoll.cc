@@ -280,7 +280,7 @@ bool http_Dispatcher::Run()
                         if (errno == EAGAIN)
                             break;
 
-                        LogError("Failed to accept client: %1 %2", strerror(errno), errno);
+                        LogError("Failed to accept client: %1", strerror(errno));
                         return false;
                     }
 
