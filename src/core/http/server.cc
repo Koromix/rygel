@@ -1219,7 +1219,7 @@ void http_IO::Rearm(int64_t start)
 
 bool http_IO::IsKeptAlive() const
 {
-    bool waiting = !incoming.buf.len && (request_start > socket_start);
+    bool waiting = !incoming.buf.len && (request_start != socket_start);
     return waiting;
 }
 
