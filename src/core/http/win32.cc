@@ -60,7 +60,7 @@ enum class PendingOperation {
     Execute,
     Done,
 
-    CreateSockets,
+    Manage,
     Exit
 };
 
@@ -387,7 +387,7 @@ bool http_Dispatcher::Run()
                     bool post = !create_accepts.fetch_add(1);
 
                     if (post) {
-                        PostQueuedCompletionStatus(iocp, 0, (int)PendingOperation::CreateSockets, nullptr);
+                        PostQueuedCompletionStatus(iocp, 0, (int)PendingOperation::Manage, nullptr);
                     }
                 }
 
@@ -515,13 +515,15 @@ bool http_Dispatcher::Run()
                 }
             } break;
 
-            case PendingOperation::CreateSockets: {
-                Size prev_len = sockets.len;
+            case PendingOperation::Manage: {
+                Size start_len = sockets.len;
+                Size prev_create = 0;
 
                 do {
+                    int create = create_accepts;
                     int pending = pending_accepts;
-                    int target = std::clamp(pending + 4 * create_accepts.load(), BaseAccepts + 64, MaxAccepts - pending);
 
+                    int target = std::clamp(pending + 4 * (create - prev_create), BaseAccepts + 64, MaxAccepts - pending);
                     int failures = 0;
 
                     for (int i = pending; i < target; i++) {
@@ -537,18 +539,21 @@ bool http_Dispatcher::Run()
                         }
                     }
 
-                    create_accepts = 0;
+                    prev_create = create;
                 } while (pending_accepts < BaseAccepts);
 
                 Size j = 0;
-                for (Size i = 0; i < prev_len; i++) {
+                for (Size i = 0; i < start_len; i++) {
                     sockets[j] = sockets[i];
                     j += (sockets[i]->sock >= 0);
                 }
-                for (Size i = prev_len; i < sockets.len; i++, j++) {
+                for (Size i = start_len; i < sockets.len; i++, j++) {
                     sockets[j] = sockets[i];
                 }
                 sockets.len = j;
+
+                // Reset last to make sure only one Manage operations runs at the same time
+                create_accepts = 0;
             } break;
 
             case PendingOperation::Exit: {
@@ -672,7 +677,7 @@ void http_Dispatcher::DestroySocket(http_Socket *socket)
     socket->op = PendingOperation::None;
 
     // If anything fails (should be very rare), we're temporarily leaking the struct until
-    // a cleanup happens when more sockets are created (see PendingOperation::CreateSockets).
+    // a cleanup happens when more sockets are created (see PendingOperation::Manage).
 
     socket->sock = CreateSocket(daemon->sock_type, SOCK_STREAM | SOCK_OVERLAPPED);
     if (socket->sock < 0)
