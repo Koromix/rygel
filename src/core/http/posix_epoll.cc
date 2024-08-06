@@ -217,6 +217,8 @@ void http_IO::SendFile(int status, int fd, int64_t len)
             return;
         }
 
+        socket->client.timeout_at = GetMonotonicTime() + daemon->send_timeout;
+
         remain -= sent;
     }
 }
@@ -306,12 +308,6 @@ bool http_Dispatcher::Run()
 
             http_Socket *socket = sockets[i];
             http_IO *client = &socket->client;
-
-            const auto disconnect = [&]() {
-                ParkSocket(socket);
-                keep--;
-            };
-
             http_RequestStatus status = http_RequestStatus::Busy;
 
             if (socket->process) {
@@ -338,24 +334,17 @@ bool http_Dispatcher::Run()
             }
 
             switch (status) {
-                case http_RequestStatus::Busy: {
-                    int delay = (int)(client->timeout_at.load() - now);
-
-                    if (delay <= 0) {
-                        shutdown(socket->sock, SHUT_RDWR);
-                        break;
-                    }
-
-                    timeout = std::min(timeout, (unsigned int)delay);
-                } break;
+                case http_RequestStatus::Busy: { /* Do nothing */ } break;
 
                 case http_RequestStatus::Ready: {
                     if (!client->InitAddress()) {
                         client->request.keepalive = false;
                         client->SendError(400);
-                        disconnect();
 
-                        break;
+                        ParkSocket(socket);
+                        keep--;
+
+                        continue;
                     }
 
                     int worker_idx = 1 + next_worker;
@@ -375,8 +364,22 @@ bool http_Dispatcher::Run()
                     });
                 } break;
 
-                case http_RequestStatus::Close: { disconnect(); } break;
+                case http_RequestStatus::Close: {
+                    ParkSocket(socket);
+                    keep--;
+
+                    continue;
+                } break;
             }
+
+            int delay = (int)(client->timeout_at.load() - now);
+
+            if (delay <= 0) {
+                shutdown(socket->sock, SHUT_RDWR);
+                break;
+            }
+
+            timeout = std::min(timeout, (unsigned int)delay);
         }
         sockets.len = keep;
 
