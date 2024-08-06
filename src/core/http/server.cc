@@ -1185,8 +1185,6 @@ bool http_IO::Rearm(int64_t now)
         finalize();
     }
 
-    used = true;
-
     bool keepalive = request.keepalive && (now >= 0);
 
     if (keepalive) {
@@ -1228,12 +1226,6 @@ bool http_IO::Rearm(int64_t now)
     }
 
     return keepalive;
-}
-
-bool http_IO::IsKeptAlive() const
-{
-    bool waiting = !incoming.buf.len && used;
-    return waiting;
 }
 
 }

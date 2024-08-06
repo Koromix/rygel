@@ -179,7 +179,6 @@ class http_IO {
     http_Socket *socket;
     char addr[65];
 
-    bool used = false;
     int64_t socket_start;
     std::atomic_int64_t timeout_at;
 
@@ -257,7 +256,7 @@ private:
 
     // Returns true if connection is Keep-Alive and still within limits
     bool Rearm(int64_t now);
-    bool IsKeptAlive() const;
+    bool IsBusy() const { return incoming.buf.len; }
 
     friend class http_Daemon;
     friend class http_Dispatcher;
