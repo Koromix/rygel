@@ -376,7 +376,7 @@ bool http_Dispatcher::Run()
 
             if (delay <= 0) {
                 shutdown(socket->sock, SHUT_RDWR);
-                break;
+                continue;
             }
 
             timeout = std::min(timeout, (unsigned int)delay);
