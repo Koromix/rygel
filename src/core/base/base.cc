@@ -658,7 +658,7 @@ int64_t GetMonotonicTime()
     return (int64_t)GetTickCount64();
 #elif defined(__EMSCRIPTEN__)
     return (int64_t)emscripten_get_now();
-#elif defined(__linux__) || defined(__FreeBSD__)
+#elif defined(CLOCK_MONOTONIC_COARSE)
     struct timespec ts;
     RG_CRITICAL(clock_gettime(CLOCK_MONOTONIC_COARSE, &ts) == 0, "clock_gettime(CLOCK_MONOTONIC_COARSE) failed: %1", strerror(errno));
 
