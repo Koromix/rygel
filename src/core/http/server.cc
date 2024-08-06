@@ -255,6 +255,7 @@ bool http_Daemon::InitConfig(const http_Config &config)
 
     idle_timeout = config.idle_timeout;
     keepalive_time = config.keepalive_time;
+    send_timeout = config.send_timeout;
 
     max_request_size = config.max_request_size;
     max_url_len = config.max_url_len;
@@ -1198,7 +1199,7 @@ bool http_IO::Rearm(int64_t now)
         MemMove(incoming.buf.ptr, incoming.extra.ptr, incoming.extra.len);
         incoming.buf.RemoveFrom(incoming.extra.len);
     } else {
-        timeout_at = -1;
+        timeout_at = now + 5000;
         incoming.buf.RemoveFrom(0);
     }
 
