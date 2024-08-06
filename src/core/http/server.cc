@@ -264,8 +264,10 @@ bool http_Daemon::InitConfig(const http_Config &config)
     return true;
 }
 
-void http_Daemon::RunHandler(http_IO *client)
+void http_Daemon::RunHandler(http_IO *client, int64_t now)
 {
+    client->request.keepalive &= (now < client->socket_start + keepalive_time);
+
     // This log filter does two things: it keeps a copy of the last log error message,
     // and it sets the log context to the client address (for log file).
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
@@ -654,7 +656,6 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
     }
 
     socket_start = start;
-    request_start = start;
     timeout_at = start + daemon->idle_timeout;
 
     return true;
@@ -1177,21 +1178,30 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
     return true;
 }
 
-void http_IO::Rearm(int64_t start)
+bool http_IO::Rearm(int64_t now)
 {
     for (const auto &finalize: response.finalizers) {
         finalize();
     }
 
-    request_start = start;
-    timeout_at = socket_start + daemon->keepalive_time;
+    used = true;
 
-    if (start >= 0) {
+    bool keepalive = request.keepalive && (now >= 0);
+
+    if (keepalive) {
+        int64_t keepalive_timeout = socket_start + daemon->keepalive_time;
+
+        // Make sure the client gets some extra time when in Keep-Alive time to avoid
+        // abrupt disconnection once we have sent "Connection: keep-alive" to the client.
+        timeout_at = std::max(keepalive_timeout, now + 5000);
+
         MemMove(incoming.buf.ptr, incoming.extra.ptr, incoming.extra.len);
         incoming.buf.RemoveFrom(incoming.extra.len);
     } else {
+        timeout_at = -1;
         incoming.buf.RemoveFrom(0);
     }
+
     incoming.pos = 0;
     incoming.intro = {};
     incoming.extra = {};
@@ -1210,16 +1220,18 @@ void http_IO::Rearm(int64_t start)
     response.sent = 0;
     last_err = nullptr;
 
-    if (start >= 0) {
+    if (keepalive) {
         allocator.Reset();
     } else {
         allocator.ReleaseAll();
     }
+
+    return keepalive;
 }
 
 bool http_IO::IsKeptAlive() const
 {
-    bool waiting = !incoming.buf.len && (request_start != socket_start);
+    bool waiting = !incoming.buf.len && used;
     return waiting;
 }
 

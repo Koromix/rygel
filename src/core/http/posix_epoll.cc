@@ -358,33 +358,21 @@ bool http_Dispatcher::Run()
                         break;
                     }
 
-                    client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
-
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerDispatcher;
 
                     DeleteEpollDescriptor(socket->sock);
 
-                    if (client->request.keepalive) {
-                        async.Run(worker_idx, [=, this] {
-                            daemon->RunHandler(client);
-                            client->Rearm(now);
+                    async.Run(worker_idx, [=, this] {
+                        daemon->RunHandler(client, now);
 
-                            AddEpollDescriptor(socket->sock, EPOLLIN | EPOLLET, socket);
-
-                            return true;
-                        });
-                    } else {
-                        async.Run(worker_idx, [=, this] {
-                            daemon->RunHandler(client);
-                            client->Rearm(-1);
-
+                        if (!client->Rearm(GetMonotonicTime())) {
                             shutdown(socket->sock, SHUT_RD);
-                            AddEpollDescriptor(socket->sock, EPOLLIN, socket);
+                        }
+                        AddEpollDescriptor(socket->sock, EPOLLIN | EPOLLET, socket);
 
-                            return true;
-                        });
-                    }
+                        return true;
+                    });
                 } break;
 
                 case http_RequestStatus::Close: { disconnect(); } break;

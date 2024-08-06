@@ -119,7 +119,7 @@ private:
     bool WriteSocket(http_Socket *socket, Span<const uint8_t> buf);
 
     bool InitConfig(const http_Config &config);
-    void RunHandler(http_IO *client);
+    void RunHandler(http_IO *client, int64_t now);
 
     friend class http_Dispatcher;
     friend class http_IO;
@@ -179,8 +179,8 @@ class http_IO {
     http_Socket *socket;
     char addr[65];
 
+    bool used = false;
     int64_t socket_start;
-    int64_t request_start;
     std::atomic_int64_t timeout_at;
 
     struct {
@@ -209,7 +209,7 @@ class http_IO {
     BlockAllocator allocator { Kibibytes(8) };
 
 public:
-    http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(0); }
+    http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(-1); }
     ~http_IO();
 
     RG::Allocator *Allocator() { return &allocator; }
@@ -255,8 +255,8 @@ private:
     bool WriteDirect(Span<const uint8_t> buf);
     bool WriteChunked(Span<const uint8_t> buf);
 
-    void Rearm(int64_t start);
-
+    // Returns true if connection is Keep-Alive and still within limits
+    bool Rearm(int64_t now);
     bool IsKeptAlive() const;
 
     friend class http_Daemon;

@@ -476,8 +476,7 @@ bool http_Dispatcher::Run()
                             break;
                         }
 
-                        client->request.keepalive &= (now < client->socket_start + daemon->keepalive_time);
-                        daemon->RunHandler(client);
+                        daemon->RunHandler(client, now);
                     } break;
 
                     case http_RequestStatus::Close: { DisconnectSocket(socket); } break;
@@ -511,13 +510,7 @@ bool http_Dispatcher::Run()
 
                 http_IO *client = socket->client;
 
-                if (client->request.keepalive) {
-                    client->Rearm(now);
-
-                    if (!PostRead(socket)) {
-                        DisconnectSocket(socket);
-                    }
-                } else {
+                if (!client->Rearm(now) || !PostRead(socket)) {
                     DisconnectSocket(socket);
                 }
             } break;
