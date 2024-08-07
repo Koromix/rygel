@@ -228,22 +228,14 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 #if defined(__FreeBSD__) || defined(__APPLE__)
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 
-    struct iovec header = {};
+    struct iovec header = { (void *)intro.ptr, (size_t)intro.len };
     struct sf_hdtr hdtr = { &header, 1, nullptr, 0 };
 
     off_t offset = 0;
-    int64_t remain = intro.len + len;
+    int64_t remain = len + intro.len;
 
     // Send intro and file in one go
     while (remain) {
-        if (offset < intro.len) {
-            header.iov_base = (void *)(intro.ptr + offset);
-            header.iov_len = (size_t)(intro.len - offset);
-        } else {
-            hdtr.headers = nullptr;
-            hdtr.hdr_cnt = 0;
-        }
-
         Size send = (Size)std::min(remain, (int64_t)Mebibytes(2));
 
 #if defined(__FreeBSD__)
@@ -275,8 +267,16 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         socket->client.timeout_at = GetMonotonicTime() + daemon->send_timeout;
 
-        offset += sent;
+        // Assume header is sent entirely!
+        // Looks correct for FreeBSD (after a quick check of the kernel code), no idea for macOS...
+        RG_ASSERT(!hdtr.hdr_cnt || sent >= intro.len);
+
+        offset += sent - hdtr.hdr_cnt * intro.len;
         remain -= (int64_t)sent;
+
+        // Only send header once :)
+        hdtr.headers = nullptr;
+        hdtr.hdr_cnt = 0;
     }
 #else
     Send(status, len, [&](StreamWriter *writer) {
