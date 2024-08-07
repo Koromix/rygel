@@ -237,7 +237,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     RG_DEFER { close(fd); };
 
     response.started = true;
-    response.expected = len;
 
     SetDescriptorNonBlock(socket->sock, false);
 

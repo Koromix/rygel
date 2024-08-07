@@ -703,7 +703,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     AddFinalizer([=]() { CloseDescriptor(fd); });
 
     response.started = true;
-    response.expected = len;
 
     // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
@@ -773,17 +772,15 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 bool http_IO::WriteChunked(Span<const uint8_t> data)
 {
     if (!data.len) {
-        bool success = (response.expected < 0 || response.sent == response.expected);
-
         uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
-        success &= daemon->WriteSocket(socket, end);
 
-        request.keepalive &= success;
+        if (!daemon->WriteSocket(socket, end)) {
+            request.keepalive = false;
+            return false;
+        }
+        daemon->EndWrite(socket);
 
-        socket->op = PendingOperation::Done;
-        PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
-
-        return success;
+        return true;
     }
 
     do {
@@ -804,8 +801,6 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
 
         data.ptr += copy_len;
         data.len -= copy_len;
-
-        response.sent += copy_len;
     } while (data.len);
 
     return true;

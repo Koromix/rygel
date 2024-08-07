@@ -100,15 +100,15 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
 bool http_IO::WriteChunked(Span<const uint8_t> data)
 {
     if (!data.len) {
-        bool success = (response.expected < 0 || response.sent == response.expected);
-
         uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
-        success &= daemon->WriteSocket(socket, end);
 
-        SetDescriptorRetain(socket->sock, false);
+        if (!daemon->WriteSocket(socket, end)) {
+            request.keepalive = false;
+            return false;
+        }
+        daemon->EndWrite(socket);
 
-        request.keepalive &= success;
-        return success;
+        return true;
     }
 
     if (data.len > (Size)16 * 0xFFFF) [[unlikely]] {

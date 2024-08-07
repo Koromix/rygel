@@ -182,7 +182,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     RG_DEFER { close(fd); };
 
     response.started = true;
-    response.expected = len;
 
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
 

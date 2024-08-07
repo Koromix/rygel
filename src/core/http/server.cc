@@ -499,7 +499,6 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
     }
 
     response.started = true;
-    response.expected = len;
 
     Span<const char> intro = PrepareResponse(status, encoding, len);
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
@@ -1169,12 +1168,8 @@ Size http_IO::ReadDirect(Span<uint8_t> buf)
 bool http_IO::WriteDirect(Span<const uint8_t> data)
 {
     if (!data.len) {
-        bool success = (response.expected < 0 || response.sent == response.expected);
-
-        request.keepalive &= success;
         daemon->EndWrite(socket);
-
-        return success;
+        return true;
     }
 
     if (!daemon->WriteSocket(socket, data)) {
@@ -1201,10 +1196,10 @@ bool http_IO::Rearm(int64_t now)
         timeout_at = std::max(keepalive_timeout, now + 5000);
 
         MemMove(incoming.buf.ptr, incoming.buf.ptr + incoming.pos, incoming.buf.len - incoming.pos);
-        incoming.buf.RemoveFrom(incoming.pos);
+        incoming.buf.len -= incoming.pos;
     } else {
         timeout_at = now + 5000;
-        incoming.buf.RemoveFrom(0);
+        incoming.buf.len = 0;
     }
 
     incoming.pos = 0;
@@ -1219,8 +1214,6 @@ bool http_IO::Rearm(int64_t now)
     response.headers.RemoveFrom(0);
     response.finalizers.RemoveFrom(0);
     response.started = false;
-    response.expected = 0;
-    response.sent = 0;
     last_err = nullptr;
 
     if (keepalive) {
