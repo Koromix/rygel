@@ -372,10 +372,10 @@ R"(<!DOCTYPE html>
     </head>
     <body>
         <nav>
-{{ NAV }}
+            {{ NAV }}
         </nav>
         <main>
-{{ MAIN }}
+            {{ MAIN }}
         </main>
     </body>
 </html>
@@ -439,28 +439,26 @@ R"(<!DOCTYPE html>
             WriteContent(title, writer);
         } else if (key == "NAV") {
             bool root = TestStr(request.path, "/");
-
-            PrintLn(writer, "        <a href=\"..\"%1>(go back)</a>", root ? " style=\"visibility: hidden;\"" : "");
-            PrintLn(writer, "        %1", request.path);
+            Print(writer, "<a href=\"..\"%1>(go back)</a> %2", root ? " style=\"visibility: hidden;\"" : "", request.path);
         } else if (key == "MAIN") {
             if (entries.len) {
-                writer->Write("        <table>\n");
+                writer->Write("<table>");
                 for (const EntryData &entry: entries) {
                     const char *cls = entry.is_directory ? "directory" : "file";
 
-                    Print(writer, "            <tr class=\"%1\">", cls);
-                    Print(writer, "                <td><a href=\"");
+                    Print(writer, "<tr class=\"%1\">", cls);
+                    Print(writer, "<td><a href=\"");
                     WriteURL(entry.name, writer); writer->Write("\">"); WriteContent(entry.name, writer);
-                    writer->Write("</a></li>\n");
+                    writer->Write("</a></li>");
                     if (!entry.is_directory) {
-                        Print(writer, "                <td>%1</td>", FmtDiskSize(entry.size));
+                        Print(writer, "<td>%1</td>", FmtDiskSize(entry.size));
                     } else {
-                        Print(writer, "                <td></td>");
+                        Print(writer, "<td></td>");
                     }
-                    Print(writer, "            </tr>");
+                    Print(writer, "</tr>");
 
                 }
-                writer->Write("        </table>");
+                writer->Write("</table>");
             } else {
                 writer->Write("Empty directory");
             }
