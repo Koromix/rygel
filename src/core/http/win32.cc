@@ -703,7 +703,7 @@ http_IO *http_Dispatcher::InitClient(http_Socket *socket, int64_t start, struct 
 
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
-    static const Size MaxSend = INT32_MAX - 1;
+    static const Size MaxSend = Mebibytes(2);
 
     RG_ASSERT(socket);
     RG_ASSERT(!response.started);
