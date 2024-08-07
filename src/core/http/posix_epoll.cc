@@ -92,6 +92,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
         LogError("Failed to listen on socket: %1", strerror(errno));
         return false;
     }
+
     SetDescriptorNonBlock(listener, true);
 
     listeners.Append(listener);
@@ -156,21 +157,6 @@ void http_Daemon::Stop()
     listeners.Clear();
 
     handle_func = {};
-}
-
-void http_Daemon::StartRead(http_Socket *)
-{
-    // Nothing to do
-}
-
-void http_Daemon::StartWrite(http_Socket *)
-{
-    // Nothing to do
-}
-
-void http_Daemon::EndWrite(http_Socket *socket)
-{
-    SetDescriptorRetain(socket->sock, false);
 }
 
 void http_IO::SendFile(int status, int fd, int64_t len)

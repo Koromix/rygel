@@ -211,23 +211,6 @@ void http_Daemon::Stop()
     handle_func = {};
 }
 
-void http_Daemon::StartRead(http_Socket *socket)
-{
-    SetDescriptorNonBlock(socket->sock, false);
-}
-
-void http_Daemon::StartWrite(http_Socket *socket)
-{
-    SetDescriptorNonBlock(socket->sock, false);
-    SetDescriptorRetain(socket->sock, true);
-}
-
-void http_Daemon::EndWrite(http_Socket *socket)
-{
-    SetDescriptorNonBlock(socket->sock, true);
-    SetDescriptorRetain(socket->sock, false);
-}
-
 void http_IO::SendFile(int status, int fd, int64_t len)
 {
     RG_ASSERT(socket);
@@ -238,7 +221,9 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
     response.started = true;
 
+#if !defined(MSG_DONTWAIT)
     SetDescriptorNonBlock(socket->sock, false);
+#endif
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
@@ -393,6 +378,9 @@ bool http_Dispatcher::Run()
                     http_Socket *socket = (http_Socket *)addr;
 
                     if (socket) [[likely]] {
+#if !defined(MSG_DONTWAIT)
+                        SetDescriptorNonBlock(socket->sock, true);
+#endif
                         AddEventChange(EVFILT_READ, socket->sock, EV_ENABLE | EV_CLEAR, socket);
                     }
                 }
@@ -410,21 +398,8 @@ bool http_Dispatcher::Run()
 
 #if defined(SOCK_CLOEXEC)
                 int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
-
-#if defined(TCP_NOPUSH)
-                if (sock >= 0) {
-                    // Disable Nagle algorithm on platforms with better options
-                    int flag = 1;
-                    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-                }
-#endif
 #else
                 int sock = accept(daemon->listener, (sockaddr *)&ss, &ss_len);
-
-                if (sock >= 0) {
-                    fcntl(sock, F_SETFD, FD_CLOEXEC);
-                    SetDescriptorNonBlock(sock, true);
-                }
 #endif
 
                 if (sock < 0) {
@@ -436,6 +411,13 @@ bool http_Dispatcher::Run()
                     LogError("Failed to accept client: %1", strerror(errno));
                     return false;
                 }
+
+#if !defined(SOCK_CLOEXEC)
+                fcntl(sock, F_SETFD, FD_CLOEXEC);
+#endif
+#if !defined(MSG_DONTWAIT)
+                SetDescriptorNonBlock(sock, true);
+#endif
 
                 http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
 
@@ -464,8 +446,13 @@ bool http_Dispatcher::Run()
 
                 client->incoming.buf.Grow(Kibibytes(8));
 
+#if defined(MSG_DONTWAIT)
+                Size available = client->incoming.buf.Available() - 1;
+                Size bytes = recv(socket->sock, client->incoming.buf.ptr, (size_t)available, MSG_DONTWAIT);
+#else
                 Size available = client->incoming.buf.Available() - 1;
                 Size bytes = recv(socket->sock, client->incoming.buf.ptr, (size_t)available, 0);
+#endif
 
                 if (bytes > 0) {
                     client->incoming.buf.len += bytes;

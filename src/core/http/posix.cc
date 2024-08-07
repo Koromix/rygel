@@ -42,6 +42,28 @@ namespace RG {
 // Sane platform
 static_assert(EAGAIN == EWOULDBLOCK);
 
+void http_Daemon::StartRead(http_Socket *socket)
+{
+#if !defined(MSG_DONTWAIT)
+    SetDescriptorNonBlock(socket->sock, false);
+#else
+    (void)socket;
+#endif
+}
+
+void http_Daemon::StartWrite(http_Socket *socket)
+{
+#if !defined(MSG_DONTWAIT)
+    SetDescriptorNonBlock(socket->sock, false);
+#endif
+    SetDescriptorRetain(socket->sock, true);
+}
+
+void http_Daemon::EndWrite(http_Socket *socket)
+{
+    SetDescriptorRetain(socket->sock, false);
+}
+
 Size http_Daemon::ReadSocket(http_Socket *socket, Span<uint8_t> buf)
 {
 restart:
