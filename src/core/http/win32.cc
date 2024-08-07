@@ -517,7 +517,7 @@ bool http_Dispatcher::Run()
 
             case PendingOperation::Manage: {
                 Size start_len = sockets.len;
-                Size prev_create = 0;
+                int prev_create = 0;
 
                 do {
                     int create = create_accepts;

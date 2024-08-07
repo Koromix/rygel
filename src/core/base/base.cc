@@ -5942,7 +5942,7 @@ void SetDescriptorRetain(int fd, bool retain)
 #else
     // Nothing to see here
 
-    (void)sock;
+    (void)fd;
     (void)retain;
 #endif
 }
