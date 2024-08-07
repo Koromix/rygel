@@ -168,9 +168,9 @@ void http_Daemon::StartWrite(http_Socket *)
     // Nothing to do
 }
 
-void http_Daemon::EndWrite(http_Socket *)
+void http_Daemon::EndWrite(http_Socket *socket)
 {
-    // Nothing to do
+    SetDescriptorRetain(socket->sock, false);
 }
 
 void http_IO::SendFile(int status, int fd, int64_t len)
