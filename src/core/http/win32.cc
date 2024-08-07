@@ -467,17 +467,7 @@ bool http_Dispatcher::Run()
                         }
                     } break;
 
-                    case http_RequestStatus::Ready: {
-                        if (!client->InitAddress()) {
-                            client->request.keepalive = false;
-                            client->SendError(400);
-                            DisconnectSocket(socket);
-
-                            break;
-                        }
-
-                        daemon->RunHandler(client, now);
-                    } break;
+                    case http_RequestStatus::Ready: { daemon->RunHandler(client, now); } break;
 
                     case http_RequestStatus::Close: { DisconnectSocket(socket); } break;
                 }

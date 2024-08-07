@@ -267,8 +267,6 @@ bool http_Daemon::InitConfig(const http_Config &config)
 
 void http_Daemon::RunHandler(http_IO *client, int64_t now)
 {
-    client->request.keepalive &= (now < client->socket_start + keepalive_time);
-
     // This log filter does two things: it keeps a copy of the last log error message,
     // and it sets the log context to the client address (for log file).
     PushLogFilter([&](LogLevel level, const char *ctx, const char *msg, FunctionRef<LogFunc> func) {
@@ -282,6 +280,15 @@ void http_Daemon::RunHandler(http_IO *client, int64_t now)
         func(level, ctx_buf, msg);
     });
     RG_DEFER { PopLogFilter(); };
+
+    if (!client->InitAddress()) [[unlikely]] {
+        client->request.keepalive = false;
+        client->SendError(400);
+
+        return;
+    }
+
+    client->request.keepalive &= (now < client->socket_start + keepalive_time);
 
     handle_func(client->request, client);
 
@@ -867,7 +874,7 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
 
 http_RequestStatus http_IO::ParseRequest()
 {
-    bool complete = false;
+    Span<char> intro = {};
     bool keepalive = false;
 
     // Find end of request headers (CRLF+CRLF)
@@ -884,30 +891,26 @@ http_RequestStatus http_IO::ParseRequest()
         const char *end = (const char *)incoming.buf.ptr + incoming.pos;
 
         if (end[0] == '\r' && end[1] == '\n' && end[2] == '\r' && end[3] == '\n') {
-            incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
-            incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 4, incoming.buf.len - incoming.pos - 4);
+            intro = incoming.buf.As<char>().Take(0, incoming.pos);
+            incoming.pos += 4;
 
-            complete = true;
             break;
         } else if (end[0] == '\n' && end[1] == '\n') {
-            incoming.intro = incoming.buf.As<char>().Take(0, incoming.pos);
-            incoming.extra = MakeSpan(incoming.buf.ptr + incoming.pos + 2, incoming.buf.len - incoming.pos - 2);
+            intro = incoming.buf.As<char>().Take(0, incoming.pos);
+            incoming.pos += 2;
 
-            complete = true;
             break;
         }
 
         incoming.pos++;
     }
 
-    if (!complete)
+    if (!intro.len)
         return http_RequestStatus::Busy;
-
-    Span<char> remain = incoming.intro;
 
     // Parse request line
     {
-        Span<char> line = SplitStrLine(remain, &remain);
+        Span<char> line = SplitStrLine(intro, &intro);
 
         if (std::any_of(line.begin(), line.end(), [](char c) { return c == 0; })) {
             LogError("Request line contains NUL characters");
@@ -991,8 +994,8 @@ http_RequestStatus http_IO::ParseRequest()
     }
 
     // Parse headers
-    while (remain.len) {
-        Span<char> line = SplitStrLine(remain, &remain);
+    while (intro.len) {
+        Span<char> line = SplitStrLine(intro, &intro);
 
         Span<char> key = SplitStr(line, ':', &line);
         Span<char> value = TrimStr(line);
@@ -1130,21 +1133,20 @@ Span<const char> http_IO::PrepareResponse(int status, CompressionType encoding, 
 
 Size http_IO::ReadDirect(Span<uint8_t> buf)
 {
+    buf.len = std::min((int64_t)buf.len, request.body_len - incoming.read);
+
     Size start_len = buf.len;
 
-    if (incoming.extra.len) {
-        int64_t remaining = request.body_len - incoming.read;
-        Size copy_len = (Size)std::min((int64_t)std::min(incoming.extra.len, buf.len), remaining);
+    if (incoming.pos < incoming.buf.len) {
+        Size available = incoming.buf.len - incoming.pos;
+        Size copy_len = std::min(buf.len, available);
 
-        MemCpy(buf.ptr, incoming.extra.ptr, copy_len);
-        incoming.extra.ptr += copy_len;
-        incoming.extra.len -= copy_len;
+        MemCpy(buf.ptr, incoming.buf.ptr + incoming.pos, copy_len);
+        incoming.pos += copy_len;
 
         buf.ptr += copy_len;
         buf.len -= copy_len;
     }
-
-    buf.len = std::min((int64_t)buf.len, request.body_len - incoming.read);
 
     while (buf.len) {
         Size bytes = daemon->ReadSocket(socket, buf);
@@ -1160,6 +1162,7 @@ Size http_IO::ReadDirect(Span<uint8_t> buf)
         buf.len -= bytes;
     }
 
+    incoming.read += start_len - buf.len;
     return start_len - buf.len;
 }
 
@@ -1197,16 +1200,14 @@ bool http_IO::Rearm(int64_t now)
         // abrupt disconnection once we have sent "Connection: keep-alive" to the client.
         timeout_at = std::max(keepalive_timeout, now + 5000);
 
-        MemMove(incoming.buf.ptr, incoming.extra.ptr, incoming.extra.len);
-        incoming.buf.RemoveFrom(incoming.extra.len);
+        MemMove(incoming.buf.ptr, incoming.buf.ptr + incoming.pos, incoming.buf.len - incoming.pos);
+        incoming.buf.RemoveFrom(incoming.pos);
     } else {
         timeout_at = now + 5000;
         incoming.buf.RemoveFrom(0);
     }
 
     incoming.pos = 0;
-    incoming.intro = {};
-    incoming.extra = {};
     incoming.read = 0;
     incoming.reading = false;
 

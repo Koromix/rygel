@@ -343,27 +343,21 @@ bool http_Dispatcher::Run()
                 case http_RequestStatus::Busy: { /* Do nothing */ } break;
 
                 case http_RequestStatus::Ready: {
-                    if (!client->InitAddress()) {
-                        client->request.keepalive = false;
-                        client->SendError(400);
-
-                        ParkSocket(socket);
-                        keep--;
-
-                        continue;
-                    }
-
                     int worker_idx = 1 + next_worker;
                     next_worker = (next_worker + 1) % WorkersPerDispatcher;
 
                     DeleteEpollDescriptor(socket->sock);
 
                     async.Run(worker_idx, [=, this] {
-                        daemon->RunHandler(client, now);
+                        do {
+                            daemon->RunHandler(client, now);
 
-                        if (!client->Rearm(GetMonotonicTime())) {
-                            shutdown(socket->sock, SHUT_RD);
-                        }
+                            if (!client->Rearm(GetMonotonicTime())) {
+                                shutdown(socket->sock, SHUT_RD);
+                                break;
+                            }
+                        } while (client->ParseRequest() == http_RequestStatus::Ready);
+
                         AddEpollDescriptor(socket->sock, EPOLLIN | EPOLLET, socket);
 
                         return true;

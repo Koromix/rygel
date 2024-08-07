@@ -185,7 +185,6 @@ class http_IO {
     struct {
         HeapArray<uint8_t> buf;
         Size pos = 0;
-        Span<char> intro = {};
         Span<uint8_t> extra = {};
 
         int64_t read = 0;
