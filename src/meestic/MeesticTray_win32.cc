@@ -124,8 +124,8 @@ static bool ToggleProfile(int delta)
         next_idx += delta;
 
         if (next_idx < 0) {
-            next_idx = config.profiles.len - 1;
-        } else if (next_idx >= config.profiles.len) {
+            next_idx = config.profiles.count - 1;
+        } else if (next_idx >= config.profiles.count) {
             next_idx = 0;
         }
     } while (config.profiles[next_idx].manual);
@@ -186,7 +186,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                 HMENU menu = CreatePopupMenu();
                 RG_DEFER { DestroyMenu(menu); };
 
-                for (Size i = 0; i < config.profiles.len; i++) {
+                for (Size i = 0; i < config.profiles.count; i++) {
                     const ConfigProfile &profile = config.profiles[i];
 
                     int flags = MF_STRING | (i == profile_idx ? MF_CHECKED : 0);
@@ -210,7 +210,7 @@ static LRESULT __stdcall MainWindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPAR
                     default: {
                         Size idx = action - 10;
 
-                        if (idx >= 0 && idx < config.profiles.len) {
+                        if (idx >= 0 && idx < config.profiles.count) {
                             if (!ApplyProfile(idx)) {
                                 PostQuitMessage(1);
                             }
