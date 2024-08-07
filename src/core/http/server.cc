@@ -521,6 +521,9 @@ void http_IO::Send(int status, CompressionType encoding, int64_t len, FunctionRe
 
     // HEAD quick path
     if (request.headers_only) {
+        daemon->StartWrite(socket);
+        response.started = true;
+
         const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
         StreamWriter writer(write, "<http>");
 
