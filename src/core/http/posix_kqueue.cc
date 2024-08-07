@@ -374,54 +374,14 @@ bool http_Dispatcher::Run()
 
     for (;;) {
         int64_t now = GetMonotonicTime();
+        bool accepts = false;
 
         for (const struct kevent &ev: events) {
             if (ev.ident == (uintptr_t)listener) {
                 if (ev.flags & EV_EOF) [[unlikely]]
                     return true;
 
-                for (int i = 0; i < 8; i++) {
-                    sockaddr_storage ss;
-                    socklen_t ss_len = RG_SIZE(ss);
-
-#if defined(SOCK_CLOEXEC)
-                    int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
-
-#if defined(TCP_NOPUSH)
-                    if (sock >= 0) {
-                        // Disable Nagle algorithm on platforms with better options
-                        int flag = 1;
-                        setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
-                    }
-#endif
-#else
-                    int sock = accept(daemon->listener, (sockaddr *)&ss, &ss_len);
-
-                    if (sock >= 0) {
-                        fcntl(sock, F_SETFD, FD_CLOEXEC);
-                        SetDescriptorNonBlock(sock, true);
-                    }
-#endif
-
-                    if (sock < 0) {
-                        if (errno == EINVAL)
-                            return true;
-                        if (errno == EAGAIN)
-                            break;
-
-                        LogError("Failed to accept client: %1", strerror(errno));
-                        return false;
-                    }
-
-                    http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
-
-                    if (!socket) [[unlikely]] {
-                        close(sock);
-                        continue;
-                    }
-
-                    sockets.Append(socket);
-                }
+                accepts = true;
             } else if (ev.ident == (uintptr_t)pair_fd[0]) {
                 for (;;) {
                     uintptr_t addr = 0;
@@ -440,6 +400,52 @@ bool http_Dispatcher::Run()
             } else {
                 http_Socket *socket = (http_Socket *)ev.udata;
                 socket->process = true;
+            }
+        }
+
+        // Process new connections
+        if (accepts) {
+            for (int i = 0; i < 8; i++) {
+                sockaddr_storage ss;
+                socklen_t ss_len = RG_SIZE(ss);
+
+#if defined(SOCK_CLOEXEC)
+                int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+
+#if defined(TCP_NOPUSH)
+                if (sock >= 0) {
+                    // Disable Nagle algorithm on platforms with better options
+                    int flag = 1;
+                    setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag));
+                }
+#endif
+#else
+                int sock = accept(daemon->listener, (sockaddr *)&ss, &ss_len);
+
+                if (sock >= 0) {
+                    fcntl(sock, F_SETFD, FD_CLOEXEC);
+                    SetDescriptorNonBlock(sock, true);
+                }
+#endif
+
+                if (sock < 0) {
+                    if (errno == EAGAIN)
+                        break;
+                    if (errno == EINVAL)
+                        return true;
+
+                    LogError("Failed to accept client: %1", strerror(errno));
+                    return false;
+                }
+
+                http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
+
+                if (!socket) [[unlikely]] {
+                    close(sock);
+                    continue;
+                }
+
+                sockets.Append(socket);
             }
         }
 

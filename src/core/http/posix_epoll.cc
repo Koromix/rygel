@@ -261,41 +261,47 @@ bool http_Dispatcher::Run()
 
     for (;;) {
         int64_t now = GetMonotonicTime();
+        bool accepts = false;
 
         for (const struct epoll_event &ev: events) {
             if (!ev.data.fd) {
                 if (ev.events & EPOLLHUP) [[unlikely]]
                     return true;
 
-                sockaddr_storage ss;
-                socklen_t ss_len = RG_SIZE(ss);
-
-                // Accept queued clients
-                for (int i = 0; i < 8; i++) {
-                    int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
-
-                    if (sock < 0) {
-                        if (errno == EINVAL)
-                            return true;
-                        if (errno == EAGAIN)
-                            break;
-
-                        LogError("Failed to accept client: %1", strerror(errno));
-                        return false;
-                    }
-
-                    http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
-
-                    if (!socket) [[unlikely]] {
-                        close(sock);
-                        continue;
-                    }
-
-                    sockets.Append(socket);
-                }
+                accepts = true;
             } else {
                 http_Socket *socket = (http_Socket *)ev.data.ptr;
                 socket->process = true;
+            }
+        }
+
+        // Process new connections
+        if (accepts) {
+            sockaddr_storage ss;
+            socklen_t ss_len = RG_SIZE(ss);
+
+            // Accept queued clients
+            for (int i = 0; i < 8; i++) {
+                int sock = accept4(listener, (sockaddr *)&ss, &ss_len, SOCK_CLOEXEC);
+
+                if (sock < 0) {
+                    if (errno == EAGAIN)
+                        break;
+                    if (errno == EINVAL)
+                        return true;
+
+                    LogError("Failed to accept client: %1", strerror(errno));
+                    return false;
+                }
+
+                http_Socket *socket = InitSocket(sock, now, (sockaddr *)&ss);
+
+                if (!socket) [[unlikely]] {
+                    close(sock);
+                    continue;
+                }
+
+                sockets.Append(socket);
             }
         }
 
