@@ -232,10 +232,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     struct sf_hdtr hdtr = { &header, 1, nullptr, 0 };
 
     off_t offset = 0;
-    int64_t remain = len + intro.len;
+    int64_t remain = len;
 
     // Send intro and file in one go
-    while (remain) {
+    do {
         Size send = (Size)std::min(remain, (int64_t)Mebibytes(2));
 
 #if defined(__FreeBSD__)
@@ -267,17 +267,20 @@ void http_IO::SendFile(int status, int fd, int64_t len)
 
         socket->client.timeout_at = GetMonotonicTime() + daemon->send_timeout;
 
-        // Assume header is sent entirely!
-        // Looks correct for FreeBSD (after a quick check of the kernel code), no idea for macOS...
-        RG_ASSERT(!hdtr.hdr_cnt || sent >= intro.len);
+        if (sent < (Size)header.iov_len) [[unlikely]] {
+            header.iov_base = (uint8_t *)header.iov_base + sent;
+            header.iov_len -= sent;
 
-        offset += sent - hdtr.hdr_cnt * intro.len;
-        remain -= (int64_t)sent;
+            continue;
+        }
+        sent -= (Size)header.iov_len;
 
-        // Only send header once :)
-        hdtr.headers = nullptr;
+        offset += sent;
+        remain -= sent;
+
         hdtr.hdr_cnt = 0;
-    }
+        header.iov_len = 0;
+    } while (remain);
 #else
     Send(status, len, [&](StreamWriter *writer) {
         StreamReader reader(fd, "<file>");
