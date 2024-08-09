@@ -512,7 +512,7 @@ static void torture_rekey_different_kex(void **state)
     memset(data, 'A', 128);
     for (i = 0; i < KEX_RETRY; i++) {
         ssh_send_ignore(s->ssh.session, data);
-        ssh_handle_packets(s->ssh.session, 100);
+        ssh_handle_packets(s->ssh.session, 1000);
 
         c = s->ssh.session->current_crypto;
         /* SHA256 len */
@@ -590,7 +590,7 @@ static void torture_rekey_server_different_kex(void **state)
     memset(data, 'A', 128);
     for (i = 0; i < KEX_RETRY; i++) {
         ssh_send_ignore(s->ssh.session, data);
-        ssh_handle_packets(s->ssh.session, 100);
+        ssh_handle_packets(s->ssh.session, 1000);
 
         c = s->ssh.session->current_crypto;
         /* SHA256 len */

@@ -73,6 +73,7 @@ static void torture_session_keys(UNUSED_PARAM(void **state))
     assert_int_equal(rc, 0);
 
     test_crypto.shared_secret = ssh_make_string_bn(k_string);
+    SSH_STRING_FREE(k_string);
 
     rc = ssh_generate_session_keys(&session);
     assert_int_equal(rc, 0);
@@ -84,7 +85,13 @@ static void torture_session_keys(UNUSED_PARAM(void **state))
     assert_memory_equal(test_crypto.encryptMAC, eMAC, 32);
     assert_memory_equal(test_crypto.decryptMAC, dMAC, 32);
 
-    SSH_STRING_FREE(k_string);
+    bignum_safe_free(test_crypto.shared_secret);
+    SAFE_FREE(test_crypto.encryptIV);
+    SAFE_FREE(test_crypto.decryptIV);
+    SAFE_FREE(test_crypto.encryptkey);
+    SAFE_FREE(test_crypto.decryptkey);
+    SAFE_FREE(test_crypto.encryptMAC);
+    SAFE_FREE(test_crypto.decryptMAC);
 }
 
 int torture_run_tests(void) {

@@ -21,7 +21,7 @@
 #ifndef PACKET_H_
 #define PACKET_H_
 
-#include "wrapper.h"
+#include "libssh/wrapper.h"
 
 struct ssh_socket_struct;
 

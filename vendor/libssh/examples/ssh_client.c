@@ -94,7 +94,6 @@ static void usage(void)
             "Options :\n"
             "  -l user : log in as user\n"
             "  -p port : connect to port\n"
-            "  -d : use DSS to verify host public key\n"
             "  -r : use RSA to verify host public key\n"
             "  -F file : parse configuration file instead of default one\n"
 #ifdef WITH_PCAP
@@ -298,25 +297,41 @@ static void shell(ssh_session session)
 static void batch_shell(ssh_session session)
 {
     ssh_channel channel;
-    char buffer[PATH_MAX];
-    size_t i;
-    int s = 0;
-
-    for (i = 0; i < MAXCMD && cmds[i]; ++i) {
-        s += snprintf(buffer + s, sizeof(buffer) - s, "%s ", cmds[i]);
-    }
+    char *buffer = NULL;
+    size_t i, s, n;
 
     channel = ssh_channel_new(session);
     if (channel == NULL) {
         return;
     }
 
-    ssh_channel_open_session(channel);
-    if (ssh_channel_request_exec(channel, buffer)) {
-        printf("Error executing '%s' : %s\n", buffer, ssh_get_error(session));
+    n = 0;
+    for (i = 0; i < MAXCMD && cmds[i]; ++i) {
+        /* Including space after cmds[i] */
+        n += strlen(cmds[i]) + 1;
+    }
+    /* Trailing \0 */
+    n += 1;
+
+    buffer = malloc(n);
+    if (buffer == NULL) {
         ssh_channel_free(channel);
         return;
     }
+
+    s = 0;
+    for (i = 0; i < MAXCMD && cmds[i]; ++i) {
+        s += snprintf(buffer + s, n - s, "%s ", cmds[i]);
+    }
+
+    ssh_channel_open_session(channel);
+    if (ssh_channel_request_exec(channel, buffer)) {
+        printf("Error executing '%s' : %s\n", buffer, ssh_get_error(session));
+        free(buffer);
+        ssh_channel_free(channel);
+        return;
+    }
+    free(buffer);
     select_loop(session, channel);
     ssh_channel_free(channel);
 }

@@ -20,7 +20,7 @@
 
 #ifndef STRING_H_
 #define STRING_H_
-#include "priv.h"
+#include "libssh/priv.h"
 
 #ifdef __cplusplus
 extern "C" {

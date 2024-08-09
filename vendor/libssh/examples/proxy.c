@@ -143,19 +143,11 @@ static struct argp_option options[] = {
         .group = 0
     },
     {
-        .name  = "dsakey",
-        .key   = 'd',
-        .arg   = "FILE",
-        .flags = 0,
-        .doc   = "Set the dsa key.",
-        .group = 0
-    },
-    {
         .name  = "rsakey",
         .key   = 'r',
         .arg   = "FILE",
         .flags = 0,
-        .doc   = "Set the rsa key.",
+        .doc   = "Set the rsa host key (deprecated alias to 'k').",
         .group = 0
     },
     {
@@ -180,14 +172,10 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
         case 'p':
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_BINDPORT_STR, arg);
             break;
-        case 'd':
-            ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_DSAKEY, arg);
-            break;
+        case 'r':
+            /* deprecated */
         case 'k':
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY, arg);
-            break;
-        case 'r':
-            ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_RSAKEY, arg);
             break;
         case 'v':
             ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_LOG_VERBOSITY_STR, "3");
@@ -237,7 +225,7 @@ int main(int argc, char **argv){
     sshbind=ssh_bind_new();
     session=ssh_new();
 
-    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_RSAKEY, "sshd_rsa");
+    ssh_bind_options_set(sshbind, SSH_BIND_OPTIONS_HOSTKEY, "sshd_rsa");
 
 #ifdef HAVE_ARGP_H
     /*

@@ -21,8 +21,8 @@
 #ifndef THREADS_H_
 #define THREADS_H_
 
-#include "libssh.h"
-#include "callbacks.h"
+#include <libssh/libssh.h>
+#include <libssh/callbacks.h>
 
 #if HAVE_PTHREAD
 

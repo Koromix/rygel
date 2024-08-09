@@ -70,7 +70,7 @@
  * @param[out] found_type A pointer to a string to be set with the found key
  *                        type.
  *
- * @returns             The found_type type of key (ie "dsa","ssh-rsa"). Don't
+ * @returns             The found_type type of key (ie "ssh-rsa"). Don't
  *                      free that value. NULL if no match was found or the file
  *                      was not found.
  */
@@ -152,7 +152,7 @@ static int check_public_key(ssh_session session, char **tokens) {
   char *pubkey_64;
   int rc;
 
-    /* ssh-dss or ssh-rsa */
+    /* ssh-rsa, ssh-ed25519, .. */
     pubkey_64 = tokens[2];
     pubkey_buffer = base64_to_bin(pubkey_64);
 

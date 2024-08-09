@@ -9,7 +9,7 @@
 #ifndef FE25519_H
 #define FE25519_H
 
-#include "priv.h"
+#include "libssh/priv.h"
 
 #define fe25519              crypto_sign_ed25519_ref_fe25519
 #define fe25519_freeze       crypto_sign_ed25519_ref_fe25519_freeze

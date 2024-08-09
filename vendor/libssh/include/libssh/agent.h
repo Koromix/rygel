@@ -21,7 +21,7 @@
 #ifndef __AGENT_H
 #define __AGENT_H
 
-#include "libssh.h"
+#include "libssh/libssh.h"
 
 /* Messages for the authentication agent connection. */
 #define SSH_AGENTC_REQUEST_RSA_IDENTITIES        1

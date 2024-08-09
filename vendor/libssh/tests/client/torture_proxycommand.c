@@ -69,7 +69,9 @@ static void torture_options_set_proxycommand(void **state)
     char command[255] = {0};
     struct stat sb;
     int rc;
+#ifdef WITH_EXEC
     socket_t fd;
+#endif
 
     rc = stat(NCAT_EXECUTABLE, &sb);
     if (rc != 0 || (sb.st_mode & S_IXOTH) == 0) {
@@ -88,11 +90,15 @@ static void torture_options_set_proxycommand(void **state)
     rc = ssh_options_set(session, SSH_OPTIONS_PROXYCOMMAND, command);
     assert_int_equal(rc, 0);
     rc = ssh_connect(session);
+#ifdef WITH_EXEC
     assert_ssh_return_code(session, rc);
     fd = ssh_get_fd(session);
-    assert_true(fd != SSH_INVALID_SOCKET);
+    assert_int_not_equal(fd, SSH_INVALID_SOCKET);
     rc = fcntl(fd, F_GETFL);
     assert_int_equal(rc & O_RDWR, O_RDWR);
+#else
+    assert_int_equal(rc, SSH_ERROR);
+#endif /* WITH_EXEC */
 }
 
 #else /* NCAT_EXECUTABLE */
@@ -124,7 +130,9 @@ static void torture_options_set_proxycommand_ssh(void **state)
     const char *address = torture_server_address(AF_INET);
     char command[255] = {0};
     int rc;
+#ifdef WITH_EXEC
     socket_t fd;
+#endif
 
     rc = snprintf(command, sizeof(command),
                   "ssh -oStrictHostKeyChecking=no -oUserKnownHostsFile=/dev/null -W [%%h]:%%p alice@%s",
@@ -134,11 +142,15 @@ static void torture_options_set_proxycommand_ssh(void **state)
     rc = ssh_options_set(session, SSH_OPTIONS_PROXYCOMMAND, command);
     assert_int_equal(rc, 0);
     rc = ssh_connect(session);
+#ifdef WITH_EXEC
     assert_ssh_return_code(session, rc);
     fd = ssh_get_fd(session);
-    assert_true(fd != SSH_INVALID_SOCKET);
+    assert_int_not_equal(fd, SSH_INVALID_SOCKET);
     rc = fcntl(fd, F_GETFL);
     assert_int_equal(rc & O_RDWR, O_RDWR);
+#else
+    assert_int_equal(rc, SSH_ERROR);
+#endif /* WITH_EXEC */
 }
 
 static void torture_options_set_proxycommand_ssh_stderr(void **state)
@@ -148,7 +160,9 @@ static void torture_options_set_proxycommand_ssh_stderr(void **state)
     const char *address = torture_server_address(AF_INET);
     char command[255] = {0};
     int rc;
+#ifdef WITH_EXEC
     socket_t fd;
+#endif
 
     /* The -vvv switches produce the desired output on the standard error */
     rc = snprintf(command, sizeof(command),
@@ -159,11 +173,15 @@ static void torture_options_set_proxycommand_ssh_stderr(void **state)
     rc = ssh_options_set(session, SSH_OPTIONS_PROXYCOMMAND, command);
     assert_int_equal(rc, 0);
     rc = ssh_connect(session);
+#ifdef WITH_EXEC
     assert_ssh_return_code(session, rc);
     fd = ssh_get_fd(session);
-    assert_true(fd != SSH_INVALID_SOCKET);
+    assert_int_not_equal(fd, SSH_INVALID_SOCKET);
     rc = fcntl(fd, F_GETFL);
     assert_int_equal(rc & O_RDWR, O_RDWR);
+#else
+    assert_int_equal(rc, SSH_ERROR);
+#endif /* WITH_EXEC */
 }
 
 static void torture_options_proxycommand_injection(void **state)

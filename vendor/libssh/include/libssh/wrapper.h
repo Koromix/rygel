@@ -24,10 +24,10 @@
 #include <stdbool.h>
 
 #include "config.h"
-#include "libssh.h"
-#include "libcrypto.h"
-#include "libgcrypt.h"
-#include "libmbedcrypto.h"
+#include "libssh/libssh.h"
+#include "libssh/libcrypto.h"
+#include "libssh/libgcrypt.h"
+#include "libssh/libmbedcrypto.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -193,7 +193,6 @@ int auth_gssapi_mic_cb(ssh_session session,
         printf("Received some gssapi credentials\n");
     } else {
         printf("Not received any forwardable creds\n");
-        goto denied;
     }
 
     printf("Authenticated\n");
@@ -203,8 +202,6 @@ int auth_gssapi_mic_cb(ssh_session session,
 
     return SSH_AUTH_SUCCESS;
 
-denied:
-    sdata->auth_attempts++;
 null_userdata:
     return SSH_AUTH_DENIED;
 }
@@ -886,7 +883,6 @@ void default_handle_session_cb(ssh_event event,
     }
 
     sdata.server_state = (void *)state;
-    cdata.server_state = (void *)state;
 
 #ifdef WITH_PCAP
     set_pcap(&sdata, session, state->pcap_file);
@@ -902,7 +898,7 @@ void default_handle_session_cb(ssh_event event,
 
     if (ssh_handle_key_exchange(session) != SSH_OK) {
         fprintf(stderr, "%s\n", ssh_get_error(session));
-        return;
+        goto end;
     }
 
     /* Set the supported authentication methods */
@@ -911,7 +907,8 @@ void default_handle_session_cb(ssh_event event,
     } else {
         ssh_set_auth_methods(session,
                 SSH_AUTH_METHOD_PASSWORD |
-                SSH_AUTH_METHOD_PUBLICKEY);
+                SSH_AUTH_METHOD_PUBLICKEY|
+                SSH_AUTH_METHOD_GSSAPI_MIC);
     }
 
     ssh_event_add_session(event, session);
@@ -921,12 +918,12 @@ void default_handle_session_cb(ssh_event event,
         /* If the user has used up all attempts, or if he hasn't been able to
          * authenticate in 10 seconds (n * 100ms), disconnect. */
         if (sdata.auth_attempts >= state->max_tries || n >= 100) {
-            return;
+            goto end;
         }
 
         if (ssh_event_dopoll(event, 100) == SSH_ERROR) {
             fprintf(stderr, "do_poll error: %s\n", ssh_get_error(session));
-            return;
+            goto end;
         }
         n++;
     }

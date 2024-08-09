@@ -21,7 +21,7 @@
 #ifndef AUTH_H_
 #define AUTH_H_
 #include "config.h"
-#include "callbacks.h"
+#include "libssh/callbacks.h"
 
 #ifdef __cplusplus
 extern "C" {

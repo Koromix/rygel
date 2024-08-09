@@ -22,7 +22,7 @@
 #define PCAP_H_
 
 #include "config.h"
-#include "libssh.h"
+#include "libssh/libssh.h"
 
 #ifdef WITH_PCAP
 typedef struct ssh_pcap_context_struct* ssh_pcap_context;

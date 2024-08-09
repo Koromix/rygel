@@ -23,7 +23,7 @@
 
 #include "config.h"
 
-#include "crypto.h"
+#include "libssh/crypto.h"
 
 struct dh_ctx;
 

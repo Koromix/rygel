@@ -22,7 +22,7 @@
 #define ECDH_H_
 
 #include "config.h"
-#include "callbacks.h"
+#include "libssh/callbacks.h"
 
 #ifdef HAVE_LIBCRYPTO
 #ifdef HAVE_OPENSSL_ECDH_H

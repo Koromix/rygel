@@ -10,7 +10,11 @@ set(server_SRCS
 
 add_library(testserver STATIC
             test_server.c
-            default_cb.c)
+            default_cb.c
+            sftpserver_cb.c)
+if (WITH_COVERAGE)
+    append_coverage_compiler_flags_to_target(testserver)
+endif (WITH_COVERAGE)
 
 set(LIBSSH_SERVER_TESTS
 #    torture_server_kbdint
@@ -28,10 +32,10 @@ if (UNIX AND NOT WIN32)
     add_executable(test_server ${server_SRCS})
     target_compile_options(test_server PRIVATE ${DEFAULT_C_COMPILE_FLAGS})
     target_link_libraries(test_server
-                          testserver
-                          ssh::ssh
-                          ${ARGP_LIBRARIES}
-                          util)
+        PRIVATE testserver ssh::ssh ${ARGP_LIBRARIES} util)
+    if (WITH_COVERAGE)
+        append_coverage_compiler_flags_to_target(test_server)
+    endif (WITH_COVERAGE)
 endif ()
 
 endif (WITH_SERVER AND UNIX AND NOT WIN32)

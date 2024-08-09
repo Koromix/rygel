@@ -26,7 +26,7 @@
 #ifndef BIND_CONFIG_H_
 #define BIND_CONFIG_H_
 
-#include "server.h"
+#include "libssh/server.h"
 
 #ifdef __cplusplus
 extern "C" {

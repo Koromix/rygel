@@ -21,9 +21,9 @@
 #ifndef BIND_H_
 #define BIND_H_
 
-#include "priv.h"
-#include "kex.h"
-#include "session.h"
+#include "libssh/priv.h"
+#include "libssh/kex.h"
+#include "libssh/session.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,11 +39,9 @@ struct ssh_bind_struct {
   char *wanted_methods[SSH_KEX_METHODS];
   char *banner;
   char *ecdsakey;
-  char *dsakey;
   char *rsakey;
   char *ed25519key;
   ssh_key ecdsa;
-  ssh_key dsa;
   ssh_key rsa;
   ssh_key ed25519;
   char *bindaddr;

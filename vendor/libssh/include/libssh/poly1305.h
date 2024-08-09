@@ -5,7 +5,7 @@
 
 #ifndef POLY1305_H
 #define POLY1305_H
-#include "chacha20-poly1305-common.h"
+#include "libssh/chacha20-poly1305-common.h"
 
 #ifdef __cplusplus
 extern "C" {

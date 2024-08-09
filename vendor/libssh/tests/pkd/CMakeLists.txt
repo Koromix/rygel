@@ -5,7 +5,6 @@ if (WITH_SERVER AND UNIX AND NOT WIN32)
     include_directories(${libssh_SOURCE_DIR}/include
                         ${libssh_BINARY_DIR}/include
                         ${CMOCKA_INCLUDE_DIR}
-                        ${ZLIB_INCLUDE_DIR}
                         ${CMAKE_BINARY_DIR}
                         ${libssh_SOURCE_DIR}/src
                         ${CMAKE_CURRENT_SOURCE_DIR})
@@ -26,7 +25,10 @@ set(pkd_libs
 
 add_executable(pkd_hello ${pkd_hello_src})
 target_compile_options(pkd_hello PRIVATE ${DEFAULT_C_COMPILE_FLAGS})
-target_link_libraries(pkd_hello ${pkd_libs})
+target_link_libraries(pkd_hello PRIVATE ${pkd_libs})
+if (WITH_COVERAGE)
+    append_coverage_compiler_flags_to_target(pkd_hello)
+endif (WITH_COVERAGE)
 
 #
 # pkd_hello_i1 runs only one iteration per algorithm combination for

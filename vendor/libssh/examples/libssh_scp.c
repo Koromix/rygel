@@ -229,11 +229,11 @@ static int open_location(struct location *loc, int flag) {
             return -1;
         }
         return 0;
-    } else {
+    } else if (loc->path != NULL) {
         loc->file = fopen(loc->path, flag == READ ? "r":"w");
         if (!loc->file) {
             if (errno == EISDIR) {
-                if (loc->path != NULL && chdir(loc->path)) {
+                if (chdir(loc->path)) {
                     fprintf(stderr,
                             "Error changing directory to %s: %s\n",
                             loc->path, strerror(errno));

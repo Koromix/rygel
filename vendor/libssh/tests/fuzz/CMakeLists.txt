@@ -4,7 +4,7 @@ macro(fuzzer name)
     add_executable(${name} ${name}.c)
     target_link_libraries(${name}
                           PRIVATE
-                              ssh::static)
+                              ssh::static pthread)
     if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         set_target_properties(${name}
                               PROPERTIES
@@ -32,3 +32,5 @@ fuzzer(ssh_server_fuzzer)
 fuzzer(ssh_client_config_fuzzer)
 fuzzer(ssh_bind_config_fuzzer)
 fuzzer(ssh_known_hosts_fuzzer)
+fuzzer(ssh_privkey_fuzzer)
+fuzzer(ssh_pubkey_fuzzer)

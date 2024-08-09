@@ -21,9 +21,9 @@
 #ifndef BIGNUM_H_
 #define BIGNUM_H_
 
-#include "libcrypto.h"
-#include "libgcrypt.h"
-#include "libmbedcrypto.h"
+#include "libssh/libcrypto.h"
+#include "libssh/libgcrypt.h"
+#include "libssh/libmbedcrypto.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -34,7 +34,7 @@ set(_MBEDTLS_ROOT_HINTS_AND_PATHS
 
 find_path(MBEDTLS_INCLUDE_DIR
     NAMES
-        mbedtls/config.h
+        mbedtls/ssl.h
     HINTS
         ${_MBEDTLS_ROOT_HINTS_AND_PATHS}
     PATH_SUFFIXES
@@ -73,6 +73,14 @@ set(MBEDTLS_LIBRARIES ${MBEDTLS_SSL_LIBRARY} ${MBEDTLS_CRYPTO_LIBRARY}
         ${MBEDTLS_X509_LIBRARY})
 
 if (MBEDTLS_INCLUDE_DIR AND EXISTS "${MBEDTLS_INCLUDE_DIR}/mbedtls/version.h")
+    # mbedtls 2.8
+    file(STRINGS "${MBEDTLS_INCLUDE_DIR}/mbedtls/version.h" _mbedtls_version_str REGEX
+            "^#[\t ]*define[\t ]+MBEDTLS_VERSION_STRING[\t ]+\"[0-9]+.[0-9]+.[0-9]+\"")
+
+    string(REGEX REPLACE "^.*MBEDTLS_VERSION_STRING.*([0-9]+.[0-9]+.[0-9]+).*"
+            "\\1" MBEDTLS_VERSION "${_mbedtls_version_str}")
+elseif (MBEDTLS_INCLUDE_DIR AND EXISTS "${MBEDTLS_INCLUDE_DIR}/mbedtls/build_info.h")
+    # mbedtls 3.6
     file(STRINGS "${MBEDTLS_INCLUDE_DIR}/mbedtls/version.h" _mbedtls_version_str REGEX
             "^#[\t ]*define[\t ]+MBEDTLS_VERSION_STRING[\t ]+\"[0-9]+.[0-9]+.[0-9]+\"")
 
@@ -93,8 +101,8 @@ if (MBEDTLS_VERSION)
             in the system variable MBEDTLS_ROOT_DIR"
     )
 else (MBEDTLS_VERSION)
-    find_package_handle_standard_args(MBedTLS
-        "Could NOT find mbedTLS, try to set the path to mbedLS root folder in
+    find_package_handle_standard_args(MbedTLS
+        "Could NOT find mbedTLS, try to set the path to mbedTLS root folder in
         the system variable MBEDTLS_ROOT_DIR"
         MBEDTLS_INCLUDE_DIR
         MBEDTLS_LIBRARIES)

@@ -271,7 +271,7 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
     ssh_string q_s_string;
     gcry_sexp_t param = NULL;
     gcry_sexp_t key = NULL;
-    /* SSH host keys (rsa,dsa,ecdsa) */
+    /* SSH host keys (rsa, ed25519 and ecdsa) */
     ssh_key privkey;
     enum ssh_digest_e digest = SSH_DIGEST_AUTO;
     ssh_string sig_blob = NULL;
@@ -366,7 +366,7 @@ SSH_PACKET_CALLBACK(ssh_packet_server_ecdh_init){
         goto out;
     }
 
-    SSH_LOG(SSH_LOG_PROTOCOL, "SSH_MSG_KEXDH_REPLY sent");
+    SSH_LOG(SSH_LOG_DEBUG, "SSH_MSG_KEXDH_REPLY sent");
     rc = ssh_packet_send(session);
     if (rc != SSH_OK) {
         goto out;

@@ -14,6 +14,7 @@
 #include "match.c"
 #include "config.c"
 #include "libssh/socket.h"
+#include "libssh/misc.h"
 
 extern LIBSSH_THREAD int ssh_log_level;
 
@@ -41,6 +42,10 @@ extern LIBSSH_THREAD int ssh_log_level;
 #define LIBSSH_TESTCONFIG10 "libssh_testconfig10.tmp"
 #define LIBSSH_TESTCONFIG11 "libssh_testconfig11.tmp"
 #define LIBSSH_TESTCONFIG12 "libssh_testconfig12.tmp"
+#define LIBSSH_TESTCONFIG14 "libssh_testconfig14.tmp"
+#define LIBSSH_TESTCONFIG15 "libssh_testconfig15.tmp"
+#define LIBSSH_TESTCONFIG16 "libssh_testconfig16.tmp"
+#define LIBSSH_TESTCONFIG17 "libssh_testconfig17.tmp"
 #define LIBSSH_TESTCONFIGGLOB "libssh_testc*[36].tmp"
 #define LIBSSH_TEST_PUBKEYTYPES "libssh_test_PubkeyAcceptedKeyTypes.tmp"
 #define LIBSSH_TEST_PUBKEYALGORITHMS "libssh_test_PubkeyAcceptedAlgorithms.tmp"
@@ -180,7 +185,39 @@ extern LIBSSH_THREAD int ssh_log_level;
 /* Multiple IdentityFile settings all are applied */
 #define LIBSSH_TESTCONFIG_STRING13 \
    "IdentityFile id_rsa_one\n" \
-   "IdentityFile id_ecdsa_two\n"
+   "CertificateFile id_rsa_one-cert.pub\n" \
+   "IdentityFile id_ecdsa_two\n" \
+   "CertificateFile id_ecdsa_two-cert.pub\n" \
+
+/* +,-,^ features for all supported list */
+/* kex won't work in fips */
+#define LIBSSH_TESTCONFIG_STRING14 \
+    "HostKeyAlgorithms +ssh-rsa\n" \
+    "Ciphers +aes128-cbc,aes256-cbc\n" \
+    "KexAlgorithms +diffie-hellman-group14-sha1,diffie-hellman-group1-sha1\n" \
+    "MACs +hmac-sha1,hmac-sha1-etm@openssh.com\n"
+
+/* have to be algorithms which are in the default list */
+#define LIBSSH_TESTCONFIG_STRING15 \
+    "HostKeyAlgorithms -rsa-sha2-512,rsa-sha2-256\n" \
+    "Ciphers -aes256-ctr\n" \
+    "KexAlgorithms -diffie-hellman-group18-sha512,diffie-hellman-group16-sha512\n" \
+    "MACs -hmac-sha2-256-etm@openssh.com\n"
+
+#define LIBSSH_TESTCONFIG_STRING16 \
+    "HostKeyAlgorithms ^rsa-sha2-512,rsa-sha2-256\n" \
+    "Ciphers ^aes256-cbc\n" \
+    "KexAlgorithms ^diffie-hellman-group18-sha512,diffie-hellman-group16-sha512\n" \
+    "MACs ^hmac-sha1\n"
+
+/* Connection Multiplexing */
+#define LIBSSH_TESTCONFIG_STRING17 \
+    "Host simple\n" \
+    "\tControlMaster auto\n" \
+    "\tControlPath /tmp/ssh-%r@%h:%p\n" \
+    "Host none\n" \
+    "\tControlMaster yes\n" \
+    "\tControlPath none\n"
 
 #define LIBSSH_TEST_PUBKEYTYPES_STRING \
     "PubkeyAcceptedKeyTypes "PUBKEYACCEPTEDTYPES"\n"
@@ -239,6 +276,10 @@ static int setup_config_files(void **state)
     unlink(LIBSSH_TESTCONFIG10);
     unlink(LIBSSH_TESTCONFIG11);
     unlink(LIBSSH_TESTCONFIG12);
+    unlink(LIBSSH_TESTCONFIG14);
+    unlink(LIBSSH_TESTCONFIG15);
+    unlink(LIBSSH_TESTCONFIG16);
+    unlink(LIBSSH_TESTCONFIG17);
     unlink(LIBSSH_TEST_PUBKEYTYPES);
     unlink(LIBSSH_TEST_PUBKEYALGORITHMS);
     unlink(LIBSSH_TEST_NONEWLINEEND);
@@ -286,6 +327,16 @@ static int setup_config_files(void **state)
     torture_write_file(LIBSSH_TESTCONFIG12,
                        LIBSSH_TESTCONFIG_STRING12);
 
+    /* +,-,^ feature */
+    torture_write_file(LIBSSH_TESTCONFIG14,
+                       LIBSSH_TESTCONFIG_STRING14);
+    torture_write_file(LIBSSH_TESTCONFIG15,
+                       LIBSSH_TESTCONFIG_STRING15);
+    torture_write_file(LIBSSH_TESTCONFIG16,
+                       LIBSSH_TESTCONFIG_STRING16);
+    torture_write_file(LIBSSH_TESTCONFIG17,
+                       LIBSSH_TESTCONFIG_STRING17);
+
     torture_write_file(LIBSSH_TEST_PUBKEYTYPES,
                        LIBSSH_TEST_PUBKEYTYPES_STRING);
 
@@ -317,6 +368,10 @@ static int teardown_config_files(void **state)
     unlink(LIBSSH_TESTCONFIG10);
     unlink(LIBSSH_TESTCONFIG11);
     unlink(LIBSSH_TESTCONFIG12);
+    unlink(LIBSSH_TESTCONFIG14);
+    unlink(LIBSSH_TESTCONFIG15);
+    unlink(LIBSSH_TESTCONFIG16);
+    unlink(LIBSSH_TESTCONFIG17);
     unlink(LIBSSH_TEST_PUBKEYTYPES);
     unlink(LIBSSH_TEST_PUBKEYALGORITHMS);
 
@@ -638,6 +693,34 @@ static void torture_config_auth_methods_string(void **state)
 }
 
 /**
+ * @brief Helper for checking hostname, username and port of ssh_jump_info_struct
+ */
+static void
+helper_proxy_jump_check(struct ssh_iterator *jump,
+                        const char *hostname,
+                        const char *username,
+                        const char *port)
+{
+    struct ssh_jump_info_struct *jis =
+        ssh_iterator_value(struct ssh_jump_info_struct *, jump);
+
+    assert_string_equal(jis->hostname, hostname);
+
+    if (username != NULL) {
+        assert_string_equal(jis->username, username);
+    } else {
+        assert_null(jis->username);
+    }
+
+    if (port != NULL) {
+        int iport = strtol(port, NULL, 10);
+        assert_int_equal(jis->port, iport);
+    } else {
+        assert_int_equal(jis->port, 22);
+    }
+}
+
+/**
  * @brief Verify the configuration parser does not choke on unknown
  * or unsupported configuration options
  */
@@ -648,15 +731,18 @@ static void torture_config_unknown(void **state,
     int ret = 0;
 
     /* test corner cases */
+    /* Without libssh proxy jump */
+    torture_setenv("OPENSSH_PROXYJUMP", "1");
     _parse_config(session, file, string, SSH_OK);
     assert_string_equal(session->opts.ProxyCommand,
-            "ssh -W '[%h]:%p' many-spaces.com");
+                        "ssh -W '[%h]:%p' many-spaces.com");
     assert_string_equal(session->opts.host, "equal.sign");
 
     ret = ssh_config_parse_file(session, "/etc/ssh/ssh_config");
     assert_true(ret == 0);
     ret = ssh_config_parse_file(session, GLOBAL_CLIENT_CONFIG);
     assert_true(ret == 0);
+    torture_unsetenv("OPENSSH_PROXYJUMP");
 }
 
 /**
@@ -808,7 +894,7 @@ static void torture_config_match(void **state,
     }
     torture_reset_config(session);
     _parse_config(session, file, string, SSH_OK);
-#ifdef _WIN32
+#ifndef WITH_EXEC
     /* The match exec is not supported on windows at this moment */
     assert_string_equal(session->opts.host, "otherhost");
 #else
@@ -824,7 +910,7 @@ static void torture_config_match(void **state,
     }
     torture_reset_config(session);
     _parse_config(session, file, string, SSH_OK);
-#ifdef _WIN32
+#ifndef WITH_EXEC
     /* The match exec is not supported on windows at this moment */
     assert_string_equal(session->opts.host, "otherhost");
 #else
@@ -840,7 +926,7 @@ static void torture_config_match(void **state,
     }
     torture_reset_config(session);
     _parse_config(session, file, string, SSH_OK);
-#ifdef _WIN32
+#ifndef WITH_EXEC
     /* The match exec is not supported on windows at this moment */
     assert_string_equal(session->opts.host, "otherhost");
 #else
@@ -940,7 +1026,88 @@ static void torture_config_proxyjump(void **state,
                                      const char *file, const char *string)
 {
     ssh_session session = *state;
+
     const char *config;
+
+
+    /* Tests for libssh based proxyjump */
+    /* Simplest version with just a hostname */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "simple");
+    _parse_config(session, file, string, SSH_OK);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "jumpbox",
+                            NULL,
+                            NULL);
+
+    /* With username */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "user");
+    _parse_config(session, file, string, SSH_OK);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "jumpbox",
+                            "user",
+                            NULL);
+
+    /* With port */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "port");
+    _parse_config(session, file, string, SSH_OK);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "jumpbox",
+                            NULL,
+                            "2222");
+
+    /* Two step jump */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "two-step");
+    _parse_config(session, file, string, SSH_OK);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "second",
+                            "u2",
+                            "33");
+    helper_proxy_jump_check(session->opts.proxy_jumps->root->next,
+                            "first",
+                            "u1",
+                            "222");
+
+    /* none */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "none");
+    _parse_config(session, file, string, SSH_OK);
+    assert_int_equal(ssh_list_count(session->opts.proxy_jumps), 0);
+
+    /* If also ProxyCommand is specified, the first is applied */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "only-command");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.ProxyCommand, PROXYCMD);
+    assert_int_equal(ssh_list_count(session->opts.proxy_jumps), 0);
+
+    /* If also ProxyCommand is specified, the first is applied */
+    torture_reset_config(session);
+    SAFE_FREE(session->opts.ProxyCommand);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "only-jump");
+    _parse_config(session, file, string, SSH_OK);
+    assert_null(session->opts.ProxyCommand);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "jumpbox",
+                            NULL,
+                            NULL);
+
+    /* IPv6 address */
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "ipv6");
+    _parse_config(session, file, string, SSH_OK);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "2620:52:0::fed",
+                            NULL,
+                            NULL);
+
+    torture_reset_config(session);
+
+    /* Tests for proxycommand based proxyjump */
+    torture_setenv("OPENSSH_PROXYJUMP", "1");
 
     /* Simplest version with just a hostname */
     torture_reset_config(session);
@@ -995,6 +1162,7 @@ static void torture_config_proxyjump(void **state,
     assert_string_equal(session->opts.ProxyCommand,
                         "ssh -W '[%h]:%p' 2620:52:0::fed");
 
+
     /* Multiple @ is allowed in second jump */
     config = "Host allowed-hostname\n"
              "\tProxyJump localhost,user@principal.com@jumpbox:22\n";
@@ -1022,8 +1190,44 @@ static void torture_config_proxyjump(void **state,
     _parse_config(session, file, string, SSH_OK);
     assert_string_equal(session->opts.ProxyCommand,
                         "ssh -l user@principal.com -p 22 -W '[%h]:%p' jumpbox");
+    torture_unsetenv("OPENSSH_PROXYJUMP");
+
+    /* Tests for libssh based proxyjump */
+    /* Multiple @ is allowed in second jump */
+    config = "Host allowed-hostname\n"
+             "\tProxyJump localhost,user@principal.com@jumpbox:22\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "allowed-hostname");
+    _parse_config(session, file, string, SSH_OK);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "jumpbox",
+                            "user@principal.com",
+                            "22");
+
+    /* Multiple @ is allowed */
+    config = "Host allowed-hostname\n"
+             "\tProxyJump user@principal.com@jumpbox:22\n";
+    if (file != NULL) {
+        torture_write_file(file, config);
+    } else {
+        string = config;
+    }
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "allowed-hostname");
+    _parse_config(session, file, string, SSH_OK);
+    helper_proxy_jump_check(session->opts.proxy_jumps->root,
+                            "jumpbox",
+                            "user@principal.com",
+                            "22");
+    torture_reset_config(session);
 
     /* In this part, we try various other config files and strings. */
+    torture_setenv("OPENSSH_PROXYJUMP", "1");
 
     /* Try to create some invalid configurations */
     /* Non-numeric port */
@@ -1169,6 +1373,8 @@ static void torture_config_proxyjump(void **state,
     torture_reset_config(session);
     ssh_options_set(session, SSH_OPTIONS_HOST, "no-port");
     _parse_config(session, file, string, SSH_ERROR);
+
+    torture_unsetenv("OPENSSH_PROXYJUMP");
 }
 
 /**
@@ -1185,6 +1391,76 @@ static void torture_config_proxyjump_file(void **state)
 static void torture_config_proxyjump_string(void **state)
 {
     torture_config_proxyjump(state, NULL, LIBSSH_TESTCONFIG_STRING11);
+}
+
+/**
+ * @brief Verify we can parse ControlPath configuration option
+ */
+static void torture_config_control_path(void **state,
+                                        const char *file, const char *string)
+{
+    ssh_session session = *state;
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "simple");
+    _parse_config(session, file, string, SSH_OK);
+    assert_string_equal(session->opts.control_path, "/tmp/ssh-%r@%h:%p");
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "none");
+    _parse_config(session, file, string, SSH_OK);
+    assert_null(session->opts.control_path);
+}
+
+/**
+ * @brief Verify we can parse ControlPath configuration option from string
+ */
+static void torture_config_control_path_string(void **state)
+{
+    torture_config_control_path(state, NULL, LIBSSH_TESTCONFIG_STRING17);
+}
+
+/**
+ * @brief Verify we can parse ControlPath configuration option from file
+ */
+static void torture_config_control_path_file(void **state)
+{
+    torture_config_control_path(state, LIBSSH_TESTCONFIG17, NULL);
+}
+
+/**
+ * @brief Verify we can parse ControlMaster configuration option
+ */
+static void torture_config_control_master(void **state,
+                                          const char *file, const char *string)
+{
+    ssh_session session = *state;
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "simple");
+    _parse_config(session, file, string, SSH_OK);
+    assert_int_equal(session->opts.control_master, SSH_CONTROL_MASTER_AUTO);
+
+    torture_reset_config(session);
+    ssh_options_set(session, SSH_OPTIONS_HOST, "none");
+    _parse_config(session, file, string, SSH_OK);
+    assert_int_equal(session->opts.control_master, SSH_CONTROL_MASTER_YES);
+}
+
+/**
+ * @brief Verify we can parse ControlMaster configuration option from string
+ */
+static void torture_config_control_master_string(void **state)
+{
+    torture_config_control_master(state, NULL, LIBSSH_TESTCONFIG_STRING17);
+}
+
+/**
+ * @brief Verify we can parse ControlMaster configuration option from file
+ */
+static void torture_config_control_master_file(void **state)
+{
+    torture_config_control_master(state, LIBSSH_TESTCONFIG17, NULL);
 }
 
 /**
@@ -1270,6 +1546,345 @@ static void torture_config_rekey_file(void **state)
 static void torture_config_rekey_string(void **state)
 {
     torture_config_rekey(state, NULL, LIBSSH_TESTCONFIG_STRING12);
+}
+
+/**
+ * @brief Remove substring from a string
+ *
+ * @param occurrence 0 means "remove the first occurrence"
+ *                   1 means "remove the second occurrence" and so on
+ */
+static void helper_remove_substring(char *s, const char *subs, int occurrence) {
+    char *p;
+    /* remove the substring from the defaults */
+    p = strstr(s, subs);
+    assert_non_null(p);
+    /* look for second occurrence */
+    for (int i = 0; i < occurrence; i++) {
+        p = strstr(p + 1, subs);
+        assert_non_null(p);
+    }
+    memmove(p, p + strlen(subs), strlen(p + strlen(subs)) + 1);
+}
+
+/**
+ * @brief test that openssh style '+' feature works
+ */
+static void torture_config_plus(void **state,
+                                const char *file, const char *string)
+{
+    ssh_session session = *state;
+    const char *def_hostkeys = ssh_kex_get_default_methods(SSH_HOSTKEYS);
+    const char *fips_hostkeys = ssh_kex_get_fips_methods(SSH_HOSTKEYS);
+    const char *def_ciphers = ssh_kex_get_default_methods(SSH_CRYPT_C_S);
+    const char *fips_ciphers = ssh_kex_get_fips_methods(SSH_CRYPT_C_S);
+    const char *def_kex = ssh_kex_get_default_methods(SSH_KEX);
+    const char *fips_kex = ssh_kex_get_fips_methods(SSH_KEX);
+    const char *def_mac = ssh_kex_get_default_methods(SSH_MAC_C_S);
+    const char *fips_mac = ssh_kex_get_fips_methods(SSH_MAC_C_S);
+    const char *hostkeys_added = ",ssh-rsa";
+    const char *ciphers_added = ",aes128-cbc,aes256-cbc";
+    const char *kex_added = ",diffie-hellman-group14-sha1,diffie-hellman-group1-sha1";
+    const char *mac_added = ",hmac-sha1,hmac-sha1-etm@openssh.com";
+    char *awaited = NULL;
+    int rc;
+
+    _parse_config(session, file, string, SSH_OK);
+
+    /* check hostkeys */
+    if (ssh_fips_mode()) {
+        /* ssh-rsa is disabled in fips */
+        assert_string_equal(session->opts.wanted_methods[SSH_HOSTKEYS], fips_hostkeys);
+    } else {
+        awaited = calloc(strlen(def_hostkeys) + strlen(hostkeys_added) + 1, 1);
+        rc = snprintf(awaited, strlen(def_hostkeys) + strlen(hostkeys_added) + 1,
+                      "%s%s", def_hostkeys, hostkeys_added);
+        assert_int_equal(rc, strlen(def_hostkeys) + strlen(hostkeys_added));
+
+        assert_string_equal(session->opts.wanted_methods[SSH_HOSTKEYS], awaited);
+        free(awaited);
+    }
+
+    /* check ciphers */
+    if (ssh_fips_mode()) {
+        /* already all supported is in the list */
+        assert_string_equal(session->opts.wanted_methods[SSH_CRYPT_C_S], fips_ciphers);
+    } else {
+        awaited = calloc(strlen(def_ciphers) + strlen(ciphers_added) + 1, 1);
+        rc = snprintf(awaited, strlen(def_ciphers) + strlen(ciphers_added) + 1,
+                      "%s%s", def_ciphers, ciphers_added);
+        assert_int_equal(rc, strlen(def_ciphers) + strlen(ciphers_added));
+        assert_string_equal(session->opts.wanted_methods[SSH_CRYPT_C_S], awaited);
+        free(awaited);
+    }
+
+    /* check kex */
+    if (ssh_fips_mode()) {
+        /* sha1 is disabled in fips */
+        assert_string_equal(session->opts.wanted_methods[SSH_KEX], fips_kex);
+    } else {
+        awaited = calloc(strlen(def_kex) + strlen(kex_added) + 1, 1);
+        rc = snprintf(awaited, strlen(def_kex) + strlen(kex_added) + 1,
+                      "%s%s", def_kex, kex_added);
+        assert_int_equal(rc, strlen(def_kex) + strlen(kex_added));
+        assert_string_equal(session->opts.wanted_methods[SSH_KEX], awaited);
+        free(awaited);
+    }
+
+    /* check mac */
+    if (ssh_fips_mode()) {
+        /* the added algos are already in the fips_methods */
+        assert_string_equal(session->opts.wanted_methods[SSH_MAC_C_S], fips_mac);
+    } else {
+        awaited = calloc(strlen(def_mac) + strlen(mac_added) + 1, 1);
+        rc = snprintf(awaited, strlen(def_mac) + strlen(mac_added) + 1,
+                      "%s%s", def_mac, mac_added);
+        assert_int_equal(rc, strlen(def_mac) + strlen(mac_added));
+        assert_string_equal(session->opts.wanted_methods[SSH_MAC_C_S], awaited);
+        free(awaited);
+    }
+}
+
+/**
+ * @brief test that openssh style '+' feature works from file
+ */
+static void torture_config_plus_file(void **state)
+{
+    torture_config_plus(state, LIBSSH_TESTCONFIG14, NULL);
+}
+
+/**
+ * @brief test that openssh style '+' feature works from string
+ */
+static void torture_config_plus_string(void **state)
+{
+    torture_config_plus(state, NULL, LIBSSH_TESTCONFIG_STRING14);
+}
+
+/**
+ * @brief test that openssh style '-' feature works from string
+ */
+static void torture_config_minus(void **state,
+                                 const char *file, const char *string)
+{
+    ssh_session session = *state;
+    const char *def_hostkeys = ssh_kex_get_default_methods(SSH_HOSTKEYS);
+    const char *fips_hostkeys = ssh_kex_get_fips_methods(SSH_HOSTKEYS);
+    const char *def_ciphers = ssh_kex_get_default_methods(SSH_CRYPT_C_S);
+    const char *fips_ciphers = ssh_kex_get_fips_methods(SSH_CRYPT_C_S);
+    const char *def_kex = ssh_kex_get_default_methods(SSH_KEX);
+    const char *fips_kex = ssh_kex_get_fips_methods(SSH_KEX);
+    const char *def_mac = ssh_kex_get_default_methods(SSH_MAC_C_S);
+    const char *fips_mac = ssh_kex_get_fips_methods(SSH_MAC_C_S);
+    const char *hostkeys_removed = ",rsa-sha2-512,rsa-sha2-256";
+    const char *ciphers_removed = ",aes256-ctr";
+    const char *kex_removed = ",diffie-hellman-group18-sha512,diffie-hellman-group16-sha512";
+    const char *fips_kex_removed = ",diffie-hellman-group16-sha512,diffie-hellman-group18-sha512";
+    const char *mac_removed = "hmac-sha2-256-etm@openssh.com,";
+    char *awaited = NULL;
+    int rc;
+
+    _parse_config(session, file, string, SSH_OK);
+
+    /* check hostkeys */
+    if (ssh_fips_mode()) {
+        awaited = calloc(strlen(fips_hostkeys) + 1, 1);
+        rc = snprintf(awaited, strlen(fips_hostkeys) + 1, "%s", fips_hostkeys);
+        assert_int_equal(rc, strlen(fips_hostkeys));
+    } else {
+        awaited = calloc(strlen(def_hostkeys) + 1, 1);
+        rc = snprintf(awaited, strlen(def_hostkeys) + 1, "%s", def_hostkeys);
+        assert_int_equal(rc, strlen(def_hostkeys));
+    }
+    /* remove the substring from the defaults */
+    helper_remove_substring(awaited, hostkeys_removed, 0);
+    assert_string_equal(session->opts.wanted_methods[SSH_HOSTKEYS], awaited);
+    free(awaited);
+
+    /* check ciphers */
+    if (ssh_fips_mode()) {
+        awaited = calloc(strlen(fips_ciphers) + 1, 1);
+        rc = snprintf(awaited, strlen(fips_ciphers) + 1, "%s", fips_ciphers);
+        assert_int_equal(rc, strlen(fips_ciphers));
+    } else {
+        awaited = calloc(strlen(def_ciphers) + 1, 1);
+        rc = snprintf(awaited, strlen(def_ciphers) + 1, "%s", def_ciphers);
+        assert_int_equal(rc, strlen(def_ciphers));
+    }
+    /* remove the substring from the defaults */
+    helper_remove_substring(awaited, ciphers_removed, 0);
+    assert_string_equal(session->opts.wanted_methods[SSH_CRYPT_C_S], awaited);
+    free(awaited);
+
+    /* check kex */
+    if (ssh_fips_mode()) {
+        awaited = calloc(strlen(fips_kex) + 1, 1);
+        rc = snprintf(awaited, strlen(fips_kex) + 1, "%s", fips_kex);
+        assert_int_equal(rc, strlen(fips_kex));
+        /* remove the substring from the defaults */
+        helper_remove_substring(awaited, fips_kex_removed, 0);
+    } else {
+        awaited = calloc(strlen(def_kex) + 1, 1);
+        rc = snprintf(awaited, strlen(def_kex) + 1, "%s", def_kex);
+        assert_int_equal(rc, strlen(def_kex));
+        /* remove the substring from the defaults */
+        helper_remove_substring(awaited, kex_removed, 0);
+    }
+    assert_string_equal(session->opts.wanted_methods[SSH_KEX], awaited);
+    free(awaited);
+
+    /* check mac */
+    if (ssh_fips_mode()) {
+        awaited = calloc(strlen(fips_mac) + 1, 1);
+        rc = snprintf(awaited, strlen(fips_mac) + 1, "%s", fips_mac);
+        assert_int_equal(rc, strlen(fips_mac));
+    } else {
+        awaited = calloc(strlen(def_mac) + 1, 1);
+        rc = snprintf(awaited, strlen(def_mac) + 1, "%s", def_mac);
+        assert_int_equal(rc, strlen(def_mac));
+    }
+    /* remove the substring from the defaults */
+    helper_remove_substring(awaited, mac_removed, 0);
+    assert_string_equal(session->opts.wanted_methods[SSH_MAC_C_S], awaited);
+    free(awaited);
+}
+
+/**
+ * @brief test that openssh style '-' feature works from file
+ */
+static void torture_config_minus_file(void **state)
+{
+    torture_config_minus(state, LIBSSH_TESTCONFIG15, NULL);
+}
+
+/**
+ * @brief test that openssh style '-' feature works from string
+ */
+static void torture_config_minus_string(void **state)
+{
+    torture_config_minus(state, NULL, LIBSSH_TESTCONFIG_STRING15);
+}
+
+/**
+ * @brief test that openssh style '^' feature works from string
+ */
+static void torture_config_caret(void **state,
+                                 const char *file, const char *string)
+{
+    ssh_session session = *state;
+    const char *def_hostkeys = ssh_kex_get_default_methods(SSH_HOSTKEYS);
+    const char *fips_hostkeys = ssh_kex_get_fips_methods(SSH_HOSTKEYS);
+    const char *def_ciphers = ssh_kex_get_default_methods(SSH_CRYPT_C_S);
+    const char *fips_ciphers = ssh_kex_get_fips_methods(SSH_CRYPT_C_S);
+    const char *def_kex = ssh_kex_get_default_methods(SSH_KEX);
+    const char *fips_kex = ssh_kex_get_fips_methods(SSH_KEX);
+    const char *def_mac = ssh_kex_get_default_methods(SSH_MAC_C_S);
+    const char *fips_mac = ssh_kex_get_fips_methods(SSH_MAC_C_S);
+    const char *hostkeys_prio = "rsa-sha2-512,rsa-sha2-256";
+    const char *ciphers_prio = "aes256-cbc,";
+    const char *kex_prio = "diffie-hellman-group18-sha512,diffie-hellman-group16-sha512,";
+    const char *fips_kex_prio = ",diffie-hellman-group16-sha512,diffie-hellman-group18-sha512";
+    const char *mac_prio = "hmac-sha1,";
+    char *awaited = NULL;
+    int rc;
+
+    _parse_config(session, file, string, SSH_OK);
+
+    /* check hostkeys */
+    /* +2 for the added comma and the \0 */
+    if (ssh_fips_mode()) {
+        awaited = calloc(strlen(hostkeys_prio) + strlen(fips_hostkeys) + 2, 1);
+        rc = snprintf(awaited, strlen(hostkeys_prio) + strlen(fips_hostkeys) + 2,
+                      "%s,%s", hostkeys_prio, fips_hostkeys);
+        assert_int_equal(rc, strlen(hostkeys_prio) + strlen(fips_hostkeys) + 1);
+    } else {
+        awaited = calloc(strlen(def_hostkeys) + strlen(hostkeys_prio) + 2, 1);
+        rc = snprintf(awaited, strlen(hostkeys_prio) + strlen(def_hostkeys) + 2,
+                      "%s,%s", hostkeys_prio, def_hostkeys);
+        assert_int_equal(rc, strlen(hostkeys_prio) + strlen(def_hostkeys) + 1);
+    }
+
+    /* remove the substring from the defaults */
+    helper_remove_substring(awaited, hostkeys_prio, 1);
+    /* remove the comma at the end of the list */
+    awaited[strlen(awaited) - 1] = '\0';
+
+    assert_string_equal(session->opts.wanted_methods[SSH_HOSTKEYS], awaited);
+    free(awaited);
+
+    /* check ciphers */
+    if (ssh_fips_mode()) {
+        awaited = calloc(strlen(ciphers_prio) + strlen(fips_ciphers) + 1, 1);
+        rc = snprintf(awaited, strlen(ciphers_prio) + strlen(fips_ciphers) + 1,
+                      "%s%s", ciphers_prio, fips_ciphers);
+        assert_int_equal(rc, strlen(ciphers_prio) + strlen(fips_ciphers));
+        /* remove the substring from the defaults */
+        helper_remove_substring(awaited, ciphers_prio, 1);
+    } else {
+        /* + 2 because the '\0' and the comma */
+        awaited = calloc(strlen(ciphers_prio) + strlen(def_ciphers) + 1, 1);
+        rc = snprintf(awaited, strlen(ciphers_prio) + strlen(def_ciphers) + 1,
+                      "%s%s", ciphers_prio, def_ciphers);
+        assert_int_equal(rc, strlen(ciphers_prio) + strlen(def_ciphers));
+    }
+
+    assert_string_equal(session->opts.wanted_methods[SSH_CRYPT_C_S], awaited);
+    free(awaited);
+
+    /* check kex */
+    if (ssh_fips_mode()) {
+        awaited = calloc(strlen(kex_prio) + strlen(fips_kex) + 1, 1);
+        rc = snprintf(awaited, strlen(kex_prio) + strlen(fips_kex) + 1,
+                      "%s%s", kex_prio, fips_kex);
+        assert_int_equal(rc, strlen(kex_prio) + strlen(fips_kex));
+        /* remove the substring from the defaults */
+        /* the default list has different order of these two algos than the fips
+         * and because here is a braindead string substitution being done,
+         * change the order and remove the first occurrence of it */
+        helper_remove_substring(awaited, fips_kex_prio, 0);
+    } else {
+        awaited = calloc(strlen(kex_prio) + strlen(def_kex) + 1, 1);
+        rc = snprintf(awaited, strlen(kex_prio) + strlen(def_kex) + 1,
+                      "%s%s", kex_prio, def_kex);
+        assert_int_equal(rc, strlen(def_kex) + strlen(kex_prio));
+        /* remove the substring from the defaults */
+        helper_remove_substring(awaited, kex_prio, 1);
+    }
+
+    assert_string_equal(session->opts.wanted_methods[SSH_KEX], awaited);
+    free(awaited);
+
+    /* check mac */
+    if (ssh_fips_mode()) {
+        awaited = calloc(strlen(mac_prio) + strlen(fips_mac) + 1, 1);
+        rc = snprintf(awaited, strlen(mac_prio) + strlen(fips_mac) + 1, "%s%s", mac_prio, fips_mac);
+        assert_int_equal(rc, strlen(mac_prio) + strlen(fips_mac));
+        /* the fips list contains hmac-sha1 algo */
+        helper_remove_substring(awaited, mac_prio, 1);
+    } else {
+        awaited = calloc(strlen(mac_prio) + strlen(def_mac) + 1, 1);
+        /* the mac is not in default; it is added to the list */
+        rc = snprintf(awaited, strlen(mac_prio) + strlen(def_mac) + 1, "%s%s", mac_prio, def_mac);
+        assert_int_equal(rc, strlen(mac_prio) + strlen(def_mac));
+    }
+    assert_string_equal(session->opts.wanted_methods[SSH_MAC_C_S], awaited);
+    free(awaited);
+}
+
+/**
+ * @brief test that openssh style '^' feature works from file
+ */
+static void torture_config_caret_file(void **state)
+{
+    torture_config_caret(state, LIBSSH_TESTCONFIG16, NULL);
+}
+
+/**
+ * @brief test that openssh style '^' feature works from string
+ */
+static void torture_config_caret_string(void **state)
+{
+    torture_config_caret(state, NULL, LIBSSH_TESTCONFIG_STRING16);
 }
 
 /**
@@ -1392,7 +2007,7 @@ static void torture_config_parser_get_cmd(void **state)
 {
     char *p = NULL, *tok = NULL;
     char data[256];
-#ifdef __unix__
+#ifdef WITH_EXEC
     FILE *outfile = NULL, *infile = NULL;
     int pid;
     char buffer[256] = {0};
@@ -1436,7 +2051,7 @@ static void torture_config_parser_get_cmd(void **state)
     assert_string_equal(tok, data);
     assert_int_equal(*p, '\0');
 
-#ifdef __unix__
+#ifdef WITH_EXEC
     /* Check if the command would get correctly executed
      * Use the script file "hello world.sh" to echo the first argument
      * Run as <= "/workdir/hello world.sh" "hello libssh" => */
@@ -1466,7 +2081,7 @@ static void torture_config_parser_get_cmd(void **state)
 
     fclose(outfile);
     assert_string_equal(buffer, "hello libssh");
-#endif
+#endif /* WITH_EXEC */
 }
 
 /* ssh_config_get_token() should behave as expected
@@ -1737,6 +2352,7 @@ static void torture_config_match_pattern(void **state)
 static void torture_config_identity(void **state)
 {
     const char *id = NULL;
+    const char *cert = NULL;
     struct ssh_iterator *it = NULL;
     ssh_session session = *state;
 
@@ -1753,6 +2369,20 @@ static void torture_config_identity(void **state)
     assert_non_null(it);
     id = it->data;
     assert_string_equal(id, "id_rsa_one");
+
+    /* The certs are first added to this temporary list before expanding */
+    it = ssh_list_get_iterator(session->opts.certificate_non_exp);
+    assert_non_null(it);
+    cert = it->data;
+    /* The certs are coming as listed in the configuration file */
+    assert_string_equal(cert, "id_rsa_one-cert.pub");
+
+    it = it->next;
+    assert_non_null(it);
+    cert = it->data;
+    assert_string_equal(cert, "id_ecdsa_two-cert.pub");
+    /* and that is all */
+    assert_null(it->next);
 }
 
 /* Make absolute path for config include
@@ -1895,6 +2525,9 @@ static void torture_config_parse_uri(void **state)
     assert_null(username);
     assert_string_equal(hostname, "1:2:3::4");
     SAFE_FREE(hostname);
+
+    rc = ssh_config_parse_uri("user -name@", &username, NULL, NULL, true);
+    assert_int_equal(rc, SSH_ERROR);
 }
 
 int torture_run_tests(void)
@@ -1937,9 +2570,29 @@ int torture_run_tests(void)
                                         setup, teardown),
         cmocka_unit_test_setup_teardown(torture_config_proxyjump_string,
                                         setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_control_path_file,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_control_path_string,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_control_master_file,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_control_master_string,
+                                        setup, teardown),
         cmocka_unit_test_setup_teardown(torture_config_rekey_file,
                                         setup, teardown),
         cmocka_unit_test_setup_teardown(torture_config_rekey_string,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_plus_file,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_plus_string,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_minus_file,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_minus_string,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_caret_file,
+                                        setup, teardown),
+        cmocka_unit_test_setup_teardown(torture_config_caret_string,
                                         setup, teardown),
         cmocka_unit_test_setup_teardown(torture_config_pubkeytypes_file,
                                         setup, teardown),
