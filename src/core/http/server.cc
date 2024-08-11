@@ -902,19 +902,9 @@ http_RequestStatus http_IO::ParseRequest()
     {
         Span<char> line = SplitStrLine(intro, &intro);
 
-        if (std::any_of(line.begin(), line.end(), [](char c) { return c == 0; })) {
-            LogError("Request line contains NUL characters");
-            SendError(400);
-            return http_RequestStatus::Close;
-        }
-
         Span<char> method = SplitStr(line, ' ', &line);
         Span<char> url = SplitStr(line, ' ', &line);
         Span<char> protocol = SplitStr(line, ' ', &line);
-
-        for (char &c: method) {
-            c = UpperAscii(c);
-        }
 
         if (line.len) {
             LogError("Unexpected data after request line");
