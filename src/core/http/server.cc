@@ -871,41 +871,65 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
     return true;
 }
 
+#if defined(_WIN32)
+
+static void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
+{
+    RG_ASSERT(src_len >= 0);
+    RG_ASSERT(needle_len > 0);
+
+    src_len -= needle_len - 1;
+
+    int needle0 = *(const uint8_t *)needle;
+    Size offset = 0;
+
+    while (offset < src_len) {
+        uint8_t *next = (uint8_t *)memchr((uint8_t *)src + offset, needle0, (size_t)(src_len - offset));
+
+        if (!next)
+            return nullptr;
+        if (!memcmp(next, needle, (size_t)needle_len))
+            return next;
+
+        offset = next - (const uint8_t *)src + 1;
+    }
+
+    return nullptr;
+}
+
+#else
+
+static void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
+{
+    void *ptr = memmem(src, (size_t)src_len, needle, (size_t)needle_len);
+    return ptr;
+}
+
+#endif
+
 http_RequestStatus http_IO::ParseRequest()
 {
     Span<char> intro = {};
     bool keepalive = false;
 
     // Find end of request headers (CRLF+CRLF)
-    while (incoming.buf.len - incoming.pos >= 4) {
-        uint8_t *next = (uint8_t *)memchr(incoming.buf.ptr + incoming.pos, '\r', incoming.buf.len - incoming.pos);
-        incoming.pos = next ? next - incoming.buf.ptr : incoming.buf.len;
+    {
+        uint8_t *end = (uint8_t *)MemMem(incoming.buf.ptr + incoming.pos, incoming.buf.len - incoming.pos, "\r\n\r\n", 4);
+
+        if (!end) {
+            incoming.pos = std::max((Size)0, incoming.buf.len - 3);
+            return http_RequestStatus::Busy;
+        }
+
+        intro = MakeSpan((char *)incoming.buf.ptr, end - incoming.buf.ptr);
+        incoming.pos = end - incoming.buf.ptr + 4;
 
         if (incoming.pos >= daemon->max_request_size) [[unlikely]] {
             LogError("Excessive request size");
             SendError(413);
             return http_RequestStatus::Close;
         }
-
-        const char *end = (const char *)incoming.buf.ptr + incoming.pos;
-
-        if (end[0] == '\r' && end[1] == '\n' && end[2] == '\r' && end[3] == '\n') {
-            intro = incoming.buf.As<char>().Take(0, incoming.pos);
-            incoming.pos += 4;
-
-            break;
-        } else if (end[0] == '\n' && end[1] == '\n') {
-            intro = incoming.buf.As<char>().Take(0, incoming.pos);
-            incoming.pos += 2;
-
-            break;
-        }
-
-        incoming.pos++;
     }
-
-    if (!intro.len)
-        return http_RequestStatus::Busy;
 
     // Parse request line
     {
