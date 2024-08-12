@@ -411,7 +411,7 @@ http_Socket *http_Dispatcher::InitSocket(int sock, int64_t start, struct sockadd
 
     if (!socket->client.Init(socket, start, sa)) [[unlikely]]
         return nullptr;
-    if (!AddEpollDescriptor(sock, EPOLLIN | EPOLLET, socket)) [[unlikely]]
+    if (!AddEpollDescriptor(sock, EPOLLIN, socket)) [[unlikely]]
         return nullptr;
 
     err_guard.Disable();
