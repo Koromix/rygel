@@ -183,6 +183,8 @@ static_assert(sizeof(double) == 8, "This code base is not designed to support si
 #elif defined(_MSC_VER)
     #define RG_PUSH_NO_WARNINGS __pragma(warning(push, 0))
     #define RG_POP_NO_WARNINGS __pragma(warning(pop))
+
+    #define __restrict__ __restrict
 #else
     #error Compiler not supported
 #endif
@@ -496,7 +498,7 @@ static inline T *AlignDown(T *ptr, Size align)
 
 // Calling memcpy (and friends) with a NULL source pointer is undefined behavior
 // even if length is 0. This is dumb, work around this.
-static inline void *MemCpy(void *dest, const void *src, Size len)
+static inline void *MemCpy(void *__restrict__ dest, const void *__restrict__ src, Size len)
 {
     RG_ASSERT(len >= 0);
 
