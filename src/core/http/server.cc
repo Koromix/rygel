@@ -1197,16 +1197,14 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
         return true;
     }
 
-    uint8_t full[6] = { 'F', 'F', 'F', 'F', '\r', '\n' };
-    uint8_t last[6] = { 0, 0, 0, 0, '\r', '\n' };
-    uint8_t tail[2] = { '\r', '\n' };
+    uint8_t full[8] = { '\r', '\n', 'F', 'F', 'F', 'F', '\r', '\n' };
+    uint8_t last[8] = { '\r', '\n', 0, 0, 0, 0, '\r', '\n' };
 
-    LocalArray<Span<const uint8_t>, 3 * 16> parts;
+    LocalArray<Span<const uint8_t>, 2 * 16 + 1> parts;
 
     while (data.len >= 0xFFFF) {
         parts.Append(MakeSpan(full, RG_SIZE(full)));
         parts.Append(MakeSpan(data.ptr, 0xFFFF));
-        parts.Append(MakeSpan(tail, RG_SIZE(tail)));
 
         data.ptr += 0xFFFF;
         data.len -= 0xFFFF;
@@ -1215,15 +1213,18 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
     if (data.len) {
         static const char literals[] = "0123456789ABCDEF";
 
-        last[0] = literals[((size_t)data.len >> 12) & 0xF];
-        last[1] = literals[((size_t)data.len >> 8) & 0xF];
-        last[2] = literals[((size_t)data.len >> 4) & 0xF];
-        last[3] = literals[((size_t)data.len >> 0) & 0xF];
+        last[2] = literals[((size_t)data.len >> 12) & 0xF];
+        last[3] = literals[((size_t)data.len >> 8) & 0xF];
+        last[4] = literals[((size_t)data.len >> 4) & 0xF];
+        last[5] = literals[((size_t)data.len >> 0) & 0xF];
 
         parts.Append(MakeSpan(last, RG_SIZE(last)));
         parts.Append(MakeSpan(data.ptr, data.len));
-        parts.Append(MakeSpan(tail, RG_SIZE(tail)));
     }
+
+    parts[0].ptr += 2;
+    parts[0].len -= 2;
+    parts.Append(MakeSpan(full, 2));
 
     return daemon->WriteSocket(socket, parts);
 }
