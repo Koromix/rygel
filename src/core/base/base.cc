@@ -135,6 +135,34 @@ extern "C" void AssertMessage(const char *filename, int line, const char *cond)
     Print(StdErr, "%1:%2: Assertion '%3' failed\n", filename, line, cond);
 }
 
+#if defined(_WIN32)
+
+void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
+{
+    RG_ASSERT(src_len >= 0);
+    RG_ASSERT(needle_len > 0);
+
+    src_len -= needle_len - 1;
+
+    int needle0 = *(const uint8_t *)needle;
+    Size offset = 0;
+
+    while (offset < src_len) {
+        uint8_t *next = (uint8_t *)memchr((uint8_t *)src + offset, needle0, (size_t)(src_len - offset));
+
+        if (!next)
+            return nullptr;
+        if (!memcmp(next, needle, (size_t)needle_len))
+            return next;
+
+        offset = next - (const uint8_t *)src + 1;
+    }
+
+    return nullptr;
+}
+
+#endif
+
 // ------------------------------------------------------------------------
 // Memory / Allocator
 // ------------------------------------------------------------------------

@@ -539,6 +539,23 @@ static inline void *MemSet(void *dest, int c, Size len)
     return dest;
 }
 
+#if defined(_WIN32)
+
+void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len);
+
+#else
+
+static inline void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
+{
+    RG_ASSERT(src_len >= 0);
+    RG_ASSERT(needle_len > 0);
+
+    void *ptr = memmem(src, (size_t)src_len, needle, (size_t)needle_len);
+    return ptr;
+}
+
+#endif
+
 template <typename T, typename = typename std::enable_if<std::is_enum<T>::value, T>>
 typename std::underlying_type<T>::type MaskEnum(T value)
 {

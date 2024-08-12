@@ -871,42 +871,6 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
     return true;
 }
 
-#if defined(_WIN32)
-
-static void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
-{
-    RG_ASSERT(src_len >= 0);
-    RG_ASSERT(needle_len > 0);
-
-    src_len -= needle_len - 1;
-
-    int needle0 = *(const uint8_t *)needle;
-    Size offset = 0;
-
-    while (offset < src_len) {
-        uint8_t *next = (uint8_t *)memchr((uint8_t *)src + offset, needle0, (size_t)(src_len - offset));
-
-        if (!next)
-            return nullptr;
-        if (!memcmp(next, needle, (size_t)needle_len))
-            return next;
-
-        offset = next - (const uint8_t *)src + 1;
-    }
-
-    return nullptr;
-}
-
-#else
-
-static void *MemMem(const void *src, Size src_len, const void *needle, Size needle_len)
-{
-    void *ptr = memmem(src, (size_t)src_len, needle, (size_t)needle_len);
-    return ptr;
-}
-
-#endif
-
 http_RequestStatus http_IO::ParseRequest()
 {
     Span<char> intro = {};
