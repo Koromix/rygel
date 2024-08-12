@@ -1168,6 +1168,66 @@ bool http_IO::WriteDirect(Span<const uint8_t> data)
     return true;
 }
 
+bool http_IO::WriteChunked(Span<const uint8_t> data)
+{
+    if (!data.len) {
+        uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
+
+        if (!daemon->WriteSocket(socket, end)) {
+            request.keepalive = false;
+            return false;
+        }
+        daemon->EndWrite(socket);
+
+        return true;
+    }
+
+    if (data.len > (Size)16 * 0xFFFF) [[unlikely]] {
+        do {
+            Size take = std::min((Size)16 * 0xFFFF, data.len);
+            Span<const uint8_t> frag = data.Take(0, take);
+
+            if (!WriteChunked(frag))
+                return false;
+
+            data.ptr += take;
+            data.len -= take;
+        } while (data.len);
+
+        return true;
+    }
+
+    uint8_t full[6] = { 'F', 'F', 'F', 'F', '\r', '\n' };
+    uint8_t last[6] = { 0, 0, 0, 0, '\r', '\n' };
+    uint8_t tail[2] = { '\r', '\n' };
+
+    LocalArray<Span<const uint8_t>, 3 * 16> parts;
+
+    while (data.len >= 0xFFFF) {
+        parts.Append(MakeSpan(full, RG_SIZE(full)));
+        parts.Append(MakeSpan(data.ptr, 0xFFFF));
+        parts.Append(MakeSpan(tail, RG_SIZE(tail)));
+
+        data.ptr += 0xFFFF;
+        data.len -= 0xFFFF;
+    }
+
+    if (data.len) {
+        static const char literals[] = "0123456789ABCDEF";
+
+        last[0] = literals[((size_t)data.len >> 12) & 0xF];
+        last[1] = literals[((size_t)data.len >> 8) & 0xF];
+        last[2] = literals[((size_t)data.len >> 4) & 0xF];
+        last[3] = literals[((size_t)data.len >> 0) & 0xF];
+
+        parts.Append(MakeSpan(last, RG_SIZE(last)));
+        parts.Append(MakeSpan(data.ptr, data.len));
+        parts.Append(MakeSpan(tail, RG_SIZE(tail)));
+    }
+
+    return daemon->WriteSocket(socket, parts);
+}
+
 bool http_IO::Rearm(int64_t now)
 {
     for (const auto &finalize: response.finalizers) {

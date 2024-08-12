@@ -341,6 +341,45 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<const uint8_t> buf)
     return true;
 }
 
+bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> parts)
+{
+    while (parts.len) {
+        LocalArray<WSABUF, 64> bufs;
+        bufs.len = std::min(parts.len, bufs.Available());
+
+        for (Size i = 0; i < bufs.len; i++) {
+            const Span<const uint8_t> &part = parts[i];
+
+            if (part.len > (Size)INT_MAX) [[unlikely]] {
+                LogError("Cannot proceed with excessive scattered chunk size");
+                return false;
+            }
+
+            bufs[i].buf = (char *)part.ptr;
+            bufs[i].len = (unsigned long)part.len;
+        }
+
+        DWORD sent = 0;
+        int ret = WSASend((SOCKET)socket->sock, bufs.data, (DWORD)bufs.len, &sent, 0, nullptr, nullptr);
+
+        if (ret) {
+            errno = TranslateWinSockError();
+            if (errno != ENOTCONN && errno != ECONNRESET) {
+                LogError("Failed to send to client: %1", strerror(errno));
+            }
+            return false;
+        }
+
+        // Windows does not apparently do partial writes, so don't bother dealing with that.
+        // Go on!
+
+        parts.ptr += bufs.len;
+        parts.len -= bufs.len;
+    }
+
+    return true;
+}
+
 static http_Socket *SocketFromOverlapped(void *ptr)
 {
     uint8_t *data = (uint8_t *)ptr;
@@ -767,43 +806,6 @@ void http_IO::SendFile(int status, int fd, int64_t len)
         socket->op = PendingOperation::Done;
         PostQueuedCompletionStatus(daemon->iocp, 0, 0, &socket->overlapped);
     }
-}
-
-bool http_IO::WriteChunked(Span<const uint8_t> data)
-{
-    if (!data.len) {
-        uint8_t end[5] = { '0', '\r', '\n', '\r', '\n' };
-
-        if (!daemon->WriteSocket(socket, end)) {
-            request.keepalive = false;
-            return false;
-        }
-        daemon->EndWrite(socket);
-
-        return true;
-    }
-
-    do {
-        LocalArray<uint8_t, 16384> buf;
-
-        Size copy_len = std::min(RG_SIZE(buf.data) - 8, data.len);
-
-        buf.len = 8 + copy_len;
-        Fmt(buf.As<char>(), "%1\r\n", FmtHex(copy_len).Pad0(-4));
-        MemCpy(buf.data + 6, data.ptr, copy_len);
-        buf.data[6 + copy_len + 0] = '\r';
-        buf.data[6 + copy_len + 1] = '\n';
-
-        if (!daemon->WriteSocket(socket, buf)) {
-            request.keepalive = false;
-            return false;
-        }
-
-        data.ptr += copy_len;
-        data.len -= copy_len;
-    } while (data.len);
-
-    return true;
 }
 
 }
