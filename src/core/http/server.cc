@@ -500,6 +500,9 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
 
     response.started = true;
 
+    // Don't allow Keep-Alive with HTTP/1.0 when chunked encoding is used
+    request.keepalive &= (len >= 0 || request.version >= 11);
+
     Span<const char> intro = PrepareResponse(status, encoding, len);
     const auto write = [this](Span<const uint8_t> buf) { return WriteDirect(buf); };
 
