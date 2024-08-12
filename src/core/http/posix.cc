@@ -158,7 +158,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
 
         socket->client.timeout_at = GetMonotonicTime() + send_timeout;
 
-        for (;;) {
+        do {
             struct iovec *part = msg.msg_iov;
 
             if (part->iov_len > (size_t)sent) {
@@ -171,7 +171,7 @@ bool http_Daemon::WriteSocket(http_Socket *socket, Span<Span<const uint8_t>> par
             msg.msg_iov++;
             msg.msg_iovlen--;
             sent -= (Size)part->iov_len;
-        }
+        } while (msg.msg_iovlen);
     }
 
     return true;
