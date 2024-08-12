@@ -378,8 +378,7 @@ R"(<!DOCTYPE html>
             {{ MAIN }}
         </main>
     </body>
-</html>
-)";
+</html>)";
 
     struct EntryData {
         Span<const char> name;
@@ -389,7 +388,7 @@ R"(<!DOCTYPE html>
 
     HeapArray<EntryData> entries;
     {
-        EnumResult ret = EnumerateDirectory(dirname, nullptr, 4096,
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, 16384,
                                             [&](const char *basename, const FileInfo &file_info) {
             EntryData entry = {};
 
