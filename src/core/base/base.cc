@@ -6038,6 +6038,7 @@ public:
 
     void RunWorker(int worker_idx);
     void SyncOn(Async *async);
+    bool WaitOn(Async *async, int timeout);
 
     void RunTasks(int worker_idx);
     void RunTask(Task *task);
@@ -6106,6 +6107,11 @@ bool Async::Sync()
 {
     pool->SyncOn(this);
     return success;
+}
+
+bool Async::Wait(int timeout)
+{
+    return pool->WaitOn(this, timeout);
 }
 
 int Async::GetWorkerCount()
@@ -6286,6 +6292,20 @@ void AsyncPool::SyncOn(Async *async)
         std::unique_lock<std::mutex> lock_sync(pool_mutex);
         sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
     }
+}
+
+bool AsyncPool::WaitOn(Async *async, int timeout)
+{
+    std::unique_lock<std::mutex> lock_sync(pool_mutex);
+
+    if (timeout >= 0) {
+        std::chrono::milliseconds delay(timeout);
+        sync_cv.wait_for(lock_sync, delay, [&]() { return !async->remaining_tasks; });
+    } else {
+        sync_cv.wait(lock_sync, [&]() { return !async->remaining_tasks; });
+    }
+
+    return !async->remaining_tasks;
 }
 
 void AsyncPool::RunTasks(int worker_idx)

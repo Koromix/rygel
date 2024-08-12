@@ -150,6 +150,8 @@ bool http_Config::SetProperty(Span<const char> key, Span<const char> value, Span
         }
     } else if (key == "SendTimeout") {
         return ParseDuration(value, &send_timeout);
+    } else if (key == "StopTimeout") {
+        return ParseDuration(value, &stop_timeout);
     } else if (key == "MaxRequestSize") {
         return ParseSize(value, &max_request_size);
     } else if (key == "MaxUrlLength") {
@@ -219,6 +221,10 @@ bool http_Config::Validate() const
         LogError("HTTP SendTimeout must be >= 10 sec");
         return false;
     }
+    if (stop_timeout < 1000) {
+        LogError("HTTP StopTimeout must be >= 1 sec");
+        return false;
+    }
 
     if (max_request_size < 1024) {
         LogError("MaxRequestSize must be >= 1 kB");
@@ -256,6 +262,7 @@ bool http_Daemon::InitConfig(const http_Config &config)
     idle_timeout = config.idle_timeout;
     keepalive_time = config.keepalive_time;
     send_timeout = config.send_timeout;
+    stop_timeout = config.stop_timeout;
 
     max_request_size = config.max_request_size;
     max_url_len = config.max_url_len;

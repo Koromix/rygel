@@ -4636,7 +4636,10 @@ public:
 
     void Run(const std::function<bool()> &f);
     void Run(int worker, const std::function<bool()> &f);
+
     bool Sync();
+    bool Wait(int timeout);
+    bool IsSuccess() const { return success; }
 
     int GetWorkerCount();
 

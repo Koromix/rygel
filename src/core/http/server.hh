@@ -54,6 +54,7 @@ struct http_Config {
     int idle_timeout = 10000;
     int keepalive_time = 20000;
     int send_timeout = 60000;
+    int stop_timeout = 10000;
 
     Size max_request_size = Kilobytes(40);
     Size max_url_len = Kilobytes(20);
@@ -91,6 +92,7 @@ class http_Daemon {
     int idle_timeout;
     int keepalive_time;
     int send_timeout;
+    int stop_timeout;
 
     Size max_request_size;
     Size max_url_len;
