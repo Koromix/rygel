@@ -336,7 +336,7 @@ static inline bool IsFieldValueValid(Span<const char> key)
     return valid;
 }
 
-static bool IsHeaderKeyValid(const char *key)
+[[maybe_unused]] static bool IsHeaderKeyValid(const char *key)
 {
     bool upper = true;
 
