@@ -77,35 +77,6 @@ const installAsyncProxy = function(){
   const log =    (...args)=>logImpl(2, ...args);
   const warn =   (...args)=>logImpl(1, ...args);
   const error =  (...args)=>logImpl(0, ...args);
-  const metrics = Object.create(null);
-  metrics.reset = ()=>{
-    let k;
-    const r = (m)=>(m.count = m.time = m.wait = 0);
-    for(k in state.opIds){
-      r(metrics[k] = Object.create(null));
-    }
-    let s = metrics.s11n = Object.create(null);
-    s = s.serialize = Object.create(null);
-    s.count = s.time = 0;
-    s = metrics.s11n.deserialize = Object.create(null);
-    s.count = s.time = 0;
-  };
-  metrics.dump = ()=>{
-    let k, n = 0, t = 0, w = 0;
-    for(k in state.opIds){
-      const m = metrics[k];
-      n += m.count;
-      t += m.time;
-      w += m.wait;
-      m.avgTime = (m.count && m.time) ? (m.time / m.count) : 0;
-    }
-    console.log(globalThis?.location?.href,
-                "metrics for",globalThis?.location?.href,":\n",
-                metrics,
-                "\nTotal of",n,"op(s) for",t,"ms",
-                "approx",w,"ms spent waiting on OPFS APIs.");
-    console.log("Serialization metrics:",metrics.s11n);
-  };
 
   
   const __openFiles = Object.create(null);
@@ -184,22 +155,25 @@ const installAsyncProxy = function(){
       this.name = 'GetSyncHandleError';
     }
   };
+
+  
   GetSyncHandleError.convertRc = (e,rc)=>{
-    if(1){
-      return (
-        e instanceof GetSyncHandleError
-          && ((e.cause.name==='NoModificationAllowedError')
-              
-              || (e.cause.name==='DOMException'
-                  && 0===e.cause.message.indexOf('Access Handles cannot')))
-      ) ? (
+    if( e instanceof GetSyncHandleError ){
+      if( e.cause.name==='NoModificationAllowedError'
         
-        state.sq3Codes.SQLITE_BUSY
-      ) : rc;
-    }else{
-      return rc;
+          || (e.cause.name==='DOMException'
+              && 0===e.cause.message.indexOf('Access Handles cannot')) ){
+        return state.sq3Codes.SQLITE_BUSY;
+      }else if( 'NotFoundError'===e.cause.name ){
+        
+        return state.sq3Codes.SQLITE_CANTOPEN;
+      }
+    }else if( 'NotFoundError'===e?.name ){
+      return state.sq3Codes.SQLITE_CANTOPEN;
     }
-  }
+    return rc;
+  };
+
   
   const getSyncHandle = async (fh,opName)=>{
     if(!fh.syncHandle){
@@ -250,84 +224,41 @@ const installAsyncProxy = function(){
   };
 
   
-  const __mTimer = Object.create(null);
-  __mTimer.op = undefined;
-  __mTimer.start = undefined;
-  const mTimeStart = (op)=>{
-    __mTimer.start = performance.now();
-    __mTimer.op = op;
-    
-    ++metrics[op].count;
-  };
-  const mTimeEnd = ()=>(
-    metrics[__mTimer.op].time += performance.now() - __mTimer.start
-  );
-  const __wTimer = Object.create(null);
-  __wTimer.op = undefined;
-  __wTimer.start = undefined;
-  const wTimeStart = (op)=>{
-    __wTimer.start = performance.now();
-    __wTimer.op = op;
-    
-  };
-  const wTimeEnd = ()=>(
-    metrics[__wTimer.op].wait += performance.now() - __wTimer.start
-  );
-
-  
   let flagAsyncShutdown = false;
 
   
   const vfsAsyncImpls = {
-    'opfs-async-metrics': async ()=>{
-      mTimeStart('opfs-async-metrics');
-      metrics.dump();
-      storeAndNotify('opfs-async-metrics', 0);
-      mTimeEnd();
-    },
     'opfs-async-shutdown': async ()=>{
       flagAsyncShutdown = true;
       storeAndNotify('opfs-async-shutdown', 0);
     },
     mkdir: async (dirname)=>{
-      mTimeStart('mkdir');
       let rc = 0;
-      wTimeStart('mkdir');
       try {
         await getDirForFilename(dirname+"/filepart", true);
       }catch(e){
         state.s11n.storeException(2,e);
         rc = state.sq3Codes.SQLITE_IOERR;
-      }finally{
-        wTimeEnd();
       }
       storeAndNotify('mkdir', rc);
-      mTimeEnd();
     },
     xAccess: async (filename)=>{
-      mTimeStart('xAccess');
       
       let rc = 0;
-      wTimeStart('xAccess');
       try{
         const [dh, fn] = await getDirForFilename(filename);
         await dh.getFileHandle(fn);
       }catch(e){
         state.s11n.storeException(2,e);
         rc = state.sq3Codes.SQLITE_IOERR;
-      }finally{
-        wTimeEnd();
       }
       storeAndNotify('xAccess', rc);
-      mTimeEnd();
     },
     xClose: async function(fid){
       const opName = 'xClose';
-      mTimeStart(opName);
       __implicitLocks.delete(fid);
       const fh = __openFiles[fid];
       let rc = 0;
-      wTimeStart(opName);
       if(fh){
         delete __openFiles[fid];
         await closeSyncHandle(fh);
@@ -339,20 +270,15 @@ const installAsyncProxy = function(){
         state.s11n.serialize();
         rc = state.sq3Codes.SQLITE_NOTFOUND;
       }
-      wTimeEnd();
       storeAndNotify(opName, rc);
-      mTimeEnd();
     },
     xDelete: async function(...args){
-      mTimeStart('xDelete');
       const rc = await vfsAsyncImpls.xDeleteNoWait(...args);
       storeAndNotify('xDelete', rc);
-      mTimeEnd();
     },
     xDeleteNoWait: async function(filename, syncDir = 0, recursive = false){
       
       let rc = 0;
-      wTimeStart('xDelete');
       try {
         while(filename){
           const [hDir, filenamePart] = await getDirForFilename(filename, false);
@@ -368,14 +294,11 @@ const installAsyncProxy = function(){
         state.s11n.storeException(2,e);
         rc = state.sq3Codes.SQLITE_IOERR_DELETE;
       }
-      wTimeEnd();
       return rc;
     },
     xFileSize: async function(fid){
-      mTimeStart('xFileSize');
       const fh = __openFiles[fid];
       let rc = 0;
-      wTimeStart('xFileSize');
       try{
         const sz = await (await getSyncHandle(fh,'xFileSize')).getSize();
         state.s11n.serialize(Number(sz));
@@ -384,19 +307,15 @@ const installAsyncProxy = function(){
         rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR);
       }
       await releaseImplicitLock(fh);
-      wTimeEnd();
       storeAndNotify('xFileSize', rc);
-      mTimeEnd();
     },
     xLock: async function(fid,
                           lockType){
-      mTimeStart('xLock');
       const fh = __openFiles[fid];
       let rc = 0;
       const oldLockType = fh.xLock;
       fh.xLock = lockType;
       if( !fh.syncHandle ){
-        wTimeStart('xLock');
         try {
           await getSyncHandle(fh,'xLock');
           __implicitLocks.delete(fid);
@@ -405,18 +324,14 @@ const installAsyncProxy = function(){
           rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_LOCK);
           fh.xLock = oldLockType;
         }
-        wTimeEnd();
       }
       storeAndNotify('xLock',rc);
-      mTimeEnd();
     },
     xOpen: async function(fid, filename,
                           flags,
                           opfsFlags){
       const opName = 'xOpen';
-      mTimeStart(opName);
       const create = (state.sq3Codes.SQLITE_OPEN_CREATE & flags);
-      wTimeStart('xOpen');
       try{
         let hDir, filenamePart;
         try {
@@ -424,8 +339,6 @@ const installAsyncProxy = function(){
         }catch(e){
           state.s11n.storeException(1,e);
           storeAndNotify(opName, state.sq3Codes.SQLITE_NOTFOUND);
-          mTimeEnd();
-          wTimeEnd();
           return;
         }
         if( state.opfsFlags.OPFS_UNLINK_BEFORE_OPEN & opfsFlags ){
@@ -437,7 +350,6 @@ const installAsyncProxy = function(){
           }
         }
         const hFile = await hDir.getFileHandle(filenamePart, {create});
-        wTimeEnd();
         const fh = Object.assign(Object.create(null),{
           fid: fid,
           filenameAbs: filename,
@@ -452,69 +364,50 @@ const installAsyncProxy = function(){
         fh.releaseImplicitLocks =
           (opfsFlags & state.opfsFlags.OPFS_UNLOCK_ASAP)
           || state.opfsFlags.defaultUnlockAsap;
-        if(0 
-           && (0===(flags & state.sq3Codes.SQLITE_OPEN_MAIN_DB))){
-          
-          fh.xLock = "xOpen";
-          await getSyncHandle(fh,'xOpen');
-        }
         __openFiles[fid] = fh;
         storeAndNotify(opName, 0);
       }catch(e){
-        wTimeEnd();
         error(opName,e);
         state.s11n.storeException(1,e);
         storeAndNotify(opName, state.sq3Codes.SQLITE_IOERR);
       }
-      mTimeEnd();
     },
     xRead: async function(fid,n,offset64){
-      mTimeStart('xRead');
       let rc = 0, nRead;
       const fh = __openFiles[fid];
       try{
-        wTimeStart('xRead');
         nRead = (await getSyncHandle(fh,'xRead')).read(
           fh.sabView.subarray(0, n),
           {at: Number(offset64)}
         );
-        wTimeEnd();
         if(nRead < n){
           fh.sabView.fill(0, nRead, n);
           rc = state.sq3Codes.SQLITE_IOERR_SHORT_READ;
         }
       }catch(e){
-        if(undefined===nRead) wTimeEnd();
         error("xRead() failed",e,fh);
         state.s11n.storeException(1,e);
         rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_READ);
       }
       await releaseImplicitLock(fh);
       storeAndNotify('xRead',rc);
-      mTimeEnd();
     },
     xSync: async function(fid,flags){
-      mTimeStart('xSync');
       const fh = __openFiles[fid];
       let rc = 0;
       if(!fh.readOnly && fh.syncHandle){
         try {
-          wTimeStart('xSync');
           await fh.syncHandle.flush();
         }catch(e){
           state.s11n.storeException(2,e);
           rc = state.sq3Codes.SQLITE_IOERR_FSYNC;
         }
-        wTimeEnd();
       }
       storeAndNotify('xSync',rc);
-      mTimeEnd();
     },
     xTruncate: async function(fid,size){
-      mTimeStart('xTruncate');
       let rc = 0;
       const fh = __openFiles[fid];
-      wTimeStart('xTruncate');
       try{
         affirmNotRO('xTruncate', fh);
         await (await getSyncHandle(fh,'xTruncate')).truncate(size);
@@ -524,33 +417,25 @@ const installAsyncProxy = function(){
         rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_TRUNCATE);
       }
       await releaseImplicitLock(fh);
-      wTimeEnd();
       storeAndNotify('xTruncate',rc);
-      mTimeEnd();
     },
     xUnlock: async function(fid,
                             lockType){
-      mTimeStart('xUnlock');
       let rc = 0;
       const fh = __openFiles[fid];
       if( state.sq3Codes.SQLITE_LOCK_NONE===lockType
           && fh.syncHandle ){
-        wTimeStart('xUnlock');
         try { await closeSyncHandle(fh) }
         catch(e){
           state.s11n.storeException(1,e);
           rc = state.sq3Codes.SQLITE_IOERR_UNLOCK;
         }
-        wTimeEnd();
       }
       storeAndNotify('xUnlock',rc);
-      mTimeEnd();
     },
     xWrite: async function(fid,n,offset64){
-      mTimeStart('xWrite');
       let rc;
       const fh = __openFiles[fid];
-      wTimeStart('xWrite');
       try{
         affirmNotRO('xWrite', fh);
         rc = (
@@ -564,9 +449,7 @@ const installAsyncProxy = function(){
         rc = GetSyncHandleError.convertRc(e,state.sq3Codes.SQLITE_IOERR_WRITE);
       }
       await releaseImplicitLock(fh);
-      wTimeEnd();
       storeAndNotify('xWrite',rc);
-      mTimeEnd();
     }
   };
 
@@ -597,8 +480,6 @@ const installAsyncProxy = function(){
       }
     };
     state.s11n.deserialize = function(clear=false){
-      ++metrics.s11n.deserialize.count;
-      const t = performance.now();
       const argc = viewU8[0];
       const rc = argc ? [] : null;
       if(argc){
@@ -623,12 +504,9 @@ const installAsyncProxy = function(){
       }
       if(clear) viewU8[0] = 0;
       
-      metrics.s11n.deserialize.time += performance.now() - t;
       return rc;
     };
     state.s11n.serialize = function(...args){
-      const t = performance.now();
-      ++metrics.s11n.serialize.count;
       if(args.length){
         
         const typeIds = [];
@@ -657,7 +535,6 @@ const installAsyncProxy = function(){
       }else{
         viewU8[0] = 0;
       }
-      metrics.s11n.serialize.time += performance.now() - t;
     };
 
     state.s11n.storeException = state.asyncS11nExceptions
@@ -723,7 +600,6 @@ const installAsyncProxy = function(){
               }
             });
             initS11n();
-            metrics.reset();
             log("init state",state);
             wPost('opfs-async-inited');
             waitLoop();
@@ -735,9 +611,6 @@ const installAsyncProxy = function(){
               flagAsyncShutdown = false;
               waitLoop();
             }
-            break;
-          case 'opfs-async-metrics':
-            metrics.dump();
             break;
       }
     };

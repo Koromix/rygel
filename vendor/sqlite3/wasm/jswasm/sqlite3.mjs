@@ -26,9 +26,9 @@
 /*
 ** This code was built from sqlite3 version...
 **
-** SQLITE_VERSION "3.46.0"
-** SQLITE_VERSION_NUMBER 3046000
-** SQLITE_SOURCE_ID "2024-05-23 13:25:27 96c92aba00c8375bc32fafcdf12429c58bd8aabfcadab6683e35bbb9cdebf19e"
+** SQLITE_VERSION "3.46.1"
+** SQLITE_VERSION_NUMBER 3046001
+** SQLITE_SOURCE_ID "2024-08-13 09:16:08 c9c2ab54ba1f5f46360f1b4f35d849cd3f080e6fc2b6c60e91b16c63f69a1e33"
 **
 ** Using the Emscripten SDK version 3.1.30.
 */
@@ -9335,7 +9335,7 @@ globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
 
 
 globalThis.sqlite3ApiBootstrap.initializers.push(function(sqlite3){
-  sqlite3.version = {"libVersion": "3.46.0", "libVersionNumber": 3046000, "sourceId": "2024-05-23 13:25:27 96c92aba00c8375bc32fafcdf12429c58bd8aabfcadab6683e35bbb9cdebf19e","downloadVersion": 3460000};
+  sqlite3.version = {"libVersion": "3.46.1", "libVersionNumber": 3046001, "sourceId": "2024-08-13 09:16:08 c9c2ab54ba1f5f46360f1b4f35d849cd3f080e6fc2b6c60e91b16c63f69a1e33","downloadVersion": 3460100};
 });
 
 
@@ -11127,6 +11127,7 @@ const installOpfsVfs = function callee(options){
       'SQLITE_ACCESS_EXISTS',
       'SQLITE_ACCESS_READWRITE',
       'SQLITE_BUSY',
+      'SQLITE_CANTOPEN',
       'SQLITE_ERROR',
       'SQLITE_IOERR',
       'SQLITE_IOERR_ACCESS',
@@ -11174,8 +11175,10 @@ const installOpfsVfs = function callee(options){
       Atomics.notify(state.sabOPView, state.opIds.whichOp)
       ;
       const t = performance.now();
-      Atomics.wait(state.sabOPView, state.opIds.rc, -1)
-      ;
+      while('not-equal'!==Atomics.wait(state.sabOPView, state.opIds.rc, -1)){
+        
+      }
+      
       const rc = Atomics.load(state.sabOPView, state.opIds.rc);
       metrics[op].wait += performance.now() - t;
       if(rc && state.asyncS11nExceptions){
@@ -11332,8 +11335,12 @@ const installOpfsVfs = function callee(options){
     const ioSyncWrappers = {
       xCheckReservedLock: function(pFile,pOut){
         
-        const f = __openFiles[pFile];
-        wasm.poke(pOut, f.lockType ? 1 : 0, 'i32');
+        if(1){
+          wasm.poke(pOut, 0, 'i32');
+        }else{
+          const f = __openFiles[pFile];
+          wasm.poke(pOut, f.lockType ? 1 : 0, 'i32');
+        }
         return 0;
       },
       xClose: function(pFile){
@@ -11349,7 +11356,6 @@ const installOpfsVfs = function callee(options){
         return rc;
       },
       xDeviceCharacteristics: function(pFile){
-        
         return capi.SQLITE_IOCAP_UNDELETABLE_WHEN_OPEN;
       },
       xFileControl: function(pFile, opId, pArg){
