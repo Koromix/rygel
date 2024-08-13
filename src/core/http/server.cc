@@ -1256,6 +1256,7 @@ bool http_IO::Rearm(int64_t now)
     incoming.reading = false;
 
     request.keepalive = false;
+    request.values.RemoveFrom(0);
     request.headers.RemoveFrom(0);
     request.cookies.RemoveFrom(0);
     request.body_len = 0;
