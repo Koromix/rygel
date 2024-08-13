@@ -261,7 +261,7 @@ static void ServeFile(const char *filename, const FileInfo &file_info, const htt
 
     // Handle ETag caching
     if (etag) {
-        const char *client_etag = request.FindHeader("If-None-Match");
+        const char *client_etag = request.GetHeaderValue("If-None-Match");
 
         if (client_etag && TestStr(client_etag, etag)) {
             if (config.verbose) {
@@ -613,7 +613,7 @@ static HandlerResult HandleProxy(const http_RequestInfo &request, http_IO *io, c
                 key = DuplicateString(key, io->Allocator());
                 value = DuplicateString(value, io->Allocator());
 
-                ctx->headers.Append({ key.ptr, value.ptr });
+                ctx->headers.Append({ key.ptr, value.ptr, nullptr });
             }
 
             return nmemb;
@@ -820,8 +820,8 @@ Options:
                 }
                 config.headers.len = j;
 
-                config.headers.Append({ "Cross-Origin-Opener-Policy", "same-origin" });
-                config.headers.Append({ "Cross-Origin-Embedder-Policy", "require-corp" });
+                config.headers.Append({ "Cross-Origin-Opener-Policy", "same-origin", nullptr });
+                config.headers.Append({ "Cross-Origin-Embedder-Policy", "require-corp", nullptr });
             } else if (opt.Test("-v", "--verbose")) {
                 config.verbose = true;
             } else {

@@ -49,7 +49,7 @@ void HandleLegacyLoad(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     int64_t anchor;
-    if (const char *str = request.FindGetValue("anchor"); str) {
+    if (const char *str = request.GetQueryValue("anchor"); str) {
         if (!ParseInt(str, &anchor)) {
             io->SendError(422);
             return;
@@ -1060,7 +1060,7 @@ void HandleLegacyExport(InstanceHolder *instance, const http_RequestInfo &reques
 
     if (!session || !session->HasPermission(instance, UserPermission::DataExport)) {
         const InstanceHolder *master = instance->master;
-        const char *export_key = !instance->slaves.len ? request.FindHeader("X-Export-Key") : nullptr;
+        const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
 
         if (!export_key) {
             if (!session) {

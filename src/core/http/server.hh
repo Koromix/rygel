@@ -148,6 +148,17 @@ static const char *const http_RequestMethodNames[] = {
 struct http_KeyValue {
     const char *key;
     const char *value;
+
+    http_KeyValue *next;
+};
+
+struct http_KeyHead {
+    const char *key;
+
+    http_KeyValue *first;
+    http_KeyValue *last;
+
+    RG_HASHTABLE_HANDLER(http_KeyHead, key);
 };
 
 struct http_RequestInfo {
@@ -163,9 +174,21 @@ struct http_RequestInfo {
     HeapArray<http_KeyValue> headers;
     HeapArray<http_KeyValue> cookies;
 
-    const char *FindGetValue(const char *key) const;
-    const char *FindHeader(const char *key) const;
-    const char *FindCookie(const char *key) const;
+private:
+    HashTable<const char *, http_KeyHead> values_map;
+    HashTable<const char *, http_KeyHead> headers_map;
+    HashTable<const char *, http_KeyHead> cookies_map;
+
+public:
+    const http_KeyHead *FindQuery(const char *key) const;
+    const http_KeyHead *FindHeader(const char *key) const;
+    const http_KeyHead *FindCookie(const char *key) const;
+
+    const char *GetQueryValue(const char *key) const;
+    const char *GetHeaderValue(const char *key) const;
+    const char *GetCookieValue(const char *key) const;
+
+    friend class http_IO;
 };
 
 enum class http_RequestStatus {

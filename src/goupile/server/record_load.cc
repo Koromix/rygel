@@ -268,7 +268,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     int64_t anchor = -1;
     bool allow_deleted = false;
     {
-        if (const char *str = request.FindGetValue("anchor"); str) {
+        if (const char *str = request.GetQueryValue("anchor"); str) {
             if (!ParseInt(str, &anchor)) {
                 io->SendError(422);
                 return;
@@ -280,7 +280,7 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
             }
         }
 
-        if (const char *str = request.FindGetValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
+        if (const char *str = request.GetQueryValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
             io->SendError(422);
             return;
         }
@@ -388,14 +388,14 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
     int64_t anchor = -1;
     bool allow_deleted = false;
     {
-        tid = request.FindGetValue("tid");
+        tid = request.GetQueryValue("tid");
         if (!tid) {
             LogError("Missing 'tid' parameter");
             io->SendError(422);
             return;
         }
 
-        if (const char *str = request.FindGetValue("anchor"); str) {
+        if (const char *str = request.GetQueryValue("anchor"); str) {
             if (!ParseInt(str, &anchor)) {
                 io->SendError(422);
                 return;
@@ -407,7 +407,7 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
             }
         }
 
-        if (const char *str = request.FindGetValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
+        if (const char *str = request.GetQueryValue("deleted"); str && !ParseBool(str, &allow_deleted)) {
             io->SendError(422);
             return;
         }
@@ -520,7 +520,7 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
         return;
     }
 
-    const char *tid = request.FindGetValue("tid");
+    const char *tid = request.GetQueryValue("tid");
     if (!tid) {
         LogError("Missing 'tid' parameter");
         io->SendError(422);
@@ -580,7 +580,7 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
 
     // Check permissions
     {
-        const char *export_key = !instance->slaves.len ? request.FindHeader("X-Export-Key") : nullptr;
+        const char *export_key = !instance->slaves.len ? request.GetHeaderValue("X-Export-Key") : nullptr;
 
         if (export_key) {
             const InstanceHolder *master = instance->master;
@@ -619,7 +619,7 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
     int64_t from = 0;
     int64_t to = -1;
     {
-        if (const char *str = request.FindGetValue("from"); str) {
+        if (const char *str = request.GetQueryValue("from"); str) {
             if (!ParseInt(str, &from)) {
                 io->SendError(422);
                 return;
@@ -631,7 +631,7 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
             }
         }
 
-        if (const char *str = request.FindGetValue("to"); str) {
+        if (const char *str = request.GetQueryValue("to"); str) {
             if (!ParseInt(str, &to)) {
                 io->SendError(422);
                 return;

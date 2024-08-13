@@ -23,7 +23,7 @@ namespace RG {
 static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
                               http_IO *io, LocalDate *out_start_date, LocalDate *out_end_date)
 {
-    const char *str = request.FindGetValue(key);
+    const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
         io->SendError(422);
@@ -61,7 +61,7 @@ invalid:
 static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *key,
                                  http_IO *io, mco_DispenseMode *out_dispense_mode)
 {
-    const char *str = request.FindGetValue(key);
+    const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
         io->SendError(422);
@@ -80,7 +80,7 @@ static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *ke
 static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char *key,
                                      http_IO *io, bool *out_apply_coefficient)
 {
-    const char *str = request.FindGetValue(key);
+    const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
         io->SendError(422);
@@ -105,7 +105,7 @@ static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char
 static bool GetQueryGhmRoot(const http_RequestInfo &request, const char *key,
                             http_IO *io, mco_GhmRootCode *out_ghm_root)
 {
-    const char *str = request.FindGetValue(key);
+    const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
         io->SendError(422);
@@ -414,16 +414,16 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     mco_GhmRootCode ghm_root = {};
     if (!GetQueryDateRange(request, "period", io, &period[0], &period[1]))
         return;
-    if (request.FindGetValue("diff")) {
+    if (request.GetQueryValue("diff")) {
         if (!GetQueryDateRange(request, "diff", io, &diff[0], &diff[1]))
             return;
     }
-    filter = request.FindGetValue("filter");
+    filter = request.GetQueryValue("filter");
     if (!GetQueryDispenseMode(request, "dispense_mode", io, &dispense_mode))
         return;
     if (!GetQueryApplyCoefficient(request, "apply_coefficient", io, &apply_coefficient))
         return;
-    if (request.FindGetValue("ghm_root")) {
+    if (request.GetQueryValue("ghm_root")) {
         if (!GetQueryGhmRoot(request, "ghm_root", io, &ghm_root))
             return;
     }
@@ -584,7 +584,7 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
         return;
     if (!GetQueryGhmRoot(request, "ghm_root", io, &ghm_root))
         return;
-    filter = request.FindGetValue("filter");
+    filter = request.GetQueryValue("filter");
     if (!GetQueryDispenseMode(request, "dispense_mode", io, &dispense_mode))
         return;
     if (!GetQueryApplyCoefficient(request, "apply_coefficient", io, &apply_coefficent))

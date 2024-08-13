@@ -170,8 +170,8 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
 
 bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)
 {
-    const char *str1 = request.FindHeader("X-Requested-With");
-    const char *str2 = request.FindHeader("Sec-Fetch-Site");
+    const char *str1 = request.GetHeaderValue("X-Requested-With");
+    const char *str2 = request.GetHeaderValue("Sec-Fetch-Site");
 
     if (!str1 || !TestStr(str1, "XMLHTTPRequest")) {
         LogError("Anti-CSRF header is missing");

@@ -355,7 +355,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 #endif
 
     if (thop_config.require_host) {
-        const char *host = request.FindGetValue("Host");
+        const char *host = request.GetQueryValue("Host");
 
         if (!host) {
             LogError("Request is missing required Host header");
@@ -380,7 +380,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     // Handle server-side cache validation (ETag)
     {
-        const char *etag = request.FindGetValue("If-None-Match");
+        const char *etag = request.GetQueryValue("If-None-Match");
         if (etag && TestStr(etag, thop_etag)) {
             io->SendEmpty(304);
             return;

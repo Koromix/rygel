@@ -33,7 +33,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
     }
 
     int64_t fs_version;
-    if (const char *str = request.FindGetValue("version"); str) {
+    if (const char *str = request.GetQueryValue("version"); str) {
         if (!ParseInt(str, &fs_version)) {
             io->SendError(422);
             return;
@@ -99,8 +99,8 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     RG_ASSERT(url <= request.path + strlen(request.path));
     RG_ASSERT(url[0] == '/');
 
-    const char *client_etag = request.FindHeader("If-None-Match");
-    const char *client_sha256 = request.FindGetValue("sha256");
+    const char *client_etag = request.GetHeaderValue("If-None-Match");
+    const char *client_sha256 = request.GetQueryValue("sha256");
 
     // Handle special paths
     if (TestStr(url, "/favicon.png")) {
@@ -225,7 +225,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     if (src_encoding == CompressionType::None && dest_encoding == src_encoding) {
         LocalArray<http_ByteRange, 16> ranges;
         {
-            const char *str = request.FindHeader("Range");
+            const char *str = request.GetHeaderValue("Range");
 
             if (str && !http_ParseRange(str, src_len, &ranges)) {
                 io->SendError(416);
@@ -425,7 +425,7 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
 
     const char *url = request.path + 1 + instance->key.len;
     const char *filename = url + 7;
-    const char *client_sha256 = request.FindGetValue("sha256");
+    const char *client_sha256 = request.GetQueryValue("sha256");
 
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
@@ -603,7 +603,7 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
 
     const char *url = request.path + 1 + instance->key.len;
     const char *filename = url + 7;
-    const char *client_sha256 = request.FindGetValue("sha256");
+    const char *client_sha256 = request.GetQueryValue("sha256");
 
     if (!StartsWith(url, "/files/")) {
         LogError("Cannot write to file outside '/files/'");
@@ -665,7 +665,7 @@ void HandleFileHistory(InstanceHolder *instance, const http_RequestInfo &request
         return;
     }
 
-    const char *filename = request.FindGetValue("filename");
+    const char *filename = request.GetQueryValue("filename");
     if (!filename) {
         LogError("Missing 'filename' parameter");
         io->SendError(422);
@@ -795,17 +795,17 @@ void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, 
 
     int64_t from_version = 0;
     int64_t to_version = 0;
-    if (request.FindGetValue("from") || request.FindGetValue("to")) {
+    if (request.GetQueryValue("from") || request.GetQueryValue("to")) {
         bool valid = true;
 
-        if (const char *str = request.FindGetValue("from"); str) {
+        if (const char *str = request.GetQueryValue("from"); str) {
             valid &= ParseInt(str, &from_version);
         } else {
             LogError("Missing 'from' parameter");
             valid = false;
         }
 
-        if (const char *str = request.FindGetValue("to"); str) {
+        if (const char *str = request.GetQueryValue("to"); str) {
             valid &= ParseInt(str, &to_version);
         } else {
             LogError("Missing 'to' parameter");

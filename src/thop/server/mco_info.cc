@@ -24,7 +24,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
 {
     LocalDate date = {};
     {
-        const char *date_str = request.FindGetValue("date");
+        const char *date_str = request.GetQueryValue("date");
 
         if (!date_str) {
             LogError("Missing 'date' parameter");
@@ -39,7 +39,7 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
 
     drd_Sector sector = drd_Sector::Public;
     if (out_sector) {
-        const char *sector_str = request.FindGetValue("sector");
+        const char *sector_str = request.GetQueryValue("sector");
         if (!sector_str) {
             LogError("Missing 'sector' parameter");
             io->SendError(422);
@@ -76,7 +76,7 @@ void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO 
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
-        const char *spec_str = request.FindGetValue("spec");
+        const char *spec_str = request.GetQueryValue("spec");
         if (spec_str && spec_str[0]) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
@@ -131,7 +131,7 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Procedures);
     {
-        const char *spec_str = request.FindGetValue("spec");
+        const char *spec_str = request.GetQueryValue("spec");
         if (spec_str && spec_str[0]) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Procedures) {
@@ -534,7 +534,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO 
     ctx.ghm_nodes = index->ghm_nodes;
 
     // Diagnosis?
-    if (const char *code = request.FindGetValue("diag"); code && code[0]) {
+    if (const char *code = request.GetQueryValue("diag"); code && code[0]) {
         if (TestStr(code, "*")) {
             ctx.ignore_diagnoses = true;
         } else {
@@ -558,7 +558,7 @@ void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO 
     }
 
     // Procedure?
-    if (const char *code = request.FindGetValue("proc"); code && code[0]) {
+    if (const char *code = request.GetQueryValue("proc"); code && code[0]) {
         if (TestStr(code, "*")) {
             ctx.ignore_procedures = true;
         } else {

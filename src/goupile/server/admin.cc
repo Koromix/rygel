@@ -2047,7 +2047,7 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
         return;
     }
 
-    const char *instance_key = request.FindGetValue("instance");
+    const char *instance_key = request.GetQueryValue("instance");
     if (!instance_key) {
         LogError("Missing 'instance' parameter");
         io->SendError(422);

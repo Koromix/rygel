@@ -271,7 +271,7 @@ static void InitAssets()
 static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *etag,
                          const http_RequestInfo &request, http_IO *io)
 {
-    const char *client_etag = request.FindHeader("If-None-Match");
+    const char *client_etag = request.GetHeaderValue("If-None-Match");
 
     if (client_etag && TestStr(client_etag, etag)) {
         io->SendEmpty(304);
@@ -769,7 +769,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 #endif
 
     if (gp_domain.config.require_host) {
-        const char *host = request.FindHeader("Host");
+        const char *host = request.GetHeaderValue("Host");
 
         if (!host) {
             LogError("Request is missing required Host header");

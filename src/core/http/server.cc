@@ -304,34 +304,94 @@ void http_Daemon::RunHandler(http_IO *client, int64_t now)
     }
 }
 
-const char *http_RequestInfo::FindGetValue(const char *key) const
+static inline bool IsFieldKeyValid(Span<const char> key)
 {
-    for (const http_KeyValue &value: values) {
-        if (TestStr(value.key, key))
-            return value.value;
-    }
+    static RG_CONSTINIT Bitset<256> ValidCharacters = {
+        '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '0', '1', '2', '3', '4', '5',
+        '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
+        'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '^', '_',
+        '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+        'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '|', '~'
+    };
 
-    return nullptr;
+    if (!key.len)
+        return false;
+
+    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacters.Test((uint8_t)c); });
+    return valid;
 }
 
-const char *http_RequestInfo::FindHeader(const char *key) const
+static inline bool IsFieldValueValid(Span<const char> key)
 {
-    for (const http_KeyValue &header: headers) {
-        if (TestStr(header.key, key))
-            return header.value;
-    }
+    static RG_CONSTINIT Bitset<256> ValidCharacters = {
+        ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
+        '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+        'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_',
+        '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
+        'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'
+    };
 
-    return nullptr;
+    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacters.Test((uint8_t)c); });
+    return valid;
 }
 
-const char *http_RequestInfo::FindCookie(const char *key) const
+static bool IsHeaderKeyValid(const char *key)
 {
-    for (const http_KeyValue &cookie: cookies) {
-        if (TestStr(cookie.key, key))
-            return cookie.value;
+    bool upper = true;
+
+    for (Size i = 0; key[i]; i++) {
+        int c = key[i];
+
+        bool valid = upper ? (c == UpperAscii(c)) : (c == LowerAscii(c));
+        if (!valid)
+            return false;
+
+        upper = (c == '-');
     }
 
-    return nullptr;
+    bool empty = !key[0];
+    return !empty;
+}
+
+const http_KeyHead *http_RequestInfo::FindQuery(const char *key) const
+{
+    const http_KeyHead *head = values_map.Find(key);
+    return head;
+}
+
+const http_KeyHead *http_RequestInfo::FindHeader(const char *key) const
+{
+    RG_ASSERT(IsHeaderKeyValid(key));
+
+    const http_KeyHead *head = headers_map.Find(key);
+    return head;
+}
+
+const http_KeyHead *http_RequestInfo::FindCookie(const char *key) const
+{
+    const http_KeyHead *head = cookies_map.Find(key);
+    return head;
+}
+
+const char *http_RequestInfo::GetQueryValue(const char *key) const
+{
+    const http_KeyHead *head = values_map.Find(key);
+    return head ? head->last->value : nullptr;
+}
+
+const char *http_RequestInfo::GetHeaderValue(const char *key) const
+{
+    RG_ASSERT(IsHeaderKeyValid(key));
+
+    const http_KeyHead *head = headers_map.Find(key);
+    return head ? head->last->value : nullptr;
+}
+
+const char *http_RequestInfo::GetCookieValue(const char *key) const
+{
+    const http_KeyHead *head = cookies_map.Find(key);
+    return head ? head->last->value : nullptr;
 }
 
 http_IO::~http_IO()
@@ -348,7 +408,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 
     // Only allow Gzip for now, to reduce attack surface
     CompressionType compression_type = CompressionType::None;
-    if (const char *str = request.FindHeader("Content-Encoding"); str) {
+    if (const char *str = request.GetHeaderValue("Content-Encoding"); str) {
         if (max_len < 0) {
             LogError("Refusing Content-Encoding without server limit");
             SendError(400);
@@ -446,7 +506,7 @@ void http_IO::AddCachingHeaders(int64_t max_age, const char *etag)
 
 bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_encoding)
 {
-    const char *accept_str = request.FindHeader("Accept-Encoding");
+    const char *accept_str = request.GetHeaderValue("Accept-Encoding");
     uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
 
     if (acceptable_encodings & (1 << (int)preferred)) {
@@ -465,7 +525,7 @@ bool http_IO::NegociateEncoding(CompressionType preferred, CompressionType *out_
 
 bool http_IO::NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding)
 {
-    const char *accept_str = request.FindHeader("Accept-Encoding");
+    const char *accept_str = request.GetHeaderValue("Accept-Encoding");
     uint32_t acceptable_encodings = http_ParseAcceptableEncodings(accept_str);
 
     if (acceptable_encodings & (1 << (int)preferred1)) {
@@ -687,7 +747,7 @@ bool http_IO::InitAddress()
         case http_AddressMode::Socket: { /* Keep socket address */ } break;
 
         case http_AddressMode::XForwardedFor: {
-            const char *str = request.FindHeader("X-Forwarded-For");
+            const char *str = request.GetHeaderValue("X-Forwarded-For");
             if (!str) {
                 LogError("X-Forwarded-For header is missing but is required by the configuration");
                 return false;
@@ -706,7 +766,7 @@ bool http_IO::InitAddress()
         } break;
 
         case http_AddressMode::XRealIP: {
-            const char *str = request.FindHeader("X-Real-IP");
+            const char *str = request.GetHeaderValue("X-Real-IP");
             if (!str) {
                 LogError("X-Real-IP header is missing but is required by the configuration");
                 return false;
@@ -726,38 +786,6 @@ bool http_IO::InitAddress()
     }
 
     return true;
-}
-
-static inline bool IsFieldKeyValid(Span<const char> key)
-{
-    static RG_CONSTINIT Bitset<256> ValidCharacters = {
-        '!', '#', '$', '%', '&', '\'', '*', '+', '-', '.', '0', '1', '2', '3', '4', '5',
-        '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L',
-        'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '^', '_',
-        '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-        'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '|', '~'
-    };
-
-    if (!key.len)
-        return false;
-
-    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacters.Test((uint8_t)c); });
-    return valid;
-}
-
-static inline bool IsFieldValueValid(Span<const char> key)
-{
-    static RG_CONSTINIT Bitset<256> ValidCharacters = {
-        ' ', '!', '"', '#', '$', '%', '&', '\'', '(', ')', '*', '+', ',', '-', '.', '/',
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
-        '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
-        'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_',
-        '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-        'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~'
-    };
-
-    bool valid = std::all_of(key.begin(), key.end(), [](char c) { return ValidCharacters.Test((uint8_t)c); });
-    return valid;
 }
 
 static inline int ParseHexadecimalChar(char c)
@@ -879,6 +907,17 @@ static bool DecodeQuery(Span<char> str, HeapArray<http_KeyValue> *out_values)
     }
 
     return true;
+}
+
+static void MapKeys(Span<http_KeyValue> pairs, HashTable<const char *, http_KeyHead> *out_map)
+{
+    for (http_KeyValue &pair: pairs) {
+        http_KeyHead *head = out_map->TrySet({ pair.key, &pair, &pair });
+
+        head->last->next = &pair;
+        head->last = &pair;
+        pair.next = nullptr;
+    }
 }
 
 http_RequestStatus http_IO::ParseRequest()
@@ -1021,7 +1060,7 @@ http_RequestStatus http_IO::ParseRequest()
                 return http_RequestStatus::Close;
             }
 
-            request.headers.Append({ key.ptr, value.ptr });
+            request.headers.Append({ key.ptr, value.ptr, nullptr });
         }
 
         // Handle special headers
@@ -1052,7 +1091,7 @@ http_RequestStatus http_IO::ParseRequest()
                     return http_RequestStatus::Close;
                 }
 
-                request.cookies.Append({ name.ptr, value.ptr });
+                request.cookies.Append({ name.ptr, value.ptr, nullptr });
             }
         } else if (TestStr(key, "Connection")) {
             keepalive = !TestStrI(value, "close");
@@ -1078,6 +1117,11 @@ http_RequestStatus http_IO::ParseRequest()
             return http_RequestStatus::Close;
         }
     }
+
+    // Map keys for faster access
+    MapKeys(request.values, &request.values_map);
+    MapKeys(request.headers, &request.headers_map);
+    MapKeys(request.cookies, &request.cookies_map);
 
     // Set at the end so any error before would lead to "Connection: close"
     request.keepalive = keepalive;
@@ -1259,6 +1303,9 @@ bool http_IO::Rearm(int64_t now)
     request.values.RemoveFrom(0);
     request.headers.RemoveFrom(0);
     request.cookies.RemoveFrom(0);
+    request.values_map.RemoveAll();
+    request.headers_map.RemoveAll();
+    request.cookies_map.RemoveAll();
     request.body_len = 0;
 
     response.headers.RemoveFrom(0);
