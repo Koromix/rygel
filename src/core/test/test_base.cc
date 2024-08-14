@@ -790,7 +790,7 @@ BENCHMARK_FUNCTION("base/Fmt")
     });
 
     RunBenchmark("base Fmt (allocator)", iterations, [&](Size) {
-        LinkedAllocator temp_alloc;
+        BlockAllocator temp_alloc;
         Fmt(&temp_alloc, "%1:%2:%3:%4:%5:%6:%%\n", 1234, 42, -313.3, "str", (void*)1000, 'X');
     });
 

@@ -26,7 +26,7 @@ namespace RG {
 
 struct DictionarySet {
     HeapArray<AssetInfo> dictionaries;
-    LinkedAllocator alloc;
+    BlockAllocator alloc;
 };
 
 struct Route {
@@ -211,6 +211,8 @@ static bool InitDictionarySet(Span<const char *const> table_directories)
 
         HeapArray<uint8_t> buf(&dictionary_set.alloc);
         {
+            buf.Grow(Mebibytes(1));
+
             StreamReader reader(filename);
             StreamWriter writer(&buf, nullptr, CompressionType::Gzip);
             if (!SpliceStream(&reader, Megabytes(16), &writer))

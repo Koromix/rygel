@@ -1027,7 +1027,10 @@ bool mco_StaySetBuilder::Finish(mco_StaySet *out_set)
                  fichcomps.len - matched_fichcomps.table.count);
     }
 
+    other_diagnoses_alloc.GiveTo(&set.array_alloc);
+    procedures_alloc.GiveTo(&set.array_alloc);
     set.stays.Trim();
+
     std::swap(*out_set, set);
 
     return true;

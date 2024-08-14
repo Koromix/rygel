@@ -189,7 +189,7 @@ static IconInfo InitIcons()
     static bool init = false;
     static Span<const uint8_t> icons[RG_LEN(IconSizes)];
     static IconInfo info;
-    static LinkedAllocator icons_alloc;
+    static BlockAllocator icons_alloc;
 
     // We could do this at compile-time if we had better (or at least easier to use) compile-time
     // possibilities... Well. It's quick enough, so no big deal.

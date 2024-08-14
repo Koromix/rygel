@@ -173,7 +173,6 @@ enum class AggregationFlag {
 
 struct AggregateSet {
     HeapArray<Aggregate> aggregates;
-
     LinkedAllocator array_alloc;
 };
 
@@ -188,8 +187,8 @@ class AggregateSetBuilder {
 
     HashMap<Aggregate::Key, Size> aggregates_map;
     HashSet<mco_GhmRootCode> ghm_roots_set;
-    IndirectBlockAllocator units_alloc { &set.array_alloc, Kibibytes(4) };
-    IndirectBlockAllocator parts_alloc { &set.array_alloc, Kibibytes(16) };
+    BlockAllocator units_alloc { Kibibytes(4) };
+    BlockAllocator parts_alloc { Kibibytes(16) };
 
     // Reuse for performance
     HashMap<drd_UnitCode, Aggregate::Part> agg_parts_map;
@@ -334,6 +333,9 @@ void AggregateSetBuilder::Finish(AggregateSet *out_set, HeapArray<mco_GhmRootCod
         return MultiCmp(agg1.key.ghm.value - agg2.key.ghm.value,
                         agg1.key.ghs.number - agg2.key.ghs.number) < 0;
     });
+
+    units_alloc.GiveTo(&set.array_alloc);
+    parts_alloc.GiveTo(&set.array_alloc);
 
     std::swap(*out_set, set);
     if (out_ghm_roots) {

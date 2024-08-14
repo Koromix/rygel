@@ -161,7 +161,6 @@ struct mco_Test {
 
 struct mco_StaySet {
     HeapArray<mco_Stay> stays;
-
     LinkedAllocator array_alloc;
 
     bool SavePack(StreamWriter *st) const;
@@ -173,8 +172,8 @@ class mco_StaySetBuilder {
 
     mco_StaySet set;
 
-    IndirectBlockAllocator other_diagnoses_alloc { &set.array_alloc, 2048 * RG_SIZE(drd_DiagnosisCode) };
-    IndirectBlockAllocator procedures_alloc { &set.array_alloc, 2048 * RG_SIZE(mco_ProcedureRealisation) };
+    BlockAllocator other_diagnoses_alloc { 2048 * RG_SIZE(drd_DiagnosisCode) };
+    BlockAllocator procedures_alloc { 2048 * RG_SIZE(mco_ProcedureRealisation) };
 
     struct FichCompData {
         enum class Type {

@@ -244,10 +244,7 @@ void LinkedAllocator::ReleaseAll()
 
 void LinkedAllocator::ReleaseAllExcept(void *ptr)
 {
-    if (!ptr) {
-        ReleaseAll();
-        return;
-    }
+    RG_ASSERT(ptr);
 
     Bucket *keep = PointerToBucket(ptr);
     Bucket *bucket = keep->next;
@@ -327,27 +324,76 @@ void LinkedAllocator::Release(const void *ptr, Size size)
     ReleaseRaw(allocator, bucket, RG_SIZE(Bucket) + size);
 }
 
+void LinkedAllocator::GiveTo(LinkedAllocator *alloc)
+{
+    Bucket *other = alloc->list;
+
+    if (other && list) {
+        other->prev->next = list;
+        list->prev = other->prev;
+        list->next = other;
+        other->prev = list;
+    } else if (list) {
+        RG_ASSERT(!alloc->list);
+        alloc->list = list;
+    }
+
+    list = nullptr;
+}
+
 LinkedAllocator::Bucket *LinkedAllocator::PointerToBucket(void *ptr)
 {
     uint8_t *data = (uint8_t *)ptr;
     return (Bucket *)(data - offsetof(Bucket, data));
 }
 
-void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
+BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
+{
+    allocator.operator=(std::move(other.allocator));
+
+    block_size = other.block_size;
+    current_bucket = other.current_bucket;
+    last_alloc = other.last_alloc;
+
+    other.current_bucket = nullptr;
+    other.last_alloc = nullptr;
+
+    return *this;
+}
+
+void BlockAllocator::Reset()
+{
+    last_alloc = nullptr;
+
+    if (current_bucket) {
+        current_bucket->used = 0;
+        allocator.ReleaseAllExcept(current_bucket);
+    } else {
+        allocator.ReleaseAll();
+    }
+}
+
+void BlockAllocator::ReleaseAll()
+{
+    current_bucket = nullptr;
+    last_alloc = nullptr;
+
+    allocator.ReleaseAll();
+}
+
+void *BlockAllocator::Allocate(Size size, unsigned int flags)
 {
     RG_ASSERT(size >= 0);
-
-    LinkedAllocator *alloc = GetAllocator();
 
     // Keep alignement requirements
     Size aligned_size = AlignLen(size, 8);
 
     if (AllocateSeparately(aligned_size)) {
-        uint8_t *ptr = (uint8_t *)AllocateRaw(alloc, size, flags);
+        uint8_t *ptr = (uint8_t *)AllocateRaw(&allocator, size, flags);
         return ptr;
     } else {
         if (!current_bucket || (current_bucket->used + aligned_size) > block_size) {
-            current_bucket = (Bucket *)AllocateRaw(alloc, RG_SIZE(Bucket) + block_size,
+            current_bucket = (Bucket *)AllocateRaw(&allocator, RG_SIZE(Bucket) + block_size,
                                                    flags & ~(int)AllocFlag::Zero);
             current_bucket->used = 0;
         }
@@ -364,7 +410,7 @@ void *BlockAllocatorBase::Allocate(Size size, unsigned int flags)
     }
 }
 
-void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
+void *BlockAllocator::Resize(void *ptr, Size old_size, Size new_size, unsigned int flags)
 {
     RG_ASSERT(old_size >= 0);
     RG_ASSERT(new_size >= 0);
@@ -391,8 +437,7 @@ void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsign
                 MemSet((uint8_t *)ptr + old_size, 0, new_size - old_size);
             }
         } else if (AllocateSeparately(aligned_old_size)) {
-            LinkedAllocator *alloc = GetAllocator();
-            ptr = ResizeRaw(alloc, ptr, old_size, new_size, flags);
+            ptr = ResizeRaw(&allocator, ptr, old_size, new_size, flags);
         } else {
             void *new_ptr = Allocate(new_size, flags & ~(int)AllocFlag::Zero);
 
@@ -413,93 +458,34 @@ void *BlockAllocatorBase::Resize(void *ptr, Size old_size, Size new_size, unsign
     return ptr;
 }
 
-void BlockAllocatorBase::Release(const void *ptr, Size size)
+void BlockAllocator::Release(const void *ptr, Size size)
 {
     RG_ASSERT(size >= 0);
 
     if (ptr) {
-        LinkedAllocator *alloc = GetAllocator();
-
         Size aligned_size = AlignLen(size, 8);
 
         if (ptr == last_alloc) {
             current_bucket->used -= aligned_size;
 
             if (!current_bucket->used) {
-                ReleaseRaw(alloc, current_bucket, RG_SIZE(Bucket) + block_size);
+                ReleaseRaw(&allocator, current_bucket, RG_SIZE(Bucket) + block_size);
                 current_bucket = nullptr;
             }
 
             last_alloc = nullptr;
         } else if (AllocateSeparately(aligned_size)) {
-            ReleaseRaw(alloc, ptr, size);
+            ReleaseRaw(&allocator, ptr, size);
         }
     }
 }
 
-void BlockAllocatorBase::CopyFrom(BlockAllocatorBase *other)
-{
-    block_size = other->block_size;
-    current_bucket = other->current_bucket;
-    last_alloc = other->last_alloc;
-}
-
-void *BlockAllocatorBase::ResetCurrent()
-{
-    last_alloc = nullptr;
-
-    if (current_bucket) {
-        current_bucket->used = 0;
-        return current_bucket;
-    } else {
-        return nullptr;
-    }
-}
-
-void BlockAllocatorBase::ForgetCurrent()
+void BlockAllocator::GiveTo(LinkedAllocator *alloc)
 {
     current_bucket = nullptr;
     last_alloc = nullptr;
-}
 
-BlockAllocator& BlockAllocator::operator=(BlockAllocator &&other)
-{
-    allocator.operator=(std::move(other.allocator));
-    CopyFrom(&other);
-
-    return *this;
-}
-
-void BlockAllocator::Reset()
-{
-    void *ptr = ResetCurrent();
-    allocator.ReleaseAllExcept(ptr);
-}
-
-void BlockAllocator::ReleaseAll()
-{
-    ForgetCurrent();
-    allocator.ReleaseAll();
-}
-
-IndirectBlockAllocator& IndirectBlockAllocator::operator=(IndirectBlockAllocator &&other)
-{
-    allocator->operator=(std::move(*other.allocator));
-    CopyFrom(&other);
-
-    return *this;
-}
-
-void IndirectBlockAllocator::Reset()
-{
-    void *ptr = ResetCurrent();
-    allocator->ReleaseAllExcept(ptr);
-}
-
-void IndirectBlockAllocator::ReleaseAll()
-{
-    ForgetCurrent();
-    allocator->ReleaseAll();
+    allocator.GiveTo(alloc);
 }
 
 #if defined(_WIN32)

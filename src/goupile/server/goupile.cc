@@ -50,7 +50,7 @@ DomainHolder gp_domain;
 static HashMap<const char *, const AssetInfo *> assets_map;
 static const AssetInfo *assets_root;
 static HeapArray<const char *> assets_for_cache;
-static LinkedAllocator assets_alloc;
+static BlockAllocator assets_alloc;
 static char shared_etag[17];
 
 static std::shared_mutex render_mutex;

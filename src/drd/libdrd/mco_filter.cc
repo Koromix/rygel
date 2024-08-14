@@ -1179,12 +1179,18 @@ Size mco_WrenRunner::Process(Span<const mco_Result> results, const mco_Result mo
                              HeapArray<const mco_Result *> *out_mono_results,
                              mco_StaySet *out_stay_set)
 {
-    IndirectBlockAllocator new_other_diagnoses_alloc { &out_stay_set->array_alloc, 2048 * RG_SIZE(drd_DiagnosisCode) };
-    IndirectBlockAllocator new_procedures_alloc { &out_stay_set->array_alloc, 2048 * RG_SIZE(mco_ProcedureRealisation) };
+    BlockAllocator new_other_diagnoses_alloc { 2048 * RG_SIZE(drd_DiagnosisCode) };
+    BlockAllocator new_procedures_alloc { 2048 * RG_SIZE(mco_ProcedureRealisation) };
+
+    RG_DEFER {
+        new_other_diagnoses_alloc.GiveTo(&out_stay_set->array_alloc);
+        new_procedures_alloc.GiveTo(&out_stay_set->array_alloc);
+    };
+
     HeapArray<drd_DiagnosisCode> new_other_diagnoses(&new_other_diagnoses_alloc);
     HeapArray<mco_ProcedureRealisation> new_procedures(&new_procedures_alloc);
-
     Size stays_count = 0;
+
     for (const mco_Result &result: results) {
         InitProxyArrays(result.stays.len - other_diagnosis_arrays.len);
 

@@ -1217,81 +1217,48 @@ public:
 
     bool IsUsed() const { return list; }
 
+    void GiveTo(LinkedAllocator *alloc);
+
 private:
     static Bucket *PointerToBucket(void *ptr);
 };
 
-class BlockAllocatorBase: public Allocator {
+class BlockAllocator: public Allocator {
     struct Bucket {
         Size used;
         uint8_t data[];
     };
 
+    LinkedAllocator allocator;
     Size block_size;
 
     Bucket *current_bucket = nullptr;
     uint8_t *last_alloc = nullptr;
 
 public:
-    BlockAllocatorBase(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
+    BlockAllocator(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
         : block_size(block_size)
     {
         RG_ASSERT(block_size > 0);
     }
-
-    void *Allocate(Size size, unsigned int flags = 0) override;
-    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
-    void Release(const void *ptr, Size size) override;
-
-    bool IsUsed() const
-    {
-        LinkedAllocator *alloc = ((BlockAllocatorBase *)this)->GetAllocator();
-        return alloc->IsUsed();
-    }
-
-protected:
-    void CopyFrom(BlockAllocatorBase *other);
-    void *ResetCurrent();
-    void ForgetCurrent();
-
-    virtual LinkedAllocator *GetAllocator() = 0;
-
-private:
-    bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
-};
-
-class BlockAllocator final: public BlockAllocatorBase {
-    LinkedAllocator allocator;
-
-protected:
-    LinkedAllocator *GetAllocator() override { return &allocator; }
-
-public:
-    BlockAllocator(Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : BlockAllocatorBase(block_size) {}
 
     BlockAllocator(BlockAllocator &&other) { *this = std::move(other); }
     BlockAllocator& operator=(BlockAllocator &&other);
 
     void Reset();
     void ReleaseAll();
-};
 
-class IndirectBlockAllocator final: public BlockAllocatorBase {
-    LinkedAllocator *allocator;
+    void *Allocate(Size size, unsigned int flags = 0) override;
+    void *Resize(void *ptr, Size old_size, Size new_size, unsigned int flags = 0) override;
+    void Release(const void *ptr, Size size) override;
 
-protected:
-    LinkedAllocator *GetAllocator() override { return allocator; }
+    bool IsUsed() const { return allocator.IsUsed(); }
 
-public:
-    IndirectBlockAllocator(LinkedAllocator *alloc, Size block_size = RG_BLOCK_ALLOCATOR_DEFAULT_SIZE)
-        : BlockAllocatorBase(block_size), allocator(alloc) {}
+    void GiveTo(LinkedAllocator *alloc);
+    void GiveTo(BlockAllocator *alloc) { GiveTo(&alloc->allocator); }
 
-    IndirectBlockAllocator(IndirectBlockAllocator &&other) { *this = std::move(other); }
-    IndirectBlockAllocator& operator=(IndirectBlockAllocator &&other);
-
-    void Reset();
-    void ReleaseAll();
+private:
+    bool AllocateSeparately(Size aligned_size) const { return aligned_size > block_size / 2; }
 };
 
 #if !defined(__wasi__)

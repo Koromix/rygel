@@ -383,7 +383,7 @@ class mco_TableSetBuilder {
         Size prev_index_idx;
     };
 
-    LinkedAllocator file_alloc;
+    BlockAllocator file_alloc;
     HeapArray<TableLoadInfo> table_loads;
 
     mco_TableSet set;
