@@ -223,7 +223,6 @@ class http_IO {
 
     struct {
         HeapArray<http_KeyValue> headers;
-        HeapArray<std::function<void()>> finalizers;
 
         bool started = false;
         int64_t expected = 0;
@@ -234,9 +233,8 @@ class http_IO {
 
 public:
     http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(-1); }
-    ~http_IO();
 
-    RG::Allocator *Allocator() { return &allocator; }
+    RG::BlockAllocator *Allocator() { return &allocator; }
 
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);
     bool NegociateEncoding(CompressionType preferred1, CompressionType preferred2, CompressionType *out_encoding);
@@ -265,8 +263,6 @@ public:
     void SendError(int status, const char *msg = nullptr);
     void SendFile(int status, const char *filename, const char *mimetype = nullptr);
     void SendFile(int status, int fd, int64_t len);
-
-    void AddFinalizer(const std::function<void()> &func);
 
 private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);

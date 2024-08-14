@@ -42,7 +42,9 @@ bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io);
 class http_JsonPageBuilder: public json_Writer {
     http_IO *io = nullptr;
 
-    HeapArray<uint8_t> buf;
+    HeapArray<uint8_t> buf { &allocator };
+    BlockAllocator allocator;
+
     StreamWriter st;
     CompressionType encoding;
 

@@ -197,13 +197,12 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         return true;
     }
     src_len = sqlite3_blob_bytes(src_blob);
+    RG_DEFER { sqlite3_blob_close(src_blob); };
 
     // Fast path (small objects)
     if (dest_encoding == src_encoding && src_len <= 65536) {
-        RG_DEFER { sqlite3_blob_close(src_blob); };
 
         uint8_t *ptr = (uint8_t *)AllocateRaw(io->Allocator(), src_len);
-        io->AddFinalizer([=] { ReleaseRaw(io->Allocator(), ptr, src_len); });
 
         if (sqlite3_blob_read(src_blob, ptr, (int)src_len, 0) != SQLITE_OK) {
             LogError("SQLite Error: %1", sqlite3_errmsg(*instance->db));
@@ -217,9 +216,6 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         return true;
     }
-
-    // The blob needs to remain valid until the end of connection
-    io->AddFinalizer([=]() { sqlite3_blob_close(src_blob); });
 
     // Handle range requests
     if (src_encoding == CompressionType::None && dest_encoding == src_encoding) {

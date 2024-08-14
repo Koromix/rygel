@@ -208,8 +208,8 @@ void http_JsonPageBuilder::Finish()
     bool success = st.Close();
     RG_ASSERT(success);
 
-    Span<const uint8_t> data = buf.TrimAndLeak();
-    io->AddFinalizer([=]() { ReleaseSpan(nullptr, data); });
+    Span<const uint8_t> data = buf.Leak();
+    allocator.GiveTo(io->Allocator());
 
     io->AddEncodingHeader(encoding);
     io->SendBinary(200, data, "application/json");

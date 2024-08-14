@@ -561,7 +561,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
         io->SendError(404);
         return;
     }
-    io->AddFinalizer([=]() { instance->Unref(); });
+    RG_DEFER { instance->Unref(); };
 
     // Enforce trailing slash on base URLs. Use 302 instead of 301 to avoid
     // problems with query strings being erased without question.

@@ -394,13 +394,6 @@ const char *http_RequestInfo::GetCookieValue(const char *key) const
     return head ? head->last->value : nullptr;
 }
 
-http_IO::~http_IO()
-{
-    for (const auto &finalize: response.finalizers) {
-        finalize();
-    }
-}
-
 bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
 {
     RG_ASSERT(socket);
@@ -704,12 +697,6 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
 
     err_guard.Disable();
     SendFile(status, fd, file_info.size);
-}
-
-void http_IO::AddFinalizer(const std::function<void()> &func)
-{
-    RG_ASSERT(!response.started);
-    response.finalizers.Append(func);
 }
 
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
@@ -1275,10 +1262,6 @@ bool http_IO::WriteChunked(Span<const uint8_t> data)
 
 bool http_IO::Rearm(int64_t now)
 {
-    for (const auto &finalize: response.finalizers) {
-        finalize();
-    }
-
     bool keepalive = request.keepalive && (now >= 0);
 
     if (keepalive) {
@@ -1309,7 +1292,6 @@ bool http_IO::Rearm(int64_t now)
     request.body_len = 0;
 
     response.headers.RemoveFrom(0);
-    response.finalizers.RemoveFrom(0);
     response.started = false;
     last_err = nullptr;
 
