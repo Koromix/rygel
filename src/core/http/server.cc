@@ -1304,4 +1304,14 @@ bool http_IO::Rearm(int64_t now)
     return keepalive;
 }
 
+bool http_IO::IsBusy() const
+{
+    if (!incoming.buf.len)
+        return false;
+    if (incoming.reading && incoming.read == request.body_len)
+        return false;
+
+    return true;
+}
+
 }

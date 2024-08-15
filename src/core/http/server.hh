@@ -277,7 +277,7 @@ private:
 
     // Returns true if connection is Keep-Alive and still within limits
     bool Rearm(int64_t now);
-    bool IsBusy() const { return incoming.buf.len; }
+    bool IsBusy() const;
 
     friend class http_Daemon;
     friend class http_Dispatcher;
