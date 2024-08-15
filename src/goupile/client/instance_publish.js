@@ -106,8 +106,8 @@ function InstancePublisher() {
             d.text('*filename', 'Chemin :', { value: d.values.file ? d.values.file.name : null });
 
             if (d.values.filename) {
-                if (!d.values.filename.match(/^[A-Za-z0-9_\.]+(\/[A-Za-z0-9_\.]+)*$/))
-                    d.error('filename', 'Caractères autorisés: a-z, 0-9, \'_\', \'.\' et \'/\' (pas au début ou à la fin)');
+                if (!d.values.filename.match(/^[A-Za-z0-9_\-\.]+(\/[A-Za-z0-9_\-\.]+)*$/))
+                    d.error('filename', 'Caractères autorisés: a-z, 0-9, \'-\', \'_\', \'.\' et \'/\' (pas au début ou à la fin)');
                 if (d.values.filename.includes('/../') || d.values.filename.endsWith('/..'))
                     d.error('filename', 'Le chemin ne doit pas contenir de composants \'..\'');
             }
