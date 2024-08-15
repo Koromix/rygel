@@ -18,15 +18,15 @@ import * as UI from './ui.js';
 
 function InstancePublisher() {
     let actions;
-    let dialog;
+    let refresh;
 
     this.runDialog = async function(e) {
-        await computeActions();
-
-        let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
+        actions = await computeActions();
 
         return UI.dialog(e, 'Publication', {}, (d, resolve, reject) => {
-            dialog = d;
+            refresh = d.refresh;
+
+            let modifications = actions.reduce((acc, action) => acc + (action.type !== 'noop'), 0);
 
             d.output(html`
                 <div class="ui_quick">
@@ -64,7 +64,7 @@ function InstancePublisher() {
                             return html`
                                 <tr class=${action.type === 'conflict' ? 'conflict' : ''}>
                                     <td>
-                                        <a @click=${UI.wrap(e => runDeleteFileDialog(e, action))}>x</a>
+                                        <a @click=${UI.wrap(e => deleteFile(e, action))}>x</a>
                                     </td>
                                     <td class=${local_cls}>${action.filename}</td>
                                     <td class="size">${action.to_sha256 ? Util.formatDiskSize(action.to_size) : ''}</td>
@@ -89,7 +89,7 @@ function InstancePublisher() {
 
                 <div class="ui_quick">
                     <div style="flex: 1;"></div>
-                    <a @click=${UI.wrap(runAddFileDialog)}>Ajouter un fichier</a>
+                    <a @click=${UI.wrap(addFile)}>Ajouter un fichier</a>
                 </div>
             `);
 
@@ -97,28 +97,10 @@ function InstancePublisher() {
                 await deploy(actions);
                 resolve();
             });
-        })
+        });
     }
 
-    async function refresh() {
-        await computeActions();
-        dialog.refresh();
-    }
-
-     // XXX: What about conflicts?
-    async function computeActions() {
-        actions = await Net.get(`${ENV.urls.base}api/files/delta`);
-
-        for (let action of actions) {
-            if (action.to_sha256 === action.from_sha256) {
-                action.type = 'noop';
-            } else {
-                action.type = 'push';
-            }
-        }
-    }
-
-    function runAddFileDialog(e) {
+    function addFile(e) {
         return UI.dialog(e, 'Ajout de fichier', {}, (d, resolve, reject) => {
             d.file('*file', 'Fichier :');
             d.text('*filename', 'Chemin :', { value: d.values.file ? d.values.file.name : null });
@@ -151,20 +133,21 @@ function InstancePublisher() {
                     progress.success('Fichier enregistré');
                     resolve();
 
+                    actions = await computeActions();
                     refresh();
                 } catch (err) {
                     progress.close();
 
                     Log.error(err);
-                    d.refresh();
+                    refresh();
                 }
             });
         });
     }
 
-    function runDeleteFileDialog(e, action) {
+    function deleteFile(e, action) {
         return UI.confirm(e, `Voulez-vous vraiment supprimer le fichier '${action.filename}' ?`,
-                                'Supprimer', async () => {
+                             'Supprimer', async () => {
             let url = Util.pasteURL(`${ENV.urls.base}files/${action.filename}`, { sha256: action.to_sha256 });
             let response = await Net.fetch(url, { method: 'DELETE' });
 
@@ -173,8 +156,24 @@ function InstancePublisher() {
                 throw new Error(err)
             }
 
+            actions = await computeActions();
             refresh();
         });
+    }
+
+     // XXX: What about conflicts?
+    async function computeActions() {
+        let actions = await Net.get(`${ENV.urls.base}api/files/delta`);
+
+        for (let action of actions) {
+            if (action.to_sha256 === action.from_sha256) {
+                action.type = 'noop';
+            } else {
+                action.type = 'push';
+            }
+        }
+
+        return actions;
     }
 
     async function deploy(actions) {
