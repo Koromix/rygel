@@ -4084,9 +4084,17 @@ Span<const char> GetPathExtension(Span<const char> filename,
                                   CompressionType *out_compression_type = nullptr);
 CompressionType GetPathCompression(Span<const char> filename);
 
-Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, Allocator *alloc);
+enum class NormalizeFlag {
+    EndWithSeparator = 1 << 0
+};
+
+Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, unsigned int flags, Allocator *alloc);
+static inline Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, Allocator *alloc)
+    { return NormalizePath(path, root_directory, 0, alloc); }
+static inline Span<char> NormalizePath(Span<const char> path, unsigned int flags, Allocator *alloc)
+    { return NormalizePath(path, {}, flags, alloc); }
 static inline Span<char> NormalizePath(Span<const char> path, Allocator *alloc)
-    { return NormalizePath(path, {}, alloc); }
+    { return NormalizePath(path, {}, 0, alloc); }
 
 bool PathIsAbsolute(const char *path);
 bool PathIsAbsolute(Span<const char> path);

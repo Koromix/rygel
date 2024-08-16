@@ -3148,7 +3148,7 @@ CompressionType GetPathCompression(Span<const char> filename)
     return compression_type;
 }
 
-Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, Allocator *alloc)
+Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, unsigned int flags, Allocator *alloc)
 {
     RG_ASSERT(alloc);
 
@@ -3198,6 +3198,9 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     } else {
         // Strip last separator
         buf.len--;
+    }
+    if (flags & (int)NormalizeFlag::EndWithSeparator) {
+        buf.Append(*RG_PATH_SEPARATORS);
     }
 
     // NUL terminator

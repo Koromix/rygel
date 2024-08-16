@@ -1,0 +1,970 @@
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see https://www.gnu.org/licenses/.
+
+#include "src/core/base/base.hh"
+#include "src/core/sqlite/sqlite.hh"
+
+#include <sys/statvfs.h>
+
+namespace RG {
+
+static const int SchemaVersion = 1;
+
+struct DiskInfo {
+    int64_t id;
+    char uuid[37];
+
+    int64_t total;
+    int64_t used;
+    int64_t files;
+};
+
+struct DiskSet {
+    HeapArray<DiskInfo> disks;
+};
+
+static const char *database_filename = nullptr;
+static sq_Database db;
+
+static bool OpenDatabase()
+{
+    RG_ASSERT(!db.IsValid());
+
+    if (!database_filename) {
+        LogError("Missing database filename");
+        return false;
+    }
+
+    if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return false;
+    if (!db.SetWAL(false))
+        return false;
+
+    int version;
+    if (!db.GetUserVersion(&version))
+        return false;
+
+    if (version > SchemaVersion) {
+        LogError("Database schema is too recent (%1, expected %2)", version, SchemaVersion);
+        return false;
+    } else if (version < SchemaVersion) {
+        bool success = db.Transaction([&]() {
+            switch (version) {
+                case 0: {
+                    bool success = db.RunMany(R"(
+                        CREATE TABLE disks (
+                            id INTEGER PRIMARY KEY,
+                            uuid TEXT NOT NULL,
+                            root TEXT NOT NULL,
+                            size INTEGER NOT NULL
+                        );
+                        CREATE UNIQUE INDEX disks_u ON disks (uuid);
+
+                        CREATE TABLE files (
+                            id INTEGER PRIMARY KEY,
+                            path TEXT NOT NULL,
+                            origin TEXT,
+                            mtime INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            disk_id INTEGER REFERENCES disks (id)
+                        );
+                        CREATE UNIQUE INDEX files_p ON files (path);
+                    )");
+                    if (!success)
+                        return false;
+                } // [[fallthrough]];
+
+                static_assert(SchemaVersion == 1);
+            }
+
+            if (!db.SetUserVersion(SchemaVersion))
+                return false;
+
+            return true;
+        });
+
+        if (!success) {
+            db.Close();
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static const char *GenerateUUIDv4(Allocator *alloc)
+{
+    uint8_t bytes[16];
+    FillRandomSafe(bytes);
+
+    bytes[6] = (4 << 4) | (bytes[6] & 0x0F);
+    bytes[8] = (2 << 6) | (bytes[8] & 0x3F);
+
+    const char *uuid = Fmt(alloc, "%1-%2-%3-%4-%5",
+                                  FmtSpan(MakeSpan(bytes + 0, 4), FmtType::BigHex, "").Pad0(-2),
+                                  FmtSpan(MakeSpan(bytes + 4, 2), FmtType::BigHex, "").Pad0(-2),
+                                  FmtSpan(MakeSpan(bytes + 6, 2), FmtType::BigHex, "").Pad0(-2),
+                                  FmtSpan(MakeSpan(bytes + 8, 2), FmtType::BigHex, "").Pad0(-2),
+                                  FmtSpan(MakeSpan(bytes + 10, 6), FmtType::BigHex, "").Pad0(-2)).ptr;
+    return uuid;
+}
+
+static const char *ReadUUID(const char *filename, Allocator *alloc)
+{
+    LocalArray<char, 64> buf;
+    buf.len = ReadFile(filename, buf.data);
+
+    if (buf.len < 0)
+        return nullptr;
+    buf.len = TrimStrRight(buf.As<char>()).len;
+
+    if (buf.len < 36) {
+        LogError("Truncated disk UUID");
+        return nullptr;
+    } else if (buf.len > 36) {
+        LogError("Excessive UUID size");
+        return nullptr;
+    }
+
+    const char *uuid = DuplicateString(buf, alloc).ptr;
+    return uuid;
+}
+
+static int64_t GetAvailableSpace(const char *path)
+{
+    struct statvfs vfs;
+    if (statvfs(path, &vfs) < 0) {
+        LogError("Cannot get volume information for '%1': %2", path, strerror(errno));
+        return -1;
+    }
+
+    int64_t blocks = (int64_t)vfs.f_bavail;
+    int64_t available = blocks * vfs.f_frsize;
+
+    return available;
+}
+
+static int64_t GetTotalSpace(const char *path)
+{
+    struct statvfs vfs;
+    if (statvfs(path, &vfs) < 0) {
+        LogError("Cannot get volume information for '%1': %2", path, strerror(errno));
+        return -1;
+    }
+
+    double blocks = (double)vfs.f_blocks * 0.98;
+    int64_t available = blocks * vfs.f_frsize;
+
+    return available;
+}
+
+static bool GatherDiskStats(DiskSet *out_set)
+{
+    RG_DEFER_NC(err_guard, len = out_set->disks.len) { out_set->disks.RemoveFrom(len); };
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT d.id, d.uuid, d.size, SUM(f.size), COUNT(f.id)
+                       FROM disks d
+                       LEFT JOIN files f ON (f.disk_id = d.id)
+                       GROUP BY d.id)", &stmt))
+        return false;
+
+    while (stmt.Step()) {
+        DiskInfo disk = {};
+
+        disk.id = sqlite3_column_int64(stmt, 0);
+        CopyString((const char *)sqlite3_column_text(stmt, 1), disk.uuid);
+        disk.total = sqlite3_column_int64(stmt, 2);
+        disk.used = sqlite3_column_int64(stmt, 3);
+        disk.files = sqlite3_column_int64(stmt, 4);
+
+        out_set->disks.Append(disk);
+    }
+    if (!stmt.IsValid())
+        return false;
+
+    err_guard.Disable();
+    return true;
+}
+
+static DiskInfo *FindDisk(DiskSet *set, int64_t id)
+{
+    for (DiskInfo &disk: set->disks) {
+        if (disk.id == id)
+            return &disk;
+    }
+    return nullptr;
+}
+
+static DiskInfo *FindSpace(DiskSet *set, int64_t size)
+{
+    DiskInfo *target = nullptr;
+    double min_ratio = INFINITY;
+
+    for (DiskInfo &disk: set->disks) {
+        int64_t available = disk.total - disk.used;
+
+        if (size <= available) {
+            double ratio = (double)(available + size) / disk.total;
+
+            if (ratio < min_ratio) {
+                target = &disk;
+                min_ratio = ratio;
+            }
+        }
+    }
+
+    return target;
+}
+
+class IntegrateContext {
+    int64_t disk_id;
+    const char *disk_dir;
+    int64_t changeset;
+
+    BlockAllocator temp_alloc;
+
+public:
+    IntegrateContext(int64_t disk_id, const char *disk_dir)
+        : disk_id(disk_id), disk_dir(disk_dir), changeset(GetRandomInt64(0, INT64_MAX)) {}
+
+    bool AddNew() { return AddNew(""); }
+    bool DeleteOld();
+
+private:
+    bool AddNew(const char *dirname);
+};
+
+bool IntegrateContext::AddNew(const char *dirname)
+{
+    const char *enum_dir = Fmt(&temp_alloc, "%1%2", disk_dir, dirname).ptr;
+
+    EnumResult ret = EnumerateDirectory(enum_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+        switch (file_info.type) {
+            case FileType::Directory: {
+                const char *path = Fmt(&temp_alloc, "%1%2%/", dirname, basename).ptr;
+
+                if (!AddNew(path))
+                    return false;
+            } break;
+
+            case FileType::File: {
+                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
+
+                if (TestStr(path, ".cartup"))
+                    break;
+
+                if (!db.Run(R"(INSERT INTO files (path, mtime, size, disk_id, changeset)
+                               VALUES (?1, ?2, ?3, ?4, ?5)
+                               ON CONFLICT DO UPDATE SET mtime = excluded.mtime,
+                                                         size = excluded.size,
+                                                         disk_id = excluded.disk_id,
+                                                         changeset = excluded.changeset)",
+                            path, file_info.mtime, file_info.size, disk_id, changeset))
+                    return false;
+            } break;
+
+            case FileType::Link:
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {
+                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
+                LogWarning("Ignoring special file '%1' (%2)", path, FileTypeNames[(int)file_info.type]);
+            } break;
+        }
+
+        return true;
+    });
+    if (ret != EnumResult::Success)
+        return false;
+
+    return true;
+}
+
+bool IntegrateContext::DeleteOld()
+{
+    bool success = db.Run("DELETE FROM files WHERE disk_id = ?1 AND changeset IS NOT ?2", disk_id, changeset);
+    return success;
+}
+
+static int RunIntegrate(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *disk_dir = nullptr;
+    int64_t size = -1;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 integrate <disk> [...]
+
+Options:
+    %!..+-D, --database_file <file>%!0   Set database file%!0
+
+    %!..+-s, --size <size>%!0            Set explicit disk size
+                                 %!D..(default: auto-detect)%!0)",
+                FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("-s", "--size", OptionType::Value)) {
+                if (!ParseSize(opt.current_value, &size))
+                    return 1;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        disk_dir = opt.ConsumeNonOption();
+        opt.LogUnusedArguments();
+    }
+
+    if (!disk_dir) {
+        LogInfo("Missing disk path argument");
+        return 1;
+    }
+    if (!PathIsAbsolute(disk_dir)) {
+        LogInfo("Disk path must be absolute");
+        return 1;
+    }
+    disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
+
+    if (!OpenDatabase())
+        return 1;
+
+    const char *uuid = nullptr;
+    {
+        const char *filename = Fmt(&temp_alloc, "%1%/.cartup", disk_dir).ptr;
+
+        if (TestFile(filename, FileType::File)) {
+            uuid = ReadUUID(filename, &temp_alloc);
+
+            if (!uuid)
+                return false;
+        } else {
+            uuid = GenerateUUIDv4(&temp_alloc);
+
+            if (!WriteFile(uuid, filename))
+                return false;
+        }
+    }
+
+    bool success = db.Transaction([&]() {
+        int64_t disk_id;
+        {
+            sq_Statement stmt;
+            if (!db.Prepare(R"(INSERT INTO disks (uuid, root, size) VALUES (?1, ?2, ?3)
+                               ON CONFLICT DO UPDATE SET size = IIF(excluded.size > 0, excluded.size, size)
+                               RETURNING id)",
+                            &stmt, uuid, disk_dir, size))
+                return false;
+            if (!stmt.GetSingleValue(&disk_id))
+                return false;
+        }
+
+        // Run integration
+        {
+            IntegrateContext ctx(disk_id, disk_dir);
+
+            if (!ctx.AddNew())
+                return false;
+            if (!ctx.DeleteOld())
+                return false;
+        }
+
+        if (size < 0) {
+            size = GetAvailableSpace(disk_dir);
+            if (size < 0)
+                return false;
+
+            sq_Statement stmt;
+            if (!db.Prepare("SELECT SUM(size) * 1.02 FROM files WHERE disk_id = ?1 GROUP BY disk_id",
+                            &stmt, disk_id))
+                return false;
+
+            if (stmt.Step()) {
+                size += sqlite3_column_int64(stmt, 0);
+            } else if (!stmt.IsValid()) {
+                return false;
+            }
+
+            size = std::min(GetTotalSpace(disk_dir), size);
+
+            if (!db.Run("UPDATE disks SET size = ?2 WHERE id = ?1", disk_id, size))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return 1;
+
+    if (!db.Close())
+        return 1;
+
+    return 0;
+}
+
+enum class DistributeResult {
+    Complete,
+    Partial,
+    Error
+};
+
+class DistributeContext {
+    DiskSet *set;
+    const char *src_dir;
+
+    BlockAllocator temp_alloc;
+
+public:
+    DistributeContext(DiskSet *set, const char *src_dir)
+        : set(set), src_dir(src_dir) {}
+
+    DistributeResult Distribute() { return Distribute(""); }
+
+private:
+    DistributeResult Distribute(const char *dirname);
+};
+
+DistributeResult DistributeContext::Distribute(const char *dirname)
+{
+    const char *enum_dir = Fmt(&temp_alloc, "%1%2", src_dir, dirname).ptr;
+    bool complete = true;
+
+    EnumResult ret = EnumerateDirectory(enum_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+        switch (file_info.type) {
+            case FileType::Directory: {
+                const char *path = Fmt(&temp_alloc, "%1%2%/", dirname, basename).ptr;
+
+                switch (Distribute(path)) {
+                    case DistributeResult::Complete: {} break;
+                    case DistributeResult::Partial: { complete = false; } break;
+                    case DistributeResult::Error: return false;
+                }
+            } break;
+
+            case FileType::File: {
+                const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
+                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
+
+                sq_Statement stmt;
+                if (!db.Prepare("SELECT id, disk_id, origin, mtime, size FROM files WHERE path = ?1", &stmt, path))
+                    return false;
+
+                DiskInfo *disk = nullptr;
+
+                if (stmt.Step()) {
+                    int64_t id = sqlite3_column_int64(stmt, 0);
+                    int64_t disk_id = sqlite3_column_int64(stmt, 1);
+                    const char *origin = (const char *)sqlite3_column_text(stmt, 2);
+                    int64_t mtime = sqlite3_column_int64(stmt, 3);
+                    int64_t size = sqlite3_column_int64(stmt, 4);
+
+                    if (mtime == file_info.mtime && size == file_info.size) {
+                        if (!origin && !db.Run("UPDATE files SET origin = ?2 WHERE id = ?1", id, filename))
+                            return false;
+                        break;
+                    }
+
+                    disk = FindDisk(set, disk_id);
+
+                    if (!disk) {
+                        LogError("Unexplained disk info mismatch");
+                        return false;
+                    }
+                    disk->used -= size;
+
+                    if (file_info.size > disk->total - disk->used) {
+                        disk = nullptr;
+                    }
+                } else if (!stmt.IsValid()) {
+                    return false;
+                }
+
+                if (!disk) {
+                    disk = FindSpace(set, file_info.size);
+
+                    if (!disk) {
+                        LogError("Not enough space for '%1'", path);
+
+                        complete = false;
+                        return true;
+                    }
+                }
+
+                disk->used += file_info.size;
+
+                if (!db.Run(R"(INSERT INTO files (disk_id, path, origin, mtime, size) VALUES (?1, ?2, ?3, ?4, ?5)
+                               ON CONFLICT (path) DO UPDATE SET disk_id = excluded.disk_id,
+                                                                origin = excluded.origin,
+                                                                mtime = excluded.mtime,
+                                                                size = excluded.size)",
+                            disk->id, path, filename, file_info.mtime, file_info.size))
+                    return false;
+
+                LogInfo("Attribute '%1' to disk '%2'", filename, disk->uuid);
+            } break;
+
+            case FileType::Link:
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {
+                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
+                LogWarning("Ignoring special file '%1' (%2)", path, FileTypeNames[(int)file_info.type]);
+            } break;
+        }
+
+        return true;
+    });
+    if (ret != EnumResult::Success)
+        return DistributeResult::Error;
+
+    return complete ? DistributeResult::Complete : DistributeResult::Partial;
+}
+
+static int RunDistribute(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    HeapArray<const char *> sources;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 distribute [options] <source> [...]
+
+Options:
+    %!..+-D, --database_file <file>%!0   Set database file%!0)",
+                FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
+                // Already handled
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        const char *src_dir = opt.ConsumeNonOption();
+
+        if (!src_dir) {
+            LogError("Missing source directories");
+            return 1;
+        }
+
+        do {
+            src_dir = NormalizePath(src_dir, GetWorkingDirectory(), (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
+
+            if (!TestFile(src_dir, FileType::Directory)) {
+                LogInfo("Directory '%1' does not exist", src_dir);
+                return 1;
+            }
+
+            sources.Append(src_dir);
+        } while ((src_dir = opt.ConsumeNonOption()));
+    }
+
+    DiskSet set;
+
+    if (!OpenDatabase())
+        return 1;
+    if (!GatherDiskStats(&set))
+        return 1;
+
+    bool complete = true;
+    bool success = db.Transaction([&]() {
+        for (const char *src_dir: sources) {
+            DistributeContext ctx(&set, src_dir);
+
+            switch (ctx.Distribute()) {
+                case DistributeResult::Complete: {} break;
+                case DistributeResult::Partial: { complete = false; } break;
+                case DistributeResult::Error: return false;
+            }
+        }
+
+        return true;
+    });
+    if (!success || !complete)
+        return 1;
+
+    return 0;
+}
+
+static bool CopyFile(const char *from, const char *to)
+{
+    if (!EnsureDirectoryExists(to))
+        return false;
+
+    StreamReader reader(from);
+    StreamWriter writer(to, (int)StreamWriterFlag::Atomic);
+
+    if (!SpliceStream(&reader, -1, &writer))
+        return false;
+    if (!writer.Close())
+        return false;
+
+    return true;
+}
+static bool BackupFiles(const char *disk_dir, const char *uuid, bool fake)
+{
+    BlockAllocator temp_alloc;
+
+    sq_Statement stmt;
+    if (!db.Prepare(R"(SELECT f.origin, f.path, f.mtime, f.size
+                       FROM disks d
+                       INNER JOIN files f ON (f.disk_id = d.id)
+                       WHERE d.uuid = ?1 AND f.origin IS NOT NULL)", &stmt, uuid))
+        return false;
+
+    bool valid = true;
+
+    while (stmt.Step()) {
+        const char *origin = (const char *)sqlite3_column_text(stmt, 0);
+        const char *path = (const char *)sqlite3_column_text(stmt, 1);
+        int64_t mtime = sqlite3_column_int64(stmt, 2);
+        int64_t size = sqlite3_column_int64(stmt, 3);
+
+        FileInfo file_info;
+        StatResult stat = StatFile(origin, &file_info);
+
+        if (stat == StatResult::Success) {
+            if (file_info.mtime == mtime && file_info.size == size)
+                continue;
+
+            LogInfo("Copy '%1' to disk '%2'", origin, uuid);
+
+            if (!fake) {
+                const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", disk_dir, path).ptr;
+                valid &= CopyFile(origin, dest_filename);
+            }
+        }
+    }
+    valid &= stmt.IsValid();
+
+    return valid;
+}
+
+// Return true if all children are deleted (directory is not empty)
+static bool DeleteUnknownFiles(const char *disk_dir, const char *uuid, const char *dirname, bool fake)
+{
+    BlockAllocator temp_alloc;
+
+    const char *enum_dir = Fmt(&temp_alloc, "%1%2", disk_dir, dirname).ptr;
+    bool complete = true;
+
+    EnumerateDirectory(enum_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+        switch (file_info.type) {
+            case FileType::Directory: {
+                const char *path = Fmt(&temp_alloc, "%1%2%/", dirname, basename).ptr;
+                bool empty = DeleteUnknownFiles(disk_dir, uuid, path, fake);
+
+                if (empty && !fake) {
+                    const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
+                    UnlinkDirectory(filename);
+                }
+
+                complete &= empty;
+            } break;
+
+            case FileType::File: {
+                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
+
+                sq_Statement stmt;
+                if (!db.Prepare(R"(SELECT f.id
+                                   FROM files f
+                                   INNER JOIN disks d ON (d.id = f.disk_id)
+                                   WHERE d.uuid =?1 AND path = ?2)", &stmt, uuid, path))
+                    return false;
+
+                bool exists = stmt.Step();
+
+                if (!stmt.IsValid())
+                    return false;
+
+                if (!exists) {
+                    LogInfo("Delete '%1'", path);
+
+                    if (!fake) {
+                        const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
+                        UnlinkFile(filename);
+                    }
+                }
+
+                complete &= !exists;
+            } break;
+
+            case FileType::Link:
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {
+                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
+                LogWarning("Ignoring special file '%1' (%2)", path, FileTypeNames[(int)file_info.type]);
+
+                complete = false;
+            } break;
+        }
+
+        return true;
+    });
+
+    return complete;
+}
+
+static int RunBackup(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    HeapArray<const char *> disks;
+    bool fake = false;
+    bool cleanup = false;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 backup [options] <disk> [...]
+
+Options:
+    %!..+-D, --database_file <file>%!0   Set database file%!0
+
+        %!..+--delete%!0                 Delete unused files
+
+    %!..+-n, --dry_run%!0                Fake backup actions)",
+                FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
+                // Already handled
+            } else if (opt.Test("--delete")) {
+                cleanup = true;
+            } else if (opt.Test("-n", "--dry_run")) {
+                fake = true;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        const char *disk_dir = opt.ConsumeNonOption();
+
+        if (!disk_dir) {
+            LogError("Missing source directories");
+            return 1;
+        }
+
+        do {
+            disk_dir = NormalizePath(disk_dir, GetWorkingDirectory(), (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
+
+            if (!TestFile(disk_dir, FileType::Directory)) {
+                LogInfo("Directory '%1' does not exist", disk_dir);
+                return 1;
+            }
+
+            disks.Append(disk_dir);
+        } while ((disk_dir = opt.ConsumeNonOption()));
+    }
+
+    if (!OpenDatabase())
+        return 1;
+
+    Async async;
+
+    for (const char *disk_dir: disks) {
+        const char *uuid_filename = Fmt(&temp_alloc, "%1%/.cartup", disk_dir).ptr;
+        const char *uuid = ReadUUID(uuid_filename, &temp_alloc);
+
+        // Check disk exists!
+        {
+            sq_Statement stmt;
+            if (!db.Prepare("SELECT id FROM disks WHERE uuid = ?1", &stmt, uuid))
+                return 1;
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("Disk %1' is not in database");
+                }
+                return 1;
+            }
+        }
+
+        async.Run([&]() {
+            if (cleanup) {
+                DeleteUnknownFiles(disk_dir, uuid, "", fake);
+            }
+            if (!BackupFiles(disk_dir, uuid, fake))
+                return false;
+
+            return true;
+        });
+    }
+
+    if (!async.Sync())
+        return 1;
+
+    return 0;
+}
+
+static int RunStats(Span<const char *> arguments)
+{
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 stats [options] <source> [...]
+
+Options:
+    %!..+-D, --database_file <file>%!0   Set database file%!0)",
+                FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
+                // Already handled
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+    }
+
+    DiskSet set;
+
+    if (!OpenDatabase())
+        return 1;
+    if (!GatherDiskStats(&set))
+        return 1;
+
+    for (Size i = 0; i < set.disks.len; i++) {
+        const DiskInfo &disk = set.disks[i];
+
+        PrintLn("%1%!..+Disk %2%!0 [%3]:", i ? "\n" : "", i + 1, disk.uuid);
+        PrintLn("  Total: %!..+%1%!0", FmtDiskSize(disk.total));
+        PrintLn("  Used: %!..+%1 (%2%%)%!0", FmtDiskSize(disk.used), FmtDouble((double)disk.used * 100.0 / (double)disk.total, 1));
+        PrintLn("  Files: %!..+%1%!0", disk.files);
+    }
+
+    return 0;
+}
+
+int Main(int argc, char **argv)
+{
+    RG_CRITICAL(argc >= 1, "First argument is missing");
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 <command> [args]%!0
+
+Backup commands:
+    %!..+distribute%!0                   Distribute files to known disks
+    %!..+backup%!0                       Backup files to plugged disks
+
+Disk commands:
+    %!..+integrate%!0                    Add disk for future backups
+    %!..+stats%!0                        Get disk usage statistics
+
+Options:
+    %!..+-D, --database_file <file>%!0   Set database file%!0
+)",
+                FelixTarget);
+    };
+
+    if (argc < 2) {
+        print_usage(StdErr);
+        PrintLn(StdErr);
+        LogError("No command provided");
+        return 1;
+    }
+
+    const char *cmd = argv[1];
+    Span<const char *> arguments((const char **)argv + 2, argc - 2);
+
+    // Handle help and version arguments
+    if (TestStr(cmd, "--help") || TestStr(cmd, "help")) {
+        if (arguments.len && arguments[0][0] != '-') {
+            cmd = arguments[0];
+            arguments[0] = (cmd[0] == '-') ? cmd : "--help";
+        } else {
+            print_usage(StdOut);
+            return 0;
+        }
+    } else if (TestStr(cmd, "--version")) {
+        PrintLn("%!R..%1%!0 %!..+%2%!0", FelixTarget, FelixVersion);
+        PrintLn("Compiler: %1", FelixCompiler);
+        return 0;
+    }
+
+    // Find database filename
+    {
+        OptionParser opt(arguments, OptionMode::Skip);
+
+        while (opt.Next()) {
+            if (opt.Test("-D", "--database_file", OptionType::Value)) {
+                database_filename = opt.current_value;
+            } else if (opt.TestHasFailed()) {
+                return 1;
+            }
+        }
+    }
+
+    if (TestStr(cmd, "integrate")) {
+        return RunIntegrate(arguments);
+    } else if (TestStr(cmd, "distribute")) {
+        return RunDistribute(arguments);
+    } else if (TestStr(cmd, "backup")) {
+        return RunBackup(arguments);
+    } else if (TestStr(cmd, "stats")) {
+        return RunStats(arguments);
+    } else {
+        LogError("Unknown command '%1'", cmd);
+        return 1;
+    }
+}
+
+}
+
+// C++ namespaces are stupid
+int main(int argc, char **argv) { return RG::RunApp(argc, argv); }
