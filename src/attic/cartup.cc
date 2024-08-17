@@ -630,25 +630,35 @@ Options:
     return 0;
 }
 
-static bool CopyFile(const char *from, const char *to)
-{
-    if (!EnsureDirectoryExists(to))
-        return false;
+class BackupContext {
+    const char *uuid;
+    const char *disk_dir;
+    bool fake;
 
-    StreamReader reader(from);
-    StreamWriter writer(to, (int)StreamWriterFlag::Atomic);
+    Span<uint8_t> buf;
 
-    if (!SpliceStream(&reader, -1, &writer))
-        return false;
-    if (!writer.Close())
-        return false;
-
-    return true;
-}
-static bool BackupFiles(const char *disk_dir, const char *uuid, bool fake)
-{
     BlockAllocator temp_alloc;
 
+public:
+    BackupContext(const char *uuid, const char *disk_dir, bool fake);
+
+    bool BackupNew();
+    bool DeleteOld() { return DeleteOld(""); }
+
+private:
+    bool DeleteOld(const char *dirname);
+
+    bool CopyFile(const char *from, const char *to);
+};
+
+BackupContext::BackupContext(const char *uuid, const char *disk_dir, bool fake)
+    : uuid(uuid), disk_dir(disk_dir), fake(fake)
+{
+    buf = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
+}
+
+bool BackupContext::BackupNew()
+{
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT f.origin, f.path, f.mtime, f.size
                        FROM disks d
@@ -664,19 +674,33 @@ static bool BackupFiles(const char *disk_dir, const char *uuid, bool fake)
         int64_t mtime = sqlite3_column_int64(stmt, 2);
         int64_t size = sqlite3_column_int64(stmt, 3);
 
+        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", disk_dir, path).ptr;
+
         FileInfo file_info;
-        StatResult stat = StatFile(origin, &file_info);
+        StatResult stat = StatFile(dest_filename, (int)StatFlag::SilentMissing, &file_info);
 
-        if (stat == StatResult::Success) {
-            if (file_info.mtime == mtime && file_info.size == size)
-                continue;
+        switch (stat) {
+            case StatResult::Success: {
+                if (file_info.mtime == mtime && file_info.size == size)
+                    continue;
 
-            LogInfo("Copy '%1' to disk '%2'", origin, uuid);
+                // Go on!
+            } break;
 
-            if (!fake) {
-                const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", disk_dir, path).ptr;
-                valid &= CopyFile(origin, dest_filename);
-            }
+            case StatResult::MissingPath: { /* Go on! */ } break;
+
+            case StatResult::AccessDenied:
+            case StatResult::OtherError: {
+                LogError("Failed to stat '%1': %1", strerror(errno));
+                valid = false;
+            } break;
+        }
+
+        LogInfo("Copy '%1' to disk '%2'", origin, uuid);
+
+        if (!fake) {
+            const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", disk_dir, path).ptr;
+            valid &= CopyFile(origin, dest_filename);
         }
     }
     valid &= stmt.IsValid();
@@ -685,7 +709,7 @@ static bool BackupFiles(const char *disk_dir, const char *uuid, bool fake)
 }
 
 // Return true if all children are deleted (directory is not empty)
-static bool DeleteUnknownFiles(const char *disk_dir, const char *uuid, const char *dirname, bool fake)
+bool BackupContext::DeleteOld(const char *dirname)
 {
     BlockAllocator temp_alloc;
 
@@ -696,7 +720,7 @@ static bool DeleteUnknownFiles(const char *disk_dir, const char *uuid, const cha
         switch (file_info.type) {
             case FileType::Directory: {
                 const char *path = Fmt(&temp_alloc, "%1%2%/", dirname, basename).ptr;
-                bool empty = DeleteUnknownFiles(disk_dir, uuid, path, fake);
+                bool empty = DeleteOld(path);
 
                 if (empty && !fake) {
                     const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
@@ -748,6 +772,22 @@ static bool DeleteUnknownFiles(const char *disk_dir, const char *uuid, const cha
     });
 
     return complete;
+}
+
+bool BackupContext::CopyFile(const char *from, const char *to)
+{
+    if (!EnsureDirectoryExists(to))
+        return false;
+
+    StreamReader reader(from);
+    StreamWriter writer(to, (int)StreamWriterFlag::Atomic);
+
+    if (!SpliceStream(&reader, -1, &writer, buf))
+        return false;
+    if (!writer.Close())
+        return false;
+
+    return true;
 }
 
 static int RunBackup(Span<const char *> arguments)
@@ -840,10 +880,12 @@ Options:
         }
 
         async.Run([&]() {
+            BackupContext ctx(uuid, disk_dir, fake);
+
             if (cleanup) {
-                DeleteUnknownFiles(disk_dir, uuid, "", fake);
+                ctx.DeleteOld();
             }
-            if (!BackupFiles(disk_dir, uuid, fake))
+            if (!ctx.BackupNew())
                 return false;
 
             return true;
