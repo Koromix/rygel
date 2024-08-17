@@ -809,8 +809,13 @@ Options:
     Async async;
 
     for (const char *disk_dir: disks) {
-        const char *uuid_filename = Fmt(&temp_alloc, "%1%/.cartup", disk_dir).ptr;
+        const char *uuid_filename = Fmt(&temp_alloc, "%1.cartup", disk_dir).ptr;
         const char *uuid = ReadUUID(uuid_filename, &temp_alloc);
+
+        if (!uuid) {
+            LogError("Cannot find disk UUID from '%1", disk_dir);
+            return 1;
+        }
 
         // Check disk exists!
         {
@@ -820,7 +825,7 @@ Options:
 
             if (!stmt.Step()) {
                 if (stmt.IsValid()) {
-                    LogError("Disk %1' is not in database");
+                    LogError("Disk '%1' is not in database", uuid);
                 }
                 return 1;
             }
