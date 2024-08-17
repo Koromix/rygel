@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.23.1
+
+* Allow using the `node:` import prefix with `es*` targets ([#3821](https://github.com/evanw/esbuild/issues/3821))
+
+    The [`node:` prefix on imports](https://nodejs.org/api/esm.html#node-imports) is an alternate way to import built-in node modules. For example, `import fs from "fs"` can also be written `import fs from "node:fs"`. This only works with certain newer versions of node, so esbuild removes it when you target older versions of node such as with `--target=node14` so that your code still works. With the way esbuild's platform-specific feature compatibility table works, this was added by saying that only newer versions of node support this feature. However, that means that a target such as `--target=node18,es2022` removes the `node:` prefix because none of the `es*` targets are known to support this feature. This release adds the support for the `node:` flag to esbuild's internal compatibility table for `es*` to allow you to use compound targets like this:
+
+    ```js
+    // Original code
+    import fs from 'node:fs'
+    fs.open
+
+    // Old output (with --bundle --format=esm --platform=node --target=node18,es2022)
+    import fs from "fs";
+    fs.open;
+
+    // New output (with --bundle --format=esm --platform=node --target=node18,es2022)
+    import fs from "node:fs";
+    fs.open;
+    ```
+
+* Fix a panic when using the CLI with invalid build flags if `--analyze` is present ([#3834](https://github.com/evanw/esbuild/issues/3834))
+
+    Previously esbuild's CLI could crash if it was invoked with flags that aren't valid for a "build" API call and the `--analyze` flag is present. This was caused by esbuild's internals attempting to add a Go plugin (which is how `--analyze` is implemented) to a null build object. The panic has been fixed in this release.
+
+* Fix incorrect location of certain error messages ([#3845](https://github.com/evanw/esbuild/issues/3845))
+
+    This release fixes a regression that caused certain errors relating to variable declarations to be reported at an incorrect location. The regression was introduced in version 0.18.7 of esbuild.
+
+* Print comments before case clauses in switch statements ([#3838](https://github.com/evanw/esbuild/issues/3838))
+
+    With this release, esbuild will attempt to print comments that come before case clauses in switch statements. This is similar to what esbuild already does for comments inside of certain types of expressions. Note that these types of comments are not printed if minification is enabled (specifically whitespace minification).
+
+* Fix a memory leak with `pluginData` ([#3825](https://github.com/evanw/esbuild/issues/3825))
+
+    With this release, the build context's internal `pluginData` cache will now be cleared when starting a new build. This should fix a leak of memory from plugins that return `pluginData` objects from `onResolve` and/or `onLoad` callbacks.
+
 ## 0.23.0
 
 **_This release deliberately contains backwards-incompatible changes._** To avoid automatically picking up releases like this, you should either be pinning the exact version of `esbuild` in your `package.json` file (recommended) or be using a version range syntax that only accepts patch upgrades such as `^0.22.0` or `~0.22.0`. See npm's documentation about [semver](https://docs.npmjs.com/cli/v6/using-npm/semver/) for more information.
