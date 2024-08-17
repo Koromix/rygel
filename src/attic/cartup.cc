@@ -692,7 +692,7 @@ static bool DeleteUnknownFiles(const char *disk_dir, const char *uuid, const cha
 
                 if (empty && !fake) {
                     const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
-                    UnlinkDirectory(filename);
+                    complete &= UnlinkDirectory(filename);
                 }
 
                 complete &= empty;
@@ -718,7 +718,7 @@ static bool DeleteUnknownFiles(const char *disk_dir, const char *uuid, const cha
 
                     if (!fake) {
                         const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
-                        UnlinkFile(filename);
+                        complete &= UnlinkFile(filename);
                     }
                 }
 
