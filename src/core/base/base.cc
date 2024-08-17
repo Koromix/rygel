@@ -6941,7 +6941,7 @@ bool StreamWriter::Open(const char *filename, unsigned int flags,
 
             if (has_proc) {
                 const char *dirname = DuplicateString(directory, &str_alloc).ptr;
-                dest.u.file.fd = RG_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE, 0644), < 0);
+                dest.u.file.fd = RG_RESTART_EINTR(open(dirname, O_WRONLY | O_TMPFILE | O_CLOEXEC, 0644), < 0);
 
                 if (dest.u.file.fd >= 0) {
                     dest.u.file.owned = true;
