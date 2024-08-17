@@ -18,7 +18,7 @@
 
 namespace RG {
 
-static const int SchemaVersion = 1;
+static const int SchemaVersion = 2;
 
 struct DiskInfo {
     int64_t id;
@@ -82,9 +82,17 @@ static bool OpenDatabase()
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 1: {
+                    bool success = db.RunMany(R"(
+                        ALTER TABLE files ADD COLUMN changeset INTEGER;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(SchemaVersion == 1);
+                static_assert(SchemaVersion == 2);
             }
 
             if (!db.SetUserVersion(SchemaVersion))
