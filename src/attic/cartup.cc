@@ -14,7 +14,19 @@
 #include "src/core/base/base.hh"
 #include "src/core/sqlite/sqlite.hh"
 
-#include <sys/statvfs.h>
+#if defined(_WIN32)
+    #if !defined(NOMINMAX)
+        #define NOMINMAX
+    #endif
+    #if !defined(WIN32_LEAN_AND_MEAN)
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+#else
+    #include <fcntl.h>
+    #include <sys/stat.h>
+    #include <sys/statvfs.h>
+#endif
 
 namespace RG {
 
@@ -648,7 +660,7 @@ public:
 private:
     bool DeleteOld(const char *dirname);
 
-    bool CopyFile(const char *from, const char *to);
+    bool CopyFile(const char *from, const char *to, int64_t mtime);
 };
 
 BackupContext::BackupContext(const char *uuid, const char *disk_dir, bool fake)
@@ -700,7 +712,7 @@ bool BackupContext::BackupNew()
 
         if (!fake) {
             const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", disk_dir, path).ptr;
-            valid &= CopyFile(origin, dest_filename);
+            valid &= CopyFile(origin, dest_filename, mtime);
         }
     }
     valid &= stmt.IsValid();
@@ -732,6 +744,9 @@ bool BackupContext::DeleteOld(const char *dirname)
 
             case FileType::File: {
                 const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
+
+                if (TestStr(path, ".cartup"))
+                    break;
 
                 sq_Statement stmt;
                 if (!db.Prepare(R"(SELECT f.id
@@ -774,7 +789,48 @@ bool BackupContext::DeleteOld(const char *dirname)
     return complete;
 }
 
-bool BackupContext::CopyFile(const char *from, const char *to)
+#if defined(_WIN32)
+
+static FILETIME UnixTimeToFileTime(int64_t time)
+{
+    time = (time + 11644473600000ll) * 10000;
+
+    FILETIME ft;
+    ft.dwHighDateTime = (DWORD)(time >> 32);
+    ft.dwLowDateTime = (DWORD)time;
+
+    return ft;
+}
+
+static void SetFileMetaData(int fd, const char *filename, int64_t mtime)
+{
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+    FILETIME mft = UnixTimeToFileTime(mtime);
+
+    if (!SetFileTime(h, &bft, nullptr, &mft)) {
+        LogError("Failed to set modification time of '%1' (ignoring)", filename);
+    }
+}
+
+#else
+
+static void SetFileMetaData(int fd, const char *filename, int64_t mtime)
+{
+    struct timespec times[2] = {};
+
+    times[0].tv_nsec = UTIME_OMIT;
+    times[1].tv_sec = mtime / 1000;
+    times[1].tv_nsec = (mtime % 1000) * 1000;
+
+    if (futimens(fd, times) < 0) {
+        LogError("Failed to set mtime of '%1' (ignoring)", filename);
+    }
+}
+
+#endif
+
+bool BackupContext::CopyFile(const char *from, const char *to, int64_t mtime)
 {
     if (!EnsureDirectoryExists(to))
         return false;
@@ -784,6 +840,12 @@ bool BackupContext::CopyFile(const char *from, const char *to)
 
     if (!SpliceStream(&reader, -1, &writer, buf))
         return false;
+    if (!writer.Flush())
+        return false;
+
+    int fd = writer.GetDescriptor();
+    SetFileMetaData(fd, to, mtime);
+
     if (!writer.Close())
         return false;
 
