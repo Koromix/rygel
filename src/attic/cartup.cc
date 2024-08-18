@@ -50,7 +50,7 @@ static bool OpenDatabase()
 
     if (!db.Open(database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
         return false;
-    if (!db.SetWAL(false))
+    if (!db.SetWAL(true))
         return false;
 
     int version;
