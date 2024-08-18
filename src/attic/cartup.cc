@@ -14,19 +14,10 @@
 #include "src/core/base/base.hh"
 #include "src/core/sqlite/sqlite.hh"
 
-#if defined(_WIN32)
-    #if !defined(NOMINMAX)
-        #define NOMINMAX
-    #endif
-    #if !defined(WIN32_LEAN_AND_MEAN)
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <windows.h>
-#else
-    #include <fcntl.h>
-    #include <sys/stat.h>
-    #include <sys/statvfs.h>
-#endif
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/sendfile.h>
 
 namespace RG {
 
@@ -789,65 +780,50 @@ bool BackupContext::DeleteOld(const char *dirname)
     return complete;
 }
 
-#if defined(_WIN32)
-
-static FILETIME UnixTimeToFileTime(int64_t time)
-{
-    time = (time + 11644473600000ll) * 10000;
-
-    FILETIME ft;
-    ft.dwHighDateTime = (DWORD)(time >> 32);
-    ft.dwLowDateTime = (DWORD)time;
-
-    return ft;
-}
-
-static void SetFileMetaData(int fd, const char *filename, int64_t mtime)
-{
-    HANDLE h = (HANDLE)_get_osfhandle(fd);
-
-    FILETIME mft = UnixTimeToFileTime(mtime);
-
-    if (!SetFileTime(h, &bft, nullptr, &mft)) {
-        LogError("Failed to set modification time of '%1' (ignoring)", filename);
-    }
-}
-
-#else
-
-static void SetFileMetaData(int fd, const char *filename, int64_t mtime)
-{
-    struct timespec times[2] = {};
-
-    times[0].tv_nsec = UTIME_OMIT;
-    times[1].tv_sec = mtime / 1000;
-    times[1].tv_nsec = (mtime % 1000) * 1000;
-
-    if (futimens(fd, times) < 0) {
-        LogError("Failed to set mtime of '%1' (ignoring)", filename);
-    }
-}
-
-#endif
-
 bool BackupContext::CopyFile(const char *from, const char *to, int64_t mtime)
 {
     if (!EnsureDirectoryExists(to))
         return false;
 
-    StreamReader reader(from);
-    StreamWriter writer(to, (int)StreamWriterFlag::Atomic);
-
-    if (!SpliceStream(&reader, -1, &writer, buf))
+    int src_fd = OpenFile(from, (int)OpenFlag::Read);
+    if (src_fd < 0)
         return false;
-    if (!writer.Flush())
-        return false;
+    RG_DEFER { close(src_fd); };
 
-    int fd = writer.GetDescriptor();
-    SetFileMetaData(fd, to, mtime);
-
-    if (!writer.Close())
+    int dest_fd = OpenFile(to, (int)OpenFlag::Write);
+    if (dest_fd < 0)
         return false;
+    RG_DEFER { close(dest_fd); };
+
+    struct stat sb;
+    if (fstat(src_fd, &sb) < 0) {
+        LogError("Failed to stat '%1': %2", from, strerror(errno));
+        return false;
+    }
+
+    off_t offset = 0;
+    while (offset < sb.st_size) {
+        size_t count = std::min(sb.st_size - offset, (off_t)Mebibytes(128));
+        ssize_t ret = sendfile(dest_fd, src_fd, &offset, count);
+
+        if (ret < 0) {
+            LogError("Failed to copy '%1' to '%2': %3", from, to, strerror(errno));
+            return false;
+        }
+    }
+
+    // Set file modification time
+    {
+        struct timespec times[2] = {};
+
+        times[0].tv_nsec = UTIME_OMIT;
+        times[1].tv_sec = mtime / 1000;
+        times[1].tv_nsec = (mtime % 1000) * 1000;
+
+        if (futimens(dest_fd, times) < 0) {
+            LogError("Failed to set mtime of '%1' (ignoring)", to);
+        }
+    }
 
     return true;
 }
