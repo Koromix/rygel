@@ -3302,6 +3302,12 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
     }
     RG_ASSERT(oflags >= 0);
 
+    if (flags & (int)OpenFlag::Keep) {
+        if (creation == CREATE_ALWAYS) {
+            creation = OPEN_ALWAYS;
+        }
+        oflags &= ~_O_TRUNC;
+    }
     if (flags & (int)OpenFlag::Directory) {
         RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
         RG_ASSERT(!(flags & (int)OpenFlag::Append));
@@ -3602,6 +3608,9 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
     }
     RG_ASSERT(oflags >= 0);
 
+    if (flags & (int)OpenFlag::Keep) {
+        oflags &= ~O_TRUNC;
+    }
     if (flags & (int)OpenFlag::Directory) {
         RG_ASSERT(!(flags & (int)OpenFlag::Exclusive));
         RG_ASSERT(!(flags & (int)OpenFlag::Append));

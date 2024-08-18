@@ -4212,9 +4212,10 @@ enum class OpenFlag {
     Write = 1 << 1,
     Append = 1 << 2,
 
-    Directory = 1 << 3,
-    Exists = 1 << 4,
-    Exclusive = 1 << 5
+    Keep = 1 << 3,
+    Directory = 1 << 4,
+    Exists = 1 << 5,
+    Exclusive = 1 << 6
 };
 
 enum class OpenResult {

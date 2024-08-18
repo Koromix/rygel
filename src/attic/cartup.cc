@@ -13,6 +13,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/sqlite/sqlite.hh"
+#include "vendor/blake3/c/blake3.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -636,14 +637,17 @@ Options:
 class BackupContext {
     const char *uuid;
     const char *disk_dir;
+
+    bool checksum;
     bool fake;
 
+    // Pre-allocated for performance
     Span<uint8_t> buf;
 
     BlockAllocator temp_alloc;
 
 public:
-    BackupContext(const char *uuid, const char *disk_dir, bool fake);
+    BackupContext(const char *uuid, const char *disk_dir, bool checksum, bool fake);
 
     bool BackupNew();
     bool DeleteOld() { return DeleteOld(""); }
@@ -651,11 +655,14 @@ public:
 private:
     bool DeleteOld(const char *dirname);
 
-    bool CopyFile(const char *from, const char *to, int64_t mtime);
+    bool HashFile(int fd, const char *filename, uint8_t out_hash[32]);
+    bool CopyFile(int src_fd, const char *src_filename,
+                  int dest_fd, const char *dest_filename,
+                  int64_t mtime, int64_t size);
 };
 
-BackupContext::BackupContext(const char *uuid, const char *disk_dir, bool fake)
-    : uuid(uuid), disk_dir(disk_dir), fake(fake)
+BackupContext::BackupContext(const char *uuid, const char *disk_dir, bool checksum, bool fake)
+    : uuid(uuid), disk_dir(disk_dir), checksum(checksum), fake(fake)
 {
     buf = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
 }
@@ -672,38 +679,79 @@ bool BackupContext::BackupNew()
     bool valid = true;
 
     while (stmt.Step()) {
-        const char *origin = (const char *)sqlite3_column_text(stmt, 0);
+        const char *src_filename = (const char *)sqlite3_column_text(stmt, 0);
         const char *path = (const char *)sqlite3_column_text(stmt, 1);
         int64_t mtime = sqlite3_column_int64(stmt, 2);
         int64_t size = sqlite3_column_int64(stmt, 3);
 
-        const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", disk_dir, path).ptr;
+        const char *dest_filename = Fmt(&temp_alloc, "%1%2", disk_dir, path).ptr;
+
+        int src_fd = OpenFile(src_filename, (int)OpenFlag::Read);
+        if (src_fd < 0) {
+            valid = false;
+            continue;
+        }
+        RG_DEFER { close(src_fd); };
+
+        if (!EnsureDirectoryExists(dest_filename)) {
+            valid = false;
+            continue;
+        }
+
+        int dest_fd = OpenFile(dest_filename, (int)OpenFlag::Write | (int)OpenFlag::Keep);
+        if (dest_fd < 0) {
+            valid = false;
+            continue;
+        }
+        RG_DEFER { close(dest_fd); };
 
         FileInfo file_info;
-        StatResult stat = StatFile(dest_filename, (int)StatFlag::SilentMissing, &file_info);
+        StatResult stat = StatFile(dest_fd, dest_filename, 0, &file_info);
 
         switch (stat) {
             case StatResult::Success: {
-                if (file_info.mtime == mtime && file_info.size == size)
-                    continue;
+                if (file_info.size == size) {
+                    if (checksum) {
+                        uint8_t src_hash[32];
+                        uint8_t dest_hash[32];
+
+                        if (!HashFile(src_fd, src_filename, src_hash)) {
+                            valid = false;
+                            continue;
+                        }
+                        if (!HashFile(dest_fd, dest_filename, dest_hash)) {
+                            valid = false;
+                            continue;
+                        }
+
+                        if (!memcmp(src_hash, dest_hash, 32))
+                            continue;
+                    } else {
+                        if (file_info.mtime == mtime)
+                            continue;
+                    }
+                }
 
                 // Go on!
             } break;
 
-            case StatResult::MissingPath: { /* Go on! */ } break;
+            case StatResult::MissingPath: { /* Go on */ } break;
 
             case StatResult::AccessDenied:
             case StatResult::OtherError: {
                 LogError("Failed to stat '%1': %1", strerror(errno));
                 valid = false;
+
+                continue;
             } break;
         }
 
-        LogInfo("Copy '%1' to disk '%2'", origin, uuid);
+        const char *basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS).ptr;
+        LogInfo("Copy '%1' to disk '%2'", basename, uuid);
 
         if (!fake) {
-            const char *dest_filename = Fmt(&temp_alloc, "%1%/%2", disk_dir, path).ptr;
-            valid &= CopyFile(origin, dest_filename, mtime);
+            const char *dest_filename = Fmt(&temp_alloc, "%1%2", disk_dir, path).ptr;
+            valid &= CopyFile(src_fd, src_filename, dest_fd, dest_filename, mtime, size);
         }
     }
     valid &= stmt.IsValid();
@@ -780,36 +828,53 @@ bool BackupContext::DeleteOld(const char *dirname)
     return complete;
 }
 
-bool BackupContext::CopyFile(const char *from, const char *to, int64_t mtime)
+bool BackupContext::HashFile(int fd, const char *filename, uint8_t out_hash[32])
 {
-    if (!EnsureDirectoryExists(to))
-        return false;
+    blake3_hasher hasher;
+    blake3_hasher_init(&hasher);
 
-    int src_fd = OpenFile(from, (int)OpenFlag::Read);
-    if (src_fd < 0)
-        return false;
-    RG_DEFER { close(src_fd); };
+    for (;;) {
+        ssize_t bytes = read(fd, buf.ptr, (size_t)buf.len);
 
-    int dest_fd = OpenFile(to, (int)OpenFlag::Write);
-    if (dest_fd < 0)
-        return false;
-    RG_DEFER { close(dest_fd); };
+        if (bytes < 0) {
+            if (errno == EINTR)
+                continue;
 
-    struct stat sb;
-    if (fstat(src_fd, &sb) < 0) {
-        LogError("Failed to stat '%1': %2", from, strerror(errno));
-        return false;
+            LogError("Failed to read '%1'", filename);
+            return false;
+        }
+        if (!bytes)
+            break;
+
+        blake3_hasher_update(&hasher, buf.ptr, (size_t)bytes);
     }
 
+    blake3_hasher_finalize(&hasher, out_hash, 32);
+
+    return true;
+}
+
+bool BackupContext::CopyFile(int src_fd, const char *src_filename,
+                             int dest_fd, const char *dest_filename,
+                             int64_t mtime, int64_t size)
+{
     off_t offset = 0;
-    while (offset < sb.st_size) {
-        size_t count = std::min(sb.st_size - offset, (off_t)Mebibytes(128));
+
+    while (offset < size) {
+        size_t count = std::min(size - offset, (off_t)Mebibytes(128));
         ssize_t ret = sendfile(dest_fd, src_fd, &offset, count);
 
         if (ret < 0) {
-            LogError("Failed to copy '%1' to '%2': %3", from, to, strerror(errno));
+            LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
             return false;
         }
+    }
+
+    if (fsync(dest_fd) < 0) {
+        LogWarning("Failed to flush '%1': %2 (ignoring)", dest_filename, strerror(errno));
+    }
+    if (ftruncate(dest_fd, size) < 0) {
+        LogWarning("Failed to size file '%1': %2 (ignoring)", dest_filename, strerror(errno));
     }
 
     // Set file modification time
@@ -821,7 +886,8 @@ bool BackupContext::CopyFile(const char *from, const char *to, int64_t mtime)
         times[1].tv_nsec = (mtime % 1000) * 1000;
 
         if (futimens(dest_fd, times) < 0) {
-            LogError("Failed to set mtime of '%1' (ignoring)", to);
+            LogError("Failed to set mtime of '%1': %2", dest_filename, strerror(errno));
+            return false;
         }
     }
 
@@ -834,6 +900,7 @@ static int RunBackup(Span<const char *> arguments)
 
     // Options
     HeapArray<const char *> disks;
+    bool checksum = false;
     bool fake = false;
     bool cleanup = false;
 
@@ -844,6 +911,7 @@ R"(Usage: %!..+%1 backup [options] <disk> [...]
 Options:
     %!..+-D, --database_file <file>%!0   Set database file%!0
 
+    %!..+-c, --checksum%!0               Use checksum (BLAKE3) to compare files
         %!..+--delete%!0                 Delete unused files
 
     %!..+-n, --dry_run%!0                Fake backup actions)",
@@ -860,6 +928,8 @@ Options:
                 return 0;
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 // Already handled
+            } else if (opt.Test("-c", "--checksum")) {
+                checksum = true;
             } else if (opt.Test("--delete")) {
                 cleanup = true;
             } else if (opt.Test("-n", "--dry_run")) {
@@ -918,13 +988,13 @@ Options:
         }
 
         async.Run([&]() {
-            BackupContext ctx(uuid, disk_dir, fake);
+            BackupContext ctx(uuid, disk_dir, checksum, fake);
 
+            if (!ctx.BackupNew())
+                return false;
             if (cleanup) {
                 ctx.DeleteOld();
             }
-            if (!ctx.BackupNew())
-                return false;
 
             return true;
         });
@@ -1000,8 +1070,7 @@ Disk commands:
     %!..+stats%!0                        Get disk usage statistics
 
 Options:
-    %!..+-D, --database_file <file>%!0   Set database file%!0
-)",
+    %!..+-D, --database_file <file>%!0   Set database file%!0)",
                 FelixTarget);
     };
 
