@@ -4510,6 +4510,13 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
 Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
 {
+    ExecuteInfo info = {};
+
+    info.env_variables = {
+        { "LANG", "C" },
+        { "LC_ALL", "C" }
+    };
+
     Size total_len = 0;
     const auto write = [&](Span<uint8_t> buf) {
         Size copy = std::min(out_output.len - total_len, buf.len);
@@ -4519,7 +4526,7 @@ Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
     };
 
     int exit_code;
-    if (!ExecuteCommandLine(cmd_line, {}, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code))
+    if (!ExecuteCommandLine(cmd_line, info, MakeSpan((const uint8_t *)nullptr, 0), write, &exit_code))
         return -1;
     if (exit_code) {
         LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);
@@ -4531,8 +4538,15 @@ Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
 
 bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
 {
+    ExecuteInfo info = {};
+
+    info.env_variables = {
+        { "LANG", "C" },
+        { "LC_ALL", "C" }
+    };
+
     int exit_code;
-    if (!ExecuteCommandLine(cmd_line, {}, {}, Mebibytes(1), out_output, &exit_code))
+    if (!ExecuteCommandLine(cmd_line, info, {}, Mebibytes(1), out_output, &exit_code))
         return false;
     if (exit_code) {
         LogDebug("Command '%1 failed (exit code: %2)", cmd_line, exit_code);

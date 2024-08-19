@@ -111,7 +111,7 @@ static HostArchitecture ParseTarget(Span<const char> output)
         Span<const char> line = SplitStrLine(output, &output);
 
         Span<const char> value;
-        Span<const char> key = SplitStr(line, ':', &value);
+        Span<const char> key = TrimStr(SplitStr(line, ':', &value));
         value = TrimStr(value);
 
         if (!value.len)
