@@ -685,6 +685,12 @@ static bool AdjustMetadata(int fd, const char *filename, int64_t mtime)
     return true;
 }
 
+static bool IsTimeEquivalent(int64_t time1, int64_t time2)
+{
+    bool close = (time1 / 10) == (time2 / 10);
+    return close;
+}
+
 bool BackupContext::BackupNew()
 {
     sq_Statement stmt;
@@ -714,7 +720,7 @@ bool BackupContext::BackupNew()
         // Check file information consistency
         {
             FileInfo src_info;
-            StatResult stat = StatFile(src_fd, dest_filename, 0, &src_info);
+            StatResult stat = StatFile(src_fd, src_filename, 0, &src_info);
 
             if (stat != StatResult::Success) {
                 valid = false;
@@ -768,7 +774,7 @@ bool BackupContext::BackupNew()
                             continue;
                         }
                     } else {
-                        if (dest_info.mtime == mtime) {
+                        if (IsTimeEquivalent(dest_info.mtime, mtime)) {
                             LogInfo("Skip '%1' (metadata match)", path);
                             continue;
                         }
