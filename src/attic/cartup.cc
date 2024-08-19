@@ -693,6 +693,24 @@ bool BackupContext::BackupNew()
         }
         RG_DEFER { close(src_fd); };
 
+        // Check file information consistency
+        {
+            FileInfo src_info;
+            StatResult stat = StatFile(src_fd, dest_filename, 0, &src_info);
+
+            if (stat != StatResult::Success) {
+                valid = false;
+                continue;
+            }
+
+            if (src_info.size != size || src_info.mtime != mtime) {
+                LogError("Mismatchd size of mtime for '%1' (skipping)", src_filename);
+
+                valid = false;
+                continue;
+            }
+        }
+
         if (!EnsureDirectoryExists(dest_filename)) {
             valid = false;
             continue;
@@ -705,12 +723,12 @@ bool BackupContext::BackupNew()
         }
         RG_DEFER { close(dest_fd); };
 
-        FileInfo file_info;
-        StatResult stat = StatFile(dest_fd, dest_filename, 0, &file_info);
+        FileInfo dest_info;
+        StatResult stat = StatFile(dest_fd, dest_filename, 0, &dest_info);
 
         switch (stat) {
             case StatResult::Success: {
-                if (file_info.size == size) {
+                if (dest_info.size == size) {
                     if (checksum) {
                         uint8_t src_hash[32];
                         uint8_t dest_hash[32];
@@ -727,7 +745,7 @@ bool BackupContext::BackupNew()
                         if (!memcmp(src_hash, dest_hash, 32))
                             continue;
                     } else {
-                        if (file_info.mtime == mtime)
+                        if (dest_info.mtime == mtime)
                             continue;
                     }
                 }
@@ -740,8 +758,8 @@ bool BackupContext::BackupNew()
             case StatResult::AccessDenied:
             case StatResult::OtherError: {
                 LogError("Failed to stat '%1': %1", strerror(errno));
-                valid = false;
 
+                valid = false;
                 continue;
             } break;
         }
