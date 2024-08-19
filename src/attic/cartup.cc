@@ -654,9 +654,8 @@ public:
 private:
     bool DeleteOld(const char *dirname);
 
-    bool HashFile(int fd, const char *filename, uint8_t out_hash[32]);
-    bool CopyFile(int src_fd, const char *src_filename,
-                  int dest_fd, const char *dest_filename,
+    bool HashFile(int fd, const char *filename, Span<uint8_t> buf, uint8_t out_hash[32]);
+    bool CopyFile(int src_fd, const char *src_filename,int dest_fd, const char *dest_filename,
                   int64_t mtime, int64_t size);
 };
 
@@ -695,6 +694,13 @@ bool BackupContext::BackupNew()
         return false;
 
     bool valid = true;
+
+    Span<uint8_t> buf1 = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
+    Span<uint8_t> buf2 = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
+    RG_DEFER {
+        ReleaseSpan(&temp_alloc, buf1);
+        ReleaseSpan(&temp_alloc, buf2);
+    };
 
     while (stmt.Step()) {
         const char *src_filename = (const char *)sqlite3_column_text(stmt, 0);
@@ -751,11 +757,12 @@ bool BackupContext::BackupNew()
                         uint8_t src_hash[32];
                         uint8_t dest_hash[32];
 
-                        if (!HashFile(src_fd, src_filename, src_hash)) {
-                            valid = false;
-                            continue;
-                        }
-                        if (!HashFile(dest_fd, dest_filename, dest_hash)) {
+                        Async async;
+
+                        async.Run([&]() { return HashFile(src_fd, src_filename, buf1, src_hash); });
+                        async.Run([&]() { return HashFile(dest_fd, dest_filename, buf2, dest_hash); });
+
+                        if (!async.Sync()) {
                             valid = false;
                             continue;
                         }
@@ -866,13 +873,10 @@ bool BackupContext::DeleteOld(const char *dirname)
     return complete;
 }
 
-bool BackupContext::HashFile(int fd, const char *filename, uint8_t out_hash[32])
+bool BackupContext::HashFile(int fd, const char *filename, Span<uint8_t> buf, uint8_t out_hash[32])
 {
     blake3_hasher hasher;
     blake3_hasher_init(&hasher);
-
-    Span<uint8_t> buf = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
-    RG_DEFER { ReleaseSpan(&temp_alloc, buf); };
 
     for (;;) {
         ssize_t bytes = read(fd, buf.ptr, buf.len);
@@ -895,8 +899,7 @@ bool BackupContext::HashFile(int fd, const char *filename, uint8_t out_hash[32])
     return true;
 }
 
-bool BackupContext::CopyFile(int src_fd, const char *src_filename,
-                             int dest_fd, const char *dest_filename,
+bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename,
                              int64_t mtime, int64_t size)
 {
     bool next = true;
