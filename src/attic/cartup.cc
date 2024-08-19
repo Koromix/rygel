@@ -401,8 +401,7 @@ Options:
 
             if (!ctx.AddNew())
                 return false;
-            if (!ctx.DeleteOld())
-                return false;
+            ctx.DeleteOld();
         }
 
         if (size < 0) {
@@ -447,20 +446,22 @@ enum class DistributeResult {
 class DistributeContext {
     DiskSet *set;
     const char *src_dir;
+    int64_t changeset;
 
     BlockAllocator temp_alloc;
 
 public:
-    DistributeContext(DiskSet *set, const char *src_dir)
-        : set(set), src_dir(src_dir) {}
+    DistributeContext(DiskSet *set)
+        : set(set), changeset(GetRandomInt64(0, INT64_MAX)) {}
 
-    DistributeResult Distribute() { return Distribute(""); }
+    DistributeResult DistributeNew(const char *src_dir) { return DistributeNew(src_dir, ""); }
+    bool DeleteOld();
 
 private:
-    DistributeResult Distribute(const char *dirname);
+    DistributeResult DistributeNew(const char *src_dir, const char *dirname);
 };
 
-DistributeResult DistributeContext::Distribute(const char *dirname)
+DistributeResult DistributeContext::DistributeNew(const char *src_dir, const char *dirname)
 {
     const char *enum_dir = Fmt(&temp_alloc, "%1%2", src_dir, dirname).ptr;
     bool complete = true;
@@ -470,7 +471,7 @@ DistributeResult DistributeContext::Distribute(const char *dirname)
             case FileType::Directory: {
                 const char *path = Fmt(&temp_alloc, "%1%2%/", dirname, basename).ptr;
 
-                switch (Distribute(path)) {
+                switch (DistributeNew(src_dir, path)) {
                     case DistributeResult::Complete: {} break;
                     case DistributeResult::Partial: { complete = false; } break;
                     case DistributeResult::Error: return false;
@@ -482,23 +483,14 @@ DistributeResult DistributeContext::Distribute(const char *dirname)
                 const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
 
                 sq_Statement stmt;
-                if (!db.Prepare("SELECT id, disk_id, origin, mtime, size FROM files WHERE path = ?1", &stmt, path))
+                if (!db.Prepare("SELECT disk_id, size FROM files WHERE path = ?1", &stmt, path))
                     return false;
 
                 DiskInfo *disk = nullptr;
 
                 if (stmt.Step()) {
-                    int64_t id = sqlite3_column_int64(stmt, 0);
-                    int64_t disk_id = sqlite3_column_int64(stmt, 1);
-                    const char *origin = (const char *)sqlite3_column_text(stmt, 2);
-                    int64_t mtime = sqlite3_column_int64(stmt, 3);
-                    int64_t size = sqlite3_column_int64(stmt, 4);
-
-                    if (mtime == file_info.mtime && size == file_info.size) {
-                        if (!origin && !db.Run("UPDATE files SET origin = ?2 WHERE id = ?1", id, filename))
-                            return false;
-                        break;
-                    }
+                    int64_t disk_id = sqlite3_column_int64(stmt, 0);
+                    int64_t size = sqlite3_column_int64(stmt, 1);
 
                     disk = FindDisk(set, disk_id);
 
@@ -528,12 +520,14 @@ DistributeResult DistributeContext::Distribute(const char *dirname)
 
                 disk->used += file_info.size;
 
-                if (!db.Run(R"(INSERT INTO files (disk_id, path, origin, mtime, size) VALUES (?1, ?2, ?3, ?4, ?5)
+                if (!db.Run(R"(INSERT INTO files (disk_id, path, origin, mtime, size, changeset)
+                               VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                                ON CONFLICT (path) DO UPDATE SET disk_id = excluded.disk_id,
                                                                 origin = excluded.origin,
                                                                 mtime = excluded.mtime,
-                                                                size = excluded.size)",
-                            disk->id, path, filename, file_info.mtime, file_info.size))
+                                                                size = excluded.size,
+                                                                changeset = excluded.changeset)",
+                            disk->id, path, filename, file_info.mtime, file_info.size, changeset))
                     return false;
 
                 LogInfo("Attribute '%1' to disk '%2'", filename, disk->uuid);
@@ -554,6 +548,12 @@ DistributeResult DistributeContext::Distribute(const char *dirname)
         return DistributeResult::Error;
 
     return complete ? DistributeResult::Complete : DistributeResult::Partial;
+}
+
+bool DistributeContext::DeleteOld()
+{
+    bool success = db.Run("UPDATE files SET origin = NULL WHERE changeset IS NOT ?1", changeset);
+    return success;
 }
 
 static int RunDistribute(Span<const char *> arguments)
@@ -616,15 +616,17 @@ Options:
 
     bool complete = true;
     bool success = db.Transaction([&]() {
-        for (const char *src_dir: sources) {
-            DistributeContext ctx(&set, src_dir);
+        DistributeContext ctx(&set);
 
-            switch (ctx.Distribute()) {
+        for (const char *src_dir: sources) {
+            switch (ctx.DistributeNew(src_dir)) {
                 case DistributeResult::Complete: {} break;
                 case DistributeResult::Partial: { complete = false; } break;
                 case DistributeResult::Error: return false;
             }
         }
+
+        ctx.DeleteOld();
 
         return true;
     });
@@ -704,7 +706,7 @@ bool BackupContext::BackupNew()
             }
 
             if (src_info.size != size || src_info.mtime != mtime) {
-                LogError("Mismatchd size of mtime for '%1' (skipping)", src_filename);
+                LogError("Mismatched size or mtime for '%1' (skipping)", src_filename);
 
                 valid = false;
                 continue;
@@ -809,7 +811,7 @@ bool BackupContext::DeleteOld(const char *dirname)
                 if (!db.Prepare(R"(SELECT f.id
                                    FROM files f
                                    INNER JOIN disks d ON (d.id = f.disk_id)
-                                   WHERE d.uuid =?1 AND path = ?2)", &stmt, uuid, path))
+                                   WHERE d.uuid = ?1 AND path = ?2 AND origin IS NOT NULL)", &stmt, uuid, path))
                     return false;
 
                 bool exists = stmt.Step();
