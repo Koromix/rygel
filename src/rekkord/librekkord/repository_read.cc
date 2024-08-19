@@ -246,7 +246,7 @@ static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t
 
     times[0].tv_nsec = UTIME_OMIT;
     times[1].tv_sec = mtime / 1000;
-    times[1].tv_nsec = (mtime % 1000) * 1000;
+    times[1].tv_nsec = (mtime % 1000) * 1000000;
 
     if (futimens(fd, times) < 0) {
         LogError("Failed to set mtime of '%1' (ignoring)", filename);
