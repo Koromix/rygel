@@ -445,7 +445,6 @@ enum class DistributeResult {
 
 class DistributeContext {
     DiskSet *set;
-    const char *src_dir;
     int64_t changeset;
 
     BlockAllocator temp_alloc;
