@@ -975,7 +975,7 @@ Options:
         const char *disk_dir = opt.ConsumeNonOption();
 
         if (!disk_dir) {
-            LogError("Missing source directories");
+            LogError("Missing disk directories");
             return 1;
         }
 
