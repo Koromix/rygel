@@ -742,7 +742,7 @@ bool BackupContext::BackupNew()
         RG_DEFER { close(dest_fd); };
 
         FileInfo dest_info;
-        StatResult stat = StatFile(dest_fd, dest_filename, 0, &dest_info);
+        StatResult stat = StatFile(dest_fd, dest_filename, (int)StatFlag::SilentMissing, &dest_info);
 
         switch (stat) {
             case StatResult::Success: {
