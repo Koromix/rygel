@@ -718,7 +718,7 @@ bool BackupContext::BackupNew()
             continue;
         }
 
-        int dest_fd = OpenFile(dest_filename, (int)OpenFlag::Write | (int)OpenFlag::Keep);
+        int dest_fd = OpenFile(dest_filename, (int)OpenFlag::Read | (int)OpenFlag::Write | (int)OpenFlag::Keep);
         if (dest_fd < 0) {
             valid = false;
             continue;
