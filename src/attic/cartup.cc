@@ -643,9 +643,6 @@ class BackupContext {
     bool checksum;
     bool fake;
 
-    // Pre-allocated for performance
-    Span<uint8_t> buf;
-
     BlockAllocator temp_alloc;
 
 public:
@@ -664,10 +661,7 @@ private:
 };
 
 BackupContext::BackupContext(const char *uuid, const char *disk_dir, bool checksum, bool fake)
-    : uuid(uuid), disk_dir(disk_dir), checksum(checksum), fake(fake)
-{
-    buf = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
-}
+    : uuid(uuid), disk_dir(disk_dir), checksum(checksum), fake(fake) {}
 
 static bool AdjustMetadata(int fd, const char *filename, int64_t mtime)
 {
@@ -877,8 +871,11 @@ bool BackupContext::HashFile(int fd, const char *filename, uint8_t out_hash[32])
     blake3_hasher hasher;
     blake3_hasher_init(&hasher);
 
+    Span<uint8_t> buf = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
+    RG_DEFER { ReleaseSpan(&temp_alloc, buf); };
+
     for (;;) {
-        ssize_t bytes = read(fd, buf.ptr, (size_t)buf.len);
+        ssize_t bytes = read(fd, buf.ptr, buf.len);
 
         if (bytes < 0) {
             if (errno == EINTR)
@@ -902,23 +899,87 @@ bool BackupContext::CopyFile(int src_fd, const char *src_filename,
                              int dest_fd, const char *dest_filename,
                              int64_t mtime, int64_t size)
 {
-    off_t offset = 0;
+    bool next = true;
 
-    while (offset < size) {
-        size_t count = std::min(size - offset, (off_t)Mebibytes(128));
-        ssize_t ret = sendfile(dest_fd, src_fd, &offset, count);
+    while (next) {
+        next = false;
 
-        if (ret < 0) {
-            LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
-            return false;
+        off_t src_offset = 0;
+        off_t dest_offset = 0;
+
+        while (src_offset < size) {
+            size_t len = std::min(size - src_offset, (off_t)Mebibytes(256));
+            ssize_t ret = copy_file_range(src_fd, &src_offset, dest_fd, &dest_offset, len, 0);
+
+            if (ret < 0) {
+                if (errno == EXDEV) {
+                    next = true;
+                    break;
+                }
+
+                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+                return false;
+            }
         }
     }
 
+    while (next) {
+        next = false;
+
+        off_t src_offset = 0;
+
+        if (lseek(dest_fd, 0, SEEK_SET) < 0) {
+            LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
+            return false;
+        }
+
+        while (src_offset < size) {
+            size_t count = std::min(size - src_offset, (off_t)Mebibytes(128));
+            ssize_t ret = sendfile(dest_fd, src_fd, &src_offset, count);
+
+            if (ret < 0) {
+                if (errno == EINVAL) {
+                    next = true;
+                    break;
+                }
+
+                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+                return false;
+            }
+        }
+    }
+
+    while (next) {
+        next = false;
+
+        if (lseek(src_fd, 0, SEEK_SET) < 0) {
+            LogError("Failed to seek to start of '%1': %2", src_filename, strerror(errno));
+            return false;
+        }
+        if (lseek(dest_fd, 0, SEEK_SET) < 0) {
+            LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
+            return false;
+        }
+
+        StreamReader reader(src_fd, src_filename);
+        StreamWriter writer(dest_fd, dest_filename);
+
+        if (!SpliceStream(&reader, -1, &writer))
+            break;
+        if (!writer.Close())
+            break;
+    }
+
+    // Last method was fallback
+    RG_ASSERT(!next);
+
     if (fsync(dest_fd) < 0) {
-        LogWarning("Failed to flush '%1': %2 (ignoring)", dest_filename, strerror(errno));
+        LogWarning("Failed to flush '%1': %2", dest_filename, strerror(errno));
+        return false;
     }
     if (ftruncate(dest_fd, size) < 0) {
-        LogWarning("Failed to size file '%1': %2 (ignoring)", dest_filename, strerror(errno));
+        LogWarning("Failed to size file '%1': %2", dest_filename, strerror(errno));
+        return false;
     }
 
     AdjustMetadata(dest_fd, dest_filename, mtime);
