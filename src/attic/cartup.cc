@@ -669,6 +669,22 @@ BackupContext::BackupContext(const char *uuid, const char *disk_dir, bool checks
     buf = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
 }
 
+static bool AdjustMetadata(int fd, const char *filename, int64_t mtime)
+{
+    struct timespec times[2] = {};
+
+    times[0].tv_nsec = UTIME_OMIT;
+    times[1].tv_sec = mtime / 1000;
+    times[1].tv_nsec = (mtime % 1000) * 1000;
+
+    if (futimens(fd, times) < 0) {
+        LogError("Failed to set mtime of '%1': %2", filename, strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
 bool BackupContext::BackupNew()
 {
     sq_Statement stmt;
@@ -744,11 +760,18 @@ bool BackupContext::BackupNew()
                             continue;
                         }
 
-                        if (!memcmp(src_hash, dest_hash, 32))
+                        if (!memcmp(src_hash, dest_hash, 32)) {
+                            LogInfo("Skip '%1' (checksum match)", path);
+                            if (!fake) {
+                                AdjustMetadata(dest_fd, dest_filename, mtime);
+                            }
                             continue;
+                        }
                     } else {
-                        if (dest_info.mtime == mtime)
+                        if (dest_info.mtime == mtime) {
+                            LogInfo("Skip '%1' (metadata match)", path);
                             continue;
+                        }
                     }
                 }
 
@@ -766,13 +789,8 @@ bool BackupContext::BackupNew()
             } break;
         }
 
-        const char *basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS).ptr;
-        LogInfo("Copy '%1' to disk '%2'", basename, uuid);
-
-        if (!fake) {
-            const char *dest_filename = Fmt(&temp_alloc, "%1%2", disk_dir, path).ptr;
-            valid &= CopyFile(src_fd, src_filename, dest_fd, dest_filename, mtime, size);
-        }
+        LogInfo("Copy '%1' to disk '%2'", path, uuid);
+        valid &= fake || CopyFile(src_fd, src_filename, dest_fd, dest_filename, mtime, size);
     }
     valid &= stmt.IsValid();
 
@@ -897,19 +915,7 @@ bool BackupContext::CopyFile(int src_fd, const char *src_filename,
         LogWarning("Failed to size file '%1': %2 (ignoring)", dest_filename, strerror(errno));
     }
 
-    // Set file modification time
-    {
-        struct timespec times[2] = {};
-
-        times[0].tv_nsec = UTIME_OMIT;
-        times[1].tv_sec = mtime / 1000;
-        times[1].tv_nsec = (mtime % 1000) * 1000;
-
-        if (futimens(dest_fd, times) < 0) {
-            LogError("Failed to set mtime of '%1': %2", dest_filename, strerror(errno));
-            return false;
-        }
-    }
+    AdjustMetadata(dest_fd, dest_filename, mtime);
 
     return true;
 }
