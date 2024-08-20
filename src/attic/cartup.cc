@@ -903,7 +903,7 @@ bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, 
 {
     bool next = true;
 
-    while (next) {
+    if (next) {
         next = false;
 
         off_t src_offset = 0;
@@ -925,7 +925,7 @@ bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, 
         }
     }
 
-    while (next) {
+    if (next) {
         next = false;
 
         off_t src_offset = 0;
@@ -951,7 +951,7 @@ bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, 
         }
     }
 
-    while (next) {
+    if (next) {
         next = false;
 
         if (lseek(src_fd, 0, SEEK_SET) < 0) {
@@ -967,9 +967,9 @@ bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, 
         StreamWriter writer(dest_fd, dest_filename);
 
         if (!SpliceStream(&reader, -1, &writer))
-            break;
+            return false;
         if (!writer.Close())
-            break;
+            return false;
     }
 
     // Last method was fallback
