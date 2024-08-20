@@ -95,29 +95,6 @@ GetContext::GetContext(rk_Disk *disk, bool chown)
 
 #if defined(_WIN32)
 
-static bool ReserveFile(int fd, const char *filename, int64_t len)
-{
-    HANDLE h = (HANDLE)_get_osfhandle(fd);
-
-    LARGE_INTEGER prev_pos = {};
-    if (!SetFilePointerEx(h, prev_pos, &prev_pos, FILE_CURRENT)) {
-        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
-        return false;
-    }
-    RG_DEFER { SetFilePointerEx(h, prev_pos, nullptr, FILE_BEGIN); };
-
-    if (!SetFilePointerEx(h, { .QuadPart = len }, nullptr, FILE_BEGIN)) {
-        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
-        return false;
-    }
-    if (!SetEndOfFile(h)) {
-        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
-        return false;
-    }
-
-    return true;
-}
-
 static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
 {
     RG_ASSERT(buf.len < UINT32_MAX);
@@ -150,49 +127,11 @@ static bool CreateSymbolicLink(const char *filename, const char *target, bool)
     return true;
 }
 
-static FILETIME UnixTimeToFileTime(int64_t time)
-{
-    time = (time + 11644473600000ll) * 10000;
-
-    FILETIME ft;
-    ft.dwHighDateTime = (DWORD)(time >> 32);
-    ft.dwLowDateTime = (DWORD)time;
-
-    return ft;
-}
-
 static void SetFileOwner(int, const char *, uint32_t, uint32_t)
 {
 }
 
-static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime, uint32_t)
-{
-    HANDLE h = (HANDLE)_get_osfhandle(fd);
-
-    FILETIME mft = UnixTimeToFileTime(mtime);
-    FILETIME bft = UnixTimeToFileTime(btime);
-
-    if (!SetFileTime(h, &bft, nullptr, &mft)) {
-        LogError("Failed to set modification time of '%1': %2", filename, GetWin32ErrorString());
-    }
-}
-
 #else
-
-static bool ReserveFile(int fd, const char *filename, int64_t len)
-{
-    if (ftruncate(fd, len) < 0) {
-        if (errno == EINVAL) {
-            // Only write() calls seem to return ENOSPC, ftruncate() seems to fail with EINVAL
-            LogError("Failed to reserve file '%1': not enough space", filename);
-        } else {
-            LogError("Failed to reserve file '%1': %2", filename, strerror(errno));
-        }
-        return false;
-    }
-
-    return true;
-}
 
 static bool WriteAt(int fd, const char *filename, int64_t offset, Span<const uint8_t> buf)
 {
@@ -237,23 +176,6 @@ static void SetFileOwner(int fd, const char *filename, uint32_t uid, uint32_t gi
 {
     if (fchown(fd, (uid_t)uid, (gid_t)gid) < 0) {
         LogError("Failed to change owner of '%1' (ignoring)", filename);
-    }
-}
-
-static void SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t, uint32_t mode)
-{
-    struct timespec times[2] = {};
-
-    times[0].tv_nsec = UTIME_OMIT;
-    times[1].tv_sec = mtime / 1000;
-    times[1].tv_nsec = (mtime % 1000) * 1000000;
-
-    if (futimens(fd, times) < 0) {
-        LogError("Failed to set mtime of '%1' (ignoring)", filename);
-    }
-
-    if (fchmod(fd, (mode_t)mode) < 0) {
-        LogError("Failed to set permissions of '%1' (ignoring)", filename);
     }
 }
 

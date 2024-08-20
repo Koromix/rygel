@@ -4159,6 +4159,9 @@ enum class RenameFlag {
 // Sync failures are logged but not reported as errors (function returns true)
 bool RenameFile(const char *src_filename, const char *dest_filename, unsigned int flags);
 
+bool ReserveFile(int fd, const char *filename, int64_t len);
+bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime, uint32_t mode);
+
 enum class EnumResult {
     Success,
 

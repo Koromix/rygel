@@ -635,11 +635,24 @@ LocalDate &LocalDate::operator--()
 // ------------------------------------------------------------------------
 
 #if defined(_WIN32)
+
 static int64_t FileTimeToUnixTime(FILETIME ft)
 {
     int64_t time = ((int64_t)ft.dwHighDateTime << 32) | ft.dwLowDateTime;
     return time / 10000 - 11644473600000ll;
 }
+
+static FILETIME UnixTimeToFileTime(int64_t time)
+{
+    time = (time + 11644473600000ll) * 10000;
+
+    FILETIME ft;
+    ft.dwHighDateTime = (DWORD)(time >> 32);
+    ft.dwLowDateTime = (DWORD)time;
+
+    return ft;
+}
+
 #endif
 
 int64_t GetUnixTime()
@@ -2191,6 +2204,44 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
     return false;
 }
 
+bool ReserveFile(int fd, const char *filename, int64_t len)
+{
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+    LARGE_INTEGER prev_pos = {};
+    if (!SetFilePointerEx(h, prev_pos, &prev_pos, FILE_CURRENT)) {
+        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+    RG_DEFER { SetFilePointerEx(h, prev_pos, nullptr, FILE_BEGIN); };
+
+    if (!SetFilePointerEx(h, { .QuadPart = len }, nullptr, FILE_BEGIN)) {
+        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+    if (!SetEndOfFile(h)) {
+        LogError("Failed to resize file '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
+bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime, uint32_t)
+{
+    HANDLE h = (HANDLE)_get_osfhandle(fd);
+
+    FILETIME mft = UnixTimeToFileTime(mtime);
+    FILETIME bft = UnixTimeToFileTime(btime);
+
+    if (!SetFileTime(h, &bft, nullptr, &mft)) {
+        LogError("Failed to set modification time of '%1': %2", filename, GetWin32ErrorString());
+        return false;
+    }
+
+    return true;
+}
+
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
@@ -2491,6 +2542,42 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
     }
 
     return true;
+}
+
+bool ReserveFile(int fd, const char *filename, int64_t len)
+{
+    if (ftruncate(fd, len) < 0) {
+        if (errno == EINVAL) {
+            // Only write() calls seem to return ENOSPC, ftruncate() seems to fail with EINVAL
+            LogError("Failed to reserve file '%1': not enough space", filename);
+        } else {
+            LogError("Failed to reserve file '%1': %2", filename, strerror(errno));
+        }
+        return false;
+    }
+
+    return true;
+}
+
+bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t, uint32_t mode)
+{
+    struct timespec times[2] = {};
+    bool valid = true;
+
+    times[0].tv_nsec = UTIME_OMIT;
+    times[1].tv_sec = mtime / 1000;
+    times[1].tv_nsec = (mtime % 1000) * 1000000;
+
+    if (futimens(fd, times) < 0) {
+        LogError("Failed to set mtime of '%1'", filename);
+        valid = false;
+    }
+    if (fchmod(fd, (mode_t)mode) < 0) {
+        LogError("Failed to set permissions of '%1'", filename);
+        valid = false;
+    }
+
+    return valid;
 }
 
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
