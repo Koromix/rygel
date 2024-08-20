@@ -73,6 +73,7 @@ struct http_Socket {
 
     uint8_t accept[2 * AcceptAddressLen];
     std::function<void(DWORD)> execute;
+    std::function<void()> finalize;
 
     std::mutex mutex;
     http_IO *client = nullptr;
@@ -83,6 +84,9 @@ struct http_Socket {
 
         if (client) {
             delete client;
+        }
+        if (finalize) {
+            finalize();
         }
     };
 };
@@ -682,6 +686,10 @@ void http_Dispatcher::DisconnectSocket(http_Socket *socket)
         delete socket->client;
         socket->client = nullptr;
     }
+    if (socket->finalize) {
+        socket->finalize();
+        socket->finalize = {};
+    }
 
     socket->op = PendingOperation::Disconnect;
 
@@ -738,10 +746,10 @@ void http_IO::SendFile(int status, int fd, int64_t len)
     RG_ASSERT(!response.started);
     RG_ASSERT(len >= 0);
 
-    // Async operation
-    AddFinalizer([=]() { CloseDescriptor(fd); });
-
     response.started = true;
+
+    RG_ASSERT(!socket->finalize);
+    socket->finalize = [=]() { _close(fd); };
 
     // Send intro and file in one go
     Span<const char> intro = PrepareResponse(status, CompressionType::None, len);
