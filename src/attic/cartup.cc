@@ -16,7 +16,6 @@
 #include "vendor/blake3/c/blake3.h"
 
 #include <sys/statvfs.h>
-#include <sys/sendfile.h>
 
 namespace RG {
 
@@ -652,8 +651,7 @@ private:
     bool DeleteOld(const char *dirname);
 
     bool HashFile(int fd, const char *filename, Span<uint8_t> buf, uint8_t out_hash[32]);
-    bool CopyFile(int src_fd, const char *src_filename,int dest_fd, const char *dest_filename,
-                  int64_t mtime, int64_t size);
+    bool CopyFile(int src_fd, const char *src_filename,int dest_fd, const char *dest_filename, int64_t size, int64_t mtime);
 };
 
 BackupContext::BackupContext(const char *uuid, const char *disk_dir, bool checksum, bool fake)
@@ -778,7 +776,7 @@ bool BackupContext::BackupNew()
         }
 
         LogInfo("Copy '%1' to disk '%2'", path, uuid);
-        valid &= fake || CopyFile(src_fd, src_filename, dest_fd, dest_filename, mtime, size);
+        valid &= fake || CopyFile(src_fd, src_filename, dest_fd, dest_filename, size, mtime);
     }
     valid &= stmt.IsValid();
 
@@ -880,91 +878,12 @@ bool BackupContext::HashFile(int fd, const char *filename, Span<uint8_t> buf, ui
     return true;
 }
 
-bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename,
-                             int64_t mtime, int64_t size)
+bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size, int64_t mtime)
 {
-    bool next = true;
-
-    if (next) {
-        next = false;
-
-        off_t src_offset = 0;
-        off_t dest_offset = 0;
-
-        while (src_offset < size) {
-            size_t len = std::min(size - src_offset, (off_t)Mebibytes(256));
-            ssize_t ret = copy_file_range(src_fd, &src_offset, dest_fd, &dest_offset, len, 0);
-
-            if (ret < 0) {
-                if (errno == EXDEV) {
-                    next = true;
-                    break;
-                }
-
-                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
-                return false;
-            }
-        }
-    }
-
-    if (next) {
-        next = false;
-
-        off_t src_offset = 0;
-
-        if (lseek(dest_fd, 0, SEEK_SET) < 0) {
-            LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
-            return false;
-        }
-
-        while (src_offset < size) {
-            size_t count = std::min(size - src_offset, (off_t)Mebibytes(128));
-            ssize_t ret = sendfile(dest_fd, src_fd, &src_offset, count);
-
-            if (ret < 0) {
-                if (errno == EINVAL) {
-                    next = true;
-                    break;
-                }
-
-                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
-                return false;
-            }
-        }
-    }
-
-    if (next) {
-        next = false;
-
-        if (lseek(src_fd, 0, SEEK_SET) < 0) {
-            LogError("Failed to seek to start of '%1': %2", src_filename, strerror(errno));
-            return false;
-        }
-        if (lseek(dest_fd, 0, SEEK_SET) < 0) {
-            LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
-            return false;
-        }
-
-        StreamReader reader(src_fd, src_filename);
-        StreamWriter writer(dest_fd, dest_filename);
-
-        if (!SpliceStream(&reader, -1, &writer))
-            return false;
-        if (!writer.Close())
-            return false;
-    }
-
-    // Last method was fallback
-    RG_ASSERT(!next);
-
-    if (fsync(dest_fd) < 0) {
-        LogWarning("Failed to flush '%1': %2", dest_filename, strerror(errno));
+    if (!SpliceFile(src_fd, src_filename, dest_fd, dest_filename, size))
         return false;
-    }
-    if (ftruncate(dest_fd, size) < 0) {
-        LogWarning("Failed to size file '%1': %2", dest_filename, strerror(errno));
+    if (!FlushFile(dest_fd, dest_filename))
         return false;
-    }
 
     SetFileMetaData(dest_fd, dest_filename, mtime, 0, 0644);
 

@@ -59,6 +59,20 @@
 
     #define RtlGenRandom SystemFunction036
     extern "C" BOOLEAN NTAPI RtlGenRandom(PVOID RandomBuffer, ULONG RandomBufferLength);
+
+    typedef struct _IO_STATUS_BLOCK {
+        union {
+            LONG Status;
+            PVOID Pointer;
+        };
+        ULONG_PTR Information;
+    } IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+
+    typedef LONG NTAPI NtCopyFileChunkFunc(HANDLE SourceHandle, HANDLE DestHandle, HANDLE Event,
+                                           PIO_STATUS_BLOCK IoStatusBlock, ULONG Length,
+                                           PLARGE_INTEGER SourceOffset, PLARGE_INTEGER DestOffset,
+                                           PULONG SourceKey, PULONG DestKey, ULONG Flags);
+    typedef ULONG RtlNtStatusToDosErrorFunc(LONG Status);
 #elif defined(__wasi__)
     #include <dirent.h>
     #include <fcntl.h>
@@ -97,10 +111,12 @@
 #endif
 #if defined(__linux__)
     #include <sys/syscall.h>
+    #include <sys/sendfile.h>
 #endif
 #if defined(__APPLE__)
     #include <sys/random.h>
     #include <mach-o/dyld.h>
+    #include <copyfile.h>
 #endif
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
     #include <pthread_np.h>
@@ -3495,6 +3511,82 @@ bool FlushFile(int fd, const char *filename)
     return true;
 }
 
+bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size)
+{
+    static NtCopyFileChunkFunc *NtCopyFileChunk =
+        (NtCopyFileChunkFunc *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCopyFileChunk");
+
+    // Try fast kernel-mode copy introduced in Windows 11
+    if (NtCopyFileChunk) {
+        HANDLE h1 = (HANDLE)_get_osfhandle(src_fd);
+        HANDLE h2 = (HANDLE)_get_osfhandle(dest_fd);
+
+        LARGE_INTEGER offset = {};
+
+        while (offset.QuadPart < size) {
+            unsigned long count = (unsigned long)std::min(size - offset.QuadPart, (int64_t)Mebibytes(256));
+
+            IO_STATUS_BLOCK iob;
+            LONG status = NtCopyFileChunk(h1, h2, nullptr, &iob, count, &offset, &offset, nullptr, nullptr, 0);
+
+            if (status) {
+                static RtlNtStatusToDosErrorFunc *RtlNtStatusToDosError =
+                    (RtlNtStatusToDosErrorFunc *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "RtlNtStatusToDosError");
+
+                unsigned long err = RtlNtStatusToDosError(status);
+                LogError("Failed to copy '%1' to '%2': %2", GetWin32ErrorString(err));
+
+                return false;
+            }
+            if (!iob.Information) {
+                LogError("Failed to copy '%1' to '%2': Truncated file");
+                return false;
+            }
+
+            offset.QuadPart += iob.Information;
+        }
+
+        return true;
+    }
+
+    // User-mode fallback method
+    {
+        off_t src_offset = 0;
+
+        if (_lseek(src_fd, 0, SEEK_SET) < 0) {
+            LogError("Failed to seek to start of '%1': %2", src_filename, strerror(errno));
+            return false;
+        }
+        if (_lseek(dest_fd, 0, SEEK_SET) < 0) {
+            LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
+            return false;
+        }
+
+        while (src_offset < size) {
+            LocalArray<uint8_t, 655536> buf;
+            buf.len = _read(src_fd, buf.data, (unsigned int)buf.len);
+
+            if (buf.len < 0) {
+                if (errno == EINTR)
+                    continue;
+
+                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+                return false;
+            }
+            if (!buf.len) {
+                LogError("Failed to copy '%1' to '%2': Truncated file");
+                return false;
+            }
+
+            src_offset += (off_t)buf.len;
+        }
+
+        return true;
+    }
+
+    RG_UNREACHABLE();
+}
+
 bool FileIsVt100(int fd)
 {
     static thread_local int cache_fd = -1;
@@ -3757,6 +3849,120 @@ bool FlushFile(int fd, const char *filename)
     }
 
     return true;
+}
+
+bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size)
+{
+#if defined(__linux__) || defined(__FreeBSD__)
+    // Try copy_file_range() if available
+    {
+        off_t src_offset = 0;
+        off_t dest_offset = 0;
+
+        while (src_offset < size) {
+            size_t count = std::min(size - src_offset, (off_t)Mebibytes(256));
+            ssize_t ret = copy_file_range(src_fd, &src_offset, dest_fd, &dest_offset, count, 0);
+
+            if (ret < 0) {
+                if (errno == EXDEV)
+                    goto xdev;
+                if (errno == EINTR)
+                    continue;
+
+                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+xdev:
+#endif
+
+#if defined(__APPLE__)
+    {
+        copyfile_state_t state = copyfile_state_alloc();
+        if (!state)
+            RG_BAD_ALLOC();
+        RG_DEFER { copyfile_state_free(state); };
+
+        if (fcopyfile(src_fd, dest_fd, state, COPYFILE_DATA) < 0) {
+            LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+            return false;
+        }
+
+        return true;
+    }
+#endif
+
+#if defined(__linux__)
+    // Try sendfile() on Linux
+    {
+        off_t src_offset = 0;
+
+        if (lseek(dest_fd, 0, SEEK_SET) < 0) {
+            LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
+            return false;
+        }
+
+        while (src_offset < size) {
+            size_t count = std::min(size - src_offset, (off_t)Mebibytes(256));
+            ssize_t ret = sendfile(dest_fd, src_fd, &src_offset, count);
+
+            if (ret < 0) {
+                if (errno == EINVAL)
+                    goto unsupported;
+                if (errno == EINTR)
+                    continue;
+
+                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+unsupported:
+#endif
+
+    // User-mode fallback method
+    {
+        off_t src_offset = 0;
+
+        if (lseek(src_fd, 0, SEEK_SET) < 0) {
+            LogError("Failed to seek to start of '%1': %2", src_filename, strerror(errno));
+            return false;
+        }
+        if (lseek(dest_fd, 0, SEEK_SET) < 0) {
+            LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
+            return false;
+        }
+
+        while (src_offset < size) {
+            LocalArray<uint8_t, 655536> buf;
+            buf.len = read(src_fd, buf.data, (size_t)buf.len);
+
+            if (buf.len < 0) {
+                if (errno == EINTR)
+                    continue;
+
+                LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+                return false;
+            }
+            if (!buf.len) {
+                LogError("Failed to copy '%1' to '%2': Truncated file");
+                return false;
+            }
+
+            src_offset += (off_t)buf.len;
+        }
+
+        return true;
+    }
+
+    RG_UNREACHABLE();
 }
 
 bool FileIsVt100(int fd)

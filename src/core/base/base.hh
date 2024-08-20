@@ -4245,6 +4245,8 @@ static inline int OpenFile(const char *filename, unsigned int flags)
 void CloseDescriptor(int fd);
 bool FlushFile(int fd, const char *filename);
 
+bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size);
+
 bool FileIsVt100(int fd);
 
 #if !defined(__wasi__)
