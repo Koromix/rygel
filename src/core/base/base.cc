@@ -4064,7 +4064,7 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
             Span<const char> value = kv.value;
 
             Size len = 2 * (key.len + value.len + 1) + 1;
-            new_env_w.Reserve(len);
+            new_env_w.Grow(len);
 
             len = ConvertUtf8ToWin32Wide(key, new_env_w.TakeAvailable());
             if (len < 0) [[unlikely]]
@@ -4597,12 +4597,13 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 
 Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
 {
-    ExecuteInfo info = {};
-
-    info.env_variables = {
+    static ExecuteInfo::KeyValue variables[] = {
         { "LANG", "C" },
         { "LC_ALL", "C" }
     };
+
+    ExecuteInfo info = {};
+    info.env_variables = variables;
 
     Size total_len = 0;
     const auto write = [&](Span<uint8_t> buf) {
@@ -4625,12 +4626,13 @@ Size ReadCommandOutput(const char *cmd_line, Span<char> out_output)
 
 bool ReadCommandOutput(const char *cmd_line, HeapArray<char> *out_output)
 {
-    ExecuteInfo info = {};
-
-    info.env_variables = {
+    static ExecuteInfo::KeyValue variables[] = {
         { "LANG", "C" },
         { "LC_ALL", "C" }
     };
+
+    ExecuteInfo info = {};
+    info.env_variables = variables;
 
     int exit_code;
     if (!ExecuteCommandLine(cmd_line, info, {}, Mebibytes(1), out_output, &exit_code))
