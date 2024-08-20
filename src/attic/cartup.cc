@@ -15,8 +15,6 @@
 #include "src/core/sqlite/sqlite.hh"
 #include "vendor/blake3/c/blake3.h"
 
-#include <fcntl.h>
-#include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <sys/sendfile.h>
 
@@ -661,22 +659,6 @@ private:
 BackupContext::BackupContext(const char *uuid, const char *disk_dir, bool checksum, bool fake)
     : uuid(uuid), disk_dir(disk_dir), checksum(checksum), fake(fake) {}
 
-static bool AdjustMetadata(int fd, const char *filename, int64_t mtime)
-{
-    struct timespec times[2] = {};
-
-    times[0].tv_nsec = UTIME_OMIT;
-    times[1].tv_sec = mtime / 1000;
-    times[1].tv_nsec = (mtime % 1000) * 1000000;
-
-    if (futimens(fd, times) < 0) {
-        LogError("Failed to set mtime of '%1': %2", filename, strerror(errno));
-        return false;
-    }
-
-    return true;
-}
-
 static bool IsTimeEquivalent(int64_t time1, int64_t time2)
 {
     bool close = (time1 / 10) == (time2 / 10);
@@ -769,7 +751,7 @@ bool BackupContext::BackupNew()
                         if (!memcmp(src_hash, dest_hash, 32)) {
                             LogInfo("Skip '%1' (checksum match)", path);
                             if (!fake) {
-                                AdjustMetadata(dest_fd, dest_filename, mtime);
+                                SetFileMetaData(dest_fd, dest_filename, mtime, mtime, 0644);
                             }
                             continue;
                         }
@@ -984,7 +966,7 @@ bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, 
         return false;
     }
 
-    AdjustMetadata(dest_fd, dest_filename, mtime);
+    SetFileMetaData(dest_fd, dest_filename, mtime, 0, 0644);
 
     return true;
 }
