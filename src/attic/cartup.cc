@@ -15,8 +15,6 @@
 #include "src/core/sqlite/sqlite.hh"
 #include "vendor/blake3/c/blake3.h"
 
-#include <sys/statvfs.h>
-
 namespace RG {
 
 static const int SchemaVersion = 2;
@@ -147,34 +145,6 @@ static const char *ReadUUID(const char *filename, Allocator *alloc)
 
     const char *uuid = DuplicateString(buf, alloc).ptr;
     return uuid;
-}
-
-static int64_t GetAvailableSpace(const char *path)
-{
-    struct statvfs vfs;
-    if (statvfs(path, &vfs) < 0) {
-        LogError("Cannot get volume information for '%1': %2", path, strerror(errno));
-        return -1;
-    }
-
-    int64_t blocks = (int64_t)vfs.f_bavail;
-    int64_t available = blocks * vfs.f_frsize;
-
-    return available;
-}
-
-static int64_t GetTotalSpace(const char *path)
-{
-    struct statvfs vfs;
-    if (statvfs(path, &vfs) < 0) {
-        LogError("Cannot get volume information for '%1': %2", path, strerror(errno));
-        return -1;
-    }
-
-    double blocks = (double)vfs.f_blocks * 0.98;
-    int64_t available = blocks * vfs.f_frsize;
-
-    return available;
 }
 
 static bool LoadDiskStats(DiskSet *out_set)
@@ -402,8 +372,8 @@ Options:
         }
 
         if (size < 0) {
-            size = GetAvailableSpace(disk_dir);
-            if (size < 0)
+            VolumeInfo volume;
+            if (!GetVolumeInfo(disk_dir, &volume))
                 return false;
 
             sq_Statement stmt;
@@ -412,14 +382,16 @@ Options:
                 return false;
 
             if (stmt.Step()) {
-                size += sqlite3_column_int64(stmt, 0);
+                volume.available += sqlite3_column_int64(stmt, 0);
             } else if (!stmt.IsValid()) {
                 return false;
             }
 
-            size = std::min(GetTotalSpace(disk_dir), size);
+            // Max out at 98% of the total size to account for metadata (or at least, try to)
+            volume.total -= volume.total / 50;
+            volume.available = std::min(volume.total, volume.available);
 
-            if (!db.Run("UPDATE disks SET size = ?2 WHERE id = ?1", disk_id, size))
+            if (!db.Run("UPDATE disks SET size = ?2 WHERE id = ?1", disk_id, volume.available))
                 return false;
         }
 

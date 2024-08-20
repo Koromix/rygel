@@ -4162,6 +4162,13 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
 bool ReserveFile(int fd, const char *filename, int64_t len);
 bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime, uint32_t mode);
 
+struct VolumeInfo {
+    int64_t total;
+    int64_t available;
+};
+
+bool GetVolumeInfo(const char *dirname, VolumeInfo *out_volume);
+
 enum class EnumResult {
     Success,
 

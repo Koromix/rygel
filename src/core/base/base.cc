@@ -97,6 +97,7 @@
     #include <sys/mman.h>
     #include <sys/resource.h>
     #include <sys/stat.h>
+    #include <sys/statvfs.h>
     #include <sys/types.h>
     #include <sys/socket.h>
     #include <sys/un.h>
@@ -2258,6 +2259,33 @@ bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t btime,
     return true;
 }
 
+bool GetVolumeInfo(const char *dirname, VolumeInfo *out_volume)
+{
+    ULARGE_INTEGER available;
+    ULARGE_INTEGER total;
+
+    if (win32_utf8) {
+        if (!GetDiskFreeSpaceExA(dirname, &available, &total, nullptr)) {
+            LogError("Cannot get volume information for '%1': %2", dirname, GetWin32ErrorString());
+            return false;
+        }
+    } else {
+        wchar_t dirname_w[4096];
+        if (ConvertUtf8ToWin32Wide(dirname, dirname_w) < 0)
+            return false;
+
+        if (!GetDiskFreeSpaceExW(dirname_w, &available, &total, nullptr)) {
+            LogError("Cannot get volume information for '%1': %2", dirname, GetWin32ErrorString());
+            return false;
+        }
+    }
+
+    out_volume->total = (int64_t)total.QuadPart;
+    out_volume->available = (int64_t)available.QuadPart;
+
+    return true;
+}
+
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
                               FunctionRef<bool(const char *, FileType)> func)
 {
@@ -2594,6 +2622,20 @@ bool SetFileMetaData(int fd, const char *filename, int64_t mtime, int64_t, uint3
     }
 
     return valid;
+}
+
+bool GetVolumeInfo(const char *dirname, VolumeInfo *out_volume)
+{
+    struct statvfs vfs;
+    if (statvfs(dirname, &vfs) < 0) {
+        LogError("Cannot get volume information for '%1': %2", dirname, strerror(errno));
+        return false;
+    }
+
+    out_volume->total = (int64_t)vfs.f_blocks * vfs.f_frsize;
+    out_volume->available = (int64_t)vfs.f_bavail * vfs.f_frsize;
+
+    return true;
 }
 
 EnumResult EnumerateDirectory(const char *dirname, const char *filter, Size max_files,
