@@ -15,6 +15,10 @@
 #include "src/core/sqlite/sqlite.hh"
 #include "vendor/blake3/c/blake3.h"
 
+#if defined(_WIN32)
+    #include <io.h>
+#endif
+
 namespace RG {
 
 static const int SchemaVersion = 2;
@@ -666,7 +670,7 @@ bool BackupContext::BackupNew()
             valid = false;
             continue;
         }
-        RG_DEFER { close(src_fd); };
+        RG_DEFER { CloseDescriptor(src_fd); };
 
         // Check file information consistency
         {
@@ -696,7 +700,7 @@ bool BackupContext::BackupNew()
             valid = false;
             continue;
         }
-        RG_DEFER { close(dest_fd); };
+        RG_DEFER { CloseDescriptor(dest_fd); };
 
         FileInfo dest_info;
         StatResult stat = StatFile(dest_fd, dest_filename, (int)StatFlag::SilentMissing, &dest_info);
@@ -830,7 +834,11 @@ bool BackupContext::HashFile(int fd, const char *filename, Span<uint8_t> buf, ui
     blake3_hasher_init(&hasher);
 
     for (;;) {
+#if defined(_WIN32)
+        int bytes = _read(fd, buf.ptr, (unsigned int)buf.len);
+#else
         ssize_t bytes = read(fd, buf.ptr, buf.len);
+#endif
 
         if (bytes < 0) {
             if (errno == EINTR)
