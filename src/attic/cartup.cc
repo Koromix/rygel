@@ -21,7 +21,7 @@ namespace RG {
 
 static const int SchemaVersion = 2;
 
-struct DiskInfo {
+struct DiskData {
     int64_t id;
     char uuid[37];
 
@@ -31,7 +31,7 @@ struct DiskInfo {
 };
 
 struct DiskSet {
-    HeapArray<DiskInfo> disks;
+    HeapArray<DiskData> disks;
 };
 
 static const char *database_filename = nullptr;
@@ -177,7 +177,7 @@ static int64_t GetTotalSpace(const char *path)
     return available;
 }
 
-static bool GatherDiskStats(DiskSet *out_set)
+static bool LoadDiskStats(DiskSet *out_set)
 {
     RG_DEFER_NC(err_guard, len = out_set->disks.len) { out_set->disks.RemoveFrom(len); };
 
@@ -189,7 +189,7 @@ static bool GatherDiskStats(DiskSet *out_set)
         return false;
 
     while (stmt.Step()) {
-        DiskInfo disk = {};
+        DiskData disk = {};
 
         disk.id = sqlite3_column_int64(stmt, 0);
         CopyString((const char *)sqlite3_column_text(stmt, 1), disk.uuid);
@@ -206,21 +206,21 @@ static bool GatherDiskStats(DiskSet *out_set)
     return true;
 }
 
-static DiskInfo *FindDisk(DiskSet *set, int64_t id)
+static DiskData *FindDisk(DiskSet *set, int64_t id)
 {
-    for (DiskInfo &disk: set->disks) {
+    for (DiskData &disk: set->disks) {
         if (disk.id == id)
             return &disk;
     }
     return nullptr;
 }
 
-static DiskInfo *FindSpace(DiskSet *set, int64_t size)
+static DiskData *FindSpace(DiskSet *set, int64_t size)
 {
-    DiskInfo *target = nullptr;
+    DiskData *target = nullptr;
     double min_ratio = INFINITY;
 
-    for (DiskInfo &disk: set->disks) {
+    for (DiskData &disk: set->disks) {
         int64_t available = disk.total - disk.used;
 
         if (size <= available) {
@@ -482,7 +482,7 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir, const cha
                 if (!db.Prepare("SELECT disk_id, size FROM files WHERE path = ?1", &stmt, path))
                     return false;
 
-                DiskInfo *disk = nullptr;
+                DiskData *disk = nullptr;
 
                 if (stmt.Step()) {
                     int64_t disk_id = sqlite3_column_int64(stmt, 0);
@@ -607,7 +607,7 @@ Options:
 
     if (!OpenDatabase())
         return 1;
-    if (!GatherDiskStats(&set))
+    if (!LoadDiskStats(&set))
         return 1;
 
     bool complete = true;
@@ -1034,11 +1034,11 @@ Options:
 
     if (!OpenDatabase())
         return 1;
-    if (!GatherDiskStats(&set))
+    if (!LoadDiskStats(&set))
         return 1;
 
     for (Size i = 0; i < set.disks.len; i++) {
-        const DiskInfo &disk = set.disks[i];
+        const DiskData &disk = set.disks[i];
 
         PrintLn("%1%!..+Disk %2%!0 [%3]:", i ? "\n" : "", i + 1, disk.uuid);
         PrintLn("  Total: %!..+%1%!0", FmtDiskSize(disk.total));
