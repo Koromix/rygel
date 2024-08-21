@@ -338,7 +338,7 @@ Options:
 
     const char *uuid = nullptr;
     {
-        const char *filename = Fmt(&temp_alloc, "%1%/.cartup", disk_dir).ptr;
+        const char *filename = Fmt(&temp_alloc, "%1.cartup", disk_dir).ptr;
 
         if (TestFile(filename, FileType::File)) {
             uuid = ReadUUID(filename, &temp_alloc);
@@ -1008,6 +1008,8 @@ Options:
                 return 1;
             }
         }
+
+        opt.LogUnusedArguments();
     }
 
     DiskSet set;
