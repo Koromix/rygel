@@ -5188,7 +5188,11 @@ bool NotifySystemd()
 // Main
 // ------------------------------------------------------------------------
 
+#if defined(__linux__)
+__attribute__((weak)) int Main(int argc, char **argv);
+#else
 int Main(int argc, char **argv);
+#endif
 
 int RunApp(int argc, char **argv)
 {
