@@ -3566,6 +3566,8 @@ bool FlushFile(int fd, const char *filename)
 
 bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size)
 {
+    static_assert(sizeof(off_t) == 8, "This code base requires large file offsets");
+
     static NtCopyFileChunkFunc *NtCopyFileChunk =
         (NtCopyFileChunkFunc *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCopyFileChunk");
 
@@ -3906,6 +3908,8 @@ bool FlushFile(int fd, const char *filename)
 
 bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size)
 {
+    static_assert(sizeof(off_t) == 8, "This code base requires large file offsets");
+
 #if defined(__linux__) || defined(__FreeBSD__)
     // Try copy_file_range() if available
     {
@@ -3913,7 +3917,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
         off_t dest_offset = 0;
 
         while (src_offset < size) {
-            size_t count = std::min(size - src_offset, (off_t)Mebibytes(256));
+            size_t count = (size_t)std::min(size - (int64_t)src_offset, (int64_t)Mebibytes(256));
             ssize_t ret = copy_file_range(src_fd, &src_offset, dest_fd, &dest_offset, count, 0);
 
             if (ret < 0) {
@@ -3960,7 +3964,7 @@ xdev:
         }
 
         while (src_offset < size) {
-            size_t count = std::min(size - src_offset, (off_t)Mebibytes(256));
+            size_t count = (size_t)std::min(size - (int64_t)src_offset, (int64_t)Mebibytes(256));
             ssize_t ret = sendfile(dest_fd, src_fd, &src_offset, count);
 
             if (ret < 0) {
