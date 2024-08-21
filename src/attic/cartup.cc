@@ -192,15 +192,15 @@ static DiskData *FindDisk(DiskSet *set, int64_t id)
 static DiskData *FindSpace(DiskSet *set, int64_t size)
 {
     DiskData *target = nullptr;
-    double min_ratio = INFINITY;
+    double min_ratio = 0;
 
     for (DiskData &disk: set->disks) {
         int64_t available = disk.total - disk.used;
 
         if (size <= available) {
-            double ratio = (double)(available + size) / disk.total;
+            double ratio = (double)(available - size) / disk.total;
 
-            if (ratio < min_ratio) {
+            if (ratio > min_ratio) {
                 target = &disk;
                 min_ratio = ratio;
             }
