@@ -67,6 +67,7 @@ struct TargetConfig {
 
     const char *gnu_flags;
     const char *ms_flags;
+    int link_priority;
 
     RG_HASHTABLE_HANDLER(TargetConfig, name);
 };
@@ -381,6 +382,8 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         target_config.gnu_flags = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "MsFlags") {
                         target_config.ms_flags = DuplicateString(prop.value, &set.str_alloc).ptr;
+                    } else if (prop.key == "LinkPriority") {
+                        valid &= ParseInt(prop.value, &target_config.link_priority);
                     } else {
                         LogError("Unknown attribute '%1'", prop.key);
                         valid = false;
@@ -477,6 +480,7 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->embed_options = target_config->embed_options;
     target->gnu_flags = target_config->gnu_flags;
     target->ms_flags = target_config->ms_flags;
+    target->link_priority = target_config->link_priority;
 
     // Resolve imported targets
     {
@@ -555,6 +559,13 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         target->cxx_pch_src = CreateSource(target, target_config->cxx_pch_filename, SourceType::Cxx, features);
         target->pchs.Append(target->cxx_pch_src->filename);
     }
+
+    // Sort source files based on link priority
+    std::stable_sort(target->sources.begin(), target->sources.end(),
+                     [](const SourceFileInfo *src1, const SourceFileInfo *src2) {
+        int delta = src2->target->link_priority - src1->target->link_priority;
+        return delta < 0;
+    });
 
     // Deduplicate aggregated arrays
     DeduplicateArray(&target->include_directories, [](const char *str) { return str; });

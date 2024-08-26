@@ -60,6 +60,7 @@ struct alignas(8) TargetInfo {
 
     const char *gnu_flags;
     const char *ms_flags;
+    int link_priority;
 
     uint32_t CombineFeatures(uint32_t features) const
     {
