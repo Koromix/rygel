@@ -420,6 +420,26 @@ bool TargetSetBuilder::LoadFiles(Span<const char *const> filenames)
     return success;
 }
 
+template <typename T, typename Func>
+static void DeduplicateArray(HeapArray<T> *array, Func func)
+{
+    HashSet<const char *> handled;
+
+    Size j = 0;
+    for (Size i = 0; i < array->len; i++) {
+        (*array)[j] = (*array)[i];
+
+        const char *str = func((*array)[i]);
+
+        bool inserted;
+        handled.TrySet(str, &inserted);
+
+        j += inserted;
+    }
+
+    array->len = j;
+}
+
 // We steal stuff from TargetConfig so it's not reusable after that
 const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
 {
@@ -527,53 +547,12 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
         target->pchs.Append(target->cxx_pch_src->filename);
     }
 
-    // Deduplicate libraries
-    {
-        HashSet<const char *> handled;
-
-        Size j = 0;
-        for (Size i = 0; i < target->libraries.len; i++) {
-            target->libraries[j] = target->libraries[i];
-
-            bool inserted;
-            handled.TrySet(target->libraries[i], &inserted);
-
-            j += inserted;
-        }
-        target->libraries.len = j;
-    }
-
-    // Deduplicate PCHs
-    {
-        HashSet<const char *> handled;
-
-        Size j = 0;
-        for (Size i = 0; i < target->pchs.len; i++) {
-            target->pchs[j] = target->pchs[i];
-
-            bool inserted;
-            handled.TrySet(target->pchs[i], &inserted);
-
-            j += inserted;
-        }
-        target->pchs.len = j;
-    }
-
-    // Deduplicate sources
-    {
-        HashSet<const char *> handled;
-
-        Size j = 0;
-        for (Size i = 0; i < target->sources.len; i++) {
-            target->sources[j] = target->sources[i];
-
-            bool inserted;
-            handled.TrySet(target->sources[i]->filename, &inserted);
-
-            j += inserted;
-        }
-        target->sources.len = j;
-    }
+    // Deduplicate aggregated arrays
+    DeduplicateArray(&target->include_directories, [](const char *str) { return str; });
+    DeduplicateArray(&target->include_files, [](const char *str) { return str; });
+    DeduplicateArray(&target->libraries, [](const char *str) { return str; });
+    DeduplicateArray(&target->pchs, [](const char *str) { return str; });
+    DeduplicateArray(&target->sources, [](const SourceFileInfo *src) { return src->filename; });
 
     // Gather asset filenames
     if (!ResolveFileSet(target_config->embed_file_set, &set.str_alloc, &target->embed_filenames))
