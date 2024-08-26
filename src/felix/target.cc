@@ -277,7 +277,11 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                     valid = false;
                 } else if (prop.key == "Platforms" || prop.key == "Hosts") {
                     target_config.platforms = ParseSupportedPlatforms(prop.value);
-                    valid &= !!target_config.platforms;
+
+                    if (!target_config.platforms) {
+                        LogError("Unknown platform or platform family '%1'", prop.value);
+                        valid = false;
+                    }
                 } else {
                     Span<const char> suffix;
                     prop.key = SplitStr(prop.key, '/', &suffix);
@@ -619,6 +623,12 @@ bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match
 
     while (str.len) {
         Span<const char> test = SplitStr(str, '/', &str);
+        bool wanted = true;
+
+        if (StartsWith(test, "-")) {
+            test = test.Take(1, test.len - 1);
+            wanted = false;
+        }
 
         if (!test.len)
             continue;
@@ -627,7 +637,7 @@ bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match
         {
             HostArchitecture architecture;
             if (ParseArchitecture(test, &architecture)) {
-                match &= (architecture == this->architecture);
+                match &= ((architecture == compiler->architecture) == wanted);
                 continue;
             }
         }
@@ -635,10 +645,23 @@ bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match
         // Platform?
         {
             unsigned int platforms = ParseSupportedPlatforms(test);
-            if (!platforms)
-                return false;
-            match &= !!(platforms & (1 << (int)platform));
+            if (platforms) {
+                match &= (!!(platforms & (1 << (int)compiler->platform)) == wanted);
+                continue;
+            }
         }
+
+        // Feature?
+        {
+            CompileFeature feature;
+            if (OptionToEnumI(CompileFeatureOptions, test, &feature)) {
+                match &= (!!(features & (1 << (int)feature)) == wanted);
+                continue;
+            }
+        }
+
+        LogError("Invalid conditional suffix '%1'", test);
+        return false;
     }
 
     *out_match = match;
@@ -676,9 +699,6 @@ unsigned int ParseSupportedPlatforms(Span<const char> str)
             }
         }
     }
-    if (!platforms) {
-        LogError("Unknown platform or platform family '%1'", str);
-    }
 
     return platforms;
 }
@@ -706,9 +726,9 @@ bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture)
     return false;
 }
 
-bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, HostArchitecture architecture, TargetSet *out_set)
+bool LoadTargetSet(Span<const char *const> filenames, const Compiler *compiler, uint32_t features, TargetSet *out_set)
 {
-    TargetSetBuilder target_set_builder(platform, architecture);
+    TargetSetBuilder target_set_builder(compiler, features);
     if (!target_set_builder.LoadFiles(filenames))
         return false;
     target_set_builder.Finish(out_set);

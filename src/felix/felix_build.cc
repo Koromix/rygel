@@ -144,6 +144,7 @@ static bool ParseHostString(Span<const char> str, Allocator *alloc, HostSpecifie
             unsigned int platforms = ParseSupportedPlatforms(platform);
 
             if (!platforms) {
+                LogError("Unknown platform or platform family '%1'", platform);
                 return false;
             } else if (PopCount(platforms) > 1) {
                 LogError("Ambiguous platform '%1' (multiple matches)", platform);
@@ -597,15 +598,18 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
     }
 
     // Load configuration file
-    if (!quiet) {
-        LogInfo("Loading targets...");
-    }
     TargetSet target_set;
-    if (!LoadTargetSet(config_filename, compiler->platform, compiler->architecture, &target_set))
-        return 1;
-    if (!target_set.targets.count) {
-        LogError("Configuration file does not contain any target");
-        return 1;
+    {
+        if (!quiet) {
+            LogInfo("Loading targets...");
+        }
+
+        if (!LoadTargetSet(config_filename, compiler.get(), build.features, &target_set))
+            return 1;
+        if (!target_set.targets.count) {
+            LogError("Configuration file does not contain any target");
+            return 1;
+        }
     }
 
     // Select targets

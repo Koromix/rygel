@@ -112,8 +112,8 @@ struct TargetSet {
 class TargetSetBuilder {
     RG_DELETE_COPY(TargetSetBuilder)
 
-    HostPlatform platform;
-    HostArchitecture architecture;
+    const Compiler *compiler;
+    uint32_t features;
 
     BlockAllocator temp_alloc;
 
@@ -121,8 +121,8 @@ class TargetSetBuilder {
     TargetSet set;
 
 public:
-    TargetSetBuilder(HostPlatform platform, HostArchitecture architecture)
-        : platform(platform), architecture(architecture) {}
+    TargetSetBuilder(const Compiler *compiler, uint32_t features)
+        : compiler(compiler), features(features) {}
 
     bool LoadIni(StreamReader *st);
     bool LoadFiles(Span<const char *const> filenames);
@@ -140,6 +140,6 @@ private:
 unsigned int ParseSupportedPlatforms(Span<const char> str);
 bool ParseArchitecture(Span<const char> str, HostArchitecture *out_architecture);
 
-bool LoadTargetSet(Span<const char *const> filenames, HostPlatform platform, HostArchitecture architecture, TargetSet *out_set);
+bool LoadTargetSet(Span<const char *const> filenames, const Compiler *compiler, uint32_t features, TargetSet *out_set);
 
 }
