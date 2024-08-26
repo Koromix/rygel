@@ -164,6 +164,11 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"ESM",            "Bundle JS in ESM format instead of IIFE"}
 };
 
+enum class CompilerFamily {
+    Gnu,
+    Microsoft
+};
+
 enum class SourceType {
     C,
     Cxx,
@@ -213,6 +218,7 @@ public:
 
     virtual bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const = 0;
 
+    virtual CompilerFamily GetFamily() const = 0;
     virtual const char *GetObjectExtension() const = 0;
     virtual const char *GetLinkExtension(TargetType type) const = 0;
     virtual const char *GetImportExtension() const = 0;
@@ -230,7 +236,7 @@ public:
     virtual void MakePchCommand(const char *pch_filename, SourceType src_type,
                                 Span<const char *const> definitions,
                                 Span<const char *const> include_directories, Span<const char *const> include_files,
-                                uint32_t features, bool env_flags, Allocator *alloc, Command *out_cmd) const = 0;
+                                const char *custom_flags, uint32_t features, Allocator *alloc, Command *out_cmd) const = 0;
     virtual const char *GetPchCache(const char *pch_filename, Allocator *alloc) const = 0;
     virtual const char *GetPchObject(const char *pch_filename, Allocator *alloc) const = 0;
 
@@ -239,14 +245,14 @@ public:
                                    Span<const char *const> include_directories,
                                    Span<const char *const> system_directories,
                                    Span<const char *const> include_files,
-                                   uint32_t features, bool env_flags, const char *dest_filename,
+                                   const char *custom_flags, uint32_t features, const char *dest_filename,
                                    Allocator *alloc, Command *out_cmd) const = 0;
     virtual void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
                                      Allocator *alloc, Command *out_cmd) const = 0;
 
     virtual void MakeLinkCommand(Span<const char *const> obj_filenames,
                                  Span<const char *const> libraries, TargetType link_type,
-                                 uint32_t features, bool env_flags, const char *dest_filename,
+                                 const char *custom_flags, uint32_t features, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;
     virtual void MakePostCommand(const char *src_filename, const char *dest_filename,
                                  Allocator *alloc, Command *out_cmd) const = 0;

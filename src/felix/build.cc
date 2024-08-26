@@ -350,13 +350,16 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         // Build object file
         {
             Command cmd = InitCommand();
+
+            const char *flags = GatherFlags(target, SourceType::C);
+
             if (module) {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  nullptr, {"EXPORT"}, {}, {}, {}, features, build.env,
+                                                  nullptr, {"EXPORT"}, {}, {}, {}, flags, features,
                                                   obj_filename, &str_alloc, &cmd);
             } else {
                 build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  nullptr, {}, {}, {}, {}, features, build.env,
+                                                  nullptr, {}, {}, {}, {}, flags, features,
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
@@ -368,10 +371,11 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         if (module) {
             const char *module_filename = Fmt(&str_alloc, "%1%/%2_assets%3", build.output_directory,
                                               target.name, RG_SHARED_LIBRARY_EXTENSION).ptr;
+            const char *flags = GatherFlags(target, SourceType::Object);
 
             Command cmd = InitCommand();
             build.compiler->MakeLinkCommand(obj_filename, {}, TargetType::Library,
-                                            features, build.env, module_filename, &str_alloc, &cmd);
+                                            flags, features, module_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(module_filename)).ptr;
             AppendNode(text, module_filename, cmd, obj_filename);
@@ -399,14 +403,16 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
     if (target.type == TargetType::Executable) {
         const char *src_filename = Fmt(&str_alloc, "%1%/Misc%/%2_version.c", cache_directory, target.name).ptr;
         const char *obj_filename = Fmt(&str_alloc, "%1%2", src_filename, build.compiler->GetObjectExtension()).ptr;
+
         uint32_t features = target.CombineFeatures(build.features);
+        const char *flags = GatherFlags(target, SourceType::C);
 
         if (!UpdateVersionSource(target.name, version_str, src_filename))
             return false;
 
         Command cmd = InitCommand();
         build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                          nullptr, {}, {}, {}, {}, features, build.env,
+                                          nullptr, {}, {}, {}, {}, flags, features,
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 version file", target.name).ptr;
@@ -450,11 +456,13 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         const char *link_filename;
         {
             link_filename = Fmt(&str_alloc, "%1%/%2%3", build.output_directory, target.title, link_ext).ptr;
+
             uint32_t features = target.CombineFeatures(build.features);
+            const char *flags = GatherFlags(target, SourceType::Object);
 
             Command cmd = InitCommand();
             build.compiler->MakeLinkCommand(obj_filenames, link_libraries, target.type,
-                                            features, build.env, link_filename, &str_alloc, &cmd);
+                                            flags, features, link_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(link_filename)).ptr;
             AppendNode(text, link_filename, cmd, obj_filenames);
@@ -563,14 +571,13 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
 
                 const char *cache_filename = build.compiler->GetPchCache(pch_filename, &str_alloc);
 
-                uint32_t features = build.features;
-                features = pch->target->CombineFeatures(features);
-                features = pch->CombineFeatures(features);
+                uint32_t features = pch->CombineFeatures(build.features);
+                const char *flags = GatherFlags(*src.target, src.type);
 
                 Command cmd = InitCommand();
                 build.compiler->MakePchCommand(pch_filename, pch->type,
                                                pch->target->definitions, pch->target->include_directories,
-                                               pch->target->include_files, features, build.env, &str_alloc, &cmd);
+                                               pch->target->include_files, flags, features, &str_alloc, &cmd);
 
                 // Check the PCH cache file against main file dependencies
                 if (!IsFileUpToDate(cache_filename, pch_filename)) {
@@ -604,9 +611,8 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
     if (!obj_filename) {
         obj_filename = BuildObjectPath(src.filename, cache_directory, "", build.compiler->GetObjectExtension());
 
-        uint32_t features = build.features;
-        features = src.target->CombineFeatures(features);
-        features = src.CombineFeatures(features);
+        uint32_t features = src.CombineFeatures(build.features);
+        const char *flags = GatherFlags(*src.target, src.type);
 
         HeapArray<const char *> system_directories;
         if (src.target->qt_components.len && !AddQtDirectories(src, &system_directories))
@@ -616,7 +622,7 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
         build.compiler->MakeObjectCommand(src.filename, src.type,
                                           pch_filename, src.target->definitions,
                                           src.target->include_directories, system_directories,
-                                          src.target->include_files, features, build.env,
+                                          src.target->include_files, flags, features,
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
@@ -950,6 +956,76 @@ const char *Builder::BuildObjectPath(Span<const char> src_filename, const char *
     }
 
     return buf.TrimAndLeak(1).ptr;
+}
+
+static void AppendFlags(const char *flags, HeapArray<char> *out_buf)
+{
+    if (!flags || !flags[0])
+        return;
+
+    if (out_buf->len) {
+        out_buf->Append(' ');
+    }
+    out_buf->Append(flags);
+}
+
+const char *Builder::GatherFlags(const TargetInfo &target, SourceType type)
+{
+    RG_ASSERT((uintptr_t)&target % 8 == 0);
+    RG_ASSERT((int)type < 8);
+
+    const void *key = (const void *)((uint8_t *)&target + (int)type);
+
+    bool inserted;
+    const char **ptr = custom_flags.TrySet(key, nullptr, &inserted);
+
+    if (inserted) {
+        HeapArray<char> buf(&str_alloc);
+
+        switch (type) {
+            case SourceType::C: {
+                switch (build.compiler->GetFamily()) {
+                    case CompilerFamily::Gnu: { AppendFlags(target.gnu_flags, &buf); } break;
+                    case CompilerFamily::Microsoft: { AppendFlags(target.ms_flags, &buf); } break;
+                }
+
+                if (build.env) {
+                    AppendFlags(GetEnv("CFLAGS"), &buf);
+                    AppendFlags(GetEnv("CPPFLAGS"), &buf);
+                }
+            } break;
+
+            case SourceType::Cxx: {
+                switch (build.compiler->GetFamily()) {
+                    case CompilerFamily::Gnu: { AppendFlags(target.gnu_flags, &buf); } break;
+                    case CompilerFamily::Microsoft: { AppendFlags(target.ms_flags, &buf); } break;
+                }
+
+                if (build.env) {
+                    AppendFlags(GetEnv("CXXFLAGS"), &buf);
+                    AppendFlags(GetEnv("CPPFLAGS"), &buf);
+                }
+            } break;
+
+            // Not an object, we use this enum type as a hack for link flags
+            case SourceType::Object: {
+                if (build.env) {
+                    AppendFlags(GetEnv("LDFLAGS"), &buf);
+                }
+            } break;
+
+            case SourceType::Esbuild:
+            case SourceType::QtUi:
+            case SourceType::QtResources: {} break;
+        }
+
+        if (buf.len) {
+            buf.Append(0);
+            *ptr = buf.TrimAndLeak().ptr;
+        }
+    }
+
+    return *ptr;
 }
 
 static inline const char *CleanFileName(const char *str)

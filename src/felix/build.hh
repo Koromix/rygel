@@ -120,6 +120,7 @@ class Builder {
     HashMap<BuildKey, const char *> build_map;
     HashMap<const char *, const char *> moc_map;
     HashMap<const char *, int64_t> mtime_map;
+    HashMap<const void *, const char *> custom_flags;
 
     // Build
     std::mutex out_mutex;
@@ -169,6 +170,7 @@ private:
 
     const char *BuildObjectPath(Span<const char> src_filename, const char *output_directory,
                                 const char *prefix, const char *suffix);
+    const char *GatherFlags(const TargetInfo& target, SourceType type);
 
     bool AppendNode(const char *text, const char *dest_filename, const Command &cmd,
                     Span<const char *const> src_filenames);

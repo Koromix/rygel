@@ -19,32 +19,10 @@
 namespace RG {
 
 struct TargetConfig;
-struct TargetInfo;
+struct SourceFileInfo;
 struct SourceFeatures;
 
-struct SourceFileInfo {
-    // In order to build source files with the correct definitions (and include directories, etc.),
-    // we need to use the options from the target that first found this source file!
-    const TargetInfo *target;
-
-    const char *filename;
-    SourceType type;
-
-    uint32_t enable_features;
-    uint32_t disable_features;
-
-    uint32_t CombineFeatures(uint32_t defaults) const
-    {
-        defaults |= enable_features;
-        defaults &= ~disable_features;
-
-        return defaults;
-    }
-
-    RG_HASHTABLE_HANDLER(SourceFileInfo, filename);
-};
-
-struct TargetInfo {
+struct alignas(8) TargetInfo {
     const char *name;
     TargetType type;
     unsigned int platforms;
@@ -80,17 +58,44 @@ struct TargetInfo {
     HeapArray<const char *> embed_filenames;
     const char *embed_options;
 
-    uint32_t CombineFeatures(uint32_t defaults) const
-    {
-        defaults |= enable_features;
-        defaults &= ~disable_features;
+    const char *gnu_flags;
+    const char *ms_flags;
 
-        return defaults;
+    uint32_t CombineFeatures(uint32_t features) const
+    {
+        features |= enable_features;
+        features &= ~disable_features;
+
+        return features;
     }
 
     bool TestPlatforms(HostPlatform platform) const { return platforms & (1 << (int)platform); }
 
     RG_HASHTABLE_HANDLER(TargetInfo, name);
+};
+
+struct SourceFileInfo {
+    // In order to build source files with the correct definitions (and include directories, etc.),
+    // we need to use the options from the target that first found this source file!
+    const TargetInfo *target;
+
+    const char *filename;
+    SourceType type;
+
+    uint32_t enable_features;
+    uint32_t disable_features;
+
+    uint32_t CombineFeatures(uint32_t features) const
+    {
+        features = target->CombineFeatures(features);
+
+        features |= enable_features;
+        features &= ~disable_features;
+
+        return features;
+    }
+
+    RG_HASHTABLE_HANDLER(SourceFileInfo, filename);
 };
 
 struct TargetSet {

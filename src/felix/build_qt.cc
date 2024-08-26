@@ -114,10 +114,11 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
         obj_filename = Fmt(&str_alloc, "%1%2", cpp_filename, build.compiler->GetObjectExtension()).ptr;
 
         uint32_t features = target.CombineFeatures(build.features);
+        const char *flags = GatherFlags(target, SourceType::Cxx);
 
         Command cmd = {};
         build.compiler->MakeObjectCommand(cpp_filename, SourceType::Cxx,
-                                          nullptr, {}, {}, {}, {}, features, build.env,
+                                          nullptr, {}, {}, {}, {}, flags, features,
                                           obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 QRC resources", target.name).ptr;
@@ -347,11 +348,13 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
         if (!obj_filename) {
             obj_filename = Fmt(&str_alloc, "%1%2", moc_filename, build.compiler->GetObjectExtension()).ptr;
 
+            const char *flags = GatherFlags(*src.target, SourceType::Cxx);
+
             Command cmd = {};
             build.compiler->MakeObjectCommand(moc_filename, SourceType::Cxx,
                                               nullptr, src.target->definitions,
                                               src.target->include_directories, system_directories,
-                                              {}, features, build.env,
+                                              {}, flags, features,
                                               obj_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, "Build MOC for %!..+%1%!0", src.filename).ptr;
@@ -396,11 +399,12 @@ R"(#include <QtCore/QtPlugin>
         return nullptr;
 
     uint32_t features = target.CombineFeatures(build.features);
+    const char *flags = GatherFlags(target, SourceType::Cxx);
 
     // Build object file
     Command cmd = {};
     build.compiler->MakeObjectCommand(src_filename, SourceType::Cxx,
-                                      nullptr, {}, {}, qt->headers, {}, features, build.env,
+                                      nullptr, {}, {}, qt->headers, {}, flags, features,
                                       obj_filename,  &str_alloc, &cmd);
 
     const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 static Qt helper", target.name).ptr;

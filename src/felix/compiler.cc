@@ -39,17 +39,6 @@ static bool SplitPrefixSuffix(const char *binary, const char *needle,
     return true;
 }
 
-static void AddEnvironmentFlags(Span<const char *const> names, HeapArray<char> *out_buf)
-{
-    for (const char *name: names) {
-        const char *flags = GetEnv(name);
-
-        if (flags && flags[0]) {
-            Fmt(out_buf, " %1", flags);
-        }
-    }
-}
-
 static void MakeEmbedCommand(Span<const char *const> embed_filenames, bool use_arrays,
                              const char *embed_options, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd)
@@ -411,6 +400,7 @@ public:
         return true;
     }
 
+    CompilerFamily GetFamily() const override { return CompilerFamily::Gnu; };
     const char *GetObjectExtension() const override { return (platform == HostPlatform::Windows) ? ".obj" : ".o"; }
     const char *GetLinkExtension(TargetType type) const override
     {
@@ -454,12 +444,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
-                        Span<const char *const> include_files, uint32_t features, bool env_flags,
+                        Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
-                          include_files, features, env_flags, nullptr, alloc, out_cmd);
+                          include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -474,7 +464,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -702,15 +692,8 @@ public:
             Fmt(&buf, " -include \"%1\"", include_file);
         }
 
-        if (env_flags) {
-            switch (src_type) {
-                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
-                case SourceType::Object:
-                case SourceType::Esbuild:
-                case SourceType::QtUi:
-                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
-            }
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -737,7 +720,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, TargetType link_type,
-                         uint32_t features, bool env_flags, const char *dest_filename,
+                         const char *custom_flags, uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -896,8 +879,8 @@ public:
         if (ld) {
             Fmt(&buf, " -fuse-ld=%1", ld);
         }
-        if (env_flags) {
-            AddEnvironmentFlags("LDFLAGS", &buf);
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -1054,6 +1037,7 @@ public:
         return true;
     }
 
+    CompilerFamily GetFamily() const override { return CompilerFamily::Gnu; };
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType type) const override
     {
@@ -1092,12 +1076,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
-                        Span<const char *const> include_files, uint32_t features, bool env_flags,
+                        Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
-                          include_files, features, env_flags, nullptr, alloc, out_cmd);
+                          include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -1112,7 +1096,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -1299,15 +1283,8 @@ public:
             Fmt(&buf, " -include \"%1\"", include_file);
         }
 
-        if (env_flags) {
-            switch (src_type) {
-                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
-                case SourceType::Object:
-                case SourceType::Esbuild:
-                case SourceType::QtUi:
-                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
-            }
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -1334,7 +1311,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, TargetType link_type,
-                         uint32_t features, bool env_flags, const char *dest_filename,
+                         const char *custom_flags, uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -1457,8 +1434,8 @@ public:
         if (ld) {
             Fmt(&buf, " -fuse-ld=%1", ld);
         }
-        if (env_flags) {
-            AddEnvironmentFlags("LDFLAGS", &buf);
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -1576,6 +1553,7 @@ public:
         return true;
     }
 
+    CompilerFamily GetFamily() const override { return CompilerFamily::Microsoft; };
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetLinkExtension(TargetType type) const override
     {
@@ -1612,12 +1590,12 @@ public:
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
                         Span<const char *const> definitions, Span<const char *const> include_directories,
-                        Span<const char *const> include_files, uint32_t features, bool env_flags,
+                        Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
         MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
-                          include_files, features, env_flags, nullptr, alloc, out_cmd);
+                          include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -1638,7 +1616,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -1742,15 +1720,8 @@ public:
             }
         }
 
-        if (env_flags) {
-            switch (src_type) {
-                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
-                case SourceType::Object:
-                case SourceType::Esbuild:
-                case SourceType::QtUi:
-                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
-            }
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -1772,7 +1743,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, TargetType link_type,
-                         uint32_t features, bool env_flags, const char *dest_filename,
+                         const char *custom_flags, uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -1822,8 +1793,8 @@ public:
             Fmt(&buf, " /SUBSYSTEM:windows /ENTRY:mainCRTStartup");
         }
 
-        if (env_flags) {
-            AddEnvironmentFlags("LDFLAGS", &buf);
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -1895,6 +1866,7 @@ public:
         return true;
     }
 
+    CompilerFamily GetFamily() const override { return CompilerFamily::Gnu; };
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType) const override { return ".js"; }
     const char *GetImportExtension() const override { return ".so"; }
@@ -1918,7 +1890,7 @@ public:
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
-                        Span<const char *const>, uint32_t, bool, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+                        Span<const char *const>, const char *, uint32_t, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -1926,7 +1898,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -1997,15 +1969,8 @@ public:
             Fmt(&buf, " -include \"%1\"", include_file);
         }
 
-        if (env_flags) {
-            switch (src_type) {
-                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
-                case SourceType::Object:
-                case SourceType::Esbuild:
-                case SourceType::QtUi:
-                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
-            }
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -2025,7 +1990,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, TargetType link_type,
-                         uint32_t, bool env_flags, const char *dest_filename,
+                         const char *custom_flags, uint32_t, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -2066,8 +2031,8 @@ public:
             Fmt(&buf, " -s SIDE_MODULE=1");
         }
 
-        if (env_flags) {
-            AddEnvironmentFlags("LDFLAGS", &buf);
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -2179,6 +2144,7 @@ public:
         return true;
     }
 
+    CompilerFamily GetFamily() const override { return CompilerFamily::Gnu; };
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType type) const override {
         RG_ASSERT(type == TargetType::Executable);
@@ -2248,7 +2214,7 @@ public:
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
-                        Span<const char *const>, uint32_t, bool, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+                        Span<const char *const>, const char *, uint32_t, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
@@ -2256,7 +2222,7 @@ public:
     void MakeObjectCommand(const char *src_filename, SourceType src_type,
                            const char *pch_filename, Span<const char *const> definitions,
                            Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, uint32_t features, bool env_flags,
+                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
                            const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -2366,15 +2332,8 @@ public:
             Fmt(&buf, " -include \"%1\"", include_file);
         }
 
-        if (env_flags) {
-            switch (src_type) {
-                case SourceType::C: { AddEnvironmentFlags({"CPPFLAGS", "CFLAGS"}, &buf); } break;
-                case SourceType::Cxx: { AddEnvironmentFlags({"CPPFLAGS", "CXXFLAGS"}, &buf); } break;
-                case SourceType::Object:
-                case SourceType::Esbuild:
-                case SourceType::QtUi:
-                case SourceType::QtResources: { RG_UNREACHABLE(); } break;
-            }
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
@@ -2394,7 +2353,7 @@ public:
 
     void MakeLinkCommand(Span<const char *const> obj_filenames,
                          Span<const char *const> libraries, TargetType link_type,
-                         uint32_t features, bool env_flags, const char *dest_filename,
+                         const char *custom_flags, uint32_t features, const char *dest_filename,
                          Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
@@ -2449,8 +2408,8 @@ public:
         }
         Fmt(&buf, " -lm -lstdc++");
 
-        if (env_flags) {
-            AddEnvironmentFlags("LDFLAGS", &buf);
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
         }
 
         out_cmd->cache_len = buf.len;
