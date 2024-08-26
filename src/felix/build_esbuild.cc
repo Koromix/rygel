@@ -168,7 +168,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
             }
             Fmt(&buf, " --allow-overwrite --metafile=\"%1\" --outfile=\"%2\"", meta_filename, bundle_filename);
 
-            if ((features & (int)CompileFeature::OptimizeSize) || (features & (int)CompileFeature::OptimizeSpeed)) {
+            if (features & (int)CompileFeature::Optimize) {
                 Fmt(&buf, " --minify");
             }
             if (features & (int)CompileFeature::DebugInfo) {

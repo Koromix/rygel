@@ -33,14 +33,14 @@ Template = Debug
 Features = +ASan +UBSan
 
 [Fast]
-Features = ?PCH, ?Ccache, Warnings, DebugInfo, OptimizeSpeed
+Features = ?PCH, ?Ccache, Warnings, DebugInfo, Optimize
 
 [LTO]
-Features = Warnings, DebugInfo, OptimizeSpeed, LTO
+Features = Warnings, DebugInfo, Optimize, LTO
 
 [Paranoid]
 Host = :clang:lld
-Features = Warnings, OptimizeSpeed, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
+Features = Warnings, Optimize, LTO, SafeStack, CFI, ZeroInit, ShuffleCode
 
 [DebugParanoid]
 Template = Paranoid
@@ -48,44 +48,44 @@ Features = +DebugInfo
 
 [EmscriptenNode]
 Host = Emscripten/Node
-Features = Warnings, DebugInfo, OptimizeSpeed
+Features = Warnings, DebugInfo, Optimize
 
 [EmscriptenWeb]
 Host = Emscripten/Web
-Features = Warnings, DebugInfo, OptimizeSpeed
+Features = Warnings, DebugInfo, Optimize
 
 [WasmWasi]
 Host = WASM/WASI
-Features = Warnings, DebugInfo, OptimizeSpeed
+Features = Warnings, DebugInfo, Optimize
 
 [TeensyLC]
 Host = TeensyLC
-Features = Warnings, OptimizeSize
+Features = Warnings, Optimize, MinimizeSize
 
 [Teensy30]
 Host = Teensy30
-Features = Warnings, OptimizeSize
+Features = Warnings, Optimize, MinimizeSize
 
 [Teensy31]
 Host = Teensy31
-Features = Warnings, OptimizeSize
+Features = Warnings, Optimize, MinimizeSize
 
 [Teensy35]
 Host = Teensy35
-Features = Warnings, OptimizeSize
+Features = Warnings, Optimize, MinimizeSize
 
 [Teensy36]
 Host = Teensy36
-Features = Warnings, OptimizeSize
+Features = Warnings, Optimize, MinimizeSize
 
 [Teensy40]
 Host = Teensy40
-Features = Warnings, OptimizeSize
+Features = Warnings, Optimize, MinimizeSize
 
 [Teensy41]
 Host = Teensy41
-Features = Warnings, OptimizeSize
+Features = Warnings, Optimize, MinimizeSize
 
 [TeensyMM]
 Host = TeensyMM
-Features = Warnings, OptimizeSize
+Features = Warnings, Optimize, MinimizeSize

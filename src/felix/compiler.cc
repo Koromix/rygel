@@ -324,8 +324,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::OptimizeSpeed;
-        supported |= (int)CompileFeature::OptimizeSize;
+        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::MinimizeSize;
         if (DetectCcache()) {
             supported |= (int)CompileFeature::Ccache;
         }
@@ -379,8 +379,8 @@ public:
 
         features |= (supported & maybe_features);
 
-        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
-            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
+        if ((features & (int)CompileFeature::MinimizeSize) && !(features & (int)CompileFeature::Optimize)) {
+            LogError("Cannot use MinimizeSize without Optimize feature");
             return false;
         }
         if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
@@ -515,10 +515,10 @@ public:
         if (clang_ver >= 1300) {
             Fmt(&buf, " -fno-finite-loops");
         }
-        if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
-        } else if (features & (int)CompileFeature::OptimizeSize) {
+        if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG -ffunction-sections -fdata-sections");
+        } else if (features & (int)CompileFeature::Optimize) {
+            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
         } else {
             Fmt(&buf, " -O0 -ftrapv");
         }
@@ -595,7 +595,7 @@ public:
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
 
-                if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
+                if (features & (int)CompileFeature::Optimize) {
                     Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", clang_ver >= 1701 ? 3 : 2);
                 } else {
                     Fmt(&buf, " -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
@@ -614,7 +614,7 @@ public:
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
 
-                if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
+                if (features & (int)CompileFeature::Optimize) {
                     Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2");
                 }
             } break;
@@ -794,7 +794,7 @@ public:
         // Platform flags
         switch (platform) {
             case HostPlatform::Windows: {
-                const char *suffix = (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) ? "" : "d";
+                const char *suffix = (features & (int)CompileFeature::Optimize) ? "" : "d";
 
                 Fmt(&buf, " -Wl,/NODEFAULTLIB:libcmt -Wl,/NODEFAULTLIB:msvcrt -Wl,setargv.obj -Wl,oldnames.lib");
                 Fmt(&buf, " -Wl,/OPT:ref");
@@ -977,8 +977,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::OptimizeSpeed;
-        supported |= (int)CompileFeature::OptimizeSize;
+        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::MinimizeSize;
         if (DetectCcache()) {
             supported |= (int)CompileFeature::Ccache;
         }
@@ -1020,8 +1020,8 @@ public:
 
         features |= (supported & maybe_features);
 
-        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
-            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
+        if ((features & (int)CompileFeature::MinimizeSize) && !(features & (int)CompileFeature::Optimize)) {
+            LogError("Cannot use MinimizeSize without Optimize feature");
             return false;
         }
         if ((features & (int)CompileFeature::ASan) && (features & (int)CompileFeature::TSan)) {
@@ -1144,10 +1144,10 @@ public:
         if (gcc_ver >= 1000) {
             Fmt(&buf, " -fno-finite-loops");
         }
-        if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
-        } else if (features & (int)CompileFeature::OptimizeSize) {
+        if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG -ffunction-sections -fdata-sections");
+        } else if (features & (int)CompileFeature::Optimize) {
+            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
         } else {
             Fmt(&buf, " -O0 -ftrapv -fsanitize-undefined-trap-on-error");
         }
@@ -1221,7 +1221,7 @@ public:
             case HostPlatform::Linux: {
                 Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
 
-                if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
+                if (features & (int)CompileFeature::Optimize) {
                     Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", gcc_ver >= 1200 ? 3 : 2);
                 } else {
                     Fmt(&buf, " -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
@@ -1235,7 +1235,7 @@ public:
             default: {
                 Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64");
 
-                if (features & ((int)CompileFeature::OptimizeSpeed | (int)CompileFeature::OptimizeSize)) {
+                if (features & (int)CompileFeature::Optimize) {
                     Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=2");
                 }
             } break;
@@ -1518,8 +1518,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::OptimizeSpeed;
-        supported |= (int)CompileFeature::OptimizeSize;
+        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::MinimizeSize;
         supported |= (int)CompileFeature::HotAssets;
         supported |= (int)CompileFeature::PCH;
         supported |= (int)CompileFeature::Warnings;
@@ -1544,8 +1544,8 @@ public:
 
         features |= (supported & maybe_features);
 
-        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
-            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
+        if ((features & (int)CompileFeature::MinimizeSize) && !(features & (int)CompileFeature::Optimize)) {
+            LogError("Cannot use MinimizeSize without Optimize feature");
             return false;
         }
 
@@ -1642,10 +1642,10 @@ public:
 
         // Build options
         Fmt(&buf, " /I. /EHsc /utf-8");
-        if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " /O2 /DNDEBUG");
-        } else if (features & (int)CompileFeature::OptimizeSize) {
+        if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " /O1 /DNDEBUG");
+        } else if (features & (int)CompileFeature::Optimize) {
+            Fmt(&buf, " /O2 /DNDEBUG");
         } else {
             Fmt(&buf, " /Od /RTCsu");
         }
@@ -1843,8 +1843,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::OptimizeSpeed;
-        supported |= (int)CompileFeature::OptimizeSize;
+        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::MinimizeSize;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
 
@@ -1857,8 +1857,8 @@ public:
 
         features |= (supported & maybe_features);
 
-        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
-            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
+        if ((features & (int)CompileFeature::MinimizeSize) && !(features & (int)CompileFeature::Optimize)) {
+            LogError("Cannot use MinimizeSize without Optimize feature");
             return false;
         }
 
@@ -1924,10 +1924,10 @@ public:
 
         // Build options
         Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
-        if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O1 -fwrapv -DNDEBUG");
-        } else if (features & (int)CompileFeature::OptimizeSize) {
+        if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG");
+        } else if (features & (int)CompileFeature::Optimize) {
+            Fmt(&buf, " -O1 -fwrapv -DNDEBUG");
         } else {
             Fmt(&buf, " -O0 -ftrapv");
         }
@@ -2120,8 +2120,8 @@ public:
     {
         uint32_t supported = 0;
 
-        supported |= (int)CompileFeature::OptimizeSpeed;
-        supported |= (int)CompileFeature::OptimizeSize;
+        supported |= (int)CompileFeature::Optimize;
+        supported |= (int)CompileFeature::MinimizeSize;
         supported |= (int)CompileFeature::Warnings;
         supported |= (int)CompileFeature::DebugInfo;
         supported |= (int)CompileFeature::LTO;
@@ -2135,8 +2135,8 @@ public:
 
         features |= (supported & maybe_features);
 
-        if ((features & (int)CompileFeature::OptimizeSpeed) && (features & (int)CompileFeature::OptimizeSize)) {
-            LogError("Cannot use OptimizeSpeed and OptimizeSize at the same time");
+        if ((features & (int)CompileFeature::MinimizeSize) && !(features & (int)CompileFeature::Optimize)) {
+            LogError("Cannot use MinimizeSize without Optimize feature");
             return false;
         }
 
@@ -2245,10 +2245,10 @@ public:
 
         // Build options
         Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
-        if (features & (int)CompileFeature::OptimizeSpeed) {
-            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
-        } else if (features & (int)CompileFeature::OptimizeSize) {
+        if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG");
+        } else if (features & (int)CompileFeature::Optimize) {
+            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
         } else {
             Fmt(&buf, " -O0 -ftrapv -fsanitize-undefined-trap-on-error");
         }
