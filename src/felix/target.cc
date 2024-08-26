@@ -65,8 +65,6 @@ struct TargetConfig {
     FileSet embed_file_set;
     const char *embed_options;
 
-    const char *gnu_flags;
-    const char *ms_flags;
     int link_priority;
 
     RG_HASHTABLE_HANDLER(TargetConfig, name);
@@ -382,10 +380,6 @@ bool TargetSetBuilder::LoadIni(StreamReader *st)
                         AppendListValues(prop.value, &set.str_alloc, &target_config.embed_file_set.ignore);
                     } else if (prop.key == "EmbedOptions" || prop.key == "PackOptions") {
                         target_config.embed_options = DuplicateString(prop.value, &set.str_alloc).ptr;
-                    } else if (prop.key == "GnuFlags") {
-                        target_config.gnu_flags = DuplicateString(prop.value, &set.str_alloc).ptr;
-                    } else if (prop.key == "MsFlags") {
-                        target_config.ms_flags = DuplicateString(prop.value, &set.str_alloc).ptr;
                     } else if (prop.key == "LinkPriority") {
                         valid &= ParseInt(prop.value, &target_config.link_priority);
                     } else {
@@ -482,8 +476,6 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
     target->disable_features = target_config->disable_features;
     target->bundle_options = target_config->bundle_options;
     target->embed_options = target_config->embed_options;
-    target->gnu_flags = target_config->gnu_flags;
-    target->ms_flags = target_config->ms_flags;
     target->link_priority = target_config->link_priority;
 
     // Resolve imported targets

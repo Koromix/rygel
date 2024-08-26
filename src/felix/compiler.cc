@@ -400,7 +400,6 @@ public:
         return true;
     }
 
-    CompilerFamily GetFamily() const override { return CompilerFamily::Gnu; };
     const char *GetObjectExtension() const override { return (platform == HostPlatform::Windows) ? ".obj" : ".o"; }
     const char *GetLinkExtension(TargetType type) const override
     {
@@ -1037,7 +1036,6 @@ public:
         return true;
     }
 
-    CompilerFamily GetFamily() const override { return CompilerFamily::Gnu; };
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType type) const override
     {
@@ -1553,7 +1551,6 @@ public:
         return true;
     }
 
-    CompilerFamily GetFamily() const override { return CompilerFamily::Microsoft; };
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetLinkExtension(TargetType type) const override
     {
@@ -1866,7 +1863,6 @@ public:
         return true;
     }
 
-    CompilerFamily GetFamily() const override { return CompilerFamily::Gnu; };
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType) const override { return ".js"; }
     const char *GetImportExtension() const override { return ".so"; }
@@ -2144,7 +2140,6 @@ public:
         return true;
     }
 
-    CompilerFamily GetFamily() const override { return CompilerFamily::Gnu; };
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType type) const override {
         RG_ASSERT(type == TargetType::Executable);

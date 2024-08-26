@@ -164,11 +164,6 @@ static const OptionDesc CompileFeatureOptions[] = {
     {"ESM",            "Bundle JS in ESM format instead of IIFE"}
 };
 
-enum class CompilerFamily {
-    Gnu,
-    Microsoft
-};
-
 enum class SourceType {
     C,
     Cxx,
@@ -218,7 +213,6 @@ public:
 
     virtual bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const = 0;
 
-    virtual CompilerFamily GetFamily() const = 0;
     virtual const char *GetObjectExtension() const = 0;
     virtual const char *GetLinkExtension(TargetType type) const = 0;
     virtual const char *GetImportExtension() const = 0;

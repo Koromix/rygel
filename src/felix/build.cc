@@ -984,11 +984,6 @@ const char *Builder::GatherFlags(const TargetInfo &target, SourceType type)
 
         switch (type) {
             case SourceType::C: {
-                switch (build.compiler->GetFamily()) {
-                    case CompilerFamily::Gnu: { AppendFlags(target.gnu_flags, &buf); } break;
-                    case CompilerFamily::Microsoft: { AppendFlags(target.ms_flags, &buf); } break;
-                }
-
                 if (build.env) {
                     AppendFlags(GetEnv("CFLAGS"), &buf);
                     AppendFlags(GetEnv("CPPFLAGS"), &buf);
@@ -996,11 +991,6 @@ const char *Builder::GatherFlags(const TargetInfo &target, SourceType type)
             } break;
 
             case SourceType::Cxx: {
-                switch (build.compiler->GetFamily()) {
-                    case CompilerFamily::Gnu: { AppendFlags(target.gnu_flags, &buf); } break;
-                    case CompilerFamily::Microsoft: { AppendFlags(target.ms_flags, &buf); } break;
-                }
-
                 if (build.env) {
                     AppendFlags(GetEnv("CXXFLAGS"), &buf);
                     AppendFlags(GetEnv("CPPFLAGS"), &buf);

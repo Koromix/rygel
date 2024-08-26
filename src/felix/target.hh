@@ -58,8 +58,6 @@ struct alignas(8) TargetInfo {
     HeapArray<const char *> embed_filenames;
     const char *embed_options;
 
-    const char *gnu_flags;
-    const char *ms_flags;
     int link_priority;
 
     uint32_t CombineFeatures(uint32_t features) const
