@@ -102,19 +102,9 @@ void sb_SandboxBuilder::MountPath(const char *src, const char *dest, bool readon
     mounts.Append(bind);
 }
 
-void sb_SandboxBuilder::FilterSyscalls(sb_FilterAction default_action, Span<const sb_FilterItem> items)
-{
-    RG_ASSERT(!filter_syscalls);
-
-    filter_syscalls = true;
-    this->default_action = default_action;
-
-    FilterSyscalls(items);
-}
-
 void sb_SandboxBuilder::FilterSyscalls(Span<const sb_FilterItem> items)
 {
-    RG_ASSERT(filter_syscalls);
+    filter_syscalls = true;
 
     filter_items.Reserve(items.len);
     for (sb_FilterItem item: items) {
@@ -501,6 +491,22 @@ bool sb_SandboxBuilder::Apply()
     // Install syscall filters
     if (filter_syscalls) {
         LogDebug("Applying syscall filters");
+
+        sb_FilterAction default_action;
+        {
+            const char *str = GetEnv("DEFAULT_SECCOMP_ACTION");
+
+            if (!str || TestStrI(str, "Kill")) {
+                default_action = sb_FilterAction::Kill;
+            } else if (TestStrI(str, "Trap")) {
+                default_action = sb_FilterAction::Trap;
+            } else if (TestStrI(str, "Block")) {
+                default_action = sb_FilterAction::Block;
+            } else {
+                LogError("Invalid default seccomp action '%1'", str);
+                return false;
+            }
+        }
 
         if (prctl(PR_GET_SECCOMP, 0, 0, 0, 0) < 0) {
             LogError("Cannot sandbox syscalls: seccomp is not available");

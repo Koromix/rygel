@@ -95,7 +95,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         "/etc/ld.so.cache"
     }, true);
 
-    sb.FilterSyscalls(sb_FilterAction::Kill, {
+    sb.FilterSyscalls({
         { "exit", sb_FilterAction::Allow },
         { "exit_group", sb_FilterAction::Allow },
         { "brk", sb_FilterAction::Allow },

@@ -46,7 +46,7 @@ static bool ApplySandbox()
 
     sb_SandboxBuilder sb;
 
-    sb.FilterSyscalls(sb_FilterAction::Kill, {
+    sb.FilterSyscalls({
         { "exit", sb_FilterAction::Allow },
         { "exit_group", sb_FilterAction::Allow },
         { "brk", sb_FilterAction::Allow },

@@ -59,7 +59,6 @@ class sb_SandboxBuilder final {
     HeapArray<const char *> masked_filenames;
 
     bool filter_syscalls = false;
-    sb_FilterAction default_action;
     HeapArray<sb_FilterItem> filter_items;
 #endif
 
@@ -75,7 +74,6 @@ public:
 
 #if defined(__linux__)
     void MountPath(const char *src, const char *dest, bool readonly);
-    void FilterSyscalls(sb_FilterAction default_action, Span<const sb_FilterItem> items = {});
     void FilterSyscalls(Span<const sb_FilterItem> items);
 #endif
 
