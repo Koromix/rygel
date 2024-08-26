@@ -165,6 +165,7 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"clone", sb_FilterAction::Allow},
         {"clone3", sb_FilterAction::Allow},
         {"futex", sb_FilterAction::Allow},
+        {"futex_time64", sb_FilterAction::Allow},
         {"rseq", sb_FilterAction::Allow},
         {"set_robust_list", sb_FilterAction::Allow},
         {"socket", sb_FilterAction::Allow},
@@ -210,7 +211,8 @@ static bool ApplySandbox(Span<const char *const> reveal_paths, Span<const char *
         {"sendto", sb_FilterAction::Allow},
         {"shutdown", sb_FilterAction::Allow},
         {"uname", sb_FilterAction::Allow},
-        {"utime", sb_FilterAction::Allow}
+        {"utime", sb_FilterAction::Allow},
+        {"getrusage", sb_FilterAction::Allow}
     });
 #endif
 
