@@ -511,6 +511,7 @@ public:
 
         // Build options
         Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
+        Fmt(&buf, " -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free");
         if (clang_ver >= 1300) {
             Fmt(&buf, " -fno-finite-loops");
         }
@@ -1139,6 +1140,7 @@ public:
 
         // Build options
         Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
+        Fmt(&buf, " -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free");
         if (gcc_ver >= 1000) {
             Fmt(&buf, " -fno-finite-loops");
         }
