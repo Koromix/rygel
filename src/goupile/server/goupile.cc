@@ -1102,13 +1102,6 @@ For help about those commands, type: %!..+%1 <command> --help%!0)",
             LogDebug("Prune template renders");
             PruneRenders();
 
-#if defined(__GLIBC__)
-            // Actually release memory to the OS, because for some reason glibc doesn't want to
-            // do this automatically even after 98% of the resident memory pool has been freed.
-            LogDebug("Release memory (glibc)");
-            malloc_trim(0);
-#endif
-
             first = false;
         }
     }
