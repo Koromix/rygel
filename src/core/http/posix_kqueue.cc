@@ -180,7 +180,7 @@ void http_Daemon::Stop()
 {
     // Shut everything down
     for (int listener: listeners) {
-        shutdown(listener, SHUT_RD);
+        shutdown(listener, SHUT_RDWR);
     }
 
 #if defined(__APPLE__)
