@@ -703,23 +703,28 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     this->socket = socket;
 
-    int family = sa->sa_family;
-    void *ptr = nullptr;
+    switch (sa->sa_family) {
+        case AF_INET: {
+            void *ptr = &((sockaddr_in *)sa)->sin_addr;
 
-    switch (family) {
-        case AF_INET: { ptr = &((sockaddr_in *)sa)->sin_addr; } break;
-        case AF_INET6: { ptr = &((sockaddr_in6 *)sa)->sin6_addr; } break;
-        case AF_UNIX: {
-            CopyString("unix", addr);
-            return true;
+            if (!inet_ntop(AF_INET, ptr, addr, RG_SIZE(addr))) [[unlikely]] {
+                LogError("Cannot convert IPv4 address to text");
+                return false;
+            }
         } break;
 
-        default: { RG_UNREACHABLE(); } break;
-    }
+        case AF_INET6: {
+            void *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
 
-    if (!inet_ntop(family, ptr, addr, RG_SIZE(addr))) {
-        LogError("Cannot convert network address to text");
-        return false;
+            if (!inet_ntop(AF_INET6, ptr, addr, RG_SIZE(addr))) [[unlikely]] {
+                LogError("Cannot convert IPv6 address to text");
+                return false;
+            }
+        } break;
+
+        case AF_UNIX: { CopyString("unix", addr); } break;
+
+        default: { RG_UNREACHABLE(); } break;
     }
 
     socket_start = start;
