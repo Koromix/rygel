@@ -15,7 +15,7 @@ DOCKER_IMAGE=debian11
 
 build() {
     ./bootstrap.sh
-    ./felix -pParanoid --host=$1:clang-17:lld-17 goupile
+    ./felix -pParanoid --host=$1:clang-18:lld-18 goupile
 
     install -D -m0755 bin/Paranoid/goupile ${ROOT_DIR}/bin/goupile
 
