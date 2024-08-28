@@ -290,7 +290,7 @@ void http_Daemon::RunHandler(http_IO *client, int64_t now)
 
     client->request.keepalive &= (now < client->socket_start + keepalive_time);
 
-    handle_func(client->request, client);
+    handle_func(client);
 
     if (!client->response.started) [[unlikely]] {
         client->SendError(500);

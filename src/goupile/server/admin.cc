@@ -1043,7 +1043,7 @@ Options:
     return 0;
 }
 
-void HandleDemo(const http_RequestInfo &request, http_IO *io)
+void HandleDemo(http_IO *io)
 {
     RG_ASSERT(gp_domain.config.demo_mode);
 
@@ -1104,7 +1104,7 @@ void HandleDemo(const http_RequestInfo &request, http_IO *io)
 
     if (!gp_domain.SyncInstance(name))
         return;
-    if (!LoginUserAuto(userid, request, io))
+    if (!LoginUserAuto(io, userid))
         return;
 
     const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;
@@ -1112,9 +1112,10 @@ void HandleDemo(const http_RequestInfo &request, http_IO *io)
     io->SendEmpty(302);
 }
 
-void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceCreate(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1456,9 +1457,10 @@ bool ArchiveDomain()
     return ArchiveInstances(nullptr, &conflict) || conflict;
 }
 
-void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceDelete(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1612,9 +1614,10 @@ void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io)
     io->SendText(complete ? 200 : 202, "{}", "application/json");
 }
 
-void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceConfigure(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1785,9 +1788,9 @@ void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceList(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1857,9 +1860,10 @@ void HandleInstanceList(const http_RequestInfo &request, http_IO *io)
     json.Finish();
 }
 
-void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
+void HandleInstanceAssign(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2032,9 +2036,10 @@ void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
+void HandleInstancePermissions(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2133,9 +2138,9 @@ void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io)
     json.Finish();
 }
 
-void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
+void HandleArchiveCreate(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2162,9 +2167,9 @@ void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
+void HandleArchiveDelete(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2234,9 +2239,9 @@ void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
+void HandleArchiveList(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2288,9 +2293,10 @@ void HandleArchiveList(const http_RequestInfo &request, http_IO *io)
     json.Finish();
 }
 
-void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
+void HandleArchiveDownload(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2334,9 +2340,10 @@ void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io)
     io->SendFile(200, filename);
 }
 
-void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
+void HandleArchiveUpload(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2401,9 +2408,10 @@ void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
+void HandleArchiveRestore(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2779,9 +2787,10 @@ void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
+void HandleUserCreate(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -2926,9 +2935,10 @@ void HandleUserCreate(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
+void HandleUserEdit(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -3102,9 +3112,10 @@ void HandleUserEdit(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
+void HandleUserDelete(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");
@@ -3205,9 +3216,9 @@ void HandleUserDelete(const http_RequestInfo &request, http_IO *io)
     });
 }
 
-void HandleUserList(const http_RequestInfo &request, http_IO *io)
+void HandleUserList(http_IO *io)
 {
-    RetainPtr<const SessionInfo> session = GetAdminSession(nullptr, request, io);
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
 
     if (!session) {
         LogError("User is not logged in");

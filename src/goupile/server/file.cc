@@ -24,8 +24,10 @@
 
 namespace RG {
 
-void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFileList(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (instance->master != instance) {
         LogError("Cannot list files through slave instance");
         io->SendError(403);
@@ -40,7 +42,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
         }
 
         if (fs_version == 0) {
-            RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+            RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
             if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
                 LogError("You cannot access pages in development");
@@ -82,7 +84,7 @@ void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, h
     json.Finish();
 }
 
-static void AddMimeTypeHeader(const char *filename, http_IO *io)
+static void AddMimeTypeHeader(http_IO *io, const char *filename)
 {
    const char *mimetype = GetMimeType(GetPathExtension(filename), nullptr);
 
@@ -92,8 +94,9 @@ static void AddMimeTypeHeader(const char *filename, http_IO *io)
 }
 
 // Returns true when request has been handled (file exists or an error has occured)
-bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+bool HandleFileGet(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
     const char *url = request.path + 1 + instance->key.len;
 
     RG_ASSERT(url <= request.path + strlen(request.path));
@@ -127,7 +130,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
         if (ParseInt(filename, &fs_version, 0, &remain) && remain.ptr[0] == '/') {
             if (fs_version == 0) {
-                RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+                RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
                 if (!session || !session->HasPermission(instance, UserPermission::BuildCode)) {
                     LogError("You cannot access pages in development");
@@ -210,7 +213,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
         }
 
         io->AddEncodingHeader(dest_encoding);
-        AddMimeTypeHeader(filename.ptr, io);
+        AddMimeTypeHeader(io, filename.ptr);
 
         io->SendBinary(200, MakeSpan(ptr, src_len));
 
@@ -321,7 +324,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
 
                 io->AddHeader("Content-Range", buf);
                 io->AddEncodingHeader(dest_encoding);
-                AddMimeTypeHeader(filename.ptr, io);
+                AddMimeTypeHeader(io, filename.ptr);
             }
 
             StreamWriter writer;
@@ -354,7 +357,7 @@ bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, ht
     // Default path, for big files and/or transcoding (Gzip to None, etc.)
     {
         io->AddEncodingHeader(dest_encoding);
-        AddMimeTypeHeader(filename.ptr, io);
+        AddMimeTypeHeader(io, filename.ptr);
 
         StreamWriter writer;
         if (src_encoding == dest_encoding) {
@@ -404,9 +407,10 @@ static bool CheckSha256(Span<const char> sha256)
     return true;
 }
 
-void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFilePut(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");
@@ -582,9 +586,10 @@ void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, ht
     });
 }
 
-void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFileDelete(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");
@@ -646,9 +651,10 @@ void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request,
     });
 }
 
-void HandleFileHistory(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFileHistory(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");
@@ -702,9 +708,9 @@ void HandleFileHistory(InstanceHolder *instance, const http_RequestInfo &request
     json.Finish();
 }
 
-void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFileRestore(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");
@@ -774,9 +780,10 @@ void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFileDelta(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");
@@ -889,9 +896,9 @@ void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, 
     json.Finish();
 }
 
-void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleFilePublish(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");

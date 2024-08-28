@@ -45,7 +45,7 @@ bool SendSMS(const char *to, const char *message)
     return sms.Send(to, message);
 }
 
-void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSendMail(http_IO *io, InstanceHolder *instance)
 {
     if (!gp_domain.config.smtp.url) {
         LogError("This instance is not configured to send mails");
@@ -53,7 +53,7 @@ void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, h
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");
@@ -135,7 +135,7 @@ void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, h
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSendSMS(http_IO *io, InstanceHolder *instance)
 {
     if (gp_domain.config.sms.provider == sms_Provider::None) {
         LogError("This instance is not configured to send SMS messages");
@@ -143,7 +143,7 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");
@@ -221,9 +221,9 @@ void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, ht
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSendTokenize(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");

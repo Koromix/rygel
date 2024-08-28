@@ -26,15 +26,17 @@
 
 namespace RG {
 
-void HandleLegacyLoad(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleLegacyLoad(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -169,7 +171,7 @@ struct SaveRecord {
     bool deleted = false;
 };
 
-void HandleLegacySave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleLegacySave(http_IO *io, InstanceHolder *instance)
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
@@ -177,7 +179,7 @@ void HandleLegacySave(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -194,7 +196,7 @@ void HandleLegacySave(InstanceHolder *instance, const http_RequestInfo &request,
     if (!session->userid) {
         RG_ASSERT(session->type == SessionType::Auto);
 
-        session = MigrateGuestSession(*session, instance, request, io);
+        session = MigrateGuestSession(io, instance, *session);
         if (!session)
             return;
         stamp = session->GetStamp(instance);
@@ -1048,15 +1050,17 @@ RecordExporter::Row *RecordExporter::GetRow(RecordExporter::Table *table, const 
     return row;
 }
 
-void HandleLegacyExport(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session || !session->HasPermission(instance, UserPermission::DataExport)) {
         const InstanceHolder *master = instance->master;

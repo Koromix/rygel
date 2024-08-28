@@ -243,15 +243,17 @@ static void JsonRawOrNull(Span<const char> str, json_Writer *json)
     }
 }
 
-void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordList(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -362,15 +364,17 @@ void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request,
     json.Finish();
 }
 
-void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordGet(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -499,15 +503,17 @@ void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, 
     json.Finish();
 }
 
-void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordAudit(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session) {
         LogError("User is not logged in");
@@ -570,8 +576,10 @@ void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request
     json.Finish();
 }
 
-void RunExport(InstanceHolder *instance, bool data, bool meta, const http_RequestInfo &request, http_IO *io)
+void RunExport(http_IO *io, InstanceHolder *instance, bool data, bool meta)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
         io->SendError(403);
@@ -602,7 +610,7 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
                 return;
             }
         } else {
-           RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+           RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
            if (!session) {
                 LogError("User is not logged in");
@@ -713,14 +721,14 @@ void RunExport(InstanceHolder *instance, bool data, bool meta, const http_Reques
     json.Finish();
 }
 
-void HandleExportData(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleExportData(http_IO *io, InstanceHolder *instance)
 {
-    RunExport(instance, true, false, request, io);
+    RunExport(io, instance, true, false);
 }
 
-void HandleExportMeta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleExportMeta(http_IO *io, InstanceHolder *instance)
 {
-    RunExport(instance, false, true, request, io);
+    RunExport(io, instance, false, true);
 }
 
 }

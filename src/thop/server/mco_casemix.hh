@@ -19,7 +19,7 @@
 
 namespace RG {
 
-void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http_IO *io);
-void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoAggregate(http_IO *io, const User *user);
+void ProduceMcoResults(http_IO *io, const User *user);
 
 }

@@ -255,8 +255,9 @@ static bool LoadConfig(const char *filename, Config *out_config)
     return LoadConfig(&st, out_config);
 }
 
-static void ServeFile(const char *filename, const FileInfo &file_info, const http_RequestInfo &request, http_IO *io)
+static void ServeFile(http_IO *io, const char *filename, const FileInfo &file_info)
 {
+    const http_RequestInfo &request = io->Request();
     const char *etag = config.set_etag ? Fmt(io->Allocator(), "%1-%2", file_info.mtime, file_info.size).ptr : nullptr;
 
     // Handle ETag caching
@@ -316,8 +317,10 @@ static void WriteURL(Span<const char> str, StreamWriter *writer) {
     }
 }
 
-static void ServeIndex(const char *dirname, const http_RequestInfo &request, http_IO *io)
+static void ServeIndex(http_IO *io, const char *dirname)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (config.verbose) {
         LogInfo("Serving '%1' with auto-index of '%2'", request.path, dirname);
     }
@@ -469,8 +472,10 @@ R"(<!DOCTYPE html>
     io->SendBinary(200, page, "text/html");
 }
 
-static HandlerResult HandleLocal(const http_RequestInfo &request, http_IO *io, const char *dirname)
+static HandlerResult HandleLocal(http_IO *io, const char *dirname)
 {
+    const http_RequestInfo &request = io->Request();
+
     Span<const char> relative_url = TrimStrLeft(request.path, "/\\").ptr;
     Span<const char> filename = NormalizePath(relative_url, dirname, io->Allocator());
 
@@ -499,7 +504,7 @@ static HandlerResult HandleLocal(const http_RequestInfo &request, http_IO *io, c
     }
 
     if (file_info.type == FileType::File) {
-        ServeFile(filename.ptr, file_info, request, io);
+        ServeFile(io, filename.ptr, file_info);
         return HandlerResult::Done;
     } else if (file_info.type == FileType::Directory) {
         if (!EndsWith(request.path, "/")) {
@@ -515,10 +520,10 @@ static HandlerResult HandleLocal(const http_RequestInfo &request, http_IO *io, c
 
         if (StatFile(index_filename, (int)StatFlag::SilentMissing, &index_info) == StatResult::Success &&
                 index_info.type == FileType::File) {
-            ServeFile(index_filename, index_info, request, io);
+            ServeFile(io, index_filename, index_info);
             return HandlerResult::Done;
         } else if (config.auto_index) {
-            ServeIndex(filename.ptr, request, io);
+            ServeIndex(io, filename.ptr);
             return HandlerResult::Done;
         } else {
             io->SendError(403);
@@ -530,7 +535,7 @@ static HandlerResult HandleLocal(const http_RequestInfo &request, http_IO *io, c
     }
 }
 
-static HandlerResult HandleProxy(const http_RequestInfo &request, http_IO *io, const char *proxy_url, bool relay404)
+static HandlerResult HandleProxy(http_IO *io, const char *proxy_url, bool relay404)
 {
     static const char *const OmitHeaders[] = {
         "Host",
@@ -542,6 +547,8 @@ static HandlerResult HandleProxy(const http_RequestInfo &request, http_IO *io, c
         "Content-Length",
         "Transfer-Encoding"
     };
+
+    const http_RequestInfo &request = io->Request();
 
     if (curl) {
         if (!curl_Reset(curl))
@@ -685,8 +692,10 @@ static HandlerResult HandleProxy(const http_RequestInfo &request, http_IO *io, c
     return HandlerResult::Done;
 }
 
-static void HandleRequest(const http_RequestInfo &request, http_IO *io)
+static void HandleRequest(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
+
     RG_ASSERT(StartsWith(request.path, "/"));
 
     // Security checks
@@ -717,8 +726,8 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
     for (const SourceInfo &src: config.sources) {
         switch (src.type) {
-            case SourceType::Local: { TRY(HandleLocal(request, io, src.path)); } break;
-            case SourceType::Remote: { TRY(HandleProxy(request, io, src.path, config.sources.len == 1)); } break;
+            case SourceType::Local: { TRY(HandleLocal(io, src.path)); } break;
+            case SourceType::Remote: { TRY(HandleProxy(io, src.path, config.sources.len == 1)); } break;
         }
     }
 

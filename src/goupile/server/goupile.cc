@@ -270,9 +270,9 @@ static void InitAssets()
     });
 }
 
-static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *etag,
-                         const http_RequestInfo &request, http_IO *io)
+static void AttachStatic(http_IO *io, const AssetInfo &asset, int64_t max_age, const char *etag)
 {
+    const http_RequestInfo &request = io->Request();
     const char *client_etag = request.GetHeaderValue("If-None-Match");
 
     if (client_etag && TestStr(client_etag, etag)) {
@@ -285,16 +285,16 @@ static void AttachStatic(const AssetInfo &asset, int64_t max_age, const char *et
     }
 }
 
-static void HandlePing(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+static void HandlePing(http_IO *io, InstanceHolder *instance)
 {
     // Do this to renew session and clear invalid session cookies
-    GetNormalSession(instance, request, io);
+    GetNormalSession(io, instance);
 
     io->AddCachingHeaders(0, nullptr);
     io->SendText(200, "Pong!");
 }
 
-static void HandleFileStatic(InstanceHolder *instance, const http_RequestInfo &, http_IO *io)
+static void HandleFileStatic(http_IO *io, InstanceHolder *instance)
 {
     http_JsonPageBuilder json;
     if (!json.Init(io))
@@ -369,9 +369,11 @@ static void PruneRenders()
     render_map.Trim();
 }
 
-static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
+static void HandleAdminRequest(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
     RG_ASSERT(StartsWith(request.path, "/admin/") || TestStr(request.path, "/admin"));
+
     const char *admin_url = request.path + 6;
 
     // Missing trailing slash, redirect
@@ -433,14 +435,14 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
                     Print(writer, "{{%1}}", expr);
                 }
             });
-            AttachStatic(*render, 0, shared_etag, request, io);
+            AttachStatic(io, *render, 0, shared_etag);
 
             return;
         } else if (TestStr(admin_url, "/favicon.png")) {
             const AssetInfo *asset = assets_map.FindValue("/admin/favicon.png", nullptr);
             RG_ASSERT(asset);
 
-            AttachStatic(*asset, 0, shared_etag, request, io);
+            AttachStatic(io, *asset, 0, shared_etag);
 
             return;
         } else {
@@ -448,7 +450,7 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
 
             if (asset) {
                 int64_t max_age = StartsWith(admin_url, "/static/") ? (365ll * 86400000) : 0;
-                AttachStatic(*asset, max_age, shared_etag, request, io);
+                AttachStatic(io, *asset, max_age, shared_etag);
 
                 return;
             }
@@ -456,62 +458,62 @@ static void HandleAdminRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // CSRF protection
-    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(request, io))
+    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
     // And now, API endpoints
     if (TestStr(admin_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
-        HandlePing(nullptr, request, io);
+        HandlePing(io, nullptr);
     } else if (TestStr(admin_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
-        HandleSessionProfile(nullptr, request, io);
+        HandleSessionProfile(io, nullptr);
     } else if (TestStr(admin_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
-        HandleSessionLogin(nullptr, request, io);
+        HandleSessionLogin(io, nullptr);
     } else if (TestStr(admin_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
-        HandleSessionConfirm(nullptr, request, io);
+        HandleSessionConfirm(io, nullptr);
     } else if (TestStr(admin_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
-        HandleSessionLogout(request, io);
+        HandleSessionLogout(io);
     } else if (TestStr(admin_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
-        HandleChangePassword(nullptr, request, io);
+        HandleChangePassword(io, nullptr);
     } else if (TestStr(admin_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
-        HandleChangeQRcode(request, io);
+        HandleChangeQRcode(io);
     } else if (TestStr(admin_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
-        HandleChangeTOTP(request, io);
+        HandleChangeTOTP(io);
     } else if (TestStr(admin_url, "/api/instances/create") && request.method == http_RequestMethod::Post) {
-        HandleInstanceCreate(request, io);
+        HandleInstanceCreate(io);
     } else if (TestStr(admin_url, "/api/instances/delete") && request.method == http_RequestMethod::Post) {
-        HandleInstanceDelete(request, io);
+        HandleInstanceDelete(io);
     } else if (TestStr(admin_url, "/api/instances/configure") && request.method == http_RequestMethod::Post) {
-        HandleInstanceConfigure(request, io);
+        HandleInstanceConfigure(io);
     } else if (TestStr(admin_url, "/api/instances/list") && request.method == http_RequestMethod::Get) {
-        HandleInstanceList(request, io);
+        HandleInstanceList(io);
     } else if (TestStr(admin_url, "/api/instances/assign") && request.method == http_RequestMethod::Post) {
-        HandleInstanceAssign(request, io);
+        HandleInstanceAssign(io);
     } else if (TestStr(admin_url, "/api/instances/permissions") && request.method == http_RequestMethod::Get) {
-        HandleInstancePermissions(request, io);
+        HandleInstancePermissions(io);
     } else if (TestStr(admin_url, "/api/archives/create") && request.method == http_RequestMethod::Post) {
-        HandleArchiveCreate(request, io);
+        HandleArchiveCreate(io);
     } else if (TestStr(admin_url, "/api/archives/delete") && request.method == http_RequestMethod::Post) {
-        HandleArchiveDelete(request, io);
+        HandleArchiveDelete(io);
     } else if (TestStr(admin_url, "/api/archives/list") && request.method == http_RequestMethod::Get) {
-        HandleArchiveList(request, io);
+        HandleArchiveList(io);
     } else if (StartsWith(admin_url, "/api/archives/files") && request.method == http_RequestMethod::Get) {
-        HandleArchiveDownload(request, io);
+        HandleArchiveDownload(io);
     } else if (StartsWith(admin_url, "/api/archives/files") && request.method == http_RequestMethod::Put) {
-        HandleArchiveUpload(request, io);
+        HandleArchiveUpload(io);
     } else if (TestStr(admin_url, "/api/archives/restore") && request.method == http_RequestMethod::Post) {
-        HandleArchiveRestore(request, io);
+        HandleArchiveRestore(io);
     } else if (TestStr(admin_url, "/api/users/create") && request.method == http_RequestMethod::Post) {
-        HandleUserCreate(request, io);
+        HandleUserCreate(io);
     } else if (TestStr(admin_url, "/api/users/edit") && request.method == http_RequestMethod::Post) {
-        HandleUserEdit(request, io);
+        HandleUserEdit(io);
     } else if (TestStr(admin_url, "/api/users/delete") && request.method == http_RequestMethod::Post) {
-        HandleUserDelete(request, io);
+        HandleUserDelete(io);
     } else if (TestStr(admin_url, "/api/users/list") && request.method == http_RequestMethod::Get) {
-        HandleUserList(request, io);
+        HandleUserList(io);
     } else if (TestStr(admin_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
-        HandleSendMail(nullptr, request, io);
+        HandleSendMail(io, nullptr);
     } else if (TestStr(admin_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
-        HandleSendSMS(nullptr, request, io);
+        HandleSendSMS(io, nullptr);
     } else {
         io->SendError(404);
     }
@@ -533,8 +535,10 @@ static void EncodeUrlSafe(Span<const char> str, const char *passthrough, HeapArr
     out_buf->ptr[out_buf->len] = 0;
 }
 
-static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
+static void HandleInstanceRequest(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
+
     InstanceHolder *instance = nullptr;
     const char *instance_url = request.path;
 
@@ -591,7 +595,7 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // Try application files
-    if (request.method == http_RequestMethod::Get && HandleFileGet(instance, request, io))
+    if (request.method == http_RequestMethod::Get && HandleFileGet(io, instance))
         return;
 
     // Try static assets
@@ -659,99 +663,101 @@ static void HandleInstanceRequest(const http_RequestInfo &request, http_IO *io)
                     Print(writer, "{{%1}}", expr);
                 }
             });
-            AttachStatic(*render, 0, instance_etag, request, io);
+            AttachStatic(io, *render, 0, instance_etag);
 
             return;
         } else if (asset) {
             int64_t max_age = StartsWith(instance_url, "/static/") ? (365ll * 86400000) : 0;
-            AttachStatic(*asset, max_age, shared_etag, request, io);
+            AttachStatic(io, *asset, max_age, shared_etag);
 
             return;
         }
     }
 
     // CSRF protection
-    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(request, io))
+    if (request.method != http_RequestMethod::Get && !http_PreventCSRF(io))
         return;
 
     // And now, API endpoints
     if (TestStr(instance_url, "/api/session/ping") && request.method == http_RequestMethod::Get) {
-        HandlePing(instance, request, io);
+        HandlePing(io, instance);
     } else if (TestStr(instance_url, "/api/session/profile") && request.method == http_RequestMethod::Get) {
-        HandleSessionProfile(instance, request, io);
+        HandleSessionProfile(io, instance);
     } else if (TestStr(instance_url, "/api/session/login") && request.method == http_RequestMethod::Post) {
-        HandleSessionLogin(instance, request, io);
+        HandleSessionLogin(io, instance);
     } else if (TestStr(instance_url, "/api/session/token") && request.method == http_RequestMethod::Post) {
-        HandleSessionToken(instance, request, io);
+        HandleSessionToken(io, instance);
     } else if (TestStr(instance_url, "/api/session/key") && request.method == http_RequestMethod::Post) {
-        HandleSessionKey(instance, request, io);
+        HandleSessionKey(io, instance);
     } else if (TestStr(instance_url, "/api/session/confirm") && request.method == http_RequestMethod::Post) {
-        HandleSessionConfirm(instance, request, io);
+        HandleSessionConfirm(io, instance);
     } else if (TestStr(instance_url, "/api/session/logout") && request.method == http_RequestMethod::Post) {
-        HandleSessionLogout(request, io);
+        HandleSessionLogout(io);
     } else if (TestStr(instance_url, "/api/change/password") && request.method == http_RequestMethod::Post) {
-        HandleChangePassword(instance, request, io);
+        HandleChangePassword(io, instance);
     } else if (TestStr(instance_url, "/api/change/qrcode") && request.method == http_RequestMethod::Get) {
-        HandleChangeQRcode(request, io);
+        HandleChangeQRcode(io);
     } else if (TestStr(instance_url, "/api/change/totp") && request.method == http_RequestMethod::Post) {
-        HandleChangeTOTP(request, io);
+        HandleChangeTOTP(io);
     } else if (TestStr(instance_url, "/api/change/mode") && request.method == http_RequestMethod::Post) {
-        HandleChangeMode(instance, request, io);
+        HandleChangeMode(io, instance);
     } else if (TestStr(instance_url, "/api/change/export_key") && request.method == http_RequestMethod::Post) {
-        HandleChangeExportKey(instance, request, io);
+        HandleChangeExportKey(io, instance);
     } else if (TestStr(instance_url, "/api/files/static") && request.method == http_RequestMethod::Get) {
-         HandleFileStatic(instance, request, io);
+         HandleFileStatic(io, instance);
     } else if (TestStr(instance_url, "/api/files/list") && request.method == http_RequestMethod::Get) {
-         HandleFileList(instance, request, io);
+         HandleFileList(io, instance);
     } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Put) {
-        HandleFilePut(instance, request, io);
+        HandleFilePut(io, instance);
     } else if (StartsWith(instance_url, "/files/") && request.method == http_RequestMethod::Delete) {
-        HandleFileDelete(instance, request, io);
+        HandleFileDelete(io, instance);
     } else if (StartsWith(instance_url, "/api/files/history") && request.method == http_RequestMethod::Get) {
-        HandleFileHistory(instance, request, io);
+        HandleFileHistory(io, instance);
     } else if (StartsWith(instance_url, "/api/files/restore") && request.method == http_RequestMethod::Post) {
-        HandleFileRestore(instance, request, io);
+        HandleFileRestore(io, instance);
     } else if (StartsWith(instance_url, "/api/files/delta") && request.method == http_RequestMethod::Get) {
-        HandleFileDelta(instance, request, io);
+        HandleFileDelta(io, instance);
     } else if (StartsWith(instance_url, "/api/files/publish") && request.method == http_RequestMethod::Post) {
-        HandleFilePublish(instance, request, io);
+        HandleFilePublish(io, instance);
     } else if (TestStr(instance_url, "/api/records/list") && request.method == http_RequestMethod::Get) {
-        HandleRecordList(instance, request, io);
+        HandleRecordList(io, instance);
     } else if (TestStr(instance_url, "/api/records/get") && request.method == http_RequestMethod::Get) {
-        HandleRecordGet(instance, request, io);
+        HandleRecordGet(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/audit") && request.method == http_RequestMethod::Get) {
-        HandleRecordAudit(instance, request, io);
+        HandleRecordAudit(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
-        HandleRecordSave(instance, request, io);
+        HandleRecordSave(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/delete") && request.method == http_RequestMethod::Post) {
-        HandleRecordDelete(instance, request, io);
+        HandleRecordDelete(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/lock") && request.method == http_RequestMethod::Post) {
-        HandleRecordLock(instance, request, io);
+        HandleRecordLock(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/records/unlock") && request.method == http_RequestMethod::Post) {
-        HandleRecordUnlock(instance, request, io);
+        HandleRecordUnlock(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/export/data") && request.method == http_RequestMethod::Get) {
-        HandleExportData(instance, request, io);
+        HandleExportData(io, instance);
     } else if (!instance->legacy && TestStr(instance_url, "/api/export/meta") && request.method == http_RequestMethod::Get) {
-        HandleExportMeta(instance, request, io);
+        HandleExportMeta(io, instance);
     } else if (instance->legacy && TestStr(instance_url, "/api/records/load") && request.method == http_RequestMethod::Get) {
-        HandleLegacyLoad(instance, request, io);
+        HandleLegacyLoad(io, instance);
     } else if (instance->legacy && TestStr(instance_url, "/api/records/save") && request.method == http_RequestMethod::Post) {
-        HandleLegacySave(instance, request, io);
+        HandleLegacySave(io, instance);
     } else if (instance->legacy && TestStr(instance_url, "/api/records/export") && request.method == http_RequestMethod::Get) {
-        HandleLegacyExport(instance, request, io);
+        HandleLegacyExport(io, instance);
     } else if (TestStr(instance_url, "/api/send/mail") && request.method == http_RequestMethod::Post) {
-        HandleSendMail(instance, request, io);
+        HandleSendMail(io, instance);
     } else if (TestStr(instance_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
-        HandleSendSMS(instance, request, io);
+        HandleSendSMS(io, instance);
     } else if (TestStr(instance_url, "/api/send/tokenize") && request.method == http_RequestMethod::Post) {
-        HandleSendTokenize(instance, request, io);
+        HandleSendTokenize(io, instance);
     } else {
         io->SendError(404);
     }
 }
 
-static void HandleRequest(const http_RequestInfo &request, http_IO *io)
+static void HandleRequest(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
+
 #if defined(FELIX_HOT_ASSETS)
     // This is not actually thread safe, because it may release memory from an asset
     // that is being used by another thread. This code only runs in development builds
@@ -795,7 +801,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     // to forbid the instance key.
     if (TestStr(request.path, "/")) {
         if (gp_domain.config.demo_mode) {
-            HandleDemo(request, io);
+            HandleDemo(io);
         } else {
             const AssetInfo *render = RenderTemplate("/", *assets_root,
                                                  [&](Span<const char> expr, StreamWriter *writer) {
@@ -811,17 +817,17 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
                     Print(writer, "{{%1}}", expr);
                 }
             });
-            AttachStatic(*render, 0, shared_etag, request, io);
+            AttachStatic(io, *render, 0, shared_etag);
         }
     } else if (TestStr(request.path, "/favicon.png")) {
         const AssetInfo *asset = assets_map.FindValue("/favicon.png", nullptr);
         RG_ASSERT(asset);
 
-        AttachStatic(*asset, 0, shared_etag, request, io);
+        AttachStatic(io, *asset, 0, shared_etag);
     } else if (StartsWith(request.path, "/admin/") || TestStr(request.path, "/admin")) {
-        HandleAdminRequest(request, io);
+        HandleAdminRequest(io);
     } else {
-        HandleInstanceRequest(request, io);
+        HandleInstanceRequest(io);
     }
 }
 

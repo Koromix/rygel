@@ -168,8 +168,10 @@ bool http_ParseRange(Span<const char> str, Size len, LocalArray<http_ByteRange, 
     return true;
 }
 
-bool http_PreventCSRF(const http_RequestInfo &request, http_IO *io)
+bool http_PreventCSRF(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
+
     const char *str1 = request.GetHeaderValue("X-Requested-With");
     const char *str2 = request.GetHeaderValue("Sec-Fetch-Site");
 

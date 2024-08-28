@@ -50,7 +50,7 @@ struct Route {
             const char *mimetype;
         } st;
 
-        void (*func)(const http_RequestInfo &request, const User *user, http_IO *io);
+        void (*func)(http_IO *io, const User *user);
     } u;
 
     RG_HASHTABLE_HANDLER(Route, url);
@@ -68,7 +68,7 @@ static DictionarySet dictionary_set;
 static HashTable<Span<const char>, Route> routes;
 static BlockAllocator routes_alloc;
 
-static void ProduceSettings(const http_RequestInfo &, const User *user, http_IO *io)
+static void ProduceSettings(http_IO *io, const User *user)
 {
     http_JsonPageBuilder json;
     if (!json.Init(io))
@@ -140,7 +140,7 @@ static void ProduceSettings(const http_RequestInfo &, const User *user, http_IO 
     json.Finish();
 }
 
-static void ProduceStructures(const http_RequestInfo &, const User *user, http_IO *io)
+static void ProduceStructures(http_IO *io, const User *user)
 {
     if (!user) {
         LogError("Not allowed to query structures");
@@ -252,8 +252,7 @@ static void InitRoutes()
         routes.Set(route);
     };
     const auto add_function_route = [&](http_RequestMethod method, const char *url,
-                                        void (*func)(const http_RequestInfo &request, const User *user,
-                                                     http_IO *io)) {
+                                        void (*func)(http_IO *io, const User *user)) {
         Route route = {};
 
         route.method = method;
@@ -340,8 +339,10 @@ static void InitRoutes()
     add_function_route(http_RequestMethod::Get, "/api/mco/results", ProduceMcoResults);
 }
 
-static void HandleRequest(const http_RequestInfo &request, http_IO *io)
+static void HandleRequest(http_IO *io)
 {
+    const http_RequestInfo &request = io->Request();
+
 #if defined(FELIX_HOT_ASSETS)
     // This is not actually thread safe, because it may release memory from an asset
     // that is being used by another thread. This code only runs in development builds
@@ -372,7 +373,7 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
     }
 
     // Find user information
-    const User *user = CheckSessionUser(request, io);
+    const User *user = CheckSessionUser(io);
 
     // Send these headers whenever possible
     io->AddHeader("Referrer-Policy", "no-referrer");
@@ -444,10 +445,10 @@ static void HandleRequest(const http_RequestInfo &request, http_IO *io)
 
         case Route::Type::Function: {
             // CSRF protection
-            if (!http_PreventCSRF(request, io))
+            if (!http_PreventCSRF(io))
                 return;
 
-            route->u.func(request, user, io);
+            route->u.func(io, user);
         } break;
     }
 }

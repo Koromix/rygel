@@ -195,8 +195,7 @@ void SessionInfo::AuthorizeInstance(const InstanceHolder *instance, uint32_t per
     stamps_map.Set(stamp);
 }
 
-static void WriteProfileJson(const SessionInfo *session, const InstanceHolder *instance,
-                             const http_RequestInfo &, http_IO *io)
+static void WriteProfileJson(http_IO *io, const SessionInfo *session, const InstanceHolder *instance)
 {
     http_JsonPageBuilder json;
     if (!json.Init(io))
@@ -345,7 +344,7 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     return ptr;
 }
 
-bool LoginUserAuto(int64_t userid, const http_RequestInfo &request, http_IO *io)
+bool LoginUserAuto(http_IO *io, int64_t userid)
 {
     RG_ASSERT(userid > 0);
 
@@ -373,7 +372,7 @@ bool LoginUserAuto(int64_t userid, const http_RequestInfo &request, http_IO *io)
         return false;
     session->change_password = change_password;
 
-    sessions.Open(request, io, session);
+    sessions.Open(io, session);
 
     return true;
 }
@@ -388,9 +387,9 @@ void InvalidateUserStamps(int64_t userid)
     });
 }
 
-RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+    RetainPtr<SessionInfo> session = sessions.Find(io);
 
     if (!session && instance && instance->config.allow_guests) {
         // Create local key
@@ -412,9 +411,9 @@ RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const ht
     return session;
 }
 
-RetainPtr<const SessionInfo> GetAdminSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+RetainPtr<const SessionInfo> GetAdminSession(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
 
     if (!session)
         return nullptr;
@@ -526,8 +525,10 @@ static bool CheckPasswordComplexity(const SessionInfo &session, Span<const char>
     return pwd_CheckPassword(password, session.username, flags);
 }
 
-void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSessionLogin(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
+
     const char *username = nullptr;
     Span<const char> password = {};
     {
@@ -688,8 +689,8 @@ void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &reques
 
                 session->change_password = change_password;
 
-                sessions.Open(request, io, session);
-                WriteProfileJson(session.GetRaw(), instance, request, io);
+                sessions.Open(io, session);
+                WriteProfileJson(io, session.GetRaw(), instance);
             }
 
             return;
@@ -833,8 +834,10 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     return session;
 }
 
-void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSessionToken(http_IO *io, InstanceHolder *instance)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!instance->config.token_key) {
         LogError("This instance does not use tokens");
         io->SendError(403);
@@ -1018,12 +1021,12 @@ void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &reques
         }
     }
 
-    sessions.Open(request, io, session);
+    sessions.Open(io, session);
 
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSessionKey(http_IO *io, InstanceHolder *instance)
 {
     const char *session_key = nullptr;
     {
@@ -1062,13 +1065,12 @@ void HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request,
     if (!session)
         return;
 
-    sessions.Open(request, io, session);
+    sessions.Open(io, session);
 
     io->SendText(200, "{}", "application/json");
 }
 
-static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
-                      const char *code, const http_RequestInfo &, http_IO *io)
+static bool CheckTotp(http_IO *io, const SessionInfo &session, InstanceHolder *instance, const char *code)
 {
     int64_t time = GetUnixTime();
     int64_t counter = time / TotpPeriod;
@@ -1098,9 +1100,10 @@ static bool CheckTotp(const SessionInfo &session, InstanceHolder *instance,
     }
 }
 
-void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<SessionInfo> session = sessions.Find(io);
 
     if (!session) {
         LogError("Session is closed");
@@ -1167,12 +1170,12 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
                 session->confirm = SessionConfirm::None;
                 sodium_memzero(session->secret, RG_SIZE(session->secret));
 
-                WriteProfileJson(session.GetRaw(), instance, request, io);
+                WriteProfileJson(io, session.GetRaw(), instance);
             } else {
                 const EventInfo *event = RegisterEvent(request.client_addr, session->username);
 
                 if (event->count >= BanThreshold) {
-                    sessions.Close(request, io);
+                    sessions.Close(io);
                     LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
                     io->SendError(403);
                 }
@@ -1181,7 +1184,7 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
 
         case SessionConfirm::TOTP:
         case SessionConfirm::QRcode: {
-            if (CheckTotp(*session, instance, code, request, io)) {
+            if (CheckTotp(io, *session, instance, code)) {
                 if (session->confirm == SessionConfirm::QRcode) {
                     if (!gp_domain.db.Run("UPDATE dom_users SET secret = ?2 WHERE userid = ?1",
                                           session->userid, session->secret))
@@ -1191,12 +1194,12 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
                 session->confirm = SessionConfirm::None;
                 sodium_memzero(session->secret, RG_SIZE(session->secret));
 
-                WriteProfileJson(session.GetRaw(), instance, request, io);
+                WriteProfileJson(io, session.GetRaw(), instance);
             } else {
                 const EventInfo *event = RegisterEvent(request.client_addr, session->username);
 
                 if (event->count >= BanThreshold) {
-                    sessions.Close(request, io);
+                    sessions.Close(io);
                     LogError("Code is incorrect; you are now blocked for %1 minutes", (BanTime + 59000) / 60000);
                     io->SendError(403);
                 }
@@ -1205,21 +1208,22 @@ void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &requ
     }
 }
 
-void HandleSessionLogout(const http_RequestInfo &request, http_IO *io)
+void HandleSessionLogout(http_IO *io)
 {
-    sessions.Close(request, io);
+    sessions.Close(io);
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleSessionProfile(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
-    WriteProfileJson(session.GetRaw(), instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
+    WriteProfileJson(io, session.GetRaw(), instance);
 }
 
-void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleChangePassword(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<SessionInfo> session = sessions.Find(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1364,7 +1368,7 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
 
     if (session->change_password) {
         session->change_password = false;
-        WriteProfileJson(session.GetRaw(), instance, request, io);
+        WriteProfileJson(io, session.GetRaw(), instance);
     } else {
         io->SendText(200, "{}", "application/json");
     }
@@ -1372,9 +1376,9 @@ void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &requ
 
 // This does not make any persistent change and it needs to return an image
 // so it is a GET even though it performs an action (change the secret).
-void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
+void HandleChangeQRcode(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+    RetainPtr<SessionInfo> session = sessions.Find(io);
 
     if (!session) {
         LogError("Session is closed");
@@ -1421,9 +1425,10 @@ void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io)
     io->SendAsset(200, png, "image/png");
 }
 
-void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
+void HandleChangeTOTP(http_IO *io)
 {
-    RetainPtr<SessionInfo> session = sessions.Find(request, io);
+    const http_RequestInfo &request = io->Request();
+    RetainPtr<SessionInfo> session = sessions.Find(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1525,7 +1530,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
     }
 
     // Check user knows secret
-    if (!CheckTotp(*session, nullptr, code, request, io))
+    if (!CheckTotp(io, *session, nullptr, code))
         return;
 
     bool success = gp_domain.db.Transaction([&]() {
@@ -1547,7 +1552,7 @@ void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io)
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleChangeMode(http_IO *io, InstanceHolder *instance)
 {
     if (instance->master != instance) {
         LogError("Cannot change mode through slave instance");
@@ -1555,7 +1560,7 @@ void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
-    RetainPtr<const SessionInfo> session = sessions.Find(request, io);
+    RetainPtr<const SessionInfo> session = sessions.Find(io);
     SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -1609,9 +1614,9 @@ void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request,
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleChangeExportKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
 {
-    RetainPtr<const SessionInfo> session = sessions.Find(request, io);
+    RetainPtr<const SessionInfo> session = sessions.Find(io);
 
     if (!session) {
         LogError("User is not logged in");
@@ -1647,8 +1652,7 @@ void HandleChangeExportKey(InstanceHolder *instance, const http_RequestInfo &req
     json.Finish();
 }
 
-RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, InstanceHolder *instance,
-                                                 const http_RequestInfo &request, http_IO *io)
+RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const SessionInfo &guest)
 {
     RG_ASSERT(!guest.userid && guest.type == SessionType::Auto);
 
@@ -1694,7 +1698,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, Insta
     uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
     session->AuthorizeInstance(instance, permissions);
 
-    sessions.Open(request, io, session);
+    sessions.Open(io, session);
 
     return session;
 }

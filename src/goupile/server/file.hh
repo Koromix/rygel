@@ -20,14 +20,14 @@ namespace RG {
 
 class InstanceHolder;
 
-void HandleFileList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-bool HandleFileGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleFilePut(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleFileDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleFileHistory(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleFileRestore(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleFileDelta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleFilePublish(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleFileList(http_IO *io, InstanceHolder *instance);
+bool HandleFileGet(http_IO *io, InstanceHolder *instance);
+void HandleFilePut(http_IO *io, InstanceHolder *instance);
+void HandleFileDelete(http_IO *io, InstanceHolder *instance);
+void HandleFileHistory(http_IO *io, InstanceHolder *instance);
+void HandleFileRestore(http_IO *io, InstanceHolder *instance);
+void HandleFileDelta(http_IO *io, InstanceHolder *instance);
+void HandleFilePublish(http_IO *io, InstanceHolder *instance);
 
 static inline void FormatSha256(Span<const uint8_t> hash, char out_sha256[65])
 {

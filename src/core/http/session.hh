@@ -59,7 +59,7 @@ public:
 
     void SetCookiePath(const char *new_path) { cookie_path = new_path; }
 
-    void Open(const http_RequestInfo &, http_IO *io, RetainPtr<T> udata)
+    void Open(http_IO *io, RetainPtr<T> udata)
     {
         std::lock_guard<std::shared_mutex> lock_excl(mutex);
 
@@ -78,9 +78,11 @@ public:
         io->AddCookieHeader(cookie_path, "session_rnd", handle->session_rnd, false);
     }
 
-    void Close(const http_RequestInfo &request, http_IO *io)
+    void Close(http_IO *io)
     {
         std::lock_guard<std::shared_mutex> lock_excl(mutex);
+
+        const http_RequestInfo &request = io->Request();
 
         // We don't care about those but for performance reasons FindHandle()
         // always writes those.
@@ -92,9 +94,11 @@ public:
         DeleteSessionCookies(io);
     }
 
-    RetainPtr<T> Find(const http_RequestInfo &request, http_IO *io)
+    RetainPtr<T> Find(http_IO *io)
     {
         std::shared_lock<std::shared_mutex> lock_shr(mutex);
+
+        const http_RequestInfo &request = io->Request();
 
         bool mismatch = false;
         bool locked = false;

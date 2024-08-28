@@ -102,14 +102,14 @@ class http_Daemon {
     Async *async = nullptr;
     http_Dispatcher *dispatcher = nullptr;
 
-    std::function<void(const http_RequestInfo &request, http_IO *io)> handle_func;
+    std::function<void(http_IO *io)> handle_func;
 
 public:
     http_Daemon() {}
     ~http_Daemon() { Stop(); }
 
     bool Bind(const http_Config &config, bool log_addr = true);
-    bool Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func);
+    bool Start(std::function<void(http_IO *io)> func);
     void Stop();
 
 private:
@@ -234,6 +234,7 @@ class http_IO {
 public:
     http_IO(http_Daemon *daemon) : daemon(daemon) { Rearm(-1); }
 
+    const http_RequestInfo &Request() const { return request; }
     RG::BlockAllocator *Allocator() { return &allocator; }
 
     bool NegociateEncoding(CompressionType preferred, CompressionType *out_encoding);

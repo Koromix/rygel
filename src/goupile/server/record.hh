@@ -20,17 +20,17 @@ namespace RG {
 
 class InstanceHolder;
 
-void HandleRecordList(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordGet(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordAudit(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordList(http_IO *io, InstanceHolder *instance);
+void HandleRecordGet(http_IO *io, InstanceHolder *instance);
+void HandleRecordAudit(http_IO *io, InstanceHolder *instance);
 
-void HandleExportData(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleExportMeta(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleExportData(http_IO *io, InstanceHolder *instance);
+void HandleExportMeta(http_IO *io, InstanceHolder *instance);
 
-void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordSave(http_IO *io, InstanceHolder *instance);
+void HandleRecordDelete(http_IO *io, InstanceHolder *instance);
 
-void HandleRecordLock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleRecordUnlock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleRecordLock(http_IO *io, InstanceHolder *instance);
+void HandleRecordUnlock(http_IO *io, InstanceHolder *instance);
 
 }

@@ -155,7 +155,7 @@ bool http_Daemon::Bind(const http_Config &config, bool log_addr)
     return true;
 }
 
-bool http_Daemon::Start(std::function<void(const http_RequestInfo &request, http_IO *io)> func)
+bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 {
     RG_ASSERT(listeners.len);
     RG_ASSERT(!handle_func);

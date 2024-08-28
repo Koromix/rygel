@@ -19,9 +19,10 @@
 
 namespace RG {
 
-static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request, http_IO *io,
-                                                 drd_Sector *out_sector = nullptr)
+static const mco_TableIndex *GetIndexFromRequest(http_IO *io, drd_Sector *out_sector = nullptr)
 {
+    const http_RequestInfo &request = io->Request();
+
     LocalDate date = {};
     {
         const char *date_str = request.GetQueryValue("date");
@@ -68,15 +69,18 @@ static const mco_TableIndex *GetIndexFromRequest(const http_RequestInfo &request
     return index;
 }
 
-void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoDiagnoses(http_IO *io, const User *)
 {
-    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    const http_RequestInfo &request = io->Request();
+
+    const mco_TableIndex *index = GetIndexFromRequest(io);
     if (!index)
         return;
 
     mco_ListSpecifier spec(mco_ListSpecifier::Table::Diagnoses);
     {
         const char *spec_str = request.GetQueryValue("spec");
+
         if (spec_str && spec_str[0]) {
             spec = mco_ListSpecifier::FromString(spec_str);
             if (!spec.IsValid() || spec.table != mco_ListSpecifier::Table::Diagnoses) {
@@ -123,9 +127,11 @@ void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *, http_IO 
     return json.Finish();
 }
 
-void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoProcedures(http_IO *io, const User *)
 {
-    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    const http_RequestInfo &request = io->Request();
+
+    const mco_TableIndex *index = GetIndexFromRequest(io);
     if (!index)
         return;
 
@@ -173,10 +179,10 @@ void ProduceMcoProcedures(const http_RequestInfo &request, const User *, http_IO
     return json.Finish();
 }
 
-void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoGhmGhs(http_IO *io, const User *)
 {
     drd_Sector sector;
-    const mco_TableIndex *index = GetIndexFromRequest(request, io, &sector);
+    const mco_TableIndex *index = GetIndexFromRequest(io, &sector);
     if (!index)
         return;
 
@@ -299,9 +305,9 @@ void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *, http_IO *io
     return json.Finish();
 }
 
-void ProduceMcoTree(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoTree(http_IO *io, const User *)
 {
-    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    const mco_TableIndex *index = GetIndexFromRequest(io);
     if (!index)
         return;
 
@@ -524,9 +530,11 @@ static bool HighlightNodes(const HighlightContext &ctx, Size node_idx, uint16_t 
     }
 }
 
-void ProduceMcoHighlight(const http_RequestInfo &request, const User *, http_IO *io)
+void ProduceMcoHighlight(http_IO *io, const User *)
 {
-    const mco_TableIndex *index = GetIndexFromRequest(request, io);
+    const http_RequestInfo &request = io->Request();
+
+    const mco_TableIndex *index = GetIndexFromRequest(io);
     if (!index)
         return;
 

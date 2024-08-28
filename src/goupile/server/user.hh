@@ -115,32 +115,31 @@ public:
     void AuthorizeInstance(const InstanceHolder *instance, uint32_t permissions, const char *lock = nullptr);
 };
 
-bool LoginUserAuto(int64_t userid, const http_RequestInfo &request, http_IO *io);
+bool LoginUserAuto(http_IO *io, int64_t userid);
 
 void InvalidateUserStamps(int64_t userid);
 
-RetainPtr<const SessionInfo> GetNormalSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-RetainPtr<const SessionInfo> GetAdminSession(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *instance);
+RetainPtr<const SessionInfo> GetAdminSession(http_IO *io, InstanceHolder *instance);
 
 void PruneSessions();
 
 bool HashPassword(Span<const char> password, char out_hash[PasswordHashBytes]);
 
-void HandleSessionLogin(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleSessionToken(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleSessionKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleSessionConfirm(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleSessionLogout(const http_RequestInfo &request, http_IO *io);
-void HandleSessionProfile(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSessionLogin(http_IO *io, InstanceHolder *instance);
+void HandleSessionToken(http_IO *io, InstanceHolder *instance);
+void HandleSessionKey(http_IO *io, InstanceHolder *instance);
+void HandleSessionConfirm(http_IO *io, InstanceHolder *instance);
+void HandleSessionLogout(http_IO *io);
+void HandleSessionProfile(http_IO *io, InstanceHolder *instance);
 
-void HandleChangePassword(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleChangeQRcode(const http_RequestInfo &request, http_IO *io);
-void HandleChangeTOTP(const http_RequestInfo &request, http_IO *io);
-void HandleChangeMode(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleChangeExportKey(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleChangePassword(http_IO *io, InstanceHolder *instance);
+void HandleChangeQRcode(http_IO *io);
+void HandleChangeTOTP(http_IO *io);
+void HandleChangeMode(http_IO *io, InstanceHolder *instance);
+void HandleChangeExportKey(http_IO *io, InstanceHolder *instance);
 
-RetainPtr<const SessionInfo> MigrateGuestSession(const SessionInfo &guest, InstanceHolder *instance,
-                                                 const http_RequestInfo &request, http_IO *io);
+RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const SessionInfo &guest);
 
 
 }

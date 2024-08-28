@@ -308,9 +308,9 @@ bool InitUsers(const char *profile_directory)
     return true;
 }
 
-const User *CheckSessionUser(const http_RequestInfo &request, http_IO *io)
+const User *CheckSessionUser(http_IO *io)
 {
-    RetainPtr<const User> udata = sessions.Find(request, io);
+    RetainPtr<const User> udata = sessions.Find(io);
     return udata ? udata.GetRaw() : nullptr;
 }
 
@@ -319,7 +319,7 @@ void PruneSessions()
     sessions.Prune();
 }
 
-void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
+void HandleLogin(http_IO *io, const User *)
 {
     const char *username = nullptr;
     const char *password = nullptr;
@@ -373,14 +373,14 @@ void HandleLogin(const http_RequestInfo &request, const User *, http_IO *io)
 
     // Create session
     RetainPtr<const User> udata((User *)user, [](User *) {});
-    sessions.Open(request, io, udata);
+    sessions.Open(io, udata);
 
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleLogout(const http_RequestInfo &request, const User *, http_IO *io)
+void HandleLogout(http_IO *io, const User *)
 {
-    sessions.Close(request, io);
+    sessions.Close(io);
     io->SendText(200, "{}", "application/json");
 }
 

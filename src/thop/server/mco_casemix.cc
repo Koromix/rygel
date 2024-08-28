@@ -20,9 +20,10 @@
 
 namespace RG {
 
-static bool GetQueryDateRange(const http_RequestInfo &request, const char *key,
-                              http_IO *io, LocalDate *out_start_date, LocalDate *out_end_date)
+static bool GetQueryDateRange(http_IO *io, const char *key, LocalDate *out_start_date, LocalDate *out_end_date)
 {
+    const http_RequestInfo &request = io->Request();
+
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
@@ -58,9 +59,10 @@ invalid:
     return false;
 }
 
-static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *key,
-                                 http_IO *io, mco_DispenseMode *out_dispense_mode)
+static bool GetQueryDispenseMode(http_IO *io, const char *key, mco_DispenseMode *out_dispense_mode)
 {
+    const http_RequestInfo &request = io->Request();
+
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
@@ -77,9 +79,10 @@ static bool GetQueryDispenseMode(const http_RequestInfo &request, const char *ke
     return true;
 }
 
-static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char *key,
-                                     http_IO *io, bool *out_apply_coefficient)
+static bool GetQueryApplyCoefficient(http_IO *io, const char *key, bool *out_apply_coefficient)
 {
+    const http_RequestInfo &request = io->Request();
+
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
@@ -102,9 +105,10 @@ static bool GetQueryApplyCoefficient(const http_RequestInfo &request, const char
     return true;
 }
 
-static bool GetQueryGhmRoot(const http_RequestInfo &request, const char *key,
-                            http_IO *io, mco_GhmRootCode *out_ghm_root)
+static bool GetQueryGhmRoot(http_IO *io, const char *key, mco_GhmRootCode *out_ghm_root)
 {
+    const http_RequestInfo &request = io->Request();
+
     const char *str = request.GetQueryValue(key);
     if (!str) {
         LogError("Missing '%1' argument", key);
@@ -399,8 +403,10 @@ static void GatherGhmGhsInfo(Span<const mco_GhmRootCode> ghm_roots, LocalDate mi
     }
 }
 
-void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http_IO *io)
+void ProduceMcoAggregate(http_IO *io, const User *user)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!user || !user->CheckPermission(UserPermission::McoCasemix)) {
         LogError("Not allowed to query MCO aggregations");
         io->SendError(403);
@@ -414,19 +420,19 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficient = false;
     mco_GhmRootCode ghm_root = {};
-    if (!GetQueryDateRange(request, "period", io, &period[0], &period[1]))
+    if (!GetQueryDateRange(io, "period", &period[0], &period[1]))
         return;
     if (request.GetQueryValue("diff")) {
-        if (!GetQueryDateRange(request, "diff", io, &diff[0], &diff[1]))
+        if (!GetQueryDateRange(io, "diff", &diff[0], &diff[1]))
             return;
     }
     filter = request.GetQueryValue("filter");
-    if (!GetQueryDispenseMode(request, "dispense_mode", io, &dispense_mode))
+    if (!GetQueryDispenseMode(io, "dispense_mode", &dispense_mode))
         return;
-    if (!GetQueryApplyCoefficient(request, "apply_coefficient", io, &apply_coefficient))
+    if (!GetQueryApplyCoefficient(io, "apply_coefficient", &apply_coefficient))
         return;
     if (request.GetQueryValue("ghm_root")) {
-        if (!GetQueryGhmRoot(request, "ghm_root", io, &ghm_root))
+        if (!GetQueryGhmRoot(io, "ghm_root", &ghm_root))
             return;
     }
 
@@ -567,8 +573,10 @@ void ProduceMcoAggregate(const http_RequestInfo &request, const User *user, http
     json.Finish();
 }
 
-void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_IO *io)
+void ProduceMcoResults(http_IO *io, const User *user)
 {
+    const http_RequestInfo &request = io->Request();
+
     if (!user || !user->CheckPermission(UserPermission::McoCasemix) ||
                  !user->CheckPermission(UserPermission::McoResults)) {
         LogError("Not allowed to query MCO results");
@@ -582,14 +590,14 @@ void ProduceMcoResults(const http_RequestInfo &request, const User *user, http_I
     const char *filter;
     mco_DispenseMode dispense_mode = mco_DispenseMode::J;
     bool apply_coefficent = false;
-    if (!GetQueryDateRange(request, "period", io, &period[0], &period[1]))
+    if (!GetQueryDateRange(io, "period", &period[0], &period[1]))
         return;
-    if (!GetQueryGhmRoot(request, "ghm_root", io, &ghm_root))
+    if (!GetQueryGhmRoot(io, "ghm_root", &ghm_root))
         return;
     filter = request.GetQueryValue("filter");
-    if (!GetQueryDispenseMode(request, "dispense_mode", io, &dispense_mode))
+    if (!GetQueryDispenseMode(io, "dispense_mode", &dispense_mode))
         return;
-    if (!GetQueryApplyCoefficient(request, "apply_coefficient", io, &apply_coefficent))
+    if (!GetQueryApplyCoefficient(io, "apply_coefficient", &apply_coefficent))
         return;
 
     // Check permissions

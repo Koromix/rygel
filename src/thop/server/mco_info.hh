@@ -19,11 +19,11 @@
 
 namespace RG {
 
-void ProduceMcoDiagnoses(const http_RequestInfo &request, const User *user, http_IO *io);
-void ProduceMcoProcedures(const http_RequestInfo &request, const User *user, http_IO *io);
-void ProduceMcoGhmGhs(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoDiagnoses(http_IO *io, const User *user);
+void ProduceMcoProcedures(http_IO *io, const User *user);
+void ProduceMcoGhmGhs(http_IO *io, const User *user);
 
-void ProduceMcoTree(const http_RequestInfo &request, const User *user, http_IO *io);
-void ProduceMcoHighlight(const http_RequestInfo &request, const User *user, http_IO *io);
+void ProduceMcoTree(http_IO *io, const User *user);
+void ProduceMcoHighlight(http_IO *io, const User *user);
 
 }

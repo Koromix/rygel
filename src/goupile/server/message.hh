@@ -28,8 +28,8 @@ bool InitSMS(const sms_Config &config);
 bool SendMail(const char *to, const smtp_MailContent &content);
 bool SendSMS(const char *to, const char *message);
 
-void HandleSendMail(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleSendSMS(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
-void HandleSendTokenize(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io);
+void HandleSendMail(http_IO *io, InstanceHolder *instance);
+void HandleSendSMS(http_IO *io, InstanceHolder *instance);
+void HandleSendTokenize(http_IO *io, InstanceHolder *instance);
 
 }

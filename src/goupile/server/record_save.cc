@@ -104,7 +104,7 @@ static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
     return buf.Leak().ptr;
 }
 
-void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
@@ -112,7 +112,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -129,7 +129,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
     }
 
     if (!session->userid) {
-        session = MigrateGuestSession(*session, instance, request, io);
+        session = MigrateGuestSession(io, instance, *session);
         if (!session)
             return;
         stamp = session->GetStamp(instance);
@@ -492,7 +492,7 @@ void HandleRecordSave(InstanceHolder *instance, const http_RequestInfo &request,
     io->SendText(200, json, "application/json");
 }
 
-void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
@@ -500,7 +500,7 @@ void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &reques
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -643,7 +643,7 @@ void HandleRecordDelete(InstanceHolder *instance, const http_RequestInfo &reques
     io->SendText(200, "{}", "application/json");
 }
 
-static void HandleLock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io, bool lock)
+static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
 {
     if (!instance->config.data_remote) {
         LogError("Records API is disabled in Offline mode");
@@ -651,7 +651,7 @@ static void HandleLock(InstanceHolder *instance, const http_RequestInfo &request
         return;
     }
 
-    RetainPtr<const SessionInfo> session = GetNormalSession(instance, request, io);
+    RetainPtr<const SessionInfo> session = GetNormalSession(io, instance);
     const SessionStamp *stamp = session ? session->GetStamp(instance) : nullptr;
 
     if (!session) {
@@ -749,14 +749,14 @@ static void HandleLock(InstanceHolder *instance, const http_RequestInfo &request
     io->SendText(200, "{}", "application/json");
 }
 
-void HandleRecordLock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordLock(http_IO *io, InstanceHolder *instance)
 {
-    HandleLock(instance, request, io, true);
+    HandleLock(io, instance, true);
 }
 
-void HandleRecordUnlock(InstanceHolder *instance, const http_RequestInfo &request, http_IO *io)
+void HandleRecordUnlock(http_IO *io, InstanceHolder *instance)
 {
-    HandleLock(instance, request, io, false);
+    HandleLock(io, instance, false);
 }
 
 }

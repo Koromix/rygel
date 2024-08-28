@@ -24,27 +24,27 @@ int RunKeys(Span<const char *> arguments);
 
 int RunUnseal(Span<const char *> arguments);
 
-void HandleDemo(const http_RequestInfo &request, http_IO *io);
+void HandleDemo(http_IO *io);
 
-void HandleInstanceCreate(const http_RequestInfo &request, http_IO *io);
-void HandleInstanceDelete(const http_RequestInfo &request, http_IO *io);
-void HandleInstanceConfigure(const http_RequestInfo &request, http_IO *io);
-void HandleInstanceList(const http_RequestInfo &request, http_IO *io);
-void HandleInstanceAssign(const http_RequestInfo &request, http_IO *io);
-void HandleInstancePermissions(const http_RequestInfo &request, http_IO *io);
+void HandleInstanceCreate(http_IO *io);
+void HandleInstanceDelete(http_IO *io);
+void HandleInstanceConfigure(http_IO *io);
+void HandleInstanceList(http_IO *io);
+void HandleInstanceAssign(http_IO *io);
+void HandleInstancePermissions(http_IO *io);
 
 bool ArchiveDomain();
 
-void HandleArchiveCreate(const http_RequestInfo &request, http_IO *io);
-void HandleArchiveDelete(const http_RequestInfo &request, http_IO *io);
-void HandleArchiveList(const http_RequestInfo &request, http_IO *io);
-void HandleArchiveDownload(const http_RequestInfo &request, http_IO *io);
-void HandleArchiveUpload(const http_RequestInfo &request, http_IO *io);
-void HandleArchiveRestore(const http_RequestInfo &request, http_IO *io);
+void HandleArchiveCreate(http_IO *io);
+void HandleArchiveDelete(http_IO *io);
+void HandleArchiveList(http_IO *io);
+void HandleArchiveDownload(http_IO *io);
+void HandleArchiveUpload(http_IO *io);
+void HandleArchiveRestore(http_IO *io);
 
-void HandleUserCreate(const http_RequestInfo &request, http_IO *io);
-void HandleUserEdit(const http_RequestInfo &request, http_IO *io);
-void HandleUserDelete(const http_RequestInfo &request, http_IO *io);
-void HandleUserList(const http_RequestInfo &request, http_IO *io);
+void HandleUserCreate(http_IO *io);
+void HandleUserEdit(http_IO *io);
+void HandleUserDelete(http_IO *io);
+void HandleUserList(http_IO *io);
 
 }
