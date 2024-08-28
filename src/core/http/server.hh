@@ -203,7 +203,7 @@ class http_IO {
     http_Daemon *daemon;
 
     http_Socket *socket;
-    char addr[65];
+    char addr[65] = {};
 
     int64_t socket_start;
     std::atomic_int64_t timeout_at;
