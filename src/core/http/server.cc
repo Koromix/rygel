@@ -288,13 +288,6 @@ void http_Daemon::RunHandler(http_IO *client, int64_t now)
     });
     RG_DEFER { PopLogFilter(); };
 
-    if (!client->InitAddress()) [[unlikely]] {
-        client->request.keepalive = false;
-        client->SendError(400);
-
-        return;
-    }
-
     client->request.keepalive &= (now < client->socket_start + keepalive_time);
 
     handle_func(client->request, client);
@@ -703,79 +696,44 @@ bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     this->socket = socket;
 
-    switch (sa->sa_family) {
-        case AF_INET: {
-            void *ptr = &((sockaddr_in *)sa)->sin_addr;
+    if (daemon->addr_mode == http_AddressMode::Socket) {
+        switch (sa->sa_family) {
+            case AF_INET: {
+                void *ptr = &((sockaddr_in *)sa)->sin_addr;
 
-            if (!inet_ntop(AF_INET, ptr, addr, RG_SIZE(addr))) [[unlikely]] {
-                LogError("Cannot convert IPv4 address to text");
-                return false;
-            }
-        } break;
+                if (!inet_ntop(AF_INET, ptr, addr, RG_SIZE(addr))) [[unlikely]] {
+                    LogError("Cannot convert IPv4 address to text");
+                    return false;
+                }
+            } break;
 
-        case AF_INET6: {
-            void *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
+            case AF_INET6: {
+#if !defined(_WIN32)
+                RG_ASSERT(RG_SIZE(addr) >= INET6_ADDRSTRLEN + 2);
+#endif
 
-            if (!inet_ntop(AF_INET6, ptr, addr, RG_SIZE(addr))) [[unlikely]] {
-                LogError("Cannot convert IPv6 address to text");
-                return false;
-            }
-        } break;
+                void *ptr = &((sockaddr_in6 *)sa)->sin6_addr;
 
-        case AF_UNIX: { CopyString("unix", addr); } break;
+                if (!inet_ntop(AF_INET6, ptr, addr, RG_SIZE(addr))) [[unlikely]] {
+                    LogError("Cannot convert IPv6 address to text");
+                    return false;
+                }
 
-        default: { RG_UNREACHABLE(); } break;
+                if (StartsWith(addr, "::ffff:") || StartsWith(addr, "::FFFF:")) {
+                    // Not supposed to even go near the limit, but make sure!
+                    Size move = std::min((Size)strlen(addr + 7) + 1, RG_SIZE(addr) - 8);
+                    MemMove(addr, addr + 7, move);
+                }
+            } break;
+
+            case AF_UNIX: { CopyString("unix", addr); } break;
+
+            default: { RG_UNREACHABLE(); } break;
+        }
     }
 
     socket_start = start;
     timeout_at = start + daemon->idle_timeout;
-
-    return true;
-}
-
-bool http_IO::InitAddress()
-{
-    switch (daemon->addr_mode) {
-        case http_AddressMode::Socket: { /* Keep socket address */ } break;
-
-        case http_AddressMode::XForwardedFor: {
-            const char *str = request.GetHeaderValue("X-Forwarded-For");
-            if (!str) {
-                LogError("X-Forwarded-For header is missing but is required by the configuration");
-                return false;
-            }
-
-            Span<const char> trimmed = TrimStr(SplitStr(str, ','));
-
-            if (!trimmed.len) [[unlikely]] {
-                LogError("Empty client address in X-Forwarded-For header");
-                return false;
-            }
-            if (!CopyString(trimmed, addr)) [[unlikely]] {
-                LogError("Excessively long client address in X-Forwarded-For header");
-                return false;
-            }
-        } break;
-
-        case http_AddressMode::XRealIP: {
-            const char *str = request.GetHeaderValue("X-Real-IP");
-            if (!str) {
-                LogError("X-Real-IP header is missing but is required by the configuration");
-                return false;
-            }
-
-            Span<const char> trimmed = TrimStr(str);
-
-            if (!trimmed.len) [[unlikely]] {
-                LogError("Empty client address in X-Forwarded-For header");
-                return false;
-            }
-            if (!CopyString(trimmed, addr)) [[unlikely]] {
-                LogError("Excessively long client address in X-Forwarded-For header");
-                return false;
-            }
-        } break;
-    }
 
     return true;
 }
@@ -916,6 +874,7 @@ http_RequestStatus http_IO::ParseRequest()
 {
     Span<char> intro = {};
     bool keepalive = false;
+    bool known_addr = (daemon->addr_mode == http_AddressMode::Socket);
 
     // Find end of request headers (CRLF+CRLF)
     {
@@ -1103,11 +1062,47 @@ http_RequestStatus http_IO::ParseRequest()
                 SendError(400);
                 return http_RequestStatus::Close;
             }
+        } else if (daemon->addr_mode == http_AddressMode::XForwardedFor && TestStr(key, "X-Forwarded-For")) {
+            Span<const char> trimmed = TrimStr(SplitStr(value, ','));
+
+            if (!trimmed.len) [[unlikely]] {
+                LogError("Empty client address in X-Forwarded-For header");
+                SendError(400);
+                return http_RequestStatus::Close;
+            }
+            if (!CopyString(trimmed, addr)) [[unlikely]] {
+                LogError("Excessively long client address in X-Forwarded-For header");
+                SendError(400);
+                return http_RequestStatus::Close;
+            }
+
+            known_addr = true;
+        } else if (daemon->addr_mode == http_AddressMode::XRealIP && TestStr(key, "X-Real-IP")) {
+            Span<const char> trimmed = TrimStr(value);
+
+            if (!trimmed.len) [[unlikely]] {
+                LogError("Empty client address in X-Forwarded-For header");
+                SendError(400);
+                return http_RequestStatus::Close;
+            }
+            if (!CopyString(trimmed, addr)) [[unlikely]] {
+                LogError("Excessively long client address in X-Forwarded-For header");
+                SendError(400);
+                return http_RequestStatus::Close;
+            }
+
+            known_addr = true;
         } else if (TestStr(key, "Transfer-Encoding")) {
             LogError("Requests with Transfer-Encoding are not supported");
             SendError(501);
             return http_RequestStatus::Close;
         }
+    }
+
+    if (!known_addr) [[unlikely]] {
+        LogError("Missing expected %1 address header", http_AddressModeNames[(int)daemon->addr_mode]);
+        SendError(400);
+        return http_RequestStatus::Close;
     }
 
     // Map keys for faster access

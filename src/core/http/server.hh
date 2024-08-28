@@ -266,7 +266,6 @@ public:
 
 private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
-    bool InitAddress();
 
     http_RequestStatus ParseRequest();
     Span<const char> PrepareResponse(int status, CompressionType encoding, int64_t len);
