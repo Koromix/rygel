@@ -3566,8 +3566,6 @@ bool FlushFile(int fd, const char *filename)
 
 bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size)
 {
-    static_assert(sizeof(off_t) == 8, "This code base requires large file offsets");
-
     static NtCopyFileChunkFunc *NtCopyFileChunk =
         (NtCopyFileChunkFunc *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCopyFileChunk");
 
@@ -3606,7 +3604,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
 
     // User-mode fallback method
     {
-        off_t src_offset = 0;
+        int64_t src_offset = 0;
 
         if (_lseek(src_fd, 0, SEEK_SET) < 0) {
             LogError("Failed to seek to start of '%1': %2", src_filename, strerror(errno));
@@ -3633,7 +3631,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
                 return false;
             }
 
-            src_offset += (off_t)buf.len;
+            src_offset += buf.len;
         }
 
         return true;
