@@ -47,6 +47,12 @@
 #include "libssh/pki.h"
 #include "libssh/kex.h"
 
+#ifndef _WIN32
+#ifdef HAVE_PTHREAD
+extern int proxy_disconnect;
+#endif /* HAVE_PTHREAD */
+#endif /* _WIN32 */
+
 #define set_status(session, status) do {\
         if (session->common.callbacks && session->common.callbacks->connect_status_function) \
             session->common.callbacks->connect_status_function(session->common.callbacks->userdata, status); \
@@ -765,8 +771,6 @@ ssh_session_set_disconnect_message(ssh_session session, const char *message)
     return SSH_OK;
 }
 
-extern int proxy_disconnect;
-
 /**
  * @brief Disconnect from a session (client or server).
  *
@@ -789,12 +793,14 @@ ssh_disconnect(ssh_session session)
     }
 
 #ifndef _WIN32
+#ifdef HAVE_PTHREAD
     /* Only send the disconnect to all other threads when the root session calls
      * ssh_disconnect() */
     if (session->proxy_root) {
         proxy_disconnect = 1;
     }
-#endif
+#endif /* HAVE_PTHREAD */
+#endif /* _WIN32 */
 
     if (session->disconnect_message == NULL) {
         session->disconnect_message = strdup("Bye Bye") ;

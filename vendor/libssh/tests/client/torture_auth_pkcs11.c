@@ -103,7 +103,8 @@ static int session_teardown(void **state)
 
     return 0;
 }
-static int setup_session(void **state)
+
+static int setup_pkcs11(void **state)
 {
     struct torture_state *s = *state;
     struct pki_st *test_state = NULL;
@@ -144,7 +145,7 @@ static int sshd_setup(void **state)
 {
 
     torture_setup_sshd_server(state, true);
-    setup_session(state);
+    setup_pkcs11(state);
 
     return 0;
 }
@@ -155,18 +156,20 @@ static int sshd_teardown(void **state) {
     struct pki_st *test_state = s->private_data;
     int rc;
 
-    torture_cleanup_tokens(test_state->temp_dir);
+    if (test_state != NULL) {
+        torture_cleanup_tokens(test_state->temp_dir);
 
-    rc = torture_change_dir(test_state->orig_dir);
-    assert_int_equal(rc, 0);
+        rc = torture_change_dir(test_state->orig_dir);
+        assert_int_equal(rc, 0);
 
-    rc = torture_rmdirs(test_state->temp_dir);
-    assert_int_equal(rc, 0);
+        rc = torture_rmdirs(test_state->temp_dir);
+        assert_int_equal(rc, 0);
 
-    SAFE_FREE(test_state->temp_dir);
-    SAFE_FREE(test_state->orig_dir);
-    SAFE_FREE(test_state->keys_dir);
-    SAFE_FREE(test_state);
+        SAFE_FREE(test_state->temp_dir);
+        SAFE_FREE(test_state->orig_dir);
+        SAFE_FREE(test_state->keys_dir);
+        SAFE_FREE(test_state);
+    }
 
     torture_teardown_sshd_server(state);
 
@@ -177,13 +180,10 @@ static void torture_auth_autopubkey(void **state, const char *obj_name, const ch
     struct torture_state *s = *state;
     ssh_session session = s->ssh.session;
     int rc;
-    int verbosity = 4;
     char priv_uri[1042];
+
     /* Authenticate as charlie with bob his pubkey */
     rc = ssh_options_set(session, SSH_OPTIONS_USER, TORTURE_SSH_USER_CHARLIE);
-    assert_int_equal(rc, SSH_OK);
-
-    rc = ssh_options_set(session, SSH_OPTIONS_LOG_VERBOSITY, &verbosity);
     assert_int_equal(rc, SSH_OK);
 
     snprintf(priv_uri, sizeof(priv_uri), "pkcs11:token=%s;object=%s;type=private?pin-value=%s",

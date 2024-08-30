@@ -355,6 +355,8 @@ endif (WITH_SYMBOL_VERSIONING AND HAVE_LD_VERSION_SCRIPT)
 
 set_target_properties(ssh
     PROPERTIES
+      C_STANDARD
+        99
       VERSION
         ${LIBRARY_VERSION}
       SOVERSION

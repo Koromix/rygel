@@ -7,13 +7,20 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-void destructor(void) __attribute__((destructor));
-
+/*******************************************************************************
+ *                            Structs
+ ******************************************************************************/
 struct file {
     char *name;
     uid_t uid;
     gid_t gid;
 } file = {0};
+
+/*******************************************************************************
+ *                            Destructor
+ ******************************************************************************/
+
+void destructor(void) __attribute__((destructor));
 
 void
 destructor(void)
@@ -21,26 +28,11 @@ destructor(void)
     free(file.name);
 }
 
-typedef int (*__libc_chown)(const char *pathname, uid_t owner, gid_t group);
+/*******************************************************************************
+ *                              Chown wrapping
+ ******************************************************************************/
 
-typedef int (*__libc_fchownat)(int dirfd,
-                               const char *pathname,
-                               uid_t owner,
-                               gid_t group,
-                               int flags);
-
-typedef int (*__libc_stat)(const char *pathname, struct stat *statbuf);
-
-typedef int (*__libc_xstat)(int ver,
-                            const char *pathname,
-                            struct stat *statbuf);
-
-typedef int (*__libc_lxstat)(int ver,
-                             const char *pathname,
-                             struct stat *statbuf);
-
-typedef int (*__libc_lstat)(const char *pathname, struct stat *statbuf);
-
+/** Records the UID and GID and pretend syscall worked */
 static int
 chown_helper(const char *pathname, uid_t owner, gid_t group)
 {
@@ -68,33 +60,36 @@ chown_helper(const char *pathname, uid_t owner, gid_t group)
     return -1;
 }
 
-static void
-stat_helper(const char *pathname, struct stat *statbuf)
-{
-    if (file.name != NULL && strcmp(pathname, file.name) == 0) {
-        statbuf->st_uid = file.uid;
-        statbuf->st_gid = file.gid;
+#define WRAP_CHOWN(syscall_name)                                      \
+    typedef int (*__libc_##syscall_name)(const char *pathname,        \
+                                         uid_t owner,                 \
+                                         gid_t group);                \
+    int syscall_name(const char *pathname, uid_t owner, gid_t group); \
+    int syscall_name(const char *pathname, uid_t owner, gid_t group)  \
+    {                                                                 \
+        __libc_##syscall_name original_##syscall_name = NULL;         \
+        int rc;                                                       \
+                                                                      \
+        rc = chown_helper(pathname, owner, group);                    \
+        if (rc == 0) {                                                \
+            return 0;                                                 \
+        }                                                             \
+        original_##syscall_name =                                     \
+            (__libc_##syscall_name)dlsym(RTLD_NEXT, #syscall_name);   \
+        return (*original_##syscall_name)(pathname, owner, group);    \
     }
-}
 
-/* silent gcc */
-int chown(const char *pathname, uid_t owner, gid_t group);
+WRAP_CHOWN(chown)
+WRAP_CHOWN(chown32)
+WRAP_CHOWN(lchown)
 
-int
-chown(const char *pathname, uid_t owner, gid_t group)
-{
-    __libc_chown original_chown = NULL;
-    int rc;
+/* fchownat */
+typedef int (*__libc_fchownat)(int dirfd,
+                               const char *pathname,
+                               uid_t owner,
+                               gid_t group,
+                               int flags);
 
-    rc = chown_helper(pathname, owner, group);
-    if (rc == 0) {
-        return 0;
-    }
-    original_chown = (__libc_chown)dlsym(RTLD_NEXT, "chown");
-    return (*original_chown)(pathname, owner, group);
-}
-
-/* SFTP Server calls fchownat for symlinks  */
 int
 fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags);
 
@@ -112,62 +107,107 @@ fchownat(int dirfd, const char *pathname, uid_t owner, gid_t group, int flags)
     original_fchownat = (__libc_fchownat)dlsym(RTLD_NEXT, "fchownat");
     return (*original_fchownat)(dirfd, pathname, owner, group, flags);
 }
-int stat(const char *pathname, struct stat *statbuf);
 
-int
-stat(const char *pathname, struct stat *statbuf)
+/*******************************************************************************
+ *                              Stat wrapping
+ ******************************************************************************/
+
+/** Returns previously set UID/GID for the filename */
+static void
+stat_helper(const char *pathname, struct stat *statbuf)
 {
-    int rc;
-    __libc_stat original_stat = NULL;
-
-    original_stat = (__libc_stat)dlsym(RTLD_NEXT, "stat");
-    rc = (*original_stat)(pathname, statbuf);
-    stat_helper(pathname, statbuf);
-
-    return rc;
+    if (file.name != NULL && strcmp(pathname, file.name) == 0) {
+        statbuf->st_uid = file.uid;
+        statbuf->st_gid = file.gid;
+    }
 }
 
-/* CentOS8 calls xstat */
-int __xstat(int ver, const char *pathname, struct stat *statbuf);
-
-int
-__xstat(int ver, const char *pathname, struct stat *statbuf)
+static void
+stat64_helper(const char *pathname, struct stat64 *statbuf)
 {
-    int rc;
-    __libc_xstat original_xstat = NULL;
-
-    original_xstat = (__libc_xstat)dlsym(RTLD_NEXT, "__xstat");
-    rc = (*original_xstat)(ver, pathname, statbuf);
-    stat_helper(pathname, statbuf);
-
-    return rc;
+    if (file.name != NULL && strcmp(pathname, file.name) == 0) {
+        statbuf->st_uid = file.uid;
+        statbuf->st_gid = file.gid;
+    }
 }
 
-int __lxstat(int ver, const char *pathname, struct stat *statbuf);
+#define WRAP_STAT(syscall_name, struct_name)                             \
+    typedef int (*__libc_##syscall_name)(const char *pathname,           \
+                                         struct struct_name *statbuf);   \
+    int syscall_name(const char *pathname, struct struct_name *statbuf); \
+    int syscall_name(const char *pathname, struct struct_name *statbuf)  \
+    {                                                                    \
+        int rc;                                                          \
+        __libc_##syscall_name original_##syscall_name = NULL;            \
+                                                                         \
+        original_##syscall_name =                                        \
+            (__libc_##syscall_name)dlsym(RTLD_NEXT, #syscall_name);      \
+        rc = (*original_##syscall_name)(pathname, statbuf);              \
+        struct_name##_helper(pathname, statbuf);                         \
+                                                                         \
+        return rc;                                                       \
+    }
 
-int
-__lxstat(int ver, const char *pathname, struct stat *statbuf)
+WRAP_STAT(stat, stat)
+WRAP_STAT(lstat, stat)
+/* i686 arch */
+WRAP_STAT(stat64, stat64)
+WRAP_STAT(lstat64, stat64)
+
+#define WRAP_XSTAT(syscall_name)                                           \
+    typedef int (*__libc_##syscall_name)(int ver,                          \
+                                         const char *pathname,             \
+                                         struct stat *statbuf);            \
+    int syscall_name(int ver, const char *pathname, struct stat *statbuf); \
+    int syscall_name(int ver, const char *pathname, struct stat *statbuf)  \
+    {                                                                      \
+        int rc;                                                            \
+        __libc_##syscall_name original_##syscall_name = NULL;              \
+                                                                           \
+        original_##syscall_name =                                          \
+            (__libc_##syscall_name)dlsym(RTLD_NEXT, #syscall_name);        \
+        rc = (*original_##syscall_name)(ver, pathname, statbuf);           \
+        stat_helper(pathname, statbuf);                                    \
+                                                                           \
+        return rc;                                                         \
+    }
+
+WRAP_XSTAT(__xstat) /* CentOS8 */
+WRAP_XSTAT(__lxstat)
+
+/* i686 arch (likely not wrappable) */
+static void
+statx_helper(const char *pathname, struct statx *statbuf)
 {
-    int rc;
-    __libc_lxstat original_lxstat = NULL;
-
-    original_lxstat = (__libc_lxstat)dlsym(RTLD_NEXT, "__lxstat");
-    rc = (*original_lxstat)(ver, pathname, statbuf);
-    stat_helper(pathname, statbuf);
-
-    return rc;
+    if (file.name != NULL && strcmp(pathname, file.name) == 0) {
+        statbuf->stx_uid = file.uid;
+        statbuf->stx_gid = file.gid;
+    }
 }
-int lstat(const char *pathname, struct stat *statbuf);
 
+typedef int (*__libc_statx)(int dirfd,
+                            const char *pathname,
+                            int flags,
+                            unsigned int mask,
+                            struct statx *statbuf);
+int statx(int dirfd,
+          const char *pathname,
+          int flags,
+          unsigned int mask,
+          struct statx *statbuf);
 int
-lstat(const char *pathname, struct stat *statbuf)
+statx(int dirfd,
+      const char *pathname,
+      int flags,
+      unsigned int mask,
+      struct statx *statbuf)
 {
     int rc;
-    __libc_lstat original_lstat = NULL;
+    __libc_statx original_statx = NULL;
 
-    original_lstat = (__libc_lstat)dlsym(RTLD_NEXT, "lstat");
-    rc = (*original_lstat)(pathname, statbuf);
-    stat_helper(pathname, statbuf);
+    original_statx = (__libc_statx)dlsym(RTLD_NEXT, "statx");
+    rc = (*original_statx)(dirfd, pathname, flags, mask, statbuf);
+    statx_helper(pathname, statbuf);
 
     return rc;
 }

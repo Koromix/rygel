@@ -729,7 +729,7 @@ static void torture_auth_agent_identities_only(void **state)
     char bob_ssh_key[1024];
     struct passwd *pwd = NULL;
     int rc;
-    int identities_only = 1;
+    bool identities_only = true;
     char *id = NULL;
 
     pwd = getpwnam("bob");
@@ -786,7 +786,7 @@ static void torture_auth_agent_identities_only_protected(void **state)
     char bob_ssh_key[1024];
     struct passwd *pwd;
     int rc;
-    int identities_only = 1;
+    bool identities_only = true;
     char *id = NULL;
 
     pwd = getpwnam("bob");

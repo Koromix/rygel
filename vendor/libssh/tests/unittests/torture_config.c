@@ -1404,7 +1404,7 @@ static void torture_config_control_path(void **state,
     torture_reset_config(session);
     ssh_options_set(session, SSH_OPTIONS_HOST, "simple");
     _parse_config(session, file, string, SSH_OK);
-    assert_string_equal(session->opts.control_path, "/tmp/ssh-%r@%h:%p");
+    assert_null(session->opts.control_path);
 
     torture_reset_config(session);
     ssh_options_set(session, SSH_OPTIONS_HOST, "none");
@@ -1439,12 +1439,12 @@ static void torture_config_control_master(void **state,
     torture_reset_config(session);
     ssh_options_set(session, SSH_OPTIONS_HOST, "simple");
     _parse_config(session, file, string, SSH_OK);
-    assert_int_equal(session->opts.control_master, SSH_CONTROL_MASTER_AUTO);
+    assert_int_equal(session->opts.control_master, SSH_CONTROL_MASTER_NO);
 
     torture_reset_config(session);
     ssh_options_set(session, SSH_OPTIONS_HOST, "none");
     _parse_config(session, file, string, SSH_OK);
-    assert_int_equal(session->opts.control_master, SSH_CONTROL_MASTER_YES);
+    assert_int_equal(session->opts.control_master, SSH_CONTROL_MASTER_NO);
 }
 
 /**

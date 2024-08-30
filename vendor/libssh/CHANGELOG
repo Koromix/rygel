@@ -1,6 +1,12 @@
 CHANGELOG
 =========
 
+version 0.11.1 (released 2024-08-30)
+ * Fixed default TTY modes that are set when stdin is not connected to tty (#270)
+ * Fixed zlib cleanup procedure, which could crash on i386
+ * Various test fixes improving their stability
+ * Fixed cygwin build
+
 version 0.11.0 (released 2024-07-31)
   * Deprecations and Removals:
     * Dropped support for DSA

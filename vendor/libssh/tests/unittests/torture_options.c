@@ -1350,7 +1350,7 @@ static void torture_options_copy(void **state)
     assert_string_equal(session->opts.pubkey_accepted_types,
                         new->opts.pubkey_accepted_types);
     assert_string_equal(session->opts.ProxyCommand, new->opts.ProxyCommand);
-    assert_string_equal(session->opts.control_path, new->opts.control_path);
+    assert_null(new->opts.control_path);
     /* TODO custombanner */
     assert_int_equal(session->opts.timeout, new->opts.timeout);
     assert_int_equal(session->opts.timeout_usec, new->opts.timeout_usec);

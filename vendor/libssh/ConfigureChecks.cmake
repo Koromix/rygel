@@ -64,6 +64,7 @@ check_include_file(arpa/inet.h HAVE_ARPA_INET_H)
 check_include_file(byteswap.h HAVE_BYTESWAP_H)
 check_include_file(glob.h HAVE_GLOB_H)
 check_include_file(valgrind/valgrind.h HAVE_VALGRIND_VALGRIND_H)
+check_include_file(ifaddrs.h HAVE_IFADDRS_H)
 
 if (WIN32)
   check_include_file(io.h HAVE_IO_H)

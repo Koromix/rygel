@@ -16,9 +16,10 @@ static int
 sshd_setup(void **state)
 {
     /*
-     * Without root permissions, the exec-ed SFTP server does not inherit some
-     * wrappers so we use internal-sftp for this test, which does not have this
-     * issue.
+     * The OpenSSH invokes the sftp server command with execve(), which does
+     * not inherit the environment variables (including LD_PRELOAD, which
+     * is needed for the fs_wrapper). Using `internal-sftp` works around this,
+     * keeping the old environment around.
      */
     setenv("TORTURE_SFTP_SERVER", "internal-sftp", 1);
 

@@ -58,6 +58,9 @@
 /* Define to 1 if you have the <stdint.h> header file. */
 #cmakedefine HAVE_STDINT_H 1
 
+/* Define to 1 if you have the <ifaddrs.h> header file. */
+#cmakedefine HAVE_IFADDRS_H 1
+
 /* Define to 1 if you have the <openssl/aes.h> header file. */
 #cmakedefine HAVE_OPENSSL_AES_H 1
 

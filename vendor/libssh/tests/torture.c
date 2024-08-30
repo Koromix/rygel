@@ -236,6 +236,10 @@ int torture_terminate_process(const char *pidfile)
 
     /* read the pidfile */
     pid = torture_read_pidfile(pidfile);
+    if (pid == -1) {
+        fprintf(stderr, "Failed to read PID file %s\n", pidfile);
+        return -1;
+    }
     assert_int_not_equal(pid, -1);
 
     for (count = 0; count < 10; count++) {
@@ -756,6 +760,9 @@ static void torture_setup_create_sshd_config(void **state, bool pam)
 #if OPENSSH_VERSION_MAJOR == 8 && OPENSSH_VERSION_MINOR >= 2
              "CASignatureAlgorithms " OPENSSH_KEYS "\n"
 #endif
+#if (OPENSSH_VERSION_MAJOR == 9 && OPENSSH_VERSION_MINOR >= 8) || OPENSSH_VERSION_MAJOR > 9
+             "PerSourcePenaltyExemptList 127.0.0.21\n"
+#endif
              "Ciphers " OPENSSH_CIPHERS "\n"
              "KexAlgorithms " OPENSSH_KEX "\n"
              "MACs " OPENSSH_MACS "\n"
@@ -786,6 +793,9 @@ static void torture_setup_create_sshd_config(void **state, bool pam)
              "%s\n" /* Here comes UsePam */
              "%s" /* The space for test-specific options */
              "\n"
+#if (OPENSSH_VERSION_MAJOR == 9 && OPENSSH_VERSION_MINOR >= 8) || OPENSSH_VERSION_MAJOR > 9
+             "PerSourcePenaltyExemptList 127.0.0.21\n"
+#endif
              "Ciphers "
                 "aes256-gcm@openssh.com,aes256-ctr,aes256-cbc,"
                 "aes128-gcm@openssh.com,aes128-ctr,aes128-cbc"
@@ -1361,10 +1371,8 @@ torture_update_sshd_config(void **state, const char *config)
 void torture_teardown_sshd_server(void **state)
 {
     struct torture_state *s = *state;
-    int rc;
 
-    rc = torture_terminate_process(s->srv_pidfile);
-    assert_return_code(rc, errno);
+    torture_terminate_process(s->srv_pidfile);
     torture_teardown_socket_dir(state);
 }
 #endif /* SSHD_EXECUTABLE */
@@ -1377,7 +1385,9 @@ void torture_setup_tokens(const char *temp_dir,
 {
     char token_setup_start_cmd[1024] = {0};
     char socket_path[1204] = {0};
+#ifndef WITH_PKCS11_PROVIDER
     char conf_path[1024] = {0};
+#endif /* WITH_PKCS11_PROVIDER */
     char *env = NULL;
     int rc;
 
@@ -1394,8 +1404,8 @@ void torture_setup_tokens(const char *temp_dir,
                   P11_KIT_CLIENT
 #else
                   ""
-#endif
-                 );
+#endif /* WITH_PKCS11_PROVIDER */
+    );
     assert_int_not_equal(rc, sizeof(token_setup_start_cmd));
 
     rc = system(token_setup_start_cmd);
@@ -1419,7 +1429,7 @@ void torture_setup_tokens(const char *temp_dir,
         setenv("PKCS11_PROVIDER_MODULE", PKCS11SPY, 1);
 #else
         fprintf(stderr, "[ TORTURE  ] >>> pkcs11-spy not found\n");
-#endif
+#endif /* PKCS11SPY */
     }
 #else
     (void)env;
@@ -1431,11 +1441,9 @@ void torture_setup_tokens(const char *temp_dir,
 
 void torture_cleanup_tokens(const char *temp_dir)
 {
-    char pidfile[1024] = {0};
-    int rc;
-    pid_t pid;
-
 #ifdef WITH_PKCS11_PROVIDER
+    char pidfile[1024] = {0};
+
     snprintf(pidfile, sizeof(pidfile), "%s/p11-kit-server.pid", temp_dir);
     torture_terminate_process(pidfile);
 #else

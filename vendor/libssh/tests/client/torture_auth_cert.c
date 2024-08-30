@@ -587,7 +587,7 @@ torture_auth_agent_cert_identities_only(void **state)
     ssh_session session = s->ssh.session;
     char doe_ssh_key[1024];
     struct passwd *pwd = NULL;
-    int identities_only = 1;
+    bool identities_only = true;
     char *id = NULL;
     int rc;
 
@@ -646,7 +646,7 @@ torture_auth_agent_cert_identities_only_nonblocking(void **state)
     ssh_session session = s->ssh.session;
     char doe_ssh_key[1024];
     struct passwd *pwd = NULL;
-    int identities_only = 1;
+    bool identities_only = true;
     char *id = NULL;
     int rc;
 
@@ -750,7 +750,7 @@ torture_auth_agent_cert_identities_only_explicit(void **state)
     char doe_ssh_key[1024];
     char doe_ssh_cert[1024];
     struct passwd *pwd = NULL;
-    int identities_only = 1;
+    bool identities_only = true;
     char *id = NULL;
     int rc;
 
@@ -815,7 +815,7 @@ torture_auth_agent_cert_identities_only_nonblocking_explicit(void **state)
     char doe_ssh_key[1024];
     char doe_ssh_cert[1024];
     struct passwd *pwd = NULL;
-    int identities_only = 1;
+    bool identities_only = true;
     char *id = NULL;
     int rc;
 
@@ -887,7 +887,7 @@ torture_auth_agent_cert_only_identities_only(void **state)
     ssh_session session = s->ssh.session;
     char doe_ssh_cert[1024];
     struct passwd *pwd = NULL;
-    int identities_only = 1;
+    bool identities_only = true;
     char *id = NULL;
     int rc;
 
@@ -945,7 +945,7 @@ torture_auth_agent_cert_only_identities_only_nonblocking(void **state)
     ssh_session session = s->ssh.session;
     char doe_ssh_cert[1024];
     struct passwd *pwd = NULL;
-    int identities_only = 1;
+    bool identities_only = true;
     char *id = NULL;
     int rc;
 

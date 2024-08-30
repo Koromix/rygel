@@ -39,9 +39,11 @@
 # include <errno.h>
 # include <signal.h>
 # include <sys/wait.h>
-# include <ifaddrs.h>
 # include <net/if.h>
 # include <netinet/in.h>
+#endif
+#ifdef HAVE_IFADDRS_H
+#include <ifaddrs.h>
 #endif
 
 #include "libssh/config_parser.h"
@@ -130,9 +132,9 @@ static struct ssh_config_keyword_table_s ssh_config_keyword_table[] = {
   { "verifyhostkeydns", SOC_UNSUPPORTED},
   { "visualhostkey", SOC_UNSUPPORTED},
   { "clearallforwardings", SOC_NA},
-  { "controlmaster", SOC_CONTROLMASTER},
+  { "controlmaster", SOC_NA},
   { "controlpersist", SOC_NA},
-  { "controlpath", SOC_CONTROLPATH},
+  { "controlpath", SOC_NA},
   { "dynamicforward", SOC_NA},
   { "escapechar", SOC_NA},
   { "exitonforwardfailure", SOC_NA},
@@ -639,7 +641,7 @@ ssh_config_make_absolute(ssh_session session,
     return out;
 }
 
-#ifndef _WIN32
+#ifdef HAVE_IFADDRS_H
 /**
  * @brief Checks if host address matches the local network specified.
  *
@@ -730,7 +732,7 @@ ssh_match_localnetwork(const char *addrlist, bool negate)
 
     return (found == (negate ? 0 : 1));
 }
-#endif
+#endif /* HAVE_IFADDRS_H */
 
 static int
 ssh_config_parse_line(ssh_session session,
@@ -955,7 +957,6 @@ ssh_config_parse_line(ssh_session session,
                 args++;
                 break;
 
-#ifndef _WIN32
             case MATCH_LOCALNETWORK:
                 /* Here we match only one argument */
                 p = ssh_config_get_str_tok(&s, NULL);
@@ -968,6 +969,7 @@ ssh_config_parse_line(ssh_session session,
                     SAFE_FREE(x);
                     return -1;
                 }
+#ifdef HAVE_IFADDRS_H
                 rv = match_cidr_address_list(NULL, p, -1);
                 if (rv == -1) {
                     ssh_set_error(session,
@@ -992,9 +994,17 @@ ssh_config_parse_line(ssh_session session,
                 }
 
                 result &= rv;
+#else /* HAVE_IFADDRS_H */
+                ssh_set_error(session,
+                              SSH_FATAL,
+                              "line %d: ERROR - match localnetwork "
+                              "not supported on this platform",
+                              count);
+                SAFE_FREE(x);
+                return -1;
+#endif /* HAVE_IFADDRS_H */
                 args++;
                 break;
-#endif
 
             case MATCH_UNKNOWN:
             default:

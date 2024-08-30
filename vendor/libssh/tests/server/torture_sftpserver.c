@@ -316,7 +316,6 @@ static int session_setup_sftp(void **state)
     /* init sftp session */
     tsftp = s->ssh.tsftp;
 
-    printf("in establish before sftp_new\n");
     sftp = sftp_new(session);
     assert_non_null(sftp);
     tsftp->sftp = sftp;

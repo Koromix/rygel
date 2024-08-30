@@ -3,7 +3,9 @@
 #include "libssh/options.h"
 #include "libssh/session.h"
 #include "match.c"
+#ifdef HAVE_IFADDRS_H
 #include <ifaddrs.h>
+#endif
 #include <net/if.h>
 #include <stdbool.h>
 
@@ -129,7 +131,10 @@ subnet_mask_to_prefix_length_6(struct in6_addr subnet_mask)
  * @brief helper function returning the IPv4 and IPv6 network ID
  * (in CIDR format) corresponding to any of the running local interfaces.
  * The network interface corresponding to IPv4 and IPv6 network ID may be
- * different ("loopback" local interface is ignored).
+ * different.
+ *
+ * @note If no non-loopback network interfaces are found for IPv4 or
+ * IPv6, the function will fall back to using the loopback addresses.
  */
 static int
 get_network_id(char *net_id_4, char *net_id_6)
@@ -140,8 +145,10 @@ get_network_id(char *net_id_4, char *net_id_6)
     struct sockaddr_in netmask;
     struct sockaddr_in6 netmask6;
     char address[NI_MAXHOST], *a = NULL;
-    char *network_id_str = NULL, network_id_str6[INET6_ADDRSTRLEN];
-    int i, prefix_length, rc, found_4 = 0, found_6 = 0;
+    char *network_id_str = NULL, network_id_str6[INET6_ADDRSTRLEN],
+         lo_net_id_4[NI_MAXHOST], lo_net_id_6[NI_MAXHOST];
+    int i, prefix_length, rc;
+    int found_4 = 0, found_lo_4 = 0, found_6 = 0, found_lo_6 = 0;
     socklen_t sa_len;
 
     ZERO_STRUCT(addr);
@@ -162,11 +169,6 @@ get_network_id(char *net_id_4, char *net_id_6)
         }
 
         if (ifa->ifa_addr == NULL || (ifa->ifa_flags & IFF_UP) == 0) {
-            continue;
-        }
-
-        /* Skip loopback interface */
-        if (strcmp(ifa->ifa_name, "lo") == 0) {
             continue;
         }
 
@@ -222,12 +224,22 @@ get_network_id(char *net_id_4, char *net_id_6)
                 continue;
             }
 
-            snprintf(net_id_4,
-                     NI_MAXHOST,
-                     "%s/%u",
-                     network_id_str,
-                     prefix_length);
-            found_4 = 1;
+            if (strcmp(ifa->ifa_name, "lo") == 0) {
+                /* Store it temporarily in case needed for fallback */
+                snprintf(lo_net_id_4,
+                         NI_MAXHOST,
+                         "%s/%u",
+                         network_id_str,
+                         prefix_length);
+                found_lo_4 = 1;
+            } else {
+                snprintf(net_id_4,
+                         NI_MAXHOST,
+                         "%s/%u",
+                         network_id_str,
+                         prefix_length);
+                found_4 = 1;
+            }
         } else if (ifa->ifa_addr->sa_family == AF_INET6) {
 
             /* Remove interface in case of IPv6 address: addr%interface */
@@ -263,13 +275,41 @@ get_network_id(char *net_id_4, char *net_id_6)
                 continue;
             }
 
-            snprintf(net_id_6,
-                     NI_MAXHOST,
-                     "%s/%u",
-                     network_id_str6,
-                     prefix_length);
-            found_6 = 1;
+            if (strcmp(ifa->ifa_name, "lo") == 0) {
+                /* Store it temporarily in case needed for fallback */
+                snprintf(lo_net_id_6,
+                         NI_MAXHOST,
+                         "%s/%u",
+                         network_id_str6,
+                         prefix_length);
+                found_lo_6 = 1;
+            } else {
+                snprintf(net_id_6,
+                         NI_MAXHOST,
+                         "%s/%u",
+                         network_id_str6,
+                         prefix_length);
+                found_6 = 1;
+            }
         }
+    }
+
+    /*
+     * Fallback to the loopback network ID (127.0.0.0/8) if no other
+     * IPv4 network ID has been found.
+     */
+    if (!found_4 && found_lo_4) {
+        snprintf(net_id_4, NI_MAXHOST, "%s", lo_net_id_4);
+        found_4 = 1;
+    }
+
+    /*
+     * Fallback to the loopback network ID (::1/128) if no other
+     * IPv6 network ID has been found.
+     */
+    if (!found_6 && found_lo_6) {
+        snprintf(net_id_6, NI_MAXHOST, "%s", lo_net_id_6);
+        found_6 = 1;
     }
 
     freeifaddrs(ifaddrs);
