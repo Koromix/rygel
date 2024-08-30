@@ -1623,11 +1623,11 @@ void ssl_tls13_derive_secret(int hash_alg,
 
     unsigned char const *lbl = NULL;
     size_t lbl_len;
-#define MBEDTLS_SSL_TLS1_3_LABEL(name, string)                       \
-    if (label_idx == (int) tls13_label_ ## name)                      \
+#define MBEDTLS_SSL_TLS1_3_LABEL(name, string)                         \
+    if (label_idx == (int) tls13_label_ ## name)                       \
     {                                                                  \
         lbl = mbedtls_ssl_tls13_labels.name;                           \
-        lbl_len = sizeof(mbedtls_ssl_tls13_labels.name);             \
+        lbl_len = sizeof(mbedtls_ssl_tls13_labels.name);               \
     }
     MBEDTLS_SSL_TLS1_3_LABEL_LIST
 #undef MBEDTLS_SSL_TLS1_3_LABEL
@@ -1667,7 +1667,7 @@ void ssl_tls13_derive_early_secrets(int hash_alg,
     /* Double-check that we've passed sane parameters. */
     psa_algorithm_t alg = (psa_algorithm_t) hash_alg;
     size_t const hash_len = PSA_HASH_LENGTH(alg);
-    TEST_ASSERT(PSA_ALG_IS_HASH(alg)             &&
+    TEST_ASSERT(PSA_ALG_IS_HASH(alg)               &&
                 secret->len == hash_len            &&
                 transcript->len == hash_len        &&
                 traffic_expected->len == hash_len  &&
@@ -1701,7 +1701,7 @@ void ssl_tls13_derive_handshake_secrets(int hash_alg,
     /* Double-check that we've passed sane parameters. */
     psa_algorithm_t alg = (psa_algorithm_t) hash_alg;
     size_t const hash_len = PSA_HASH_LENGTH(alg);
-    TEST_ASSERT(PSA_ALG_IS_HASH(alg)            &&
+    TEST_ASSERT(PSA_ALG_IS_HASH(alg)              &&
                 secret->len == hash_len           &&
                 transcript->len == hash_len       &&
                 client_expected->len == hash_len  &&
@@ -1736,7 +1736,7 @@ void ssl_tls13_derive_application_secrets(int hash_alg,
     /* Double-check that we've passed sane parameters. */
     psa_algorithm_t alg = (psa_algorithm_t) hash_alg;
     size_t const hash_len = PSA_HASH_LENGTH(alg);
-    TEST_ASSERT(PSA_ALG_IS_HASH(alg)            &&
+    TEST_ASSERT(PSA_ALG_IS_HASH(alg)              &&
                 secret->len == hash_len           &&
                 transcript->len == hash_len       &&
                 client_expected->len == hash_len  &&
@@ -1772,7 +1772,7 @@ void ssl_tls13_derive_resumption_secrets(int hash_alg,
     /* Double-check that we've passed sane parameters. */
     psa_algorithm_t alg = (psa_algorithm_t) hash_alg;
     size_t const hash_len = PSA_HASH_LENGTH(alg);
-    TEST_ASSERT(PSA_ALG_IS_HASH(alg)              &&
+    TEST_ASSERT(PSA_ALG_IS_HASH(alg)                &&
                 secret->len == hash_len             &&
                 transcript->len == hash_len         &&
                 resumption_expected->len == hash_len);
@@ -1803,7 +1803,7 @@ void ssl_tls13_create_psk_binder(int hash_alg,
     /* Double-check that we've passed sane parameters. */
     psa_algorithm_t alg = (psa_algorithm_t) hash_alg;
     size_t const hash_len = PSA_HASH_LENGTH(alg);
-    TEST_ASSERT(PSA_ALG_IS_HASH(alg)          &&
+    TEST_ASSERT(PSA_ALG_IS_HASH(alg)            &&
                 transcript->len == hash_len     &&
                 binder_expected->len == hash_len);
 
@@ -2093,7 +2093,7 @@ void ssl_serialize_session_save_load(int ticket_len, char *crt_file,
 
 #if defined(MBEDTLS_SSL_PROTO_TLS1_3)
     if (tls_version == MBEDTLS_SSL_VERSION_TLS1_3) {
-        TEST_ASSERT(original.ciphersuite == restored.ciphersuite);
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
         TEST_ASSERT(original.ticket_age_add == restored.ticket_age_add);
         TEST_ASSERT(original.ticket_flags == restored.ticket_flags);
         TEST_ASSERT(original.resumption_key_len == restored.resumption_key_len);
@@ -2104,22 +2104,24 @@ void ssl_serialize_session_save_load(int ticket_len, char *crt_file,
                                restored.resumption_key,
                                original.resumption_key_len) == 0);
         }
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
 
-#if defined(MBEDTLS_SSL_EARLY_DATA)
-        TEST_ASSERT(
-            original.max_early_data_size == restored.max_early_data_size);
-#if defined(MBEDTLS_SSL_ALPN) && defined(MBEDTLS_SSL_SRV_C)
+#if defined(MBEDTLS_SSL_SRV_C)
         if (endpoint_type == MBEDTLS_SSL_IS_SERVER) {
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
+#if defined(MBEDTLS_SSL_EARLY_DATA) && defined(MBEDTLS_SSL_ALPN)
             TEST_ASSERT(original.ticket_alpn != NULL);
             TEST_ASSERT(restored.ticket_alpn != NULL);
             TEST_MEMORY_COMPARE(original.ticket_alpn, strlen(original.ticket_alpn),
                                 restored.ticket_alpn, strlen(restored.ticket_alpn));
+#endif
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
         }
-#endif
-#endif
+#endif /* MBEDTLS_SSL_SRV_C */
 
-#if defined(MBEDTLS_SSL_SESSION_TICKETS) && defined(MBEDTLS_SSL_CLI_C)
+#if defined(MBEDTLS_SSL_CLI_C)
         if (endpoint_type == MBEDTLS_SSL_IS_CLIENT) {
+#if defined(MBEDTLS_SSL_SESSION_TICKETS)
 #if defined(MBEDTLS_HAVE_TIME)
             TEST_ASSERT(original.ticket_reception_time == restored.ticket_reception_time);
 #endif
@@ -2132,11 +2134,22 @@ void ssl_serialize_session_save_load(int ticket_len, char *crt_file,
                                    restored.ticket,
                                    original.ticket_len) == 0);
             }
-
-        }
+#if defined(MBEDTLS_SSL_SERVER_NAME_INDICATION)
+            TEST_ASSERT(original.hostname != NULL);
+            TEST_ASSERT(restored.hostname != NULL);
+            TEST_MEMORY_COMPARE(original.hostname, strlen(original.hostname),
+                                restored.hostname, strlen(restored.hostname));
 #endif
+#endif /* MBEDTLS_SSL_SESSION_TICKETS */
+        }
+#endif /* MBEDTLS_SSL_CLI_C */
     }
 #endif /* MBEDTLS_SSL_PROTO_TLS1_3 */
+
+#if defined(MBEDTLS_SSL_EARLY_DATA)
+    TEST_ASSERT(
+        original.max_early_data_size == restored.max_early_data_size);
+#endif
 
 #if defined(MBEDTLS_SSL_RECORD_SIZE_LIMIT)
     TEST_ASSERT(original.record_size_limit == restored.record_size_limit);

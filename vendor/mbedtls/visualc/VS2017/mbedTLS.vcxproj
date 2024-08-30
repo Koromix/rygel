@@ -225,6 +225,7 @@
     <ClInclude Include="..\..\include\psa\build_info.h" />
     <ClInclude Include="..\..\include\psa\crypto.h" />
     <ClInclude Include="..\..\include\psa\crypto_adjust_auto_enabled.h" />
+    <ClInclude Include="..\..\include\psa\crypto_adjust_config_dependencies.h" />
     <ClInclude Include="..\..\include\psa\crypto_adjust_config_key_pair_types.h" />
     <ClInclude Include="..\..\include\psa\crypto_adjust_config_synonyms.h" />
     <ClInclude Include="..\..\include\psa\crypto_builtin_composites.h" />
@@ -278,6 +279,7 @@
     <ClInclude Include="..\..\library\alignment.h" />
     <ClInclude Include="..\..\library\base64_internal.h" />
     <ClInclude Include="..\..\library\bignum_core.h" />
+    <ClInclude Include="..\..\library\bignum_internal.h" />
     <ClInclude Include="..\..\library\bignum_mod.h" />
     <ClInclude Include="..\..\library\bignum_mod_raw.h" />
     <ClInclude Include="..\..\library\bignum_mod_raw_invasive.h" />
