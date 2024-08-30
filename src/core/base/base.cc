@@ -5591,15 +5591,17 @@ overflow:
 
 bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int flags, Span<const char> *out_remaining)
 {
-    uint64_t duration = 0;
+    int64_t duration = 0;
+    int64_t multiplier = 1000;
 
     if (!ParseInt(str, &duration, flags & ~(int)ParseFlag::End, &str))
         return false;
-    if (duration > INT64_MAX) [[unlikely]]
-        goto overflow;
+    if (duration < 0) [[unlikely]] {
+        LogError("Duration values must be positive");
+        return false;
+    }
 
     if (str.len) {
-        uint64_t multiplier = 1;
         int next = 1;
 
         switch (str[0]) {
@@ -5616,20 +5618,21 @@ bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int fla
             }
             return false;
         }
-        str = str.Take(next, str.len - next);
 
-        uint64_t total = duration * multiplier;
-        if ((duration && total / duration != multiplier) || total > INT64_MAX) [[unlikely]]
-            goto overflow;
-        duration = total;
-    } else {
-        uint64_t total = duration * 1000;
-        if ((duration && total / duration != 1000) || total > INT64_MAX) [[unlikely]]
-            goto overflow;
-        duration = total;
+        str = str.Take(next, str.len - next);
     }
 
-    *out_duration = (int64_t)duration;
+#if defined(__GNUC__) || defined(__clang__)
+    if (__builtin_mul_overflow(duration, multiplier, &duration)) [[unlikely]]
+        goto overflow;
+#else
+    uint64_t total = duration * multiplier;
+    if ((duration && total / duration != multiplier) || total > INT64_MAX) [[unlikely]]
+        goto overflow;
+    duration = (int64_t)total;
+#endif
+
+    *out_duration = duration;
     if (out_remaining) {
         *out_remaining = str;
     }
