@@ -5502,42 +5502,86 @@ const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix
 // Parsing
 // ------------------------------------------------------------------------
 
-bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags,
-               Span<const char> *out_remaining)
+static inline uint32_t MatchBool(uint64_t u, uint64_t wanted, int bytes, bool value)
 {
-#define TRY_MATCH(Match, Value) \
-        do { \
-            if (str == (Match)) { \
-                *out_value = (Value); \
-                if (out_remaining) { \
-                    *out_remaining = str.Take(str.len, 0); \
-                } \
-                return true; \
-            } else if (!(flags & (int)ParseFlag::End)) { \
-                *out_value = (Value); \
-                if (out_remaining) { \
-                    Size match_len = strlen(Match); \
-                    *out_remaining = str.Take(match_len, str.len - match_len); \
-                } \
-                return true; \
-            } \
-        } while (false)
+    int shift = bytes * 8;
+    uint64_t mask = (1ull << shift) - 1;
 
-    TRY_MATCH("1", true);
-    TRY_MATCH("On", true);
-    TRY_MATCH("Y", true);
-    TRY_MATCH("Yes", true);
-    TRY_MATCH("True", true);
-    TRY_MATCH("0", false);
-    TRY_MATCH("Off", false);
-    TRY_MATCH("N", false);
-    TRY_MATCH("No", false);
-    TRY_MATCH("False", false);
+    bool match = ((u & mask) == wanted);
 
-    if (flags & (int)ParseFlag::Log) {
-        LogError("Invalid boolean value '%1'", str);
+    uint32_t ret = ((uint32_t)match << 31) | ((uint32_t)value << 30) | (uint32_t)bytes;
+    return ret;
+}
+
+bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags, Span<const char> *out_remaining)
+{
+    union {
+        uint8_t raw[8];
+        uint64_t u;
+    } u = {};
+
+    switch (str.len) {
+        default: { RG_ASSERT(str.len >= 0); } [[fallthrough]];
+
+#if defined(RG_BIG_ENDIAN)
+        case 8: { u.raw[0] = LowerAscii(str[7]); } [[fallthrough]];
+        case 7: { u.raw[1] = LowerAscii(str[6]); } [[fallthrough]];
+        case 6: { u.raw[2] = LowerAscii(str[5]); } [[fallthrough]];
+        case 5: { u.raw[3] = LowerAscii(str[4]); } [[fallthrough]];
+        case 4: { u.raw[4] = LowerAscii(str[3]); } [[fallthrough]];
+        case 3: { u.raw[5] = LowerAscii(str[2]); } [[fallthrough]];
+        case 2: { u.raw[6] = LowerAscii(str[1]); } [[fallthrough]];
+        case 1: { u.raw[7] = LowerAscii(str[0]); } [[fallthrough]];
+        case 0: {} break;
+#else
+        case 8: { u.raw[7] = LowerAscii(str[7]); } [[fallthrough]];
+        case 7: { u.raw[6] = LowerAscii(str[6]); } [[fallthrough]];
+        case 6: { u.raw[5] = LowerAscii(str[5]); } [[fallthrough]];
+        case 5: { u.raw[4] = LowerAscii(str[4]); } [[fallthrough]];
+        case 4: { u.raw[3] = LowerAscii(str[3]); } [[fallthrough]];
+        case 3: { u.raw[2] = LowerAscii(str[2]); } [[fallthrough]];
+        case 2: { u.raw[1] = LowerAscii(str[1]); } [[fallthrough]];
+        case 1: { u.raw[0] = LowerAscii(str[0]); } [[fallthrough]];
+        case 0: {} break;
+#endif
     }
-    return false;
+
+    uint32_t ret = std::max({
+        MatchBool(u.u, 0x31ull, 1, true), // 1
+        MatchBool(u.u, 0x6E6Full, 2, true), // on
+        MatchBool(u.u, 0x79ull, 1, true), // y
+        MatchBool(u.u, 0x736579ull, 3, true), // yes
+        MatchBool(u.u, 0x65757274ull, 4, true), // true
+
+        MatchBool(u.u, 0x30ull, 1, false), // 0
+        MatchBool(u.u, 0x66666Full, 3, false), // off
+        MatchBool(u.u, 0x6Eull, 1, false), // n
+        MatchBool(u.u, 0x6F6Eull, 2, false), // no
+        MatchBool(u.u, 0x65736C6166ull, 5, false), // false
+    });
+
+    bool match = ret & 0x80000000u;
+    bool value = ret & 0x40000000u;
+    Size end = (Size)(ret & ~0xC0000000u);
+
+    if (!match) [[unlikely]] {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Invalid boolean value '%1'", str);
+        }
+        return false;
+    }
+    if ((flags & (int)ParseFlag::End) && end < str.len) [[unlikely]] {
+        if (flags & (int)ParseFlag::Log) {
+            LogError("Malformed boolean '%1'", str);
+        }
+        return false;
+    }
+
+    *out_value = value;
+    if (out_remaining) {
+        *out_remaining = str.Take(end, str.len - end);
+    }
+    return true;
 }
 
 bool ParseSize(Span<const char> str, int64_t *out_size, unsigned int flags, Span<const char> *out_remaining)
