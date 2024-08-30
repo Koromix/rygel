@@ -256,6 +256,56 @@ TEST_FUNCTION("base/FastRandom")
     }
 }
 
+TEST_FUNCTION("base/ParseBool")
+{
+    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+    RG_DEFER { PopLogFilter(); };
+
+#define VALID(Str, Flags, Value, Remain) \
+        do { \
+            bool value; \
+            Span<const char> remain; \
+            bool valid = ParseBool((Str), &value, (Flags), &remain); \
+             \
+            TEST_EX(valid && value == (Value) && remain.len == (Remain), \
+                    "%1: Valid %2 [%3] == %4 %5 [%6]", (Str), (Value), (Remain), valid ? "Valid" : "Invalid", value, remain.len); \
+        } while (false)
+#define INVALID(Str, Flags) \
+        do { \
+            bool value; \
+            bool valid = ParseBool((Str), &value, (Flags)); \
+             \
+            TEST_EX(!valid, "%1: Invalid == %2 %3", (Str), valid ? "Valid" : "Invalid", value); \
+        } while (false)
+
+    VALID("1", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("on", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("y", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("yes", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("true", RG_DEFAULT_PARSE_FLAGS, true, 0);
+
+    VALID("0", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("off", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("n", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("no", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("false", RG_DEFAULT_PARSE_FLAGS, false, 0);
+
+    VALID("true", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("TrUe", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    INVALID("trues", RG_DEFAULT_PARSE_FLAGS);
+    VALID("FALSE!", 0, false, 1);
+    VALID("Y", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    INVALID("YE", RG_DEFAULT_PARSE_FLAGS);
+    VALID("yes", 0, true, 0);
+    VALID("yes!!!", 0, true, 3);
+    VALID("n+", 0, false, 1);
+    VALID("no+", 0, false, 1);
+    INVALID("no+", RG_DEFAULT_PARSE_FLAGS);
+
+#undef INVALID
+#undef VALID
+}
+
 TEST_FUNCTION("base/GetRandomInt")
 {
     static const int iterations = 100;
@@ -937,6 +987,60 @@ BENCHMARK_FUNCTION("base/HashTable")
 
         sum += ptr ? (unsigned int)*ptr : 0;
     });
+}
+
+BENCHMARK_FUNCTION("base/ParseBool")
+{
+    PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
+    RG_DEFER { PopLogFilter(); };
+
+    static const int iterations = 4000000;
+
+    bool yes = true;
+    bool no = false;
+    bool valid = true;
+
+#define VALID(Str, Flags, Value, Remain) \
+        RunBenchmark(Str, iterations, [&](Size) { \
+            bool value; \
+            Span<const char> remain; \
+            valid &= ParseBool((Str), &value, (Flags), &remain); \
+             \
+            yes &= value; \
+            no |= value; \
+        })
+#define INVALID(Str, Flags) \
+        RunBenchmark(Str, iterations, [&](Size) { \
+            bool value; \
+            valid &= ParseBool((Str), &value, (Flags)); \
+        })
+
+    VALID("1", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("on", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("y", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("Yes", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("true", RG_DEFAULT_PARSE_FLAGS, true, 0);
+
+    VALID("0", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("off", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("n", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("no", RG_DEFAULT_PARSE_FLAGS, false, 0);
+    VALID("False", RG_DEFAULT_PARSE_FLAGS, false, 0);
+
+    VALID("true", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    VALID("TrUe", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    INVALID("trues", RG_DEFAULT_PARSE_FLAGS);
+    VALID("FALSE!", 0, false, 1);
+    VALID("Y", RG_DEFAULT_PARSE_FLAGS, true, 0);
+    INVALID("YE", RG_DEFAULT_PARSE_FLAGS);
+    VALID("yes", 0, true, 0);
+    VALID("yes!!!", 0, true, 3);
+    VALID("n+", 0, false, 1);
+    VALID("no+", 0, false, 1);
+    INVALID("no+", RG_DEFAULT_PARSE_FLAGS);
+
+#undef INVALID
+#undef VALID
 }
 
 }
