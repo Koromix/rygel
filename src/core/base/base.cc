@@ -5502,23 +5502,14 @@ const char *CreateUniqueDirectory(Span<const char> directory, const char *prefix
 // Parsing
 // ------------------------------------------------------------------------
 
-static inline uint32_t MatchBool(uint64_t u, uint64_t wanted, int bytes, bool value)
-{
-    int shift = bytes * 8;
-    uint64_t mask = (1ull << shift) - 1;
-
-    bool match = ((u & mask) == wanted);
-
-    uint32_t ret = ((uint32_t)match << 31) | ((uint32_t)value << 30) | (uint32_t)bytes;
-    return ret;
-}
-
 bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags, Span<const char> *out_remaining)
 {
     union {
-        uint8_t raw[8];
+        char raw[8];
         uint64_t u;
     } u = {};
+    Size end = 0;
+    bool value = false;
 
     switch (str.len) {
         default: { RG_ASSERT(str.len >= 0); } [[fallthrough]];
@@ -5546,30 +5537,34 @@ bool ParseBool(Span<const char> str, bool *out_value, unsigned int flags, Span<c
 #endif
     }
 
-    uint32_t ret = std::max({
-        MatchBool(u.u, 0x31ull, 1, true), // 1
-        MatchBool(u.u, 0x6E6Full, 2, true), // on
-        MatchBool(u.u, 0x79ull, 1, true), // y
-        MatchBool(u.u, 0x736579ull, 3, true), // yes
-        MatchBool(u.u, 0x65757274ull, 4, true), // true
+#define MATCH(Wanted, Len, Value) \
+        if (uint64_t masked = u.u & ((1ull << ((Len) * 8)) - 1); masked == (Wanted)) { \
+            end = (Len); \
+            value = (Value); \
+             \
+            break; \
+        }
 
-        MatchBool(u.u, 0x30ull, 1, false), // 0
-        MatchBool(u.u, 0x66666Full, 3, false), // off
-        MatchBool(u.u, 0x6Eull, 1, false), // n
-        MatchBool(u.u, 0x6F6Eull, 2, false), // no
-        MatchBool(u.u, 0x65736C6166ull, 5, false), // false
-    });
+    do {
+        MATCH(0x31ull, 1, true);
+        MATCH(0x6E6Full, 2, true);
+        MATCH(0x736579ull, 3, true);
+        MATCH(0x79ull, 1, true);
+        MATCH(0x65757274ull, 4, true);
+        MATCH(0x30ull, 1, false);
+        MATCH(0x66666Full, 3, false);
+        MATCH(0x6F6Eull, 2, false);
+        MATCH(0x6Eull, 1, false);
+        MATCH(0x65736C6166ull, 5, false);
 
-    bool match = ret & 0x80000000u;
-    bool value = ret & 0x40000000u;
-    Size end = (Size)(ret & ~0xC0000000u);
-
-    if (!match) [[unlikely]] {
         if (flags & (int)ParseFlag::Log) {
             LogError("Invalid boolean value '%1'", str);
         }
         return false;
-    }
+    } while (false);
+
+#undef MATCH
+
     if ((flags & (int)ParseFlag::End) && end < str.len) [[unlikely]] {
         if (flags & (int)ParseFlag::Log) {
             LogError("Malformed boolean '%1'", str);
