@@ -571,7 +571,7 @@ Options:
             src_dir = NormalizePath(src_dir, GetWorkingDirectory(), (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
 
             if (!TestFile(src_dir, FileType::Directory)) {
-                LogInfo("Directory '%1' does not exist", src_dir);
+                LogError("Directory '%1' does not exist", src_dir);
                 return 1;
             }
 
@@ -927,7 +927,7 @@ Options:
             disk_dir = NormalizePath(disk_dir, GetWorkingDirectory(), (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
 
             if (!TestFile(disk_dir, FileType::Directory)) {
-                LogInfo("Directory '%1' does not exist", disk_dir);
+                LogError("Directory '%1' does not exist", disk_dir);
                 return 1;
             }
 
