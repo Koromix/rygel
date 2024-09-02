@@ -518,7 +518,8 @@ public:
         if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG -ffunction-sections -fdata-sections");
         } else if (features & (int)CompileFeature::Optimize) {
-            Fmt(&buf, " -O2 -fwrapv -DNDEBUG");
+            const char *level = (clang_ver >= 1700) ? "-O3" : "-O2";
+            Fmt(&buf, " %1 -fwrapv -DNDEBUG", level);
         } else {
             Fmt(&buf, " -O0 -ftrapv");
         }
