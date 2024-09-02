@@ -998,43 +998,45 @@ BENCHMARK_FUNCTION("base/ParseBool")
     bool valid = true;
 
 #define VALID(Str, Flags, Value, Remain) \
-        RunBenchmark(Str, iterations, [&](Size) { \
+        do { \
             bool value; \
             Span<const char> remain; \
             valid &= ParseBool((Str), &value, (Flags), &remain); \
              \
             yes &= value; \
             no |= value; \
-        })
+        } while (false)
 #define INVALID(Str, Flags) \
-        RunBenchmark(Str, iterations, [&](Size) { \
+        do { \
             bool value; \
             valid &= ParseBool((Str), &value, (Flags)); \
-        })
+        } while (false)
 
-    VALID("1", (int)ParseFlag::End, true, 0);
-    VALID("on", (int)ParseFlag::End, true, 0);
-    VALID("y", (int)ParseFlag::End, true, 0);
-    VALID("Yes", (int)ParseFlag::End, true, 0);
-    VALID("true", (int)ParseFlag::End, true, 0);
+    RunBenchmark("ParseBool", iterations, [&](Size) {
+        VALID("1", (int)ParseFlag::End, true, 0);
+        VALID("on", (int)ParseFlag::End, true, 0);
+        VALID("y", (int)ParseFlag::End, true, 0);
+        VALID("Yes", (int)ParseFlag::End, true, 0);
+        VALID("true", (int)ParseFlag::End, true, 0);
 
-    VALID("0", (int)ParseFlag::End, false, 0);
-    VALID("off", (int)ParseFlag::End, false, 0);
-    VALID("n", (int)ParseFlag::End, false, 0);
-    VALID("no", (int)ParseFlag::End, false, 0);
-    VALID("False", (int)ParseFlag::End, false, 0);
+        VALID("0", (int)ParseFlag::End, false, 0);
+        VALID("off", (int)ParseFlag::End, false, 0);
+        VALID("n", (int)ParseFlag::End, false, 0);
+        VALID("no", (int)ParseFlag::End, false, 0);
+        VALID("False", (int)ParseFlag::End, false, 0);
 
-    VALID("true", (int)ParseFlag::End, true, 0);
-    VALID("TrUe", (int)ParseFlag::End, true, 0);
-    INVALID("trues", (int)ParseFlag::End);
-    VALID("FALSE!", 0, false, 1);
-    VALID("Y", (int)ParseFlag::End, true, 0);
-    INVALID("YE", (int)ParseFlag::End);
-    VALID("yes", 0, true, 0);
-    VALID("yes!!!", 0, true, 3);
-    VALID("n+", 0, false, 1);
-    VALID("no+", 0, false, 1);
-    INVALID("no+", (int)ParseFlag::End);
+        VALID("true", (int)ParseFlag::End, true, 0);
+        VALID("TrUe", (int)ParseFlag::End, true, 0);
+        INVALID("trues", (int)ParseFlag::End);
+        VALID("FALSE!", 0, false, 1);
+        VALID("Y", (int)ParseFlag::End, true, 0);
+        INVALID("YE", (int)ParseFlag::End);
+        VALID("yes", 0, true, 0);
+        VALID("yes!!!", 0, true, 3);
+        VALID("n+", 0, false, 1);
+        VALID("no+", 0, false, 1);
+        INVALID("no+", (int)ParseFlag::End);
+    });
 
 #undef INVALID
 #undef VALID
