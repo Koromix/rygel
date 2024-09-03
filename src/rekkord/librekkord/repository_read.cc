@@ -38,7 +38,6 @@ namespace RG {
 #endif
 
 enum class ExtractFlag {
-    SkipMeta = 1 << 0,
     AllowSeparators = 1 << 1,
     FlattenName = 1 << 2
 };
@@ -69,15 +68,14 @@ struct FileChunk {
 
 class GetContext {
     rk_Disk *disk;
-    bool unlink;
-    bool chown;
+    rk_GetSettings settings;
 
     Async tasks;
 
     std::atomic<int64_t> stat_len { 0 };
 
 public:
-    GetContext(rk_Disk *disk, bool unlink, bool chown);
+    GetContext(rk_Disk *disk, const rk_GetSettings &settings);
 
     bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
     bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest);
@@ -87,10 +85,13 @@ public:
     bool Sync() { return tasks.Sync(); }
 
     int64_t GetLen() const { return stat_len; }
+
+private:
+    bool CleanDirectory(Span<const char> dirname, const HashSet<Span<const char>> &keep);
 };
 
-GetContext::GetContext(rk_Disk *disk, bool unlink, bool chown)
-    : disk(disk), unlink(unlink), chown(chown), tasks(disk->GetThreads())
+GetContext::GetContext(rk_Disk *disk, const rk_GetSettings &settings)
+    : disk(disk), settings(settings), tasks(disk->GetThreads())
 {
 }
 
@@ -200,6 +201,16 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     entry.flags = LittleEndian(ptr->flags);
     entry.basename = DuplicateString(ptr->GetName(), alloc).ptr;
 
+#if defined(_WIN32)
+    if (allow_separators) {
+        char *basename = (char *)entry.basename;
+
+        for (Size i = 0; basename[i]; i++) {
+            basename[i] = (basename[i] == '/') ? '\\' : basename[i];
+        }
+    }
+#endif
+
     entry.mtime = LittleEndian(ptr->mtime);
     entry.btime = LittleEndian(ptr->btime);
     entry.mode = LittleEndian(ptr->mode);
@@ -234,41 +245,10 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
 
 bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname)
 {
-    flags |= (int)ExtractFlag::SkipMeta;
-
     EntryInfo dest = {};
     dest.filename = dest_dirname;
 
     return ExtractEntries(entries, flags, dest);
-}
-
-static bool RemoveDirectoryRec(Span<const char> dirname, const HashSet<Span<const char>> &keep)
-{
-    BlockAllocator temp_alloc;
-
-    std::function<bool(const char *)> empty_directory = [&](const char *dirname) {
-        EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
-            const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
-
-            if (keep.Find(filename))
-                return true;
-
-            if (file_info.type == FileType::Directory) {
-                if (!empty_directory(filename))
-                    return false;
-                return UnlinkDirectory(filename);
-            } else {
-                return UnlinkFile(filename);
-            }
-        });
-        if (ret != EnumResult::Success)
-            return false;
-
-        return true;
-    };
-
-    const char *copy = DuplicateString(dirname, &temp_alloc).ptr;
-    return empty_directory(copy);
 }
 
 bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest)
@@ -286,11 +266,12 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
         EntryInfo meta = {};
         bool chown = false;
+        bool fake = false;
 
         HeapArray<EntryInfo> entries;
 
         ~SharedContext() {
-            if (meta.filename) {
+            if (!fake && meta.filename) {
                 int fd = OpenFile(meta.filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
                 if (fd < 0)
                     return;
@@ -308,12 +289,11 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     std::shared_ptr<SharedContext> ctx = std::make_shared<SharedContext>();
     bool allow_separators = (flags & (int)ExtractFlag::AllowSeparators);
 
-    if (!(flags & (int)ExtractFlag::SkipMeta)) {
-        RG_ASSERT(dest.basename);
-
+    if (dest.basename) {
         ctx->meta = dest;
         ctx->meta.filename = DuplicateString(dest.filename, &ctx->temp_alloc).ptr;
-        ctx->chown = chown;
+        ctx->chown = settings.chown;
+        ctx->fake = settings.fake;
     }
 
     for (Size offset = 0; offset < entries.len;) {
@@ -335,12 +315,12 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         } else {
             entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry->basename).ptr;
 
-            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry->filename))
+            if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry->filename))
                 return false;
         }
     }
 
-    if (unlink) {
+    if (settings.unlink) {
         HashSet<Span<const char>> keep;
         Size dest_len = strlen(dest.filename);
 
@@ -358,7 +338,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             }
         }
 
-        if (!RemoveDirectoryRec(dest.filename, keep))
+        if (!CleanDirectory(dest.filename, keep))
             return false;
 
         if (allow_separators) {
@@ -367,7 +347,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                 SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
 
                 while (path.len > dest_len) {
-                    if (!RemoveDirectoryRec(path, keep))
+                    if (!CleanDirectory(path, keep))
                         return false;
                     SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
                 }
@@ -389,7 +369,11 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                     }
 
-                    if (!MakeDirectory(entry.filename, false))
+                    if (settings.verbose) {
+                        LogInfo("Extract %!..+%1%!0 %!D..[directory]%!0", entry.filename);
+                    }
+
+                    if (!settings.fake && !MakeDirectory(entry.filename, false))
                         return false;
                     if (!ExtractEntries(entry_blob, 0, entry))
                         return false;
@@ -401,16 +385,22 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         return false;
                     }
 
+                    if (settings.verbose) {
+                        LogInfo("Extract %!..+%1%!0 %!D..[file]%!0", entry.filename);
+                    }
+
                     int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename);
-                    if (fd < 0)
+                    if (!settings.fake && fd < 0)
                         return false;
                     RG_DEFER { CloseDescriptor(fd); };
 
                     // Set file metadata
-                    if (chown) {
-                        SetFileOwner(fd, entry.filename, entry.uid, entry.gid);
+                    if (!settings.fake) {
+                        if (settings.chown) {
+                            SetFileOwner(fd, entry.filename, entry.uid, entry.gid);
+                        }
+                        SetFileMetaData(fd, entry.filename, entry.mtime, entry.btime, entry.mode);
                     }
-                    SetFileMetaData(fd, entry.filename, entry.mtime, entry.btime, entry.mode);
                 } break;
 
                 case (int)RawFile::Kind::Link: {
@@ -422,7 +412,11 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     // NUL terminate the path
                     entry_blob.Append(0);
 
-                    if (!CreateSymbolicLink(entry.filename, (const char *)entry_blob.ptr, true))
+                    if (settings.verbose) {
+                        LogInfo("Extract %!..+%1%!0 %!D..[symbolic link]%!0", entry.filename);
+                    }
+
+                    if (!settings.fake && !CreateSymbolicLink(entry.filename, (const char *)entry_blob.ptr, settings.force))
                         return false;
                 } break;
 
@@ -444,7 +438,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
 
     char tmp_filename[4096];
-    {
+    if (!settings.fake) {
         PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
         RG_DEFER_N(log_guard) { PopLogFilter(); };
 
@@ -492,6 +486,9 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 LogError("Malformed file blob '%1'", hash);
                 return -1;
             }
+            if (settings.fake)
+                break;
+
             if (!ReserveFile(fd, dest_filename, file_len))
                 return -1;
 
@@ -558,6 +555,9 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         case rk_BlobType::Chunk: {
             file_len = file_blob.len;
 
+            if (settings.fake)
+                break;
+
             if (!WriteAt(fd, dest_filename, 0, file_blob)) {
                 LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
                 return -1;
@@ -570,23 +570,67 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         case rk_BlobType::Link: { RG_UNREACHABLE(); } break;
     }
 
-    if (!FlushFile(fd, dest_filename))
-        return -1;
+    if (!settings.fake) {
+        if (!FlushFile(fd, dest_filename))
+            return -1;
 
-    err_guard.Disable();
-    CloseDescriptor(fd);
+        err_guard.Disable();
+        CloseDescriptor(fd);
 
-    if (!RenameFile(tmp_filename, dest_filename, (int)RenameFlag::Overwrite))
-        return -1;
+        if (!RenameFile(tmp_filename, dest_filename, (int)RenameFlag::Overwrite))
+            return -1;
 
-    fd = OpenFile(dest_filename, (int)OpenFlag::Append);
-    if (fd < 0)
-        return -1;
+        fd = OpenFile(dest_filename, (int)OpenFlag::Append);
+        if (fd < 0)
+            return -1;
+    }
 
     // Finally :)
     stat_len += file_len;
 
     return fd;
+}
+
+bool GetContext::CleanDirectory(Span<const char> dirname, const HashSet<Span<const char>> &keep)
+{
+    BlockAllocator temp_alloc;
+
+    std::function<bool(const char *)> clean_directory = [&](const char *dirname) {
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+            const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
+
+            if (keep.Find(filename))
+                return true;
+
+            if (file_info.type == FileType::Directory) {
+                if (!clean_directory(filename))
+                    return false;
+
+                if (settings.verbose) {
+                    LogInfo("Delete directory '%1'", filename);
+                }
+                if (settings.fake)
+                    return true;
+
+                return UnlinkDirectory(filename);
+            } else {
+                if (settings.verbose) {
+                    LogInfo("Delete file '%1'", filename);
+                }
+                if (settings.fake)
+                    return true;
+
+                return UnlinkFile(filename);
+            }
+        });
+        if (ret != EnumResult::Success)
+            return false;
+
+        return true;
+    };
+
+    const char *copy = DuplicateString(dirname, &temp_alloc).ptr;
+    return clean_directory(copy);
 }
 
 bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len)
@@ -596,7 +640,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
     if (!disk->ReadBlob(hash, &type, &blob))
         return false;
 
-    GetContext get(disk, settings.unlink, settings.chown);
+    GetContext get(disk, settings);
 
     switch (type) {
         case rk_BlobType::Chunk:
@@ -608,8 +652,12 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
                 }
             }
 
+            if (settings.verbose) {
+                LogInfo("Restore file %!..+%1%!0", hash);
+            }
+
             int fd = get.GetFile(hash, type, blob, dest_path);
-            if (fd < 0)
+            if (!settings.fake && fd < 0)
                 return false;
             CloseDescriptor(fd);
         } break;
@@ -623,6 +671,10 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             } else {
                 if (!MakeDirectory(dest_path, !settings.force))
                     return false;
+            }
+
+            if (settings.verbose) {
+                LogInfo("Restore directory %!..+%1%!0", hash);
             }
 
             if (!get.ExtractEntries(blob, 0, dest_path))
@@ -654,12 +706,22 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             unsigned int flags = (int)ExtractFlag::AllowSeparators |
                                  (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
+            if (settings.verbose) {
+                LogInfo("Restore snapshot %!..+%1%!0", hash);
+            }
+
             if (!get.ExtractEntries(entries, flags, dest_path))
                 return false;
         } break;
 
         case rk_BlobType::Link: {
             blob.Append(0);
+
+            if (settings.verbose) {
+                LogInfo("Restore symbolic link '%1' to '%2'", hash, dest_path);
+            }
+            if (settings.fake)
+                break;
 
             if (!CreateSymbolicLink(dest_path, (const char *)blob.ptr, settings.force))
                 return false;

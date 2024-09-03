@@ -30,6 +30,8 @@ struct rk_GetSettings {
     bool force = false;
     bool unlink = false;
     bool chown = false;
+    bool verbose = false;
+    bool fake = false;
 };
 
 struct rk_ListSettings {

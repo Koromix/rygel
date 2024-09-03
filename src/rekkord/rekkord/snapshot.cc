@@ -168,6 +168,9 @@ Options:
         %!..+--flat%!0                   Use flat names for snapshot files
         %!..+--chown%!0                  Restore original file UID and GID
 
+    %!..+-v, --verbose%!0                Show detailed actions
+    %!..+-n, --dry_run%!0                Fake file restoration
+
     %!..+-j, --threads <threads>%!0      Change number of threads
                                  %!D..(default: automatic)%!0)", FelixTarget);
     };
@@ -202,6 +205,10 @@ Options:
                 settings.flat = true;
             } else if (opt.Test("--chown")) {
                 settings.chown = true;
+            } else if (opt.Test("-v", "--verbose")) {
+                settings.verbose = true;
+            } else if (opt.Test("-n", "--dry_run")) {
+                settings.fake = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
                 if (!ParseInt(opt.current_value, &config.threads))
                     return 1;
@@ -262,7 +269,11 @@ Options:
 
     LogInfo();
     LogInfo("Restored: %!..+%1%!0 (%2)", dest_filename, FmtDiskSize(file_len));
-    LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
+    if (!settings.fake) {
+        LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
+    } else {
+        LogInfo("Execution time: %!..+%1s%!0 %!D..[dry run]%!0", FmtDouble(time, 1));
+    }
 
     return 0;
 }
