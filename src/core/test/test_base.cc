@@ -876,7 +876,7 @@ BENCHMARK_FUNCTION("base/MatchPathName")
 
 BENCHMARK_FUNCTION("base/Random")
 {
-    static const int iterations = 500000;
+    static const int iterations = 5000000;
 
     srand(42);
     RunBenchmark("rand", iterations, [&](Size) {
