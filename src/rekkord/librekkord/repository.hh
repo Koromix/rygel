@@ -28,6 +28,7 @@ struct rk_PutSettings {
 struct rk_GetSettings {
     bool flat = false;
     bool force = false;
+    bool unlink = false;
     bool chown = false;
 };
 

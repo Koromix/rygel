@@ -162,7 +162,8 @@ Options:
 
     %!..+-O, --output <path>%!0          Restore file or directory to path
 
-    %!..+-f, --force%!0                  Overwrite destination if not empty
+    %!..+-f, --force%!0                  Overwrite destination files
+        %!..+--delete%!0                 Delete extraneous files from destination
 
         %!..+--flat%!0                   Use flat names for snapshot files
         %!..+--chown%!0                  Restore original file UID and GID
@@ -195,6 +196,8 @@ Options:
                 dest_filename = opt.current_value;
             } else if (opt.Test("-f", "--force")) {
                 settings.force = true;
+            } else if (opt.Test("--delete")) {
+                settings.unlink = true;
             } else if (opt.Test("--flat")) {
                 settings.flat = true;
             } else if (opt.Test("--chown")) {

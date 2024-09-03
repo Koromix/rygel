@@ -69,6 +69,7 @@ struct FileChunk {
 
 class GetContext {
     rk_Disk *disk;
+    bool unlink;
     bool chown;
 
     Async tasks;
@@ -76,7 +77,7 @@ class GetContext {
     std::atomic<int64_t> stat_len { 0 };
 
 public:
-    GetContext(rk_Disk *disk, bool chown);
+    GetContext(rk_Disk *disk, bool unlink, bool chown);
 
     bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
     bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest);
@@ -88,8 +89,8 @@ public:
     int64_t GetLen() const { return stat_len; }
 };
 
-GetContext::GetContext(rk_Disk *disk, bool chown)
-    : disk(disk), chown(chown), tasks(disk->GetThreads())
+GetContext::GetContext(rk_Disk *disk, bool unlink, bool chown)
+    : disk(disk), unlink(unlink), chown(chown), tasks(disk->GetThreads())
 {
 }
 
@@ -241,6 +242,34 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     return ExtractEntries(entries, flags, dest);
 }
 
+static bool RemoveDirectoryRec(const char *dirname, FunctionRef<bool(const char *)> keep)
+{
+    BlockAllocator temp_alloc;
+
+    std::function<bool(const char *, FunctionRef<bool(const char *)>)> empty_directory = [&](const char *dirname, FunctionRef<bool(const char *)> keep) {
+        EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+            if (keep(basename))
+                return true;
+
+            const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
+
+            if (file_info.type == FileType::Directory) {
+                if (!empty_directory(filename, [](const char *) { return false; }))
+                    return false;
+                return UnlinkDirectory(filename);
+            } else {
+                return UnlinkFile(filename);
+            }
+        });
+        if (ret != EnumResult::Success)
+            return false;
+
+        return true;
+    };
+
+    return empty_directory(dirname, keep);
+}
+
 bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest)
 {
     // XXX: Make sure each path does not clobber a previous one
@@ -256,6 +285,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
         EntryInfo meta = {};
         bool chown = false;
+
+        HeapArray<EntryInfo> entries;
 
         ~SharedContext() {
             if (meta.filename) {
@@ -275,6 +306,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
     std::shared_ptr<SharedContext> ctx = std::make_shared<SharedContext>();
 
+    bool allow_separators = (flags & (int)ExtractFlag::AllowSeparators);
+    bool unlink = this->unlink && !allow_separators;
+
     if (!(flags & (int)ExtractFlag::SkipMeta)) {
         RG_ASSERT(dest.basename);
 
@@ -284,27 +318,43 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     }
 
     for (Size offset = 0; offset < entries.len;) {
-        EntryInfo entry = {};
+        EntryInfo *entry = ctx->entries.AppendDefault();
 
-        Size skip = DecodeEntry(entries, offset, flags & (int)ExtractFlag::AllowSeparators, &ctx->temp_alloc, &entry);
+        Size skip = DecodeEntry(entries, offset, allow_separators, &ctx->temp_alloc, entry);
         if (skip < 0)
             return false;
         offset += skip;
 
-        if (entry.kind == (int)RawFile::Kind::Unknown)
+        if (entry->kind == (int)RawFile::Kind::Unknown)
             continue;
-        if (!(entry.flags & (int)RawFile::Flags::Readable))
+        if (!(entry->flags & (int)RawFile::Flags::Readable))
             continue;
 
         if (flags & (int)ExtractFlag::FlattenName) {
-            entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, SplitStrReverse(entry.basename, '/')).ptr;
+            Span<const char> basename = SplitStrReverse(entry->basename, '/');
+            entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, basename).ptr;
         } else {
-            entry.filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry.basename).ptr;
+            entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry->basename).ptr;
 
-            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry.filename))
+            if ((flags & (int)ExtractFlag::AllowSeparators) && !EnsureDirectoryExists(entry->filename))
                 return false;
         }
+    }
 
+    if (unlink) {
+        HashSet<const char *> names;
+
+        for (const EntryInfo &entry: ctx->entries) {
+            names.Set(entry.basename);
+        }
+
+        const auto keep = [&](const char *basename) { return !!names.Find(basename); };
+
+        if (!RemoveDirectoryRec(dest.filename, keep))
+            return false;
+    }
+
+    for (const EntryInfo &entry: ctx->entries) {
         tasks.Run([=, ctx = ctx, this] () {
             rk_BlobType entry_type;
             HeapArray<uint8_t> entry_blob;
@@ -525,7 +575,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
     if (!disk->ReadBlob(hash, &type, &blob))
         return false;
 
-    GetContext get(disk, settings.chown);
+    GetContext get(disk, settings.unlink, settings.chown);
 
     switch (type) {
         case rk_BlobType::Chunk:
@@ -579,7 +629,9 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             }
 
             Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
-            unsigned int flags = (int)ExtractFlag::AllowSeparators | (settings.flat ? (int)ExtractFlag::FlattenName : 0);
+
+            unsigned int flags = (int)ExtractFlag::AllowSeparators |
+                                 (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
             if (!get.ExtractEntries(entries, flags, dest_path))
                 return false;
