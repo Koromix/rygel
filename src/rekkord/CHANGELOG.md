@@ -6,6 +6,10 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.23 (2024-09-03)
+
+- Support *--verbose* and *--dry_run* flags in `rekkord restore`
+
 ### Rekkord 0.22 (2024-09-03)
 
 - Add option to delete extra files and directories with `rekkord restore`
