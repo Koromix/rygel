@@ -663,13 +663,7 @@ public:
         }
         if (features & (int)CompileFeature::CFI) {
             RG_ASSERT(features & (int)CompileFeature::LTO);
-
             Fmt(&buf, " -fsanitize=cfi");
-            if (src_type == SourceType::C) {
-                // There's too much pointer type fuckery going on in C
-                // to not take this precaution. Without it, SQLite3 crashes.
-                Fmt(&buf, " -fsanitize-cfi-icall-generalize-pointers");
-            }
         }
         if (features & (int)CompileFeature::ShuffleCode) {
             Fmt(&buf, " -ffunction-sections -fdata-sections");
