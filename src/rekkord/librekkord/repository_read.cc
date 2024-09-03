@@ -242,19 +242,19 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     return ExtractEntries(entries, flags, dest);
 }
 
-static bool RemoveDirectoryRec(const char *dirname, FunctionRef<bool(const char *)> keep)
+static bool RemoveDirectoryRec(Span<const char> dirname, HashSet<Span<const char>> keep)
 {
     BlockAllocator temp_alloc;
 
-    std::function<bool(const char *, FunctionRef<bool(const char *)>)> empty_directory = [&](const char *dirname, FunctionRef<bool(const char *)> keep) {
+    std::function<bool(const char *)> empty_directory = [&](const char *dirname) {
         EnumResult ret = EnumerateDirectory(dirname, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
-            if (keep(basename))
-                return true;
-
             const char *filename = Fmt(&temp_alloc, "%1%/%2", dirname, basename).ptr;
 
+            if (keep.Find(filename))
+                return true;
+
             if (file_info.type == FileType::Directory) {
-                if (!empty_directory(filename, [](const char *) { return false; }))
+                if (!empty_directory(filename))
                     return false;
                 return UnlinkDirectory(filename);
             } else {
@@ -267,7 +267,8 @@ static bool RemoveDirectoryRec(const char *dirname, FunctionRef<bool(const char 
         return true;
     };
 
-    return empty_directory(dirname, keep);
+    const char *copy = DuplicateString(dirname, &temp_alloc).ptr;
+    return empty_directory(copy);
 }
 
 bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest)
@@ -307,7 +308,6 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     std::shared_ptr<SharedContext> ctx = std::make_shared<SharedContext>();
 
     bool allow_separators = (flags & (int)ExtractFlag::AllowSeparators);
-    bool unlink = this->unlink && !allow_separators;
 
     if (!(flags & (int)ExtractFlag::SkipMeta)) {
         RG_ASSERT(dest.basename);
@@ -342,16 +342,38 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     }
 
     if (unlink) {
-        HashSet<const char *> names;
+        HashSet<Span<const char>> keep;
+        Size dest_len = strlen(dest.filename);
 
         for (const EntryInfo &entry: ctx->entries) {
-            names.Set(entry.basename);
-        }
+            Span<const char> path = entry.filename;
+            keep.Set(path);
 
-        const auto keep = [&](const char *basename) { return !!names.Find(basename); };
+            if (allow_separators) {
+                SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
+
+                while (path.len > dest_len) {
+                    keep.Set(path);
+                    SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
+                }
+            }
+        }
 
         if (!RemoveDirectoryRec(dest.filename, keep))
             return false;
+
+        if (allow_separators) {
+            for (const EntryInfo &entry: ctx->entries) {
+                Span<const char> path = entry.filename;
+                SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
+
+                while (path.len > dest_len) {
+                    if (!RemoveDirectoryRec(path, keep))
+                        return false;
+                    SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
+                }
+            }
+        }
     }
 
     for (const EntryInfo &entry: ctx->entries) {
