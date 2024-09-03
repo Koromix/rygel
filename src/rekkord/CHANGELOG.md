@@ -6,6 +6,11 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.22 (2024-09-03)
+
+- Add option to delete extra files and directories with `rekkord restore`
+- Fix incorrect mtime when restoring files on POSIX systems
+
 ### Rekkord 0.21 (2024-07-28)
 
 - Update to LZ4 1.10.0
