@@ -242,7 +242,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     return ExtractEntries(entries, flags, dest);
 }
 
-static bool RemoveDirectoryRec(Span<const char> dirname, HashSet<Span<const char>> keep)
+static bool RemoveDirectoryRec(Span<const char> dirname, const HashSet<Span<const char>> &keep)
 {
     BlockAllocator temp_alloc;
 
@@ -306,7 +306,6 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     };
 
     std::shared_ptr<SharedContext> ctx = std::make_shared<SharedContext>();
-
     bool allow_separators = (flags & (int)ExtractFlag::AllowSeparators);
 
     if (!(flags & (int)ExtractFlag::SkipMeta)) {
