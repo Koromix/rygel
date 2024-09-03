@@ -233,6 +233,37 @@ function is_path_separator(c) {
     return false;
 }
 
+function sync_files(src_dir, dest_dir) {
+    let keep = new Set;
+
+    // Copy source files
+    {
+        let entries = fs.readdirSync(src_dir, { withFileTypes: true });
+
+        for (let entry of entries) {
+            if (!entry.isFile())
+                continue;
+
+            keep.add(entry.name);
+            fs.copyFileSync(src_dir + `/${entry.name}`, dest_dir + `/${entry.name}`);
+        }
+    }
+
+    // Delete old destination files
+    {
+        let entries = fs.readdirSync(dest_dir, { withFileTypes: true });
+
+        for (let entry of entries) {
+            if (!entry.isFile())
+                continue;
+            if (keep.has(entry.name))
+                continue;
+
+            fs.unlinkSync(dest_dir + `/${entry.name}`);
+        }
+    }
+}
+
 function determine_arch() {
     let arch = process.arch;
 
@@ -384,6 +415,7 @@ module.exports = {
     extract_targz,
     path_is_absolute,
     path_has_dotdot,
+    sync_files,
     determine_arch,
     unlink_recursive,
     get_napi_version,

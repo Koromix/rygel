@@ -70,6 +70,7 @@ function Builder(config = {}) {
     let cache_dir = get_cache_directory();
     let build_dir = config.build_dir;
     let work_dir = null;
+    let output_dir = null;
 
     if (build_dir == null) {
         let options = read_cnoke_options();
@@ -81,7 +82,8 @@ function Builder(config = {}) {
         }
     }
     build_dir = build_dir.replace(/\\/g, '/');
-    work_dir = build_dir + `/v${runtime_version}_${arch}`;
+    work_dir = build_dir + `/v${runtime_version}_${arch}/${mode}`;
+    output_dir = work_dir + '/Output';
 
     let cmake_bin = null;
 
@@ -99,6 +101,7 @@ function Builder(config = {}) {
         // Prepare build directory
         fs.mkdirSync(build_dir, { recursive: true, mode: 0o755 });
         fs.mkdirSync(work_dir, { recursive: true, mode: 0o755 });
+        fs.mkdirSync(output_dir, { recursive: true, mode: 0o755 });
 
         retry &= fs.existsSync(work_dir + '/CMakeCache.txt');
 
@@ -212,7 +215,7 @@ function Builder(config = {}) {
         args.push(`-DCMAKE_BUILD_TYPE=${mode}`);
         for (let type of ['ARCHIVE', 'RUNTIME', 'LIBRARY']) {
             for (let suffix of ['', '_DEBUG', '_RELEASE', '_RELWITHDEBINFO'])
-                args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${build_dir}`);
+                args.push(`-DCMAKE_${type}_OUTPUT_DIRECTORY${suffix}=${output_dir}`);
         }
         args.push('--no-warn-unused-cli');
 
@@ -261,6 +264,10 @@ function Builder(config = {}) {
         let proc = spawnSync(cmake_bin, args, { stdio: 'inherit' });
         if (proc.status !== 0)
             throw new Error('Failed to run build step');
+
+        console.log('>> Copy target files');
+
+        tools.sync_files(output_dir, build_dir);
     };
 
     async function check_prebuild() {
