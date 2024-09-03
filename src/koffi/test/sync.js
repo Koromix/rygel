@@ -25,7 +25,7 @@ const koffi = require('../../koffi');
 const assert = require('assert');
 const path = require('path');
 const util = require('util');
-const cnoke = require('./CNoke.json');
+const pkg = require('./package.json');
 
 const Pack1 = koffi.struct('Pack1', {
     a: 'int'
@@ -168,7 +168,7 @@ async function main() {
 }
 
 async function test() {
-    let lib_filename = path.join(__dirname, cnoke.output, 'sync' + koffi.extension);
+    let lib_filename = path.join(__dirname, pkg.cnoke.output, 'sync' + koffi.extension);
     let lib = koffi.load(lib_filename);
 
     const CallFree = lib.func('void CallFree(void *ptr)');

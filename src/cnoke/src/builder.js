@@ -418,16 +418,6 @@ function Builder(config = {}) {
             }
         }
 
-        try {
-            let json = fs.readFileSync(project_dir + '/CNoke.json', { encoding: 'utf-8' });
-
-            cnoke = JSON.parse(json);
-            directory = project_dir;
-        } catch (err) {
-            if (err.code != 'ENOENT')
-                throw err;
-        }
-
         if (cnoke == null)
             cnoke = pkg?.cnoke ?? {};
 
