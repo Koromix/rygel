@@ -121,10 +121,14 @@ async function structureTables() {
 
             if (table == null) {
                 table = {
-                    first_head: null,
-                    last_head: null,
-                    heads_map: new Map
+                    variables: new Map,
+
+                    prev: null,
+                    next: null,
                 };
+                table.previous = table;
+                table.next = table;
+
                 tables[store] = table;
             }
 
@@ -134,25 +138,19 @@ async function structureTables() {
             for (let i = 0; i < keys.length; i++) {
                 let key = keys[i];
 
-                if (!table.heads_map.has(key)) {
-                    let previous = table.heads_map.get(keys[i - 1]);
+                if (!table.variables.has(key)) {
+                    let previous = table.variables.get(keys[i - 1]) ?? table;
 
                     let head = {
                         variable: { key: key, ...notes.variables[key] },
-                        previous: previous,
-                        next: null
+                        prev: previous,
+                        next: previous.next
                     };
 
-                    if (previous == null) {
-                        table.first_head = head;
-                    } else {
-                        head.next = previous.next;
-                    }
-                    if (table.last_head != null)
-                        table.last_head.next = head;
-                    table.last_head = head;
+                    previous.next.prev = head;
+                    previous.next = head;
 
-                    table.heads_map.set(key, head);
+                    table.variables.set(key, head);
                 }
             }
         }
@@ -160,9 +158,10 @@ async function structureTables() {
 
     // Expand linked list to proper arrays
     for (let store in tables) {
+        let table = tables[store];
         let variables = [];
 
-        for (let head = tables[store].first_head; head != null; head = head.next)
+        for (let head = table.next; head != table; head = head.next)
             variables.push(head.variable);
 
         tables[store] = {
