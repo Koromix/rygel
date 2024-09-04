@@ -725,7 +725,7 @@ const Net = new function() {
         if (options.headers == null)
             options.headers = {};
         if (!options.hasOwnProperty('timeout') && options.signal == null)
-            options.timeout = 6000;
+            options.timeout = 15000;
         if (!options.headers.hasOwnProperty('X-Requested-With'))
             options.headers['X-Requested-With'] = 'XMLHTTPRequest';
 
