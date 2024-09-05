@@ -2,6 +2,16 @@
 
 ## Goupile 3.6
 
+### Goupile 3.6.4 (2024-09-05)
+
+- Fix default panels when building and opening URLs
+- Fix infinite loop when assembling export structure
+- Fix FOREIGN KEY bug when saving data in multi-center projects
+- Fix incomplete app homepage option
+- Fix disabled "Publish" button after adding file
+- Switch to new HTTP server code in goupile
+- Use mimalloc on Linux and BSD systems
+
 ### Goupile 3.6.3 (2024-07-26)
 
 - Fix a possible crash when sending mails

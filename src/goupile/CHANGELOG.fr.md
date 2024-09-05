@@ -2,6 +2,16 @@
 
 ## Goupile 3.6
 
+### Goupile 3.6.4 (05/09/2024)
+
+- Correction des panneaux affichés par défaut lors de l'assemblage et de l'ouverture d'URL
+- Correction d'une boucle infinie pendant l'export des données en v3
+- Correction d'une erreur serveur (FOREIGN KEY error) lors de l'enregistrement de données dans des projets multicentriques
+- Support amélioré de l'option `homepage` de l'application
+- Correction du bouton « Publier » désactivé après l'ajout d'un fichier
+- Passage au nouveau code de serveur HTTP dans goupile
+- Utilisation de mimalloc sur les systèmes Linux et BSD
+
 ### Goupile 3.6.3 (26/07/2024)
 
 - Correction d'un crash possible lors de l'envoi de mails
