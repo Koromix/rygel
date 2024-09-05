@@ -235,6 +235,8 @@ Options:
         return 1;
     }
 
+    dest_filename = NormalizePath(dest_filename, &temp_alloc).ptr;
+
     if (!config.Complete(true))
         return 1;
 

@@ -370,7 +370,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     }
 
                     if (settings.verbose) {
-                        LogInfo("Extract %!..+%1%!0 %!D..[directory]%!0", entry.filename);
+                        LogInfo("%!D..[D]%!0 %!..+%1%/%!0", entry.filename);
                     }
 
                     if (!settings.fake && !MakeDirectory(entry.filename, false))
@@ -386,7 +386,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     }
 
                     if (settings.verbose) {
-                        LogInfo("Extract %!..+%1%!0 %!D..[file]%!0", entry.filename);
+                        LogInfo("%!D..[F]%!0 %!..+%1%!0", entry.filename);
                     }
 
                     int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename);
@@ -413,7 +413,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     entry_blob.Append(0);
 
                     if (settings.verbose) {
-                        LogInfo("Extract %!..+%1%!0 %!D..[symbolic link]%!0", entry.filename);
+                        LogInfo("%!D..[L]%!0 %!..+%1%!0)", entry.filename);
                     }
 
                     if (!settings.fake && !CreateSymbolicLink(entry.filename, (const char *)entry_blob.ptr, settings.force))
