@@ -1481,7 +1481,6 @@ async function go(e, url = null, options = {}) {
             }
         }
 
-        let first_page = (route.page == null);
         let context_change = (new_route.tid != route.tid ||
                               new_route.anchor != route.anchor ||
                               new_route.page != route.page);
@@ -1530,7 +1529,7 @@ async function go(e, url = null, options = {}) {
         }
 
         // Show form automatically?
-        if (!UI.isPanelActive('view') && url != null && !explicit_panels && !first_page) {
+        if (!UI.isPanelActive('view') && url != null && !explicit_panels) {
             UI.togglePanel('data', false);
             UI.togglePanel('view', true);
         }
@@ -1654,8 +1653,18 @@ async function run(push_history = true) {
         let url = contextualizeURL(route.page.url, form_thread);
         let panels = UI.getPanels().join('|');
 
-        if (!profile.develop) {
-            if (!form_thread.saved || panels == 'view')
+        {
+            let defaults = null;
+
+            if (profile.develop) {
+                defaults = 'editor|view';
+            } else if (form_thread.saved) {
+                defaults = 'view';
+            } else {
+                defaults = 'data';
+            }
+
+            if (panels == defaults)
                 panels = null;
         }
 
