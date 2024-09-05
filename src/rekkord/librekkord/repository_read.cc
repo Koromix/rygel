@@ -48,7 +48,8 @@ struct EntryInfo {
     int kind;
     unsigned int flags;
 
-    const char *basename;
+    Span<const char> basename;
+    Span<const char> filename;
 
     int64_t mtime;
     int64_t btime;
@@ -56,8 +57,6 @@ struct EntryInfo {
     uint32_t uid;
     uint32_t gid;
     int64_t size;
-
-    Span<const char> filename;
 };
 
 struct FileChunk {
@@ -199,14 +198,14 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     entry.hash = ptr->hash;
     entry.kind = LittleEndian(ptr->kind);
     entry.flags = LittleEndian(ptr->flags);
-    entry.basename = DuplicateString(ptr->GetName(), alloc).ptr;
+    entry.basename = DuplicateString(ptr->GetName(), alloc);
 
 #if defined(_WIN32)
     if (allow_separators) {
-        char *basename = (char *)entry.basename;
+        Span<char> basename = entry.basename;
 
-        for (Size i = 0; basename[i]; i++) {
-            basename[i] = (basename[i] == '/') ? '\\' : basename[i];
+        for (char &c: basename) {
+            c = (c == '\\') ? '/' : c;
         }
     }
 #endif
@@ -226,15 +225,15 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
         LogError("Unknown object kind 0x%1", FmtHex((unsigned int)entry.kind));
         return -1;
     }
-    if (!entry.basename[0] || PathContainsDotDot(entry.basename)) {
+    if (!entry.basename.len || PathContainsDotDot(entry.basename.ptr)) {
         LogError("Unsafe object name '%1'", entry.basename);
         return -1;
     }
-    if (PathIsAbsolute(entry.basename)) {
+    if (PathIsAbsolute(entry.basename.ptr)) {
         LogError("Unsafe object name '%1'", entry.basename);
         return -1;
     }
-    if (!allow_separators && strpbrk(entry.basename, RG_PATH_SEPARATORS)) {
+    if (!allow_separators && strpbrk(entry.basename.ptr, RG_PATH_SEPARATORS)) {
         LogError("Unsafe object name '%1'", entry.basename);
         return -1;
     }
@@ -293,7 +292,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     std::shared_ptr<SharedContext> ctx = std::make_shared<SharedContext>();
     bool allow_separators = (flags & (int)ExtractFlag::AllowSeparators);
 
-    if (dest.basename) {
+    if (dest.basename.len) {
         ctx->meta = dest;
         ctx->meta.filename = DuplicateString(dest.filename, &ctx->temp_alloc);
         ctx->chown = settings.chown;
@@ -341,7 +340,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             }
         }
 
-        if (!CleanDirectory(dest.filename.ptr, keep))
+        if (!CleanDirectory(dest.filename, keep))
             return false;
 
         if (allow_separators) {
@@ -373,7 +372,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     }
 
                     if (settings.verbose) {
-                        LogInfo("%!D..[D]%!0 %!..+%1%/%!0", entry.filename);
+                        Span<const char> prefix = entry.filename.Take(0, entry.filename.len - entry.basename.len - 1);
+                        LogInfo("%!D..[D]%!0 %1%/%!..+%2%/%!0", prefix, entry.basename);
                     }
 
                     if (!settings.fake && !MakeDirectory(entry.filename.ptr, false))
@@ -389,7 +389,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     }
 
                     if (settings.verbose) {
-                        LogInfo("%!D..[F]%!0 %!..+%1%!0", entry.filename);
+                        Span<const char> prefix = entry.filename.Take(0, entry.filename.len - entry.basename.len - 1);
+                        LogInfo("%!D..[F]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
                     }
 
                     int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename.ptr);
@@ -416,7 +417,8 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     entry_blob.Append(0);
 
                     if (settings.verbose) {
-                        LogInfo("%!D..[L]%!0 %!..+%1%!0)", entry.filename);
+                        Span<const char> prefix = entry.filename.Take(0, entry.filename.len - entry.basename.len - 1);
+                        LogInfo("%!D..[L]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
                     }
 
                     if (!settings.fake && !CreateSymbolicLink(entry.filename.ptr, (const char *)entry_blob.ptr, settings.force))
@@ -848,7 +850,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 
             default: { RG_UNREACHABLE(); } break;
         }
-        obj->name = entry.basename;
+        obj->name = entry.basename.ptr;
         obj->mtime = entry.mtime;
         obj->btime = entry.btime;
         obj->mode = entry.mode;

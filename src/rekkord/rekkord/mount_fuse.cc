@@ -549,7 +549,7 @@ Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
     }
     LogInfo();
 
-    LogInfo("Mounting %1 to '%2'...", hash, mountpoint);
+    LogInfo("Mounting %!..+%1%!0 to '%2'...", hash, mountpoint);
     if (!InitRoot(hash, flat))
         return 1;
     LogInfo("Ready");
