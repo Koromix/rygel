@@ -57,7 +57,7 @@ struct EntryInfo {
     uint32_t gid;
     int64_t size;
 
-    const char *filename;
+    Span<const char> filename;
 };
 
 struct FileChunk {
@@ -246,7 +246,11 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
 bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname)
 {
     EntryInfo dest = {};
-    dest.filename = dest_dirname;
+
+    if (!dest_dirname[0]) {
+        dest_dirname = ".";
+    }
+    dest.filename = TrimStrRight(dest_dirname, RG_PATH_SEPARATORS);
 
     return ExtractEntries(entries, flags, dest);
 }
@@ -271,17 +275,17 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         HeapArray<EntryInfo> entries;
 
         ~SharedContext() {
-            if (!fake && meta.filename) {
-                int fd = OpenFile(meta.filename, (int)OpenFlag::Write | (int)OpenFlag::Directory);
+            if (!fake && meta.filename.len) {
+                int fd = OpenFile(meta.filename.ptr, (int)OpenFlag::Write | (int)OpenFlag::Directory);
                 if (fd < 0)
                     return;
                 RG_DEFER { CloseDescriptor(fd); };
 
                 // Set directory metadata
                 if (chown) {
-                    SetFileOwner(fd, meta.filename, meta.uid, meta.gid);
+                    SetFileOwner(fd, meta.filename.ptr, meta.uid, meta.gid);
                 }
-                SetFileMetaData(fd, meta.filename, meta.mtime, meta.btime, meta.mode);
+                SetFileMetaData(fd, meta.filename.ptr, meta.mtime, meta.btime, meta.mode);
             }
         }
     };
@@ -291,7 +295,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
     if (dest.basename) {
         ctx->meta = dest;
-        ctx->meta.filename = DuplicateString(dest.filename, &ctx->temp_alloc).ptr;
+        ctx->meta.filename = DuplicateString(dest.filename, &ctx->temp_alloc);
         ctx->chown = settings.chown;
         ctx->fake = settings.fake;
     }
@@ -315,14 +319,13 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         } else {
             entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry->basename).ptr;
 
-            if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry->filename))
+            if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry->filename.ptr))
                 return false;
         }
     }
 
     if (settings.unlink) {
         HashSet<Span<const char>> keep;
-        Size dest_len = strlen(dest.filename);
 
         for (const EntryInfo &entry: ctx->entries) {
             Span<const char> path = entry.filename;
@@ -331,14 +334,14 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
             if (allow_separators) {
                 SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
 
-                while (path.len > dest_len) {
+                while (path.len > dest.filename.len) {
                     keep.Set(path);
                     SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
                 }
             }
         }
 
-        if (!CleanDirectory(dest.filename, keep))
+        if (!CleanDirectory(dest.filename.ptr, keep))
             return false;
 
         if (allow_separators) {
@@ -346,7 +349,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                 Span<const char> path = entry.filename;
                 SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
 
-                while (path.len > dest_len) {
+                while (path.len > dest.filename.len) {
                     if (!CleanDirectory(path, keep))
                         return false;
                     SplitStrReverse(path, *RG_PATH_SEPARATORS, &path);
@@ -373,7 +376,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         LogInfo("%!D..[D]%!0 %!..+%1%/%!0", entry.filename);
                     }
 
-                    if (!settings.fake && !MakeDirectory(entry.filename, false))
+                    if (!settings.fake && !MakeDirectory(entry.filename.ptr, false))
                         return false;
                     if (!ExtractEntries(entry_blob, 0, entry))
                         return false;
@@ -389,7 +392,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         LogInfo("%!D..[F]%!0 %!..+%1%!0", entry.filename);
                     }
 
-                    int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename);
+                    int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename.ptr);
                     if (!settings.fake && fd < 0)
                         return false;
                     RG_DEFER { CloseDescriptor(fd); };
@@ -397,9 +400,9 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     // Set file metadata
                     if (!settings.fake) {
                         if (settings.chown) {
-                            SetFileOwner(fd, entry.filename, entry.uid, entry.gid);
+                            SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
                         }
-                        SetFileMetaData(fd, entry.filename, entry.mtime, entry.btime, entry.mode);
+                        SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
                     }
                 } break;
 
@@ -416,7 +419,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         LogInfo("%!D..[L]%!0 %!..+%1%!0)", entry.filename);
                     }
 
-                    if (!settings.fake && !CreateSymbolicLink(entry.filename, (const char *)entry_blob.ptr, settings.force))
+                    if (!settings.fake && !CreateSymbolicLink(entry.filename.ptr, (const char *)entry_blob.ptr, settings.force))
                         return false;
                 } break;
 
