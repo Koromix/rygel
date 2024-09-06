@@ -7014,6 +7014,12 @@ int StreamReader::GetDescriptor() const
     return source.u.file.fd;
 }
 
+void StreamReader::SetDescriptorOwned(bool owned)
+{
+    RG_ASSERT(source.type == SourceType::File);
+    source.u.file.owned = owned;
+}
+
 Size StreamReader::Read(Span<uint8_t> out_buf)
 {
     Size read_len = 0;
@@ -7459,6 +7465,15 @@ int StreamWriter::GetDescriptor() const
     return dest.u.file.fd;
 }
 
+void StreamWriter::SetDescriptorOwned(bool owned)
+{
+    RG_ASSERT(dest.type == DestinationType::BufferedFile ||
+              dest.type == DestinationType::LineFile ||
+              dest.type == DestinationType::DirectFile);
+
+    dest.u.file.owned = owned;
+}
+
 bool StreamWriter::Write(Span<const uint8_t> buf)
 {
     if (error) [[unlikely]]
@@ -7547,8 +7562,10 @@ bool StreamWriter::Close(bool implicit)
                     }
 #endif
 
-                    CloseDescriptor(dest.u.file.fd);
-                    dest.u.file.owned = false;
+                    if (dest.u.file.owned) {
+                        CloseDescriptor(dest.u.file.fd);
+                        dest.u.file.owned = false;
+                    }
 
                     if (dest.u.file.tmp_filename) {
                         unsigned int flags = (int)RenameFlag::Overwrite | (int)RenameFlag::Sync;
@@ -7564,7 +7581,7 @@ bool StreamWriter::Close(bool implicit)
                 }
             }
 
-            if (dest.u.file.owned && dest.u.file.fd >= 0) {
+            if (dest.u.file.owned) {
                 CloseDescriptor(dest.u.file.fd);
                 dest.u.file.owned = false;
             }

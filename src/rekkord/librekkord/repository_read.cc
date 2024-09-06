@@ -439,40 +439,18 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
 {
     RG_ASSERT(type == rk_BlobType::File || type == rk_BlobType::Chunk);
 
-    int fd = -1;
-    RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
+    // Use StreamWriter machinery to do atomic replace, even through we do not write through it
+    // and want to keep the descriptor at the end.
+    StreamWriter writer;
 
-    char tmp_filename[4096];
     if (!settings.fake) {
-        PushLogFilter([](LogLevel, const char *, const char *, FunctionRef<LogFunc>) {});
-        RG_DEFER_N(log_guard) { PopLogFilter(); };
-
-        for (Size i = 0; i < 1000; i++) {
-            Size len = Fmt(tmp_filename, "%1.%2", dest_filename, FmtRandom(12)).len;
-
-            if (len >= RG_SIZE(tmp_filename) - 1) [[unlikely]] {
-                PopLogFilter();
-                log_guard.Disable();
-
-                LogError("Cannot create temporary file for '%1': path too long", dest_filename);
-                return -1;
-            }
-
-            // We want to show an error on last try
-            if (i == 999) [[unlikely]] {
-                PopLogFilter();
-                log_guard.Disable();
-            }
-
-            fd = OpenFile(tmp_filename, (int)OpenFlag::Write | (int)OpenFlag::Exclusive);
-
-            if (fd >= 0) [[likely]]
-                break;
-        }
-
-        if (fd < 0) [[unlikely]]
+        if (!writer.Open(dest_filename, (int)StreamWriterFlag::Atomic))
             return -1;
+        writer.SetDescriptorOwned(false);
     }
+
+    int fd = !settings.fake ? writer.GetDescriptor() : -1;
+    RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
 
     int64_t file_len = -1;
     switch (type) {
@@ -575,24 +553,13 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         case rk_BlobType::Link: { RG_UNREACHABLE(); } break;
     }
 
-    if (!settings.fake) {
-        if (!FlushFile(fd, dest_filename))
-            return -1;
-
-        err_guard.Disable();
-        CloseDescriptor(fd);
-
-        if (!RenameFile(tmp_filename, dest_filename, (int)RenameFlag::Overwrite))
-            return -1;
-
-        fd = OpenFile(dest_filename, (int)OpenFlag::Append);
-        if (fd < 0)
-            return -1;
-    }
+    if (!settings.fake && !writer.Close())
+        return -1;
 
     // Finally :)
     stat_len += file_len;
 
+    err_guard.Disable();
     return fd;
 }
 

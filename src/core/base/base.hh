@@ -4731,6 +4731,7 @@ public:
     bool IsEOF() const { return eof; }
 
     int GetDescriptor() const;
+    void SetDescriptorOwned(bool owned);
 
     void SetReadLimit(int64_t limit) { read_max = limit; }
 
@@ -4947,6 +4948,7 @@ public:
     bool IsValid() const { return filename && !error; }
 
     int GetDescriptor() const;
+    void SetDescriptorOwned(bool owned);
 
     bool Write(Span<const uint8_t> buf);
     bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
