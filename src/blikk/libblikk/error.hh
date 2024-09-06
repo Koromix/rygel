@@ -81,7 +81,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
     switch (type) {
         case bk_DiagnosticType::Error:{
             char ctx_buf[512];
-            Fmt(ctx_buf, "%1(%2:%3)", filename, line, column + 1);
+            Fmt(ctx_buf, "%1(%2:%3): ", filename, line, column + 1);
 
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
@@ -94,7 +94,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, Span<const char> code, const ch
 
         case bk_DiagnosticType::Hint: {
             char ctx_buf[512];
-            Fmt(ctx_buf, "    %1(%2:%3)", filename, line, column + 1);
+            Fmt(ctx_buf, "    %1(%2:%3): ", filename, line, column + 1);
 
             LocalArray<char, 2048> msg_buf;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!..+").len;
@@ -118,7 +118,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, const char *fmt, Args... args)
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!0").len;
 
-            Log(LogLevel::Error, "Error", "%1", msg_buf.data);
+            Log(LogLevel::Error, "Error: ", "%1", msg_buf.data);
         } break;
 
         case bk_DiagnosticType::Hint: {
@@ -127,7 +127,7 @@ void bk_ReportDiagnostic(bk_DiagnosticType type, const char *fmt, Args... args)
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), fmt, args...).len;
             msg_buf.len += Fmt(msg_buf.TakeAvailable(), "%!0").len;
 
-            Log(LogLevel::Info, "    Hint", "%1", msg_buf.data);
+            Log(LogLevel::Info, "    Hint: ", "%1", msg_buf.data);
         } break;
     }
 }
