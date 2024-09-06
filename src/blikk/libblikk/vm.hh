@@ -54,7 +54,7 @@ public:
     }
 
     void SetFlags(unsigned int new_flags) { flags = new_flags; }
-    bool GetFlags() const { return flags; }
+    unsigned int GetFlags() const { return flags; }
 
 private:
     void DumpInstruction(const bk_Instruction &inst, Size pc, Size bp) const;
