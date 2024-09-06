@@ -393,18 +393,21 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                         LogInfo("%!D..[F]%!0 %1%/%!..+%2%!0", prefix, entry.basename);
                     }
 
+                    if (settings.fake) {
+                        stat_len += entry.size;
+                        break;
+                    }
+
                     int fd = GetFile(entry.hash, entry_type, entry_blob, entry.filename.ptr);
-                    if (!settings.fake && fd < 0)
+                    if (fd < 0)
                         return false;
                     RG_DEFER { CloseDescriptor(fd); };
 
                     // Set file metadata
-                    if (!settings.fake) {
-                        if (settings.chown) {
-                            SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
-                        }
-                        SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
+                    if (settings.chown) {
+                        SetFileOwner(fd, entry.filename.ptr, entry.uid, entry.gid);
                     }
+                    SetFileMetaData(fd, entry.filename.ptr, entry.mtime, entry.btime, entry.mode);
                 } break;
 
                 case (int)RawFile::Kind::Link: {
