@@ -2,9 +2,10 @@
     "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
     "release-type": "node",
     "pull-request-title-pattern": "chore: release v${version}",
-    "bootstrap-sha": "186e04b5e40e54d7fd1655bc67081cc483f12488",
+    "bootstrap-sha": "9d78c7da25c5f90617600e23d2a8e7a23288f1ae",
     "packages": {
         ".": {
+            "include-component-in-tag": false,
             "changelog-path": "CHANGELOG.md"
         }
     }
