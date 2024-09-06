@@ -20,7 +20,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 declare module 'koffi' {
-    export function load(path: string): IKoffiLib;
+    export function load(path: string | null): IKoffiLib;
 
     interface IKoffiCType { __brand: 'IKoffiCType' }
     interface IKoffiPointerCast { __brand: 'IKoffiPointerCast' }
