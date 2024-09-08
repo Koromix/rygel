@@ -747,7 +747,7 @@ bool BackupContext::BackupNew()
                         }
 
                         if (!memcmp(src_hash, dest_hash, 32)) {
-                            LogInfo("Skip '%1' (checksum match)", path);
+                            LogDebug("Skip '%1' (checksum match)", path);
                             if (!fake) {
                                 SetFileMetaData(dest_fd, dest_filename, mtime, mtime, 0644);
                             }
@@ -755,7 +755,7 @@ bool BackupContext::BackupNew()
                         }
                     } else {
                         if (IsTimeEquivalent(dest_info.mtime, mtime)) {
-                            LogInfo("Skip '%1' (metadata match)", path);
+                            LogDebug("Skip '%1' (metadata match)", path);
                             continue;
                         }
                     }
