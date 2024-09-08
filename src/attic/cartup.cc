@@ -958,10 +958,15 @@ Options:
         return 1;
 
     Async async;
+    int processed = 0;
 
     // Copy to backup disks
     for (const DiskData &disk: set.disks) {
         const char *uuid_filename = Fmt(&temp_alloc, "%1.cartup", disk.root).ptr;
+
+        if (!TestFile(uuid_filename, FileType::File))
+            continue;
+
         const char *uuid = ReadUUID(uuid_filename, &temp_alloc);
 
         if (!uuid) {
@@ -970,6 +975,8 @@ Options:
         }
         if (!TestStr(uuid, disk.uuid))
             continue;
+
+        processed++;
 
         // Check disk exists!
         {
@@ -1000,6 +1007,10 @@ Options:
 
     if (!async.Sync())
         return 1;
+    if (!processed) {
+        LogError("No backup disk found");
+        return 1;
+    }
 
     return 0;
 }
