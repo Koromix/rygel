@@ -558,7 +558,7 @@ static void PrintStatus(const BackupSet &set)
         PrintLn("Sources:");
         for (Size i = 0; i < set.sources.len; i++) {
             const SourceInfo &src = set.sources[i];
-            PrintLn("  Source %1: %!..+%2%!0", i + 1, src.root);
+            PrintLn("  %!D..[%1]%!0 %!..+%2%!0", i + 1, src.root);
         }
     } else {
         PrintLn("No source");
@@ -571,7 +571,7 @@ static void PrintStatus(const BackupSet &set)
             const DiskData &disk = set.disks[i];
             double usage = (double)disk.used / (double)disk.total;
 
-            PrintLn("  Disk %1: %!..+%2%!0", i + 1, disk.uuid);
+            PrintLn("  %!D..[%1]%!0 %!..+%2%!0 (%3)", i + 1, disk.name, disk.uuid);
             PrintLn("    Used: %!..+%1/%2%!0 (%3%%)", FmtDiskSize(disk.used), FmtDiskSize(disk.total), FmtDouble(usage * 100.0, 1));
             PrintLn("    Files: %!..+%1%!0", disk.files);
         }
