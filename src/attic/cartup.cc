@@ -255,8 +255,8 @@ bool BackupSet::Open(const char *db_filename, bool create)
 
             disk.id = sqlite3_column_int64(stmt, 0);
             CopyString((const char *)sqlite3_column_text(stmt, 1), disk.uuid);
-            disk.name = (const char *)sqlite3_column_text(stmt, 2);
-            disk.root = (const char *)sqlite3_column_text(stmt, 3);
+            disk.name = DuplicateString((const char *)sqlite3_column_text(stmt, 2), &str_alloc).ptr;
+            disk.root = DuplicateString((const char *)sqlite3_column_text(stmt, 3), &str_alloc).ptr;
             disk.total = sqlite3_column_int64(stmt, 4);
             disk.used = sqlite3_column_int64(stmt, 5);
             disk.files = sqlite3_column_int64(stmt, 6);
