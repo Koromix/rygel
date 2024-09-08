@@ -235,7 +235,7 @@ bool BackupSet::Open(const char *db_filename, bool create)
             }
 
             src.id = sqlite3_column_int64(stmt, 0);
-            src.root = NormalizePath(src_dir, &str_alloc).ptr;
+            src.root = NormalizePath(src_dir, (int)NormalizeFlag::EndWithSeparator, &str_alloc).ptr;
 
             sources.Append(src);
         }
