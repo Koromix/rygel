@@ -59,6 +59,17 @@ struct BackupSet {
     SourceInfo *FindSource(const char *selector);
 };
 
+static const char *GetDefaultDatabasePath()
+{
+    const char *filename = GetEnv("CARTUP_DATABASE");
+
+    if (!filename || !filename[0]) {
+        filename = "cartup.db";
+    }
+
+    return filename;
+}
+
 static const char *GenerateUUIDv4(Allocator *alloc)
 {
     uint8_t bytes[16];
@@ -347,7 +358,7 @@ SourceInfo *BackupSet::FindSource(const char *selector)
 static int RunInit(Span<const char *> arguments)
 {
     // Options
-    const char *db_filename = "cartup.db";
+    const char *db_filename = GetDefaultDatabasePath();
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -572,7 +583,7 @@ static void PrintStatus(const BackupSet &set)
 static int RunStatus(Span<const char *> arguments)
 {
     // Options
-    const char *db_filename = "cartup.db";
+    const char *db_filename = GetDefaultDatabasePath();
     bool distribute = true;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -889,7 +900,7 @@ static int RunBackup(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *db_filename = "cartup.db";
+    const char *db_filename = GetDefaultDatabasePath();
     bool distribute = true;
     bool checksum = false;
     bool fake = false;
@@ -998,7 +1009,7 @@ static int RunAddSource(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *db_filename = "cartup.db";
+    const char *db_filename = GetDefaultDatabasePath();
     const char *src_dir = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -1060,7 +1071,7 @@ Options:
 static bool RunDeleteSource(Span<const char *> arguments)
 {
     // Options
-    const char *db_filename = "cartup.db";
+    const char *db_filename = GetDefaultDatabasePath();
     const char *identifier = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -1193,7 +1204,7 @@ static int RunAddDisk(Span<const char *> arguments)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *db_filename = "cartup.db";
+    const char *db_filename = GetDefaultDatabasePath();
     const char *name = nullptr;
     int64_t size = -1;
     const char *disk_dir = nullptr;
@@ -1336,7 +1347,7 @@ Options:
 static bool RunDeleteDisk(Span<const char *> arguments)
 {
     // Options
-    const char *db_filename = "cartup.db";
+    const char *db_filename = GetDefaultDatabasePath();
     const char *identifier = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
