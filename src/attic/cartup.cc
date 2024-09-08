@@ -197,7 +197,7 @@ bool BackupSet::Open(const char *db_filename, bool create)
                         CREATE UNIQUE INDEX files_p ON files (path);
 
                         INSERT INTO disks (id, uuid, name, root, size)
-                            SELECT id, uuid, 'Disk ' || (id + 1), root, size FROM disks_BAK;
+                            SELECT id, uuid, 'Disk ' || id, root, size FROM disks_BAK;
                         INSERT INTO files (id, path, origin, mtime, size, disk_id)
                             SELECT id, path, origin, mtime, size, disk_id FROM files_BAK;
                     )");
