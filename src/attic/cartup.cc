@@ -634,8 +634,7 @@ Options:
 
 class BackupContext {
     BackupSet *set;
-    const char *uuid;
-    const char *disk_dir;
+    const DiskData *disk;
 
     bool checksum;
     bool fake;
@@ -643,8 +642,8 @@ class BackupContext {
     BlockAllocator temp_alloc;
 
 public:
-    BackupContext(BackupSet *set, const char *uuid, const char *disk_dir, bool checksum, bool fake)
-        : set(set), uuid(uuid), disk_dir(disk_dir), checksum(checksum), fake(fake) {}
+    BackupContext(BackupSet *set, const DiskData *disk, bool checksum, bool fake)
+        : set(set), disk(disk), checksum(checksum), fake(fake) {}
 
     bool BackupNew();
     bool DeleteOld() { return DeleteOld(""); }
@@ -669,7 +668,7 @@ bool BackupContext::BackupNew()
                             FROM disks d
                             INNER JOIN files f ON (f.disk_id = d.id)
                             WHERE d.uuid = ?1 AND f.origin IS NOT NULL)",
-                         &stmt, uuid))
+                         &stmt, disk->uuid))
         return false;
 
     bool valid = true;
@@ -687,7 +686,7 @@ bool BackupContext::BackupNew()
         int64_t mtime = sqlite3_column_int64(stmt, 2);
         int64_t size = sqlite3_column_int64(stmt, 3);
 
-        const char *dest_filename = Fmt(&temp_alloc, "%1%2", disk_dir, path).ptr;
+        const char *dest_filename = Fmt(&temp_alloc, "%1%2", disk->root, path).ptr;
 
         int src_fd = OpenFile(src_filename, (int)OpenFlag::Read);
         if (src_fd < 0) {
@@ -775,7 +774,7 @@ bool BackupContext::BackupNew()
             } break;
         }
 
-        LogInfo("Copy '%1' to disk '%2'", path, uuid);
+        LogInfo("Copy '%1' to %2 (%3)", path, disk->name, disk->uuid);
         valid &= fake || CopyFile(src_fd, src_filename, dest_fd, dest_filename, size, mtime);
     }
     valid &= stmt.IsValid();
@@ -788,7 +787,7 @@ bool BackupContext::DeleteOld(const char *dirname)
 {
     BlockAllocator temp_alloc;
 
-    const char *enum_dir = Fmt(&temp_alloc, "%1%2", disk_dir, dirname).ptr;
+    const char *enum_dir = Fmt(&temp_alloc, "%1%2", disk->root, dirname).ptr;
     bool complete = true;
 
     EnumerateDirectory(enum_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
@@ -815,8 +814,8 @@ bool BackupContext::DeleteOld(const char *dirname)
                 if (!set->db.Prepare(R"(SELECT f.id
                                         FROM files f
                                         INNER JOIN disks d ON (d.id = f.disk_id)
-                                        WHERE d.uuid = ?1 AND path = ?2 AND origin IS NOT NULL)",
-                                     &stmt, uuid, path))
+                                        WHERE d.id = ?1 AND path = ?2 AND origin IS NOT NULL)",
+                                     &stmt, disk->id, path))
                     return false;
 
                 bool exists = stmt.Step();
@@ -993,7 +992,7 @@ Options:
         }
 
         async.Run([&]() {
-            BackupContext ctx(&set, uuid, disk.root, checksum, fake);
+            BackupContext ctx(&set, &disk, checksum, fake);
 
             if (!ctx.BackupNew())
                 return false;
