@@ -940,15 +940,15 @@ bool BackupContext::DeleteOld(const char *dirname)
                                      &stmt, disk->id, path))
                     return false;
 
-                if (!stmt.Step()) {
-                    if (!stmt.IsValid())
-                        return false;
+                int64_t id = -1;
+                bool exists = false;
 
-                    break;
+                if (stmt.Step()) {
+                    id = sqlite3_column_int64(stmt, 0);
+                    exists = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
+                } else if (!stmt.IsValid()) {
+                    return false;
                 }
-
-                int64_t id = sqlite3_column_int64(stmt, 0);
-                bool exists = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
 
                 if (exists) {
                     complete = false;
