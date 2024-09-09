@@ -684,7 +684,7 @@ R"(Usage: %!..+%1 status [options]
 Options:
     %!..+-D, --database_file <file>%!0   Set database file
 
-        %!..+--no_distribute%!0          Don't detect source changes)",
+        %!..+--no_detect%!0              Don't detect source changes)",
                 FelixTarget);
     };
 
@@ -698,7 +698,7 @@ Options:
                 return 0;
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
-            } else if (opt.Test("--no_distribute")) {
+            } else if (opt.Test("--no_detect")) {
                 distribute = false;
             } else {
                 opt.LogUnknownError();
@@ -1048,7 +1048,7 @@ R"(Usage: %!..+%1 backup [options]
 Options:
     %!..+-D, --database_file <file>%!0   Set database file%!0
 
-        %!..+--no_distribute%!0          Don't detect source changes
+        %!..+--no_detect%!0              Don't detect source changes
 
     %!..+-c, --checksum%!0               Use checksum (BLAKE3) to compare files
         %!..+--delete%!0                 Delete unused files
@@ -1067,7 +1067,7 @@ Options:
                 return 0;
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
-            } else if (opt.Test("--no_distribute")) {
+            } else if (opt.Test("--no_detect")) {
                 distribute = false;
             } else if (opt.Test("-c", "--checksum")) {
                 checksum = true;
