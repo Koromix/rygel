@@ -10,4 +10,4 @@ Attention, il s'agit d'un **dépôt unique** (*monorepo*) qui contient plusieurs
 
 # Licence
 
-Goupile est une application **libre et gratuite**, sous [licence AGPL 3](https://www.gnu.org/licenses/#AGPL). Vous pouvez librement télécharger et utiliser le code source de Goupile. Tout le monde a l'autorisation d'exécuter, de copier, de modifier, et de redistribuer des versions modifiées de ce code.
+Goupile est une application **libre et gratuite**, sous [licence GPL 3](https://www.gnu.org/licenses/#GPL). Vous pouvez librement télécharger et utiliser le code source de Goupile. Tout le monde a l'autorisation d'exécuter, de copier, de modifier, et de redistribuer des versions modifiées de ce code.

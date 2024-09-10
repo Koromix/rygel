@@ -1,15 +1,17 @@
+// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+//
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
+// it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// GNU General Public License for more details.
 //
-// You should have received a copy of the GNU Affero General Public License
-// along with this program. If not, see https://www.gnu.org/licenses/.
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
 #include "src/core/wrap/json.hh"
@@ -20,7 +22,7 @@ namespace RG {
 // For simplicity, I've replicated the required data structures from libcc
 // and packer.hh directly below. Don't forget to keep them in sync.
 static const char *const CodePrefix =
-R"(// Copyright 2023 Niels Martignène <niels.martignene@protonmail.com>
+R"(// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
 // this software and associated documentation files (the “Software”), to deal in

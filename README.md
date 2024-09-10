@@ -1,23 +1,23 @@
 # Projects
 
-Most projects are licensed under the [AGPL 3.0 license](https://www.gnu.org/licenses/agpl-3.0.html), with a few exceptions listed below.
+Most projects are licensed under the [GPL 3.0 license](https://www.gnu.org/licenses/gpl-3.0.html), with a few exceptions listed below.
 
 | Project    | Description                                                                      | Build tool | Quality  | License   |
 | ---------- | -------------------------------------------------------------------------------- | ---------- | -------- | --------- |
-| *blikk*    | Embeddable beginner-friendly language with static types, fast compilation        | Felix      | **WIP**  | AGPL 3    |
-| *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)          | Felix      | **Good** | *MIT*     |
-| *cnoke*    | Simple alternative to cmake.js, without any dependency                           | Node.js    | **Good** | *MIT*     |
-| *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR              | Felix/R    | **Good** | AGPL 3    |
-| *felix*    | Small build system made specifically for this repository                         | Felix      | **Good** | AGPL 3    |
-| *goupile*  | Programmable electronic data capture application                                 | Felix      | **WIP**  | AGPL 3    |
-| *hodler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)                     | Felix      | **Good** | AGPL 3    |
-| *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js                   | Node.js    | **Good** | *MIT*     |
-| *meestic*  | Control the keyboard lighting on MSI Delta 15 laptops                            | Felix      | **Good** | AGPL 3    |
-| *napka*    | List and map of mental healthcare resources in France                            | Node.js    | **WIP**  | AGPL 3    |
-| *rekkord*  | Backup tool with deduplication and asymmetric encryption                         | Felix      | **WIP**  | AGPL 3    |
-| *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd                | Felix      | **Good** | AGPL 3    |
+| *blikk*    | Embeddable beginner-friendly language with static types, fast compilation        | Felix      | **WIP**  | GPL 3     |
+| *core*     | Base C++ libraries (such as libcc) and small wrappers (R, rapidjson...)          | Felix      | **Good** | MIT       |
+| *cnoke*    | Simple alternative to cmake.js, without any dependency                           | Node.js    | **Good** | MIT       |
+| *drd*      | Alternative PMSI MCO classifier, subprojects: libdrd, drdc and drdR              | Felix/R    | **Good** | GPL 3     |
+| *felix*    | Small build system made specifically for this repository                         | Felix      | **Good** | GPL 3     |
+| *goupile*  | Programmable electronic data capture application                                 | Felix      | **WIP**  | GPL 3     |
+| *hodler*   | Simple markdown-to-HTML website generator (e.g. koromix.dev)                     | Felix      | **Good** | GPL 3     |
+| *koffi*    | Fast and simple C FFI (foreign function interface) for Node.js                   | Node.js    | **Good** | MIT       |
+| *meestic*  | Control the keyboard lighting on MSI Delta 15 laptops                            | Felix      | **Good** | GPL 3     |
+| *napka*    | List and map of mental healthcare resources in France                            | Node.js    | **WIP**  | GPL 3     |
+| *rekkord*  | Backup tool with deduplication and asymmetric encryption                         | Felix      | **WIP**  | GPL 3     |
+| *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd                | Felix      | **Good** | GPL 3     |
 | *tytools*  | Independent tools to manage, flash and communicate with Teensy microcontrollers  | Felix      | **Good** | Unlicense |
-| *web*      | Reusable utility functions and HTML/CSS/JS widgets                               | Felix      | **Good** | AGPL 3    |
+| *web*      | Reusable utility functions and HTML/CSS/JS widgets                               | Felix      | **Good** | MIT       |
 
 You can also visit the [attic](src/attic/) for a few more single-file tools.
 

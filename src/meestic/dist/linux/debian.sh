@@ -6,7 +6,7 @@ PKG_NAME=meestic
 PKG_AUTHOR="Niels Martignène <niels.martignene@protonmail.com>"
 PKG_DESCRIPTION="CLI and GUI tools to control the keyboard lighting on MSI Delta 15 laptops"
 PKG_DEPENDENCIES="libudev1"
-PKG_LICENSE=AGPL-3.0-or-later
+PKG_LICENSE=GPL-3.0-or-later
 PKG_ARCHITECTURES="amd64 i386 arm64"
 
 SCRIPT_PATH=src/meestic/dist/linux/debian.sh

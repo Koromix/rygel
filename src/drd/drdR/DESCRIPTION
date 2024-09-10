@@ -6,7 +6,7 @@ Version: 0.0.0.9000
 Author: Niels Martignène
 Maintainer: Niels Martignène <niels.martignene@protonmail.com>
 Description: Alternative French PMSI Classifier
-License: AGPL-3
+License: GPL-3
 Imports:
     data.table (>= 1.10.0),
     Rcpp (>= 0.12.13)

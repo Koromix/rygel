@@ -4,7 +4,7 @@ Contactez-nous via [hello@goupile.fr](mailto:hello@goupile.fr) pour utiliser cet
 
 Nous proposons également des prestations d'hébergement payantes basées sur Goupile adaptées à vos besoins, consultez la [page des tarifs](/pricing) ou contactez-nous pour plus d'information.
 
-Le code source est publié sous licence [AGPL version 3](https://www.gnu.org/licenses/#AGPL).
+Le code source est publié sous licence [GPL version 3](https://www.gnu.org/licenses/#GPL).
 
 <div class="slideshow">
     <div class="legend">
