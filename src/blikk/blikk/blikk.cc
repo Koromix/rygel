@@ -179,6 +179,7 @@ Options:
 
             return RunFile(filename_or_code, config);
         } break;
+
         case RunMode::Command: {
             if (!filename_or_code) {
                 LogError("No command provided");
