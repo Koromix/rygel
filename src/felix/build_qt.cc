@@ -206,17 +206,24 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
                 }
             }
 
+            const char *library = nullptr;
+
             if (build.compiler->platform == HostPlatform::Windows) {
-                const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5",
-                                          qt->libraries, build.compiler->GetLibPrefix(), qt->version_major,
-                                          component, build.compiler->GetImportExtension()).ptr;
-                obj_filenames->Append(library);
+                library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5",
+                              qt->libraries, build.compiler->GetLibPrefix(), qt->version_major,
+                              component, build.compiler->GetImportExtension()).ptr;
             } else {
-                const char *library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5.%6",
-                                          qt->libraries, build.compiler->GetLibPrefix(), qt->version_major,
-                                          component, build.compiler->GetImportExtension(), qt->version_major).ptr;
-                obj_filenames->Append(library);
+                library = Fmt(&str_alloc, "%1%/%2Qt%3%4%5.%6",
+                              qt->libraries, build.compiler->GetLibPrefix(), qt->version_major,
+                              component, build.compiler->GetImportExtension(), qt->version_major).ptr;
             }
+
+            if (!TestFile(library)) {
+                LogError("Cannot find shared library for Qt component '%1'", component);
+                return false;
+            }
+
+            obj_filenames->Append(library);
         }
 
         // Fix quirk: QtGui depends on QtDBus but it's not listed correctly
@@ -267,10 +274,15 @@ bool Builder::AddQtLibraries(const TargetInfo &target, HeapArray<const char *> *
                                                                              component, build.compiler->GetArchiveExtension()).ptr;
             const char *prl_filename = Fmt(&str_alloc, "%1%/%2Qt%3%4.prl", qt->libraries, build.compiler->GetLibPrefix(), qt->version_major, component).ptr;
 
+            if (!TestFile(library_filename)) {
+                LogError("Cannot find static library for Qt component '%1'", component);
+                return false;
+            }
+
             obj_filenames->Append(library_filename);
 
             if (!TestFile(prl_filename)) {
-                LogError("Cannot find PRL file for Qt compoment '%1'", component);
+                LogError("Cannot find PRL file for Qt component '%1'", component);
                 return false;
             }
 
