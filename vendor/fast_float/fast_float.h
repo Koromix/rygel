@@ -128,6 +128,12 @@
 #define FASTFLOAT_IS_CONSTEXPR 0
 #endif
 
+#if __cplusplus >= 201703L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201703L)
+#define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 0
+#else
+#define FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE 1
+#endif
+
 #endif // FASTFLOAT_CONSTEXPR_FEATURE_DETECT_H
 
 #ifndef FASTFLOAT_FLOAT_COMMON_H
@@ -474,7 +480,8 @@ full_multiplication(uint64_t a, uint64_t b) {
   // But MinGW on ARM64 doesn't have native support for 64-bit multiplications
   answer.high = __umulh(a, b);
   answer.low = a * b;
-#elif defined(FASTFLOAT_32BIT) || (defined(_WIN64) && !defined(__clang__))
+#elif defined(FASTFLOAT_32BIT) ||                                              \
+    (defined(_WIN64) && !defined(__clang__) && !defined(_M_ARM64))
   answer.low = _umul128(a, b, &answer.high); // _umul128 not available on ARM64
 #elif defined(FASTFLOAT_64BIT) && defined(__SIZEOF_INT128__)
   __uint128_t r = ((__uint128_t)a) * b;
@@ -573,11 +580,15 @@ template <typename U> struct binary_format_lookup_tables<double, U> {
                           constant_55555 * 5 * 5 * 5 * 5)};
 };
 
+#if FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE
+
 template <typename U>
 constexpr double binary_format_lookup_tables<double, U>::powers_of_ten[];
 
 template <typename U>
 constexpr uint64_t binary_format_lookup_tables<double, U>::max_mantissa[];
+
+#endif
 
 template <typename U> struct binary_format_lookup_tables<float, U> {
   static constexpr float powers_of_ten[] = {1e0f, 1e1f, 1e2f, 1e3f, 1e4f, 1e5f,
@@ -600,11 +611,15 @@ template <typename U> struct binary_format_lookup_tables<float, U> {
       0x1000000 / (constant_55555 * constant_55555 * 5)};
 };
 
+#if FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE
+
 template <typename U>
 constexpr float binary_format_lookup_tables<float, U>::powers_of_ten[];
 
 template <typename U>
 constexpr uint64_t binary_format_lookup_tables<float, U>::max_mantissa[];
+
+#endif
 
 template <>
 inline constexpr int binary_format<double>::min_exponent_fast_path() {
@@ -808,7 +823,11 @@ template <typename = void> struct space_lut {
       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 };
 
+#if FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE
+
 template <typename T> constexpr bool space_lut<T>::value[];
+
+#endif
 
 inline constexpr bool is_space(uint8_t c) { return space_lut<>::value[c]; }
 #endif
@@ -890,11 +909,15 @@ template <typename = void> struct int_luts {
       3379220508056640625,     4738381338321616896};
 };
 
+#if FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE
+
 template <typename T> constexpr uint8_t int_luts<T>::chdigit[];
 
 template <typename T> constexpr size_t int_luts<T>::maxdigits_u64[];
 
 template <typename T> constexpr uint64_t int_luts<T>::min_safe_u64[];
+
+#endif
 
 template <typename UC>
 fastfloat_really_inline constexpr uint8_t ch_to_digit(UC c) {
@@ -2244,9 +2267,13 @@ template <class unused = void> struct powers_template {
   };
 };
 
+#if FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE
+
 template <class unused>
 constexpr uint64_t
     powers_template<unused>::power_of_five_128[number_of_entries];
+
+#endif
 
 using powers = powers_template<>;
 
@@ -2869,11 +2896,15 @@ template <typename = void> struct pow5_tables {
 #endif
 };
 
+#if FASTFLOAT_DETAIL_MUST_DEFINE_CONSTEXPR_VARIABLE
+
 template <typename T> constexpr uint32_t pow5_tables<T>::large_step;
 
 template <typename T> constexpr uint64_t pow5_tables<T>::small_power_of_5[];
 
 template <typename T> constexpr limb pow5_tables<T>::large_power_of_5[];
+
+#endif
 
 // big integer type. implements a small subset of big integer
 // arithmetic, using simple algorithms since asymptotically
