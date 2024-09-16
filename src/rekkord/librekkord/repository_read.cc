@@ -204,7 +204,7 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
 
 #if defined(_WIN32)
     if (allow_separators) {
-        Span<char> basename = entry.basename;
+        Span<char> basename = entry.basename.As<char>();
 
         for (char &c: basename) {
             c = (c == '\\') ? '/' : c;
