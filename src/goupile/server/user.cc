@@ -32,6 +32,7 @@ static_assert(PasswordHashBytes == crypto_pwhash_STRBYTES);
 static const int BanThreshold = 6;
 static const int64_t BanTime = 1800 * 1000;
 static const int64_t TotpPeriod = 30000;
+static const int MaxChallengeDelay = 5000 * 1000;
 
 struct EventInfo {
     struct Key {
@@ -346,7 +347,7 @@ static RetainPtr<SessionInfo> CreateUserSession(SessionType type, int64_t userid
     return ptr;
 }
 
-bool LoginUserAuto(http_IO *io, int64_t userid)
+RetainPtr<SessionInfo> LoginUserAuto(http_IO *io, int64_t userid)
 {
     RG_ASSERT(userid > 0);
 
@@ -354,7 +355,7 @@ bool LoginUserAuto(http_IO *io, int64_t userid)
     if (!gp_domain.db.Prepare(R"(SELECT username, local_key, change_password
                                  FROM dom_users
                                  WHERE userid = ?1)", &stmt))
-        return false;
+        return nullptr;
     sqlite3_bind_int64(stmt, 1, userid);
 
     if (!stmt.Step()) {
@@ -362,7 +363,7 @@ bool LoginUserAuto(http_IO *io, int64_t userid)
             LogError("User ID %1 does not exist");
             io->SendError(404);
         }
-        return false;
+        return nullptr;
     }
 
     const char *username = (const char *)sqlite3_column_text(stmt, 0);
@@ -371,12 +372,12 @@ bool LoginUserAuto(http_IO *io, int64_t userid)
 
     RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Login, userid, username, local_key);
     if (!session.IsValid())
-        return false;
+        return nullptr;
     session->change_password = change_password;
 
     sessions.Open(io, session);
 
-    return true;
+    return session;
 }
 
 void InvalidateUserStamps(int64_t userid)
@@ -726,54 +727,41 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         return nullptr;
     sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
-    if (stmt.Step()) {
-        userid = sqlite3_column_int64(stmt, 0);
-        local_key = (const char *)sqlite3_column_text(stmt, 1);
-    } else if (stmt.IsValid()) {
+    if (!stmt.Step()) {
+        if (stmt.IsValid())
+            return nullptr;
         stmt.Finalize();
 
-        bool success = instance->db->Transaction([&]() {
-            if (!instance->db->Prepare("SELECT userid, local_key FROM ins_users WHERE key = ?1", &stmt))
-                return false;
-            sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
+        local_key = (const char *)AllocateRaw(&temp_alloc, 128);
 
-            if (stmt.Step()) {
-                userid = sqlite3_column_int64(stmt, 0);
-                local_key = (const char *)sqlite3_column_text(stmt, 1);
-            } else if (stmt.IsValid()) {
-                local_key = (const char *)AllocateRaw(&temp_alloc, 128);
+        // Create random local key
+        {
+            uint8_t buf[32];
+            FillRandomSafe(buf);
+            sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
+        }
 
-                // Create random local key
-                {
-                    uint8_t buf[32];
-                    FillRandomSafe(buf);
-                    sodium_bin2base64((char *)local_key, 45, buf, RG_SIZE(buf), sodium_base64_VARIANT_ORIGINAL);
-                }
-
-                sq_Statement stmt;
-                if (!instance->db->Prepare(R"(INSERT INTO ins_users (key, local_key)
-                                              VALUES (?1, ?2)
-                                              RETURNING userid)",
-                                           &stmt, key, local_key))
-                    return false;
-                if (!stmt.GetSingleValue(&userid))
-                    return false;
-            } else {
-                return false;
-            }
-
-            return true;
-        });
-        if (!success)
+        if (!instance->db->Prepare(R"(INSERT INTO ins_users (key, local_key)
+                                      VALUES (?1, ?2)
+                                      ON CONFLICT DO NOTHING
+                                      RETURNING userid, local_key)",
+                                   &stmt, key, local_key))
             return nullptr;
-    } else {
-        return nullptr;
+
+        if (!stmt.Step()) {
+            RG_ASSERT(!stmt.IsValid());
+            return nullptr;
+        }
     }
+
+    userid = sqlite3_column_int64(stmt, 0);
+    local_key = (const char *)sqlite3_column_text(stmt, 1);
 
     RG_ASSERT(userid > 0);
     userid = -userid;
 
     RetainPtr<SessionInfo> session;
+
     if (email) {
         if (!gp_domain.config.smtp.url) [[unlikely]] {
             LogError("This instance is not configured to send mails");
@@ -1066,7 +1054,6 @@ void HandleSessionKey(http_IO *io, InstanceHolder *instance)
     RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Key, session_key, session_key, nullptr, nullptr, nullptr);
     if (!session)
         return;
-
     sessions.Open(io, session);
 
     io->SendText(200, "{}", "application/json");
@@ -1654,19 +1641,22 @@ void HandleChangeExportKey(http_IO *io, InstanceHolder *instance)
     json.Finish();
 }
 
-RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const SessionInfo &guest)
+RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *instance, const char *username)
 {
-    RG_ASSERT(!guest.userid && guest.type == SessionType::Auto);
+    // Create random username (if needed)
+    if (!username || !username[0]) {
+        Span<char> key = AllocateSpan<char>(io->Allocator(), 11);
 
-    // Create random username
-    char key[11];
-    for (Size i = 0; i < 7; i++) {
-        key[i] = (char)('a' + randombytes_uniform('z' - 'a' + 1));
+        for (Size i = 0; i < 7; i++) {
+            key[i] = (char)('a' + randombytes_uniform('z' - 'a' + 1));
+        }
+        for (Size i = 7; i < 10; i++) {
+            key[i] = (char)('0' + randombytes_uniform('9' - '0' + 1));
+        }
+        key[10] = 0;
+
+        username = key.ptr;
     }
-    for (Size i = 7; i < 10; i++) {
-        key[i] = (char)('0' + randombytes_uniform('9' - '0' + 1));
-    }
-    key[10] = 0;
 
     // Create random local key
     char local_key[45];
@@ -1682,7 +1672,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
         if (!instance->db->Prepare(R"(INSERT INTO ins_users (key, local_key)
                                       VALUES (?1, ?2)
                                       RETURNING userid)",
-                                   &stmt, key, local_key))
+                                   &stmt, username, local_key))
             return false;
         if (!stmt.GetSingleValue(&userid))
             return false;
@@ -1695,7 +1685,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
     RG_ASSERT(userid > 0);
     userid = -userid;
 
-    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, key, local_key);
+    RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, username, local_key);
 
     uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
     session->AuthorizeInstance(instance, permissions);
@@ -1703,6 +1693,289 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
     sessions.Open(io, session);
 
     return session;
+}
+
+void HandleAuthChallenge(http_IO *io, InstanceHolder *instance)
+{
+    int64_t now = GetUnixTime();
+
+    LocalArray<uint8_t, 1024> cypher;
+    char base64[2048];
+    static_assert(RG_SIZE(cypher) >= crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES);
+
+    randombytes_buf(cypher.data, crypto_secretbox_NONCEBYTES);
+    crypto_secretbox_easy(cypher.data + crypto_secretbox_NONCEBYTES, (const uint8_t *)&now, RG_SIZE(now), cypher.data, instance->challenge_key);
+    cypher.len = crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + RG_SIZE(now);
+
+    sodium_bin2base64(base64, RG_SIZE(base64), cypher.data, cypher.len, sodium_base64_VARIANT_ORIGINAL);
+
+    http_JsonPageBuilder json;
+    if (!json.Init(io))
+        return;
+
+    json.StartObject();
+    json.Key("challenge"); json.String(base64);
+    json.EndObject();
+
+    json.Finish();
+}
+
+void HandleAuthRegister(http_IO *io, InstanceHolder *instance)
+{
+    RetainPtr<const SessionInfo> session = sessions.Find(io);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+
+    int64_t now = GetUnixTime();
+
+    const char *challenge_key = nullptr;
+    const char *credential_id = nullptr;
+    const char *public_key = nullptr;
+    int algorithm = 0;
+    const char *attestation = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "challenge") {
+                parser.ParseString(&challenge_key);
+            } else if (key == "credential_id") {
+                parser.ParseString(&credential_id);
+            } else if (key == "public_key") {
+                parser.ParseString(&public_key);
+            } else if (key == "algorithm") {
+                parser.ParseInt(&algorithm);
+            } else if (key == "attestation") {
+                parser.ParseString(&attestation);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check for missing values
+    if (!challenge_key) {
+        LogError("Missing 'challenge' parameter");
+        io->SendError(422);
+        return;
+    }
+    if (!credential_id) {
+        LogError("Missing 'credential_id' parameter");
+        io->SendError(422);
+        return;
+    }
+    if (!public_key) {
+        LogError("Missing 'public_key' parameter");
+        io->SendError(422);
+        return;
+    }
+    if (!algorithm) {
+        LogError("Missing 'algorithm' parameter");
+        io->SendError(422);
+        return;
+    }
+    if (!attestation) {
+        LogError("Missing 'attestation' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    // Check challenge key
+    {
+        LocalArray<uint8_t, 1024> cypher;
+
+        size_t bin_len;
+        if (sodium_base642bin(cypher.data, RG_SIZE(cypher.data), challenge_key, strlen(challenge_key),
+                              nullptr, &bin_len, nullptr, sodium_base64_VARIANT_ORIGINAL) < 0) {
+            LogError("Failed to decode base64 challenge");
+            io->SendError(422);
+            return;
+        }
+        cypher.len = (Size)bin_len;
+
+        if (cypher.len != crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + RG_SIZE(int64_t)) {
+            LogError("Malformed challenge key");
+            io->SendError(422);
+            return;
+        }
+
+        int64_t time = -1;
+        if (crypto_secretbox_open_easy((uint8_t *)&time, cypher.data + crypto_secretbox_NONCEBYTES,
+                                                         cypher.len - crypto_secretbox_NONCEBYTES,
+                                       cypher.data, instance->challenge_key) < 0) {
+            LogError("Invalid challenge key");
+            io->SendError(403);
+            return;
+        }
+
+        if (time < now - MaxChallengeDelay || time > now) {
+            LogError("Outdated challenge key");
+            io->SendError(403);
+            return;
+        }
+    }
+
+    // Update WebAuthn credentials
+    if (!instance->db->Run(R"(INSERT INTO ins_devices (credential_id, public_key, algorithm, userid)
+                              VALUES (?1, ?2, ?3, ?4))",
+                           credential_id, public_key, algorithm, session->userid))
+        return;
+
+    io->SendText(200, "{}", "application/json");
+}
+
+void HandleAuthAssert(http_IO *io, InstanceHolder *instance)
+{
+    int64_t now = GetUnixTime();
+
+    const char *challenge_key = nullptr;
+    const char *credential_id = nullptr;
+    const char *signature = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "challenge") {
+                parser.ParseString(&challenge_key);
+            } else if (key == "credential_id") {
+                parser.ParseString(&credential_id);
+            } else if (key == "signature") {
+                parser.ParseString(&signature);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check for missing values
+    if (!challenge_key) {
+        LogError("Missing 'challenge' parameter");
+        io->SendError(422);
+        return;
+    }
+    if (!credential_id) {
+        LogError("Missing 'credential_id' parameter");
+        io->SendError(422);
+        return;
+    }
+    if (!signature) {
+        LogError("Missing 'public_key' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    // Check challenge key
+    {
+        LocalArray<uint8_t, 1024> cypher;
+
+        size_t bin_len;
+        if (sodium_base642bin(cypher.data, RG_SIZE(cypher.data), challenge_key, strlen(challenge_key),
+                              nullptr, &bin_len, nullptr, sodium_base64_VARIANT_ORIGINAL) < 0) {
+            LogError("Failed to decode base64 challenge");
+            io->SendError(422);
+            return;
+        }
+        cypher.len = (Size)bin_len;
+
+        if (cypher.len != crypto_secretbox_NONCEBYTES + crypto_secretbox_MACBYTES + RG_SIZE(int64_t)) {
+            LogError("Malformed challenge key");
+            io->SendError(422);
+            return;
+        }
+
+        int64_t time = -1;
+        if (crypto_secretbox_open_easy((uint8_t *)&time, cypher.data + crypto_secretbox_NONCEBYTES,
+                                                         cypher.len - crypto_secretbox_NONCEBYTES,
+                                       cypher.data, instance->challenge_key) < 0) {
+            LogError("Invalid challenge key");
+            io->SendError(403);
+            return;
+        }
+
+        if (time < now - MaxChallengeDelay || time > now) {
+            LogError("Outdated challenge key");
+            io->SendError(403);
+            return;
+        }
+    }
+
+    // Create session
+    RetainPtr<SessionInfo> session;
+    {
+        sq_Statement stmt;
+        if (!instance->db->Prepare("SELECT userid FROM ins_devices WHERE credential_id = ?1", &stmt, credential_id))
+            return;
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Invalid credentials");
+                io->SendError(403);
+            }
+            return;
+        }
+
+        int64_t userid = sqlite3_column_int64(stmt, 0);
+
+        if (userid > 0) {
+            session = LoginUserAuto(io, userid);
+            if (!session)
+                return;
+        } else {
+            stmt.Finalize();
+            if (!instance->db->Prepare("SELECT key, local_key FROM ins_users WHERE userid = ?1", &stmt, -userid))
+                return;
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("Invalid credentials");
+                    io->SendError(403);
+                }
+                return;
+            }
+
+            const char *username = (const char *)sqlite3_column_text(stmt, 0);
+            const char *local_key = (const char *)sqlite3_column_text(stmt, 1);
+
+            session = CreateUserSession(SessionType::Token, userid, username, local_key);
+
+            uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
+            session->AuthorizeInstance(instance, permissions);
+
+            sessions.Open(io, session);
+        }
+    }
+
+    WriteProfileJson(io, session.GetRaw(), instance);
 }
 
 }

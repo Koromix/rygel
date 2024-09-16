@@ -18,6 +18,7 @@ function ApplicationInfo(profile) {
 
     this.pages = [];
     this.homepage = null;
+    this.remember = false;
 
     this.stores = [];
 
@@ -55,6 +56,8 @@ function ApplicationBuilder(app) {
 
     Object.defineProperties(this, {
         homepage: { get: () => app.homepage, set: homepage => { app.homepage = homepage; }, enumerable: true },
+        remember: { get: () => app.remember, set: remember => { app.remember = remember; }, enumerable: true },
+
         head: { get: () => app.head, set: head => { app.head = head; }, enumerable: true },
         tags: { get: () => app.tags, set: tags => { app.tags = tags; }, enumerable: true },
 

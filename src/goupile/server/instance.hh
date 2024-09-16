@@ -55,6 +55,7 @@ public:
     } config;
 
     std::atomic_int64_t fs_version { 0 };
+    uint8_t challenge_key[32];
 
     BlockAllocator str_alloc;
 

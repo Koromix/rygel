@@ -48,6 +48,7 @@ struct RecordFragment {
 struct SignupInfo {
     bool enable = false;
 
+    const char *username = nullptr;
     const char *url = nullptr;
     const char *to = nullptr;
     const char *subject = nullptr;
@@ -194,17 +195,6 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         LogError("User is not allowed to save data");
         io->SendError(403);
         return;
-    }
-
-    if (!session->userid) {
-        session = MigrateGuestSession(io, instance, *session);
-        if (!session)
-            return;
-        stamp = session->GetStamp(instance);
-        if (!stamp)
-            return;
-
-        RG_ASSERT(session->userid < 0);
     }
 
     char tid[27];
@@ -355,7 +345,9 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                             Span<const char> key = {};
                             parser.ParseKey(&key);
 
-                            if (key == "url") {
+                            if (key == "username") {
+                                parser.ParseString(&signup.username);
+                            } else if (key == "url") {
                                 parser.ParseString(&signup.url);
                             } else if (key == "to") {
                                 parser.ParseString(&signup.to);
@@ -417,12 +409,30 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 LogError("Missing signup fields");
                 valid = false;
             }
+
+            if (signup.username && !signup.username[0]) {
+                LogError("Empty username is not allowed");
+                valid = false;
+            }
         }
 
         if (!valid) {
             io->SendError(422);
             return;
         }
+    }
+
+    // Create full session for guests
+    if (!session->userid) {
+        session = MigrateGuestSession(io, instance, signup.username);
+        if (!session)
+            return;
+
+        stamp = session->GetStamp(instance);
+        if (!stamp)
+            return;
+
+        RG_ASSERT(session->userid < 0);
     }
 
     int64_t new_anchor = -1;

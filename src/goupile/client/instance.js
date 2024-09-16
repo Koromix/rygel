@@ -126,6 +126,9 @@ async function initApp() {
         for (let child of container.children)
             document.head.appendChild(child);
     }
+
+    if (app.remember)
+        await goupile.rememberMe();
 }
 
 async function runMainScript() {

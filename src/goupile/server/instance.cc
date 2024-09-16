@@ -25,7 +25,7 @@
 namespace RG {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 120;
+const int InstanceVersion = 121;
 const int LegacyVersion = 60;
 
 bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *key, sq_Database *db, bool migrate)
@@ -164,6 +164,10 @@ bool InstanceHolder::Open(int64_t unique, InstanceHolder *master, const char *ke
     } else {
         title = config.name;
     }
+
+    // Create challenge key
+    static_assert(RG_SIZE(challenge_key) == crypto_secretbox_KEYBYTES);
+    randombytes_buf(challenge_key, RG_SIZE(challenge_key));
 
     return true;
 }
@@ -2385,9 +2389,23 @@ bool MigrateInstance(sq_Database *db, int target)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 120: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE ins_devices (
+                        credential_id TEXT NOT NULL,
+                        public_key TEXT NOT NULL,
+                        algorithm INTEGER NOT NULL,
+                        userid INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX ins_devices_c ON ins_devices (credential_id);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 120);
+            static_assert(InstanceVersion == 121);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

@@ -159,6 +159,7 @@ public:
     bool ParseNull();
     bool ParseBool(bool *out_value);
     bool ParseInt(int64_t *out_value);
+    bool ParseInt(int *out_value);
     bool ParseDouble(double *out_value);
     bool ParseString(Span<const char> *out_str);
     bool ParseString(const char **out_str);

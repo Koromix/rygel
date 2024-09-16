@@ -204,6 +204,16 @@ bool json_Parser::ParseInt(int64_t *out_i)
     }
 }
 
+bool json_Parser::ParseInt(int *out_i)
+{
+    if (ConsumeToken(json_TokenType::Number)) {
+        error |= !RG::ParseInt(handler.u.num, out_i);
+        return !error;
+    } else {
+        return false;
+    }
+}
+
 bool json_Parser::ParseDouble(double *out_d)
 {
     if (ConsumeToken(json_TokenType::Number)) {
