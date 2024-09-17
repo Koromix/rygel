@@ -322,14 +322,24 @@ function renderDropItem(item, idx) {
     let url = contextualizeURL(item.url, form_thread);
     let status = makeStatusText(item, form_thread);
 
-    return html`
-        ${idx ? html`<span style="align-self: center;">›</span>` : ''}
-        <button class=${active ? 'active' : ''}
-                @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
-            <div style="flex: 1;">${item.title}</div>
-            ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
-       </button>
-    `;
+    if (idx) {
+        return html`
+            ${idx ? html`<span style="align-self: center; margin: 0 2px;">›</span>` : ''}
+            <button class=${active ? 'active' : ''}
+                    @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
+                <div style="flex: 1;">${item.title}</div>
+                ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
+           </button>
+        `;
+    } else {
+        return html`
+            <button class=${'icon home' + (active ? ' active' : '')}
+                    @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
+                <div style="flex: 1;">${item.title}</div>
+                ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
+           </button>
+        `;
+    }
 }
 
 function makeStatusText(item, thread) {

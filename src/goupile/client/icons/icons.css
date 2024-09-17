@@ -26,6 +26,7 @@ button.icon { text-align: right; }
 .icon.data { background-image: url('data.webp'); }
 .icon.down { background-image: url('down.webp'); }
 .icon.dual { background-image: url('dual.webp'); }
+.icon.home { background-image: url('home.webp'); }
 .icon.instances { background-image: url('instances.webp'); }
 .icon.lines { background-image: url('lines.webp'); }
 .icon.lock { background-image: url('lock.webp'); }
