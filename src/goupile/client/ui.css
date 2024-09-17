@@ -57,7 +57,7 @@ button {
     border-radius: var(--button_rounding);
 }
 button.color {
-    background: var(--color);
+    background-color: var(--color);
     border: 1px solid var(--color);
     color: white;
 }
@@ -77,8 +77,8 @@ button:not(:disabled):hover { filter: brightness(80%) contrast(160%); }
     position: sticky;
     left: 0;
     top: 0;
-    height: 2.8em;
-    min-height: 2.8em;
+    height: 3.2em;
+    min-height: 3.2em;
     display: flex;
     background: linear-gradient(var(--menu_color_n1), var(--menu_color));
     color: white;
@@ -143,11 +143,11 @@ html.small .ui_toolbar button.icon {
 .ui_toolbar > .drop > button::after {
     position: absolute;
     right: 2px;
-    top: 9px;
     width: 22px;
     height: 16px;
     background-image: url('icons/down.webp');
     background-repeat: no-repeat;
+    background-position-y: center;
     background-size: 22px;
     content: ' ';
 }
@@ -216,7 +216,7 @@ html.small .ui_toolbar > .drop > button.icon::after { display: none; }
 /* -------------------- Panels -------------------- */
 
 #ui_panels {
-    height: calc(100% - 2.8em);
+    height: calc(100% - 3.2em);
     display: flex;
 }
 #ui_panels > div {
@@ -376,7 +376,7 @@ html.mobile .ui_table.fixed { table-layout: auto; }
 #ui_log {
     position: fixed;
     left: calc(50% - 160px);
-    top: calc(2.8em + 12px);
+    top: calc(3.2em + 12px);
     width: 320px;
     user-select: none;
     -moz-user-select: none;

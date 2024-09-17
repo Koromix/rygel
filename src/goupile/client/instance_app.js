@@ -19,6 +19,7 @@ function ApplicationInfo(profile) {
     this.pages = [];
     this.homepage = null;
     this.remember = false;
+    this.shortcuts = [];
 
     this.stores = [];
 
@@ -48,6 +49,8 @@ function ApplicationBuilder(app) {
             warn_unsaved: true,
             has_lock: false,
             sequence: false,
+            progress: true,
+            enabled: true,
 
             export_dialog: null,
             export_filter: null
@@ -64,6 +67,8 @@ function ApplicationBuilder(app) {
         warnUnsaved: makeOptionProperty('warn_unsaved'),
         hasLock: makeOptionProperty('has_lock'),
         sequence: makeOptionProperty('sequence'),
+        progress: makeOptionProperty('progress'),
+        enabled: makeOptionProperty('enabled'),
 
         exportDialog: makeOptionProperty('export_dialog'),
         exportFilter: makeOptionProperty('export_filter')
@@ -105,6 +110,9 @@ function ApplicationBuilder(app) {
             children: [],
 
             store: current_store,
+
+            enabled: options.enabled,
+            progress: options.progress
         };
 
         let page = {
@@ -147,12 +155,14 @@ function ApplicationBuilder(app) {
             }
         }
 
+        options = expandOptions(options);
+
         let prev_store = current_store;
         let prev_menu = current_menu;
         let prev_options = options_stack;
 
         try {
-            options_stack = [expandOptions(options)];
+            // options_stack = [expandOptions(options)];
 
             current_store = {
                 key: key,
@@ -171,7 +181,9 @@ function ApplicationBuilder(app) {
                 children: [],
 
                 store: current_store,
-                page: null
+
+                enabled: options.enabled,
+                progress: options.progress
             };
 
             app.stores.push(current_store);
@@ -227,6 +239,17 @@ function ApplicationBuilder(app) {
             current_store = prev_store;
             options_stack = prev_options;
         }
+    };
+
+    this.shortcut = function(label, options = {}, func = null) {
+        let shortcut = {
+            label: label,
+            click: func,
+            icon: options.icon ?? null,
+            color: options.color ?? null
+        };
+
+        app.shortcuts.push(shortcut);
     };
 
     function checkKeySyntax(key) {

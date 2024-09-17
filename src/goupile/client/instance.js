@@ -200,8 +200,8 @@ async function runTasks(sync) {
 }
 
 function renderMenu() {
-    let show_menu = !goupile.isLocked() && (route.page.menu.chain.length > 2 ||
-                                            route.page.menu.chain[0].children.length > 1);
+    let show_menu = (route.page.menu.chain.length > 2 ||
+                     route.page.menu.chain[0].children.length > 1);
     let menu_is_wide = isMenuWide(route.page.menu);
     let show_title = !show_menu;
 
@@ -247,7 +247,7 @@ function renderMenu() {
             ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
 
-            ${show_menu && !menu_is_wide ? Util.map(route.page.menu.chain[0].children, item => renderDropItem(item)) : ''}
+            ${show_menu && !menu_is_wide ? Util.map(route.page.menu.chain[0].children, renderDropItem) : ''}
             ${show_menu && menu_is_wide ? route.page.menu.chain.map(renderDropItem) : ''}
             ${show_title ? html`<button title=${route.page.title} class="active">
                 ${form_thread.locked ? '🔒' : ''}
@@ -317,12 +317,13 @@ function isMenuWide(menu) {
     return false;
 }
 
-function renderDropItem(item) {
+function renderDropItem(item, idx) {
     let active = (route.page.menu == item);
     let url = contextualizeURL(item.url, form_thread);
     let status = makeStatusText(item, form_thread);
 
     return html`
+        ${idx ? html`<span style="align-self: center;">›</span>` : ''}
         <button class=${active ? 'active' : ''}
                 @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
             <div style="flex: 1;">${item.title}</div>
@@ -332,11 +333,14 @@ function renderDropItem(item) {
 }
 
 function makeStatusText(item, thread) {
+    if (goupile.isLocked())
+        return '';
+
     let status = computeStatus(item, thread);
 
     if (status.complete) {
         return '✓\uFE0E';
-    } else if (status.filled) {
+    } else if (status.filled && item.progress) {
         let progress = Math.floor(100 * status.filled / status.total);
         return html`${progress}%`;
     } else {
@@ -730,8 +734,8 @@ function toggleTagFilter(tag) {
 }
 
 async function renderForm() {
-    let show_menu = !goupile.isLocked() && (route.page.menu.chain.length > 2 ||
-                                            route.page.menu.chain[0].children.length > 1);
+    let show_menu = (route.page.menu.chain.length > 2 ||
+                     route.page.menu.chain[0].children.length > 1);
     let menu_is_wide = isMenuWide(route.page.menu);
 
     return html`
@@ -753,7 +757,7 @@ async function renderForm() {
                             if (status.complete) {
                                 cls += ' complete';
                                 text = 'Rempli';
-                            } else if (status.filled) {
+                            } else if (status.filled && item.progress) {
                                 let progress = Math.floor(100 * status.filled / status.total);
 
                                 text = html`
@@ -763,7 +767,7 @@ async function renderForm() {
                                     </div>
                                 `;
                             } else {
-                                text = 'Non rempli';
+                                text = '';
                             }
 
                             return html`
@@ -786,7 +790,7 @@ async function renderForm() {
                             if (status.complete) {
                                 cls += ' complete';
                                 text = 'Rempli';
-                            } else if (status.filled) {
+                            } else if (status.filled && item.progress) {
                                 let progress = Math.floor(100 * status.filled / status.total);
 
                                 text = html`
@@ -796,7 +800,7 @@ async function renderForm() {
                                     </div>
                                 `;
                             } else {
-                                text = 'Non rempli';
+                                text = '';
                             }
 
                             return html`
@@ -809,8 +813,18 @@ async function renderForm() {
                     </div>
                 </div>
 
-                <div id="ins_actions"></div>
+                <div id="ins_actions">
+                    <div style="flex: 1;"></div>
+                    ${renderShortcuts()}
+                </div>
             </div>
+            <div style="flex: 1;"></div>
+
+            ${app.shortcuts.length ? html`
+                <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
+                    ${renderShortcuts()}
+                </nav>
+            ` : ''}
         </div>
     `;
 }
@@ -855,8 +869,8 @@ async function renderPage() {
             triggerError(route.page.filename, err);
     }
 
-    let show_menu = !goupile.isLocked() && (route.page.menu.chain.length > 2 ||
-                                            route.page.menu.chain[0].children.length > 1);
+    let show_menu = (route.page.menu.chain.length > 2 ||
+                     route.page.menu.chain[0].children.length > 1);
     let menu_is_wide = isMenuWide(route.page.menu);
 
     // Quick access to page sections
@@ -884,14 +898,27 @@ async function renderPage() {
                         <h1>${route.page.title}</h1>
                         <ul>${page_sections.map(section => html`<li><a href=${'#' + section.anchor}>${section.title}</a></li>`)}</ul>
                     ` : ''}
+
+                    <div style="flex: 1;"></div>
+                    ${renderShortcuts()}
                 </div>
             </div>
             <div style="flex: 1;"></div>
 
-            ${model.actions.length ? html`
+            ${model.actions.length || app.shortcuts.length ? html`
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                    <div style="flex: 1;"></div>
+                    ${renderShortcuts()}
 
+                    <div style="flex: 1;"></div>
+                    ${model.actions.some(action => !action.options.always) ? html`
+                        <hr/>
+                        <div class="drop up right">
+                            <button @click=${UI.deployMenu}>Autres actions</button>
+                            <div>
+                                ${model.actions.map(action => action.render())}
+                            </div>
+                        </div>
+                    ` : ''}
                     ${Util.mapRange(0, model.actions.length, idx => {
                         let action = model.actions[model.actions.length - idx - 1];
 
@@ -911,12 +938,29 @@ async function renderPage() {
                             </div>
                         </div>
                     ` : ''}
-
-                    <div style="flex: 1;"></div>
                 </nav>
             ` : ''}
         </div>
     `;
+}
+
+function renderShortcuts() {
+    return app.shortcuts.map(shortcut => {
+        let cls = '';
+        let style = '';
+
+        if (shortcut.icon) {
+            cls += ' icon';
+            style += 'background-image: url(' + shortcut.icon + ');';
+        }
+        if (shortcut.color) {
+            cls += ' color';
+            style += `--color: ${shortcut.color};`;
+        }
+
+        return html`<button type="button" class=${cls} style=${style}
+                            @click=${shortcut.click}/>${shortcut.label}</button>`;
+    });
 }
 
 function addAutomaticActions(builder, model) {
@@ -1015,7 +1059,7 @@ function addAutomaticActions(builder, model) {
 
         if (!is_new && form_state.hasChanged()) {
             builder.action('-');
-            builder.action('Oublier les modifications', { color: '#db0a0a' }, async e => {
+            builder.action('Oublier les modifications', {}, async e => {
                 await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                        'Oublier', () => {});
 

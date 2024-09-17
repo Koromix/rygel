@@ -16,7 +16,10 @@
 .icon {
     background-repeat: no-repeat;
     background-size: 22px;
+    background-position: 2px center;
+    padding-left: 22px;
 }
+button.icon { text-align: right; }
 
 .icon.archives { background-image: url('archives.webp'); }
 .icon.code { background-image: url('code.webp'); }
