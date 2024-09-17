@@ -51,6 +51,7 @@ function ApplicationBuilder(app) {
             sequence: false,
             progress: true,
             enabled: true,
+            help: null,
 
             export_dialog: null,
             export_filter: null
@@ -69,6 +70,7 @@ function ApplicationBuilder(app) {
         sequence: makeOptionProperty('sequence'),
         progress: makeOptionProperty('progress'),
         enabled: makeOptionProperty('enabled'),
+        help: makeOptionProperty('help'),
 
         exportDialog: makeOptionProperty('export_dialog'),
         exportFilter: makeOptionProperty('export_filter')
@@ -112,7 +114,8 @@ function ApplicationBuilder(app) {
             store: current_store,
 
             enabled: options.enabled,
-            progress: options.progress
+            progress: options.progress,
+            help: options.help
         };
 
         let page = {
@@ -183,7 +186,8 @@ function ApplicationBuilder(app) {
                 store: current_store,
 
                 enabled: options.enabled,
-                progress: options.progress
+                progress: options.progress,
+                help: options.help
             };
 
             app.stores.push(current_store);

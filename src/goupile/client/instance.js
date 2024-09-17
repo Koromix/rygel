@@ -800,6 +800,7 @@ async function renderForm() {
                                 </div>
                             `;
                         })}
+                        ${route.page.menu.help ? html`<div class="ins_help">${route.page.menu.help}</div>` : ''}
                     </div>
 
                     <div id="ins_tiles">

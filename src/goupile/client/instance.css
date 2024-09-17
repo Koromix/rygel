@@ -250,6 +250,11 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     width: 250px;
     text-align: right;
 }
+.ins_help {
+    background: #f8f8f8;
+    padding: 0.5em;
+    margin-top: -6px;
+}
 
 .ins_tile {
     display: flex;
