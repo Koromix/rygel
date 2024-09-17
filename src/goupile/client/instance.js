@@ -1126,26 +1126,22 @@ function addAutomaticTags(variables) {
 }
 
 function renderPageMenu(item) {
-    if (!item.children.length)
+    if (!item.children.some(child => child.enabled))
         return '';
 
     return html`
         <a href=${contextualizeURL(item.url, form_thread)}>${item.title}</a>
         <ul>
             ${Util.map(item.children, item => {
+                if (!item.enabled)
+                    return '';
+
                 let active = route.page.menu.chain.includes(item);
                 let url = contextualizeURL(item.url, form_thread);
                 let status = makeStatusText(item, form_thread);
 
-                let cls = '';
-
-                if (active)
-                    cls += ' active';
-                if (!item.enabled)
-                    cls += ' disabled';
-
                 return html`
-                    <li><a class=${cls} href=${url}>
+                    <li><a class=${active ? 'active' : ''} href=${url}>
                         <div style="flex: 1;">${item.title}</div>
                         <span style="font-size: 0.9em;">${status}</span>
                     </a></li>
