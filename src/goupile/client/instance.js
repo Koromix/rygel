@@ -2077,8 +2077,10 @@ async function saveRecord(tid, entry, data, meta) {
 
     await records.save(tid, entry, ENV.version, meta.constraints, meta.signup);
 
-    if (!profile.userid)
-        await goupile.syncProfile();
+    if (!profile.userid) {
+        window.onbeforeunload = null;
+        window.location.href = window.location.href;
+    }
 }
 
 export {
