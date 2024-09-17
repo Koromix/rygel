@@ -804,7 +804,7 @@ async function renderForm() {
                     </div>
 
                     <div id="ins_tiles">
-                        ${route.page.menu.children.map(item => {
+                        ${route.page.menu.children.map((item, idx) => {
                             let url = contextualizeURL(item.url, form_thread);
                             let status = computeStatus(item, form_thread);
 
@@ -832,6 +832,7 @@ async function renderForm() {
 
                             return html`
                                 <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                                    <div class="index">${idx + 1}</div>
                                     <div class="title">${item.title}</div>
                                     <div class="status">${text}</div>
                                 </div>

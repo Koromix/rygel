@@ -274,6 +274,10 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     background: var(--active_color_n1);
     color: white;
 }
+.ins_tile > .index {
+    font-size: 0.9em;
+    opacity: 0.5;
+}
 .ins_tile > .title {
     font-weight: bold;
     text-align: center;
