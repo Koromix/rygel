@@ -56,7 +56,7 @@ html.instance {
 #ins_levels {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
 }
 #ins_tiles {
     display: flex;
@@ -236,6 +236,7 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     background: #dfdfdf;
     cursor: pointer;
     align-items: center;
+    border-radius: var(--block_rounding);
 }
 .ins_level:hover { filter: brightness(80%) contrast(120%); }
 .ins_level.complete {
@@ -252,8 +253,14 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
 }
 .ins_help {
     background: #f8f8f8;
-    padding: 0.5em;
-    margin-top: -6px;
+    padding: 0.6em;
+    margin-top: -10px;
+    border-bottom-left-radius: var(--block_rounding);
+    border-bottom-right-radius: var(--block_rounding);
+}
+.ins_level:has(+ .ins_help) {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .ins_tile {
@@ -268,6 +275,7 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     gap: 8px;
     background: #dfdfdf;
     cursor: pointer;
+    border-radius: var(--block_rounding);
 }
 .ins_tile:hover { filter: brightness(80%) contrast(120%); }
 .ins_tile.complete {
