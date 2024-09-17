@@ -80,12 +80,10 @@ function FormModel() {
     this.variables = [];
     this.actions = [];
 
-    this.errors = 0;
     this.valid = true;
-    this.triggered = false;
 
-    this.isValid = function() { return self.valid; };
-    this.hasErrors = function() { return !!self.errors; };
+    this.isValid = function() { return !self.widgets.some(intf => intf.errors.length); };
+    this.hasErrors = function() { return self.widgets.some(intf => intf.errors.some(err => !err.delay)); };
 
     this.render = function() {
         return html`
@@ -1816,25 +1814,23 @@ instead of:
     }
 
     function renderWrappedWidget(intf, frag) {
+        let errors = intf.errors.filter(err => !err.delay);
+
         let cls = 'fm_widget';
-        if (intf.errors.length)
+
+        if (errors.length)
             cls += ' error';
         if (intf.options.mandatory)
             cls += ' mandatory';
         if (intf.options.compact)
             cls += ' compact';
 
-        let classes = makeClasses(intf.options, 'fm_wrap');
-
-        if (intf.options.disabled)
-            classes += ' disabled';
-
         return html`
             <div class=${makeClasses(intf.options, 'fm_wrap')} data-line=${intf.line}>
                 <div class=${cls}>
                     ${frag}
-                    ${intf.errors.length ?
-                        html`<div class="fm_error">${intf.errors.map(err => html`${err}<br/>`)}</div>` : ''}
+                    ${errors.length ?
+                        html`<div class="fm_error">${errors.map(err => html`${err.msg}<br/>`)}</div>` : ''}
                 </div>
                 ${intf.options.help && Array.isArray(intf.options.help) ?
                     intf.options.help.map(help => help ? html`<div class="fm_help"><p>${help}</p></div>` : '') : ''}
@@ -1956,17 +1952,14 @@ instead of:
             changed: key.retain.just_changed.has(key.name),
 
             error: (msg, delay = false) => {
-                if (!delay || key.retain.take_delayed.has(key.name)) {
-                    msg = msg || '';
+                msg = msg || '';
+                delay &&= !key.retain.take_delayed.has(key.name);
 
-                    intf.errors.push(msg);
-                    model.errors++;
+                intf.errors.push({ msg: msg, delay: delay });
+                model.errors++;
 
-                    let note = data.openNote(key.ptr, 'errors', []);
-                    note.push({ key: key.name, message: msg });
-                }
-
-                model.valid = false;
+                let note = data.openNote(key.ptr, 'errors', []);
+                note.push({ key: key.name, message: msg });
 
                 return intf;
             }
@@ -1985,12 +1978,8 @@ instead of:
             variable.props = props;
         }
 
-        if (intf.options.mandatory && intf.missing) {
+        if (intf.options.mandatory && intf.missing)
             intf.error('Obligatoire !', intf.options.missing_mode !== 'error');
-
-            if (intf.options.missing_mode === 'disable')
-                model.valid = false;
-        }
 
         model.variables.push(intf);
         key.variables.set(key.name, intf);

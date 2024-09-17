@@ -1110,9 +1110,9 @@ function addAutomaticTags(variables) {
         } else if (status.filling == 'wait') {
             tags.push('wait');
         } else if (status.filling != null) {
-            // Do nothing but skip following tags
+            intf.errors.length = 0;
         } else if (intf.missing && intf.options.mandatory) {
-            if (form_entry.anchor >= 0 || intf.errors.length)
+            if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay))
                 tags.push('incomplete');
         } else if (intf.errors.length) {
             tags.push('error');
