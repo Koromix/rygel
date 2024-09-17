@@ -94,9 +94,9 @@ button:not(:disabled):hover { filter: brightness(80%) contrast(160%); }
     display: flex;
     height: 100%;
     box-sizing: border-box;
-    background-color: inherit;
+    background-color: var(--color, inherit);
     border: 0;
-    color: inherit;
+    color: white;
     text-decoration: none;
     border-radius: 0;
     overflow: hidden;

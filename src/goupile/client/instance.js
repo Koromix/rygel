@@ -349,6 +349,16 @@ function makeStatusText(item, thread) {
 }
 
 function computeStatus(item, thread) {
+    if (!item.enabled) {
+        let status = {
+            filled: 0,
+            total: 0,
+            complete: false
+        };
+
+        return status;
+    }
+
     if (item.children.length) {
         let status = {
             filled: 0,
@@ -754,7 +764,10 @@ async function renderForm() {
 
                             let cls = 'ins_level';
 
-                            if (status.complete) {
+                            if (!item.enabled) {
+                                cls += ' disabled';
+                                text = 'Non disponible';
+                            } else if (status.complete) {
                                 cls += ' complete';
                                 text = 'Rempli';
                             } else if (status.filled && item.progress) {
@@ -787,7 +800,10 @@ async function renderForm() {
                             let cls = 'ins_tile';
                             let text = null;
 
-                            if (status.complete) {
+                            if (!item.enabled) {
+                                cls += ' disabled';
+                                text = 'Non disponible';
+                            } else if (status.complete) {
                                 cls += ' complete';
                                 text = 'Rempli';
                             } else if (status.filled && item.progress) {
@@ -929,15 +945,6 @@ async function renderPage() {
 
                         return action.render();
                     })}
-                    ${model.actions.some(action => !action.options.always) ? html`
-                        <hr/>
-                        <div class="drop up right">
-                            <button @click=${UI.deployMenu}>Autres actions</button>
-                            <div>
-                                ${model.actions.map(action => action.render())}
-                            </div>
-                        </div>
-                    ` : ''}
                 </nav>
             ` : ''}
         </div>
@@ -1118,8 +1125,15 @@ function renderPageMenu(item) {
                 let url = contextualizeURL(item.url, form_thread);
                 let status = makeStatusText(item, form_thread);
 
+                let cls = '';
+
+                if (active)
+                    cls += ' active';
+                if (!item.enabled)
+                    cls += ' disabled';
+
                 return html`
-                    <li><a class=${active ? 'active' : ''} href=${url}>
+                    <li><a class=${cls} href=${url}>
                         <div style="flex: 1;">${item.title}</div>
                         <span style="font-size: 0.9em;">${status}</span>
                     </a></li>

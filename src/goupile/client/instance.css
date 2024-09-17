@@ -206,14 +206,20 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: flex; }
 #ins_tasks {
     display: none;
     bottom: 0;
-    background: #070707;
-    color: #d9d9d9;
-    filter: invert(100%);
+    background: #f4f2ef;
+    color: white;
+
+    --menu_color: #f4f2ef;
+    --menu_color_n1: #fdfbf8;
+}
+#ins_tasks button { color: black; }
+#ins_tasks button.color:not(:disabled) {
+    background-color: var(--color);
+    border: 1px solid var(--color);
+    color: white;
 }
 #ins_tasks > .hid { font-weight: bold; }
-html.small #ins_tasks {
-    display: flex;
-}
+html.small #ins_tasks { display: flex; }
 html:not(.small) #ui_panels > div:not(:only-child) #ins_tasks {
     display: flex;
     border: 12px solid black;
