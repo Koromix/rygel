@@ -1857,10 +1857,13 @@ function triggerError(filename, err) {
 function getFillingStatuses(intf) {
     let statuses = [];
 
-    statuses.push(['wait', 'En attente']);
-    statuses.push(['check', 'À vérifier']);
+    if (!goupile.isLocked()) {
+        statuses.push(['wait', 'En attente']);
+        statuses.push(['check', 'À vérifier']);
+    }
     if (intf.missing) {
         statuses.push(
+            ['nsp', 'Ne souhaite pas répondre'],
             ['na', 'Non applicable'],
             ['nd', 'Non disponible']
         );

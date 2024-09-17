@@ -2032,7 +2032,7 @@ instead of:
             <div class="fm_label">
                 <label for=${intf.id}>
                     ${intf.label}
-                    ${intf.options.annotate ? html`<span style="font-weight: normal;">(<a @click=${e => annotate(e, intf)}>annoter</a>)</span>` : ''}
+                    ${intf.options.annotate ? html`<span style="font-weight: normal;">(<a @click=${e => annotate(e, intf)}>commenter</a>)</span>` : ''}
                 </label>
 
                 ${tags.length ? html`
