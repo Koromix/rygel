@@ -1111,7 +1111,7 @@ function addAutomaticTags(variables) {
         } else if (intf.missing && intf.options.mandatory) {
             if (form_entry.anchor >= 0 || intf.errors.some(err => !err.delay))
                 tags.push('incomplete');
-        } else if (intf.errors.length) {
+        } else if (intf.errors.some(err => !err.delay)) {
             tags.push('error');
         }
 
