@@ -329,7 +329,7 @@ function renderDropItem(item, first) {
         `;
     } else {
         return html`
-            <span style="align-self: center; margin: 0 2px;">›</span>
+            <span style="align-self: center; margin: 0 6px;">›</span>
             <button class=${active ? 'active' : ''}
                     @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
                 <div style="flex: 1;">${item.title}</div>
