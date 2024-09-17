@@ -1339,7 +1339,7 @@ function FormBuilder(state, model) {
 
         let widgets = [];
         let render = (intf, id) => html`
-            <fieldset class="fm_container fm_section" id=${id || ''}>
+            <fieldset class=${makeClasses(options, 'fm_container', 'fm_section')} id=${id || ''}>
                 ${label ? html`<div class="fm_legend" style=${makeLegendStyle(options)}>
                                    <span @click=${e => handleSectionClick(e, label)}>${label}</span></div>` : ''}
                 ${deploy ? widgets.map(intf => intf.render()) : ''}
@@ -1373,7 +1373,7 @@ function FormBuilder(state, model) {
         options = expandOptions(options);
 
         let render = intf => html`
-            <fieldset class="fm_container fm_section error">
+            <fieldset class=${makeClasses(options, 'fm_container', 'fm_section', 'error')}>
                 <div class="fm_legend" style=${makeLegendStyle(options)}>${label || 'Liste des erreurs'}</div>
                 ${!self.hasErrors() ? 'Aucune erreur' : ''}
                 ${model.widgets.map(intf => {
@@ -1407,7 +1407,7 @@ function FormBuilder(state, model) {
         let widgets = [];
 
         let render = intf => tabs.length ? html`
-            <div class="fm_container fm_section tabs">
+            <div class=${makeClasses(options, 'fm_container', 'fm_section', 'tabs')}>
                 <div class="fm_tabs">
                     ${tabs.map((tab, idx) =>
                         html`<button type="button" class=${!tab.disabled && idx === tab_idx ? 'active' : ''}
@@ -1595,7 +1595,7 @@ instead of:
 
         let widgets = [];
         let render = intf => html`
-            <div class="fm_container fm_columns">
+            <div class=${makeClasses(options, 'fm_container', 'fm_columns')}>
                 ${widgets.map(intf => html`
                     <div style=${options.wide ? 'flex: 1;' : ''}>
                         ${intf.render()}
@@ -1824,8 +1824,13 @@ instead of:
         if (intf.options.compact)
             cls += ' compact';
 
+        let classes = makeClasses(intf.options, 'fm_wrap');
+
+        if (intf.options.disabled)
+            classes += ' disabled';
+
         return html`
-            <div class=${intf.options.disabled ? 'fm_wrap disabled' : 'fm_wrap'} data-line=${intf.line}>
+            <div class=${makeClasses(intf.options, 'fm_wrap')} data-line=${intf.line}>
                 <div class=${cls}>
                     ${frag}
                     ${intf.errors.length ?
@@ -1868,6 +1873,15 @@ instead of:
             style += `background: ${options.color};`;
 
         return style;
+    }
+
+    function makeClasses(options, ...classes) {
+        classes = classes.filter(cls => cls != null);
+
+        if (options.cls)
+            classes.push(options.cls);
+
+        return classes.join(' ');
     }
 
     function makeWidget(type, id, label, func, options = {}) {
