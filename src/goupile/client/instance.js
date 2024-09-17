@@ -1128,7 +1128,7 @@ function renderPageMenu(item) {
         return '';
 
     return html`
-        <h1>${item.title}</h1>
+        <a href=${contextualizeURL(item.url, form_thread)}>${item.title}</a>
         <ul>
             ${Util.map(item.children, item => {
                 let active = route.page.menu.chain.includes(item);
