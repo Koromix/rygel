@@ -200,10 +200,8 @@ async function runTasks(sync) {
 }
 
 function renderMenu() {
-    let show_menu = (route.page.menu.chain.length > 2 ||
-                     route.page.menu.chain[0].children.length > 1);
+    let show_menu = true;
     let menu_is_wide = isMenuWide(route.page.menu);
-    let show_title = !show_menu;
 
     if (!UI.isPanelActive('editor') && !UI.isPanelActive('view'))
         show_menu = false;
@@ -247,12 +245,11 @@ function renderMenu() {
             ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
 
-            ${show_menu && !menu_is_wide ? Util.map(route.page.menu.chain[0].children, renderDropItem) : ''}
-            ${show_menu && menu_is_wide ? route.page.menu.chain.map(renderDropItem) : ''}
-            ${show_title ? html`<button title=${route.page.title} class="active">
-                ${form_thread.locked ? '🔒' : ''}
-                ${route.page.title}
-            </button>` : ''}
+            ${show_menu && !menu_is_wide ? html`
+                ${renderDropItem(route.page.menu.chain[0], true)}
+                ${Util.map(route.page.menu.chain[0].children, item => renderDropItem(item, false))}
+            ` : ''}
+            ${show_menu && menu_is_wide ? route.page.menu.chain.map((item, idx) => renderDropItem(item, !idx)) : ''}
             ${app.panels.data && (!UI.isPanelActive('view') || form_thread.saved) ? html`
                 <div style="width: 15px;"></div>
                 <button class="icon new" @click=${UI.wrap(e => go(e, route.page.menu.chain[0].url))}>Ajouter</button>
@@ -317,15 +314,14 @@ function isMenuWide(menu) {
     return false;
 }
 
-function renderDropItem(item, idx) {
+function renderDropItem(item, first) {
     let active = (route.page.menu == item);
     let url = contextualizeURL(item.url, form_thread);
     let status = makeStatusText(item, form_thread);
 
-    if (idx) {
+    if (first) {
         return html`
-            ${idx ? html`<span style="align-self: center; margin: 0 2px;">›</span>` : ''}
-            <button class=${active ? 'active' : ''}
+            <button class=${'icon home' + (active ? ' active' : '')}
                     @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
                 <div style="flex: 1;">${item.title}</div>
                 ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
@@ -333,7 +329,8 @@ function renderDropItem(item, idx) {
         `;
     } else {
         return html`
-            <button class=${'icon home' + (active ? ' active' : '')}
+            <span style="align-self: center; margin: 0 2px;">›</span>
+            <button class=${active ? 'active' : ''}
                     @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
                 <div style="flex: 1;">${item.title}</div>
                 ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
