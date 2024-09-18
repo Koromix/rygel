@@ -30,6 +30,7 @@ button.icon { text-align: right; }
 .icon.instances { background-image: url('instances.webp'); }
 .icon.lines { background-image: url('lines.webp'); }
 .icon.lock { background-image: url('lock.webp'); }
+.icon.microphone { background-image: url('microphone.webp'); }
 .icon.new { background-image: url('new.webp'); }
 .icon.offline { background-image: url('offline.webp'); }
 .icon.online { background-image: url('online.webp'); }

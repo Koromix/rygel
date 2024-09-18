@@ -259,9 +259,10 @@ function FormBuilder(state, model) {
         key = decodeKey(key, options);
 
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
+        let extra = makeTextExtra(key, options, value);
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf)}
+            ${makeLabel(intf, extra)}
             ${makePrefixOrSuffix('fm_prefix', options.prefix, value)}
             <input id=${id} type="text" class="fm_input" style=${makeInputStyle(options)}
                    placeholder=${options.placeholder || ''}
@@ -283,9 +284,10 @@ function FormBuilder(state, model) {
         key = decodeKey(key, options);
 
         let value = readValue(key, options, value => (value != null) ? String(value) : undefined);
+        let extra = makeTextExtra(key, options, value);
 
         let render = (intf, id) => renderWrappedWidget(intf, html`
-            ${makeLabel(intf)}
+            ${makeLabel(intf, extra)}
             <textarea id=${id} class="fm_input" style=${makeInputStyle(options)}
                    rows=${options.rows || 3} cols=${options.cols || 30}
                    placeholder=${options.placeholder || ''}
@@ -2012,7 +2014,7 @@ instead of:
         }
     }
 
-    function makeLabel(intf) {
+    function makeLabel(intf, extra = null) {
         if (intf.label == null)
             return '';
 
@@ -2031,6 +2033,7 @@ instead of:
                 ` : ''}
 
                 ${intf.options.annotate ? html`<a class="fm_annotate" @click=${e => annotate(e, intf)} title="Ajouter des annotations">🖊\uFE0E</a>` : ''}
+                ${extra != null ? html`<span style="font-weight: normal;">${extra}</span>` : ''}
             </div>
         `;
     }
@@ -2049,6 +2052,118 @@ instead of:
             return html`<span class=${cls}>${text != null ? text : ''}</span>`;
         } else {
             return '';
+        }
+    }
+
+    function makeTextExtra(key, options, value) {
+        let extra = '';
+
+        if (options.voice) {
+            if (!ENV.use_offline)
+               throw new Error('Enable offline use to support voice recognition');
+
+            let language = null;
+
+            switch (options.voice) {
+                case 'en': { language = 'vosk-model-small-en-us-0.15'; } break;
+                case 'fr': { language = 'vosk-model-small-fr-pguyot-0.3'; } break;
+
+                default: throw new Error(`Unsupported '${options.voice}' for voice recognition`);
+            }
+
+            extra = html`${extra}${extra ? ', ' : ''}<a @click=${UI.wrap(e => handleVocalClick(e, key, value, language))}>dicter</a>`;
+        }
+
+        if (extra)
+            extra = html`(${extra})`;
+
+        return extra;
+    }
+
+    async function handleVocalClick(e, key, value, language) {
+        if (!isModifiable(key))
+            return;
+
+        if (typeof loadVosklet === 'undefined')
+            await Net.loadScript(`${ENV.urls.static}vosklet/Vosklet.min.js`);
+
+        let vosklet = null;
+        let stream = null;
+
+        try {
+            let ctx = new AudioContext({ sinkId: { type: 'none' } });
+
+            vosklet = await loadVosklet();
+
+            let url = `${ENV.urls.static}vosklet/${language}.tar`;
+            let model = await vosklet.createModel(url, language, language);
+
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: false,
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    channelCount: 1
+                }
+            });
+
+            let microphone = ctx.createMediaStreamSource(stream);
+            let recognizer = await vosklet.createRecognizer(model, ctx.sampleRate);
+            let transferer = await vosklet.createTransferer(ctx, 128 * 150);
+            transferer.port.onmessage = ev => recognizer.acceptWaveform(ev.data);
+
+            let textarea = document.createElement('textarea');
+            textarea.className = 'fm_input';
+            textarea.setAttribute('style', 'width: 400px;');
+            textarea.setAttribute('readonly', true);
+            textarea.rows = 12;
+
+            let text = value ?? '';
+            let lines = null;
+
+            await UI.dialog(e, null, {}, (d, resolve, reject) => {
+                if (lines == null) {
+                    lines = text.split('\n');
+                    lines.push('');
+
+                    recognizer.addEventListener('partialResult', ev => {
+                        lines[lines.length - 1] = JSON.parse(ev.detail).partial;
+                        refresh();
+                    });
+                    recognizer.addEventListener('result', ev => {
+                        lines[lines.length - 1] = JSON.parse(ev.detail).text;
+                        lines.push('');
+
+                        refresh();
+                    });
+
+                    microphone.connect(transferer);
+                }
+
+                d.output(html`
+                    <div class="fm_wrap">
+                        <div class="fm_widget">${textarea}</div>
+                    </div>
+                `);
+
+                d.action('Accepter', {}, () => {
+                    updateValue(key, text);
+                    resolve(text);
+                });
+
+                function refresh() {
+                    text = lines.join('\n').trim();
+                    textarea.value = text;
+                }
+            });
+        } finally {
+            if (stream != null) {
+                for (let track of stream.getTracks())
+                    track.stop();
+            }
+
+            if (vosklet != null)
+                vosklet.cleanUp();
         }
     }
 
