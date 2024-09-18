@@ -122,12 +122,12 @@ static const char *TagsToJson(Span<const char *const> tags, Allocator *alloc)
     return buf.Leak().ptr;
 }
 
-static bool PrepareSignup(const InstanceHolder *instance, const char *username, const char *tid,
+static bool PrepareSignup(const InstanceHolder *instance, const char *tid, const char *username,
                           SignupInfo &info, Allocator *alloc, smtp_MailContent *out_mail)
 {
     Span<char> token;
     {
-        Span<const char> msg = Fmt(alloc, R"({"username": "%1", "tid": "%2"})", username, tid);
+        Span<const char> msg = Fmt(alloc, R"({"key": "%1"})", username);
 
         Span<uint8_t> cypher = AllocateSpan<uint8_t>(alloc, msg.len + crypto_box_SEALBYTES);
 
@@ -338,7 +338,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                         signup.enable = false;
                     } break;
                     case json_TokenType::StartObject: {
-                        signup.enable = (session->userid < 0);
+                        signup.enable = (session->userid <= 0);
 
                         parser.ParseObject();
                         while (parser.InObject()) {
@@ -627,7 +627,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         do {
             smtp_MailContent content;
 
-            if (!PrepareSignup(instance, session->username, tid, signup, io->Allocator(), &content))
+            if (!PrepareSignup(instance, tid, session->username, signup, io->Allocator(), &content))
                 break;
             if (!SendMail(signup.to, content))
                 break;

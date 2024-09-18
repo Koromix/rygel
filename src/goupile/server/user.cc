@@ -728,7 +728,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
     sqlite3_bind_text(stmt, 1, key, -1, SQLITE_STATIC);
 
     if (!stmt.Step()) {
-        if (stmt.IsValid())
+        if (!stmt.IsValid())
             return nullptr;
         stmt.Finalize();
 
@@ -904,7 +904,7 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
     // Parse JSON
     const char *email = nullptr;
     const char *sms = nullptr;
-    const char *tid = nullptr;
+    const char *id = nullptr;
     const char *username = nullptr;
     HeapArray<const char *> claims;
     const char *lock = nullptr;
@@ -917,12 +917,12 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
             const char *key = "";
             parser.ParseKey(&key);
 
-            if (TestStr(key, "email")) {
+            if (TestStr(key, "key") || TestStr(key, "id")) {
+                parser.ParseString(&id);
+            } else if (TestStr(key, "email")) {
                 parser.ParseString(&email);
             } else if (TestStr(key, "sms")) {
                 parser.ParseString(&sms);
-            } else if (TestStr(key, "tid") || TestStr(key, "id")) {
-                parser.ParseString(&tid);
             } else if (TestStr(key, "username")) {
                 parser.ParseString(&username);
             } else if (TestStr(key, "claims")) {
@@ -954,6 +954,10 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
     {
         bool valid = true;
 
+        if (!id || !id[0]) {
+            LogError("Missing or empty key");
+            valid = false;
+        }
         if (email && !email[0]) {
             LogError("Empty email address");
             valid = false;
@@ -962,12 +966,9 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
             LogError("Empty SMS phone number");
             valid = false;
         }
-        if (!tid || !tid[0]) {
-            LogError("Missing or empty token id");
-            valid = false;
-        }
+
         if (!username || !username[0]) {
-            username = tid;
+            username = id;
         }
 
         if (!valid) {
@@ -978,16 +979,16 @@ void HandleSessionToken(http_IO *io, InstanceHolder *instance)
 
     if (email || sms) {
         // Avoid confirmation event (spam for mails, and SMS are costly)
-        RegisterEvent(request.client_addr, tid);
+        RegisterEvent(request.client_addr, id);
     }
 
-    if (CountEvents(request.client_addr, tid) >= BanThreshold) {
+    if (CountEvents(request.client_addr, id) >= BanThreshold) {
         LogError("You are blocked for %1 minutes after excessive login failures", (BanTime + 59000) / 60000);
         io->SendError(403);
         return;
     }
 
-    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, tid, username, email, sms, lock);
+    RetainPtr<SessionInfo> session = CreateAutoSession(instance, SessionType::Token, id, username, email, sms, lock);
     if (!session)
         return;
 
