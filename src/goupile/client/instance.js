@@ -984,11 +984,7 @@ function addAutomaticActions(builder, model) {
         builder.errorList();
 
     if (route.page.store != null) {
-        let force = builder.justTriggered();
-
-        let label = force ? '+Forcer l\'enregistrement' : '+Enregistrer';
-        let color = force ? null : '#2d8261';
-
+        let label = '+Enregistrer';
         let is_new = (form_entry.anchor < 0);
 
         if (is_new && route.page.options.sequence)
@@ -998,9 +994,8 @@ function addAutomaticActions(builder, model) {
         let can_lock = form_thread.saved && route.page.options.has_lock &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
-        builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: color }, async () => {
-            if (!force)
-                form_builder.triggerErrors();
+        builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: '#2d8261' }, async () => {
+            form_builder.triggerErrors();
 
             await data_mutex.run(async () => {
                 await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
