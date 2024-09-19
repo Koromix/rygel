@@ -23,7 +23,7 @@
 
 namespace RG {
 
-static const int SchemaVersion = 5;
+static const int SchemaVersion = 6;
 
 struct DiskData {
     int64_t id;
@@ -268,9 +268,17 @@ bool BackupSet::Open(const char *db_filename, bool create)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 5: {
+                    bool success = db.RunMany(R"(
+                        UPDATE files SET path = replace(path, '\\', '/');
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(SchemaVersion == 5);
+                static_assert(SchemaVersion == 6);
             }
 
             if (!db.SetUserVersion(SchemaVersion))
@@ -300,7 +308,7 @@ bool BackupSet::Open(const char *db_filename, bool create)
             }
 
             src.id = sqlite3_column_int64(stmt, 0);
-            src.root = NormalizePath(src_dir, (int)NormalizeFlag::EndWithSeparator, &str_alloc).ptr;
+            src.root = NormalizePath(src_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &str_alloc).ptr;
 
             sources.Append(src);
         }
@@ -342,10 +350,13 @@ bool BackupSet::Refresh()
     while (stmt.Step()) {
         DiskData disk = {};
 
+        const char *name = (const char *)sqlite3_column_text(stmt, 2);
+        const char *root = (const char *)sqlite3_column_text(stmt, 3);
+
         disk.id = sqlite3_column_int64(stmt, 0);
         CopyString((const char *)sqlite3_column_text(stmt, 1), disk.uuid);
-        disk.name = DuplicateString((const char *)sqlite3_column_text(stmt, 2), &str_alloc).ptr;
-        disk.root = NormalizePath((const char *)sqlite3_column_text(stmt, 3), (int)NormalizeFlag::EndWithSeparator, &str_alloc).ptr;
+        disk.name = DuplicateString(name, &str_alloc).ptr;
+        disk.root = NormalizePath(root, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &str_alloc).ptr;
         disk.total = sqlite3_column_int64(stmt, 4);
         disk.used = sqlite3_column_int64(stmt, 5);
         disk.files = sqlite3_column_int64(stmt, 6);
@@ -532,7 +543,7 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir)
     EnumResult ret = EnumerateDirectory(src_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
         switch (file_info.type) {
             case FileType::Directory: {
-                const char *dirname = Fmt(&temp_alloc, "%1%2%/", src_dir, basename).ptr;
+                const char *dirname = Fmt(&temp_alloc, "%1%2/", src_dir, basename).ptr;
 
                 switch (DistributeNew(dirname)) {
                     case DistributeResult::Complete: {} break;
@@ -816,7 +827,7 @@ bool BackupContext::BackupNew()
             char drive = LowerAscii(src_filename[0]);
             const char *remain = TrimStrLeft(src_filename + 2, RG_PATH_SEPARATORS).ptr;
 
-            dest_filename = Fmt(&temp_alloc, "%1%2%/%3", disk->root, drive, remain).ptr;
+            dest_filename = Fmt(&temp_alloc, "%1%2/%3", disk->root, drive, remain).ptr;
         } else {
             const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
             dest_filename = Fmt(&temp_alloc, "%1%2", disk->root, remain).ptr;
@@ -968,7 +979,7 @@ bool BackupContext::DeleteOld(const char *dest_dir, Size root_len)
     EnumerateDirectory(dest_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
         switch (file_info.type) {
             case FileType::Directory: {
-                const char *dirname = Fmt(&temp_alloc, "%1%2%/", dest_dir, basename).ptr;
+                const char *dirname = Fmt(&temp_alloc, "%1%2/", dest_dir, basename).ptr;
 
                 bool empty = DeleteOld(dirname, root_len);
 
@@ -985,6 +996,15 @@ bool BackupContext::DeleteOld(const char *dest_dir, Size root_len)
 
                 const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
                 const char *origin = filename + root_len;
+
+#if defined(_WIN32)
+                if (origin[0] == '/' && IsAsciiAlpha(origin[1]) && origin[2] == '/') {
+                    char drive = UpperAscii(origin[1]);
+                    Span<const char> remain = TrimStrLeft(origin + 2, RG_PATH_SEPARATORS);
+
+                    origin = Fmt(&temp_alloc, "%1:/%2", drive, remain).ptr;
+                }
+#endif
 
                 sq_Statement stmt;
                 if (!set->db.Prepare(R"(SELECT f.id, IIF(f.status <> 'removed', 1, 0)
@@ -1252,7 +1272,7 @@ Options:
         return 1;
     }
 
-    src_dir = NormalizePath(src_dir, (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
+    src_dir = NormalizePath(src_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &temp_alloc).ptr;
 
     BackupSet set;
     if (!set.Open(db_filename))
@@ -1348,7 +1368,7 @@ private:
 IntegrateContext::IntegrateContext(BackupSet *set, int64_t disk_id, const char *disk_dir)
     : set(set), changeset(GetRandomInt64(0, INT64_MAX)), disk_id(disk_id)
 {
-    this->disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
+    this->disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &temp_alloc).ptr;
 }
 
 bool IntegrateContext::AddNew(const char *src_dir)
@@ -1356,7 +1376,7 @@ bool IntegrateContext::AddNew(const char *src_dir)
     EnumResult ret = EnumerateDirectory(src_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
         switch (file_info.type) {
             case FileType::Directory: {
-                const char *dirname = Fmt(&temp_alloc, "%1%2%/", src_dir, basename).ptr;
+                const char *dirname = Fmt(&temp_alloc, "%1%2/", src_dir, basename).ptr;
 
                 if (!AddNew(dirname))
                     return false;
@@ -1467,7 +1487,7 @@ Options:
         return 1;
     }
 
-    disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
+    disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &temp_alloc).ptr;
 
     BackupSet set;
     if (!set.Open(db_filename))

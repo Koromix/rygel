@@ -4085,7 +4085,8 @@ Span<const char> GetPathExtension(Span<const char> filename,
 CompressionType GetPathCompression(Span<const char> filename);
 
 enum class NormalizeFlag {
-    EndWithSeparator = 1 << 0
+    EndWithSeparator = 1 << 0,
+    ForceSlash = 1 << 1
 };
 
 Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory, unsigned int flags, Allocator *alloc);

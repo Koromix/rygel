@@ -3314,11 +3314,13 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
     HeapArray<char> buf(alloc);
     Size parts_count = 0;
 
+    char separator = (flags & (int)NormalizeFlag::ForceSlash) ? '/' : *RG_PATH_SEPARATORS;
+
     const auto append_normalized_path = [&](Span<const char> path) {
         if (!buf.len && PathIsAbsolute(path)) {
             Span<const char> prefix = SplitStrAny(path, RG_PATH_SEPARATORS, &path);
             buf.Append(prefix);
-            buf.Append(*RG_PATH_SEPARATORS);
+            buf.Append(separator);
         }
 
         while (path.len) {
@@ -3330,13 +3332,13 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
                     parts_count--;
                 } else {
                     buf.Append("..");
-                    buf.Append(*RG_PATH_SEPARATORS);
+                    buf.Append(separator);
                 }
             } else if (part == ".") {
                 // Skip
             } else if (part.len) {
                 buf.Append(part);
-                buf.Append(*RG_PATH_SEPARATORS);
+                buf.Append(separator);
                 parts_count++;
             }
         }
@@ -3356,8 +3358,14 @@ Span<char> NormalizePath(Span<const char> path, Span<const char> root_directory,
         buf.len--;
     }
     if (flags & (int)NormalizeFlag::EndWithSeparator) {
-        buf.Append(*RG_PATH_SEPARATORS);
+        buf.Append(separator);
     }
+
+#if defined(_WIN32)
+    if (buf.len >= 2 && IsAsciiAlpha(buf[0]) && buf[1] == ':') {
+        buf[0] = UpperAscii(buf[0]);
+    }
+#endif
 
     // NUL terminator
     buf.Trim(1);
