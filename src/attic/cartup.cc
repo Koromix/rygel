@@ -23,7 +23,7 @@
 
 namespace RG {
 
-static const int SchemaVersion = 4;
+static const int SchemaVersion = 5;
 
 struct DiskData {
     int64_t id;
@@ -36,6 +36,7 @@ struct DiskData {
     int64_t used;
     int64_t files;
 
+    int64_t added;
     int64_t changed;
     int64_t removed;
 };
@@ -239,9 +240,37 @@ bool BackupSet::Open(const char *db_filename, bool create)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 4: {
+                    bool success = db.RunMany(R"(
+                        DROP INDEX files_p;
+
+                        ALTER TABLE files RENAME TO files_BAK;
+
+                        CREATE TABLE files (
+                            id INTEGER PRIMARY KEY,
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            disk_id INTEGER REFERENCES disks (id),
+                            status TEXT CHECK(status IN ('ok', 'added', 'changed', 'removed')) NOT NULL,
+                            changeset INTEGER
+                        );
+                        CREATE UNIQUE INDEX files_p ON files (path);
+
+                        INSERT INTO files (id, path, mtime, size, disk_id, status)
+                            SELECT id, origin, mtime, size, disk_id, IIF(outdated = 0, 'ok', 'changed')
+                            FROM files_BAK
+                            WHERE origin IS NOT NULL;
+
+                        DROP TABLE files_BAK;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(SchemaVersion == 4);
+                static_assert(SchemaVersion == 5);
             }
 
             if (!db.SetUserVersion(SchemaVersion))
@@ -302,8 +331,9 @@ bool BackupSet::Refresh()
 
     sq_Statement stmt;
     if (!db.Prepare(R"(SELECT d.id, d.uuid, d.name, d.root, d.size, SUM(f.size), COUNT(f.id),
-                              SUM(IIF(f.outdated = 1 AND f.origin IS NOT NULL, 1, 0)) AS changed,
-                              SUM(IIF(f.outdated = 1 AND f.origin IS NULL, 1, 0)) AS removed
+                              SUM(IIF(f.status = 'added', 1, 0)) AS added,
+                              SUM(IIF(f.status = 'changed', 1, 0)) AS changed,
+                              SUM(IIF(f.status = 'removed', 1, 0)) AS removed
                        FROM disks d
                        LEFT JOIN files f ON (f.disk_id = d.id)
                        GROUP BY d.id)", &stmt))
@@ -315,12 +345,13 @@ bool BackupSet::Refresh()
         disk.id = sqlite3_column_int64(stmt, 0);
         CopyString((const char *)sqlite3_column_text(stmt, 1), disk.uuid);
         disk.name = DuplicateString((const char *)sqlite3_column_text(stmt, 2), &str_alloc).ptr;
-        disk.root = DuplicateString((const char *)sqlite3_column_text(stmt, 3), &str_alloc).ptr;
+        disk.root = NormalizePath((const char *)sqlite3_column_text(stmt, 3), (int)NormalizeFlag::EndWithSeparator, &str_alloc).ptr;
         disk.total = sqlite3_column_int64(stmt, 4);
         disk.used = sqlite3_column_int64(stmt, 5);
         disk.files = sqlite3_column_int64(stmt, 6);
-        disk.changed = sqlite3_column_int64(stmt, 7);
-        disk.removed = sqlite3_column_int64(stmt, 8);
+        disk.added = sqlite3_column_int64(stmt, 7);
+        disk.changed = sqlite3_column_int64(stmt, 8);
+        disk.removed = sqlite3_column_int64(stmt, 9);
 
         disks.Append(disk);
     }
@@ -467,11 +498,8 @@ class DistributeContext {
 public:
     DistributeContext(BackupSet *set);
 
-    DistributeResult DistributeNew(const char *src_dir) { return DistributeNew(src_dir, ""); }
+    DistributeResult DistributeNew(const char *src_dir);
     bool DeleteOld();
-
-private:
-    DistributeResult DistributeNew(const char *src_dir, const char *dirname);
 };
 
 DistributeContext::DistributeContext(BackupSet *set)
@@ -492,22 +520,21 @@ DistributeContext::DistributeContext(BackupSet *set)
     }
 }
 
-DistributeResult DistributeContext::DistributeNew(const char *src_dir, const char *dirname)
+DistributeResult DistributeContext::DistributeNew(const char *src_dir)
 {
     if (!usages.len) {
         LogError("No backup disk is defined");
         return DistributeResult::Error;
     }
 
-    const char *enum_dir = Fmt(&temp_alloc, "%1%2", src_dir, dirname).ptr;
     bool complete = true;
 
-    EnumResult ret = EnumerateDirectory(enum_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+    EnumResult ret = EnumerateDirectory(src_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
         switch (file_info.type) {
             case FileType::Directory: {
-                const char *path = Fmt(&temp_alloc, "%1%2%/", dirname, basename).ptr;
+                const char *dirname = Fmt(&temp_alloc, "%1%2%/", src_dir, basename).ptr;
 
-                switch (DistributeNew(src_dir, path)) {
+                switch (DistributeNew(dirname)) {
                     case DistributeResult::Complete: {} break;
                     case DistributeResult::Partial: { complete = false; } break;
                     case DistributeResult::Error: return false;
@@ -515,11 +542,10 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir, const cha
             } break;
 
             case FileType::File: {
-                const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
-                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
+                const char *filename = Fmt(&temp_alloc, "%1%2", src_dir, basename).ptr;
 
                 sq_Statement stmt;
-                if (!set->db.Prepare("SELECT disk_id, size FROM files WHERE path = ?1", &stmt, path))
+                if (!set->db.Prepare("SELECT disk_id, size FROM files WHERE path = ?1", &stmt, filename))
                     return false;
 
                 UsageInfo *usage = nullptr;
@@ -560,7 +586,7 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir, const cha
                     }
 
                     if (!usage) {
-                        LogError("Not enough space for '%1'", path);
+                        LogError("Not enough space for '%1'", filename);
 
                         complete = false;
                         return true;
@@ -569,17 +595,16 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir, const cha
 
                 usage->used += file_info.size;
 
-                if (!set->db.Run(R"(INSERT INTO files (path, origin, mtime, size, disk_id, outdated, changeset)
-                                    VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6)
-                                    ON CONFLICT (path) DO UPDATE SET origin = excluded.origin,
-                                                                     mtime = excluded.mtime,
+                if (!set->db.Run(R"(INSERT INTO files (path, mtime, size, disk_id, status, changeset)
+                                    VALUES (?1, ?2, ?3, ?4, 'added', ?5)
+                                    ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
                                                                      size = excluded.size,
                                                                      disk_id = excluded.disk_id,
-                                                                     outdated = IIF(mtime <> excluded.mtime OR
-                                                                                    size <> excluded.size OR
-                                                                                    disk_id <> excluded.disk_id, 1, outdated),
+                                                                     status = IIF(mtime <> excluded.mtime OR
+                                                                                  size <> excluded.size OR
+                                                                                  disk_id <> excluded.disk_id, 'changed', status),
                                                                      changeset = excluded.changeset)",
-                                 path, filename, file_info.mtime, file_info.size, usage->id, changeset))
+                                 filename, file_info.mtime, file_info.size, usage->id, changeset))
                     return false;
             } break;
 
@@ -587,8 +612,8 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir, const cha
             case FileType::Device:
             case FileType::Pipe:
             case FileType::Socket: {
-                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
-                LogWarning("Ignoring special file '%1' (%2)", path, FileTypeNames[(int)file_info.type]);
+                const char *filename = Fmt(&temp_alloc, "%1%2", src_dir, basename).ptr;
+                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
             } break;
         }
 
@@ -605,7 +630,7 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir, const cha
 
 bool DistributeContext::DeleteOld()
 {
-    bool success = set->db.Run("UPDATE files SET origin = NULL, outdated = 1 WHERE changeset IS NOT ?1", changeset);
+    bool success = set->db.Run("UPDATE files SET status = 'removed' WHERE changeset IS NOT ?1", changeset);
     return success;
 }
 
@@ -662,8 +687,11 @@ static void PrintStatus(const BackupSet &set)
             PrintLn("    Used: %!..+%1/%2%!0 (%3%%)", FmtDiskSize(disk.used), FmtDiskSize(disk.total), FmtDouble(usage * 100.0, 1));
             PrintLn("    Files: %!..+%1%!0", disk.files);
 
-            if (disk.changed || disk.removed) {
-                PrintLn("    Changes: %!G.++%1%!0 / %!R.+-%2%!0", disk.changed, disk.removed);
+            if (disk.added || disk.changed || disk.removed) {
+                int64_t changed = disk.added + disk.changed;
+                int64_t removed = disk.removed + disk.changed;
+
+                PrintLn("    Changes: %!G.++%1%!0 / %!R.+-%2%!0", changed, removed);
             } else {
                 PrintLn("    Changes: none");
             }
@@ -744,10 +772,10 @@ public:
     bool DeleteOld();
 
 private:
-    bool DeleteOld(const char *dirname);
+    bool DeleteOld(const char *dirname, Size root_len);
 
     bool HashFile(int fd, const char *filename, Span<uint8_t> buf, uint8_t out_hash[32]);
-    bool CopyFile(int src_fd, const char *src_filename,int dest_fd, const char *dest_filename, int64_t size, int64_t mtime);
+    bool CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size, int64_t mtime);
 };
 
 static bool IsTimeEquivalent(int64_t time1, int64_t time2)
@@ -759,10 +787,10 @@ static bool IsTimeEquivalent(int64_t time1, int64_t time2)
 bool BackupContext::BackupNew()
 {
     sq_Statement stmt;
-    if (!set->db.Prepare(R"(SELECT f.id, f.origin, f.path, f.mtime, f.size
+    if (!set->db.Prepare(R"(SELECT f.id, f.path, f.mtime, f.size
                             FROM disks d
                             INNER JOIN files f ON (f.disk_id = d.id)
-                            WHERE d.uuid = ?1 AND f.origin IS NOT NULL)",
+                            WHERE d.uuid = ?1 AND f.status <> 'removed')",
                          &stmt, disk->uuid))
         return false;
 
@@ -778,11 +806,27 @@ bool BackupContext::BackupNew()
     while (stmt.Step()) {
         int64_t id = sqlite3_column_int64(stmt, 0);
         const char *src_filename = (const char *)sqlite3_column_text(stmt, 1);
-        const char *path = (const char *)sqlite3_column_text(stmt, 2);
-        int64_t mtime = sqlite3_column_int64(stmt, 3);
-        int64_t size = sqlite3_column_int64(stmt, 4);
+        int64_t mtime = sqlite3_column_int64(stmt, 2);
+        int64_t size = sqlite3_column_int64(stmt, 3);
 
-        const char *dest_filename = Fmt(&temp_alloc, "%1%2", disk->root, path).ptr;
+        const char *dest_filename = nullptr;
+
+#if defined(_WIN32)
+        if (IsAsciiAlpha(src_filename[0]) && src_filename[1] == ':') {
+            char drive = LowerAscii(src_filename[0]);
+            const char *remain = TrimStrLeft(src_filename + 2, RG_PATH_SEPARATORS).ptr;
+
+            dest_filename = Fmt(&temp_alloc, "%1%2%/%3", disk->root, drive, remain).ptr;
+        } else {
+            const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
+            dest_filename = Fmt(&temp_alloc, "%1%2", disk->root, remain).ptr;
+        }
+#else
+        {
+            const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
+            dest_filename = Fmt(&temp_alloc, "%1%2", disk->root, remain).ptr;
+        }
+#endif
 
         int src_fd = OpenFile(src_filename, (int)OpenFlag::Read);
         if (src_fd < 0) {
@@ -809,20 +853,27 @@ bool BackupContext::BackupNew()
             }
         }
 
-        if (!EnsureDirectoryExists(dest_filename)) {
-            valid = false;
-            continue;
-        }
-
-        int dest_fd = OpenFile(dest_filename, (int)OpenFlag::Read | (int)OpenFlag::Write | (int)OpenFlag::Keep);
-        if (dest_fd < 0) {
-            valid = false;
-            continue;
-        }
+        int dest_fd = -1;
+        StatResult stat;
+        FileInfo dest_info;
         RG_DEFER { CloseDescriptor(dest_fd); };
 
-        FileInfo dest_info;
-        StatResult stat = StatFile(dest_fd, dest_filename, (int)StatFlag::SilentMissing, &dest_info);
+        if (fake) {
+            stat = StatFile(dest_filename, (int)StatFlag::SilentMissing, &dest_info);
+        } else {
+            if (!EnsureDirectoryExists(dest_filename)) {
+                valid = false;
+                continue;
+            }
+
+            dest_fd = OpenFile(dest_filename, (int)OpenFlag::Read | (int)OpenFlag::Write | (int)OpenFlag::Keep);
+            if (dest_fd < 0) {
+                valid = false;
+                continue;
+            }
+
+            stat = StatFile(dest_fd, dest_filename, (int)StatFlag::SilentMissing, &dest_info);
+        }
 
         switch (stat) {
             case StatResult::Success: {
@@ -842,21 +893,21 @@ bool BackupContext::BackupNew()
                         }
 
                         if (!memcmp(src_hash, dest_hash, 32)) {
-                            LogDebug("Skip '%1' (checksum match)", path);
+                            LogDebug("Skip '%1' (checksum match)", src_filename);
 
                             if (!fake) {
                                 SetFileMetaData(dest_fd, dest_filename, mtime, mtime, 0644);
-                                valid &= set->db.Run("UPDATE files SET outdated = 0 WHERE id = ?1", id);
+                                valid &= set->db.Run("UPDATE files SET status = 'ok' WHERE id = ?1", id);
                             }
 
                             continue;
                         }
                     } else {
                         if (IsTimeEquivalent(dest_info.mtime, mtime)) {
-                            LogDebug("Skip '%1' (metadata match)", path);
+                            LogDebug("Skip '%1' (metadata match)", src_filename);
 
                             if (!fake) {
-                                valid &= set->db.Run("UPDATE files SET outdated = 0 WHERE id = ?1", id);
+                                valid &= set->db.Run("UPDATE files SET status = 'ok' WHERE id = ?1", id);
                             }
 
                             continue;
@@ -878,14 +929,14 @@ bool BackupContext::BackupNew()
             } break;
         }
 
-        LogInfo("Copy '%1' to %2 (%3)", path, disk->name, disk->uuid);
+        LogInfo("Copy '%1' to %2 (%3)", src_filename, disk->name, disk->uuid);
 
         if (!fake) {
             if (!CopyFile(src_fd, src_filename, dest_fd, dest_filename, size, mtime)) {
                 valid = false;
                 continue;
             }
-            if (!set->db.Run("UPDATE files SET outdated = 0 WHERE id = ?1", id)) {
+            if (!set->db.Run("UPDATE files SET status = 'ok' WHERE id = ?1", id)) {
                 valid = false;
                 continue;
             }
@@ -898,48 +949,49 @@ bool BackupContext::BackupNew()
 
 bool BackupContext::DeleteOld()
 {
-    bool success = DeleteOld("");
+    Size root_len = strlen(disk->root) - 1;
+    bool success = DeleteOld(disk->root, root_len);
 
-    if (!fake && !set->db.Run("DELETE FROM files WHERE disk_id = ?1 AND origin IS NULL AND changeset IS ?2", disk->id, changeset))
+    if (!fake && !set->db.Run("DELETE FROM files WHERE disk_id = ?1 AND status = 'removed' AND changeset IS ?2", disk->id, changeset))
         return false;
 
     return success;
 }
 
 // Return true if all children are deleted (directory is not empty)
-bool BackupContext::DeleteOld(const char *dirname)
+bool BackupContext::DeleteOld(const char *dest_dir, Size root_len)
 {
     BlockAllocator temp_alloc;
 
-    const char *enum_dir = Fmt(&temp_alloc, "%1%2", disk->root, dirname).ptr;
     bool complete = true;
 
-    EnumerateDirectory(enum_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+    EnumerateDirectory(dest_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
         switch (file_info.type) {
             case FileType::Directory: {
-                const char *path = Fmt(&temp_alloc, "%1%2%/", dirname, basename).ptr;
-                bool empty = DeleteOld(path);
+                const char *dirname = Fmt(&temp_alloc, "%1%2%/", dest_dir, basename).ptr;
+
+                bool empty = DeleteOld(dirname, root_len);
 
                 if (empty && !fake) {
-                    const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
-                    complete &= UnlinkDirectory(filename);
+                    complete &= UnlinkDirectory(dirname);
                 }
 
                 complete &= empty;
             } break;
 
             case FileType::File: {
-                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
-
-                if (TestStr(path, ".cartup"))
+                if (TestStr(basename, ".cartup"))
                     break;
 
+                const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
+                const char *origin = filename + root_len;
+
                 sq_Statement stmt;
-                if (!set->db.Prepare(R"(SELECT f.id, f.origin
+                if (!set->db.Prepare(R"(SELECT f.id, IIF(f.status <> 'removed', 1, 0)
                                         FROM files f
                                         INNER JOIN disks d ON (d.id = f.disk_id)
                                         WHERE d.id = ?1 AND path = ?2)",
-                                     &stmt, disk->id, path))
+                                     &stmt, disk->id, origin))
                     return false;
 
                 int64_t id = -1;
@@ -947,7 +999,7 @@ bool BackupContext::DeleteOld(const char *dirname)
 
                 if (stmt.Step()) {
                     id = sqlite3_column_int64(stmt, 0);
-                    exists = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
+                    exists = sqlite3_column_int(stmt, 1);
                 } else if (!stmt.IsValid()) {
                     return false;
                 }
@@ -957,11 +1009,9 @@ bool BackupContext::DeleteOld(const char *dirname)
                     break;
                 }
 
-                LogInfo("Delete '%1'", path);
+                LogInfo("Delete '%1'", filename);
 
                 if (!fake) {
-                    const char *filename = Fmt(&temp_alloc, "%1%2", enum_dir, basename).ptr;
-
                     if (!UnlinkFile(filename)) {
                         complete = false;
                         break;
@@ -977,8 +1027,8 @@ bool BackupContext::DeleteOld(const char *dirname)
             case FileType::Device:
             case FileType::Pipe:
             case FileType::Socket: {
-                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
-                LogWarning("Ignoring special file '%1' (%2)", path, FileTypeNames[(int)file_info.type]);
+                const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
+                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
 
                 complete = false;
             } break;
@@ -1286,43 +1336,46 @@ class IntegrateContext {
     BlockAllocator temp_alloc;
 
 public:
-    IntegrateContext(BackupSet *set, int64_t disk_id, const char *disk_dir)
-        : set(set), changeset(GetRandomInt64(0, INT64_MAX)), disk_id(disk_id), disk_dir(disk_dir) {}
+    IntegrateContext(BackupSet *set, int64_t disk_id, const char *disk_dir);
 
-    bool AddNew() { return AddNew(""); }
+    bool AddNew() { return AddNew(disk_dir); }
     bool DeleteOld();
 
 private:
-    bool AddNew(const char *dirname);
+    bool AddNew(const char *src_dir);
 };
 
-bool IntegrateContext::AddNew(const char *dirname)
+IntegrateContext::IntegrateContext(BackupSet *set, int64_t disk_id, const char *disk_dir)
+    : set(set), changeset(GetRandomInt64(0, INT64_MAX)), disk_id(disk_id)
 {
-    const char *enum_dir = Fmt(&temp_alloc, "%1%2", disk_dir, dirname).ptr;
+    this->disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator, &temp_alloc).ptr;
+}
 
-    EnumResult ret = EnumerateDirectory(enum_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+bool IntegrateContext::AddNew(const char *src_dir)
+{
+    EnumResult ret = EnumerateDirectory(src_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
         switch (file_info.type) {
             case FileType::Directory: {
-                const char *path = Fmt(&temp_alloc, "%1%2%/", dirname, basename).ptr;
+                const char *dirname = Fmt(&temp_alloc, "%1%2%/", src_dir, basename).ptr;
 
-                if (!AddNew(path))
+                if (!AddNew(dirname))
                     return false;
             } break;
 
             case FileType::File: {
-                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
-
-                if (TestStr(path, ".cartup"))
+                if (TestStr(basename, ".cartup"))
                     break;
 
-                if (!set->db.Run(R"(INSERT INTO files (path, mtime, size, disk_id, changeset)
-                                    VALUES (?1, ?2, ?3, ?4, ?5)
-                                    ON CONFLICT (path) DO UPDATE SET outdated = excluded.outdated,
-                                                                     mtime = excluded.mtime,
+                const char *filename = Fmt(&temp_alloc, "%1%2", src_dir, basename).ptr;
+
+                if (!set->db.Run(R"(INSERT INTO files (path, mtime, size, disk_id, status, changeset)
+                                    VALUES (?1, ?2, ?3, ?4, 'added', ?5)
+                                    ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
                                                                      size = excluded.size,
                                                                      disk_id = excluded.disk_id,
+                                                                     status = 'changed',
                                                                      changeset = excluded.changeset)",
-                                 path, file_info.mtime, file_info.size, disk_id, changeset))
+                                 filename, file_info.mtime, file_info.size, disk_id, changeset))
                     return false;
             } break;
 
@@ -1330,8 +1383,8 @@ bool IntegrateContext::AddNew(const char *dirname)
             case FileType::Device:
             case FileType::Pipe:
             case FileType::Socket: {
-                const char *path = Fmt(&temp_alloc, "%1%2", dirname, basename).ptr;
-                LogWarning("Ignoring special file '%1' (%2)", path, FileTypeNames[(int)file_info.type]);
+                const char *filename = Fmt(&temp_alloc, "%1%2", src_dir, basename).ptr;
+                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
             } break;
         }
 
