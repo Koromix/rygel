@@ -641,7 +641,15 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir)
 
 bool DistributeContext::DeleteOld()
 {
-    bool success = set->db.Run("UPDATE files SET status = 'removed' WHERE changeset IS NOT ?1", changeset);
+    bool success = set->db.Transaction([&]() {
+        if (!set->db.Run("DELETE FROM files WHERE status = 'added' AND changeset IS NOT ?1", changeset))
+            return false;
+        if (!set->db.Run("UPDATE files SET status = 'removed' WHERE changeset IS NOT ?1", changeset))
+            return false;
+
+        return true;
+    });
+
     return success;
 }
 
