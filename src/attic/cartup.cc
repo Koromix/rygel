@@ -23,7 +23,7 @@
 
 namespace RG {
 
-static const int SchemaVersion = 6;
+static const int SchemaVersion = 7;
 
 struct DiskData {
     int64_t id;
@@ -276,9 +276,35 @@ bool BackupSet::Open(const char *db_filename, bool create)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 6: {
+                    bool success = db.RunMany(R"(
+                        DROP INDEX files_p;
+
+                        ALTER TABLE files RENAME TO files_BAK;
+
+                        CREATE TABLE files (
+                            id INTEGER PRIMARY KEY,
+                            path TEXT NOT NULL,
+                            mtime INTEGER NOT NULL,
+                            size INTEGER NOT NULL,
+                            disk_id INTEGER REFERENCES disks (id) ON DELETE CASCADE,
+                            status TEXT CHECK(status IN ('ok', 'added', 'changed', 'removed')) NOT NULL,
+                            changeset INTEGER
+                        );
+                        CREATE UNIQUE INDEX files_p ON files (path);
+
+                        INSERT INTO files (id, path, mtime, size, disk_id, status)
+                            SELECT id, path, mtime, size, disk_id, status FROM files_BAK;
+
+                        DROP TABLE files_BAK;
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(SchemaVersion == 6);
+                static_assert(SchemaVersion == 7);
             }
 
             if (!db.SetUserVersion(SchemaVersion))
