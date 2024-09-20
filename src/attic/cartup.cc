@@ -706,8 +706,57 @@ static bool DistributeChanges(BackupSet *set)
     return true;
 }
 
-static void PrintStatus(const BackupSet &set)
+static int RunStatus(Span<const char *> arguments)
 {
+    // Options
+    const char *db_filename = GetDefaultDatabasePath();
+    bool distribute = true;
+    bool verbose = false;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 status [options]
+
+Options:
+    %!..+-D, --database_file <file>%!0   Set database file
+
+    %!..+-v, --verbose%!0                Show detailed changes
+        %!..+--no_detect%!0              Don't detect source changes)",
+                FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
+                db_filename = opt.current_value;
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose = true;
+            } else if (opt.Test("--no_detect")) {
+                distribute = false;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        opt.LogUnusedArguments();
+    }
+
+    BackupSet set;
+    if (!set.Open(db_filename))
+        return 1;
+
+    if (distribute && !DistributeChanges(&set))
+        return 1;
+
+    bool blank = true;
+
     if (set.sources.len) {
         PrintLn("Sources:");
         for (Size i = 0; i < set.sources.len; i++) {
@@ -716,12 +765,13 @@ static void PrintStatus(const BackupSet &set)
         }
     } else {
         PrintLn("No source");
+        blank = false;
     }
 
-    if (set.sources.len || set.disks.len) {
+    if (blank) {
         PrintLn();
+        blank = set.disks.len;
     }
-
     if (set.disks.len) {
         PrintLn("Disks:");
         for (Size i = 0; i < set.disks.len; i++) {
@@ -744,53 +794,53 @@ static void PrintStatus(const BackupSet &set)
     } else {
         PrintLn("No disk");
     }
-}
 
-static int RunStatus(Span<const char *> arguments)
-{
-    // Options
-    const char *db_filename = GetDefaultDatabasePath();
-    bool distribute = true;
+    if (verbose) {
+        sq_Statement stmt;
+        if (!set.db.Prepare("SELECT path, status, disk_id, size FROM files WHERE status <> 'ok'", &stmt))
+            return 1;
 
-    const auto print_usage = [=](StreamWriter *st) {
-        PrintLn(st,
-R"(Usage: %!..+%1 status [options]
-
-Options:
-    %!..+-D, --database_file <file>%!0   Set database file
-
-        %!..+--no_detect%!0              Don't detect source changes)",
-                FelixTarget);
-    };
-
-    // Parse arguments
-    {
-        OptionParser opt(arguments);
-
-        while (opt.Next()) {
-            if (opt.Test("--help")) {
-                print_usage(StdOut);
-                return 0;
-            } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
-                db_filename = opt.current_value;
-            } else if (opt.Test("--no_detect")) {
-                distribute = false;
-            } else {
-                opt.LogUnknownError();
-                return 1;
+        if (stmt.Step()) {
+            if (blank) {
+                PrintLn();
+                blank = true;
             }
+
+            PrintLn("Changes:");
+
+            do {
+                const char *filename = (const char *)sqlite3_column_text(stmt, 0);
+                const char *status = (const char *)sqlite3_column_text(stmt, 1);
+                int64_t disk_id = sqlite3_column_int64(stmt, 2);
+                int64_t size = sqlite3_column_int64(stmt, 3);
+
+                DiskData *disk = set.FindDisk(disk_id);
+
+                if (!disk) {
+                    LogError("Disk ID mismatch");
+                    continue;
+                }
+
+                if (TestStr(status, "added") || TestStr(status, "changed")) {
+                    PrintLn("  %!G..(+)%!0 %!..+%1%!0 %!D..(+%2 for %3)%!0", filename, FmtDiskSize(size), disk->name);
+                } else if (TestStr(status, "removed")) {
+                    PrintLn("  %!R..(-)%!0 %!..+%1%!0 %!D..(+%2 for %3)%!0", filename, FmtDiskSize(size), disk->name);
+                } else {
+                    RG_UNREACHABLE();
+                }
+            } while (stmt.Step());
+        } else {
+            if (!stmt.IsValid())
+                return 1;
+
+            if (blank) {
+                PrintLn();
+                blank = false;
+            }
+
+            PrintLn("No change");
         }
-
-        opt.LogUnusedArguments();
     }
-
-    BackupSet set;
-    if (!set.Open(db_filename))
-        return 1;
-
-    if (distribute && !DistributeChanges(&set))
-        return 1;
-    PrintStatus(set);
 
     if (!set.Close())
         return 1;
