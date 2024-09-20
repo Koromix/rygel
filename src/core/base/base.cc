@@ -3600,7 +3600,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
                 return false;
             }
             if (!iob.Information) {
-                LogError("Failed to copy '%1' to '%2': Truncated file");
+                LogError("Failed to copy '%1' to '%2': Truncated file", src_filename, dest_filename);
                 return false;
             }
 
@@ -3625,7 +3625,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
 
         while (src_offset < size) {
             LocalArray<uint8_t, 655536> buf;
-            buf.len = _read(src_fd, buf.data, (unsigned int)buf.len);
+            buf.len = _read(src_fd, buf.data, RG_SIZE(buf.data));
 
             if (buf.len < 0) {
                 if (errno == EINTR)
@@ -3635,9 +3635,27 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
                 return false;
             }
             if (!buf.len) {
-                LogError("Failed to copy '%1' to '%2': Truncated file");
+                LogError("Failed to copy '%1' to '%2': Truncated file", src_filename, dest_filename);
                 return false;
             }
+
+            Span<const uint8_t> remain = buf;
+
+            do {
+                int written = _write(dest_fd, remain.ptr, (size_t)remain.len);
+
+                if (written < 0) {
+                   LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+                    return false;
+                }
+                if (!written) {
+                    LogError("Failed to copy '%1' to '%2': Truncated file", src_filename, dest_filename);
+                    return false;
+                }
+
+                remain.ptr += written;
+                remain.len -= written;
+            } while (remain.len);
 
             src_offset += buf.len;
         }
@@ -4005,7 +4023,7 @@ unsupported:
 
         while (src_offset < size) {
             LocalArray<uint8_t, 655536> buf;
-            buf.len = read(src_fd, buf.data, (size_t)buf.len);
+            buf.len = read(src_fd, buf.data, RG_SIZE(buf.data));
 
             if (buf.len < 0) {
                 if (errno == EINTR)
@@ -4018,6 +4036,24 @@ unsupported:
                 LogError("Failed to copy '%1' to '%2': Truncated file");
                 return false;
             }
+
+            Span<const uint8_t> remain = buf;
+
+            do {
+                ssize_t written = write(dest_fd, remain.ptr, (size_t)remain.len);
+
+                if (written < 0) {
+                   LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
+                    return false;
+                }
+                if (!written) {
+                    LogError("Failed to copy '%1' to '%2': Truncated file", src_filename, dest_filename);
+                    return false;
+                }
+
+                remain.ptr += written;
+                remain.len -= written;
+            } while (remain.len);
 
             src_offset += (off_t)buf.len;
         }
