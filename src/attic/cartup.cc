@@ -824,7 +824,7 @@ Options:
                 if (TestStr(status, "added") || TestStr(status, "changed")) {
                     PrintLn("  %!G..(+)%!0 %!..+%1%!0 %!D..(+%2 for %3)%!0", filename, FmtDiskSize(size), disk->name);
                 } else if (TestStr(status, "removed")) {
-                    PrintLn("  %!R..(-)%!0 %!..+%1%!0 %!D..(+%2 for %3)%!0", filename, FmtDiskSize(size), disk->name);
+                    PrintLn("  %!R..(-)%!0 %!..+%1%!0 %!D..(-%2 for %3)%!0", filename, FmtDiskSize(size), disk->name);
                 } else {
                     RG_UNREACHABLE();
                 }
