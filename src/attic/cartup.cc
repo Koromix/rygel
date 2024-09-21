@@ -852,6 +852,8 @@ class BackupContext {
     BackupSet *set;
     const DiskData *disk;
 
+    int64_t changeset;
+
     bool checksum;
     bool fake;
 
@@ -859,7 +861,7 @@ class BackupContext {
 
 public:
     BackupContext(BackupSet *set, const DiskData *disk, bool checksum, bool fake)
-        : set(set), disk(disk), checksum(checksum), fake(fake) {}
+        : set(set), disk(disk), changeset(GetRandomInt64(0, INT64_MAX)), checksum(checksum), fake(fake) {}
 
     bool BackupNew();
     bool DeleteOld();
@@ -1045,7 +1047,7 @@ bool BackupContext::DeleteOld()
     Size root_len = strlen(disk->root) - 1;
     bool success = DeleteOld(disk->root, root_len);
 
-    if (!fake && !set->db.Run("DELETE FROM files WHERE disk_id = ?1 AND status = 'removed'", disk->id))
+    if (!fake && !set->db.Run("DELETE FROM files WHERE disk_id = ?1 AND status = 'removed' AND changeset IS NOT ?2", disk->id, changeset))
         return false;
 
     return success;
@@ -1089,17 +1091,22 @@ bool BackupContext::DeleteOld(const char *dest_dir, Size root_len)
 #endif
 
                 sq_Statement stmt;
-                if (!set->db.Prepare(R"(SELECT f.id
+                if (!set->db.Prepare(R"(SELECT f.id, IIF(f.status = 'removed', 1, 0) AS removed
                                         FROM files f
                                         INNER JOIN disks d ON (d.id = f.disk_id)
-                                        WHERE d.id = ?1 AND f.path = ?2 AND f.status <> 'removed')",
+                                        WHERE d.id = ?1 AND f.path = ?2)",
                                      &stmt, disk->id, origin))
                     return false;
 
-                bool exists = stmt.Step();
+                int64_t id = -1;
+                bool exists = false;
 
-                if (!stmt.IsValid())
+                if (stmt.Step()) {
+                    id = sqlite3_column_int64(stmt, 0);
+                    exists = sqlite3_column_int(stmt, 1);
+                } else if (!stmt.IsValid()) {
                     return false;
+                }
 
                 if (exists) {
                     complete = false;
@@ -1109,6 +1116,8 @@ bool BackupContext::DeleteOld(const char *dest_dir, Size root_len)
                 LogInfo("Delete '%1'", filename);
 
                 if (!fake && !UnlinkFile(filename)) {
+                    set->db.Run("UPDATE files SET changeset = ?2 WHERE id = ?1", id, changeset);
+
                     complete = false;
                     break;
                 }
