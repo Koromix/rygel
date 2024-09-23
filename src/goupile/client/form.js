@@ -1867,6 +1867,8 @@ instead of:
     function makeClasses(options, ...classes) {
         classes = classes.filter(cls => cls != null);
 
+        if (options.disabled)
+            classes.push('disabled');
         if (options.cls)
             classes.push(options.cls);
 
