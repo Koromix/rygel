@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr"class="nojs">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>{{ TITLE }}</title>
+        <meta name="description" content="{{ DESCRIPTION }}">
+        <link rel="icon" href="{{ ASSET favicon.png }}">
+
+        <meta name="theme-color" content="#3c7778">
+        <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
+
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}" async></script>
+    </head>
+
+    <body>
+        <div id="deploy" onclick="main.deploy(); return false;"></div>
+
+        <nav id="top">
+            <menu>
+                <a id="logo" href="/"><img src="{{ ASSET static/logo.webp }}" alt="Logo Lignes de Vie" /></a>
+
+{{ LINKS }}
+            </menu>
+        </nav>
+
+        {{ TOC }}
+
+        <main>
+            {{ CONTENT }}
+        </main>
+
+        <footer>
+            <div>Lignes de Vie © 2024</div>
+            <img src="{{ ASSET static/logo.webp }}" alt="" width="187" height="67">
+            <div style="font-size: 0.8em;">
+                Cn2r, 103 Bld de la liberté, 59000 LILLE<br>
+                <a href="mailto:contact@cn2r.fr" style="font-weight: bold; color: inherit;">contact@cn2r.fr</a>
+            </div>
+        </footer>
+    </body>
+</html>

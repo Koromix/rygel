@@ -1,0 +1,222 @@
+/* Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
+@import url('../../../../src/web/flaat/flaat.css');
+@import url('print.css');
+
+html {
+    --primary_color: #e78d6f;
+    --secondary_color: #e78d6f;
+}
+
+main a {
+    color: var(--color, #383838);
+    text-decoration: underline;
+}
+main a:has(> img) { text-decoration: none !important; }
+main a:not(:has(> img)):hover { color: var(--color, black); }
+
+h1 { border-bottom: 1px solid #ccc; }
+
+span[title] { border-bottom: 1px dotted #383838; }
+
+#logo > img {
+    margin: -16px;
+    width: calc(100% + 32px);
+    height: calc(100% + 36px);
+}
+
+.schema {
+    display: block;
+    margin: 2em auto;
+    width: min(100%, 800px);
+}
+
+.columns {
+    display: flex;
+    align-items: start;
+    gap: 2em;
+}
+.columns > * { flex: 1; width: 0; }
+
+.note {
+    width: 600px;
+    max-width: 90%;
+    margin: 1em auto;
+    padding: 0.5em;
+    border-top: none;
+    border-left: 2px solid var(--primary_color);
+    border-radius: 2px;
+    box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.05),0 0 .0625rem rgba(0, 0, 0, 0.1);
+}
+.note > .title {
+    background: #fff4e5;
+    margin: -0.5em -0.5em 0.5em -0.5em;
+    padding: 4px 0.5em;
+    font-weight: bold;
+}
+
+footer {
+    padding: 1em;
+    background: #f6f6f9;
+    display: flex;
+    gap: 1.5em;
+    align-items: center;
+    justify-content: center;
+}
+footer > img { filter: saturate(0%) brightness(0); }
+
+.team {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    font-size: 0.9em;
+    flex-wrap: wrap;
+}
+.team + .team { margin-top: 24px; }
+.team > div {
+    background: #f8f8f8;
+    padding: 1em 0.5em;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 240px;
+    align-items: center;
+}
+.team img {
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+}
+.team .name {
+    font-weight: bold;
+    text-align: center;
+}
+.team .title {
+    text-align: center;
+    margin-bottom: 1em;
+}
+.team .mission {
+    font-style: italic;
+    text-align: center;
+    font-size: 0.8em;
+    margin-top: -8px;
+}
+
+.tel_3114 {
+    display: flex;
+    max-width: 600px;
+    margin: 0 auto 1em auto;
+    padding: 1em;
+    align-items: center;
+    gap: 20px;
+    border: 2px solid #ffd212;
+}
+
+@media screen and (max-width: 960px) {
+    .tel_3114 { flex-direction: column; }
+    .tel_3114 > img { margin: 0.5em 0; }
+}
+
+.shelf {
+    display: flex;
+    margin: 2em 1em;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.shelf img { object-fit: contain; }
+
+.links {
+    margin: 1em;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+.links > a {
+    display: block;
+    width: 80%;
+    min-width: 250px;
+    background: #4b9596;
+    color: white;
+    padding: 0.6em 1em;
+    text-decoration: none;
+    text-align: center;
+}
+.links > a:hover {
+    background: var(--hover, #3d7879) !important;
+    color: white;
+}
+
+.quotes {
+    margin: 2em auto;
+    max-width: 90%;
+    width: 600px;
+    font-style: italic;
+}
+.quotes > .intro { padding: 6px; }
+.quotes > .content {;
+    position: relative;
+    padding: 1em;
+    text-align: justify;
+    border-radius: 12px;
+    background: #3c8ebb;
+    color: white;
+}
+.quotes > .content > img {
+    position: absolute;
+    width: 48px;
+    height: 48px;
+    margin-right: 1em;
+    object-fit: contain;
+}
+.quotes > .content > div { margin-left: calc(48px + 1.5em); }
+.quotes > .content > div + div { margin-top: 2em; }
+.quotes p:last-child {
+    margin-top: 2px;
+    font-size: 1.1em;
+}
+
+.inline {
+    float: left;
+    margin: 8px 3.5% 8px 12px;
+}
+.inline.right {
+    float: right;
+    margin: 8px 12px 8px 3.5%;
+}
+
+@media screen and (max-width: 960px) {
+    footer {
+        flex-direction: column;
+        padding: 0.5em;
+        gap: 6px;
+        text-align: center;
+    }
+    footer > img { display: none; }
+
+    .columns { display: block; }
+    .columns > * { width: auto; }
+    .columns > * + * { margin-top: 3em; }
+
+    .team {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .inline { display: none; }
+}
