@@ -47,7 +47,7 @@
         }
     },
 
-    "linux_i386": {
+    "linux_ia32": {
         "title": "Linux i386",
 
         "info": {
@@ -120,7 +120,7 @@
         }
     },
 
-    "freebsd_i386": {
+    "freebsd_ia32": {
         "title": "FreeBSD i386",
 
         "info": {
@@ -192,7 +192,7 @@
         }
     },
 
-    "openbsd_i386": {
+    "openbsd_ia32": {
         "title": "OpenBSD i386",
 
         "info": {
@@ -240,7 +240,7 @@
         }
     },
 
-    "win32_i386": {
+    "win32_ia32": {
         "title": "Windows i386",
 
         "info": {
