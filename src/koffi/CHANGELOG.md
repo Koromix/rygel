@@ -40,7 +40,28 @@ Consult the [migration guide](migration.md) for more information.
 
 ## Koffi 2
 
+### Koffi 2.9
+
+#### Koffi 2.9.1 (2024-09-23)
+
+- Fix x86 32-bit support regression in 2.9.0
+- Add missing TS definition for `koffi.alloc()`
+- Support `koffi.load(null)` in TS definition file
+
+#### Koffi 2.9.0 (2024-07-22)
+
+- Add support for char32_t and wchar_t (wide) strings
+- Include Linux/musl x64 prebuild (based on Alpine)
+
 ### Koffi 2.8
+
+#### Koffi 2.8.11 (2024-06-19)
+
+- Work around MSVC compiler bug introduced in Visual Studio 17.10
+
+```{warning}
+Use on platforms without pre-built binaries is broken in Koffi 2.8.10, skip this version.
+```
 
 #### Koffi 2.8.9 (2024-05-17)
 
