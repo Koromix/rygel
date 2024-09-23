@@ -833,13 +833,13 @@ async function renderPage() {
 
                     <div style="flex: 1;"></div>
                     ${model.actions.some(action => !action.options.always) ? html`
-                        <hr/>
                         <div class="drop up right">
                             <button @click=${UI.deployMenu}>Autres actions</button>
                             <div>
                                 ${model.actions.map(action => action.render())}
                             </div>
                         </div>
+                        <hr/>
                     ` : ''}
                     ${Util.mapRange(0, model.actions.length, idx => {
                         let action = model.actions[model.actions.length - idx - 1];
