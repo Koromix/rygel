@@ -233,7 +233,7 @@ function FormBuilder(state, model) {
             self.restart();
             state.just_triggered = true;
 
-            throw new Error('Corrigez les erreurs avant de continuer');
+            throw new Error(`Vous n'avez pas répondu à toutes les questions, veuillez vérifier vos réponses ou indiquer que vous ne souhaitez pas répondre à l'aide des petits boutons « Commenter ».`);
         }
     };
 
@@ -1372,16 +1372,9 @@ function FormBuilder(state, model) {
 
         let render = intf => html`
             <fieldset class=${makeClasses(options, 'fm_container', 'fm_section', 'error')}>
-                <div class="fm_legend" style=${makeLegendStyle(options)}>${label || 'Liste des erreurs'}</div>
+                <div class="fm_legend" style=${makeLegendStyle(options)}>${label || `Assurez-vous d'avoir répondu à tous les items`}</div>
                 ${!self.hasErrors() ? 'Aucune erreur' : ''}
-                ${model.widgets.map(intf => {
-                    if (intf.errors.length) {
-                        return html`${intf.errors.length} ${intf.errors.length > 1 ? 'erreurs' : 'erreur'} sur :
-                                    <a href=${'#' + intf.id}>${intf.label}</a><br/>`;
-                     } else {
-                        return '';
-                     }
-                })}
+                ${model.widgets.map(intf => intf.errors.length ? html`<a href=${'#' + intf.id}>${intf.label}</a><br/>` : '')}
             </fieldset>
         `;
 
@@ -1978,8 +1971,10 @@ instead of:
             variable.props = props;
         }
 
-        if (intf.options.mandatory && intf.missing)
-            intf.error('Obligatoire !', intf.options.missing_mode !== 'error');
+        if (intf.options.mandatory && intf.missing) {
+            let msg = intf.options.annotate ? 'Réponse obligatoire sauf justification' : 'Réponse obligatoire';
+            intf.error(msg, intf.options.missing_mode !== 'error');
+        }
 
         model.variables.push(intf);
         key.variables.set(key.name, intf);

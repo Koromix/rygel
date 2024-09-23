@@ -375,9 +375,9 @@ html.mobile .ui_table.fixed { table-layout: auto; }
 
 #ui_log {
     position: fixed;
-    left: calc(50% - 160px);
+    left: calc(50% - 300px);
     top: calc(3.2em + 12px);
-    width: 320px;
+    width: 600px;
     user-select: none;
     -moz-user-select: none;
     -webkit-user-select: none;
