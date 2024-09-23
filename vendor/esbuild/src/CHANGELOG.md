@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.24.0
+
+**_This release deliberately contains backwards-incompatible changes._** To avoid automatically picking up releases like this, you should either be pinning the exact version of `esbuild` in your `package.json` file (recommended) or be using a version range syntax that only accepts patch upgrades such as `^0.23.0` or `~0.23.0`. See npm's documentation about [semver](https://docs.npmjs.com/cli/v6/using-npm/semver/) for more information.
+
+* Drop support for older platforms ([#3902](https://github.com/evanw/esbuild/pull/3902))
+
+    This release drops support for the following operating system:
+
+    * macOS 10.15 Catalina
+
+    This is because the Go programming language dropped support for this operating system version in Go 1.23, and this release updates esbuild from Go 1.22 to Go 1.23. Go 1.23 now requires macOS 11 Big Sur or later.
+
+    Note that this only affects the binary esbuild executables that are published to the esbuild npm package. It's still possible to compile esbuild's source code for these older operating systems. If you need to, you can compile esbuild for yourself using an older version of the Go compiler (before Go version 1.23). That might look something like this:
+
+    ```
+    git clone https://github.com/evanw/esbuild.git
+    cd esbuild
+    go build ./cmd/esbuild
+    ./esbuild --version
+    ```
+
+* Fix class field decorators in TypeScript if `useDefineForClassFields` is `false` ([#3913](https://github.com/evanw/esbuild/issues/3913))
+
+    Setting the `useDefineForClassFields` flag to `false` in `tsconfig.json` means class fields use the legacy TypeScript behavior instead of the standard JavaScript behavior. Specifically they use assign semantics instead of define semantics (e.g. setters are triggered) and fields without an initializer are not initialized at all. However, when this legacy behavior is combined with standard JavaScript decorators, TypeScript switches to always initializing all fields, even those without initializers. Previously esbuild incorrectly continued to omit field initializers for this edge case. These field initializers in this case should now be emitted starting with this release.
+
+* Avoid incorrect cycle warning with `tsconfig.json` multiple inheritance ([#3898](https://github.com/evanw/esbuild/issues/3898))
+
+    TypeScript 5.0 introduced multiple inheritance for `tsconfig.json` files where `extends` can be an array of file paths. Previously esbuild would incorrectly treat files encountered more than once when processing separate subtrees of the multiple inheritance hierarchy as an inheritance cycle. With this release, `tsconfig.json` files containing this edge case should work correctly without generating a warning.
+
+* Handle Yarn Plug'n'Play stack overflow with `tsconfig.json` ([#3915](https://github.com/evanw/esbuild/issues/3915))
+
+    Previously a `tsconfig.json` file that `extends` another file in a package with an `exports` map could cause a stack overflow when Yarn's Plug'n'Play resolution was active. This edge case should work now starting with this release.
+
+* Work around more issues with Deno 1.31+ ([#3917](https://github.com/evanw/esbuild/pull/3917))
+
+    This version of Deno broke the `stdin` and `stdout` properties on command objects for inherited streams, which matters when you run esbuild's Deno module as the entry point (i.e. when `import.meta.main` is `true`). Previously esbuild would crash in Deno 1.31+ if you ran esbuild like that. This should be fixed starting with this release.
+
+    This fix was contributed by [@Joshix-1](https://github.com/Joshix-1).
+
 ## 0.23.1
 
 * Allow using the `node:` import prefix with `es*` targets ([#3821](https://github.com/evanw/esbuild/issues/3821))

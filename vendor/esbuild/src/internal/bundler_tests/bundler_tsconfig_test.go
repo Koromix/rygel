@@ -2749,3 +2749,181 @@ func TestTsconfigJsonConfigDirBaseURLInheritedPaths(t *testing.T) {
 		},
 	})
 }
+
+// https://github.com/evanw/esbuild/issues/3915
+func TestTsconfigStackOverflowYarnPnP(t *testing.T) {
+	tsconfig_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/Users/user/project/entry.jsx": `
+				console.log(<div />)
+			`,
+			"/Users/user/project/tsconfig.json": `
+				{
+					"extends": "tsconfigs/config"
+				}
+			`,
+			"/Users/user/project/packages/tsconfigs/package.json": `
+				{
+					"exports": {
+						"./config": "./configs/tsconfig.json"
+					}
+				}
+			`,
+			"/Users/user/project/packages/tsconfigs/configs/tsconfig.json": `
+				{
+					"compilerOptions": {
+						"jsxFactory": "success"
+					}
+				}
+			`,
+			"/Users/user/project/.pnp.data.json": `
+				{
+					"packageRegistryData": [
+						[null, [
+							[null, {
+								"packageLocation": "./",
+								"packageDependencies": [
+									["tsconfigs", "virtual:some-path"]
+								],
+								"linkType": "SOFT"
+							}]
+						]],
+						["tsconfigs", [
+							["virtual:some-path", {
+								"packageLocation": "./packages/tsconfigs/",
+								"packageDependencies": [
+									["tsconfigs", "virtual:some-path"]
+								],
+								"packagePeers": [],
+								"linkType": "SOFT"
+							}],
+							["workspace:packages/tsconfigs", {
+								"packageLocation": "./packages/tsconfigs/",
+								"packageDependencies": [
+									["tsconfigs", "workspace:packages/tsconfigs"]
+								],
+								"linkType": "SOFT"
+							}]
+						]]
+					]
+				}
+			`,
+		},
+		entryPaths:    []string{"/Users/user/project/entry.jsx"},
+		absWorkingDir: "/Users/user/project",
+		options: config.Options{
+			Mode:          config.ModeBundle,
+			AbsOutputFile: "/Users/user/project/out.js",
+		},
+	})
+}
+
+func TestTsconfigJsonExtendsArrayIssue3898(t *testing.T) {
+	tsconfig_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/Users/user/project/index.tsx": `
+				import { type SomeType } from 'MUST_KEEP'
+				console.log(<>
+					<div/>
+				</>)
+			`,
+			"/Users/user/project/tsconfig.json": `
+				{
+					"extends": [
+						"./tsconfigs/a.json",
+						"./tsconfigs/b.json",
+					]
+				}
+			`,
+			"/Users/user/project/tsconfigs/base.json": `
+				{
+					"compilerOptions": {
+						"verbatimModuleSyntax": true,
+					}
+				}
+			`,
+			"/Users/user/project/tsconfigs/a.json": `
+				{
+					"extends": "./base.json",
+					"compilerOptions": {
+						"jsxFactory": "SUCCESS",
+					}
+				}
+			`,
+			"/Users/user/project/tsconfigs/b.json": `
+				{
+					"extends": "./base.json",
+					"compilerOptions": {
+						"jsxFragmentFactory": "WORKS",
+					}
+				}
+			`,
+		},
+		entryPaths: []string{"/Users/user/project/index.tsx"},
+		options: config.Options{
+			Mode:          config.ModePassThrough,
+			AbsOutputFile: "/Users/user/project/out.js",
+			JSX: config.JSXOptions{
+				SideEffects: true,
+			},
+		},
+	})
+}
+
+func TestTsconfigDecoratorsUseDefineForClassFieldsFalse(t *testing.T) {
+	tsconfig_suite.expectBundled(t, bundled{
+		files: map[string]string{
+			"/Users/user/project/src/entry.ts": `
+				class Class {
+				}
+				class ClassMethod {
+					foo() {}
+				}
+				class ClassField {
+					foo = 123
+					bar
+				}
+				class ClassAccessor {
+					accessor foo = 123
+					accessor bar
+				}
+				new Class
+				new ClassMethod
+				new ClassField
+				new ClassAccessor
+			`,
+			"/Users/user/project/src/entrywithdec.ts": `
+				@dec class Class {
+				}
+				class ClassMethod {
+					@dec foo() {}
+				}
+				class ClassField {
+					@dec foo = 123
+					@dec bar
+				}
+				class ClassAccessor {
+					@dec accessor foo = 123
+					@dec accessor bar
+				}
+				new Class
+				new ClassMethod
+				new ClassField
+				new ClassAccessor
+			`,
+			"/Users/user/project/src/tsconfig.json": `{
+				"compilerOptions": {
+					"useDefineForClassFields": false
+				}
+			}`,
+		},
+		entryPaths: []string{
+			"/Users/user/project/src/entry.ts",
+			"/Users/user/project/src/entrywithdec.ts",
+		},
+		options: config.Options{
+			Mode:         config.ModeBundle,
+			AbsOutputDir: "/Users/user/project/out",
+		},
+	})
+}
