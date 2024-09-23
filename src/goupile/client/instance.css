@@ -67,7 +67,7 @@ html.instance {
     flex-wrap: wrap;
     align-content: center;
     justify-content: center;
-    gap: 12px;
+    gap: 18px;
 }
 
 #ins_levels:has(> div) + #ins_tiles { padding-top: 36px; }
