@@ -51,6 +51,7 @@ function ApplicationBuilder(app) {
             sequence: false,
             progress: true,
             enabled: true,
+            icon: null,
             help: null,
 
             export_dialog: null,
@@ -70,6 +71,7 @@ function ApplicationBuilder(app) {
         sequence: makeOptionProperty('sequence'),
         progress: makeOptionProperty('progress'),
         enabled: makeOptionProperty('enabled'),
+        icon: makeOptionProperty('icon'),
         help: makeOptionProperty('help'),
 
         exportDialog: makeOptionProperty('export_dialog'),
@@ -115,6 +117,7 @@ function ApplicationBuilder(app) {
 
             enabled: options.enabled,
             progress: options.progress,
+            icon: options.icon,
             help: options.help
         };
 
@@ -187,6 +190,7 @@ function ApplicationBuilder(app) {
 
                 enabled: options.enabled,
                 progress: options.progress,
+                icon: options.icon,
                 help: options.help
             };
 

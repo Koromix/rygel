@@ -274,7 +274,8 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: #dfdfdf;
+    background: var(--active_color);
+    color: white;
     cursor: pointer;
     border-radius: var(--block_rounding);
 }
@@ -283,13 +284,18 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     background: var(--active_color_n1);
     color: white;
 }
+.ins_tile > img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+}
 .ins_tile > .index {
     font-size: 0.9em;
-    opacity: 0.5;
+    opacity: 0.8;
 }
 .ins_tile > .title {
-    font-weight: bold;
     text-align: center;
+    font-weight: bold;
 }
 .ins_tile > .status {
     width: 100px;
@@ -305,7 +311,7 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
 .ins_progress > div {
     flex: 1;
     height: 10px;
-    background: linear-gradient(to right, var(--active_color_n1) 0 calc(1% * var(--progress)), white calc(1% * var(--progress)));
+    background: linear-gradient(to right, #383838 0 calc(1% * var(--progress)), white calc(1% * var(--progress)));
     border-radius: 1px;
 }
 .ins_progress > span {
