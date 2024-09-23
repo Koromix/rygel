@@ -241,7 +241,7 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
 }
 .ins_level:hover { filter: brightness(80%) contrast(120%); }
 .ins_level.complete {
-    background: var(--active_color_n1);
+    background: var(--page_color_n1);
     color: white;
 }
 .ins_level > .title {
@@ -252,17 +252,7 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     width: 250px;
     text-align: right;
 }
-.ins_help {
-    background: #f8f8f8;
-    padding: 0.6em;
-    margin-top: -10px;
-    border-bottom-left-radius: var(--block_rounding);
-    border-bottom-right-radius: var(--block_rounding);
-}
-.ins_level:has(+ .ins_help) {
-    border-bottom-left-radius: 0;
-    border-bottom-right-radius: 0;
-}
+.ins_help { padding: 0.5em 1em 0 1em; }
 
 .ins_tile {
     display: flex;
@@ -274,16 +264,16 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     align-items: center;
     justify-content: center;
     gap: 8px;
-    background: var(--active_color);
-    color: white;
+    background: #dfdfdf;
     cursor: pointer;
     border-radius: var(--block_rounding);
 }
 .ins_tile:hover { filter: brightness(80%) contrast(120%); }
 .ins_tile.complete {
-    background: var(--active_color_n1);
+    background: var(--page_color_n1);
     color: white;
 }
+.ins_tile.complete > img { filter: invert(100%); }
 .ins_tile > img {
     width: 64px;
     height: 64px;

@@ -154,6 +154,7 @@ html.mobile .fm_section {
 }
 .fm_prefix { margin-right: 3px; }
 .fm_suffix { margin-left: 3px; }
+.fm_annotate { text-decoration: none; }
 
 html:not(.small) .fm_widget.compact {
     flex: 1;

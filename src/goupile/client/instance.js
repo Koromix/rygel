@@ -650,7 +650,7 @@ function renderData() {
 
                                     if (status.complete) {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
-                                                        title=${col.item.title}><a href=${url}>${summary ?? '✓\uFE0E Rempli'}</a></td>`;
+                                                        title=${col.item.title}><a href=${url}>${summary ?? '✓\uFE0E Complet'}</a></td>`;
                                     } else if (status.filled) {
                                         let progress = Math.floor(100 * status.filled / status.total);
 
@@ -881,7 +881,7 @@ function defaultFormPage(ctx) {
                     text = 'Non disponible';
                 } else if (status.complete) {
                     cls += ' complete';
-                    text = 'Rempli';
+                    text = 'Complet';
                 } else if (status.filled && child.progress) {
                     let progress = Math.floor(100 * status.filled / status.total);
 
@@ -918,7 +918,7 @@ function defaultFormPage(ctx) {
                     text = 'Non disponible';
                 } else if (status.complete) {
                     cls += ' complete';
-                    text = 'Rempli';
+                    text = 'Complet';
                 } else if (status.filled && child.progress) {
                     let progress = Math.floor(100 * status.filled / status.total);
 
@@ -1840,9 +1840,9 @@ function getFillingStatuses(intf) {
     }
     if (intf.missing) {
         statuses.push(
-            ['nsp', 'Ne souhaite pas répondre'],
-            ['na', 'Non applicable'],
-            ['nd', 'Non disponible']
+            ['nsp', goupile.isLocked() ? 'Je ne souhaite pas répondre' : 'Ne souhaite pas répondre'],
+            ['na', goupile.isLocked() ? 'Ce n\'est pas applicable' : 'Non applicable'],
+            ['nd', goupile.isLocked() ? 'Je n\'ai pas cette information' : 'Non disponible']
         );
     } else {
         statuses.push(['complete', 'Complet']);
@@ -2020,13 +2020,13 @@ function runAnnotationDialog(e, intf) {
         let locked = d.values.hasOwnProperty('locked') ? d.values.locked : status.locked;
         let statuses = getFillingStatuses(intf);
 
-        d.enumRadio('filling', 'Statut actuel', statuses, { value: status.filling, disabled: locked });
-        d.textArea('comment', 'Commentaire', { rows: 4, value: status.comment, disabled: locked });
+        d.enumRadio('filling', null, statuses, { value: status.filling, disabled: locked });
+        d.textArea('comment', 'Commentaire libre', { rows: 4, value: status.comment, disabled: locked });
 
         if (goupile.hasPermission('data_audit'))
             d.binary('locked', 'Validation finale', { value: status.locked });
 
-        d.action('Appliquer', { disabled: !d.isValid() }, async () => {
+        d.action('Confirmer', { disabled: !d.isValid() }, async () => {
             status.filling = d.values.filling;
             status.comment = d.values.comment;
             status.locked = d.values.locked;

@@ -2018,7 +2018,6 @@ instead of:
             <div class="fm_label">
                 <label for=${intf.id}>
                     ${intf.label}
-                    ${intf.options.annotate ? html`<span style="font-weight: normal;">(<a @click=${e => annotate(e, intf)}>commenter</a>)</span>` : ''}
                 </label>
 
                 ${tags.length ? html`
@@ -2026,6 +2025,8 @@ instead of:
                         ${tags.map(tag => html` <span class="ui_tag" style=${'background: ' + tag.color + ';'}>${tag.label}</span>`)}
                     </div>
                 ` : ''}
+
+                ${intf.options.annotate ? html`<a class="fm_annotate" @click=${e => annotate(e, intf)} title="Ajouter des annotations">🖊\uFE0E</a>` : ''}
             </div>
         `;
     }
