@@ -868,6 +868,9 @@ function defaultFormPage(ctx) {
     form.output(html`
         <div id="ins_levels">
             ${page.chain.map(child => {
+                if (!child.progress && !child.help)
+                    return '';
+
                 let url = meta.contextualize(child.url, thread);
                 let status = meta.status(child, thread);
 

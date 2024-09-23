@@ -70,7 +70,7 @@ html.instance {
     gap: 12px;
 }
 
-#ins_levels + #ins_tiles { padding-top: 36px; }
+#ins_levels:has(> div) + #ins_tiles { padding-top: 36px; }
 
 html.mobile #ins_page { padding-top: 0; }
 
