@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { contextualizeURL, computeStatus } from './instance.js';
 
 function MetaModel() {
     this.summary = null;
@@ -78,6 +79,18 @@ function MetaInterface(page, data, meta) {
         url = url.protocol + '//' + url.host + url.pathname;
         return url;
     }
+
+    this.contextualize = function(url, thread) {
+        if (typeof url != 'string')
+            url = url?.url;
+
+        return contextualizeURL(url, thread);
+    };
+
+    this.status = function(item, thread) {
+        let status = computeStatus(item, thread);
+        return status;
+    };
 }
 
 export {

@@ -44,11 +44,14 @@ html.instance {
     flex-direction: row;
     justify-content: center;
 }
+#ins_content {
+    width: 100%;
+    max-width: 1080px;
+}
 
 #ins_form {
     box-sizing: border-box;
     width: 100%;
-    max-width: 1080px;
     display: flex;
     flex-direction: column;
     gap: 36px;
@@ -67,10 +70,7 @@ html.instance {
     gap: 12px;
 }
 
-#ins_content {
-    width: 100%;
-    max-width: 1080px;
-}
+#ins_levels + #ins_tiles { padding-top: 36px; }
 
 html.mobile #ins_page { padding-top: 0; }
 

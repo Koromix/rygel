@@ -163,13 +163,7 @@ function initUI() {
         UI.createPanel('editor', 0, renderEditor);
     if (app.panels.data)
         UI.createPanel('data', app.panels.editor ? 1 : 0, renderData);
-    UI.createPanel('view', 1, () => {
-        if (route.page.filename != null) {
-            return renderPage();
-        } else {
-            return renderForm();
-        }
-    });
+    UI.createPanel('view', 1, renderPage);
 
     if (app.panels.editor) {
         UI.setPanels(['editor', 'view']);
@@ -750,118 +744,20 @@ function toggleTagFilter(tag) {
      return go();
 }
 
-async function renderForm() {
-    let show_menu = (route.page.menu.chain.length > 2 ||
-                     route.page.menu.chain[0].children.length > 1);
-    let menu_is_wide = isMenuWide(route.page.menu);
-
-    return html`
-        <div class="print">
-            <div id="ins_page">
-                <div id="ins_menu">
-                    ${show_menu ? Util.mapRange(1 - menu_is_wide, route.page.menu.chain.length,
-                                                idx => renderPageMenu(route.page.menu.chain[idx])) : ''}
-                </div>
-
-                <div id="ins_form">
-                    <div id="ins_levels">
-                        ${route.page.menu.chain.map(item => {
-                            let url = contextualizeURL(item.url, form_thread);
-                            let status = computeStatus(item, form_thread);
-
-                            let cls = 'ins_level';
-
-                            if (!item.enabled) {
-                                cls += ' disabled';
-                                text = 'Non disponible';
-                            } else if (status.complete) {
-                                cls += ' complete';
-                                text = 'Rempli';
-                            } else if (status.filled && item.progress) {
-                                let progress = Math.floor(100 * status.filled / status.total);
-
-                                text = html`
-                                    <div class="ins_progress" style=${'--progress: ' + progress}>
-                                        <div></div>
-                                        <span>${progress}%</span>
-                                    </div>
-                                `;
-                            } else {
-                                text = '';
-                            }
-
-                            return html`
-                                <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
-                                    <div class="title">${item.title}</div>
-                                    <div class="status">${text}</div>
-                                </div>
-                            `;
-                        })}
-                        ${route.page.menu.help ? html`<div class="ins_help">${route.page.menu.help}</div>` : ''}
-                    </div>
-
-                    <div id="ins_tiles">
-                        ${route.page.menu.children.map((item, idx) => {
-                            let url = contextualizeURL(item.url, form_thread);
-                            let status = computeStatus(item, form_thread);
-
-                            let cls = 'ins_tile';
-                            let text = null;
-
-                            if (!item.enabled) {
-                                cls += ' disabled';
-                                text = 'Non disponible';
-                            } else if (status.complete) {
-                                cls += ' complete';
-                                text = 'Rempli';
-                            } else if (status.filled && item.progress) {
-                                let progress = Math.floor(100 * status.filled / status.total);
-
-                                text = html`
-                                    <div class="ins_progress" style=${'--progress: ' + progress}>
-                                        <div></div>
-                                        <span>${progress}%</span>
-                                    </div>
-                                `;
-                            } else {
-                                text = '';
-                            }
-
-                            return html`
-                                <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
-                                    <div class="index">${idx + 1}</div>
-                                    <div class="title">${item.title}</div>
-                                    <div class="status">${text}</div>
-                                </div>
-                            `;
-                        })}
-                    </div>
-                </div>
-
-                <div id="ins_actions">
-                    <div style="flex: 1;"></div>
-                    ${renderShortcuts()}
-                </div>
-            </div>
-            <div style="flex: 1;"></div>
-
-            ${app.shortcuts.length ? html`
-                <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                    ${renderShortcuts()}
-                </nav>
-            ` : ''}
-        </div>
-    `;
-}
-
 async function renderPage() {
     let model = new FormModel;
     let builder = new FormBuilder(form_state, model);
     let meta = new MetaModel;
 
     try {
-        let buffer = code_buffers.get(route.page.filename);
-        let func = code_builds.get(buffer.sha256);
+        let func = null;
+
+        if (route.page.filename != null) {
+            let buffer = code_buffers.get(route.page.filename);
+            func = code_builds.get(buffer.sha256);
+        } else {
+            func = defaultFormPage;
+        }
 
         if (func == null)
             throw null;
@@ -869,8 +765,9 @@ async function renderPage() {
         await func({
             app: app,
             form: builder,
+            page: route.page.menu,
             meta: new MetaInterface(route.page, form_data, meta),
-            thread: form_thread.entries,
+            thread: form_thread,
             values: form_state.values
         });
 
@@ -958,6 +855,90 @@ async function renderPage() {
             ` : ''}
         </div>
     `;
+}
+
+function defaultFormPage(ctx) {
+    let app = ctx.app;
+    let form = ctx.form;
+    let meta = ctx.meta;
+    let page = ctx.page;
+    let thread = ctx.thread;
+    let values = ctx.values;
+
+    form.output(html`
+        <div id="ins_levels">
+            ${page.chain.map(child => {
+                let url = meta.contextualize(child.url, thread);
+                let status = meta.status(child, thread);
+
+                let cls = 'ins_level';
+
+                if (!child.enabled) {
+                    cls += ' disabled';
+                    text = 'Non disponible';
+                } else if (status.complete) {
+                    cls += ' complete';
+                    text = 'Rempli';
+                } else if (status.filled && child.progress) {
+                    let progress = Math.floor(100 * status.filled / status.total);
+
+                    text = html`
+                        <div class="ins_progress" style=${'--progress: ' + progress}>
+                            <div></div>
+                            <span>${progress}%</span>
+                        </div>
+                    `;
+                } else {
+                    text = '';
+                }
+
+                return html`
+                    <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                        <div class="title">${child.title}</div>
+                        <div class="status">${text}</div>
+                    </div>
+                `;
+            })}
+            ${page.help ? html`<div class="ins_help">${page.help}</div>` : ''}
+        </div>
+
+        <div id="ins_tiles">
+            ${page.children.map((child, idx) => {
+                let url = meta.contextualize(child.url, thread);
+                let status = meta.status(child, thread);
+
+                let cls = 'ins_tile';
+                let text = null;
+
+                if (!child.enabled) {
+                    cls += ' disabled';
+                    text = 'Non disponible';
+                } else if (status.complete) {
+                    cls += ' complete';
+                    text = 'Rempli';
+                } else if (status.filled && child.progress) {
+                    let progress = Math.floor(100 * status.filled / status.total);
+
+                    text = html`
+                        <div class="ins_progress" style=${'--progress: ' + progress}>
+                            <div></div>
+                            <span>${progress}%</span>
+                        </div>
+                    `;
+                } else {
+                    text = '';
+                }
+
+                return html`
+                    <div class=${cls} @click=${UI.wrap(e => go(e, url))}>
+                        <div class="index">${idx + 1}</div>
+                        <div class="title">${child.title}</div>
+                        <div class="status">${text}</div>
+                    </div>
+                `;
+            })}
+        </div>
+    `);
 }
 
 function renderShortcuts() {
@@ -2081,6 +2062,8 @@ async function saveRecord(tid, entry, data, meta) {
 export {
     init,
     hasUnsavedData,
+    computeStatus,
+    contextualizeURL,
     runTasks,
     go
 }

@@ -197,10 +197,15 @@ function ApplicationBuilder(app) {
                 if (app.pages.some(page => page.key == key))
                     throw new Error(`Page key '${key}' is already used`);
 
+                let filename = options.filename;
+
+                if (filename === true)
+                    filename = `pages/${key}.js`;
+
                 let page = {
                     key: key,
                     title: title,
-                    filename: options.filename,
+                    filename: filename,
                     url: ENV.urls.instance + key,
 
                     menu: current_menu,
