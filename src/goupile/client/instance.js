@@ -772,6 +772,11 @@ async function renderPage() {
         render(model.renderWidgets(), page_div);
         page_div.classList.remove('disabled');
 
+        if (form_state.justTriggered()) {
+            let panel_el = document.querySelector('#ins_page')?.parentNode;
+            panel_el.scrollTo?.(0, panel_el.scrollHeight);
+        }
+
         form_model = model;
         form_builder = builder;
         form_meta = meta;
