@@ -236,8 +236,8 @@ function renderMenu() {
                 ` : ''}
                 <button class=${'icon view' + (!UI.hasTwoPanels() && UI.isPanelActive(1) ? ' active' : '')}
                         @click=${UI.wrap(e => togglePanels(false, true))}></button>
+                <div style="flex: 1; min-width: 4px;"></div>
             ` : ''}
-            <div style="flex: 1; min-width: 4px;"></div>
 
             ${show_menu && !menu_is_wide ? html`
                 ${renderDropItem(route.page.menu.chain[0], true)}
