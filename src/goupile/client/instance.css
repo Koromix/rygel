@@ -69,8 +69,7 @@ html.instance {
     justify-content: center;
     gap: 18px;
 }
-
-#ins_levels:has(> div) + #ins_tiles { padding-top: 36px; }
+* + #ins_tiles { padding-top: 36px; }
 
 html.mobile #ins_page { padding-top: 0; }
 
@@ -274,8 +273,8 @@ html:not(.small) #ui_panels > div:not(:only-child) #ins_tasks {
 }
 .ins_tile.complete > img { filter: invert(100%); }
 .ins_tile > img {
-    width: 64px;
-    height: 64px;
+    width: 48px;
+    height: 48px;
     object-fit: contain;
 }
 .ins_tile > .index {
