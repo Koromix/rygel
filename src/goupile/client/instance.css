@@ -226,7 +226,6 @@ html:not(.small) #ui_panels > div:not(:only-child) #ins_tasks {
     display: flex;
     border: 12px solid black;
 }
-html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
 
 /* -------------------- Data -------------------- */
 
