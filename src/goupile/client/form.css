@@ -70,6 +70,10 @@
     color: white;
 }
 .fm_section.error > .fm_legend::before { display: none; }
+.fm_section.error ul {
+    margin: 0 1em;
+    padding: 0;
+}
 
 .fm_section.tabs {
     margin-top: 1.6em;

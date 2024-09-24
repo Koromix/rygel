@@ -1374,7 +1374,11 @@ function FormBuilder(state, model) {
             <fieldset class=${makeClasses(options, 'fm_container', 'fm_section', 'error')}>
                 <div class="fm_legend" style=${makeLegendStyle(options)}>${label || `Assurez-vous d'avoir répondu à tous les items`}</div>
                 ${!self.hasErrors() ? 'Aucune erreur' : ''}
-                ${model.widgets.map(intf => intf.errors.length ? html`<a href=${'#' + intf.id}>${intf.label}</a><br/>` : '')}
+                ${self.hasErrors() ? html`
+                    <ul>
+                        ${model.widgets.map(intf => intf.errors.length ? html`<li><a href=${'#' + intf.id}>${intf.label}</a></li>` : '')}
+                    </ul>
+                ` : ''}
             </fieldset>
         `;
 
