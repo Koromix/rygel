@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { contextualizeURL, computeStatus } from './instance.js';
+import { contextualizeURL, computeStatus, go } from './instance.js';
 
 function MetaModel() {
     this.summary = null;
@@ -90,6 +90,10 @@ function MetaInterface(page, data, meta) {
     this.status = function(item, thread) {
         let status = computeStatus(item, thread);
         return status;
+    };
+
+    this.go = function(e, url = null) {
+        return go(e, url);
     };
 }
 

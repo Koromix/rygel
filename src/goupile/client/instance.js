@@ -1211,7 +1211,7 @@ async function handleFileChange(filename) {
     buffer.sha256 = sha256;
 
     try {
-        func = await buildScript(buffer.code, ['app', 'form', 'meta', 'thread', 'values']);
+        func = await buildScript(buffer.code, ['app', 'form', 'meta', 'page', 'thread', 'values']);
         code_builds.set(buffer.sha256, func);
 
         triggerError(filename, null);
@@ -1606,7 +1606,7 @@ async function run(push_history = true) {
 
             if (func == null) {
                 try {
-                    func = await buildScript(buffer.code, ['app', 'form', 'meta', 'thread', 'values']);
+                    func = await buildScript(buffer.code, ['app', 'form', 'meta', 'page', 'thread', 'values']);
                     code_builds.set(buffer.sha256, func);
                 } catch (err) {
                     triggerError(route.page.filename, err);
