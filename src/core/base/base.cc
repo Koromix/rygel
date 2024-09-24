@@ -8165,6 +8165,9 @@ Span<const uint8_t> PatchFile(Span<const uint8_t> data, Allocator *alloc,
     bool success = writer.Close();
     RG_ASSERT(success);
 
+    buf.Grow(1);
+    buf.ptr[buf.len] = 0;
+
     return buf.Leak();
 }
 
@@ -8180,6 +8183,9 @@ Span<const uint8_t> PatchFile(const AssetInfo &asset, Allocator *alloc,
 
     bool success = writer.Close();
     RG_ASSERT(success);
+
+    buf.Grow(1);
+    buf.ptr[buf.len] = 0;
 
     return buf.Leak();
 }
