@@ -202,7 +202,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     SignupInfo signup = {};
     {
         StreamReader st;
-        if (!io->OpenForRead(Kibibytes(64), &st))
+        if (!io->OpenForRead(Mebibytes(8), &st))
             return;
         json_Parser parser(&st, io->Allocator());
 
