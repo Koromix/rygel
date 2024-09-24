@@ -227,20 +227,19 @@ html:not(.small) .fm_widget.compact > .fm_calc { padding-top: 4px; }
 
 .fm_enum {
     display: inline-block;
+    margin-top: -2px;
     padding-left: 1px;
 }
 .fm_enum > button {
     position: relative;
-    margin: 0 0 0 -1px;
+    margin: 2px 0 0 2px;
     padding: 0.25em 8px;
     background: white;
     border: 1px solid #ccc;
     border-width: 0.5px;
-    border-radius: 0;
+    border-radius: var(--widget_rounding);
     color: black;
 }
-.fm_enum > button:first-child { border-radius: var(--widget_rounding) 0 0 var(--widget_rounding); }
-.fm_enum > button:last-child { border-radius: 0 var(--widget_rounding) var(--widget_rounding) 0; }
 .fm_enum > button::before, .fm_enum > button::after {
     display: inline-block;
     width: 8px;
