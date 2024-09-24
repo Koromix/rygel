@@ -2018,7 +2018,8 @@ function runAnnotationDialog(e, intf) {
         let locked = d.values.hasOwnProperty('locked') ? d.values.locked : status.locked;
         let statuses = getFillingStatuses(intf);
 
-        d.enumRadio('filling', null, statuses, { value: status.filling, disabled: locked });
+        if (statuses.length >= 2)
+            d.enumRadio('filling', null, statuses, { value: status.filling, disabled: locked });
         d.textArea('comment', 'Commentaire libre', { rows: 4, value: status.comment, disabled: locked });
 
         if (goupile.hasPermission('data_audit'))
