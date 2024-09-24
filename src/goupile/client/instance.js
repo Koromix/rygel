@@ -971,10 +971,7 @@ function addAutomaticActions(builder, model) {
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
         if (can_save) {
-            let label = '+Enregistrer';
-
-            if (is_new && route.page.options.sequence)
-                label = '+Continuer';
+            let label = route.page.options.sequence ? '+Continuer' : '+Enregistrer';
 
             builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: '#2d8261' }, async () => {
                 form_builder.triggerErrors();

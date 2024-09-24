@@ -168,8 +168,6 @@ function ApplicationBuilder(app) {
         let prev_options = options_stack;
 
         try {
-            // options_stack = [expandOptions(options)];
-
             current_store = {
                 key: key,
                 title: title,
@@ -222,6 +220,7 @@ function ApplicationBuilder(app) {
 
                 func();
             } else {
+                options_stack = [expandOptions(options)];
                 self.page(key, func || title);
             }
 
