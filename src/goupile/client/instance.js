@@ -866,6 +866,8 @@ function defaultFormPage(ctx) {
     let values = ctx.values;
 
     form.output(html`
+        ${page.help ? html`<div class="ins_help">${page.help}</div>` : ''}
+
         <div id="ins_levels">
             ${page.chain.map(child => {
                 if (!child.progress && !child.help)
@@ -902,7 +904,6 @@ function defaultFormPage(ctx) {
                     </div>
                 `;
             })}
-            ${page.help ? html`<div class="ins_help">${page.help}</div>` : ''}
         </div>
 
         <div id="ins_tiles">
