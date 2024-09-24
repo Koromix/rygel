@@ -314,13 +314,8 @@ function renderDropItem(item, first) {
     let status = makeStatusText(item, form_thread);
 
     if (first) {
-        return html`
-            <button class=${'icon home' + (active ? ' active' : '')}
-                    @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
-                <div style="flex: 1;">${item.title}</div>
-                ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
-           </button>
-        `;
+        return html`<button class=${'icon home' + (active ? ' active' : '')}
+                            @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}></button>`;
     } else {
         return html`
             <span style="align-self: center; margin: 0 6px;">›</span>
