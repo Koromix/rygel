@@ -233,7 +233,7 @@ function FormBuilder(state, model) {
             self.restart();
             state.just_triggered = true;
 
-            throw new Error(`Vous n'avez pas répondu à toutes les questions, veuillez vérifier vos réponses ou indiquer que vous ne souhaitez pas répondre à l'aide des petits boutons « Commenter ».`);
+            throw new Error(`Vous n'avez pas répondu correctement à toutes les questions, veuillez vérifier vos réponses ou mettre des annotations`);
         }
     };
 
@@ -1372,7 +1372,7 @@ function FormBuilder(state, model) {
 
         let render = intf => html`
             <fieldset class=${makeClasses(options, 'fm_container', 'fm_section', 'error')}>
-                <div class="fm_legend" style=${makeLegendStyle(options)}>${label || `Assurez-vous d'avoir répondu à tous les items`}</div>
+                <div class="fm_legend" style=${makeLegendStyle(options)}>${label || `Assurez-vous d'avoir correctement répondu à tous les items`}</div>
                 ${!self.hasErrors() ? 'Aucune erreur' : ''}
                 ${self.hasErrors() ? html`
                     <ul>
