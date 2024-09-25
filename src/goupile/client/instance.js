@@ -888,7 +888,7 @@ function defaultFormPage(ctx) {
                     text = html`
                         <div class="ins_progress" style=${'--progress: ' + progress}>
                             <div></div>
-                            <span>${progress}%</span>
+                            <span>${status.filled} ${status.filled > 1 ? 'items' : 'item'} sur ${status.total}</span>
                         </div>
                     `;
                 } else {
@@ -925,7 +925,7 @@ function defaultFormPage(ctx) {
                     text = html`
                         <div class="ins_progress" style=${'--progress: ' + progress}>
                             <div></div>
-                            <span>${progress}%</span>
+                            <span>${status.filled}/${status.total}</span>
                         </div>
                     `;
                 } else {

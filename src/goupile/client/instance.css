@@ -309,7 +309,6 @@ html.small #ins_page { border-bottom-width: calc(3.2em + 12px); }
     border-radius: 1px;
 }
 .ins_progress > span {
-    width: 20px;
     font-size: 0.8em;
     text-align: left;
 }
