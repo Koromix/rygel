@@ -965,66 +965,69 @@ function addAutomaticActions(builder, model) {
         builder.errorList();
 
     if (route.page.store != null) {
-        let label = '+Enregistrer';
         let is_new = (form_entry.anchor < 0);
 
-        if (is_new && route.page.options.sequence)
-            label = '+Continuer';
-
-        let can_save = form_thread.locked || !form_state.hasChanged();
+        let can_save = !form_thread.locked && form_state.hasChanged();
         let can_lock = form_thread.saved && route.page.options.has_lock &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
-        builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: '#2d8261' }, async () => {
-            form_builder.triggerErrors();
+        if (can_save) {
+            let label = '+Enregistrer';
 
-            await data_mutex.run(async () => {
-                await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
-                await openRecord(form_thread.tid, null, route.page);
-                data_threads = null;
-            });
+            if (is_new && route.page.options.sequence)
+                label = '+Continuer';
 
-            // Redirect?
-            {
-                let redirect = route.page.options.sequence;
-                let url = null;
+            builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: '#2d8261' }, async () => {
+                form_builder.triggerErrors();
 
-                if (redirect === true) {
-                    for (let i = route.page.menu.chain.length - 2; i >= 0; i--) {
-                        let item = route.page.menu.chain[i];
-                        let status = computeStatus(item, form_thread);
+                await data_mutex.run(async () => {
+                    await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
+                    await openRecord(form_thread.tid, null, route.page);
+                    data_threads = null;
+                });
 
-                        if (item.url != route.page.menu.url) {
-                            url = contextualizeURL(item.url, form_thread);
+                // Redirect?
+                {
+                    let redirect = route.page.options.sequence;
+                    let url = null;
 
-                            if (!status.complete)
-                                break;
+                    if (redirect === true) {
+                        for (let i = route.page.menu.chain.length - 2; i >= 0; i--) {
+                            let item = route.page.menu.chain[i];
+                            let status = computeStatus(item, form_thread);
+
+                            if (item.url != route.page.menu.url) {
+                                url = contextualizeURL(item.url, form_thread);
+
+                                if (!status.complete)
+                                    break;
+                            }
                         }
+
+                        if (is_new && route.page.menu.chain.length > 1) {
+                            let parent = route.page.menu.chain[route.page.menu.chain.length - 2];
+                            let idx = parent.children.indexOf(route.page.menu);
+
+                            if (idx >= 0 && idx < parent.children.length - 1) {
+                                let next = parent.children[idx + 1];
+
+                                while (next.children.length)
+                                    next = next.children[0];
+
+                                url = contextualizeURL(next.url, form_thread);
+                            }
+                        }
+                    } else if (typeof redirect == 'string') {
+                        let page = app.pages.find(page => page.key == redirect);
+
+                        if (page != null)
+                            url = contextualizeURL(page.url, form_thread);
                     }
 
-                    if (is_new && route.page.menu.chain.length > 1) {
-                        let parent = route.page.menu.chain[route.page.menu.chain.length - 2];
-                        let idx = parent.children.indexOf(route.page.menu);
-
-                        if (idx >= 0 && idx < parent.children.length - 1) {
-                            let next = parent.children[idx + 1];
-
-                            while (next.children.length)
-                                next = next.children[0];
-
-                            url = contextualizeURL(next.url, form_thread);
-                        }
-                    }
-                } else if (typeof redirect == 'string') {
-                    let page = app.pages.find(page => page.key == redirect);
-
-                    if (page != null)
-                        url = contextualizeURL(page.url, form_thread);
+                    go(null, url);
                 }
-
-                go(null, url);
-            }
-        });
+            });
+        }
 
         if (can_lock) {
             let label = !form_thread.locked ? '+Verrouiller' : 'Déverrouiller';
