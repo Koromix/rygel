@@ -257,7 +257,10 @@ table + div.legend {
     text-decoration: none;
     text-align: center;
 }
-.buttons > a:hover { filter: brightness(80%) contrast(150%); }
+.buttons > a:hover {
+    filter: brightness(80%) contrast(150%);
+    color: white;
+}
 
 code:not(.hljs) {
     padding: 2px 6px;
