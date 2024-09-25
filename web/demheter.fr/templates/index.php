@@ -63,6 +63,7 @@
             #news > div a {
                 color: white;
                 text-decoration: underline;
+                font-weight: bold;
             }
 
             @media screen and (max-width: 960px) {
