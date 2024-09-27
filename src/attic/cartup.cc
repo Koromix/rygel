@@ -1309,6 +1309,9 @@ Options:
 
     LogInfo("Done!%!D..%1%!0", fake ? " [dry run]" : "");
 
+    if (!set.Close())
+        return 1;
+
     return 0;
 }
 
@@ -1378,10 +1381,10 @@ Options:
         return 1;
     }
 
+    LogInfo("Added source %!..+%1%!0", src_dir);
+
     if (!set.Close())
         return 1;
-
-    LogInfo("Added source %!..+%1%!0", src_dir);
 
     return 0;
 }
@@ -1440,10 +1443,10 @@ Options:
     if (!set.db.Run("DELETE FROM sources WHERE id = ?1", src->id))
         return 1;
 
+    LogInfo("Removed source %!..+%1%!0", src->root);
+
     if (!set.Close())
         return 1;
-
-    LogInfo("Removed source %!..+%1%!0", src->root);
 
     return 0;
 }
@@ -1525,6 +1528,30 @@ bool IntegrateContext::DeleteOld()
     return success;
 }
 
+static int64_t EsimateAvailableSpace(BackupSet *set, int64_t disk_id, const char *disk_dir)
+{
+    VolumeInfo volume;
+    if (!GetVolumeInfo(disk_dir, &volume))
+        return -1;
+
+    sq_Statement stmt;
+    if (!set->db.Prepare("SELECT SUM(size) * 1.02 FROM files WHERE disk_id = ?1 GROUP BY disk_id",
+                         &stmt, disk_id))
+        return -1;
+
+    if (stmt.Step()) {
+        volume.available += sqlite3_column_int64(stmt, 0);
+    } else if (!stmt.IsValid()) {
+        return -1;
+    }
+
+    // Max out at 98% of the total size to account for metadata (or at least, try to)
+    volume.total -= volume.total / 50;
+    volume.available = std::min(volume.total, volume.available);
+
+    return volume.available;
+}
+
 static int RunAddDisk(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -1533,7 +1560,6 @@ static int RunAddDisk(Span<const char *> arguments)
     const char *db_filename = GetDefaultDatabasePath();
     const char *name = nullptr;
     int64_t size = -1;
-    bool update = false;
     const char *disk_dir = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -1545,9 +1571,7 @@ Options:
 
     %!..+-n, --name <name>%!0            Set disk name
     %!..+-s, --size <size>%!0            Set explicit disk size
-                                 %!D..(default: auto-detect)%!0
-
-    %!..+-u, --update%!0                 Update existing disk)",
+                                 %!D..(default: auto-detect)%!0)",
                 FelixTarget);
     };
 
@@ -1566,8 +1590,6 @@ Options:
             } else if (opt.Test("-s", "--size", OptionType::Value)) {
                 if (!ParseSize(opt.current_value, &size))
                     return 1;
-            } else if (opt.Test("-u", "--update")) {
-                update = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -1593,7 +1615,7 @@ Options:
 
     disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &temp_alloc).ptr;
 
-    if (!name && !update) {
+    if (!name) {
         Span<const char> basename = SplitStrReverseAny(TrimStrRight(disk_dir, RG_PATH_SEPARATORS), RG_PATH_SEPARATORS);
 
         if (!basename.len) {
@@ -1617,32 +1639,19 @@ Options:
 
             if (!uuid)
                 return 1;
-        } else if (!update) {
+        } else {
             uuid = GenerateUUIDv4(&temp_alloc);
 
             if (!WriteFile(uuid, filename))
                 return 1;
-        } else {
-            LogError("Disk '%1' does not seem to have been used before (no .cartup file)", disk_dir);
-            return 1;
         }
     }
 
     bool success = set.db.Transaction([&]() {
         int64_t disk_id = -1;
 
-        if (update) {
-            sq_Statement stmt;
-            if (!set.db.Prepare(R"(UPDATE disks SET root = ?2,
-                                                    name = IFNULL(?3, name),
-                                                    size = ?4
-                                   WHERE uuid = ?1
-                                   RETURNING id)",
-                                &stmt, uuid, disk_dir, name, size))
-                return false;
-            if (!stmt.GetSingleValue(&disk_id))
-                return false;
-        } else {
+        // Create new disk
+        {
             sq_Statement stmt;
             if (!set.db.Prepare(R"(INSERT INTO disks (uuid, name, root, size) VALUES (?1, ?2, ?3, ?4)
                                    ON CONFLICT (uuid) DO NOTHING
@@ -1670,26 +1679,11 @@ Options:
         }
 
         if (size < 0) {
-            VolumeInfo volume;
-            if (!GetVolumeInfo(disk_dir, &volume))
+            int64_t available = EsimateAvailableSpace(&set, disk_id, disk_dir);
+
+            if (available < 0)
                 return false;
-
-            sq_Statement stmt;
-            if (!set.db.Prepare("SELECT SUM(size) * 1.02 FROM files WHERE disk_id = ?1 GROUP BY disk_id",
-                                &stmt, disk_id))
-                return false;
-
-            if (stmt.Step()) {
-                volume.available += sqlite3_column_int64(stmt, 0);
-            } else if (!stmt.IsValid()) {
-                return false;
-            }
-
-            // Max out at 98% of the total size to account for metadata (or at least, try to)
-            volume.total -= volume.total / 50;
-            volume.available = std::min(volume.total, volume.available);
-
-            if (!set.db.Run("UPDATE disks SET size = ?2 WHERE id = ?1", disk_id, volume.available))
+            if (!set.db.Run("UPDATE disks SET size = ?2 WHERE id = ?1", disk_id, available))
                 return false;
         }
 
@@ -1698,10 +1692,129 @@ Options:
     if (!success)
         return 1;
 
+    LogInfo("Added disk %!..+%1%!0 for '%2' %!D..[%3]%!0", name, disk_dir, uuid);
+
     if (!set.Close())
         return 1;
 
-    LogInfo("%1 disk %!..+%2%!0 for '%3' %!D..[%4]%!0", update ? "Updated" : "Added", name, disk_dir, uuid);
+    return 0;
+}
+
+static int RunEditDisk(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *db_filename = GetDefaultDatabasePath();
+    const char *name = nullptr;
+    int64_t size = -1;
+    const char *identifier = nullptr;
+    const char *disk_dir = nullptr;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 edit_disk [options] <ID | UUID | name> [<directory>]
+
+Options:
+    %!..+-D, --database_file <file>%!0   Set database file%!0
+
+    %!..+-n, --name <name>%!0            Set disk name
+    %!..+-s, --size <size>%!0            Set explicit disk size
+                                 %!D..(default: auto-detect)%!0)",
+                FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
+                db_filename = opt.current_value;
+            } else if (opt.Test("-n", "--name", OptionType::Value)) {
+                name = opt.current_value;
+            } else if (opt.Test("-s", "--size", OptionType::Value)) {
+                if (!ParseSize(opt.current_value, &size))
+                    return 1;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        identifier = opt.ConsumeNonOption();
+        disk_dir = opt.ConsumeNonOption();
+
+        opt.LogUnusedArguments();
+    }
+
+    if (!identifier) {
+        LogError("Missing disk identifier argument");
+        return 1;
+    }
+
+    if (disk_dir) {
+        if (!PathIsAbsolute(disk_dir)) {
+            LogError("Disk path must be absolute");
+            return 1;
+        }
+        if (!TestFile(disk_dir, FileType::Directory)) {
+            LogError("Disk directory '%1' does not exist", disk_dir);
+            return 1;
+        }
+
+        disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &temp_alloc).ptr;
+    }
+
+    BackupSet set;
+    if (!set.Open(db_filename))
+        return 1;
+
+    DiskData *disk = set.FindDisk(identifier);
+
+    if (!disk) {
+        LogError("Cannot find disk '%1'", identifier);
+        return 1;
+    }
+
+    bool success = set.db.Transaction([&]() {
+        disk_dir = disk_dir ? disk_dir : disk->root;
+        name = name ? name : disk->name;
+
+        if (!set.db.Run("UPDATE disks SET root = ?2, name = ?3, size = ?4 WHERE id = ?1",
+                        disk->id, disk_dir, name, size))
+                return false;
+
+        // Run integration
+        {
+            IntegrateContext ctx(&set, disk->id, disk_dir);
+
+            if (!ctx.AddNew())
+                return false;
+            ctx.DeleteOld();
+        }
+
+        if (size < 0) {
+            int64_t available = EsimateAvailableSpace(&set, disk->id, disk_dir);
+
+            if (available < 0)
+                return false;
+            if (!set.db.Run("UPDATE disks SET size = ?2 WHERE id = ?1", disk->id, available))
+                return false;
+        }
+
+        return true;
+    });
+    if (!success)
+        return 1;
+
+    LogInfo("Updated disk %!..+%1%!0 for '%2' %!D..[%3]%!0", name, disk_dir, disk->uuid);
+
+    if (!set.Close())
+        return 1;
 
     return 0;
 }
@@ -1761,6 +1874,9 @@ Options:
 
     LogInfo("Deleted disk %!..+%1%!0 for '%2' %!D..[%3]%!0", disk->name, disk->root, disk->uuid);
 
+    if (!set.Close())
+        return 1;
+
     return 0;
 }
 
@@ -1781,6 +1897,7 @@ Commands:
     %!..+delete_source%!0                Delete backup source directory
 
     %!..+add_disk%!0                     Add disk for future backups
+    %!..+edit_disk%!0                    Edit existing backup disk
     %!..+delete_disk%!0                  Remove disk from backups)",
                 FelixTarget);
     };
@@ -1818,6 +1935,8 @@ Commands:
         return RunBackup(arguments);
     } else if (TestStr(cmd, "add_disk")) {
         return RunAddDisk(arguments);
+    } else if (TestStr(cmd, "edit_disk")) {
+        return RunEditDisk(arguments);
     } else if (TestStr(cmd, "delete_disk")) {
         return RunDeleteDisk(arguments);
     } else if (TestStr(cmd, "add_source")) {
