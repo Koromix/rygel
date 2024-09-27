@@ -1501,30 +1501,32 @@ static inline Size ProcessAnsiSpecifier(const char *spec, bool vt100, AppendFunc
 {
     Size idx = 0;
 
-    char buf[32] = "\x1B[";
+    LocalArray<char, 32> buf;
     bool valid = true;
+
+    buf.Append("\x1B[");
 
     // Foreground color
     switch (spec[++idx]) {
-        case 'd': { strcat(buf, "30"); } break;
-        case 'r': { strcat(buf, "31"); } break;
-        case 'g': { strcat(buf, "32"); } break;
-        case 'y': { strcat(buf, "33"); } break;
-        case 'b': { strcat(buf, "34"); } break;
-        case 'm': { strcat(buf, "35"); } break;
-        case 'c': { strcat(buf, "36"); } break;
-        case 'w': { strcat(buf, "37"); } break;
-        case 'D': { strcat(buf, "90"); } break;
-        case 'R': { strcat(buf, "91"); } break;
-        case 'G': { strcat(buf, "92"); } break;
-        case 'Y': { strcat(buf, "93"); } break;
-        case 'B': { strcat(buf, "94"); } break;
-        case 'M': { strcat(buf, "95"); } break;
-        case 'C': { strcat(buf, "96"); } break;
-        case 'W': { strcat(buf, "97"); } break;
-        case '.': { strcat(buf, "39"); } break;
+        case 'd': { buf.Append("30"); } break;
+        case 'r': { buf.Append("31"); } break;
+        case 'g': { buf.Append("32"); } break;
+        case 'y': { buf.Append("33"); } break;
+        case 'b': { buf.Append("34"); } break;
+        case 'm': { buf.Append("35"); } break;
+        case 'c': { buf.Append("36"); } break;
+        case 'w': { buf.Append("37"); } break;
+        case 'D': { buf.Append("90"); } break;
+        case 'R': { buf.Append("91"); } break;
+        case 'G': { buf.Append("92"); } break;
+        case 'Y': { buf.Append("93"); } break;
+        case 'B': { buf.Append("94"); } break;
+        case 'M': { buf.Append("95"); } break;
+        case 'C': { buf.Append("96"); } break;
+        case 'W': { buf.Append("97"); } break;
+        case '.': { buf.Append("39"); } break;
         case '0': {
-            strcat(buf, "0");
+            buf.Append("0");
             goto end;
         } break;
         case 0: {
@@ -1536,23 +1538,23 @@ static inline Size ProcessAnsiSpecifier(const char *spec, bool vt100, AppendFunc
 
     // Background color
     switch (spec[++idx]) {
-        case 'd': { strcat(buf, ";40"); } break;
-        case 'r': { strcat(buf, ";41"); } break;
-        case 'g': { strcat(buf, ";42"); } break;
-        case 'y': { strcat(buf, ";43"); } break;
-        case 'b': { strcat(buf, ";44"); } break;
-        case 'm': { strcat(buf, ";45"); } break;
-        case 'c': { strcat(buf, ";46"); } break;
-        case 'w': { strcat(buf, ";47"); } break;
-        case 'D': { strcat(buf, ";100"); } break;
-        case 'R': { strcat(buf, ";101"); } break;
-        case 'G': { strcat(buf, ";102"); } break;
-        case 'Y': { strcat(buf, ";103"); } break;
-        case 'B': { strcat(buf, ";104"); } break;
-        case 'M': { strcat(buf, ";105"); } break;
-        case 'C': { strcat(buf, ";106"); } break;
-        case 'W': { strcat(buf, ";107"); } break;
-        case '.': { strcat(buf, ";49"); } break;
+        case 'd': { buf.Append(";40"); } break;
+        case 'r': { buf.Append(";41"); } break;
+        case 'g': { buf.Append(";42"); } break;
+        case 'y': { buf.Append(";43"); } break;
+        case 'b': { buf.Append(";44"); } break;
+        case 'm': { buf.Append(";45"); } break;
+        case 'c': { buf.Append(";46"); } break;
+        case 'w': { buf.Append(";47"); } break;
+        case 'D': { buf.Append(";100"); } break;
+        case 'R': { buf.Append(";101"); } break;
+        case 'G': { buf.Append(";102"); } break;
+        case 'Y': { buf.Append(";103"); } break;
+        case 'B': { buf.Append(";104"); } break;
+        case 'M': { buf.Append(";105"); } break;
+        case 'C': { buf.Append(";106"); } break;
+        case 'W': { buf.Append(";107"); } break;
+        case '.': { buf.Append(";49"); } break;
         case 0: {
             valid = false;
             goto end;
@@ -1562,10 +1564,10 @@ static inline Size ProcessAnsiSpecifier(const char *spec, bool vt100, AppendFunc
 
     // Bold/dim/underline/invert
     switch (spec[++idx]) {
-        case '+': { strcat(buf, ";1"); } break;
-        case '-': { strcat(buf, ";2"); } break;
-        case '_': { strcat(buf, ";4"); } break;
-        case '^': { strcat(buf, ";7"); } break;
+        case '+': { buf.Append(";1"); } break;
+        case '-': { buf.Append(";2"); } break;
+        case '_': { buf.Append(";4"); } break;
+        case '^': { buf.Append(";7"); } break;
         case '.': {} break;
         case 0: {
             valid = false;
@@ -1583,7 +1585,7 @@ end:
     }
 
     if (vt100) {
-        strcat(buf, "m");
+        buf.Append("m");
         append(buf);
     }
 
@@ -1861,7 +1863,7 @@ const char *DebugLogContext(const char *filename, int line)
 
     if (buf.len > 32) {
         char *ptr = buf.end() - 32;
-        MemCpy(ptr, "  [...", 6);
+        MemCpy(ptr, "[...", 4);
         return ptr;
     } else {
         return buf.data;
@@ -1914,8 +1916,10 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     char msg_buf[2048];
     {
         Size len = FmtFmt(fmt, args, msg_buf).len;
+
         if (len == RG_SIZE(msg_buf) - 1) {
-            strcpy(msg_buf + RG_SIZE(msg_buf) - 32, "... [truncated]");
+            strncpy(msg_buf + RG_SIZE(msg_buf) - 32, "... [truncated]", 32);
+            msg_buf[RG_SIZE(msg_buf) - 1] = 0;
         }
     }
 
