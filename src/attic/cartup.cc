@@ -23,7 +23,7 @@
 
 namespace RG {
 
-static const int SchemaVersion = 7;
+static const int SchemaVersion = 8;
 
 struct DiskData {
     int64_t id;
@@ -302,9 +302,17 @@ bool BackupSet::Open(const char *db_filename, bool create)
                     )");
                     if (!success)
                         return false;
+                } [[fallthrough]];
+
+                case 7: {
+                    bool success = db.RunMany(R"(
+                        CREATE UNIQUE INDEX sources_r ON sources (root);
+                    )");
+                    if (!success)
+                        return false;
                 } // [[fallthrough]];
 
-                static_assert(SchemaVersion == 7);
+                static_assert(SchemaVersion == 8);
             }
 
             if (!db.SetUserVersion(SchemaVersion))
@@ -489,20 +497,15 @@ Options:
         return 1;
     }
 
+    LogInfo("Initializing...");
+
     BackupSet set;
     if (!set.Open(db_filename, true))
         return 1;
     if (!set.Close())
         return 1;
 
-    for (Size i = 0; i < set.disks.len; i++) {
-        const DiskData &disk = set.disks[i];
-
-        PrintLn("%1%!..+Disk %2%!0 [%3]:", i ? "\n" : "", i + 1, disk.uuid);
-        PrintLn("  Total: %!..+%1%!0", FmtDiskSize(disk.total));
-        PrintLn("  Used: %!..+%1 (%2%%)%!0", FmtDiskSize(disk.used), FmtDouble((double)disk.used * 100.0 / (double)disk.total, 1));
-        PrintLn("  Files: %!..+%1%!0", disk.files);
-    }
+    LogInfo("Done");
 
     return 0;
 }
@@ -683,6 +686,8 @@ static bool DistributeChanges(BackupSet *set)
 {
     bool complete = true;
 
+    LogInfo("Detecting source changes...");
+
     bool success = set->db.Transaction([&]() {
         DistributeContext ctx(set);
 
@@ -752,26 +757,33 @@ Options:
     if (!set.Open(db_filename))
         return 1;
 
+    distribute &= (set.disks.len > 0);
     if (distribute && !DistributeChanges(&set))
         return 1;
 
-    bool blank = true;
+    bool blank = distribute;
 
+#define BLANK(Cond) \
+        do { \
+            if (blank) { \
+                PrintLn(); \
+            } \
+            blank = !!(Cond); \
+        } while (false)
+
+    BLANK(set.sources.len);
     if (set.sources.len) {
         PrintLn("Sources:");
         for (Size i = 0; i < set.sources.len; i++) {
             const SourceInfo &src = set.sources[i];
             PrintLn("  %!D..[%1]%!0 %!..+%2%!0", i + 1, src.root);
         }
+        blank = true;
     } else {
         PrintLn("No source");
-        blank = false;
     }
 
-    if (blank) {
-        PrintLn();
-        blank = set.disks.len;
-    }
+    BLANK(set.disks.len);
     if (set.disks.len) {
         PrintLn("Disks:");
         for (Size i = 0; i < set.disks.len; i++) {
@@ -800,12 +812,12 @@ Options:
         if (!set.db.Prepare("SELECT path, status, disk_id, size FROM files WHERE status <> 'ok'", &stmt))
             return 1;
 
-        if (stmt.Step()) {
-            if (blank) {
-                PrintLn();
-                blank = true;
-            }
+        bool available = stmt.Step();
+        if (!stmt.IsValid())
+            return 1;
+        BLANK(available);
 
+        if (available) {
             PrintLn("Changes:");
 
             do {
@@ -830,17 +842,11 @@ Options:
                 }
             } while (stmt.Step());
         } else {
-            if (!stmt.IsValid())
-                return 1;
-
-            if (blank) {
-                PrintLn();
-                blank = false;
-            }
-
             PrintLn("No change");
         }
     }
+
+#undef BLANK
 
     if (!set.Close())
         return 1;
@@ -1247,6 +1253,8 @@ Options:
     Async async;
     int processed = 0;
 
+    LogInfo("Backing up...");
+
     // Copy to backup disks
     for (const DiskData &disk: set.disks) {
         const char *uuid_filename = Fmt(&temp_alloc, "%1.cartup", disk.root).ptr;
@@ -1298,6 +1306,8 @@ Options:
         LogError("No backup disk found");
         return 1;
     }
+
+    LogInfo("Done!%!D..%1%!0", fake ? " [dry run]" : "");
 
     return 0;
 }
@@ -1358,10 +1368,20 @@ Options:
     if (!set.Open(db_filename))
         return 1;
 
-    if (!set.db.Run("INSERT INTO sources (root) VALUES (?1)", src_dir))
+    if (!set.db.Run(R"(INSERT INTO sources (root)
+                       VALUES (?1)
+                       ON CONFLICT (root) DO NOTHING)", src_dir))
         return 1;
+
+    if (!sqlite3_changes(set.db)) {
+        LogError("Source '%1' already exists", src_dir);
+        return 1;
+    }
+
     if (!set.Close())
         return 1;
+
+    LogInfo("Added source %!..+%1%!0", src_dir);
 
     return 0;
 }
@@ -1419,8 +1439,11 @@ Options:
 
     if (!set.db.Run("DELETE FROM sources WHERE id = ?1", src->id))
         return 1;
+
     if (!set.Close())
         return 1;
+
+    LogInfo("Removed source %!..+%1%!0", src->root);
 
     return 0;
 }
@@ -1510,6 +1533,7 @@ static int RunAddDisk(Span<const char *> arguments)
     const char *db_filename = GetDefaultDatabasePath();
     const char *name = nullptr;
     int64_t size = -1;
+    bool update = false;
     const char *disk_dir = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -1521,7 +1545,9 @@ Options:
 
     %!..+-n, --name <name>%!0            Set disk name
     %!..+-s, --size <size>%!0            Set explicit disk size
-                                 %!D..(default: auto-detect)%!0)",
+                                 %!D..(default: auto-detect)%!0
+
+    %!..+-u, --update%!0                 Update existing disk)",
                 FelixTarget);
     };
 
@@ -1540,6 +1566,8 @@ Options:
             } else if (opt.Test("-s", "--size", OptionType::Value)) {
                 if (!ParseSize(opt.current_value, &size))
                     return 1;
+            } else if (opt.Test("-u", "--update")) {
+                update = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -1550,10 +1578,6 @@ Options:
         opt.LogUnusedArguments();
     }
 
-    if (!name) {
-        LogError("Missing disk name (use -n option)");
-        return 1;
-    }
     if (!disk_dir) {
         LogError("Missing disk path argument");
         return 1;
@@ -1569,6 +1593,17 @@ Options:
 
     disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &temp_alloc).ptr;
 
+    if (!name && !update) {
+        Span<const char> basename = SplitStrReverseAny(TrimStrRight(disk_dir, RG_PATH_SEPARATORS), RG_PATH_SEPARATORS);
+
+        if (!basename.len) {
+            LogError("Missing disk name (use -n option)");
+            return 1;
+        }
+
+        name = DuplicateString(basename, &temp_alloc).ptr;
+    }
+
     BackupSet set;
     if (!set.Open(db_filename))
         return 1;
@@ -1581,26 +1616,48 @@ Options:
             uuid = ReadUUID(filename, &temp_alloc);
 
             if (!uuid)
-                return false;
-        } else {
+                return 1;
+        } else if (!update) {
             uuid = GenerateUUIDv4(&temp_alloc);
 
             if (!WriteFile(uuid, filename))
-                return false;
+                return 1;
+        } else {
+            LogError("Disk '%1' does not seem to have been used before (no .cartup file)", disk_dir);
+            return 1;
         }
     }
 
     bool success = set.db.Transaction([&]() {
-        int64_t disk_id;
-        {
+        int64_t disk_id = -1;
+
+        if (update) {
             sq_Statement stmt;
-            if (!set.db.Prepare(R"(INSERT INTO disks (uuid, name, root, size) VALUES (?1, ?2, ?3, ?4)
-                                   ON CONFLICT DO UPDATE SET size = IIF(excluded.size > 0, excluded.size, size)
+            if (!set.db.Prepare(R"(UPDATE disks SET root = ?2,
+                                                    name = IFNULL(?3, name),
+                                                    size = ?4
+                                   WHERE uuid = ?1
                                    RETURNING id)",
-                                &stmt, uuid, name, disk_dir, size))
+                                &stmt, uuid, disk_dir, name, size))
                 return false;
             if (!stmt.GetSingleValue(&disk_id))
                 return false;
+        } else {
+            sq_Statement stmt;
+            if (!set.db.Prepare(R"(INSERT INTO disks (uuid, name, root, size) VALUES (?1, ?2, ?3, ?4)
+                                   ON CONFLICT (uuid) DO NOTHING
+                                   RETURNING id)",
+                                &stmt, uuid, name, disk_dir, size))
+                return false;
+
+            if (!stmt.Step()) {
+                if (stmt.IsValid()) {
+                    LogError("Disk '%1' %!D..[%2]%!0 already exists", disk_dir, uuid);
+                }
+                return false;
+            }
+
+            disk_id = sqlite3_column_int64(stmt, 0);
         }
 
         // Run integration
@@ -1643,6 +1700,8 @@ Options:
 
     if (!set.Close())
         return 1;
+
+    LogInfo("%1 disk %!..+%2%!0 for '%3' %!D..[%4]%!0", update ? "Updated" : "Added", name, disk_dir, uuid);
 
     return 0;
 }
@@ -1699,6 +1758,8 @@ Options:
     }
     if (!set.db.Run("DELETE FROM disks WHERE id = ?1", disk->id))
         return 1;
+
+    LogInfo("Deleted disk %!..+%1%!0 for '%2' %!D..[%3]%!0", disk->name, disk->root, disk->uuid);
 
     return 0;
 }
