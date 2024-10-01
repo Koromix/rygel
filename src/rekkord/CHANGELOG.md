@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.25 (2024-10-02)
+
+- Support locating snapshots by name in main commands
+- Show SSH error message if SFTP error is "Success"
+- Fix broken multi-sort in `rekkord snapshots`
+
 ### Rekkord 0.24 (2024-10-01)
 
 - Remove support for anonymous snapshots
