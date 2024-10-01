@@ -374,11 +374,11 @@ int RunList(Span<const char *> arguments)
     rk_ListSettings settings;
     OutputFormat format = OutputFormat::Plain;
     int verbose = 0;
-    const char *name = nullptr;
+    const char *identifier = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 list [-R <repo>] <hash>%!0
+R"(Usage: %!..+%1 list [-R <repo>] <hash | name>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -454,12 +454,12 @@ Available output formats: %!..+%3%!0)",
             }
         }
 
-        name = opt.ConsumeNonOption();
+        identifier = opt.ConsumeNonOption();
         opt.LogUnusedArguments();
     }
 
-    if (!name) {
-        LogError("No hash provided");
+    if (!identifier) {
+        LogError("No identifier provided");
         return 1;
     }
 
@@ -480,14 +480,13 @@ Available output formats: %!..+%3%!0)",
     }
     LogInfo();
 
+    rk_Hash hash = {};
+    if (!rk_Locate(disk.get(), identifier, &hash))
+        return 1;
+
     HeapArray<rk_ObjectInfo> objects;
-    {
-        rk_Hash hash = {};
-        if (!rk_ParseHash(name, &hash))
-            return 1;
-        if (!rk_List(disk.get(), hash, settings, &temp_alloc, &objects))
-            return 1;
-    }
+    if (!rk_List(disk.get(), hash, settings, &temp_alloc, &objects))
+        return 1;
 
     switch (format) {
         case OutputFormat::Plain: {

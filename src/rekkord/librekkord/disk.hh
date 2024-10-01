@@ -186,6 +186,4 @@ std::unique_ptr<rk_Disk> rk_OpenLocalDisk(const char *path, const char *username
 std::unique_ptr<rk_Disk> rk_OpenSftpDisk(const ssh_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings);
 std::unique_ptr<rk_Disk> rk_OpenS3Disk(const s3_Config &config, const char *username, const char *pwd, const rk_OpenSettings &settings);
 
-bool rk_ParseHash(const char *str, rk_Hash *out_hash);
-
 }

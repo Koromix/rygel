@@ -37,11 +37,11 @@ Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 
 # Explore snapshot
 
-You can list the directories and files in a snapshot with the `rekkord list` command. You need to know the unique [snapshot hash](#list-snapshots) for this.
+You can list the directories and files in a snapshot with the `rekkord list` command. You can either use the unique [snapshot hash](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord list <HASH>
+rekkord list <HASH or NAME>
 ```
 
 The output looks something like this:
@@ -111,20 +111,20 @@ Use `--format JSON` or `--format XML` to get the file tree in a JSON or XML form
 
 # Restore snapshot
 
-Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You need to know the unique [snapshot hash](#list-snapshots) for this.
+Use the `rekkord restore` command to restore the files from a snapshot onto the local filesystem. You can either use the unique [object hash](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord restore <HASH> -O <PATH>
+rekkord restore <HASH or NAME> -O <PATH>
 ```
 
 # Mount snapshot
 
-You can also use `rekkord mount <hash> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem.
+You can also use `rekkord mount <hash> <mountpoint>` to mount a snapshot or a directory as a read-only filesystem. You can either use the unique [object hash](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord mount <HASH> <MOUNTPOINT>
+rekkord mount <HASH or NAME> <MOUNTPOINT>
 ```
 
 This mode has several limitations for now:

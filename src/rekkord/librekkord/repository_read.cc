@@ -967,6 +967,58 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
     return true;
 }
 
+static inline int ParseHexadecimalChar(char c)
+{
+    if (c >= '0' && c <= '9') {
+        return c - '0';
+    } else if (c >= 'A' && c <= 'F') {
+        return c - 'A' + 10;
+    } else if (c >= 'a' && c <= 'f') {
+        return c - 'a' + 10;
+    } else {
+        return -1;
+    }
+}
+
+static bool ParseHash(Span<const char> str, rk_Hash *out_hash)
+{
+    for (Size i = 0, j = 0; str[j]; i++, j += 2) {
+        int high = ParseHexadecimalChar(str[j]);
+        int low = (high >= 0) ? ParseHexadecimalChar(str[j + 1]) : -1;
+
+        if (low < 0)
+            return false;
+
+        out_hash->hash[i] = (uint8_t)((high << 4) | low);
+    }
+
+    return true;
+}
+
+bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash)
+{
+    BlockAllocator temp_alloc;
+
+    if (ParseHash(identifier, out_hash))
+        return true;
+
+    HeapArray<rk_SnapshotInfo> snapshots;
+    if (!rk_Snapshots(disk, &temp_alloc, &snapshots))
+        return false;
+
+    for (Size i = snapshots.len - 1; i >= 0; i--) {
+        const rk_SnapshotInfo &snapshot = snapshots[i];
+
+        if (TestStr(identifier, snapshot.name)) {
+            *out_hash = snapshot.hash;
+            return true;
+        }
+    }
+
+    LogError("Cannot find object '%1'", identifier);
+    return false;
+}
+
 const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc)
 {
     rk_BlobType type;

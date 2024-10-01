@@ -99,6 +99,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings,
 bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
              Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
+bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash);
 
 // Symbolic links
 const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc);

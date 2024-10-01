@@ -416,16 +416,16 @@ int RunMount(Span<const char *> arguments)
 
     // Options
     rk_Config config;
-    const char *mountpoint = nullptr;
     bool flat = false;
-    rk_Hash hash = {};
     bool foreground = false;
     bool debug = false;
     HeapArray<const char *> fuse_options;
+    const char *identifier = nullptr;
+    const char *mountpoint = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mount [-R <repo>] <hash> <mountpoint>%!0
+R"(Usage: %!..+%1 mount [-R <repo>] <hash | name> <mountpoint>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -500,21 +500,19 @@ Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
             }
         }
 
-        const char *name = opt.ConsumeNonOption();
+        identifier = opt.ConsumeNonOption();
         mountpoint = opt.ConsumeNonOption();
 
-        if (!name) {
-            LogError("No hash provided");
-            return 1;
-        }
-        if (!rk_ParseHash(name, &hash))
-            return 1;
-        if (!mountpoint) {
-            LogError("Missing mountpoint");
-            return 1;
-        }
-
         opt.LogUnusedArguments();
+    }
+
+    if (!identifier) {
+        LogError("No identifier provided");
+        return 1;
+    }
+    if (!mountpoint) {
+        LogError("Missing mountpoint");
+        return 1;
     }
 
     if (!config.Complete(true))
@@ -540,6 +538,10 @@ Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
     if (!disk)
         return 1;
     RG_DEFER { disk.reset(nullptr); };
+
+    rk_Hash hash = {};
+    if (!rk_Locate(disk.get(), identifier, &hash))
+        return 1;
 
     ZeroMemorySafe((void *)config.password, strlen(config.password));
     config.password = nullptr;

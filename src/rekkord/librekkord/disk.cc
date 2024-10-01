@@ -1154,34 +1154,4 @@ std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate)
     RG_UNREACHABLE();
 }
 
-static inline int ParseHexadecimalChar(char c)
-{
-    if (c >= '0' && c <= '9') {
-        return c - '0';
-    } else if (c >= 'A' && c <= 'F') {
-        return c - 'A' + 10;
-    } else if (c >= 'a' && c <= 'f') {
-        return c - 'a' + 10;
-    } else {
-        return -1;
-    }
-}
-
-bool rk_ParseHash(const char *str, rk_Hash *out_hash)
-{
-    for (Size i = 0, j = 0; str[j]; i++, j += 2) {
-        int high = ParseHexadecimalChar(str[j]);
-        int low = (high >= 0) ? ParseHexadecimalChar(str[j + 1]) : -1;
-
-        if (low < 0) {
-            LogError("Malformed hash string '%1'", str);
-            return false;
-        }
-
-        out_hash->hash[i] = (uint8_t)((high << 4) | low);
-    }
-
-    return true;
-}
-
 }

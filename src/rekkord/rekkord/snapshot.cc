@@ -149,11 +149,11 @@ int RunRestore(Span<const char *> arguments)
     rk_Config config;
     rk_GetSettings settings;
     const char *dest_filename = nullptr;
-    const char *name = nullptr;
+    const char *identifier = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 restore [-R <repo>] <hash> -O <path>%!0
+R"(Usage: %!..+%1 restore [-R <repo>] <hash | name> -O <path>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -224,12 +224,12 @@ Options:
             }
         }
 
-        name = opt.ConsumeNonOption();
+        identifier = opt.ConsumeNonOption();
         opt.LogUnusedArguments();
     }
 
-    if (!name) {
-        LogError("No hash provided");
+    if (!identifier) {
+        LogError("No identifier provided");
         return 1;
     }
     if (!dest_filename) {
@@ -258,14 +258,13 @@ Options:
 
     int64_t now = GetMonotonicTime();
 
+    rk_Hash hash = {};
+    if (!rk_Locate(disk.get(), identifier, &hash))
+        return 1;
+
     int64_t file_len = 0;
-    {
-        rk_Hash hash = {};
-        if (!rk_ParseHash(name, &hash))
-            return 1;
-        if (!rk_Get(disk.get(), hash, settings, dest_filename, &file_len))
-            return 1;
-    }
+    if (!rk_Get(disk.get(), hash, settings, dest_filename, &file_len))
+        return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
 
