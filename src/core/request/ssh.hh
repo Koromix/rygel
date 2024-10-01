@@ -62,6 +62,5 @@ bool ssh_DecodeURL(Span<const char> url, ssh_Config *out_config);
 ssh_session ssh_Connect(const ssh_Config &config);
 
 const char *sftp_GetErrorString(sftp_session sftp);
-const char *sftp_GetErrorString(int error);
 
 }

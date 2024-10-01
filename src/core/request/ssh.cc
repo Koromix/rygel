@@ -318,13 +318,7 @@ ssh_session ssh_Connect(const ssh_Config &config)
     return ssh;
 }
 
-const char *sftp_GetErrorString(sftp_session sftp)
-{
-    int error = sftp_get_error(sftp);
-    return sftp_GetErrorString(error);
-}
-
-const char *sftp_GetErrorString(int error)
+const char *TranslateSftpError(int error)
 {
     switch (error) {
         case SSH_FX_OK: return "Success";
@@ -344,6 +338,17 @@ const char *sftp_GetErrorString(int error)
     }
 
     return "Unknown error";
+}
+
+const char *sftp_GetErrorString(sftp_session sftp)
+{
+    int error = sftp_get_error(sftp);
+
+    if (error != SSH_FX_OK) {
+        return TranslateSftpError(error);
+    } else {
+        return ssh_get_error(sftp->session);
+    }
 }
 
 }
