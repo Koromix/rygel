@@ -43,7 +43,7 @@ struct rk_ListSettings {
 struct rk_SnapshotInfo {
     rk_Hash hash;
 
-    const char *name; // Can be NULL
+    const char *name;
     int64_t time;
     int64_t len;
     int64_t stored;

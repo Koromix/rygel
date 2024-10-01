@@ -25,7 +25,6 @@ enum class OutputFormat {
     JSON,
     XML
 };
-
 static const char *const OutputFormatNames[] = {
     "Plain",
     "JSON",

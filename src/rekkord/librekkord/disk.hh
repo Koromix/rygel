@@ -26,7 +26,20 @@ struct ssh_Config;
 
 struct rk_Hash {
     uint8_t hash[32];
+
     operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
+
+    bool operator<(const rk_Hash &other) const
+    {
+        for (Size i = 0; i < RG_SIZE(hash); i++) {
+            int delta = hash[i] - other.hash[i];
+
+            if (delta)
+                return delta > 0;
+        }
+
+        return false;
+    }
 };
 static_assert(RG_SIZE(rk_Hash) == 32);
 

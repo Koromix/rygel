@@ -21,6 +21,21 @@
 
 namespace RG {
 
+enum class SortOrder {
+    Hash,
+    Time,
+    Name,
+    Size,
+    Stored
+};
+static const char *const SortOrderNames[] = {
+    "Hash",
+    "Time",
+    "Name",
+    "Size",
+    "Stored"
+};
+
 int RunSnapshots(Span<const char *> arguments)
 {
     BlockAllocator temp_alloc;
@@ -28,6 +43,7 @@ int RunSnapshots(Span<const char *> arguments)
     // Options
     rk_Config config;
     OutputFormat format = OutputFormat::Plain;
+    HeapArray<int> sorts;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -45,8 +61,12 @@ Options:
 
     %!..+-f, --format <format>%!0        Change output format
                                  %!D..(default: %2)%!0
+    %!..+-s, --sort <sort>%!0            Change sort order
+                                 %!D..(default: Time)%!0
 
-Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
+Available output formats: %!..+%3%!0
+Available sort orders: %!..+%4%!0)",
+                FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames), FmtSpan(SortOrderNames));
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -81,6 +101,26 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                     LogError("Unknown output format '%1'", opt.current_value);
                     return 1;
                 }
+            } else if (opt.Test("-s", "--sort", OptionType::Value)) {
+                Span<const char> remain = opt.current_value;
+
+                while (remain.len) {
+                    Span<const char> part = TrimStr(SplitStrAny(remain, " ,", &remain));
+
+                    if (part.len) {
+                        bool ascending = (part[0] != '!');
+                        Span<const char> name = part.Take(!ascending, part.len - !ascending);
+                        SortOrder order;
+
+                        if (!OptionToEnumI(SortOrderNames, name, &order)) {
+                            LogError("Unknown sort order '%1'", name);
+                            return 1;
+                        }
+
+                        int sort = ascending ? ((int)order + 1) : (-1 - (int)order);
+                        sorts.Append(sort);
+                    }
+                }
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -110,6 +150,28 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
     HeapArray<rk_SnapshotInfo> snapshots;
     if (!rk_Snapshots(disk.get(), &temp_alloc, &snapshots))
         return 1;
+
+    for (int sort: sorts) {
+        bool ascending = (sort > 0);
+        SortOrder order = ascending ? (SortOrder)(sort - 1) : (SortOrder)(-1 - sort);
+
+        std::function<bool(const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2)> compare;
+
+        switch (order) {
+            case SortOrder::Hash: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return s1.hash < s2.hash; }; } break;
+            case SortOrder::Time: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return s1.time < s2.time; }; } break;
+            case SortOrder::Name: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return CmpStr(s1.name, s2.name) < 0; }; } break;
+            case SortOrder::Size: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return s1.len < s2.len; }; } break;
+            case SortOrder::Stored: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return s1.stored < s2.stored; }; } break;
+        }
+        RG_ASSERT(compare);
+
+        if (!ascending) {
+            compare = [=](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return !compare(s1, s2); };
+        }
+
+        std::stable_sort(snapshots.begin(), snapshots.end(), compare);
+    }
 
     switch (format) {
         case OutputFormat::Plain: {

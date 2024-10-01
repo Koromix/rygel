@@ -739,7 +739,7 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
         header.name[RG_SIZE(header.name) - 1] = 0;
 
         snapshot.hash = tag.hash;
-        snapshot.name = header.name[0] ? DuplicateString(header.name, alloc).ptr : nullptr;
+        snapshot.name = DuplicateString(header.name, alloc).ptr;
         snapshot.time = LittleEndian(header.time);
         snapshot.len = LittleEndian(header.len);
         snapshot.stored = LittleEndian(header.stored);
