@@ -6,11 +6,12 @@
 
 Each snapshot has a unique hash (which is actually a BLAKE3 hash in hexadecimal form), which is generated automatically when the snapshot is created.
 
-You need to give snapshots a name (or use `--anonymous` to skip this). This name does not have to be unique and only exists to help you categorize snapshots.
+By default, snapshots are named after the normalized path you are backing up. You can use `-n <NAME>` to use a custom name. You must give an explicit name if you specify multiple paths.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord save -n <NAME> <PATHS...>
+rekkord save <PATH>
+rekkord save -n <NAME> <PATH1> <PATH2> ...
 ```
 
 The command will give you the snapshot hash once it finishes. You can retrieve the hash later with [rekkord list](#list-snapshots).

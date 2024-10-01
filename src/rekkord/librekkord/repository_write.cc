@@ -521,17 +521,24 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
     RG_ASSERT(filenames.len >= 1);
 
-    if (settings.raw && settings.name) {
-        LogError("Cannot use snapshot name in raw mode");
-        return false;
-    }
-    if (settings.raw && filenames.len != 1) {
-        LogError("Only one object can be backuped up in raw mode");
-        return false;
-    }
-    if (settings.name && strlen(settings.name) >= RG_SIZE(SnapshotHeader2::name)) {
-        LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotHeader2::name));
-        return false;
+    if (settings.raw) {
+        if (settings.name) {
+            LogError("Cannot use snapshot name in raw mode");
+            return false;
+        }
+        if (filenames.len != 1) {
+            LogError("Only one object can be saved up in raw mode");
+            return false;
+        }
+    } else {
+        if (!settings.name || !settings.name[0]) {
+            LogError("Snapshot name cannot be empty");
+            return false;
+        }
+        if (strlen(settings.name) >= RG_SIZE(SnapshotHeader2::name)) {
+            LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotHeader2::name));
+            return false;
+        }
     }
 
     sq_Database *db = disk->OpenCache();

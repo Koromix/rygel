@@ -25,7 +25,6 @@ int RunSave(Span<const char *> arguments)
     // Options
     rk_Config config;
     rk_PutSettings settings;
-    bool allow_anonymous = false;
     HeapArray<const char *> filenames;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -39,8 +38,7 @@ Options:
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
 
-    %!..+-n, --name <name>%!0            Set user friendly name
-        %!..+--anonymous%!0              Allow snapshot without name
+    %!..+-n, --name <name>%!0            Set custom snapshot name
         %!..+--raw%!0                    Skip snapshot object and report data hash
 
         %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is
@@ -73,8 +71,6 @@ Options:
                 settings.name = opt.current_value;
             } else if (opt.Test("--follow_symlinks")) {
                 settings.follow_symlinks = true;
-            } else if (opt.Test("--anonymous")) {
-                allow_anonymous = true;
             } else if (opt.Test("--raw")) {
                 settings.raw = true;
             } else if (opt.Test("-j", "--threads", OptionType::Value)) {
@@ -99,9 +95,13 @@ Options:
         return 1;
     }
 
-    if (!settings.name && !allow_anonymous && !settings.raw) {
-        LogError("Use --anonymous to create unnamed snapshot object");
-        return 1;
+    if (!settings.name && !settings.raw) {
+        if (filenames.len > 1) {
+            LogError("You must use an explicit name with %!..+-n <name>%!0 to save multiple paths");
+            return 1;
+        }
+
+        settings.name = NormalizePath(filenames[0], &temp_alloc).ptr;
     }
 
     if (!config.Complete(true))
