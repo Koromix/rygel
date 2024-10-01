@@ -6,6 +6,16 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.24 (2024-10-01)
+
+- Remove support for anonymous snapshots
+- Add sort option to `rekkord snapshots`
+- Improve exploration commands with colors
+- Fix ugly double-slash in restore paths
+- Use O_TMPFILE for `rekkord restore` on Linux
+- Improve Windows compatibility
+- Switch to GPL 3+ license
+
 ### Rekkord 0.23 (2024-09-03)
 
 - Support *--verbose* and *--dry_run* flags in `rekkord restore`
