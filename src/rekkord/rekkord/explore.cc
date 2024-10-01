@@ -28,7 +28,6 @@ int RunSnapshots(Span<const char *> arguments)
     // Options
     rk_Config config;
     OutputFormat format = OutputFormat::Plain;
-    int verbose = 0;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -46,7 +45,6 @@ Options:
 
     %!..+-f, --format <format>%!0        Change output format
                                  %!D..(default: %2)%!0
-    %!..+-v, --verbose%!0                Enable verbose output (plain only)
 
 Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
     };
@@ -83,8 +81,6 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                     LogError("Unknown output format '%1'", opt.current_value);
                     return 1;
                 }
-            } else if (opt.Test("-v", "--verbose")) {
-                verbose++;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -121,16 +117,10 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 for (const rk_SnapshotInfo &snapshot: snapshots) {
                     TimeSpec spec = DecomposeTime(snapshot.time);
 
-                    if (snapshot.name) {
-                        PrintLn("%1   %!..+%2%!0 [%3]", snapshot.hash, FmtArg(snapshot.name).Pad(24), FmtTimeNice(spec));
-                    } else {
-                        PrintLn("%1   %!D..(anonymous)%!0              [%2]", snapshot.hash, FmtTimeNice(spec));
-                    }
-
-                    if (verbose) {
-                        PrintLn("+ Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
-                        PrintLn("+ Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
-                    }
+                    PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.name).Pad(40), FmtTimeNice(spec));
+                    PrintLn("  + Hash: %!..+%1%!0", snapshot.hash);
+                    PrintLn("  + Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
+                    PrintLn("  + Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
                 }
             } else {
                 LogInfo("There does not seem to be any snapshot");
@@ -147,12 +137,12 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 char hash[128];
                 Fmt(hash, "%1", snapshot.hash);
 
-                json.Key("hash"); json.String(hash);
                 if (snapshot.name) {
                     json.Key("name"); json.String(snapshot.name);
                 } else {
                     json.Key("name"); json.Null();
                 }
+                json.Key("hash"); json.String(hash);
                 json.Key("time"); json.Int64(snapshot.time);
                 json.Key("size"); json.Int64(snapshot.len);
                 json.Key("storage"); json.Int64(snapshot.stored);
@@ -175,8 +165,8 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 char hash[128];
                 Fmt(hash, "%1", snapshot.hash);
 
-                element.append_attribute("Hash") = hash;
                 element.append_attribute("Name") = snapshot.name ? snapshot.name : "";
+                element.append_attribute("Hash") = hash;
                 element.append_attribute("Time") = snapshot.time;
                 element.append_attribute("Size") = snapshot.len;
                 element.append_attribute("Storage") = snapshot.stored;
@@ -194,19 +184,30 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
     TimeSpec mspec = DecomposeTime(obj.mtime);
     int indent = (start_depth + obj.depth) * 2;
 
-    char suffix = (obj.type == rk_ObjectType::Directory) ? '/' : ' ';
+    bool bold = (obj.type == rk_ObjectType::File || obj.type == rk_ObjectType::Link);
+    char suffix = (obj.type == rk_ObjectType::Directory ? '/' : ' ');
     int align = (int)std::max(60 - indent - strlen(obj.name), (size_t)0);
     bool size = (obj.readable && obj.type == rk_ObjectType::File);
 
-    if (obj.type != rk_ObjectType::Link && obj.mode) {
-        PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 %!D..(0%6)%!0 [%7] %!.._%8%!0",
+    if (bold && obj.mode) {
+        PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5 %!D..(0%6)%!0 %!G..%7%!0 %!Y..%8%!0",
+                FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
+                obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
+                FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
+    } else if (bold) {
+        PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5        %!G..%6%!0 %!Y..%7%!0",
+                FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
+                obj.name, suffix, FmtArg(" ").Repeat(align),
+                FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
+    } else if (obj.type != rk_ObjectType::Link && obj.mode) {
+        PrintLn("%1%!D..[%2] %!0%3%4%5 %!D..(0%6)%!0 %!G..%7%!0 %!..+%8%!0",
                 FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
                 obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
                 FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
     } else {
-        PrintLn("%1%!D..[%2] %!0%!..+%3%4%!0%5        [%6] %!.._%7%!0",
+        PrintLn("%1%!D..[%2] %!0%3%4%5 %!D..(0%6)%!0 %!G..%7%!0 %!..+%8%!0",
                 FmtArg(" ").Repeat(indent), rk_ObjectTypeNames[(int)obj.type][0],
-                obj.name, suffix, FmtArg(" ").Repeat(align),
+                obj.name, suffix, FmtArg(" ").Repeat(align), FmtOctal(obj.mode).Pad0(-3),
                 FmtTimeNice(mspec), size ? FmtDiskSize(obj.size) : FmtArg(""));
     }
 
