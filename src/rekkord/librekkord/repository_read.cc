@@ -933,7 +933,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
 
             obj->hash = hash;
             obj->type = rk_ObjectType::Snapshot;
-            obj->name = header->name[0] ? DuplicateString(header->name, alloc).ptr : nullptr;
+            obj->name = DuplicateString(header->name, alloc).ptr;
             obj->mtime = header->time;
             obj->btime = header->time;
             obj->size = header->len;
