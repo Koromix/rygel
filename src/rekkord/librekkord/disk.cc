@@ -83,6 +83,8 @@ bool rk_Disk::Authenticate(const char *username, const char *pwd)
             }
             return false;
         }
+
+        user = DuplicateString(username, &str_alloc).ptr;
     }
 
     // Get cache ID
@@ -114,6 +116,7 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
     mode = rk_DiskMode::Full;
     MemCpy(skey, key.ptr, key.len);
     crypto_scalarmult_base(pkey, skey);
+    user = nullptr;
 
     // Get cache ID
     if (!ReadSecret("rekkord", id))
@@ -126,10 +129,12 @@ bool rk_Disk::Authenticate(Span<const uint8_t> key)
 void rk_Disk::Lock()
 {
     mode = rk_DiskMode::Secure;
+    user = nullptr;
 
     ZeroMemorySafe(cache_id, RG_SIZE(cache_id));
     ZeroMemorySafe(pkey, RG_SIZE(pkey));
     ZeroMemorySafe(skey, RG_SIZE(skey));
+    str_alloc.ReleaseAll();
 
     cache_db.Close();
 }

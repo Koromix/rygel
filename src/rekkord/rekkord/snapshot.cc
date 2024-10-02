@@ -95,13 +95,9 @@ Options:
         return 1;
     }
 
-    if (!settings.name && !settings.raw) {
-        if (filenames.len > 1) {
-            LogError("You must use an explicit name with %!..+-n <name>%!0 to save multiple paths");
-            return 1;
-        }
-
-        settings.name = NormalizePath(filenames[0], &temp_alloc).ptr;
+    if (!settings.name && !settings.raw && filenames.len > 1) {
+        LogError("You must use an explicit name with %!..+-n <name>%!0 to save multiple paths");
+        return 1;
     }
 
     if (!config.Complete(true))
@@ -110,6 +106,13 @@ Options:
     std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
+
+    if (!settings.name && !settings.raw) {
+        const char *username = disk->GetUser();
+        const char *path = NormalizePath(filenames[0], &temp_alloc).ptr;
+
+        settings.name = username ? Fmt(&temp_alloc, "%1@%2", path, username).ptr : path;
+    };
 
     ZeroMemorySafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
@@ -133,7 +136,12 @@ Options:
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
 
     LogInfo();
-    LogInfo("%1 hash: %!..+%2%!0", settings.raw ? "Data" : "Snapshot", hash);
+    if (settings.raw) {
+        LogInfo("Data hash: %!..+%1%!0", hash);
+    } else {
+        LogInfo("Snapshot hash: %!..+%1%!0", hash);
+        LogInfo("Snapshot name: %!..+%1%!0", settings.name);
+    }
     LogInfo("Stored size: %!..+%1%!0", FmtDiskSize(total_len));
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(total_written));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));

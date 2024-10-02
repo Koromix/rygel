@@ -89,6 +89,7 @@ protected:
     uint8_t cache_id[32];
 
     rk_DiskMode mode = rk_DiskMode::Secure;
+    const char *user = nullptr;
     uint8_t pkey[32] = {};
     uint8_t skey[32] = {};
     bool mlocked = false;
@@ -113,6 +114,7 @@ public:
     const char *GetURL() const { return url; }
     Span<const uint8_t> GetSalt() const { return pkey; }
     rk_DiskMode GetMode() const { return mode; }
+    const char *GetUser() const { return user; }
 
     Span<const uint8_t> GetFullKey() const
     {

@@ -552,7 +552,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     SnapshotHeader2 *header = (SnapshotHeader2 *)snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2));
 
     header->time = LittleEndian(GetUnixTime());
-    CopyString(settings.name ? settings.name : "", header->name);
+    CopyString(settings.name, header->name);
 
     PutContext put(disk, db);
 
