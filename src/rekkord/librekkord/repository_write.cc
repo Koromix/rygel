@@ -549,10 +549,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     HeapArray<uint8_t> snapshot_blob;
-    SnapshotHeader2 *header = (SnapshotHeader2 *)snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2));
-
-    header->time = LittleEndian(GetUnixTime());
-    CopyString(settings.name, header->name);
+    snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2));
 
     PutContext put(disk, db);
 
@@ -649,6 +646,10 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
     rk_Hash hash = {};
     if (!settings.raw) {
+        SnapshotHeader2 *header = (SnapshotHeader2 *)snapshot_blob.ptr;
+
+        header->time = LittleEndian(GetUnixTime());
+        CopyString(settings.name, header->name);
         header->len = LittleEndian(total_len);
         header->stored = LittleEndian(total_written);
 
