@@ -6,6 +6,13 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.26 (2024-10-02)
+
+- Fix `rekkord save` crash when making saving in raw mode
+- Fix read-beyond-end of hash identifiers
+- Append username to default snapshot names
+- Fix possible NULL name when listing snapshots
+
 ### Rekkord 0.25 (2024-10-02)
 
 - Support locating snapshots by name in main commands
