@@ -29,16 +29,16 @@ struct rk_Hash {
 
     operator FmtArg() const { return FmtSpan(hash, FmtType::BigHex, "").Pad0(-2); }
 
-    bool operator<(const rk_Hash &other) const
+    int operator-(const rk_Hash &other) const
     {
         for (Size i = 0; i < RG_SIZE(hash); i++) {
             int delta = hash[i] - other.hash[i];
 
             if (delta)
-                return delta > 0;
+                return delta;
         }
 
-        return false;
+        return 0;
     }
 };
 static_assert(RG_SIZE(rk_Hash) == 32);

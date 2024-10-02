@@ -151,26 +151,40 @@ Available sort orders: %!..+%4%!0)",
     if (!rk_Snapshots(disk.get(), &temp_alloc, &snapshots))
         return 1;
 
-    for (int sort: sorts) {
-        bool ascending = (sort > 0);
-        SortOrder order = ascending ? (SortOrder)(sort - 1) : (SortOrder)(-1 - sort);
+    if (sorts.len) {
+        std::function<int64_t(const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2)> compare =
+            [](const rk_SnapshotInfo &, const rk_SnapshotInfo &) -> int64_t { return 0; };
 
-        std::function<bool(const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2)> compare;
+        for (int sort: sorts) {
+            bool ascending = (sort > 0);
+            SortOrder order = ascending ? (SortOrder)(sort - 1) : (SortOrder)(-1 - sort);
 
-        switch (order) {
-            case SortOrder::Hash: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return s1.hash < s2.hash; }; } break;
-            case SortOrder::Time: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return s1.time < s2.time; }; } break;
-            case SortOrder::Name: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return CmpStr(s1.name, s2.name) < 0; }; } break;
-            case SortOrder::Size: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return s1.len < s2.len; }; } break;
-            case SortOrder::Stored: { compare = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return s1.stored < s2.stored; }; } break;
+            std::function<int64_t(const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2)> func;
+
+            switch (order) {
+                case SortOrder::Hash: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.hash - s2.hash; }; } break;
+                case SortOrder::Time: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.time - s2.time; }; } break;
+                case SortOrder::Name: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return CmpStr(s1.name, s2.name); }; } break;
+                case SortOrder::Size: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.len - s2.len; }; } break;
+                case SortOrder::Stored: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.stored - s2.stored; }; } break;
+            }
+            RG_ASSERT(func);
+
+            if (ascending) {
+                compare = [=](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) {
+                    int64_t delta = compare(s1, s2);
+                    return delta ? delta : func(s1, s2);
+                };
+            } else {
+                compare = [=](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) {
+                    int64_t delta = compare(s1, s2);
+                    return delta ? delta : func(s2, s1);
+                };
+            }
         }
-        RG_ASSERT(compare);
 
-        if (!ascending) {
-            compare = [=](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return !compare(s1, s2); };
-        }
-
-        std::stable_sort(snapshots.begin(), snapshots.end(), compare);
+        std::stable_sort(snapshots.begin(), snapshots.end(),
+                         [&](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) { return compare(s1, s2) < 0; });
     }
 
     switch (format) {
