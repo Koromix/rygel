@@ -48,3 +48,39 @@
     </div>
     <img src="{{ ASSET static/misc/demeter.webp }}" alt="Déméter" />
 </div>
+
+<style>
+    .pills > div {
+        display: flex;
+        margin-bottom: 0;
+        margin-top: 0;
+        box-shadow: 1px 1px #00000011;
+        font-size: 0.8em;
+        gap: 1em;
+    }
+    .pills > div > div:first-child {
+        border: 1px solid #3d787922;
+        width: 120px;
+        background: #3d7879;
+        color: white;
+        padding: 1em;
+        font-size: 1.5em;
+        font-weight: bold;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+    }
+    .pills > div > div:last-child {
+        border: 1px solid #3d787922;
+        flex: 1;
+        padding: 1em;
+        background: #4b9596;
+        color: white;
+        z-index: 1;
+    }
+    .pills > div ul {
+        margin: 0;
+        padding: 0 12px;
+    }
+</style>

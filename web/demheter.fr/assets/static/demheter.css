@@ -72,37 +72,6 @@ footer {
 }
 footer > img { filter: saturate(0%) brightness(0); }
 
-.pills > div {
-    display: flex;
-    margin-bottom: 0;
-    margin-top: 0;
-    box-shadow: 1px 1px #00000011;
-    font-size: 0.8em;
-}
-.pills > div > div:first-child {
-    border: 1px solid #3d787922;
-    width: 120px;
-    background: #3d7879;
-    color: white;
-    padding: 1em;
-    font-size: 1.5em;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-}
-.pills > div > div:last-child {
-    border: 1px solid #3d787922;
-    flex: 1;
-    padding: 1em;
-    background: #4b9596;
-    color: white;
-    z-index: 1;
-}
-.pills > div ul {
-    margin: 0;
-    padding: 0 12px;
-}
-
 .team {
     display: flex;
     justify-content: center;
@@ -255,7 +224,7 @@ footer > img { filter: saturate(0%) brightness(0); }
 }
 .quotes > .content > div { margin-left: calc(48px + 1.5em); }
 .quotes > .content > div + div { margin-top: 2em; }
-.quotes p:last-child {
+.quotes p.name {
     margin-top: 2px;
     font-size: 1.1em;
 }

@@ -36,7 +36,7 @@ Sans les explications d’un médecin, les **personnes se retrouvent seules** fa
         <div>
             <p>« Annoncer le diagnostic permet d’établir une relation thérapeutique de confiance et
         de traverser le diagnostic ensemble »
-            <p>Alyx
+            <p class="name">Alyx
         </div>
     </div>
 </div>
@@ -59,11 +59,11 @@ Le trouble psychique peut être vécu comme un **« tabou familial »** : la com
         <img src="{{ ASSET static/clubhouse/talk.png }}" alt="" />
         <div>
             <p>« Sans un diagnostic clair, on ne se sent pas légitime de parler aux autres de son trouble psychique »
-            <p>Victoria
+            <p class="name">Victoria
         </div>
         <div>
             <p>« L’annonce du diagnostic par un médecin aux proches peut les aider à mieux réagir »
-            <p>Juliette
+            <p class="name">Juliette
         </div>
     </div>
 </div>
