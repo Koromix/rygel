@@ -46,6 +46,7 @@ int RunInit(Span<const char *> arguments)
     const char *write_pwd = nullptr;
     bool random_full_pwd = true;
     bool random_write_pwd = true;
+    const char *key_filename = "master.key";
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -57,7 +58,11 @@ Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
 
         %!..+--master_password [pwd]%!0  Set master password manually
-        %!..+--write_password [pwd]%!0   Set write-only password manually)", FelixTarget);
+        %!..+--write_password [pwd]%!0   Set write-only password manually
+
+    %!..+-K, --key_file <file>%!0        Set explicit master key export file
+                                 %!D..(default: %2)%!0
+        %!..+--skip_key%!0               Skip master key export)", FelixTarget, key_filename);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -82,6 +87,10 @@ Options:
             } else if (opt.Test("--write_password", OptionType::OptionalValue)) {
                 write_pwd = opt.current_value;
                 random_write_pwd = false;
+            } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
+                key_filename = opt.current_value;
+            } else if (opt.Test("--skip_key")) {
+                key_filename = nullptr;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -93,6 +102,11 @@ Options:
 
     if (!config.Complete(false))
         return 1;
+
+    if (key_filename && TestFile(key_filename)) {
+        LogError("Master key export file '%1' already exists", key_filename);
+        return 1;
+    }
 
     std::unique_ptr<rk_Disk> disk = rk_Open(config, false);
     if (!disk)
@@ -129,15 +143,6 @@ Options:
         return 1;
     LogInfo();
 
-    // Export master key
-    char master_key[257] = {};
-    {
-        Span<const uint8_t> key = disk->GetFullKey();
-        sodium_bin2base64(master_key, RG_SIZE(master_key), key.ptr, (size_t)key.len, sodium_base64_VARIANT_ORIGINAL);
-    }
-
-    LogInfo("Master key: %!..+%1%!0", master_key);
-    LogInfo();
     if (random_full_pwd) {
         LogInfo("Default master password: %!..+%1%!0", full_pwd);
     } else {
@@ -148,8 +153,19 @@ Options:
     } else {
         LogInfo("    write-only password: %!D..(hidden)%!0");
     }
-    LogInfo();
-    LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
+
+    // Continue even if it fails, an error will be shown regardless
+    if (key_filename) {
+        LogInfo();
+
+        if (WriteFile(disk->GetFullKey(), key_filename)) {
+            LogInfo("Wrote master key: %!..+%1%!0", key_filename);
+            LogInfo();
+            LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
+        } else {
+            LogInfo("Use %!..+rekkord export_key%!0 to export the master key and keep it safe.");
+        }
+    }
 
     return 0;
 }
@@ -158,6 +174,7 @@ int RunExportKey(Span<const char *> arguments)
 {
     // Options
     rk_Config config;
+    const char *key_filename = "master.key";
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -168,7 +185,10 @@ Options:
 
     %!..+-R, --repository <dir>%!0       Set repository directory
     %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
+        %!..+--password <pwd>%!0         Set repository password
+
+    %!..+-K, --key_file <file>%!0        Set explicit master key export file
+                                 %!D..(default: %2)%!0)", FelixTarget, key_filename);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -191,6 +211,8 @@ Options:
                 config.username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 config.password = opt.current_value;
+            } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
+                key_filename = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -203,6 +225,11 @@ Options:
     if (!config.Complete(true))
         return 1;
 
+    if (TestFile(key_filename)) {
+        LogError("Master key export file '%1' already exists", key_filename);
+        return 1;
+    }
+
     std::unique_ptr<rk_Disk> disk = rk_Open(config, true);
     if (!disk)
         return 1;
@@ -214,14 +241,12 @@ Options:
     }
     LogInfo();
 
-    // Export master key
-    char master64[257] = {};
-    {
-        Span<const uint8_t> key = disk->GetFullKey();
-        sodium_bin2base64(master64, RG_SIZE(master64), key.ptr, (size_t)key.len, sodium_base64_VARIANT_ORIGINAL);
-    }
+    if (!WriteFile(disk->GetFullKey(), key_filename))
+        return 1;
 
-    LogInfo("Master key: %!..+%1%!0", master64);
+    LogInfo("Wrote master key: %!..+%1%!0", key_filename);
+    LogInfo();
+    LogInfo("Please %!.._save the master key in a secure place%!0, you can use it to decrypt the data even if the default account is lost or deleted.");
 
     return 0;
 }
@@ -232,8 +257,7 @@ int RunAddUser(Span<const char *> arguments)
 
     // Options
     rk_Config config;
-    bool authenticate = true;
-    const char *master64 = nullptr;
+    const char *key_filename = nullptr;
     rk_DiskMode mode = rk_DiskMode::Full;
     const char *full_pwd = nullptr;
     const char *write_pwd = nullptr;
@@ -252,7 +276,8 @@ Options:
     %!..+-R, --repository <dir>%!0       Set repository directory
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
-        %!..+--master_key [key]%!0       Use master key instead of username/password
+
+    %!..+-K, --key_file <file>%!0        Use master key instead of username/password
 
     %!..+-m, --mode <mode>%!0            Access mode (see below)
 
@@ -285,9 +310,8 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
                 config.username = opt.current_value;
             } else if (opt.Test("--password", OptionType::Value)) {
                 config.password = opt.current_value;
-            } else if (opt.Test("--master_key", OptionType::OptionalValue)) {
-                master64 = opt.current_value;
-                authenticate = false;
+            } else if (opt.Test("-K", "--key_file", OptionType::Value)) {
+                key_filename = opt.current_value;
             } else if (opt.Test("-m", "--mode", OptionType::Value)) {
                 if (TestStr(opt.current_value, rk_DiskModeNames[(int)rk_DiskMode::Full])) {
                     mode = rk_DiskMode::Full;
@@ -320,6 +344,8 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
         return 1;
     }
 
+    bool authenticate = !key_filename;
+
     if (!config.Complete(authenticate))
         return 1;
 
@@ -331,20 +357,10 @@ Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_
     if (!authenticate) {
         RG_ASSERT(disk->GetMode() == rk_DiskMode::Secure);
 
-        if (!master64) {
-            master64 = Prompt("Master key: ", nullptr, "*", &temp_alloc);
-            if (!master64)
-                return 1;
-        }
-
         LocalArray<uint8_t, 128> master_key;
-        size_t key_len;
-        if (sodium_base642bin(master_key.data, RG_SIZE(master_key.data), master64, strlen(master64),
-                              nullptr, &key_len, nullptr, sodium_base64_VARIANT_ORIGINAL) < 0) {
-            LogError("Malformed master key");
+        master_key.len = ReadFile(key_filename, master_key.data);
+        if (master_key.len < 0)
             return 1;
-        }
-        master_key.len = (Size)key_len;
 
         if (!disk->Authenticate(master_key))
             return false;
