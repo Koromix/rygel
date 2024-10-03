@@ -344,8 +344,8 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
     static const char *const LowerCharsNoAmbi = "abcdefghijkmnopqrstuvwxyz";
     static const char *const DigitChars = "0123456789";
     static const char *const DigitCharsNoAmbi = "23456789";
-    static const char *const SpecialChars = "_-.[]";
-    static const char *const DangerousChars = "!@#$%^&*";
+    static const char *const SpecialChars = "-_.[]";
+    static const char *const DangerousChars = "!@#$%^&*()+";
 
     if (out_password.len < 9) {
         LogError("Refusing to generate password less than 8 characters");
@@ -408,6 +408,12 @@ bool pwd_GeneratePassword(unsigned int flags, Span<char> out_password)
 
             FastRandomRNG<size_t> rng;
             std::shuffle(out_password.begin(), out_password.end() - 1, rng);
+
+            // Avoid '-' in first position, to avoid problems when used in command-lines
+            while (out_password[0] == '-') {
+                int idx = GetRandomInt(0, RG_SIZE(SpecialChars));
+                out_password[0] = SpecialChars[idx];
+            }
 
             if ((flags & (int)pwd_GenerateFlag::Check) && !pwd_CheckPassword(out_password.ptr))
                 continue;
