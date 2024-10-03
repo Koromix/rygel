@@ -8,7 +8,7 @@
 
 ### Rekkord 0.26 (2024-10-02)
 
-- Fix `rekkord save` crash when making saving in raw mode
+- Fix `rekkord save` crash when saving in raw mode
 - Fix read-beyond-end of hash identifiers
 - Append username to default snapshot names
 - Fix possible NULL name when listing snapshots
