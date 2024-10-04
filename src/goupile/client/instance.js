@@ -774,7 +774,7 @@ async function renderPage() {
 
         if (form_state.justTriggered()) {
             let panel_el = document.querySelector('#ins_page')?.parentNode;
-            panel_el.scrollTo?.(0, panel_el.scrollHeight);
+            panel_el?.scrollTo?.(0, panel_el.scrollHeight);
         }
 
         form_model = model;
@@ -1980,6 +1980,12 @@ async function openRecord(tid, anchor, page) {
 
         /* XXX if (new_record.saved && new_record.ulid == form_record.ulid)
             new_state.take_delayed = form_state.take_delayed; */
+    }
+
+    // Scroll to top if needed
+    if (page != route.page) {
+        let panel_el = document.querySelector('#ins_page')?.parentNode;
+        panel_el?.scrollTo?.(0, 0);
     }
 
     new_state.changeHandler = async () => {
