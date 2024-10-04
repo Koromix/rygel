@@ -346,7 +346,7 @@ Options:
 
         %!..+--run <target>%!0           Run target after successful build
                                  %!D..(all remaining arguments are passed as-is)%!0
-        %!..+--run_here <target>%!0      Same thing, but run from current directory
+        %!..+--here <target>%!0          Same thing, but run from current directory
 
 Supported platforms:)", FelixTarget, jobs);
 
@@ -411,7 +411,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
                 load_user = false;
             } else if (opt.Test("-p", "--preset", OptionType::Value)) {
                 preset_name = opt.current_value;
-            } else if (opt.Test("--run") || opt.Test("--run_here")) {
+            } else if (opt.Test("--run") || opt.Test("--here") || opt.Test("--run_here")) {
                 break;
             } else if (opt.TestHasFailed()) {
                 return 1;
@@ -559,7 +559,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             } else if (opt.Test("--run", OptionType::Value)) {
                 run_target_name = opt.current_value;
                 break;
-            } else if (opt.Test("--run_here", OptionType::Value)) {
+            } else if (opt.Test("--here", OptionType::Value) || opt.Test("--run_here", OptionType::Value)) {
                 run_target_name = opt.current_value;
                 run_here = true;
                 break;
