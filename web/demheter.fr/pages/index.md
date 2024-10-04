@@ -56,7 +56,6 @@
         margin-top: 0;
         box-shadow: 1px 1px #00000011;
         font-size: 0.8em;
-        gap: 1em;
     }
     .pills > div > div:first-child {
         border: 1px solid #3d787922;
