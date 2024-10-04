@@ -18,5 +18,5 @@
 
     .columns { display: block; }
     .columns > * { width: auto; }
-    .columns > * + * { margin-top: 3em; }
+    .columns > * + * { margin-top: 2em; }
 }

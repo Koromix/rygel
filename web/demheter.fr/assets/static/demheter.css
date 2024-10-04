@@ -252,7 +252,7 @@ footer > img { filter: saturate(0%) brightness(0); }
 
     .columns { display: block; }
     .columns > * { width: auto; }
-    .columns > * + * { margin-top: 3em; }
+    .columns > * + * { margin-top: 2em; }
 
     .team {
         flex-direction: column;
