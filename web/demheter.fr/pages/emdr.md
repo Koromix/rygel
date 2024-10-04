@@ -118,4 +118,10 @@ Le processus de mouvement oculaire en EMDR facilite ce retraitement, **stimulant
         font-size: 2em;
         font-weight: bold;
     }
+
+    @media screen and (max-width: 960px) {
+        .steps > div { width: 100%; }
+        .steps > div > div:first-child { font-size: 2em; }
+        .steps p { font-size: 1.2em; }
+    }
 </style>
