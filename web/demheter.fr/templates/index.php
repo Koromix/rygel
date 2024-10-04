@@ -73,6 +73,7 @@
                     padding: 0;
                     background: none;
                     position: relative;
+                    overflow: hidden;
                 }
                 #news > img { top: calc(100% - 16px); }
                 #news > div > img {
