@@ -29,7 +29,7 @@ Ces thérapies mettent en lumière le rôle important que jouent les problèmes 
 # Objectifs
 
 <div class="circles">
-    <div style="width: 340px; background: #3c8ebb;"><p><b>Renforcer des compétences communicationnelles</b></p><p>En développant des techniques de communication pour résoudre les conflits et encourager des interactions positives.</p></div>
+    <div style="width: 340px; background: #3c8ebb;"><p><b>Renforcer les compétences communicationnelles</b></p><p>En développant des techniques de communication pour résoudre les conflits et encourager des interactions positives.</p></div>
     <div style="width: 340px; background: #3c8ebb;"><p><b>Favoriser l'empathie et la compréhension mutuelle</b></p><p>En aidant les individus à comprendre les perceptions et émotions des autres membres de sa famille pour renforcer l'empathie au sein des relations.</p></div>
     <div style="width: 340px; background: #3c8ebb;"><p><b>Développer des stratégies de régulation émotionnelle et de gestion de crise</b></p><p>Tout en adaptant ces stratégies au contexte relationnel spécifique de chaque famille ou couple.</p></div>
 </div>

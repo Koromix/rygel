@@ -25,7 +25,7 @@ L'ETP DEMHETER se déroule en plusieurs étapes décrites ci-dessous :
     </div>
     <div>
         <div style="background: #b94bb1;">Séances<br><span class="sub">(groupe)</span></div>
-        <div style="background: #c66cbf;"><ul><li>Chaque séance se déroulent au sein d'un <b>groupe de huit patients</b> partageant la même pathologie.<li>Lors de la première séance, les patients signent une <b>charte d’engagement</b> et de respect du groupe.</li><li>Les séances ont lieu une fois par semaine, pendant deux heures.</li><li>Chaque séance est animée par <b>un psychiatre avec un psychologue, un pharmacien ou un patient</b>.</li><li>À la fin de chaque séance, une évaluation est réalisée pour mesurer la <b>satisfaction</b> des participants et leur compréhension des notions abordées.</li></div>
+        <div style="background: #c66cbf;"><ul><li>Chaque séance se déroule au sein d'un <b>groupe de huit patients</b> partageant la même pathologie.<li>Lors de la première séance, les patients signent une <b>charte d’engagement</b> et de respect du groupe.</li><li>Les séances ont lieu une fois par semaine, pendant deux heures.</li><li>Chaque séance est animée par <b>un psychiatre avec un psychologue, un pharmacien ou un patient</b>.</li><li>À la fin de chaque séance, une évaluation est réalisée pour mesurer la <b>satisfaction</b> des participants et leur compréhension des notions abordées.</li></div>
     </div>
     <div>
         <div style="background: #b237a9;">É͘valuation de fin de programme<br><span class="sub">(individuel)</span></div>
@@ -48,7 +48,7 @@ Il y a actuellement deux programmes ETP en place au sein de DEMHETER :
         <li>Le premier module de six séances porte sur la connaissance de la pathologie bipolaire et la dépression résistante.
         <li>Le deuxième module porte sur la qualité de vie, la gestion du stress, des émotions et des ruminations.
     </ul>
-    <ul style="color: #b20b56;">
+    <ul style="color: #4d9290;">
          <div class="group">Programme sur le trouble somatique fonctionnel</div>
          <li>Les sept séances sont destinées à améliorer la qualité de vie des patients, malgré la persistance de symptômes somatiques.</li>
          <li>Ce programme vise le développement de compétences permettant de mieux comprendre et gérer les symptômes pour obtenir une meilleure autonomie quotidienne.</li>
@@ -66,7 +66,7 @@ Il y a actuellement deux programmes ETP en place au sein de DEMHETER :
         margin-bottom: 0;
         margin-top: 0;
         box-shadow: 1px 1px #00000011;
-        font-size: 0.8em;
+        font-size: 0.9em;
     }
     .pills > div + div { margin-top: 8px; }
     .pills > div > div:first-child {
@@ -74,7 +74,7 @@ Il y a actuellement deux programmes ETP en place au sein de DEMHETER :
         width: 120px;
         color: white;
         padding: 1em;
-        font-size: 1.5em;
+        font-size: 1.2em;
         font-weight: bold;
         display: flex;
         justify-content: center;
@@ -95,7 +95,7 @@ Il y a actuellement deux programmes ETP en place au sein de DEMHETER :
         padding: 0 12px;
     }
     .pills .sub {
-        font-size: 0.6em;
+        font-size: 0.7em;
         font-style: italic;
         font-weight: normal;
     }
