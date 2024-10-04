@@ -16,11 +16,11 @@
         <div>
             <div>Niveau de proximité</div>
             <div><ul><li>Consultation directe</li><li>Médecins généralistes, psychiatres (libéraux et de secteur)</li></ul></div>
-        </div><br>
+        </div>
         <div>
             <div>Niveau de recours</div>
             <div><ul><li>Sollicitation par le niveau de proximité</li><li>Centres spécialisés dans les troubles de l’humeur résistants (avis et évaluations spécialisées)</li></ul></div>
-        </div><br>
+        </div>
         <div>
             <div>Niveau de référence</div>
             <div><ul><li>Le CHU de Lille spécialisé dans les troubles de l'humeur résistants et complexes</li><li>Missions de recours et de coordination, centre de ressources, formation et recherche, approches multidisciplinaires</li></ul></div>
@@ -57,6 +57,7 @@
         box-shadow: 1px 1px #00000011;
         font-size: 0.8em;
     }
+    .pills > div + div { margin-top: 0.8em; }
     .pills > div > div:first-child {
         border: 1px solid #3d787922;
         width: 120px;
@@ -73,7 +74,7 @@
     .pills > div > div:last-child {
         border: 1px solid #3d787922;
         flex: 1;
-        padding: 1em;
+        padding: 1em 1.5em;
         background: #4b9596;
         color: white;
         z-index: 1;
@@ -81,5 +82,12 @@
     .pills > div ul {
         margin: 0;
         padding: 0 12px;
+    }
+
+    @media screen and (max-width: 960px) {
+        .pills > div > div:first-child {
+            width: 85px;
+            font-size: 1.1em;
+        }
     }
 </style>

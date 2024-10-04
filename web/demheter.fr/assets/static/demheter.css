@@ -28,7 +28,10 @@ main a {
 main a:has(> img) { text-decoration: none !important; }
 main a:not(:has(> img)):hover { color: var(--color, black); }
 
-h1 { border-bottom: 1px solid #ccc; }
+h1 {
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 0.7em;
+}
 
 span[title] { border-bottom: 1px dotted #383838; }
 
