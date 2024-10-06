@@ -3576,7 +3576,8 @@ bool FlushFile(int fd, const char *filename)
     return true;
 }
 
-bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size)
+bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
+                int dest_fd, const char *dest_filename, int64_t dest_offset, int64_t size)
 {
     static NtCopyFileChunkFunc *NtCopyFileChunk =
         (NtCopyFileChunkFunc *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCopyFileChunk");
@@ -3586,13 +3587,17 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
         HANDLE h1 = (HANDLE)_get_osfhandle(src_fd);
         HANDLE h2 = (HANDLE)_get_osfhandle(dest_fd);
 
-        LARGE_INTEGER offset = {};
+        LARGE_INTEGER offset0 = {};
+        LARGE_INTEGER offset1 = {};
 
-        while (offset.QuadPart < size) {
-            unsigned long count = (unsigned long)std::min(size - offset.QuadPart, (int64_t)Mebibytes(256));
+        offset0.QuadPart = src_offset;
+        offset1.QuadPart = dest_offset;
+
+        while (size) {
+            unsigned long count = (unsigned long)std::min(size, (int64_t)Mebibytes(256));
 
             IO_STATUS_BLOCK iob;
-            LONG status = NtCopyFileChunk(h1, h2, nullptr, &iob, count, &offset, &offset, nullptr, nullptr, 0);
+            LONG status = NtCopyFileChunk(h1, h2, nullptr, &iob, count, &offset0, &offset1, nullptr, nullptr, 0);
 
             if (status) {
                 static RtlNtStatusToDosErrorFunc *RtlNtStatusToDosError =
@@ -3608,7 +3613,9 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
                 return false;
             }
 
-            offset.QuadPart += iob.Information;
+            offset0.QuadPart += iob.Information;
+            offset1.QuadPart += iob.Information;
+            size -= iob.Information;
         }
 
         return true;
@@ -3616,20 +3623,20 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
 
     // User-mode fallback method
     {
-        int64_t src_offset = 0;
-
-        if (_lseek(src_fd, 0, SEEK_SET) < 0) {
+        if (_lseeki64(src_fd, src_offset, SEEK_SET) < 0) {
             LogError("Failed to seek to start of '%1': %2", src_filename, strerror(errno));
             return false;
         }
-        if (_lseek(dest_fd, 0, SEEK_SET) < 0) {
+        if (_lseeki64(dest_fd, dest_offset, SEEK_SET) < 0) {
             LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
             return false;
         }
 
-        while (src_offset < size) {
+        while (size) {
             LocalArray<uint8_t, 655536> buf;
-            buf.len = _read(src_fd, buf.data, RG_SIZE(buf.data));
+            unsigned long count = (unsigned long)std::min(size, (int64_t)RG_SIZE(buf.data));
+
+            buf.len = _read(src_fd, buf.data, count);
 
             if (buf.len < 0) {
                 if (errno == EINTR)
@@ -3661,7 +3668,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
                 remain.len -= written;
             } while (remain.len);
 
-            src_offset += buf.len;
+            size -= buf.len;
         }
 
         return true;
@@ -3934,22 +3941,22 @@ bool FlushFile(int fd, const char *filename)
     return true;
 }
 
-bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size)
+bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
+                int dest_fd, const char *dest_filename, int64_t dest_offset, int64_t size)
 {
     static_assert(sizeof(off_t) == 8, "This code base requires large file offsets");
 
 #if defined(__linux__) || defined(__FreeBSD__)
     // Try copy_file_range() if available
     {
-        off_t src_offset = 0;
-        off_t dest_offset = 0;
+        bool first = true;
 
-        while (src_offset < size) {
-            size_t count = (size_t)std::min(size - (int64_t)src_offset, (int64_t)Mebibytes(256));
-            ssize_t ret = copy_file_range(src_fd, &src_offset, dest_fd, &dest_offset, count, 0);
+        while (size) {
+            size_t count = (size_t)std::min(size, (int64_t)Mebibytes(256));
+            ssize_t ret = copy_file_range(src_fd, (off_t *)&src_offset, dest_fd, (off_t *)&dest_offset, count, 0);
 
             if (ret < 0) {
-                if (errno == EXDEV)
+                if (first && errno == EXDEV)
                     goto xdev;
                 if (errno == EINTR)
                     continue;
@@ -3957,6 +3964,9 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
                 LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
                 return false;
             }
+
+            first = false;
+            size -= ret;
         }
 
         return true;
@@ -3965,38 +3975,22 @@ bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *d
 xdev:
 #endif
 
-#if defined(__APPLE__)
-    {
-        copyfile_state_t state = copyfile_state_alloc();
-        if (!state)
-            RG_BAD_ALLOC();
-        RG_DEFER { copyfile_state_free(state); };
-
-        if (fcopyfile(src_fd, dest_fd, state, COPYFILE_DATA) < 0) {
-            LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
-            return false;
-        }
-
-        return true;
-    }
-#endif
-
 #if defined(__linux__)
     // Try sendfile() on Linux
     {
-        off_t src_offset = 0;
+        bool first = true;
 
-        if (lseek(dest_fd, 0, SEEK_SET) < 0) {
+        if (lseek(dest_fd, dest_offset, SEEK_SET) < 0) {
             LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
             return false;
         }
 
-        while (src_offset < size) {
-            size_t count = (size_t)std::min(size - (int64_t)src_offset, (int64_t)Mebibytes(256));
-            ssize_t ret = sendfile(dest_fd, src_fd, &src_offset, count);
+        while (size) {
+            size_t count = (size_t)std::min(size, (int64_t)Mebibytes(256));
+            ssize_t ret = sendfile(dest_fd, src_fd, (off_t *)&src_offset, count);
 
             if (ret < 0) {
-                if (errno == EINVAL)
+                if (first && errno == EINVAL)
                     goto unsupported;
                 if (errno == EINTR)
                     continue;
@@ -4004,6 +3998,9 @@ xdev:
                 LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
                 return false;
             }
+
+            first = false;
+            size -= ret;
         }
 
         return true;
@@ -4014,20 +4011,20 @@ unsupported:
 
     // User-mode fallback method
     {
-        off_t src_offset = 0;
-
-        if (lseek(src_fd, 0, SEEK_SET) < 0) {
+        if (lseek(src_fd, src_offset, SEEK_SET) < 0) {
             LogError("Failed to seek to start of '%1': %2", src_filename, strerror(errno));
             return false;
         }
-        if (lseek(dest_fd, 0, SEEK_SET) < 0) {
+        if (lseek(dest_fd, dest_offset, SEEK_SET) < 0) {
             LogError("Failed to seek to start of '%1': %2", dest_filename, strerror(errno));
             return false;
         }
 
-        while (src_offset < size) {
+        while (size) {
             LocalArray<uint8_t, 655536> buf;
-            buf.len = read(src_fd, buf.data, RG_SIZE(buf.data));
+            Size count = (Size)std::min(size, (int64_t)RG_SIZE(buf.data));
+
+            buf.len = read(src_fd, buf.data, (size_t)count);
 
             if (buf.len < 0) {
                 if (errno == EINTR)
@@ -4059,7 +4056,7 @@ unsupported:
                 remain.len -= written;
             } while (remain.len);
 
-            src_offset += (off_t)buf.len;
+            size -= buf.len;
         }
 
         return true;
