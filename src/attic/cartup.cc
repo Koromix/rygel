@@ -1180,6 +1180,8 @@ bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, 
 {
     if (!SpliceFile(src_fd, src_filename, dest_fd, dest_filename, size))
         return false;
+    if (!ResizeFile(dest_fd, dest_filename, size))
+        return false;
     if (!FlushFile(dest_fd, dest_filename))
         return false;
 

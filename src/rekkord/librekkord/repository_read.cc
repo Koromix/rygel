@@ -477,7 +477,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
             if (settings.fake)
                 break;
 
-            if (!ReserveFile(fd, dest_filename, file_len))
+            if (!ResizeFile(fd, dest_filename, file_len))
                 return -1;
 
             Async async(&tasks);

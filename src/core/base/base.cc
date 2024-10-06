@@ -2225,7 +2225,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
     return false;
 }
 
-bool ReserveFile(int fd, const char *filename, int64_t len)
+bool ResizeFile(int fd, const char *filename, int64_t len)
 {
     HANDLE h = (HANDLE)_get_osfhandle(fd);
 
@@ -2603,7 +2603,7 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
     return true;
 }
 
-bool ReserveFile(int fd, const char *filename, int64_t len)
+bool ResizeFile(int fd, const char *filename, int64_t len)
 {
     if (ftruncate(fd, len) < 0) {
         if (errno == EINVAL) {
