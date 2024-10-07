@@ -344,6 +344,7 @@ const Util = new function() {
         if (URL.revokeObjectURL)
             setTimeout(() => URL.revokeObjectURL(url), 60000);
     };
+    this.saveBlob = this.saveFile;
 
     this.loadFile = async function() {
         let file = await new Promise((resolve, reject) => {
