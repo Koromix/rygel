@@ -1391,7 +1391,7 @@ Options:
     return 0;
 }
 
-static bool RunDeleteSource(Span<const char *> arguments)
+static int RunRemoveSource(Span<const char *> arguments)
 {
     // Options
     const char *db_filename = GetDefaultDatabasePath();
@@ -1399,7 +1399,7 @@ static bool RunDeleteSource(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 delete_source [options] <ID | UUID | name>
+R"(Usage: %!..+%1 remove_source [options] <ID | UUID | name>
 
 Options:
     %!..+-D, --database_file <file>%!0   Set database file%!0)",
@@ -1821,7 +1821,7 @@ Options:
     return 0;
 }
 
-static bool RunDeleteDisk(Span<const char *> arguments)
+static int RunRemoveDisk(Span<const char *> arguments)
 {
     // Options
     const char *db_filename = GetDefaultDatabasePath();
@@ -1829,7 +1829,7 @@ static bool RunDeleteDisk(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 delete_disk [options] <ID | UUID | name>
+R"(Usage: %!..+%1 remove_disk [options] <ID | UUID | name>
 
 Options:
     %!..+-D, --database_file <file>%!0   Set database file%!0)",
@@ -1896,11 +1896,11 @@ Commands:
     %!..+backup%!0                       Distribute changes and backup to plugged disks
 
     %!..+add_source%!0                   Add backup source directory
-    %!..+delete_source%!0                Delete backup source directory
+    %!..+remove_source%!0                Remove directory from known sources
 
     %!..+add_disk%!0                     Add disk for future backups
     %!..+edit_disk%!0                    Edit existing backup disk
-    %!..+delete_disk%!0                  Remove disk from backups)",
+    %!..+remove_disk%!0                  Remove disk from backups)",
                 FelixTarget);
     };
 
@@ -1939,12 +1939,12 @@ Commands:
         return RunAddDisk(arguments);
     } else if (TestStr(cmd, "edit_disk")) {
         return RunEditDisk(arguments);
-    } else if (TestStr(cmd, "delete_disk")) {
-        return RunDeleteDisk(arguments);
+    } else if (TestStr(cmd, "remove_disk")) {
+        return RunRemoveDisk(arguments);
     } else if (TestStr(cmd, "add_source")) {
         return RunAddSource(arguments);
-    } else if (TestStr(cmd, "delete_source")) {
-        return RunDeleteSource(arguments);
+    } else if (TestStr(cmd, "remove_source")) {
+        return RunRemoveSource(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
