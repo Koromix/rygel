@@ -59,10 +59,10 @@ struct BackupSet {
 
     bool Refresh();
 
-    DiskData *FindDisk(int64_t id);
+    DiskData *FindDisk(int64_t idx);
     DiskData *FindDisk(const char *selector);
 
-    SourceInfo *FindSource(int64_t id);
+    SourceInfo *FindSource(int64_t idx);
     SourceInfo *FindSource(const char *selector);
 };
 
@@ -407,24 +407,23 @@ bool BackupSet::Refresh()
     return true;
 }
 
-DiskData *BackupSet::FindDisk(int64_t id)
+DiskData *BackupSet::FindDisk(int64_t idx)
 {
-    for (DiskData &disk: disks) {
-        if (disk.id == id)
-            return &disk;
-    }
+    if (idx < 1 || --idx >= disks.len)
+        return nullptr;
 
-    return nullptr;
+    return &disks[idx];
 }
 
 DiskData *BackupSet::FindDisk(const char *selector)
 {
-    int64_t id = -1;
-    ParseInt(selector, &id, (int)ParseFlag::End);
+    int64_t idx = -1;
+    ParseInt(selector, &idx, (int)ParseFlag::End);
+
+    if (idx >= 1 && --idx < disks.len)
+        return &disks[idx];
 
     for (DiskData &disk: disks) {
-        if (disk.id == id)
-            return &disk;
         if (TestStrI(disk.uuid, selector))
             return &disk;
         if (TestStrI(disk.name, selector))
@@ -434,24 +433,23 @@ DiskData *BackupSet::FindDisk(const char *selector)
     return nullptr;
 }
 
-SourceInfo *BackupSet::FindSource(int64_t id)
+SourceInfo *BackupSet::FindSource(int64_t idx)
 {
-    for (SourceInfo &src: sources) {
-        if (src.id == id)
-            return &src;
-    }
+    if (idx < 1 || --idx >= sources.len)
+        return nullptr;
 
-    return nullptr;
+    return &sources[idx];
 }
 
 SourceInfo *BackupSet::FindSource(const char *selector)
 {
-    int64_t id = -1;
-    ParseInt(selector, &id, (int)ParseFlag::End);
+    int64_t idx = -1;
+    ParseInt(selector, &idx, (int)ParseFlag::End);
+
+    if (idx >= 1 && --idx < sources.len)
+        return &sources[idx];
 
     for (SourceInfo &src: sources) {
-        if (src.id == id)
-            return &src;
         if (TestStrI(src.root, selector))
             return &src;
     }
