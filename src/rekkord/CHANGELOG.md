@@ -6,6 +6,11 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.27 (2024-10-08)
+
+- Replace base64 master key display with file export
+- Always append username to snapshot names
+
 ### Rekkord 0.26 (2024-10-02)
 
 - Fix `rekkord save` crash when saving in raw mode
