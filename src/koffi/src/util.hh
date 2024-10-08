@@ -61,7 +61,9 @@ public:
 
     Napi::Value GetAddress(const Napi::CallbackInfo &info);
     Napi::Value GetType(const Napi::CallbackInfo &info);
+
     Napi::Value Call(const Napi::CallbackInfo &info);
+    Napi::Value Read(const Napi::CallbackInfo &info);
 };
 
 class UnionObject: public Napi::ObjectWrap<UnionObject> {
@@ -113,6 +115,16 @@ static inline bool IsFloat(const TypeInfo *type)
     bool fp = (type->primitive == PrimitiveKind::Float32 ||
                type->primitive == PrimitiveKind::Float64);
     return fp;
+}
+
+static inline bool IsPointer(const TypeInfo *type)
+{
+    bool ptr = (type->primitive == PrimitiveKind::Pointer ||
+                type->primitive == PrimitiveKind::String ||
+                type->primitive == PrimitiveKind::String16 ||
+                type->primitive == PrimitiveKind::String32 ||
+                type->primitive == PrimitiveKind::Callback);
+    return ptr;
 }
 
 static inline bool IsRegularSize(Size size, Size max)

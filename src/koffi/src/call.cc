@@ -664,7 +664,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
             case PrimitiveKind::Array: {
                 if (value.IsArray()) {
                     Napi::Array array = value.As<Napi::Array>();
-                    Size len = (Size)member.type->size / member.type->ref.type->size;
+                    Size len = (Size)member.type->size / member.type->ref->size;
 
                     if (!PushNormalArray(array, len, member.type, dest))
                         return false;
@@ -703,7 +703,7 @@ bool CallData::PushObject(Napi::Object obj, const TypeInfo *type, uint8_t *origi
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    ptr = ReserveTrampoline(member.type->ref.proto, func);
+                    ptr = ReserveTrampoline(member.type->proto, func);
                     if (!ptr) [[unlikely]]
                         return false;
                 } else if (CheckPointerType(instance, value, member.type)) {
@@ -729,7 +729,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
 {
     RG_ASSERT(array.IsArray());
 
-    const TypeInfo *ref = type->ref.type;
+    const TypeInfo *ref = type->ref;
 
     if (array.Length() != (size_t)len) [[unlikely]] {
         ThrowError<Napi::Error>(env, "Expected array of length %1, got %2", len, array.Length());
@@ -907,7 +907,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
 
                 if (value.IsArray()) {
                     Napi::Array array2 = value.As<Napi::Array>();
-                    Size len2 = (Size)ref->size / ref->ref.type->size;
+                    Size len2 = (Size)ref->size / ref->ref->size;
 
                     if (!PushNormalArray(array2, len2, ref, dest))
                         return false;
@@ -950,7 +950,7 @@ bool CallData::PushNormalArray(Napi::Array array, Size len, const TypeInfo *type
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    ptr = ReserveTrampoline(ref->ref.proto, func);
+                    ptr = ReserveTrampoline(ref->proto, func);
                     if (!ptr) [[unlikely]]
                         return false;
                 } else if (CheckPointerType(instance, value, ref)) {
@@ -995,7 +995,7 @@ void CallData::PushBuffer(Span<const uint8_t> buffer, Size size, const TypeInfo 
         } while (false)
 
     if (type->primitive == PrimitiveKind::Array || type->primitive == PrimitiveKind::Pointer) {
-        const TypeInfo *ref = type->ref.type;
+        const TypeInfo *ref = type->ref;
 
         if (ref->primitive == PrimitiveKind::Int16S || ref->primitive == PrimitiveKind::UInt16S) {
             SWAP(uint16_t);
@@ -1016,7 +1016,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
 
     size_t encoded = 0;
 
-    switch (type->ref.type->primitive) {
+    switch (type->ref->primitive) {
         case PrimitiveKind::Int8: {
             napi_status status = napi_get_value_string_utf8(env, obj, (char *)origin, type->size, &encoded);
             RG_ASSERT(status == napi_ok);
@@ -1029,7 +1029,7 @@ bool CallData::PushStringArray(Napi::Value obj, const TypeInfo *type, uint8_t *o
         } break;
 
         default: {
-            ThrowError<Napi::TypeError>(env, "Strings cannot be converted to %1 array", type->ref.type->name);
+            ThrowError<Napi::TypeError>(env, "Strings cannot be converted to %1 array", type->ref->name);
             return false;
         } break;
     }
@@ -1057,10 +1057,11 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         } break;
 
         case napi_object: {
+            const TypeInfo *ref = type->ref;
             uint8_t *ptr = nullptr;
 
             OutArgument::Kind out_kind;
-            const TypeInfo *out_type = type->ref.type;
+            const TypeInfo *out_type = ref;
             Size out_max_len = -1;
 
             if (CheckPointerType(instance, value, type)) {
@@ -1072,8 +1073,8 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 Napi::Array array = value.As<Napi::Array>();
                 bool string1 = (array.Length() == 1 && ((Napi::Value)array[0u]).IsString());
 
-                if (string1 && (type->ref.type->primitive == PrimitiveKind::Int8 ||
-                                type->ref.type == instance->void_type)) {
+                if (string1 && (ref->primitive == PrimitiveKind::Int8 ||
+                                ref == instance->void_type)) {
                     Size len = PushStringValue(array[0u], (const char **)&ptr);
 
                     if (len < 0) [[unlikely]]
@@ -1082,7 +1083,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     out_kind = OutArgument::Kind::Array;
                     out_type = MakeTemporaryArrayType(instance->char_type, len, ArrayHint::String);
                     out_max_len = len;
-                } else if (string1 && type->ref.type->primitive == PrimitiveKind::Int16) {
+                } else if (string1 && ref->primitive == PrimitiveKind::Int16) {
                     Size len = PushString16Value(array[0u], (const char16_t **)&ptr);
 
                     if (len < 0) [[unlikely]]
@@ -1091,7 +1092,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     out_kind = OutArgument::Kind::Array;
                     out_type = MakeTemporaryArrayType(instance->char16_type, len, ArrayHint::String);
                     out_max_len = len;
-                } else if (string1 && type->ref.type->primitive == PrimitiveKind::Int32) {
+                } else if (string1 && ref->primitive == PrimitiveKind::Int32) {
                     Size len = PushString32Value(array[0u], (const char32_t **)&ptr);
 
                     if (len < 0) [[unlikely]]
@@ -1101,14 +1102,14 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                     out_type = MakeTemporaryArrayType(instance->char32_type, len, ArrayHint::String);
                     out_max_len = len;
                 } else {
-                    if (!type->ref.type->size) [[unlikely]] {
+                    if (!ref->size) [[unlikely]] {
                         ThrowError<Napi::TypeError>(env, "Cannot pass %1 value to %2, use koffi.as()",
-                                                    type->ref.type != instance->void_type ? "opaque" : "ambiguous", type->name);
+                                                    ref != instance->void_type ? "opaque" : "ambiguous", type->name);
                         return false;
                     }
 
                     Size len = (Size)array.Length();
-                    Size size = len * type->ref.type->size;
+                    Size size = len * ref->size;
 
                     ptr = AllocHeap(size, 16);
 
@@ -1129,21 +1130,21 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
                 directions = 1;
 
                 out_kind = OutArgument::Kind::Buffer;
-            } else if (type->ref.type->primitive == PrimitiveKind::Record ||
-                       type->ref.type->primitive == PrimitiveKind::Union) [[likely]] {
+            } else if (ref->primitive == PrimitiveKind::Record ||
+                       ref->primitive == PrimitiveKind::Union) [[likely]] {
                 Napi::Object obj = value.As<Napi::Object>();
                 RG_ASSERT(IsObject(value));
 
-                ptr = AllocHeap(type->ref.type->size, 16);
+                ptr = AllocHeap(ref->size, 16);
 
-                if (type->ref.type->primitive == PrimitiveKind::Union &&
+                if (ref->primitive == PrimitiveKind::Union &&
                         (directions & 2) && !CheckValueTag(obj, &UnionObjectMarker)) [[unlikely]] {
                     ThrowError<Napi::TypeError>(env, "Unexpected %1 value, expected union value", GetValueType(obj));
                     return false;
                 }
 
                 if (directions & 1) {
-                    if (!PushObject(obj, type->ref.type, ptr))
+                    if (!PushObject(obj, ref, ptr))
                         return false;
                 } else {
                     MemSet(ptr, 0, type->size);
@@ -1173,16 +1174,16 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
         case napi_string: {
             RG_ASSERT(type->primitive == PrimitiveKind::Pointer);
 
-            if (type->ref.type == instance->void_type) {
+            if (type->ref == instance->void_type) {
                 PushStringValue(value, (const char **)out_ptr);
                 return true;
-            } else if (type->ref.type->primitive == PrimitiveKind::Int8) {
+            } else if (type->ref->primitive == PrimitiveKind::Int8) {
                 PushStringValue(value, (const char **)out_ptr);
                 return true;
-            } else if (type->ref.type->primitive == PrimitiveKind::Int16) {
+            } else if (type->ref->primitive == PrimitiveKind::Int16) {
                 PushString16Value(value, (const char16_t **)out_ptr);
                 return true;
-            } else if (type->ref.type->primitive == PrimitiveKind::Int32) {
+            } else if (type->ref->primitive == PrimitiveKind::Int32) {
                 PushString32Value(value, (const char32_t **)out_ptr);
                 return true;
             } else {
@@ -1198,7 +1199,7 @@ bool CallData::PushPointer(Napi::Value value, const TypeInfo *type, int directio
 
             Napi::Function func = value.As<Napi::Function>();
 
-            void *ptr = ReserveTrampoline(type->ref.proto, func);
+            void *ptr = ReserveTrampoline(type->proto, func);
             if (!ptr) [[unlikely]]
                 return false;
 
@@ -1295,7 +1296,7 @@ const TypeInfo *CallData::MakeTemporaryArrayType(const TypeInfo *ref, Size len, 
     type->primitive = PrimitiveKind::Array;
     type->align = 1;
     type->size = (int32_t)(ref->size * len);
-    type->ref.type = ref;
+    type->ref = ref;
     type->hint = hint;
 
     return type;

@@ -162,12 +162,13 @@ static Size ClassifyType(const TypeInfo *type, Size offset, Span<RegisterClass> 
                 return 1;
             }
 
-            Size len = type->size / type->ref.type->size;
+            const TypeInfo *ref = type->ref;
+            Size len = type->size / ref->size;
 
             for (Size i = 0; i < len; i++) {
                 Size start = offset / 8;
-                ClassifyType(type->ref.type, offset % 8, classes.Take(start, classes.len - start));
-                offset += type->ref.type->size;
+                ClassifyType(ref, offset % 8, classes.Take(start, classes.len - start));
+                offset += ref->size;
             }
 
             return (offset + 7) / 8;
@@ -407,7 +408,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    ptr = ReserveTrampoline(param.type->ref.proto, func);
+                    ptr = ReserveTrampoline(param.type->proto, func);
                     if (!ptr) [[unlikely]]
                         return false;
                 } else if (CheckPointerType(instance, value, param.type)) {
@@ -833,17 +834,18 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             out_reg->rax = (uint64_t)str32;
         } break;
         case PrimitiveKind::Pointer: {
-            uint8_t *ptr;
+            const TypeInfo *ref = type->ref;
+            uint8_t *ptr = nullptr;
 
             if (CheckPointerType(instance, value, type)) {
                 ptr = (uint8_t *)UnwrapPointer(value);
-            } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
-                                           type->ref.type->primitive == PrimitiveKind::Union)) {
+            } else if (IsObject(value) && (ref->primitive == PrimitiveKind::Record ||
+                                           ref->primitive == PrimitiveKind::Union)) {
                 Napi::Object obj = value.As<Napi::Object>();
 
-                ptr = AllocHeap(type->ref.type->size, 16);
+                ptr = AllocHeap(ref->size, 16);
 
-                if (!PushObject(obj, type->ref.type, ptr))
+                if (!PushObject(obj, ref, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -916,7 +918,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             if (value.IsFunction()) {
                 Napi::Function func2 = value.As<Napi::Function>();
 
-                ptr = ReserveTrampoline(type->ref.proto, func2);
+                ptr = ReserveTrampoline(type->proto, func2);
                 if (!ptr) [[unlikely]]
                     return;
             } else if (CheckPointerType(instance, value, type)) {

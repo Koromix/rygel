@@ -649,10 +649,10 @@ Napi::Value InstantiatePointer(const Napi::CallbackInfo &info)
     }
 
     const TypeInfo *type = ResolveType(info[1]);
-    if (!type)
+    if (!type) [[unlikely]]
         return env.Null();
-    if (type->primitive != PrimitiveKind::Pointer && type->primitive != PrimitiveKind::Callback) {
-        ThrowError<Napi::TypeError>(env, "Expected pointer type, got %1", PrimitiveKindNames[(int)type->primitive]);
+    if (!IsPointer(type)) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", PrimitiveKindNames[(int)type->primitive]);
         return env.Null();
     }
 
@@ -674,12 +674,8 @@ static Napi::Value EncodePointerDirection(const Napi::CallbackInfo &info, int di
     const TypeInfo *type = ResolveType(info[0]);
     if (!type)
         return env.Null();
-
-    if (type->primitive != PrimitiveKind::Pointer &&
-            type->primitive != PrimitiveKind::String &&
-            type->primitive != PrimitiveKind::String16 &&
-            type->primitive != PrimitiveKind::String32) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer or string type", type->name);
+    if (!IsPointer(type)) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", type->name);
         return env.Null();
     }
 
@@ -997,7 +993,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
     type->primitive = PrimitiveKind::Prototype;
     type->align = alignof(void *);
     type->size = RG_SIZE(void *);
-    type->ref.proto = func;
+    type->proto = func;
 
     instance->types_map.Set(type->name, type);
 
@@ -1843,7 +1839,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     TrampolineInfo *trampoline = &shared.trampolines[idx];
 
     trampoline->instance = instance;
-    trampoline->proto = type->ref.proto;
+    trampoline->proto = type->proto;
     trampoline->func.Reset(func, 1);
     if (!IsNullOrUndefined(recv)) {
         trampoline->recv.Reset(recv, 1);
@@ -1852,7 +1848,7 @@ static Napi::Value RegisterCallback(const Napi::CallbackInfo &info)
     }
     trampoline->generation = -1;
 
-    void *ptr = GetTrampoline(idx, type->ref.proto);
+    void *ptr = GetTrampoline(idx, type->proto);
     Napi::Value wrapper = WrapPointer(env, instance, type, ptr);
 
     // Cache index for fast unregistration
@@ -1921,12 +1917,8 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(info[1]);
     if (!type) [[unlikely]]
         return env.Null();
-    if (type->primitive != PrimitiveKind::Pointer &&
-            type->primitive != PrimitiveKind::Callback &&
-            type->primitive != PrimitiveKind::String &&
-            type->primitive != PrimitiveKind::String16 &&
-            type->primitive != PrimitiveKind::String32) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Only pointer or string types can be used for casting");
+    if (!IsPointer(type)) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Only pointer types can be used for casting");
         return env.Null();
     }
 
@@ -1941,32 +1933,34 @@ static Napi::Value CastValue(const Napi::CallbackInfo &info)
     return external;
 }
 
-static Napi::Value DecodeValue(const Napi::CallbackInfo &info)
+static Napi::Value ReadValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
-    bool has_len = (info.Length() >= 3u + has_offset && info[2u + has_offset].IsNumber());
+    bool has_len = (info.Length() >= 3u);
 
-    if (info.Length() < 2u + has_offset) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected %1 to 4 arguments, got %2", 2 + has_offset, info.Length());
+    if (info.Length() < 2u) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 2 to 3 arguments, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[1u + has_offset]);
+    const TypeInfo *type = ResolveType(info[1u]);
     if (!type) [[unlikely]]
         return env.Null();
+    if (!IsPointer(type)) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", type->name);
+        return env.Null();
+    }
 
     Napi::Value value = info[0];
-    int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
 
     if (has_len) {
-        Size len = info[2u + has_offset].As<Napi::Number>();
+        Size len = info[2u].As<Napi::Number>();
 
-        Napi::Value ret = Decode(value, offset, type, &len);
+        Napi::Value ret = Decode(value, 0, type->ref, &len);
         return ret;
     } else {
-        Napi::Value ret = Decode(value, offset, type);
+        Napi::Value ret = Decode(value, 0, type->ref);
         return ret;
     }
 }
@@ -2185,7 +2179,7 @@ static void RegisterPrimitiveType(Napi::Env env, Napi::Object map, std::initiali
         const TypeInfo *marker = instance->types_map.FindValue(ref, nullptr);
         RG_ASSERT(marker);
 
-        type->ref.type = marker;
+        type->ref = marker;
     }
 
     Napi::Value wrapper = FinalizeType(env, instance, type);
@@ -2293,7 +2287,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     exports.Set("unregister", Napi::Function::New(env, UnregisterCallback, "unregister"));
 
     exports.Set("as", Napi::Function::New(env, CastValue, "as"));
-    exports.Set("decode", Napi::Function::New(env, DecodeValue, "decode"));
+    exports.Set("read", Napi::Function::New(env, ReadValue, "read"));
     exports.Set("encode", Napi::Function::New(env, EncodeValue, "encode"));
     exports.Set("address", Napi::Function::New(env, GetPointerAddress, "address"));
 

@@ -149,6 +149,6 @@ async function create_temporary_file(prefix) {
 }
 
 function check_text(ptr, expect) {
-    let str = koffi.decode(ptr, 'char', -1);
+    let str = ptr.read();
     assert.equal(str, expect);
 }

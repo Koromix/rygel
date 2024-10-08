@@ -129,10 +129,8 @@ struct TypeInfo {
     uint16_t flags;
 
     HeapArray<RecordMember> members; // Record only
-    union {
-        const TypeInfo *type; // Pointer or array
-        const FunctionInfo *proto; // Callback only
-    } ref;
+    const TypeInfo *ref; // Pointer, array or callback
+    const FunctionInfo *proto; // Prototype or callback only
     ArrayHint hint; // Array only
 
     mutable Napi::FunctionReference construct; // Union only

@@ -86,12 +86,12 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
         case PrimitiveKind::Float64: {} break;
 
         case PrimitiveKind::Array: {
-            uint32_t len = type->size / type->ref.type->size;
+            uint32_t len = type->size / type->ref->size;
             defn.Set("length", Napi::Number::New(env, (double)len));
             defn.Set("hint", ArrayHintNames[(int)type->hint]);
         } [[fallthrough]];
         case PrimitiveKind::Pointer: {
-            Napi::Value value = FinalizeType(env, instance, type->ref.type);
+            Napi::Value value = FinalizeType(env, instance, type->ref);
             defn.Set("ref", value);
         } break;
 
@@ -114,7 +114,7 @@ TypeObject::TypeObject(const Napi::CallbackInfo &info)
 
         case PrimitiveKind::Prototype:
         case PrimitiveKind::Callback: {
-            Napi::Object proto = DescribeFunction(env, type->ref.proto);
+            Napi::Object proto = DescribeFunction(env, type->proto);
             defn.Set("proto", proto);
         } break;
     }
@@ -132,7 +132,8 @@ Napi::Function PointerObject::InitClass(Napi::Env env)
         InstanceAccessor("address", &PointerObject::GetAddress, nullptr, napi_enumerable),
         InstanceAccessor("type", &PointerObject::GetType, nullptr, napi_enumerable),
 
-        InstanceMethod("call", &PointerObject::Call, napi_enumerable)
+        InstanceMethod("call", &PointerObject::Call, napi_enumerable),
+        InstanceMethod("read", &PointerObject::Read, napi_enumerable)
     });
 
     return constructor;
@@ -190,10 +191,34 @@ Napi::Value PointerObject::Call(const Napi::CallbackInfo &info)
         return env.Null();
     }
 
-    const FunctionInfo *proto = type->ref.proto;
+    const FunctionInfo *proto = type->proto;
 
     return proto->variadic ? TranslateVariadicCall(proto, ptr, info)
                            : TranslateNormalCall(proto, ptr, info);
+}
+
+Napi::Value PointerObject::Read(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    bool has_len = (info.Length() >= 1);
+
+    if (type->primitive == PrimitiveKind::Callback) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Cannot read function pointer");
+        return env.Null();
+    }
+
+    if (has_len) {
+        if (!info[0].IsNumber()) {
+            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(info[0]));
+            return env.Null();
+        }
+
+        Size len = info[0].As<Napi::Number>();
+        return Decode(env, (const uint8_t *)&ptr, type, &len);
+    } else {
+        return Decode(env, (const uint8_t *)&ptr, type);
+    }
 }
 
 Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
@@ -552,12 +577,13 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
                 type->primitive = PrimitiveKind::Pointer;
                 type->size = RG_SIZE(void *);
                 type->align = RG_SIZE(void *);
-                type->ref.type = ref;
+                type->ref = ref;
             } else {
                 type->primitive = PrimitiveKind::Callback;
                 type->size = RG_SIZE(void *);
                 type->align = RG_SIZE(void *);
-                type->ref.proto = ref->ref.proto;
+                type->ref = ref;
+                type->proto = ref->proto;
             }
 
             bucket->key = type->name;
@@ -583,7 +609,7 @@ static const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref
     type->primitive = PrimitiveKind::Array;
     type->align = ref->align;
     type->size = (int32_t)(len * ref->size);
-    type->ref.type = ref;
+    type->ref = ref;
     type->hint = hint;
 
     if (insert) {
@@ -646,7 +672,7 @@ bool CanPassType(const TypeInfo *type, int directions)
             return false;
         if (type->primitive == PrimitiveKind::Prototype)
             return false;
-        if (type->primitive == PrimitiveKind::Callback && type->ref.proto->variadic)
+        if (type->primitive == PrimitiveKind::Callback && type->proto->variadic)
             return false;
 
         return true;
@@ -671,7 +697,7 @@ bool CanStoreType(const TypeInfo *type)
         return false;
     if (type->primitive == PrimitiveKind::Prototype)
         return false;
-    if (type->primitive == PrimitiveKind::Callback && type->ref.proto->variadic)
+    if (type->primitive == PrimitiveKind::Callback && type->proto->variadic)
         return false;
 
     return true;
@@ -762,9 +788,9 @@ bool CheckPointerType(const InstanceData *instance, Napi::Value value, const Typ
 
     if (type == expect)
         return true;
-    if (type->primitive == PrimitiveKind::Pointer && type->ref.type == instance->void_type)
+    if (type->primitive == PrimitiveKind::Pointer && type->ref == instance->void_type)
         return true;
-    if (expect->primitive == PrimitiveKind::Pointer && expect->ref.type == instance->void_type)
+    if (expect->primitive == PrimitiveKind::Pointer && expect->ref == instance->void_type)
         return true;
 
     return false;
@@ -986,7 +1012,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
-    uint32_t len = type->size / type->ref.type->size;
+    uint32_t len = type->size / type->ref->size;
     Size offset = 0;
 
 #define POP_ARRAY(SetCode) \
@@ -994,13 +1020,13 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
             Napi::Array array = Napi::Array::New(env); \
              \
             for (uint32_t i = 0; i < len; i++) { \
-                offset = AlignLen(offset, type->ref.type->align); \
+                offset = AlignLen(offset, type->ref->align); \
                  \
                 const uint8_t *src = origin + offset; \
                  \
                 SetCode \
                  \
-                offset += type->ref.type->size; \
+                offset += type->ref->size; \
             } \
              \
             return array; \
@@ -1016,7 +1042,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
                 Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
                  \
-                DecodeBuffer(buffer, origin, type->ref.type); \
+                DecodeBuffer(buffer, origin, type->ref); \
                  \
                 return array; \
             } \
@@ -1033,13 +1059,13 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
                 Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
                  \
-                DecodeBuffer(buffer, origin, type->ref.type); \
+                DecodeBuffer(buffer, origin, type->ref); \
                  \
                 return array; \
             } \
         } while (false)
 
-    switch (type->ref.type->primitive) {
+    switch (type->ref->primitive) {
         case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
 
         case PrimitiveKind::Bool: {
@@ -1135,20 +1161,20 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
             POP_ARRAY({
                 void *ptr2 = *(void **)src;
 
-                Napi::Value wrapper = WrapPointer(env, instance, type->ref.type, ptr2);
+                Napi::Value wrapper = WrapPointer(env, instance, type->ref, ptr2);
                 array.Set(i, wrapper);
             });
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             POP_ARRAY({
-                Napi::Object obj = DecodeObject(env, src, type->ref.type);
+                Napi::Object obj = DecodeObject(env, src, type->ref);
                 array.Set(i, obj);
             });
         } break;
         case PrimitiveKind::Array: {
             POP_ARRAY({
-                Napi::Value value = DecodeArray(env, src, type->ref.type);
+                Napi::Value value = DecodeArray(env, src, type->ref);
                 array.Set(i, value);
             });
         } break;
@@ -1442,8 +1468,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
                 return str32 ? MakeStringFromUTF32(env, str32) : env.Null();
             }
         } break;
-        case PrimitiveKind::Pointer:
-        case PrimitiveKind::Callback: {
+        case PrimitiveKind::Pointer: {
             void *ptr2 = *(void **)ptr;
 
             Napi::Value wrapper = WrapPointer(env, instance, type, ptr2);
@@ -1467,8 +1492,9 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
             return Napi::Number::New(env, d);
         } break;
 
-        case PrimitiveKind::Prototype: {
-            const FunctionInfo *proto = type->ref.proto;
+        case PrimitiveKind::Prototype:
+        case PrimitiveKind::Callback: {
+            const FunctionInfo *proto = type->proto;
             RG_ASSERT(!proto->variadic);
             RG_ASSERT(!proto->lib);
 
@@ -1630,7 +1656,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
         case PrimitiveKind::Array: {
             if (value.IsArray()) {
                 Napi::Array array = value.As<Napi::Array>();
-                Size len = (Size)type->size / type->ref.type->size;
+                Size len = (Size)type->size / type->ref->size;
 
                 if (!call.PushNormalArray(array, len, type, origin))
                     return false;
@@ -1669,7 +1695,7 @@ bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *t
             if (value.IsFunction()) {
                 ThrowError<Napi::Error>(env, "Cannot encode non-registered callback");
                 return false;
-            } else if (CheckPointerType(instance, value, type->ref.type)) {
+            } else if (CheckPointerType(instance, value, type->ref)) {
                 ptr = UnwrapPointer(value);
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
@@ -1798,8 +1824,8 @@ static int AnalyseFlatRec(const TypeInfo *type, int offset, int count, FunctionR
         }
         offset += count;
     } else if (type->primitive == PrimitiveKind::Array) {
-        count *= type->size / type->ref.type->size;
-        offset = AnalyseFlatRec(type->ref.type, offset, count, func);
+        count *= type->size / type->ref->size;
+        offset = AnalyseFlatRec(type->ref, offset, count, func);
     } else {
         func(type, offset, count);
         offset += count;

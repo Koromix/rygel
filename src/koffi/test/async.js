@@ -113,7 +113,7 @@ async function test() {
             let p = new Promise((resolve, reject) => {
                 try {
                     let ptr = GetBinaryIntFunction(type);
-                    let func = koffi.decode(ptr, BinaryIntFunc);
+                    let func = koffi.read(ptr, 'BinaryIntFunc *');
 
                     func.async(a, b, (err, res) => {
                         assert.equal(res, expected);

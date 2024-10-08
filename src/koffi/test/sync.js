@@ -440,7 +440,7 @@ async function test() {
         let fmt = (process.platform == 'win32') ? 'foo %d %g %S %s' : 'foo %d %g %s %ls';
         let ptr = PrintFmtWide(fmt, 'int', 200, 'double', 1.5, 'str', 'BAR', 'wchar_t *', '\u{1F600} ><');
 
-        let str = koffi.decode(ptr, 'wchar_t', -1);
+        let str = ptr.read();
         assert.equal(str, 'foo 200 1.5 BAR \u{1F600} ><');
 
         CallFree(ptr);
@@ -679,14 +679,14 @@ async function test() {
             PackFloat3(20.0, 30.0, 40.0, koffi.as(ptr1, type));
             PackFloat3(i * 2, -30.0, -31.0, ptr2);
 
-            assert.deepEqual(koffi.decode(ptr1[0], 'Float3'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
-            assert.deepEqual(koffi.decode(ptr1[0].buffer, 'Float3'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
+            assert.deepEqual(koffi.read(ptr1[0], 'Float3 *'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
+            assert.deepEqual(koffi.read(ptr1[0].buffer, 'Float3 *'), { a: 20.0, b: Float32Array.from([30.0, 40.0])});
 
             assert.ok(ptr2 instanceof Buffer);
-            assert.deepEqual(koffi.decode(ptr2, 'Float3'), { a: i * 2, b: Float32Array.from([-30.0, -31.0])});
-            assert.deepEqual(koffi.decode(ptr2.buffer, 'Float3'), { a: 0, b: Float32Array.from([-30.0, -31.0])});
+            assert.deepEqual(koffi.read(ptr2, 'Float3 *'), { a: i * 2, b: Float32Array.from([-30.0, -31.0])});
+            assert.deepEqual(koffi.read(ptr2.buffer, 'Float3 *'), { a: 0, b: Float32Array.from([-30.0, -31.0])});
 
-            assert.deepEqual(koffi.decode(ptr2, 'float', 3), Float32Array.from([i * 2, -30.0, -31.0]));
+            assert.deepEqual(koffi.read(ptr2, 'float *', 3), Float32Array.from([i * 2, -30.0, -31.0]));
         }
     }
 
@@ -698,8 +698,8 @@ async function test() {
         AddPack3(2, 42, -5, array1);
         AddPack3(2, 42, -5, array2.buffer);
 
-        assert.deepEqual(koffi.decode(array1, 'Pack3'), { a: 14, b: 87, c: -7 });
-        assert.deepEqual(koffi.decode(array2, 'Pack3'), { a: -10, b: -3, c: -3 });
+        assert.deepEqual(koffi.read(array1, 'Pack3 *'), { a: 14, b: 87, c: -7 });
+        assert.deepEqual(koffi.read(array2, 'Pack3 *'), { a: -10, b: -3, c: -3 });
     }
 
     // Test errno
@@ -807,7 +807,7 @@ async function test() {
     {
         let ptr = GetLatin1String();
 
-        let array = koffi.decode(ptr, 'uint8_t', -1);
+        let array = koffi.read(ptr, 'uint8_t *', -1);
         let str = Buffer.from(array.buffer).toString('latin1');
 
         assert.equal(str, 'Microsoft®²');
@@ -949,12 +949,26 @@ async function test() {
 }
 
 function check_text(ptr, expect) {
-    let str = koffi.decode(ptr, 'char', -1);
+    if (ptr == null) {
+        asset.equal(ptr, null);
+        return;
+    }
+
+    let typed = new koffi.Pointer(ptr, 'const char *');
+    let str = typed.read();
+
     assert.equal(str, expect);
 }
 
 function check_text16(ptr, expect) {
-    let str = koffi.decode(ptr, 'char16', -1);
+     if (ptr == null) {
+        asset.equal(ptr, null);
+        return;
+    }
+
+    let typed = new koffi.Pointer(ptr, 'const char16_t *');
+    let str = typed.read();
+
     assert.equal(str, expect);
 }
 
