@@ -107,12 +107,17 @@ Options:
     if (!disk)
         return 1;
 
-    if (!settings.name && !settings.raw) {
+    if (!settings.raw) {
         const char *username = disk->GetUser();
-        const char *path = NormalizePath(filenames[0], &temp_alloc).ptr;
+        RG_ASSERT(username);
 
-        settings.name = username ? Fmt(&temp_alloc, "%1@%2", path, username).ptr : path;
-    };
+        if (settings.name) {
+            settings.name = Fmt(&temp_alloc, "%1@%2", settings.name, username).ptr;
+        } else {
+            const char *path = NormalizePath(filenames[0], &temp_alloc).ptr;
+            settings.name = Fmt(&temp_alloc, "%1@%2", path, username).ptr;
+        }
+    }
 
     ZeroMemorySafe((void *)config.password, strlen(config.password));
     config.password = nullptr;
