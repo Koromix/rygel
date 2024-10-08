@@ -73,10 +73,10 @@ rekkord init
 
 This command will initialize the repository with a random 256-bit master key.
 
-The command will give you this **master key** in base64 form.
+After initialization, the **master key** is exported to a binary file, named `master.key` by default (in the current directory). You can change the export file with the `--key_file <file>` option, or skip it altogether with `--skip_key`.
 
 > [!IMPORTANT]
-> You should **store it in a secure place**, it can be used to reset user accounts and passwords (see below).
+> You should **store this master key in a secure place**, it can be used to reset user accounts and passwords (see below).
 > However, if it leaks, everyone will be able to decrypt your snapshots!
 
 The **write-only key** (public key) is derived from this master key (secret key).
@@ -89,5 +89,7 @@ Rekkord repositories support multiple user accounts. A **user account named defa
 You will need one or the other to use other rekkord commands. Please store these passwords securely.
 
 > [!IMPORTANT]
-> You can reset any account or password (including the default one) **as long as you have the master key**.
+> You can reset any account or password (including the default one) **as long as you have the master key** file.
 > As mentioned previously, this one, you must not lose or leak!
+
+You can use `rekkord export_key` to re-export the master key at any time.
