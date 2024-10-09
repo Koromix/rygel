@@ -1,11 +1,3 @@
-# SaneBB
-
-SaneBB is a **small and fast BBCode parser in Java**, which I made as an alternative to the horribly overengineered and [inner-platform effect](https://en.wikipedia.org/wiki/Inner-platform_effect) victim [KefirBB library](https://github.com/kefirfromperm/kefirbb).
-
-It's a single Java file, the documentation is included at the top of the file.
-
-You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/master/SaneBB.java).
-
 # Serf
 
 Serf is a **small HTTP server made for local testing**. It can serve static file, proxy remote websites (GET only), and you can customize the headers with a simple config file.
@@ -65,6 +57,14 @@ It will transparently forward standard streams (stdin, stdout, stderr) and repor
 It is mainly useful for automated test systems, do not install it on production machines because it is a security risk. SeatSH only makes sure that the user connected to the SSH matches the one on the active console session, nothing more.
 
 You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#seatsh).
+
+# SaneBB
+
+SaneBB is a **small and fast BBCode parser in Java**, which I made as an alternative to the horribly overengineered and [inner-platform effect](https://en.wikipedia.org/wiki/Inner-platform_effect) victim [KefirBB library](https://github.com/kefirfromperm/kefirbb).
+
+It's a single Java file, the documentation is included at the top of the file.
+
+You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/master/SaneBB.java).
 
 # DRD
 
