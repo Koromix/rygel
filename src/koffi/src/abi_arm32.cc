@@ -435,7 +435,7 @@ bool CallData::Prepare(const FunctionInfo *func, const Napi::CallbackInfo &info)
                 if (value.IsFunction()) {
                     Napi::Function func = value.As<Napi::Function>();
 
-                    ptr = ReserveTrampoline(param.type->ref.proto, func);
+                    ptr = ReserveTrampoline(param.type->proto, func);
                     if (!ptr) [[unlikely]]
                         return false;
                 } else if (CheckPointerType(instance, value, param.type)) {
@@ -993,7 +993,7 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
             if (value.IsFunction()) {
                 Napi::Function func2 = value.As<Napi::Function>();
 
-                ptr = ReserveTrampoline(type->ref.proto, func2);
+                ptr = ReserveTrampoline(type->proto, func2);
                 if (!ptr) [[unlikely]]
                     return;
             } else if (CheckPointerType(instance, value, type)) {

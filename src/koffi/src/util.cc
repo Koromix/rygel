@@ -133,7 +133,8 @@ Napi::Function PointerObject::InitClass(Napi::Env env)
         InstanceAccessor("type", &PointerObject::GetType, nullptr, napi_enumerable),
 
         InstanceMethod("call", &PointerObject::Call, napi_enumerable),
-        InstanceMethod("read", &PointerObject::Read, napi_enumerable)
+        InstanceMethod("read", &PointerObject::Read, napi_enumerable),
+        InstanceMethod("write", &PointerObject::Write, napi_enumerable)
     });
 
     return constructor;
@@ -201,24 +202,33 @@ Napi::Value PointerObject::Read(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    bool has_len = (info.Length() >= 1);
-
     if (type->primitive == PrimitiveKind::Callback) [[unlikely]] {
         ThrowError<Napi::TypeError>(env, "Cannot read function pointer");
         return env.Null();
     }
 
-    if (has_len) {
-        if (!info[0].IsNumber()) {
-            ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected number", GetValueType(info[0]));
-            return env.Null();
-        }
+    return Decode(env, (const uint8_t *)ptr, type);
+}
 
-        Size len = info[0].As<Napi::Number>();
-        return Decode(env, (const uint8_t *)&ptr, type, &len);
-    } else {
-        return Decode(env, (const uint8_t *)&ptr, type);
+Napi::Value PointerObject::Write(const Napi::CallbackInfo &info)
+{
+    Napi::Env env = info.Env();
+
+    if (info.Length() < 1) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 1 argument, got %1", info.Length());
+        return env.Null();
     }
+    if (type->primitive == PrimitiveKind::Callback) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Cannot write function pointer");
+        return env.Null();
+    }
+
+    Napi::Value value = info[0];
+
+    if (!Encode(env, (uint8_t *)ptr, value, type)) [[unlikely]]
+        return env.Null();
+
+    return env.Undefined();
 }
 
 Napi::Function UnionObject::InitClass(Napi::Env env, const TypeInfo *type)
@@ -458,21 +468,24 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
                 return nullptr;
             }
 
-            arrays.Append(0);
+            arrays.Append(-1);
         } else if (after[0] == '[') {
             after = after.Take(1, after.len - 1);
 
             Size len = 0;
 
             after = TrimStrLeft(after);
-            if (!ParseInt(after, &len, 0, &after) || len < 0) [[unlikely]] {
-                ThrowError<Napi::Error>(env, "Invalid array length");
-                return nullptr;
-            }
-            after = TrimStrLeft(after);
-            if (!after.len || after[0] != ']') [[unlikely]] {
-                ThrowError<Napi::Error>(env, "Expected ']' after array length");
-                return nullptr;
+            if (!after.len || after[0] != ']') {
+                if (!ParseInt(after, &len, 0, &after) || len <= 0) [[unlikely]] {
+                    ThrowError<Napi::Error>(env, "Invalid array length");
+                    return nullptr;
+                }
+                after = TrimStrLeft(after);
+
+                if (!after.len || after[0] != ']') [[unlikely]] {
+                    ThrowError<Napi::Error>(env, "Expected ']' after array length");
+                    return nullptr;
+                }
             }
             after = after.Take(1, after.len - 1);
 
@@ -523,29 +536,49 @@ const TypeInfo *ResolveType(Napi::Env env, Span<const char> str, int *out_direct
             return nullptr;
     }
 
-    for (int i = 0;; i++) {
-        if (i >= arrays.len)
-            break;
-        Size len = arrays[i];
+    // Make actual type
+    {
+        bool allow_sized = true;
 
-        if (len > 0) {
-            if (type->flags & (int)TypeFlag::IsIncomplete) [[unlikely]] {
-                ThrowError<Napi::TypeError>(env, "Cannot make array of incomplete type");
-                return nullptr;
+        for (int i = 0;; i++) {
+            if (i >= arrays.len)
+                break;
+            Size len = arrays[i];
+
+            const TypeInfo *ref = type;
+
+            if (len > 0) {
+                if (type->flags & (int)TypeFlag::IsIncomplete) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Cannot make array of incomplete type");
+                    return nullptr;
+                }
+                if (!allow_sized) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Only the last array dimension can use automatic size");
+                    return nullptr;
+                }
+
+                if (len > instance->config.max_type_size / type->size) {
+                    ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / type->size);
+                    return nullptr;
+                }
+
+                type = MakeArrayType(instance, ref, len);
+                RG_ASSERT(type);
+            } else if (!len) {
+                type = MakeArrayType(instance, ref, 0);
+
+                if (!type) [[unlikely]] {
+                    ThrowError<Napi::TypeError>(env, "Cannot determine null-terminated length for type %1", ref->name);
+                    return nullptr;
+                }
+
+                allow_sized = false;
+            } else {
+                RG_ASSERT(len == -1);
+
+                type = MakePointerType(instance, ref);
+                RG_ASSERT(type);
             }
-
-            if (len > instance->config.max_type_size / type->size) {
-                ThrowError<Napi::TypeError>(env, "Array length is too high (max = %1)", instance->config.max_type_size / type->size);
-                return nullptr;
-            }
-
-            type = MakeArrayType(instance, type, len);
-            RG_ASSERT(type);
-        } else {
-            RG_ASSERT(!len);
-
-            type = MakePointerType(instance, type);
-            RG_ASSERT(type);
         }
     }
 
@@ -599,12 +632,45 @@ const TypeInfo *MakePointerType(InstanceData *instance, const TypeInfo *ref, int
 static const TypeInfo *MakeArrayType(InstanceData *instance, const TypeInfo *ref, Size len,
                                      ArrayHint hint, bool insert)
 {
-    RG_ASSERT(len > 0);
+    RG_ASSERT(len >= 0);
     RG_ASSERT(len <= instance->config.max_type_size / ref->size);
+
+    if (!len) {
+        switch (ref->primitive) {
+            case PrimitiveKind::Int8:
+            case PrimitiveKind::UInt8:
+            case PrimitiveKind::Int16:
+            case PrimitiveKind::UInt16:
+            case PrimitiveKind::Int32:
+            case PrimitiveKind::UInt32:
+            case PrimitiveKind::Pointer: {} break;
+
+            case PrimitiveKind::Void:
+            case PrimitiveKind::Bool:
+            case PrimitiveKind::Int16S:
+            case PrimitiveKind::UInt16S:
+            case PrimitiveKind::Int32S:
+            case PrimitiveKind::UInt32S:
+            case PrimitiveKind::Int64:
+            case PrimitiveKind::Int64S:
+            case PrimitiveKind::UInt64:
+            case PrimitiveKind::UInt64S:
+            case PrimitiveKind::String:
+            case PrimitiveKind::String16:
+            case PrimitiveKind::String32:
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union:
+            case PrimitiveKind::Array:
+            case PrimitiveKind::Float32:
+            case PrimitiveKind::Float64:
+            case PrimitiveKind::Prototype:
+            case PrimitiveKind::Callback: { return nullptr; } break;
+        }
+    }
 
     TypeInfo *type = instance->types.AppendDefault();
 
-    type->name = Fmt(&instance->str_alloc, "%1[%2]", ref->name, len).ptr;
+    type->name = Fmt(&instance->str_alloc, "%1[%2]", ref->name, len ? FmtArg(len) : FmtArg("")).ptr;
 
     type->primitive = PrimitiveKind::Array;
     type->align = ref->align;
@@ -694,6 +760,8 @@ bool CanReturnType(const TypeInfo *type)
 bool CanStoreType(const TypeInfo *type)
 {
     if (type->primitive == PrimitiveKind::Void)
+        return false;
+    if (type->primitive == PrimitiveKind::Array && !type->size)
         return false;
     if (type->primitive == PrimitiveKind::Prototype)
         return false;
@@ -1012,21 +1080,70 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
 
     RG_ASSERT(type->primitive == PrimitiveKind::Array);
 
-    uint32_t len = type->size / type->ref->size;
+    const TypeInfo *ref = type->ref;
+    uint32_t len = type->size / ref->size;
     Size offset = 0;
+
+    if (!len) {
+        switch (ref->primitive) {
+            case PrimitiveKind::Int8:
+            case PrimitiveKind::UInt8: {
+                Size count = strlen((const char *)origin);
+                len = (uint32_t)count;
+            } break;
+
+            case PrimitiveKind::Int16:
+            case PrimitiveKind::UInt16: {
+                Size count = NullTerminatedLength((const char16_t *)origin, RG_SIZE_MAX);
+                len = (uint32_t)count * 2;
+            } break;
+
+            case PrimitiveKind::Int32:
+            case PrimitiveKind::UInt32: {
+                Size count = NullTerminatedLength((const char32_t *)origin, RG_SIZE_MAX);
+                len = (uint32_t)count * 4;
+            } break;
+
+            case PrimitiveKind::Pointer: {
+                Size count = NullTerminatedLength((const void **)origin, RG_SIZE_MAX);
+                len = (uint32_t)count * RG_SIZE(void *);
+            } break;
+
+            case PrimitiveKind::Void:
+            case PrimitiveKind::Bool:
+            case PrimitiveKind::Int16S:
+            case PrimitiveKind::UInt16S:
+            case PrimitiveKind::Int32S:
+            case PrimitiveKind::UInt32S:
+            case PrimitiveKind::Int64:
+            case PrimitiveKind::Int64S:
+            case PrimitiveKind::UInt64:
+            case PrimitiveKind::UInt64S:
+            case PrimitiveKind::String:
+            case PrimitiveKind::String16:
+            case PrimitiveKind::String32:
+            case PrimitiveKind::Record:
+            case PrimitiveKind::Union:
+            case PrimitiveKind::Array:
+            case PrimitiveKind::Float32:
+            case PrimitiveKind::Float64:
+            case PrimitiveKind::Prototype:
+            case PrimitiveKind::Callback: { RG_UNREACHABLE(); } break;
+        }
+    }
 
 #define POP_ARRAY(SetCode) \
         do { \
             Napi::Array array = Napi::Array::New(env); \
              \
             for (uint32_t i = 0; i < len; i++) { \
-                offset = AlignLen(offset, type->ref->align); \
+                offset = AlignLen(offset, ref->align); \
                  \
                 const uint8_t *src = origin + offset; \
                  \
                 SetCode \
                  \
-                offset += type->ref->size; \
+                offset += ref->size; \
             } \
              \
             return array; \
@@ -1042,7 +1159,7 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
                 Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
                  \
-                DecodeBuffer(buffer, origin, type->ref); \
+                DecodeBuffer(buffer, origin, ref); \
                  \
                 return array; \
             } \
@@ -1059,13 +1176,13 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
                 Napi::TypedArrayType array = Napi::TypedArrayType::New(env, len); \
                 Span<uint8_t> buffer = MakeSpan((uint8_t *)array.ArrayBuffer().Data(), (Size)len * RG_SIZE(CType)); \
                  \
-                DecodeBuffer(buffer, origin, type->ref); \
+                DecodeBuffer(buffer, origin, ref); \
                  \
                 return array; \
             } \
         } while (false)
 
-    switch (type->ref->primitive) {
+    switch (ref->primitive) {
         case PrimitiveKind::Void: { RG_UNREACHABLE(); } break;
 
         case PrimitiveKind::Bool: {
@@ -1161,20 +1278,20 @@ Napi::Value DecodeArray(Napi::Env env, const uint8_t *origin, const TypeInfo *ty
             POP_ARRAY({
                 void *ptr2 = *(void **)src;
 
-                Napi::Value wrapper = WrapPointer(env, instance, type->ref, ptr2);
+                Napi::Value wrapper = WrapPointer(env, instance, ref, ptr2);
                 array.Set(i, wrapper);
             });
         } break;
         case PrimitiveKind::Record:
         case PrimitiveKind::Union: {
             POP_ARRAY({
-                Napi::Object obj = DecodeObject(env, src, type->ref);
+                Napi::Object obj = DecodeObject(env, src, ref);
                 array.Set(i, obj);
             });
         } break;
         case PrimitiveKind::Array: {
             POP_ARRAY({
-                Napi::Value value = DecodeArray(env, src, type->ref);
+                Napi::Value value = DecodeArray(env, src, ref);
                 array.Set(i, value);
             });
         } break;
@@ -1334,7 +1451,7 @@ void DecodeBuffer(Span<uint8_t> buffer, const uint8_t *origin, const TypeInfo *r
 #undef SWAP
 }
 
-Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const Size *len)
+Napi::Value Decode(Napi::Value value, const TypeInfo *type)
 {
     Napi::Env env = value.Env();
 
@@ -1345,9 +1462,8 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
     } else if (IsRawBuffer(value)) {
         Span<uint8_t> buffer = GetRawBuffer(value);
 
-        if (buffer.len - offset < type->size) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
-                                    type->name, type->size + offset);
+        if (buffer.len < type->size) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)", type->name, type->size);
             return env.Null();
         }
 
@@ -1359,52 +1475,14 @@ Napi::Value Decode(Napi::Value value, Size offset, const TypeInfo *type, const S
 
     if (!ptr)
         return env.Null();
-    ptr += offset;
 
-    Napi::Value ret = Decode(env, ptr, type, len);
+    Napi::Value ret = Decode(env, ptr, type);
     return ret;
 }
 
-Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, const Size *len)
+Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (len && type->primitive != PrimitiveKind::String &&
-               type->primitive != PrimitiveKind::String16 &&
-               type->primitive != PrimitiveKind::String32 &&
-               type->primitive != PrimitiveKind::Prototype) {
-        if (*len >= 0) {
-            type = MakeArrayType(instance, type, *len);
-        } else {
-            switch (type->primitive) {
-                case PrimitiveKind::Int8:
-                case PrimitiveKind::UInt8: {
-                    Size count = strlen((const char *)ptr);
-                    type = MakeArrayType(instance, type, count);
-                } break;
-                case PrimitiveKind::Int16:
-                case PrimitiveKind::UInt16: {
-                    Size count = NullTerminatedLength((const char16_t *)ptr, RG_SIZE_MAX);
-                    type = MakeArrayType(instance, type, count);
-                } break;
-                case PrimitiveKind::Int32:
-                case PrimitiveKind::UInt32: {
-                    Size count = NullTerminatedLength((const char32_t *)ptr, RG_SIZE_MAX);
-                    type = MakeArrayType(instance, type, count);
-                } break;
-
-                case PrimitiveKind::Pointer: {
-                    Size count = NullTerminatedLength((const void **)ptr, RG_SIZE_MAX);
-                    type = MakeArrayType(instance, type, count);
-                } break;
-
-                default: {
-                    ThrowError<Napi::TypeError>(env, "Cannot determine null-terminated length for type %1", type->name);
-                    return env.Null();
-                } break;
-            }
-        }
-    }
 
 #define RETURN_INT(Type, NewCall) \
         do { \
@@ -1442,36 +1520,21 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
         case PrimitiveKind::UInt64: { RETURN_INT(uint64_t, NewBigInt); } break;
         case PrimitiveKind::UInt64S: { RETURN_INT_SWAP(uint64_t, NewBigInt); } break;
         case PrimitiveKind::String: {
-            if (len) {
-                const char *str = *(const char **)ptr;
-                return str ? Napi::String::New(env, str, *len) : env.Null();
-            } else {
-                const char *str = *(const char **)ptr;
-                return str ? Napi::String::New(env, str) : env.Null();
-            }
+            const char *str = (const char *)ptr;
+            return str ? Napi::String::New(env, str) : env.Null();
         } break;
         case PrimitiveKind::String16: {
-            if (len) {
-                const char16_t *str16 = *(const char16_t **)ptr;
-                return str16 ? Napi::String::New(env, str16, *len) : env.Null();
-            } else {
-                const char16_t *str16 = *(const char16_t **)ptr;
-                return str16 ? Napi::String::New(env, str16) : env.Null();
-            }
+            const char16_t *str16 = (const char16_t *)ptr;
+            return str16 ? Napi::String::New(env, str16) : env.Null();
         } break;
         case PrimitiveKind::String32: {
-            if (len) {
-                const char32_t *str32 = *(const char32_t **)ptr;
-                return str32 ? MakeStringFromUTF32(env, str32, *len) : env.Null();
-            } else {
-                const char32_t *str32 = *(const char32_t **)ptr;
-                return str32 ? MakeStringFromUTF32(env, str32) : env.Null();
-            }
+            const char32_t *str32 = (const char32_t *)ptr;
+            return str32 ? MakeStringFromUTF32(env, str32) : env.Null();
         } break;
         case PrimitiveKind::Pointer: {
             void *ptr2 = *(void **)ptr;
 
-            Napi::Value wrapper = WrapPointer(env, instance, type, ptr2);
+            Napi::Value wrapper = WrapPointer(env, instance, type->ref, ptr2);
             return wrapper;
         } break;
         case PrimitiveKind::Record:
@@ -1519,7 +1582,7 @@ Napi::Value Decode(Napi::Env env, const uint8_t *ptr, const TypeInfo *type, cons
     return env.Null();
 }
 
-bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *type, const Size *len)
+bool Encode(Napi::Value ref, Napi::Value value, const TypeInfo *type)
 {
     Napi::Env env = ref.Env();
 
@@ -1530,9 +1593,8 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
     } else if (IsRawBuffer(ref)) {
         Span<uint8_t> buffer = GetRawBuffer(ref);
 
-        if (buffer.len - offset < type->size) [[unlikely]] {
-            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)",
-                                    type->name, type->size + offset);
+        if (buffer.len < type->size) [[unlikely]] {
+            ThrowError<Napi::Error>(env, "Expected buffer with size superior or equal to type %1 (%2 bytes)", type->name, type->size);
             return env.Null();
         }
 
@@ -1546,26 +1608,13 @@ bool Encode(Napi::Value ref, Size offset, Napi::Value value, const TypeInfo *typ
         ThrowError<Napi::Error>(env, "Cannot encode data in NULL pointer");
         return env.Null();
     }
-    ptr += offset;
 
-    return Encode(env, ptr, value, type, len);
+    return Encode(env, ptr, value, type);
 }
 
-bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *type, const Size *len)
+bool Encode(Napi::Env env, uint8_t *origin, Napi::Value value, const TypeInfo *type)
 {
     InstanceData *instance = env.GetInstanceData<InstanceData>();
-
-    if (len && type->primitive != PrimitiveKind::String &&
-               type->primitive != PrimitiveKind::String16 &&
-               type->primitive != PrimitiveKind::String32 &&
-               type->primitive != PrimitiveKind::Prototype) {
-        if (*len < 0) [[unlikely]] {
-            ThrowError<Napi::TypeError>(env, "Automatic (negative) length is only supported when decoding");
-            return env.Null();
-        }
-
-        type = MakeArrayType(instance, type, *len);
-    }
 
     InstanceMemory mem = {};
     CallData call(env, instance, &mem);

@@ -806,18 +806,19 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
         return env.Null();
     }
-    if (!info[1].IsNumber()) {
-        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer", GetValueType(info[1]));
+    if (!info[1].IsNumber() && !IsNullOrUndefined(info[1])) {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 value for length, expected integer or null", GetValueType(info[1]));
         return env.Null();
     }
 
     const TypeInfo *ref = ResolveType(info[0]);
-    int64_t len = info[1].As<Napi::Number>().Int64Value();
+    bool has_len = info[1].IsNumber();
+    int64_t len = has_len ? info[1].As<Napi::Number>().Int64Value() : 0;
 
     if (!ref)
         return env.Null();
-    if (len <= 0) {
-        ThrowError<Napi::TypeError>(env, "Array length must be positive and non-zero");
+    if (len < 0 + has_len) {
+        ThrowError<Napi::TypeError>(env, "Array length must be positive");
         return env.Null();
     }
     if (len > instance->config.max_type_size / ref->size) {
@@ -860,6 +861,11 @@ static Napi::Value CreateArrayType(const Napi::CallbackInfo &info)
         type = MakeArrayType(instance, ref, len, hint);
     } else {
         type = MakeArrayType(instance, ref, len);
+    }
+
+    if (!type) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Cannot determine null-terminated length for type %1", ref->name);
+        return env.Null();
     }
 
     return FinalizeType(env, instance, type);
@@ -1199,6 +1205,10 @@ static Napi::Value GetTypeSize(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(info[0]);
     if (!type)
         return env.Null();
+    if (!type->size) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Cannot get size of incomplete type %1", type->name);
+        return env.Null();
+    }
 
     return Napi::Number::New(env, type->size);
 }
@@ -1670,7 +1680,6 @@ static Napi::Value FindSymbol(const Napi::CallbackInfo &info)
     const TypeInfo *type = ResolveType(info[1]);
     if (!type)
         return env.Null();
-    type = MakePointerType(instance, type);
 
 #if defined(_WIN32)
     void *ptr = (void *)GetProcAddress((HMODULE)lib->module, name.c_str());
@@ -1937,10 +1946,8 @@ static Napi::Value ReadValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    bool has_len = (info.Length() >= 3u);
-
     if (info.Length() < 2u) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected 2 to 3 arguments, got %1", info.Length());
+        ThrowError<Napi::TypeError>(env, "Expected 2 arguments, got %1", info.Length());
         return env.Null();
     }
 
@@ -1954,46 +1961,31 @@ static Napi::Value ReadValue(const Napi::CallbackInfo &info)
 
     Napi::Value value = info[0];
 
-    if (has_len) {
-        Size len = info[2u].As<Napi::Number>();
-
-        Napi::Value ret = Decode(value, 0, type->ref, &len);
-        return ret;
-    } else {
-        Napi::Value ret = Decode(value, 0, type->ref);
-        return ret;
-    }
+    return Decode(value, type->ref);
 }
 
-static Napi::Value EncodeValue(const Napi::CallbackInfo &info)
+static Napi::Value WriteValue(const Napi::CallbackInfo &info)
 {
     Napi::Env env = info.Env();
 
-    bool has_offset = (info.Length() >= 2 && info[1].IsNumber());
-    bool has_len = (info.Length() >= 4u + has_offset && info[3u + has_offset].IsNumber());
-
-    if (info.Length() < 3u + has_offset) [[unlikely]] {
-        ThrowError<Napi::TypeError>(env, "Expected %1 to 5 arguments, got %2", 3 + has_offset, info.Length());
+    if (info.Length() < 3u) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected 3 arguments, got %1", info.Length());
         return env.Null();
     }
 
-    const TypeInfo *type = ResolveType(info[1u + has_offset]);
+    const TypeInfo *type = ResolveType(info[1u]);
     if (!type) [[unlikely]]
         return env.Null();
-
-    Napi::Value ref = info[0];
-    int64_t offset = has_offset ? info[1].As<Napi::Number>().Int64Value() : 0;
-    Napi::Value value = info[2u + has_offset];
-
-    if (has_len) {
-        Size len = info[3u + has_offset].As<Napi::Number>();
-
-        if (!Encode(ref, offset, value, type, &len))
-            return env.Null();
-    } else {
-        if (!Encode(ref, offset, value, type))
-            return env.Null();
+    if (!IsPointer(type)) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Unexpected %1 type, expected pointer type", type->name);
+        return env.Null();
     }
+
+    Napi::Value ptr = info[0];
+    Napi::Value value = info[2u];
+
+    if (!Encode(ptr, value, type->ref)) [[unlikely]]
+        return env.Null();
 
     return env.Undefined();
 }
@@ -2288,7 +2280,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
 
     exports.Set("as", Napi::Function::New(env, CastValue, "as"));
     exports.Set("read", Napi::Function::New(env, ReadValue, "read"));
-    exports.Set("encode", Napi::Function::New(env, EncodeValue, "encode"));
+    exports.Set("write", Napi::Function::New(env, WriteValue, "write"));
     exports.Set("address", Napi::Function::New(env, GetPointerAddress, "address"));
 
     exports.Set("reset", Napi::Function::New(env, ResetKoffi, "reset"));

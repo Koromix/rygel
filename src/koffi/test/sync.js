@@ -276,7 +276,7 @@ async function test() {
     const IfElseStr = lib.func('const char *IfElseStr(const char *a, const char *b, bool cond)');
     const sym_int = lib.symbol('sym_int', 'int');
     const sym_str = lib.symbol('sym_str', 'const char *');
-    const sym_int3 = lib.symbol('sym_int3', 'int [ 3 ]');
+    const sym_int3 = lib.symbol('sym_int3', 'int[3]');
     const GetSymbolInt = lib.func('int GetSymbolInt()');
     const GetSymbolStr = lib.func('const char *GetSymbolStr()');
     const GetSymbolInt3 = lib.func('void GetSymbolInt3(_Out_ int *out)');
@@ -686,7 +686,8 @@ async function test() {
             assert.deepEqual(koffi.read(ptr2, 'Float3 *'), { a: i * 2, b: Float32Array.from([-30.0, -31.0])});
             assert.deepEqual(koffi.read(ptr2.buffer, 'Float3 *'), { a: 0, b: Float32Array.from([-30.0, -31.0])});
 
-            assert.deepEqual(koffi.read(ptr2, 'float *', 3), Float32Array.from([i * 2, -30.0, -31.0]));
+            assert.deepEqual(koffi.read(ptr2, koffi.pointer(koffi.array('float', 3))), Float32Array.from([i * 2, -30.0, -31.0]));
+            assert.deepEqual(koffi.read(ptr2, 'float[3] *'), Float32Array.from([i * 2, -30.0, -31.0]));
         }
     }
 
@@ -807,10 +808,14 @@ async function test() {
     {
         let ptr = GetLatin1String();
 
-        let array = koffi.read(ptr, 'uint8_t *', -1);
-        let str = Buffer.from(array.buffer).toString('latin1');
+        let array1 = koffi.read(ptr, 'uint8_t[] *');
+        let str1 = Buffer.from(array1.buffer).toString('latin1');
 
-        assert.equal(str, 'Microsoft®²');
+        let array2 = koffi.read(ptr, koffi.pointer(koffi.array('uint8_t', null)));
+        let str2 = Buffer.from(array2.buffer).toString('latin1');
+
+        assert.equal(str1, 'Microsoft®²');
+        assert.equal(str2, 'Microsoft®²');
     }
 
     // Test boolean parameters
@@ -820,16 +825,17 @@ async function test() {
     assert.equal(BoolToMask12(false, true, true, false, false, false, false, true, false, false, true, true), 0b011000010011);
     assert.equal(IfElseInt(true, 42, 24), 42);
     assert.equal(IfElseInt(false, 42, 24), 24);
-    check_text(IfElseStr("foo", "bar", true), "foo");
-    check_text(IfElseStr("FIRST", "SECOND", false), "SECOND");
+    check_text(IfElseStr('foo', 'bar', true), 'foo');
+    check_text(IfElseStr('FIRST', 'SECOND', false), 'SECOND');
 
     // Encode variables
     {
-        koffi.encode(sym_int, 'int', 12);
-        koffi.encode(sym_str, 'const char *', 'I think...');
-        koffi.encode(sym_str, 'const char *', 'I can encode!');
-        koffi.encode(sym_int3, 'int', [4, 2, 42], 3);
+        sym_int.write(12);
+        sym_str.write('I think...');
+        sym_str.write('I can encode!');
+        koffi.write(sym_int3, 'int[3] *', [4, 2, 42]);
 
+        assert.equal(sym_int.read(), 12);
         assert.equal(GetSymbolInt(), 12);
         check_text(GetSymbolStr(), 'I can encode!');
 

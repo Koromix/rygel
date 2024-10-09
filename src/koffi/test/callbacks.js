@@ -257,8 +257,8 @@ async function test() {
         let array = ['foo', 'bar', '123', 'foobar'];
 
         CallQSort(koffi.as(array, 'char **'), array.length, koffi.sizeof('void *'), koffi.as((ptr1, ptr2) => {
-            let str1 = koffi.decode(ptr1, 'char *');
-            let str2 = koffi.decode(ptr2, 'char *');
+            let str1 = koffi.read(ptr1, 'char ***').read();
+            let str2 = koffi.read(ptr2, 'char ***').read();
 
             return str1.localeCompare(str2);
         }, 'SortCallback *'));

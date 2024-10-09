@@ -101,6 +101,7 @@ function wrap(native) {
             ptr = new native.Pointer(ptr, native.pointer(type));
             return ptr.call(...args);
         }, 'The koffi.call() function is deprecated, use pointer.call() method instead', 'KOFFI009'),
+
         decode: util.deprecate((ptr, offset, type, len) => {
             if (typeof offset != 'number' && typeof offset != 'bigint')  {
                 len = type;
@@ -108,12 +109,47 @@ function wrap(native) {
                 offset = 0;
             }
 
+            type = native.type(type);
+            if (len != null && type.primitive != 'String'
+                            && type.primitive != 'String16'
+                            && type.primitive != 'String32'
+                            && type.primitive != 'Prototype') {
+                if (len < 0)
+                    len = null;
+                type = native.array(type, len);
+            }
             type = native.pointer(type);
-            ptr = offset ? (new native.Pointer(koffi.address(ptr) + offset, type)) : ptr;
 
-            let ret = (len != null) ? native.read(ptr, type, len) : native.read(ptr, type);
-            return ret;
+            if (offset)
+                ptr = new native.Pointer(native.address(ptr) + BigInt(offset), type);
+
+            return native.read(ptr, type);
         }, 'The koffi.decode() function is deprecated, use pointer.read() or koffi.read() instead', 'KOFFI011'),
+
+        encode: util.deprecate((ptr, offset, type, value, len) => {
+            if (typeof offset != 'number' && typeof offset != 'bigint')  {
+                len = value;
+                value = type;
+                type = offset;
+                offset = 0;
+            }
+
+            type = native.type(type);
+            if (len != null && type.primitive != 'String'
+                            && type.primitive != 'String16'
+                            && type.primitive != 'String32'
+                            && type.primitive != 'Prototype') {
+                if (len < 0)
+                    len = null;
+                type = native.array(type, len);
+            }
+            type = native.pointer(type);
+
+            if (offset)
+                ptr = new native.Pointer(native.address(ptr) + BigInt(offset), type);
+
+            return native.write(ptr, type, value);
+        }, 'The koffi.encode() function is deprecated, use pointer.write() or koffi.write() instead', 'KOFFI012'),
 
         resolve: util.deprecate(native.type, 'The koffi.resolve() function is deprecated, use koffi.type() instead', 'KOFFI009'),
         introspect: util.deprecate(native.type, 'The koffi.introspect() function is deprecated, use koffi.type() instead', 'KOFFI010')
