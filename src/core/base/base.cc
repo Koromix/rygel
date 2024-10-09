@@ -2544,10 +2544,8 @@ StatResult StatFile(int fd, const char *path, unsigned int flags, FileInfo *out_
     return StatAt(fd, false, path, flags, out_info);
 }
 
-static bool SyncFileDirectory(const char *filename)
+static bool SyncDirectory(Span<const char> directory)
 {
-    Span<const char> directory = GetPathDirectory(filename);
-
     char directory0[4096];
     if (directory.len >= RG_SIZE(directory0)) {
         LogError("Failed to sync directory '%1': path too long", directory);
@@ -2596,8 +2594,13 @@ bool RenameFile(const char *src_filename, const char *dest_filename, unsigned in
     // Not much we can do if fsync fails (I think), so ignore errors.
     // Hope for the best: that's the spirit behind the POSIX filesystem API (...).
     if (flags & (int)RenameFlag::Sync) {
-        SyncFileDirectory(src_filename);
-        SyncFileDirectory(dest_filename);
+        Span<const char> src_directory = GetPathDirectory(src_filename);
+        Span<const char> dest_directory = GetPathDirectory(dest_filename);
+
+        SyncDirectory(src_directory);
+        if (dest_directory != src_directory) {
+            SyncDirectory(dest_directory);
+        }
     }
 
     return true;
