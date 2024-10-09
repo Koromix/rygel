@@ -4,7 +4,7 @@
 
 ### Koffi 3.0
 
-#### Koffi 3.0.0 (in development)
+#### Koffi 3.0.0
 
 **Main changes:**
 
@@ -14,9 +14,10 @@
   * Access type information directly on type variables without `koffi.introspect()`
 - Replace use of externals with proper pointer objects:
   * Get pointer type with `pointer.type`
-  * Get pointer address with `pointer.address` (or `koffi.address(ptr)`)
-  * Read and write from/to C memory with `pointer.read()` and `pointer.write()`
-  * Call functions with `pointer.call()`
+  * Get pointer address with `pointer.address` or `koffi.address(ptr)`
+  * Read from C memory with `pointer.read()` or `koffi.read(ptr, type)`
+  * Write to C memory with `pointer.write(value)` or `koffi.write(ptr, type, value)`
+  * Call functions with `pointer.call(...)` or `koffi.call(func, type, ...)`
   * Make or cast pointers with `new koffi.Pointer(address, type)`
 
 **Other changes:**
@@ -25,10 +26,10 @@
 
 **Newly deprecated functions:**
 
-- Deprecate `koffi.resolve()` function, replace with `koffi.type()` method
+- Deprecate `koffi.resolve()` function, replace with `koffi.type()`
+- Deprecate `koffi.introspect()` function, replace with `koffi.type()`
 - Deprecate `koffi.decode()` function, replace with `pointer.read()` method (or `koffi.read()`)
 - Deprecate `koffi.encode()` function, replace with `pointer.write()` method (or `koffi.write()`)
-- Deprecate `koffi.call()` function, replace with `pointer.call()` method
 
 **Removed deprecated functions:**
 
