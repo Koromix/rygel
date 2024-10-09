@@ -8,9 +8,9 @@ You can find it here [on GitHub](https://github.com/Koromix/libraries/blob/maste
 
 # Serf
 
-Serf is a **small HTTP server made for local testing**. It can serve static files and you can customize the headers with a simple config file.
+Serf is a **small HTTP server made for local testing**. It can serve static file, proxy remote websites (GET only), and you can customize the headers with a simple config file.
 
-Here is an example configuration file:
+Here is an example configuration file for serving local files with the required Cross-Origin headers to enabe SharedArrayBuffer support:
 
 ```ini
 [HTTP]
@@ -20,9 +20,7 @@ Port = 80
 # UnixPath is ignored unless SocketType is set to Unix
 UnixPath = /run/serf.sock
 
-[Files]
-# Set directory to serve, relative to the location of the INI file
-RootDirectory = .
+[Settings]
 # Enable AutoIndex to list content of directories without index.html
 AutoIndex = On
 # Maximum cache time in seconds
@@ -30,10 +28,28 @@ MaxAge = 0
 # Generate E-tag based on file modification time and size
 ETag = On
 
+[Sources]
+# Serve from path relative to INI file
+Source = .
+
 [Headers]
 # List headers you want to add to all server responses
 Cross-Origin-Embedder-Policy = require-corp
 Cross-Origin-Opener-Policy = same-origin
+```
+
+Once this file exists, run serf with `serf -C serf.ini`. If you don't specify the file explicitly, serf will try to find one from its application directory (i.e. the directory where the executable resides).
+
+Here is another configuration to reverse proxy https://koromix.dev/ unless a local file match in the directory `files/` exists:
+
+```ini
+[HTTP]
+SocketType = Dual
+Port = 80
+
+[Sources]
+Source = files
+Source = https://koromix.dev/
 ```
 
 You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#serf).

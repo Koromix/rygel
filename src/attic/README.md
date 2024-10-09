@@ -2,7 +2,7 @@
 
 Serf is a **small HTTP server made for local testing**. It can serve static files, proxy remote websites (GET only), and you can customize the headers with a simple config file.
 
-Here is an example configuration file for serving local files:
+Here is an example configuration file for serving local files with the required Cross-Origin headers to enabe SharedArrayBuffer support:
 
 ```ini
 [HTTP]
@@ -32,7 +32,7 @@ Cross-Origin-Opener-Policy = same-origin
 
 Once this file exists, run serf with `serf -C serf.ini`. If you don't specify the file explicitly, serf will try to find one from its application directory (i.e. the directory where the executable resides).
 
-Here is another configuration to reverse proxy https://koromix.dev/ unless a local file match in the directory `files/` exists.
+Here is another configuration to reverse proxy https://koromix.dev/ unless a local file match in the directory `files/` exists:
 
 ```ini
 [HTTP]
@@ -108,7 +108,7 @@ Its main purpose is to test compression and decompression implementations agains
 
 # Hodler
 
-Hodler is a simple and **limited static-site builder** that I use to generate the pages on [koromix.dev](https://koromix.dev/) and [demheter.fr](https://demheter.fr/) from Markdown files.
+Hodler is a simple and **very opinitated static-site builder** that I use to generate the pages on [koromix.dev](https://koromix.dev/) and [demheter.fr](https://demheter.fr/) from Markdown files.
 
 # Snaplite
 
