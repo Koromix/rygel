@@ -5234,13 +5234,7 @@ bool NotifySystemd()
 // Main
 // ------------------------------------------------------------------------
 
-#if defined(__linux__)
-__attribute__((weak)) int Main(int argc, char **argv);
-#else
-int Main(int argc, char **argv);
-#endif
-
-int RunApp(int argc, char **argv)
+void InitApp()
 {
 #if defined(_WIN32)
     // Use binary standard I/O
@@ -5276,8 +5270,6 @@ int RunApp(int argc, char **argv)
     // so we want to cache the result as soon as possible.
     GetApplicationExecutable();
 #endif
-
-    return Main(argc, argv);
 }
 
 // ------------------------------------------------------------------------

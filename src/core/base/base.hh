@@ -4369,12 +4369,14 @@ bool NotifySystemd();
         return ret; \
     })()
 
-// ------------------------------------------------------------------------
-// Main
-// ------------------------------------------------------------------------
-
+void InitApp();
 int Main(int argc, char **argv);
-int RunApp(int argc, char **argv);
+
+static inline int RunApp(int argc, char **argv)
+{
+    InitApp();
+    return Main(argc, argv);
+}
 
 // ------------------------------------------------------------------------
 // Standard paths
