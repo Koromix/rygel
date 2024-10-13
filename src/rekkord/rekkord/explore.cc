@@ -44,6 +44,7 @@ int RunSnapshots(Span<const char *> arguments)
     rk_Config config;
     OutputFormat format = OutputFormat::Plain;
     HeapArray<int> sorts;
+    const char *pattern = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -63,6 +64,7 @@ Options:
                                  %!D..(default: %2)%!0
     %!..+-s, --sort <sort>%!0            Change sort order
                                  %!D..(default: Time)%!0
+    %!..+-p, --pattern <pattern>         Filter snapshot names with glob-like pattern
 
 Available output formats: %!..+%3%!0
 Available sort orders: %!..+%4%!0)",
@@ -121,6 +123,8 @@ Available sort orders: %!..+%4%!0)",
                         sorts.Append(sort);
                     }
                 }
+            } else if (opt.Test("-p", "--pattern", OptionType::Value)) {
+                pattern = opt.current_value;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -150,6 +154,17 @@ Available sort orders: %!..+%4%!0)",
     HeapArray<rk_SnapshotInfo> snapshots;
     if (!rk_Snapshots(disk.get(), &temp_alloc, &snapshots))
         return 1;
+
+    if (pattern) {
+        Size j = 0;
+        for (Size i = 0; i < snapshots.len; i++) {
+            const rk_SnapshotInfo &snapshot = snapshots[i];
+
+            snapshots[j] = snapshot;
+            j += MatchPathName(snapshot.name, pattern);
+        }
+        snapshots.len = j;
+    }
 
     if (sorts.len) {
         std::function<int64_t(const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2)> compare =
