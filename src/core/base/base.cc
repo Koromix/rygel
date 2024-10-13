@@ -3656,7 +3656,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
             Span<const uint8_t> remain = buf;
 
             do {
-                int written = _write(dest_fd, remain.ptr, (size_t)remain.len);
+                int written = _write(dest_fd, remain.ptr, (unsigned int)remain.len);
 
                 if (written < 0) {
                    LogError("Failed to copy '%1' to '%2': %3", src_filename, dest_filename, strerror(errno));
@@ -5714,7 +5714,7 @@ bool ParseDuration(Span<const char> str, int64_t *out_duration, unsigned int fla
         goto overflow;
 #else
     uint64_t total = duration * multiplier;
-    if ((duration && total / duration != multiplier) || total > INT64_MAX) [[unlikely]]
+    if ((duration && total / duration != (uint64_t)multiplier) || total > INT64_MAX) [[unlikely]]
         goto overflow;
     duration = (int64_t)total;
 #endif
