@@ -1207,13 +1207,13 @@ void CallData::Relay(Size idx, uint8_t *own_sp, uint8_t *caller_sp, bool switch_
 
             if (CheckPointerType(instance, value, type)) {
                 ptr = (uint8_t *)UnwrapPointer(value);
-            } else if (IsObject(value) && (type->ref.type->primitive == PrimitiveKind::Record ||
-                                           type->ref.type->primitive == PrimitiveKind::Union)) {
+            } else if (IsObject(value) && (type->ref->primitive == PrimitiveKind::Record ||
+                                           type->ref->primitive == PrimitiveKind::Union)) {
                 Napi::Object obj = value.As<Napi::Object>();
 
-                ptr = AllocHeap(type->ref.type->size, 16);
+                ptr = AllocHeap(type->ref->size, 16);
 
-                if (!PushObject(obj, type->ref.type, ptr))
+                if (!PushObject(obj, type->ref, ptr))
                     return;
             } else if (IsNullOrUndefined(value)) {
                 ptr = nullptr;
