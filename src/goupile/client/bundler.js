@@ -53,9 +53,10 @@ async function build(code, get_file) {
     let ret = await esbuild.build({
         entryPoints: ['@'],
         bundle: true,
+        format: 'esm',
         write: false,
         outfile: '@',
-        target: 'es6',
+        target: 'es2022',
         sourcemap: 'external',
         plugins: [plugin]
     })
