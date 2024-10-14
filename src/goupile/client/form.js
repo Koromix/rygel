@@ -1943,14 +1943,12 @@ instead of:
         if (key.variables.has(key.name))
             throw new Error(`Variable '${key}' already exists`);
 
-        key.retain.just_changed.delete(key.name);
-
         Object.assign(intf, {
             key: key,
             value: value,
 
             missing: !intf.options.disabled && value == null,
-            changed: key.retain.just_changed.has(key.name),
+            changed: key.retain.just_changed.delete(key.name),
 
             error: (msg, delay = false) => {
                 msg = msg || '';
