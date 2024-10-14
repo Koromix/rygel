@@ -2941,9 +2941,11 @@ static Size MatchPathItemI(const char *path, const char *spec)
 
 bool MatchPathName(const char *path, const char *spec, bool case_sensitive)
 {
+    auto match = case_sensitive ? MatchPathItem : MatchPathItemI;
+
     // Match head
     {
-        Size match_len = case_sensitive ? MatchPathItem(path, spec) : MatchPathItemI(path, spec);
+        Size match_len = match(path, spec);
 
         if (match_len < 0) {
             return false;
@@ -2968,7 +2970,7 @@ bool MatchPathName(const char *path, const char *spec, bool case_sensitive)
         }
 
         for (;;) {
-            Size match_len = case_sensitive ? MatchPathItem(path, spec) : MatchPathItemI(path, spec);
+            Size match_len = match(path, spec);
 
             // We need to be greedy for the last wildcard, or we may not reach the tail
             if (match_len < 0 || (spec == tail && path[match_len])) {
