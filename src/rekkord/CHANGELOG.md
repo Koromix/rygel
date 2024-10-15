@@ -6,6 +6,11 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.28 (2024-10-15)
+
+- Add *--pattern* option to `rekkord snapshots`
+- Clean up and rename `rekkord mount` fuse options
+
 ### Rekkord 0.27 (2024-10-08)
 
 - Replace base64 master key display with file export
