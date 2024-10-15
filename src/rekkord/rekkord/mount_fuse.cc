@@ -405,13 +405,6 @@ static const struct fuse_operations FuseOperations = {
 
 int RunMount(Span<const char *> arguments)
 {
-    static const char *const FuseOptions[] = {
-        "default_permissions",
-        "allow_root",
-        "allow_other",
-        "auto_unmount"
-    };
-
     BlockAllocator temp_alloc;
 
     // Options
@@ -440,10 +433,13 @@ Options:
                                  %!D..(default: automatic)%!0
 
     %!..+-f, --foreground%!0             Run mount process in foreground
-        %!..+--debug%!0                  Debug FUSE calls
-    %!..+-o, --option <option>%!0        Set additional FUSE options (see below)
 
-Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
+        %!..+--auto_unmount%!0           Release filesystem automatically after process termination
+        %!..+--allow_other%!0            Allow all users to access the filesystem
+        %!..+--allow_root%!0             Allow owner and root to access the filesystem
+        %!..+--default_permissions%!0    Enforce snapshotted file permissions
+
+        %!..+--debug%!0                  Debug FUSE calls)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -479,21 +475,16 @@ Supported FUSE options: %!..+%2%!0)", FelixTarget, FmtSpan(FuseOptions));
                 foreground = true;
             } else if (opt.Test("--debug")) {
                 debug = true;
-            } else if (opt.Test("-o", "--option", OptionType::Value)) {
-                Span<const char> remain = opt.current_value;
-
-                while (remain.len) {
-                    Span<const char> part = TrimStr(SplitStrAny(remain, " ,", &remain));
-
-                    if (!std::find_if(std::begin(FuseOptions), std::end(FuseOptions),
-                                      [&](const char *opt) { return TestStr(part, opt); })) {
-                        LogError("FUSE option '%1' is not supported", opt.current_value);
-                        return 1;
-                    }
-
-                    const char *copy = DuplicateString(part, &temp_alloc).ptr;
-                    fuse_options.Append(copy);
-                }
+            } else if (opt.Test("--auto_unmount")) {
+                fuse_options.Append("auto_unmount");
+            } else if (opt.Test("--default_permissions")) {
+                fuse_options.Append("default_permissions");
+            } else if (opt.Test("--allow_other")) {
+                fuse_options.Append("allow_other");
+            } else if (opt.Test("--allow_root")) {
+                fuse_options.Append("allow_root");
+            } else if (opt.Test("--owner_root")) {
+                fuse_options.Append("owner_root");
             } else {
                 opt.LogUnknownError();
                 return 1;
