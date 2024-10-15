@@ -53,7 +53,7 @@ R"(Usage: %!..+%1 snapshots [-R <repo>]%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-R, --repository <url>%!0       Set repository URL
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
 
@@ -412,7 +412,7 @@ R"(Usage: %!..+%1 list [-R <repo>] <hash | name>%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-R, --repository <url>%!0       Set repository URL
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
 

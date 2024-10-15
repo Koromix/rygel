@@ -32,7 +32,7 @@ R"(Usage: %!..+%1 change_id [-C <config>]%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-R, --repository <url>%!0       Set repository URL
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
     };
@@ -96,7 +96,7 @@ R"(Usage: %!..+%1 rebuild_cache [-C <config>]%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory)", FelixTarget);
+    %!..+-R, --repository <url>%!0       Set repository URL)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))

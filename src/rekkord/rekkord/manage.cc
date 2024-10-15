@@ -55,7 +55,7 @@ R"(Usage: %!..+%1 init [-C <config>] [dir]%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-R, --repository <url>%!0       Set repository URL
 
         %!..+--master_password [pwd]%!0  Set master password manually
         %!..+--write_password [pwd]%!0   Set write-only password manually
@@ -183,7 +183,7 @@ R"(Usage: %!..+%1 export_key [-C <config>]%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-R, --repository <url>%!0       Set repository URL
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
 
@@ -273,7 +273,7 @@ R"(Usage: %!..+%1 add_user [-C <config>] <username>%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-R, --repository <url>%!0       Set repository URL
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
 
@@ -435,7 +435,7 @@ R"(Usage: %!..+%1 delete_user [-C <config>] <username>%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-R, --repository <url>%!0       Set repository URL
 
         %!..+--force%!0                  Force deletion %!D..(to delete yourself)%!0)", FelixTarget);
     };
@@ -517,7 +517,7 @@ R"(Usage: %!..+%1 list_users [-C <config>]%!0
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <dir>%!0       Set repository directory
+    %!..+-R, --repository <url>%!0       Set repository URL
 
     %!..+-f, --format <format>%!0        Change output format
                                  %!D..(default: %2)%!0
