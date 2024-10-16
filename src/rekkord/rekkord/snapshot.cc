@@ -111,9 +111,7 @@ Options:
         const char *username = disk->GetUser();
         RG_ASSERT(username);
 
-        if (settings.name) {
-            settings.name = Fmt(&temp_alloc, "%1@%2", settings.name, username).ptr;
-        } else {
+        if (!settings.name) {
             const char *path = NormalizePath(filenames[0], &temp_alloc).ptr;
             settings.name = Fmt(&temp_alloc, "%1@%2", path, username).ptr;
         }
