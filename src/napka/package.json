@@ -13,18 +13,18 @@
     "author": "Niels Martignène <niels.martignene@protonmail.com>",
     "license": "GPL-3.0",
     "dependencies": {
-        "better-sqlite3": "^8.0.0",
+        "better-sqlite3": "^11.3.0",
         "better-sqlite3-session-store": "^0.1.0",
         "compression": "^1.7.4",
-        "esbuild": "^0.17.17",
-        "express": "^4.17.1",
-        "express-session": "^1.17.3",
-        "lit": "^2.4.1",
-        "markdown-it": "^13.0.1",
-        "mime": "^3.0.0",
-        "node-fetch": "^2.6.9",
-        "node-xlsx": "^0.21.0",
-        "nunjucks": "^3.2.3",
-        "whatwg-fetch": "^3.2.0"
+        "esbuild": "^0.24.0",
+        "express": "^4.21.1",
+        "express-session": "^1.18.1",
+        "lit": "^3.2.1",
+        "markdown-it": "^14.1.0",
+        "mime": "^4.0.4",
+        "node-fetch": "^3.3.2",
+        "node-xlsx": "^0.24.0",
+        "nunjucks": "^3.2.4",
+        "whatwg-fetch": "^3.6.20"
     }
 }
