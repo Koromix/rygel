@@ -6,6 +6,10 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.29 (2024-10-16)
+
+- Revert "Always append username to snapshot names" change
+
 ### Rekkord 0.28 (2024-10-15)
 
 - Add *--pattern* option to `rekkord snapshots`
