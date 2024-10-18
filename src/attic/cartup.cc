@@ -531,13 +531,15 @@ class DistributeContext {
     HeapArray<UsageInfo> usages;
     HashTable<int64_t, UsageInfo *> usages_map;
 
-    BlockAllocator temp_alloc;
-
 public:
     DistributeContext(BackupSet *set);
 
     DistributeResult DistributeNew(const char *src_dir);
     bool DeleteOld();
+
+    bool BackupNew(const DiskData &disk, bool checksum);
+    bool DeleteExtra(const DiskData &disk);
+    bool DeleteExtra(const DiskData &disk, const char *dest_dir, Size root_len);
 };
 
 DistributeContext::DistributeContext(BackupSet *set)
@@ -560,6 +562,8 @@ DistributeContext::DistributeContext(BackupSet *set)
 
 DistributeResult DistributeContext::DistributeNew(const char *src_dir)
 {
+    BlockAllocator temp_alloc;
+
     if (!usages.len) {
         LogError("No backup disk is defined");
         return DistributeResult::Error;
@@ -668,26 +672,255 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir)
 
 bool DistributeContext::DeleteOld()
 {
-    bool success = set->db.Transaction([&]() {
-        if (!set->db.Run("DELETE FROM files WHERE status = 'added' AND changeset IS NOT ?1", changeset))
-            return false;
-        if (!set->db.Run("UPDATE files SET status = 'removed' WHERE changeset IS NOT ?1", changeset))
-            return false;
+    if (!set->db.Run("DELETE FROM files WHERE status = 'added' AND changeset IS NOT ?1", changeset))
+        return false;
+    if (!set->db.Run("UPDATE files SET status = 'removed' WHERE changeset IS NOT ?1", changeset))
+        return false;
 
-        return true;
-    });
+    return true;
+}
+
+static const char *BuildDiskPath(const char *src_filename, const DiskData &disk, BlockAllocator *alloc)
+{
+    const char *dest_filename = nullptr;
+
+#if defined(_WIN32)
+    if (IsAsciiAlpha(src_filename[0]) && src_filename[1] == ':') {
+        char drive = LowerAscii(src_filename[0]);
+        const char *remain = TrimStrLeft(src_filename + 2, RG_PATH_SEPARATORS).ptr;
+
+        dest_filename = Fmt(alloc, "%1%2/%3", disk.root, drive, remain).ptr;
+    } else {
+        const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
+        dest_filename = Fmt(alloc, "%1%2", disk.root, remain).ptr;
+    }
+#else
+    {
+        const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
+        dest_filename = Fmt(alloc, "%1%2", disk.root, remain).ptr;
+    }
+#endif
+
+    return dest_filename;
+}
+
+static bool HashFile(int fd, const char *filename, Span<uint8_t> buf, uint8_t out_hash[32])
+{
+    blake3_hasher hasher;
+    blake3_hasher_init(&hasher);
+
+    for (;;) {
+#if defined(_WIN32)
+        int bytes = _read(fd, buf.ptr, (unsigned int)buf.len);
+#else
+        ssize_t bytes = read(fd, buf.ptr, buf.len);
+#endif
+
+        if (bytes < 0) {
+            if (errno == EINTR)
+                continue;
+
+            LogError("Failed to read '%1'", filename);
+            return false;
+        }
+        if (!bytes)
+            break;
+
+        blake3_hasher_update(&hasher, buf.ptr, (size_t)bytes);
+    }
+
+    blake3_hasher_finalize(&hasher, out_hash, 32);
+
+    return true;
+}
+
+static bool IsTimeEquivalent(int64_t time1, int64_t time2)
+{
+    bool close = (time1 / 10) == (time2 / 10);
+    return close;
+}
+
+bool DistributeContext::BackupNew(const DiskData &disk, bool checksum)
+{
+    BlockAllocator temp_alloc;
+
+    sq_Statement stmt;
+    if (!set->db.Prepare(R"(SELECT f.id, f.path, f.mtime, f.size
+                            FROM disks d
+                            INNER JOIN files f ON (f.disk_id = d.id)
+                            WHERE d.uuid = ?1 AND f.status <> 'removed')",
+                         &stmt, disk.uuid))
+        return false;
+
+    bool valid = true;
+
+    Span<uint8_t> buf1 = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
+    Span<uint8_t> buf2 = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
+    RG_DEFER {
+        ReleaseSpan(&temp_alloc, buf1);
+        ReleaseSpan(&temp_alloc, buf2);
+    };
+
+    while (stmt.Step()) {
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        const char *src_filename = (const char *)sqlite3_column_text(stmt, 1);
+        int64_t mtime = sqlite3_column_int64(stmt, 2);
+        int64_t size = sqlite3_column_int64(stmt, 3);
+
+        const char *dest_filename = BuildDiskPath(src_filename, disk, &temp_alloc);
+
+        FileInfo dest_info;
+        StatResult stat = StatFile(dest_filename, (int)StatFlag::SilentMissing, &dest_info);
+
+        switch (stat) {
+            case StatResult::Success: {
+                bool changed = false;
+
+                if (dest_info.size == size) {
+                    if (checksum) {
+                        int src_fd = OpenFile(src_filename, (int)OpenFlag::Read);
+                        int dest_fd = OpenFile(dest_filename, (int)OpenFlag::Read);
+                        RG_DEFER {
+                            CloseDescriptor(src_fd);
+                            CloseDescriptor(dest_fd);
+                        };
+
+                        if (src_fd < 0 || dest_fd < 0) {
+                            valid = false;
+                            break;
+                        }
+
+                        uint8_t src_hash[32] = {};
+                        uint8_t dest_hash[32] = {};
+
+                        Async async;
+
+                        async.Run([&]() { return HashFile(src_fd, src_filename, buf1, src_hash); });
+                        async.Run([&]() { return HashFile(dest_fd, dest_filename, buf2, dest_hash); });
+
+                        if (!async.Sync()) {
+                            valid = false;
+                            continue;
+                        }
+
+                        changed = !!memcmp(src_hash, dest_hash, 32);
+                    } else {
+                        changed = !IsTimeEquivalent(dest_info.mtime, mtime);
+                    }
+                } else {
+                    changed = true;
+                }
+
+                valid &= !changed || set->db.Run("UPDATE files SET status = 'changed' WHERE id = ?1", id);
+            } break;
+
+            case StatResult::MissingPath: {
+                valid &= set->db.Run("UPDATE files SET status = 'added' WHERE id = ?1", id);
+            } break;
+
+            case StatResult::AccessDenied:
+            case StatResult::OtherError: {
+                LogError("Failed to stat '%1': %1", strerror(errno));
+                valid = false;
+            } break;
+        }
+    }
+    valid &= stmt.IsValid();
+
+    return valid;
+}
+
+bool DistributeContext::DeleteExtra(const DiskData &disk)
+{
+    Size root_len = strlen(disk.root) - 1;
+    bool success = DeleteExtra(disk, disk.root, root_len);
+
+    if (!set->db.Run("DELETE FROM files WHERE disk_id = ?1 AND status = 'removed' AND changeset IS NOT ?2", disk.id, changeset))
+        return false;
 
     return success;
 }
 
-static bool DistributeChanges(BackupSet *set)
+// Return true if all children are deleted (directory is not empty)
+bool DistributeContext::DeleteExtra(const DiskData &disk, const char *dest_dir, Size root_len)
 {
+    BlockAllocator temp_alloc;
+
     bool complete = true;
 
-    LogInfo("Detecting source changes...");
+    EnumerateDirectory(dest_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+        switch (file_info.type) {
+            case FileType::Directory: {
+                const char *dirname = Fmt(&temp_alloc, "%1%2/", dest_dir, basename).ptr;
+                complete &= DeleteExtra(disk, dirname, root_len);
+            } break;
+
+            case FileType::File: {
+                if (TestStr(basename, ".cartup"))
+                    break;
+
+                const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
+                const char *origin = filename + root_len;
+
+#if defined(_WIN32)
+                if (origin[0] == '/' && IsAsciiAlpha(origin[1]) && origin[2] == '/') {
+                    char drive = UpperAscii(origin[1]);
+                    Span<const char> remain = TrimStrLeft(origin + 2, RG_PATH_SEPARATORS);
+
+                    origin = Fmt(&temp_alloc, "%1:/%2", drive, remain).ptr;
+                }
+#endif
+
+                sq_Statement stmt;
+                if (!set->db.Prepare(R"(SELECT f.id
+                                        FROM files f
+                                        INNER JOIN disks d ON (d.id = f.disk_id)
+                                        WHERE d.id = ?1 AND f.path = ?2)",
+                                     &stmt, disk.id, origin))
+                    return false;
+
+                if (stmt.Step()) {
+                    int64_t id = sqlite3_column_int64(stmt, 0);
+
+                    if (!set->db.Run("UPDATE files SET changeset = ?2 WHERE id = ?1", id, changeset))
+                        return false;
+                } else if (stmt.IsValid()) {
+                    if (!set->db.Run(R"(INSERT INTO files (path, mtime, size, disk_id, status, changeset)
+                                        VALUES (?1, ?2, ?3, ?4, 'removed', ?5))",
+                                     origin, 0, 0, disk.id, changeset))
+                        return false;
+                } else {
+                    return false;
+                }
+            } break;
+
+            case FileType::Link:
+            case FileType::Device:
+            case FileType::Pipe:
+            case FileType::Socket: {
+                const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
+                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
+
+                complete = false;
+            } break;
+        }
+
+        return true;
+    });
+
+    return complete;
+}
+
+static bool DistributeChanges(BackupSet *set, bool checksum)
+{
+    BlockAllocator temp_alloc;
+
+    bool complete = true;
+
+    DistributeContext ctx(set);
 
     bool success = set->db.Transaction([&]() {
-        DistributeContext ctx(set);
+        LogInfo("Detecting source changes...");
 
         for (const SourceInfo &src: set->sources) {
             switch (ctx.DistributeNew(src.root)) {
@@ -697,6 +930,27 @@ static bool DistributeChanges(BackupSet *set)
             }
         }
         ctx.DeleteOld();
+
+        LogInfo("Detecting backup changes...");
+
+        for (const DiskData &disk: set->disks) {
+            const char *uuid_filename = Fmt(&temp_alloc, "%1.cartup", disk.root).ptr;
+
+            if (!TestFile(uuid_filename, FileType::File))
+                continue;
+
+            const char *uuid = ReadUUID(uuid_filename, &temp_alloc);
+
+            if (!uuid) {
+                LogError("Cannot find disk UUID from '%1", disk.root);
+                return false;
+            }
+            if (!TestStr(uuid, disk.uuid))
+                continue;
+
+            complete &= ctx.BackupNew(disk, checksum);
+            complete &= ctx.DeleteExtra(disk);
+        }
 
         return true;
     });
@@ -713,8 +967,9 @@ static int RunStatus(Span<const char *> arguments)
 {
     // Options
     const char *db_filename = GetDefaultDatabasePath();
-    bool distribute = true;
     bool verbose = false;
+    bool distribute = true;
+    bool checksum = false;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -724,7 +979,9 @@ Options:
     %!..+-D, --database_file <file>%!0   Set database file
 
     %!..+-v, --verbose%!0                Show detailed changes
-        %!..+--no_detect%!0              Don't detect source changes)",
+        %!..+--no_detect%!0              Don't detect source changes
+
+    %!..+-c, --checksum%!0               Use checksum (BLAKE3) to compare files)",
                 FelixTarget);
     };
 
@@ -742,6 +999,8 @@ Options:
                 verbose = true;
             } else if (opt.Test("--no_detect")) {
                 distribute = false;
+            } else if (opt.Test("-c", "--checksum")) {
+                checksum = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -756,7 +1015,7 @@ Options:
         return 1;
 
     distribute &= (set.disks.len > 0);
-    if (distribute && !DistributeChanges(&set))
+    if (distribute && !DistributeChanges(&set, checksum))
         return 1;
 
     bool blank = distribute;
@@ -852,55 +1111,33 @@ Options:
     return 0;
 }
 
-class BackupContext {
-    BackupSet *set;
-    const DiskData *disk;
-
-    int64_t changeset;
-
-    bool checksum;
-    bool fake;
-
-    BlockAllocator temp_alloc;
-
-public:
-    BackupContext(BackupSet *set, const DiskData *disk, bool checksum, bool fake)
-        : set(set), disk(disk), changeset(GetRandomInt64(0, INT64_MAX)), checksum(checksum), fake(fake) {}
-
-    bool BackupNew();
-    bool DeleteOld();
-
-private:
-    bool DeleteOld(const char *dirname, Size root_len);
-
-    bool HashFile(int fd, const char *filename, Span<uint8_t> buf, uint8_t out_hash[32]);
-    bool CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size, int64_t mtime);
-};
-
-static bool IsTimeEquivalent(int64_t time1, int64_t time2)
+static bool CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size, int64_t mtime)
 {
-    bool close = (time1 / 10) == (time2 / 10);
-    return close;
+    if (!SpliceFile(src_fd, src_filename, dest_fd, dest_filename, size))
+        return false;
+    if (!ResizeFile(dest_fd, dest_filename, size))
+        return false;
+    if (!FlushFile(dest_fd, dest_filename))
+        return false;
+
+    SetFileMetaData(dest_fd, dest_filename, mtime, 0, 0644);
+
+    return true;
 }
 
-bool BackupContext::BackupNew()
+static bool PerformCopies(BackupSet *set, const DiskData &disk)
 {
+    BlockAllocator temp_alloc;
+
     sq_Statement stmt;
     if (!set->db.Prepare(R"(SELECT f.id, f.path, f.mtime, f.size
                             FROM disks d
                             INNER JOIN files f ON (f.disk_id = d.id)
-                            WHERE d.uuid = ?1 AND f.status <> 'removed')",
-                         &stmt, disk->uuid))
+                            WHERE d.uuid = ?1 AND f.status IN ('added', 'changed'))",
+                         &stmt, disk.uuid))
         return false;
 
     bool valid = true;
-
-    Span<uint8_t> buf1 = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
-    Span<uint8_t> buf2 = AllocateSpan<uint8_t>(&temp_alloc, Mebibytes(4));
-    RG_DEFER {
-        ReleaseSpan(&temp_alloc, buf1);
-        ReleaseSpan(&temp_alloc, buf2);
-    };
 
     while (stmt.Step()) {
         int64_t id = sqlite3_column_int64(stmt, 0);
@@ -908,24 +1145,7 @@ bool BackupContext::BackupNew()
         int64_t mtime = sqlite3_column_int64(stmt, 2);
         int64_t size = sqlite3_column_int64(stmt, 3);
 
-        const char *dest_filename = nullptr;
-
-#if defined(_WIN32)
-        if (IsAsciiAlpha(src_filename[0]) && src_filename[1] == ':') {
-            char drive = LowerAscii(src_filename[0]);
-            const char *remain = TrimStrLeft(src_filename + 2, RG_PATH_SEPARATORS).ptr;
-
-            dest_filename = Fmt(&temp_alloc, "%1%2/%3", disk->root, drive, remain).ptr;
-        } else {
-            const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
-            dest_filename = Fmt(&temp_alloc, "%1%2", disk->root, remain).ptr;
-        }
-#else
-        {
-            const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
-            dest_filename = Fmt(&temp_alloc, "%1%2", disk->root, remain).ptr;
-        }
-#endif
+        const char *dest_filename = BuildDiskPath(src_filename, disk, &temp_alloc);
 
         int src_fd = OpenFile(src_filename, (int)OpenFlag::Read);
         if (src_fd < 0) {
@@ -952,240 +1172,66 @@ bool BackupContext::BackupNew()
             }
         }
 
-        int dest_fd = -1;
-        StatResult stat;
-        FileInfo dest_info;
+        if (!EnsureDirectoryExists(dest_filename)) {
+            valid = false;
+            continue;
+        }
+
+        int dest_fd = OpenFile(dest_filename, (int)OpenFlag::Read | (int)OpenFlag::Write | (int)OpenFlag::Keep);
+        if (dest_fd < 0) {
+            valid = false;
+            continue;
+        }
         RG_DEFER { CloseDescriptor(dest_fd); };
 
-        if (fake) {
-            stat = StatFile(dest_filename, (int)StatFlag::SilentMissing, &dest_info);
-        } else {
-            if (!EnsureDirectoryExists(dest_filename)) {
-                valid = false;
-                continue;
-            }
+        LogInfo("Copy '%1' to %2 (%3)", src_filename, disk.name, disk.uuid);
 
-            dest_fd = OpenFile(dest_filename, (int)OpenFlag::Read | (int)OpenFlag::Write | (int)OpenFlag::Keep);
-            if (dest_fd < 0) {
-                valid = false;
-                continue;
-            }
-
-            stat = StatFile(dest_fd, dest_filename, (int)StatFlag::SilentMissing, &dest_info);
+        if (!CopyFile(src_fd, src_filename, dest_fd, dest_filename, size, mtime)) {
+            valid = false;
+            continue;
         }
-
-        switch (stat) {
-            case StatResult::Success: {
-                if (dest_info.size == size) {
-                    if (checksum) {
-                        uint8_t src_hash[32];
-                        uint8_t dest_hash[32];
-
-                        Async async;
-
-                        async.Run([&]() { return HashFile(src_fd, src_filename, buf1, src_hash); });
-                        async.Run([&]() { return HashFile(dest_fd, dest_filename, buf2, dest_hash); });
-
-                        if (!async.Sync()) {
-                            valid = false;
-                            continue;
-                        }
-
-                        if (!memcmp(src_hash, dest_hash, 32)) {
-                            LogDebug("Skip '%1' (checksum match)", src_filename);
-
-                            if (!fake) {
-                                SetFileMetaData(dest_fd, dest_filename, mtime, mtime, 0644);
-                                valid &= set->db.Run("UPDATE files SET status = 'ok' WHERE id = ?1", id);
-                            }
-
-                            continue;
-                        }
-                    } else {
-                        if (IsTimeEquivalent(dest_info.mtime, mtime)) {
-                            LogDebug("Skip '%1' (metadata match)", src_filename);
-
-                            if (!fake) {
-                                valid &= set->db.Run("UPDATE files SET status = 'ok' WHERE id = ?1", id);
-                            }
-
-                            continue;
-                        }
-                    }
-                }
-
-                // Go on!
-            } break;
-
-            case StatResult::MissingPath: { /* Go on */ } break;
-
-            case StatResult::AccessDenied:
-            case StatResult::OtherError: {
-                LogError("Failed to stat '%1': %1", strerror(errno));
-
-                valid = false;
-                continue;
-            } break;
-        }
-
-        LogInfo("Copy '%1' to %2 (%3)", src_filename, disk->name, disk->uuid);
-
-        if (!fake) {
-            if (!CopyFile(src_fd, src_filename, dest_fd, dest_filename, size, mtime)) {
-                valid = false;
-                continue;
-            }
-            if (!set->db.Run("UPDATE files SET status = 'ok' WHERE id = ?1", id)) {
-                valid = false;
-                continue;
-            }
+        if (!set->db.Run("UPDATE files SET status = 'ok' WHERE id = ?1", id)) {
+            valid = false;
+            continue;
         }
     }
-    valid &= stmt.IsValid();
 
     return valid;
 }
 
-bool BackupContext::DeleteOld()
-{
-    Size root_len = strlen(disk->root) - 1;
-    bool success = DeleteOld(disk->root, root_len);
-
-    if (!fake && !set->db.Run("DELETE FROM files WHERE disk_id = ?1 AND status = 'removed' AND changeset IS NOT ?2", disk->id, changeset))
-        return false;
-
-    return success;
-}
-
-// Return true if all children are deleted (directory is not empty)
-bool BackupContext::DeleteOld(const char *dest_dir, Size root_len)
+static bool PerformDeletions(BackupSet *set, const DiskData &disk)
 {
     BlockAllocator temp_alloc;
 
-    bool complete = true;
+    sq_Statement stmt;
+    if (!set->db.Prepare(R"(SELECT f.id, f.path
+                            FROM disks d
+                            INNER JOIN files f ON (f.disk_id = d.id)
+                            WHERE d.uuid = ?1 AND f.status = 'removed')",
+                         &stmt, disk.uuid))
+        return false;
 
-    EnumerateDirectory(dest_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
-        switch (file_info.type) {
-            case FileType::Directory: {
-                const char *dirname = Fmt(&temp_alloc, "%1%2/", dest_dir, basename).ptr;
+    bool valid = true;
 
-                bool empty = DeleteOld(dirname, root_len);
+    while (stmt.Step()) {
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        const char *src_filename = (const char *)sqlite3_column_text(stmt, 1);
 
-                if (empty && !fake) {
-                    complete &= UnlinkDirectory(dirname);
-                }
+        const char *dest_filename = BuildDiskPath(src_filename, disk, &temp_alloc);
 
-                complete &= empty;
-            } break;
+        LogInfo("Delete '%1'", dest_filename);
 
-            case FileType::File: {
-                if (TestStr(basename, ".cartup"))
-                    break;
-
-                const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
-                const char *origin = filename + root_len;
-
-#if defined(_WIN32)
-                if (origin[0] == '/' && IsAsciiAlpha(origin[1]) && origin[2] == '/') {
-                    char drive = UpperAscii(origin[1]);
-                    Span<const char> remain = TrimStrLeft(origin + 2, RG_PATH_SEPARATORS);
-
-                    origin = Fmt(&temp_alloc, "%1:/%2", drive, remain).ptr;
-                }
-#endif
-
-                sq_Statement stmt;
-                if (!set->db.Prepare(R"(SELECT f.id, IIF(f.status = 'removed', 1, 0) AS removed
-                                        FROM files f
-                                        INNER JOIN disks d ON (d.id = f.disk_id)
-                                        WHERE d.id = ?1 AND f.path = ?2)",
-                                     &stmt, disk->id, origin))
-                    return false;
-
-                int64_t id = -1;
-                bool exists = false;
-
-                if (stmt.Step()) {
-                    id = sqlite3_column_int64(stmt, 0);
-                    exists = sqlite3_column_int(stmt, 1);
-                } else if (!stmt.IsValid()) {
-                    return false;
-                }
-
-                if (exists) {
-                    complete = false;
-                    break;
-                }
-
-                LogInfo("Delete '%1'", filename);
-
-                if (!fake && !UnlinkFile(filename)) {
-                    set->db.Run("UPDATE files SET changeset = ?2 WHERE id = ?1", id, changeset);
-
-                    complete = false;
-                    break;
-                }
-            } break;
-
-            case FileType::Link:
-            case FileType::Device:
-            case FileType::Pipe:
-            case FileType::Socket: {
-                const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
-                LogWarning("Ignoring special file '%1' (%2)", filename, FileTypeNames[(int)file_info.type]);
-
-                complete = false;
-            } break;
+        if (!UnlinkFile(dest_filename)) {
+            valid = false;
+            continue;
         }
-
-        return true;
-    });
-
-    return complete;
-}
-
-bool BackupContext::HashFile(int fd, const char *filename, Span<uint8_t> buf, uint8_t out_hash[32])
-{
-    blake3_hasher hasher;
-    blake3_hasher_init(&hasher);
-
-    for (;;) {
-#if defined(_WIN32)
-        int bytes = _read(fd, buf.ptr, (unsigned int)buf.len);
-#else
-        ssize_t bytes = read(fd, buf.ptr, buf.len);
-#endif
-
-        if (bytes < 0) {
-            if (errno == EINTR)
-                continue;
-
-            LogError("Failed to read '%1'", filename);
-            return false;
+        if (!set->db.Run("DELETE FROM files WHERE id = ?1", id)) {
+            valid = false;
+            continue;
         }
-        if (!bytes)
-            break;
-
-        blake3_hasher_update(&hasher, buf.ptr, (size_t)bytes);
     }
 
-    blake3_hasher_finalize(&hasher, out_hash, 32);
-
-    return true;
-}
-
-bool BackupContext::CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size, int64_t mtime)
-{
-    if (!SpliceFile(src_fd, src_filename, dest_fd, dest_filename, size))
-        return false;
-    if (!ResizeFile(dest_fd, dest_filename, size))
-        return false;
-    if (!FlushFile(dest_fd, dest_filename))
-        return false;
-
-    SetFileMetaData(dest_fd, dest_filename, mtime, 0, 0644);
-
-    return true;
+    return valid;
 }
 
 static int RunBackup(Span<const char *> arguments)
@@ -1196,7 +1242,6 @@ static int RunBackup(Span<const char *> arguments)
     const char *db_filename = GetDefaultDatabasePath();
     bool distribute = true;
     bool checksum = false;
-    bool fake = false;
     bool cleanup = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -1209,9 +1254,7 @@ Options:
         %!..+--no_detect%!0              Don't detect source changes
 
     %!..+-c, --checksum%!0               Use checksum (BLAKE3) to compare files
-        %!..+--delete%!0                 Delete unused files
-
-    %!..+-n, --dry_run%!0                Fake backup actions)",
+        %!..+--cleanup%!0                Delete removed files from backup disks)",
                 FelixTarget);
     };
 
@@ -1229,10 +1272,8 @@ Options:
                 distribute = false;
             } else if (opt.Test("-c", "--checksum")) {
                 checksum = true;
-            } else if (opt.Test("--delete")) {
+            } else if (opt.Test("--cleanup")) {
                 cleanup = true;
-            } else if (opt.Test("-n", "--dry_run")) {
-                fake = true;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -1247,7 +1288,7 @@ Options:
         return 1;
 
     // Distribute changes
-    if (distribute && !DistributeChanges(&set))
+    if (distribute && !DistributeChanges(&set, checksum))
         return 1;
 
     Async async;
@@ -1273,28 +1314,11 @@ Options:
 
         processed++;
 
-        // Check disk exists!
-        {
-            sq_Statement stmt;
-            if (!set.db.Prepare("SELECT id FROM disks WHERE uuid = ?1", &stmt, uuid))
-                return 1;
-
-            if (!stmt.Step()) {
-                if (stmt.IsValid()) {
-                    LogError("Disk '%1' is not in database", uuid);
-                }
-                return 1;
-            }
-        }
-
         async.Run([&]() {
-            BackupContext ctx(&set, &disk, checksum, fake);
-
-            if (!ctx.BackupNew())
+            if (!PerformCopies(&set, disk))
                 return false;
-            if (cleanup) {
-                ctx.DeleteOld();
-            }
+            if (cleanup && !PerformDeletions(&set, disk))
+                return false;
 
             return true;
         });
@@ -1307,7 +1331,7 @@ Options:
         return 1;
     }
 
-    LogInfo("Done!%!D..%1%!0", fake ? " [dry run]" : "");
+    LogInfo("Done!");
 
     if (!set.Close())
         return 1;
