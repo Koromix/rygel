@@ -41,7 +41,7 @@ Options:
     %!..+-n, --name <name>%!0            Set custom snapshot name
         %!..+--raw%!0                    Skip snapshot object and report data hash
 
-        %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is
+        %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is)
 
     %!..+-j, --threads <threads>%!0      Change number of threads
                                  %!D..(default: automatic)%!0)", FelixTarget);
