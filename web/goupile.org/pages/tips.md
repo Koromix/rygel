@@ -288,9 +288,8 @@ Contient la structure de l'appli : formulaires, pages, etc
 
 Sur une pages données les variables sont accesibles via `values.ma_variable`. Il est aussi possible de les assigner et de le créer avec `values.new_variable`.
 
-```{note}
-La syntaxe `form.value("")` est supportée mais n'est plus recommandée.
-```
+> [!NOTE]
+> La syntaxe `form.value("")` est supportée mais n'est plus recommandée.
 
 ## Valeurs par défaut
 

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" class="nojs">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>{{ TITLE }}</title>
+        <meta name="author" content="Niels Martignène">
+        <meta name="description" content="{{ DESCRIPTION }}">
+        <link rel="icon" href="{{ ASSET favicon.png }}">
+
+        <meta name="theme-color" content="#6aa051">
+        <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
+
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}" async></script>
+    </head>
+
+    <body>
+        <div id="deploy"></div>
+
+        <nav id="top">
+            <menu>
+                <a id="logo" href="/"><img src="{{ ASSET favicon.png }}" alt="Logo Rekkord" /></a>
+
+{{ LINKS }}
+
+                <div style="flex: 1;"></div>
+
+                <li><a href="https://www.npmjs.com/package/koffi" style="border-bottom-color: transparent;"><img src="https://img.shields.io/badge/NPM-3.0.0-brightgreen" alt="NPM"/></a></li>
+                <li><a href="https://github.com/Koromix/koffi" style="border-bottom-color: transparent;"><img src="https://img.shields.io/badge/GitHub-Koffi-ff6600" alt="GitHub"/></a></li>
+            </menu>
+        </nav>
+
+        {{ TOC }}
+
+        <main>
+            {{ CONTENT }}
+        </main>
+    </body>
+</html>

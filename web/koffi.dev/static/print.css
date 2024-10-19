@@ -13,9 +13,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-@import url('../../../src/web/flaat/flaat.css');
-@import url('../../../vendor/highlight.js/styles/base16/tomorrow.css');
+@media print {
+    .schema { width: 90%; }
 
-html {
-    --primary_color: #6aa051;
+    .columns { display: block; }
+    .columns > * { width: auto; }
+    .columns > * + * { margin-top: 3em; }
 }
