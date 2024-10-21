@@ -212,7 +212,7 @@ bool gui_Window::InitImGui(ImFontAtlas *font_atlas)
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
                      GL_UNSIGNED_BYTE, pixels);
-        io->Fonts->TexID = (void *)(intptr_t)font_texture;
+        io->Fonts->SetTexID((ImTextureID)font_texture);
     }
 
     io->BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
