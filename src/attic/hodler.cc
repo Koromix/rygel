@@ -440,15 +440,15 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
 
             // Support GitHub-like alerts
             if (event == CMARK_EVENT_EXIT && type == CMARK_NODE_BLOCK_QUOTE) {
-                cmark_node *child0 = cmark_node_first_child(node);
-                cmark_node *child = child0;
+                cmark_node *child = cmark_node_first_child(node);
+                cmark_node *text = child;
 
-                if (cmark_node_get_type(child) == CMARK_NODE_PARAGRAPH) {
-                    child = cmark_node_first_child(child);
+                if (cmark_node_get_type(text) == CMARK_NODE_PARAGRAPH) {
+                    text = cmark_node_first_child(text);
                 }
 
-                if (cmark_node_get_type(child) == CMARK_NODE_TEXT) {
-                    const char *literal = cmark_node_get_literal(child);
+                if (cmark_node_get_type(text) == CMARK_NODE_TEXT) {
+                    const char *literal = cmark_node_get_literal(text);
                     RG_ASSERT(literal);
 
                     const char *cls = nullptr;
@@ -468,7 +468,7 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
                     if (cls) {
                         RG_DEFER {
                             cmark_node_free(node);
-                            cmark_node_free(child);
+                            cmark_node_free(text);
                         };
 
                         const char *tag = Fmt(alloc, "<div class=\"alert %1\">", cls).ptr;
@@ -482,9 +482,16 @@ static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *al
 
                         cmark_node_replace(node, block);
 
-                        cmark_node_unlink(child0);
                         cmark_node_append_child(block, title);
-                        cmark_node_append_child(block, child0);
+
+                        do {
+                            cmark_node *next = cmark_node_next(child);
+
+                            cmark_node_unlink(child);
+                            cmark_node_append_child(block, child);
+
+                            child = next;
+                        } while (child);
                     }
                 }
             }
