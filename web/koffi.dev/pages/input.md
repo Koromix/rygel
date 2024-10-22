@@ -148,11 +148,11 @@ The full example below implements an iterative string builder (concatenator) in 
 ```c
 // Build with: clang -fPIC -o handles.so -shared handles.c -Wall -O2
 
-include <stdlib.h>
-include <stdbool.h>
-include <stdio.h>
-include <errno.h>
-include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
 typedef struct Fragment {
     struct Fragment *next;

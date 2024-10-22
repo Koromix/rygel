@@ -145,7 +145,7 @@ After the call, you can dereference the member value you want on this object and
 The following example illustrates the use of `koffi.Union()` to decode output unions after the call.
 
 ```c
-include <stdint.h>
+#include <stdint.h>
 
 typedef union IntOrDouble {
     int64_t i;

@@ -45,7 +45,7 @@ You need to specify the correct [calling convention](functions#calling-conventio
 Use transient callbacks when the native C function only needs to call them while it runs (e.g. qsort, progress callback, `sqlite3_exec`). Here is a small example with the C part and the JS part.
 
 ```c
-include <string.h>
+#include <string.h>
 
 int TransferToJS(const char *name, int age, int (*cb)(const char *str, int age))
 {

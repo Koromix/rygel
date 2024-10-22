@@ -95,9 +95,9 @@ Here is a simple example of a C function taking a NULL-terminated list of string
 ```c
 // Build with: clang -fPIC -o length.so -shared length.c -Wall -O2
 
-include <stdlib.h>
-include <stdint.h>
-include <string.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 
 int64_t ComputeTotalLength(const char **strings)
 {

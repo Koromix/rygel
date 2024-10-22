@@ -226,8 +226,8 @@ However, you can use `koffi.alloc(type, len)` to allocate memory and get a point
 The example below sets up some memory to be used as an output buffer where a concatenation function appends a string on each call.
 
 ```c
-include <assert.h>
-include <stddef.h>
+#include <assert.h>
+#include <stddef.h>
 
 static char *buf_ptr;
 static size_t buf_len;
