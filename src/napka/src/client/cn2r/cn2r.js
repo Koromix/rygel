@@ -214,7 +214,7 @@ function Cn2rProvider() {
 
                     ${!checkSchedule(entry.rdv_horaires) ? html`<span class="tag" style="background: #db0a0a;">⚠\uFE0E Horaires non communiqués</span>${makeEdit(entry, 'rdv_horaires')}<br/>` : ''}
                     ${checkSchedule(entry.rdv_horaires) ? html`
-                        <div class="planning_tip">Horaires donnés à titre indicatif${makeEdit(entry, 'rdv_horaires')}</div>
+                        <div class="planning_tip">Horaires du secrétariat${makeEdit(entry, 'rdv_horaires')}</div>
                         ${edit_key != 'rdv_horaires' ? html`
                             <table class="planning">
                                 ${Util.mapRange(1, show_we ? 8 : 6, day => {
@@ -248,7 +248,7 @@ function Cn2rProvider() {
                     ` : ''}
                     Modalités : ${field(entry, 'rdv_modalites')}<br/><br/>
 
-                    <u>Pour contacter le CRP</u> :<br/><br/>
+                    <u>Contacter la structure</u> :<br/><br/>
                     ${isConnected() || entry.rdv_fixe ? html`Téléphone : <b>${field(entry, 'rdv_fixe', parse.cleanPhoneNumber(entry.rdv_fixe))}</b>
                                        ${isConnected() || entry.rdv_portable ? html` ou ${field(entry, 'rdv_portable', parse.cleanPhoneNumber(entry.rdv_portable))}` : ''}<br/>` : ''}
                     ${isConnected() || entry.rdv_mail ? html`Courriel : ${field(entry, 'rdv_mail', entry.rdv_mail ? html`<a href=${'mailto:' + entry.rdv_mail} style="white-space: nowrap;">${entry.rdv_mail}</a>` : html`<span class="sub">(inconnu)</span>`)}</a><br/>` : ''}
