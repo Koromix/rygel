@@ -314,3 +314,8 @@ pre {
     --color: #c93c37;
     --text: '⚠\FE0E  Caution';
 }
+
+.footnotes {
+    margin: 2em 1em;
+    font-style: italic;
+}
