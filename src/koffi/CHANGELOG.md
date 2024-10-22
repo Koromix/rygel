@@ -1,8 +1,13 @@
-# Koffi 3
+# Version history
 
-## Koffi 3.0
+> [!NOTE]
+> Consult the [migration guide](migration) to migrate between major Koffi versions.
 
-### Koffi 3.0.0
+## Koffi 3
+
+### Koffi 3.0
+
+#### Koffi 3.0.0
 
 **Main changes:**
 
@@ -37,118 +42,118 @@
 
 Consult the [migration guide](migration) for more information.
 
-# Koffi 2
+## Koffi 2
 
-## Koffi 2.9
+### Koffi 2.9
 
-### Koffi 2.9.1 (2024-09-23)
+#### Koffi 2.9.1 (2024-09-23)
 
 - Fix x86 32-bit support regression in 2.9.0
 - Add missing TS definition for `koffi.alloc()`
 - Support `koffi.load(null)` in TS definition file
 
-### Koffi 2.9.0 (2024-07-22)
+#### Koffi 2.9.0 (2024-07-22)
 
 - Add support for char32_t and wchar_t (wide) strings
 - Include Linux/musl x64 prebuild (based on Alpine)
 
-## Koffi 2.8
+### Koffi 2.8
 
-### Koffi 2.8.11 (2024-06-19)
+#### Koffi 2.8.11 (2024-06-19)
 
 - Work around MSVC compiler bug introduced in Visual Studio 17.10
 
 > [!WARNING]
-> Use on platforms without pre-built binaries is broken in Koffi 2.8.10, skip this version.
+Use on platforms without pre-built binaries is broken in Koffi 2.8.10, skip this version.
 
-### Koffi 2.8.9 (2024-05-17)
+#### Koffi 2.8.9 (2024-05-17)
 
 - Fix ABI issue regarding bool return values on x86_64 (and possibly other platforms)
 
-### Koffi 2.8.8 (2024-04-26)
+#### Koffi 2.8.8 (2024-04-26)
 
 - Support use of buffers with mismatched size (truncation or zero-filling)
 
-### Koffi 2.8.7 (2024-04-23)
+#### Koffi 2.8.7 (2024-04-23)
 
 - Improve compatibility with SEHOP on Windows ([@longhun12346](https://github.com/longhun12346))
 
-### Koffi 2.8.6 (2024-04-12)
+#### Koffi 2.8.6 (2024-04-12)
 
-- Support [loading library](library#load-library) with RTLD_DEEPBIND where supported
+- Support [loading library](functions#loading-options) with RTLD_DEEPBIND where supported
 
-### Koffi 2.8.5 (2024-04-11)
+#### Koffi 2.8.5 (2024-04-11)
 
 - Prevent obviously invalid type and member names
 - Fix possible infinite loop / UB for `koffi.load()` errors on POSIX systems
 - Fix null return value instead of exception for some errors in `koffi.load()` on Windows
 
-### Koffi 2.8.4 (2024-04-09)
+#### Koffi 2.8.4 (2024-04-09)
 
 - Use simpler workaround for Node 20.12+ and 21.6+ to avoid excessive memory use
 
 > [!WARNING]
 > Some pre-built binaries are missing in Koffi 2.8.3, skip this version.
 
-### Koffi 2.8.2 (2024-04-07)
+#### Koffi 2.8.2 (2024-04-07)
 
-- Support [loading library](library#load-library) with RTLD_GLOBAL on POSIX platforms
+- Support [loading library](functions#loading-options) with RTLD_GLOBAL on POSIX platforms
 
-### Koffi 2.8.1 (2024-04-04)
+#### Koffi 2.8.1 (2024-04-04)
 
 - Fix incompatibility with Node 20.12+ and 21.6+
 
-### Koffi 2.8.0 (2024-02-12)
+#### Koffi 2.8.0 (2024-02-12)
 
 - Support pushing pointers for string arguments
 - Add `koffi.alloc()` for [stable pointers](output#stable-pointers)
 
-## Koffi 2.7
+### Koffi 2.7
 
-### Koffi 2.7.4 (2024-02-04)
+#### Koffi 2.7.4 (2024-02-04)
 
 - Support callbacks happening on main thread but outside JS call (such as during event loop)
 - Improve stability after `koffi.reset()`
 - Expose internal Node/NAPI `env` pointer
 - Name main Koffi API functions
 
-### Koffi 2.7.3 (2024-01-26)
+#### Koffi 2.7.3 (2024-01-26)
 
 - Support decoding NULL terminated arrays
 
-### Koffi 2.7.2 (2024-01-15)
+#### Koffi 2.7.2 (2024-01-15)
 
 - Add missing TypeScript declaration for `koffi.free()`
 - Fix TypeScript declaration of `koffi.encode()`
 - Try to improve compatibility with webpack
 
-### Koffi 2.7.1 (2024-01-02)
+#### Koffi 2.7.1 (2024-01-02)
 
 - Support C-like `int[3]` syntax for [fixed array types](input#fixed-size-c-arrays)
 - Refuse type specifiers with invalid tokens at the end (previously ignored)
 
-### Koffi 2.7.0 (2023-12-21)
+#### Koffi 2.7.0 (2023-12-21)
 
 - Support alternative [callback calling convention](callbacks#callback-types) in classic syntax
 - Change syntax for [calling conventions](functions#calling-conventions) with classic syntax
 - Drop unused "internal" property from Koffi
 
-## Koffi 2.6
+### Koffi 2.6
 
-### Koffi 2.6.12 (2023-12-11)
+#### Koffi 2.6.12 (2023-12-11)
 
 - Fix possible crash introduced in Koffi 2.6.11
 
-### Koffi 2.6.11 (2023-12-05)
+#### Koffi 2.6.11 (2023-12-05)
 
 - Speed up resolving simple and often used type names
-- Fix use of optional length argument with [koffi.encode()](memory#encode-to-c-memory)
+- Fix use of optional length argument with [koffi.encode()](variables#encode-to-c-memory)
 
-### Koffi 2.6.10 (2023-11-29)
+#### Koffi 2.6.10 (2023-11-29)
 
 - Protect GetLastError() value from Node.js and V8 on Windows
 
-### Koffi 2.6.9 (2023-11-25)
+#### Koffi 2.6.9 (2023-11-25)
 
 - Search in DLL directory for additional dependencies on Windows
 - Ignore prototype properties when making structs or unions
@@ -158,61 +163,61 @@ Consult the [migration guide](migration) for more information.
 > [!WARNING]
 > Loading Win32 system libraries can fail in Koffi 2.6.8, skip this version.
 
-### Koffi 2.6.6 (2023-10-28)
+#### Koffi 2.6.6 (2023-10-28)
 
 - Better handle errors while making struct or union types
 
-### Koffi 2.6.5 (2023-10-28)
+#### Koffi 2.6.5 (2023-10-28)
 
 - Allow self-referential structs and unions
 - Fix rare Node.js "FATAL ERROR" with some invalid type specifiers
 
-### Koffi 2.6.4 (2023-10-26)
+#### Koffi 2.6.4 (2023-10-26)
 
 - Fix build issue with recent Visual Studio versions
 
-### Koffi 2.6.3 (2023-10-17)
+#### Koffi 2.6.3 (2023-10-17)
 
 - Add indirect loading script to help some bundlers
 
 > [!WARNING]
 > Pre-built binaries don't work correctly in Koffi 2.6.2, skip this version.
 
-### Koffi 2.6.1 (2023-09-18)
+#### Koffi 2.6.1 (2023-09-18)
 
 - Support string direction qualifiers in classic function definitions
 - Fix possible off-by-one array access when parsing type name
 
-### Koffi 2.6.0 (2023-09-13)
+#### Koffi 2.6.0 (2023-09-13)
 
 **New features:**
 
-- Use [koffi.symbol()](library#import-variables) to make pointers to exported variables (or other symbols)
-- Use [koffi.encode()](memory#encode-to-c-memory) to explictly encode data from JS to C memory
-- Use shared library [lazy-loading](library#load-library) (RTLD_LAZY) on POSIX platforms
+- Use [koffi.symbol()](variables#variable-definitions) to make pointers to exported variables (or other symbols)
+- Use [koffi.encode()](variables#encode-to-c-memory) to explictly encode data from JS to C memory
+- Use shared library [lazy-loading](functions#loading-options) (RTLD_LAZY) on POSIX platforms
 
 **Other changes:**
 
 - Print more helpful error for Win32/Win64 DLL mismatches
 - Add missing 'Union' primitive value in TS definition file
 
-## Koffi 2.5
+### Koffi 2.5
 
-### Koffi 2.5.20 (2023-08-31)
+#### Koffi 2.5.20 (2023-08-31)
 
 - Fix possible crash with async registered callbacks introduced in Koffi 2.5.19
 - Various documentation fixes and improvements
 
-### Koffi 2.5.19 (2023-08-29)
+#### Koffi 2.5.19 (2023-08-29)
 
 - Create thread-safe function broker lazily
 - Add [koffi.reset()](misc#reset-internal-state) for type names and async broker
 
-### Koffi 2.5.18 (2023-08-27)
+#### Koffi 2.5.18 (2023-08-27)
 
 - Fix compatibility with Electron
 
-### Koffi 2.5.16 (2023-08-25)
+#### Koffi 2.5.16 (2023-08-25)
 
 - Run Koffi tests through usual index.js entry point
 - Fix DLL error when using Koffi from NW.js on Windows
@@ -221,21 +226,21 @@ Consult the [migration guide](migration) for more information.
 > [!WARNING]
 > Pre-built binaries don't work correctly in Koffi 2.5.13 to 2.5.15, skip those versions.
 
-### Koffi 2.5.12 (2023-08-21)
+#### Koffi 2.5.12 (2023-08-21)
 
 - Fix native module bundling for FreeBSD ARM64 and Linux RISC-V 64
 - Increase maximum number of parameters to 64
 
-### Koffi 2.5.11 (2023-08-03)
+#### Koffi 2.5.11 (2023-08-03)
 
 - Support casting function pointers with [koffi.as()](pointers#handling-void-pointers)
 - Build in C++20 mode
 
-### Koffi 2.5.10 (2023-08-01)
+#### Koffi 2.5.10 (2023-08-01)
 
 - Fix CMake regression when client has to build Koffi
 
-### Koffi 2.5.9 (2023-07-28)
+#### Koffi 2.5.9 (2023-07-28)
 
 **Main changes:**
 
@@ -247,43 +252,43 @@ Consult the [migration guide](migration) for more information.
 - Add missing unload() export to TS file
 - Add export for koffi.types in TS file
 
-### Koffi 2.5.8 (2023-07-26)
+#### Koffi 2.5.8 (2023-07-26)
 
 - Add more search paths for native Koffi modules
 - Add section [about bundling](start#bundling-koffi) to documentation
 
-### Koffi 2.5.7 (2023-07-19)
+#### Koffi 2.5.7 (2023-07-19)
 
 - Point package to new repository
 
-### Koffi 2.5.6 (2023-07-19)
+#### Koffi 2.5.6 (2023-07-19)
 
 - Increase limit of output parameters from 16 to 32
 
-### Koffi 2.5.5 (2023-07-17)
+#### Koffi 2.5.5 (2023-07-17)
 
 - Support decoding non-char null-terminated arrays
 
-### Koffi 2.5.4 (2023-07-14)
+#### Koffi 2.5.4 (2023-07-14)
 
 - Fix `koffi.pointer()` not accepting disposable types
 - Fix potential issues when making pointers to anonymous types
 
-### Koffi 2.5.3 (2023-07-05)
+#### Koffi 2.5.3 (2023-07-05)
 
 - Add missing union exports in TS definition file
 - Fix some parameter names in TS definition file
 
-### Koffi 2.5.2 (2023-07-04)
+#### Koffi 2.5.2 (2023-07-04)
 
 - Default initialize unset object/struct members
 
-### Koffi 2.5.1 (2023-06-20)
+#### Koffi 2.5.1 (2023-06-20)
 
 - Fix crash with some struct types in System V 64 ABI
 - Always use direct passthrough for buffer arguments
 
-### Koffi 2.5.0 (2023-06-20)
+#### Koffi 2.5.0 (2023-06-20)
 
 **New features:**
 
@@ -294,14 +299,14 @@ Consult the [migration guide](migration) for more information.
 - Fix ABI for single-float aggregate return on i386 BSD systems
 - Don't mess with Node.js signal handling on POSIX systems
 
-## Koffi 2.4
+### Koffi 2.4
 
-### Koffi 2.4.2 (2023-06-04)
+#### Koffi 2.4.2 (2023-06-04)
 
 - Support calling variadic function pointers
 - Add documentation for function pointers
 
-### Koffi 2.4.1 (2023-06-03)
+#### Koffi 2.4.1 (2023-06-03)
 
 **Main changes:**
 
@@ -316,51 +321,51 @@ Consult the [migration guide](migration) for more information.
 - Reorganize Koffi data conversion documentation
 - Add deprecated `koffi.handle` to TS file
 
-## Koffi 2.3
+### Koffi 2.3
 
-### Koffi 2.3.20 (2023-05-15)
+#### Koffi 2.3.20 (2023-05-15)
 
 - Support explicit library unloading with `lib.unload()`
 
-### Koffi 2.3.19 (2023-04-21)
+#### Koffi 2.3.19 (2023-04-21)
 
 - Actually allow non-ambiguous [string] values for `void *` arguments
 
-### Koffi 2.3.18 (2023-04-21)
+#### Koffi 2.3.18 (2023-04-21)
 
 - Fix possible crash on exit caused by unregistered callbacks
 
-### Koffi 2.3.17 (2023-04-20)
+#### Koffi 2.3.17 (2023-04-20)
 
 - Allow strings for input `void *`, `int8_t *` and `int16_t *` pointer arguments
 - Support using `[string]` (single-element string arrays) for polymorphic input/output arguments
 
-### Koffi 2.3.16 (2023-04-11)
+#### Koffi 2.3.16 (2023-04-11)
 
 - Fix Windows ARM64 build to work with official Node.js version
 - Compile Windows builds with Visual Studio 2022 17.5.3
 - Support null in `koffi.free()` and `koffi.address()`
 
-### Koffi 2.3.15 (2023-04-10)
+#### Koffi 2.3.15 (2023-04-10)
 
 - Improve manual decoding of 0-terminated strings
 - Add checks around array conversion hints
 
-### Koffi 2.3.14 (2023-04-05)
+#### Koffi 2.3.14 (2023-04-05)
 
 - Add `koffi.errno()` function to get and set current errno value
 - Add `koffi.os.errno` object with valid errno codes
 
-### Koffi 2.3.13 (2023-03-30)
+#### Koffi 2.3.13 (2023-03-30)
 
 - Add `koffi.address()` to get the raw value of a wrapper pointer
 
-### Koffi 2.3.12 (2023-03-30)
+#### Koffi 2.3.12 (2023-03-30)
 
 - Fix broken syntax in TS definition file
 - Add missing exported properties in TS file
 
-### Koffi 2.3.11 (2023-03-30)
+#### Koffi 2.3.11 (2023-03-30)
 
 **Main changes:**
 
@@ -372,27 +377,27 @@ Consult the [migration guide](migration) for more information.
 - Avoid using `statx()` to allow compilation with glibc < 2.28
 - Reorganize NPM package files to be less convoluted
 
-### Koffi 2.3.9 (2023-03-10)
+#### Koffi 2.3.9 (2023-03-10)
 
 - Relicense under MIT license
 
-### Koffi 2.3.8 (2023-02-28)
+#### Koffi 2.3.8 (2023-02-28)
 
 - Disable non-ready union support
 - Simplify Windows stack allocation and drop NOACCESS and GUARD pages
 - Adjust Windows TEB SEH chain and GuaranteedStackBytes for Koffi calls
 
-### Koffi 2.3.7 (2023-02-27)
+#### Koffi 2.3.7 (2023-02-27)
 
 - Fix missing require in index.js ([@gastonFrecceroNapse](https://github.com/gastonFrecceroNapse))
 - Reduce NPM package bloat (from 65 MB to 20 MB) caused by changes in 2.3.6
 
-### Koffi 2.3.6 (2023-02-26)
+#### Koffi 2.3.6 (2023-02-26)
 
 - Fix broken TS definition file
 - Keep all prebuilt binaries and load correct one at runtime
 
-### Koffi 2.3.5 (2023-02-24)
+#### Koffi 2.3.5 (2023-02-24)
 
 **Main fixes:**
 
@@ -408,11 +413,11 @@ Consult the [migration guide](migration) for more information.
 - Mark optional properties in TS TypeInfo class
 - Minor performance improvements
 
-### Koffi 2.3.4 (2023-01-31)
+#### Koffi 2.3.4 (2023-01-31)
 
 - Fix error when installing Koffi on Windows (2.3.2)
 
-### Koffi 2.3.2 (2023-01-30)
+#### Koffi 2.3.2 (2023-01-30)
 
 **Main changes:**
 
@@ -425,13 +430,13 @@ Consult the [migration guide](migration) for more information.
 - Avoid CNoke dependency
 - Clear out development dependencies from package.json
 
-### Koffi 2.3.1 (2023-01-30)
+#### Koffi 2.3.1 (2023-01-30)
 
 - Error out when trying to use ambiguous `void *` arguments (input and/or output)
 - Adjust TypeScript definitions ([@insraq](https://github.com/insraq))
 - Fix possible crash when parsing invalid prototype
 
-### Koffi 2.3.0 (2023-01-25)
+#### Koffi 2.3.0 (2023-01-25)
 
 **Main changes:**
 
@@ -448,23 +453,23 @@ Consult the [migration guide](migration) for more information.
 - Improve documentation for `koffi.decode()`
 - Reduce NPM package size (from 100 MB to 25 MB) by removing test code and dependencies
 
-## Koffi 2.2
+### Koffi 2.2
 
-### Koffi 2.2.5 (2023-01-23)
+#### Koffi 2.2.5 (2023-01-23)
 
 - Relicense Koffi under LGPL 3.0
 
-### Koffi 2.2.4 (2023-01-19)
+#### Koffi 2.2.4 (2023-01-19)
 
 - Fix memory leak on Windows (in Koffi 2.2.3) when running many async calls
 - Reorganize documentation pages
 
-### Koffi 2.2.3 (2023-01-17)
+#### Koffi 2.2.3 (2023-01-17)
 
 - Support native code that uses [Structured Exception Handling (SEH)](https://learn.microsoft.com/en-us/cpp/cpp/structured-exception-handling-c-cpp) on Windows (x86, x64 and ARM64)
 - Try to use ebp/rbp as frame pointer in x86/x64 ASM code
 
-### Koffi 2.2.2 (2023-01-14)
+#### Koffi 2.2.2 (2023-01-14)
 
 **Main fixes:**
 
@@ -478,11 +483,11 @@ Consult the [migration guide](migration) for more information.
 - Check N-API version when module is loaded
 - Optimize callback unregistration
 
-### Koffi 2.2.1 (2022-12-21)
+#### Koffi 2.2.1 (2022-12-21)
 
 - Fix crash when [calling callback again after FFI call inside previous callback](https://github.com/Koromix/rygel/issues/15)
 
-### Koffi 2.2.0 (2022-12-20)
+#### Koffi 2.2.0 (2022-12-20)
 
 **New features:**
 
@@ -496,13 +501,13 @@ Consult the [migration guide](migration) for more information.
 - Correctly validate output parameter types
 - Fix assertion with `void *` parameters
 
-## Koffi 2.1
+### Koffi 2.1
 
-### Koffi 2.1.5 (2022-11-27)
+#### Koffi 2.1.5 (2022-11-27)
 
 - Add missing README file to NPM package
 
-### Koffi 2.1.4 (2022-11-25)
+#### Koffi 2.1.4 (2022-11-25)
 
 **Main changes:**
 
@@ -513,19 +518,19 @@ Consult the [migration guide](migration) for more information.
 
 - Moved Koffi to a new repository: https://github.com/Koromix/rygel/
 
-### Koffi 2.1.3 (2022-10-31)
+#### Koffi 2.1.3 (2022-10-31)
 
 - Support up to 16 output parameters (instead of 8)
 
-### Koffi 2.1.2 (2022-10-31)
+#### Koffi 2.1.2 (2022-10-31)
 
 - Support up to 8 output parameters (instead of 4)
 
-### Koffi 2.1.1 (2022-08-16)
+#### Koffi 2.1.1 (2022-08-16)
 
 - Fix potential memory allocation bugs
 
-### Koffi 2.1.0 (2022-08-13)
+#### Koffi 2.1.0 (2022-08-13)
 
 **Main changes:**
 
@@ -543,13 +548,13 @@ Consult the [migration guide](migration) for more information.
 - Detect impossible parameter and return types (such as non-pointer opaque types)
 - Various documentation fixes and improvements
 
-## Koffi 2.0
+### Koffi 2.0
 
-### Koffi 2.0.1 (2022-07-30)
+#### Koffi 2.0.1 (2022-07-30)
 
 - Return `undefined` (instead of null) for `void` functions
 
-### Koffi 2.0.0 (2022-07-29)
+#### Koffi 2.0.0 (2022-07-29)
 
 **Major new features:**
 
@@ -573,19 +578,19 @@ Consult the [migration guide](migration) for more information.
 
 Consult the [migration guide](migration) for more information.
 
-# Koffi 1
+## Koffi 1
 
-## Koffi 1.3
+### Koffi 1.3
 
-### Koffi 1.3.12 (2022-07-27)
+#### Koffi 1.3.12 (2022-07-27)
 
 - Fix support for Yarn package manager
 
-### Koffi 1.3.11 (2022-07-26)
+#### Koffi 1.3.11 (2022-07-26)
 
 - Fix broken parsing of `void *` when used for first parameter
 
-### Koffi 1.3.10 (2022-07-25)
+#### Koffi 1.3.10 (2022-07-25)
 
 **Main fixes:**
 
@@ -597,11 +602,11 @@ Consult the [migration guide](migration) for more information.
 
 - Various documentation fixes and improvements
 
-### Koffi 1.3.9 (2022-07-15)
+#### Koffi 1.3.9 (2022-07-15)
 
 - Fix prebuild compatibility with Electron on Windows x64
 
-### Koffi 1.3.8 (2022-07-12)
+#### Koffi 1.3.8 (2022-07-12)
 
 **Main changes:**
 
@@ -612,7 +617,7 @@ Consult the [migration guide](migration) for more information.
 
 - Fix and harmonize a few error messages
 
-### Koffi 1.3.7 (2022-07-07)
+#### Koffi 1.3.7 (2022-07-07)
 
 **Main fixes:**
 
@@ -625,7 +630,7 @@ Consult the [migration guide](migration) for more information.
 - Add str/str16 type aliases for string/string16
 - Various documentation fixes and improvements
 
-### Koffi 1.3.6 (2022-07-01)
+#### Koffi 1.3.6 (2022-07-01)
 
 **Main fixes:**
 
@@ -637,7 +642,7 @@ Consult the [migration guide](migration) for more information.
 - Prebuild with Clang for Windows x64 and Linux x64 binaries
 - Various documentation improvements
 
-### Koffi 1.3.5 (2022-06-25)
+#### Koffi 1.3.5 (2022-06-25)
 
 **Main changes:**
 
@@ -649,11 +654,11 @@ Consult the [migration guide](migration) for more information.
 - Reduce default async memory stack and heap size
 - Various documentation improvements
 
-### Koffi 1.3.4 (2022-06-24)
+#### Koffi 1.3.4 (2022-06-24)
 
 - Fix possible OpenBSD i386 crash with `(void)` functions
 
-### Koffi 1.3.3 (2022-06-24)
+#### Koffi 1.3.3 (2022-06-24)
 
 **Main fixes:**
 
@@ -665,16 +670,16 @@ Consult the [migration guide](migration) for more information.
 - Disable unsafe compiler optimizations
 - Various documentation improvements
 
-### Koffi 1.3.2 (2022-06-23)
+#### Koffi 1.3.2 (2022-06-23)
 
 - Support compilation in C++14 mode (graceful degradation)
 - Support older toolchains on Linux (tested on Debian 9)
 
-### Koffi 1.3.1 (2022-06-22)
+#### Koffi 1.3.1 (2022-06-22)
 
 - The prebuilt binary is tested when Koffi is installed, and a rebuild happens if it fails to load
 
-### Koffi 1.3.0 (2022-06-22)
+#### Koffi 1.3.0 (2022-06-22)
 
 **Major changes:**
 
@@ -690,17 +695,17 @@ Consult the [migration guide](migration) for more information.
 - Detect floating-point ABI before using prebuilt binaries (ARM32, RISC-V)
 - Forbid duplicate member names in struct types
 
-## Koffi 1.2
+### Koffi 1.2
 
-### Koffi 1.2.4 (2022-06-12)
+#### Koffi 1.2.4 (2022-06-12)
 
 - Windows ARM64 is now supported
 
-### Koffi 1.2.3 (2022-06-11)
+#### Koffi 1.2.3 (2022-06-11)
 
 - A prebuilt binary for macOS ARM64 (M1) is now included
 
-### Koffi 1.2.1 (2022-06-11)
+#### Koffi 1.2.1 (2022-06-11)
 
 This entry documents changes since version 1.1.0.
 
@@ -725,7 +730,7 @@ This entry documents changes since version 1.1.0.
 - Make sure we have a redzone below the stack for all architectures
 - Use slower allocation for big objects instead of failing
 
-# Todo list
+## Todo list
 
 The following features and improvements are planned, not necessarily in that order:
 
