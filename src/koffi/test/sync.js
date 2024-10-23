@@ -836,8 +836,11 @@ async function test() {
         koffi.write(sym_int3, 'int[3] *', [4, 2, 42]);
 
         assert.equal(sym_int.read(), 12);
+        assert.equal(koffi.read(sym_int, 'int *'), 12);
         assert.equal(GetSymbolInt(), 12);
         check_text(GetSymbolStr(), 'I can encode!');
+        assert.equal(sym_str.read(), 'I can encode!');
+        assert.equal(koffi.read(sym_str, 'const char **'), 'I can encode!');
 
         let out3 = [0, 0, 0];
         GetSymbolInt3(out3);
