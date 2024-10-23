@@ -28,7 +28,7 @@ import urllib.request
 import os.path
 from collections import namedtuple
 
-DEFAULT_URL = 'https://unicode.org/Public/15.1.0'
+DEFAULT_URL = 'https://unicode.org/Public/16.0.0'
 
 LICENSE_HEADER = """// Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
 
