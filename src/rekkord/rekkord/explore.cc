@@ -17,7 +17,6 @@
 #include "src/core/wrap/json.hh"
 #include "rekkord.hh"
 #include "vendor/pugixml/src/pugixml.hpp"
-#include <iostream> // for pugixml
 
 namespace RG {
 
@@ -34,6 +33,14 @@ static const char *const SortOrderNames[] = {
     "Name",
     "Size",
     "Stored"
+};
+
+class PugiXmlWriter: public pugi::xml_writer {
+    StreamWriter *st;
+
+public:
+    PugiXmlWriter(StreamWriter *st) : st(st) {}
+    void write(const void* data, size_t size) override { st->Write((const uint8_t *)data, (Size)size); }
 };
 
 int RunSnapshots(Span<const char *> arguments)
@@ -285,7 +292,8 @@ Available sort orders: %!..+%4%!0)",
                 element.append_attribute("Tag") = snapshot.tag;
             }
 
-            doc.save(std::cout, "    ");
+            PugiXmlWriter writer(StdOut);
+            doc.save(writer, "    ");
         } break;
     }
 
@@ -620,7 +628,8 @@ Available output formats: %!..+%3%!0)",
                 }
             }
 
-            doc.save(std::cout, "    ");
+            PugiXmlWriter writer(StdOut);
+            doc.save(writer, "    ");
         } break;
     }
 
