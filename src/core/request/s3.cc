@@ -861,7 +861,7 @@ Size s3_Session::PrepareHeaders(const char *method, const char *path, const char
                                 Span<const uint8_t> body, Allocator *alloc, Span<curl_slist> out_headers)
 {
     int64_t now = GetUnixTime();
-    TimeSpec date = DecomposeTime(now, TimeMode::UTC);
+    TimeSpec date = DecomposeTimeUTC(now);
 
     // Compute SHA-256 and signature
     uint8_t signature[32];

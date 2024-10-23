@@ -59,7 +59,7 @@ struct DomainConfig {
     bool auto_migrate = true;
 
     int archive_hour = 0;
-    TimeMode archive_zone = TimeMode::Local;
+    bool archive_utc = false;
     int archive_retention = 7;
 
     PasswordComplexity user_password = PasswordComplexity::Moderate;

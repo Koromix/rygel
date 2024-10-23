@@ -158,7 +158,7 @@ As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_
         Size frame_idx = (at >= 0) ? snapshot.FindFrame(at) : -1;
         int64_t mtime = (frame_idx >= 0) ? snapshot.frames[frame_idx].mtime : snapshot.mtime;
 
-        TimeSpec spec = DecomposeTime(mtime);
+        TimeSpec spec = DecomposeTimeUTC(mtime);
         LogInfo("Restoring '%1' at %2%3", dest_filename, FmtTimeNice(spec), dry_run ? " [dry]" : "");
 
         if (!dry_run) {
@@ -226,16 +226,16 @@ Options:
         const sq_SnapshotInfo &snapshot = snapshot_set.snapshots[i];
 
         PrintLn("%1Database: %!..+%2%!0", verbosity && i ? "\n" : "", snapshot.orig_filename);
-        PrintLn("  - Creation time: %!y..%1%!0", FmtTimeNice(DecomposeTime(snapshot.ctime)));
-        PrintLn("  - Last time:     %!y..%1%!0", FmtTimeNice(DecomposeTime(snapshot.mtime)));
+        PrintLn("  - Creation time: %!y..%1%!0", FmtTimeNice(DecomposeTimeUTC(snapshot.ctime)));
+        PrintLn("  - Last time:     %!y..%1%!0", FmtTimeNice(DecomposeTimeUTC(snapshot.mtime)));
 
         if (verbosity) {
             for (const sq_SnapshotGeneration &generation: snapshot.generations) {
                 const char *basename = SplitStrReverseAny(generation.base_filename, RG_PATH_SEPARATORS).ptr;
 
                 PrintLn("  - Generation '%1' (%2 %3)", basename, generation.frames, generation.frames == 1 ? "frame" : "frames");
-                PrintLn("    + From:%!0 %1", FmtTimeNice(DecomposeTime(generation.ctime)));
-                PrintLn("    + To: %1", FmtTimeNice(DecomposeTime(generation.mtime)));
+                PrintLn("    + From:%!0 %1", FmtTimeNice(DecomposeTimeUTC(generation.ctime)));
+                PrintLn("    + To: %1", FmtTimeNice(DecomposeTimeUTC(generation.mtime)));
 
                 if (verbosity >= 2) {
 
@@ -243,9 +243,9 @@ Options:
                         const sq_SnapshotFrame &frame = snapshot.frames[generation.frame_idx + j];
 
                         if (verbosity >= 3) {
-                            PrintLn("    + Frame %1: %2 %!D..(%3)%!0", j, FmtTimeNice(DecomposeTime(frame.mtime)), FormatSha256(frame.sha256));
+                            PrintLn("    + Frame %1: %2 %!D..(%3)%!0", j, FmtTimeNice(DecomposeTimeUTC(frame.mtime)), FormatSha256(frame.sha256));
                         } else {
-                            PrintLn("    + Frame %1: %2", j, FmtTimeNice(DecomposeTime(frame.mtime)));
+                            PrintLn("    + Frame %1: %2", j, FmtTimeNice(DecomposeTimeUTC(frame.mtime)));
                         }
                     }
                 }

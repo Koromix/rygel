@@ -715,7 +715,7 @@ int64_t GetMonotonicTime()
 #endif
 }
 
-TimeSpec DecomposeTime(int64_t time, TimeMode mode)
+TimeSpec DecomposeTimeUTC(int64_t time)
 {
     TimeSpec spec = {};
 
@@ -723,40 +723,51 @@ TimeSpec DecomposeTime(int64_t time, TimeMode mode)
     __time64_t time64 = time / 1000;
 
     struct tm ti = {};
-    int offset = INT_MAX;
-    switch (mode) {
-        case TimeMode::Local: {
-            _localtime64_s(&ti, &time64);
+    _gmtime64_s(&ti, &time64);
+#else
+    time_t time64 = time / 1000;
 
-            struct tm utc = {};
-            _gmtime64_s(&utc, &time64);
+    struct tm ti = {};
+    gmtime_r(&time64, &ti);
+#endif
 
-            offset = (int)(_mktime64(&ti) - _mktime64(&utc) + (3600 * ti.tm_isdst));
-        } break;
+    spec.year = (int16_t)(1900 + ti.tm_year);
+    spec.month = (int8_t)ti.tm_mon + 1; // Whose idea was it to use 0-11? ...
+    spec.day = (int8_t)ti.tm_mday;
+    spec.week_day = (int8_t)(ti.tm_wday ? (ti.tm_wday + 1) : 7);
+    spec.hour = (int8_t)ti.tm_hour;
+    spec.min = (int8_t)ti.tm_min;
+    spec.sec = (int8_t)ti.tm_sec;
+    spec.msec = time % 1000;
+    spec.offset = 0;
 
-        case TimeMode::UTC: {
-            _gmtime64_s(&ti, &time64);
-            offset = 0;
-        } break;
-    }
-    RG_ASSERT(offset != INT_MAX);
+    return spec;
+}
+
+TimeSpec DecomposeTimeLocal(int64_t time)
+{
+    TimeSpec spec = {};
+
+#if defined(_WIN32)
+    __time64_t time64 = time / 1000;
+
+    struct tm ti = {};
+    int offset = 0;
+
+    _localtime64_s(&ti, &time64);
+
+    struct tm utc = {};
+    _gmtime64_s(&utc, &time64);
+
+    offset = (int)(_mktime64(&ti) - _mktime64(&utc) + (3600 * ti.tm_isdst));
 #else
     time_t time64 = time / 1000;
 
     struct tm ti = {};
     int offset = 0;
-    switch (mode) {
-        case TimeMode::Local: {
-            localtime_r(&time64, &ti);
-            offset = ti.tm_gmtoff;
-        } break;
 
-        case TimeMode::UTC: {
-            gmtime_r(&time64, &ti);
-            offset = 0;
-        } break;
-    }
-    RG_ASSERT(offset != INT_MAX);
+    localtime_r(&time64, &ti);
+    offset = ti.tm_gmtoff;
 #endif
 
     spec.year = (int16_t)(1900 + ti.tm_year);

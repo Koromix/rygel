@@ -1137,7 +1137,7 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
     {
         int64_t time = GetUnixTime();
         const char *disposition = Fmt(io->Allocator(), "attachment; filename=\"%1_%2.db\"",
-                                                       instance->key, FmtTimeISO(DecomposeTime(time))).ptr;
+                                                       instance->key, FmtTimeISO(DecomposeTimeLocal(time))).ptr;
         io->AddHeader("Content-Disposition", disposition);
     }
 

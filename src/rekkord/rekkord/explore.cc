@@ -210,7 +210,7 @@ Available sort orders: %!..+%4%!0)",
         case OutputFormat::Plain: {
             if (snapshots.len) {
                 for (const rk_SnapshotInfo &snapshot: snapshots) {
-                    TimeSpec spec = DecomposeTime(snapshot.time);
+                    TimeSpec spec = DecomposeTimeLocal(snapshot.time);
 
                     PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.name).Pad(40), FmtTimeNice(spec));
                     PrintLn("  + Hash: %!..+%1%!0", snapshot.hash);
@@ -282,7 +282,7 @@ Available sort orders: %!..+%4%!0)",
 
 static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbose)
 {
-    TimeSpec mspec = DecomposeTime(obj.mtime);
+    TimeSpec mspec = DecomposeTimeUTC(obj.mtime);
     int indent = (start_depth + obj.depth) * 2;
 
     bool bold = (obj.type == rk_ObjectType::File || obj.type == rk_ObjectType::Link);
@@ -320,7 +320,7 @@ static void ListObjectPlain(const rk_ObjectInfo &obj, int start_depth, int verbo
             PrintLn("%1    + UID/GID: %!..+%2:%3%!0", FmtArg(" ").Repeat(indent), obj.uid, obj.gid);
         }
         if (verbose > 1) {
-            TimeSpec bspec = DecomposeTime(obj.btime);
+            TimeSpec bspec = DecomposeTimeUTC(obj.btime);
             PrintLn("%1    + Birth time: %!..+%2%!0", FmtArg(" ").Repeat(indent), FmtTimeNice(bspec));
         }
     }

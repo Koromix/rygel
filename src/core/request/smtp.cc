@@ -82,7 +82,7 @@ static void EncodeRfc2047(const char *str, HeapArray<char> *out_buf)
 
 static void FormatRfcDate(int64_t time, HeapArray<char> *out_buf)
 {
-    TimeSpec spec = DecomposeTime(time);
+    TimeSpec spec = DecomposeTimeLocal(time);
 
     switch (spec.week_day) {
         case 1: { out_buf->Append("Mon, "); } break;

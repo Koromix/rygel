@@ -3664,16 +3664,8 @@ struct TimeSpec {
     int16_t offset; // minutes
 };
 
-enum class TimeMode {
-    Local,
-    UTC
-};
-static const char *const TimeModeNames[] = {
-    "Local",
-    "UTC"
-};
-
-TimeSpec DecomposeTime(int64_t time, TimeMode mode = TimeMode::Local);
+TimeSpec DecomposeTimeUTC(int64_t time);
+TimeSpec DecomposeTimeLocal(int64_t time);
 
 // ------------------------------------------------------------------------
 // Format
