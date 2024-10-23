@@ -71,5 +71,5 @@ const my_string = lib.symbol('my_string', 'const char *');
 
 You cannot directly manipulate these pointers, use:
 
-- [koffi.decode()](memory#decode-to-js-values) to read their value
-- [koffi.encode()](memory#encode-to-c-memory) to change their value
+- [koffi.read()](memory#read-c-values) to read their value
+- [koffi.write()](memory#write-c-values) to change their value
