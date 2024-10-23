@@ -440,4 +440,4 @@ const ExplicitEnum = koffi.enumeration('ExplicitEnum', {
 
 # Union types
 
-The declaration and use of [unions types](unions) will be explained in a later section, they are only briefly mentioned here if you need them.
+The declaration and use of [union types](unions) will be explained in a later section, they are only briefly mentioned here if you need them.
