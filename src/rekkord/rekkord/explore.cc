@@ -236,13 +236,19 @@ Available sort orders: %!..+%4%!0)",
                 char hash[128];
                 Fmt(hash, "%1", snapshot.hash);
 
+                char time[64];
+                {
+                    TimeSpec spec = DecomposeTimeUTC(snapshot.time);
+                    Fmt(time, "%1", FmtTimeISO(spec, true));
+                }
+
                 if (snapshot.name) {
                     json.Key("name"); json.String(snapshot.name);
                 } else {
                     json.Key("name"); json.Null();
                 }
                 json.Key("hash"); json.String(hash);
-                json.Key("time"); json.Int64(snapshot.time);
+                json.Key("time"); json.String(time);
                 json.Key("size"); json.Int64(snapshot.len);
                 json.Key("storage"); json.Int64(snapshot.stored);
                 json.Key("tag"); json.String(snapshot.tag);
@@ -265,9 +271,15 @@ Available sort orders: %!..+%4%!0)",
                 char hash[128];
                 Fmt(hash, "%1", snapshot.hash);
 
+                char time[64];
+                {
+                    TimeSpec spec = DecomposeTimeUTC(snapshot.time);
+                    Fmt(time, "%1", FmtTimeISO(spec, true));
+                }
+
                 element.append_attribute("Name") = snapshot.name ? snapshot.name : "";
                 element.append_attribute("Hash") = hash;
-                element.append_attribute("Time") = snapshot.time;
+                element.append_attribute("Time") = time;
                 element.append_attribute("Size") = snapshot.len;
                 element.append_attribute("Storage") = snapshot.stored;
                 element.append_attribute("Tag") = snapshot.tag;
@@ -342,11 +354,21 @@ static void ListObjectJson(json_PrettyWriter *json, const rk_ObjectInfo &obj)
         json->Key("hash"); json->Null();
     }
 
+    char mtime[64];
+    char btime[64];
+    {
+        TimeSpec mspec = DecomposeTimeUTC(obj.mtime);
+        TimeSpec bspec = DecomposeTimeUTC(obj.btime);
+
+        Fmt(mtime, "%1", FmtTimeISO(mspec, true));
+        Fmt(btime, "%1", FmtTimeISO(bspec, true));
+    }
+
     if (obj.type == rk_ObjectType::Snapshot) {
-        json->Key("time"); json->Int64(obj.mtime);
+        json->Key("time"); json->String(mtime);
     } else {
-        json->Key("mtime"); json->Int64(obj.mtime);
-        json->Key("btime"); json->Int64(obj.btime);
+        json->Key("mtime"); json->String(mtime);
+        json->Key("btime"); json->String(btime);
         if (obj.type != rk_ObjectType::Link) {
             json->Key("mode"); json->String(Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr);
         }
