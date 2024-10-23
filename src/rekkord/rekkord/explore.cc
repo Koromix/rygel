@@ -45,6 +45,7 @@ int RunSnapshots(Span<const char *> arguments)
     OutputFormat format = OutputFormat::Plain;
     HeapArray<int> sorts;
     const char *pattern = nullptr;
+    int verbose = 0;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -65,6 +66,7 @@ Options:
     %!..+-s, --sort <sort>%!0            Change sort order
                                  %!D..(default: Time)%!0
     %!..+-p, --pattern <pattern>         Filter snapshot names with glob-like pattern
+    %!..+-v, --verbose%!0                Enable verbose output (plain only)
 
 Available output formats: %!..+%3%!0
 Available sort orders: %!..+%4%!0)",
@@ -125,6 +127,8 @@ Available sort orders: %!..+%4%!0)",
                 }
             } else if (opt.Test("-p", "--pattern", OptionType::Value)) {
                 pattern = opt.current_value;
+            } else if (opt.Test("-v", "--verbose")) {
+                verbose++;
             } else {
                 opt.LogUnknownError();
                 return 1;
@@ -212,6 +216,10 @@ Available sort orders: %!..+%4%!0)",
                     PrintLn("  + Hash: %!..+%1%!0", snapshot.hash);
                     PrintLn("  + Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
                     PrintLn("  + Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
+
+                    if (verbose >= 1) {
+                        PrintLn("  + Tag: %!D..%1%!0", snapshot.tag);
+                    }
                 }
             } else {
                 LogInfo("There does not seem to be any snapshot");
@@ -237,6 +245,7 @@ Available sort orders: %!..+%4%!0)",
                 json.Key("time"); json.Int64(snapshot.time);
                 json.Key("size"); json.Int64(snapshot.len);
                 json.Key("storage"); json.Int64(snapshot.stored);
+                json.Key("tag"); json.String(snapshot.tag);
 
                 json.EndObject();
             }
@@ -261,6 +270,7 @@ Available sort orders: %!..+%4%!0)",
                 element.append_attribute("Time") = snapshot.time;
                 element.append_attribute("Size") = snapshot.len;
                 element.append_attribute("Storage") = snapshot.stored;
+                element.append_attribute("Tag") = snapshot.tag;
             }
 
             doc.save(std::cout, "    ");

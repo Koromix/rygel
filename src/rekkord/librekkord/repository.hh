@@ -41,6 +41,7 @@ struct rk_ListSettings {
 };
 
 struct rk_SnapshotInfo {
+    const char *tag;
     rk_Hash hash;
 
     const char *name;

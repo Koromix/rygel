@@ -77,6 +77,7 @@ struct rk_UserInfo {
 };
 
 struct rk_TagInfo {
+    const char *path;
     rk_Hash hash;
     Span<const uint8_t> payload;
 };

@@ -774,15 +774,13 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
     RG_ASSERT(url);
     RG_ASSERT(mode == rk_DiskMode::Full);
 
-    BlockAllocator temp_alloc;
-
     Size start_len = out_tags->len;
     RG_DEFER_N(out_guard) { out_tags->RemoveFrom(start_len); };
 
     HeapArray<const char *> filenames;
     {
         bool success = ListRaw("tags", [&](const char *filename) {
-            filename = DuplicateString(filename, &temp_alloc).ptr;
+            filename = DuplicateString(filename, alloc).ptr;
             filenames.Append(filename);
 
             return true;
@@ -831,7 +829,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             Span<uint8_t> data = AllocateSpan<uint8_t>(alloc, data_len);
 
             if (crypto_box_seal_open(data.ptr, cypher.ptr, cypher.len, pkey, skey) != 0) {
-                LogError("Failed to unseal tag data");
+                LogError("Failed to unseal tag data from '%1'", basename);
                 return true;
             }
 
@@ -839,10 +837,11 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
             MemCpy(&intro, data.ptr, RG_SIZE(intro));
 
             if (intro.version != TagVersion) {
-                LogError("Unexpected tag version %1 (expected %2)", intro.version, TagVersion);
+                LogError("Unexpected tag version %1 (expected %2) in '%3'", intro.version, TagVersion, basename);
                 return true;
             }
 
+            tag.path = basename.ptr;
             tag.hash = intro.hash;
             tag.payload = data.Take(RG_SIZE(intro), data.len - RG_SIZE(intro));
 
