@@ -22,8 +22,8 @@
 #include "src/core/base/base.hh"
 #include "s3.hh"
 #include "curl.hh"
+#include "src/core/wrap/xml.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
-#include "vendor/pugixml/src/pugixml.hpp"
 
 namespace RG {
 

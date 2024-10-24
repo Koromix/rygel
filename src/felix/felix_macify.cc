@@ -16,9 +16,9 @@
 #if defined(__APPLE__)
 
 #include "src/core/base/base.hh"
+#include "src/core/wrap/xml.hh"
 #include "compiler.hh"
 #include "locate.hh"
-#include "vendor/pugixml/src/pugixml.hpp"
 #include <sys/stat.h>
 
 namespace RG {

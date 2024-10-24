@@ -15,20 +15,12 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/wrap/json.hh"
+#include "src/core/wrap/xml.hh"
 #include "rekkord.hh"
 #include "src/core/password/password.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
-#include "vendor/pugixml/src/pugixml.hpp"
 
 namespace RG {
-
-class PugiXmlWriter: public pugi::xml_writer {
-    StreamWriter *st;
-
-public:
-    PugiXmlWriter(StreamWriter *st) : st(st) {}
-    void write(const void* data, size_t size) override { st->Write((const uint8_t *)data, (Size)size); }
-};
 
 static bool GeneratePassword(Span<char> out_pwd)
 {
@@ -617,7 +609,7 @@ Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)form
                 element.append_attribute("Mode") = rk_DiskModeNames[(int)user.mode];
             }
 
-            PugiXmlWriter writer(StdOut);
+            xml_PugiWriter writer(StdOut);
             doc.save(writer, "    ");
         } break;
     }

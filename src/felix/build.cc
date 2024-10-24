@@ -15,9 +15,9 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/wrap/json.hh"
+#include "src/core/wrap/xml.hh"
 #include "build.hh"
 #include "locate.hh"
-#include "vendor/pugixml/src/pugixml.hpp"
 
 namespace RG {
 
