@@ -16,5 +16,5 @@ Si vous désirez participer, utilisez notre web-application, créez votre compte
 
 <div class="buttons">
     <a href="/etudes">En savoir plus sur les études</a>
-    <a href="http://localhost:8889/demo/" target="_blank">Utiliser notre application en ligne</a>
+    <a href="https://beta.goupile.fr/ldv/" target="_blank">Utiliser notre application en ligne</a>
 </div>
