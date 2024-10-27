@@ -736,8 +736,9 @@ static bool HashFile(int fd, const char *filename, Span<uint8_t> buf, uint8_t ou
 
 static bool IsTimeEquivalent(int64_t time1, int64_t time2)
 {
-    bool close = (time1 / 10) == (time2 / 10);
-    return close;
+    // Support FAT filesystems (precision is 2 seconds)
+    int64_t delta = std::abs(time1 - time2);
+    return delta < 2000;
 }
 
 bool DistributeContext::BackupNew(const DiskData &disk, bool checksum)
