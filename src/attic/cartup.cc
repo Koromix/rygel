@@ -812,7 +812,8 @@ bool DistributeContext::BackupNew(const DiskData &disk, bool checksum)
                     changed = true;
                 }
 
-                valid &= !changed || set->db.Run("UPDATE files SET status = 'changed' WHERE id = ?1", id);
+                const char *status = changed ? "changed" : "ok";
+                valid &= set->db.Run("UPDATE files SET status = ?2 WHERE id = ?1", id, status);
             } break;
 
             case StatResult::MissingPath: {
