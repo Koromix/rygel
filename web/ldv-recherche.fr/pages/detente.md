@@ -1,5 +1,5 @@
 # Espace détente
 
-<div style="margin: 1em; text-align: center;">
-    <iframe width="560" height="315" src="https://www.youtube.com/embed/dQw4w9WgXcQ?si=NDsk97npbay70M2P" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-</div>
+Pellentesque quam lorem, fringilla ut porttitor vel, laoreet in est. Mauris vulputate leo in tincidunt convallis. Curabitur eget consequat arcu, in faucibus nisi. Pellentesque elementum rhoncus tincidunt. Proin ut nunc commodo, feugiat magna id, pulvinar lorem. Phasellus nec fermentum odio. Nam mattis hendrerit mauris, finibus lacinia nisi. Donec consectetur felis in arcu congue, convallis congue dui ultricies. Donec interdum elit ante, lobortis elementum dui commodo ut. Integer consequat ullamcorper ipsum sed luctus. Nunc non finibus nibh. Integer at orci sed metus laoreet efficitur.
+
+Cras tincidunt enim quam, ut ornare nisi tincidunt eget. Mauris tempor ex eget urna volutpat, id fermentum mi malesuada. Vivamus lacinia nunc mi, sit amet bibendum ante tempus ac. Curabitur odio purus, faucibus a sem in, vehicula pulvinar velit. Curabitur mattis lobortis purus, a posuere orci varius id. Maecenas mollis lacus in tellus hendrerit, ac maximus diam egestas. Vivamus aliquet ante quis urna sodales, vitae pellentesque ligula consectetur. 
