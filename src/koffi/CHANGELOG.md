@@ -26,6 +26,7 @@
 **Other changes:**
 
 - Add `koffi.enumeration()` to create [enum types](input#enum-types)
+- Reduce maximum number of parallel callbacks from 8192 to 4096
 
 **Newly deprecated functions:**
 

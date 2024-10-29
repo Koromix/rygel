@@ -82,7 +82,7 @@ console.log(ret);
 
 Use registered callbacks when the function needs to be called at a later time (e.g. log handler, event handler, `fopencookie/funopen`). Call `koffi.register(func, type)` to register a callback function, with two arguments: the JS function, and the callback type.
 
-When you are done, call `koffi.unregister()` (with the value returned by `koffi.register()`) to release the slot. A maximum of 8192 callbacks can exist at the same time. Failure to do so will leak the slot, and subsequent registrations may fail (with an exception) once all slots are used.
+When you are done, call `koffi.unregister()` (with the value returned by `koffi.register()`) to release the slot. A maximum of 4096 callbacks can exist at the same time. Failure to release a slot triggers a leak, and subsequent registrations may fail (with an exception) once all slots are used.
 
 The example below shows how to register and unregister delayed callbacks.
 
