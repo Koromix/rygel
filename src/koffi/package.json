@@ -31,9 +31,6 @@
     "package": "node tools/koffi.js build"
   },
   "license": "MIT",
-  "devDependencies": {
-    "esbuild": "^0.19.2"
-  },
   "cnoke": {
     "api": "../../vendor/node-api-headers",
     "output": "../../bin/Koffi/{{ platform }}_{{ arch }}",
