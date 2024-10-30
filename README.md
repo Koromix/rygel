@@ -67,8 +67,8 @@ My personal preference goes to a rather C-like C++ style:
 
 - Careful use of templates (mainly for containers)
 - Little object-oriented programming, tagged unions and code locality are preferred over inheritance and virtual methods
-- Use of RAII where natural and defer-like statements otherwise
-- No exceptions, errors are logged and signaled with a simple return value (bool when possible, a dedicated enum when more information is relevant)
+- Use of defer-like statements for cleanup, or RAII where it feels natural
+- No exceptions, errors are logged to stderr (and/or a GUI when one exists) and propagated in the code with a simple return value (bool when possible, a dedicated enum when more information is relevant)
 - Memory regions are used when many allocations are needed, when building many strings for example
 - Heavy use of array and string views for function arguments
 - Avoid dependencies unless a strong argument can be made for one, and vendorize them aggressively (with patches if needed)
