@@ -1069,6 +1069,7 @@ function renderPage() {
 
     let menu = (profile.lock == null) && (route.form.menu.length > 1 || route.form.chain.length > 1);
     let wide = (route.form.chain[0].menu.length > 3);
+    let hid = (!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null);
 
     let sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
         title: intf.label,
@@ -1125,7 +1126,7 @@ function renderPage() {
             ` : ''}
 
             <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
-                ${!goupile.isLocked() && form_record.chain[0].saved && form_record.chain[0].hid != null ? html`
+                ${hid ? html`
                     <button class="ins_hid" style=${form_record.historical ? 'color: #00ffff;' : ''}
                             @click=${goupile.hasPermission('data_audit') ? UI.wrap(e => runTrailDialog(e, route.ulid)) : null}>
                         ${form_record.chain[0].form.title} <span style="font-weight: bold;">#${form_record.chain[0].hid}</span>
@@ -1152,6 +1153,7 @@ function renderPage() {
 
                     return action.render();
                 })}
+                ${!hid ? html`<div style="flex: 1;"></div>` : ''}
             </nav>
         </div>
     `;

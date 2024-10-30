@@ -851,6 +851,7 @@ async function renderPage() {
 
                         return action.render();
                     })}
+                    <div style="flex: 1;"></div>
                 </nav>
             ` : ''}
         </div>
