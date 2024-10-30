@@ -11,6 +11,12 @@ TEMP=../../bin/BootstrapFelix
 BUILD=../../bin/$PRESET
 BINARY=../../felix
 
+if uname | grep -qi mingw; then
+    LIBRARIES="-lws2_32 -ladvapi32 -lshell32 -lole32 -luuid"
+else
+    LIBRARIES=""
+fi
+
 if command -v $BINARY >/dev/null 2>&1; then
     $BINARY -p$PRESET felix $* && $BUILD/felix -q -p$PRESET felix $* && ln -sf bin/$PRESET/felix $BINARY && exit
     rm -f $BINARY
@@ -19,7 +25,7 @@ fi
 if command -v clang++ >/dev/null 2>&1; then
     echo "Bootstrapping felix with Clang..."
     mkdir -p $TEMP
-    clang++ -std=gnu++2a -O0 -I../.. -DNDEBUG $SRC -Wno-everything -pthread -o $TEMP/felix
+    clang++ -std=gnu++2a -O0 -I../.. -DNDEBUG $SRC -Wno-everything -pthread $LIBRARIES -o $TEMP/felix
     $TEMP/felix -p$PRESET felix $*
     ln -sf bin/$PRESET/felix $BINARY
 
@@ -33,7 +39,7 @@ fi
 if command -v g++ >/dev/null 2>&1; then
     echo "Bootstrapping felix with GCC..."
     mkdir -p $TEMP
-    g++ -std=gnu++2a -O0 -I../.. -DNDEBUG $SRC -w -pthread -o $TEMP/felix
+    g++ -std=gnu++2a -O0 -I../.. -DNDEBUG $SRC -w -pthread $LIBRARIES -o $TEMP/felix
     $TEMP/felix -p$PRESET felix $*
     ln -sf bin/$PRESET/felix $BINARY
 
