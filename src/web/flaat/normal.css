@@ -271,7 +271,6 @@ code:not(.hljs) {
 
 pre {
     position: relative;
-    max-height: 360px;
     margin: 1em 20px;
     padding: 0;
     border: 1px solid #ebebeb;
