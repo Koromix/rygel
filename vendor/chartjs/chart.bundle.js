@@ -3354,9 +3354,11 @@ function applyStack(stack, value, dsIndex, options = {}) {
   if (value === null) {
     return;
   }
+  let found = false;
   for (i = 0, ilen = keys.length; i < ilen; ++i) {
     datasetIndex = +keys[i];
     if (datasetIndex === dsIndex) {
+      found = true;
       if (options.all) {
         continue;
       }
@@ -3366,6 +3368,9 @@ function applyStack(stack, value, dsIndex, options = {}) {
     if (isNumberFinite(otherValue) && (singleMode || value === 0 || sign(value) === sign(otherValue))) {
       value += otherValue;
     }
+  }
+  if (!found && !options.all) {
+    return 0;
   }
   return value;
 }
@@ -8411,7 +8416,7 @@ function needContext(proxy, names2) {
   }
   return false;
 }
-var version = "4.4.5";
+var version = "4.4.6";
 var KNOWN_POSITIONS = [
   "top",
   "bottom",
@@ -14366,7 +14371,7 @@ export {
 
 chart.js/dist/chunks/helpers.segment.js:
   (*!
-   * Chart.js v4.4.5
+   * Chart.js v4.4.6
    * https://www.chartjs.org
    * (c) 2024 Chart.js Contributors
    * Released under the MIT License
@@ -14374,7 +14379,7 @@ chart.js/dist/chunks/helpers.segment.js:
 
 chart.js/dist/chart.js:
   (*!
-   * Chart.js v4.4.5
+   * Chart.js v4.4.6
    * https://www.chartjs.org
    * (c) 2024 Chart.js Contributors
    * Released under the MIT License
