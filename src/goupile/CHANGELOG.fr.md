@@ -1,5 +1,29 @@
 # Goupile changelog
 
+## Goupile 3.7
+
+### Goupile 3.7.0 (2024-10-31)
+
+- Prise en charge des scripts personnalisés au niveau des catégories
+- Prise en charge du contenu personnalisé dans les éléments du formulaire
+- Prise en charge des icônes de tuiles de formulaire personnalisées
+- Augmentation de la hauteur des barres de menu supérieure et inférieure
+- Centrage des boutons d'action sur mobile
+- Afficher l'icône d'accueil dans le menu principal
+- Rendre les catégories de menu cliquables
+- Passer à des boutons espacés pour les énumérations
+- Faire défiler vers le haut lors d'un changement de page
+- Simplification de l'enchaînement automatique des formulaires
+- Prise en charge des classes personnalisées pour la plupart des widgets
+- Correction de l'espace vide au bas des formulaires sur les mobiles
+- Amélioration du style et du texte des boîtes d'erreur
+- Correction de l'attribut « changed » cassé pour les widgets
+- Correction du widget `form.time()` cassé dans l'ancien Goupile
+- Correction des balises d'erreur prématurées avec les erreurs retardées
+- Réduction des statuts annotés disponibles en mode verrouillé
+- Ciblage de JS ES 2022 pour lae support `top-level await`
+- Introduction d'un système d'inscription avec courrier électronique
+
 ## Goupile 3.6
 
 ### Goupile 3.6.4 (05/09/2024)

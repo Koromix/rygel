@@ -1,5 +1,29 @@
 # Goupile changelog
 
+## Goupile 3.7
+
+### Goupile 3.7.0 (2024-10-31)
+
+- Support custom category-level scripts
+- Support custom content in form level elements
+- Support custom form tile icons
+- Increase height of top and bottom menu bar
+- Center mobile action buttons when relevant
+- Show home icon before main menu item
+- Make menu categories clickables
+- Switch to spaced buttons for enumerations
+- Scroll to top on page change
+- Simplify automatic sequencing of forms
+- Support setting custom classes for most widgets
+- Fix empty space at the bottom of forms on mobiles
+- Improve styling and text of error boxes
+- Fix broken "changed" attribute for widgets
+- Fix broken `form.time()` widget in legacy Goupile
+- Fix error tags showing up for delayed errors
+- Reduce available annotation statuses in locked mode
+- Target ES 2022 for top-level await support
+- Introduce basic mail signup system
+
 ## Goupile 3.6
 
 ### Goupile 3.6.4 (2024-09-05)
