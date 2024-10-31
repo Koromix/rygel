@@ -220,7 +220,8 @@ html:not(.small) #ui_panels > div:only-child #ins_actions { display: flex; }
     color: white;
 }
 #ins_tasks > .hid { font-weight: bold; }
-#ins_tasks { display: flex; }
+html.small #ins_tasks { display: flex; }
+#ui_panels > div:not(:only-child) #ins_tasks { display: flex; }
 
 /* -------------------- Data -------------------- */
 
