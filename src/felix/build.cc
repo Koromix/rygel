@@ -172,6 +172,7 @@ Builder::Builder(const BuildSettings &build)
     cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
     shared_directory = Fmt(&str_alloc, "%1%/Shared", build.output_directory).ptr;
     cache_filename = Fmt(&str_alloc, "%1%/FelixCache.bin", shared_directory).ptr;
+    compile_filename = Fmt(&str_alloc, "%1%/compile_commands.json", build.output_directory).ptr;
 
     LoadCache();
 }
@@ -722,6 +723,11 @@ bool Builder::Build(int jobs, bool verbose)
             SaveCache();
         }
 
+        // Update compilation database
+        if (!build.fake) {
+            SaveCompile();
+        }
+
         // Clean up failed and temporary files
         // Windows has a tendency to hold file locks a bit longer than needed...
         // Try to delete files several times silently unless it's the last try.
@@ -849,8 +855,7 @@ void Builder::SaveCache()
         }
     }
 
-    if (!st.Close())
-        return;
+    st.Close();
 }
 
 void Builder::LoadCache()
@@ -921,6 +926,37 @@ void Builder::LoadCache()
 
     cache.Leak();
     clear_guard.Disable();
+}
+
+void Builder::SaveCompile()
+{
+    StreamWriter st(compile_filename, (int)StreamWriterFlag::Atomic);
+    if (!st.IsValid())
+        return;
+    json_PrettyWriter json(&st);
+
+    json.StartArray();
+
+    for (const CacheEntry &entry: cache_map) {
+        if (!entry.deps_len)
+            continue;
+
+        const char *directory = GetWorkingDirectory();
+        const DependencyEntry &dep0 = cache_dependencies[entry.deps_offset];
+
+        json.StartObject();
+
+        json.Key("directory"); json.String(directory);
+        json.Key("command"); json.String(entry.cmd_line.ptr, entry.cmd_line.len);
+        json.Key("file"); json.String(dep0.filename);
+        json.Key("output"); json.String(entry.filename);
+
+        json.EndObject();
+    }
+
+    json.EndArray();
+
+    st.Close();
 }
 
 const char *Builder::BuildObjectPath(Span<const char> src_filename, const char *output_directory,
