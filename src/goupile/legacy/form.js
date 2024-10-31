@@ -1042,11 +1042,11 @@ function FormBuilder(state, model, readonly = false) {
         let value = readValue(key, options, value => {
             if (typeof value === 'string') {
                 try {
-                    value = LocalDate.parse(value);
+                    value = LocalTime.parse(value);
                 } catch (err) {
                     value = undefined;
                 }
-            } else if (!(value instanceof LocalDate)) {
+            } else if (!(value instanceof LocalTime)) {
                 value = undefined;
             }
 
@@ -1067,7 +1067,7 @@ function FormBuilder(state, model, readonly = false) {
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
-        let intf = makeWidget('date', label, render, options);
+        let intf = makeWidget('time', label, render, options);
         fillVariableInfo(intf, key, value);
         addWidget(intf);
 
