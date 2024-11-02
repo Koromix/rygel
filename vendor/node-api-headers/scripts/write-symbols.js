@@ -2,7 +2,7 @@
 
 const { resolve: resolvePath } = require('path');
 const { writeFile } = require('fs/promises');
-const { runClang } = require('./clang-utils');
+const { runClang } = require('../lib/clang-utils');
 
 /** @typedef {{ js_native_api_symbols: string[]; node_api_symbols: string[]; }} SymbolInfo */
 

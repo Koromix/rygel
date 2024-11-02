@@ -1,5 +1,13 @@
 # node-api-headers Changelog
 
+## [1.4.0](https://github.com/nodejs/node-api-headers/compare/v1.3.0...v1.4.0) (2024-10-30)
+
+
+### Features
+
+* **no-release:** add conditional support in `#if` ([#52](https://github.com/nodejs/node-api-headers/issues/52)) ([e1b8feb](https://github.com/nodejs/node-api-headers/commit/e1b8feb060cf85522538ec1b8a1d6eb782620022))
+* update headers from nodejs/node tag v23.1.0 ([#56](https://github.com/nodejs/node-api-headers/issues/56)) ([3336912](https://github.com/nodejs/node-api-headers/commit/33369124c7f8a670422a0c5a27ad149da83ed8d6))
+
 ## [1.3.0](https://github.com/nodejs/node-api-headers/compare/v1.2.0...v1.3.0) (2024-09-04)
 
 

@@ -6,7 +6,8 @@ const { resolve } = require('path');
 const { parseArgs } = require('util')
 const { createInterface } = require('readline');
 const { inspect } = require('util');
-const { runClang } = require('./clang-utils');
+const { runClang } = require('../lib/clang-utils');
+const { evaluate } = require('../lib/parse-utils');
 
 /**
  * @returns {Promise<string>} Version string, eg. `'v19.6.0'`.
@@ -32,8 +33,11 @@ function removeExperimentals(stream, destination, verbose = false) {
         };
         const rl = createInterface(stream);
 
-        /** @type {Array<'write' | 'ignore'>} */
-        let mode = ['write'];
+        /** @type {Array<'write' | 'ignore' | 'preprocessor'>} */
+        const mode = ['write'];
+
+        /** @type {Array<string>} */
+        const preprocessor = [];
 
         /** @type {Array<string>} */
         const macroStack = [];
@@ -43,6 +47,22 @@ function removeExperimentals(stream, destination, verbose = false) {
 
         let lineNumber = 0;
         let toWrite = '';
+
+        const handlePreprocessor = (expression) => {
+            const result = evaluate(expression);
+
+            macroStack.push(expression);
+
+            if (result === false) {
+                debug(`Line ${lineNumber} Ignored '${expression}'`);
+                mode.push('ignore');
+                return false;
+            } else {
+                debug(`Line ${lineNumber} Pushed '${expression}'`);
+                mode.push('write');
+                return true;
+            }
+        };
 
         rl.on('line', function lineHandler(line) {
             ++lineNumber;
@@ -63,14 +83,23 @@ function removeExperimentals(stream, destination, verbose = false) {
                 } else {
                     mode.push('write');
                 }
-
             }
             else if (matches = line.match(/^\s*#if\s+(.+)$/)) {
-                const identifier = matches[1];
-                macroStack.push(identifier);
-                mode.push('write');
+                const expression = matches[1];
+                if (expression.endsWith('\\')) {
+                    if (preprocessor.length) {
+                        reject(new Error(`Unexpected preprocessor continuation on line ${lineNumber}`));
+                        return;
+                    }
+                    preprocessor.push(expression.substring(0, expression.length - 1));
 
-                debug(`Line ${lineNumber} Pushed ${identifier}`);
+                    mode.push('preprocessor');
+                    return;
+                } else {
+                    if (!handlePreprocessor(expression)) {
+                        return;
+                    }
+                }
             }
             else if (line.match(/^#else(?:\s+|$)/)) {
                 const identifier = macroStack[macroStack.length - 1];
@@ -83,7 +112,7 @@ function removeExperimentals(stream, destination, verbose = false) {
                     return;
                 }
 
-                if (identifier === 'NAPI_EXPERIMENTAL') {
+                if (identifier.indexOf('NAPI_EXPERIMENTAL') > -1) {
                     const lastMode = mode[mode.length - 1];
                     mode[mode.length - 1] = (lastMode === 'ignore') ? 'write' : 'ignore';
                     return;
@@ -98,9 +127,10 @@ function removeExperimentals(stream, destination, verbose = false) {
                 if (!identifier) {
                     rl.off('line', lineHandler);
                     reject(new Error(`Macro stack is empty handling #endif on line ${lineNumber}`));
+                    return;
                 }
 
-                if (identifier === 'NAPI_EXPERIMENTAL') {
+                if (identifier.indexOf('NAPI_EXPERIMENTAL') > -1) {
                     return;
                 }
             }
@@ -113,7 +143,28 @@ function removeExperimentals(stream, destination, verbose = false) {
 
             if (mode[mode.length - 1] === 'write') {
                 toWrite += `${line}\n`;
+            } else if (mode[mode.length - 1] === 'preprocessor') {
+                if (!preprocessor) {
+                    reject(new Error(`Preprocessor mode without preprocessor on line ${lineNumber}`));
+                    return;
+                }
+
+                if (line.endsWith('\\')) {
+                    preprocessor.push(line.substring(0, line.length - 1));
+                    return;
+                }
+
+                preprocessor.push(line);
+
+                const expression = preprocessor.join('');
+                preprocessor.length = 0;
+                mode.pop();
+
+                if (!handlePreprocessor(expression)) {
+                    return;
+                }
             }
+
         });
 
         rl.on('close', () => {
@@ -138,7 +189,7 @@ function removeExperimentals(stream, destination, verbose = false) {
  * @param {string} path Path for file to validate with clang.
  */
 async function validateSyntax(path) {
-    try { 
+    try {
         await runClang(['-fsyntax-only', path]);
     } catch (e) {
         throw new Error(`Syntax validation failed for ${path}: ${e}`);

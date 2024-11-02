@@ -43,14 +43,7 @@ typedef struct napi_env__* napi_env;
 // basic APIs (unless the user explicitly casts the environment), we achieve
 // the ability to ensure at compile time that we do not call APIs that affect
 // the state of the JS engine from a synchronous (basic) finalizer.
-#if !defined(NAPI_EXPERIMENTAL) ||                                             \
-    (defined(NAPI_EXPERIMENTAL) &&                                             \
-     (defined(NODE_API_EXPERIMENTAL_NOGC_ENV_OPT_OUT) ||                       \
-      defined(NODE_API_EXPERIMENTAL_BASIC_ENV_OPT_OUT)))
 typedef struct napi_env__* node_api_nogc_env;
-#else
-typedef const struct napi_env__* node_api_nogc_env;
-#endif
 typedef node_api_nogc_env node_api_basic_env;
 
 typedef struct napi_value__* napi_value;
@@ -147,16 +140,7 @@ typedef void(NAPI_CDECL* napi_finalize)(napi_env env,
                                         void* finalize_data,
                                         void* finalize_hint);
 
-#if !defined(NAPI_EXPERIMENTAL) ||                                             \
-    (defined(NAPI_EXPERIMENTAL) &&                                             \
-     (defined(NODE_API_EXPERIMENTAL_NOGC_ENV_OPT_OUT) ||                       \
-      defined(NODE_API_EXPERIMENTAL_BASIC_ENV_OPT_OUT)))
 typedef napi_finalize node_api_nogc_finalize;
-#else
-typedef void(NAPI_CDECL* node_api_nogc_finalize)(node_api_nogc_env env,
-                                                 void* finalize_data,
-                                                 void* finalize_hint);
-#endif
 typedef node_api_nogc_finalize node_api_basic_finalize;
 
 typedef struct {

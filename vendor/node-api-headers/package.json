@@ -33,8 +33,9 @@
     }
   ],
   "description": "Node-API headers",
-  "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "acorn": "^8.12.1"
+  },
   "directories": {},
   "gypfile": false,
   "homepage": "https://github.com/nodejs/node-api-headers",
@@ -42,7 +43,6 @@
   "license": "MIT",
   "main": "index.js",
   "name": "node-api-headers",
-  "optionalDependencies": {},
   "readme": "README.md",
   "repository": {
     "type": "git",
@@ -51,8 +51,9 @@
   "scripts": {
     "update-headers": "node --no-warnings scripts/update-headers.js",
     "write-symbols": "node --no-warnings scripts/write-symbols.js",
-    "write-win32-def": "node --no-warnings scripts/write-win32-def.js"
+    "write-win32-def": "node --no-warnings scripts/write-win32-def.js",
+    "test": "node test/parse-utils.js "
   },
-  "version": "1.3.0",
+  "version": "1.4.0",
   "support": true
 }
