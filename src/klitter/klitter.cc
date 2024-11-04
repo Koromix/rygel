@@ -68,10 +68,10 @@ struct BackupSet {
 
 static const char *GetDefaultDatabasePath()
 {
-    const char *filename = GetEnv("KIPER_DATABASE");
+    const char *filename = GetEnv("KLITTER_DATABASE");
 
     if (!filename || !filename[0]) {
-        filename = "kiper.db";
+        filename = "klitter.db";
     }
 
     return filename;
@@ -858,7 +858,7 @@ bool DistributeContext::DeleteExtra(const DiskData &disk, const char *dest_dir, 
             } break;
 
             case FileType::File: {
-                if (TestStr(basename, ".kiper"))
+                if (TestStr(basename, ".klitter"))
                     break;
 
                 const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
@@ -937,7 +937,7 @@ static bool DistributeChanges(BackupSet *set, bool checksum)
         LogInfo("Detecting backup changes...");
 
         for (const DiskData &disk: set->disks) {
-            const char *uuid_filename = Fmt(&temp_alloc, "%1.kiper", disk.root).ptr;
+            const char *uuid_filename = Fmt(&temp_alloc, "%1.klitter", disk.root).ptr;
 
             if (!TestFile(uuid_filename, FileType::File))
                 continue;
@@ -1301,7 +1301,7 @@ Options:
 
     // Copy to backup disks
     for (const DiskData &disk: set.disks) {
-        const char *uuid_filename = Fmt(&temp_alloc, "%1.kiper", disk.root).ptr;
+        const char *uuid_filename = Fmt(&temp_alloc, "%1.klitter", disk.root).ptr;
 
         if (!TestFile(uuid_filename, FileType::File))
             continue;
@@ -1516,7 +1516,7 @@ bool IntegrateContext::AddNew(const char *src_dir)
             } break;
 
             case FileType::File: {
-                if (TestStr(basename, ".kiper"))
+                if (TestStr(basename, ".klitter"))
                     break;
 
                 const char *filename = Fmt(&temp_alloc, "%1%2", src_dir, basename).ptr;
@@ -1659,7 +1659,7 @@ Options:
 
     const char *uuid = nullptr;
     {
-        const char *filename = Fmt(&temp_alloc, "%1.kiper", disk_dir).ptr;
+        const char *filename = Fmt(&temp_alloc, "%1.klitter", disk_dir).ptr;
 
         if (TestFile(filename, FileType::File)) {
             uuid = ReadUUID(filename, &temp_alloc);
@@ -1916,7 +1916,7 @@ int Main(int argc, char **argv)
 R"(Usage: %!..+%1 <command> [args]%!0
 
 Commands:
-    %!..+init%!0                         Init kiper database for backups
+    %!..+init%!0                         Init klitter database for backups
     %!..+status%!0                       Get backup status and recorded disk usage
     %!..+backup%!0                       Distribute changes and backup to plugged disks
 
