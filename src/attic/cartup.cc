@@ -888,7 +888,8 @@ bool DistributeContext::DeleteExtra(const DiskData &disk, const char *dest_dir, 
                         return false;
                 } else if (stmt.IsValid()) {
                     if (!set->db.Run(R"(INSERT INTO files (path, mtime, size, disk_id, status, changeset)
-                                        VALUES (?1, ?2, ?3, ?4, 'removed', ?5))",
+                                        VALUES (?1, ?2, ?3, ?4, 'removed', ?5)
+                                        ON CONFLICT (path) DO NOTHING)",
                                      origin, 0, 0, disk.id, changeset))
                         return false;
                 } else {
