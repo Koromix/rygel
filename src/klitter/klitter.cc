@@ -15,6 +15,7 @@
 
 #include "src/core/base/base.hh"
 #include "src/core/sqlite/sqlite.hh"
+#include "config.hh"
 #include "vendor/blake3/c/blake3.h"
 
 #if defined(_WIN32)
@@ -23,14 +24,13 @@
 
 namespace RG {
 
-static const int SchemaVersion = 8;
+static const int SchemaVersion = 9;
 
 struct DiskData {
     int64_t id;
 
     char uuid[37];
     const char *name;
-    const char *root;
 
     int64_t total;
     int64_t used;
@@ -65,6 +65,8 @@ struct BackupSet {
     SourceInfo *FindSource(int64_t idx);
     SourceInfo *FindSource(const char *selector);
 };
+
+static Config config;
 
 static const char *GetDefaultDatabasePath()
 {
@@ -312,7 +314,15 @@ bool BackupSet::Open(const char *db_filename, bool create)
                         return false;
                 } // [[fallthrough]];
 
-                static_assert(SchemaVersion == 8);
+                case 8: {
+                    bool success = db.RunMany(R"(
+                        ALTER TABLE disks DROP COLUMN root;
+                    )");
+                    if (!success)
+                        return false;
+                } // [[fallthrough]];
+
+                static_assert(SchemaVersion == 9);
             }
 
             if (!db.SetUserVersion(SchemaVersion))
@@ -372,7 +382,7 @@ bool BackupSet::Refresh()
     HeapArray<DiskData> disks;
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT d.id, d.uuid, d.name, d.root, d.size, SUM(f.size), COUNT(f.id),
+    if (!db.Prepare(R"(SELECT d.id, d.uuid, d.name, d.size, SUM(f.size), COUNT(f.id),
                               SUM(IIF(f.status = 'added', 1, 0)) AS added,
                               SUM(IIF(f.status = 'changed', 1, 0)) AS changed,
                               SUM(IIF(f.status = 'removed', 1, 0)) AS removed
@@ -385,18 +395,16 @@ bool BackupSet::Refresh()
         DiskData disk = {};
 
         const char *name = (const char *)sqlite3_column_text(stmt, 2);
-        const char *root = (const char *)sqlite3_column_text(stmt, 3);
 
         disk.id = sqlite3_column_int64(stmt, 0);
         CopyString((const char *)sqlite3_column_text(stmt, 1), disk.uuid);
         disk.name = DuplicateString(name, &str_alloc).ptr;
-        disk.root = NormalizePath(root, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &str_alloc).ptr;
-        disk.total = sqlite3_column_int64(stmt, 4);
-        disk.used = sqlite3_column_int64(stmt, 5);
-        disk.files = sqlite3_column_int64(stmt, 6);
-        disk.added = sqlite3_column_int64(stmt, 7);
-        disk.changed = sqlite3_column_int64(stmt, 8);
-        disk.removed = sqlite3_column_int64(stmt, 9);
+        disk.total = sqlite3_column_int64(stmt, 3);
+        disk.used = sqlite3_column_int64(stmt, 4);
+        disk.files = sqlite3_column_int64(stmt, 5);
+        disk.added = sqlite3_column_int64(stmt, 6);
+        disk.changed = sqlite3_column_int64(stmt, 7);
+        disk.removed = sqlite3_column_int64(stmt, 8);
 
         disks.Append(disk);
     }
@@ -467,7 +475,8 @@ static int RunInit(Span<const char *> arguments)
 R"(Usage: %!..+%1 init [options]
 
 Options:
-    %!..+-D, --database_file <file>%!0   Set database file%!0)",
+    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-D, --database_file <file>%!0   Set database file)",
                 FelixTarget);
     };
 
@@ -479,6 +488,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
             } else {
@@ -537,8 +548,8 @@ public:
     DistributeResult DistributeNew(const char *src_dir);
     bool DeleteOld();
 
-    bool BackupNew(const DiskData &disk, bool checksum);
-    bool DeleteExtra(const DiskData &disk);
+    bool BackupNew(const DiskData &disk, const char *disk_path, bool checksum);
+    bool DeleteExtra(const DiskData &disk, const char *disk_path);
     bool DeleteExtra(const DiskData &disk, const char *dest_dir, Size root_len);
 };
 
@@ -680,7 +691,7 @@ bool DistributeContext::DeleteOld()
     return true;
 }
 
-static const char *BuildDiskPath(const char *src_filename, const DiskData &disk, BlockAllocator *alloc)
+static const char *BuildDiskPath(const char *src_filename, const char *disk_path, BlockAllocator *alloc)
 {
     const char *dest_filename = nullptr;
 
@@ -689,15 +700,15 @@ static const char *BuildDiskPath(const char *src_filename, const DiskData &disk,
         char drive = LowerAscii(src_filename[0]);
         const char *remain = TrimStrLeft(src_filename + 2, RG_PATH_SEPARATORS).ptr;
 
-        dest_filename = Fmt(alloc, "%1%2/%3", disk.root, drive, remain).ptr;
+        dest_filename = Fmt(alloc, "%1%2/%3", disk_path, drive, remain).ptr;
     } else {
         const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
-        dest_filename = Fmt(alloc, "%1%2", disk.root, remain).ptr;
+        dest_filename = Fmt(alloc, "%1%2", disk_path, remain).ptr;
     }
 #else
     {
         const char *remain = TrimStrLeft(src_filename, RG_PATH_SEPARATORS).ptr;
-        dest_filename = Fmt(alloc, "%1%2", disk.root, remain).ptr;
+        dest_filename = Fmt(alloc, "%1%2", disk_path, remain).ptr;
     }
 #endif
 
@@ -741,7 +752,7 @@ static bool IsTimeEquivalent(int64_t time1, int64_t time2)
     return delta < 2000;
 }
 
-bool DistributeContext::BackupNew(const DiskData &disk, bool checksum)
+bool DistributeContext::BackupNew(const DiskData &disk, const char *disk_path, bool checksum)
 {
     BlockAllocator temp_alloc;
 
@@ -768,7 +779,7 @@ bool DistributeContext::BackupNew(const DiskData &disk, bool checksum)
         int64_t mtime = sqlite3_column_int64(stmt, 2);
         int64_t size = sqlite3_column_int64(stmt, 3);
 
-        const char *dest_filename = BuildDiskPath(src_filename, disk, &temp_alloc);
+        const char *dest_filename = BuildDiskPath(src_filename, disk_path, &temp_alloc);
 
         FileInfo dest_info;
         StatResult stat = StatFile(dest_filename, (int)StatFlag::SilentMissing, &dest_info);
@@ -832,10 +843,10 @@ bool DistributeContext::BackupNew(const DiskData &disk, bool checksum)
     return valid;
 }
 
-bool DistributeContext::DeleteExtra(const DiskData &disk)
+bool DistributeContext::DeleteExtra(const DiskData &disk, const char *disk_path)
 {
-    Size root_len = strlen(disk.root) - 1;
-    bool success = DeleteExtra(disk, disk.root, root_len);
+    Size root_len = strlen(disk_path) - 1;
+    bool success = DeleteExtra(disk, disk_path, root_len);
 
     if (!set->db.Run("DELETE FROM files WHERE disk_id = ?1 AND status = 'removed' AND changeset IS NOT ?2", disk.id, changeset))
         return false;
@@ -936,23 +947,20 @@ static bool DistributeChanges(BackupSet *set, bool checksum)
 
         LogInfo("Detecting backup changes...");
 
-        for (const DiskData &disk: set->disks) {
-            const char *uuid_filename = Fmt(&temp_alloc, "%1.klitter", disk.root).ptr;
+        for (const char *disk_path: config.disk_paths) {
+            const char *uuid_filename = Fmt(&temp_alloc, "%1.klitter", disk_path).ptr;
 
             if (!TestFile(uuid_filename, FileType::File))
                 continue;
 
             const char *uuid = ReadUUID(uuid_filename, &temp_alloc);
+            const DiskData *disk = uuid ? set->FindDisk(uuid) : nullptr;
 
-            if (!uuid) {
-                LogError("Cannot find disk UUID from '%1", disk.root);
-                return false;
-            }
-            if (!TestStr(uuid, disk.uuid))
+            if (!disk)
                 continue;
 
-            complete &= ctx.BackupNew(disk, checksum);
-            complete &= ctx.DeleteExtra(disk);
+            complete &= ctx.BackupNew(*disk, disk_path, checksum);
+            complete &= ctx.DeleteExtra(*disk, disk_path);
         }
 
         return true;
@@ -979,6 +987,7 @@ static int RunStatus(Span<const char *> arguments)
 R"(Usage: %!..+%1 status [options]
 
 Options:
+    %!..+-C, --config_file <file>%!0     Set configuration file
     %!..+-D, --database_file <file>%!0   Set database file
 
     %!..+-v, --verbose%!0                Show detailed changes
@@ -996,6 +1005,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
             } else if (opt.Test("-v", "--verbose")) {
@@ -1128,7 +1139,7 @@ static bool CopyFile(int src_fd, const char *src_filename, int dest_fd, const ch
     return true;
 }
 
-static bool PerformCopies(BackupSet *set, const DiskData &disk)
+static bool PerformCopies(BackupSet *set, const DiskData &disk, const char *disk_path)
 {
     BlockAllocator temp_alloc;
 
@@ -1148,7 +1159,7 @@ static bool PerformCopies(BackupSet *set, const DiskData &disk)
         int64_t mtime = sqlite3_column_int64(stmt, 2);
         int64_t size = sqlite3_column_int64(stmt, 3);
 
-        const char *dest_filename = BuildDiskPath(src_filename, disk, &temp_alloc);
+        const char *dest_filename = BuildDiskPath(src_filename, disk_path, &temp_alloc);
 
         int src_fd = OpenFile(src_filename, (int)OpenFlag::Read);
         if (src_fd < 0) {
@@ -1202,7 +1213,7 @@ static bool PerformCopies(BackupSet *set, const DiskData &disk)
     return valid;
 }
 
-static bool PerformDeletions(BackupSet *set, const DiskData &disk)
+static bool PerformDeletions(BackupSet *set, const DiskData &disk, const char *disk_path)
 {
     BlockAllocator temp_alloc;
 
@@ -1220,7 +1231,7 @@ static bool PerformDeletions(BackupSet *set, const DiskData &disk)
         int64_t id = sqlite3_column_int64(stmt, 0);
         const char *src_filename = (const char *)sqlite3_column_text(stmt, 1);
 
-        const char *dest_filename = BuildDiskPath(src_filename, disk, &temp_alloc);
+        const char *dest_filename = BuildDiskPath(src_filename, disk_path, &temp_alloc);
 
         LogInfo("Delete '%1'", dest_filename);
 
@@ -1252,7 +1263,8 @@ static int RunBackup(Span<const char *> arguments)
 R"(Usage: %!..+%1 backup [options]
 
 Options:
-    %!..+-D, --database_file <file>%!0   Set database file%!0
+    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-D, --database_file <file>%!0   Set database file
 
         %!..+--no_detect%!0              Don't detect source changes
 
@@ -1269,6 +1281,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
             } else if (opt.Test("--no_detect")) {
@@ -1300,27 +1314,24 @@ Options:
     LogInfo("Backing up...");
 
     // Copy to backup disks
-    for (const DiskData &disk: set.disks) {
-        const char *uuid_filename = Fmt(&temp_alloc, "%1.klitter", disk.root).ptr;
+    for (const char *disk_path: config.disk_paths) {
+        const char *uuid_filename = Fmt(&temp_alloc, "%1.klitter", disk_path).ptr;
 
         if (!TestFile(uuid_filename, FileType::File))
             continue;
 
         const char *uuid = ReadUUID(uuid_filename, &temp_alloc);
+        const DiskData *disk = uuid ? set.FindDisk(uuid) : nullptr;
 
-        if (!uuid) {
-            LogError("Cannot find disk UUID from '%1", disk.root);
-            return 1;
-        }
-        if (!TestStr(uuid, disk.uuid))
+        if (!disk)
             continue;
 
         processed++;
 
         async.Run([&]() {
-            if (!PerformCopies(&set, disk))
+            if (!PerformCopies(&set, *disk, disk_path))
                 return false;
-            if (cleanup && !PerformDeletions(&set, disk))
+            if (cleanup && !PerformDeletions(&set, *disk, disk_path))
                 return false;
 
             return true;
@@ -1355,7 +1366,8 @@ static int RunAddSource(Span<const char *> arguments)
 R"(Usage: %!..+%1 add_source [options] <directory>
 
 Options:
-    %!..+-D, --database_file <file>%!0   Set database file%!0)",
+    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-D, --database_file <file>%!0   Set database file)",
                 FelixTarget);
     };
 
@@ -1367,6 +1379,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
             } else {
@@ -1427,7 +1441,8 @@ static int RunRemoveSource(Span<const char *> arguments)
 R"(Usage: %!..+%1 remove_source [options] <ID | UUID | name>
 
 Options:
-    %!..+-D, --database_file <file>%!0   Set database file%!0)",
+    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-D, --database_file <file>%!0   Set database file)",
                 FelixTarget);
     };
 
@@ -1439,6 +1454,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
             } else {
@@ -1587,18 +1604,18 @@ static int RunAddDisk(Span<const char *> arguments)
     const char *db_filename = GetDefaultDatabasePath();
     const char *name = nullptr;
     int64_t size = -1;
-    const char *disk_dir = nullptr;
+    const char *disk_path = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 add_disk [options] <directory>
 
 Options:
-    %!..+-D, --database_file <file>%!0   Set database file%!0
+    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-D, --database_file <file>%!0   Set database file
 
     %!..+-n, --name <name>%!0            Set disk name
-    %!..+-s, --size <size>%!0            Set explicit disk size
-                                 %!D..(default: auto-detect)%!0)",
+    %!..+-s, --size <size>%!0            Set explicit disk size)",
                 FelixTarget);
     };
 
@@ -1610,6 +1627,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
             } else if (opt.Test("-n", "--name", OptionType::Value)) {
@@ -1623,27 +1642,27 @@ Options:
             }
         }
 
-        disk_dir = opt.ConsumeNonOption();
+        disk_path = opt.ConsumeNonOption();
         opt.LogUnusedArguments();
     }
 
-    if (!disk_dir) {
+    if (!disk_path) {
         LogError("Missing disk path argument");
         return 1;
     }
-    if (!PathIsAbsolute(disk_dir)) {
+    if (!PathIsAbsolute(disk_path)) {
         LogError("Disk path must be absolute");
         return 1;
     }
-    if (!TestFile(disk_dir, FileType::Directory)) {
-        LogError("Disk directory '%1' does not exist", disk_dir);
+    if (!TestFile(disk_path, FileType::Directory)) {
+        LogError("Disk directory '%1' does not exist", disk_path);
         return 1;
     }
 
-    disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &temp_alloc).ptr;
+    disk_path = NormalizePath(disk_path, &temp_alloc).ptr;
 
     if (!name) {
-        Span<const char> basename = SplitStrReverseAny(TrimStrRight(disk_dir, RG_PATH_SEPARATORS), RG_PATH_SEPARATORS);
+        Span<const char> basename = SplitStrReverseAny(disk_path, RG_PATH_SEPARATORS);
 
         if (!basename.len) {
             LogError("Missing disk name (use -n option)");
@@ -1659,7 +1678,7 @@ Options:
 
     const char *uuid = nullptr;
     {
-        const char *filename = Fmt(&temp_alloc, "%1.klitter", disk_dir).ptr;
+        const char *filename = Fmt(&temp_alloc, "%1%/.klitter", disk_path).ptr;
 
         if (TestFile(filename, FileType::File)) {
             uuid = ReadUUID(filename, &temp_alloc);
@@ -1680,15 +1699,15 @@ Options:
         // Create new disk
         {
             sq_Statement stmt;
-            if (!set.db.Prepare(R"(INSERT INTO disks (uuid, name, root, size) VALUES (?1, ?2, ?3, ?4)
+            if (!set.db.Prepare(R"(INSERT INTO disks (uuid, name, size) VALUES (?1, ?2, ?3)
                                    ON CONFLICT (uuid) DO NOTHING
                                    RETURNING id)",
-                                &stmt, uuid, name, disk_dir, size))
+                                &stmt, uuid, name, size))
                 return false;
 
             if (!stmt.Step()) {
                 if (stmt.IsValid()) {
-                    LogError("Disk '%1' %!D..[%2]%!0 already exists", disk_dir, uuid);
+                    LogError("Disk '%1' %!D..[%2]%!0 already exists", name, uuid);
                 }
                 return false;
             }
@@ -1698,7 +1717,7 @@ Options:
 
         // Run integration
         {
-            IntegrateContext ctx(&set, disk_id, disk_dir);
+            IntegrateContext ctx(&set, disk_id, disk_path);
 
             if (!ctx.AddNew())
                 return false;
@@ -1706,7 +1725,7 @@ Options:
         }
 
         if (size < 0) {
-            int64_t available = EsimateAvailableSpace(&set, disk_id, disk_dir);
+            int64_t available = EsimateAvailableSpace(&set, disk_id, disk_path);
 
             if (available < 0)
                 return false;
@@ -1719,7 +1738,7 @@ Options:
     if (!success)
         return 1;
 
-    LogInfo("Added disk %!..+%1%!0 for '%2' %!D..[%3]%!0", name, disk_dir, uuid);
+    LogInfo("Added disk %!..+%1%!0 at '%2' %!D..[%3]%!0", name, disk_path, uuid);
 
     if (!set.Close())
         return 1;
@@ -1736,14 +1755,15 @@ static int RunEditDisk(Span<const char *> arguments)
     const char *name = nullptr;
     int64_t size = -1;
     const char *identifier = nullptr;
-    const char *disk_dir = nullptr;
+    const char *disk_path = nullptr;
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 edit_disk [options] <ID | UUID | name> [<directory>]
 
 Options:
-    %!..+-D, --database_file <file>%!0   Set database file%!0
+    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-D, --database_file <file>%!0   Set database file
 
     %!..+-n, --name <name>%!0            Set disk name
     %!..+-s, --size <size>%!0            Set explicit disk size
@@ -1759,6 +1779,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
             } else if (opt.Test("-n", "--name", OptionType::Value)) {
@@ -1773,7 +1795,7 @@ Options:
         }
 
         identifier = opt.ConsumeNonOption();
-        disk_dir = opt.ConsumeNonOption();
+        disk_path = opt.ConsumeNonOption();
 
         opt.LogUnusedArguments();
     }
@@ -1783,17 +1805,17 @@ Options:
         return 1;
     }
 
-    if (disk_dir) {
-        if (!PathIsAbsolute(disk_dir)) {
+    if (disk_path) {
+        if (!PathIsAbsolute(disk_path)) {
             LogError("Disk path must be absolute");
             return 1;
         }
-        if (!TestFile(disk_dir, FileType::Directory)) {
-            LogError("Disk directory '%1' does not exist", disk_dir);
+        if (!TestFile(disk_path, FileType::Directory)) {
+            LogError("Disk directory '%1' does not exist", disk_path);
             return 1;
         }
 
-        disk_dir = NormalizePath(disk_dir, (int)NormalizeFlag::EndWithSeparator | (int)NormalizeFlag::ForceSlash, &temp_alloc).ptr;
+        disk_path = NormalizePath(disk_path, &temp_alloc).ptr;
     }
 
     BackupSet set;
@@ -1808,24 +1830,23 @@ Options:
     }
 
     bool success = set.db.Transaction([&]() {
-        disk_dir = disk_dir ? disk_dir : disk->root;
         name = name ? name : disk->name;
 
-        if (!set.db.Run("UPDATE disks SET root = ?2, name = ?3, size = ?4 WHERE id = ?1",
-                        disk->id, disk_dir, name, size))
+        if (!set.db.Run("UPDATE disks SET name = ?2, size = ?3 WHERE id = ?1",
+                        disk->id, name, size))
                 return false;
 
         // Run integration
-        {
-            IntegrateContext ctx(&set, disk->id, disk_dir);
+        if (disk_path) {
+            IntegrateContext ctx(&set, disk->id, disk_path);
 
             if (!ctx.AddNew())
                 return false;
             ctx.DeleteOld();
         }
 
-        if (size < 0) {
-            int64_t available = EsimateAvailableSpace(&set, disk->id, disk_dir);
+        if (size < 0 && disk_path) {
+            int64_t available = EsimateAvailableSpace(&set, disk->id, disk_path);
 
             if (available < 0)
                 return false;
@@ -1838,7 +1859,7 @@ Options:
     if (!success)
         return 1;
 
-    LogInfo("Updated disk %!..+%1%!0 for '%2' %!D..[%3]%!0", name, disk_dir, disk->uuid);
+    LogInfo("Updated disk %!..+%1%!0 at '%2' %!D..[%3]%!0", name, disk_path, disk->uuid);
 
     if (!set.Close())
         return 1;
@@ -1857,7 +1878,8 @@ static int RunRemoveDisk(Span<const char *> arguments)
 R"(Usage: %!..+%1 remove_disk [options] <ID | UUID | name>
 
 Options:
-    %!..+-D, --database_file <file>%!0   Set database file%!0)",
+    %!..+-C, --config_file <file>%!0     Set configuration file
+    %!..+-D, --database_file <file>%!0   Set database file)",
                 FelixTarget);
     };
 
@@ -1869,6 +1891,8 @@ Options:
             if (opt.Test("--help")) {
                 print_usage(StdOut);
                 return 0;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                // Already handled
             } else if (opt.Test("-D", "--database_file", OptionType::Value)) {
                 db_filename = opt.current_value;
             } else {
@@ -1899,7 +1923,7 @@ Options:
     if (!set.db.Run("DELETE FROM disks WHERE id = ?1", disk->id))
         return 1;
 
-    LogInfo("Deleted disk %!..+%1%!0 for '%2' %!D..[%3]%!0", disk->name, disk->root, disk->uuid);
+    LogInfo("Deleted disk %!..+%1%!0 %!D..[%2]%!0", disk->name, disk->uuid);
 
     if (!set.Close())
         return 1;
@@ -1911,9 +1935,13 @@ int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
+    // Options
+    LocalArray<const char *, 4> config_filenames;
+    const char *config_filename = FindConfigFile("klitter.ini", &config.str_alloc, &config_filenames);
+
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 <command> [args]%!0
+R"(Usage: %!..+%1 <command> [-C <config.ini>] [args]%!0
 
 Commands:
     %!..+init%!0                         Init klitter database for backups
@@ -1925,8 +1953,15 @@ Commands:
 
     %!..+add_disk%!0                     Add disk for future backups
     %!..+edit_disk%!0                    Edit existing backup disk
-    %!..+remove_disk%!0                  Remove disk from backups)",
+    %!..+remove_disk%!0                  Remove disk from backups
+
+By default, the first of the following config files will be used:
+)",
                 FelixTarget);
+
+        for (const char *filename: config_filenames) {
+            PrintLn(st, "    %!..+%1%!0", filename);
+        }
     };
 
     if (argc < 2) {
@@ -1953,6 +1988,29 @@ Commands:
         PrintLn("Compiler: %1", FelixCompiler);
         return 0;
     }
+
+    // Find config filename
+    {
+        OptionParser opt(arguments, OptionMode::Skip);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                // Don't try to load anything in this case
+                config_filename = nullptr;
+                break;
+            } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
+                config_filename = opt.current_value;
+            } else if (opt.TestHasFailed()) {
+                return 1;
+            }
+        }
+    }
+
+    // Load config
+    if (config_filename && !LoadConfig(config_filename, &config))
+        return 1;
+    if (!config.Validate())
+        return 1;
 
     if (TestStr(cmd, "init")) {
         return RunInit(arguments);
