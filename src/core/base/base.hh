@@ -3182,7 +3182,7 @@ static constexpr inline uint64_t HashStr(Span<const char> str)
     const uint64_t Mult = (((uint64_t)0xc6a4a793ull) << 32ull) + (uint64_t)0x5bd1e995ull;
 
     const auto unaligned_load =
-#if defined(__GNUC__) || defined(__clang__)
+#if defined(__GNUC__) || __clang_major__ >= 17
         !std::is_constant_evaluated() ?
         [](const char *p) {
             uint64_t result;
