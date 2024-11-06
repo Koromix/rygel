@@ -1,5 +1,5 @@
-#ifndef HEADER_CURL_PATH_H
-#define HEADER_CURL_PATH_H
+#ifndef HEADER_LIBTEST_FIRST_H
+#define HEADER_LIBTEST_FIRST_H
 /***************************************************************************
  *                                  _   _ ____  _
  *  Project                     ___| | | |  _ \| |
@@ -23,27 +23,16 @@
  * SPDX-License-Identifier: curl
  *
  ***************************************************************************/
-
 #include "curl_setup.h"
 #include <curl/curl.h>
-#include "urldata.h"
 
-#ifdef _WIN32
-#  undef  PATH_MAX
-#  define PATH_MAX MAX_PATH
-#  ifndef R_OK
-#    define R_OK 4
-#  endif
+typedef CURLcode (*test_func_t)(char *);
+
+#ifdef CURLTESTS_BUNDLED
+struct onetest {
+  const char *name;
+  test_func_t ptr;
+};
 #endif
 
-#ifndef PATH_MAX
-#define PATH_MAX 1024 /* just an extra precaution since there are systems that
-                         have their definition hidden well */
-#endif
-
-CURLcode Curl_getworkingpath(struct Curl_easy *data,
-                             char *homedir,
-                             char **path);
-
-CURLcode Curl_get_pathname(const char **cpp, char **path, const char *homedir);
-#endif /* HEADER_CURL_PATH_H */
+#endif /* HEADER_LIBTEST_FIRST_H */

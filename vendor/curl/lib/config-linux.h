@@ -789,9 +789,9 @@
 
 /* cpu-machine-OS */
 #ifdef __LP64__
-#  define OS "x86_64-pc-linux"
+#  define CURL_OS "x86_64-pc-linux"
 #else
-#  define OS "i386-pc-linux"
+#  define CURL_OS "i386-pc-linux"
 #endif
 
 /* Name of package */

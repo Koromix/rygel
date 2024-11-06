@@ -1,8 +1,8 @@
-diff --git a/vendor/curl/lib/config-emscripten.h b/vendor/curl/lib/config-emscripten.h
+diff --git b/vendor/curl/lib/config-emscripten.h a/vendor/curl/lib/config-emscripten.h
 new file mode 100644
-index 000000000..dccd4e159
+index 000000000..9818942f1
 --- /dev/null
-+++ b/vendor/curl/lib/config-emscripten.h
++++ a/vendor/curl/lib/config-emscripten.h
 @@ -0,0 +1,996 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -782,7 +782,7 @@ index 000000000..dccd4e159
 +/* #undef NTLM_WB_FILE */
 +
 +/* cpu-machine-OS */
-+#define OS "x86_64-pc-linux-gnux32"
++#define CURL_OS "x86_64-pc-linux-gnux32"
 +
 +/* Name of package */
 +#define PACKAGE "curl"
@@ -1000,11 +1000,11 @@ index 000000000..dccd4e159
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/config-freebsd.h b/vendor/curl/lib/config-freebsd.h
+diff --git b/vendor/curl/lib/config-freebsd.h a/vendor/curl/lib/config-freebsd.h
 new file mode 100644
-index 000000000..3745108c8
+index 000000000..e0996cb46
 --- /dev/null
-+++ b/vendor/curl/lib/config-freebsd.h
++++ a/vendor/curl/lib/config-freebsd.h
 @@ -0,0 +1,1074 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -1823,7 +1823,7 @@ index 000000000..3745108c8
 +/* #undef NTLM_WB_FILE */
 +
 +/* cpu-machine-OS */
-+#define OS "x86_64-unknown-freebsd12.1"
++#define CURL_OS "x86_64-unknown-freebsd12.1"
 +
 +/* Name of package */
 +#define PACKAGE "curl"
@@ -2080,11 +2080,11 @@ index 000000000..3745108c8
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/config-linux.h b/vendor/curl/lib/config-linux.h
+diff --git b/vendor/curl/lib/config-linux.h a/vendor/curl/lib/config-linux.h
 new file mode 100644
-index 000000000..b13f95dd8
+index 000000000..b7876ce6d
 --- /dev/null
-+++ b/vendor/curl/lib/config-linux.h
++++ a/vendor/curl/lib/config-linux.h
 @@ -0,0 +1,1038 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -2877,9 +2877,9 @@ index 000000000..b13f95dd8
 +
 +/* cpu-machine-OS */
 +#ifdef __LP64__
-+#  define OS "x86_64-pc-linux"
++#  define CURL_OS "x86_64-pc-linux"
 +#else
-+#  define OS "i386-pc-linux"
++#  define CURL_OS "i386-pc-linux"
 +#endif
 +
 +/* Name of package */
@@ -3124,11 +3124,11 @@ index 000000000..b13f95dd8
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/config-macos.h b/vendor/curl/lib/config-macos.h
+diff --git b/vendor/curl/lib/config-macos.h a/vendor/curl/lib/config-macos.h
 new file mode 100644
-index 000000000..236f2a57e
+index 000000000..6aba01a73
 --- /dev/null
-+++ b/vendor/curl/lib/config-macos.h
++++ a/vendor/curl/lib/config-macos.h
 @@ -0,0 +1,1038 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -3921,9 +3921,9 @@ index 000000000..236f2a57e
 +
 +/* cpu-machine-OS */
 +#ifdef __LP64__
-+#  define OS "x86_64-pc-linux"
++#  define CURL_OS "x86_64-pc-linux"
 +#else
-+#  define OS "i386-pc-linux"
++#  define CURL_OS "i386-pc-linux"
 +#endif
 +
 +/* Name of package */
@@ -4168,11 +4168,11 @@ index 000000000..236f2a57e
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/config-openbsd.h b/vendor/curl/lib/config-openbsd.h
+diff --git b/vendor/curl/lib/config-openbsd.h a/vendor/curl/lib/config-openbsd.h
 new file mode 100644
-index 000000000..743638517
+index 000000000..2ae6f3977
 --- /dev/null
-+++ b/vendor/curl/lib/config-openbsd.h
++++ a/vendor/curl/lib/config-openbsd.h
 @@ -0,0 +1,1080 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -4997,7 +4997,7 @@ index 000000000..743638517
 +/* #undef NTLM_WB_FILE */
 +
 +/* cpu-machine-OS */
-+#define OS "x86_64-unknown-openbsd7.0"
++#define CURL_OS "x86_64-unknown-openbsd7.0"
 +
 +/* Name of package */
 +#define PACKAGE "curl"
@@ -5254,11 +5254,11 @@ index 000000000..743638517
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git a/vendor/curl/lib/curl_setup.h b/vendor/curl/lib/curl_setup.h
-index 1e5371ef8..4caa72a68 100644
---- a/vendor/curl/lib/curl_setup.h
-+++ b/vendor/curl/lib/curl_setup.h
-@@ -133,6 +133,26 @@
+diff --git b/vendor/curl/lib/curl_setup.h a/vendor/curl/lib/curl_setup.h
+index cfab14085..672930aeb 100644
+--- b/vendor/curl/lib/curl_setup.h
++++ a/vendor/curl/lib/curl_setup.h
+@@ -138,6 +138,26 @@
  #  endif
  #endif
  

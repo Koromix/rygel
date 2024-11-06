@@ -815,7 +815,7 @@
 /* #undef NTLM_WB_FILE */
 
 /* cpu-machine-OS */
-#define OS "x86_64-unknown-freebsd12.1"
+#define CURL_OS "x86_64-unknown-freebsd12.1"
 
 /* Name of package */
 #define PACKAGE "curl"

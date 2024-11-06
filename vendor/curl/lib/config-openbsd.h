@@ -821,7 +821,7 @@
 /* #undef NTLM_WB_FILE */
 
 /* cpu-machine-OS */
-#define OS "x86_64-unknown-openbsd7.0"
+#define CURL_OS "x86_64-unknown-openbsd7.0"
 
 /* Name of package */
 #define PACKAGE "curl"
