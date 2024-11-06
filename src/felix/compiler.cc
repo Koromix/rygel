@@ -347,7 +347,7 @@ public:
         }
         supported |= (int)CompileFeature::ZeroInit;
         if (platform != HostPlatform::WasmWasi) {
-            if (clang_ver >= 1700 && platform != HostPlatform::OpenBSD) {
+            if (clang_ver >= 1300 && platform != HostPlatform::OpenBSD) {
                 supported |= (int)CompileFeature::CFI; // LTO only
             }
             if (platform != HostPlatform::Windows) {
