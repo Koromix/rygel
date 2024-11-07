@@ -2,6 +2,12 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.1 (2024-11-07)
+
+- Ajustement des contraintes par défaut des mots de passe :
+  * Modérée pour les utilisateurs normaux et administrateurs
+  * Difficile pour les super-administrateurs
+
 ### Goupile 3.7.0 (2024-10-31)
 
 - Modification de l'objet `thread` dans les scripts : `thread['form']` devient `thread.entries['form']`

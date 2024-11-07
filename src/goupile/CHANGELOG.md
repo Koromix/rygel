@@ -2,6 +2,12 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.1 (2024-11-07)
+
+- Adjust default password constraints:
+  * Moderate for normal users and project administrators
+  * Hard for root users
+
 ### Goupile 3.7.0 (2024-10-31)
 
 - Change `thread` object in scripts: `thread['form']` becomes `thread.entries['form']`
