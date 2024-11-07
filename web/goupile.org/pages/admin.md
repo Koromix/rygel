@@ -80,8 +80,6 @@ La complexité requise pour les mots de passe dépend du type d'utilisateur :
 - Les utilisateurs normaux ou ayant des droits d'administration sur un ou plusieurs projets doivent utiliser un mot de passe d'au moins 8 caractères avec 3 classes de caractère, ou plus de 16 caractères avec 2 classes différentes
 - Les super-administrateurs doivent utiliser un mot de passe complexe, évalué par un score de complexité du mot de passe
 
-Le mot de passe doit contenir au moins 8 caractères de 3 classes différentes (numériques, alphanumériques, symboles spéciaux). Le statut administrateur permet l'accès à l'interface administrateur. Par défaut, le statut administrateur n'est pas activé.
-
 Après avoir saisi les différents champs, cliquer sur « Créer » [1].
 
 <div class="screenshot">
