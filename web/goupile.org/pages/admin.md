@@ -75,7 +75,7 @@ Une nouvelle fenêtre apparaît (« Création d'un utilisateur »). Vous devez y
 
 Le nom d'utilisateur correspond au nom de l'utilisateur. Il peut être de format numérique ou alphanumérique. Les majuscules et les caractères spéciaux (à l'exception du tiret court ‘-‘, de l'underscore ‘_' et du point ‘.') ne sont pas autorisés. Nous vous conseillons un nom d'utilisateur au format : « prenom.nom ».
 
-e mot de passe doit contenir au moins 8 caractères de 3 classes différentes (numériques, alphanumériques, symboles spéciaux). Le statut administrateur permet l'accès à l'interface administrateur. Par défaut, le statut administrateur n'est pas activé.
+Le mot de passe doit contenir au moins 8 caractères de 3 classes différentes (numériques, alphanumériques, symboles spéciaux). Le statut administrateur permet l'accès à l'interface administrateur. Par défaut, le statut administrateur n'est pas activé.
 
 Après avoir saisi les différents champs, cliquer sur « Créer » [1].
 
