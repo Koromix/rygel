@@ -293,6 +293,7 @@ Size CallData::PushString16Value(Napi::Value value, const char16_t **out_str16)
     size_t len = 0;
     napi_status status;
 
+    mem->heap.ptr = AlignUp(mem->heap.ptr, 2);
     buf.ptr = (char16_t *)mem->heap.ptr;
     buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32)) / 2;
 
@@ -384,6 +385,7 @@ Size CallData::PushString32Value(Napi::Value value, const char32_t **out_str32)
     if (buf16.len < 0) [[unlikely]]
         return -1;
 
+    mem->heap.ptr = AlignUp(mem->heap.ptr, 4);
     buf.ptr = (char32_t *)mem->heap.ptr;
     buf.len = std::max((Size)0, mem->heap.len - Kibibytes(32)) / 4;
 
