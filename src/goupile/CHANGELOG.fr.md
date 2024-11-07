@@ -4,6 +4,7 @@
 
 ### Goupile 3.7.0 (2024-10-31)
 
+- Modification de l'objet `thread` dans les scripts : `thread['form']` devient `thread.entries['form']`
 - Prise en charge des scripts personnalisés au niveau des catégories
 - Prise en charge du contenu personnalisé dans les éléments du formulaire
 - Prise en charge des icônes de tuiles de formulaire personnalisées

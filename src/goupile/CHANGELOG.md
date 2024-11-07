@@ -4,6 +4,7 @@
 
 ### Goupile 3.7.0 (2024-10-31)
 
+- Change `thread` object in scripts: `thread['form']` becomes `thread.entries['form']`
 - Support custom category-level scripts
 - Support custom content in form level elements
 - Support custom form tile icons
