@@ -68,7 +68,7 @@ PublicKey = %2
 
 [Security]
 # UserPassword = Moderate
-# AdminPassword = Hard
+# AdminPassword = Moderate
 # RootPassword = Hard
 
 [SMS]

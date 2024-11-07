@@ -63,7 +63,7 @@ struct DomainConfig {
     int archive_retention = 7;
 
     PasswordComplexity user_password = PasswordComplexity::Moderate;
-    PasswordComplexity admin_password = PasswordComplexity::Hard;
+    PasswordComplexity admin_password = PasswordComplexity::Moderate;
     PasswordComplexity root_password = PasswordComplexity::Hard;
 
     const char *default_username = nullptr;
