@@ -270,7 +270,7 @@ static bool CheckComplexity(Span<const char> password, unsigned int flags)
     if (flags & (int)pwd_CheckFlag::Classes) {
         if (password.len < 16) {
             if (PopCount(classes) < 3) {
-                LogError("Passwords less than 16 characters must include symbols");
+                LogError("Passwords with less than 16 characters must include symbols");
                 return false;
             }
         } else {
