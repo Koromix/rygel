@@ -46,6 +46,11 @@ Consult the [migration guide](migration) for more information.
 
 ### Koffi 2.9
 
+#### Koffi 2.9.2 (2024-11-08)
+
+- Fix non-aligned pointers when pushing UTF-16 and UTF-32 string parameters
+- Various documentation fixes and improvements
+
 #### Koffi 2.9.1 (2024-09-23)
 
 - Fix x86 32-bit support regression in 2.9.0
