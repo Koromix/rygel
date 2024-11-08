@@ -374,7 +374,6 @@
     {
       "name": "Vladimir Morozov",
       "url": "https://github.com/vmoroz"
-
     },
     {
       "name": "WenheLI",
@@ -431,7 +430,8 @@
     "fs-extra": "^11.1.1",
     "path": "^0.12.7",
     "pre-commit": "^1.2.2",
-    "safe-buffer": "^5.1.1"
+    "safe-buffer": "^5.1.1",
+    "semver": "^7.6.0"
   },
   "directories": {},
   "gypfile": false,
@@ -463,6 +463,9 @@
   "scripts": {
     "prebenchmark": "node-gyp rebuild -C benchmark",
     "benchmark": "node benchmark",
+    "create-coverage": "npm test --coverage",
+    "report-coverage-html": "rm -rf coverage-html && mkdir coverage-html && gcovr -e test --merge-mode-functions merge-use-line-max --html-nested ./coverage-html/index.html test",
+    "report-coverage-xml": "rm -rf coverage-xml && mkdir coverage-xml && gcovr -e test --merge-mode-functions merge-use-line-max --xml -o ./coverage-xml/coverage-cxx.xml test",
     "pretest": "node-gyp rebuild -C test",
     "test": "node test",
     "test:debug": "node-gyp rebuild -C test --debug && NODE_API_BUILD_CONFIG=Debug node ./test/index.js",
@@ -475,9 +478,9 @@
     "lint:fix": "node tools/clang-format --fix && node tools/eslint-format --fix"
   },
   "pre-commit": "lint",
-  "version": "7.1.0",
+  "version": "8.2.2",
   "support": true,
   "engines": {
-    "node": "^16 || ^18 || >= 20"
+    "node": "^18 || ^20 || >= 21"
   }
 }

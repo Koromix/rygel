@@ -142,6 +142,26 @@ static_assert(sizeof(char16_t) == sizeof(wchar_t),
     }                                                                          \
   } while (0)
 
+// Internal check helper. Be careful that the formatted message length should be
+// max 255 size and null terminated.
+#define NAPI_INTERNAL_CHECK(expr, location, ...)                               \
+  do {                                                                         \
+    if (!(expr)) {                                                             \
+      std::string msg = Napi::details::StringFormat(__VA_ARGS__);              \
+      Napi::Error::Fatal(location, msg.c_str());                               \
+    }                                                                          \
+  } while (0)
+
+#define NAPI_INTERNAL_CHECK_EQ(actual, expected, value_format, location)       \
+  do {                                                                         \
+    auto actual_value = (actual);                                              \
+    NAPI_INTERNAL_CHECK(actual_value == (expected),                            \
+                        location,                                              \
+                        "Expected " #actual " to be equal to " #expected       \
+                        ", but got " value_format ".",                         \
+                        actual_value);                                         \
+  } while (0)
+
 #define NAPI_FATAL_IF_FAILED(status, location, message)                        \
   NAPI_CHECK((status) == napi_ok, location, message)
 
@@ -279,6 +299,14 @@ template <typename T>
 using MaybeOrValue = T;
 #endif
 
+#ifdef NODE_API_EXPERIMENTAL_HAS_POST_FINALIZER
+using node_addon_api_basic_env = node_api_nogc_env;
+using node_addon_api_basic_finalize = node_api_nogc_finalize;
+#else
+using node_addon_api_basic_env = napi_env;
+using node_addon_api_basic_finalize = napi_finalize;
+#endif
+
 /// Environment for Node-API values and operations.
 ///
 /// All Node-API values and operations must be associated with an environment.
@@ -287,14 +315,13 @@ using MaybeOrValue = T;
 /// Node-API operations within the callback. (Many methods infer the
 /// environment from the `this` instance that the method is called on.)
 ///
-/// In the future, multiple environments per process may be supported,
-/// although current implementations only support one environment per process.
+/// Multiple environments may co-exist in a single process or a thread.
 ///
 /// In the V8 JavaScript engine, a Node-API environment approximately
 /// corresponds to an Isolate.
-class Env {
+class BasicEnv {
  private:
-  napi_env _env;
+  node_addon_api_basic_env _env;
 #if NAPI_VERSION > 5
   template <typename T>
   static void DefaultFini(Env, T* data);
@@ -302,20 +329,22 @@ class Env {
   static void DefaultFiniWithHint(Env, DataType* data, HintType* hint);
 #endif  // NAPI_VERSION > 5
  public:
-  Env(napi_env env);
+  BasicEnv(node_addon_api_basic_env env);
 
-  operator napi_env() const;
+  operator node_addon_api_basic_env() const;
 
-  Object Global() const;
-  Value Undefined() const;
-  Value Null() const;
-
-  bool IsExceptionPending() const;
-  Error GetAndClearPendingException() const;
-
-  MaybeOrValue<Value> RunScript(const char* utf8script) const;
-  MaybeOrValue<Value> RunScript(const std::string& utf8script) const;
-  MaybeOrValue<Value> RunScript(String script) const;
+  // Without these operator overloads, the error:
+  //
+  //    Use of overloaded operator '==' is ambiguous (with operand types
+  //    'Napi::Env' and 'Napi::Env')
+  //
+  // ... occurs when comparing foo.Env() == bar.Env() or foo.Env() == nullptr
+  bool operator==(const BasicEnv& other) const {
+    return _env == other._env;
+  };
+  bool operator==(std::nullptr_t /*other*/) const {
+    return _env == nullptr;
+  };
 
 #if NAPI_VERSION > 2
   template <typename Hook, typename Arg = void>
@@ -334,7 +363,7 @@ class Env {
 
   template <typename T>
   using Finalizer = void (*)(Env, T*);
-  template <typename T, Finalizer<T> fini = Env::DefaultFini<T>>
+  template <typename T, Finalizer<T> fini = BasicEnv::DefaultFini<T>>
   void SetInstanceData(T* data) const;
 
   template <typename DataType, typename HintType>
@@ -342,7 +371,7 @@ class Env {
   template <typename DataType,
             typename HintType,
             FinalizerWithHint<DataType, HintType> fini =
-                Env::DefaultFiniWithHint<DataType, HintType>>
+                BasicEnv::DefaultFiniWithHint<DataType, HintType>>
   void SetInstanceData(DataType* data, HintType* hint) const;
 #endif  // NAPI_VERSION > 5
 
@@ -351,9 +380,9 @@ class Env {
   class CleanupHook {
    public:
     CleanupHook();
-    CleanupHook(Env env, Hook hook, Arg* arg);
-    CleanupHook(Env env, Hook hook);
-    bool Remove(Env env);
+    CleanupHook(BasicEnv env, Hook hook, Arg* arg);
+    CleanupHook(BasicEnv env, Hook hook);
+    bool Remove(BasicEnv env);
     bool IsEmpty() const;
 
    private:
@@ -371,6 +400,39 @@ class Env {
 #if NAPI_VERSION > 8
   const char* GetModuleFileName() const;
 #endif  // NAPI_VERSION > 8
+
+#ifdef NODE_API_EXPERIMENTAL_HAS_POST_FINALIZER
+  template <typename FinalizerType>
+  inline void PostFinalizer(FinalizerType finalizeCallback) const;
+
+  template <typename FinalizerType, typename T>
+  inline void PostFinalizer(FinalizerType finalizeCallback, T* data) const;
+
+  template <typename FinalizerType, typename T, typename Hint>
+  inline void PostFinalizer(FinalizerType finalizeCallback,
+                            T* data,
+                            Hint* finalizeHint) const;
+#endif  // NODE_API_EXPERIMENTAL_HAS_POST_FINALIZER
+
+  friend class Env;
+};
+
+class Env : public BasicEnv {
+ public:
+  Env(napi_env env);
+
+  operator napi_env() const;
+
+  Object Global() const;
+  Value Undefined() const;
+  Value Null() const;
+
+  bool IsExceptionPending() const;
+  Error GetAndClearPendingException() const;
+
+  MaybeOrValue<Value> RunScript(const char* utf8script) const;
+  MaybeOrValue<Value> RunScript(const std::string& utf8script) const;
+  MaybeOrValue<Value> RunScript(String script) const;
 };
 
 /// A JavaScript value of unknown type.
@@ -406,6 +468,8 @@ class Value {
   /// - napi_value
   template <typename T>
   static Value From(napi_env env, const T& value);
+
+  static void CheckCast(napi_env env, napi_value value);
 
   /// Converts to a Node-API value primitive.
   ///
@@ -472,6 +536,10 @@ class Value {
   /// asserts that the actual type is the expected type.
   template <typename T>
   T As() const;
+
+  // Unsafe Value::As(), should be avoided.
+  template <typename T>
+  T UnsafeAs() const;
 
   MaybeOrValue<Boolean> ToBoolean()
       const;  ///< Coerces a value to a JavaScript boolean.
@@ -1268,7 +1336,7 @@ class TypedArrayOf : public TypedArray {
       napi_typedarray_type type =
           TypedArray::TypedArrayTypeForPrimitiveType<T>()
 #else
-        napi_typedarray_type type
+      napi_typedarray_type type
 #endif
       ///< Type of array, if different from the default array type for the
       ///< template parameter T.
@@ -1291,7 +1359,7 @@ class TypedArrayOf : public TypedArray {
       napi_typedarray_type type =
           TypedArray::TypedArrayTypeForPrimitiveType<T>()
 #else
-        napi_typedarray_type type
+      napi_typedarray_type type
 #endif
       ///< Type of array, if different from the default array type for the
       ///< template parameter T.
@@ -1381,8 +1449,8 @@ class DataView : public Object {
   template <typename T>
   void WriteData(size_t byteOffset, T value) const;
 
-  void* _data;
-  size_t _length;
+  void* _data{};
+  size_t _length{};
 };
 
 class Function : public Object {
@@ -1715,7 +1783,7 @@ FunctionReference Persistent(Function value);
 ///
 /// Following C++ statements will not be executed. The exception will bubble
 /// up as a C++ exception of type `Napi::Error`, until it is either caught
-/// while still in C++, or else automatically propataged as a JavaScript
+/// while still in C++, or else automatically propagated as a JavaScript
 /// exception when the callback returns to JavaScript.
 ///
 /// #### Example 2A - Propagating a Node-API C++ exception:
@@ -1888,7 +1956,7 @@ class CallbackInfo {
   napi_value _this;
   size_t _argc;
   napi_value* _argv;
-  napi_value _staticArgs[6];
+  napi_value _staticArgs[6]{};
   napi_value* _dynamicArgs;
   void* _data;
 };
@@ -2395,6 +2463,7 @@ class ObjectWrap : public InstanceWrap<T>, public Reference<Object> {
       napi_property_attributes attributes = napi_default);
   static Napi::Value OnCalledAsFunction(const Napi::CallbackInfo& callbackInfo);
   virtual void Finalize(Napi::Env env);
+  virtual void Finalize(BasicEnv env);
 
  private:
   using This = ObjectWrap<T>;
@@ -2409,7 +2478,12 @@ class ObjectWrap : public InstanceWrap<T>, public Reference<Object> {
                                                 napi_callback_info info);
   static napi_value StaticSetterCallbackWrapper(napi_env env,
                                                 napi_callback_info info);
-  static void FinalizeCallback(napi_env env, void* data, void* hint);
+  static void FinalizeCallback(node_addon_api_basic_env env,
+                               void* data,
+                               void* hint);
+
+  static void PostFinalizeCallback(napi_env env, void* data, void* hint);
+
   static Function DefineClass(Napi::Env env,
                               const char* utf8name,
                               const size_t props_count,
@@ -2440,6 +2514,7 @@ class ObjectWrap : public InstanceWrap<T>, public Reference<Object> {
   }
 
   bool _construction_failed = true;
+  bool _finalized = false;
 };
 
 class HandleScope {
@@ -3160,14 +3235,14 @@ class AsyncProgressQueueWorker
 // Memory management.
 class MemoryManagement {
  public:
-  static int64_t AdjustExternalMemory(Env env, int64_t change_in_bytes);
+  static int64_t AdjustExternalMemory(BasicEnv env, int64_t change_in_bytes);
 };
 
 // Version management
 class VersionManagement {
  public:
-  static uint32_t GetNapiVersion(Env env);
-  static const napi_node_version* GetNodeVersion(Env env);
+  static uint32_t GetNapiVersion(BasicEnv env);
+  static const napi_node_version* GetNodeVersion(BasicEnv env);
 };
 
 #if NAPI_VERSION > 5

@@ -30,6 +30,7 @@
         'error.cc',
         'error_handling_for_primitives.cc',
         'external.cc',
+        'finalizer_order.cc',
         'function.cc',
         'function_reference.cc',
         'handlescope.cc',
@@ -87,18 +88,31 @@
       'build_sources_type_check': [
         'value_type_cast.cc'
       ],
+      'want_coverage': '<!(node -p process.env.npm_config_coverage)',
+      'use_node_api_headers': '<!(node -p process.env.use_node_api_headers)',
       'conditions': [
         ['disable_deprecated!="true"', {
           'build_sources': ['object/object_deprecated.cc']
         }]
       ]
     },
+    'conditions': [
+      ['want_coverage=="true" and OS=="linux"', {
+        'cflags_cc': ['--coverage'],
+        'ldflags': ['--coverage'],
+      }],
+      ['use_node_api_headers=="true"', {
+        # prepend to the include_dirs list
+        'include_dirs+': ["<!(node -p \"require('node-api-headers').include_dir\")"],
+      }],
+    ],
   },
   'targets': [
     {
       'target_name': 'binding',
       'dependencies': ['../node_addon_api.gyp:node_addon_api_except'],
-      'sources': ['>@(build_sources)']
+      'sources': ['>@(build_sources)'],
+      'defines': ['NODE_ADDON_API_ENABLE_TYPE_CHECK_ON_AS']
     },
     {
       'target_name': 'binding_noexcept',

@@ -5,13 +5,13 @@
     ],
     'variables': {
       'NAPI_VERSION%': "<!(node -p \"process.env.NAPI_VERSION || process.versions.napi\")",
-      'disable_deprecated': "<!(node -p \"process.env['npm_config_disable_deprecated']\")"
+      'require_basic_finalizers': "<!(node -p \"process.env['npm_config_require_basic_finalizers']\")",
     },
     'conditions': [
       ['NAPI_VERSION!=""', { 'defines': ['NAPI_VERSION=<@(NAPI_VERSION)'] } ],
       ['NAPI_VERSION==2147483647', { 'defines': ['NAPI_EXPERIMENTAL'] } ],
-      ['disable_deprecated=="true"', {
-        'defines': ['NODE_ADDON_API_DISABLE_DEPRECATED']
+      ['require_basic_finalizers=="true"', {
+        'defines': ['NODE_ADDON_API_REQUIRE_BASIC_FINALIZERS'],
       }],
       ['OS=="mac"', {
         'cflags+': ['-fvisibility=hidden'],
@@ -27,7 +27,9 @@
   'targets': [
     {
       'target_name': 'addon',
-      'defines': [ 'NAPI_CPP_EXCEPTIONS' ],
+      'defines': [
+        'NAPI_CPP_EXCEPTIONS'
+      ],
       'cflags!': [ '-fno-exceptions' ],
       'cflags_cc!': [ '-fno-exceptions' ],
       'msvs_settings': {
@@ -41,23 +43,6 @@
         'MACOSX_DEPLOYMENT_TARGET': '10.7',
         'GCC_ENABLE_CPP_EXCEPTIONS': 'YES',
       },
-    },
-    {
-      'target_name': 'addon_noexcept',
-      'defines': [ 'NAPI_DISABLE_CPP_EXCEPTIONS' ],
-      'cflags': [ '-fno-exceptions' ],
-      'cflags_cc': [ '-fno-exceptions' ],
-      'msvs_settings': {
-        'VCCLCompilerTool': {
-          'ExceptionHandling': 0,
-          'EnablePREfast': 'true',
-        },
-      },
-      'xcode_settings': {
-        'CLANG_CXX_LIBRARY': 'libc++',
-        'MACOSX_DEPLOYMENT_TARGET': '10.7',
-        'GCC_ENABLE_CPP_EXCEPTIONS': 'NO',
-      },
-    },
-  ],
+    }
+  ]
 }

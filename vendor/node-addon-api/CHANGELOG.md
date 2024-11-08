@@ -1,5 +1,73 @@
 # node-addon-api Changelog
 
+## [8.2.2](https://github.com/nodejs/node-addon-api/compare/v8.2.1...v8.2.2) (2024-11-07)
+
+
+### Bug Fixes
+
+* mark external memory and version APIs as basic ([#1597](https://github.com/nodejs/node-addon-api/issues/1597)) ([78da4fa](https://github.com/nodejs/node-addon-api/commit/78da4fa2251af1e4de16efac94d92388f117ae6e))
+* missing napi_delete_reference on ObjectWrap ref ([#1607](https://github.com/nodejs/node-addon-api/issues/1607)) ([98aae33](https://github.com/nodejs/node-addon-api/commit/98aae3343c3af36b4befd6b67c4cb19ba49b8d20))
+
+## [8.2.1](https://github.com/nodejs/node-addon-api/compare/v8.2.0...v8.2.1) (2024-10-09)
+
+
+### Bug Fixes
+
+* failed type cast checks in Symbol::WellKnown ([#1581](https://github.com/nodejs/node-addon-api/issues/1581)) ([d8523a7](https://github.com/nodejs/node-addon-api/commit/d8523a708030a0a3abb9d7832051c70e2dafac3d))
+* missing node_api_nogc_env definition ([#1585](https://github.com/nodejs/node-addon-api/issues/1585)) ([6ba3891](https://github.com/nodejs/node-addon-api/commit/6ba3891954d8b56215d133e54a86cb621e476b9e))
+
+## [8.2.0](https://github.com/nodejs/node-addon-api/compare/v8.1.0...v8.2.0) (2024-09-19)
+
+
+### Features
+
+* add support for nogc types via `BasicEnv`  ([#1514](https://github.com/nodejs/node-addon-api/issues/1514)) ([b4aeecb](https://github.com/nodejs/node-addon-api/commit/b4aeecb046480eeaaf1c578a140f71ac0e77094f))
+* add support for requiring basic finalizers ([#1568](https://github.com/nodejs/node-addon-api/issues/1568)) ([7bcb826](https://github.com/nodejs/node-addon-api/commit/7bcb826aa4323f450b3c58f9c7fb34243ff13f77))
+
+
+### Bug Fixes
+
+* call base basic finalizer if none defined ([#1574](https://github.com/nodejs/node-addon-api/issues/1574)) ([294a43f](https://github.com/nodejs/node-addon-api/commit/294a43f8c6a4c79b3295a8f1b83d4782d44cfe74))
+
+## [8.1.0](https://github.com/nodejs/node-addon-api/compare/node-addon-api-v8.0.0...node-addon-api-v8.1.0) (2024-07-05)
+
+
+### Features
+
+* Expose version property in public API ([#1479](https://github.com/nodejs/node-addon-api/issues/1479)) ([23bb42b](https://github.com/nodejs/node-addon-api/commit/23bb42b5e47630c9082dddbabea555626571926e))
+* improve messages on CheckCast ([#1507](https://github.com/nodejs/node-addon-api/issues/1507)) ([bf49519](https://github.com/nodejs/node-addon-api/commit/bf49519a4ce08ee5320327c9a0199cd89d5b87b3))
+
+
+### Bug Fixes
+
+* fix compilation for Visual Studio 2022 ([#1492](https://github.com/nodejs/node-addon-api/issues/1492)) ([e011720](https://github.com/nodejs/node-addon-api/commit/e011720010af26ed66638ceac822e5f1c5e43cde))
+* restore ability to run under NAPI_EXPERIMENTAL ([#1409](https://github.com/nodejs/node-addon-api/issues/1409)) ([40bcb09](https://github.com/nodejs/node-addon-api/commit/40bcb09e6b82e7a1164cb3de56cb503d9b5a3d37))
+
+## 2024-03-01 Version 8.0.0, @legendecas
+
+### Notable changes
+
+- Support for Node.js v16.x is no longer maintained.
+
+### Commits
+
+* \[[`df2147a2b6`](https://github.com/nodejs/node-addon-api/commit/df2147a2b6)] - build(deps): bump github/codeql-action from 3.24.3 to 3.24.5 (dependabot\[bot]) [#1455](https://github.com/nodejs/node-addon-api/pull/1455)
+* \[[`eb4fa9b55a`](https://github.com/nodejs/node-addon-api/commit/eb4fa9b55a)] - build(deps): bump actions/dependency-review-action from 4.1.0 to 4.1.3 (dependabot\[bot]) [#1452](https://github.com/nodejs/node-addon-api/pull/1452)
+* \[[`f85e8146bb`](https://github.com/nodejs/node-addon-api/commit/f85e8146bb)] - build(deps): bump github/codeql-action from 3.23.2 to 3.24.3 (dependabot\[bot]) [#1448](https://github.com/nodejs/node-addon-api/pull/1448)
+* \[[`b84deb0d2f`](https://github.com/nodejs/node-addon-api/commit/b84deb0d2f)] - build(deps): bump actions/dependency-review-action from 4.0.0 to 4.1.0 (dependabot\[bot]) [#1447](https://github.com/nodejs/node-addon-api/pull/1447)
+* \[[`7dcee380cd`](https://github.com/nodejs/node-addon-api/commit/7dcee380cd)] - build(deps): bump actions/setup-node from 4.0.1 to 4.0.2 (dependabot\[bot]) [#1444](https://github.com/nodejs/node-addon-api/pull/1444)
+* \[[`a727b629fe`](https://github.com/nodejs/node-addon-api/commit/a727b629fe)] - build(deps): bump actions/upload-artifact from 4.3.0 to 4.3.1 (dependabot\[bot]) [#1443](https://github.com/nodejs/node-addon-api/pull/1443)
+* \[[`ea712094e3`](https://github.com/nodejs/node-addon-api/commit/ea712094e3)] - build(deps): bump step-security/harden-runner from 2.6.1 to 2.7.0 (dependabot\[bot]) [#1440](https://github.com/nodejs/node-addon-api/pull/1440)
+* \[[`898e5006a5`](https://github.com/nodejs/node-addon-api/commit/898e5006a5)] - build(deps): bump github/codeql-action from 3.23.1 to 3.23.2 (dependabot\[bot]) [#1439](https://github.com/nodejs/node-addon-api/pull/1439)
+* \[[`66e6e0e4b6`](https://github.com/nodejs/node-addon-api/commit/66e6e0e4b6)] - build(deps): bump actions/upload-artifact from 4.0.0 to 4.3.0 (dependabot\[bot]) [#1438](https://github.com/nodejs/node-addon-api/pull/1438)
+* \[[`f1ca4ccd7f`](https://github.com/nodejs/node-addon-api/commit/f1ca4ccd7f)] - build(deps): bump actions/dependency-review-action from 3.1.5 to 4.0.0 (dependabot\[bot]) [#1433](https://github.com/nodejs/node-addon-api/pull/1433)
+* \[[`c58112d52e`](https://github.com/nodejs/node-addon-api/commit/c58112d52e)] - build(deps): bump github/codeql-action from 3.23.0 to 3.23.1 (dependabot\[bot]) [#1430](https://github.com/nodejs/node-addon-api/pull/1430)
+* \[[`f1b9c0bc24`](https://github.com/nodejs/node-addon-api/commit/f1b9c0bc24)] - **chore**: remove v16.x regular CI runs (Chengzhong Wu) [#1437](https://github.com/nodejs/node-addon-api/pull/1437)
+* \[[`c6561d90d6`](https://github.com/nodejs/node-addon-api/commit/c6561d90d6)] - **chore**: reduce dependabot noise (Chengzhong Wu) [#1436](https://github.com/nodejs/node-addon-api/pull/1436)
+* \[[`42931eeba6`](https://github.com/nodejs/node-addon-api/commit/42931eeba6)] - **doc**: reorganize readme (Chengzhong Wu) [#1441](https://github.com/nodejs/node-addon-api/pull/1441)
+* \[[`3b9f3db14e`](https://github.com/nodejs/node-addon-api/commit/3b9f3db14e)] - **doc**: update changelog maker commands (Chengzhong Wu) [#1431](https://github.com/nodejs/node-addon-api/pull/1431)
+* \[[`034c039298`](https://github.com/nodejs/node-addon-api/commit/034c039298)] - **test**: heed npm\_config\_debug (Gabriel Schulhof) [#1445](https://github.com/nodejs/node-addon-api/pull/1445)
+
 ## 2024-01-18 Version 7.1.0, @legendecas
 
 ### Notable changes
@@ -1173,5 +1241,3 @@ yet backported in the previous Node.js version.
 * [0a899bf1c5] - doc: update indication of latest version (Michael Dawson) https://github.com/nodejs/node-addon-api/pull/211
 * [17c74e5a5e] - n-api: RangeError in napi_create_dataview() (Jinho Bang) https://github.com/nodejs/node-addon-api/pull/214
 * [4058a29989] - n-api: fix memory leak in napi_async_destroy() (Jinho Bang) https://github.com/nodejs/node-addon-api/pull/213
-
-
