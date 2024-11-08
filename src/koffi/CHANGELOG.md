@@ -739,9 +739,10 @@ This entry documents changes since version 1.1.0.
 
 The following features and improvements are planned, not necessarily in that order:
 
+- Port Koffi to Loong64 ISA and ABI
+- Port Koffi to PowerPC (POWER9+) ISA and ABI
 - Optimize passing of structs and arrays (with auto-generated JS)
 - Automate Windows/AArch64 (qemu) and macOS/AArch64 (how? ... thanks Apple) tests
 - Create a real-world example, using several libraries (Raylib, SQLite, libsodium) to illustrate various C API styles
 - Add simple struct type parser
-- Port Koffi to PowerPC (POWER9+) ABI
 - Fix assembly unwind and CFI directives for better debugging experience
