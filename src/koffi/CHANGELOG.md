@@ -69,7 +69,7 @@ Consult the [migration guide](migration) for more information.
 - Work around MSVC compiler bug introduced in Visual Studio 17.10
 
 > [!WARNING]
-Use on platforms without pre-built binaries is broken in Koffi 2.8.10, skip this version.
+> Use on platforms without pre-built binaries is broken in Koffi 2.8.10, skip this version.
 
 #### Koffi 2.8.9 (2024-05-17)
 
