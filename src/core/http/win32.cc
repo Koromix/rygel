@@ -37,14 +37,6 @@
 #include <mswsock.h>
 #include <io.h>
 
-#if !defined(UNIX_PATH_MAX)
-    #define UNIX_PATH_MAX 108
-#endif
-typedef struct sockaddr_un {
-    ADDRESS_FAMILY sun_family;
-    char sun_path[UNIX_PATH_MAX];
-} SOCKADDR_UN, *PSOCKADDR_UN;
-
 namespace RG {
 
 static const int BaseAccepts = 512;
