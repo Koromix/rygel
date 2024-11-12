@@ -25,6 +25,13 @@ It is currently in development and there are no public builds yet.
 
 Find out more on the official website: https://goupile.org/
 
+<p style="display: flex; gap: 2em; justify-content: center;">
+    <a href="https://nlnet.nl/" style="border-bottom-color: transparent; margin-top: 8px;" target="_blank"><img src="{{ ASSET static/nlnet/nlnet.svg }}" height="60" alt="NLnet Foundation"/></a>
+    <a href="https://nlnet.nl/project/Goupile/" style="border-bottom-color: transparent; margin-top: 8px;"><img src="{{ ASSET static/nlnet/ngi0core.svg }}" height="60" alt="NGI Zero Core"/></a>
+</p>
+
+This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
+
 # License
 
 This program is free software: you can redistribute it and/or modify it under the terms of the **GNU General Public License** as published by the Free Software Foundation, either **version 3 of the License**, or (at your option) any later version.
