@@ -39,7 +39,7 @@
 - Correction du widget `form.time()` cassé dans l'ancien Goupile
 - Correction des balises d'erreur prématurées avec les erreurs retardées
 - Réduction des statuts annotés disponibles en mode verrouillé
-- Ciblage de JS ES 2022 pour lae support `top-level await`
+- Ciblage de JS ES 2022 pour le support `top-level await`
 - Introduction d'un système d'inscription avec courrier électronique
 
 ## Goupile 3.6

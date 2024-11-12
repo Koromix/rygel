@@ -39,7 +39,7 @@
 - Fix broken `form.time()` widget in legacy Goupile
 - Fix error tags showing up for delayed errors
 - Reduce available annotation statuses in locked mode
-- Target ES 2022 for top-level await support
+- Target ES 2022 for `top-level await` support
 - Introduce basic mail signup system
 
 ## Goupile 3.6
