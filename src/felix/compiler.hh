@@ -210,6 +210,7 @@ public:
     HostPlatform platform;
     HostArchitecture architecture;
     const char *name;
+    char title[64];
 
     virtual ~Compiler() {}
 
@@ -255,7 +256,10 @@ public:
 
 protected:
     Compiler(HostPlatform platform, HostArchitecture architecture, const char *name)
-        : platform(platform), architecture(architecture), name(name) {}
+        : platform(platform), architecture(architecture), name(name)
+    {
+        CopyString(name, title);
+    }
 };
 
 struct SupportedCompiler {

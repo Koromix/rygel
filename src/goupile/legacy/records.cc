@@ -1112,6 +1112,9 @@ void HandleLegacyExport(http_IO *io, InstanceHolder *instance)
 
     RecordExporter exporter(instance);
 
+    // Export can take a long time, don't timeout because request looks idle
+    io->SetTimeout(120000);
+
     while (stmt.Step()) {
         const char *root_ulid = (const char *)sqlite3_column_text(stmt, 0);
         const char *ulid = (const char *)sqlite3_column_text(stmt, 1);

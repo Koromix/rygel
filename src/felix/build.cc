@@ -665,7 +665,7 @@ bool Builder::UpdateVersionSource(const char *target, const char *version, const
               "const char *FelixVersion = \"%2\";\n"
               "const char *FelixCompiler = \"%3 (%4)\";\n",
         target, version ? version : "unknown",
-        build.compiler->name, FmtFlags(build.features, CompileFeatureOptions));
+        build.compiler->title, FmtFlags(build.features, CompileFeatureOptions));
 
     bool new_version;
     if (TestFile(dest_filename, FileType::File)) {

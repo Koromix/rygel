@@ -74,6 +74,7 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
         if (token == marker) {
             int major = 0;
             int minor = 0;
+            int patch = 0;
 
             if (!ParseInt(remain, &major, 0, &remain)) {
                 LogError("Unexpected version format returned by '%1'", cmd);
@@ -87,8 +88,16 @@ static int ParseVersion(const char *cmd, Span<const char> output, const char *ma
                     return -1;
                 }
             }
+            if(remain[0] == '.') {
+                remain = remain.Take(1, remain.len - 1);
 
-            int version = major * 100 + minor;
+                if (!ParseInt(remain, &patch, 0, &remain)) {
+                    LogError("Unexpected version format returned by '%1'", cmd);
+                    return -1;
+                }
+            }
+
+            int version = major * 10000 + minor * 100 + patch;
             return version;
         }
     }
@@ -319,6 +328,8 @@ public:
         if (!async.Sync())
             return nullptr;
 
+        Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->clang_ver, 3, 100));
+
         return compiler;
     }
 
@@ -347,7 +358,7 @@ public:
         }
         supported |= (int)CompileFeature::ZeroInit;
         if (platform != HostPlatform::WasmWasi) {
-            if (clang_ver >= 1300 && platform != HostPlatform::OpenBSD) {
+            if (clang_ver >= 130000 && platform != HostPlatform::OpenBSD) {
                 supported |= (int)CompileFeature::CFI; // LTO only
             }
             if (platform != HostPlatform::Windows) {
@@ -393,7 +404,7 @@ public:
             LogError("Clang CFI feature requires LTO compilation");
             return false;
         }
-        if (lld_ver < 1100 && (features & (int)CompileFeature::ShuffleCode)) {
+        if (lld_ver < 110000 && (features & (int)CompileFeature::ShuffleCode)) {
             LogError("ShuffleCode requires LLD >= 11, try --host option (e.g. --host=:clang-11:lld-11)");
             return false;
         }
@@ -487,7 +498,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=%2", cxx, clang_ver >= 1000 ? "gnu++20" : "gnu++2a"); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=%2", cxx, clang_ver >= 100000 ? "gnu++20" : "gnu++2a"); } break;
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -514,13 +525,13 @@ public:
         // Build options
         Fmt(&buf, " -I. -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
         Fmt(&buf, " -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free");
-        if (clang_ver >= 1300) {
+        if (clang_ver >= 130000) {
             Fmt(&buf, " -fno-finite-loops");
         }
         if (features & (int)CompileFeature::MinimizeSize) {
             Fmt(&buf, " -Os -fwrapv -DNDEBUG -ffunction-sections -fdata-sections");
         } else if (features & (int)CompileFeature::Optimize) {
-            const char *level = (clang_ver >= 1700) ? "-O3" : "-O2";
+            const char *level = (clang_ver >= 170000) ? "-O3" : "-O2";
             Fmt(&buf, " %1 -fwrapv -DNDEBUG", level);
         } else {
             Fmt(&buf, " -O0 -ftrapv");
@@ -594,12 +605,12 @@ public:
             case HostPlatform::Linux: {
                 Fmt(&buf, " -pthread -fPIC -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
 
-                if (clang_ver >= 1100) {
+                if (clang_ver >= 110000) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
 
                 if (features & (int)CompileFeature::Optimize) {
-                    Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", clang_ver >= 1701 ? 3 : 2);
+                    Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", clang_ver >= 170100 ? 3 : 2);
                 } else {
                     Fmt(&buf, " -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
@@ -613,7 +624,7 @@ public:
             default: {
                 Fmt(&buf, " -pthread -fPIC -D_FILE_OFFSET_BITS=64");
 
-                if (clang_ver >= 1100) {
+                if (clang_ver >= 110000) {
                     Fmt(&buf, " -fno-semantic-interposition");
                 }
 
@@ -646,7 +657,7 @@ public:
             Fmt(&buf, " -fsanitize=undefined");
         }
         Fmt(&buf, " -fstack-protector-strong --param ssp-buffer-size=4");
-        if (platform == HostPlatform::Linux && clang_ver >= 1100) {
+        if (platform == HostPlatform::Linux && clang_ver >= 110000) {
             Fmt(&buf, " -fstack-clash-protection");
         }
         if (features & (int)CompileFeature::SafeStack) {
@@ -659,7 +670,7 @@ public:
         if (features & (int)CompileFeature::ZeroInit) {
             Fmt(&buf, " -ftrivial-auto-var-init=zero");
 
-            if (clang_ver < 1600) {
+            if (clang_ver < 160000) {
                 Fmt(&buf, " -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang");
             }
         }
@@ -818,7 +829,7 @@ public:
                 Fmt(&buf, " -pthread -Wl,-z,relro,-z,now,-z,noexecstack,-z,separate-code,-z,stack-size=1048576");
 
                 if (lld_ver) {
-                    if (lld_ver >= 1300) {
+                    if (lld_ver >= 130000) {
                         // The second flag is needed to fix undefined __start_/__stop_ symbols related to --gc-sections
                         Fmt(&buf, "  -Wl,--gc-sections -z nostart-stop-gc");
                     }
@@ -863,7 +874,7 @@ public:
             Fmt(&buf, " -fsanitize=cfi");
         }
         if (features & (int)CompileFeature::ShuffleCode) {
-            if (lld_ver >= 1300) {
+            if (lld_ver >= 130000) {
                 Fmt(&buf, " -Wl,--shuffle-sections=*=0");
             } else {
                 Fmt(&buf, " -Wl,--shuffle-sections=0");
@@ -967,6 +978,8 @@ public:
             }
         };
 
+        Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->gcc_ver, 3, 100));
+
         return compiler;
     }
 
@@ -1025,7 +1038,7 @@ public:
             LogError("Cannot use ASan and TSan at the same time");
             return false;
         }
-        if (gcc_ver < 1201 && (features & (int)CompileFeature::ZeroInit)) {
+        if (gcc_ver < 120100 && (features & (int)CompileFeature::ZeroInit)) {
             LogError("ZeroInit requires GCC >= 12.1, try --host option (e.g. --host=:gcc-12)");
             return false;
         }
@@ -1114,7 +1127,7 @@ public:
         // Compiler
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
-            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=%2", cxx, gcc_ver >= 1100 ? "gnu++20" : "gnu++2a"); } break;
+            case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=%2", cxx, gcc_ver >= 110000 ? "gnu++20" : "gnu++2a"); } break;
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -1138,7 +1151,7 @@ public:
         // Build options
         Fmt(&buf, " -fvisibility=hidden -fno-strict-aliasing -fno-delete-null-pointer-checks -fno-omit-frame-pointer");
         Fmt(&buf, " -fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free");
-        if (gcc_ver >= 1000) {
+        if (gcc_ver >= 100000) {
             Fmt(&buf, " -fno-finite-loops");
         }
         if (features & (int)CompileFeature::MinimizeSize) {
@@ -1219,7 +1232,7 @@ public:
                 Fmt(&buf, " -pthread -fPIC -fno-semantic-interposition -D_FILE_OFFSET_BITS=64 -D_GLIBCXX_ASSERTIONS");
 
                 if (features & (int)CompileFeature::Optimize) {
-                    Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", gcc_ver >= 1200 ? 3 : 2);
+                    Fmt(&buf, " -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=%1", gcc_ver >= 120000 ? 3 : 2);
                 } else {
                     Fmt(&buf, " -D_GLIBCXX_DEBUG -D_GLIBCXX_SANITIZE_VECTOR");
                 }
@@ -1508,6 +1521,8 @@ public:
             }
         }
 
+        Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->cl_ver, 3, 100));
+
         return compiler;
     }
 
@@ -1579,7 +1594,7 @@ public:
         RG_ASSERT(alloc);
 
         // Strings literals were limited in length before MSVC 2022
-        bool use_arrays = (cl_ver < 1930);
+        bool use_arrays = (cl_ver < 193000);
 
         RG::MakeEmbedCommand(embed_filenames, use_arrays, embed_options, dest_filename, alloc, out_cmd);
     }
