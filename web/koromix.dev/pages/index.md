@@ -67,7 +67,7 @@ The projects on this page are provided as-is, and are in **various states of com
 
 Project | Description | Language
 ------- | ----------- | --------
-[Serf](https://github.com/Koromix/rygel/tree/master/src/attic#serf) | Serf is a small HTTP server made for local testing with customizable headers | C++
+[Nestor](https://github.com/Koromix/rygel/tree/master/src/attic#nestor) | Nestor is a small HTTP server made for local testing with customizable headers | C++
 [SeatSH](https://github.com/Koromix/rygel/tree/master/src/attic#seatsh) | SeatSH is a Windows service that enables you to launch graphical programs from an SSH connection on Windows 10, for automated test systems. | C++
 [SaneBB](https://github.com/Koromix/libraries/blob/master/SaneBB.java) | Small (single-file) and fast BBCode parser in Java | Java
 [DRD](https://github.com/Koromix/rygel/tree/master/src/drd) | Alternative french PMSI MCO classifier<br>*Library (libdrd), command-line tool (drdc) and R package (drdR)* | C++

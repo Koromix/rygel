@@ -748,7 +748,7 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Default config filename
-    const char *config_filename = Fmt(&temp_alloc, "%1%/serf.ini", GetApplicationDirectory()).ptr;
+    const char *config_filename = Fmt(&temp_alloc, "%1%/nestor.ini", GetApplicationDirectory()).ptr;
     bool explicit_config = false;
 
     const auto print_usage = [=](StreamWriter *st) {

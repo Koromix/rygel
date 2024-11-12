@@ -1,6 +1,6 @@
-# Serf
+# Nestor
 
-Serf is a **small HTTP server made for local testing**. It can serve static file, proxy remote websites (GET only), and you can customize the headers with a simple config file.
+Nestor is a **small HTTP server made for local testing**. It can serve static file, proxy remote websites (GET only), and you can customize the headers with a simple config file.
 
 Here is an example configuration file for serving local files with the required Cross-Origin headers to enabe SharedArrayBuffer support:
 
@@ -10,7 +10,7 @@ Here is an example configuration file for serving local files with the required 
 SocketType = Dual
 Port = 80
 # UnixPath is ignored unless SocketType is set to Unix
-UnixPath = /run/serf.sock
+UnixPath = /run/nestor.sock
 
 [Settings]
 # Enable AutoIndex to list content of directories without index.html
@@ -30,7 +30,7 @@ Cross-Origin-Embedder-Policy = require-corp
 Cross-Origin-Opener-Policy = same-origin
 ```
 
-Once this file exists, run serf with `serf -C serf.ini`. If you don't specify the file explicitly, serf will try to find one from its application directory (i.e. the directory where the executable resides).
+Once this file exists, run nestor with `nestor -C nestor.ini`. If you don't specify the file explicitly, Nestor will try to find one from its application directory (i.e. the directory where the executable resides).
 
 Here is another configuration to reverse proxy https://koromix.dev/ unless a local file match in the directory `files/` exists:
 
@@ -44,7 +44,7 @@ Source = files
 Source = https://koromix.dev/
 ```
 
-You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#serf).
+You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/attic#nestor).
 
 # SeatSH
 
