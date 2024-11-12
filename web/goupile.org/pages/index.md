@@ -9,6 +9,13 @@ Goupile est un **outil de conception d'eCRF libre** qui s'efforce de rendre la c
 
 Goupile est publié sous licence [GPL version 3](https://www.gnu.org/licenses/#GPL), utilisez le librement. Nous proposons également des prestations d'hébergement payantes basées sur Goupile adaptées à vos besoins, consultez la [page des tarifs](/pricing) ou contactez-nous pour plus d'information.
 
+<p style="display: flex; gap: 2em; justify-content: center;">
+    <a href="https://nlnet.nl/" style="border-bottom-color: transparent; margin-top: 8px;" target="_blank"><img src="{{ ASSET static/nlnet/nlnet.svg }}" height="60" alt="NLnet Foundation"/></a>
+    <a href="https://nlnet.nl/project/Goupile/" style="border-bottom-color: transparent; margin-top: 8px;"><img src="{{ ASSET static/nlnet/ngi0core.svg }}" height="60" alt="NGI Zero Core"/></a>
+</p>
+
+Ce projet est sponsorisé par NLnet: https://nlnet.nl/project/Goupile/
+
 <div class="slideshow">
     <div class="legend">
         <p class="active">Créez et testez vos formulaires à la volée avec toutes sortes de widgets</p>
