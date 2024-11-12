@@ -692,6 +692,12 @@ void http_IO::SendFile(int status, const char *filename, const char *mimetype)
     SendFile(status, fd, file_info.size);
 }
 
+void http_IO::SetTimeout(int timeout)
+{
+    int64_t now = GetMonotonicTime();
+    timeout_at = now + timeout;
+}
+
 bool http_IO::Init(http_Socket *socket, int64_t start, struct sockaddr *sa)
 {
     this->socket = socket;

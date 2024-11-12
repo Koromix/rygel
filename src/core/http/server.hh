@@ -265,6 +265,8 @@ public:
     void SendFile(int status, const char *filename, const char *mimetype = nullptr);
     void SendFile(int status, int fd, int64_t len);
 
+    void SetTimeout(int timeout);
+
 private:
     bool Init(http_Socket *socket, int64_t start, struct sockaddr *sa);
 
