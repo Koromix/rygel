@@ -1,6 +1,12 @@
-# Goupile changelog
+# Historique des versions
 
 ## Goupile 3.7
+
+### Goupile 3.7.3 (12/11/2024)
+
+- Correction d'un crash après changement de mot de passe et activation TOTP
+- Correction des sous-projets mal rangés dans le panneau d'administration
+- Correction d'erreurs avec des attributs utilisateur email et téléphone vides
 
 ### Goupile 3.7.2 (12/11/2024)
 

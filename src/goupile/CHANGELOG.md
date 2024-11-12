@@ -2,6 +2,12 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.3 (2024-11-12)
+
+- Fix deadlocks after password change and TOTP activation
+- Fix badly ordered sub-projects in admin panel
+- Fix errors with empty email and phone user attributes
+
 ### Goupile 3.7.2 (2024-11-12)
 
 - Restore missing Administration link in profile menu
