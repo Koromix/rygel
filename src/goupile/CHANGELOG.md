@@ -2,6 +2,10 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.4 (2024-11-12)
+
+- Fix premature HTTP timeout when exporting data from legacy instance
+
 ### Goupile 3.7.3 (2024-11-12)
 
 - Fix deadlocks after password change and TOTP activation

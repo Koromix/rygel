@@ -2,6 +2,10 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.4 (12/11/2024)
+
+- Correction d'un timeout HTTP prématuré lors de l'export de données en v2
+
 ### Goupile 3.7.3 (12/11/2024)
 
 - Correction d'un crash après changement de mot de passe et activation TOTP
