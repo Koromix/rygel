@@ -1796,6 +1796,9 @@ FmtArg FmtVersion(int64_t version, int parts, int by)
         divisor /= by;
     }
 
+    // Remove trailing dot
+    buf.ptr[-1] = 0;
+
     return arg;
 }
 
