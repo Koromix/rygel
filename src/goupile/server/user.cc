@@ -1101,7 +1101,7 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    std::lock_guard<std::shared_mutex> lock_excl(session->mutex);
+    std::unique_lock<std::shared_mutex> lock_excl(session->mutex);
 
     if (session->confirm == SessionConfirm::None) {
         LogError("Session does not need confirmation");
@@ -1184,6 +1184,7 @@ void HandleSessionConfirm(http_IO *io, InstanceHolder *instance)
                 session->confirm = SessionConfirm::None;
                 sodium_memzero(session->secret, RG_SIZE(session->secret));
 
+                lock_excl.unlock();
                 WriteProfileJson(io, session.GetRaw(), instance);
             } else {
                 const EventInfo *event = RegisterEvent(request.client_addr, session->username);
@@ -1221,7 +1222,7 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
         return;
     }
 
-    std::lock_guard<std::shared_mutex> lock_excl(session->mutex);
+    std::unique_lock<std::shared_mutex> lock_excl(session->mutex);
 
     if (session->type != SessionType::Login) {
         LogError("This account does not use passwords");
@@ -1358,6 +1359,8 @@ void HandleChangePassword(http_IO *io, InstanceHolder *instance)
 
     if (session->change_password) {
         session->change_password = false;
+
+        lock_excl.unlock();
         WriteProfileJson(io, session.GetRaw(), instance);
     } else {
         io->SendText(200, "{}", "application/json");
