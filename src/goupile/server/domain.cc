@@ -824,10 +824,6 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
     }
 
     // Commit changes
-    std::sort(new_instances.begin(), new_instances.end(),
-              [](InstanceHolder *instance1, InstanceHolder *instance2) {
-        return CmpStr(instance1->key, instance2->key) < 0;
-    });
     std::swap(instances, new_instances);
     std::swap(instances_map, new_map);
 
