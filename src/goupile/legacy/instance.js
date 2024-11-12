@@ -692,14 +692,11 @@ function renderData() {
                 </tbody>
             </table>
 
-            <div class="ui_quick">
-                ${goupile.hasPermission('data_export') ? html`
-                    <a href=${ENV.urls.instance + 'api/records/export'} download>Exporter les données</a>
-                ` : ''}
-                <div style="flex: 1;"></div>
-                ${ENV.backup_key != null ? html`
-                    <a @click=${UI.wrap(backupRecords)}>Faire une sauvegarde chiffrée</a>
-                ` : ''}
+            <div class="ui_actions">
+                ${goupile.hasPermission('data_export') ?
+                    html`<button @click=${e => { window.location.href = ENV.urls.instance + 'api/records/export'; }}>Exporter les données</button>` : ''}
+                ${ENV.backup_key != null ?
+                    html`<button @click=${UI.wrap(backupRecords)}>Faire une sauvegarde chiffrée</button>` : ''}
             </div>
         </div>
     `;
