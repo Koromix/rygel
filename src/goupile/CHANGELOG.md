@@ -2,6 +2,11 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.2 (2024-11-12)
+
+- Restore missing Administration link in profile menu
+- Switch to proper export buttons in legacy instances
+
 ### Goupile 3.7.1 (2024-11-07)
 
 - Adjust default password constraints:

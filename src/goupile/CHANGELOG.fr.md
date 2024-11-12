@@ -2,6 +2,11 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.2 (12/11/2024)
+
+- Ajout du lien manquant vers le panneau d'administration
+- Utilisation de boutons d'export sur les instances v2
+
 ### Goupile 3.7.1 (07/11/2024)
 
 - Ajustement des contraintes par défaut des mots de passe :
