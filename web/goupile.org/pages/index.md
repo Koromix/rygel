@@ -7,7 +7,7 @@ Goupile est un **outil de conception d'eCRF libre** qui s'efforce de rendre la c
 > </div>
 > Attention, les sessions et les données de la version de démonstration sont régulièrement remises à zéro !
 
-Goupile est publié sous licence [GPL version 3](https://www.gnu.org/licenses/#GPL). Utilisez le librement. Nous proposons également des prestations d'hébergement payantes basées sur Goupile adaptées à vos besoins, consultez la [page des tarifs](/pricing) ou contactez-nous pour plus d'information.
+Goupile est publié sous licence [GPL version 3](https://www.gnu.org/licenses/#GPL), utilisez le librement. Nous proposons également des prestations d'hébergement payantes basées sur Goupile adaptées à vos besoins, consultez la [page des tarifs](/pricing) ou contactez-nous pour plus d'information.
 
 <div class="slideshow">
     <div class="legend">
