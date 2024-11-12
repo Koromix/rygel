@@ -2,6 +2,10 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.5 (2024-11-12)
+
+- Fix recurent crash in demo mode
+
 ### Goupile 3.7.4 (2024-11-12)
 
 - Fix premature HTTP timeout when exporting data from legacy instance
