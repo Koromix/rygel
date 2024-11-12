@@ -596,7 +596,7 @@ bool DomainHolder::Sync(const char *filter_key, bool thorough)
                     break;
                 } else {
                     bool match = !filter_key || TestStr(filter_key, instance_key) ||
-                                                TestStr(filter_key, master_key);
+                                 (master_key && TestStr(filter_key, master_key));
 
                     if (match) {
                         StartInfo start = {};
