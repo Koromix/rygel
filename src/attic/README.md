@@ -96,6 +96,17 @@ After that, the binary will be available in the `bin/Fast` directory.
 
 Put it somewhere pratical, ideally in the PATH (so you can use it easily), and install the service by running the commands given at the end by `seatsh --help` from a *command prompt with administrative privileges*.
 
+# Hodler
+
+Hodler is a simple and **very opinionated static-site builder** that I use to generate the pages for various static websites from Markdown sites.
+
+Some examples are:
+
+- [koromix.dev](https://koromix.dev/)
+- [koffi.dev](https://koffi.dev/)
+- [rekkord.org](https://rekkord.org/)
+- [demheter.fr](https://demheter.fr/)
+
 # Authool
 
 Authtool can **generate and check passwords**, and can also **create and check TOTP secrets and codes**. It can also generate a valid QR code PNG file with a TOTP secret.
@@ -105,10 +116,6 @@ Authtool can **generate and check passwords**, and can also **create and check T
 Empress uses the compression algorithms implemented in libcc to provide simple **single-file compression and decompression**, and so far supports Zlib, Gzip, Brotli and LZ4.
 
 Its main purpose is to test compression and decompression implementations against official tools.
-
-# Hodler
-
-Hodler is a simple and **very opinitated static-site builder** that I use to generate the pages on [koromix.dev](https://koromix.dev/) and [demheter.fr](https://demheter.fr/) from Markdown files.
 
 # Snaplite
 
