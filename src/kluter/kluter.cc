@@ -70,10 +70,10 @@ static Config config;
 
 static const char *GetDefaultDatabasePath()
 {
-    const char *filename = GetEnv("KLITTER_DATABASE");
+    const char *filename = GetEnv("KLUTER_DATABASE");
 
     if (!filename || !filename[0]) {
-        filename = "klitter.db";
+        filename = "kluter.db";
     }
 
     return filename;
@@ -869,7 +869,7 @@ bool DistributeContext::DeleteExtra(const DiskData &disk, const char *dest_dir, 
             } break;
 
             case FileType::File: {
-                if (TestStr(basename, ".klitter"))
+                if (TestStr(basename, ".kluter"))
                     break;
 
                 const char *filename = Fmt(&temp_alloc, "%1%2", dest_dir, basename).ptr;
@@ -948,7 +948,7 @@ static bool DistributeChanges(BackupSet *set, bool checksum)
         LogInfo("Detecting backup changes...");
 
         for (const char *disk_path: config.disk_paths) {
-            const char *uuid_filename = Fmt(&temp_alloc, "%1.klitter", disk_path).ptr;
+            const char *uuid_filename = Fmt(&temp_alloc, "%1.kluter", disk_path).ptr;
 
             if (!TestFile(uuid_filename, FileType::File))
                 continue;
@@ -1315,7 +1315,7 @@ Options:
 
     // Copy to backup disks
     for (const char *disk_path: config.disk_paths) {
-        const char *uuid_filename = Fmt(&temp_alloc, "%1.klitter", disk_path).ptr;
+        const char *uuid_filename = Fmt(&temp_alloc, "%1.kluter", disk_path).ptr;
 
         if (!TestFile(uuid_filename, FileType::File))
             continue;
@@ -1533,7 +1533,7 @@ bool IntegrateContext::AddNew(const char *src_dir)
             } break;
 
             case FileType::File: {
-                if (TestStr(basename, ".klitter"))
+                if (TestStr(basename, ".kluter"))
                     break;
 
                 const char *filename = Fmt(&temp_alloc, "%1%2", src_dir, basename).ptr;
@@ -1572,7 +1572,7 @@ bool IntegrateContext::DeleteOld()
     return success;
 }
 
-static int64_t EsimateAvailableSpace(BackupSet *set, int64_t disk_id, const char *disk_dir)
+static int64_t EstimateAvailableSpace(BackupSet *set, int64_t disk_id, const char *disk_dir)
 {
     VolumeInfo volume;
     if (!GetVolumeInfo(disk_dir, &volume))
@@ -1678,7 +1678,7 @@ Options:
 
     const char *uuid = nullptr;
     {
-        const char *filename = Fmt(&temp_alloc, "%1%/.klitter", disk_path).ptr;
+        const char *filename = Fmt(&temp_alloc, "%1%/.kluter", disk_path).ptr;
 
         if (TestFile(filename, FileType::File)) {
             uuid = ReadUUID(filename, &temp_alloc);
@@ -1725,7 +1725,7 @@ Options:
         }
 
         if (size < 0) {
-            int64_t available = EsimateAvailableSpace(&set, disk_id, disk_path);
+            int64_t available = EstimateAvailableSpace(&set, disk_id, disk_path);
 
             if (available < 0)
                 return false;
@@ -1846,7 +1846,7 @@ Options:
         }
 
         if (size < 0 && disk_path) {
-            int64_t available = EsimateAvailableSpace(&set, disk->id, disk_path);
+            int64_t available = EstimateAvailableSpace(&set, disk->id, disk_path);
 
             if (available < 0)
                 return false;
@@ -1937,14 +1937,14 @@ int Main(int argc, char **argv)
 
     // Options
     LocalArray<const char *, 4> config_filenames;
-    const char *config_filename = FindConfigFile("klitter.ini", &config.str_alloc, &config_filenames);
+    const char *config_filename = FindConfigFile("kluter.ini", &config.str_alloc, &config_filenames);
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
 R"(Usage: %!..+%1 <command> [-C <config.ini>] [args]%!0
 
 Commands:
-    %!..+init%!0                         Init klitter database for backups
+    %!..+init%!0                         Init kluter database for backups
     %!..+status%!0                       Get backup status and recorded disk usage
     %!..+backup%!0                       Distribute changes and backup to plugged disks
 
