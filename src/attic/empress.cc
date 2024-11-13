@@ -177,7 +177,6 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
                                (force ? 0 : (int)StreamWriterFlag::Exclusive);
 
     Async async(-1, false);
-    std::atomic_int compressions { 0 };
 
     for (Size i = 0; i < src_filenames.len; i++) {
         async.Run([&, i]() {
@@ -187,33 +186,35 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
             StreamReader reader;
             StreamWriter writer;
 
+            Span<const char> src_basename = src_filename ? SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS)
+                                                         : CompressionTypeNames[(int)compression_type];
+            ProgressHandle progress(src_basename);
+
             if (src_filename) {
                 if (reader.Open(src_filename) != OpenResult::Success)
                     return false;
+
+                LogInfo("Compressing '%1'...", src_basename);
             } else {
                 if (!reader.Open(STDIN_FILENO, "<stdin>"))
                     return false;
+
+                LogInfo("Compressing standard input...");
             }
 
             if (dest_filename) {
                 if (!writer.Open(dest_filename, write_flags, compression_type, compression_speed))
                     return false;
-
-                const char *basename = SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS).ptr;
-                LogInfo("Compressing '%1'...", basename);
             } else {
                 if (!writer.Open(STDOUT_FILENO, "<stdout>", write_flags, compression_type, compression_speed))
                     return false;
-
-                LogInfo("Compressing to standard output...");
             }
 
-            if (!SpliceStream(&reader, -1, &writer))
+            if (!SpliceStream(&reader, -1, &writer, progress))
                 return false;
             if (!writer.Close())
                 return false;
 
-            compressions++;
             return true;
         });
     }
@@ -223,11 +224,8 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
     if (success) {
         LogInfo("Done!");
         return 0;
-    } else if (compressions) {
-        LogInfo("Some files were compressed");
-        return 1;
     } else {
-        LogError("No successful compression");
+        LogInfo("Done! (with errors)");
         return 1;
     }
 }
@@ -428,7 +426,6 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
                                (force ? 0 : (int)StreamWriterFlag::Exclusive);
 
     Async async(-1, false);
-    std::atomic_int decompressions = 0;
 
     for (Size i = 0; i < src_filenames.len; i++) {
         async.Run([&, i] {
@@ -446,12 +443,15 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
                     return false;
             }
 
+            Span<const char> dest_basename = dest.filename ? SplitStrReverseAny(dest.filename, RG_PATH_SEPARATORS)
+                                                           : CompressionTypeNames[(int)dest.compression_type];
+            ProgressHandle progress(dest_basename);
+
             if (dest.filename) {
                 if (!writer.Open(dest.filename, write_flags))
                     return false;
 
-                const char *basename = SplitStrReverseAny(dest.filename, RG_PATH_SEPARATORS).ptr;
-                LogInfo("Decompressing '%1'...", basename);
+                LogInfo("Decompressing '%1'...", dest_basename);
             } else {
                 if (!writer.Open(STDOUT_FILENO, "<stdout>", write_flags))
                     return false;
@@ -459,12 +459,11 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
                 LogInfo("Decompressing to standard output...");
             }
 
-            if (!SpliceStream(&reader, -1, &writer))
+            if (!SpliceStream(&reader, -1, &writer, progress))
                 return false;
             if (!writer.Close())
                 return false;
 
-            decompressions++;
             return true;
         });
     }
@@ -474,11 +473,8 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
     if (success) {
         LogInfo("Done!");
         return 0;
-    } else if (decompressions) {
-        LogInfo("Some files were decompressed");
-        return 1;
     } else {
-        LogError("No successful decompression");
+        LogInfo("Done! (with errors)");
         return 1;
     }
 }

@@ -4015,6 +4015,45 @@ bool RedirectLogToWindowsEvents(const char *name);
 #endif
 
 // ------------------------------------------------------------------------
+// Progress
+// ------------------------------------------------------------------------
+
+struct ProgressInfo {
+    Span<const char> action;
+
+    bool determinate;
+    int64_t value;
+    int64_t min;
+    int64_t max;
+};
+
+typedef void ProgressFunc(Span<const ProgressInfo> states);
+
+class ProgressHandle {
+    Span<const char> action;
+
+    struct ProgressNode *node = nullptr;
+
+public:
+    ProgressHandle(Span<const char> action) : action(action) {}
+    ~ProgressHandle();
+
+    void Set(int64_t value, int64_t min, int64_t max);
+    void Set(int64_t value, int64_t max) { Set(value, 0, max); }
+    void Busy() { Set(0, 0); }
+
+    void operator()(int64_t value, int64_t min, int64_t max) { Set(value, min, max); }
+    void operator()(int64_t value, int64_t max) { Set(value, 0, max); }
+    void operator()() { Set(0, 0); }
+
+private:
+    bool AcquireNode();
+};
+
+void SetProgressHandler(const std::function<ProgressFunc> &func);
+void DefaultProgressHandler(Span<const ProgressInfo> bars);
+
+// ------------------------------------------------------------------------
 // System
 // ------------------------------------------------------------------------
 
@@ -5014,10 +5053,12 @@ public:
     } \
     static StreamCompressorHelper RG_UNIQUE_NAME(CreateCompressorHelper)((Type), RG_UNIQUE_NAME(CreateCompressor))
 
-bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf);
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf,
+                  FunctionRef<void(int64_t, int64_t)> progress = [](int64_t, int64_t) {});
 
 template<Size S = 65535>
-bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer,
+                  FunctionRef<void(int64_t, int64_t)> progress = [](int64_t, int64_t) {})
 {
     static_assert(S >= Kibibytes(2) && S <= Kibibytes(96));
 
@@ -5026,7 +5067,7 @@ bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer)
     // for 1 MiB with PT_GNU_STACK (using linker flag -z stack-size) anyway.
     uint8_t buf[S];
 
-    return SpliceStream(reader, max_len, writer, buf);
+    return SpliceStream(reader, max_len, writer, buf, progress);
 }
 
 bool IsCompressorAvailable(CompressionType compression_type);

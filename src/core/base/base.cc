@@ -1815,6 +1815,10 @@ static std::function<LogFunc> log_handler = DefaultLogHandler;
 static thread_local std::function<LogFilterFunc> *log_filters[16];
 static thread_local Size log_filters_len;
 
+#if !defined(__wasi__)
+static std::mutex log_mutex;
+#endif
+
 const char *GetEnv(const char *name)
 {
 #if defined(__EMSCRIPTEN__)
@@ -1938,8 +1942,7 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     }
 
 #if !defined(__wasi__)
-    static std::mutex mutex;
-    std::unique_lock<std::mutex> lock(mutex);
+    std::lock_guard<std::mutex> lock(log_mutex);
 #endif
 
     if (log_filters_len) {
@@ -2025,6 +2028,213 @@ bool RedirectLogToWindowsEvents(const char *name)
     return true;
 }
 #endif
+
+// ------------------------------------------------------------------------
+// Progress
+// ------------------------------------------------------------------------
+
+struct ProgressState {
+    bool valid;
+
+    bool determinate;
+    int64_t value;
+    int64_t min;
+    int64_t max;
+};
+
+struct ProgressNode {
+    std::atomic_bool used;
+    Span<const char> action;
+
+    std::mutex mutex;
+    ProgressState front;
+    ProgressState back;
+};
+
+static std::function<ProgressFunc> pg_handler = DefaultProgressHandler;
+
+static std::atomic_int pg_count;
+static ProgressNode pg_nodes[4096];
+
+static std::mutex pg_mutex;
+static bool pg_run = false;
+
+static void RunProgressThread()
+{
+    // Reuse for performance
+    HeapArray<ProgressInfo> bars;
+
+    int delay = StdErr->IsVt100() ? 400 : 10000;
+
+    for (;;) {
+        // Need to run still?
+        {
+            std::lock_guard<std::mutex> lock(pg_mutex);
+
+            if (!pg_count) {
+                pg_run = false;
+                break;
+            }
+        }
+
+        bars.RemoveFrom(0);
+
+        for (ProgressNode &node: pg_nodes) {
+            ProgressInfo bar = {};
+
+            // Copy state atomically or bail
+            {
+                std::unique_lock<std::mutex> lock(node.mutex, std::try_to_lock);
+
+                if (lock.owns_lock()) {
+                    node.back = node.front;
+                    lock.unlock();
+                }
+
+                if (!node.back.valid)
+                    continue;
+            }
+
+            bar.action = node.action;
+            bar.determinate = node.back.determinate;
+            bar.value = node.back.value;
+            bar.min = node.back.min;
+            bar.max = node.back.max;
+
+            bars.Append(bar);
+        }
+
+        pg_handler(bars);
+
+        WaitDelay(delay);
+    }
+}
+
+ProgressHandle::~ProgressHandle()
+{
+    if (node) {
+        std::lock_guard<std::mutex> lock(node->mutex);
+
+        node->front.valid = false;
+        node->used = false;
+
+        pg_count--;
+    }
+}
+
+void ProgressHandle::Set(int64_t value, int64_t min, int64_t max)
+{
+    if (!AcquireNode())
+        return;
+
+    std::unique_lock<std::mutex> lock(node->mutex, std::try_to_lock);
+
+    if (!lock.owns_lock())
+        return;
+
+    if (max > min) {
+        node->front.determinate = true;
+        node->front.value = value;
+        node->front.min = min;
+        node->front.max = max;
+        node->front.valid = true;
+    } else {
+        node->front.determinate = false;
+        node->front.valid = true;
+    }
+}
+
+bool ProgressHandle::AcquireNode()
+{
+    if (node)
+        return true;
+
+    int count = pg_count++;
+
+    if (!count) {
+        std::lock_guard lock(pg_mutex);
+
+        if (!pg_run) {
+            std::thread thread(RunProgressThread);
+            thread.detach();
+
+            pg_run = true;
+        }
+    } else if (count >= RG_LEN(pg_nodes) / 4) {
+        pg_count--;
+        return false;
+    }
+
+    int base = GetRandomInt(0, RG_LEN(pg_nodes));
+
+    for (int i = 0; i < RG_LEN(pg_nodes); i++) {
+        int idx = (base + i) % RG_LEN(pg_nodes);
+
+        ProgressNode *node = &pg_nodes[idx];
+        bool used = node->used.exchange(true);
+
+        if (!used) {
+            node->action = action;
+            this->node = node;
+
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void SetProgressHandler(const std::function<ProgressFunc> &func)
+{
+    pg_handler = func;
+}
+
+void DefaultProgressHandler(Span<const ProgressInfo> bars)
+{
+    static int frame = 0;
+
+#if !defined(__wasi__)
+    std::lock_guard<std::mutex> lock(log_mutex);
+#endif
+
+    int pad = 0;
+
+    for (const ProgressInfo &bar: bars) {
+        Size len = std::min((Size)50, bar.action.len);
+        pad = std::max(pad, (int)len);
+    }
+
+    for (const ProgressInfo &bar: bars) {
+        char action[256];
+
+        if (bar.action.len > pad) {
+            Fmt(action, "%1...", bar.action.Take(0, pad - 3));
+        } else {
+            Fmt(action, "%1", FmtArg(bar.action).Pad(pad));
+        }
+
+        if (bar.determinate) {
+            int64_t range = bar.max - bar.min;
+            int64_t delta = bar.value - bar.min;
+
+            int progress = (int)(100 * delta / range);
+            int size = progress / 5;
+
+            PrintLn(StdErr, "%1    %!..+[%2%3]   %4%%%!0", action, FmtArg('-').Repeat(size), FmtArg(' ').Repeat(20 - size), progress);
+        } else {
+            int before = frame;
+            int after = std::max(19 - frame, 0);
+
+            PrintLn(StdErr, "%1    %!..+[%2-%3]%!0", action, FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after));
+        }
+    }
+
+    if (StdErr->IsVt100()) {
+        Print(StdErr, "\x1B[%1F\x1B[%1M", bars.len);
+    }
+
+    frame = (frame + 1) % 21;
+}
 
 // ------------------------------------------------------------------------
 // System
@@ -7840,14 +8050,17 @@ StreamCompressorHelper::StreamCompressorHelper(CompressionType compression_type,
     CompressorFunctions[(int)compression_type] = func;
 }
 
-bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf)
+bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, Span<uint8_t> buf,
+                  FunctionRef<void(int64_t, int64_t)> progress)
 {
     RG_ASSERT(buf.len >= Kibibytes(2));
 
     if (!reader->IsValid())
         return false;
 
+    int64_t raw_len = reader->ComputeRawLen();
     int64_t total_len = 0;
+
     do {
         Size read_len = reader->Read(buf);
         if (read_len < 0)
@@ -7861,6 +8074,8 @@ bool SpliceStream(StreamReader *reader, int64_t max_len, StreamWriter *writer, S
 
         if (!writer->Write(buf.ptr, read_len))
             return false;
+
+        progress(reader->GetRawRead(), raw_len);
     } while (!reader->IsEOF());
 
     return true;
