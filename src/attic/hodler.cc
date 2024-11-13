@@ -74,6 +74,7 @@ struct PageData {
     const char *title;
     const char *menu;
     const char *description;
+    bool toc;
 
     const char *url;
 
@@ -600,7 +601,7 @@ static bool RenderTemplate(const char *template_filename, Span<const PageData> p
                 i = RenderMenu(pages, page_idx, i, pages.len, 0, writer);
             }
         } else if (key == "TOC") {
-            if (page.sections.len > 1) {
+            if (page.toc && page.sections.len > 1) {
                 PrintLn(writer, "<nav id=\"side\"><menu>");
 
                 for (const PageSection &sec: page.sections) {
@@ -705,6 +706,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             page.name = SectionToPageName(prop.section, &temp_alloc);
             page.src_filename = NormalizePath(prop.section, source_dir, &temp_alloc).ptr;
             page.description = "";
+            page.toc = true;
 
             do {
                 if (prop.key == "SourceFile") {
@@ -715,6 +717,8 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                     page.menu = DuplicateString(prop.value, &temp_alloc).ptr;
                 } else if (prop.key == "Description") {
                     page.description = DuplicateString(prop.value, &temp_alloc).ptr;
+                } else if (prop.key == "ToC") {
+                    valid &= ParseBool(prop.value, &page.toc);
                 } else if (prop.key == "Template") {
                     page.template_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
                 } else {

@@ -1,4 +1,4 @@
-# Overview
+# Koffi
 
 Koffi is a **fast and easy-to-use C FFI module for Node.js**, featuring:
 
