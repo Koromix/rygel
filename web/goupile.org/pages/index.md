@@ -15,4 +15,4 @@ Nous proposons également des prestations d'hébergement payantes basées sur Go
     <a href="https://nlnet.nl/project/Goupile/" style="border-bottom-color: transparent; margin-top: 8px;"><img src="{{ ASSET static/nlnet/ngi0core.svg }}" height="60" alt="NGI Zero Core"/></a>
 </p>
 
-Ce projet est sponsorisé par NLnet: https://nlnet.nl/project/Goupile/
+Ce projet est sponsorisé par NLnet : https://nlnet.nl/project/Goupile/
