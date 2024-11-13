@@ -8,6 +8,7 @@ cd "$(dirname $0)"
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
 trap 'kill $(jobs -p) 2>/dev/null' SIGINT
 
+mkdir -p dist
 ../../bin/Fast/nestor dist/ &
 ../../bin/Fast/hodler . -O dist --loop &
 
