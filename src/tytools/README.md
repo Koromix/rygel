@@ -2,11 +2,8 @@
 
 TyTools is a collection of independent tools to manage, flash and communicate with **[Teensy](https://www.pjrc.com/teensy/) microcontrollers**.
 
-<p style="text-align: center;">
-    <a href="{{ ASSET static/tytools/tycommander.webp }}" target="_blank">
-        <img src="{{ ASSET static/tytools/tycommander.webp }}" width="677"
-             style="max-width: 90vw; object-fit: scale-down;" alt="Screenshot of TyCommander" />
-    </a>
+<p style="text-align: center; margin: 2em;">
+    <img src="{{ ASSET static/tytools/logo.webp }}" width="333" height="96" alt="" />
 </p>
 
 Tool        | Type                      | Description
@@ -16,6 +13,13 @@ TyUploader  | Qt GUI (static)           | Simple firmware / sketch uploader
 tycmd       | Command-line<br>_No Qt !_ | Command-line tool to manage Teensy boards
 
 Each tool is **independent** and you only need the one executable to use it. The Qt-based GUI tools are statically compiled to make that possible.
+
+<p style="text-align: center;">
+    <a href="{{ ASSET static/tytools/tycommander.webp }}" target="_blank">
+        <img src="{{ ASSET static/tytools/tycommander.webp }}" width="677"
+             style="max-width: 90vw; object-fit: scale-down;" alt="Screenshot of TyCommander" />
+    </a>
+</p>
 
 # Install
 

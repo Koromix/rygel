@@ -2,6 +2,12 @@
 
 Goupile is an **open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
 
+<p style="text-align: center; margin: 2em;">
+    <img src="{{ ASSET static/goupile/logo.webp }}" width="313" height="96" alt=""/>
+</p>
+
+It is currently in development, find out more on the official website: https://goupile.org/
+
 <p style="text-align: center;">
     <a href="https://goupile.org/static/screenshots/editor.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/editor.webp"
@@ -21,16 +27,12 @@ Goupile is an **open-source electronic data capture** application that strives t
    </a>
 </p>
 
-It is currently in development and there are no public builds yet.
-
-Find out more on the official website: https://goupile.org/
+This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
 
 <p style="display: flex; gap: 2em; justify-content: center;">
     <a href="https://nlnet.nl/" style="border-bottom-color: transparent; margin-top: 8px;" target="_blank"><img src="{{ ASSET static/nlnet/nlnet.svg }}" height="60" alt="NLnet Foundation"/></a>
     <a href="https://nlnet.nl/project/Goupile/" style="border-bottom-color: transparent; margin-top: 8px;"><img src="{{ ASSET static/nlnet/ngi0core.svg }}" height="60" alt="NGI Zero Core"/></a>
 </p>
-
-This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
 
 # License
 
