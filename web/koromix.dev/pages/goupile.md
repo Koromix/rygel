@@ -23,7 +23,7 @@ It is currently in development, find out more on the official website: https://g
     </a>
     <a href="https://goupile.org/static/screenshots/tablet.webp" target="_blank">
         <img src="https://goupile.org/static/screenshots/tablet.webp"
-             width="360" height="180" alt=""/>
+             width="360" height="180" style="object-fit: contain;" alt=""/>
    </a>
 </p>
 
