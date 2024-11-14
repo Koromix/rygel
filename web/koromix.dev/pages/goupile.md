@@ -3,7 +3,7 @@
 Goupile is an **open-source electronic data capture** application that strives to make form creation and data entry both powerful and easy.
 
 <p style="text-align: center; margin: 2em;">
-    <img src="{{ ASSET static/goupile/logo.webp }}" width="313" height="96" alt=""/>
+    <img src="{{ ASSET static/goupile/logo.webp }}" width="321" height="96" alt=""/>
 </p>
 
 It is currently in development, find out more on the official website: https://goupile.org/
