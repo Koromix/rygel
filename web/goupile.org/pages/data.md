@@ -1,5 +1,5 @@
->>> [!IMPORTANT]
->>> La documentation est en cours de rédaction et d'amélioration, certaines sections sont incomplètes.
+> [!IMPORTANT]
+> La documentation est en cours de rédaction et d'amélioration, certaines sections sont incomplètes.
 
 # Suivi des saisies
 
