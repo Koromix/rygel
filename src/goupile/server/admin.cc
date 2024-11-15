@@ -2860,8 +2860,8 @@ void HandleUserCreate(http_IO *io)
         if (username && !CheckUserName(username)) {
             valid = false;
         }
-        if (password && !password[0]) {
-            LogError("Empty password");
+        if (password && strlen(password) < pwd_MinLength) {
+            LogError("Password is too short");
             valid = false;
         }
         if (email && !strchr(email, '@')) {
@@ -3020,8 +3020,8 @@ void HandleUserEdit(http_IO *io)
         if (username && !CheckUserName(username)) {
             valid = false;
         }
-        if (password && !password[0]) {
-            LogError("Empty password");
+        if (password && strlen(password) < pwd_MinLength) {
+            LogError("Password is too short");
             valid = false;
         }
         if (email && !strchr(email, '@')) {
