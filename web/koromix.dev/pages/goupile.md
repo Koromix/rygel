@@ -6,6 +6,13 @@ Goupile is an **open-source electronic data capture** application that strives t
     <img src="{{ ASSET static/goupile/logo.webp }}" width="321" height="96" alt=""/>
 </p>
 
+This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
+
+<p style="display: flex; gap: 2em; justify-content: center;">
+    <a href="https://nlnet.nl/" style="border-bottom-color: transparent; margin-top: 8px;" target="_blank"><img src="{{ ASSET static/nlnet/nlnet.svg }}" height="60" alt="NLnet Foundation"/></a>
+    <a href="https://nlnet.nl/project/Goupile/" style="border-bottom-color: transparent; margin-top: 8px;"><img src="{{ ASSET static/nlnet/ngi0core.svg }}" height="60" alt="NGI Zero Core"/></a>
+</p>
+
 It is currently in development, find out more on the official website: https://goupile.org/
 
 <p style="text-align: center;">
@@ -25,13 +32,6 @@ It is currently in development, find out more on the official website: https://g
         <img src="https://goupile.org/static/screenshots/tablet.webp"
              width="360" height="180" style="object-fit: contain;" alt=""/>
    </a>
-</p>
-
-This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
-
-<p style="display: flex; gap: 2em; justify-content: center;">
-    <a href="https://nlnet.nl/" style="border-bottom-color: transparent; margin-top: 8px;" target="_blank"><img src="{{ ASSET static/nlnet/nlnet.svg }}" height="60" alt="NLnet Foundation"/></a>
-    <a href="https://nlnet.nl/project/Goupile/" style="border-bottom-color: transparent; margin-top: 8px;"><img src="{{ ASSET static/nlnet/ngi0core.svg }}" height="60" alt="NGI Zero Core"/></a>
 </p>
 
 # License

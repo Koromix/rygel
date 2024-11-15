@@ -4,13 +4,13 @@ Goupile is an open-source electronic data capture application that strives to ma
 
 It is licensed under the [GPL 3 license](https://www.gnu.org/licenses/#GPL). You can freely download and use the goupile source code. Everyone is granted the right to copy, modify and redistribute it.
 
+This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
+
 <div align="center">
     <a href="https://nlnet.nl/" style="border-bottom-color: transparent;"><img src="https://github.com/Koromix/rygel/blob/master/web/goupile.org/static/nlnet/nlnet.svg" height="60" alt="NLnet Foundation"/></a>&nbsp;&nbsp;&nbsp;
     <a href="https://nlnet.nl/" style="border-bottom-color: transparent;"><img src="https://github.com/Koromix/rygel/blob/master/web/goupile.org/static/nlnet/ngi0core.svg" height="60" alt="NGI Zero Core"/></a>
     <br><br>
 </div>
-
-This project is sponsored by NLnet: https://nlnet.nl/project/Goupile/
 
 # Get started
 
