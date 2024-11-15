@@ -68,16 +68,6 @@ span[title] { border-bottom: 1px dotted #383838; }
     font-weight: bold;
 }
 
-footer {
-    padding: 1em;
-    background: #f6f6f9;
-    display: flex;
-    gap: 1.5em;
-    align-items: center;
-    justify-content: center;
-}
-footer > img { filter: saturate(0%) brightness(0); }
-
 .team {
     display: flex;
     justify-content: center;
@@ -201,14 +191,6 @@ footer > img { filter: saturate(0%) brightness(0); }
 }
 
 @media screen and (max-width: 960px) {
-    footer {
-        flex-direction: column;
-        padding: 0.5em;
-        gap: 6px;
-        text-align: center;
-    }
-    footer > img { display: none; }
-
     .columns { display: block; }
     .columns > * { width: auto; }
     .columns > * + * { margin-top: 3em; }

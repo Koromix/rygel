@@ -61,6 +61,14 @@
         line-height: 1.6em;
     }
 
+    footer {
+        flex-direction: column;
+        padding: 0.5em;
+        gap: 6px;
+        text-align: center;
+    }
+    footer > img { display: none; }
+
     #logo {
         height: 100%;
         margin: 0 auto;

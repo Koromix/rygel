@@ -175,6 +175,16 @@ main {
 }
 #side ~ main { padding-right: 290px; }
 
+footer {
+    padding: 1em;
+    background: #f6f6f9;
+    display: flex;
+    gap: 1.5em;
+    align-items: center;
+    justify-content: center;
+}
+footer > img { filter: saturate(0%) brightness(0); }
+
 p { margin: 1em 0 0 0; }
 p:first-child, h1 + p, h2 + p, h3 + p { margin-top: 0; }
 
