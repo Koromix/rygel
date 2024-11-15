@@ -176,7 +176,7 @@ main {
 #side ~ main { padding-right: 290px; }
 
 footer {
-    padding: 1em;
+    padding: 0.5em;
     background: #f6f6f9;
     display: flex;
     gap: 1.5em;
