@@ -166,7 +166,7 @@ function parse_markdown($text) {
         </main>
 
         <footer>
-            <div>DEMHETER © 2022</div>
+            <div>DEMHETER © 2024</div>
             <img src="{{ ASSET static/logo.webp }}" alt="" width="300" height="64">
             <div style="font-size: 0.8em;">
                 CHU de Lille, 59037 Lille CEDEX<br>
