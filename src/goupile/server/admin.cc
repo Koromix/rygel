@@ -1106,8 +1106,19 @@ void HandleDemo(http_IO *io)
 
     if (!gp_domain.SyncInstance(name))
         return;
-    if (!LoginUserAuto(io, userid))
+
+    InstanceHolder *instance = gp_domain.Ref(name);
+    if (!instance)
         return;
+    RG_DEFER { instance->Unref(); };
+
+    RetainPtr<SessionInfo> session = LoginUserAuto(io, userid);
+    if (!session)
+        return;
+    SessionStamp *stamp = session->GetStamp(instance);
+    if (!stamp)
+        return;
+    stamp->develop = true;
 
     const char *redirect = Fmt(io->Allocator(), "/%1/", name).ptr;
     io->AddHeader("Location", redirect);
