@@ -68,6 +68,8 @@ let error_map = new LruMap(8);
 
 let editor_el;
 let editor_ace;
+let editor_tabs;
+let editor_tab = 'form';
 let editor_filename;
 
 let ignore_editor_change = false;
@@ -108,8 +110,6 @@ async function initApp() {
         builder.form('default', 'Défaut', 'Page par défaut');
 
         app = Util.deepFreeze(new_app);
-
-        editor_filename = 'main.js';
 
         triggerError('main.js', err);
     }
@@ -422,8 +422,7 @@ function renderEditor() {
     // Ask ACE to adjust if needed, it needs to happen after the render
     setTimeout(() => editor_ace.resize(false), 0);
 
-    let tabs = getEditorTabs();
-    let active_tab = tabs.find(tab => tab.active);
+    let active_tab = editor_tabs.find(tab => tab.filename == editor_filename) ?? editor_tabs[0];
 
     return html`
         <div style="--menu_color: #1d1d1d; --menu_color_n1: #2c2c2c;">
@@ -431,8 +430,8 @@ function renderEditor() {
                 <div class="drop">
                     <button @click=${UI.deployMenu}>${active_tab.title}</button>
                     <div>
-                        ${tabs.map(tab => html`<button class=${UI.isPanelActive('editor') && tab.active ? 'active' : ''}
-                                                       @click=${UI.wrap(e => toggleEditorFile(e, tab.filename))}>${tab.title}</button>`)}
+                        ${editor_tabs.map(tab => html`<button class=${UI.isPanelActive('editor') && tab.active ? 'active' : ''}
+                                                              @click=${UI.wrap(e => toggleEditorTab(e, tab))}>${tab.title}</button>`)}
                     </div>
                 </div>
                 <div style="flex: 1;"></div>
@@ -451,26 +450,32 @@ function renderEditor() {
     `;
 }
 
-function getEditorTabs() {
-    let tabs = [];
+function updateEditorTabs() {
+    editor_tabs = [];
 
-    tabs.push({
+    editor_tabs.push({
+        key: 'project',
         title: 'Projet',
         filename: 'main.js',
         active: false
     });
     if (route.page.filename != null) {
-        tabs.push({
+        editor_tabs.push({
+            key: 'form',
             title: 'Formulaire',
             filename: route.page.filename,
             active: false
         });
     }
 
-    for (let tab of tabs)
-        tab.active = (editor_filename == tab.filename);
+    let active_tab = editor_tabs.find(tab => tab.key == editor_tab);
 
-    return tabs;
+    if (active_tab != null) {
+        editor_tab = active_tab.key;
+        editor_filename = active_tab.filename;
+    } else {
+        editor_filename = editor_tabs[0].filename;
+    }
 }
 
 async function runHistoryDialog(e, filename) {
@@ -1184,8 +1189,10 @@ async function syncEditor() {
     editor_ace.setSession(buffer.session);
 }
 
-function toggleEditorFile(e, filename) {
-    editor_filename = filename;
+function toggleEditorTab(e, tab) {
+    editor_tab = tab.key;
+    editor_filename = tab.filename;
+
     return togglePanels(true, null);
 }
 
@@ -1618,11 +1625,7 @@ async function run(push_history = true) {
 
         // Sync editor (if needed)
         if (UI.isPanelActive('editor')) {
-            if (route.page.filename == null) {
-                editor_filename = 'main.js'
-            } else if (editor_filename !== 'main.js') {
-                editor_filename = route.page.filename;
-            }
+            updateEditorTabs();
 
             let err = error_map.get(editor_filename);
 
