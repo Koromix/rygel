@@ -2,6 +2,12 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.6 (2024-11-16)
+
+- Enable development mode by default for demo instances
+- Switch to form editor tab until it is explicitly changed
+- Fix possible crash on mode change
+
 ### Goupile 3.7.5 (2024-11-12)
 
 - Fix recurent crash in demo mode

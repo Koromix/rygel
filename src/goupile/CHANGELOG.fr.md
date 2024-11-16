@@ -2,6 +2,12 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.6 (16/11/2024)
+
+- Activation du mode conception par défaut pour les instances de démonstration
+- Bascule automatique de l'éditeur vers l'onglet formulaire sauf si modifié explicitement
+- Correction d'un crash possible lors d'un changement de mode
+
 ### Goupile 3.7.5 (12/11/2024)
 
 - Correction d'un crash récurrent avec le mode de démonstration
