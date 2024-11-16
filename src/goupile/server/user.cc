@@ -1561,7 +1561,7 @@ void HandleChangeMode(http_IO *io, InstanceHolder *instance)
         io->SendError(401);
         return;
     }
-    if (session->type != SessionType::Login) {
+    if (!stamp || session->type != SessionType::Login) {
         LogError("This account does not have a profile");
         io->SendError(403);
         return;
