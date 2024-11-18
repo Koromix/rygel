@@ -2577,6 +2577,18 @@ async function loadRecords(parent_ulid = null, form_key = null)
         }
     }
 
+    if (ENV.key == 'encollines' && form_key == 'encollines' && parent_ulid == null) {
+        let more = await loadRecords(null, 'soignants');
+
+        for (let record of more) {
+            if (record.parent != null)
+                continue;
+
+            record.form = app.forms.get('encollines');
+            records.unshift(record);
+        }
+    }
+
     return records;
 }
 
@@ -2622,6 +2634,9 @@ async function decryptRecord(obj, version, allow_deleted) {
 
     let entry = await decryptSymmetric(obj.enc, ['records', 'lock']);
     let fragments = entry.fragments;
+
+    if (ENV.key == 'encollines' && entry.form == 'soignants' && entry.parent == null)
+        entry.form = 'encollines';
 
     let form = app.forms.get(entry.form);
     if (form == null)
@@ -2717,11 +2732,9 @@ async function moveToAppropriateRecord(record, target_form, create_new) {
     if (path != null) {
         for (let form of path.up) {
             record = record.parent;
+
             if (record.values == null)
                 record = await loadRecord(record.ulid, null);
-
-            if (record.form !== form)
-                throw new Error('Saut impossible en raison d\'un changement de schéma');
         }
 
         for (let i = 0; i < path.down.length; i++) {
@@ -2733,6 +2746,7 @@ async function moveToAppropriateRecord(record, target_form, create_new) {
                 let child = children[children.length - 1];
 
                 record = await loadRecord(child.ulid, null);
+
                 if (record.form !== form)
                     throw new Error('Saut impossible en raison d\'un changement de schéma');
             } else if (create_new) {
