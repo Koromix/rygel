@@ -346,7 +346,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             Command cmd = InitCommand();
             build.compiler->MakeEmbedCommand(embed_filenames, target.embed_options, src_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Embed %!..+%1%!0 assets", target.name).ptr;
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Embed %!..+%1%!0 assets", target.name).ptr;
             AppendNode(text, src_filename, cmd, embed_filenames);
         }
 
@@ -366,7 +366,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                                   obj_filename,  &str_alloc, &cmd);
             }
 
-            const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 assets", target.name).ptr;
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 assets", target.name).ptr;
             AppendNode(text, obj_filename, cmd, src_filename);
         }
 
@@ -380,7 +380,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             build.compiler->MakeLinkCommand(obj_filename, {}, TargetType::Library,
                                             flags, features, module_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(module_filename)).ptr;
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Link %!..+%1%!0", GetLastDirectoryAndName(module_filename)).ptr;
             AppendNode(text, module_filename, cmd, obj_filename);
         } else {
             obj_filenames.Append(obj_filename);
@@ -418,7 +418,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                                           nullptr, {}, {}, {}, {}, flags, features,
                                           obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0 version file", target.name).ptr;
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 version file", target.name).ptr;
         AppendNode(text, obj_filename, cmd, src_filename);
 
         obj_filenames.Append(obj_filename);
@@ -436,7 +436,8 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
         Command cmd = InitCommand();
         build.compiler->MakeResourceCommand(rc_filename, res_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Build %!..+%1%!0 resource file", target.name).ptr;
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build %!..+%1%!0 resource file", target.name).ptr;
+
         if (target.icon_filename) {
             AppendNode(text, res_filename, cmd, { rc_filename, target.icon_filename });
         } else {
@@ -467,7 +468,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             build.compiler->MakeLinkCommand(obj_filenames, link_libraries, target.type,
                                             flags, features, link_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Link %!..+%1%!0", GetLastDirectoryAndName(link_filename)).ptr;
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Link %!..+%1%!0", GetLastDirectoryAndName(link_filename)).ptr;
             AppendNode(text, link_filename, cmd, obj_filenames);
         }
 
@@ -478,7 +479,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             Command cmd = InitCommand();
             build.compiler->MakePostCommand(link_filename, target_filename, &str_alloc, &cmd);
 
-            const char *text = Fmt(&str_alloc, "Convert %!..+%1%!0", GetLastDirectoryAndName(target_filename)).ptr;
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Convert %!..+%1%!0", GetLastDirectoryAndName(target_filename)).ptr;
             AppendNode(text, target_filename, cmd, link_filename);
         } else {
             target_filename = link_filename;
@@ -507,7 +508,7 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             // Help command find qmake
             cmd.env_variables.Append({ "QMAKE_PATH", qt->qmake });
 
-            const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", GetLastDirectoryAndName(bundle_filename)).ptr;
+            const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Bundle %!..+%1%!0", GetLastDirectoryAndName(bundle_filename)).ptr;
             AppendNode(text, bundle_filename, cmd, target_filename);
 
             target_filename = bundle_filename;
@@ -599,8 +600,10 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                     }
                 }
 
-                const char *text = Fmt(&str_alloc, "Precompile %!..+%1%!0", pch->filename).ptr;
-                if (AppendNode(text, pch_filename, cmd, pch->filename)) {
+                const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Precompile %!..+%1%!0", pch->filename).ptr;
+                bool append = AppendNode(text, pch_filename, cmd, pch->filename);
+
+                if (append) {
                     if (!build.fake && !CreatePrecompileHeader(pch->filename, pch_filename))
                         return false;
                 }
@@ -628,12 +631,12 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                                           src.target->include_files, flags, features,
                                           obj_filename, &str_alloc, &cmd);
 
-        const char *text = Fmt(&str_alloc, "Compile %!..+%1%!0", src.filename).ptr;
-        if (pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename })
-                         : AppendNode(text, obj_filename, cmd, src.filename)) {
-            if (!build.fake && !EnsureDirectoryExists(obj_filename))
-                return false;
-        }
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0", src.filename).ptr;
+        bool append = pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename })
+                                   : AppendNode(text, obj_filename, cmd, src.filename);
+
+       if (append && !build.fake && !EnsureDirectoryExists(obj_filename))
+            return false;
 
         if (src.target->qt_components.len && !CompileMocHelper(src, system_directories, features))
             return false;

@@ -48,7 +48,7 @@ RG_INIT(RedirectLog)
                 PrintLn("%1%2%3", ctx ? ctx : "", ctx ? ": " : "", msg);
             } break;
         }
-    });
+    }, false);
 }
 
 void rcc_DumpWarnings()

@@ -100,8 +100,8 @@ int RunCommand(Span<const char> code, const Config &config)
             return 1;
 
         // ... but don't tell the user if it fails!
-        SetLogHandler([](LogLevel, const char *, const char *) {});
-        RG_DEFER { SetLogHandler(DefaultLogHandler); };
+        SetLogHandler([](LogLevel, const char *, const char *) {}, false);
+        RG_DEFER { SetLogHandler(DefaultLogHandler, StdErr->IsVt100()); };
 
         valid_with_fake_print = compiler.Compile(file);
     } else {
@@ -166,7 +166,7 @@ int RunInteractive(const Config &config)
             } else {
                 trace.Store(level, ctx, msg);
             }
-        });
+        }, false);
         RG_DEFER_N(try_guard) {
             prompter.Commit();
             trace.Dump();

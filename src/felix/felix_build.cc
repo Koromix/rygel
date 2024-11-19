@@ -580,7 +580,7 @@ For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget)
             if (level != LogLevel::Info) {
                 DefaultLogHandler(level, ctx, msg);
             }
-        });
+        }, StdErr->IsVt100());
     }
 
     // Initialize and check compiler

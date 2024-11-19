@@ -3915,13 +3915,34 @@ enum class LogLevel {
     Error
 };
 
-Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf);
-Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out_buf);
-Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc);
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Span<char> out_buf);
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, HeapArray<char> *out_buf);
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Allocator *alloc);
 void PrintFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
 void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
 
-#define DEFINE_FMT_VARIANT(Name, Ret, Type) \
+#define DEFINE_FMT_VARIANT(Ret, Type) \
+    static inline Ret Fmt(Type out, const char *fmt) \
+    { \
+        return FmtFmt(fmt, {}, false, out); \
+    } \
+    static inline Ret Fmt(Type out, bool vt100, const char *fmt) \
+    { \
+        return FmtFmt(fmt, {}, vt100, out); \
+    } \
+    template <typename... Args> \
+    Ret Fmt(Type out, const char *fmt, Args... args) \
+    { \
+        const FmtArg fmt_args[] = { FmtArg(args)... }; \
+        return FmtFmt(fmt, fmt_args, false, out); \
+    } \
+    template <typename... Args> \
+    Ret Fmt(Type out, bool vt100, const char *fmt, Args... args) \
+    { \
+        const FmtArg fmt_args[] = { FmtArg(args)... }; \
+        return FmtFmt(fmt, fmt_args, vt100, out); \
+    }
+#define DEFINE_PRINT_VARIANT(Name, Ret, Type) \
     static inline Ret Name(Type out, const char *fmt) \
     { \
         return Name##Fmt(fmt, {}, out); \
@@ -3933,13 +3954,14 @@ void PrintLnFmt(const char *fmt, Span<const FmtArg> args, StreamWriter *out_st);
         return Name##Fmt(fmt, fmt_args, out); \
     }
 
-DEFINE_FMT_VARIANT(Fmt, Span<char>, Span<char>)
-DEFINE_FMT_VARIANT(Fmt, Span<char>, HeapArray<char> *)
-DEFINE_FMT_VARIANT(Fmt, Span<char>, Allocator *)
-DEFINE_FMT_VARIANT(Print, void, StreamWriter *)
-DEFINE_FMT_VARIANT(PrintLn, void, StreamWriter *)
+DEFINE_FMT_VARIANT(Span<char>, Span<char>)
+DEFINE_FMT_VARIANT(Span<char>, HeapArray<char> *)
+DEFINE_FMT_VARIANT(Span<char>, Allocator *)
+DEFINE_PRINT_VARIANT(Print, void, StreamWriter *)
+DEFINE_PRINT_VARIANT(PrintLn, void, StreamWriter *)
 
 #undef DEFINE_FMT_VARIANT
+#undef DEFINE_PRINT_VARIANT
 
 // Print formatted strings to stdout
 template <typename... Args>
@@ -4004,7 +4026,7 @@ static inline void Log(LogLevel level, const char *ctx, const char *fmt, Args...
     static inline void LogError(Args... args) { Log(LogLevel::Error, "Error: ", args...); }
 #endif
 
-void SetLogHandler(const std::function<LogFunc> &func);
+void SetLogHandler(const std::function<LogFunc> &func, bool vt100);
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg);
 
 void PushLogFilter(const std::function<LogFilterFunc> &func);
@@ -4725,6 +4747,7 @@ class StreamReader {
         bool eof = false;
     } source;
 
+    std::mutex mutex;
     StreamDecoder *decoder = nullptr;
 
     int64_t raw_len = -1;
@@ -4774,6 +4797,7 @@ public:
 
     void SetReadLimit(int64_t limit) { read_max = limit; }
 
+    // Thread safe methods
     Size Read(Span<uint8_t> out_buf);
     Size Read(Span<char> out_buf) { return Read(out_buf.As<uint8_t>()); }
     Size Read(Size buf_len, void *out_buf) { return Read(MakeSpan((uint8_t *)out_buf, buf_len)); }
@@ -4928,6 +4952,7 @@ class StreamWriter {
         bool vt100;
     } dest;
 
+    std::mutex mutex;
     StreamEncoder *encoder = nullptr;
 
     int64_t raw_written = 0;
@@ -4980,6 +5005,7 @@ public:
     bool Close() { return Close(false); }
 
     // For compressed streams, Flush may not be complete and only Close() can finalize the file.
+    // Thread safe method
     bool Flush();
 
     const char *GetFileName() const { return filename; }
@@ -4989,6 +5015,7 @@ public:
     int GetDescriptor() const;
     void SetDescriptorOwned(bool owned);
 
+    // Thread safe methods
     bool Write(Span<const uint8_t> buf);
     bool Write(Span<const char> buf) { return Write(buf.As<const uint8_t>()); }
     bool Write(char buf) { return Write(MakeSpan(&buf, 1)); }

@@ -188,11 +188,11 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
             cmd.deps_filename = meta_filename;
         }
 
-        const char *text = Fmt(&str_alloc, "Bundle %!..+%1%!0", src.filename).ptr;
-        if (AppendNode(text, meta_filename, cmd, { src.filename, esbuild_binary })) {
-            if (!build.fake && !EnsureDirectoryExists(bundle_filename))
-                return nullptr;
-        }
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Bundle %!..+%1%!0", src.filename).ptr;
+        bool append = AppendNode(text, meta_filename, cmd, { src.filename, esbuild_binary });
+
+        if (append && !build.fake && !EnsureDirectoryExists(bundle_filename))
+            return nullptr;
     }
 
     return meta_filename;

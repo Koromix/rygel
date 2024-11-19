@@ -1679,18 +1679,7 @@ static inline void DoFormat(const char *fmt, Span<const FmtArg> args, bool vt100
 #endif
 }
 
-static inline bool FormatBufferWithVt100()
-{
-    // In most cases, when fmt contains color tags, this is because the caller is
-    // trying to make a string to show to the user. In this case, we want to generate
-    // VT-100 escape sequences if the standard output is a terminal, because the
-    // string will probably end up there.
-
-    static bool use_vt100 = FileIsVt100(STDOUT_FILENO) && FileIsVt100(STDERR_FILENO);
-    return use_vt100;
-}
-
-Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Span<char> out_buf)
 {
     RG_ASSERT(out_buf.len >= 0);
 
@@ -1700,7 +1689,7 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
 
     Size available_len = out_buf.len;
 
-    DoFormat(fmt, args, FormatBufferWithVt100(), [&](Span<const char> frag) {
+    DoFormat(fmt, args, vt100, [&](Span<const char> frag) {
         Size copy_len = std::min(frag.len, available_len);
 
         MemCpy(out_buf.end() - available_len, frag.ptr, copy_len);
@@ -1713,12 +1702,12 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Span<char> out_buf)
     return out_buf;
 }
 
-Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out_buf)
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, HeapArray<char> *out_buf)
 {
     Size start_len = out_buf->len;
 
     out_buf->Grow(RG_FMT_STRING_BASE_CAPACITY);
-    DoFormat(fmt, args, FormatBufferWithVt100(), [&](Span<const char> frag) {
+    DoFormat(fmt, args, vt100, [&](Span<const char> frag) {
         out_buf->Grow(frag.len + 1);
         MemCpy(out_buf->end(), frag.ptr, frag.len);
         out_buf->len += frag.len;
@@ -1728,12 +1717,12 @@ Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, HeapArray<char> *out
     return out_buf->Take(start_len, out_buf->len - start_len);
 }
 
-Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, Allocator *alloc)
+Span<char> FmtFmt(const char *fmt, Span<const FmtArg> args, bool vt100, Allocator *alloc)
 {
     RG_ASSERT(alloc);
 
     HeapArray<char> buf(alloc);
-    FmtFmt(fmt, args, &buf);
+    FmtFmt(fmt, args, vt100, &buf);
     return buf.TrimAndLeak(1);
 }
 
@@ -1809,15 +1798,12 @@ FmtArg FmtVersion(int64_t version, int parts, int by)
 static int64_t start_time = GetMonotonicTime();
 
 static std::function<LogFunc> log_handler = DefaultLogHandler;
+static bool log_vt100 = FileIsVt100(STDERR_FILENO);
 
 // thread_local is broken on MinGW when destructors are involved.
 // So heap allocation it is, at least for now.
 static thread_local std::function<LogFilterFunc> *log_filters[16];
 static thread_local Size log_filters_len;
-
-#if !defined(__wasi__)
-static std::mutex log_mutex;
-#endif
 
 const char *GetEnv(const char *name)
 {
@@ -1933,17 +1919,13 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
 
     char msg_buf[2048];
     {
-        Size len = FmtFmt(fmt, args, msg_buf).len;
+        Size len = FmtFmt(fmt, args, log_vt100, msg_buf).len;
 
         if (len == RG_SIZE(msg_buf) - 1) {
             strncpy(msg_buf + RG_SIZE(msg_buf) - 32, "... [truncated]", 32);
             msg_buf[RG_SIZE(msg_buf) - 1] = 0;
         }
     }
-
-#if !defined(__wasi__)
-    std::lock_guard<std::mutex> lock(log_mutex);
-#endif
 
     if (log_filters_len) {
         RunLogFilter(log_filters_len - 1, level, ctx, msg_buf);
@@ -1952,9 +1934,10 @@ void LogFmt(LogLevel level, const char *ctx, const char *fmt, Span<const FmtArg>
     }
 }
 
-void SetLogHandler(const std::function<LogFunc> &func)
+void SetLogHandler(const std::function<LogFunc> &func, bool vt100)
 {
     log_handler = func;
+    log_vt100 = vt100;
 }
 
 void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
@@ -1965,8 +1948,6 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
         case LogLevel::Warning: { PrintLn(StdErr, "%!M..%1%!0%2", ctx ? ctx : "", msg); } break;
         case LogLevel::Error: { PrintLn(StdErr, "%!R..%1%!0%2", ctx ? ctx : "", msg); } break;
     }
-
-    StdErr->Flush();
 }
 
 void PushLogFilter(const std::function<LogFilterFunc> &func)
@@ -2023,7 +2004,7 @@ bool RedirectLogToWindowsEvents(const char *name)
 
         const wchar_t *ptr = buf_w.data;
         ReportEventW(log, type, 0, 0, nullptr, 1, 0, &ptr, nullptr);
-    });
+    }, false);
 
     return true;
 }
@@ -2119,7 +2100,6 @@ ProgressHandle::~ProgressHandle()
         node->used = false;
 
         if (!--pg_count) {
-            std::lock_guard lock(log_mutex);
             StdErr->Flush();
         }
     }
@@ -2196,10 +2176,11 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
 {
     static int frame = 0;
 
-#if !defined(__wasi__)
-    std::lock_guard<std::mutex> lock(log_mutex);
-#endif
+    // Don't blow up stack size
+    static LocalArray<char, 65536> buf;
+    buf.Clear();
 
+    bool vt100 = StdErr->IsVt100();
     int pad = 0;
 
     for (const ProgressInfo &bar: bars) {
@@ -2223,20 +2204,20 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
             int progress = (int)(100 * delta / range);
             int size = progress / 5;
 
-            PrintLn(StdErr, "%1    %!..+[%2%3]   %4%%%!0", action, FmtArg('-').Repeat(size), FmtArg(' ').Repeat(20 - size), progress);
+            buf.len += Fmt(buf.TakeAvailable(), vt100, "%1    %!..+[%2%3]   %4%%%!0\n", action, FmtArg('-').Repeat(size), FmtArg(' ').Repeat(20 - size), progress).len;
         } else {
             int before = frame;
             int after = std::max(19 - frame, 0);
 
-            PrintLn(StdErr, "%1    %!..+[%2-%3]%!0", action, FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after));
+            buf.len += Fmt(buf.TakeAvailable(), vt100, "%1    %!..+[%2-%3]%!0\n", action, FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after)).len;
         }
     }
 
-    if (StdErr->IsVt100()) {
-        Print(StdErr, "\x1B[%1F\x1B[%1M", bars.len);
-    }
+    buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len).len;
 
     frame = (frame + 1) % 21;
+
+    StdErr->Write(buf);
 }
 
 // ------------------------------------------------------------------------
@@ -7309,6 +7290,8 @@ void StreamReader::SetDescriptorOwned(bool owned)
 
 Size StreamReader::Read(Span<uint8_t> out_buf)
 {
+    std::lock_guard<std::mutex> lock(mutex);
+
     Size read_len = 0;
 
     while (out_buf.len && !eof) {
@@ -7717,6 +7700,8 @@ bool StreamWriter::Open(const std::function<bool(Span<const uint8_t>)> &func, co
 
 bool StreamWriter::Flush()
 {
+    std::lock_guard<std::mutex> lock(mutex);
+
     if (error) [[unlikely]]
         return false;
 
@@ -7763,6 +7748,8 @@ void StreamWriter::SetDescriptorOwned(bool owned)
 
 bool StreamWriter::Write(Span<const uint8_t> buf)
 {
+    std::lock_guard<std::mutex> lock(mutex);
+
     if (error) [[unlikely]]
         return false;
 

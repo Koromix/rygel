@@ -295,7 +295,7 @@ static void RedirectErrors() {
 
         const wchar_t *ptr = buf_w.data;
         MessageBoxW(nullptr, ptr, title, flags);
-    });
+    }, false);
 }
 
 static inline ConfigProfile MakeDefaultProfile(const char *name, LightMode mode)
@@ -340,7 +340,7 @@ By default, the first of the following config files will be used:
                 FelixTarget);
 
         for (const char *filename: config_filenames) {
-            Fmt(&help, "    %!..+%1%!0\n", filename);
+            Fmt(&help, "    %1\n", filename);
         }
 
         ShowDialog(help.ptr);
@@ -350,7 +350,7 @@ By default, the first of the following config files will be used:
     if (argc >= 2 && TestStr(argv[1], "--version")) {
         HeapArray<char> version;
 
-        Fmt(&version, "%!R..%1%!0 %!..+%2%!0\n", FelixTarget, FelixVersion);
+        Fmt(&version, "%1 %2\n", FelixTarget, FelixVersion);
         Fmt(&version, "Compiler: %1", FelixCompiler);
 
         ShowDialog(version.ptr);
