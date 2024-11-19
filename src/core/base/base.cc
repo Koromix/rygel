@@ -3806,10 +3806,14 @@ bool FlushFile(int fd, const char *filename)
 }
 
 bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
-                int dest_fd, const char *dest_filename, int64_t dest_offset, int64_t size)
+                int dest_fd, const char *dest_filename, int64_t dest_offset, int64_t size,
+                FunctionRef<void(int64_t, int64_t)> progress)
 {
     static NtCopyFileChunkFunc *NtCopyFileChunk =
         (NtCopyFileChunkFunc *)GetProcAddress(GetModuleHandleA("ntdll.dll"), "NtCopyFileChunk");
+
+    int64_t max = size;
+    progress(0, max);
 
     // Try fast kernel-mode copy introduced in Windows 11
     if (NtCopyFileChunk) {
@@ -3823,7 +3827,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
         offset1.QuadPart = dest_offset;
 
         while (size) {
-            unsigned long count = (unsigned long)std::min(size, (int64_t)Mebibytes(256));
+            unsigned long count = (unsigned long)std::min(size, (int64_t)Mebibytes(64));
 
             IO_STATUS_BLOCK iob;
             LONG status = NtCopyFileChunk(h1, h2, nullptr, &iob, count, &offset0, &offset1, nullptr, nullptr, 0);
@@ -3845,6 +3849,8 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
             offset0.QuadPart += iob.Information;
             offset1.QuadPart += iob.Information;
             size -= iob.Information;
+
+            progress(max - size, max);
         }
 
         return true;
@@ -3898,6 +3904,8 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
             } while (remain.len);
 
             size -= buf.len;
+
+            progress(max - size, max);
         }
 
         return true;
@@ -4171,9 +4179,13 @@ bool FlushFile(int fd, const char *filename)
 }
 
 bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
-                int dest_fd, const char *dest_filename, int64_t dest_offset, int64_t size)
+                int dest_fd, const char *dest_filename, int64_t dest_offset, int64_t size,
+                FunctionRef<void(int64_t, int64_t)> progress)
 {
     static_assert(sizeof(off_t) == 8, "This code base requires large file offsets");
+
+    int64_t max = size;
+    progress(0, max);
 
 #if defined(__linux__) || defined(__FreeBSD__)
     // Try copy_file_range() if available
@@ -4181,7 +4193,7 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
         bool first = true;
 
         while (size) {
-            size_t count = (size_t)std::min(size, (int64_t)Mebibytes(256));
+            size_t count = (size_t)std::min(size, (int64_t)Mebibytes(64));
             ssize_t ret = copy_file_range(src_fd, (off_t *)&src_offset, dest_fd, (off_t *)&dest_offset, count, 0);
 
             if (ret < 0) {
@@ -4196,6 +4208,8 @@ bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
 
             first = false;
             size -= ret;
+
+            progress(max - size, max);
         }
 
         return true;
@@ -4215,7 +4229,7 @@ xdev:
         }
 
         while (size) {
-            size_t count = (size_t)std::min(size, (int64_t)Mebibytes(256));
+            size_t count = (size_t)std::min(size, (int64_t)Mebibytes(64));
             ssize_t ret = sendfile(dest_fd, src_fd, (off_t *)&src_offset, count);
 
             if (ret < 0) {
@@ -4230,6 +4244,8 @@ xdev:
 
             first = false;
             size -= ret;
+
+            progress(max - size, max);
         }
 
         return true;
@@ -4286,6 +4302,8 @@ unsupported:
             } while (remain.len);
 
             size -= buf.len;
+
+            progress(max - size, max);
         }
 
         return true;

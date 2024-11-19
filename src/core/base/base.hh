@@ -4285,9 +4285,11 @@ void CloseDescriptor(int fd);
 bool FlushFile(int fd, const char *filename);
 
 bool SpliceFile(int src_fd, const char *src_filename, int64_t src_offset,
-                int dest_fd, const char *dest_filename, int64_t dest_offset, int64_t size);
-static inline bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size)
-    { return SpliceFile(src_fd, src_filename, 0, dest_fd, dest_filename, 0, size); }
+                int dest_fd, const char *dest_filename, int64_t dest_offset, int64_t size,
+                FunctionRef<void(int64_t, int64_t)> progress = [](int64_t, int64_t) {});
+static inline bool SpliceFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size,
+                              FunctionRef<void(int64_t, int64_t)> progress = [](int64_t, int64_t) {})
+    { return SpliceFile(src_fd, src_filename, 0, dest_fd, dest_filename, 0, size, progress); }
 
 bool FileIsVt100(int fd);
 

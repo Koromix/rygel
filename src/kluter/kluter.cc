@@ -1127,7 +1127,10 @@ Options:
 
 static bool CopyFile(int src_fd, const char *src_filename, int dest_fd, const char *dest_filename, int64_t size, int64_t mtime)
 {
-    if (!SpliceFile(src_fd, src_filename, dest_fd, dest_filename, size))
+    Span<const char> basename = SplitStrReverseAny(src_filename, RG_PATH_SEPARATORS);
+    ProgressHandle progress(basename);
+
+    if (!SpliceFile(src_fd, src_filename, dest_fd, dest_filename, size, progress))
         return false;
     if (!ResizeFile(dest_fd, dest_filename, size))
         return false;
