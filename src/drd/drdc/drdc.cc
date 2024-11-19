@@ -141,18 +141,22 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
 
 #define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
         do { \
-            if ((ReadConfig) && !LoadConfig(config_filename, &drdc_config)) \
-                return 1; \
-            if (TestStr(cmd, RG_STRINGIFY(Cmd))) \
+            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
+                bool load = (ReadConfig) && TestFile(config_filename); \
+                 \
+                if (load && !LoadConfig(config_filename, &drdc_config)) \
+                    return 1; \
+                 \
                 return Func(arguments); \
+            } \
         } while (false)
 
-    HANDLE_COMMAND(mco_classify, RunMcoClassify, TestFile(config_filename));
-    HANDLE_COMMAND(mco_dump, RunMcoDump, TestFile(config_filename));
-    HANDLE_COMMAND(mco_list, RunMcoList, TestFile(config_filename));
-    HANDLE_COMMAND(mco_map, RunMcoMap, TestFile(config_filename));
+    HANDLE_COMMAND(mco_classify, RunMcoClassify, true);
+    HANDLE_COMMAND(mco_dump, RunMcoDump, true);
+    HANDLE_COMMAND(mco_list, RunMcoList, true);
+    HANDLE_COMMAND(mco_map, RunMcoMap, true);
     HANDLE_COMMAND(mco_pack, RunMcoPack, false);
-    HANDLE_COMMAND(mco_show, RunMcoShow, TestFile(config_filename));
+    HANDLE_COMMAND(mco_show, RunMcoShow, true);
 
 #undef HANDLE_COMMAND
 
