@@ -2009,32 +2009,35 @@ By default, the first of the following config files will be used:
         }
     }
 
-    // Load config
-    if (config_filename && !LoadConfig(config_filename, &config))
-        return 1;
-    if (!config.Validate())
-        return 1;
+#define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
+        do { \
+            if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
+                bool load = (ReadConfig) && TestFile(config_filename); \
+                 \
+                if (load) { \
+                    if (!LoadConfig(config_filename, &config)) \
+                        return 1; \
+                    if (!config.Validate()) \
+                        return 1; \
+                } \
+                 \
+                return Func(arguments); \
+            } \
+        } while (false)
 
-    if (TestStr(cmd, "init")) {
-        return RunInit(arguments);
-    } else if (TestStr(cmd, "status")) {
-        return RunStatus(arguments);
-    } else if (TestStr(cmd, "backup")) {
-        return RunBackup(arguments);
-    } else if (TestStr(cmd, "add_disk")) {
-        return RunAddDisk(arguments);
-    } else if (TestStr(cmd, "edit_disk")) {
-        return RunEditDisk(arguments);
-    } else if (TestStr(cmd, "remove_disk")) {
-        return RunRemoveDisk(arguments);
-    } else if (TestStr(cmd, "add_source")) {
-        return RunAddSource(arguments);
-    } else if (TestStr(cmd, "remove_source")) {
-        return RunRemoveSource(arguments);
-    } else {
-        LogError("Unknown command '%1'", cmd);
-        return 1;
-    }
+    HANDLE_COMMAND(init, RunInit, false);
+    HANDLE_COMMAND(status, RunStatus, true);
+    HANDLE_COMMAND(backup, RunBackup, true);
+    HANDLE_COMMAND(add_disk, RunAddDisk, true);
+    HANDLE_COMMAND(edit_disk, RunEditDisk, true);
+    HANDLE_COMMAND(remove_disk, RunRemoveDisk, true);
+    HANDLE_COMMAND(add_source, RunAddSource, true);
+    HANDLE_COMMAND(remove_source, RunRemoveSource, true);
+
+#undef HANDLE_COMMAND
+
+    LogError("Unknown command '%1'", cmd);
+    return 1;
 }
 
 }
