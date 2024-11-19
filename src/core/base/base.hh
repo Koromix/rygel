@@ -4680,7 +4680,7 @@ class Async {
 #endif
 
 public:
-    Async(int threads = -1, bool stop_after_error = true);
+    Async(int threads = 0, bool stop_after_error = true);
     Async(Async *parent, bool stop_after_error = true);
     ~Async();
 

@@ -187,7 +187,7 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     };
 
     // Heuristic found on MSDN
-    async = new Async(1 + 4 * GetCoreCount());
+    async = new Async(4 * GetCoreCount());
 
     iocp = CreateIoCompletionPort((HANDLE)(uintptr_t)listener, nullptr, 0, 0);
     if (!iocp) {
@@ -246,7 +246,7 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
 
     handle_func = func;
 
-    for (Size i = 1; i < async->GetWorkerCount(); i++) {
+    for (Size i = 0; i < async->GetWorkerCount(); i++) {
         async->Run([this] { return dispatcher->Run(); });
     }
 
