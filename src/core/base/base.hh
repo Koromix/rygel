@@ -101,8 +101,6 @@ namespace RG {
 #define RG_ASYNC_MAX_IDLE_TIME 10000
 #define RG_ASYNC_MAX_PENDING_TASKS 2048
 
-#define RG_FIBER_DEFAULT_STACK_SIZE Kibibytes(128)
-
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
