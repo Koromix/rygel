@@ -101,6 +101,9 @@ namespace RG {
 #define RG_ASYNC_MAX_IDLE_TIME 10000
 #define RG_ASYNC_MAX_PENDING_TASKS 2048
 
+#define RG_PROGRESS_MAX_NODES 1000
+#define RG_PROGRESS_USED_NODES 200
+
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------

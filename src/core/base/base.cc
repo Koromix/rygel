@@ -2035,7 +2035,7 @@ struct ProgressNode {
 static std::function<ProgressFunc> pg_handler = DefaultProgressHandler;
 
 static std::atomic_int pg_count;
-static ProgressNode pg_nodes[4096];
+static ProgressNode pg_nodes[RG_PROGRESS_MAX_NODES];
 
 static std::mutex pg_mutex;
 static bool pg_run = false;
@@ -2143,7 +2143,7 @@ bool ProgressHandle::AcquireNode()
 
             pg_run = true;
         }
-    } else if (count >= RG_LEN(pg_nodes) / 4) {
+    } else if (count > RG_PROGRESS_USED_NODES) {
         pg_count--;
         return false;
     }
