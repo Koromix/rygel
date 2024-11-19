@@ -482,6 +482,10 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
 
             Async async(&tasks);
 
+            Span<const char> basename = SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS);
+            ProgressHandle progress(basename);
+            std::atomic_int64_t total_len { 0 };
+
             // Check coherence
             Size prev_end = 0;
 
@@ -502,7 +506,9 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 }
                 prev_end = chunk.offset + chunk.len;
 
-                async.Run([=, this]() {
+                progress.Set(0, file_len);
+
+                async.Run([=, &progress, &total_len, this]() {
                     rk_BlobType type;
                     HeapArray<uint8_t> buf;
                     if (!disk->ReadBlob(chunk.hash, &type, &buf))
@@ -520,6 +526,9 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                         LogError("Failed to write to '%1': %2", dest_filename, strerror(errno));
                         return false;
                     }
+
+                    total_len += chunk.len;
+                    progress.Set(total_len, file_len);
 
                     return true;
                 });
