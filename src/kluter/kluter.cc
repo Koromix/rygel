@@ -1328,7 +1328,7 @@ Options:
 
         processed++;
 
-        async.Run([&]() {
+        async.Run([=, &set]() {
             if (!PerformCopies(&set, *disk, disk_path))
                 return false;
             if (cleanup && !PerformDeletions(&set, *disk, disk_path))
