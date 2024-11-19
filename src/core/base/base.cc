@@ -2118,7 +2118,10 @@ ProgressHandle::~ProgressHandle()
         node->front.valid = false;
         node->used = false;
 
-        pg_count--;
+        if (!--pg_count) {
+            std::lock_guard lock(log_mutex);
+            StdErr->Flush();
+        }
     }
 }
 
