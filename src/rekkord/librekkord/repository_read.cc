@@ -759,19 +759,26 @@ class ListContext {
     rk_Disk *disk;
     rk_ListSettings settings;
 
+    std::atomic_int64_t known = 1;
+    std::atomic_int64_t estimated = 1;
+    ProgressHandle *progress;
+
     Async tasks;
 
 public:
-    ListContext(rk_Disk *disk, const rk_ListSettings &settings);
+    ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress);
 
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
                         Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
     bool Sync() { return tasks.Sync(); }
+
+private:
+    void ReportProgress();
 };
 
-ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings)
-    : disk(disk), settings(settings), tasks(disk->GetThreads())
+ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress)
+    : disk(disk), settings(settings), progress(progress), tasks(disk->GetThreads())
 {
 }
 
@@ -807,6 +814,9 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 
     HeapArray<RecurseContext> contexts;
     contexts.AppendDefault(decoded.len);
+
+    estimated.fetch_add(decoded.len, std::memory_order_relaxed);
+    ReportProgress();
 
     for (Size i = 0; i < decoded.len; i++) {
         const EntryInfo &entry = decoded[i];
@@ -858,6 +868,9 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                             obj->children += (child.depth == depth + 1);
                         }
 
+                        known.fetch_add(1, std::memory_order_relaxed);
+                        ReportProgress();
+
                         return true;
                     });
                 }
@@ -865,7 +878,10 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 
             case rk_ObjectType::File:
             case rk_ObjectType::Link:
-            case rk_ObjectType::Unknown: {} break;
+            case rk_ObjectType::Unknown: {
+                known.fetch_add(1, std::memory_order_relaxed);
+                ReportProgress();
+            } break;
         }
     }
 
@@ -884,6 +900,14 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     return true;
 }
 
+void ListContext::ReportProgress()
+{
+    int64_t max = estimated.load(std::memory_order_relaxed);
+    int64_t value = known.load(std::memory_order_relaxed);
+
+    progress->Set(value, max);
+}
+
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
              Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
@@ -895,7 +919,8 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
     if (!disk->ReadBlob(hash, &type, &blob))
         return false;
 
-    ListContext tree(disk, settings);
+    ProgressHandle progress("List");
+    ListContext tree(disk, settings, &progress);
 
     switch (type) {
         case rk_BlobType::Directory: {
