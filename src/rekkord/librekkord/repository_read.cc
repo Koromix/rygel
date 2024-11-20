@@ -534,7 +534,11 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 });
             }
 
-            if (!async.Sync())
+            // Don't use Sync because we don't want to finish ASAP, and Sync will run other tasks which
+            // could take a while (such as other file tasks).
+            async.Wait(-1);
+
+            if (!async.IsSuccess())
                 return -1;
 
             // Check actual file size
