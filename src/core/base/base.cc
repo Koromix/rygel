@@ -7001,12 +7001,12 @@ bool AsyncPool::WaitOn(Async *async, int timeout)
 
     if (timeout >= 0) {
         std::chrono::milliseconds delay(timeout);
-        sync_cv.wait_for(lock_sync, delay, [&]() { return !async->remaining_tasks; });
+        bool done = sync_cv.wait_for(lock_sync, delay, [&]() { return !async->remaining_tasks; });
+        return done;
     } else {
         sync_cv.wait(lock_sync, [&]() { return !async->remaining_tasks; });
+        return true;
     }
-
-    return !async->remaining_tasks;
 }
 
 void AsyncPool::RunTasks(int worker_idx)
