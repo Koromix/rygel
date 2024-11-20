@@ -122,7 +122,7 @@ static bool LooksLikeHost(Span<const char> str)
 
 static bool LooksLikeSSH(Span<const char> str)
 {
-    if (StartsWith(str, "ssh://"))
+    if (StartsWith(str, "ssh://") || StartsWith(str, "sftp://"))
         return true;
 
     // Test for user@host pattern
