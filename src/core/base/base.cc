@@ -2197,7 +2197,10 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
     buf.Clear();
 
     bool vt100 = StdErr->IsVt100();
+    Size count = bars.len;
     int pad = 0;
+
+    bars = bars.Take(0, std::min((Size)20, bars.len));
 
     for (const ProgressInfo &bar: bars) {
         Size len = std::min((Size)50, bar.action.len);
@@ -2230,7 +2233,12 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
         }
     }
 
-    buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len).len;
+    if (count > bars.len) {
+        buf.len += Fmt(buf.TakeAvailable(), vt100, "%!D..... and %1 more tasks%!0\n", count).len;
+        buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len + 1).len;
+    } else {
+        buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len).len;
+    }
 
     frame++;
 
