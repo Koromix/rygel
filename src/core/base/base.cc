@@ -2015,12 +2015,14 @@ bool RedirectLogToWindowsEvents(const char *name)
 // ------------------------------------------------------------------------
 
 struct ProgressState {
-    bool valid;
+    Span<const char> action;
 
-    bool determinate;
     int64_t value;
     int64_t min;
     int64_t max;
+
+    bool determinate;
+    bool valid;
 };
 
 struct ProgressNode {
@@ -2076,11 +2078,11 @@ static void RunProgressThread()
                     continue;
             }
 
-            bar.action = node.action;
-            bar.determinate = node.back.determinate;
+            bar.action = node.back.action;
             bar.value = node.back.value;
             bar.min = node.back.min;
             bar.max = node.back.max;
+            bar.determinate = node.back.determinate;
 
             bars.Append(bar);
         }
@@ -2093,6 +2095,8 @@ static void RunProgressThread()
 
 ProgressHandle::~ProgressHandle()
 {
+    ProgressNode *node = this->node.load();
+
     if (node) {
         std::lock_guard<std::mutex> lock(node->mutex);
 
@@ -2107,7 +2111,9 @@ ProgressHandle::~ProgressHandle()
 
 void ProgressHandle::Set(int64_t value, int64_t min, int64_t max)
 {
-    if (!AcquireNode())
+    ProgressNode *node = AcquireNode();
+
+    if (!node) [[unlikely]]
         return;
 
     std::unique_lock<std::mutex> lock(node->mutex, std::try_to_lock);
@@ -2115,22 +2121,23 @@ void ProgressHandle::Set(int64_t value, int64_t min, int64_t max)
     if (!lock.owns_lock())
         return;
 
-    if (max > min) {
-        node->front.determinate = true;
-        node->front.value = value;
-        node->front.min = min;
-        node->front.max = max;
-        node->front.valid = true;
-    } else {
-        node->front.determinate = false;
-        node->front.valid = true;
-    }
+    node->front.action = node->action;
+    node->front.value = value;
+    node->front.min = min;
+    node->front.max = max;
+    node->front.determinate = (max > min);
+    node->front.valid = true;
 }
 
-bool ProgressHandle::AcquireNode()
+ProgressNode *ProgressHandle::AcquireNode()
 {
-    if (node)
-        return true;
+    // Fast path
+    {
+        ProgressNode *node = this->node.load(std::memory_order_relaxed);
+
+        if (node)
+            return node;
+    }
 
     int count = pg_count++;
 
@@ -2145,7 +2152,7 @@ bool ProgressHandle::AcquireNode()
         }
     } else if (count > RG_PROGRESS_USED_NODES) {
         pg_count--;
-        return false;
+        return nullptr;
     }
 
     int base = GetRandomInt(0, RG_LEN(pg_nodes));
@@ -2158,13 +2165,22 @@ bool ProgressHandle::AcquireNode()
 
         if (!used) {
             node->action = action;
-            this->node = node;
 
-            return true;
+            ProgressNode *prev = nullptr;
+            bool set = this->node.compare_exchange_strong(prev, node);
+
+            if (set) {
+                return node;
+            } else {
+                node->used = false;
+                pg_count--;
+
+                return prev;
+            }
         }
     }
 
-    return false;
+    return nullptr;
 }
 
 void SetProgressHandler(const std::function<ProgressFunc> &func)

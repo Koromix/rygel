@@ -4041,6 +4041,8 @@ bool RedirectLogToWindowsEvents(const char *name);
 // Progress
 // ------------------------------------------------------------------------
 
+struct ProgressNode;
+
 struct ProgressInfo {
     Span<const char> action;
 
@@ -4055,22 +4057,24 @@ typedef void ProgressFunc(Span<const ProgressInfo> states);
 class ProgressHandle {
     Span<const char> action;
 
-    struct ProgressNode *node = nullptr;
+    std::atomic<ProgressNode *> node = nullptr;
 
 public:
     ProgressHandle(Span<const char> action) : action(action) {}
     ~ProgressHandle();
 
+    // Thread safe
     void Set(int64_t value, int64_t min, int64_t max);
     void Set(int64_t value, int64_t max) { Set(value, 0, max); }
     void Busy() { Set(0, 0); }
 
+    // Thread safe
     void operator()(int64_t value, int64_t min, int64_t max) { Set(value, min, max); }
     void operator()(int64_t value, int64_t max) { Set(value, 0, max); }
     void operator()() { Set(0, 0); }
 
 private:
-    bool AcquireNode();
+    ProgressNode *AcquireNode();
 };
 
 void SetProgressHandler(const std::function<ProgressFunc> &func);
