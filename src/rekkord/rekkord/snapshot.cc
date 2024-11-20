@@ -122,7 +122,7 @@ Options:
 
     LogInfo("Repository: %!..+%1%!0 (%2)", disk->GetURL(), rk_DiskModeNames[(int)disk->GetMode()]);
     if (disk->GetMode() != rk_DiskMode::WriteOnly) {
-        LogWarning("You should use the write-only key with this command");
+        LogWarning("You should prefer write-only passwords for this command");
     }
     LogInfo();
 
