@@ -6738,6 +6738,7 @@ public:
     void AddTask(Async *async, int worker_idx, const std::function<bool()> &func);
 
     void RunWorker(int worker_idx);
+    void SyncOn(Async *async);
     bool WaitOn(Async *async, int timeout);
 
     void RunTasks(int worker_idx);
@@ -6754,7 +6755,7 @@ static thread_local bool async_running_task = false;
 Async::Async(int threads, bool stop_after_error)
     : stop_after_error(stop_after_error)
 {
-    RG_ASSERT(threads >= 0);
+    RG_ASSERT(threads);
 
     if (threads > 0) {
         pool = new AsyncPool(threads, false);
@@ -6805,14 +6806,13 @@ void Async::Run(int worker, const std::function<bool()> &func)
 
 bool Async::Sync()
 {
-    pool->WaitOn(this, -1);
+    pool->SyncOn(this);
     return success;
 }
 
 bool Async::Wait(int timeout)
 {
-    bool done = pool->WaitOn(this, timeout);
-    return done;
+    return pool->WaitOn(this, timeout);
 }
 
 int Async::GetWorkerCount()
@@ -6868,7 +6868,7 @@ void AsyncPool::RegisterAsync()
     std::lock_guard<std::mutex> lock_pool(pool_mutex);
 
     if (!async_count++) {
-        for (int i = 0; i < workers.len; i++) {
+        for (int i = 1; i < workers.len; i++) {
             WorkerData *worker = &workers[i];
 
             if (!worker->pool) {
@@ -6976,6 +6976,25 @@ void AsyncPool::RunWorker(int worker_idx)
     }
 }
 
+void AsyncPool::SyncOn(Async *async)
+{
+    RG_DEFER_C(pool = async_running_pool,
+               worker_idx = async_running_worker_idx) {
+        async_running_pool = pool;
+        async_running_worker_idx = worker_idx;
+    };
+
+    async_running_pool = this;
+    async_running_worker_idx = 0;
+
+    while (async->remaining_tasks) {
+        RunTasks(0);
+
+        std::unique_lock<std::mutex> lock_sync(pool_mutex);
+        sync_cv.wait(lock_sync, [&]() { return pending_tasks || !async->remaining_tasks; });
+    }
+}
+
 bool AsyncPool::WaitOn(Async *async, int timeout)
 {
     std::unique_lock<std::mutex> lock_sync(pool_mutex);
@@ -6983,11 +7002,11 @@ bool AsyncPool::WaitOn(Async *async, int timeout)
     if (timeout >= 0) {
         std::chrono::milliseconds delay(timeout);
         sync_cv.wait_for(lock_sync, delay, [&]() { return !async->remaining_tasks; });
-        return !async->remaining_tasks;
     } else {
         sync_cv.wait(lock_sync, [&]() { return !async->remaining_tasks; });
-        return true;
     }
+
+    return !async->remaining_tasks;
 }
 
 void AsyncPool::RunTasks(int worker_idx)
@@ -7034,6 +7053,7 @@ void AsyncPool::RunTask(Task *task)
 }
 
 #else
+
 
 Async::Async(int threads, bool stop_after_error)
     : stop_after_error(stop_after_error)

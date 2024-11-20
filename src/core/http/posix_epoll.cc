@@ -116,12 +116,12 @@ bool http_Daemon::Start(std::function<void(http_IO *io)> func)
     RG_ASSERT(!handle_func);
     RG_ASSERT(func);
 
-    async = new Async(2 * GetCoreCount());
+    async = new Async(1 + 2 * GetCoreCount());
 
     handle_func = func;
 
     // Run request dispatchers
-    for (int i = 0; i < async->GetWorkerCount(); i++) {
+    for (int i = 1; i < async->GetWorkerCount(); i++) {
         http_Dispatcher *dispatcher = new http_Dispatcher(this, this->dispatcher, listeners[0]);
         this->dispatcher = dispatcher;
 
@@ -212,7 +212,7 @@ bool http_Dispatcher::Run()
 {
     RG_ASSERT(epoll_fd < 0);
 
-    Async async(WorkersPerDispatcher);
+    Async async(1 + WorkersPerDispatcher);
 
     epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (epoll_fd < 0) {

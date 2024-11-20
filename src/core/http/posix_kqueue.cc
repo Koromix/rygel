@@ -305,7 +305,7 @@ bool http_Dispatcher::Run()
 {
     RG_ASSERT(kqueue_fd < 0);
 
-    Async async(WorkersPerDispatcher);
+    Async async(1 + WorkersPerDispatcher);
 
 #if defined(__FreeBSD__)
     kqueue_fd = kqueue1(O_CLOEXEC);

@@ -689,7 +689,7 @@ bool Builder::UpdateVersionSource(const char *target, const char *version, const
 
 bool Builder::Build(int jobs, bool verbose)
 {
-    RG_ASSERT(jobs > 0);
+    RG_ASSERT(jobs >= 0);
 
     // Reset build context
     clear_filenames.Clear();
