@@ -54,7 +54,7 @@ struct BlobIntro {
 
 static const int SecretVersion = 1;
 static const int TagVersion = 1;
-static const int BlobVersion = 7;
+static const int BlobVersion = 8;
 static const Size BlobSplit = Kibibytes(32);
 
 static const int CacheVersion = 4;

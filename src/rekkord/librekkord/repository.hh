@@ -46,8 +46,8 @@ struct rk_SnapshotInfo {
 
     const char *name;
     int64_t time;
-    int64_t len;
-    int64_t stored;
+    int64_t size;
+    int64_t storage;
 };
 
 enum class rk_ObjectType {
@@ -80,7 +80,9 @@ struct rk_ObjectInfo {
     int64_t size;
     bool readable;
 
-    int64_t stored; // for snapshots
+    int64_t entries; // for snapshots and directories
+    int64_t storage; // for snapshots
+
     Size children; // for snapshots and directories
 };
 

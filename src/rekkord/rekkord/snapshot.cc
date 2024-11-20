@@ -131,9 +131,9 @@ Options:
     int64_t now = GetMonotonicTime();
 
     rk_Hash hash = {};
-    int64_t total_len = 0;
+    int64_t total_size = 0;
     int64_t total_written = 0;
-    if (!rk_Put(disk.get(), settings, filenames, &hash, &total_len, &total_written))
+    if (!rk_Put(disk.get(), settings, filenames, &hash, &total_size, &total_written))
         return 1;
 
     double time = (double)(GetMonotonicTime() - now) / 1000.0;
@@ -145,7 +145,7 @@ Options:
         LogInfo("Snapshot hash: %!..+%1%!0", hash);
         LogInfo("Snapshot name: %!..+%1%!0", settings.name);
     }
-    LogInfo("Stored size: %!..+%1%!0", FmtDiskSize(total_len));
+    LogInfo("Stored size: %!..+%1%!0", FmtDiskSize(total_size));
     LogInfo("Total written: %!..+%1%!0", FmtDiskSize(total_written));
     LogInfo("Execution time: %!..+%1s%!0", FmtDouble(time, 1));
 

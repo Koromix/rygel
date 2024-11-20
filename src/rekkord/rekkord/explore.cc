@@ -183,8 +183,8 @@ Available sort orders: %!..+%4%!0)",
                 case SortOrder::Hash: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.hash - s2.hash; }; } break;
                 case SortOrder::Time: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.time - s2.time; }; } break;
                 case SortOrder::Name: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return CmpStr(s1.name, s2.name); }; } break;
-                case SortOrder::Size: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.len - s2.len; }; } break;
-                case SortOrder::Stored: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.stored - s2.stored; }; } break;
+                case SortOrder::Size: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.size - s2.size; }; } break;
+                case SortOrder::Stored: { func = [](const rk_SnapshotInfo &s1, const rk_SnapshotInfo &s2) -> int64_t { return s1.storage - s2.storage; }; } break;
             }
             RG_ASSERT(func);
 
@@ -213,8 +213,8 @@ Available sort orders: %!..+%4%!0)",
 
                     PrintLn("%!Y.+%1%!0 %!G..%2%!0", FmtArg(snapshot.name).Pad(40), FmtTimeNice(spec));
                     PrintLn("  + Hash: %!..+%1%!0", snapshot.hash);
-                    PrintLn("  + Size: %!..+%1%!0", FmtDiskSize(snapshot.len));
-                    PrintLn("  + Storage: %!..+%1%!0", FmtDiskSize(snapshot.stored));
+                    PrintLn("  + Size: %!..+%1%!0", FmtDiskSize(snapshot.size));
+                    PrintLn("  + Storage: %!..+%1%!0", FmtDiskSize(snapshot.storage));
 
                     if (verbose >= 1) {
                         PrintLn("  + Tag: %!D..%1%!0", snapshot.tag);
@@ -248,8 +248,8 @@ Available sort orders: %!..+%4%!0)",
                 }
                 json.Key("hash"); json.String(hash);
                 json.Key("time"); json.String(time);
-                json.Key("size"); json.Int64(snapshot.len);
-                json.Key("storage"); json.Int64(snapshot.stored);
+                json.Key("size"); json.Int64(snapshot.size);
+                json.Key("storage"); json.Int64(snapshot.storage);
                 json.Key("tag"); json.String(snapshot.tag);
 
                 json.EndObject();
@@ -279,8 +279,8 @@ Available sort orders: %!..+%4%!0)",
                 element.append_attribute("Name") = snapshot.name ? snapshot.name : "";
                 element.append_attribute("Hash") = hash;
                 element.append_attribute("Time") = time;
-                element.append_attribute("Size") = snapshot.len;
-                element.append_attribute("Storage") = snapshot.stored;
+                element.append_attribute("Size") = snapshot.size;
+                element.append_attribute("Storage") = snapshot.storage;
                 element.append_attribute("Tag") = snapshot.tag;
             }
 

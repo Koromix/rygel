@@ -531,7 +531,7 @@ bool rk_Disk::ReadBlob(const rk_Hash &hash, rk_BlobType *out_type, HeapArray<uin
         }
         MemCpy(&intro, remain.ptr, RG_SIZE(intro));
 
-        if (intro.version > BlobVersion) {
+        if (intro.version != BlobVersion) {
             LogError("Unexpected blob version %1 (expected %2)", intro.version, BlobVersion);
             return false;
         }

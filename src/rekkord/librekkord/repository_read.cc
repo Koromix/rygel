@@ -73,7 +73,7 @@ class GetContext {
 
     Async tasks;
 
-    std::atomic<int64_t> stat_len { 0 };
+    std::atomic<int64_t> stat_size { 0 };
 
 public:
     GetContext(rk_Disk *disk, const rk_GetSettings &settings);
@@ -85,7 +85,7 @@ public:
 
     bool Sync() { return tasks.Sync(); }
 
-    int64_t GetLen() const { return stat_len; }
+    int64_t GetSize() const { return stat_size; }
 
 private:
     bool CleanDirectory(Span<const char> dirname, const HashSet<Span<const char>> &keep);
@@ -260,11 +260,10 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 {
     // XXX: Make sure each path does not clobber a previous one
 
-    if (entries.len < RG_SIZE(int64_t)) [[unlikely]] {
+    if (entries.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
         return false;
     }
-    entries.len -= RG_SIZE(int64_t);
 
     struct SharedContext {
         BlockAllocator temp_alloc;
@@ -301,7 +300,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         ctx->fake = settings.fake;
     }
 
-    for (Size offset = 0; offset < entries.len;) {
+    for (Size offset = RG_SIZE(DirectoryHeader); offset < entries.len;) {
         EntryInfo *entry = ctx->entries.AppendDefault();
 
         Size skip = DecodeEntry(entries, offset, allow_separators, &ctx->temp_alloc, entry);
@@ -396,7 +395,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
                     }
 
                     if (settings.fake) {
-                        stat_len += entry.size;
+                        stat_size += entry.size;
                         break;
                     }
 
@@ -457,7 +456,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     int fd = !settings.fake ? writer.GetDescriptor() : -1;
     RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
 
-    int64_t file_len = -1;
+    int64_t file_size = -1;
     switch (type) {
         case rk_BlobType::File: {
             if (file_blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
@@ -467,24 +466,24 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
             file_blob.len -= RG_SIZE(int64_t);
 
             // Get file length from end of stream
-            MemCpy(&file_len, file_blob.end(), RG_SIZE(file_len));
-            file_len = LittleEndian(file_len);
+            MemCpy(&file_size, file_blob.end(), RG_SIZE(file_size));
+            file_size = LittleEndian(file_size);
 
-            if (file_len < 0) {
+            if (file_size < 0) {
                 LogError("Malformed file blob '%1'", hash);
                 return -1;
             }
             if (settings.fake)
                 break;
 
-            if (!ResizeFile(fd, dest_filename, file_len))
+            if (!ResizeFile(fd, dest_filename, file_size))
                 return -1;
 
             Async async(&tasks);
 
             Span<const char> basename = SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS);
             ProgressHandle progress(basename);
-            std::atomic_int64_t total_len { 0 };
+            std::atomic_int64_t total_size { 0 };
 
             // Check coherence
             Size prev_end = 0;
@@ -506,9 +505,9 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                 }
                 prev_end = chunk.offset + chunk.len;
 
-                progress.Set(0, file_len);
+                progress.Set(0, file_size);
 
-                async.Run([=, &progress, &total_len, this]() {
+                async.Run([=, &progress, &total_size, this]() {
                     rk_BlobType type;
                     HeapArray<uint8_t> buf;
                     if (!disk->ReadBlob(chunk.hash, &type, &buf))
@@ -527,8 +526,8 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                         return false;
                     }
 
-                    total_len += chunk.len;
-                    progress.Set(total_len, file_len);
+                    total_size += chunk.len;
+                    progress.Set(total_size, file_size);
 
                     return true;
                 });
@@ -544,9 +543,9 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
             // Check actual file size
             if (file_blob.len >= RG_SIZE(RawChunk) + RG_SIZE(int64_t)) {
                 const RawChunk *entry = (const RawChunk *)(file_blob.end() - RG_SIZE(RawChunk));
-                int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
+                int64_t size = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
-                if (len != file_len) [[unlikely]] {
+                if (size != file_size) [[unlikely]] {
                     LogError("File size mismatch for '%1'", entry->hash);
                     return -1;
                 }
@@ -554,7 +553,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         } break;
 
         case rk_BlobType::Chunk: {
-            file_len = file_blob.len;
+            file_size = file_blob.len;
 
             if (settings.fake)
                 break;
@@ -566,8 +565,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         } break;
 
         case rk_BlobType::Directory:
-        case rk_BlobType::Snapshot1:
-        case rk_BlobType::Snapshot2:
+        case rk_BlobType::Snapshot:
         case rk_BlobType::Link: { RG_UNREACHABLE(); } break;
     }
 
@@ -575,7 +573,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
         return -1;
 
     // Finally :)
-    stat_len += file_len;
+    stat_size += file_size;
 
     err_guard.Disable();
     return fd;
@@ -623,7 +621,7 @@ bool GetContext::CleanDirectory(Span<const char> dirname, const HashSet<Span<con
     return clean_directory(copy);
 }
 
-bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, const char *dest_path, int64_t *out_len)
+bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, const char *dest_path, int64_t *out_size)
 {
     rk_BlobType type;
     HeapArray<uint8_t> blob;
@@ -671,10 +669,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
                 return false;
         } break;
 
-        case rk_BlobType::Snapshot1: {
-            static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
-        case rk_BlobType::Snapshot2: {
+        case rk_BlobType::Snapshot: {
             if (!settings.force && TestFile(dest_path, FileType::Directory)) {
                 if (!IsDirectoryEmpty(dest_path)) {
                     LogError("Directory '%1' exists and is not empty", dest_path);
@@ -686,12 +681,12 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             }
 
             // There must be at least one entry
-            if (blob.len <= RG_SIZE(SnapshotHeader2)) {
+            if (blob.len <= RG_SIZE(SnapshotHeader)) {
                 LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
 
-            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
+            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader), blob.len - RG_SIZE(SnapshotHeader));
 
             unsigned int flags = (int)ExtractFlag::AllowSeparators |
                                  (settings.flat ? (int)ExtractFlag::FlattenName : 0);
@@ -721,8 +716,8 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
     if (!get.Sync())
         return false;
 
-    if (out_len) {
-        *out_len += get.GetLen();
+    if (out_size) {
+        *out_size += get.GetSize();
     }
     return true;
 }
@@ -741,13 +736,13 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
     for (const rk_TagInfo &tag: tags) {
         rk_SnapshotInfo snapshot = {};
 
-        if (tag.payload.len < (Size)offsetof(SnapshotHeader2, name) + 1 ||
-                tag.payload.len > RG_SIZE(SnapshotHeader2)) {
+        if (tag.payload.len < (Size)offsetof(SnapshotHeader, name) + 1 ||
+                tag.payload.len > RG_SIZE(SnapshotHeader)) {
             LogError("Malformed snapshot tag for '%1' (ignoring)", tag.hash);
             continue;
         }
 
-        SnapshotHeader2 header = {};
+        SnapshotHeader header = {};
         MemCpy(&header, tag.payload.ptr, tag.payload.len);
         header.name[RG_SIZE(header.name) - 1] = 0;
 
@@ -755,8 +750,8 @@ bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *o
         snapshot.hash = tag.hash;
         snapshot.name = DuplicateString(header.name, alloc).ptr;
         snapshot.time = LittleEndian(header.time);
-        snapshot.len = LittleEndian(header.len);
-        snapshot.stored = LittleEndian(header.stored);
+        snapshot.size = LittleEndian(header.size);
+        snapshot.storage = LittleEndian(header.storage);
 
         out_snapshots->Append(snapshot);
     }
@@ -772,14 +767,15 @@ class ListContext {
     rk_Disk *disk;
     rk_ListSettings settings;
 
-    std::atomic_int64_t known = 1;
-    std::atomic_int64_t estimated = 1;
     ProgressHandle *progress;
+
+    int64_t total_entries = 0;
+    std::atomic_int64_t known_entries = 0;
 
     Async tasks;
 
 public:
-    ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress);
+    ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress, int64_t entries);
 
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
                         Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
@@ -790,22 +786,21 @@ private:
     void ReportProgress();
 };
 
-ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress)
-    : disk(disk), settings(settings), progress(progress), tasks(disk->GetThreads())
+ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress, int64_t entries)
+    : disk(disk), settings(settings), progress(progress), total_entries(entries), tasks(disk->GetThreads())
 {
 }
 
 bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
                                  Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects)
 {
-    if (entries.len < RG_SIZE(int64_t)) [[unlikely]] {
+    if (entries.len < RG_SIZE(DirectoryHeader)) [[unlikely]] {
         LogError("Malformed directory blob");
         return false;
     }
-    entries.len -= RG_SIZE(int64_t);
 
     HeapArray<EntryInfo> decoded;
-    for (Size offset = 0; offset < entries.len;) {
+    for (Size offset = RG_SIZE(DirectoryHeader); offset < entries.len;) {
         EntryInfo entry = {};
 
         Size skip = DecodeEntry(entries, offset, allow_separators, alloc, &entry);
@@ -828,7 +823,6 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     HeapArray<RecurseContext> contexts;
     contexts.AppendDefault(decoded.len);
 
-    estimated.fetch_add(decoded.len, std::memory_order_relaxed);
     ReportProgress();
 
     for (Size i = 0; i < decoded.len; i++) {
@@ -881,7 +875,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                             obj->children += (child.depth == depth + 1);
                         }
 
-                        known.fetch_add(1, std::memory_order_relaxed);
+                        known_entries.fetch_add(1, std::memory_order_relaxed);
                         ReportProgress();
 
                         return true;
@@ -892,7 +886,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
             case rk_ObjectType::File:
             case rk_ObjectType::Link:
             case rk_ObjectType::Unknown: {
-                known.fetch_add(1, std::memory_order_relaxed);
+                known_entries.fetch_add(1, std::memory_order_relaxed);
                 ReportProgress();
             } break;
         }
@@ -915,10 +909,8 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 
 void ListContext::ReportProgress()
 {
-    int64_t max = estimated.load(std::memory_order_relaxed);
-    int64_t value = known.load(std::memory_order_relaxed);
-
-    progress->Set(value, max);
+    int64_t known = known_entries.load(std::memory_order_relaxed);
+    progress->Set(known, total_entries);
 }
 
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
@@ -932,55 +924,52 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
     if (!disk->ReadBlob(hash, &type, &blob))
         return false;
 
-    ProgressHandle progress("List");
-    ListContext tree(disk, settings, &progress);
-
     switch (type) {
         case rk_BlobType::Directory: {
+            if (blob.len <= RG_SIZE(DirectoryHeader)) {
+                LogError("Malformed directory blob '%1'", hash);
+                return false;
+            }
+
+            DirectoryHeader *header = (DirectoryHeader *)blob.ptr;
+            int64_t total = LittleEndian(header->entries);
+
+            ProgressHandle progress("Directory");
+            ListContext tree(disk, settings, &progress, total);
+
             if (!tree.RecurseEntries(blob, false, 0, alloc, out_objects))
                 return false;
         } break;
 
-        case rk_BlobType::Snapshot1: {
-            static_assert(RG_SIZE(SnapshotHeader1) == RG_SIZE(SnapshotHeader2));
-
-            if (blob.len <= RG_SIZE(SnapshotHeader1)) {
+        case rk_BlobType::Snapshot: {
+            if (blob.len <= RG_SIZE(SnapshotHeader) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
 
-            SnapshotHeader1 *header1 = (SnapshotHeader1 *)blob.ptr;
-            SnapshotHeader2 header2 = {};
+            SnapshotHeader *header1 = (SnapshotHeader *)blob.ptr;
+            DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
+            int64_t total = LittleEndian(header2->entries);
 
-            header2.time = header1->time;
-            header2.len = header1->len;
-            header2.stored = header1->stored;
-            MemCpy(header2.name, header1->name, RG_SIZE(header2.name));
+            ProgressHandle progress("Snapshot");
+            ListContext tree(disk, settings, &progress, total);
 
-            MemCpy(blob.ptr, &header2, RG_SIZE(SnapshotHeader2));
-        } [[fallthrough]];
-        case rk_BlobType::Snapshot2: {
-            if (blob.len <= RG_SIZE(SnapshotHeader2)) {
-                LogError("Malformed snapshot blob '%1'", hash);
-                return false;
-            }
-
-            SnapshotHeader2 *header = (SnapshotHeader2 *)blob.ptr;
-            header->name[RG_SIZE(header->name) - 1] = 0;
+            // Make sure snapshot name is NUL terminated
+            header1->name[RG_SIZE(header1->name) - 1] = 0;
 
             rk_ObjectInfo *obj = out_objects->AppendDefault();
 
             obj->hash = hash;
             obj->type = rk_ObjectType::Snapshot;
-            obj->name = DuplicateString(header->name, alloc).ptr;
-            obj->mtime = header->time;
-            obj->btime = header->time;
-            obj->size = header->len;
+            obj->name = DuplicateString(header1->name, alloc).ptr;
+            obj->mtime = LittleEndian(header1->time);
+            obj->btime = LittleEndian(header1->time);
+            obj->size = LittleEndian(header1->size);
             obj->readable = true;
 
-            obj->stored = header->stored;
+            obj->storage = LittleEndian(header1->storage);
 
-            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
+            Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader), blob.len - RG_SIZE(SnapshotHeader));
 
             if (!tree.RecurseEntries(entries, true, 1, alloc, out_objects))
                 return false;
@@ -1107,9 +1096,9 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
     blob.len -= RG_SIZE(int64_t);
 
     // Get file length from end of stream
-    int64_t file_len = -1;
-    MemCpy(&file_len, blob.end(), RG_SIZE(file_len));
-    file_len = LittleEndian(file_len);
+    int64_t file_size = -1;
+    MemCpy(&file_size, blob.end(), RG_SIZE(file_size));
+    file_size = LittleEndian(file_size);
 
     // Check coherence
     Size prev_end = 0;
@@ -1138,7 +1127,7 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
         const RawChunk *entry = (const RawChunk *)(blob.end() - RG_SIZE(RawChunk));
         int64_t len = LittleEndian(entry->offset) + LittleEndian(entry->len);
 
-        if (len != file_len) [[unlikely]] {
+        if (len != file_size) [[unlikely]] {
             LogError("File size mismatch for '%1'", entry->hash);
             return false;
         }
@@ -1149,7 +1138,7 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
 
 Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
 {
-    Size total_len = 0;
+    Size total_size = 0;
 
     for (Size i = 0; out_buf.len && i < chunks.len; i++) {
         const FileChunk &chunk = chunks[i];
@@ -1189,13 +1178,13 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
         offset += copy_len;
         out_buf.ptr += copy_len;
         out_buf.len -= copy_len;
-        total_len += copy_len;
+        total_size += copy_len;
 
         if (!out_buf.len)
             break;
     }
 
-    return total_len;
+    return total_size;
 }
 
 ChunkReader::ChunkReader(HeapArray<uint8_t> &blob)
@@ -1234,8 +1223,7 @@ std::unique_ptr<rk_FileReader> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash)
         } break;
 
         case rk_BlobType::Directory:
-        case rk_BlobType::Snapshot1:
-        case rk_BlobType::Snapshot2:
+        case rk_BlobType::Snapshot:
         case rk_BlobType::Link: {
             LogError("Expected file for '%1'", hash);
             return nullptr;
