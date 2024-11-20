@@ -2190,7 +2190,7 @@ void SetProgressHandler(const std::function<ProgressFunc> &func)
 
 void DefaultProgressHandler(Span<const ProgressInfo> bars)
 {
-    static int frame = 0;
+    static uint64_t frame = 0;
 
     // Don't blow up stack size
     static LocalArray<char, 65536> buf;
@@ -2222,8 +2222,9 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
 
             buf.len += Fmt(buf.TakeAvailable(), vt100, "%1    %!..+[%2%3]   %4%%%!0\n", action, FmtArg('-').Repeat(size), FmtArg(' ').Repeat(20 - size), progress).len;
         } else {
-            int before = frame;
-            int after = std::max(19 - frame, 0);
+            int progress = (int)(frame % 38);
+            int before = (progress > 19) ? (38 - progress) : progress;
+            int after = std::max(19 - before, 0);
 
             buf.len += Fmt(buf.TakeAvailable(), vt100, "%1    %!..+[%2-%3]%!0\n", action, FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after)).len;
         }
@@ -2231,7 +2232,7 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
 
     buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len).len;
 
-    frame = (frame + 1) % 21;
+    frame++;
 
     StdErr->Write(buf);
 }
