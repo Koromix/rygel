@@ -54,7 +54,7 @@ LocalDisk::LocalDisk(const char *path, const rk_OpenSettings &settings)
     // We're good!
     url = directory.ptr;
 
-    threads = (settings.threads > 0) ? settings.threads : (32 * GetCoreCount());
+    threads = (settings.threads > 0) ? settings.threads : (8 * GetCoreCount());
     compression_level = settings.compression_level;
 }
 
