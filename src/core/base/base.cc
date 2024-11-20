@@ -1944,9 +1944,9 @@ void DefaultLogHandler(LogLevel level, const char *ctx, const char *msg)
 {
     switch (level)  {
         case LogLevel::Debug:
-        case LogLevel::Info: { PrintLn(StdErr, "%!D..%1%!0%2", ctx ? ctx : "", msg); } break;
-        case LogLevel::Warning: { PrintLn(StdErr, "%!M..%1%!0%2", ctx ? ctx : "", msg); } break;
-        case LogLevel::Error: { PrintLn(StdErr, "%!R..%1%!0%2", ctx ? ctx : "", msg); } break;
+        case LogLevel::Info: { Print(StdErr, "%!D..%1%!0%2\n", ctx ? ctx : "", msg); } break;
+        case LogLevel::Warning: { Print(StdErr, "%!M..%1%!0%2\n", ctx ? ctx : "", msg); } break;
+        case LogLevel::Error: { Print(StdErr, "%!R..%1%!0%2\n", ctx ? ctx : "", msg); } break;
     }
 }
 
