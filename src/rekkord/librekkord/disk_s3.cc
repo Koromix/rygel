@@ -51,7 +51,7 @@ S3Disk::S3Disk(const s3_Config &config, const rk_OpenSettings &settings)
     url = s3.GetURL();
 
     // S3 is slow unless you use parallelism
-    threads = (settings.threads > 0) ? settings.threads : std::max(32, 4 * GetCoreCount());
+    threads = (settings.threads > 0) ? settings.threads : 100;
     compression_level = settings.compression_level;
 }
 
