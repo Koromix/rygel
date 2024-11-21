@@ -2223,14 +2223,20 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
 {
     static uint64_t frame = 0;
 
+    if (!bars.len) {
+        StdErr->Flush();
+        return;
+    }
+
     // Don't blow up stack size
     static LocalArray<char, 65536> buf;
     buf.Clear();
 
     bool vt100 = StdErr->IsVt100();
     Size count = bars.len;
+    Size rows = std::min((Size)20, bars.len);
 
-    bars = bars.Take(0, std::min((Size)20, bars.len));
+    bars = bars.Take(0, rows);
 
     for (const ProgressInfo &bar: bars) {
         if (bar.determinate) {
@@ -2252,14 +2258,20 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
 
     if (count > bars.len) {
         buf.len += Fmt(buf.TakeAvailable(), vt100, "%!D..... and %1 more tasks%!0\n", count - bars.len).len;
-        buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len + 1).len;
+        rows++;
+    }
+    buf.len--;
+
+    StdErr->Write(buf);
+    StdErr->Flush();
+
+    if (rows > 1) {
+        Print(StdErr, "\r\x1B[%1F\x1B[%2M", rows - 1, rows);
     } else {
-        buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len).len;
+        Print(StdErr, "\r\x1B[%2M", rows);
     }
 
     frame++;
-
-    StdErr->Write(buf);
 }
 
 // ------------------------------------------------------------------------
