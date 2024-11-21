@@ -2244,15 +2244,15 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
             int64_t delta = bar.value - bar.min;
 
             int progress = (int)(100 * delta / range);
-            int size = progress / 5;
+            int size = progress / 4;
 
-            buf.len += Fmt(buf.TakeAvailable(), vt100, "%!..+[%1%2]%!0   %3\n", FmtArg('-').Repeat(size), FmtArg(' ').Repeat(20 - size), bar.text).len;
+            buf.len += Fmt(buf.TakeAvailable(), vt100, "%!..+[%1%2]%!0  %3\n", FmtArg('-').Repeat(size), FmtArg(' ').Repeat(25 - size), bar.text).len;
         } else {
-            int progress = (int)(frame % 38);
-            int before = (progress > 19) ? (38 - progress) : progress;
-            int after = std::max(19 - before, 0);
+            int progress = (int)(frame % 48);
+            int before = (progress > 24) ? (48 - progress) : progress;
+            int after = std::max(24 - before, 0);
 
-            buf.len += Fmt(buf.TakeAvailable(), vt100, "%!..+[%1-%2]%!0   %3\n", FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after), bar.text).len;
+            buf.len += Fmt(buf.TakeAvailable(), vt100, "%!..+[%1-%2]%!0  %3\n", FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after), bar.text).len;
         }
     }
 
