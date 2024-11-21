@@ -2229,14 +2229,8 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
 
     bool vt100 = StdErr->IsVt100();
     Size count = bars.len;
-    int pad = 0;
 
     bars = bars.Take(0, std::min((Size)20, bars.len));
-
-    for (const ProgressInfo &bar: bars) {
-        Size len = std::min((Size)50, bar.text.len);
-        pad = std::max(pad, (int)len);
-    }
 
     for (const ProgressInfo &bar: bars) {
         if (bar.determinate) {
