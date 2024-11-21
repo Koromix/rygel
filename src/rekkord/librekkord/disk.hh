@@ -57,16 +57,22 @@ static const char *const rk_DiskModeNames[] = {
 enum class rk_BlobType: int8_t {
     Chunk = 0,
     File = 1,
-    Link = 2,
-    Directory = 3,
-    Snapshot = 4
+    Directory1 = 2,
+    Snapshot1 = 3,
+    Link = 4,
+    Snapshot2 = 5,
+    Directory2 = 6,
+    Snapshot3 = 7
 };
 static const char *const rk_BlobTypeNames[] = {
     "Chunk",
     "File",
+    "Directory1",
+    "Snapshot1",
     "Link",
-    "Directory",
-    "Snapshot"
+    "Snapshot2",
+    "Directory2",
+    "Snapshot3"
 };
 
 struct rk_UserInfo {

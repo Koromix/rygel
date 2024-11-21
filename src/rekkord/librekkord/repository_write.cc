@@ -324,7 +324,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             header->size = LittleEndian(pending->total_size.load());
             header->entries = LittleEndian(pending->total_entries.load());
 
-            HashBlake3(rk_BlobType::Directory, pending->blob, salt.ptr, &pending->hash);
+            HashBlake3(rk_BlobType::Directory2, pending->blob, salt.ptr, &pending->hash);
 
             if (pending->parent_idx >= 0) {
                 PendingDirectory *parent = &pending_directories[pending->parent_idx];
@@ -341,7 +341,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
             }
 
             async.Run([pending, this]() mutable {
-                Size written = disk->WriteBlob(pending->hash, rk_BlobType::Directory, pending->blob);
+                Size written = disk->WriteBlob(pending->hash, rk_BlobType::Directory2, pending->blob);
                 if (written < 0)
                     return false;
 
@@ -547,8 +547,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             LogError("Snapshot name cannot be empty");
             return false;
         }
-        if (strlen(settings.name) >= RG_SIZE(SnapshotHeader::name)) {
-            LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotHeader::name));
+        if (strlen(settings.name) >= RG_SIZE(SnapshotHeader2::name)) {
+            LogError("Snapshot name '%1' is too long (limit is %2 bytes)", settings.name, RG_SIZE(SnapshotHeader2::name));
             return false;
         }
     }
@@ -561,7 +561,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
 
     HeapArray<uint8_t> snapshot_blob;
-    snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader) + RG_SIZE(DirectoryHeader));
+    snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
 
     PutContext put(disk, db);
 
@@ -659,7 +659,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
     rk_Hash hash = {};
     if (!settings.raw) {
-        SnapshotHeader *header1 = (SnapshotHeader *)snapshot_blob.ptr;
+        SnapshotHeader2 *header1 = (SnapshotHeader2 *)snapshot_blob.ptr;
         DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
 
         header1->time = LittleEndian(GetUnixTime());
@@ -670,11 +670,11 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
         header2->size = LittleEndian(total_size);
         header2->entries = LittleEndian(total_entries);
 
-        HashBlake3(rk_BlobType::Snapshot, snapshot_blob, salt.ptr, &hash);
+        HashBlake3(rk_BlobType::Snapshot3, snapshot_blob, salt.ptr, &hash);
 
         // Write snapshot blob
         {
-            Size written = disk->WriteBlob(hash, rk_BlobType::Snapshot, snapshot_blob);
+            Size written = disk->WriteBlob(hash, rk_BlobType::Snapshot3, snapshot_blob);
             if (written < 0)
                 return false;
             total_written += written;
@@ -682,7 +682,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
 
         // Create tag file
         {
-            Size payload_len = offsetof(SnapshotHeader, name) + strlen(header1->name) + 1;
+            Size payload_len = offsetof(SnapshotHeader2, name) + strlen(header1->name) + 1;
             Span<const uint8_t> payload = MakeSpan((const uint8_t *)header1, payload_len);
 
             Size written = disk->WriteTag(hash, payload);
@@ -691,7 +691,7 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
             total_written += written;
         }
     } else {
-        const RawFile *entry = (const RawFile *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader));
+        const RawFile *entry = (const RawFile *)(snapshot_blob.ptr + RG_SIZE(SnapshotHeader2));
         hash = entry->hash;
     }
 
