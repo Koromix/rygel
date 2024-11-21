@@ -2257,7 +2257,7 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
     }
 
     if (count > bars.len) {
-        buf.len += Fmt(buf.TakeAvailable(), vt100, "%!D..... and %1 more tasks%!0\n", count).len;
+        buf.len += Fmt(buf.TakeAvailable(), vt100, "%!D..... and %1 more tasks%!0\n", count - bars.len).len;
         buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len + 1).len;
     } else {
         buf.len += Fmt(buf.TakeAvailable(), vt100, "\x1B[%1F\x1B[%1M", bars.len).len;
