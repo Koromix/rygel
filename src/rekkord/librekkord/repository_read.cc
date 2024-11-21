@@ -946,7 +946,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
 void ListContext::ReportProgress()
 {
     int64_t known = known_entries.load(std::memory_order_relaxed);
-    progress->Set(known, total_entries);
+    progress->SetFmt(known, total_entries, "%1 entries", known);
 }
 
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
@@ -973,7 +973,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             DirectoryHeader *header = (DirectoryHeader *)blob.ptr;
             int64_t total = LittleEndian(header->entries);
 
-            ProgressHandle progress("Directory");
+            ProgressHandle progress;
             ListContext tree(disk, settings, &progress, total);
 
             if (!tree.RecurseEntries(blob, false, 0, alloc, out_objects))
@@ -1011,7 +1011,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             DirectoryHeader *header2 = (DirectoryHeader *)(header1 + 1);
             int64_t total = LittleEndian(header2->entries);
 
-            ProgressHandle progress("Snapshot");
+            ProgressHandle progress;
             ListContext tree(disk, settings, &progress, total);
 
             // Make sure snapshot name is NUL terminated

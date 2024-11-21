@@ -103,6 +103,7 @@ namespace RG {
 
 #define RG_PROGRESS_MAX_NODES 1000
 #define RG_PROGRESS_USED_NODES 200
+#define RG_PROGRESS_TEXT_SIZE 64
 
 // ------------------------------------------------------------------------
 // Utility
@@ -4044,7 +4045,7 @@ bool RedirectLogToWindowsEvents(const char *name);
 struct ProgressNode;
 
 struct ProgressInfo {
-    Span<const char> action;
+    Span<const char> text;
 
     bool determinate;
     int64_t value;
@@ -4055,20 +4056,38 @@ struct ProgressInfo {
 typedef void ProgressFunc(Span<const ProgressInfo> states);
 
 class ProgressHandle {
-    Span<const char> action;
+    char text[RG_PROGRESS_TEXT_SIZE] = {};
 
     std::atomic<ProgressNode *> node = nullptr;
 
 public:
-    ProgressHandle(Span<const char> action) : action(action) {}
+    ProgressHandle() {}
+    ProgressHandle(Span<const char> str) { CopyString(str, text); }
     ~ProgressHandle();
 
-    // Thread safe
     void Set(int64_t value, int64_t min, int64_t max);
     void Set(int64_t value, int64_t max) { Set(value, 0, max); }
-    void Busy() { Set(0, 0); }
+    void Set() { Set(0, 0, 0); }
 
-    // Thread safe
+    void Set(int64_t value, int64_t min, int64_t max, Span<const char> text);
+    void Set(int64_t value, int64_t max, Span<const char> text) { Set(value, 0, max, text); }
+    void Set(Span<const char> text) { Set(0, 0, 0, text); }
+
+    template<typename... Args>
+    void SetFmt(int64_t value, int64_t min, int64_t max, const char *fmt, Args... args)
+    {
+        char text[RG_PROGRESS_TEXT_SIZE];
+        Fmt(text, fmt, args...);
+
+        Set(value, min, max, text);
+    }
+    template<typename... Args>
+    void SetFmt(int64_t value, int64_t max, const char *fmt, Args... args) { SetFmt(value, 0, max, fmt, args...); }
+    template<typename... Args>
+    void SetFmt(const char *fmt, Args... args) { SetFmt(0, 0, 0, fmt, args...); }
+
+    template<typename... Args>
+
     void operator()(int64_t value, int64_t min, int64_t max) { Set(value, min, max); }
     void operator()(int64_t value, int64_t max) { Set(value, 0, max); }
     void operator()() { Set(0, 0); }

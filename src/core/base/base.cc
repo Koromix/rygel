@@ -2015,7 +2015,7 @@ bool RedirectLogToWindowsEvents(const char *name)
 // ------------------------------------------------------------------------
 
 struct ProgressState {
-    Span<const char> action;
+    char text[RG_PROGRESS_TEXT_SIZE];
 
     int64_t value;
     int64_t min;
@@ -2027,7 +2027,6 @@ struct ProgressState {
 
 struct ProgressNode {
     std::atomic_bool used;
-    Span<const char> action;
 
     std::mutex mutex;
     ProgressState front;
@@ -2078,7 +2077,7 @@ static void RunProgressThread()
                     continue;
             }
 
-            bar.action = node.back.action;
+            bar.text = node.back.text;
             bar.value = node.back.value;
             bar.min = node.back.min;
             bar.max = node.back.max;
@@ -2121,7 +2120,26 @@ void ProgressHandle::Set(int64_t value, int64_t min, int64_t max)
     if (!lock.owns_lock())
         return;
 
-    node->front.action = node->action;
+    node->front.value = value;
+    node->front.min = min;
+    node->front.max = max;
+    node->front.determinate = (max > min);
+    node->front.valid = true;
+}
+
+void ProgressHandle::Set(int64_t value, int64_t min, int64_t max, Span<const char> text)
+{
+    ProgressNode *node = AcquireNode();
+
+    if (!node) [[unlikely]]
+        return;
+
+    std::unique_lock<std::mutex> lock(node->mutex, std::try_to_lock);
+
+    if (!lock.owns_lock())
+        return;
+
+    CopyString(text, node->front.text);
     node->front.value = value;
     node->front.min = min;
     node->front.max = max;
@@ -2164,7 +2182,8 @@ ProgressNode *ProgressHandle::AcquireNode()
         bool used = node->used.exchange(true);
 
         if (!used) {
-            node->action = action;
+            static_assert(RG_SIZE(text) == RG_SIZE(node->front.text));
+            MemCpy(node->front.text, text, RG_SIZE(text));
 
             ProgressNode *prev = nullptr;
             bool set = this->node.compare_exchange_strong(prev, node);
@@ -2203,19 +2222,11 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
     bars = bars.Take(0, std::min((Size)20, bars.len));
 
     for (const ProgressInfo &bar: bars) {
-        Size len = std::min((Size)50, bar.action.len);
+        Size len = std::min((Size)50, bar.text.len);
         pad = std::max(pad, (int)len);
     }
 
     for (const ProgressInfo &bar: bars) {
-        char action[256];
-
-        if (bar.action.len > pad) {
-            Fmt(action, "%1...", bar.action.Take(0, pad - 3));
-        } else {
-            Fmt(action, "%1", FmtArg(bar.action).Pad(pad));
-        }
-
         if (bar.determinate) {
             int64_t range = bar.max - bar.min;
             int64_t delta = bar.value - bar.min;
@@ -2223,13 +2234,13 @@ void DefaultProgressHandler(Span<const ProgressInfo> bars)
             int progress = (int)(100 * delta / range);
             int size = progress / 5;
 
-            buf.len += Fmt(buf.TakeAvailable(), vt100, "%1    %!..+[%2%3]   %4%%%!0\n", action, FmtArg('-').Repeat(size), FmtArg(' ').Repeat(20 - size), progress).len;
+            buf.len += Fmt(buf.TakeAvailable(), vt100, "%!..+[%1%2]%!0   %3\n", FmtArg('-').Repeat(size), FmtArg(' ').Repeat(20 - size), bar.text).len;
         } else {
             int progress = (int)(frame % 38);
             int before = (progress > 19) ? (38 - progress) : progress;
             int after = std::max(19 - before, 0);
 
-            buf.len += Fmt(buf.TakeAvailable(), vt100, "%1    %!..+[%2-%3]%!0\n", action, FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after)).len;
+            buf.len += Fmt(buf.TakeAvailable(), vt100, "%!..+[%1-%2]%!0   %3\n", FmtArg(' ').Repeat(before), FmtArg(' ').Repeat(after), bar.text).len;
         }
     }
 
