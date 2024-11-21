@@ -818,13 +818,12 @@ bool CopyString(Span<const char> str, Span<char> buf)
         return false;
 #endif
 
-    if (str.len > buf.len - 1) [[unlikely]]
-        return false;
+    Size copy_len = std::min(str.len, buf.len - 1);
 
-    MemCpy(buf.ptr, str.ptr, str.len);
-    buf[str.len] = 0;
+    MemCpy(buf.ptr, str.ptr, copy_len);
+    buf[copy_len] = 0;
 
-    return true;
+    return (copy_len == str.len);
 }
 
 Span<char> DuplicateString(Span<const char> str, Allocator *alloc)
