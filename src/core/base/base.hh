@@ -4062,7 +4062,7 @@ class ProgressHandle {
 
 public:
     ProgressHandle() {}
-    ProgressHandle(Span<const char> str) { CopyString(str, text); }
+    ProgressHandle(Span<const char> str) { CopyText(str, text); }
     ~ProgressHandle();
 
     void Set(int64_t value, int64_t min, int64_t max);
@@ -4076,10 +4076,10 @@ public:
     template<typename... Args>
     void SetFmt(int64_t value, int64_t min, int64_t max, const char *fmt, Args... args)
     {
-        char text[RG_PROGRESS_TEXT_SIZE];
-        Fmt(text, fmt, args...);
+        char buf[RG_PROGRESS_TEXT_SIZE];
+        Fmt(buf, fmt, args...);
 
-        Set(value, min, max, text);
+        Set(value, min, max, buf);
     }
     template<typename... Args>
     void SetFmt(int64_t value, int64_t max, const char *fmt, Args... args) { SetFmt(value, 0, max, fmt, args...); }
@@ -4094,6 +4094,7 @@ public:
 
 private:
     ProgressNode *AcquireNode();
+    void CopyText(Span<const char> text, char out[RG_PROGRESS_TEXT_SIZE]);
 };
 
 void SetProgressHandler(const std::function<ProgressFunc> &func);

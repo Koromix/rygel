@@ -2138,7 +2138,7 @@ void ProgressHandle::Set(int64_t value, int64_t min, int64_t max, Span<const cha
     if (!lock.owns_lock())
         return;
 
-    CopyString(text, node->front.text);
+    CopyText(text, node->front.text);
     node->front.value = value;
     node->front.min = min;
     node->front.max = max;
@@ -2199,6 +2199,19 @@ ProgressNode *ProgressHandle::AcquireNode()
     }
 
     return nullptr;
+}
+
+void ProgressHandle::CopyText(Span<const char> text, char out[RG_PROGRESS_TEXT_SIZE])
+{
+    Span<char> buf = MakeSpan(out, RG_PROGRESS_TEXT_SIZE);
+    bool complete = CopyString(text, buf);
+
+    if (!complete) [[unlikely]] {
+        out[RG_PROGRESS_TEXT_SIZE - 4] = '.';
+        out[RG_PROGRESS_TEXT_SIZE - 3] = '.';
+        out[RG_PROGRESS_TEXT_SIZE - 2] = '.';
+        out[RG_PROGRESS_TEXT_SIZE - 1] = 0;
+    }
 }
 
 void SetProgressHandler(const std::function<ProgressFunc> &func)
