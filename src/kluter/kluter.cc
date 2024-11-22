@@ -653,9 +653,13 @@ DistributeResult DistributeContext::DistributeNew(const char *src_dir)
                                     ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
                                                                      size = excluded.size,
                                                                      disk_id = excluded.disk_id,
-                                                                     status = IIF(mtime <> excluded.mtime OR
-                                                                                  size <> excluded.size OR
-                                                                                  disk_id <> excluded.disk_id, 'changed', status),
+                                                                     status = CASE
+                                                                         WHEN status = 'added' THEN 'added'
+                                                                         WHEN mtime <> excluded.mtime OR
+                                                                              size <> excluded.size OR
+                                                                              disk_id <> excluded.disk_id THEN 'changed'
+                                                                         ELSE 'ok'
+                                                                     END,
                                                                      changeset = excluded.changeset)",
                                  filename, file_info.mtime, file_info.size, usage->id, changeset))
                     return false;
