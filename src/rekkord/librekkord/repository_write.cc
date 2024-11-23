@@ -249,12 +249,12 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                         }
 
                         async.Run([=, this]() {
-                            int64_t file_len = 0;
-                            PutResult ret = PutFile(filename, &entry->hash, &file_len);
+                            int64_t file_size = 0;
+                            PutResult ret = PutFile(filename, &entry->hash, &file_size);
 
                             if (ret == PutResult::Success) {
                                 entry->flags |= LittleEndian((int16_t)RawFile::Flags::Readable);
-                                pending->total_size += file_len;
+                                pending->total_size += file_size;
 
                                 return true;
                             } else {
