@@ -2,6 +2,10 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.7 (23/11/2024)
+
+- Correction des instances dupliquées (régression introduite dans Goupile 3.7.3)
+
 ### Goupile 3.7.6 (16/11/2024)
 
 - Activation du mode conception par défaut pour les instances de démonstration

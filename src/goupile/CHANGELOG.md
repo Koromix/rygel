@@ -2,6 +2,10 @@
 
 ## Goupile 3.7
 
+### Goupile 3.7.7 (2024-11-23)
+
+- Fix unsorted instances leading to duplicates and deadlocks (regression introduced in Goupile 3.7.3)
+
 ### Goupile 3.7.6 (2024-11-16)
 
 - Enable development mode by default for demo instances
