@@ -95,7 +95,7 @@ public:
 private:
     bool CleanDirectory(Span<const char> dirname, const HashSet<Span<const char>> &keep);
 
-    void ReportProgress();
+    void MakeProgress(int64_t delta);
 };
 
 GetContext::GetContext(rk_Disk *disk, const rk_GetSettings &settings, ProgressHandle *progress, int64_t total)
@@ -547,8 +547,7 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
                         return false;
                     }
 
-                    restored_size.fetch_add(chunk.len, std::memory_order_relaxed);
-                    ReportProgress();
+                    MakeProgress(chunk.len);
 
                     return true;
                 });
@@ -645,13 +644,13 @@ bool GetContext::CleanDirectory(Span<const char> dirname, const HashSet<Span<con
     return clean_directory(copy);
 }
 
-void GetContext::ReportProgress()
+void GetContext::MakeProgress(int64_t delta)
 {
-    if (settings.verbose)
-        return;
+    int64_t restored = restored_size.fetch_add(delta, std::memory_order_relaxed) + delta;
 
-    int64_t restored = restored_size.load(std::memory_order_relaxed);
-    progress->SetFmt(restored, total_size, "%1 / %2", FmtDiskSize(restored), FmtDiskSize(total_size));
+    if (!settings.verbose) {
+        progress->SetFmt(restored, total_size, "%1 / %2", FmtDiskSize(restored), FmtDiskSize(total_size));
+    }
 }
 
 bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, const char *dest_path, int64_t *out_size)
@@ -861,7 +860,7 @@ public:
     bool Sync() { return tasks.Sync(); }
 
 private:
-    void ReportProgress();
+    void MakeProgress(int64_t delta);
 };
 
 ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress, int64_t total)
@@ -901,7 +900,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     HeapArray<RecurseContext> contexts;
     contexts.AppendDefault(decoded.len);
 
-    ReportProgress();
+    MakeProgress(0);
 
     for (Size i = 0; i < decoded.len; i++) {
         const EntryInfo &entry = decoded[i];
@@ -957,8 +956,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
                             obj->children += (child.depth == depth + 1);
                         }
 
-                        known_entries.fetch_add(1, std::memory_order_relaxed);
-                        ReportProgress();
+                        MakeProgress(1);
 
                         return true;
                     });
@@ -968,8 +966,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
             case rk_ObjectType::File:
             case rk_ObjectType::Link:
             case rk_ObjectType::Unknown: {
-                known_entries.fetch_add(1, std::memory_order_relaxed);
-                ReportProgress();
+                MakeProgress(1);
             } break;
         }
     }
@@ -989,10 +986,15 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
     return true;
 }
 
-void ListContext::ReportProgress()
+void ListContext::MakeProgress(int64_t delta)
 {
-    int64_t known = known_entries.load(std::memory_order_relaxed);
-    progress->SetFmt(known, total_entries, "%1 entries", known);
+    int64_t known = known_entries.fetch_add(delta, std::memory_order_relaxed) + delta;
+
+    if (total_entries) {
+        progress->SetFmt(known, total_entries, "%1 / %2 entries", known, total_entries);
+    } else {
+        progress->SetFmt(known, total_entries, "%1 entries", known);
+    }
 }
 
 bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings,
