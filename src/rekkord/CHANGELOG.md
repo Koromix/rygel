@@ -6,6 +6,19 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.30 (2024-11-24)
+
+- Adjust rekkord data format for better progress reports (causes transient repository size expansion)
+- Report progress while running `rekkord restore`
+- Report progress while running `rekkord list`
+- Reduce number of threads for local rekkord repositories
+- Default to 100 threads for S3 access in rekkord
+- Fix detection of *sftp:* URLs in rekkord
+- Fix stripped root '/' with short SSH urls
+- Expose tag filename in `rekkord snapshots`
+- Use ISO time strings for JSON and XML rekkord outputs
+- Fix typos in help and error messages
+
 ### Rekkord 0.29 (2024-10-16)
 
 - Revert "Always append username to snapshot names" change
