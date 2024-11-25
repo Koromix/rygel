@@ -357,28 +357,28 @@ static int DoOpen(const char *path, fuse_file_info *fi)
     if ((fi->flags & O_ACCMODE) != O_RDONLY)
         return -EACCES;
 
-    std::unique_ptr<rk_FileReader> reader = rk_OpenFile(disk.get(), entry->hash);
-    if (!reader)
+    std::unique_ptr<rk_FileHandle> handle = rk_OpenFile(disk.get(), entry->hash);
+    if (!handle)
         return -EIO;
 
-    fi->fh = (uintptr_t)reader.release();
+    fi->fh = (uintptr_t)handle.release();
     return 0;
 }
 
 static int DoRelease(const char *, fuse_file_info *fi)
 {
-    rk_FileReader *reader = (rk_FileReader *)fi->fh;
-    delete reader;
+    rk_FileHandle *handle = (rk_FileHandle *)fi->fh;
+    delete handle;
 
     return 0;
 }
 
 static int DoRead(const char *, char *buf, size_t size, off_t offset, fuse_file_info *fi)
 {
-    rk_FileReader *reader = (rk_FileReader *)fi->fh;
+    rk_FileHandle *handle = (rk_FileHandle *)fi->fh;
 
     Span<uint8_t> dest = MakeSpan((uint8_t *)buf, (Size)size);
-    Size read = reader->Read(offset, dest);
+    Size read = handle->Read(offset, dest);
 
     if (read < 0)
         return -EIO;

@@ -86,9 +86,9 @@ struct rk_ObjectInfo {
     Size children; // for snapshots and directories
 };
 
-class rk_FileReader {
+class rk_FileHandle {
 public:
-    virtual ~rk_FileReader() {}
+    virtual ~rk_FileHandle() {}
     virtual Size Read(int64_t offset, Span<uint8_t> out_buf) = 0;
 };
 
@@ -108,6 +108,6 @@ bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash);
 const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc);
 
 // Files
-std::unique_ptr<rk_FileReader> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash);
+std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash);
 
 }

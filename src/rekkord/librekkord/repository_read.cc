@@ -1175,7 +1175,7 @@ const char *rk_ReadLink(rk_Disk *disk, const rk_Hash &hash, Allocator *alloc)
     return target;
 }
 
-class FileReader: public rk_FileReader {
+class FileHandle: public rk_FileHandle {
     rk_Disk *disk;
     HeapArray<FileChunk> chunks;
 
@@ -1184,22 +1184,22 @@ class FileReader: public rk_FileReader {
     HeapArray<uint8_t> buf;
 
 public:
-    FileReader(rk_Disk *disk) : disk(disk) {}
+    FileHandle(rk_Disk *disk) : disk(disk) {}
 
     bool Init(const rk_Hash &hash, Span<const uint8_t> blob);
     Size Read(int64_t offset, Span<uint8_t> out_buf) override;
 };
 
-class ChunkReader: public rk_FileReader {
+class ChunkHandle: public rk_FileHandle {
     HeapArray<uint8_t> chunk;
 
 public:
-    ChunkReader(HeapArray<uint8_t> &blob);
+    ChunkHandle(HeapArray<uint8_t> &blob);
 
     Size Read(int64_t offset, Span<uint8_t> out_buf) override;
 };
 
-bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
+bool FileHandle::Init(const rk_Hash &hash, Span<const uint8_t> blob)
 {
     if (blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
         LogError("Malformed file blob '%1'", hash);
@@ -1248,7 +1248,7 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
     return true;
 }
 
-Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
+Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
 {
     Size total_size = 0;
 
@@ -1304,12 +1304,12 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
     return total_size;
 }
 
-ChunkReader::ChunkReader(HeapArray<uint8_t> &blob)
+ChunkHandle::ChunkHandle(HeapArray<uint8_t> &blob)
 {
     std::swap(chunk, blob);
 }
 
-Size ChunkReader::Read(int64_t offset, Span<uint8_t> out_buf)
+Size ChunkHandle::Read(int64_t offset, Span<uint8_t> out_buf)
 {
     Size copy_offset = (Size)std::min(offset, (int64_t)chunk.len);
     Size copy_len = std::min(chunk.len - copy_offset, out_buf.len);
@@ -1319,7 +1319,7 @@ Size ChunkReader::Read(int64_t offset, Span<uint8_t> out_buf)
     return copy_len;
 }
 
-std::unique_ptr<rk_FileReader> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash)
+std::unique_ptr<rk_FileHandle> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash)
 {
     rk_BlobType type;
     HeapArray<uint8_t> blob;
@@ -1328,15 +1328,15 @@ std::unique_ptr<rk_FileReader> rk_OpenFile(rk_Disk *disk, const rk_Hash &hash)
 
     switch (type) {
         case rk_BlobType::File: {
-            std::unique_ptr<FileReader> reader = std::make_unique<FileReader>(disk);
-            if (!reader->Init(hash, blob))
+            std::unique_ptr<FileHandle> handle = std::make_unique<FileHandle>(disk);
+            if (!handle->Init(hash, blob))
                 return nullptr;
-            return reader;
+            return handle;
         } break;
 
         case rk_BlobType::Chunk: {
-            std::unique_ptr<ChunkReader> reader = std::make_unique<ChunkReader>(blob);
-            return reader;
+            std::unique_ptr<ChunkHandle> handle = std::make_unique<ChunkHandle>(blob);
+            return handle;
         } break;
 
         case rk_BlobType::Directory1:
