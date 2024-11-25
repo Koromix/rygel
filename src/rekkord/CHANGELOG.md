@@ -6,6 +6,11 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.31 (2024-11-25)
+
+- Fix use of unix time format for `rekkord list -f XML`
+- Change style of CLI progress bars
+
 ### Rekkord 0.30 (2024-11-24)
 
 - Adjust rekkord data format for better progress reports (causes transient repository size expansion)
