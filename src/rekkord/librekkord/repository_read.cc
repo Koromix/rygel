@@ -1252,11 +1252,14 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
 {
     Size total_size = 0;
 
-    for (Size i = 0; out_buf.len && i < chunks.len; i++) {
-        const FileChunk &chunk = chunks[i];
+    FileChunk *first = std::lower_bound(chunks.begin(), chunks.end(), offset,
+                                        [](const FileChunk &chunk, int64_t offset) {
+        return chunk.offset + chunk.len < offset;
+    });
+    Size idx = first - chunks.ptr;
 
-        if (chunk.offset + chunk.len < offset)
-            continue;
+    while (idx < chunks.len) {
+        const FileChunk &chunk = chunks[idx];
 
         Size copy_offset = offset - chunk.offset;
         Size copy_len = (Size)std::min(chunk.len - copy_offset, (int64_t)out_buf.len);
@@ -1265,7 +1268,7 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
         {
             std::lock_guard<std::mutex> lock(buf_mutex);
 
-            if (buf_idx != i) {
+            if (buf_idx != idx) {
                 buf.RemoveFrom(0);
 
                 rk_BlobType type;
@@ -1281,7 +1284,7 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
                     return false;
                 }
 
-                buf_idx = i;
+                buf_idx = idx;
             }
 
             MemCpy(out_buf.ptr, buf.ptr + copy_offset, copy_len);
@@ -1294,6 +1297,8 @@ Size FileReader::Read(int64_t offset, Span<uint8_t> out_buf)
 
         if (!out_buf.len)
             break;
+
+        idx++;
     }
 
     return total_size;
