@@ -4693,7 +4693,6 @@ void CloseSocket(int fd);
 class Async {
     RG_DELETE_COPY(Async)
 
-    bool stop_after_error;
 #if !defined(__wasi__)
     std::atomic_bool success { true };
     std::atomic_int remaining_tasks { 0 };
@@ -4704,8 +4703,8 @@ class Async {
 #endif
 
 public:
-    Async(int threads = -1, bool stop_after_error = true);
-    Async(Async *parent, bool stop_after_error = true);
+    Async(int threads = -1);
+    Async(Async *parent);
     ~Async();
 
     void Run(const std::function<bool()> &f);

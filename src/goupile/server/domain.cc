@@ -474,7 +474,7 @@ bool DomainHolder::Checkpoint()
 {
     std::shared_lock<std::shared_mutex> lock_shr(mutex);
 
-    Async async(-1, false);
+    Async async;
 
     async.Run([&]() { return db.Checkpoint(); });
     for (InstanceHolder *instance: instances) {

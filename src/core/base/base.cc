@@ -6781,8 +6781,7 @@ static thread_local AsyncPool *async_running_pool = nullptr;
 static thread_local int async_running_worker_idx;
 static thread_local bool async_running_task = false;
 
-Async::Async(int threads, bool stop_after_error)
-    : stop_after_error(stop_after_error)
+Async::Async(int threads)
 {
     RG_ASSERT(threads);
 
@@ -6806,8 +6805,7 @@ Async::Async(int threads, bool stop_after_error)
     pool->RegisterAsync();
 }
 
-Async::Async(Async *parent, bool stop_after_error)
-    : stop_after_error(stop_after_error)
+Async::Async(Async *parent)
 {
     RG_ASSERT(parent);
 
@@ -7067,11 +7065,9 @@ void AsyncPool::RunTask(Task *task)
     RG_DEFER_C(running = async_running_task) { async_running_task = running; };
     async_running_task = true;
 
-    bool run = !async->stop_after_error ||
-               async->success.load(std::memory_order_relaxed);
-
     pending_tasks--;
-    if (run && !task->func()) {
+
+    if (!task->func()) {
         async->success = false;
     }
 
@@ -7084,14 +7080,12 @@ void AsyncPool::RunTask(Task *task)
 #else
 
 
-Async::Async(int threads, bool stop_after_error)
-    : stop_after_error(stop_after_error)
+Async::Async(int threads)
 {
     RG_ASSERT(threads);
 }
 
-Async::Async(Async *parent, bool stop_after_error)
-    : stop_after_error(stop_after_error)
+Async::Async(Async *parent)
 {
     RG_ASSERT(parent);
 }
@@ -7103,17 +7097,11 @@ Async::~Async()
 
 void Async::Run(const std::function<bool()> &func)
 {
-    if (!success && stop_after_error)
-        return;
-
     success &= !!func();
 }
 
 void Async::Run(int, const std::function<bool()> &func)
 {
-    if (!success && stop_after_error)
-        return;
-
     success &= !!func();
 }
 

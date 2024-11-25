@@ -176,7 +176,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
     unsigned int write_flags = (int)StreamWriterFlag::Atomic |
                                (force ? 0 : (int)StreamWriterFlag::Exclusive);
 
-    Async async(-1, false);
+    Async async;
 
     for (Size i = 0; i < src_filenames.len; i++) {
         async.Run([&, i]() {
@@ -425,7 +425,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
     unsigned int write_flags = (int)StreamWriterFlag::Atomic |
                                (force ? 0 : (int)StreamWriterFlag::Exclusive);
 
-    Async async(-1, false);
+    Async async;
 
     for (Size i = 0; i < src_filenames.len; i++) {
         async.Run([&, i] {

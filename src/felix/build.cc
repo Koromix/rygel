@@ -796,7 +796,7 @@ bool Builder::Build(int jobs, bool verbose)
     LogInfo("Building with %1 %2...", jobs, jobs > 1 ? "threads" : "thread");
     int64_t now = GetMonotonicTime();
 
-    Async async(jobs, build.stop_after_error);
+    Async async(jobs);
 
     // Run nodes
     bool busy = false;
@@ -1404,6 +1404,8 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
 
 bool Builder::RunNode(Async *async, Node *node, bool verbose)
 {
+    if (build.stop_after_error && !async->IsSuccess())
+        return false;
     if (WaitForInterrupt(0) == WaitForResult::Interrupt)
         return false;
 
