@@ -267,10 +267,11 @@ MinizCompressor::MinizCompressor(StreamWriter *writer, CompressionType type, Com
         static uint8_t gzip_header[] = {
             0x1F, 0x8B, // Fixed bytes
             8,          // Deflate
-            0,          // FLG
+            0x2,        // FLG (FHCRC)
             0, 0, 0, 0, // MTIME
             0,          // XFL
-            0           // OS
+            0,          // OS
+            0x1D, 0x26  // CRC16 for header
         };
 
         WriteRaw(gzip_header);
