@@ -483,7 +483,8 @@ int GetContext::GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_
     int fd = !settings.fake ? writer.GetDescriptor() : -1;
     RG_DEFER_N(err_guard) { CloseDescriptor(fd); };
 
-    int64_t file_size = -1;
+    int64_t file_size = 0;
+
     switch (type) {
         case rk_BlobType::File: {
             if (file_blob.len % RG_SIZE(RawChunk) != RG_SIZE(int64_t)) {
@@ -670,14 +671,17 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
                 }
             }
 
-            if (blob.len < RG_SIZE(int64_t)) {
-                LogError("Malformed file blob '%1'", hash);
-                return false;
-            }
+            int64_t file_size = 0;
 
-            int64_t file_size = -1;
-            MemCpy(&file_size, blob.end() - RG_SIZE(int64_t), RG_SIZE(int64_t));
-            file_size = LittleEndian(file_size);
+            if (type == rk_BlobType::File) {
+                if (blob.len < RG_SIZE(int64_t)) {
+                    LogError("Malformed file blob '%1'", hash);
+                    return false;
+                }
+
+                MemCpy(&file_size, blob.end() - RG_SIZE(int64_t), RG_SIZE(int64_t));
+                file_size = LittleEndian(file_size);
+            }
 
             if (settings.verbose) {
                 LogInfo("Restore file %!..+%1%!0", hash);
@@ -1204,7 +1208,7 @@ bool FileReader::Init(const rk_Hash &hash, Span<const uint8_t> blob)
     blob.len -= RG_SIZE(int64_t);
 
     // Get file length from end of stream
-    int64_t file_size = -1;
+    int64_t file_size = 0;
     MemCpy(&file_size, blob.end(), RG_SIZE(file_size));
     file_size = LittleEndian(file_size);
 
