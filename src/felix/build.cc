@@ -171,7 +171,7 @@ Builder::Builder(const BuildSettings &build)
 
     cache_directory = Fmt(&str_alloc, "%1%/%2_%3@%4", build.output_directory, build.compiler->name, platform, architecture).ptr;
     shared_directory = Fmt(&str_alloc, "%1%/Shared", build.output_directory).ptr;
-    cache_filename = Fmt(&str_alloc, "%1%/FelixCache.bin", shared_directory).ptr;
+    cache_filename = Fmt(&str_alloc, "%1%/FelixCache.lz4", shared_directory).ptr;
     compile_filename = Fmt(&str_alloc, "%1%/compile_commands.json", build.output_directory).ptr;
 
     LoadCache();
@@ -842,10 +842,12 @@ Command Builder::InitCommand()
 
 void Builder::SaveCache()
 {
+    if (!IsCompressorAvailable(CompressionType::LZ4))
+        return;
     if (!EnsureDirectoryExists(cache_filename))
         return;
 
-    StreamWriter st(cache_filename, (int)StreamWriterFlag::Atomic);
+    StreamWriter st(cache_filename, (int)StreamWriterFlag::Atomic, CompressionType::LZ4);
     if (!st.IsValid())
         return;
 
@@ -863,6 +865,8 @@ void Builder::SaveCache()
 
 void Builder::LoadCache()
 {
+    if (!IsDecompressorAvailable(CompressionType::LZ4))
+        return;
     if (!TestFile(cache_filename))
         return;
 
@@ -876,10 +880,13 @@ void Builder::LoadCache()
 
     // Load whole file to memory
     HeapArray<char> cache(&str_alloc);
-    if (ReadFile(cache_filename, Megabytes(64), &cache) < 0)
-        return;
-    cache.len = TrimStrRight(cache.Take(), "\n").len;
-    cache.Grow(1);
+    {
+        StreamReader st(cache_filename, CompressionType::LZ4);
+        if (!st.ReadAll(Megabytes(128), &cache))
+            return;
+        cache.len = TrimStrRight(cache.Take(), "\n").len;
+        cache.Grow(1);
+    }
 
     // Parse cache file
     {
