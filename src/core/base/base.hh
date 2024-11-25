@@ -4150,7 +4150,7 @@ static const char *const CompressionTypeNames[] = {
 };
 static const char *const CompressionTypeExtensions[] = {
     nullptr,
-    nullptr,
+    ".zz",
     ".gz",
     ".br",
     ".lz4",

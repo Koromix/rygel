@@ -130,7 +130,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
 
             const char *compression_ext = CompressionTypeExtensions[(int)compression_type];
             if (!compression_ext) {
-                LogError("Cannot guess output filename without compression type");
+                LogError("Cannot guess output filename");
                 return 1;
             }
 
@@ -139,7 +139,7 @@ Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAl
         } else if (src_filename) {
             const char *compression_ext = CompressionTypeExtensions[(int)compression_type];
             if (!compression_ext) {
-                LogError("Cannot guess output filename without compression type");
+                LogError("Cannot guess output filename");
                 return 1;
             }
 
