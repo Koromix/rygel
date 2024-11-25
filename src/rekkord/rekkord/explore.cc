@@ -401,11 +401,21 @@ pugi::xml_node ListObjectXml(T *ptr, const rk_ObjectInfo &obj)
         element.append_attribute("Hash") = "";
     }
 
+    char mtime[64];
+    char btime[64];
+    {
+        TimeSpec mspec = DecomposeTimeUTC(obj.mtime);
+        TimeSpec bspec = DecomposeTimeUTC(obj.btime);
+
+        Fmt(mtime, "%1", FmtTimeISO(mspec, true));
+        Fmt(btime, "%1", FmtTimeISO(bspec, true));
+    }
+
     if (obj.type == rk_ObjectType::Snapshot) {
-        element.append_attribute("Time") = obj.mtime;
+        element.append_attribute("Time") = mtime;
     } else {
-        element.append_attribute("Mtime") = obj.mtime;
-        element.append_attribute("Btime") = obj.btime;
+        element.append_attribute("Mtime") = mtime;
+        element.append_attribute("Btime") = btime;
         if (obj.type != rk_ObjectType::Link) {
             element.append_attribute("Mode") = Fmt(buf, "0o%1", FmtOctal(obj.mode)).ptr;
         }
