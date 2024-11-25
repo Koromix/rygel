@@ -80,6 +80,10 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
             LogError("File '%1' does not look like a Gzip stream", GetFileName());
             return -1;
         }
+        if (in_buf[3] & ~0x1F) {
+            LogError("Unsupported flags in Gzip header");
+            return -1;
+        }
 
         if (in_buf[3] & 0x4) { // FEXTRA
             if (in_len - header_len < 2)
