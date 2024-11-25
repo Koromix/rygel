@@ -106,11 +106,15 @@ Size MinizDecompressor::Read(Size max_len, void *user_buf)
         if (in_buf[3] & 0x2) { // FHCRC
             if (in_len - header_len < 2)
                 goto truncated_error;
-            uint16_t crc16 = (uint16_t)(in_buf[1] << 8 | in_buf[0]);
-            if ((mz_crc32(MZ_CRC32_INIT, in_buf, (size_t)header_len) & 0xFFFF) == crc16) {
-                LogError("Failed header CRC16 check in '%s'", GetFileName());
+
+            uint16_t crc16 = (uint16_t)mz_crc32(MZ_CRC32_INIT, in_buf, (size_t)header_len);
+            uint16_t expected = ((uint16_t)in_buf[header_len + 1] << 8) | in_buf[header_len];
+
+            if (crc16 != expected) {
+                LogError("Failed header CRC16 check in '%1'", GetFileName());
                 return -1;
             }
+
             header_len += 2;
         }
 
