@@ -3,7 +3,7 @@
 set -e
 cd $(dirname $0)
 
-SRC=$(ls -1 ../felix/*.cc ../core/base/base.cc ../core/compress/zlib.cc ../core/wrap/json.cc \
+SRC=$(ls -1 ../felix/*.cc ../core/base/base.cc ../core/compress/miniz.cc ../core/wrap/json.cc \
             ../../vendor/miniz/miniz.c ../../vendor/pugixml/src/pugixml.cpp)
 
 PRESET=Fast
