@@ -30,6 +30,10 @@ class MinizDecompressor: public StreamDecoder {
     tinfl_decompressor inflator;
     bool done = false;
 
+    // This decompressor supports Zlib and Gzip
+    bool is_gzip = false;
+    bool process_gzip_header = false;
+
     uint8_t in_buf[256 * 1024];
     uint8_t *in_ptr = nullptr;
     Size in_len = 0;
@@ -38,9 +42,7 @@ class MinizDecompressor: public StreamDecoder {
     uint8_t *out_ptr = nullptr;
     Size out_len = 0;
 
-    // Gzip support
-    bool is_gzip = false;
-    bool header_done = false;
+    // For gzip support
     uint32_t crc32 = MZ_CRC32_INIT;
     Size uncompressed_size = 0;
 
@@ -52,71 +54,70 @@ public:
 };
 
 MinizDecompressor::MinizDecompressor(StreamReader *reader, CompressionType type)
-    : StreamDecoder(reader)
+    : StreamDecoder(reader), is_gzip(type == CompressionType::Gzip), process_gzip_header(is_gzip)
 {
     static_assert(RG_SIZE(out_buf) >= TINFL_LZ_DICT_SIZE);
-
     tinfl_init(&inflator);
-    is_gzip = (type == CompressionType::Gzip);
 }
 
 Size MinizDecompressor::Read(Size max_len, void *user_buf)
 {
     // Gzip header is not directly supported by miniz. Currently this
-    // will fail if the header is longer than 4096 bytes, which is
+    // will fail if the header is longer than 8192 bytes, which is
     // probably quite rare.
-    if (is_gzip && !header_done) {
-        uint8_t header[4096];
-        Size header_len;
+    if (process_gzip_header) {
+        const Size header_max = 8192;
+        static_assert(header_max < RG_SIZE(in_buf) / 4);
 
-        header_len = ReadRaw(RG_SIZE(header), header);
-        if (header_len < 0) {
+        in_len = ReadRaw(header_max, in_buf);
+
+        if (in_len < 0)
             return -1;
-        } else if (header_len < 10 || header[0] != 0x1F || header[1] != 0x8B) {
+
+        Size header_len = 10;
+
+        if (in_len < header_len || in_buf[0] != 0x1F || in_buf[1] != 0x8B) {
             LogError("File '%1' does not look like a Gzip stream", GetFileName());
             return -1;
         }
 
-        Size header_offset = 10;
-        if (header[3] & 0x4) { // FEXTRA
-            if (header_len - header_offset < 2)
+        if (in_buf[3] & 0x4) { // FEXTRA
+            if (in_len - header_len < 2)
                 goto truncated_error;
-            uint16_t extra_len = (uint16_t)((header[11] << 8) | header[10]);
-            if (extra_len > header_len - header_offset)
+            uint16_t extra_len = (uint16_t)((in_buf[11] << 8) | in_buf[10]);
+            if (extra_len > in_len - header_len)
                 goto truncated_error;
-            header_offset += extra_len;
+            header_len += extra_len;
         }
-        if (header[3] & 0x8) { // FNAME
-            uint8_t *end_ptr = (uint8_t *)memchr(header + header_offset, '\0',
-                                                 (size_t)(header_len - header_offset));
+        if (in_buf[3] & 0x8) { // FNAME
+            uint8_t *end_ptr = (uint8_t *)memchr(in_buf + header_len, '\0',
+                                                 (size_t)(in_len - header_len));
             if (!end_ptr)
                 goto truncated_error;
-            header_offset = end_ptr - header + 1;
+            header_len = end_ptr - in_buf + 1;
         }
-        if (header[3] & 0x10) { // FCOMMENT
-            uint8_t *end_ptr = (uint8_t *)memchr(header + header_offset, '\0',
-                                                 (size_t)(header_len - header_offset));
+        if (in_buf[3] & 0x10) { // FCOMMENT
+            uint8_t *end_ptr = (uint8_t *)memchr(in_buf + header_len, '\0',
+                                                 (size_t)(in_len - header_len));
             if (!end_ptr)
                 goto truncated_error;
-            header_offset = end_ptr - header + 1;
+            header_len = end_ptr - in_buf + 1;
         }
-        if (header[3] & 0x2) { // FHCRC
-            if (header_len - header_offset < 2)
+        if (in_buf[3] & 0x2) { // FHCRC
+            if (in_len - header_len < 2)
                 goto truncated_error;
-            uint16_t crc16 = (uint16_t)(header[1] << 8 | header[0]);
-            if ((mz_crc32(MZ_CRC32_INIT, header, (size_t)header_offset) & 0xFFFF) == crc16) {
+            uint16_t crc16 = (uint16_t)(in_buf[1] << 8 | in_buf[0]);
+            if ((mz_crc32(MZ_CRC32_INIT, in_buf, (size_t)header_len) & 0xFFFF) == crc16) {
                 LogError("Failed header CRC16 check in '%s'", GetFileName());
                 return -1;
             }
-            header_offset += 2;
+            header_len += 2;
         }
 
-        // Put back remaining data in the buffer
-        MemCpy(in_buf, header + header_offset, header_len - header_offset);
-        in_ptr = in_buf;
-        in_len = header_len - header_offset;
+        in_ptr = in_buf + header_len;
+        in_len -= header_len;
 
-        header_done = true;
+        process_gzip_header = false;
     }
 
     // Inflate (with miniz)
