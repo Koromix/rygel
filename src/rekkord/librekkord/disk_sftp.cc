@@ -83,6 +83,7 @@ private:
 };
 
 SftpDisk::SftpDisk(const ssh_Config &config, const rk_OpenSettings &settings)
+    : rk_Disk(settings, std::max(32, 4 * GetCoreCount()))
 {
     config.Clone(&this->config);
 
@@ -108,9 +109,6 @@ SftpDisk::SftpDisk(const ssh_Config &config, const rk_OpenSettings &settings)
     } else {
         url = Fmt(&str_alloc, "sftp://%1@%2/%3", config.username, config.host, config.path ? config.path : "").ptr;
     }
-
-    threads = (settings.threads > 0) ? settings.threads : std::max(32, 4 * GetCoreCount());
-    compression_level = settings.compression_level;
 }
 
 SftpDisk::~SftpDisk()
@@ -208,7 +206,7 @@ bool SftpDisk::Init(const char *full_pwd, const char *write_pwd)
 
     // Init blob subdirectories
     {
-        Async async(GetThreads());
+        Async async(GetAsync());
 
         for (int i = 0; i < 4096; i++) {
             const char *path = Fmt(&temp_alloc, "%1/blobs/%2", config.path, FmtHex(i).Pad0(-3)).ptr;
@@ -438,7 +436,7 @@ bool SftpDisk::DeleteRaw(const char *path)
 bool SftpDisk::ListRaw(const char *path, FunctionRef<bool(const char *path)> func)
 {
     ListContext ctx = {};
-    Async tasks(GetThreads());
+    Async tasks(GetAsync());
 
     ctx.tasks = &tasks;
     ctx.func = func;

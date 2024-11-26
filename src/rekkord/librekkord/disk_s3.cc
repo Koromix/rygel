@@ -43,16 +43,13 @@ public:
 };
 
 S3Disk::S3Disk(const s3_Config &config, const rk_OpenSettings &settings)
+    : rk_Disk(settings, 100)
 {
     if (!s3.Open(config))
         return;
 
     // We're good!
     url = s3.GetURL();
-
-    // S3 is slow unless you use parallelism
-    threads = (settings.threads > 0) ? settings.threads : 100;
-    compression_level = settings.compression_level;
 }
 
 S3Disk::~S3Disk()

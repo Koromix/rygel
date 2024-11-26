@@ -99,7 +99,7 @@ private:
 };
 
 GetContext::GetContext(rk_Disk *disk, const rk_GetSettings &settings, ProgressHandle *progress, int64_t total)
-    : disk(disk), settings(settings), progress(progress), total_size(total), tasks(disk->GetThreads())
+    : disk(disk), settings(settings), progress(progress), total_size(total), tasks(disk->GetAsync())
 {
 }
 
@@ -853,22 +853,18 @@ class ListContext {
     int64_t total_entries = 0;
     std::atomic_int64_t known_entries = 0;
 
-    Async tasks;
-
 public:
     ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress, int64_t total);
 
     bool RecurseEntries(Span<const uint8_t> entries, bool allow_separators, int depth,
                         Allocator *alloc, HeapArray<rk_ObjectInfo> *out_objects);
 
-    bool Sync() { return tasks.Sync(); }
-
 private:
     void MakeProgress(int64_t delta);
 };
 
 ListContext::ListContext(rk_Disk *disk, const rk_ListSettings &settings, ProgressHandle *progress, int64_t total)
-    : disk(disk), settings(settings), progress(progress), total_entries(total), tasks(disk->GetThreads())
+    : disk(disk), settings(settings), progress(progress), total_entries(total)
 {
 }
 
@@ -892,7 +888,7 @@ bool ListContext::RecurseEntries(Span<const uint8_t> entries, bool allow_separat
         decoded.Append(entry);
     }
 
-    Async async(&tasks);
+    Async async(disk->GetAsync());
 
     struct RecurseContext {
         rk_ObjectInfo obj;

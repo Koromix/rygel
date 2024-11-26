@@ -86,6 +86,11 @@ struct rk_TagInfo {
     Span<const uint8_t> payload;
 };
 
+struct rk_OpenSettings {
+    int threads = -1;
+    int compression_level = 4;
+};
+
 class rk_Disk {
 protected:
     const char *url = nullptr;
@@ -102,12 +107,17 @@ protected:
     sq_Database cache_db;
     std::mutex cache_mutex;
     int cache_misses = 0;
-    int threads = 1;
     int compression_level = 0;
+
+    Async tasks;
 
     BlockAllocator str_alloc;
 
 public:
+    rk_Disk(const rk_OpenSettings &settings, int default_threads)
+        : compression_level(settings.compression_level),
+          tasks(settings.threads > 0 ? settings.threads : default_threads) {}
+
     virtual ~rk_Disk();
 
     virtual bool Init(const char *full_pwd, const char *write_pwd) = 0;
@@ -132,7 +142,7 @@ public:
         return pkey;
     }
 
-    int GetThreads() const { return threads; }
+    Async *GetAsync() { return &tasks; }
 
     bool ChangeID();
 
@@ -180,11 +190,6 @@ private:
     bool CheckRepository();
 
     void ClearCache();
-};
-
-struct rk_OpenSettings {
-    int threads = -1;
-    int compression_level = 4;
 };
 
 std::unique_ptr<rk_Disk> rk_Open(const rk_Config &config, bool authenticate);

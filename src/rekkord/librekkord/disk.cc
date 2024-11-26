@@ -793,7 +793,7 @@ bool rk_Disk::ListTags(Allocator *alloc, HeapArray<rk_TagInfo> *out_tags)
     out_tags->AppendDefault(filenames.len);
     ready.AppendDefault(filenames.len);
 
-    Async async(GetThreads());
+    Async async(GetAsync());
 
     // List snapshots
     for (Size i = 0; i < filenames.len; i++) {

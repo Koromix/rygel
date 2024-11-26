@@ -42,6 +42,7 @@ public:
 };
 
 LocalDisk::LocalDisk(const char *path, const rk_OpenSettings &settings)
+    : rk_Disk(settings, 8 * GetCoreCount())
 {
     Span<const char> directory = NormalizePath(path, GetWorkingDirectory(), &str_alloc);
 
@@ -53,9 +54,6 @@ LocalDisk::LocalDisk(const char *path, const rk_OpenSettings &settings)
 
     // We're good!
     url = directory.ptr;
-
-    threads = (settings.threads > 0) ? settings.threads : (8 * GetCoreCount());
-    compression_level = settings.compression_level;
 }
 
 LocalDisk::~LocalDisk()

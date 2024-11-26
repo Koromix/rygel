@@ -47,8 +47,8 @@ class PutContext {
     std::atomic_int64_t stat_written { 0 };
     std::atomic_int64_t stat_entries { 0 };
 
-    Async dir_async;
-    Async file_async;
+    Async dir_tasks;
+    Async file_tasks;
 
     std::atomic_int big_semaphore { FileBigLimit };
 
@@ -78,7 +78,7 @@ static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t 
 
 PutContext::PutContext(rk_Disk *disk, sq_Database *db)
     : disk(disk), db(db), salt(disk->GetSalt()),
-      dir_async(disk->GetThreads()), file_async(disk->GetThreads())
+      dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
 {
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
     MemCpy(&salt64, salt.ptr, RG_SIZE(salt64));
@@ -103,7 +103,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
         rk_Hash hash = {};
     };
 
-    Async async(&dir_async);
+    Async async(&dir_tasks);
     bool success = true;
 
     // Enumerate directory hierarchy and process files
@@ -441,7 +441,7 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         }
 
         do {
-            Async async(&file_async);
+            Async async(&file_tasks);
 
             // Fill buffer
             Size read = st.Read(buf.TakeAvailable());
