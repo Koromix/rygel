@@ -76,3 +76,9 @@ esbuild index.js --platform=node --bundle --loader:.node=copy --outdir=dist/
 ```
 
 You can find a full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/node-esbuild).
+
+## Node.js and yao-pkg
+
+Use [yao-pkg](https://github.com/yao-pkg/pkg) to make binary packages of your Node.js-based project.
+
+You can find a full [working example in the repository](https://github.com/Koromix/rygel/tree/master/src/koffi/examples/yao-pkg).

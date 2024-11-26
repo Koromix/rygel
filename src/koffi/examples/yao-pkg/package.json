@@ -1,0 +1,22 @@
+{
+  "name": "KoffiConfig",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "bundle": "pkg ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "koffi": "^2.5.18"
+  },
+  "devDependencies": {
+    "@yao-pkg/pkg": "^6.1.1"
+  },
+  "bin": "index.js",
+  "pkg": {
+    "outputPath": "dist"
+  }
+}
