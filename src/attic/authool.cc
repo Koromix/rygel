@@ -206,9 +206,6 @@ retry:
         if (!password)
             return 1;
 
-        if (check && !pwd_CheckPassword(password))
-            goto retry;
-
         if (confirm) {
             const char *password2 = Prompt("Confirm: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
             if (!password2)
@@ -218,9 +215,10 @@ retry:
                 LogError("Password mismatch");
                 goto retry;
             }
-        } else if (check && !pwd_CheckPassword(password)) {
-            goto retry;
         }
+
+        if (check && !pwd_CheckPassword(password))
+            goto retry;
     } else if (password[0]) {
         if (check && !pwd_CheckPassword(password))
             return 1;
@@ -237,6 +235,78 @@ retry:
     }
 
     PrintLn("PasswordHash = %1", hash);
+    return 0;
+}
+
+static int RunCheckPassword(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    const char *password = nullptr;
+    bool mask = true;
+    bool confirm = true;
+
+    const auto print_usage = [](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 check_password [options]
+       %1 check_password -p <password>%!0
+
+Options:
+    %!..+-p, --password <password>%!0    Use password given as option
+
+        %!..+--no_mask%!0                Show password as typed
+        %!..+--no_confirm%!0             Ask only once for password)", FelixTarget);
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-p", "--password", OptionType::Value)) {
+                password = opt.current_value;
+            } else if (opt.Test("--no_mask")) {
+                mask = false;
+            } else if (opt.Test("--no_confirm")) {
+                confirm = false;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        opt.LogUnusedArguments();
+    }
+
+    if (!password) {
+retry:
+        password = Prompt("Password: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
+        if (!password)
+            return 1;
+
+        if (confirm) {
+            const char *password2 = Prompt("Confirm: ", nullptr, mask ? "*" : nullptr, &temp_alloc);
+            if (!password2)
+                return 1;
+
+            if (!TestStr(password, password2)) {
+                LogError("Password mismatch");
+                goto retry;
+            }
+        }
+    } else {
+        LogError("Password must not be empty");
+        return 1;
+    }
+
+    if (!pwd_CheckPassword(password))
+        return 1;
+
+    LogInfo("Valid password");
     return 0;
 }
 
@@ -690,6 +760,7 @@ R"(Usage: %!..+%1 <command> [args]%!0
 Commands:
     %!..+generate_password%!0            Generate random password
     %!..+hash_password%!0                Hash a password (using libsodium)
+    %!..+check_password%!0               Check password strength
 
     %!..+generate_totp%!0                Generate a TOTP QR code
     %!..+compute_totp%!0                 Generate TOTP code based on current time
@@ -730,6 +801,8 @@ Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific h
         return RunGeneratePassword(arguments);
     } else if (TestStr(cmd, "hash_password")) {
         return RunHashPassword(arguments);
+    } else if (TestStr(cmd, "check_password")) {
+        return RunCheckPassword(arguments);
     } else if (TestStr(cmd, "generate_totp")) {
         return RunGenerateTOTP(arguments);
     } else if (TestStr(cmd, "compute_totp")) {
