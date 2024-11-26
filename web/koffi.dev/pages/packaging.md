@@ -4,6 +4,9 @@
 
 Koffi uses native modules to work. The NPM package contains binaries for various platforms and architectures, and the appropriate module is selected at runtime.
 
+> [!IMPORTANT]
+> Please note that Koffi is meant for Node.js (or Electron) and not for browsers! It it not possible to load native libraries inside a browser!
+
 In theory, the **packagers/bundlers should be able to find all native modules** because they are explictly listed in the Javascript file (as static strings) and package them somehow.
 
 If that is not the case, you can manually arrange to copy the `node_modules/koffi/build/koffi` directory next to your bundled script.
