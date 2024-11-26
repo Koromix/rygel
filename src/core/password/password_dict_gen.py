@@ -117,7 +117,7 @@ static const uint32_t pwd_DictWords[] = {""")
 """)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description = 'Create password_dict.hh (libpasswd) from dictionaries')
+    parser = argparse.ArgumentParser(description = 'Create password_dict.hh (core/password) from dictionaries')
     parser.add_argument('filenames', metavar = 'dictionaries', type = str, nargs = '+',
                         help = 'path to dictionaries')
     args = parser.parse_args()
