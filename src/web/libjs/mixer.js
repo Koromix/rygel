@@ -107,8 +107,33 @@ const Base64 = new function() {
                       null, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28,
                       0x29, 0x2A, 0x2B, 0x2C, 0x2D, 0x2E, 0x2F, 0x30, 0x31, 0x32, 0x33];
 
-    this.toBase64 = function(bytes) { return convertToBase64(bytes, BaseChars, true); };
-    this.toBase64Url = function(bytes) { return convertToBase64(bytes, UrlChars, false); };
+    if (Uint8Array.prototype.toBase64 != null) {
+        this.toBase64 = function(bytes) {
+            if (bytes instanceof ArrayBuffer)
+                bytes = new Uint8Array(bytes);
+
+            return bytes.toBase64({ alphabet: 'base64', omitPadding: false });
+        };
+        this.toBase64Url = function(bytes) {
+            if (bytes instanceof ArrayBuffer)
+                bytes = new Uint8Array(bytes);
+
+            return bytes.toBase64({ alphabet: 'base64url', omitPadding: true });
+        };
+    } else {
+        this.toBase64 = function(bytes) {
+            if (bytes instanceof ArrayBuffer)
+                bytes = new Uint8Array(bytes);
+
+            return convertToBase64(bytes, BaseChars, true);
+        };
+        this.toBase64Url = function(bytes) {
+            if (bytes instanceof ArrayBuffer)
+                bytes = new Uint8Array(bytes);
+
+            return convertToBase64(bytes, UrlChars, false);
+        };
+    }
 
     function convertToBase64(bytes, chars, pad) {
         if (bytes instanceof ArrayBuffer)
@@ -140,8 +165,13 @@ const Base64 = new function() {
         return result;
     }
 
-    this.toBytes = function(str) { return convertToBytes(str, BaseCodes, true); };
-    this.toBytesUrl = function(str) { return convertToBytes(str, UrlCodes, false); };
+    if (Uint8Array.fromBase64 != null) {
+        this.toBytes = function(str) { return Uint8Array.fromBase64(str, { alphabet: 'base64', lastChunkHandling: 'strict' }); };
+        this.toBytesUrl = function(str) { return Uint8Array.fromBase64(str, { alphabet: 'base64url', lastChunkHandling: 'loose' }); };
+    } else {
+        this.toBytes = function(str) { return convertToBytes(str, BaseCodes, true); };
+        this.toBytesUrl = function(str) { return convertToBytes(str, UrlCodes, false); };
+    }
 
     function convertToBytes(str, codes, pad) {
         let missing = 0;
