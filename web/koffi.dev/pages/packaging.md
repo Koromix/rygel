@@ -13,7 +13,7 @@ If that is not the case, you can manually arrange to copy the `node_modules/koff
 
 Here is an example that would work:
 
-```
+```text
 koffi/
     win32_x64/
         koffi.node
@@ -25,7 +25,7 @@ MyBundle.js
 
 When running in Electron, Koffi will also try to find the native module in `process.resourcesPath`. For an Electron app you could do something like this
 
-```
+```text
 locales/
 resources/
     koffi/
