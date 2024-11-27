@@ -189,7 +189,8 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
         io->SendError(401);
         return;
     }
-    if (!stamp || !stamp->HasPermission(UserPermission::DataEdit)) {
+    if (!stamp || (!stamp->HasPermission(UserPermission::DataNew) &&
+                   !stamp->HasPermission(UserPermission::DataEdit))) {
         LogError("User is not allowed to save data");
         io->SendError(403);
         return;
@@ -387,10 +388,14 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
                         return false;
                     }
                 } else if (stmt.IsValid()) {
-                    if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
-                                              ON CONFLICT DO NOTHING)",
-                                           -session->userid, root_ulid))
-                        return false;
+                    // If the user only has DataNew, allow new records but prevent further load and edition
+
+                    if (stamp->HasPermission(UserPermission::DataEdit)) {
+                        if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, ulid) VALUES (?1, ?2)
+                                                  ON CONFLICT DO NOTHING)",
+                                               -session->userid, root_ulid))
+                            return false;
+                    }
                 } else {
                     return false;
                 }

@@ -495,7 +495,10 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                 return false;
             }
 
-            if (!stamp->HasPermission(UserPermission::DataLoad)) {
+            if (!stamp->HasPermission(UserPermission::DataLoad) &&
+                    stamp->HasPermission(UserPermission::DataEdit)) {
+                // If the user only has DataNew, allow new records but prevent further load and edition
+
                 if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, tid) VALUES (?1, ?2)
                                           ON CONFLICT DO NOTHING)",
                                        -session->userid, tid))
