@@ -315,28 +315,10 @@ impl Zeroize for Hash {
     }
 }
 
-// A proper implementation of constant time equality is tricky, and we get it from the
-// constant_time_eq crate instead of rolling our own. However, that crate isn't compatible with
-// Miri, so we roll our own just for that.
-#[cfg(miri)]
-fn constant_time_eq_miri(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    let mut x = 0;
-    for i in 0..a.len() {
-        x |= a[i] ^ b[i];
-    }
-    x == 0
-}
-
 /// This implementation is constant-time.
 impl PartialEq for Hash {
     #[inline]
     fn eq(&self, other: &Hash) -> bool {
-        #[cfg(miri)]
-        return constant_time_eq_miri(&self.0, &other.0);
-        #[cfg(not(miri))]
         constant_time_eq::constant_time_eq_32(&self.0, &other.0)
     }
 }
@@ -345,9 +327,6 @@ impl PartialEq for Hash {
 impl PartialEq<[u8; OUT_LEN]> for Hash {
     #[inline]
     fn eq(&self, other: &[u8; OUT_LEN]) -> bool {
-        #[cfg(miri)]
-        return constant_time_eq_miri(&self.0, other);
-        #[cfg(not(miri))]
         constant_time_eq::constant_time_eq_32(&self.0, other)
     }
 }
@@ -356,9 +335,6 @@ impl PartialEq<[u8; OUT_LEN]> for Hash {
 impl PartialEq<[u8]> for Hash {
     #[inline]
     fn eq(&self, other: &[u8]) -> bool {
-        #[cfg(miri)]
-        return constant_time_eq_miri(&self.0, other);
-        #[cfg(not(miri))]
         constant_time_eq::constant_time_eq(&self.0, other)
     }
 }
@@ -904,8 +880,17 @@ fn hash_all_at_once<J: join::Join>(input: &[u8], key: &CVWords, flags: u8) -> Ou
 
 /// The default hash function.
 ///
-/// For an incremental version that accepts multiple writes, see
-/// [`Hasher::update`].
+/// For an incremental version that accepts multiple writes, see [`Hasher::new`],
+/// [`Hasher::update`], and [`Hasher::finalize`]. These two lines are equivalent:
+///
+/// ```
+/// let hash = blake3::hash(b"foo");
+/// # let hash1 = hash;
+///
+/// let hash = blake3::Hasher::new().update(b"foo").finalize();
+/// # let hash2 = hash;
+/// # assert_eq!(hash1, hash2);
+/// ```
 ///
 /// For output sizes other than 32 bytes, see [`Hasher::finalize_xof`] and
 /// [`OutputReader`].
@@ -924,11 +909,22 @@ pub fn hash(input: &[u8]) -> Hash {
 /// requirement, and callers need to be careful not to compare MACs as raw
 /// bytes.
 ///
-/// For output sizes other than 32 bytes, see [`Hasher::new_keyed`],
-/// [`Hasher::finalize_xof`], and [`OutputReader`].
+/// For an incremental version that accepts multiple writes, see [`Hasher::new_keyed`],
+/// [`Hasher::update`], and [`Hasher::finalize`]. These two lines are equivalent:
+///
+/// ```
+/// # const KEY: &[u8; 32] = &[0; 32];
+/// let mac = blake3::keyed_hash(KEY, b"foo");
+/// # let mac1 = mac;
+///
+/// let mac = blake3::Hasher::new_keyed(KEY).update(b"foo").finalize();
+/// # let mac2 = mac;
+/// # assert_eq!(mac1, mac2);
+/// ```
+///
+/// For output sizes other than 32 bytes, see [`Hasher::finalize_xof`], and [`OutputReader`].
 ///
 /// This function is always single-threaded. For multithreading support, see
-/// [`Hasher::new_keyed`] and
 /// [`Hasher::update_rayon`](struct.Hasher.html#method.update_rayon).
 pub fn keyed_hash(key: &[u8; KEY_LEN], input: &[u8]) -> Hash {
     let key_words = platform::words_from_le_bytes_32(key);
@@ -962,11 +958,25 @@ pub fn keyed_hash(key: &[u8; KEY_LEN], input: &[u8]) -> Hash {
 /// [Argon2]. Password hashes are entirely different from generic hash
 /// functions, with opposite design requirements.
 ///
-/// For output sizes other than 32 bytes, see [`Hasher::new_derive_key`],
-/// [`Hasher::finalize_xof`], and [`OutputReader`].
+/// For an incremental version that accepts multiple writes, see [`Hasher::new_derive_key`],
+/// [`Hasher::update`], and [`Hasher::finalize`]. These two statements are equivalent:
+///
+/// ```
+/// # const CONTEXT: &str = "example.com 2019-12-25 16:18:03 session tokens v1";
+/// let key = blake3::derive_key(CONTEXT, b"key material, not a password");
+/// # let key1 = key;
+///
+/// let key: [u8; 32] = blake3::Hasher::new_derive_key(CONTEXT)
+///     .update(b"key material, not a password")
+///     .finalize()
+///     .into();
+/// # let key2 = key;
+/// # assert_eq!(key1, key2);
+/// ```
+///
+/// For output sizes other than 32 bytes, see [`Hasher::finalize_xof`], and [`OutputReader`].
 ///
 /// This function is always single-threaded. For multithreading support, see
-/// [`Hasher::new_derive_key`] and
 /// [`Hasher::update_rayon`](struct.Hasher.html#method.update_rayon).
 ///
 /// [Argon2]: https://en.wikipedia.org/wiki/Argon2
