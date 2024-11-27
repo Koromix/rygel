@@ -1244,8 +1244,6 @@ globalThis.sqlite3InitModule = sqlite3InitModule;
       let st = this.db.prepare(
         new TextEncoder('utf-8').encode("select 3 as a")
       );
-      //debug("statement =",st);
-      T.assert( !this.progressHandlerCount );
       let rc;
       try {
         T.assert(wasm.isPtr(st.pointer))
