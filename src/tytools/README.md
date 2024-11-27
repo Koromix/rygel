@@ -17,7 +17,7 @@ Each tool is **independent** and you only need the one executable to use it. The
 <p style="text-align: center;">
     <a href="{{ ASSET static/tytools/tycommander.webp }}" target="_blank">
         <img src="{{ ASSET static/tytools/tycommander.webp }}" width="677"
-             style="max-width: 90vw; object-fit: scale-down;" alt="Screenshot of TyCommander" />
+             style="max-width: 90vw; object-fit: contain;" alt="Screenshot of TyCommander" />
     </a>
 </p>
 
