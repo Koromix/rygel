@@ -83,8 +83,8 @@ class GetContext {
 public:
     GetContext(rk_Disk *disk, const rk_GetSettings &settings, ProgressHandle *progress, int64_t total);
 
-    bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname);
-    bool ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest);
+    bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const char *dest_dirname);
+    bool ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const EntryInfo &dest);
 
     int GetFile(const rk_Hash &hash, rk_BlobType type, Span<const uint8_t> file_blob, const char *dest_filename);
 
@@ -267,7 +267,7 @@ static Size DecodeEntry(Span<const uint8_t> entries, Size offset, bool allow_sep
     return ptr->GetSize();
 }
 
-bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const char *dest_dirname)
+bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const char *dest_dirname)
 {
     EntryInfo dest = {};
 
@@ -276,10 +276,10 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     }
     dest.filename = TrimStrRight(dest_dirname, RG_PATH_SEPARATORS);
 
-    return ExtractEntries(entries, flags, dest);
+    return ExtractEntries(entries, allow_separators, dest);
 }
 
-bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags, const EntryInfo &dest)
+bool GetContext::ExtractEntries(Span<const uint8_t> entries, bool allow_separators, const EntryInfo &dest)
 {
     // XXX: Make sure each path does not clobber a previous one
 
@@ -314,7 +314,6 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
     };
 
     std::shared_ptr<SharedContext> ctx = std::make_shared<SharedContext>();
-    bool allow_separators = (flags & (int)ExtractFlag::AllowSeparators);
 
     if (dest.basename.len) {
         ctx->meta = dest;
@@ -336,15 +335,10 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
         if (!(entry->flags & (int)RawFile::Flags::Readable))
             continue;
 
-        if (flags & (int)ExtractFlag::FlattenName) {
-            Span<const char> basename = SplitStrReverse(entry->basename, '/');
-            entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, basename).ptr;
-        } else {
-            entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry->basename).ptr;
+        entry->filename = Fmt(&ctx->temp_alloc, "%1%/%2", dest.filename, entry->basename).ptr;
 
-            if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry->filename.ptr))
-                return false;
-        }
+        if (!settings.fake && allow_separators && !EnsureDirectoryExists(entry->filename.ptr))
+            return false;
     }
 
     if (settings.unlink) {
@@ -406,7 +400,7 @@ bool GetContext::ExtractEntries(Span<const uint8_t> entries, unsigned int flags,
 
                     if (!settings.fake && !MakeDirectory(entry.filename.ptr, false))
                         return false;
-                    if (!ExtractEntries(entry_blob, 0, entry))
+                    if (!ExtractEntries(entry_blob, false, entry))
                         return false;
                 } break;
 
@@ -729,7 +723,7 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             ProgressHandle progress("Restore");
             GetContext get(disk, settings, &progress, total);
 
-            if (!get.ExtractEntries(blob, 0, dest_path))
+            if (!get.ExtractEntries(blob, false, dest_path))
                 return false;
             if (!get.Sync())
                 return false;
@@ -773,10 +767,8 @@ bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings, 
             GetContext get(disk, settings, &progress, total);
 
             Span<uint8_t> entries = blob.Take(RG_SIZE(SnapshotHeader2), blob.len - RG_SIZE(SnapshotHeader2));
-            unsigned int flags = (int)ExtractFlag::AllowSeparators |
-                                 (settings.flat ? (int)ExtractFlag::FlattenName : 0);
 
-            if (!get.ExtractEntries(entries, flags, dest_path))
+            if (!get.ExtractEntries(entries, true, dest_path))
                 return false;
             if (!get.Sync())
                 return false;

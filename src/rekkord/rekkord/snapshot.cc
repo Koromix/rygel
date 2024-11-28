@@ -178,7 +178,6 @@ Options:
     %!..+-f, --force%!0                  Overwrite destination files
         %!..+--delete%!0                 Delete extraneous files from destination
 
-        %!..+--flat%!0                   Use flat names for snapshot files
         %!..+--chown%!0                  Restore original file UID and GID
 
     %!..+-v, --verbose%!0                Show detailed actions
@@ -214,8 +213,6 @@ Options:
                 settings.force = true;
             } else if (opt.Test("--delete")) {
                 settings.unlink = true;
-            } else if (opt.Test("--flat")) {
-                settings.flat = true;
             } else if (opt.Test("--chown")) {
                 settings.chown = true;
             } else if (opt.Test("-v", "--verbose")) {
