@@ -121,7 +121,7 @@ static void CopyAttributes(const rk_ObjectInfo &obj, CacheEntry *out_entry)
 #endif
 }
 
-static bool InitRoot(const rk_Hash &hash, bool flat)
+static bool InitRoot(const rk_Hash &hash)
 {
     BlockAllocator temp_alloc;
 
@@ -144,7 +144,7 @@ static bool InitRoot(const rk_Hash &hash, bool flat)
             continue;
 
         CacheEntry *entry = &root;
-        Span<const char> remain = flat ? SplitStrReverse(obj.name, '/') : obj.name;
+        Span<const char> remain = obj.name;
 
         while (remain.len) {
             entry->directory.ready = true;
@@ -409,7 +409,6 @@ int RunMount(Span<const char *> arguments)
 
     // Options
     rk_Config config;
-    bool flat = false;
     bool foreground = false;
     bool debug = false;
     HeapArray<const char *> fuse_options;
@@ -426,8 +425,6 @@ Options:
     %!..+-R, --repository <url>%!0       Set repository URL
     %!..+-u, --user <user>%!0            Set repository username
         %!..+--password <pwd>%!0         Set repository password
-
-        %!..+--flat%!0                   Use flat names for snapshot files
 
     %!..+-j, --threads <threads>%!0      Change number of threads
                                  %!D..(default: automatic)%!0
@@ -469,8 +466,6 @@ Options:
                     LogError("Threads count cannot be < 1");
                     return 1;
                 }
-            } else if (opt.Test("--flat")) {
-                flat = true;
             } else if (opt.Test("-f", "--foreground")) {
                 foreground = true;
             } else if (opt.Test("--debug")) {
@@ -545,7 +540,7 @@ Options:
     LogInfo();
 
     LogInfo("Mounting %!..+%1%!0 to '%2'...", hash, mountpoint);
-    if (!InitRoot(hash, flat))
+    if (!InitRoot(hash))
         return 1;
     LogInfo("Ready");
 
