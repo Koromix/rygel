@@ -513,13 +513,14 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
             if (!stamp->HasPermission(UserPermission::DataLoad)) {
                 sq_Statement stmt;
-                if (!instance->db->Prepare(R"(SELECT t.rowid
-                                              FROM rec_threads t
-                                              INNER JOIN ins_claims c ON (c.userid = ?1 AND c.tid = t.tid)
-                                              WHERE t.tid = ?2)", &stmt))
+                if (!instance->db->Prepare(R"(SELECT e.rowid
+                                              FROM rec_entries e
+                                              INNER JOIN ins_claims c ON (c.userid = ?1 AND c.tid = e.tid)
+                                              WHERE e.tid = ?2 AND e.form = ?3)", &stmt))
                     return false;
                 sqlite3_bind_int64(stmt, 1, -session->userid);
                 sqlite3_bind_text(stmt, 2, tid, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 3, fragment.store, -1, SQLITE_STATIC);
 
                 if (!stmt.Step()) {
                     if (stmt.IsValid()) {

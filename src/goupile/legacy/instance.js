@@ -810,7 +810,8 @@ function renderPage() {
     let code = code_buffers.get(filename).code;
 
     let model = new FormModel;
-    let readonly = !goupile.hasPermission('data_edit') || form_record.historical;
+    let readonly = isReadOnly(form_record);
+
     form_builder = new FormBuilder(form_state, model, readonly);
 
     try {
@@ -959,8 +960,7 @@ function renderPage() {
         if (model.hasErrors())
             form_builder.errorList();
 
-        let default_actions = goupile.hasPermission('data_edit') &&
-                              route.page.getOption('default_actions', form_record, true);
+        let default_actions = !readonly && route.page.getOption('default_actions', form_record, true);
 
         if (default_actions && model.variables.length) {
             let prev_actions = model.actions;
@@ -1352,7 +1352,7 @@ function runTrailDialog(e, ulid) {
 }
 
 async function saveRecord(record, hid, values, page, silent = false) {
-    if (!goupile.hasPermission('data_edit'))
+    if (isReadOnly(record))
         throw new Error('You are not allowed to save data');
 
     await mutex.run(async () => {
@@ -2778,6 +2778,18 @@ function computePath(from, to) {
     } else {
         return null;
     }
+}
+
+function isReadOnly(record) {
+    if (record.historical)
+        return true;
+
+    if (!goupile.hasPermission('data_edit') && record.saved)
+        return true;
+    if (!goupile.hasPermission('data_new') && !record.saved)
+        return true;
+
+    return false;
 }
 
 async function backupRecords() {

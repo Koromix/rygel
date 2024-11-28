@@ -56,7 +56,7 @@ static const char *const UserPermissionNames[] = {
 };
 static const uint32_t UserPermissionMasterMask = 0b00000000001111u;
 static const uint32_t UserPermissionSlaveMask =  0b11111111110000u;
-static const uint32_t LegacyPermissionMask =     0b11110001010111u;
+static const uint32_t LegacyPermissionMask =     0b11110001110111u;
 
 static const int PasswordHashBytes = 128;
 

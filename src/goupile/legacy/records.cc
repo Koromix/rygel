@@ -373,20 +373,19 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
             }
 
             // Reject restricted users
+            bool can_save = true;
             if (!stamp->HasPermission(UserPermission::DataLoad)) {
                 sq_Statement stmt;
                 if (!instance->db->Prepare(R"(SELECT e.rowid, c.rowid FROM rec_entries e
                                               LEFT JOIN ins_claims c ON (c.userid = ?1 AND c.ulid = e.ulid)
-                                              WHERE e.ulid = ?2)", &stmt))
+                                              WHERE e.ulid = ?2 AND e.form = ?3)", &stmt))
                     return false;
                 sqlite3_bind_int64(stmt, 1, -session->userid);
                 sqlite3_bind_text(stmt, 2, root_ulid, -1, SQLITE_STATIC);
+                sqlite3_bind_text(stmt, 3, record.form, -1, SQLITE_STATIC);
 
                 if (stmt.Step()) {
-                    if (sqlite3_column_type(stmt, 1) != SQLITE_INTEGER) {
-                        LogError("You are not allowed to alter this record");
-                        return false;
-                    }
+                    can_save = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
                 } else if (stmt.IsValid()) {
                     // If the user only has DataNew, allow new records but prevent further load and edition
 
@@ -423,6 +422,11 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
 
                         LogDebug("Ignoring conflicting fragment %1", i);
                     }
+                }
+
+                if (anchor >= 0 && !can_save) {
+                    LogError("You are not allowed to alter this record", record.ulid, record.form);
+                    return false;
                 }
             } else {
                 sq_Statement stmt;
