@@ -14,7 +14,7 @@ rekkord save <PATH>
 rekkord save -n <NAME> <PATH1> <PATH2> ...
 ```
 
-The command will give you the snapshot hash once it finishes. You can retrieve the hash later with [rekkord list](#list-snapshots).
+The command will give you the object hash of the snapshot once it finishes. You can retrieve the hash later with [rekkord list](#list-snapshots).
 
 # List snapshots
 
@@ -37,7 +37,7 @@ Use `--format JSON` or `--format XML` to get this list in a JSON or XML format.
 
 # Explore snapshot
 
-You can list the directories and files in a snapshot with the `rekkord list` command. You can either use the unique [snapshot hash](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
+You can list the directories and files in a snapshot with the `rekkord list` command. You can either use the unique [object hash](#list-snapshots), or provide a snapshot name, in which case rekkord will use the most recent snapshot that matches it.
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
