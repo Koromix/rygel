@@ -1127,22 +1127,76 @@ bool rk_Locate(rk_Disk *disk, Span<const char> identifier, rk_Hash *out_hash)
 {
     BlockAllocator temp_alloc;
 
-    if (ParseHash(identifier, out_hash))
-        return true;
+    Span<const char> path;
+    Span<const char> name = TrimStrRight(SplitStr(identifier, ':', &path), "/");
+    bool has_path = (path.ptr > name.end());
 
-    HeapArray<rk_SnapshotInfo> snapshots;
-    if (!rk_Snapshots(disk, &temp_alloc, &snapshots))
-        return false;
+    rk_Hash hash;
+    {
+        bool found = ParseHash(name, &hash);
 
-    for (Size i = snapshots.len - 1; i >= 0; i--) {
-        const rk_SnapshotInfo &snapshot = snapshots[i];
+        if (!found) {
+            HeapArray<rk_SnapshotInfo> snapshots;
+            if (!rk_Snapshots(disk, &temp_alloc, &snapshots))
+                return false;
 
-        if (TestStr(identifier, snapshot.name)) {
-            *out_hash = snapshot.hash;
-            return true;
+            for (Size i = snapshots.len - 1; i >= 0; i--) {
+                const rk_SnapshotInfo &snapshot = snapshots[i];
+
+                if (TestStr(name, snapshot.name)) {
+                    hash = snapshot.hash;
+
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+                goto missing;
         }
     }
 
+    // Traverse subpath (if any)
+    if (has_path) {
+        path = TrimStrRight(path, "/");
+
+        // Reuse for performance
+        HeapArray<rk_ObjectInfo> objects;
+
+        do {
+            objects.RemoveFrom(0);
+
+            if (!rk_List(disk, hash, {}, &temp_alloc, &objects))
+                return false;
+
+            bool match = false;
+
+            for (const rk_ObjectInfo &obj: objects) {
+                Span<const char> name = obj.name;
+
+                if (obj.type == rk_ObjectType::Snapshot)
+                    continue;
+                if (!StartsWith(path, name))
+                    continue;
+                if (path.len > name.len && path[name.len] != '/')
+                    continue;
+
+                path = TrimStrLeft(path.Take(name.len, path.len - name.len), "/");
+                hash = obj.hash;
+
+                match = true;
+                break;
+            }
+
+            if (!match)
+                goto missing;
+        } while (path.len);
+    }
+
+    *out_hash = hash;
+    return true;
+
+missing:
     LogError("Cannot find object '%1'", identifier);
     return false;
 }

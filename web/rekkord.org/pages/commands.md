@@ -41,8 +41,21 @@ You can list the directories and files in a snapshot with the `rekkord list` com
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord list <HASH or NAME>
+rekkord list <IDENTIFIER>
 ```
+
+> [!TIP]
+> You can use an object hash or a snapshot name as the identifier. In addition, you can specify a path to locate an object inside the main snapshot or directory, separated with a colon.
+>
+> Here are two examples without path:
+>
+> - `BC49879164FDEF1DD26501441B20013202E6DC7AF5D5C5AC8C97AC8126FDF4B4`: use snapshot with hash *BC4987916...*
+> - `front-machine`: find latest snapshot named *front-machine*
+>
+> Here are two examples with an additional path:
+>
+> - `51D1AE52921C8F636A18F9065D5348FC47BD61546B9688FD5D1D45F5AE240FAC:var/lib/mysql`: locate directory *var/lib/mysql* inside snapshot with hash *51D1AE529...* 
+> - `database-machine:var/lib/mysql`: locate directory *var/lib/mysql* inside inside latest snapshot named *database-machine*
 
 The output looks something like this:
 
@@ -115,8 +128,11 @@ Use the `rekkord restore` command to restore the files from a snapshot onto the 
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord restore <HASH or NAME> -O <PATH>
+rekkord restore <IDENTIFIER> -O <PATH>
 ```
+
+> [!TIP]
+> Read more about identifiers in the [exploration section](#explore-snapshot).
 
 # Mount snapshot
 
@@ -124,8 +140,11 @@ You can also use `rekkord mount <hash> <mountpoint>` to mount a snapshot or a di
 
 ```sh
 export REKKORD_CONFIG_FILE=/path/to/config.ini
-rekkord mount <HASH or NAME> <MOUNTPOINT>
+rekkord mount <IDENTIFIER> <MOUNTPOINT>
 ```
+
+> [!TIP]
+> Read more about identifiers in the [exploration section](#explore-snapshot).
 
 This mode has several limitations for now:
 

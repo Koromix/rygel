@@ -164,7 +164,7 @@ int RunRestore(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 restore [-R <repo>] <hash | name> -O <path>%!0
+R"(Usage: %!..+%1 restore [-R <repo>] <identifier> -O <path>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -184,7 +184,11 @@ Options:
     %!..+-n, --dry_run%!0                Fake file restoration
 
     %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: automatic)%!0)", FelixTarget);
+                                 %!D..(default: automatic)%!0
+
+Use an object hash or a snapshot name as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|name>[:<path>]%!0.
+
+Snapshot names are not unique, if you use a snapshot name, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
