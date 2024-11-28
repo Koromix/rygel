@@ -6,6 +6,12 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.32 (2024-11-28)
+
+- Support sub-object listing and restoration in rekkord
+- Drop *--flat* option from `rekkord restore` command
+- Drop *--flat* option from `rekkord mount` command
+
 ### Rekkord 0.31 (2024-11-25)
 
 - Fix use of unix time format for `rekkord list -f XML`
