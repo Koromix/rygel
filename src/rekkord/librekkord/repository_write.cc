@@ -43,6 +43,8 @@ class PutContext {
     Span<const uint8_t> salt;
     uint64_t salt64;
 
+    ProgressHandle *progress;
+
     std::atomic_int64_t put_size { 0 };
     std::atomic_int64_t put_stored { 0 };
     std::atomic_int64_t put_entries { 0 };
@@ -53,7 +55,7 @@ class PutContext {
     std::atomic_int big_semaphore { FileBigLimit };
 
 public:
-    PutContext(rk_Disk *disk, sq_Database *db);
+    PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress);
 
     PutResult PutDirectory(const char *src_dirname, bool follow_symlinks, rk_Hash *out_hash, int64_t *out_subdirs = nullptr);
     PutResult PutFile(const char *src_filename, rk_Hash *out_hash, int64_t *out_size = nullptr);
@@ -61,6 +63,9 @@ public:
     int64_t GetSize() const { return put_size; }
     int64_t GetStored() const { return put_stored; }
     int64_t GetEntries() const { return put_entries; }
+
+private:
+    void MakeProgress(int64_t delta);
 };
 
 static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t salt[32], rk_Hash *out_hash)
@@ -76,8 +81,8 @@ static void HashBlake3(rk_BlobType type, Span<const uint8_t> buf, const uint8_t 
     blake3_hasher_finalize(&hasher, out_hash->hash, RG_SIZE(out_hash->hash));
 }
 
-PutContext::PutContext(rk_Disk *disk, sq_Database *db)
-    : disk(disk), db(db), salt(disk->GetSalt()),
+PutContext::PutContext(rk_Disk *disk, sq_Database *db, ProgressHandle *progress)
+    : disk(disk), db(db), salt(disk->GetSalt()), progress(progress),
       dir_tasks(disk->GetAsync()), file_tasks(disk->GetAsync())
 {
     RG_ASSERT(salt.len == BLAKE3_KEY_LEN); // 32 bytes
@@ -293,7 +298,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                                 return false;
 
                             put_size += target.len;
-                            put_stored += written;
+                            MakeProgress(written);
 
                             entry->flags |= LittleEndian((int16_t)RawFile::Flags::Readable);
 
@@ -346,7 +351,7 @@ PutResult PutContext::PutDirectory(const char *src_dirname, bool follow_symlinks
                     return false;
 
                 put_size += pending->blob.len;
-                put_stored += written;
+                MakeProgress(written);
 
                 return true;
             });
@@ -421,7 +426,6 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
 
     HeapArray<uint8_t> file_blob;
     int64_t file_size = 0;
-    std::atomic_int64_t file_stored { 0 };
 
     // Split the file
     {
@@ -473,7 +477,8 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
                         Size written = disk->WriteBlob(entry.hash, rk_BlobType::Chunk, chunk);
                         if (written < 0)
                             return false;
-                        file_stored += written;
+
+                        MakeProgress(written);
 
                         MemCpy(file_blob.ptr + idx * RG_SIZE(entry), &entry, RG_SIZE(entry));
 
@@ -510,20 +515,26 @@ PutResult PutContext::PutFile(const char *src_filename, rk_Hash *out_hash, int64
         Size written = disk->WriteBlob(file_hash, rk_BlobType::File, file_blob);
         if (written < 0)
             return PutResult::Error;
-        file_stored += written;
+
+        MakeProgress(written);
     } else {
         const RawChunk *entry0 = (const RawChunk *)file_blob.ptr;
         file_hash = entry0->hash;
     }
 
     put_size += file_size;
-    put_stored += file_stored;
 
     *out_hash = file_hash;
     if (out_size) {
         *out_size = file_size;
     }
     return PutResult::Success;
+}
+
+void PutContext::MakeProgress(int64_t delta)
+{
+    int64_t stored = put_stored.fetch_add(delta, std::memory_order_relaxed) + delta;
+    progress->SetFmt("%1 stored", FmtDiskSize(stored));
 }
 
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
@@ -563,7 +574,8 @@ bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *cons
     HeapArray<uint8_t> snapshot_blob;
     snapshot_blob.AppendDefault(RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader));
 
-    PutContext put(disk, db);
+    ProgressHandle progress("Store");
+    PutContext put(disk, db, &progress);
 
     // Process snapshot entries
     for (const char *filename: filenames) {
