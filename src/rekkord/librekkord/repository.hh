@@ -93,9 +93,9 @@ public:
 
 // Snapshot commands
 bool rk_Put(rk_Disk *disk, const rk_PutSettings &settings, Span<const char *const> filenames,
-            rk_Hash *out_hash, int64_t *out_len = nullptr, int64_t *out_written = nullptr);
+            rk_Hash *out_hash, int64_t *out_size = nullptr, int64_t *out_stored = nullptr);
 bool rk_Get(rk_Disk *disk, const rk_Hash &hash, const rk_GetSettings &settings,
-            const char *dest_path, int64_t *out_len = nullptr);
+            const char *dest_path, int64_t *out_size = nullptr);
 
 // Exploration commands
 bool rk_Snapshots(rk_Disk *disk, Allocator *alloc, HeapArray<rk_SnapshotInfo> *out_snapshots);

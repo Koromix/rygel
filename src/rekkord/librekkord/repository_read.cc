@@ -1292,7 +1292,7 @@ bool FileHandle::Init(const rk_Hash &hash, Span<const uint8_t> blob)
 
 Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
 {
-    Size total_size = 0;
+    Size read_size = 0;
 
     FileChunk *first = std::lower_bound(chunks.begin(), chunks.end(), offset,
                                         [](const FileChunk &chunk, int64_t offset) {
@@ -1335,7 +1335,7 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
         offset += copy_len;
         out_buf.ptr += copy_len;
         out_buf.len -= copy_len;
-        total_size += copy_len;
+        read_size += copy_len;
 
         if (!out_buf.len)
             break;
@@ -1343,7 +1343,7 @@ Size FileHandle::Read(int64_t offset, Span<uint8_t> out_buf)
         idx++;
     }
 
-    return total_size;
+    return read_size;
 }
 
 ChunkHandle::ChunkHandle(HeapArray<uint8_t> &blob)

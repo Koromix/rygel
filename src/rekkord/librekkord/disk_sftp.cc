@@ -255,22 +255,22 @@ Size SftpDisk::ReadRaw(const char *path, Span<uint8_t> out_buf)
     }
     RG_DEFER { sftp_close(file); };
 
-    Size total_len = 0;
+    Size read_len = 0;
 
-    while (total_len < out_buf.len) {
-        ssize_t bytes = sftp_read(file, out_buf.ptr + total_len, out_buf.len - total_len);
+    while (read_len < out_buf.len) {
+        ssize_t bytes = sftp_read(file, out_buf.ptr + read_len, out_buf.len - read_len);
         if (bytes < 0) {
             LogError("Failed to read file '%1': %2", filename, sftp_GetErrorString(conn->sftp));
             return -1;
         }
 
-        total_len += (Size)bytes;
+        read_len += (Size)bytes;
 
         if (!bytes)
             break;
     }
 
-    return total_len;
+    return read_len;
 }
 
 Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
@@ -295,7 +295,7 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
     }
     RG_DEFER { sftp_close(file); };
 
-    Size total_len = 0;
+    Size read_len = 0;
 
     for (;;) {
         out_buf->Grow(Mebibytes(1));
@@ -307,14 +307,14 @@ Size SftpDisk::ReadRaw(const char *path, HeapArray<uint8_t> *out_buf)
         }
 
         out_buf->len += (Size)bytes;
-        total_len += (Size)bytes;
+        read_len += (Size)bytes;
 
         if (!bytes)
             break;
     }
 
     out_guard.Disable();
-    return total_len;
+    return read_len;
 }
 
 Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span<const uint8_t>)>)> func)
@@ -324,7 +324,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
     LocalArray<char, MaxPathSize + 128> filename;
     filename.len = Fmt(filename.data, "%1/%2", config.path, path).len;
 
-    Size total_len = 0;
+    Size written_len = 0;
 
     // Create temporary file
     sftp_file file = nullptr;
@@ -362,7 +362,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
 
     // Write encrypted content
     bool success = func([&](Span<const uint8_t> buf) {
-        total_len += buf.len;
+        written_len += buf.len;
 
         while (buf.len) {
             ssize_t bytes = sftp_write(file, buf.ptr, (size_t)buf.len);
@@ -414,7 +414,7 @@ Size SftpDisk::WriteRaw(const char *path, FunctionRef<bool(FunctionRef<bool(Span
     if (!PutCache(path))
         return -1;
 
-    return total_len;
+    return written_len;
 }
 
 bool SftpDisk::DeleteRaw(const char *path)
