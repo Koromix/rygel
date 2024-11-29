@@ -4084,7 +4084,7 @@ public:
     template<typename... Args>
     void SetFmt(int64_t value, int64_t max, const char *fmt, Args... args) { SetFmt(value, 0, max, fmt, args...); }
     template<typename... Args>
-    void SetFmt(const char *fmt, Args... args) { SetFmt(0, 0, 0, fmt, args...); }
+    void SetFmt(const char *fmt, Args... args) { SetFmt(1ll, 0ll, fmt, args...); }
 
     template<typename... Args>
 
