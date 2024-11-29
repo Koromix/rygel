@@ -6,6 +6,10 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.33 (2024-11-29)
+
+- Show busy progress bar while running `rekkord save`
+
 ### Rekkord 0.32 (2024-11-28)
 
 - Support sub-object listing and restoration in rekkord
