@@ -29,7 +29,7 @@ int RunSave(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 save [-R <repo>] <filename> ...%!0
+R"(Usage: %!..+%1 save [-C <config>] <filename> ...%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -164,7 +164,7 @@ int RunRestore(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 restore [-R <repo>] <identifier> -O <path>%!0
+R"(Usage: %!..+%1 restore [-C <config>] <identifier> -O <path>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file

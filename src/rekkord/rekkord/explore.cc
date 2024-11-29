@@ -48,7 +48,7 @@ int RunSnapshots(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 snapshots [-R <repo>]%!0
+R"(Usage: %!..+%1 snapshots [-C <config>]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
@@ -449,7 +449,7 @@ int RunList(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 list [-R <repo>] <identifier>%!0
+R"(Usage: %!..+%1 list [-C <config>] <identifier>%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file

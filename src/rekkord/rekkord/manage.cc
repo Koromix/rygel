@@ -49,7 +49,7 @@ int RunInit(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 init [-C <config>] [dir]%!0
+R"(Usage: %!..+%1 init [-C <config>]%!0
 
 Options:
     %!..+-C, --config_file <file>%!0     Set configuration file
