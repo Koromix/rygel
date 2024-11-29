@@ -14,7 +14,7 @@ rekkord save <PATH>
 rekkord save -n <NAME> <PATH1> <PATH2> ...
 ```
 
-The command will give you the object hash of the snapshot once it finishes. You can retrieve the hash later with [rekkord list](#list-snapshots).
+The command will give you the object hash of the snapshot once it finishes. You can retrieve the hash later with [rekkord snapshots](#list-snapshots).
 
 # List snapshots
 
