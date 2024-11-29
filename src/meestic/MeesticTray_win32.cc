@@ -329,10 +329,11 @@ int Main(int argc, char **argv)
         HeapArray<char> help;
 
         Fmt(&help,
-R"(Usage: %!..+%1 [options]%!0
+R"(Usage: %!..+%1 [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
+
+    %!..+-C, --config_file filename%!0     Set configuration file
 
 By default, the first of the following config files will be used:
 

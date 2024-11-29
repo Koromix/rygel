@@ -48,24 +48,25 @@ int RunSnapshots(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 snapshots [-C <config>]%!0
+R"(Usage: %!..+%1 snapshots [-C filename] [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: automatic)%!0
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password
 
-    %!..+-f, --format <format>%!0        Change output format
-                                 %!D..(default: %2)%!0
-    %!..+-s, --sort <sort>%!0            Change sort order
-                                 %!D..(default: Time)%!0
-    %!..+-p, --pattern <pattern>         Filter snapshot names with glob-like pattern
-    %!..+-v, --verbose%!0                Enable verbose output (plain only)
+    %!..+-j, --threads threads%!0          Change number of threads
+                                   %!D..(default: automatic)%!0
+
+    %!..+-f, --format format%!0            Change output format
+                                   %!D..(default: %2)%!0
+    %!..+-s, --sort sort%!0                Change sort order
+                                   %!D..(default: Time)%!0
+    %!..+-p, --pattern pattern%!0          Filter snapshot names with glob-like pattern
+    %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
 Available output formats: %!..+%3%!0
 Available sort orders: %!..+%4%!0)",
@@ -449,29 +450,29 @@ int RunList(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 list [-C <config>] <identifier>%!0
+R"(Usage: %!..+%1 list [-C filename] [option...] identifier%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: automatic)%!0
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password
 
-    %!..+-r, --recurse%!0                Show entire tree of children
-                                 %!D..(same thing as --depth=All)%!0
-        %!..+--depth <depth>%!0          Set maximum recursion depth
-                                 %!D..(default: 0)%!0
+    %!..+-j, --threads threads%!0          Change number of threads
+                                   %!D..(default: automatic)%!0
 
-    %!..+-f, --format <format>%!0        Change output format
-                                 %!D..(default: %2)%!0
-    %!..+-v, --verbose%!0                Enable verbose output (plain only)
+    %!..+-r, --recurse%!0                  Show entire tree of children
+                                   %!D..(same thing as --depth=All)%!0
+        %!..+--depth depth%!0              Set maximum recursion depth
+                                   %!D..(default: 0)%!0
+
+    %!..+-f, --format format%!0            Change output format
+                                   %!D..(default: %2)%!0
+    %!..+-v, --verbose%!0                  Enable verbose output (plain only)
 
 Use an object hash or a snapshot name as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|name>[:<path>]%!0.
-
 Snapshot names are not unique, if you use a snapshot name, rekkord will use the most recent snapshot object that matches.
 
 Available output formats: %!..+%3%!0)",

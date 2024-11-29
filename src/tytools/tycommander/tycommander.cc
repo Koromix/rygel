@@ -533,19 +533,19 @@ void TyCommander::initCache(const QString &name, SettingsDatabase &cache)
 
 QString TyCommander::helpText()
 {
-    QString help = tr("usage: %1 <command> [options]\n\n"
-                      "General options:\n"
+    QString help = tr("Usage: %1 command [option...]\n\n"
+                      "General options:\n\n"
                       "       --help               Show help message\n"
                       "       --version            Display version information\n"
                       "   -q, --quiet              Disable output, use -qqq to silence errors\n\n"
-                      "Client options:\n"
+                      "Client options:\n\n"
                       "       --autostart          Start main instance if it is not available\n"
                       "   -w, --wait               Wait until full completion\n\n"
-                      "   -B, --board <tag>        Work with board <tag> instead of first detected\n"
+                      "   -B, --board tag          Work with specific board instead of first detected\n"
                       "   -m, --multi              Select all matching boards (first match by default)\n"
                       "   -p, --persist            Save new board settings (e.g. command attach)\n"
                       "       --delegate           Reboot the board and let Teensy Loader do the rest\n\n"
-                      "Commands:\n").arg(QFileInfo(QApplication::applicationFilePath()).fileName());
+                      "Commands:\n\n").arg(QFileInfo(QApplication::applicationFilePath()).fileName());
 
     for (auto cmd = commands; cmd->name; cmd++) {
         if (!cmd->description)

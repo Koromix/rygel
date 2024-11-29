@@ -49,19 +49,20 @@ int RunInit(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 init [-C <config>]%!0
+R"(Usage: %!..+%1 init [-C filename] [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-        %!..+--master_password [pwd]%!0  Set master password manually
-        %!..+--write_password [pwd]%!0   Set write-only password manually
+    %!..+-R, --repository filename%!0      Set repository URL
 
-    %!..+-K, --key_file <file>%!0        Set explicit master key export file
-                                 %!D..(default: %2)%!0
-        %!..+--skip_key%!0               Skip master key export)", FelixTarget, key_filename);
+        %!..+--master_password [pwd]%!0    Set master password manually
+        %!..+--write_password [pwd]%!0     Set write-only password manually
+
+    %!..+-K, --key_file filename%!0        Set explicit master key export file
+                                   %!D..(default: %2)%!0
+        %!..+--skip_key%!0                 Skip master key export)", FelixTarget, key_filename);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -177,16 +178,17 @@ int RunExportKey(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 export_key [-C <config>]%!0
+R"(Usage: %!..+%1 export_key [-C filename] [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-K, --key_file <file>%!0        Set explicit master key export file
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password
+
+    %!..+-K, --key_file filename%!0        Set explicit master key export file
                                  %!D..(default: %2)%!0)", FelixTarget, key_filename);
     };
 
@@ -267,23 +269,24 @@ int RunAddUser(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 add_user [-C <config>] <username>%!0
+R"(Usage: %!..+%1 add_user [-C filename] [option...] username%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-K, --key_file <file>%!0        Use master key instead of username/password
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password
 
-    %!..+-m, --mode <mode>%!0            Access mode (see below)
+    %!..+-K, --key_file filename%!0        Use master key instead of username/password
 
-        %!..+--master_password [pwd]%!0  Set master password manually
-        %!..+--write_password [pwd]%!0   Set write-only password manually
+    %!..+-m, --mode mode%!0                Access mode (see below)
 
-        %!..+--force%!0                  Overwrite exisiting user %!D..(if any)%!0
+        %!..+--master_password [pwd]%!0    Set master password manually
+        %!..+--write_password [pwd]%!0     Set write-only password manually
+
+        %!..+--force%!0                    Overwrite exisiting user %!D..(if any)%!0
 
 Available access modes: %!..+%2, %3%!0)", FelixTarget, rk_DiskModeNames[(int)rk_DiskMode::Full],
                                                        rk_DiskModeNames[(int)rk_DiskMode::WriteOnly]);
@@ -429,14 +432,15 @@ int RunDeleteUser(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 delete_user [-C <config>] <username>%!0
+R"(Usage: %!..+%1 delete_user [-C filename] [option...] username%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-        %!..+--force%!0                  Force deletion %!D..(to delete yourself)%!0)", FelixTarget);
+    %!..+-R, --repository URL%!0           Set repository URL
+
+        %!..+--force%!0                    Force deletion %!D..(to delete yourself)%!0)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -511,15 +515,16 @@ int RunListUsers(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 list_users [-C <config>]%!0
+R"(Usage: %!..+%1 list_users [-C filename] [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-f, --format <format>%!0        Change output format
-                                 %!D..(default: %2)%!0
+    %!..+-R, --repository URL%!0           Set repository URL
+
+    %!..+-f, --format format%!0            Change output format
+                                   %!D..(default: %2)%!0
 
 Available output formats: %!..+%3%!0)", FelixTarget, OutputFormatNames[(int)format], FmtSpan(OutputFormatNames));
     };

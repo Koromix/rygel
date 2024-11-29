@@ -466,23 +466,24 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [options] [stay_file ..]%!0
+R"(Usage: %!..+%1 [option...] [stay_file...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: %2)%!0
 
-        %!..+--profile_dir <dir>%!0      Set profile directory
-        %!..+--table_dir <dir>%!0        Add table directory
+    %!..+-C, --config_file filename%!0     Set configuration file
+                                   %!D..(default: %2)%!0
 
-        %!..+--mco_auth_file <file>%!0   Set MCO authorization file
-                                 %!D..(default: <profile_dir>%/mco_authorizations.ini
-                                           <profile_dir>%/mco_authorizations.txt)%!0
+        %!..+--profile_dir directory%!0    Set profile directory
+        %!..+--table_dir directory%!0      Add table directory
 
-    %!..+-p, --port <port>%!0            Change web server port
-                                 %!D..(default: %3)%!0
-        %!..+--base_url <url>%!0         Change base URL
-                                 %!D..(default: %4)%!0)",
+        %!..+--mco_auth_file filename%!0   Set MCO authorization file
+                                   %!D..(default: <profile_dir>%/mco_authorizations.ini
+                                             <profile_dir>%/mco_authorizations.txt)%!0
+
+    %!..+-p, --port port%!0                Change web server port
+                                   %!D..(default: %3)%!0
+        %!..+--base_url URL%!0             Change base URL
+                                   %!D..(default: %4)%!0)",
                 FelixTarget, config_filename, thop_config.http.port, thop_config.base_url);
     };
 

@@ -324,15 +324,16 @@ static int RunDaemon(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 daemon [options]%!0
+R"(Usage: %!..+%1 daemon [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: see below)%!0
-    %!..+-S, --socket_file <socket>%!0   Change control socket
-                                 %!D..(default: %2)%!0
 
-        %!..+--no_sandbox%!0             Disable use of sandboxing
+    %!..+-C, --config_file filename%!0     Set configuration file
+                                   %!D..(default: see below)%!0
+    %!..+-S, --socket_file socket%!0       Change control socket
+                                   %!D..(default: %2)%!0
+
+        %!..+--no_sandbox%!0               Disable use of sandboxing
 
 By default, the first of the following config files will be used:
 )",
@@ -506,33 +507,37 @@ static int RunSet(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 set [options...] [colors...]%!0
+R"(Usage: %!..+%1 set [option...] [color...]%!0
 
 Options:
-    %!..+-m, --mode <mode>%!0            Set light mode (see below)
-                                 %!D..(default: %2)%!0
-    %!..+-s, --speed <speed>%!0          Set speed of change, from 0 and 2
-                                 %!D..(default: %3)%!0
-    %!..+-i, --intensity <intensity>%!0  Set light intensity, from 0 to 10
-                                 %!D..(default: %4)%!0
 
-Supported modes:)", FelixTarget, LightModeOptions[(int)settings.mode].name, settings.speed, settings.intensity);
+    %!..+-m, --mode mode%!0                Set light mode (see below)
+                                   %!D..(default: %2)%!0
+    %!..+-s, --speed speed%!0              Set speed of change, from 0 and 2
+                                   %!D..(default: %3)%!0
+    %!..+-i, --intensity intensity%!0      Set light intensity, from 0 to 10
+                                   %!D..(default: %4)%!0
+
+Supported modes:
+)", FelixTarget, LightModeOptions[(int)settings.mode].name, settings.speed, settings.intensity);
         for (const OptionDesc &desc: LightModeOptions) {
-            PrintLn(st, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
         };
         PrintLn(st, R"(
 A few predefined color names can be used (such as MsiBlue), or you can use
 hexadecimal RGB color codes. Don't forget the quotes or your shell may not
 like the hash character.
 
-Predefined color names:)");
+Predefined color names:
+)");
         for (const PredefinedColor &color: PredefinedColors) {
-            PrintLn(st, "    %!..+%1%!0  %!D..#%2%3%4%!0", FmtArg(color.name).Pad(27), FmtHex(color.rgb.red).Pad0(-2),
+            PrintLn(st, "    %!..+%1%!0    %!D..#%2%3%4%!0", FmtArg(color.name).Pad(27), FmtHex(color.rgb.red).Pad0(-2),
                                                                                        FmtHex(color.rgb.green).Pad0(-2),
                                                                                        FmtHex(color.rgb.blue).Pad0(-2));
         };
         PrintLn(st, R"(
 Examples:
+
     Disable lighting
     %!..+%1 -m Disabled%!0
 

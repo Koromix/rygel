@@ -463,24 +463,24 @@ int RunInit(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 init [options] [directory]%!0
+R"(Usage: %!..+%1 init [option...] [directory]%!0
 
 Options:
-    %!..+-t, --title <title>%!0          Set domain title
+    %!..+-t, --title title%!0              Set domain title
 
-    %!..+-u, --username <username>%!0    Name of default user
-        %!..+--password <pwd>%!0         Password of default user
-        %!..+--totp%!0                   Enable TOTP for root user
+    %!..+-u, --username username%!0        Name of default user
+        %!..+--password password%!0        Password of default user
+        %!..+--totp%!0                     Enable TOTP for root user
 
-        %!..+--allow_unsafe_password%!0  Allow unsafe passwords
+        %!..+--allow_unsafe_password%!0    Allow unsafe passwords
 
-        %!..+--archive_key <key>%!0      Set domain public archive key
+        %!..+--archive_key key%!0          Set domain public archive key
 
-        %!..+--demo [<name>]%!0          Create default instance)", FelixTarget);
+        %!..+--demo [name]%!0              Create default instance)", FelixTarget);
 
 #if !defined(_WIN32)
         PrintLn(st, R"(
-    %!..+-o, --owner <owner>%!0          Change directory and file owner)");
+    %!..+-o, --owner owner%!0              Change directory and file owner)");
 #endif
     };
 
@@ -715,11 +715,11 @@ int RunMigrate(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 migrate [options]%!0
+R"(Usage: %!..+%1 migrate [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: %2)%!0)", FelixTarget, config_filename);
+    %!..+-C, --config_file filename%!0     Set configuration file
+                                   %!D..(default: %2)%!0)", FelixTarget, config_filename);
     };
 
     // Parse arguments
@@ -797,7 +797,7 @@ int RunKeys(Span<const char *> arguments)
 R"(Usage: %!..+%1 keys%!0
 
 Options:
-    %!..+-k, --decrypt_key [key]%!0      Use existing decryption key)", FelixTarget);
+    %!..+-k, --decrypt_key [key]%!0        Use existing decryption key)", FelixTarget);
     };
 
     // Parse arguments
@@ -964,13 +964,13 @@ int RunUnseal(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 unseal [options] <archive_file>%!0
+R"(Usage: %!..+%1 unseal [option...] archive_file%!0
 
 Options:
-    %!..+-O, --output_file <file>%!0     Set output file
-    %!..+-k, --decrypt_key <key>%!0      Set decryption key
+    %!..+-O, --output_file filename%!0     Set output file
+    %!..+-k, --decrypt_key key%!0          Set decryption key
 
-        %!..+--check%!0                  Only check that key is valid)", FelixTarget);
+        %!..+--check%!0                    Only check that key is valid)", FelixTarget);
     };
 
     // Parse arguments

@@ -466,7 +466,7 @@ static bool AppendValidProcedures(mco_PreparedSet *out_prepared_set, unsigned in
 
                 proc_activities |= 1 << proc.activity;
             } else {
-                Span <const mco_ProcedureInfo> compatible_procs = index.FindProcedure(proc.proc);
+                Span<const mco_ProcedureInfo> compatible_procs = index.FindProcedure(proc.proc);
                 bool valid_proc = std::any_of(compatible_procs.begin(), compatible_procs.end(),
                                               [&](const mco_ProcedureInfo &proc_info) {
                     return proc_info.phase == proc.phase;

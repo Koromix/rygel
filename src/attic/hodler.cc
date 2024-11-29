@@ -1049,19 +1049,22 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [options] -O <output_dir>%!0
+R"(Usage: %!..+%1 [option...] -O output_dir%!0
 
 Options:
-    %!..+-S, --source_dir <file>%!0      Set source directory
-                                 %!D..(default: %2)%!0
 
-    %!..+-O, --output_dir <dir>%!0       Set output directory
-    %!..+-u, --urls <FORMAT>%!0          Change URL format (%3)
-                                 %!D..(default: %4)%!0
-        %!..+--gzip%!0                   Create static gzip files
+    %!..+-S, --source_dir filename%!0      Set source directory
+                                   %!D..(default: %2)%!0
 
-    %!..+-l, --loop%!0                   Build repeatedly until interrupted)",
-                FelixTarget, source_dir, FmtSpan(UrlFormatNames), UrlFormatNames[(int)urls]);
+    %!..+-O, --output_dir directory%!0     Set output directory
+    %!..+-u, --urls format%!0              Change URL format
+                                   %!D..(default: %3)%!0
+        %!..+--gzip%!0                     Create static gzip files
+
+    %!..+-l, --loop%!0                     Build repeatedly until interrupted
+
+Available URL formats: %!..+%4%!0)",
+                FelixTarget, source_dir, UrlFormatNames[(int)urls], FmtSpan(UrlFormatNames));
     };
 
     // Handle version

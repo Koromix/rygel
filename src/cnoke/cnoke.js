@@ -153,11 +153,13 @@ function print_usage() {
     let help = `Usage: cnoke [command] [options...]
 
 Commands:
+
     configure                            Configure CMake build
     build                                Build project (configure if needed)
     clean                                Clean build files
 
 Options:
+
     -d, --directory <DIR>                Change source directory
                                          (default: current working directory)
     -p, --package <DIR>                  Change package directory

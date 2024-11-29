@@ -314,52 +314,55 @@ int RunBuild(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 build [options] [target...]
-       %1 build [options] --run target [arguments...]%!0
+R"(Usage: %!..+%1 build [option...] [target...]
+       %1 build [option...] --run target [arg...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration filename
-                                 %!D..(default: FelixBuild.ini)%!0
-    %!..+-O, --output_dir <dir>%!0       Set output directory
-                                 %!D..(default: bin/<preset>)%!0
 
-        %!..+--no_presets%!0             Ignore all presets
-                                 %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
-        %!..+--no_user%!0                Ignore user presets
-                                 %!D..(FelixBuild.ini.user)%!0
-    %!..+-p, --preset <preset>%!0        Select specific preset
+    %!..+-C, --config_file filename%!0     Set configuration filename
+                                   %!D..(default: FelixBuild.ini)%!0
+    %!..+-O, --output_dir directory%!0     Set output directory
+                                   %!D..(default: bin/<preset>)%!0
 
-    %!..+-h, --host <host>%!0            Override platform, compiler and/or linker
-    %!..+-f, --features <features>%!0    Override compilation features
-                                 %!D..(start with -All to reset and set only new flags)%!0
+        %!..+--no_presets%!0               Ignore all presets
+                                   %!D..(FelixBuild.ini.presets, FelixBuild.ini.user)%!0
+        %!..+--no_user%!0                  Ignore user presets
+                                   %!D..(FelixBuild.ini.user)%!0
+    %!..+-p, --preset preset%!0            Select specific preset
 
-    %!..+-e, --environment%!0            Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
+    %!..+-h, --host host%!0                Override platform, compiler and/or linker
+    %!..+-f, --features features%!0        Override compilation features
+                                   %!D..(start with -All to reset and set only new flags)%!0
 
-    %!..+-j, --jobs <count>%!0           Set maximum number of parallel jobs
-                                 %!D..(default: %2)%!0
-    %!..+-s, --stop_after_error%!0       Continue build after errors
-        %!..+--rebuild%!0                Force rebuild all files
+    %!..+-e, --environment%!0              Use compiler flags found in environment (CFLAGS, LDFLAGS, etc.)
 
-    %!..+-q, --quiet%!0                  Reduce felix verbosity (use -qq for silence)
-    %!..+-v, --verbose%!0                Show detailed build commands
-    %!..+-n, --dry_run%!0                Fake command execution
+    %!..+-j, --jobs count%!0               Set maximum number of parallel jobs
+                                   %!D..(default: %2)%!0
+    %!..+-s, --stop_after_error%!0         Continue build after errors
+        %!..+--rebuild%!0                  Force rebuild all files
 
-        %!..+--run <target>%!0           Run target after successful build
-                                 %!D..(all remaining arguments are passed as-is)%!0
-        %!..+--here <target>%!0          Same thing, but run from current directory
+    %!..+-q, --quiet%!0                    Reduce felix verbosity (use -qq for silence)
+    %!..+-v, --verbose%!0                  Show detailed build commands
+    %!..+-n, --dry_run%!0                  Fake command execution
 
-Supported platforms:)", FelixTarget, jobs);
+        %!..+--run target%!0               Run target after successful build
+                                   %!D..(all remaining arguments are passed as-is)%!0
+        %!..+--here target%!0              Same thing, but run from current directory
+
+Supported platforms:
+)", FelixTarget, jobs);
 
         for (const char *name: HostPlatformNames) {
             PrintLn(st, "    %!..+%1%!0", name);
         }
 
         PrintLn(st, R"(
-Supported compilers:)");
+Supported compilers:
+)");
 
         for (const SupportedCompiler &supported: SupportedCompilers) {
             if (supported.cc) {
-                PrintLn(st, "    %!..+%1%!0 Binary: %2", FmtArg(supported.name).Pad(28), supported.cc);
+                PrintLn(st, "    %!..+%1%!0   Binary: %2", FmtArg(supported.name).Pad(28), supported.cc);
             } else {
                 PrintLn(st, "    %!..+%1%!0", supported.name);
             }
@@ -371,23 +374,25 @@ You can also use %!..+--host=:<binary>%!0 to specify a custom C compiler, such a
 Felix will use the matching C++ compiler automatically. Finally, you can also use this option to
 change the linker: %!..+felix --host=:clang-11:lld-11%!0 or %!..+felix --host=::gold%!0.
 
-Supported compiler features:)");
+Supported compiler features:
+)");
 
         for (const OptionDesc &desc: CompileFeatureOptions) {
-            PrintLn(st, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
         }
 
         Print(st, R"(
 Felix can also run the following special commands:
-    %!..+build%!0                        Build C and C++ projects %!D..(default)%!0)");
+
+    %!..+build%!0                          Build C and C++ projects %!D..(default)%!0)");
 #if defined(__APPLE__)
         Print(st, R"(
-    %!..+macify%!0                       Create macOS bundle app from binary)");
+    %!..+macify%!0                         Create macOS bundle app from binary)");
 #endif
         PrintLn(st, R"(
-    %!..+embed%!0                        Embed assets to C source file and other formats
+    %!..+embed%!0                          Embed assets to C source file and other formats
 
-For help about those commands, type: %!..+%1 <command> --help%!0)", FelixTarget);
+For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
     };
 
     // Find config filename

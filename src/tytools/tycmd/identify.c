@@ -17,13 +17,13 @@ static bool identify_output_json = false;
 
 static void print_identify_usage(FILE *f)
 {
-    fprintf(f, "usage: %s identify [options] <firmwares>\n\n", tycmd_executable_name);
+    fprintf(f, "Usage: %s identify [option...] firmware...\n\n", tycmd_executable_name);
 
     print_common_options(f);
     fprintf(f, "\n");
 
-    fprintf(f, "Identify options:\n"
-               "   -f, --format <format>    Firmware file format (autodetected by default)\n"
+    fprintf(f, "Identify options:\n\n"
+               "   -f, --format format      Firmware file format (autodetected by default)\n"
                "   -j, --json               Output data in JSON format\n");
 }
 

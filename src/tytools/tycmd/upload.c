@@ -17,26 +17,26 @@ static const char *upload_firmware_format = NULL;
 
 static void print_upload_usage(FILE *f)
 {
-    fprintf(f, "usage: %s upload [options] <firmwares>\n\n", tycmd_executable_name);
+    fprintf(f, "Usage: %s upload [option...] firmware...\n", tycmd_executable_name);
 
     print_common_options(f);
     fprintf(f, "\n");
 
-    fprintf(f, "Upload options:\n"
+    fprintf(f, "Upload options:\n\n"
                "   -w, --wait               Wait for the bootloader instead of rebooting\n\n"
                "       --nocheck            Force upload even if the board is not compatible\n"
                "       --noreset            Do not reset the device once the upload is finished\n"
-               "       --rtc <MODE>         Set RTC if supported: local (default), utc, none\n"
+               "       --rtc mode           Set RTC if supported: local (default), utc, none\n"
                "       --delegate           Reboot the board and let Teensy Loader do the rest\n\n"
-               "   -f, --format <format>    Firmware file format (autodetected by default)\n\n"
+               "   -f, --format format      Firmware file format (autodetected by default)\n\n"
                "You can pass multiple firmwares, and the first compatible one will be used.\n\n"
                "Use '-' to read firmware from stdin, in which case you need to specificy the\n"
-               "format with -f <format>.\n\n");
+               "format with -f format.\n\n");
 
     fprintf(f, "Supported firmware formats: ");
     for (unsigned int i = 0; i < ty_firmware_formats_count; i++)
         fprintf(f, "%s%s", i ? ", " : "", ty_firmware_formats[i].name);
-    fprintf(f, ".\n");
+    fprintf(f, "\n");
 }
 
 int upload(int argc, char *argv[])

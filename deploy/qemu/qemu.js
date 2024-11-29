@@ -93,7 +93,8 @@ async function main() {
 function print_usage(binary, commands) {
     let help = `Usage: node ${binary} <command> [options...]
 
-Commands:`;
+Commands:
+`;
 
     for (let cmd in commands) {
         let align = Math.max(0, 28 - cmd.length);

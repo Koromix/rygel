@@ -63,37 +63,41 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](StreamWriter *st, bool advanced) {
         PrintLn(st,
-R"(Usage: %!..+%1 <command> [args]%!0
+R"(Usage: %!..+%1 command [arg...]%!0
 
 Management commands:
-    %!..+init%!0                         Init new backup repository
-    %!..+export_key%!0                   Export master repository key
 
-    %!..+add_user%!0                     Add user
-    %!..+delete_user%!0                  Delete user
-    %!..+list_users%!0                   List repository users
+    %!..+init%!0                           Init new backup repository
+    %!..+export_key%!0                     Export master repository key
+
+    %!..+add_user%!0                       Add user
+    %!..+delete_user%!0                    Delete user
+    %!..+list_users%!0                     List repository users
 
 Snapshot commands:
-    %!..+save%!0                         Store directory or file and make snapshot
-    %!..+restore%!0                      Get and decrypt snapshot, directory or file
+
+    %!..+save%!0                           Store directory or file and make snapshot
+    %!..+restore%!0                        Get and decrypt snapshot, directory or file
 
 Exploration commands:
-    %!..+snapshots%!0                    List known snapshots
-    %!..+list%!0                         List snapshot or directory children
-    %!..+mount%!0                        Mount repository readonly as user filesystem)", FelixTarget);
+
+    %!..+snapshots%!0                      List known snapshots
+    %!..+list%!0                           List snapshot or directory children
+    %!..+mount%!0                          Mount repository readonly as user filesystem)", FelixTarget);
 
         if (advanced) {
             PrintLn(st, R"(
 Advanced commands:
-    %!..+change_id%!0                    Change repository cache ID
-    %!..+rebuild_cache%!0                Rebuild local repository cache)");
+
+    %!..+change_id%!0                      Change repository cache ID
+    %!..+rebuild_cache%!0                  Rebuild local repository cache)");
         } else {
             PrintLn(st, R"(
 Advanced and low-level commands are hidden, use %!..+rekkord --help full%!0 to reveal them.)");
         }
 
         PrintLn(st, R"(
-Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
+Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {

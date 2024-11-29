@@ -472,11 +472,12 @@ static int RunInit(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 init [options]
+R"(Usage: %!..+%1 init [option...]
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-    %!..+-D, --database_file <file>%!0   Set database file)",
+
+    %!..+-C, --config_file filename%!0     Set configuration file
+    %!..+-D, --database_file filename%!0   Set database file)",
                 FelixTarget);
     };
 
@@ -988,16 +989,17 @@ static int RunStatus(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 status [options]
+R"(Usage: %!..+%1 status [option...]
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-    %!..+-D, --database_file <file>%!0   Set database file
 
-    %!..+-v, --verbose%!0                Show detailed changes
-        %!..+--no_detect%!0              Don't detect source changes
+    %!..+-C, --config_file filename%!0     Set configuration file
+    %!..+-D, --database_file filename%!0   Set database file
 
-    %!..+-c, --checksum%!0               Use checksum (BLAKE3) to compare files)",
+    %!..+-v, --verbose%!0                  Show detailed changes
+        %!..+--no_detect%!0                Don't detect source changes
+
+    %!..+-c, --checksum%!0                 Use checksum (BLAKE3) to compare files)",
                 FelixTarget);
     };
 
@@ -1267,16 +1269,17 @@ static int RunBackup(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 backup [options]
+R"(Usage: %!..+%1 backup [option...]
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-    %!..+-D, --database_file <file>%!0   Set database file
 
-        %!..+--no_detect%!0              Don't detect source changes
+    %!..+-C, --config_file filename%!0     Set configuration file
+    %!..+-D, --database_file filename%!0   Set database file
 
-    %!..+-c, --checksum%!0               Use checksum (BLAKE3) to compare files
-        %!..+--cleanup%!0                Delete removed files from backup disks)",
+        %!..+--no_detect%!0                Don't detect source changes
+
+    %!..+-c, --checksum%!0                 Use checksum (BLAKE3) to compare files
+        %!..+--cleanup%!0                  Delete removed files from backup disks)",
                 FelixTarget);
     };
 
@@ -1370,11 +1373,12 @@ static int RunAddSource(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 add_source [options] <directory>
+R"(Usage: %!..+%1 add_source [option...] directory
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-    %!..+-D, --database_file <file>%!0   Set database file)",
+
+    %!..+-C, --config_file filename%!0     Set configuration file
+    %!..+-D, --database_file filename%!0   Set database file)",
                 FelixTarget);
     };
 
@@ -1445,11 +1449,12 @@ static int RunRemoveSource(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 remove_source [options] <ID | UUID | name>
+R"(Usage: %!..+%1 remove_source [option...] ID|UUID|name
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-    %!..+-D, --database_file <file>%!0   Set database file)",
+
+    %!..+-C, --config_file filename%!0     Set configuration file
+    %!..+-D, --database_file filename%!0   Set database file)",
                 FelixTarget);
     };
 
@@ -1615,14 +1620,15 @@ static int RunAddDisk(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 add_disk [options] <directory>
+R"(Usage: %!..+%1 add_disk [option...] directory
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-    %!..+-D, --database_file <file>%!0   Set database file
 
-    %!..+-n, --name <name>%!0            Set disk name
-    %!..+-s, --size <size>%!0            Set explicit disk size)",
+    %!..+-C, --config_file filename%!0     Set configuration file
+    %!..+-D, --database_file filename%!0   Set database file
+
+    %!..+-n, --name name%!0                Set disk name
+    %!..+-s, --size size%!0                Set explicit disk size)",
                 FelixTarget);
     };
 
@@ -1766,15 +1772,16 @@ static int RunEditDisk(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 edit_disk [options] <ID | UUID | name> [<directory>]
+R"(Usage: %!..+%1 edit_disk [option...] ID|UUID|name [directory]
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-    %!..+-D, --database_file <file>%!0   Set database file
 
-    %!..+-n, --name <name>%!0            Set disk name
-    %!..+-s, --size <size>%!0            Set explicit disk size
-                                 %!D..(default: auto-detect)%!0)",
+    %!..+-C, --config_file filename%!0     Set configuration file
+    %!..+-D, --database_file filename%!0   Set database file
+
+    %!..+-n, --name name%!0                Set disk name
+    %!..+-s, --size size%!0                Set explicit disk size
+                                   %!D..(default: auto-detect)%!0)",
                 FelixTarget);
     };
 
@@ -1882,11 +1889,12 @@ static int RunRemoveDisk(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 remove_disk [options] <ID | UUID | name>
+R"(Usage: %!..+%1 remove_disk [option...] ID|UUID|name
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-    %!..+-D, --database_file <file>%!0   Set database file)",
+
+    %!..+-C, --config_file filename%!0     Set configuration file
+    %!..+-D, --database_file filename%!0   Set database file)",
                 FelixTarget);
     };
 
@@ -1948,19 +1956,20 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 <command> [-C <config.ini>] [args]%!0
+R"(Usage: %!..+%1 command [-C filename] [arg...]%!0
 
 Commands:
-    %!..+init%!0                         Init kluter database for backups
-    %!..+status%!0                       Get backup status and recorded disk usage
-    %!..+backup%!0                       Distribute changes and backup to plugged disks
 
-    %!..+add_source%!0                   Add backup source directory
-    %!..+remove_source%!0                Remove directory from known sources
+    %!..+init%!0                           Init kluter database for backups
+    %!..+status%!0                         Get backup status and recorded disk usage
+    %!..+backup%!0                         Distribute changes and backup to plugged disks
 
-    %!..+add_disk%!0                     Add disk for future backups
-    %!..+edit_disk%!0                    Edit existing backup disk
-    %!..+remove_disk%!0                  Remove disk from backups
+    %!..+add_source%!0                     Add backup source directory
+    %!..+remove_source%!0                  Remove directory from known sources
+
+    %!..+add_disk%!0                       Add disk for future backups
+    %!..+edit_disk%!0                      Edit existing backup disk
+    %!..+remove_disk%!0                    Remove disk from backups
 
 By default, the first of the following config files will be used:
 )",

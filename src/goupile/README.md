@@ -70,7 +70,7 @@ For other distributions, you can [build the code from source](#build-from-source
 To create a new domain, run the following command:
 
 ```sh
-/usr/lib/goupile/manage.py create <name> [-p <HTTP port>]
+/usr/lib/goupile/manage.py create name [-p http_port]
 ```
 
 Don't forget to **securely store** the backup decryption key!

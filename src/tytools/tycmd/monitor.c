@@ -54,30 +54,30 @@ static ssize_t monitor_input_ret;
 
 static void print_monitor_usage(FILE *f)
 {
-    fprintf(f, "usage: %s monitor [options]\n\n", tycmd_executable_name);
+    fprintf(f, "Usage: %s monitor [option...]\n\n", tycmd_executable_name);
 
     print_common_options(f);
     fprintf(f, "\n");
 
-    fprintf(f, "Monitor options:\n"
+    fprintf(f, "Monitor options:\n\n"
                "   -r, --raw                Disable line-buffering and line-editing\n"
                "   -s, --silent             Disable echoing of local input on terminal\n\n"
                "   -R, --reconnect          Try to reconnect on I/O errors\n"
-               "   -D, --direction <dir>    Open serial connection in given direction\n"
+               "   -D, --direction dir      Open serial connection in given direction\n"
                "                            Supports input, output, both (default)\n"
-               "       --timeout-eof <ms>   Time before closing after EOF on standard input\n"
+               "       --timeout-eof ms     Time before closing after EOF on standard input\n"
                "                            Defaults to %d ms, use -1 to disable\n\n", monitor_timeout_eof);
 
-    fprintf(f, "Serial settings:\n"
-               "   -b, --baudrate <rate>    Use baudrate for serial port\n"
+    fprintf(f, "Serial settings:\n\n"
+               "   -b, --baudrate rate      Use baudrate for serial port\n"
                "                            Default: %u bauds\n"
-               "   -d, --databits <bits>    Change number of bits for every character\n"
+               "   -d, --databits bits      Change number of bits for every character\n"
                "                            Must be one of: 5, 6, 7 or 8\n"
-               "   -p, --stopbits <bits>    Change number of stop bits for every character\n"
+               "   -p, --stopbits bits      Change number of stop bits for every character\n"
                "                            Must be one of: 1 or 2\n"
-               "   -f, --flow <control>     Define flow-control mode\n"
+               "   -f, --flow control       Define flow-control mode\n"
                "                            Must be one of: off, rtscts or xonxoff\n"
-               "   -y, --parity <bits>      Change parity mode to use for the serial port\n"
+               "   -y, --parity bits        Change parity mode to use for the serial port\n"
                "                            Must be one of: off, even, or odd\n\n"
                "These settings are mostly ignored by the USB serial emulation, but you can still\n"
                "access them in your embedded code (e.g. the Serial object API on Teensy).\n",

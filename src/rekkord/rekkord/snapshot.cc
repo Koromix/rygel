@@ -29,22 +29,23 @@ int RunSave(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 save [-C <config>] <filename> ...%!0
+R"(Usage: %!..+%1 save [-C filename] [option...] path...%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-n, --name <name>%!0            Set custom snapshot name
-        %!..+--raw%!0                    Skip snapshot object and report data hash
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password
 
-        %!..+--follow_symlinks%!0        Follow symbolic links (instead of storing them as-is)
+    %!..+-n, --name name%!0                Set custom snapshot name
+        %!..+--raw%!0                      Skip snapshot object and report data hash
 
-    %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: automatic)%!0)", FelixTarget);
+        %!..+--follow_symlinks%!0          Follow symbolic links (instead of storing them as-is)
+
+    %!..+-j, --threads threads%!0          Change number of threads
+                                   %!D..(default: automatic)%!0)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -96,7 +97,7 @@ Options:
     }
 
     if (!settings.name && !settings.raw && filenames.len > 1) {
-        LogError("You must use an explicit name with %!..+-n <name>%!0 to save multiple paths");
+        LogError("You must use an explicit name with %!..+-n name%!0 to save multiple paths");
         return 1;
     }
 
@@ -164,30 +165,30 @@ int RunRestore(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 restore [-C <config>] <identifier> -O <path>%!0
+R"(Usage: %!..+%1 restore [-C filename] [option...] -O path identifier%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-O, --output <path>%!0          Restore file or directory to path
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password
 
-    %!..+-f, --force%!0                  Overwrite destination files
-        %!..+--delete%!0                 Delete extraneous files from destination
+    %!..+-O, --output path%!0              Restore file or directory to path
 
-        %!..+--chown%!0                  Restore original file UID and GID
+    %!..+-f, --force%!0                    Overwrite destination files
+        %!..+--delete%!0                   Delete extraneous files from destination
 
-    %!..+-v, --verbose%!0                Show detailed actions
-    %!..+-n, --dry_run%!0                Fake file restoration
+        %!..+--chown%!0                    Restore original file UID and GID
 
-    %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: automatic)%!0
+    %!..+-v, --verbose%!0                  Show detailed actions
+    %!..+-n, --dry_run%!0                  Fake file restoration
+
+    %!..+-j, --threads threads%!0          Change number of threads
+                                   %!D..(default: automatic)%!0
 
 Use an object hash or a snapshot name as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|name>[:<path>]%!0.
-
 Snapshot names are not unique, if you use a snapshot name, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
     };
 

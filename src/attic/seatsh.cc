@@ -120,10 +120,11 @@ static int RunClient(int argc, char **argv)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [options] <bin> [args...]%!0
+R"(Usage: %!..+%1 [option...] bin [arg...]%!0
 
 Options:
-    %!..+-w, --work_dir <dir>%!0         Change working directory
+
+    %!..+-w, --work_dir directory%!0       Change working directory
 
 In order for this to work, you must first install the service from an elevated command prompt:
 

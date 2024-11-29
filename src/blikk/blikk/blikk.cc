@@ -107,20 +107,21 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [options] <file>
-       %1 [options] -c <code>
-       %1 [options] -i%!0
+R"(Usage: %!..+%1 [option...] file
+       %1 [option...] -c code
+       %1 [option...] -i%!0
 
 Options:
-    %!..+-c, --command%!0                Run code directly from argument
-    %!..+-i, --interactive%!0            Run code interactively (REPL)
 
-        %!..+--sandbox%!0                Run in strict OS sandbox (if supported)
+    %!..+-c, --command%!0                  Run code directly from argument
+    %!..+-i, --interactive%!0              Run code interactively (REPL)
 
-        %!..+--no_execute%!0             Parse code but don't run it
-        %!..+--no_expression%!0          Don't try to run code as expression
-                                 %!D..(works only with -c or -i)%!0
-        %!..+--debug%!0                  Dump executed VM instructions)", FelixTarget);
+        %!..+--sandbox%!0                  Run in strict OS sandbox (if supported)
+
+        %!..+--no_execute%!0               Parse code but don't run it
+        %!..+--no_expression%!0            Don't try to run code as expression
+                                   %!D..(works only with -c or -i)%!0
+        %!..+--debug%!0                    Dump executed VM instructions)", FelixTarget);
     };
 
     // Handle version

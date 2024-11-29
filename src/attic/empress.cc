@@ -34,18 +34,19 @@ static int RunCompress(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 compress <source> [-O <destination>]
-       %1 compress <sources...> [-D <destination>]%!0
+R"(Usage: %!..+%1 compress source [-O destination]
+       %1 compress source... [-D destination]%!0
 
 Options:
-    %!..+-O, --output_file <file>%!0     Set output file
-    %!..+-D, --output_dir <dir>%!0       Set output directory
 
-    %!..+-a, --algorithm <algo>%!0       Set algorithm, see below
-    %!..+-s, --speed <speed>%!0          Set compression speed: Default, Fast or Slow
-                                 %!D..(default: Default)%!0
+    %!..+-O, --output_file filename%!0     Set output file
+    %!..+-D, --output_dir directory%!0     Set output directory
 
-    %!..+-f, --force%!0                  Overwrite destination files
+    %!..+-a, --algorithm algo%!0           Set algorithm, see below
+    %!..+-s, --speed speed%!0              Set compression speed: Default, Fast or Slow
+                                   %!D..(default: Default)%!0
+
+    %!..+-f, --force%!0                    Overwrite destination files
 
 Available compression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAlgorithms));
     };
@@ -243,16 +244,17 @@ static int RunDecompress(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 decompress <source> [-O <destination>]
-       %1 decompress <sources...> [-D <destination>]%!0
+R"(Usage: %!..+%1 decompress source [-O destination]
+       %1 decompress source... [-D destination]%!0
 
 Options:
-    %!..+-O, --output_file <file>%!0     Set output file
-    %!..+-D, --output_dir <dir>%!0       Set output directory
 
-    %!..+-a, --algorithm <algo>%!0       Set algorithm, see below
+    %!..+-O, --output_file filename%!0     Set output file
+    %!..+-D, --output_dir directory%!0     Set output directory
 
-    %!..+-f, --force%!0                  Overwrite destination file
+    %!..+-a, --algorithm algo%!0           Set algorithm, see below
+
+    %!..+-f, --force%!0                    Overwrite destination file
 
 Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(AvailableAlgorithms));
     };
@@ -485,13 +487,14 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 <command> [args]%!0
+R"(Usage: %!..+%1 command [arg...]%!0
 
 Commands:
-    %!..+compress%!0                     Compress file
-    %!..+decompress%!0                   Decompress file
 
-Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
+    %!..+compress%!0                       Compress file
+    %!..+decompress%!0                     Decompress file
+
+Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {

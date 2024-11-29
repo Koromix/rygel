@@ -32,32 +32,33 @@ static int RunGeneratePassword(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 generate_password [options]%!0
+R"(Usage: %!..+%1 generate_password [option...]%!0
 
 Options:
-    %!..+-l, --length <length>%!0        Set desired password length
-                                 %!D..(default: %2)%!0
-    %!..+-p, --pattern <chars>%!0        Set allowed/required characters, see below
 
-        %!..+--no_check%!0               Don't check password strength
+    %!..+-l, --length length%!0            Set desired password length
+                                   %!D..(default: %2)%!0
+    %!..+-p, --pattern chars%!0            Set allowed/required characters, see below
+
+        %!..+--no_check%!0                 Don't check password strength
 
 Use a pattern to set which characters classes are present in the password:
 
-    %!..+l%!0       Use lowercase characters
-    %!..+l-%!0      Use non-ambiguous lowercase characters (exclude l)
-    %!..+u%!0       Use uppercase characters
-    %!..+u-%!0      Use non-ambiguous lowercase characters (exclude I and O)
-    %!..+d%!0       Use digits
-    %!..+d-%!0      Use non-ambiguous digits (exclude 1 and 0)
-    %!..+s%!0       Use basic special symbols
-    %!..+!%!0       Use dangerous special symbols
-            %!D..(annoying to type or to use in terminals)%!0
+    %!..+l%!0                              Use lowercase characters
+    %!..+l-%!0                             Use non-ambiguous lowercase characters (exclude l)
+    %!..+u%!0                              Use uppercase characters
+    %!..+u-%!0                             Use non-ambiguous lowercase characters (exclude I and O)
+    %!..+d%!0                              Use digits
+    %!..+d-%!0                             Use non-ambiguous digits (exclude 1 and 0)
+    %!..+s%!0                              Use basic special symbols
+    %!..+!%!0                              Use dangerous special symbols
+                                   %!D..(annoying to type or to use in terminals)%!0
 
 Here are a few example patterns:
 
-    %!..+lud%!0     Use all characters (lower and uppercase) and digits
-    %!..+l-u-s%!0   Use non-ambiguous characters (lower and uppercase) and basic special symbols
-    %!..+d!%!0      Use all digits and dangerous special symbols)", FelixTarget, length);
+    %!..+lud%!0                            Use all characters (lower and uppercase) and digits
+    %!..+l-u-s%!0                          Use non-ambiguous characters (lower and uppercase) and basic special symbols
+    %!..+d!%!0                             Use all digits and dangerous special symbols)", FelixTarget, length);
     };
 
     // Parse arguments
@@ -159,15 +160,16 @@ static int RunHashPassword(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 hash_password [options]
-       %1 hash_password -p <password>%!0
+R"(Usage: %!..+%1 hash_password [option...]
+       %1 hash_password -p password%!0
 
 Options:
-    %!..+-p, --password <password>%!0    Use password given as option
 
-        %!..+--no_mask%!0                Show password as typed
-        %!..+--no_confirm%!0             Ask only once for password
-        %!..+--no_check%!0               Don't check password strength)", FelixTarget);
+    %!..+-p, --password password%!0        Use password given as option
+
+        %!..+--no_mask%!0                  Show password as typed
+        %!..+--no_confirm%!0               Ask only once for password
+        %!..+--no_check%!0                 Don't check password strength)", FelixTarget);
     };
 
     // Parse arguments
@@ -249,14 +251,15 @@ static int RunCheckPassword(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 check_password [options]
-       %1 check_password -p <password>%!0
+R"(Usage: %!..+%1 check_password [option...]
+       %1 check_password -p password%!0
 
 Options:
-    %!..+-p, --password <password>%!0    Use password given as option
 
-        %!..+--no_mask%!0                Show password as typed
-        %!..+--no_confirm%!0             Ask only once for password)", FelixTarget);
+    %!..+-p, --password password%!0        Use password given as option
+
+        %!..+--no_mask%!0                  Show password as typed
+        %!..+--no_confirm%!0               Ask only once for password)", FelixTarget);
     };
 
     // Parse arguments
@@ -326,22 +329,23 @@ static int RunGenerateTOTP(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 generate_totp [options]%!0
+R"(Usage: %!..+%1 generate_totp [option...]%!0
 
 Options:
-    %!..+-l, --label <label>%!0          Set TOTP label
-    %!..+-u, --username <username>%!0    Set TOTP username
-    %!..+-i, --issuer <issuer>%!0        Set TOTP issuer
 
-    %!..+-a, --algorithm <algorithm>%!0  Change HMAC algorithm
-                                 %!D..(default: %2)%!0
-    %!..+-s, --secret <secret>%!0        Set secret in Base32 encoding
+    %!..+-l, --label label%!0              Set TOTP label
+    %!..+-u, --username username%!0        Set TOTP username
+    %!..+-i, --issuer issuer%!0            Set TOTP issuer
 
-    %!..+-d, --digits <digits>%!0        Use specified number of digits
-                                 %!D..(default: %3)%!0
+    %!..+-a, --algorithm algorithm%!0      Change HMAC algorithm
+                                   %!D..(default: %2)%!0
+    %!..+-s, --secret secret%!0            Set secret in Base32 encoding
 
-             --skip_qrcode               Skip generation of QR code
-    %!..+-P, --png_file <file>%!0        Write QR code PNG image to disk)",
+    %!..+-d, --digits digits%!0            Use specified number of digits
+                                   %!D..(default: %3)%!0
+
+        %!..+--skip_qrcode%!0              Skip generation of QR code
+    %!..+-P, --png_file filename%!0        Write QR code PNG image to disk)",
                 FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm], digits);
     };
 
@@ -459,18 +463,19 @@ static int RunComputeTOTP(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 compute_totp [options] <secret>%!0
+R"(Usage: %!..+%1 compute_totp [option...]%!0
 
 Options:
-    %!..+-a, --algorithm <algorithm>%!0  Change HMAC algorithm
-                                 %!D..(default: %2)%!0
-    %!..+-s, --secret <secret>%!0        Set secret in Base32 encoding
 
-    %!..+-t, --time <time>%!0            Use specified Unix time instead of current time
-    %!..+-d, --digits <digits>%!0        Generate specified number of digits
-                                 %!D..(default: %3)%!0
-    %!..+-w, --window <window>%!0        Generate multiple codes around current time
-                                 %!D..(default: %4)%!0)",
+    %!..+-a, --algorithm algorithm%!0      Change HMAC algorithm
+                                   %!D..(default: %2)%!0
+    %!..+-s, --secret secret%!0            Set secret in Base32 encoding
+
+    %!..+-t, --time time%!0                Use specified Unix time instead of current time
+    %!..+-d, --digits digits%!0            Generate specified number of digits
+                                   %!D..(default: %3)%!0
+    %!..+-w, --window window%!0            Generate multiple codes around current time
+                                   %!D..(default: %4)%!0)",
                 FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm], digits, window);
     };
 
@@ -553,18 +558,19 @@ static int RunCheckTOTP(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 check_totp [options] <secret>%!0
+R"(Usage: %!..+%1 check_totp [option...]%!0
 
 Options:
-    %!..+-a, --algorithm <algorithm>%!0  Change HMAC algorithm
-                                 %!D..(default: %2)%!0
-    %!..+-s, --secret <secret>%!0        Set secret in Base32 encoding
 
-    %!..+-t, --time <time>%!0            Use specified Unix time instead of current time
-    %!..+-d, --digits <digits>%!0        Generate specified number of digits
-                                 %!D..(default: %3)%!0
-    %!..+-w, --window <window>%!0        Generate multiple codes around current time
-                                 %!D..(default: %4)%!0)",
+    %!..+-a, --algorithm algorithm%!0      Change HMAC algorithm
+                                   %!D..(default: %2)%!0
+    %!..+-s, --secret secret%!0            Set secret in Base32 encoding
+
+    %!..+-t, --time time%!0                Use specified Unix time instead of current time
+    %!..+-d, --digits digits%!0            Generate specified number of digits
+                                   %!D..(default: %3)%!0
+    %!..+-w, --window window%!0            Generate multiple codes around current time
+                                   %!D..(default: %4)%!0)",
                 FelixTarget, pwd_HotpAlgorithmNames[(int)algorithm], digits, window);
     };
 
@@ -660,15 +666,16 @@ static int RunEncodeQR(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 encode_qr [options]%!0
+R"(Usage: %!..+%1 encode_qr [option...]%!0
 
 Options:
-    %!..+-F, --file <filename>%!0        Encode data from file
-    %!..+-t, --text <text>%!0            Encode string passed as argument
 
-             --force_binary              Force use of binary encoding
+    %!..+-F, --file filename%!0            Encode data from file
+    %!..+-t, --text text%!0                Encode string passed as argument
 
-    %!..+-P, --png_file <file>%!0        Write QR code PNG image to disk)",
+         %!..+--force_binary%!0            Force use of binary encoding
+
+    %!..+-P, --png_file filename%!0        Write QR code PNG image to disk)",
                 FelixTarget);
     };
 
@@ -755,20 +762,21 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 <command> [args]%!0
+R"(Usage: %!..+%1 command [arg...]%!0
 
 Commands:
-    %!..+generate_password%!0            Generate random password
-    %!..+hash_password%!0                Hash a password (using libsodium)
-    %!..+check_password%!0               Check password strength
 
-    %!..+generate_totp%!0                Generate a TOTP QR code
-    %!..+compute_totp%!0                 Generate TOTP code based on current time
-    %!..+check_totp%!0                   Check TOTP code based on current time
+    %!..+generate_password%!0              Generate random password
+    %!..+hash_password%!0                  Hash a password (using libsodium)
+    %!..+check_password%!0                 Check password strength
 
-    %!..+encode_qr%!0                    Encode text or binary data as QR code
+    %!..+generate_totp%!0                  Generate a TOTP QR code
+    %!..+compute_totp%!0                   Generate TOTP code based on current time
+    %!..+check_totp%!0                     Check TOTP code based on current time
 
-Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
+    %!..+encode_qr%!0                      Encode text or binary data as QR code
+
+Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {

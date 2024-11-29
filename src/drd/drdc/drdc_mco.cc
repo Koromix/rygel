@@ -329,36 +329,40 @@ int RunMcoClassify(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mco_classify [options] stay_file ...%!0
+R"(Usage: %!..+%1 mco_classify [option...] stay_file...%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
         PrintLn(st, R"(
 Classify options:
-    %!..+-o, --option <options>%!0       Classifier options (see below)
-    %!..+-d, --dispense <mode>%!0        Run dispensation algorithm (see below)
-        %!..+--coeff%!0                  Apply GHS coefficients
 
-    %!..+-f, --filter <expr>%!0          Run Wren filter
-    %!..+-F, --filter_file <file>%!0     Run Wren filter in file
+    %!..+-o, --option options%!0           Classifier options (see below)
+    %!..+-d, --dispense mode%!0            Run dispensation algorithm (see below)
+        %!..+--coeff%!0                    Apply GHS coefficients
 
-    %!..+-v, --verbose%!0                Show more classification details (cumulative)
+    %!..+-f, --filter expr%!0              Run Wren filter
+    %!..+-F, --filter_file filename%!0     Run Wren filter in file
 
-        %!..+--test [options]%!0         Enable testing against GenRSA values (see below)
-        %!..+--torture [N]%!0            Benchmark classifier with N runs
+    %!..+-v, --verbose%!0                  Show more classification details (cumulative)
 
-Classifier options:)");
+        %!..+--test [options]%!0           Enable testing against GenRSA values (see below)
+        %!..+--torture [N]%!0              Benchmark classifier with N runs
+
+Classifier options:
+)");
         for (const OptionDesc &desc: mco_ClassifyFlagOptions) {
-            PrintLn(st, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
         }
         PrintLn(st, R"(
-Dispensation modes:)");
+Dispensation modes:
+)");
         for (const OptionDesc &desc: mco_DispenseModeOptions) {
-            PrintLn(st, "    %!..+%1%!0  Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    Algorithm %2", FmtArg(desc.name).Pad(27), desc.help);
         }
         PrintLn(st, R"(
-Test options:)");
+Test options:
+)");
         for (const OptionDesc &desc: TestFlagOptions) {
-            PrintLn(st, "    %!..+%1%!0  %2", FmtArg(desc.name).Pad(27), desc.help);
+            PrintLn(st, "    %!..+%1%!0    %2", FmtArg(desc.name).Pad(27), desc.help);
         }
     };
 
@@ -582,12 +586,13 @@ int RunMcoDump(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mco_dump [options] [filename] ...%!0
+R"(Usage: %!..+%1 mco_dump [option...] filename...%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
         PrintLn(st, R"(
 Dump options:
-    %!..+-d, --dump%!0                   Dump content of (readable) tables)");
+
+    %!..+-d, --dump%!0                     Dump content of (readable) tables)");
     };
 
     // Parse arguments
@@ -629,13 +634,14 @@ int RunMcoList(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mco_list [options] list_name ...%!0
+R"(Usage: %!..+%1 mco_list [option...] list_name...%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
         PrintLn(st, R"(
 List options:
-    %!..+-d, --date <date>%!0            Use tables valid on specified date
-                                 %!D..(default: most recent tables)%!0)");
+
+    %!..+-d, --date date%!0                Use tables valid on specified date
+                                   %!D..(default: most recent tables)%!0)");
     };
 
     // Parse arguments
@@ -718,13 +724,14 @@ int RunMcoMap(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mco_map [options]%!0
+R"(Usage: %!..+%1 mco_map [option...]%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
         PrintLn(st, R"(
 Map options:
-    %!..+-d, --date <date>%!0            Use tables valid on specified date
-                                 %!D..(default: most recent tables)%!0)");
+
+    %!..+-d, --date date%!0                Use tables valid on specified date
+                                   %!D..(default: most recent tables)%!0)");
     };
 
     // Parse arguments
@@ -788,12 +795,13 @@ int RunMcoPack(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mco_pack [options] stay_file ... -O output_file%!0
+R"(Usage: %!..+%1 mco_pack [option...] stay_file... -O output_file%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
         PrintLn(st, R"(
 Pack options:
-    %!..+-O, --output_file <file>%!0     Set output file)");
+
+    %!..+-O, --output_file filename%!0     Set output file)");
     };
 
     // Parse arguments
@@ -849,7 +857,7 @@ int RunMcoShow(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mco_show [options] name ...%!0
+R"(Usage: %!..+%1 mco_show [option...] name...%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
     };

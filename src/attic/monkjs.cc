@@ -45,11 +45,12 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [options] <file>
-       %1 [options] -c <code>%!0
+R"(Usage: %!..+%1 [option...] filename
+       %1 [option...] -c code%!0
 
 Options:
-    %!..+-c, --command%!0                Run code directly from argument)", FelixTarget);
+
+    %!..+-c, --command%!0                  Run code directly from argument)", FelixTarget);
     };
 
     // Handle version

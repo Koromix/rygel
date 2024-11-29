@@ -28,18 +28,19 @@ int RunMcoShow(Span<const char *> arguments);
 
 const char *const CommonOptions =
 R"(Common options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: drdc.ini)%!0
 
-        %!..+--profile_dir <dir>%!0      Set profile directory
-        %!..+--table_dir <dir>%!0        Add table directory
+    %!..+-C, --config_file filename%!0     Set configuration file
+                                   %!D..(default: drdc.ini)%!0
 
-        %!..+--mco_auth_file <file>%!0   Set MCO authorization file
-                                 %!D..(default: <profile_dir>%/mco_authorizations.ini
-                                           <profile_dir>%/mco_authorizations.txt)%!0
+        %!..+--profile_dir directory%!0    Set profile directory
+        %!..+--table_dir directory%!0      Add table directory
 
-    %!..+-s, --sector <sector>%!0        Use Public or Private sector GHS and prices
-                                 %!D..(default: Public)%!0)";
+        %!..+--mco_auth_file filename%!0   Set MCO authorization file
+                                   %!D..(default: <profile_dir>%/mco_authorizations.ini
+                                             <profile_dir>%/mco_authorizations.txt)%!0
+
+    %!..+-s, --sector sector%!0            Use Public or Private sector GHS and prices
+                                   %!D..(default: Public)%!0)";
 
 Config drdc_config;
 
@@ -77,20 +78,21 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 <command> [args]%!0
+R"(Usage: %!..+%1 command [arg...]%!0
 )", FelixTarget);
         PrintLn(st, CommonOptions);
         PrintLn(st, R"(
 Commands:
-    %!..+mco_classify%!0                 Classify MCO stays
-    %!..+mco_dump%!0                     Dump available MCO tables and lists
-    %!..+mco_list%!0                     Export MCO diagnosis and procedure lists
-    %!..+mco_map%!0                      Compute GHM accessibility constraints
-    %!..+mco_pack%!0                     Pack MCO stays for quicker loads
-    %!..+mco_show%!0                     Print information about individual MCO elements
-                                 (diagnoses, procedures, GHM roots, etc.)
 
-Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
+    %!..+mco_classify%!0                   Classify MCO stays
+    %!..+mco_dump%!0                       Dump available MCO tables and lists
+    %!..+mco_list%!0                       Export MCO diagnosis and procedure lists
+    %!..+mco_map%!0                        Compute GHM accessibility constraints
+    %!..+mco_pack%!0                       Pack MCO stays for quicker loads
+    %!..+mco_show%!0                       Print information about individual MCO elements
+                                   (diagnoses, procedures, GHM roots, etc.)
+
+Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {

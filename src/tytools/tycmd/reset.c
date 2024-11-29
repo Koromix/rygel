@@ -15,12 +15,12 @@ static bool reset_bootloader = false;
 
 static void print_reset_usage(FILE *f)
 {
-    fprintf(f, "usage: %s reset\n\n", tycmd_executable_name);
+    fprintf(f, "Usage: %s reset [option...]\n\n", tycmd_executable_name);
 
     print_common_options(f);
     fprintf(f, "\n");
 
-    fprintf(f, "Reset options:\n"
+    fprintf(f, "Reset options:\n\n"
                "   -b, --bootloader         Switch board to bootloader\n");
 }
 

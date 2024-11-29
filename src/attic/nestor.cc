@@ -753,18 +753,19 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 [options] [path or URL...]%!0
+R"(Usage: %!..+%1 [option...] path_or_URL...%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
-                                 %!D..(default: %2)%!0
 
-    %!..+-p, --port <port>%!0            Change web server port
-                                 %!D..(default: %3)%!0
+    %!..+-C, --config_file filename%!0     Set configuration file
+                                   %!D..(default: %2)%!0
 
-        %!..+--enable_sab%!0             Set headers for SharedArrayBuffer support
+    %!..+-p, --port port%!0                Change web server port
+                                   %!D..(default: %3)%!0
 
-    %!..+-v, --verbose%!0                Log served requests)",
+        %!..+--enable_sab%!0               Set headers for SharedArrayBuffer support
+
+    %!..+-v, --verbose%!0                  Log served requests)",
                 FelixTarget, config_filename, config.http.port);
     };
 

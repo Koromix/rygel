@@ -69,15 +69,16 @@ static int RunRestore(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 restore [options] <directory>%!0
+R"(Usage: %!..+%1 restore [option...] directory%!0
 
 Options:
-    %!..+-O, --output_dir <dir>%!0       Restore inside this directory (instead of real path)
 
-    %!..+-n, --dry_run%!0                Pretend to restore without doing anything
-    %!..+-f, --force%!0                  Overwrite existing databases
+    %!..+-O, --output_dir directory%!0     Restore inside this directory (instead of real path)
 
-        %!..+--at <UNIX TIME>%!0         Restore database as it was at specified time
+    %!..+-n, --dry_run%!0                  Pretend to restore without doing anything
+    %!..+-f, --force%!0                    Overwrite existing databases
+
+        %!..+--at unix_time%!0             Restore database as it was at specified time
 
 As a precaution, you need to use %!..+--force%!0 if you don't use %!..+--output_dir%!0.)", FelixTarget);
     };
@@ -184,10 +185,11 @@ static int RunList(Span<const char *> arguments)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 list [options] <directory>%!0
+R"(Usage: %!..+%1 list [option...] directory%!0
 
 Options:
-    %!..+-v, --verbose%!0                List all available logs per snapshot)", FelixTarget);
+
+    %!..+-v, --verbose%!0                  List all available logs per snapshot)", FelixTarget);
     };
 
     // Parse arguments
@@ -385,17 +387,18 @@ static int RunTorture(Span<const char *> arguments)
 
 const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 torture [options] <database>%!0
+R"(Usage: %!..+%1 torture [option...] database%!0
 
 Options:
-    %!..+-S, --snapshot_dir <dir>%!0     Create snapshots inside this directory
 
-    %!..+-d, --duration <sec>%!0         Set torture duration in seconds
-                                 %!D..(default: %2 sec)%!0
-        %!..+--full_delay <sec>%!0       Set delay between full snapshots
-                                 %!D..(default: %3 sec)%!0
+    %!..+-S, --snapshot_dir directory%!0   Create snapshots inside this directory
 
-    %!..+-f, --force%!0                  Overwrite existing database file)",
+    %!..+-d, --duration sec%!0             Set torture duration in seconds
+                                   %!D..(default: %2 sec)%!0
+        %!..+--full_delay sec%!0           Set delay between full snapshots
+                                   %!D..(default: %3 sec)%!0
+
+    %!..+-f, --force%!0                    Overwrite existing database file)",
                 FelixTarget, duration / 1000, full_delay / 1000);
     };
 
@@ -465,15 +468,16 @@ int Main(int argc, char **argv)
 
     const auto print_usage = [](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 <command> [args]%!0
+R"(Usage: %!..+%1 command [arg...]%!0
 
 Commands:
-    %!..+restore%!0                      Restore databases from SQLite snapshots
-    %!..+list%!0                         List available databases in snapshot files
 
-    %!..+torture%!0                      Torture snapshot code (for testing)
+    %!..+restore%!0                        Restore databases from SQLite snapshots
+    %!..+list%!0                           List available databases in snapshot files
 
-Use %!..+%1 help <command>%!0 or %!..+%1 <command> --help%!0 for more specific help.)", FelixTarget);
+    %!..+torture%!0                        Torture snapshot code (for testing)
+
+Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
 
     if (argc < 2) {

@@ -31,17 +31,18 @@ int RunEmbed(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 embed [options] <filename> ...%!0
+R"(Usage: %!..+%1 embed [option...] [filename...]%!0
 
 Options:
-    %!..+-O, --output_file <file>%!0     Redirect output to file or directory
 
-    %!..+-f, --flags <flags>%!0          Set embedding flags
-    %!..+-s, --strip <count>%!0          Strip first count directory components, or 'All'
-                                 %!D..(default: 0)%!0
+    %!..+-O, --output_file filename%!0     Redirect output to file or directory
 
-    %!..+-c, --compress <type>%!0        Compress data, see below for available types
-                                 %!D..(default: %2)%!0
+    %!..+-f, --flags flags%!0              Set embedding flags
+    %!..+-s, --strip count%!0              Strip first count directory components, or 'All'
+                                   %!D..(default: 0)%!0
+
+    %!..+-c, --compress type%!0            Compress data, see below for available types
+                                   %!D..(default: %2)%!0
 
 Available embedding flags: %!..+%3%!0
 Available compression types: %!..+%4%!0)", FelixTarget, CompressionTypeNames[(int)compression_type],

@@ -51,17 +51,17 @@ static void print_version(FILE *f)
 
 static void print_main_usage(FILE *f)
 {
-    fprintf(f, "usage: %s <command> [options]\n\n", tycmd_executable_name);
+    fprintf(f, "Usage: %s command [option...]\n\n", tycmd_executable_name);
 
     print_common_options(f);
     fprintf(f, "\n");
 
-    fprintf(f, "Commands:\n");
+    fprintf(f, "Commands:\n\n");
     for (const struct command *c = commands; c->name; c++)
         fprintf(f, "   %-24s %s\n", c->name, c->description);
     fputc('\n', f);
 
-    fprintf(f, "Supported models:\n");
+    fprintf(f, "Supported models:\n\n");
     for (unsigned int i = 0; i < ty_models_count; i++) {
         if (ty_models[i].mcu)
             fprintf(f, "   - %-22s (%s)\n", ty_models[i].name, ty_models[i].mcu);
@@ -70,10 +70,10 @@ static void print_main_usage(FILE *f)
 
 void print_common_options(FILE *f)
 {
-    fprintf(f, "General options:\n"
+    fprintf(f, "General options:\n\n"
                "       --help               Show help message\n"
                "       --version            Display version information\n\n"
-               "   -B, --board <tag>        Work with board <tag> instead of first detected\n"
+               "   -B, --board tag          Work with board <tag> instead of first detected\n"
                "   -q, --quiet              Disable output, use -qqq to silence errors\n");
 }
 

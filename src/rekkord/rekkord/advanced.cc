@@ -27,14 +27,15 @@ int RunChangeID(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 change_id [-C <config>]%!0
+R"(Usage: %!..+%1 change_id [-C filename] [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password)", FelixTarget);
+    %!..+-C, --config_file filename%!0       Set configuration file
+
+    %!..+-R, --repository URL%!0             Set repository URL
+    %!..+-u, --user username%!0              Set repository username
+        %!..+--password password%!0          Set repository password)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
@@ -91,12 +92,13 @@ int RunRebuildCache(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 rebuild_cache [-C <config>]%!0
+R"(Usage: %!..+%1 rebuild_cache [-C filename] [option...]%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL)", FelixTarget);
+    %!..+-C, --config_file filename%!0     Set configuration file
+
+    %!..+-R, --repository URL%!0           Set repository URL)", FelixTarget);
     };
 
     if (!FindAndLoadConfig(arguments, &config))

@@ -65,11 +65,13 @@ You can find the same help text by running `cnoke --help`:
 Usage: cnoke [command] [options...] [targets...]
 
 Commands:
+
     configure                            Configure CMake build
     build                                Build project (configure if needed)
     clean                                Clean build files
 
 Options:
+
     -d, --directory <DIR>                Change project directory
                                          (default: current working directory)
 

@@ -417,29 +417,29 @@ int RunMount(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 mount [-C <config>] <identifier> <mountpoint>%!0
+R"(Usage: %!..+%1 mount [-C filename] [option...] identifier mountpoint%!0
 
 Options:
-    %!..+-C, --config_file <file>%!0     Set configuration file
 
-    %!..+-R, --repository <url>%!0       Set repository URL
-    %!..+-u, --user <user>%!0            Set repository username
-        %!..+--password <pwd>%!0         Set repository password
+    %!..+-C, --config_file filename%!0     Set configuration file
 
-    %!..+-j, --threads <threads>%!0      Change number of threads
-                                 %!D..(default: automatic)%!0
+    %!..+-R, --repository URL%!0           Set repository URL
+    %!..+-u, --user username%!0            Set repository username
+        %!..+--password password%!0        Set repository password
 
-    %!..+-f, --foreground%!0             Run mount process in foreground
+    %!..+-j, --threads threads%!0          Change number of threads
+                                   %!D..(default: automatic)%!0
 
-        %!..+--auto_unmount%!0           Release filesystem automatically after process termination
-        %!..+--allow_other%!0            Allow all users to access the filesystem
-        %!..+--allow_root%!0             Allow owner and root to access the filesystem
-        %!..+--default_permissions%!0    Enforce snapshotted file permissions
+    %!..+-f, --foreground%!0               Run mount process in foreground
 
-        %!..+--debug%!0                  Debug FUSE calls
+        %!..+--auto_unmount%!0             Release filesystem automatically after process termination
+        %!..+--allow_other%!0              Allow all users to access the filesystem
+        %!..+--allow_root%!0               Allow owner and root to access the filesystem
+        %!..+--default_permissions%!0      Enforce snapshotted file permissions
+
+        %!..+--debug%!0                    Debug FUSE calls
 
 Use an object hash or a snapshot name as the identifier. You can append an optional path (separated by a colon), the full syntax for object identifiers is %!..+<hash|name>[:<path>]%!0.
-
 Snapshot names are not unique, if you use a snapshot name, rekkord will use the most recent snapshot object that matches.)", FelixTarget);
     };
 

@@ -39,7 +39,7 @@ Run felix anywhere inside the repository to build all projects:
 ./felix
 
 # Build specific target
-./felix <target>
+./felix target
 ```
 
 Build presets are provided and configured in `FelixBuild.ini.presets`. This repository configures several presets such as:
