@@ -295,7 +295,7 @@ async function syncProfile() {
                 online: false,
                 authorized: true,
                 permissions: {
-                    data_edit: true
+                    data_save: true
                 },
                 namespaces: lock.namespaces,
                 keys: lock.keys,

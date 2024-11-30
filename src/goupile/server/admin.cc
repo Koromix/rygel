@@ -1085,8 +1085,7 @@ void HandleDemo(http_IO *io)
             uint32_t permissions = (int)UserPermission::BuildCode |
                                    (int)UserPermission::BuildPublish |
                                    (int)UserPermission::DataLoad |
-                                   (int)UserPermission::DataNew |
-                                   (int)UserPermission::DataEdit |
+                                   (int)UserPermission::DataSave |
                                    (int)UserPermission::DataDelete |
                                    (int)UserPermission::DataAudit |
                                    (int)UserPermission::DataAnnotate |

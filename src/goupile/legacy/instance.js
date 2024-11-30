@@ -676,7 +676,7 @@ function renderData() {
                                         }
                                     }
                                 })}
-                                ${goupile.hasPermission('data_edit') ?
+                                ${goupile.hasPermission('data_save') ?
                                     html`<th><a @click=${UI.wrap(e => runDeleteRecordDialog(e, row.ulid))}>✕</a></th>` : ''}
                             </tr>
                         `;
@@ -1482,7 +1482,7 @@ async function saveRecord(record, hid, values, page, silent = false) {
 }
 
 async function deleteRecord(ulid) {
-    if (!goupile.hasPermission('data_edit'))
+    if (!goupile.hasPermission('data_save'))
         throw new Error('You are not allowed to delete data');
 
     await mutex.run(async () => {
@@ -2783,10 +2783,7 @@ function computePath(from, to) {
 function isReadOnly(record) {
     if (record.historical)
         return true;
-
-    if (!goupile.hasPermission('data_edit') && record.saved)
-        return true;
-    if (!goupile.hasPermission('data_new') && !record.saved)
+    if (!goupile.hasPermission('data_save'))
         return true;
 
     return false;

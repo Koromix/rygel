@@ -405,7 +405,7 @@ RetainPtr<const SessionInfo> GetNormalSession(http_IO *io, InstanceHolder *insta
 
         session = CreateUserSession(SessionType::Auto, 0, "Guest", local_key);
 
-        uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
+        uint32_t permissions = (int)UserPermission::DataSave;
         session->AuthorizeInstance(instance, permissions);
 
         // sessions.Open(request, io, session);
@@ -818,7 +818,7 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
         session = CreateUserSession(type, userid, username, local_key);
     }
 
-    uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
+    uint32_t permissions = (int)UserPermission::DataSave;
     session->AuthorizeInstance(instance, permissions, lock);
 
     return session;
@@ -1691,7 +1691,7 @@ RetainPtr<const SessionInfo> MigrateGuestSession(http_IO *io, InstanceHolder *in
 
     RetainPtr<SessionInfo> session = CreateUserSession(SessionType::Auto, userid, username, local_key);
 
-    uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
+    uint32_t permissions = (int)UserPermission::DataSave;
     session->AuthorizeInstance(instance, permissions);
 
     sessions.Open(io, session);
@@ -1972,7 +1972,7 @@ void HandleAuthAssert(http_IO *io, InstanceHolder *instance)
 
             session = CreateUserSession(SessionType::Token, userid, username, local_key);
 
-            uint32_t permissions = (int)UserPermission::DataNew | (int)UserPermission::DataEdit;
+            uint32_t permissions = (int)UserPermission::DataSave;
             session->AuthorizeInstance(instance, permissions);
 
             sessions.Open(io, session);

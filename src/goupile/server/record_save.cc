@@ -189,9 +189,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         io->SendError(401);
         return;
     }
-    if (!stamp || (!stamp->HasPermission(UserPermission::DataNew) &&
-                   !stamp->HasPermission(UserPermission::DataEdit) &&
-                   !stamp->HasPermission(UserPermission::DataDelete))) {
+    if (!stamp || !stamp->HasPermission(UserPermission::DataSave)) {
         LogError("User is not allowed to save data");
         io->SendError(403);
         return;
@@ -488,39 +486,21 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Check permissions
-        if (prev_anchor < 0) {
-            if (!stamp->HasPermission(UserPermission::DataNew)) {
-                LogError("You are not allowed to create new records");
-                io->SendError(403);
-                return false;
-            }
-
-            if (!stamp->HasPermission(UserPermission::DataLoad) &&
-                    stamp->HasPermission(UserPermission::DataEdit)) {
-                // If the user only has DataNew, allow new records but prevent further load and edition
-
+        if (!stamp->HasPermission(UserPermission::DataLoad)) {
+            if (prev_anchor < 0) {
                 if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, tid) VALUES (?1, ?2)
                                           ON CONFLICT DO NOTHING)",
                                        -session->userid, tid))
                     return false;
-            }
-        } else {
-            if (!stamp->HasPermission(UserPermission::DataEdit)) {
-                LogError("You are not allowed to edit records");
-                io->SendError(403);
-                return false;
-            }
-
-            if (!stamp->HasPermission(UserPermission::DataLoad)) {
+            } else {
                 sq_Statement stmt;
                 if (!instance->db->Prepare(R"(SELECT e.rowid
                                               FROM rec_entries e
                                               INNER JOIN ins_claims c ON (c.userid = ?1 AND c.tid = e.tid)
-                                              WHERE e.tid = ?2 AND e.form = ?3)", &stmt))
+                                              WHERE e.tid = ?2)", &stmt))
                     return false;
                 sqlite3_bind_int64(stmt, 1, -session->userid);
                 sqlite3_bind_text(stmt, 2, tid, -1, SQLITE_STATIC);
-                sqlite3_bind_text(stmt, 3, fragment.store, -1, SQLITE_STATIC);
 
                 if (!stmt.Step()) {
                     if (stmt.IsValid()) {
@@ -811,7 +791,7 @@ static void HandleLock(http_IO *io, InstanceHolder *instance, bool lock)
         io->SendError(401);
         return;
     }
-    if (!stamp || !stamp->HasPermission(UserPermission::DataEdit)) {
+    if (!stamp || !stamp->HasPermission(UserPermission::DataSave)) {
         LogError("User is not allowed to %1 records", lock ? "lock" : "unlock");
         io->SendError(403);
         return;
