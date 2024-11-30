@@ -18,6 +18,7 @@ import { contextualizeURL, computeStatus, go } from './instance.js';
 
 function MetaModel() {
     this.summary = null;
+    this.claim = true;
     this.constraints = {};
     this.signup = null;
 }
@@ -26,7 +27,8 @@ function MetaInterface(page, data, meta) {
     let url = makeCompleteURL(page.url);
 
     Object.defineProperties(this, {
-        summary: { get: () => meta.summary, set: summary => { meta.summary = summary; }, enumerable: true }
+        summary: { get: () => meta.summary, set: summary => { meta.summary = summary; }, enumerable: true },
+        claim: { get: () => meta.claim, set: claim => { meta.claim = !!claim; }, enumerable: true }
     });
 
     this.constrain = function(key, types) {

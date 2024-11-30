@@ -28,7 +28,7 @@ function DataRemote() {
         return thread;
     };
 
-    this.save = async function(tid, entry, fs, constraints, signup) {
+    this.save = async function(tid, entry, fs, constraints, claim, signup) {
         await Net.post(ENV.urls.instance + 'api/records/save', {
             tid: tid,
             fragment: {
@@ -40,7 +40,8 @@ function DataRemote() {
                 data: entry.data,
                 meta: entry.meta,
                 tags: entry.tags,
-                constraints: constraints
+                constraints: constraints,
+                claim: claim
             },
             signup: signup
         });

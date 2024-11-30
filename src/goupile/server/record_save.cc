@@ -43,6 +43,7 @@ struct RecordFragment {
     Span<const char> meta = {};
     HeapArray<const char *> tags;
     HeapArray<DataConstraint> constraints;
+    bool claim = true;
 };
 
 struct SignupInfo {
@@ -323,6 +324,8 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
 
                             fragment.constraints.Append(constraint);
                         }
+                    } else if (key == "claim") {
+                        parser.ParseBool(&fragment.claim);
                     } else if (parser.IsValid()) {
                         LogError("Unexpected key '%1'", key);
                         io->SendError(422);
@@ -596,6 +599,13 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         for (const char *tag: fragment.tags) {
             if (!instance->db->Run(R"(INSERT INTO rec_tags (tid, eid, name) VALUES (?1, ?2, ?3)
                                       ON CONFLICT (eid, name) DO NOTHING)", tid, fragment.eid, tag))
+                return false;
+        }
+
+        // Delete claim if requested (and if any)
+        if (!fragment.claim) {
+            if (!instance->db->Run("DELETE FROM ins_claims WHERE userid = ?1 AND tid = ?2",
+                                   -session->userid, tid))
                 return false;
         }
 

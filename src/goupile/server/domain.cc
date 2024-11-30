@@ -1745,7 +1745,7 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                                                              IIF(permissions & 128, 64, 0) |
                                                              IIF(permissions & 256, 128, 0) |
                                                              IIF(permissions & 512, 256, 0) |
-                                                             IIF(permissions & 1024, 512, 0)
+                                                             IIF(permissions & 1024, 512, 0) |
                                                              IIF(permissions & 2048, 1024, 0) |
                                                              IIF(permissions & 4096, 2048, 0) |
                                                              IIF(permissions & 8192, 4096, 0);

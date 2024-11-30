@@ -693,9 +693,10 @@ function runDeleteRecordDialog(e, row) {
         await data_mutex.run(async () => {
             await records.delete(row.tid);
 
-            data_threads = null;
             if (route.tid == row.tid)
                 await openRecord(null, null, route.page);
+
+            data_threads = null;
         });
 
         go();
@@ -989,8 +990,17 @@ function addAutomaticActions(builder, model) {
                 form_builder.triggerErrors();
 
                 await data_mutex.run(async () => {
+                    let keep_open = goupile.hasPermission('data_load') || form_meta.claim;
+
                     await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
-                    await openRecord(form_thread.tid, null, route.page);
+
+                    if (keep_open) {
+                        await openRecord(form_thread.tid, null, route.page);
+                    } else {
+                        let page = app.pages.find(page => page.key == route.page.menu.chain[0].key);
+                        await openRecord(null, null, page);
+                    }
+
                     data_threads = null;
                 });
 
@@ -2067,7 +2077,7 @@ async function saveRecord(tid, entry, data, meta) {
         entry.tags = Array.from(tags);
     }
 
-    await records.save(tid, entry, ENV.version, meta.constraints, meta.signup);
+    await records.save(tid, entry, ENV.version, meta.constraints, meta.claim, meta.signup);
 
     if (!profile.userid) {
         window.onbeforeunload = null;
