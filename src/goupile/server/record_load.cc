@@ -289,7 +289,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
             return;
         }
 
-        if (!stamp->HasPermission(UserPermission::DataLoad) ||
+        if (!stamp->HasPermission(UserPermission::DataRead) ||
                 !stamp->HasPermission(UserPermission::DataAudit)) {
             if (anchor >= 0) {
                 LogError("User is not allowed to access historical data");
@@ -315,7 +315,7 @@ void HandleRecordList(http_IO *io, InstanceHolder *instance)
 
         filter.audit_anchor = anchor;
         filter.allow_deleted = allow_deleted;
-        filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
+        filter.use_claims = !stamp->HasPermission(UserPermission::DataRead);
 
         if (!walker.Prepare(instance, session->userid, filter))
             return;
@@ -418,7 +418,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
             return;
         }
 
-        if (!stamp->HasPermission(UserPermission::DataLoad) ||
+        if (!stamp->HasPermission(UserPermission::DataRead) ||
                 !stamp->HasPermission(UserPermission::DataAudit)) {
             if (anchor >= 0) {
                 LogError("User is not allowed to access historical data");
@@ -440,7 +440,7 @@ void HandleRecordGet(http_IO *io, InstanceHolder *instance)
         filter.single_tid = tid;
         filter.audit_anchor = anchor;
         filter.allow_deleted = allow_deleted;
-        filter.use_claims = !stamp->HasPermission(UserPermission::DataLoad);
+        filter.use_claims = !stamp->HasPermission(UserPermission::DataRead);
         filter.read_data = true;
         filter.read_meta = true;
 

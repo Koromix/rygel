@@ -489,7 +489,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         }
 
         // Check permissions
-        if (!stamp->HasPermission(UserPermission::DataLoad)) {
+        if (!stamp->HasPermission(UserPermission::DataRead)) {
             if (prev_anchor < 0) {
                 if (!instance->db->Run(R"(INSERT INTO ins_claims (userid, tid) VALUES (?1, ?2)
                                           ON CONFLICT DO NOTHING)",
@@ -726,7 +726,7 @@ void HandleRecordDelete(http_IO *io, InstanceHolder *instance)
             bool locked = sqlite3_column_int(stmt, 0);
             bool claim = sqlite3_column_int(stmt, 1);
 
-            if (!stamp->HasPermission(UserPermission::DataLoad) && !claim) {
+            if (!stamp->HasPermission(UserPermission::DataRead) && !claim) {
                 LogError("Record does not exist");
                 io->SendError(404);
                 return false;

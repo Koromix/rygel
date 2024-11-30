@@ -990,7 +990,7 @@ function addAutomaticActions(builder, model) {
                 form_builder.triggerErrors();
 
                 await data_mutex.run(async () => {
-                    let keep_open = goupile.hasPermission('data_load') || form_meta.claim;
+                    let keep_open = goupile.hasPermission('data_read') || form_meta.claim;
 
                     await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
 

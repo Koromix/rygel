@@ -1013,7 +1013,7 @@ async function unlock(e, password) {
 function isLocked() {
     if (profile.lock != null)
         return true;
-    if (!hasPermission('data_load'))
+    if (!hasPermission('data_read'))
         return true;
 
     return false;

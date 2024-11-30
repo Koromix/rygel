@@ -74,7 +74,7 @@ void HandleLegacyLoad(http_IO *io, InstanceHolder *instance)
                                                       f.json, f.tags FROM rec_entries e
                                                LEFT JOIN rec_fragments f ON (f.ulid = e.ulid)
                                                WHERE e.anchor >= ?1)").len;
-        if (!stamp->HasPermission(UserPermission::DataLoad)) {
+        if (!stamp->HasPermission(UserPermission::DataRead)) {
             sql.len += Fmt(sql.TakeAvailable(), " AND e.root_ulid IN (SELECT ulid FROM ins_claims WHERE userid = ?2)").len;
         }
         sql.len += Fmt(sql.TakeAvailable(), " ORDER BY e.rowid, f.anchor").len;
@@ -372,7 +372,7 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
             }
 
             // Reject restricted users
-            if (!stamp->HasPermission(UserPermission::DataLoad)) {
+            if (!stamp->HasPermission(UserPermission::DataRead)) {
                 sq_Statement stmt;
                 if (!instance->db->Prepare(R"(SELECT e.rowid, c.rowid FROM rec_entries e
                                               LEFT JOIN ins_claims c ON (c.userid = ?1 AND c.ulid = e.ulid)

@@ -123,7 +123,7 @@ Droit | Explication
 
 Droit | Explication
 ----- | -----------
-*Load* | Lecture des enregistrements
+*Read* | Liste et lecture des enregistrements
 *Save* | Modifications des enregistrement
 *Export* | Export facile des données (CSV, XLSX, etc.)
 *Batch* | Recalcul de toutes les variables calculées sur tous les enregistrements
