@@ -1590,7 +1590,17 @@ async function go(e, url = null, options = {}) {
                 }
             }
 
-            await openRecord(new_route.tid, new_route.anchor, new_route.page);
+            try {
+                await openRecord(new_route.tid, new_route.anchor, new_route.page);
+            } catch (err) {
+                if (route.page != null)
+                    throw err;
+
+                Log.error(err);
+
+                let page = app.pages.find(page => page.key == new_route.page.menu.chain[0].key);
+                await openRecord(null, null, page);
+            }
         } else {
             route = new_route;
         }
