@@ -5716,7 +5716,7 @@ const char *GetTemporaryDirectory()
 #endif
 
 const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
-                           LocalArray<const char *, 4> *out_possibilities)
+                           HeapArray<const char *> *out_possibilities)
 {
     decltype(GetUserConfigPath) *funcs[] = {
         [](const char *name, Allocator *alloc) {

@@ -1951,7 +1951,7 @@ int Main(int argc, char **argv)
     RG_CRITICAL(argc >= 1, "First argument is missing");
 
     // Options
-    LocalArray<const char *, 4> config_filenames;
+    HeapArray<const char *> config_filenames;
     const char *config_filename = FindConfigFile("kluter.ini", &config.str_alloc, &config_filenames);
 
     const auto print_usage = [=](StreamWriter *st) {

@@ -4468,7 +4468,7 @@ const char *GetSystemConfigPath(const char *name, Allocator *alloc);
 const char *GetTemporaryDirectory();
 
 const char *FindConfigFile(Span<const char *const> names, Allocator *alloc,
-                           LocalArray<const char *, 4> *out_possibilities = nullptr);
+                           HeapArray<const char *> *out_possibilities = nullptr);
 
 const char *CreateUniqueFile(Span<const char> directory, const char *prefix, const char *extension,
                              Allocator *alloc, int *out_fd = nullptr);
