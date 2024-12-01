@@ -563,7 +563,7 @@ var uid = /* @__PURE__ */ (() => {
   return () => id++;
 })();
 function isNullOrUndef(value) {
-  return value === null || typeof value === "undefined";
+  return value === null || value === void 0;
 }
 function isArray(value) {
   if (Array.isArray && Array.isArray(value)) {
@@ -8416,7 +8416,7 @@ function needContext(proxy, names2) {
   }
   return false;
 }
-var version = "4.4.6";
+var version = "4.4.7";
 var KNOWN_POSITIONS = [
   "top",
   "bottom",
@@ -14363,15 +14363,15 @@ export {
 
 @kurkle/color/dist/color.esm.js:
   (*!
-   * @kurkle/color v0.3.2
+   * @kurkle/color v0.3.4
    * https://github.com/kurkle/color#readme
-   * (c) 2023 Jukka Kurkela
+   * (c) 2024 Jukka Kurkela
    * Released under the MIT License
    *)
 
 chart.js/dist/chunks/helpers.segment.js:
   (*!
-   * Chart.js v4.4.6
+   * Chart.js v4.4.7
    * https://www.chartjs.org
    * (c) 2024 Chart.js Contributors
    * Released under the MIT License
@@ -14379,7 +14379,7 @@ chart.js/dist/chunks/helpers.segment.js:
 
 chart.js/dist/chart.js:
   (*!
-   * Chart.js v4.4.6
+   * Chart.js v4.4.7
    * https://www.chartjs.org
    * (c) 2024 Chart.js Contributors
    * Released under the MIT License
