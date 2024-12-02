@@ -182,7 +182,7 @@ function hasUnsavedData(fs = true) {
         return false;
     if (route.page.store == null)
         return false;
-    if (!route.page.options.warn_unsaved)
+    if (!route.page.warn_unsaved)
         return false;
 
     return form_state.hasChanged();
@@ -195,7 +195,7 @@ async function runTasks(sync) {
 
 function renderMenu() {
     let show_menu = true;
-    let menu_is_wide = isMenuWide(route.page.menu);
+    let menu_is_wide = isMenuWide(route.page);
 
     if (!UI.isPanelActive('editor') && !UI.isPanelActive('view'))
         show_menu = false;
@@ -240,13 +240,13 @@ function renderMenu() {
             ` : ''}
 
             ${show_menu && !menu_is_wide ? html`
-                ${renderDropItem(route.page.menu.chain[0], true)}
-                ${Util.map(route.page.menu.chain[0].children, item => renderDropItem(item, false))}
+                ${renderDropItem(route.page.chain[0], true)}
+                ${Util.map(route.page.chain[0].children, page => renderDropItem(page, false))}
             ` : ''}
-            ${show_menu && menu_is_wide ? route.page.menu.chain.map((item, idx) => renderDropItem(item, !idx)) : ''}
+            ${show_menu && menu_is_wide ? route.page.chain.map((page, idx) => renderDropItem(page, !idx)) : ''}
             ${app.panels.data && (!UI.isPanelActive('view') || form_thread.saved) ? html`
                 <div style="width: 15px;"></div>
-                <button class="icon new" @click=${UI.wrap(e => go(e, route.page.menu.chain[0].url))}>Ajouter</button>
+                <button class="icon new" @click=${UI.wrap(e => go(e, route.page.chain[0].url))}>Ajouter</button>
             ` : ''}
             <div style="flex: 1; min-width: 4px;"></div>
 
@@ -295,8 +295,8 @@ function renderMenu() {
     `;
 }
 
-function isMenuWide(menu) {
-    let root = menu.chain[0];
+function isMenuWide(page) {
+    let root = page.chain[0];
 
     if (root.children.length > 3)
         return true;
@@ -308,35 +308,35 @@ function isMenuWide(menu) {
     return false;
 }
 
-function renderDropItem(item, first) {
-    let active = (route.page.menu == item);
-    let url = contextualizeURL(item.url, form_thread);
-    let status = makeStatusText(item, form_thread);
+function renderDropItem(page, first) {
+    let active = (route.page == page);
+    let url = contextualizeURL(page.url, form_thread);
+    let status = makeStatusText(page, form_thread);
 
     if (first) {
         return html`<button class=${'icon home' + (active ? ' active' : '')}
-                            @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}></button>`;
+                            @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
     } else {
         return html`
             <span style="align-self: center; margin: 0 6px;">›</span>
             <button class=${active ? 'active' : ''}
-                    @click=${UI.wrap(e => (item != route.page.menu) ? go(e, url) : togglePanels(null, true))}>
-                <div style="flex: 1;">${item.title}</div>
+                    @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}>
+                <div style="flex: 1;">${page.title}</div>
                 ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
            </button>
         `;
     }
 }
 
-function makeStatusText(item, thread) {
+function makeStatusText(page, thread) {
     if (goupile.isLocked())
         return '';
 
-    let status = computeStatus(item, thread);
+    let status = computeStatus(page, thread);
 
     if (status.complete) {
         return '✓\uFE0E';
-    } else if (status.filled && item.progress) {
+    } else if (status.filled && page.progress) {
         let progress = Math.floor(100 * status.filled / status.total);
         return html`${progress}%`;
     } else {
@@ -344,8 +344,8 @@ function makeStatusText(item, thread) {
     }
 }
 
-function computeStatus(item, thread) {
-    if (!item.enabled) {
+function computeStatus(page, thread) {
+    if (!page.enabled) {
         let status = {
             filled: 0,
             total: 0,
@@ -355,14 +355,14 @@ function computeStatus(item, thread) {
         return status;
     }
 
-    if (item.children.length) {
+    if (page.children.length) {
         let status = {
             filled: 0,
             total: 0,
             complete: false
         };
 
-        for (let child of item.children) {
+        for (let child of page.children) {
             let ret = computeStatus(child, thread);
 
             status.filled += ret.filled;
@@ -372,7 +372,7 @@ function computeStatus(item, thread) {
 
         return status;
     } else {
-        let complete = (thread.entries[item.store?.key]?.anchor >= 0);
+        let complete = (thread.entries[page.store?.key]?.anchor >= 0);
 
         let status = {
             filled: 0 + complete,
@@ -621,11 +621,11 @@ function renderData() {
                         <th>Création</th>
                         ${data_columns.map(col => {
                             let stats = `${col.count} / ${data_rows.length}`;
-                            let title = `${col.item.title}\nDisponible : ${stats} ${data_rows.length > 1 ? 'lignes' : 'ligne'}`;
+                            let title = `${col.page.title}\nDisponible : ${stats} ${data_rows.length > 1 ? 'lignes' : 'ligne'}`;
 
                             return html`
                                 <th title=${title}>
-                                    ${col.item.title}<br/>
+                                    ${col.page.title}<br/>
                                     <span style="font-size: 0.7em; font-weight: normal;">${stats}</span>
                                 </th>
                             `;
@@ -643,22 +643,22 @@ function renderData() {
                                 <td class=${cls} title=${row.sequence}>${row.sequence != null ? row.sequence : 'NA'}</td>
                                 <td class=${active ? ' active' : ''} title=${row.ctime.toLocaleString()}>${row.ctime.toLocaleDateString()}</td>
                                 ${data_columns.map(col => {
-                                    let status = computeStatus(col.item, row);
-                                    let summary = row.entries[col.item.store.key]?.summary;
-                                    let url = col.item.url + `/${row.tid}`;
-                                    let highlight = active && route.page.menu.chain.includes(col.item);
+                                    let status = computeStatus(col.page, row);
+                                    let summary = row.entries[col.page.store.key]?.summary;
+                                    let url = col.page.url + `/${row.tid}`;
+                                    let highlight = active && route.page.chain.includes(col.page);
 
                                     if (status.complete) {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
-                                                        title=${col.item.title}><a href=${url}>${summary ?? '✓\uFE0E Complet'}</a></td>`;
+                                                        title=${col.page.title}><a href=${url}>${summary ?? '✓\uFE0E Complet'}</a></td>`;
                                     } else if (status.filled) {
                                         let progress = Math.floor(100 * status.filled / status.total);
 
                                         return html`<td class=${highlight ? 'partial active' : 'partial'}
-                                                        title=${col.item.title}><a href=${url}>${summary ?? progress + '%'}</a></td>`;
+                                                        title=${col.page.title}><a href=${url}>${summary ?? progress + '%'}</a></td>`;
                                     } else {
                                         return html`<td class=${highlight ? 'missing active' : 'missing'}
-                                                        title=${col.item.title}><a href=${url}>Afficher</a></td>`;
+                                                        title=${col.page.title}><a href=${url}>Afficher</a></td>`;
                                     }
                                 })}
                                 ${row.locked ? html`<th>🔒</th>` : ''}
@@ -707,8 +707,8 @@ async function runExportDialog(e) {
     // XXX: Restrict to current thread
     let stores = app.stores.map(store => store.key);
 
-    let dialog = route.page.options.export_dialog;
-    let filter = route.page.options.export_filter;
+    let dialog = route.page.export_dialog;
+    let filter = route.page.export_filter;
 
     if (filter == null)
         filter = () => true;
@@ -766,7 +766,7 @@ async function renderPage() {
         await func({
             app: app,
             form: builder,
-            page: route.page.menu,
+            page: route.page,
             meta: new MetaInterface(route.page, form_data, meta),
             thread: form_thread,
             values: form_state.values
@@ -797,9 +797,9 @@ async function renderPage() {
             triggerError(route.page.filename, err);
     }
 
-    let show_menu = (route.page.menu.chain.length > 2 ||
-                     route.page.menu.chain[0].children.length > 1);
-    let menu_is_wide = isMenuWide(route.page.menu);
+    let show_menu = (route.page.chain.length > 2 ||
+                     route.page.chain[0].children.length > 1);
+    let menu_is_wide = isMenuWide(route.page);
 
     // Quick access to page sections
     let page_sections = model.widgets.filter(intf => intf.options.anchor).map(intf => ({
@@ -811,8 +811,8 @@ async function renderPage() {
         <div class="print" @scroll=${syncEditorScroll}}>
             <div id="ins_page">
                 <div id="ins_menu">
-                    ${show_menu ? Util.mapRange(1 - menu_is_wide, route.page.menu.chain.length,
-                                                idx => renderPageMenu(route.page.menu.chain[idx])) : ''}
+                    ${show_menu ? Util.mapRange(1 - menu_is_wide, route.page.chain.length,
+                                                idx => renderPageMenu(route.page.chain[idx])) : ''}
                 </div>
 
                 <form id="ins_content" autocomplete="off" @submit=${e => e.preventDefault()}>
@@ -980,11 +980,11 @@ function addAutomaticActions(builder, model) {
         let is_new = (form_entry.anchor < 0);
 
         let can_save = !form_thread.locked && form_state.hasChanged();
-        let can_lock = form_thread.saved && route.page.options.has_lock &&
+        let can_lock = form_thread.saved && route.page.has_lock &&
                        (!form_thread.locked || goupile.hasPermission('data_audit'));
 
         if (can_save) {
-            let label = route.page.options.sequence ? '+Continuer' : '+Enregistrer';
+            let label = route.page.sequence ? '+Continuer' : '+Enregistrer';
 
             builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: '#2d8261' }, async () => {
                 form_builder.triggerErrors();
@@ -997,7 +997,7 @@ function addAutomaticActions(builder, model) {
                     if (keep_open) {
                         await openRecord(form_thread.tid, null, route.page);
                     } else {
-                        let page = app.pages.find(page => page.key == route.page.menu.chain[0].key);
+                        let page = route.page.chain[0];
                         await openRecord(null, null, page);
                     }
 
@@ -1006,25 +1006,25 @@ function addAutomaticActions(builder, model) {
 
                 // Redirect?
                 {
-                    let redirect = route.page.options.sequence;
+                    let redirect = route.page.sequence;
                     let url = null;
 
                     if (redirect === true) {
-                        for (let i = route.page.menu.chain.length - 2; i >= 0; i--) {
-                            let item = route.page.menu.chain[i];
-                            let status = computeStatus(item, form_thread);
+                        for (let i = route.page.chain.length - 2; i >= 0; i--) {
+                            let page = route.page.chain[i];
+                            let status = computeStatus(page, form_thread);
 
-                            if (item.url != route.page.menu.url) {
-                                url = contextualizeURL(item.url, form_thread);
+                            if (page.url != route.page.url) {
+                                url = contextualizeURL(page.url, form_thread);
 
                                 if (!status.complete)
                                     break;
                             }
                         }
 
-                        if (is_new && route.page.menu.chain.length > 1) {
-                            let parent = route.page.menu.chain[route.page.menu.chain.length - 2];
-                            let idx = parent.children.indexOf(route.page.menu);
+                        if (is_new && route.page.chain.length > 1) {
+                            let parent = route.page.chain[route.page.chain.length - 2];
+                            let idx = parent.children.indexOf(route.page);
 
                             if (idx >= 0 && idx < parent.children.length - 1) {
                                 let next = parent.children[idx + 1];
@@ -1119,24 +1119,24 @@ function addAutomaticTags(variables) {
     }
 }
 
-function renderPageMenu(item) {
-    if (!item.children.some(child => child.enabled))
+function renderPageMenu(page) {
+    if (!page.children.some(child => child.enabled))
         return '';
 
     return html`
-        <a href=${contextualizeURL(item.url, form_thread)}>${item.title}</a>
+        <a href=${contextualizeURL(page.url, form_thread)}>${page.title}</a>
         <ul>
-            ${Util.map(item.children, item => {
-                if (!item.enabled)
+            ${Util.map(page.children, child => {
+                if (!child.enabled)
                     return '';
 
-                let active = route.page.menu.chain.includes(item);
-                let url = contextualizeURL(item.url, form_thread);
-                let status = makeStatusText(item, form_thread);
+                let active = route.page.chain.includes(child);
+                let url = contextualizeURL(child.url, form_thread);
+                let status = makeStatusText(child, form_thread);
 
                 return html`
                     <li><a class=${active ? 'active' : ''} href=${url}>
-                        <div style="flex: 1;">${item.title}</div>
+                        <div style="flex: 1;">${child.title}</div>
                         <span style="font-size: 0.9em;">${status}</span>
                     </a></li>
                 `;
@@ -1600,7 +1600,7 @@ async function go(e, url = null, options = {}) {
 
                 Log.error(err);
 
-                let page = app.pages.find(page => page.key == new_route.page.menu.chain[0].key);
+                let page = new_route.page.chain[0];
                 await openRecord(null, null, page);
             }
         } else {
@@ -1710,12 +1710,12 @@ async function run(push_history = true) {
             if (data_tags != null)
                 data_rows = data_rows.filter(thread => thread.tags.some(tag => data_tags.has(tag)));
 
-            for (let item of app.stores[0].menu.children) {
-                let store = item.store;
+            let root = route.page.chain[0];
 
+            for (let page of root.children) {
                 let col = {
-                    item: item,
-                    count: data_rows.reduce((acc, row) => acc + (row.entries[store.key] != null), 0)
+                    page: page,
+                    count: data_rows.reduce((acc, row) => acc + (row.entries[page.store.key] != null), 0)
                 };
 
                 data_columns.push(col);

@@ -41,7 +41,7 @@ function ApplicationInfo(profile) {
 function ApplicationBuilder(app) {
     let self = this;
 
-    let current_menu = null;
+    let current_page = null;
     let current_store = null;
 
     let options_stack = [
@@ -105,9 +105,10 @@ function ApplicationBuilder(app) {
         title = title || key;
         options = expandOptions(options);
 
-        let item = {
+        let page = {
             key: key,
             title: title,
+            filename: options.filename ?? `pages/${key}.js`,
             url: ENV.urls.instance + key,
 
             chain: null,
@@ -115,31 +116,16 @@ function ApplicationBuilder(app) {
 
             store: current_store,
 
-            enabled: options.enabled,
-            progress: options.progress,
-            icon: options.icon,
-            help: options.help
-        };
-
-        let page = {
-            key: key,
-            title: title,
-            filename: options.filename ?? `pages/${key}.js`,
-            url: item.url,
-
-            menu: item,
-            store: current_store,
-
-            options: options
+            ...options
         };
 
         app.pages.push(page);
 
-        if (current_menu != null) {
-            item.chain = [...current_menu.chain, item];
-            current_menu.children.push(item);
+        if (current_page != null) {
+            page.chain = [...current_page.chain, page];
+            current_page.children.push(page);
         } else {
-            item.chain = [item];
+            page.chain = [page];
         }
 
         return page;
@@ -164,59 +150,42 @@ function ApplicationBuilder(app) {
         options = expandOptions(options);
 
         let prev_store = current_store;
-        let prev_menu = current_menu;
+        let prev_page = current_page;
         let prev_options = options_stack;
 
         try {
             current_store = {
                 key: key,
                 title: title,
-                url: ENV.urls.instance + key,
-
-                menu: null
+                url: ENV.urls.instance + key
             };
 
-            current_menu = {
+            app.stores.push(current_store);
+
+            current_page = {
                 key: key,
                 title: title,
+                filename: options.filename,
                 url: current_store.url,
 
-                chain: current_menu?.chain.slice() ?? [],
+                chain: current_page?.chain.slice() ?? [],
                 children: [],
 
                 store: current_store,
 
-                enabled: options.enabled,
-                progress: options.progress,
-                icon: options.icon,
-                help: options.help
+                ...options
             };
 
-            app.stores.push(current_store);
-            current_menu.chain.push(current_menu);
+            if (current_page.filename === true)
+                current_page.filename = `pages/${key}.js`;
+
+            current_page.chain.push(current_page);
 
             if (typeof func == 'function') {
                 if (app.pages.some(page => page.key == key))
                     throw new Error(`Page key '${key}' is already used`);
 
-                let filename = options.filename;
-
-                if (filename === true)
-                    filename = `pages/${key}.js`;
-
-                let page = {
-                    key: key,
-                    title: title,
-                    filename: filename,
-                    url: ENV.urls.instance + key,
-
-                    menu: current_menu,
-                    store: current_store,
-
-                    options: options
-                };
-
-                app.pages.push(page);
+                app.pages.push(current_page);
 
                 func();
             } else {
@@ -224,30 +193,26 @@ function ApplicationBuilder(app) {
                 self.page(key, func || title);
             }
 
-            if (prev_menu != null) {
-                let simplify = (current_menu.children.length == 1) &&
+            if (prev_page != null) {
+                let simplify = (current_page.children.length == 1) &&
                                (typeof func != 'function');
 
                 if (simplify) {
-                    let child0 = current_menu.children[0];
+                    let child0 = current_page.children[0];
                     child0.chain.splice(child0.chain.length - 2, 1);
 
-                    prev_menu.children.push(child0);
-                    current_store.menu = child0;
+                    prev_page.children.push(child0);
                 } else {
-                    prev_menu.children.push(current_menu);
-                    current_store.menu = current_menu;
+                    prev_page.children.push(current_page);
                 }
-            } else {
-                current_store.menu = current_menu;
             }
 
-            if (current_menu.children.length == 1) {
-                current_menu.url = current_menu.children[0].url;
-                current_store.url = current_menu.url;
+            if (current_page.children.length == 1) {
+                current_page.url = current_page.children[0].url;
+                current_store.url = current_page.url;
             }
         } finally {
-            current_menu = prev_menu;
+            current_page = prev_page;
             current_store = prev_store;
             options_stack = prev_options;
         }
