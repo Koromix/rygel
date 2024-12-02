@@ -639,9 +639,6 @@ const Log = new function() {
         let func = handlers[handlers.length - 1];
         let is_new = (entry.type == null);
 
-        if (typeof msg == 'object' && msg != null)
-            msg = msg.msg || msg.message || msg;
-
         entry.type = type;
         entry.msg = msg;
 
