@@ -174,8 +174,8 @@ function initUI() {
     }
 }
 
-function hasUnsavedData() {
-    if (fs_timer != null)
+function hasUnsavedData(fs = true) {
+    if (fs && fs_timer != null)
         return true;
 
     if (form_state == null)
@@ -1495,7 +1495,9 @@ async function go(e, url = null, options = {}) {
 
             // Goodbye!
             if (!url.pathname.startsWith(ENV.urls.instance)) {
-                if (hasUnsavedData())
+                if (fs_timer != null)
+                    await uploadFsChanges();
+                if (hasUnsavedData(false))
                     await goupile.confirmDangerousAction(e);
 
                 window.onbeforeunload = null;
@@ -1554,7 +1556,7 @@ async function go(e, url = null, options = {}) {
 
         // Warn about data loss before loading new data
         if (context_change) {
-            if (hasUnsavedData()) {
+            if (hasUnsavedData(false)) {
                 try {
                     await UI.dialog(e, 'Enregistrer (confirmation)', {}, (d, resolve, reject) => {
                         d.output(html`Si vous continuez, vos <b>modifications seront enregistrées</b>.`);
