@@ -44,10 +44,10 @@
     <div style="flex: 2;">
         <p class="insist">Les troubles bipolaires : de la cyclothymie au syndrome maniaco-dépressif - 3e édition
         <p class="subtitle">Dépistage du trouble - Prises en charge éducatives et psychothérapeutiques - Prévention des rechutes
-        <p><u>Christine Mirabel-Sarron</u>, <u>Isabelle Leygnac-Solignac</u>
+        <p><a href="https://www.dunod.com/livres-christine-mirabel-sarron" target="_blank">Christine Mirabel-Sarron</a>, <a href="https://www.dunod.com/livres-isabelle-leygnac-solignac" target="_blank">Isabelle Leygnac-Solignac</a>
         <p>
             <b>Parution</b>: mai 2015<br>
-            <b>Collection</b> : <u>Les Ateliers du praticien</u><br>
+            <b>Collection</b> : <a href="https://www.dunod.com/collection/ateliers-du-praticien" target="_blank">Les Ateliers du praticien</a><br>
             <b>Éditions</b> : Dunod
         </p>
         <p>La terminologie « troubles bi-polaires » correspond à ce qui était autrefois présenté comme psychose maniaco-dépressive. Cette pathologie mentale grave affecte des millions de personnes. Plus de 12 % de la population mondiale serait concernée. Cet ouvrage brosse un état des lieux pour proposer traitement et réduction des troubles psychosociaux.
@@ -62,10 +62,10 @@
     <div style="flex: 2;">
         <p class="insist">Traiter la dépression et les troubles de l'humeur
         <p class="subtitle">10 cas pratiques en TCC
-        <p><u>Stéphane Rusinek</u>, <u>Nathalie Bascop</u>, <u>Cyrille Bouvet</u>, <u>Frédéric Chapelle</u>, <u>Jérémy Fonseca das Neves</u> et al.
+        <p><a href="https://www.dunod.com/livres-stephane-rusinek" target="_blank">Stéphane Rusinek</a>, <a href="https://www.dunod.com/livres-nathalie-bascop" target="_blank">Nathalie Bascop</a>, <a href="https://www.dunod.com/livres-cyrille-bouvet" target="_blank">Cyrille Bouvet</a>, <a href="https://www.dunod.com/livres-frederic-chapelle" target="_blank">Frédéric Chapelle</a>, <a href="https://www.dunod.com/livres-jeremy-fonseca-das-neves" target="_blank">Jérémy Fonseca das Neves</a> et al.
         <p>
             <b>Parution</b> : août 2017<br>
-            <b>Collection</b> : <u>Les Ateliers du praticien</u><br>
+            <b>Collection</b> : <a href="https://www.dunod.com/collection/ateliers-du-praticien" target="_blank">Les Ateliers du praticien</a><br>
             <b>Éditions</b> : Dunod
         </p>
         <p>Les troubles de l'humeur comprennent l'ensemble des troubles comportant un aspect dépressif (dépression, bipolarité, cyclothymie...). Cet ouvrage va permettre aux professionnels :
@@ -86,10 +86,10 @@
     <div style="flex: 2;">
         <p class="insist">Apprendre à soigner les dépressions - 2e édition
         <p class="subtitle">Avec les thérapies comportementales et cognitives
-        <p><u>Christine Mirabel-Sarron</u>, <u>Aurélie Docteur</u>
+        <p><a href="https://www.dunod.com/livres-christine-mirabel-sarron" target="_blank">Christine Mirabel-Sarron</a>, <a href="https://www.dunod.com/livres-aurelie-docteur" target="_blank">Aurélie Docteur</a>
         <p>
             <b>Parution</b> : mars 2021<br>
-            <b>Collection</b> : <u>Les Ateliers du praticien</u><br>
+            <b>Collection</b> : <a href="https://www.dunod.com/collection/ateliers-du-praticien" target="_blank">Les Ateliers du praticien</a><br>
             <b>Éditions</b> : Dunod
         </p>
         <p>En 15 leçons, cet ouvrage pratique fournit aux cliniciens un guide de prise en charge TCC du patient déprimé étape par étape :
@@ -111,10 +111,10 @@
     <div style="flex: 2;">
         <p class="insist">De l'humeur normale à la dépression
         <p class="subtitle">En psychologie cognitive, neurosciences et psychiatrie
-        <p><u>Eric Laurent</u>, <u>Pierre Vandel</u>
+        <p><a href="https://www.deboecksuperieur.com/auteur/eric-laurent" target="_blank">Eric Laurent</a>, <a href="https://www.deboecksuperieur.com/auteur/pierre-vandel" target="_blank">Pierre Vandel</a>
         <p>
             <b>Parution</b>: octobre 2016<br>
-            <b>Collection</b> : <u>Neuropsychologie</u><br>
+            <b>Collection</b> : <a href="https://www.deboecksuperieur.com/collection/neuropsychologie" target="_blank">Neuropsychologie</a><br>
             <b>Éditions</b> : Deboeck
         </p>
         <p>Que ce soit dans la vie professionnelle ou dans la vie privée, les concepts employés pour décrire les états affectifs sont multiples : humeur, émotion, burnout, dépression, bipolarité.
@@ -130,10 +130,10 @@
     <img src="{{ ASSET static/livres/psychoeducation_dans_depression.jpg }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
         <p class="insist">Mettre en oeuvre un programme de psychoéducation pour la dépression
-        <p><u>Luisa Weiner</u>, <u>Enzo Lachaux</u>
+        <p><a href="https://www.dunod.com/livres-luisa-weiner" target="_blank">Luisa Weiner</a>, <a href="https://www.dunod.com/livres-enzo-lachaux" target="_blank">Enzo Lachaux</a>
         <p>
             <b>Parution</b>: janvier 2022<br>
-            <b>Collection</b> : <u>Les Ateliers du praticien</u><br>
+            <b>Collection</b> : <a href="https://www.dunod.com/collection/ateliers-du-praticien" target="_blank">Les Ateliers du praticien</a><br>
             <b>Éditions</b> : Dunod
         </p>
         <p>La dépression est une problématique de santé mentale très fréquente avec des facettes cliniques variées. Face à cette complexité, les cliniciens sont souvent confrontés au dilemme suivant : comment offrir un accompagnement psychothérapique de qualité qui soit accessible à un grand nombre de patients ?
