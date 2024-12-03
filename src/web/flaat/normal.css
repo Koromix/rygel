@@ -22,6 +22,8 @@
 html {
     --top_height: 120px;
     --small_height: 90px;
+    --top_background: white;
+    --footer_background: #f6f6f9;
 
     height: 100%;
     scroll-padding-top: calc(var(--top_height) + 10px);
@@ -54,9 +56,9 @@ a:has(> img) { text-decoration: none !important; }
 #top {
     position: sticky;
     top: 0;
-    background: white;
+    background: var(--top_background);
     z-index: 9;
-    border-bottom: 2px solid white;
+    border-bottom: 2px solid var(--top_background);
     transition: border-bottom-color 0.4s ease;
 }
 #top.border { border-bottom-color: #383838; }
@@ -177,7 +179,7 @@ main {
 
 footer {
     padding: 0.5em;
-    background: #f6f6f9;
+    background: var(--footer_background);
     display: flex;
     gap: 1.5em;
     align-items: center;

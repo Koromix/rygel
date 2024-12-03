@@ -19,6 +19,11 @@
 html {
     --primary_color: #e78d6f;
     --secondary_color: #d9bf69;
+
+    --top_height: 80px;
+    --top_background: #fdfbf8;
+    --small_height: 70px;
+    --footer_background: #fdfbf8;
 }
 
 main a {
@@ -45,6 +50,13 @@ span[title] { border-bottom: 1px dotted #383838; }
     font-size: 1.1em;
     width: 30%;
 }
+
+#top menu { justify-content: space-between; }
+#top.border { border-bottom-color: var(--top_background); }
+#top.border #logo { filter: none; }
+
+footer { gap: 3em; }
+footer > img { filter: none; }
 
 #logo > img {
     margin: -16px;
@@ -137,6 +149,8 @@ span[title] { border-bottom: 1px dotted #383838; }
         gap: 20px;
     }
     .tel_3114 > img { margin: 0.5em 0; }
+
+    footer { gap: 6px; }
 }
 
 .shelf {
