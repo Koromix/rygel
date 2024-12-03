@@ -53,9 +53,6 @@ function ApplicationBuilder(app) {
             enabled: true,
             icon: null,
             help: null,
-
-            export_dialog: null,
-            export_filter: null
         }
     ];
 
@@ -72,10 +69,7 @@ function ApplicationBuilder(app) {
         progress: makeOptionProperty('progress'),
         enabled: makeOptionProperty('enabled'),
         icon: makeOptionProperty('icon'),
-        help: makeOptionProperty('help'),
-
-        exportDialog: makeOptionProperty('export_dialog'),
-        exportFilter: makeOptionProperty('export_filter')
+        help: makeOptionProperty('help')
     });
 
     this.panel = function(panel, enable) {

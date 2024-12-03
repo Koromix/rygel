@@ -706,28 +706,7 @@ function runDeleteRecordDialog(e, row) {
 async function runExportDialog(e) {
     // XXX: Restrict to current thread
     let stores = app.stores.map(store => store.key);
-
-    let dialog = route.page.export_dialog;
-    let filter = route.page.export_filter;
-
-    if (filter == null)
-        filter = () => true;
-
-    if (dialog != null) {
-        await UI.dialog(e, 'Export', {}, (d, resolve, reject) => {
-            dialog(d);
-
-            d.action('Exporter', { disabled: !d.isValid() }, async () => {
-                // Get proper object, with stringified dates
-                let json = JSON.parse(JSON.stringify(d.values));
-
-                await exportRecords(stores, values => filter(values, json));
-                resolve();
-            });
-        });
-    } else {
-        await exportRecords(stores, values => filter(values, {}));
-    }
+    await exportRecords(stores);
 }
 
 function toggleTagFilter(tag) {
