@@ -17,7 +17,7 @@
 @import url('print.css');
 
 html {
-    --primary_color: #e78d6f;
+    --primary_color: #364b9b;
     --secondary_color: #d9bf69;
 
     --top_height: 80px;
@@ -33,8 +33,11 @@ main a {
 main a:has(> img) { text-decoration: none !important; }
 main a:not(:has(> img)):hover { color: var(--color, black); }
 
-h1 { border-bottom: 1px solid #ccc; }
-* + h1 { margin-top: 2em; }
+h1 {
+    color: #364b9b;
+    border-bottom: 1px solid #ccc;
+}
+h1:not(:first-of-type) { margin-top: 2em; }
 
 span[title] { border-bottom: 1px dotted #383838; }
 
@@ -54,6 +57,29 @@ span[title] { border-bottom: 1px dotted #383838; }
 #top menu { justify-content: space-between; }
 #top.border { border-bottom-color: var(--top_background); }
 #top.border #logo { filter: none; }
+
+.banner {
+    display: flex;
+    width: 100%;
+    max-width: 1200px;
+    flex-direction: column;
+    margin: 0 auto 1em auto;
+}
+.banner > img { object-fit: contain; }
+.banner > .title {
+    margin-top: -1.8em;
+    padding: 1em;
+    align-self: start;
+    background: #eca17f;
+    font-weight: bold;
+    color: white;
+    border-radius: 16px;
+}
+.banner > .intro {
+    margin: -2px 4em 1em 4em;
+    padding: 1em;
+    border-left: 4px solid #eca17f;
+}
 
 footer { gap: 3em; }
 footer > img { filter: none; }

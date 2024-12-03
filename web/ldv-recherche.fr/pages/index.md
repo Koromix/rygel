@@ -1,3 +1,16 @@
+<div class="banner">
+    <img src="{{ ASSET static/banners/index.webp }}" alt="" />
+    <div class="title">À la une</div>
+    <div class="intro">
+        <p><b>L'étude SocioTrauma est en ligne !</b>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin pulvinar, lacus sit amet tempor tincidunt, magna purus lobortis massa, eget consectetur nunc arcu vel lectus. Fusce non suscipit nisl, et euismod tortor.
+        <div class="buttons">
+            <a href="etudes#etude-1-sociotrauma">En savoir plus</a>
+            <a>Participer à l’étude</a>
+        </div>
+    </div>
+</div>
+
 # Dispositif Lignes de Vie
 
 <div class="columns">

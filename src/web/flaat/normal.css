@@ -99,8 +99,13 @@ a:has(> img) { text-decoration: none !important; }
 #top li > a:hover, #top li.active > a {
     margin-bottom: -1px;
     border-bottom: 2px solid var(--primary_color);
+    color: var(--primary_color);
 }
-#top li > a.active { font-weight: bold; }
+#top li > a.active {
+    font-weight: bold;
+    border-bottom-color: var(--primary_color);
+    color: var(--primary_color);
+}
 #top li > div { display: none; }
 .nojs #top li:has(> div):hover, #top li:has(> div).active { border-left-color: var(--primary_color); }
 .nojs #top li:has(> div):hover > a, #top li:has(> div).active > a {

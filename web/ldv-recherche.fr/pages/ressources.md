@@ -1,3 +1,8 @@
+<div class="banner">
+    <img src="{{ ASSET static/banners/ressources.webp }}" alt="" />
+    <div class="title">Ressources</div>
+</div>
+
 <div class="tel_3114">
     <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" alt="" />
     <div>
