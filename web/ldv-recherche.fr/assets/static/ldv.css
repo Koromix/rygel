@@ -26,12 +26,9 @@ html {
     --footer_background: #fdfbf8;
 }
 
-main a {
-    color: var(--color, #383838);
-    text-decoration: underline;
-}
+main a { text-decoration: underline; }
+main a:hover { color: #26346c; }
 main a:has(> img) { text-decoration: none !important; }
-main a:not(:has(> img)):hover { color: var(--color, black); }
 
 h1 {
     color: #364b9b;
