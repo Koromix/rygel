@@ -102,6 +102,7 @@ footer > img { filter: none; }
     gap: 2em;
 }
 .columns > * { flex: 1; width: 0; }
+p + .columns { margin-top: 2em; }
 
 .note {
     width: 600px;
@@ -159,23 +160,13 @@ footer > img { filter: none; }
     margin-top: -8px;
 }
 
-.tel_3114 {
-    display: flex;
-    max-width: 900px;
-    margin: 0 auto 1em auto;
-    padding: 2em;
-    align-items: center;
-    gap: 60px;
-    border: 3px solid #d9bf69;
+.insist {
+    color: #eca17f;
+    font-size: 1.1em;
+    font-weight: bold;
 }
 
 @media screen and (max-width: 960px) {
-    .tel_3114 {
-        flex-direction: column;
-        gap: 20px;
-    }
-    .tel_3114 > img { margin: 0.5em 0; }
-
     footer { gap: 6px; }
 }
 

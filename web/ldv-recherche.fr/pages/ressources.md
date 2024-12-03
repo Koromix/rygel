@@ -42,7 +42,7 @@
 <div class="columns book">
     <img src="{{ ASSET static/livres/les_troubles_bipolaires.jpg }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
-        <p class="title">Les troubles bipolaires : de la cyclothymie au syndrome maniaco-dépressif - 3e édition
+        <p class="insist">Les troubles bipolaires : de la cyclothymie au syndrome maniaco-dépressif - 3e édition
         <p class="subtitle">Dépistage du trouble - Prises en charge éducatives et psychothérapeutiques - Prévention des rechutes
         <p><u>Christine Mirabel-Sarron</u>, <u>Isabelle Leygnac-Solignac</u>
         <p>
@@ -60,7 +60,7 @@
 <div class="columns book">
     <img src="{{ ASSET static/livres/traiter_la_depression.jpg }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
-        <p class="title">Traiter la dépression et les troubles de l'humeur
+        <p class="insist">Traiter la dépression et les troubles de l'humeur
         <p class="subtitle">10 cas pratiques en TCC
         <p><u>Stéphane Rusinek</u>, <u>Nathalie Bascop</u>, <u>Cyrille Bouvet</u>, <u>Frédéric Chapelle</u>, <u>Jérémy Fonseca das Neves</u> et al.
         <p>
@@ -84,7 +84,7 @@
 <div class="columns book">
     <img src="{{ ASSET static/livres/apprendre_a_soigner_les_depressions.jpg }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
-        <p class="title">Apprendre à soigner les dépressions - 2e édition
+        <p class="insist">Apprendre à soigner les dépressions - 2e édition
         <p class="subtitle">Avec les thérapies comportementales et cognitives
         <p><u>Christine Mirabel-Sarron</u>, <u>Aurélie Docteur</u>
         <p>
@@ -109,7 +109,7 @@
 <div class="columns book">
     <img src="{{ ASSET static/livres/humeur_normale_a_la_depression.jpg }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
-        <p class="title">De l'humeur normale à la dépression
+        <p class="insist">De l'humeur normale à la dépression
         <p class="subtitle">En psychologie cognitive, neurosciences et psychiatrie
         <p><u>Eric Laurent</u>, <u>Pierre Vandel</u>
         <p>
@@ -129,7 +129,7 @@
 <div class="columns book">
     <img src="{{ ASSET static/livres/psychoeducation_dans_depression.jpg }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
-        <p class="title">Mettre en oeuvre un programme de psychoéducation pour la dépression
+        <p class="insist">Mettre en oeuvre un programme de psychoéducation pour la dépression
         <p><u>Luisa Weiner</u>, <u>Enzo Lachaux</u>
         <p>
             <b>Parution</b>: janvier 2022<br>
@@ -146,14 +146,28 @@
 </div>
 
 <style>
+    .tel_3114 {
+        display: flex;
+        max-width: 900px;
+        margin: 0 auto 1em auto;
+        padding: 2em;
+        align-items: center;
+        gap: 60px;
+        border: 3px solid #d9bf69;
+    }
+
     .book { padding-top: 3em; }
     .book + .book {
         margin-top: 3em;
         border-top: 1px solid #ccc;
     }
-    .book .title {
-        color: #eca17f;
-        font-weight: bold;
-    }
     .book .subtitle { margin-top: 0; }
+
+    @media screen and (max-width: 960px) {
+        .tel_3114 {
+            flex-direction: column;
+            gap: 20px;
+        }
+        .tel_3114 > img { margin: 0.5em 0; }
+    }
 </style>
