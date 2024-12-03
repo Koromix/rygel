@@ -23,8 +23,9 @@
 @import url('../../../vendor/highlight.js/styles/base16/tomorrow.css');
 
 html {
-    --primary_color: #ff6600;
+    --primary_color: #2170b9;
     --secondary_color: #2170b9;
+    --anchor_color: #ff6600;
 }
 
 .screenshot {

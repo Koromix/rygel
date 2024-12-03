@@ -20,6 +20,8 @@
    OTHER DEALINGS IN THE SOFTWARE. */
 
 html {
+    --anchor_color: var(--primary_color);
+
     --top_height: 120px;
     --small_height: 90px;
     --top_background: white;
@@ -46,7 +48,7 @@ body {
 }
 
 a {
-    color: var(--primary_color, #383838);
+    color: var(--anchor_color, #383838);
     cursor: pointer;
     text-decoration: none;
 }
