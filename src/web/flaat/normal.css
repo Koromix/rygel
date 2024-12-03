@@ -271,6 +271,10 @@ table + div.legend {
     filter: brightness(80%) contrast(150%);
     color: white;
 }
+.buttons > a.disabled {
+    pointer-events: none;
+    filter: saturate(10%);
+}
 
 code:not(.hljs) {
     padding: 2px 6px;

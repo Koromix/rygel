@@ -18,7 +18,7 @@
 
 html {
     --primary_color: #e78d6f;
-    --secondary_color: #e78d6f;
+    --secondary_color: #d9bf69;
 }
 
 main a {
@@ -29,8 +29,22 @@ main a:has(> img) { text-decoration: none !important; }
 main a:not(:has(> img)):hover { color: var(--color, black); }
 
 h1 { border-bottom: 1px solid #ccc; }
+* + h1 { margin-top: 2em; }
 
 span[title] { border-bottom: 1px dotted #383838; }
+
+.buttons {
+    margin-top: 2em;
+    justify-content: space-evenly;
+    gap: 20px;
+}
+.buttons > a {
+    border-radius: 10px;
+    padding: 0.6em 1em;
+    font-weight: bold;
+    font-size: 1.1em;
+    width: 30%;
+}
 
 #logo > img {
     margin: -16px;
@@ -70,25 +84,27 @@ span[title] { border-bottom: 1px dotted #383838; }
 
 .team {
     display: flex;
-    justify-content: center;
-    gap: 24px;
+    justify-content: space-evenly;
+    gap: 12px;
     font-size: 0.9em;
     flex-wrap: wrap;
 }
-.team + .team { margin-top: 24px; }
+.team + .team { margin-top: 48px; }
 .team > div {
-    background: #f8f8f8;
+    background: #ebedf5;
     padding: 1em 0.5em;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    width: 240px;
+    width: 210px;
     align-items: center;
+    border-radius: 30px;
 }
 .team img {
     width: 128px;
     height: 128px;
     border-radius: 50%;
+    border: 5px solid #e9a07f;
 }
 .team .name {
     font-weight: bold;
@@ -107,16 +123,19 @@ span[title] { border-bottom: 1px dotted #383838; }
 
 .tel_3114 {
     display: flex;
-    max-width: 600px;
+    max-width: 900px;
     margin: 0 auto 1em auto;
-    padding: 1em;
+    padding: 2em;
     align-items: center;
-    gap: 20px;
-    border: 2px solid #ffd212;
+    gap: 60px;
+    border: 3px solid #d9bf69;
 }
 
 @media screen and (max-width: 960px) {
-    .tel_3114 { flex-direction: column; }
+    .tel_3114 {
+        flex-direction: column;
+        gap: 20px;
+    }
     .tel_3114 > img { margin: 0.5em 0; }
 }
 
