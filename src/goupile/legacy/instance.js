@@ -1468,12 +1468,24 @@ async function saveRecord(record, hid, values, page, silent = false) {
                 enablePersistence();
             }
 
-            record = await loadRecord(ulid, null);
+            let new_route = Object.assign({}, route);
+            let claim = page.getOption('claim', record, true);
 
-            let load = page.getOption('load', record, []);
+            if (claim) {
+                record = await loadRecord(ulid, null);
+            } else {
+                new_route.ulid = null;
+                new_route.version = null;
+                new_route.page = Array.from(app.pages.values()).find(page => page.url == new_route.form.chain[0].url);
+                new_route.form = new_route.page.form;
+
+                record = await createRecord(new_route.form);
+            }
+
+            let load = new_route.page.getOption('load', record, []);
             await expandRecord(record, load);
 
-            updateContext(route, record);
+            updateContext(new_route, record);
         } catch (err) {
             progress.close();
             throw err;

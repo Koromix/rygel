@@ -84,7 +84,8 @@ function ApplicationBuilder(app) {
         //     dictionaries: null,
         //     load: null,
         //     default_actions: true,
-        //     autosave: false
+        //     autosave: false,
+        //     claim: true
         // }
     ];
     let form_ref = null;
