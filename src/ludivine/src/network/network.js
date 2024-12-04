@@ -20,7 +20,6 @@ import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';
 import * as app from '../ludivine.js';
 import { NetworkWidget } from './widget.js';
-import { loadAssets, assets } from './assets.js';
 
 import '../../../../vendor/opensans/OpenSans.css';
 import '../css/network.css';
@@ -72,8 +71,6 @@ function NetworkModule(db, test, el) {
     this.start = async function() {
         Log.pushHandler(UI.notifyHandler);
 
-        await loadAssets();
-
         render(html`
             <div class="net_menu"></div>
             <div class="net_toolbox"></div>
@@ -101,8 +98,7 @@ function NetworkModule(db, test, el) {
         ctx.imageSmoothingQuality = 'high';
 
         // Adapt to viewport
-        window.addEventListener('resize', handleResize);
-        adaptToViewport();
+        window.addEventListener('resize', runner.busy);
 
         // Load existing world
         {
@@ -126,7 +122,7 @@ function NetworkModule(db, test, el) {
     };
 
     this.stop = function() {
-        window.removeEventListener('resize', handleResize);
+        window.removeEventListener('resize', runner.busy);
         runner.stop();
 
         render('', el);
@@ -212,19 +208,6 @@ function NetworkModule(db, test, el) {
         };
 
         return data;
-    }
-
-    function handleResize() {
-        adaptToViewport();
-        runner.busy();
-    }
-
-    function adaptToViewport() {
-        let is_small = (window.innerWidth < 960);
-        let is_medium = (window.innerWidth < 1280);
-
-        document.documentElement.classList.toggle('small', is_small);
-        document.documentElement.classList.toggle('medium', is_medium);
     }
 
     function update() {

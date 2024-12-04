@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { Util } from '../../../web/libjs/common.js';
 import { loadTexture } from '../../../web/libjs/runner.js';
 
 import ui_left from '../../assets/ui/left.png';
@@ -48,6 +49,7 @@ import network_unselect from '../../assets/network/unselect.png';
 import network_work from '../../assets/network/work.png';
 
 let assets = {};
+let textures = {};
 
 async function loadAssets() {
     assets.ui = {
@@ -88,21 +90,25 @@ async function loadAssets() {
         work: network_work
     };
 
-    let objects = Object.values(assets);
-    let resources = objects.flatMap(obj => Object.keys(obj).map(key => ({ obj, key })));
+    let categories = Object.keys(assets);
 
-    await Promise.all(resources.map(async res => {
-        let url = 'build/' + res.obj[res.key];
+    for (let category of categories) {
+        let keys = Object.keys(assets[category]);
 
-        if (url.endsWith('.png') || url.endsWith('.webp')) {
-            res.obj[res.key] = await loadTexture(url);
-        } else {
-            throw new Error(`Unknown resource type for '${url}'`);
-        }
-    }));
+        textures[category] = {};
+
+        await Promise.all(keys.map(async key => {
+            let url = 'build/' + assets[category][key];
+
+            textures[category][key] = await loadTexture(url);
+            assets[category][key] = url;
+        }));
+    }
 }
 
 export {
-    loadAssets,
-    assets
+    assets,
+    textures,
+
+    loadAssets
 }

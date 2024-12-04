@@ -18,8 +18,8 @@ import { Util, Log } from '../../../web/libjs/common.js';
 import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from '../lib/constants.js';
 import { computeAge, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';
+import { textures } from '../lib/assets.js';
 import * as app from '../ludivine.js';
-import { assets } from './assets.js';
 
 const TOOLS = {
     move: { title: 'Déplacer', icon: 'move' },
@@ -110,11 +110,11 @@ function NetworkWidget(mod, world) {
         render(html`
             <button @click=${UI.wrap(createPersons)}>
                 <img src="assets/network/create.png" alt="" />
-                <span>Créer</span>
+                <span>Insérer</span>
             </button>
             ${insert ? html`<button @click=${UI.wrap(insertPersons)}>
                 <img src="assets/network/insert.png" alt="" />
-                <span>Insérer</span>
+                <span>Réutiliser</span>
             </button>` : ''}
 
             <div style="flex: 1;"></div>
@@ -1199,7 +1199,7 @@ function NetworkWidget(mod, world) {
             if (i && p.proximity) {
                 let info = PERSON_KINDS[p.kind];
 
-                let icon = assets.network[info.icon];
+                let icon = textures.network[info.icon];
                 let size = radius + 0.03;
 
                 ctx.drawImage(icon, p.x - size / 2, p.y - size / 2, size, size);
