@@ -409,5 +409,7 @@ export {
     identity,
 
     start,
+    runDashboard,
+
     changeIdentity
 }

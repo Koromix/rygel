@@ -227,6 +227,12 @@ function NetworkModule(db, test, el) {
 
         // Main menu
         render(html`
+            <button type="button" title="Retourner au tableau de bord"
+                    @click=${UI.wrap(app.runDashboard)}>
+                <img src=${assets.main.dashboard} alt="" />
+                <span>Tableau de bord</span>
+            </button>
+
             <div style="flex: 1;"></div>
             <button type="button" title="Annuler la dernière modification"
                     ?disabled=${!undo_actions.length}
@@ -240,7 +246,6 @@ function NetworkModule(db, test, el) {
                 <img src=${assets.ui.redo} alt="" />
                 <span>Rétablir</span>
             </button>
-            <div style="flex: 1;"></div>
         `, menu_el);
 
         // Run widget code
