@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import sqlite3Worker1Promiser from '../../../vendor/sqlite3/wasm/jswasm/sqlite3-worker1-promiser.mjs';
+
 let promiser = null;
 let id = 0;
 
@@ -24,7 +26,7 @@ async function init(worker) {
         let sqlite3 = null;
 
         if (typeof worker === 'string') {
-            worker = new Worker(worker);
+            worker = new Worker(worker, { type: 'module' });
         } else if (typeof worker === 'function') {
             worker = worker();
         } else if (!(worker instanceof Worker)) {
@@ -156,6 +158,29 @@ function DatabaseWrapper(promiser, db) {
         });
 
         return results;
+    };
+
+    this.pluck = async function(sql, ...args) {
+        let result = await new Promise((resolve, reject) => {
+            let p = promiser({ type: 'exec', dbId: id, args: {
+                sql: sql,
+                bind: args,
+                rowMode: 'array',
+                callback: msg => {
+                    if (msg.rowNumber != null) {
+                        resolve(msg.row[0]);
+                    } else {
+                        resolve(null);
+                    }
+
+                    return false;
+                }
+            }});
+
+            p.catch(msg => reject(msg.result));
+        });
+
+        return result;
     };
 
     this.close = async function() {

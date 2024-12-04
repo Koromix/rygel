@@ -1,0 +1,38 @@
+/* Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
+.net_menu {
+    position: fixed;
+    display: flex;
+    gap: 6px;
+    z-index: 1;
+}
+.net_menu > button {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+.net_toolbox {
+    position: fixed;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 1;
+}
+.net_toolbox > button { height: 36px; }
+.net_canvas {
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+}

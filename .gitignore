@@ -35,6 +35,9 @@ package-lock.json
 /src/napka/tmp/*.js
 /src/napka/tmp/*.css
 
+/src/ludivine/build/*
+!/src/ludivine/build/.gitkeep
+
 /deploy/docker/goupile/goupile
 /deploy/qemu/machines/**
 

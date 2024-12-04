@@ -378,6 +378,7 @@ function AppRunner(canvas) {
                 updates--;
 
                 Object.assign(mouse_mirror, mouse_state);
+                cursor = 'default';
 
                 handle_update();
                 update_counter++;
@@ -474,6 +475,95 @@ function AppRunner(canvas) {
             is_idle = false;
             window.requestAnimationFrame(loop);
         }
+    };
+
+    // ------------------------------------------------------------------------
+    // Tools
+    // ------------------------------------------------------------------------
+
+    this.align = function(pos, width, height, align) {
+        let x = pos.x;
+        let y = pos.y;
+
+        if (align == 2 || align == 5 || align == 8) {
+            x -= width / 2;
+        } else if (align == 3 || align == 6 || align == 9) {
+            x -= width;
+        }
+        if (align == 1 || align == 2 || align == 3) {
+            y -= height;
+        } else if (align == 4 || align == 5 || align == 6) {
+            y -= height / 2;
+        }
+
+        return { x: x, y: y };
+    };
+
+    this.text = function(x, y, text, options = {}) {
+        let mat = ctx.getTransform();
+
+        ctx.save();
+
+        // Unfortunately we have to go back to leave screen space to draw text with
+        // correct size, so transform coordinates manually!
+        ctx.resetTransform();
+        x = x * mat.a + y * mat.c + mat.e;
+        y = y * mat.b + y * mat.d + mat.f;
+
+        let padding = (options.padding != null) ? options.padding : 0;
+
+        let width = null;
+        let height = null;
+
+        if (options.width != null) {
+            width = options.width + padding * 2;
+        } else if (typeof text == 'object') {
+            width = 22 + padding * 2;
+        } else {
+            width = ctx.measureText(text).width + padding * 2;
+        }
+        if (options.height != null) {
+            height = options.height;
+        } else if (typeof text == 'object') {
+            height = 38;
+        } else {
+            height = ctx.measureText(text).actualBoundingBoxAscent;
+        }
+
+        let align = null;
+
+        if (options.align != null) {
+            align = options.align;
+        } else if (x < 0) {
+            x += canvas.width;
+            if (y < 0) {
+                y += canvas.height;
+                align = 3;
+            } else {
+                align = 9;
+            }
+        } else {
+            if (y < 0) {
+                y += canvas.height;
+                align = 1;
+            } else {
+                align = 7;
+            }
+        }
+
+        let pos = { x: x, y: y };
+        let aligned = self.align(pos, width, height, align);
+
+        if (options.background != null) {
+            ctx.fillStyle = options.background;
+            ctx.fillRect(aligned.x - 4, aligned.y - 4, width + 8, height + 9);
+        }
+
+        ctx.textAlign = 'left';
+        ctx.fillStyle = (options.color != null) ? options.color : 'black';
+        ctx.fillText(text, aligned.x + padding, aligned.y + height);
+
+        ctx.restore();
     };
 
     // ------------------------------------------------------------------------

@@ -516,6 +516,10 @@ const Util = new function() {
         return rnd;
     };
 
+    this.getRandomFloat = function(min, max) {
+        return Math.random() * (max - min) + min;
+    };
+
     this.waitFor = function(ms) {
         return new Promise((resolve, reject) => {
             setTimeout(resolve, ms);
