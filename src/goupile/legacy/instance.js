@@ -1469,7 +1469,7 @@ async function saveRecord(record, hid, values, page, silent = false) {
             }
 
             let new_route = Object.assign({}, route);
-            let claim = page.getOption('claim', record, true);
+            let claim = silent || page.getOption('claim', record, true);
 
             if (claim) {
                 record = await loadRecord(ulid, null);
@@ -1951,17 +1951,15 @@ async function go(e, url = null, options = {}) {
                 ulid = 'new';
 
             // Go to default record?
-            if (!ulid && !app.panels.data) {
-                if (profile.lock != null) {
-                    ulid = profile.lock.ulid;
-                } else if (profile.userid) {
-                    let range = IDBKeyRange.only(profile.namespaces.records + `/${new_route.form.key}`);
-                    let keys = await db.list('rec_records/form', range);
+            if (!ulid && profile.lock != null) {
+                ulid = profile.lock.ulid;
+            } else if (!ulid && profile.userid < 0) {
+                let range = IDBKeyRange.only(profile.namespaces.records + `/${new_route.form.key}`);
+                let keys = await db.list('rec_records/form', range);
 
-                    if (keys.length) {
-                        let key = keys[0];
-                        ulid = key.primary.substr(key.primary.indexOf(':') + 1);
-                    }
+                if (keys.length) {
+                    let key = keys[0];
+                    ulid = key.primary.substr(key.primary.indexOf(':') + 1);
                 }
             }
 
