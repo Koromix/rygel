@@ -56,7 +56,7 @@ async function run() {
     process.chdir(__dirname + '/..');
 
     let src_filenames = [
-        './src/standalone/standalone.js',
+        './src/standalone.js',
         '../../vendor/sqlite3/wasm/jswasm/sqlite3.wasm',
         '../../vendor/sqlite3/wasm/jswasm/sqlite3-opfs-async-proxy.js',
         '../../vendor/sqlite3/wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs',

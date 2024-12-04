@@ -13,9 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import * as app from '../ludivine.js';
+import * as app from './ludivine.js';
 
-import './standalone.css';
+import './css/standalone.css';
 
 async function start() {
     let main = document.querySelector('main');
