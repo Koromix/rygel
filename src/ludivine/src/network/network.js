@@ -33,9 +33,9 @@ function NetworkModule(el) {
     let self = this;
 
     // DOM nodes
-    let canvas = null;
     let menu_el = null;
     let toolbox_el = null;
+    let canvas = null;
 
     // Platform
     let runner = null;
@@ -44,8 +44,6 @@ function NetworkModule(el) {
     let pressed_keys = null;
 
     // UI state
-    let is_small = false;
-    let is_medium = false;
     let debug = false;
     let tooltip = null;
 
@@ -55,12 +53,6 @@ function NetworkModule(el) {
     // General state
     let widget = null;
     let now = null;
-
-    // Layout
-    let menu_rect = {};
-    let toolbox_rect = {};
-    let mod_rect = {};
-    let line_rect = {};
 
     // Undo and redo
     let undo_actions = [];
@@ -72,7 +64,6 @@ function NetworkModule(el) {
 
     Object.defineProperties(this, {
         runner: { get: () => runner, enumerable: true },
-        rect: { get: () => mod_rect, enumerable: true },
         toolbox: { get: () => toolbox_el, enumerable: true },
 
         anonymous: { get: () => anonymous, set: value => { anonymous = value; }, enumerable: true }
@@ -88,9 +79,9 @@ function NetworkModule(el) {
             <div class="net_toolbox"></div>
             <canvas class="net_canvas"></canvas>
         `, el);
-        canvas = el.querySelector('.net_canvas');
         menu_el = el.querySelector('.net_menu');
         toolbox_el = el.querySelector('.net_toolbox');
+        canvas = el.querySelector('.net_canvas');
 
         runner = new AppRunner(canvas, assets);
 
@@ -111,8 +102,8 @@ function NetworkModule(el) {
 
         // Adapt to viewport
         window.addEventListener('resize', e => {
-            if (adaptToViewport())
-                runner.busy();
+            adaptToViewport();
+            runner.busy();
         });
         adaptToViewport();
 
@@ -205,20 +196,11 @@ function NetworkModule(el) {
     }
 
     function adaptToViewport() {
-        let new_small = (window.innerWidth < 960);
-        let new_medium = (window.innerWidth < 1280);
+        let is_small = (window.innerWidth < 960);
+        let is_medium = (window.innerWidth < 1280);
 
-        document.documentElement.classList.toggle('small', new_small);
-        document.documentElement.classList.toggle('medium', new_medium);
-
-        if (new_small != is_small || new_medium != is_medium) {
-            is_small = new_small;
-            is_medium = new_medium;
-
-            return true;
-        } else {
-            return false;
-        }
+        document.documentElement.classList.toggle('small', is_small);
+        document.documentElement.classList.toggle('medium', is_medium);
     }
 
     function update() {
@@ -234,29 +216,6 @@ function NetworkModule(el) {
             rewind(undo_actions, redo_actions);
         if (pressed_keys.ctrl > 0 && pressed_keys.y == -1)
             rewind(redo_actions, undo_actions);
-
-        // Global layout
-        Object.assign(menu_rect, {
-            left: is_medium ? 80 : 240,
-            top: 12,
-            width: canvas.width - (is_medium ? 80 : 240) - 12,
-            height: 36
-        });
-        Object.assign(toolbox_rect, {
-            left: 12,
-            top: 60,
-            width: is_medium ? 56 : 216,
-            height: canvas.height - 72
-        });
-        Object.assign(mod_rect, {
-            left: is_medium ? 80 : 240,
-            top: 60,
-            width: canvas.width - (is_medium ? 80 : 240) - 12,
-            height: canvas.height - 72
-        });
-
-        moveDiv(menu_el, menu_rect);
-        moveDiv(toolbox_el, toolbox_rect);
 
         // Main menu
         render(html`
@@ -289,17 +248,6 @@ function NetworkModule(el) {
             if (tooltip.opacity < 0)
                 tooltip = null;
         }
-    }
-
-    function moveDiv(el, rect) {
-        if (rect.left != el.style.left + 'px')
-            el.style.left = rect.left + 'px';
-        if (rect.top != el.style.top + 'px')
-            el.style.top = rect.top + 'px';
-        if (rect.width != el.style.width + 'px')
-            el.style.width = rect.width + 'px';
-        if (rect.height != el.style.height + 'px')
-            el.style.height = rect.height + 'px';
     }
 
     function saveFile() {
@@ -572,7 +520,7 @@ function NetworkModule(el) {
             ctx.fillStyle = '#efefef';
 
             ctx.beginPath();
-            ctx.rect(mod_rect.left, mod_rect.top, mod_rect.width, mod_rect.height);
+            ctx.rect(0, 0, canvas.width, canvas.height);
             ctx.fill();
             ctx.clip();
 

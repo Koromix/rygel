@@ -60,7 +60,6 @@ function NetworkWidget(mod, world) {
     let cursor = { x: null, y: null };
 
     // UI state
-    let mod_rect = mod.rect;
     let state = {
         pos: { x: 0, y: 0 },
         zoom: 0
@@ -88,8 +87,8 @@ function NetworkWidget(mod, world) {
         {
             let scale = computeScale(state.zoom);
 
-            cursor.x = (mouse_state.x - mod_rect.left - mod_rect.width / 2) / scale - state.pos.x;
-            cursor.y = (mouse_state.y - mod_rect.top - mod_rect.height / 2) / scale - state.pos.y;
+            cursor.x = (mouse_state.x - canvas.width / 2) / scale - state.pos.x;
+            cursor.y = (mouse_state.y - canvas.height / 2) / scale - state.pos.y;
         }
 
         // Global shortcuts
@@ -118,7 +117,7 @@ function NetworkWidget(mod, world) {
                 <span>Insérer</span>
             </button>` : ''}
 
-            <div style="height: 30px;"></div>
+            <div style="flex: 1;"></div>
             ${Object.keys(TOOLS).map(tool => {
                 let info = TOOLS[tool];
                 let active = (active_tool == tool && !select_mode);
@@ -744,11 +743,11 @@ function NetworkWidget(mod, world) {
                 p.x = distance * Math.cos(angle);
                 p.y = distance * -Math.sin(angle);
 
-                let mx = scale * (state.pos.x + p.x) + mod_rect.width / 2;
-                let my = scale * (state.pos.y + p.y) + mod_rect.height / 2;
+                let mx = scale * (state.pos.x + p.x) + canvas.width / 2;
+                let my = scale * (state.pos.y + p.y) + canvas.height / 2;
 
-                if (mx >= PERSON_RADIUS && mx <= mod_rect.width - PERSON_RADIUS &&
-                        my >= PERSON_RADIUS && my <= mod_rect.height - PERSON_RADIUS)
+                if (mx >= PERSON_RADIUS && mx <= canvas.width - PERSON_RADIUS &&
+                        my >= PERSON_RADIUS && my <= canvas.height - PERSON_RADIUS)
                     break;
             }
         }
@@ -1080,7 +1079,7 @@ function NetworkWidget(mod, world) {
         {
             let scale = computeScale(state.zoom);
 
-            ctx.translate(mod_rect.left + mod_rect.width / 2, mod_rect.top + mod_rect.height / 2);
+            ctx.translate(canvas.width / 2, canvas.height / 2);
             ctx.scale(scale, scale);
             ctx.translate(state.pos.x, state.pos.y);
         }
@@ -1352,7 +1351,7 @@ function NetworkWidget(mod, world) {
     function computeScale(zoom) {
         zoom += 2;
 
-        let scale = Math.min(mod_rect.width / 2, mod_rect.height / 2) * Math.exp(zoom / 10);
+        let scale = Math.min(canvas.width / 2, canvas.height / 2) * Math.exp(zoom / 10);
         return scale;
     }
 
