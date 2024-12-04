@@ -18,6 +18,7 @@ import { Util, Log } from '../../../web/libjs/common.js';
 import { AppRunner } from '../../../web/libjs/runner.js';
 import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';
+import { assets } from '../lib/assets.js';
 import * as app from '../ludivine.js';
 import { NetworkWidget } from './widget.js';
 
@@ -227,14 +228,16 @@ function NetworkModule(db, test, el) {
         // Main menu
         render(html`
             <div style="flex: 1;"></div>
-            <button title="Annuler la dernière modification" ?disabled=${!undo_actions.length}
+            <button type="button" title="Annuler la dernière modification"
+                    ?disabled=${!undo_actions.length}
                     @click=${UI.wrap(e => rewind(undo_actions, redo_actions))}>
-                <img src="assets/ui/undo.png" alt="" />
+                <img src=${assets.ui.undo} alt="" />
                 <span>Annuler</span>
             </button>
-            <button title="Rétablir la dernière action annulée" ?disabled=${!redo_actions.length}
+            <button type="button" title="Rétablir la dernière action annulée"
+                    ?disabled=${!redo_actions.length}
                     @click=${UI.wrap(e => rewind(redo_actions, undo_actions))}>
-                <img src="assets/ui/redo.png" alt="" />
+                <img src=${assets.ui.redo} alt="" />
                 <span>Rétablir</span>
             </button>
             <div style="flex: 1;"></div>

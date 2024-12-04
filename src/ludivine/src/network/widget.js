@@ -18,7 +18,7 @@ import { Util, Log } from '../../../web/libjs/common.js';
 import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from '../lib/constants.js';
 import { computeAge, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';
-import { textures } from '../lib/assets.js';
+import { assets, textures } from '../lib/assets.js';
 import * as app from '../ludivine.js';
 
 const TOOLS = {
@@ -109,11 +109,11 @@ function NetworkWidget(mod, world) {
 
         render(html`
             <button @click=${UI.wrap(createPersons)}>
-                <img src="assets/network/create.png" alt="" />
+                <img src=${assets.network.create} alt="" />
                 <span>Insérer</span>
             </button>
             ${insert ? html`<button @click=${UI.wrap(insertPersons)}>
-                <img src="assets/network/insert.png" alt="" />
+                <img src=${assets.network.insert} alt="" />
                 <span>Réutiliser</span>
             </button>` : ''}
 
@@ -125,7 +125,7 @@ function NetworkWidget(mod, world) {
                 return html`
                     <button class=${active ? 'active' : ''}
                             @click=${UI.wrap(e => switchTool(tool))}>
-                        <img src=${'assets/network/' + info.icon + '.png'} alt="" />
+                        <img src=${assets.network[info.icon]} alt="" />
                         <span>${info.title}</span>
                     </button>
                 `;
@@ -135,7 +135,7 @@ function NetworkWidget(mod, world) {
             <button class=${select_mode && !select_persons.length ? 'active' : ''}
                     title=${select_persons.length >= 2 ? '' : 'Outil de sélection multiple au lasso'}
                     @click=${UI.wrap(toggleSelection)}>
-                <img src=${'assets/network/' + (select_persons.length < 2 ? 'select.png' : 'unselect.png')} alt="" />
+                <img src=${select_persons.length < 2 ? assets.network.select : assets.network.unselect} alt="" />
                 <span>${select_persons.length < 2 ? 'Sélectionner' : 'Déselectionner'}</span>
             </button>
 
@@ -143,7 +143,7 @@ function NetworkWidget(mod, world) {
             <button class=${mod.anonymous ? 'active' : ''}
                     @click=${mod.anonymous ? UI.confirm('Voulez-vous quitter le mode anonyme ?', e => { mod.anonymous = false; })
                                            : UI.wrap(e => { mod.anonymous = true; })}>
-                <img src="assets/network/anonymous.png" alt="" />
+                <img src=${assets.network.anonymous} alt="" />
                 <span>Mode anonyme</span>
             </button>
         `, mod.toolbox);
@@ -555,7 +555,7 @@ function NetworkWidget(mod, world) {
                                         <td><input type="date" .value=${dateToString(subject.birthdate)}
                                                    @change=${UI.wrap(e => { subject.birthdate = e.target.value ? e.target.valueAsDate.valueOf() : null; render() })} /></td>
                                         <td><button type="button" class="small"
-                                                    @click=${UI.insist(e => { new_subjects = new_subjects.filter(it => it !== subject); render(); })}><img src="assets/ui/delete.png" alt="Supprimer" /></button></td>
+                                                    @click=${UI.insist(e => { new_subjects = new_subjects.filter(it => it !== subject); render(); })}><img src=${assets.ui.delete} alt="Supprimer" /></button></td>
                                     </tr>
                                 `)}
                                 ${!new_subjects.length ? html`<td colspan="5" class="center">Cliquez sur le bouton d'ajout ci-dessus.</td>` : ''}
