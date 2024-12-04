@@ -26,6 +26,7 @@ function AppRunner(canvas) {
     let prev_canvas_height = 0;
     let prev_timestamp = 0;
 
+    let run = true;
     let idle_timeout = 0;
     let run_next = false;
     let run_until = 0;
@@ -155,6 +156,11 @@ function AppRunner(canvas) {
         syncSize();
 
         window.requestAnimationFrame(loop);
+    };
+
+    this.stop = function() {
+        // Please make a new canvas, because event handlers remain connected
+        run = false;
     };
 
     function isTouchDevice() {
@@ -357,6 +363,9 @@ function AppRunner(canvas) {
     // ------------------------------------------------------------------------
 
     function loop(timestamp) {
+        if (!run)
+            return;
+
         syncSize();
 
         let delay = timestamp - prev_timestamp;

@@ -29,7 +29,7 @@ const DATA_VERSION = 1;
 const UNDO_HISTORY = 50;
 const EVENT_SIZE = 32;
 
-function NetworkModule(el) {
+function NetworkModule(db, test, el) {
     let self = this;
 
     // DOM nodes
@@ -83,7 +83,7 @@ function NetworkModule(el) {
         toolbox_el = el.querySelector('.net_toolbox');
         canvas = el.querySelector('.net_canvas');
 
-        runner = new AppRunner(canvas, assets);
+        runner = new AppRunner(canvas);
 
         ctx = canvas.getContext('2d');
         mouse_state = runner.mouseState;
@@ -101,22 +101,41 @@ function NetworkModule(el) {
         ctx.imageSmoothingQuality = 'high';
 
         // Adapt to viewport
-        window.addEventListener('resize', e => {
-            adaptToViewport();
-            runner.busy();
-        });
+        window.addEventListener('resize', handleResize);
         adaptToViewport();
 
-        // XXX: Load existing world
-        await reset();
+        // Load existing world
+        {
+            let payload = await db.pluck('SELECT payload FROM tests WHERE id = ?', test.id);
 
-        window.onbeforeunload = e => {
-            if (save_timer != null)
-                return 'Si vous confirmez vouloir quitter la page, les changements en cours seront perdues !';
-        };
+            if (payload != null) {
+                try {
+                    let json = JSON.parse(payload);
+                    load(json);
+                } catch (err) {
+                    Log.error(err);
+                    world = null;
+                }
+            }
+
+            if (world == null)
+                await reset();
+        }
 
         runner.start();
-    }
+    };
+
+    this.stop = function() {
+        window.removeEventListener('resize', handleResize);
+        runner.stop();
+
+        render('', el);
+    };
+
+    this.hasUnsavedData = function() {
+        let unsafe = (save_timer != null);
+        return unsafe;
+    };
 
     async function reset() {
         world = null;
@@ -193,6 +212,11 @@ function NetworkModule(el) {
         };
 
         return data;
+    }
+
+    function handleResize() {
+        adaptToViewport();
+        runner.busy();
     }
 
     function adaptToViewport() {
@@ -475,7 +499,17 @@ function NetworkModule(el) {
     }
 
     function autoSave() {
-        // XXX: Save world
+        if (save_timer != null)
+            clearTimeout(save_timer);
+
+        save_timer = setTimeout(() => {
+            save_timer = null;
+
+            let data = serialize();
+            let json = JSON.stringify(data);
+
+            db.exec('UPDATE tests SET payload = ? WHERE id = ?', json, test.id);
+        }, 1000);
     }
 
     this.tooltip = function(text, options = {}) {

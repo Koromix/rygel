@@ -21,6 +21,14 @@ import { computeAge, dateToString } from './lib/util.js';
 import * as UI from './lib/ui.js';
 import { NetworkModule } from './network/network.js';
 
+const MODULES = [
+    {
+        key: 'network',
+        title: 'Sociogramme',
+        cls: NetworkModule
+    }
+];
+
 let db = null;
 
 let identity = {
@@ -28,6 +36,9 @@ let identity = {
     birthdate: null,
     gender: null
 };
+
+let main_el = null;
+let active_mod = null;
 
 async function start(el) {
     Log.pushHandler(UI.notifyHandler);
@@ -48,8 +59,13 @@ async function start(el) {
         }
     }
 
-    let mod = new NetworkModule(el);
-    await mod.start();
+    window.onbeforeunload = () => {
+        if (active_mod?.hasUnsavedData())
+            return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
+    };
+
+    main_el = el;
+    await runDashboard();
 }
 
 async function initSQLite() {
@@ -83,11 +99,11 @@ async function openDatabase(filename, flags) {
                         date INTEGER NOT NULL,
                         timestamp INTEGER NOT NULL,
                         type TEXT NOT NULL,
-                        payload BLOB NOT NULL
+                        payload BLOB
                     );
 
                     CREATE TABLE events (
-                        test INTEGER NOT NULL REFERENCES tests (id),
+                        test INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
                         sequence INTEGER NOT NULL,
                         timestamp INTEGER NOT NULL,
                         type TEXT NOT NULL,
@@ -95,7 +111,7 @@ async function openDatabase(filename, flags) {
                     );
 
                     CREATE TABLE images (
-                        test INTEGER NOT NULL REFERENCES tests (id),
+                        test INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
                         timestamp NOT NULL,
                         image BLOB NOT NULL
                     );
@@ -193,7 +209,55 @@ async function changeIdentity() {
             Object.assign(identity, new_identity);
         }
     });
-};
+}
+
+async function runDashboard() {
+    if (active_mod != null) {
+        active_mod.stop();
+        active_mod = null;
+    }
+
+    let tests = await db.fetchAll('SELECT id, date, timestamp, type FROM tests ORDER BY id');
+
+    render(html`
+        <div>
+            ${tests.map(test => html`
+                <a @click=${UI.wrap(e => openTest(test))}>${test.type} ${(new Date(test.date)).toLocaleString()}</a><br/>
+            `)}
+        </div>
+
+        <div>
+            ${MODULES.map(mod => html`
+                <button @click=${UI.wrap(e => createTest(mod.key))}>${mod.title}</button><br/>
+            `)}
+        </div>
+    `, main_el);
+}
+
+async function createTest(type) {
+    let now = (new Date).valueOf();
+
+    let test = {
+        id: null,
+        date: now,
+        timestamp: now,
+        type: type
+    };
+
+    test.id = await db.pluck(`INSERT INTO tests (date, timestamp, type)
+                              VALUES (?, ?, ?)
+                              RETURNING id`,
+                             test.date, test.timestamp, test.type);
+
+    await openTest(test);
+}
+
+async function openTest(test) {
+    let mod = MODULES.find(mod => mod.key == test.type);
+
+    active_mod = new mod.cls(db, test, main_el);
+    await active_mod.start();
+}
 
 export {
     identity,
