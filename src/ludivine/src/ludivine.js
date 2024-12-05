@@ -376,8 +376,6 @@ async function exportDatabase(name) {
     let handle = await root.getFileHandle(DATABASE_FILENAME);
     let src = await handle.getFile();
 
-    console.log(src);
-
     if (window.showSaveFilePicker != null) {
         let dest = null;
 
@@ -397,8 +395,7 @@ async function exportDatabase(name) {
             throw err;
         }
     } else {
-        let file = await src.getFile();
-        Util.saveFile(file, name + '.db');
+        Util.saveFile(src, name + '.db');
     }
 }
 
@@ -440,9 +437,6 @@ async function copyWithProgress(title, src, dest) {
                     progress.value = copied;
             }
         });
-
-        if (src instanceof FileSystemHandle)
-            src = await src.getFile();
 
         await src.stream().pipeThrough(through).pipeTo(writer, { signal: controller.signal });
     } catch (err) {
