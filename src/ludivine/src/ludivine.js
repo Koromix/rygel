@@ -13,12 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../web/libjs/common.js';
 import * as sqlite3 from '../../web/libjs/sqlite3.js';
 import { GENDERS } from './lib/constants.js';
 import { computeAge, dateToString } from './lib/util.js';
 import * as UI from './lib/ui.js';
+import { PictureCropper } from './lib/picture.js';
 import { assets, loadAssets } from './lib/assets.js';
 import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
@@ -26,7 +27,7 @@ import { TrackModule } from './track/track.js';
 import './css/ludivine.css';
 
 const DATABASE_FILENAME = 'LDV.db';
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 const MODULES = [
     {
@@ -38,6 +39,7 @@ const MODULES = [
 
         prepare: (db, test, el) => new NetworkModule(db, test, el)
     },
+
     {
         key: 'arnaud',
         title: 'EyeTrack',
@@ -59,7 +61,8 @@ let db = null;
 let identity = {
     name: '',
     birthdate: null,
-    gender: null
+    gender: null,
+    picture: null
 };
 
 let main_el = null;
@@ -81,7 +84,7 @@ async function start(el) {
 
     // Load identity
     {
-        let row = await db.fetch1('SELECT name, birthdate, gender FROM meta');
+        let row = await db.fetch1('SELECT name, birthdate, gender, picture FROM meta');
 
         if (row != null) {
             Object.assign(identity, row);
@@ -153,6 +156,12 @@ async function openDatabase(filename, flags) {
                         timestamp NOT NULL,
                         image BLOB NOT NULL
                     );
+                `);
+            } // fallthrough
+
+            case 1: {
+                await db.exec(`
+                    ALTER TABLE meta ADD COLUMN picture TEXT;
                 `);
             } // fallthrough
         }
@@ -233,7 +242,7 @@ async function changeIdentity() {
             if (!elements.birthdate.value)
                 throw new Error('La date de naissance ne peut pas être vide');
 
-            let new_identity = {
+            let changes = {
                 name: elements.name.value.trim(),
                 gender: elements.gender.value,
                 birthdate: elements.birthdate.valueAsDate.valueOf()
@@ -243,10 +252,10 @@ async function changeIdentity() {
                 await db.exec('DELETE FROM meta');
 
                 await db.exec('INSERT INTO meta (name, gender, birthdate) VALUES (?, ?, ?)',
-                              new_identity.name, new_identity.gender, new_identity.birthdate);
+                              changes.name, changes.gender, changes.birthdate);
             });
 
-            Object.assign(identity, new_identity);
+            Object.assign(identity, changes);
         }
     });
 }
@@ -259,10 +268,29 @@ async function runDashboard() {
 
     let tests = await db.fetchAll('SELECT id, type, title, date FROM tests ORDER BY id');
 
+    let now = (new Date).valueOf();
+    let age = computeAge(identity.birthdate, now);
+
     render(html`
         <div class="dashboard">
-            <div>
-                <table class="tests">
+            <div class="column">
+                <div class="box">
+                    <div class="title">${identity.name} (${age} ${age > 1 ? 'ans' : 'an'})</div>
+                    <img src=${identity.picture ?? assets.main.user} alt=""/>
+                    <button type="button" class="secondary"
+                            @click=${UI.wrap(e => changeIdentity().then(runDashboard))}>Modifier mon identité</button>
+                    <button type="button" class="secondary"
+                            @click=${UI.wrap(e => changePicture().then(runDashboard))}>Modifier mon avatar</button>
+                </div>
+                <div class="box">
+                    <button type="button" class="secondary"
+                            @click=${UI.wrap(e => exportDatabase(identity.name))}>Exporter mes données</button>
+                </div>
+            </div>
+
+            <div class="box">
+                <div class="title">Tests libres</div>
+                <table>
                     <colgroup>
                         <col class="check"/>
                         <col/>
@@ -301,13 +329,127 @@ async function runDashboard() {
                         ${!tests.length ? html`<tr><td colspan="4" class="center">Aucun élément</td></tr>` : ''}
                     </tbody>
                 </table>
-                <div class="modules">
+                <div class="actions">
                     ${MODULES.map(mod =>
                         html`<button type="button" @click=${UI.wrap(e => createTest(mod.key))}>Nouveau ${mod.title}</button>`)}
                 </div>
             </div>
         </div>
     `, main_el);
+}
+
+async function changePicture() {
+    let cropper = new PictureCropper('Avatar', 256);
+
+    console.log(assets.main);
+
+    cropper.defaultURL = assets.main.user;
+    cropper.imageFormat = 'image/webp';
+
+    await cropper.run(identity.picture, async blob => {
+        if (blob == identity.picture)
+            return;
+
+        let url = await blobToDataURL(blob);
+
+        await db.exec('UPDATE meta SET picture = ?', url);
+        identity.picture = url;
+    });
+}
+
+async function blobToDataURL(blob) {
+    if (blob == null)
+        return null;
+
+    let url = await new Promise((resolve, reject) => {
+        let reader = new FileReader;
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(blob);
+    });
+
+    return url;
+}
+
+async function exportDatabase(name) {
+    let root = await navigator.storage.getDirectory();
+
+    let handle = await root.getFileHandle(DATABASE_FILENAME);
+    let src = await handle.getFile();
+
+    console.log(src);
+
+    if (window.showSaveFilePicker != null) {
+        let dest = null;
+
+        try {
+            dest = await window.showSaveFilePicker({ suggestedName: name + '.db' });
+        } catch (err) {
+            if (err.name == 'AbortError')
+                return;
+            throw err;
+        }
+
+        try {
+            let title = `Export de ${name}`;
+            await copyWithProgress(title, src, dest);
+        } catch (err) {
+            dest.remove();
+            throw err;
+        }
+    } else {
+        let file = await src.getFile();
+        Util.saveFile(file, name + '.db');
+    }
+}
+
+async function copyWithProgress(title, src, dest) {
+    let writer = await dest.createWritable();
+
+    let controller = new AbortController;
+    let progress = null;
+
+    let dialog = UI.dialog({
+        run: (render, close) => {
+            return html`
+                <div class="title">
+                    ${title}
+                    <div style="flex: 1;"></div>
+                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                </div>
+
+                <div class="main">
+                    <progress style="width: 300px;" max=${src.size} value="0"
+                              ${ref(el => { progress = el ?? progress; })} />
+                </div>
+
+                <div class="footer"></span>
+                    <button type="button" class="secondary" @click=${UI.insist(e => { controller.abort(`L'utilisateur a annulé`); close(); })}>${T.cancel}</button>
+                </div>
+            `;
+        }
+    });
+
+    try {
+        let copied = 0;
+        let through = new TransformStream({
+            transform(chunk, controller) {
+                copied += chunk.length;
+                controller.enqueue(chunk);
+
+                if (progress != null)
+                    progress.value = copied;
+            }
+        });
+
+        if (src instanceof FileSystemHandle)
+            src = await src.getFile();
+
+        await src.stream().pipeThrough(through).pipeTo(writer, { signal: controller.signal });
+    } catch (err) {
+        throw err;
+    } finally {
+        dialog.close();
+    }
 }
 
 async function createTest(type) {

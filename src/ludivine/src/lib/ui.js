@@ -275,6 +275,8 @@ function dialog(options = {}) {
 
     if (options.open != null)
         options.open(dlg_el.children[0]);
+    if (options.can_be_closed)
+        p.close = () => dlg.reject();
 
     return p;
 }

@@ -33,6 +33,7 @@ import main_dashboard from '../../assets/main/dashboard.png';
 import main_new from '../../assets/main/new.png';
 import main_network from '../../assets/main/network.png';
 import main_track from '../../assets/main/track.png';
+import main_user from '../../assets/main/user.png';
 
 import network_anonymous from '../../assets/network/anonymous.png';
 import network_child from '../../assets/network/child.png';
@@ -72,7 +73,8 @@ async function loadAssets() {
         dashboard: main_dashboard,
         new: main_new,
         network: main_network,
-        track: main_track
+        track: main_track,
+        user: main_user
     };
 
     assets.network = {
