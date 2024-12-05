@@ -57,3 +57,6 @@ footer {
     align-items: center;
     justify-content: center;
 }
+
+#top.hide { display: none; }
+footer.hide { display: none; }

@@ -287,10 +287,7 @@ async function changeIdentity() {
 }
 
 async function runDashboard() {
-    if (active_mod != null) {
-        active_mod.stop();
-        active_mod = null;
-    }
+    stopTest();
 
     let tests = await db.fetchAll('SELECT id, type, title, date FROM tests ORDER BY id');
     let stakes = await db.fetchAll('SELECT id, study FROM stakes');
@@ -618,15 +615,25 @@ async function deleteTest(id) {
 }
 
 async function openTest(test) {
-    if (active_mod != null) {
-        active_mod.stop();
-        active_mod = null;
-    }
+    stopTest();
+
+    document.querySelector('#top').classList.add('hide');
+    document.querySelector('footer').classList.add('hide');
 
     let mod = MODULES.find(mod => mod.key == test.type);
 
     active_mod = await mod.prepare(db, test, main_el);
     await active_mod.start();
+}
+
+function stopTest() {
+    if (active_mod != null) {
+        active_mod.stop();
+        active_mod = null;
+    }
+
+    document.querySelector('#top').classList.remove('hide');
+    document.querySelector('footer').classList.remove('hide');
 }
 
 export {
