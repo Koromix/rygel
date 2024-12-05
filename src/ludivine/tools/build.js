@@ -18,6 +18,7 @@
 const fs = require('fs');
 const path = require('path');
 const esbuild = require('../../../vendor/esbuild/wasm');
+const experiments = require('../src/track/experiments/experiments.json');
 
 let watch = false;
 
@@ -60,6 +61,8 @@ async function run() {
         '../../vendor/sqlite3/wasm/jswasm/sqlite3.wasm',
         '../../vendor/sqlite3/wasm/jswasm/sqlite3-opfs-async-proxy.js',
         '../../vendor/sqlite3/wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs',
+
+        ...experiments.map(exp => `./src/track/experiments/${exp.key}/${exp.key}.js`)
     ];
 
     let ctx = await esbuild.context({

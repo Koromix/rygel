@@ -32,6 +32,7 @@ import main_copy from '../../assets/main/copy.png';
 import main_dashboard from '../../assets/main/dashboard.png';
 import main_new from '../../assets/main/new.png';
 import main_network from '../../assets/main/network.png';
+import main_track from '../../assets/main/track.png';
 
 import network_anonymous from '../../assets/network/anonymous.png';
 import network_child from '../../assets/network/child.png';
@@ -70,7 +71,8 @@ async function loadAssets() {
         copy: main_copy,
         dashboard: main_dashboard,
         new: main_new,
-        network: main_network
+        network: main_network,
+        track: main_track
     };
 
     assets.network = {

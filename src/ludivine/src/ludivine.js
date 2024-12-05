@@ -21,17 +21,36 @@ import { computeAge, dateToString } from './lib/util.js';
 import * as UI from './lib/ui.js';
 import { assets, loadAssets } from './lib/assets.js';
 import { NetworkModule } from './network/network.js';
+import { TrackModule } from './track/track.js';
 
 import './css/ludivine.css';
+
+const DATABASE_FILENAME = 'LDV.db';
+const DATABASE_VERSION = 1;
 
 const MODULES = [
     {
         key: 'network',
         title: 'Sociogramme',
-        cls: NetworkModule,
-
+        icon: 'network',
         historical: true,
-        editable: true
+        editable: true,
+
+        prepare: (db, test, el) => new NetworkModule(db, test, el)
+    },
+    {
+        key: 'arnaud',
+        title: 'EyeTrack',
+        icon: 'track',
+        historical: false,
+        editable: false,
+
+        prepare: async (db, test, el) => {
+            let url = './arnaud.js';
+            let experiment = await import(url);
+
+            return new TrackModule(db, test, el, experiment);
+        },
     }
 ];
 
@@ -56,7 +75,7 @@ async function start(el) {
     await loadAssets();
 
     await initSQLite();
-    db = await openDatabase('ludivine.db', 'c');
+    db = await openDatabase(DATABASE_FILENAME, 'c');
 
     document.body.classList.remove('loading');
 
@@ -95,13 +114,11 @@ async function initSQLite() {
 
 async function openDatabase(filename, flags) {
     let db = await sqlite3.open(filename, flags);
-
     let version = await db.pluck('PRAGMA user_version');
-    let target = 2;
 
-    if (version == target)
+    if (version == DATABASE_VERSION)
         return db;
-    if (version > target)
+    if (version > DATABASE_VERSION)
         throw new Error('Database model is too recent');
 
     await db.transaction(async () => {
@@ -116,39 +133,10 @@ async function openDatabase(filename, flags) {
 
                     CREATE TABLE tests (
                         id INTEGER PRIMARY KEY,
-                        date INTEGER NOT NULL,
-                        timestamp INTEGER NOT NULL,
-                        type TEXT NOT NULL,
-                        payload BLOB
-                    );
-
-                    CREATE TABLE events (
-                        test INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
-                        sequence INTEGER NOT NULL,
-                        timestamp INTEGER NOT NULL,
-                        type TEXT NOT NULL,
-                        data TEXT
-                    );
-
-                    CREATE TABLE images (
-                        test INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
-                        timestamp NOT NULL,
-                        image BLOB NOT NULL
-                    );
-                `);
-            } // fallthrough
-
-            case 1: {
-                await db.exec(`
-                    DROP TABLE events;
-                    DROP TABLE images;
-                    DROP TABLE tests;
-
-                    CREATE TABLE tests (
-                        id INTEGER PRIMARY KEY,
                         type TEXT NOT NULL,
                         title TEXT NOT NULL,
                         date INTEGER NOT NULL,
+                        timestamp INTEGER NOT NULL,
                         payload BLOB
                     );
 
@@ -160,7 +148,7 @@ async function openDatabase(filename, flags) {
                         data TEXT
                     );
 
-                    CREATE TABLE images (
+                    CREATE TABLE snapshots (
                         test INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
                         timestamp NOT NULL,
                         image BLOB NOT NULL
@@ -169,7 +157,7 @@ async function openDatabase(filename, flags) {
             } // fallthrough
         }
 
-        await db.exec('PRAGMA user_version = ' + target);
+        await db.exec('PRAGMA user_version = ' + DATABASE_VERSION);
     });
 
     return db;
@@ -294,7 +282,7 @@ async function runDashboard() {
                     <tbody>
                         ${tests.map(test => {
                             let mod = MODULES.find(mod => mod.key == test.type);
-                            let img = assets.main[mod.key];
+                            let img = assets.main[mod.icon];
 
                             return html`
                                 <tr>
@@ -315,7 +303,7 @@ async function runDashboard() {
                 </table>
                 <div class="modules">
                     ${MODULES.map(mod =>
-                        html`<button type="button" @click=${UI.wrap(e => createTest(mod.key))}>Nouveau ${mod.title.toLowerCase()}</button>`)}
+                        html`<button type="button" @click=${UI.wrap(e => createTest(mod.key))}>Nouveau ${mod.title}</button>`)}
                 </div>
             </div>
         </div>
@@ -327,8 +315,10 @@ async function createTest(type) {
 
     let test = {
         id: null,
+        type: type,
+        title: '',
         date: now,
-        type: type
+        timestamp: null
     };
 
     await changeTest(test);
@@ -378,13 +368,15 @@ async function changeTest(test) {
             let title = elements.title.value.trim();
             let date = (mod.historical ? elements.date.valueAsDate : new Date).valueOf();
 
-            let id = await db.pluck(`INSERT INTO tests (id, title, date, type) 
-                                     VALUES (?, ?, ?, ?)
-                                     ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                               date = excluded.date
-                                     RETURNING id`,
-                                    test.id, title, date, test.type);
-            test.id = id;
+            let ret = await db.fetch1(`INSERT INTO tests (id, type, title, date, timestamp)
+                                       VALUES (?, ?, ?, ?, ?)
+                                       ON CONFLICT DO UPDATE SET title = excluded.title,
+                                                                 date = excluded.date
+                                       RETURNING id, timestamp`,
+                                      test.id, test.type, title, date, performance.now());
+
+            test.id = ret.id;
+            test.timestamp = ret.timestamp;
         }
     });
 }
@@ -401,7 +393,7 @@ async function openTest(test) {
 
     let mod = MODULES.find(mod => mod.key == test.type);
 
-    active_mod = new mod.cls(db, test, main_el);
+    active_mod = await mod.prepare(db, test, main_el);
     await active_mod.start();
 }
 
