@@ -519,11 +519,11 @@ function NetworkWidget(mod, world) {
                         <div class="section">
                             ${Object.keys(PERSON_KINDS).map(kind => {
                                 let info = PERSON_KINDS[kind];
-                                return html`<button type="button" class=${'small' + (kind == new_kind ? ' active' : '')}
+                                return html`<button type="button" class=${'secondary small' + (kind == new_kind ? ' active' : '')}
                                                     @click=${UI.wrap(e => { new_kind = kind; render(); })}>${info.plural}</button>`;
                             })}
                             <div style="flex: 1;"></div>
-                            <button type="button" class="small" @click=${UI.wrap(add_subject)}>Ajouter</button>
+                            <button type="button" class="secondary small" @click=${UI.wrap(add_subject)}>Ajouter</button>
                         </div>
                         <table style="table-layout: fixed;">
                             <colgroup>
@@ -554,7 +554,7 @@ function NetworkWidget(mod, world) {
                                         </td>
                                         <td><input type="date" .value=${dateToString(subject.birthdate)}
                                                    @change=${UI.wrap(e => { subject.birthdate = e.target.value ? e.target.valueAsDate.valueOf() : null; render() })} /></td>
-                                        <td><button type="button" class="small"
+                                        <td><button type="button" class="secondary small"
                                                     @click=${UI.insist(e => { new_subjects = new_subjects.filter(it => it !== subject); render(); })}><img src=${assets.ui.delete} alt="Supprimer" /></button></td>
                                     </tr>
                                 `)}

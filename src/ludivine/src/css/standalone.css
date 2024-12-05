@@ -68,8 +68,8 @@ button.danger {
     color: var(--color);
 }
 button.insist {
-    background: #d33410 !important;
-    border-color: #d33410 !important;
+    background: var(--secondary_color) !important;
+    border-color: var(--secondary_color) !important;
     --color: white;
     color: var(--color) !important;
     transition: --color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
@@ -78,12 +78,7 @@ button.danger.insist {
     background: #951a0b !important;
     border-color: #951a0b !important;
 }
-button.small {
-    background: #ddd;
-    border: 1px solid #ddd;
-    color: black;
-    font-size: 0.7em;
-}
+button.small { font-size: 0.7em; }
 button.small > img {
     top: 2px;
     width: 12px;

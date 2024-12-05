@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { render, html, svg, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../web/libjs/common.js';
 import * as sqlite3 from '../../web/libjs/sqlite3.js';
 import { GENDERS } from './lib/constants.js';
@@ -27,7 +27,23 @@ import { TrackModule } from './track/track.js';
 import './css/ludivine.css';
 
 const DATABASE_FILENAME = 'LDV.db';
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
+
+const STUDIES = [
+    {
+        index: 1,
+        key: 'sociotrauma',
+        title: 'SocioTrauma',
+        online: true
+    },
+
+    {
+        index: 2,
+        key: 'calypsoT',
+        title: 'CALYPSO',
+        online: false
+    }
+];
 
 const MODULES = [
     {
@@ -164,6 +180,16 @@ async function openDatabase(filename, flags) {
                     ALTER TABLE meta ADD COLUMN picture TEXT;
                 `);
             } // fallthrough
+
+            case 2: {
+                await db.exec(`
+                    CREATE TABLE stakes (
+                        id INTEGER PRIMARY KEY,
+                        study TEXT NOT NULL
+                    );
+                    CREATE UNIQUE INDEX stakes_s ON stakes (study);
+                `);
+            } // fallthrough
         }
 
         await db.exec('PRAGMA user_version = ' + DATABASE_VERSION);
@@ -190,7 +216,7 @@ async function changeIdentity() {
 
             return html`
                 <div class="title">
-                    ${init ? 'Créer le sujet' : 'Modifier le sujet'}
+                    ${init ? 'Créer mon compte' : 'Modifier mon identité'}
                     ${!init ? html`
                         <div style="flex: 1;"></div>
                         <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
@@ -267,6 +293,7 @@ async function runDashboard() {
     }
 
     let tests = await db.fetchAll('SELECT id, type, title, date FROM tests ORDER BY id');
+    let stakes = await db.fetchAll('SELECT id, study FROM stakes');
 
     let now = (new Date).valueOf();
     let age = computeAge(identity.birthdate, now);
@@ -274,64 +301,98 @@ async function runDashboard() {
     render(html`
         <div class="dashboard">
             <div class="column">
-                <div class="box">
+                <div class="box profile">
                     <div class="title">${identity.name} (${age} ${age > 1 ? 'ans' : 'an'})</div>
-                    <img src=${identity.picture ?? assets.main.user} alt=""/>
+                    <img class="picture" src=${identity.picture ?? assets.main.user} alt=""/>
                     <button type="button" class="secondary"
                             @click=${UI.wrap(e => changeIdentity().then(runDashboard))}>Modifier mon identité</button>
                     <button type="button" class="secondary"
                             @click=${UI.wrap(e => changePicture().then(runDashboard))}>Modifier mon avatar</button>
                 </div>
+
                 <div class="box">
                     <button type="button" class="secondary"
-                            @click=${UI.wrap(e => exportDatabase(identity.name))}>Exporter mes données</button>
+                            @click=${UI.insist(e => exportDatabase(identity.name))}>Exporter mes données</button>
+                    <button type="button" class="danger"
+                            @click=${UI.confirm('Suppression définitive de toutes les données', deleteDatabase)}>Supprimer mon profil</button>
                 </div>
             </div>
 
-            <div class="box">
-                <div class="title">Tests libres</div>
-                <table>
-                    <colgroup>
-                        <col class="check"/>
-                        <col/>
-                        <col style="width: 200px;"/>
-                        <col style="width: 160px;"/>
-                    </colgroup>
-
-                    <thead>
-                        <tr>
-                            <th></th>
-                            <th>Titre</th>
-                            <th>Date</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        ${tests.map(test => {
-                            let mod = MODULES.find(mod => mod.key == test.type);
-                            let img = assets.main[mod.icon];
+            <div class="column">
+                <div class="box">
+                    <div class="title">Études</div>
+                    <div class="studies">
+                        ${STUDIES.map(study => {
+                            let stake = stakes.find(stake => stake.study == study.key);
 
                             return html`
-                                <tr>
-                                    <td class="picture" title=${mod.title}><img src=${img} alt=${mod.title}></td>
-                                    ${mod.editable ? html`<td><a @click=${UI.wrap(e => openTest(test))}>${test.title}</a></td>` : ''}
-                                    ${!mod.editable ? html`<td>${test.title}</td>` : ''}
-                                    ${mod.historical ? html`<td>${(new Date(test.date)).toLocaleDateString()}</td>` : ''}
-                                    ${!mod.historical ? html`<td>${(new Date(test.date)).toLocaleString()}</td>` : ''}
-                                    <td class="right">
-                                        <button type="button" class="small" @click=${UI.wrap(e => changeTest(test).then(runDashboard))}>Configurer</button>
-                                        <button type="button" class="small danger" @click=${UI.confirm(`Suppression de ${test.title}`, e => deleteTest(test.id).then(runDashboard))}>Supprimer</button>
-                                    </td>
-                                </tr>
+                                <div class="study">
+                                    <div class="info">
+                                        <b>Étude n°${study.index}</b><br>
+                                        ${study.title}
+                                    </div>
+                                    <div class=${study.online ? 'stake' : 'stake disabled'}>
+                                        ${renderProgress(stake != null ? 20 : 0, 100)}
+                                        ${stake != null ?
+                                            html`<button type="button" class="small"
+                                                         @click=${UI.wrap(e => openStudy(study))}>Reprendre</button>` : ''}
+                                        ${stake == null && study.online ?
+                                            html`<button type="button" class="secondary small"
+                                                         @click=${UI.insist(e => openStudy(study))}>Participer</button>` : ''}
+                                        ${stake == null && !study.online ?
+                                            html`<button type="button" class="secondary small" disabled>Prochainement</button>` : ''}
+                                    </div>
+                                </div>
                             `;
                         })}
-                        ${!tests.length ? html`<tr><td colspan="4" class="center">Aucun élément</td></tr>` : ''}
-                    </tbody>
-                </table>
-                <div class="actions">
-                    ${MODULES.map(mod =>
-                        html`<button type="button" @click=${UI.wrap(e => createTest(mod.key))}>Nouveau ${mod.title}</button>`)}
+                    </div>
+                </div>
+
+                <div class="box">
+                    <div class="title">Tests libres</div>
+                    <table>
+                        <colgroup>
+                            <col class="check"/>
+                            <col/>
+                            <col style="width: 200px;"/>
+                            <col style="width: 160px;"/>
+                        </colgroup>
+
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Titre</th>
+                                <th>Date</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            ${tests.map(test => {
+                                let mod = MODULES.find(mod => mod.key == test.type);
+                                let img = assets.main[mod.icon];
+
+                                return html`
+                                    <tr>
+                                        <td class="picture" title=${mod.title}><img src=${img} alt=${mod.title}></td>
+                                        ${mod.editable ? html`<td><a @click=${UI.wrap(e => openTest(test))}>${test.title}</a></td>` : ''}
+                                        ${!mod.editable ? html`<td>${test.title}</td>` : ''}
+                                        ${mod.historical ? html`<td>${(new Date(test.date)).toLocaleDateString()}</td>` : ''}
+                                        ${!mod.historical ? html`<td>${(new Date(test.date)).toLocaleString()}</td>` : ''}
+                                        <td class="right">
+                                            <button type="button" class="secondary small" @click=${UI.wrap(e => changeTest(test).then(runDashboard))}>Configurer</button>
+                                            <button type="button" class="danger small" @click=${UI.confirm(`Suppression de ${test.title}`, e => deleteTest(test.id).then(runDashboard))}>Supprimer</button>
+                                        </td>
+                                    </tr>
+                                `;
+                            })}
+                            ${!tests.length ? html`<tr><td colspan="4" class="center">Aucun test libre</td></tr>` : ''}
+                        </tbody>
+                    </table>
+                    <div class="actions">
+                        ${MODULES.map(mod =>
+                            html`<button type="button" @click=${UI.wrap(e => createTest(mod.key))}>Nouveau ${mod.title}</button>`)}
+                    </div>
                 </div>
             </div>
         </div>
@@ -372,7 +433,6 @@ async function blobToDataURL(blob) {
 
 async function exportDatabase(name) {
     let root = await navigator.storage.getDirectory();
-
     let handle = await root.getFileHandle(DATABASE_FILENAME);
     let src = await handle.getFile();
 
@@ -444,6 +504,42 @@ async function copyWithProgress(title, src, dest) {
     } finally {
         dialog.close();
     }
+}
+
+async function deleteDatabase() {
+    await db.close();
+
+    let root = await navigator.storage.getDirectory();
+    root.removeEntry(DATABASE_FILENAME);
+
+    window.onbeforeunload = null;
+    window.location.href = window.location.href;
+}
+
+function renderProgress(value, total) {
+    let ratio = (value / total);
+    let progress = Math.round(ratio * 100);
+
+    let array = 314.1;
+    let offset = array - ratio * array;
+
+    return svg`
+        <svg width="100" height="100" viewBox="-12.5 -12.5 125 125" style="transform: rotate(-90deg)">
+            <circle r="50" cx="50" cy="50" fill="transparent" stroke="#dddddd" stroke-width="10" stroke-dasharray=${array + 'px'} stroke-dashoffset="0"></circle>
+            <circle r="50" cx="50" cy="50" stroke="#383838" stroke-width="10" stroke-linecap="butt" stroke-dasharray=${array + 'px'} stroke-dashoffset=${offset + 'px'} fill="transparent"></circle>
+            <text x="50px" y="53px" fill="#383838" font-size="19px" font-weight="bold" text-anchor="middle" style="transform: rotate(90deg) translate(0px, -96px)">${progress}%</text>
+        </svg>
+    `;
+}
+
+async function openStudy(study) {
+    await db.exec(`INSERT INTO stakes (study)
+                   VALUES (?)
+                   ON CONFLICT DO NOTHING`,
+                  study.key);
+
+    Log.info('Bientôt !');
+    runDashboard();
 }
 
 async function createTest(type) {

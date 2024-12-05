@@ -41,6 +41,14 @@
     color: #364b9b;
 }
 
+.dashboard .profile { background: #ebedf5; }
+.dashboard .picture {
+    width: 133px;
+    height: 133px;
+    margin: 0 auto;
+    border-radius: 50%;
+    border: 5px solid #e9a07f;
+}
 .dashboard table {
     width: 600px;
     table-layout: fixed;
@@ -49,4 +57,27 @@
     display: flex;
     gap: 1em;
     justify-content: center;
+}
+
+.studies {
+    display: flex;
+    gap: 2em;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.study {
+    display: flex;
+    width: 40%;
+    background: #efefef;
+    border-radius: 10px;
+    padding: 0.5em 1em;
+    align-items: center;
+}
+.study.active { background: #eca17f; }
+.study {
+    & .info { flex: 1; }
+    & .stake {
+        flex: 0;
+        text-align: center;
+    }
 }
