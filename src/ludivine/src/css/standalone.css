@@ -13,19 +13,38 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
+@import url('./web.css');
+
 html {
     --primary_color: #364b9b;
     --secondary_color: #d9bf69;
+
+    --top_height: 80px;
+    --top_background: #fdfbf8;
+    --footer_background: #fdfbf8;
 }
 
 body {
+    min-height: 100%;
     margin: 0;
     padding: 0;
 
     font-family: 'Open Sans', sans-serif;
-    font-size: 15px;
+    font-size: 17px;
     line-height: 1.5;
+
+    display: flex;
+    flex-direction: column;
 }
+
+main {
+    position: relative;
+    width: 100%;
+    flex: 1;
+
+    font-size: 15px;
+}
+.dialog { font-size: 15px; }
 
 *:focus {
     border-color: var(--secondary_color);

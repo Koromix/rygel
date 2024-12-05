@@ -14,7 +14,7 @@
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
 .net_menu {
-    position: fixed;
+    position: absolute;
     display: flex;
     gap: 6px;
     z-index: 1;
@@ -29,7 +29,7 @@
     padding-right: 20px;
 }
 .net_toolbox {
-    position: fixed;
+    position: absolute;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -42,7 +42,7 @@
 }
 .net_toolbox > button { height: 36px; }
 .net_canvas {
-    position: fixed;
+    position: absolute;
     z-index: 0;
 
     left: 240px;

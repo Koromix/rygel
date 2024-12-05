@@ -1,0 +1,59 @@
+/* Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
+#top {
+    position: sticky;
+    top: 0;
+    background: var(--top_background);
+    z-index: 9;
+    border-bottom: 2px solid var(--top_background);
+    transition: border-bottom-color 0.4s ease;
+}
+#top menu {
+    position: sticky;
+    top: 0;
+    box-sizing: border-box;
+    max-width: 1200px;
+    height: var(--top_height);
+    box-sizing: border-box;
+    margin: 0 auto;
+    padding: 16px 16px 24px 16px;
+    overflow: visible;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+#logo {
+    height: 70%;
+    object-fit: contain;
+    margin-right: 2em;
+    transition: filter 0.4s ease;
+}
+#logo > img {
+    margin: -16px;
+    width: calc(100% + 32px);
+    height: calc(100% + 36px);
+    object-fit: contain;
+}
+
+footer {
+    padding: 0.5em;
+    background: var(--footer_background);
+    display: flex;
+    gap: 1.5em;
+    align-items: center;
+    justify-content: center;
+}

@@ -350,7 +350,7 @@ async function runDashboard() {
 
                 <div class="box">
                     <div class="title">Tests libres</div>
-                    <table>
+                    <table style="table-layout: fixed;">
                         <colgroup>
                             <col class="check"/>
                             <col/>

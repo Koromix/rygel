@@ -40,23 +40,19 @@
     text-align: center;
     color: #364b9b;
 }
+.dashboard .actions {
+    display: flex;
+    gap: 1em;
+    justify-content: center;
+}
 
-.dashboard .profile { background: #ebedf5; }
-.dashboard .picture {
+.profile { background: #ebedf5; }
+.profile .picture {
     width: 133px;
     height: 133px;
     margin: 0 auto;
     border-radius: 50%;
     border: 5px solid #e9a07f;
-}
-.dashboard table {
-    width: 600px;
-    table-layout: fixed;
-}
-.dashboard .actions {
-    display: flex;
-    gap: 1em;
-    justify-content: center;
 }
 
 .studies {
