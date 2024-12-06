@@ -119,9 +119,9 @@ const char *Builder::AddQtResource(const TargetInfo &target, Span<const char *> 
         const char *flags = GatherFlags(target, SourceType::Cxx);
 
         Command cmd = {};
-        build.compiler->MakeObjectCommand(cpp_filename, SourceType::Cxx,
-                                          nullptr, {}, {}, {}, {}, flags, features,
-                                          obj_filename, &str_alloc, &cmd);
+        build.compiler->MakeCppCommand(cpp_filename, SourceType::Cxx,
+                                       nullptr, {}, {}, {}, {}, flags, features,
+                                       obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 QRC resources", target.name).ptr;
         AppendNode(text, obj_filename, cmd, cpp_filename);
@@ -365,11 +365,11 @@ bool Builder::CompileMocHelper(const SourceFileInfo &src, Span<const char *const
             const char *flags = GatherFlags(*src.target, SourceType::Cxx);
 
             Command cmd = {};
-            build.compiler->MakeObjectCommand(moc_filename, SourceType::Cxx,
-                                              nullptr, src.target->definitions,
-                                              src.target->include_directories, system_directories,
-                                              {}, flags, features,
-                                              obj_filename, &str_alloc, &cmd);
+            build.compiler->MakeCppCommand(moc_filename, SourceType::Cxx,
+                                           nullptr, src.target->definitions,
+                                           src.target->include_directories, system_directories,
+                                           {}, flags, features,
+                                           obj_filename, &str_alloc, &cmd);
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Build MOC for %!..+%1%!0", src.filename).ptr;
             AppendNode(text, obj_filename, cmd, moc_filename);
@@ -417,9 +417,9 @@ R"(#include <QtCore/QtPlugin>
 
     // Build object file
     Command cmd = {};
-    build.compiler->MakeObjectCommand(src_filename, SourceType::Cxx,
-                                      nullptr, {}, {}, qt->headers, {}, flags, features,
-                                      obj_filename,  &str_alloc, &cmd);
+    build.compiler->MakeCppCommand(src_filename, SourceType::Cxx,
+                                   nullptr, {}, {}, qt->headers, {}, flags, features,
+                                   obj_filename,  &str_alloc, &cmd);
 
     const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 static Qt helper", target.name).ptr;
     AppendNode(text, obj_filename, cmd, src_filename);

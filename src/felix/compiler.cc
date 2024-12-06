@@ -460,8 +460,8 @@ public:
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
-                          include_files, custom_flags, features, nullptr, alloc, out_cmd);
+        MakeCppCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
+                       include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -473,11 +473,11 @@ public:
     }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type,
-                           const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+    void MakeCppCommand(const char *src_filename, SourceType src_type,
+                        const char *pch_filename, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, Span<const char *const> system_directories,
+                        Span<const char *const> include_files, const char *custom_flags, uint32_t features,
+                        const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -1089,8 +1089,8 @@ public:
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
-                          include_files, custom_flags, features, nullptr, alloc, out_cmd);
+        MakeCppCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
+                       include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -1102,11 +1102,11 @@ public:
     }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type,
-                           const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+    void MakeCppCommand(const char *src_filename, SourceType src_type,
+                        const char *pch_filename, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, Span<const char *const> system_directories,
+                        Span<const char *const> include_files, const char *custom_flags, uint32_t features,
+                        const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -1605,8 +1605,8 @@ public:
                         Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        MakeObjectCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
-                          include_files, custom_flags, features, nullptr, alloc, out_cmd);
+        MakeCppCommand(pch_filename, src_type, nullptr, definitions, include_directories, {},
+                       include_files, custom_flags, features, nullptr, alloc, out_cmd);
     }
 
     const char *GetPchCache(const char *pch_filename, Allocator *alloc) const override
@@ -1624,11 +1624,11 @@ public:
         return obj_filename;
     }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type,
-                           const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+    void MakeCppCommand(const char *src_filename, SourceType src_type,
+                        const char *pch_filename, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, Span<const char *const> system_directories,
+                        Span<const char *const> include_files, const char *custom_flags, uint32_t features,
+                        const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -1905,11 +1905,11 @@ public:
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type,
-                           const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+    void MakeCppCommand(const char *src_filename, SourceType src_type,
+                        const char *pch_filename, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, Span<const char *const> system_directories,
+                        Span<const char *const> include_files, const char *custom_flags, uint32_t features,
+                        const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 
@@ -2228,11 +2228,11 @@ public:
     const char *GetPchCache(const char *, Allocator *) const override { return nullptr; }
     const char *GetPchObject(const char *, Allocator *) const override { return nullptr; }
 
-    void MakeObjectCommand(const char *src_filename, SourceType src_type,
-                           const char *pch_filename, Span<const char *const> definitions,
-                           Span<const char *const> include_directories, Span<const char *const> system_directories,
-                           Span<const char *const> include_files, const char *custom_flags, uint32_t features,
-                           const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
+    void MakeCppCommand(const char *src_filename, SourceType src_type,
+                        const char *pch_filename, Span<const char *const> definitions,
+                        Span<const char *const> include_directories, Span<const char *const> system_directories,
+                        Span<const char *const> include_files, const char *custom_flags, uint32_t features,
+                        const char *dest_filename, Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
 

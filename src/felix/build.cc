@@ -357,13 +357,13 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             const char *flags = GatherFlags(target, SourceType::C);
 
             if (module) {
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  nullptr, {"EXPORT"}, {}, {}, {}, flags, features,
-                                                  obj_filename, &str_alloc, &cmd);
+                build.compiler->MakeCppCommand(src_filename, SourceType::C,
+                                               nullptr, {"EXPORT"}, {}, {}, {}, flags, features,
+                                               obj_filename, &str_alloc, &cmd);
             } else {
-                build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                                  nullptr, {}, {}, {}, {}, flags, features,
-                                                  obj_filename,  &str_alloc, &cmd);
+                build.compiler->MakeCppCommand(src_filename, SourceType::C,
+                                               nullptr, {}, {}, {}, {}, flags, features,
+                                               obj_filename,  &str_alloc, &cmd);
             }
 
             const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 assets", target.name).ptr;
@@ -414,9 +414,9 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
             return false;
 
         Command cmd = InitCommand();
-        build.compiler->MakeObjectCommand(src_filename, SourceType::C,
-                                          nullptr, {}, {}, {}, {}, flags, features,
-                                          obj_filename, &str_alloc, &cmd);
+        build.compiler->MakeCppCommand(src_filename, SourceType::C,
+                                       nullptr, {}, {}, {}, {}, flags, features,
+                                       obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0 version file", target.name).ptr;
         AppendNode(text, obj_filename, cmd, src_filename);
@@ -625,11 +625,11 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
             return false;
 
         Command cmd = InitCommand();
-        build.compiler->MakeObjectCommand(src.filename, src.type,
-                                          pch_filename, src.target->definitions,
-                                          src.target->include_directories, system_directories,
-                                          src.target->include_files, flags, features,
-                                          obj_filename, &str_alloc, &cmd);
+        build.compiler->MakeCppCommand(src.filename, src.type,
+                                       pch_filename, src.target->definitions,
+                                       src.target->include_directories, system_directories,
+                                       src.target->include_files, flags, features,
+                                       obj_filename, &str_alloc, &cmd);
 
         const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Compile %!..+%1%!0", src.filename).ptr;
         bool append = pch_filename ? AppendNode(text, obj_filename, cmd, { src.filename, pch_filename })
