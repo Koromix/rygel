@@ -2688,39 +2688,33 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
 {
     Span<const char> extension = GetPathExtension(filename);
 
+    SourceType type = SourceType::C;
+    bool found = false;
+
     if (extension == ".c") {
-        if (out_type) {
-            *out_type = SourceType::C;
-        }
-        return true;
+        type = SourceType::C;
+        found = true;
     } else if (extension == ".cc" || extension == ".cpp") {
-        if (out_type) {
-            *out_type = SourceType::Cxx;
-        }
-        return true;
+        type = SourceType::Cxx;
+        found = true;
     } else if (extension == ".o" || extension == ".obj") {
-        if (out_type) {
-            *out_type = SourceType::Object;
-        }
-        return true;
+        type = SourceType::Object;
+        found = true;
     } else if (extension == ".js" || extension == ".css") {
-        if (out_type) {
-            *out_type = SourceType::Esbuild;
-        }
-        return true;
+        type = SourceType::Esbuild;
+        found = true;
     } else if (extension == ".ui") {
-        if (out_type) {
-            *out_type = SourceType::QtUi;
-        }
-        return true;
+        type = SourceType::QtUi;
+        found = true;
     } else if (extension == ".qrc") {
-        if (out_type) {
-            *out_type = SourceType::QtResources;
-        }
-        return true;
-    } else {
-        return false;
+        type = SourceType::QtResources;
+        found = true;
     }
+
+    if (found && out_type) {
+        *out_type = type;
+    }
+    return found;
 }
 
 static const SupportedCompiler CompilerTable[] = {
