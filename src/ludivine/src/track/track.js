@@ -38,13 +38,13 @@ function TrackModule(db, test, root_el, experiment) {
         let video = null;
         let tracker = null;
 
+        let commit_timer = setTimeout(commit, COMMIT_INTERVAL);
+        await db.exec('BEGIN');
+
         async function commit() {
             await db.exec(`COMMIT; BEGIN;`);
             commit_timer = setTimeout(commit, COMMIT_INTERVAL);
         }
-
-        let commit_timer = setTimeout(commit, COMMIT_INTERVAL);
-        await db.exec('BEGIN');
 
         try {
             input.start();
