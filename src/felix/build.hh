@@ -159,6 +159,7 @@ private:
     bool PrepareEsbuild();
 
     bool AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *obj_filenames = nullptr);
+    bool AddAssemblySource(const SourceFileInfo &src, HeapArray<const char *> *obj_filenames = nullptr);
     const char *AddEsbuildSource(const SourceFileInfo &src);
     const char *AddQtUiSource(const SourceFileInfo &src);
     const char *AddQtResource(const TargetInfo &target, Span<const char *> qrc_filenames);

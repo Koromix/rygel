@@ -539,6 +539,13 @@ const TargetInfo *TargetSetBuilder::CreateTarget(TargetConfig *target_config)
             if (!DetermineSourceType(src_filename, &src_type))
                 continue;
 
+            if (src_type == SourceType::GnuAssembly || src_type == SourceType::MicrosoftAssembly) {
+                bool assemble = compiler->CanAssemble(src_type);
+
+                if (!assemble)
+                    continue;
+            }
+
             const SourceFileInfo *src = CreateSource(target, src_filename, src_type, features);
             target->sources.Append(src);
         }

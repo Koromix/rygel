@@ -225,78 +225,79 @@ public:
             Fmt(cmd, "\"%1\" --version", compiler->cc);
 
             HeapArray<char> output;
-            if (ReadCommandOutput(cmd, &output)) {
-                compiler->clang_ver = ParseVersion(cmd, output, "version");
+            if (!ReadCommandOutput(cmd, &output))
+                return false;
 
-                HostArchitecture architecture = ParseTarget(output);
+            compiler->clang_ver = ParseVersion(cmd, output, "version");
 
-                if (architecture == HostArchitecture::Unknown) {
-                    LogError("Cannot determine default Clang architecture");
-                    return false;
-                }
+            HostArchitecture architecture = ParseTarget(output);
 
-                if (compiler->architecture == HostArchitecture::Unknown) {
-                    compiler->architecture = architecture;
+            if (architecture == HostArchitecture::Unknown) {
+                LogError("Cannot determine default Clang architecture");
+                return false;
+            }
+
+            if (compiler->architecture == HostArchitecture::Unknown) {
+                compiler->architecture = architecture;
 #if defined(_WIN32)
-                } else {
-                    switch (compiler->architecture) {
-                        case HostArchitecture::x86: { compiler->target = "-m32"; } break;
-                        case HostArchitecture::x86_64: { compiler->target = "-m64"; } break;
+            } else {
+                switch (compiler->architecture) {
+                    case HostArchitecture::x86: { compiler->target = "-m32"; } break;
+                    case HostArchitecture::x86_64: { compiler->target = "-m64"; } break;
 
-                        case HostArchitecture::ARM64:
-                        case HostArchitecture::RISCV64:
-                        case HostArchitecture::ARM32:
-                        case HostArchitecture::Web32: {
-                            LogError("Cannot use Clang (Windows) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
-                            return false;
-                        } break;
+                    case HostArchitecture::ARM64:
+                    case HostArchitecture::RISCV64:
+                    case HostArchitecture::ARM32:
+                    case HostArchitecture::Web32: {
+                        LogError("Cannot use Clang (Windows) to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
+                        return false;
+                    } break;
 
-                        case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
-                    }
-#elif !defined(__APPLE_)
-                } else {
-                    const char *prefix = nullptr;
-                    const char *suffix = nullptr;
-
-                    switch (compiler->architecture)  {
-                        case HostArchitecture::x86: { prefix = "i386"; } break;
-                        case HostArchitecture::x86_64: { prefix = "x86_64"; } break;
-                        case HostArchitecture::ARM64: { prefix = "aarch64"; } break;
-                        case HostArchitecture::RISCV64: { prefix = "riscv64"; } break;
-                        case HostArchitecture::Web32: { prefix = "wasm32"; } break;
-
-                        case HostArchitecture::ARM32: {
-                            LogError("Cannot use Clang to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
-                            return false;
-                        } break;
-
-                        case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
-                    }
-
-                    switch (compiler->platform) {
-                        case HostPlatform::Linux: { suffix = "pc-linux-gnu"; } break;
-                        case HostPlatform::FreeBSD: { suffix = "freebsd-unkown"; } break;
-                        case HostPlatform::OpenBSD: { suffix = "openbsd-unkown"; } break;
-
-                        case HostPlatform::WasmWasi: {
-                            RG_ASSERT(sysroot);
-                            suffix = "wasi";
-                        } break;
-
-                        default: {
-                            LogError("Cannot use Clang to build for '%1'", HostPlatformNames[(int)compiler->platform]);
-                            return false;
-                        } break;
-                    }
-
-                    compiler->target = Fmt(&compiler->str_alloc, "--target=%1-%2", prefix, suffix).ptr;
-#else
-                } else if (compiler->architecture != architecture) {
-                    LogError("Cannot use Clang (%1) compiler to build for '%2'",
-                             HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
-                    return false;
-#endif
+                    case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
                 }
+#elif !defined(__APPLE_)
+            } else {
+                const char *prefix = nullptr;
+                const char *suffix = nullptr;
+
+                switch (compiler->architecture)  {
+                    case HostArchitecture::x86: { prefix = "i386"; } break;
+                    case HostArchitecture::x86_64: { prefix = "x86_64"; } break;
+                    case HostArchitecture::ARM64: { prefix = "aarch64"; } break;
+                    case HostArchitecture::RISCV64: { prefix = "riscv64"; } break;
+                    case HostArchitecture::Web32: { prefix = "wasm32"; } break;
+
+                    case HostArchitecture::ARM32: {
+                        LogError("Cannot use Clang to build for '%1'", HostArchitectureNames[(int)compiler->architecture]);
+                        return false;
+                    } break;
+
+                    case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+                }
+
+                switch (compiler->platform) {
+                    case HostPlatform::Linux: { suffix = "pc-linux-gnu"; } break;
+                    case HostPlatform::FreeBSD: { suffix = "freebsd-unkown"; } break;
+                    case HostPlatform::OpenBSD: { suffix = "openbsd-unkown"; } break;
+
+                    case HostPlatform::WasmWasi: {
+                        RG_ASSERT(sysroot);
+                        suffix = "wasi";
+                    } break;
+
+                    default: {
+                        LogError("Cannot use Clang to build for '%1'", HostPlatformNames[(int)compiler->platform]);
+                        return false;
+                    } break;
+                }
+
+                compiler->target = Fmt(&compiler->str_alloc, "--target=%1-%2", prefix, suffix).ptr;
+#else
+            } else if (compiler->architecture != architecture) {
+                LogError("Cannot use Clang (%1) compiler to build for '%2'",
+                         HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
+                return false;
+#endif
             }
 
             return true;
@@ -412,6 +413,19 @@ public:
         *out_features = features;
         return true;
     }
+    bool CanAssemble(SourceType type) const override
+    {
+        switch (platform) {
+            case HostPlatform::Windows: return (type == SourceType::MicrosoftAssembly);
+
+            case HostPlatform::Linux:
+            case HostPlatform::macOS:
+            case HostPlatform::OpenBSD:
+            case HostPlatform::FreeBSD: return (type == SourceType::GnuAssembly);
+
+            default: return false;
+        }
+    }
 
     const char *GetObjectExtension() const override { return (platform == HostPlatform::Windows) ? ".obj" : ".o"; }
     const char *GetLinkExtension(TargetType type) const override
@@ -499,6 +513,9 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=%2", cxx, clang_ver >= 100000 ? "gnu++20" : "gnu++2a"); } break;
+
+            case SourceType::GnuAssembly:
+            case SourceType::MicrosoftAssembly:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -510,6 +527,9 @@ public:
             switch (src_type) {
                 case SourceType::C: { Fmt(&buf, " -x c-header -Xclang -fno-pch-timestamp -o \"%1.pch\"", src_filename); } break;
                 case SourceType::Cxx: { Fmt(&buf, " -x c++-header -Xclang -fno-pch-timestamp -o \"%1.pch\"", src_filename); } break;
+
+                case SourceType::GnuAssembly:
+                case SourceType::MicrosoftAssembly:
                 case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
@@ -698,6 +718,58 @@ public:
         }
         for (const char *include_file: include_files) {
             Fmt(&buf, " -include \"%1\"", include_file);
+        }
+
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
+        }
+
+        out_cmd->cache_len = buf.len;
+        if (FileIsVt100(STDOUT_FILENO)) {
+            Fmt(&buf, " -fcolor-diagnostics -fansi-escape-codes");
+        } else {
+            Fmt(&buf, " -fno-color-diagnostics");
+        }
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+
+        // Dependencies
+        out_cmd->deps_mode = Command::DependencyMode::MakeLike;
+        out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
+    }
+
+    void MakeAssemblyCommand(const char *src_filename, Span<const char *const> definitions,
+                             Span<const char *const> include_directories, const char *custom_flags,
+                             uint32_t features, const char *dest_filename,
+                             Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        HeapArray<char> buf(alloc);
+
+        // Compiler
+        Fmt(&buf, "\"%1\" -o \"%2\"", cc, dest_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Cross-compilation
+        AddClangTarget(&buf);
+
+        // Build options
+        Fmt(&buf, " -I.");
+        if (features & ((int)CompileFeature::MinimizeSize | (int)CompileFeature::Optimize)) {
+            Fmt(&buf, " -DNDEBUG");
+        }
+
+        // Include build directory (for generated files)
+        Span<const char> dest_directory = GetPathDirectory(dest_filename);
+        Fmt(&buf, " \"-I%1\"", dest_directory);
+
+        // Sources and definitions
+        Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
+        for (const char *definition: definitions) {
+            Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " \"-I%1\"", include_directory);
         }
 
         if (custom_flags) {
@@ -953,28 +1025,29 @@ public:
             Fmt(cmd, "\"%1\" -v", compiler->cc);
 
             HeapArray<char> output;
-            if (ReadCommandOutput(cmd, &output)) {
-                compiler->gcc_ver = ParseVersion(cmd, output, "version");
+            if (!ReadCommandOutput(cmd, &output))
+                return nullptr;
 
-                HostArchitecture architecture = ParseTarget(output);
+            compiler->gcc_ver = ParseVersion(cmd, output, "version");
 
-                if (architecture == HostArchitecture::Unknown) {
-                    LogError("Cannot determine default GCC architecture");
-                    return nullptr;
-                }
+            HostArchitecture architecture = ParseTarget(output);
 
-                if (compiler->architecture == HostArchitecture::Unknown) {
-                    compiler->architecture = architecture;
+            if (architecture == HostArchitecture::Unknown) {
+                LogError("Cannot determine default GCC architecture");
+                return nullptr;
+            }
+
+            if (compiler->architecture == HostArchitecture::Unknown) {
+                compiler->architecture = architecture;
 #if defined(__x86_64__)
-                } else if (architecture == HostArchitecture::x86_64 &&
-                           compiler->architecture == HostArchitecture::x86) {
-                    compiler->m32 = true;
+            } else if (architecture == HostArchitecture::x86_64 &&
+                       compiler->architecture == HostArchitecture::x86) {
+                compiler->m32 = true;
 #endif
-                } else if (compiler->architecture != architecture) {
-                    LogError("Cannot use GCC (%1) compiler to build for '%2'",
-                             HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
-                    return nullptr;
-                }
+            } else if (compiler->architecture != architecture) {
+                LogError("Cannot use GCC (%1) compiler to build for '%2'",
+                         HostArchitectureNames[(int)architecture], HostArchitectureNames[(int)compiler->architecture]);
+                return nullptr;
             }
         };
 
@@ -1046,6 +1119,7 @@ public:
         *out_features = features;
         return true;
     }
+    bool CanAssemble(SourceType type) const override { return (type == SourceType::GnuAssembly); }
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType type) const override
@@ -1128,6 +1202,9 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=%2", cxx, gcc_ver >= 110000 ? "gnu++20" : "gnu++2a"); } break;
+
+            case SourceType::GnuAssembly:
+            case SourceType::MicrosoftAssembly:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -1139,6 +1216,9 @@ public:
             switch (src_type) {
                 case SourceType::C: { Fmt(&buf, " -x c-header"); } break;
                 case SourceType::Cxx: { Fmt(&buf, " -x c++-header"); } break;
+
+                case SourceType::GnuAssembly:
+                case SourceType::MicrosoftAssembly:
                 case SourceType::Object:
                 case SourceType::Esbuild:
                 case SourceType::QtUi:
@@ -1291,6 +1371,55 @@ public:
         }
         for (const char *include_file: include_files) {
             Fmt(&buf, " -include \"%1\"", include_file);
+        }
+
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
+        }
+
+        out_cmd->cache_len = buf.len;
+        if (FileIsVt100(STDOUT_FILENO)) {
+            Fmt(&buf, " -fdiagnostics-color=always");
+        } else {
+            Fmt(&buf, " -fdiagnostics-color=never");
+        }
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+
+        // Dependencies
+        out_cmd->deps_mode = Command::DependencyMode::MakeLike;
+        out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
+    }
+
+    void MakeAssemblyCommand(const char *src_filename, Span<const char *const> definitions,
+                             Span<const char *const> include_directories, const char *custom_flags,
+                             uint32_t features, const char *dest_filename,
+                             Allocator *alloc, Command *out_cmd) const override
+    {
+        RG_ASSERT(alloc);
+
+        HeapArray<char> buf(alloc);
+
+        // Compiler
+        Fmt(&buf, "\"%1\" -o \"%2\"", cc, dest_filename);
+        out_cmd->rsp_offset = buf.len;
+
+        // Build options
+        Fmt(&buf, " -I.");
+        if (features & ((int)CompileFeature::MinimizeSize | (int)CompileFeature::Optimize)) {
+            Fmt(&buf, " -DNDEBUG");
+        }
+
+        // Include build directory (for generated files)
+        Span<const char> dest_directory = GetPathDirectory(dest_filename);
+        Fmt(&buf, " \"-I%1\"", dest_directory);
+
+        // Sources and definitions
+        Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
+        for (const char *definition: definitions) {
+            Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " \"-I%1\"", include_directory);
         }
 
         if (custom_flags) {
@@ -1463,6 +1592,7 @@ public:
 #if defined(_WIN32)
 class MsCompiler final: public Compiler {
     const char *cl;
+    const char *assembler;
     const char *rc;
     const char *link;
 
@@ -1477,7 +1607,39 @@ public:
     {
         std::unique_ptr<MsCompiler> compiler = std::make_unique<MsCompiler>(architecture);
 
-        // Find executables
+        // Determine CL version
+        {
+            char cmd[2048];
+            Fmt(cmd, "\"%1\"", cl);
+
+            HeapArray<char> output;
+            if (!ReadCommandOutput(cmd, &output))
+                return nullptr;
+
+            compiler->cl_ver = ParseVersion(cmd, output, "Version");
+
+            Span<const char> intro = SplitStrLine(output.As<const char>());
+            HostArchitecture architecture = {};
+
+            if (EndsWith(intro, " x86")) {
+                architecture = HostArchitecture::x86;
+            } else if (EndsWith(intro, " x64")) {
+                architecture = HostArchitecture::x86_64;
+            } else {
+                LogError("Cannot determine MS compiler architecture");
+                return nullptr;
+            }
+
+            if (compiler->architecture == HostArchitecture::Unknown) {
+                compiler->architecture = architecture;
+            } else if (compiler->architecture != architecture) {
+                LogError("Mismatch between target architecture '%1' and compiler architecture '%2'",
+                         HostArchitectureNames[(int)compiler->architecture], HostArchitectureNames[(int)architecture]);
+                return nullptr;
+            }
+        }
+
+        // Find main executables
         {
             Span<const char> prefix;
             Span<const char> suffix;
@@ -1487,38 +1649,17 @@ public:
 
             compiler->cl = DuplicateString(cl, &compiler->str_alloc).ptr;
             compiler->rc = Fmt(&compiler->str_alloc, "%1rc%2", prefix, version).ptr;
-            compiler->link = Fmt(&compiler->str_alloc, "%1link%2", prefix, version).ptr;
-        }
+            switch (compiler->architecture) {
+                case HostArchitecture::x86: { compiler->assembler = Fmt(&compiler->str_alloc, "%1ml%2", prefix, version).ptr; } break;
+                case HostArchitecture::x86_64: { compiler->assembler = Fmt(&compiler->str_alloc, "%1ml64%2", prefix, version).ptr; } break;
+                case HostArchitecture::ARM64: { compiler->assembler = Fmt(&compiler->str_alloc, "%1armasm64%2", prefix, version).ptr; } break;
 
-        // Determine CL version
-        {
-            char cmd[2048];
-            Fmt(cmd, "\"%1\"", compiler->cl);
-
-            HeapArray<char> output;
-            if (ReadCommandOutput(cmd, &output)) {
-                compiler->cl_ver = ParseVersion(cmd, output, "Version");
-
-                Span<const char> intro = SplitStrLine(output.As<const char>());
-                HostArchitecture architecture = {};
-
-                if (EndsWith(intro, " x86")) {
-                    architecture = HostArchitecture::x86;
-                } else if (EndsWith(intro, " x64")) {
-                    architecture = HostArchitecture::x86_64;
-                } else {
-                    LogError("Cannot determine MS compiler architecture");
-                    return nullptr;
-                }
-
-                if (compiler->architecture == HostArchitecture::Unknown) {
-                    compiler->architecture = architecture;
-                } else if (compiler->architecture != architecture) {
-                    LogError("Mismatch between target architecture '%1' and compiler architecture '%2'",
-                             HostArchitectureNames[(int)compiler->architecture], HostArchitectureNames[(int)architecture]);
-                    return nullptr;
-                }
+                case HostArchitecture::ARM32:
+                case HostArchitecture::RISCV64:
+                case HostArchitecture::Web32:
+                case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
             }
+            compiler->link = Fmt(&compiler->str_alloc, "%1link%2", prefix, version).ptr;
         }
 
         Fmt(compiler->title, "%1 %2", compiler->name, FmtVersion(compiler->cl_ver, 3, 100));
@@ -1564,6 +1705,7 @@ public:
         *out_features = features;
         return true;
     }
+    bool CanAssemble(SourceType type) const override { return (type == SourceType::MicrosoftAssembly); }
 
     const char *GetObjectExtension() const override { return ".obj"; }
     const char *GetLinkExtension(TargetType type) const override
@@ -1638,6 +1780,9 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" /nologo", cl); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" /nologo /std:c++20 /Zc:__cplusplus", cl); } break;
+
+            case SourceType::GnuAssembly:
+            case SourceType::MicrosoftAssembly:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -1743,6 +1888,30 @@ public:
         out_cmd->deps_mode = Command::DependencyMode::ShowIncludes;
     }
 
+    void MakeAssemblyCommand(const char *src_filename, Span<const char *const> definitions,
+                             Span<const char *const> include_directories, const char *custom_flags,
+                             uint32_t features, const char *dest_filename,
+                             Allocator *alloc, Command *out_cmd) const override
+    {
+        switch (architecture) {
+            case HostArchitecture::x86:
+            case HostArchitecture::x86_64: {
+                MakeMasmCommand(src_filename, definitions, include_directories,
+                                custom_flags, features, dest_filename, alloc, out_cmd);
+            } break;
+
+            case HostArchitecture::ARM64: {
+                MakeArmAsmCommand(src_filename, definitions, include_directories,
+                                  custom_flags, features, dest_filename, alloc, out_cmd);
+            } break;
+
+            case HostArchitecture::ARM32:
+            case HostArchitecture::RISCV64:
+            case HostArchitecture::Web32:
+            case HostArchitecture::Unknown: { RG_UNREACHABLE(); } break;
+        }
+    }
+
     void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd) const override
     {
@@ -1814,6 +1983,88 @@ public:
     }
 
     void MakePostCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
+
+private:
+    void MakeMasmCommand(const char *src_filename, Span<const char *const> definitions,
+                         Span<const char *const> include_directories, const char *custom_flags,
+                         uint32_t features, const char *dest_filename,
+                         Allocator *alloc, Command *out_cmd) const
+    {
+        RG_ASSERT(alloc);
+
+        HeapArray<char> buf(alloc);
+
+        // Compiler
+        Fmt(&buf, "\"%1\" /c /nologo /Fo\"%2\"", assembler, dest_filename);
+
+        // Build options
+        Fmt(&buf, " -I.");
+        if (features & (int)CompileFeature::Warnings) {
+            Fmt(&buf, " /W3");
+        } else {
+            Fmt(&buf, " /w");
+        }
+
+        // Include build directory (for generated files)
+        Span<const char> dest_directory = GetPathDirectory(dest_filename);
+        Fmt(&buf, " \"/I%1\"", dest_directory);
+
+        // Platform flags
+        Fmt(&buf, " /DWINVER=0x0601 /D_WIN32_WINNT=0x0601 /DUNICODE /D_UNICODE");
+
+        // Sources and definitions
+        Fmt(&buf, " /DFELIX /c /utf-8 /Ta\"%1\"", src_filename);
+        for (const char *definition: definitions) {
+            Fmt(&buf, " \"/%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
+        }
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " \"/I%1\"", include_directory);
+        }
+
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
+        }
+
+        out_cmd->cache_len = buf.len;
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+        out_cmd->skip_lines = 1;
+    }
+
+    void MakeArmAsmCommand(const char *src_filename, Span<const char *const>,
+                           Span<const char *const> include_directories, const char *custom_flags,
+                           uint32_t features, const char *dest_filename,
+                           Allocator *alloc, Command *out_cmd) const
+    {
+        RG_ASSERT(alloc);
+
+        HeapArray<char> buf(alloc);
+
+        // Compiler
+        Fmt(&buf, "\"%1\" -nologo -o \"%2\"", assembler, dest_filename);
+
+        // Build options
+        Fmt(&buf, " -i.");
+        if (!(features & (int)CompileFeature::Warnings)) {
+            Fmt(&buf, " -nowarn");
+        }
+
+        // Include build directory (for generated files)
+        Span<const char> dest_directory = GetPathDirectory(dest_filename);
+        Fmt(&buf, " \"-i%1\"", dest_directory);
+
+        // Sources and definitions
+        Fmt(&buf, " \"%1\"", src_filename);
+        for (const char *include_directory: include_directories) {
+            Fmt(&buf, " \"-i%1\"", include_directory);
+        }
+
+        if (custom_flags) {
+            Fmt(&buf, " %1", custom_flags);
+        }
+
+        out_cmd->cache_len = buf.len;
+        out_cmd->cmd_line = buf.TrimAndLeak(1);
+    }
 };
 #endif
 
@@ -1876,6 +2127,7 @@ public:
         *out_features = features;
         return true;
     }
+    bool CanAssemble(SourceType) const override { return false; }
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType) const override { return ".js"; }
@@ -1922,6 +2174,9 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++20", cxx); } break;
+
+            case SourceType::GnuAssembly:
+            case SourceType::MicrosoftAssembly:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -1995,6 +2250,9 @@ public:
         out_cmd->deps_mode = Command::DependencyMode::MakeLike;
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
+
+    void MakeAssemblyCommand(const char *, Span<const char *const>, Span<const char *const>, const char *,
+                             uint32_t, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
@@ -2153,6 +2411,7 @@ public:
         *out_features = features;
         return true;
     }
+    bool CanAssemble(SourceType) const override { return false; }
 
     const char *GetObjectExtension() const override { return ".o"; }
     const char *GetLinkExtension(TargetType type) const override {
@@ -2242,6 +2501,9 @@ public:
         switch (src_type) {
             case SourceType::C: { Fmt(&buf, "\"%1\" -std=gnu11", cc); } break;
             case SourceType::Cxx: { Fmt(&buf, "\"%1\" -std=gnu++17", cxx); } break;
+
+            case SourceType::GnuAssembly:
+            case SourceType::MicrosoftAssembly:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -2357,6 +2619,9 @@ public:
         out_cmd->deps_mode = Command::DependencyMode::MakeLike;
         out_cmd->deps_filename = Fmt(alloc, "%1.d", dest_filename ? dest_filename : src_filename).ptr;
     }
+
+    void MakeAssemblyCommand(const char *, Span<const char *const>, Span<const char *const>, const char *,
+                             uint32_t, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
     void MakeResourceCommand(const char *, const char *, Allocator *, Command *) const override { RG_UNREACHABLE(); }
 
@@ -2699,6 +2964,12 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
         found = true;
     } else if (extension == ".cc" || extension == ".cpp") {
         type = SourceType::Cxx;
+        found = true;
+    } else if (extension == ".S") {
+        type = SourceType::GnuAssembly;
+        found = true;
+    } else if (extension == ".asm") {
+        type = SourceType::MicrosoftAssembly;
         found = true;
     } else if (extension == ".o" || extension == ".obj") {
         type = SourceType::Object;

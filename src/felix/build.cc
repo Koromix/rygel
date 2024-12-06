@@ -283,6 +283,12 @@ bool Builder::AddTarget(const TargetInfo &target, const char *version_str)
                     return false;
             } break;
 
+            case SourceType::GnuAssembly:
+            case SourceType::MicrosoftAssembly: {
+                if (!AddAssemblySource(*src, &obj_filenames))
+                    return false;
+            } break;
+
             case SourceType::Object: { obj_filenames.Append(src->filename); } break;
 
             case SourceType::Esbuild: {
@@ -525,7 +531,9 @@ bool Builder::AddSource(const SourceFileInfo &src)
 {
     switch (src.type) {
         case SourceType::C:
-        case SourceType::Cxx: return AddCppSource(src, nullptr);
+        case SourceType::Cxx: return AddCppSource(src);
+        case SourceType::GnuAssembly:
+        case SourceType::MicrosoftAssembly: return AddAssemblySource(src);
         case SourceType::Esbuild: return AddEsbuildSource(src);
         case SourceType::QtUi: return AddQtUiSource(src);
 
@@ -561,6 +569,8 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                 pch_ext = ".cc";
             } break;
 
+            case SourceType::GnuAssembly:
+            case SourceType::MicrosoftAssembly:
             case SourceType::Object:
             case SourceType::Esbuild:
             case SourceType::QtUi:
@@ -652,6 +662,37 @@ bool Builder::AddCppSource(const SourceFileInfo &src, HeapArray<const char *> *o
                 out_objects->Append(moc_obj);
             }
         }
+    }
+
+    return true;
+}
+
+bool Builder::AddAssemblySource(const SourceFileInfo &src, HeapArray<const char *> *out_objects)
+{
+    RG_ASSERT(src.type == SourceType::GnuAssembly || src.type == SourceType::MicrosoftAssembly);
+
+    const char *obj_filename = build_map.FindValue({ current_ns, src.filename }, nullptr);
+
+    // Build main object
+    if (!obj_filename) {
+        obj_filename = BuildObjectPath(src.filename, cache_directory, "", build.compiler->GetObjectExtension());
+
+        uint32_t features = src.CombineFeatures(build.features);
+        const char *flags = GatherFlags(*src.target, src.type);
+
+        Command cmd = InitCommand();
+        build.compiler->MakeAssemblyCommand(src.filename, src.target->definitions, src.target->include_directories,
+                                            flags, features, obj_filename, &str_alloc, &cmd);
+
+        const char *text = Fmt(&str_alloc, StdErr->IsVt100(), "Assemble %!..+%1%!0", src.filename).ptr;
+        bool append = AppendNode(text, obj_filename, cmd, src.filename);
+
+       if (append && !build.fake && !EnsureDirectoryExists(obj_filename))
+            return false;
+    }
+
+    if (out_objects) {
+        out_objects->Append(obj_filename);
     }
 
     return true;
@@ -1048,6 +1089,8 @@ const char *Builder::GatherFlags(const TargetInfo &target, SourceType type)
                 }
             } break;
 
+            case SourceType::GnuAssembly:
+            case SourceType::MicrosoftAssembly:
             case SourceType::Esbuild:
             case SourceType::QtUi:
             case SourceType::QtResources: {} break;

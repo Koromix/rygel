@@ -169,6 +169,8 @@ static const OptionDesc CompileFeatureOptions[] = {
 enum class SourceType {
     C,
     Cxx,
+    GnuAssembly,
+    MicrosoftAssembly,
     Object,
     Esbuild,
     QtUi,
@@ -215,6 +217,7 @@ public:
     virtual ~Compiler() {}
 
     virtual bool CheckFeatures(uint32_t features, uint32_t maybe_features, uint32_t *out_features) const = 0;
+    virtual bool CanAssemble(SourceType type) const = 0;
 
     virtual const char *GetObjectExtension() const = 0;
     virtual const char *GetLinkExtension(TargetType type) const = 0;
@@ -244,6 +247,10 @@ public:
                                 Span<const char *const> include_files,
                                 const char *custom_flags, uint32_t features, const char *dest_filename,
                                 Allocator *alloc, Command *out_cmd) const = 0;
+    virtual void MakeAssemblyCommand(const char *src_filename, Span<const char *const> definitions, 
+                                     Span<const char *const> include_directories, const char *custom_flags,
+                                     uint32_t features, const char *dest_filename,
+                                     Allocator *alloc, Command *out_cmd) const = 0;
     virtual void MakeResourceCommand(const char *rc_filename, const char *dest_filename,
                                      Allocator *alloc, Command *out_cmd) const = 0;
 
