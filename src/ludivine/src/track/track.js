@@ -19,20 +19,18 @@ import { DrawAPI, InputAPI } from './api.js';
 import { calibrate } from './trackers/mouse.js';
 import experiments from './experiments/experiments.json';
 
-import '../css/track.css';
-
 const VIDEO_WIDTH = 800;
 const VIDEO_HEIGHT = 600;
 const COMMIT_INTERVAL = 10000;
 
-function TrackModule(db, test, el, experiment) {
+function TrackModule(db, test, root_el, experiment) {
     let self = this;
 
     this.start = async function() {
         let meta = await db.fetch1('SELECT gender FROM meta');
 
-        render(html`<canvas class="trk_canvas"></canvas>`, el);
-        let canvas = el.querySelector('canvas');
+        render(html`<canvas class="trk_canvas"></canvas>`, root_el);
+        let canvas = root_el.querySelector('canvas');
 
         let input = new InputAPI(canvas);
         let draw = new DrawAPI(canvas, db, test);
@@ -107,7 +105,7 @@ function TrackModule(db, test, el, experiment) {
                 console.error(err);
             }
             document.documentElement.style.cursor = 'auto';
-            render('', el);
+            render('', root_el);
         }
     };
 

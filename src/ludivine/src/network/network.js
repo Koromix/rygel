@@ -19,17 +19,14 @@ import { AppRunner } from '../../../web/core/runner.js';
 import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';
 import { assets } from '../lib/assets.js';
-import * as app from '../ludivine.js';
+import * as app from '../app.js';
 import { NetworkWidget } from './widget.js';
-
-import '../../../../vendor/opensans/OpenSans.css';
-import '../css/network.css';
 
 const DATA_VERSION = 1;
 const UNDO_HISTORY = 50;
 const EVENT_SIZE = 32;
 
-function NetworkModule(db, test, el) {
+function NetworkModule(db, test, root_el) {
     let self = this;
 
     // DOM nodes
@@ -76,10 +73,10 @@ function NetworkModule(db, test, el) {
             <div class="net_menu"></div>
             <div class="net_toolbox"></div>
             <canvas class="net_canvas"></canvas>
-        `, el);
-        menu_el = el.querySelector('.net_menu');
-        toolbox_el = el.querySelector('.net_toolbox');
-        canvas = el.querySelector('.net_canvas');
+        `, root_el);
+        menu_el = root_el.querySelector('.net_menu');
+        toolbox_el = root_el.querySelector('.net_toolbox');
+        canvas = root_el.querySelector('.net_canvas');
 
         runner = new AppRunner(canvas);
 
@@ -126,7 +123,7 @@ function NetworkModule(db, test, el) {
         window.removeEventListener('resize', runner.busy);
         runner.stop();
 
-        render('', el);
+        render('', root_el);
     };
 
     this.hasUnsavedData = function() {

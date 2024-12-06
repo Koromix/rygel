@@ -13,38 +13,17 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-@import url('./web.css');
-
-html {
-    --primary_color: #364b9b;
-    --secondary_color: #d9bf69;
-
-    --top_height: 80px;
-    --top_background: #fdfbf8;
-    --footer_background: #fdfbf8;
-}
+html { height: 100%; }
 
 body {
-    min-height: 100%;
+    height: 100%;
     margin: 0;
     padding: 0;
 
     font-family: 'Open Sans', sans-serif;
     font-size: 17px;
     line-height: 1.5;
-
-    display: flex;
-    flex-direction: column;
 }
-
-main {
-    position: relative;
-    width: 100%;
-    flex: 1;
-
-    font-size: 15px;
-}
-.dialog { font-size: 15px; }
 
 *:focus {
     border-color: var(--secondary_color);
@@ -403,14 +382,4 @@ table td.picture > img {
 @keyframes log_spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-.medium {
-    & button > span { display: none; }
-}
-
-.small {
-    & body { font-size: 13px; }
-
-    & form > .meta { padding: 8px 50px 20px 50px; }
 }
