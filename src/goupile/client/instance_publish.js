@@ -14,8 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../web/libjs/common.js';
-import { Sha256 } from '../../web/libjs/mixer.js';
+import { Util, Log, Net } from '../../web/core/common.js';
+import { Sha256 } from '../../web/core/mixer.js';
 import * as UI from './ui.js';
 
 function InstancePublisher() {

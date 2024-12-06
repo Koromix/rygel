@@ -15,7 +15,7 @@
 
 import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
-import { Util, Log, Net } from '../../../../web/libjs/common.js';
+import { Util, Log, Net } from '../../../../web/core/common.js';
 import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
 
 function ProvenanceProvider() {

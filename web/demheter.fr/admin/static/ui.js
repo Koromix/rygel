@@ -1,5 +1,5 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../../../src/web/libjs/common.js';
+import { Util, Log, Net } from '../../../../src/web/core/common.js';
 
 const UI = new function() {
     let log_entries = [];

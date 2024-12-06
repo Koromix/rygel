@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/libjs/common.js';
+import { Util, Log } from '../../../web/core/common.js';
 import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from '../lib/constants.js';
 import { computeAge, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';

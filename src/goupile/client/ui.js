@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, Mutex } from '../../web/libjs/common.js';
+import { Util, Log, Net, LruMap, Mutex } from '../../web/core/common.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
 
 import './ui.css';

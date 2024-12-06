@@ -14,12 +14,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, LocalDate } from '../../web/libjs/common.js';
+import { Util, Log, Net, LruMap, LocalDate } from '../../web/core/common.js';
 import * as thop from './thop.js';
 import { settings } from './thop.js';
 import { DataCache, formatDuration, formatPrice, parseDate } from './utility.js';
-import { VersionLine } from '../../web/libwidgets/versionline.js';
-import { EasyTable } from '../../web/libwidgets/easytable.js';
+import { VersionLine } from '../../web/widgets/versionline.js';
+import { EasyTable } from '../../web/widgets/easytable.js';
 
 import './mco_info.css';
 

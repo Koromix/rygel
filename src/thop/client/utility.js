@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util, Log, Net, LruMap, LocalDate } from '../../web/libjs/common.js';
+import { Util, Log, Net, LruMap, LocalDate } from '../../web/core/common.js';
 
 // ------------------------------------------------------------------------
 // Data

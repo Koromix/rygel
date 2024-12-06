@@ -17,7 +17,7 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 import sqlite3 from 'better-sqlite3';
 import * as database from '../lib/database.js';
-import { Util } from '../../../web/libjs/common.js';
+import { Util } from '../../../web/core/common.js';
 import * as parse from '../lib/parse.js';
 import * as imp from '../lib/import.js';
 

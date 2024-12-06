@@ -14,9 +14,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, LocalDate } from '../../web/libjs/common.js';
-import * as sqlite3 from '../../web/libjs/sqlite3.js';
-import { SmallCalendar } from '../../web/libwidgets/smallcalendar.js';
+import { Util, Log, LocalDate } from '../../web/core/common.js';
+import * as sqlite3 from '../../web/core/sqlite3.js';
+import { SmallCalendar } from '../../web/widgets/smallcalendar.js';
 import { GENDERS } from './lib/constants.js';
 import { computeAge, dateToString } from './lib/util.js';
 import * as UI from './lib/ui.js';

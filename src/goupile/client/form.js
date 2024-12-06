@@ -15,7 +15,7 @@
 
 import { render, html, svg,
          directive, Directive, noChange, nothing } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
+import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/core/common.js';
 import { profile } from './goupile.js';
 import * as UI from './ui.js';
 import { MagicData } from './form_data.js';

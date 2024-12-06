@@ -14,16 +14,16 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg, until } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/libjs/common.js';
-import * as mixer from '../../web/libjs/mixer.js';
-import * as IDB from '../../web/libjs/indexedDB.js';
+import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/core/common.js';
+import * as mixer from '../../web/core/mixer.js';
+import * as IDB from '../../web/core/indexedDB.js';
 import { ApplicationInfo, FormInfo, PageInfo, ApplicationBuilder } from './instance_app.js';
 import * as goupile from '../client/goupile.js';
 import { profile } from '../client/goupile.js';
 import * as UI from '../client/ui.js';
 import { InstancePublisher } from '../client/instance_publish.js';
 import { FormState, FormModel, FormBuilder } from './form.js';
-import { PeriodPicker } from '../../web/libwidgets/periodpicker.js';
+import { PeriodPicker } from '../../web/widgets/periodpicker.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 
 let db = null;

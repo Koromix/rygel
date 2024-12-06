@@ -1,5 +1,5 @@
 import { render, html } from '../../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Net } from '../../../../../web/libjs/common.js';
+import { Util, Net } from '../../../../../web/core/common.js';
 
 const BACKGROUND = '#7f7f7f';
 const IMAGES = 24;

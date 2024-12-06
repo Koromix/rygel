@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, Mutex, LruMap, LocalDate } from '../../web/libjs/common.js';
+import { Util, Log, Net, Mutex, LruMap, LocalDate } from '../../web/core/common.js';
 import { DataCache } from './utility.js';
 import * as McoInfoMod from './mco_info.js';
 import * as McoCasemixMod from './mco_casemix.js';

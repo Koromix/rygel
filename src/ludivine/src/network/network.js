@@ -14,8 +14,8 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/libjs/common.js';
-import { AppRunner } from '../../../web/libjs/runner.js';
+import { Util, Log } from '../../../web/core/common.js';
+import { AppRunner } from '../../../web/core/runner.js';
 import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';
 import { assets } from '../lib/assets.js';

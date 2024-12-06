@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, noChange, directive, Directive } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/libjs/common.js';
+import { Util, Log } from '../../../web/core/common.js';
 
 if (typeof T == 'undefined')
     T = {};

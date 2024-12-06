@@ -15,7 +15,7 @@
 
 import { render, html, noChange } from '../../node_modules/lit/html.js';
 import { directive, Directive } from '../../node_modules/lit/directive.js';
-import { Util, Log } from '../../../web/libjs/common.js';
+import { Util, Log } from '../../../web/core/common.js';
 
 let T = {};
 
