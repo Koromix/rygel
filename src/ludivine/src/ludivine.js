@@ -14,8 +14,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../web/libjs/common.js';
+import { Util, Log, LocalDate } from '../../web/libjs/common.js';
 import * as sqlite3 from '../../web/libjs/sqlite3.js';
+import { SmallCalendar } from '../../web/libwidgets/smallcalendar.js';
 import { GENDERS } from './lib/constants.js';
 import { computeAge, dateToString } from './lib/util.js';
 import * as UI from './lib/ui.js';
@@ -83,6 +84,8 @@ let identity = {
 
 let main_el = null;
 let active_mod = null;
+
+let calendar = new SmallCalendar;
 
 async function start(el) {
     Log.pushHandler(UI.notifyHandler);
@@ -342,6 +345,17 @@ async function runDashboard() {
                                 </div>
                             `;
                         })}
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="box">
+                        <div class="title">Calendrier</div>
+                        ${calendar.render()}
+                    </div>
+                    <div class="box" style="flex: 1;">
+                        <div class="title">Évènements à venir</div>
+                        <p style="text-align: center;">Aucun évènement à venir</p>
                     </div>
                 </div>
 

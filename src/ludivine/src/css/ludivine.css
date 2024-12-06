@@ -26,6 +26,10 @@
     flex-direction: column;
     gap: 1em;
 }
+.dashboard .row {
+    display: flex;
+    gap: 1em;
+}
 .dashboard .box {
     display: flex;
     flex-direction: column;
