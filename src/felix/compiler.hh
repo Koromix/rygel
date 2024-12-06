@@ -262,9 +262,10 @@ protected:
     }
 };
 
-struct SupportedCompiler {
+struct KnownCompiler {
     const char *name;
     const char *cc;
+    bool supported;
 };
 
 struct HostSpecifier {
@@ -274,7 +275,7 @@ struct HostSpecifier {
     const char *ld = nullptr;
 };
 
-extern const Span<const SupportedCompiler> SupportedCompilers;
+extern const Span<const KnownCompiler> KnownCompilers;
 
 std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec);
 

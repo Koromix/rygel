@@ -2448,9 +2448,12 @@ std::unique_ptr<const Compiler> PrepareCompiler(HostSpecifier spec)
         if (!spec.cc) {
             if (spec.architecture == NativeArchitecture ||
                     spec.architecture == HostArchitecture::Unknown) {
-                for (const SupportedCompiler &supported: SupportedCompilers) {
-                    if (supported.cc && FindExecutableInPath(supported.cc)) {
-                        spec.cc = supported.cc;
+                for (const KnownCompiler &known: KnownCompilers) {
+                    if (!known.supported)
+                        continue;
+
+                    if (known.cc && FindExecutableInPath(known.cc)) {
+                        spec.cc = known.cc;
                         break;
                     }
                 }
@@ -2717,15 +2720,16 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
     return found;
 }
 
-static const SupportedCompiler CompilerTable[] = {
-    {"Clang", "clang"},
+static const KnownCompiler CompilerTable[] = {
+    { "Clang", "clang", true },
 #if defined(_WIN32)
-    {"MSVC", "cl"},
+    { "MSVC", "cl", true },
+#else
+    { "MSVC", "cl", false },
 #endif
-    {"GCC", "gcc"},
-
-    {"EmCC", "emcc"}
+    { "GCC", "gcc", true },
+    { "EmCC", "emcc", true }
 };
-const Span<const SupportedCompiler> SupportedCompilers = CompilerTable;
+const Span<const KnownCompiler> KnownCompilers = CompilerTable;
 
 }

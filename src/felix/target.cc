@@ -627,6 +627,23 @@ bool TargetSetBuilder::MatchPropertySuffix(Span<const char> str, bool *out_match
         if (!test.len)
             continue;
 
+        // Compiler?
+        {
+            bool found = false;
+
+            for (const KnownCompiler &known: KnownCompilers) {
+                if (TestStr(test, known.name)) {
+                    match &= (TestStr(known.name, compiler->name) == wanted);
+                    found = true;
+
+                    break;
+                }
+            }
+
+            if (found)
+                continue;
+        }
+
         // Architecture?
         {
             HostArchitecture architecture;

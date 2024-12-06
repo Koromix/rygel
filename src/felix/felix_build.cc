@@ -360,11 +360,14 @@ Supported platforms:
 Supported compilers:
 )");
 
-        for (const SupportedCompiler &supported: SupportedCompilers) {
-            if (supported.cc) {
-                PrintLn(st, "    %!..+%1%!0   Binary: %2", FmtArg(supported.name).Pad(28), supported.cc);
+        for (const KnownCompiler &known: KnownCompilers) {
+            if (!known.supported)
+                continue;
+
+            if (known.cc) {
+                PrintLn(st, "    %!..+%1%!0   Binary: %2", FmtArg(known.name).Pad(28), known.cc);
             } else {
-                PrintLn(st, "    %!..+%1%!0", supported.name);
+                PrintLn(st, "    %!..+%1%!0", known.name);
             }
         }
 
