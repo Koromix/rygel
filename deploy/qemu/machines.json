@@ -110,13 +110,13 @@
 
         "qemu": {
             "binary": "qemu-system-x86_64",
-            "arguments": ["-m", "6G", "-smp", 4, "-rtc", "clock=host,base=localtime", "-bios", "bios.bin", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-device", "qemu-xhci", "-device", "usb-tablet", "-vnc", "127.0.0.1:15"],
+            "arguments": ["-m", "6G", "-smp", 4, "-rtc", "clock=host,base=localtime", "-bios", "bios.bin", "-hda", "disk.qcow2", "-netdev", "user,id=mynet,hostfwd=tcp::22205-:22", "-device", "e1000,netdev=mynet", "-device", "qemu-xhci", "-device", "usb-tablet", "-vga", "virtio", "-spice", "port=22305,addr=127.0.0.1,disable-ticketing"],
             "version": 13,
 
             "disk": "disk.qcow2",
 
             "ssh_port": 22205,
-            "vnc_port": 5915,
+            "spice_port": 22305,
 
             "username": "windows",
             "password": "windows",

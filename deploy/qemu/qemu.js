@@ -282,7 +282,10 @@ function QemuRunner(registry = null) {
             console.log(`  - Machine: ${machine.title} (${machine.key})`);
             console.log(`    * Command-line: ${cmd}`);
             console.log(`    * SSH port: ${machine.qemu.ssh_port}`);
-            console.log(`    * VNC port: ${machine.qemu.vnc_port}`);
+            if (machine.qemu.vnc_port != null)
+                console.log(`    * VNC port: ${machine.qemu.vnc_port}`);
+            if (machine.qemu.spice_port != null)
+                console.log(`    * SPICE port: ${machine.qemu.spice_port}`);
             console.log(`    * Username: ${machine.qemu.username}`);
             console.log(`    * Password: ${machine.qemu.password}`);
         }
