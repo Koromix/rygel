@@ -14,11 +14,24 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "vendor/blake3/c/blake3.h"
+#include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
 // Skip None
 static const Span<const char *const> AvailableAlgorithms = MakeSpan(CompressionTypeNames + 1, RG_LEN(CompressionTypeNames) - 1);
+
+enum class HashAlgorithm {
+    Sha256,
+    Sha512,
+    Blake3
+};
+static const char *const HashAlgorithmNames[] = {
+    "Sha256",
+    "Sha512",
+    "Blake3"
+};
 
 static int RunCompress(Span<const char *> arguments)
 {
@@ -480,6 +493,177 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
     }
 }
 
+static Size HashFile(StreamReader *reader, HashAlgorithm algorithm, Span<uint8_t> out_hash)
+{
+    HeapArray<uint8_t> buf;
+
+    buf.Reserve(Mebibytes(4));
+    buf.len = Mebibytes(4);
+
+    switch (algorithm) {
+        case HashAlgorithm::Sha256: {
+            RG_ASSERT(out_hash.len >= 32);
+
+            crypto_hash_sha256_state state;
+            crypto_hash_sha256_init(&state);
+
+            do {
+                Size bytes = reader->Read(buf);
+                if (bytes < 0)
+                    return -1;
+                crypto_hash_sha256_update(&state, buf.ptr, (unsigned long long)bytes);
+            } while (!reader->IsEOF());
+
+            crypto_hash_sha256_final(&state, out_hash.ptr);
+            return 32;
+        } break;
+
+        case HashAlgorithm::Sha512: {
+            RG_ASSERT(out_hash.len >= 64);
+
+            crypto_hash_sha512_state state;
+            crypto_hash_sha512_init(&state);
+
+            do {
+                Size bytes = reader->Read(buf);
+                if (bytes < 0)
+                    return -1;
+                crypto_hash_sha512_update(&state, buf.ptr, (unsigned long long)bytes);
+            } while (!reader->IsEOF());
+
+            crypto_hash_sha512_final(&state, out_hash.ptr);
+            return 64;
+        } break;
+
+        case HashAlgorithm::Blake3: {
+            RG_ASSERT(out_hash.len >= 32);
+
+            blake3_hasher state;
+            blake3_hasher_init(&state);
+
+            do {
+                Size bytes = reader->Read(buf);
+                if (bytes < 0)
+                    return -1;
+                blake3_hasher_update(&state, buf.ptr, (size_t)bytes);
+            } while (!reader->IsEOF());
+
+            blake3_hasher_finalize(&state, out_hash.ptr, 32);
+            return 32;
+        } break;
+    }
+
+    RG_UNREACHABLE();
+}
+
+static int RunHash(Span<const char *> arguments)
+{
+    BlockAllocator temp_alloc;
+
+    // Options
+    HeapArray<const char *> src_filenames;
+    HashAlgorithm algorithm = HashAlgorithm::Sha256;
+    bool brief = false;
+
+    const auto print_usage = [=](StreamWriter *st) {
+        PrintLn(st,
+R"(Usage: %!..+%1 hash [-a algorithm] [option...] source...%!0
+
+Options:
+
+    %!..+-a, --algorithm algo%!0           Set algorithm, see below
+                                   %!D..(default: %2)%!0
+
+        %!..+--brief%!0                    Use brief display (single file only)
+
+Available hash algorithms: %!..+%3%!0)",
+                FelixTarget, HashAlgorithmNames[(int)algorithm], FmtSpan(HashAlgorithmNames));
+    };
+
+    // Parse arguments
+    {
+        OptionParser opt(arguments);
+
+        while (opt.Next()) {
+            if (opt.Test("--help")) {
+                print_usage(StdOut);
+                return 0;
+            } else if (opt.Test("-a", "--algorithm", OptionType::Value)) {
+                if (!OptionToEnumI(HashAlgorithmNames, opt.current_value, &algorithm)) {
+                    LogError("Unknown hash algorithm '%1'", opt.current_value);
+                    return 1;
+                }
+            } else if (opt.Test("--brief")) {
+                brief = true;
+            } else {
+                opt.LogUnknownError();
+                return 1;
+            }
+        }
+
+        opt.ConsumeNonOptions(&src_filenames);
+    }
+
+    if (!src_filenames.len) {
+        src_filenames.Append("-");
+    }
+    if (brief && src_filenames.len > 1) {
+        LogError("Option --brief cannot be used with more than one source file");
+        return 1;
+    }
+
+    Async async;
+
+    if (src_filenames.len == 1 && TestStr(src_filenames[0], "-")) {
+        src_filenames[0] = nullptr;
+    }
+
+    for (const char *src_filename: src_filenames) {
+        async.Run([&, src_filename]() {
+            StreamReader reader;
+
+            if (src_filename) {
+                if (reader.Open(src_filename) != OpenResult::Success)
+                    return false;
+            } else {
+                if (!reader.Open(STDIN_FILENO, "<stdin>"))
+                    return false;
+            }
+
+            // Compute hash
+            LocalArray<uint8_t, 256> hash;
+            hash.len = HashFile(&reader, algorithm, hash.data);
+            if (hash.len < 0)
+                return false;
+
+            // Format hash
+            LocalArray<char, 512> text;
+            if (brief) {
+                FmtArg arg = FmtSpan(hash.Take(), FmtType::BigHex, "").Pad0(-2);
+                text.len = Fmt(text.data, StdOut->IsVt100(), "%1\n", arg).len;
+            } else {
+                FmtArg arg = FmtSpan(hash.Take(), FmtType::BigHex, "").Pad0(-2);
+                text.len = Fmt(text.data, StdOut->IsVt100(), "%!..+%1%!0  %2\n", arg, reader.GetFileName()).len;
+            }
+
+            // Handle truncated filename
+            if (text.len == RG_SIZE(text.data) - 1 && text[text.len - 1] != '\n') {
+                text[text.len - 4] = '.';
+                text[text.len - 3] = '.';
+                text[text.len - 2] = '.';
+                text[text.len - 1] = '\n';
+            }
+
+            StdOut->Write(text);
+
+            return true;
+        });
+    }
+
+    bool success = async.Sync();
+    return !success;
+}
+
 int Main(int argc, char **argv)
 {
     RG_CRITICAL(argc >= 1, "First argument is missing");
@@ -492,6 +676,8 @@ Commands:
 
     %!..+compress%!0                       Compress file
     %!..+decompress%!0                     Decompress file
+
+    %!..+hash%!0                           Hash file
 
 Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.)", FelixTarget);
     };
@@ -525,6 +711,8 @@ Use %!..+%1 help command%!0 or %!..+%1 command --help%!0 for more specific help.
         return RunCompress(arguments);
     } else if (TestStr(cmd, "decompress")) {
         return RunDecompress(arguments);
+    } else if (TestStr(cmd, "hash")) {
+        return RunHash(arguments);
     } else {
         LogError("Unknown command '%1'", cmd);
         return 1;
