@@ -6,6 +6,11 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.34 (2024-12-09)
+
+- Use more standard syntax in usage texts
+- Use assembly implementations of blake3 and libsodium algorithms
+
 ### Rekkord 0.33 (2024-11-29)
 
 - Show busy progress bar while running `rekkord save`
