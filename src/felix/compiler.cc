@@ -413,19 +413,7 @@ public:
         *out_features = features;
         return true;
     }
-    bool CanAssemble(SourceType type) const override
-    {
-        switch (platform) {
-            case HostPlatform::Windows: return (type == SourceType::MicrosoftAssembly);
-
-            case HostPlatform::Linux:
-            case HostPlatform::macOS:
-            case HostPlatform::OpenBSD:
-            case HostPlatform::FreeBSD: return (type == SourceType::GnuAssembly);
-
-            default: return false;
-        }
-    }
+    bool CanAssemble(SourceType type) const override { return (type == SourceType::GnuAssembly); }
 
     const char *GetObjectExtension() const override { return (platform == HostPlatform::Windows) ? ".obj" : ".o"; }
     const char *GetLinkExtension(TargetType type) const override
