@@ -414,7 +414,9 @@ void HandleLegacySave(http_IO *io, InstanceHolder *instance)
                                           fragment.mtime, fragment.fs, fragment.page, fragment.json, fragment.tags.ptr))
                         return false;
 
-                    if (!stmt.GetSingleValue(&anchor)) {
+                    if (stmt.Step()) {
+                        anchor = sqlite3_column_int64(stmt, 0);
+                    } else {
                         if (!stmt.IsValid())
                             return false;
 
