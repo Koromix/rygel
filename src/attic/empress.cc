@@ -34,8 +34,8 @@ static int RunCompress(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 compress source [-O destination]
-       %1 compress source... [-D destination]%!0
+R"(Usage: %!..+%1 compress [option...] source [-O destination]
+       %1 compress [option...] source... [-D destination]%!0
 
 Options:
 
@@ -244,8 +244,8 @@ static int RunDecompress(Span<const char *> arguments)
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
-R"(Usage: %!..+%1 decompress source [-O destination]
-       %1 decompress source... [-D destination]%!0
+R"(Usage: %!..+%1 decompress [option...] source [-O destination]
+       %1 decompress [option...] source... [-D destination]%!0
 
 Options:
 
@@ -289,8 +289,7 @@ Available decompression algorithms: %!..+%2%!0)", FelixTarget, FmtSpan(Available
     }
 
     if (!src_filenames.len) {
-        LogError("Missing input filenames (use '-' for standard input)");
-        return 1;
+        src_filenames.Append("-");
     }
 
     if (output_filename && output_directory) {
