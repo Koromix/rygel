@@ -172,7 +172,7 @@ bool HandleFileGet(http_IO *io, InstanceHolder *instance)
         }
         if (client_sha256 && !TestStr(client_sha256, sha256)) {
             LogError("Fetch refused because of sha256 mismatch");
-            io->SendError(409);
+            io->SendError(422);
             return true;
         }
 
@@ -513,7 +513,7 @@ void HandleFilePut(http_IO *io, InstanceHolder *instance)
     // Don't lie to me :)
     if (client_sha256 && !TestStr(sha256, client_sha256)) {
         LogError("Upload refused because of sha256 mismatch");
-        io->SendError(409);
+        io->SendError(422);
         return;
     }
 
@@ -541,8 +541,16 @@ void HandleFilePut(http_IO *io, InstanceHolder *instance)
                                        &stmt, sha256, mtime, CompressionTypeNames[(int)compression_type],
                                        total_len, sq_Binding::Zeroblob(file_len)))
                 return false;
-            if (!stmt.GetSingleValue(&rowid))
+
+            if (stmt.Step()) {
+                rowid = sqlite3_column_int64(stmt, 0);
+            } else {
+                if (stmt.IsValid()) {
+                    LogError("Duplicate file blob '%1'", sha256);
+                    io->SendError(409);
+                }
                 return false;
+            }
         }
 
         sqlite3_blob *blob;
@@ -637,7 +645,7 @@ void HandleFileDelete(http_IO *io, InstanceHolder *instance)
 
                 if (!TestStr(sha256, client_sha256)) {
                     LogError("Deletion refused because of sha256 mismatch");
-                    io->SendError(409);
+                    io->SendError(422);
                     return false;
                 }
             }

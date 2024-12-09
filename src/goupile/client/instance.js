@@ -1232,7 +1232,7 @@ async function handleFileChange(filename) {
 }
 
 const uploadFsChanges = Util.serialize(async function () {
-    let progress = Log.progress('Envoi des modifications');
+    let progress = Log.progress('Sauvegarde des modifications');
 
     try {
         let db = await goupile.openLocalDB();
