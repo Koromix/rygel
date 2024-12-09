@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import sqlite3Worker1Promiser from '../../../vendor/sqlite3/wasm/jswasm/sqlite3-worker1-promiser.mjs';
+import sqlite3Worker1Promiser from '../../../vendor/sqlite3mc/wasm/jswasm/sqlite3-worker1-promiser.mjs';
 
 let promiser = null;
 let id = 0;

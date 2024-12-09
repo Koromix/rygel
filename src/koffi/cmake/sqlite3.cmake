@@ -19,7 +19,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 # OTHER DEALINGS IN THE SOFTWARE.
 
-add_library(sqlite3 SHARED ../../../vendor/sqlite3/sqlite3.c)
+add_library(sqlite3 SHARED ../../../vendor/sqlite3mc/sqlite3.c)
 set_target_properties(sqlite3 PROPERTIES PREFIX "")
 
 if(WIN32)

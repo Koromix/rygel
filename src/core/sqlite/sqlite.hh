@@ -22,7 +22,7 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "vendor/sqlite3/sqlite3.h"
+#include "vendor/sqlite3mc/sqlite3mc.h"
 #include "vendor/libsodium/src/libsodium/include/sodium/crypto_hash_sha256.h"
 
 // Work around -Wzero-as-null-pointer-constant warning

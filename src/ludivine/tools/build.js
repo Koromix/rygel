@@ -58,9 +58,9 @@ async function run() {
 
     let src_filenames = [
         './ludivine.js',
-        '../../vendor/sqlite3/wasm/jswasm/sqlite3.wasm',
-        '../../vendor/sqlite3/wasm/jswasm/sqlite3-opfs-async-proxy.js',
-        '../../vendor/sqlite3/wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs',
+        '../../vendor/sqlite3mc/wasm/jswasm/sqlite3.wasm',
+        '../../vendor/sqlite3mc/wasm/jswasm/sqlite3-opfs-async-proxy.js',
+        '../../vendor/sqlite3mc/wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs',
 
         ...experiments.map(exp => `./src/track/experiments/${exp.key}/${exp.key}.js`)
     ];

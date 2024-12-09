@@ -1,0 +1,19 @@
+diff --git a/vendor/sqlite3/sqlite3mc.c b/vendor/sqlite3/sqlite3mc.c
+index 091006ef9..427cf24c2 100644
+--- a/vendor/sqlite3mc/sqlite3mc.c
++++ b/vendor/sqlite3mc/sqlite3mc.c
+@@ -270109,11 +270109,11 @@ void RijndaelDecrypt(Rijndael* rijndael, UINT8 a[16], UINT8 b[16]);
+ #if __has_attribute(target) && __has_include(<wmmintrin.h>) && (defined(__x86_64__) || defined(__i386))
+ #define HAS_AES_HARDWARE AES_HARDWARE_NI
+ 
+-#elif __has_attribute(target) && __has_include(<arm_neon.h>) && (defined(__aarch64__))
+-#define HAS_AES_HARDWARE AES_HARDWARE_NEON
++// #elif __has_attribute(target) && __has_include(<arm_neon.h>) && (defined(__aarch64__))
++// #define HAS_AES_HARDWARE AES_HARDWARE_NEON
+ 
+ /* Crypto extension in AArch64 can be enabled using __attribute__((target)) */
+-#define USE_CLANG_ATTR_TARGET_AARCH64
++// #define USE_CLANG_ATTR_TARGET_AARCH64
+ 
+ #endif
+ 
