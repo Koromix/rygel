@@ -135,7 +135,6 @@ bool sq_Database::Open(const char *filename, unsigned int flags)
         PRAGMA foreign_keys = ON;
         PRAGMA synchronous = NORMAL;
         PRAGMA busy_timeout = 15000;
-        PRAGMA cache_size = -16384;
     )";
 
     RG_ASSERT(!db);
