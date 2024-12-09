@@ -70,8 +70,7 @@ bool sq_Database::SetSnapshotDirectory(const char *directory, int64_t full_delay
     // Configure database to let us manipulate the WAL manually
     if (!RunMany(R"(PRAGMA locking_mode = EXCLUSIVE;
                     PRAGMA journal_mode = WAL;
-                    PRAGMA auto_vacuum = 0;
-                    PRAGMA cache_spill = false;)"))
+                    PRAGMA auto_vacuum = 0;)"))
         return false;
 
     // Open permanent WAL stream
