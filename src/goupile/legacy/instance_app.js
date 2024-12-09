@@ -85,6 +85,7 @@ function ApplicationBuilder(app) {
         //     load: null,
         //     default_actions: true,
         //     autosave: false,
+        //     confirm: false,
         //     claim: true
         // }
     ];

@@ -905,8 +905,8 @@ function renderPage() {
                     return page ? page.url : null;
                 },
 
-                save: async () => {
-                    await saveRecord(form_record, new_hid, form_values, route.page);
+                save: async (e) => {
+                    await saveRecord(e, form_record, new_hid, form_values, route.page);
                     await run();
                 },
                 delete: (e, ulid, confirm = true) => {
@@ -978,7 +978,7 @@ function renderPage() {
 
                         if (!form_record.saved || form_state.hasChanged()) {
                             form_builder.triggerErrors();
-                            await saveRecord(form_record, new_hid, form_values, route.page);
+                            await saveRecord(e, form_record, new_hid, form_values, route.page, { stay: false });
                         }
 
                         go(e, url);
@@ -993,10 +993,10 @@ function renderPage() {
 
                 form_builder.action(name, {disabled: !form_state.hasChanged(),
                                            color: nav_sequence.next == null ? '#2d8261' : null,
-                                           always: nav_sequence.next == null}, async () => {
+                                           always: nav_sequence.next == null}, async e => {
                     form_builder.triggerErrors();
+                    await saveRecord(e, form_record, new_hid, form_values, route.page, { stay: false });
 
-                    await saveRecord(form_record, new_hid, form_values, route.page);
                     run();
                 });
             }
@@ -1006,8 +1006,7 @@ function renderPage() {
                     form_builder.action('Forcer l\'enregistrement', {}, async e => {
                         await UI.confirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
                                             'Enregistrer', () => {});
-
-                        await saveRecord(form_record, new_hid, form_values, route.page);
+                        await saveRecord(e, form_record, new_hid, form_values, route.page, { stay: false, confirm: false });
 
                         run();
                     });
@@ -1351,9 +1350,19 @@ function runTrailDialog(e, ulid) {
     });
 }
 
-async function saveRecord(record, hid, values, page, silent = false) {
+async function saveRecord(e, record, hid, values, page, options = {}) {
     if (isReadOnly(record))
         throw new Error('You are not allowed to save data');
+
+    let silent = options.silent ?? false;
+    let claim = (options.stay ?? true) || page.getOption('claim', record, true);
+    let confirm = (options.confirm ?? !silent) && page.getOption('confirm', record, !claim);
+
+    if (confirm) {
+        let text = claim ? html`Confirmez-vous l'enregistrement ?`
+                         : html`Confirmez-vous la <b>finalisation de cet enregistrement</b> ?`;
+        await UI.confirm(e, text, 'Continuer', () => {});
+    }
 
     await mutex.run(async () => {
         let progress = Log.progress('Enregistrement en cours');
@@ -1469,7 +1478,6 @@ async function saveRecord(record, hid, values, page, silent = false) {
             }
 
             let new_route = Object.assign({}, route);
-            let claim = silent || page.getOption('claim', record, true);
 
             if (claim) {
                 record = await loadRecord(ulid, null);
@@ -2052,7 +2060,7 @@ async function go(e, url = null, options = {}) {
                     if (autosave || profile.userid < 0) {
                         if (!autosave)
                             form_builder.triggerErrors();
-                        await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
+                        await mutex.chain(() => saveRecord(e, form_record, new_hid, form_values, route.page));
 
                         new_route.version = null;
                         options.reload = true;
@@ -2072,7 +2080,7 @@ async function go(e, url = null, options = {}) {
                                     d.action('Enregistrer', {}, async e => {
                                         try {
                                             form_builder.triggerErrors();
-                                            await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page));
+                                            await mutex.chain(() => saveRecord(e, form_record, new_hid, form_values, route.page, { confirm: false }));
                                         } catch (err) {
                                             reject(err);
                                         }
@@ -2316,7 +2324,7 @@ async function handleStateChange() {
                     let prev_state = form_state;
                     let prev_values = form_values;
 
-                    await mutex.chain(() => saveRecord(form_record, new_hid, form_values, route.page, true));
+                    await mutex.chain(() => saveRecord(null, form_record, new_hid, form_values, route.page, { silent: true }));
 
                     // Avoid unwanted value changes while user is doing stuff
                     form_state = prev_state;
