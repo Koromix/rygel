@@ -22,8 +22,9 @@
 html {
     --anchor_color: var(--primary_color);
 
-    --top_height: 120px;
-    --small_height: 90px;
+    --top_height: 90px;
+    --top_padding: 6px;
+    --small_height: 80px;
     --top_background: white;
     --footer_background: #f6f6f9;
 
@@ -63,7 +64,6 @@ a:has(> img) { text-decoration: none !important; }
     border-bottom: 2px solid var(--top_background);
     transition: border-bottom-color 0.4s ease;
 }
-#top.border { border-bottom-color: #383838; }
 #top menu {
     position: sticky;
     top: 0;
@@ -72,7 +72,7 @@ a:has(> img) { text-decoration: none !important; }
     height: var(--top_height);
     box-sizing: border-box;
     margin: 0 auto;
-    padding: 16px 16px 24px 16px;
+    padding: var(--top_padding);
     overflow: visible;
     z-index: 1;
     display: flex;
@@ -141,7 +141,6 @@ a:has(> img) { text-decoration: none !important; }
     height: 100%;
     object-fit: contain;
 }
-#top.border #logo { filter: saturate(0%) brightness(0); }
 
 #side menu {
     margin: 0;

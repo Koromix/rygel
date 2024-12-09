@@ -52,8 +52,6 @@ span[title] { border-bottom: 1px dotted #383838; }
 }
 
 #top menu { justify-content: space-between; }
-#top.border { border-bottom-color: var(--top_background); }
-#top.border #logo { filter: none; }
 
 .banner {
     display: flex;

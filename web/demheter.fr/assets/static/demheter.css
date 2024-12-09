@@ -19,6 +19,9 @@
 html {
     --primary_color: #ff6600;
     --secondary_color: #4b9596;
+
+    --top_height: 120px;
+    --top_padding: 16px;
 }
 
 main a {
@@ -34,6 +37,9 @@ h1 {
 }
 
 span[title] { border-bottom: 1px dotted #383838; }
+
+#top.border { border-bottom-color: #383838; }
+#top.border #logo { filter: saturate(0%) brightness(0); }
 
 .schema {
     display: block;

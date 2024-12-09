@@ -17,7 +17,6 @@ window.addEventListener('load', e => {
     initDeploy();
     initMenu();
     initSide();
-    initScroll();
 
     document.documentElement.classList.remove('nojs');
     document.documentElement.classList.add('js');
@@ -131,16 +130,6 @@ function initSide() {
             window.removeEventListener('scroll', highlightOnScroll);
         }
     });
-}
-
-function initScroll() {
-    window.addEventListener('scroll', adjust_top);
-    adjust_top();
-
-    function adjust_top() {
-        let top = document.querySelector('nav#top');
-        top.classList.toggle('border', window.pageYOffset >= 20);
-    }
 }
 
 function findParent(el, func) {
