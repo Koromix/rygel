@@ -189,7 +189,7 @@ Options:
         %!..+--password password%!0        Set repository password
 
     %!..+-K, --key_file filename%!0        Set explicit master key export file
-                                 %!D..(default: %2)%!0)", FelixTarget, key_filename);
+                                   %!D..(default: %2)%!0)", FelixTarget, key_filename);
     };
 
     if (!FindAndLoadConfig(arguments, &config))
