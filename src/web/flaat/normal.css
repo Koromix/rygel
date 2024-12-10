@@ -64,6 +64,7 @@ a:has(> img) { text-decoration: none !important; }
     border-bottom: 2px solid var(--top_background);
     transition: border-bottom-color 0.4s ease;
 }
+#top.border { border-bottom-color: #383838; }
 #top menu {
     position: sticky;
     top: 0;
@@ -134,7 +135,6 @@ a:has(> img) { text-decoration: none !important; }
     height: 70%;
     object-fit: contain;
     margin-right: 2em;
-    transition: filter 0.4s ease;
 }
 #logo > img {
     width: 100%;

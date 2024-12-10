@@ -38,7 +38,7 @@ h1 {
 
 span[title] { border-bottom: 1px dotted #383838; }
 
-#top.border { border-bottom-color: #383838; }
+#logo { transition: filter 0.4s ease; }
 #top.border #logo { filter: saturate(0%) brightness(0); }
 
 .schema {
