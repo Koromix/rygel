@@ -823,8 +823,8 @@ function runEditUserDialog(e, user) {
                     change_password: d.values.change_password,
                     confirm: d.values.confirm,
                     reset_secret: d.values.reset_secret,
-                    email: d.values.email || '',
-                    phone: d.values.phone || '',
+                    email: d.values.email ?? '',
+                    phone: d.values.phone ?? '',
                     root: profile.root ? d.values.root : false
                 });
 

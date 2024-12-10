@@ -2843,8 +2843,10 @@ void HandleUserCreate(http_IO *io)
                 parser.ParseBool(&confirm);
             } else if (key == "email") {
                 parser.ParseString(&email);
+                email = email[0] ? email : nullptr;
             } else if (key == "phone") {
                 parser.ParseString(&phone);
+                phone = phone[0] ? phone : nullptr;
             } else if (key == "root") {
                 parser.ParseBool(&root);
             } else if (parser.IsValid()) {
@@ -2969,8 +2971,8 @@ void HandleUserEdit(http_IO *io)
     bool change_password = true;
     bool confirm = false, set_confirm = false;
     bool reset_secret = false;
-    const char *email = nullptr;
-    const char *phone = nullptr;
+    const char *email = nullptr; bool set_email = false;
+    const char *phone = nullptr; bool set_phone = false;
     bool root = false, set_root = false;
     {
         StreamReader st;
@@ -2999,9 +3001,19 @@ void HandleUserEdit(http_IO *io)
             } else if (key == "reset_secret") {
                 parser.SkipNull() || parser.ParseBool(&reset_secret);
             } else if (key == "email") {
-                parser.SkipNull() || parser.ParseString(&email);
+                if (!parser.SkipNull()) {
+                    parser.ParseString(&email);
+
+                    email = email[0] ? email : nullptr;
+                    set_email = true;
+                }
             } else if (key == "phone") {
-                parser.SkipNull() || parser.ParseString(&phone);
+                if (!parser.SkipNull()) {
+                    parser.ParseString(&phone);
+
+                    phone = phone[0] ? phone : nullptr;
+                    set_phone = true;
+                }
             } else if (key == "root") {
                 if (!parser.SkipNull()) {
                     parser.ParseBool(&root);
@@ -3112,9 +3124,9 @@ void HandleUserEdit(http_IO *io)
             return false;
         if (reset_secret && !gp_domain.db.Run("UPDATE dom_users SET secret = NULL WHERE userid = ?1", userid))
             return false;
-        if (email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
+        if (set_email && !gp_domain.db.Run("UPDATE dom_users SET email = ?2 WHERE userid = ?1", userid, email))
             return false;
-        if (phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
+        if (set_phone && !gp_domain.db.Run("UPDATE dom_users SET phone = ?2 WHERE userid = ?1", userid, phone))
             return false;
         if (set_root && !gp_domain.db.Run("UPDATE dom_users SET root = ?2 WHERE userid = ?1", userid, 0 + root))
             return false;
