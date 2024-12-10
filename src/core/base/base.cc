@@ -7996,6 +7996,22 @@ bool StreamWriter::InitCompressor(CompressionType type, CompressionSpeed speed)
     return true;
 }
 
+#if defined(_MSC_VER)
+
+static void *memrchr(const void *m, int c, size_t n)
+{
+    const uint8_t *ptr = (const uint8_t *)m + n;
+
+    while (ptr-- > m) {
+        if (*ptr == c)
+            return (void *)ptr;
+    }
+
+    return nullptr;
+}
+
+#endif
+
 bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 {
     switch (dest.type) {
@@ -8029,7 +8045,7 @@ bool StreamWriter::WriteRaw(Span<const uint8_t> buf)
 
         case DestinationType::LineFile: {
             while (buf.len) {
-                const uint8_t *end = (const uint8_t *)memchr(buf.ptr, '\n', (size_t)buf.len);
+                const uint8_t *end = (const uint8_t *)memrchr(buf.ptr, '\n', (size_t)buf.len);
 
                 if (end++) {
                     Size copy_len = std::min((Size)(end - buf.ptr), dest.u.file.buf.len - dest.u.file.buf_used);
