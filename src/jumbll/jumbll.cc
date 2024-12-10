@@ -866,7 +866,7 @@ bool DistributeContext::DeleteExtra(const DiskData &disk, const char *dest_dir, 
 
     bool complete = true;
 
-    EnumerateDirectory(dest_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
+    EnumResult ret = EnumerateDirectory(dest_dir, nullptr, -1, [&](const char *basename, const FileInfo &file_info) {
         switch (file_info.type) {
             case FileType::Directory: {
                 const char *dirname = Fmt(&temp_alloc, "%1%2/", dest_dir, basename).ptr;
@@ -926,6 +926,7 @@ bool DistributeContext::DeleteExtra(const DiskData &disk, const char *dest_dir, 
 
         return true;
     });
+    complete &= (ret == EnumResult::Success);
 
     return complete;
 }
@@ -1555,7 +1556,13 @@ bool IntegrateContext::AddNew(const char *src_dir)
                                     ON CONFLICT (path) DO UPDATE SET mtime = excluded.mtime,
                                                                      size = excluded.size,
                                                                      disk_id = excluded.disk_id,
-                                                                     status = 'changed',
+                                                                     status = CASE
+                                                                         WHEN status = 'added' THEN 'added'
+                                                                         WHEN mtime <> excluded.mtime OR
+                                                                              size <> excluded.size OR
+                                                                              disk_id <> excluded.disk_id THEN 'changed'
+                                                                         ELSE 'ok'
+                                                                     END,
                                                                      changeset = excluded.changeset)",
                                  filename, file_info.mtime, file_info.size, disk_id, changeset))
                     return false;
