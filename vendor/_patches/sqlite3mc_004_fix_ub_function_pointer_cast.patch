@@ -1,0 +1,24 @@
+diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
+index 7813fbdc20..251c51196c 100644
+--- a/vendor/sqlite3mc/sqlite3mc.c
++++ b/vendor/sqlite3mc/sqlite3mc.c
+@@ -284776,8 +284776,9 @@ sqlite3mcCloneCodecParameterTable()
+ }
+ 
+ SQLITE_PRIVATE void
+-sqlite3mcFreeCodecParameterTable(CodecParameter* codecParams)
++sqlite3mcFreeCodecParameterTable(void* ptr)
+ {
++  CodecParameter* codecParams = (CodecParameter*)ptr;
+   sqlite3_free(codecParams[0].m_params);
+   sqlite3_free(codecParams);
+ }
+@@ -311638,7 +311639,7 @@ mcRegisterCodecExtensions(sqlite3* db, char** pzErrMsg, const sqlite3_api_routin
+   if (rc == SQLITE_OK)
+   {
+     rc = sqlite3_create_function_v2(db, "sqlite3mc_config_table", 0, SQLITE_UTF8 | SQLITE_DETERMINISTIC,
+-                                    codecParameterTable, sqlite3mcConfigTable, 0, 0, (void(*)(void*)) sqlite3mcFreeCodecParameterTable);
++                                    codecParameterTable, sqlite3mcConfigTable, 0, 0, sqlite3mcFreeCodecParameterTable);
+   }
+ 
+   rc = (codecParameterTable != NULL) ? SQLITE_OK : SQLITE_NOMEM;
