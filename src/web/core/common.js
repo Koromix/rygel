@@ -520,6 +520,27 @@ const Util = new function() {
         return Math.random() * (max - min) + min;
     };
 
+    this.sequence = function(n) {
+        let seq = (new Array(n)).fill(0).map((v, idx) => idx);
+        return seq;
+    };
+
+    this.shuffle = function(array) {
+        let copy = array.slice();
+        let shuffled = [];
+
+        while (copy.length) {
+            let idx = self.getRandomInt(0, copy.length);
+
+            shuffled.push(copy[idx]);
+
+            copy[idx] = copy[copy.length - 1];
+            copy.length--;
+        }
+
+        return shuffled;
+    };
+
     this.waitFor = function(ms) {
         return new Promise((resolve, reject) => {
             setTimeout(resolve, ms);
