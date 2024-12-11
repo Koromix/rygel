@@ -569,7 +569,7 @@ function AppRunner(canvas) {
         }
 
         ctx.textAlign = 'left';
-        ctx.fillStyle = (options.color != null) ? options.color : 'black';
+        ctx.fillStyle = options.color ?? ctx.fillStyle ?? 'black';
         ctx.fillText(text, aligned.x + padding, aligned.y + height);
 
         ctx.restore();
