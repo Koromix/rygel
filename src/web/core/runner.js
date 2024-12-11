@@ -218,7 +218,8 @@ function AppRunner(canvas) {
 
     function updateKey(key, type) {
         if (type == 'keydown') {
-            pressed_keys[key] = 1;
+            if (pressed_keys[key] < 1)
+                pressed_keys[key] = 1;
         } else if (type == 'keyup') {
             pressed_keys[key] = (pressed_keys[key] > 0) ? -1 : 0;
         }
