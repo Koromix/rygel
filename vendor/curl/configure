@@ -917,6 +917,7 @@ BLANK_AT_MAKETIME
 CURL_NETWORK_AND_TIME_LIBS
 CURL_NETWORK_LIBS
 LIBCURL_PC_LIBS_PRIVATE
+LIBCURL_PC_LDFLAGS_PRIVATE
 CFLAG_CURL_SYMBOL_HIDING
 DOING_CURL_SYMBOL_HIDING_FALSE
 DOING_CURL_SYMBOL_HIDING_TRUE
@@ -24083,6 +24084,7 @@ fi
 
 if test X"$OPT_BROTLI" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -24249,6 +24251,7 @@ printf "%s\n" "found" >&6; }
   fi
 
   LDFLAGS="$LDFLAGS $LD_BROTLI"
+  LDFLAGSPC="$LDFLAGSPC $LD_BROTLI"
   CPPFLAGS="$CPPFLAGS $CPP_BROTLI"
   LIBS="$LIB_BROTLI $LIBS"
 
@@ -24332,6 +24335,7 @@ printf "%s\n" "$as_me: Added $DIR_BROTLI to CURL_LIBRARY_PATH" >&6;}
     LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libbrotlidec"
   else
         LDFLAGS=$CLEANLDFLAGS
+    LDFLAGSPC=$CLEANLDFLAGSPC
     CPPFLAGS=$CLEANCPPFLAGS
     LIBS=$CLEANLIBS
   fi
@@ -24349,6 +24353,7 @@ fi
 
 if test X"$OPT_ZSTD" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -24515,6 +24520,7 @@ printf "%s\n" "found" >&6; }
   fi
 
   LDFLAGS="$LDFLAGS $LD_ZSTD"
+  LDFLAGSPC="$LDFLAGSPC $LD_ZSTD"
   CPPFLAGS="$CPPFLAGS $CPP_ZSTD"
   LIBS="$LIB_ZSTD $LIBS"
 
@@ -24598,6 +24604,7 @@ printf "%s\n" "$as_me: Added $DIR_ZSTD to CURL_LIBRARY_PATH" >&6;}
     LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libzstd"
   else
         LDFLAGS=$CLEANLDFLAGS
+    LDFLAGSPC=$CLEANLDFLAGSPC
     CPPFLAGS=$CLEANCPPFLAGS
     LIBS=$CLEANLIBS
   fi
@@ -25042,7 +25049,10 @@ printf "%s\n" "no additional lib required" >&6; }
       else
         LIBS="$curl_cv_ldap_LIBS $curl_cv_save_LIBS"
       fi
-      LIBCURL_PC_REQUIRES_PRIVATE="ldap $LIBCURL_PC_REQUIRES_PRIVATE"
+      # FIXME: Enable when ldap was detected via pkg-config
+      if false; then
+        LIBCURL_PC_REQUIRES_PRIVATE="ldap $LIBCURL_PC_REQUIRES_PRIVATE"
+      fi
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $curl_cv_ldap_LIBS" >&5
 printf "%s\n" "$curl_cv_ldap_LIBS" >&6; }
       ;;
@@ -25864,11 +25874,14 @@ printf "%s\n" "#define HAVE_GSSAPI 1" >>confdefs.h
 
   HAVE_GSSAPI=1
   curl_gss_msg="enabled (MIT Kerberos/Heimdal)"
+  link_pkgconfig=''
 
   if test -n "$gnu_gss"; then
     curl_gss_msg="enabled (GNU GSS)"
     LDFLAGS="$LDFLAGS $GSSAPI_LIB_DIR"
+    LDFLAGSPC="$LDFLAGSPC $GSSAPI_LIB_DIR"
     LIBS="-lgss $LIBS"
+    link_pkgconfig=1
   elif test -z "$GSSAPI_LIB_DIR"; then
     case $host in
       *-apple-*)
@@ -26156,9 +26169,11 @@ printf "%s\n" "found" >&6; }
         elif test "$PKGCONFIG" != "no"; then
           gss_libs=`$PKGCONFIG --libs mit-krb5-gssapi`
           LIBS="$gss_libs $LIBS"
+          link_pkgconfig=1
         elif test -f "$KRB5CONFIG"; then
                               gss_libs=`$KRB5CONFIG --libs gssapi`
           LIBS="$gss_libs $LIBS"
+          link_pkgconfig=1
         else
           case $host in
             *-hp-hpux*)
@@ -26171,6 +26186,7 @@ printf "%s\n" "found" >&6; }
 
           if test "$GSSAPI_ROOT" != "yes"; then
             LDFLAGS="$LDFLAGS -L$GSSAPI_ROOT/lib$libsuff"
+            LDFLAGSPC="$LDFLAGSPC -L$GSSAPI_ROOT/lib$libsuff"
             LIBS="-l$gss_libname $LIBS"
           else
             LIBS="-l$gss_libname $LIBS"
@@ -26180,6 +26196,7 @@ printf "%s\n" "found" >&6; }
     esac
   else
     LDFLAGS="$LDFLAGS $GSSAPI_LIB_DIR"
+    LDFLAGSPC="$LDFLAGSPC $GSSAPI_LIB_DIR"
     case $host in
       *-hp-hpux*)
         LIBS="-lgss $LIBS"
@@ -26189,12 +26206,14 @@ printf "%s\n" "found" >&6; }
         ;;
     esac
   fi
-  if test -n "$gnu_gss"; then
-    LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE gss"
-  elif test "x$not_mit" = "x1"; then
-    LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE heimdal-gssapi"
-  else
-    LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE mit-krb5-gssapi"
+  if test -n "$link_pkgconfig"; then
+    if test -n "$gnu_gss"; then
+      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE gss"
+    elif test "x$not_mit" = "x1"; then
+      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE heimdal-gssapi"
+    else
+      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE mit-krb5-gssapi"
+    fi
   fi
 else
   CPPFLAGS="$save_CPPFLAGS"
@@ -26333,7 +26352,9 @@ printf "%s\n" "#define USE_SECTRANSP 1" >>confdefs.h
     ssl_msg="Secure Transport"
     test secure-transport != "$DEFAULT_SSL_BACKEND" || VALID_DEFAULT_SSL_BACKEND=yes
     SECURETRANSPORT_ENABLED=1
-    LDFLAGS="$LDFLAGS -framework CoreFoundation -framework CoreServices -framework Security"
+    SECURETRANSPORT_LDFLAGS='-framework CoreFoundation -framework CoreServices -framework Security'
+    LDFLAGS="$LDFLAGS $SECURETRANSPORT_LDFLAGS"
+    LDFLAGSPC="$LDFLAGSPC $SECURETRANSPORT_LDFLAGS"
   else
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
@@ -26454,6 +26475,7 @@ if test "x$OPT_OPENSSL" != xno; then
   ssl_msg=
 
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -26710,6 +26732,7 @@ printf "%s\n" "$as_me: pkg-config: SSL_CPPFLAGS: \"$SSL_CPPFLAGS\"" >&6;}
 
     CPPFLAGS="$CPPFLAGS $SSL_CPPFLAGS"
   LDFLAGS="$LDFLAGS $SSL_LDFLAGS"
+  LDFLAGSPC="$LDFLAGSPC $SSL_LDFLAGS"
 
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for HMAC_Update in -lcrypto" >&5
 printf %s "checking for HMAC_Update in -lcrypto... " >&6; }
@@ -26756,6 +26779,7 @@ else $as_nop
 
     if test -n "$LIB_OPENSSL" ; then
       LDFLAGS="$CLEANLDFLAGS -L$LIB_OPENSSL"
+      LDFLAGSPC="$CLEANLDFLAGSPC -L$LIB_OPENSSL"
     fi
     if test "$PKGCONFIG" = "no" -a -n "$PREFIX_OPENSSL" ; then
       # only set this if pkg-config wasn't used
@@ -26866,6 +26890,7 @@ else $as_nop
           { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
           LDFLAGS="$CLEANLDFLAGS"
+          LDFLAGSPC="$CLEANLDFLAGSPC"
           CPPFLAGS="$CLEANCPPFLAGS"
           LIBS="$CLEANLIBS"
 
@@ -27544,9 +27569,11 @@ printf "%s\n" "found" >&6; }
       CLEANLIBS="$LIBS"
       CLEANCPPFLAGS="$CPPFLAGS"
       CLEANLDFLAGS="$LDFLAGS"
+      CLEANLDFLAGSPC="$LDFLAGSPC"
 
       LIBS="$addlib $LIBS"
       LDFLAGS="$LDFLAGS $addld"
+      LDFLAGSPC="$LDFLAGSPC $addld"
       if test "$addcflags" != "-I/usr/include"; then
         CPPFLAGS="$CPPFLAGS $addcflags"
       fi
@@ -27778,6 +27805,7 @@ fi
 if test "x$OPT_MBEDTLS" != xno; then
   _cppflags=$CPPFLAGS
   _ldflags=$LDFLAGS
+  _ldflagspc=$LDFLAGSPC
   ssl_msg=
 
   if test X"$OPT_MBEDTLS" != Xno; then
@@ -27851,6 +27879,7 @@ fi
       mbedtlslib=$OPT_MBEDTLS/lib$libsuff
 
       LDFLAGS="$LDFLAGS $addld"
+      LDFLAGSPC="$LDFLAGSPC $addld"
       if test "$addcflags" != "-I/usr/include"; then
         CPPFLAGS="$CPPFLAGS $addcflags"
       fi
@@ -27907,6 +27936,7 @@ else $as_nop
 
           CPPFLAGS=$_cppflags
           LDFLAGS=$_ldflags
+          LDFLAGSPC=$_ldflagspc
 
 fi
 
@@ -27927,7 +27957,9 @@ printf "%s\n" "$as_me: detected mbedTLS" >&6;}
 printf "%s\n" "$as_me: Added $mbedtlslib to CURL_LIBRARY_PATH" >&6;}
         fi
       fi
-      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE mbedtls"
+            if false; then
+        LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE mbedtls"
+      fi
     fi
 
   fi
@@ -27949,6 +27981,7 @@ esac
 if test "x$OPT_WOLFSSL" != xno; then
   _cppflags=$CPPFLAGS
   _ldflags=$LDFLAGS
+  _ldflagspc=$LDFLAGSPC
 
   ssl_msg=
 
@@ -28142,6 +28175,7 @@ printf "%s\n" "$as_me: Check dir $wolfpkg" >&6;}
     if test "x$USE_WOLFSSL" != "xyes"; then
 
       LDFLAGS="$LDFLAGS $addld"
+      LDFLAGSPC="$LDFLAGSPC $addld"
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Add $addld to LDFLAGS" >&5
 printf "%s\n" "$as_me: Add $addld to LDFLAGS" >&6;}
       if test "$addcflags" != "-I/usr/include"; then
@@ -28200,6 +28234,7 @@ else $as_nop
 printf "%s\n" "no" >&6; }
         CPPFLAGS=$_cppflags
         LDFLAGS=$_ldflags
+        LDFLAGSPC=$_ldflagspc
         wolfssllibpath=""
 
 fi
@@ -28340,6 +28375,7 @@ fi
 if test "x$OPT_BEARSSL" != xno; then
   _cppflags=$CPPFLAGS
   _ldflags=$LDFLAGS
+  _ldflagspc=$LDFLAGSPC
   ssl_msg=
 
   if test X"$OPT_BEARSSL" != Xno; then
@@ -28413,6 +28449,7 @@ fi
       bearssllib=$OPT_BEARSSL/lib$libsuff
 
       LDFLAGS="$LDFLAGS $addld"
+      LDFLAGSPC="$LDFLAGSPC $addld"
       if test "$addcflags" != "-I/usr/include"; then
         CPPFLAGS="$CPPFLAGS $addcflags"
       fi
@@ -28469,6 +28506,7 @@ else $as_nop
 
           CPPFLAGS=$_cppflags
           LDFLAGS=$_ldflags
+          LDFLAGSPC=$_ldflagspc
 
 fi
 
@@ -28501,6 +28539,7 @@ if test "x$OPT_RUSTLS" != xno; then
   ssl_msg=
 
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
 
   ## NEW CODE
@@ -28539,6 +28578,7 @@ printf "%s\n" "$as_me: PKG_CONFIG_LIBDIR will be set to \"$RUSTLS_PCDIR\"" >&6;}
         addcflags=-I$PREFIX_RUSTLS/include
 
         LDFLAGS="$LDFLAGS $addld"
+        LDFLAGSPC="$LDFLAGSPC $addld"
         if test "$addcflags" != "-I/usr/include"; then
             CPPFLAGS="$CPPFLAGS $addcflags"
         fi
@@ -28612,6 +28652,8 @@ fi
       fi
       ;;
   esac
+
+  link_pkgconfig=''
 
   if test "$PKGTEST" = "yes"; then
 
@@ -28785,6 +28827,7 @@ printf "%s\n" "$as_me: pkg-config: SSL_CPPFLAGS: \"$SSL_CPPFLAGS\"" >&6;}
       LIB_RUSTLS=`echo $SSL_LDFLAGS | sed -e 's/^-L//'`
 
                                           LIBS="$SSL_LIBS $LIBS"
+      link_pkgconfig=1
       ssl_msg="rustls"
 
 printf "%s\n" "#define USE_RUSTLS 1" >>confdefs.h
@@ -28802,8 +28845,9 @@ printf "%s\n" "#define USE_RUSTLS 1" >>confdefs.h
             LIBS="-lrustls -lpthread -ldl -lm $LIBS"
   fi
 
-    CPPFLAGS="$CLEAN_CPPFLAGS $SSL_CPPFLAGS"
-  LDFLAGS="$CLAN_LDFLAGS $SSL_LDFLAGS"
+    CPPFLAGS="$CLEANCPPFLAGS $SSL_CPPFLAGS"
+  LDFLAGS="$CLEANLDFLAGS $SSL_LDFLAGS"
+  LDFLAGSPC="$CLEANLDFLAGSPC $SSL_LDFLAGS"
 
   if test "x$USE_RUSTLS" = "xyes"; then
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: detected Rustls" >&5
@@ -28818,7 +28862,9 @@ printf "%s\n" "$as_me: detected Rustls" >&6;}
 printf "%s\n" "$as_me: Added $LIB_RUSTLS to CURL_LIBRARY_PATH" >&6;}
       fi
     fi
-    LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE rustls"
+    if test -n "$link_pkgconfig"; then
+      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE rustls"
+    fi
   fi
 
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
@@ -29159,6 +29205,7 @@ fi
 
 if test X"$OPT_LIBPSL" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -29322,6 +29369,7 @@ printf "%s\n" "found" >&6; }
   fi
 
   LDFLAGS="$LDFLAGS $LD_PSL"
+  LDFLAGSPC="$LDFLAGSPC $LD_PSL"
   CPPFLAGS="$CPPFLAGS $CPP_PSL"
   LIBS="$LIB_PSL $LIBS"
 
@@ -29384,6 +29432,7 @@ done
 
 else $as_nop
         LDFLAGS=$CLEANLDFLAGS
+      LDFLAGSPC=$CLEANLDFLAGSPC
       CPPFLAGS=$CLEANCPPFLAGS
       LIBS=$CLEANLIBS
 
@@ -29540,6 +29589,7 @@ fi
 
 if test X"$OPT_LIBSSH2" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -29706,6 +29756,7 @@ printf "%s\n" "found" >&6; }
   fi
 
   LDFLAGS="$LDFLAGS $LD_SSH2"
+  LDFLAGSPC="$LDFLAGSPC $LD_SSH2"
   CPPFLAGS="$CPPFLAGS $CPP_SSH2"
   LIBS="$LIB_SSH2 $LIBS"
 
@@ -29785,11 +29836,13 @@ printf "%s\n" "$as_me: Added $DIR_SSH2 to CURL_LIBRARY_PATH" >&6;}
     LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libssh2"
   else
         LDFLAGS=$CLEANLDFLAGS
+    LDFLAGSPC=$CLEANLDFLAGSPC
     CPPFLAGS=$CLEANCPPFLAGS
     LIBS=$CLEANLIBS
   fi
 elif test X"$OPT_LIBSSH" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -29956,6 +30009,7 @@ printf "%s\n" "found" >&6; }
   fi
 
   LDFLAGS="$LDFLAGS $LD_SSH"
+  LDFLAGSPC="$LDFLAGSPC $LD_SSH"
   CPPFLAGS="$CPPFLAGS $CPP_SSH"
   LIBS="$LIB_SSH $LIBS"
 
@@ -30038,17 +30092,21 @@ printf "%s\n" "$as_me: Added $DIR_SSH to CURL_LIBRARY_PATH" >&6;}
     LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libssh"
   else
         LDFLAGS=$CLEANLDFLAGS
+    LDFLAGSPC=$CLEANLDFLAGSPC
     CPPFLAGS=$CLEANCPPFLAGS
     LIBS=$CLEANLIBS
   fi
 elif test X"$OPT_WOLFSSH" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
   if test "$OPT_WOLFSSH" != yes; then
     WOLFCONFIG="$OPT_WOLFSSH/bin/wolfssh-config"
-    LDFLAGS="$LDFLAGS `$WOLFCONFIG --libs`"
+    WOLFSSH_LIBS=`$WOLFCONFIG --libs`
+    LDFLAGS="$LDFLAGS $WOLFSSH_LIBS"
+    LDFLAGSPC="$LDFLAGSPC $WOLFSSH_LIBS"
     CPPFLAGS="$CPPFLAGS `$WOLFCONFIG --cflags`"
   fi
 
@@ -30127,6 +30185,7 @@ fi
 
 if test X"$OPT_LIBRTMP" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -30296,6 +30355,7 @@ printf "%s\n" "found" >&6; }
   fi
 
   LDFLAGS="$LDFLAGS $LD_RTMP"
+  LDFLAGSPC="$LDFLAGSPC $LD_RTMP"
   CPPFLAGS="$CPPFLAGS $CPP_RTMP"
   LIBS="$LIB_RTMP $LIBS"
 
@@ -30358,6 +30418,7 @@ done
 
 else $as_nop
         LDFLAGS=$CLEANLDFLAGS
+      LDFLAGSPC=$CLEANLDFLAGSPC
       CPPFLAGS=$CLEANCPPFLAGS
       LIBS=$CLEANLIBS
 
@@ -30515,6 +30576,7 @@ printf "%s\n" "yes ($withval)" >&6; }
   if test "$want_winidn" = "yes"; then
         clean_CPPFLAGS="$CPPFLAGS"
     clean_LDFLAGS="$LDFLAGS"
+    clean_LDFLAGSPC="$LDFLAGSPC"
     clean_LIBS="$LIBS"
     WINIDN_LIBS="-lnormaliz"
     WINIDN_CPPFLAGS=""
@@ -30526,6 +30588,7 @@ printf "%s\n" "yes ($withval)" >&6; }
     #
     CPPFLAGS="$CPPFLAGS $WINIDN_CPPFLAGS"
     LDFLAGS="$LDFLAGS $WINIDN_LDFLAGS"
+    LDFLAGSPC="$LDFLAGSPC $WINIDN_LDFLAGS"
     LIBS="$WINIDN_LIBS $LIBS"
     #
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if IdnToUnicode can be linked" >&5
@@ -30583,6 +30646,7 @@ printf "%s\n" "#define USE_WIN32_IDN 1" >>confdefs.h
 printf "%s\n" "$as_me: WARNING: Cannot find libraries for IDN support: IDN disabled" >&2;}
       CPPFLAGS="$clean_CPPFLAGS"
       LDFLAGS="$clean_LDFLAGS"
+      LDFLAGSPC="$clean_LDFLAGSPC"
       LIBS="$clean_LIBS"
     fi
   fi
@@ -30726,6 +30790,7 @@ fi
 if test "$want_idn" = "yes"; then
     clean_CPPFLAGS="$CPPFLAGS"
   clean_LDFLAGS="$LDFLAGS"
+  clean_LDFLAGSPC="$LDFLAGSPC"
   clean_LIBS="$LIBS"
   PKGCONFIG="no"
   #
@@ -31062,6 +31127,7 @@ printf "%s\n" "$as_me: IDN_DIR: \"$IDN_DIR\"" >&6;}
   #
   CPPFLAGS="$CPPFLAGS $IDN_CPPFLAGS"
   LDFLAGS="$LDFLAGS $IDN_LDFLAGS"
+  LDFLAGSPC="$LDFLAGSPC $IDN_LDFLAGS"
   LIBS="$IDN_LIBS $LIBS"
   #
   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking if idn2_lookup_ul can be linked" >&5
@@ -31138,6 +31204,7 @@ printf "%s\n" "$as_me: Added $IDN_DIR to CURL_LIBRARY_PATH" >&6;}
 printf "%s\n" "$as_me: WARNING: Cannot find libidn2" >&2;}
     CPPFLAGS="$clean_CPPFLAGS"
     LDFLAGS="$clean_LDFLAGS"
+    LDFLAGSPC="$clean_LDFLAGSPC"
     LIBS="$clean_LIBS"
     want_idn="no"
   fi
@@ -31176,6 +31243,7 @@ esac
 
 if test X"$want_nghttp2" != Xno; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -31359,6 +31427,7 @@ printf "%s\n" "$as_me: -L is $LD_H2" >&6;}
   fi
 
   LDFLAGS="$LDFLAGS $LD_H2"
+  LDFLAGSPC="$LDFLAGSPC $LD_H2"
   CPPFLAGS="$CPPFLAGS $CPP_H2"
   LIBS="$LIB_H2 $LIBS"
 
@@ -31428,6 +31497,7 @@ printf "%s\n" "$as_me: Added $DIR_H2 to CURL_LIBRARY_PATH" >&6;}
 
 else $as_nop
         LDFLAGS=$CLEANLDFLAGS
+      LDFLAGSPC=$CLEANLDFLAGSPC
       CPPFLAGS=$CLEANCPPFLAGS
       LIBS=$CLEANLIBS
 
@@ -31472,6 +31542,7 @@ if test X"$want_tcp2" != Xno; then
   fi
 
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -31643,6 +31714,7 @@ printf "%s\n" "$as_me: -I is $CPP_TCP2" >&6;}
 printf "%s\n" "$as_me: -L is $LD_TCP2" >&6;}
 
     LDFLAGS="$LDFLAGS $LD_TCP2"
+    LDFLAGSPC="$LDFLAGSPC $LD_TCP2"
     CPPFLAGS="$CPPFLAGS $CPP_TCP2"
     LIBS="$LIB_TCP2 $LIBS"
 
@@ -31711,6 +31783,7 @@ done
 
 else $as_nop
           LDFLAGS=$CLEANLDFLAGS
+        LDFLAGSPC=$CLEANLDFLAGSPC
         CPPFLAGS=$CLEANCPPFLAGS
         LIBS=$CLEANLIBS
 
@@ -31726,6 +31799,7 @@ fi
 
 if test "x$NGTCP2_ENABLED" = "x1" -a "x$OPENSSL_ENABLED" = "x1" -a "x$OPENSSL_IS_BORINGSSL" != "x1"; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -31897,6 +31971,7 @@ printf "%s\n" "$as_me: -I is $CPP_NGTCP2_CRYPTO_QUICTLS" >&6;}
 printf "%s\n" "$as_me: -L is $LD_NGTCP2_CRYPTO_QUICTLS" >&6;}
 
     LDFLAGS="$LDFLAGS $LD_NGTCP2_CRYPTO_QUICTLS"
+    LDFLAGSPC="$LDFLAGSPC $LD_NGTCP2_CRYPTO_QUICTLS"
     CPPFLAGS="$CPPFLAGS $CPP_NGTCP2_CRYPTO_QUICTLS"
     LIBS="$LIB_NGTCP2_CRYPTO_QUICTLS $LIBS"
 
@@ -31965,6 +32040,7 @@ done
 
 else $as_nop
           LDFLAGS=$CLEANLDFLAGS
+        LDFLAGSPC=$CLEANLDFLAGSPC
         CPPFLAGS=$CLEANCPPFLAGS
         LIBS=$CLEANLIBS
 
@@ -31980,6 +32056,7 @@ fi
 
 if test "x$NGTCP2_ENABLED" = "x1" -a "x$OPENSSL_ENABLED" = "x1" -a "x$OPENSSL_IS_BORINGSSL" = "x1"; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -32151,6 +32228,7 @@ printf "%s\n" "$as_me: -I is $CPP_NGTCP2_CRYPTO_BORINGSSL" >&6;}
 printf "%s\n" "$as_me: -L is $LD_NGTCP2_CRYPTO_BORINGSSL" >&6;}
 
     LDFLAGS="$LDFLAGS $LD_NGTCP2_CRYPTO_BORINGSSL"
+    LDFLAGSPC="$LDFLAGSPC $LD_NGTCP2_CRYPTO_BORINGSSL"
     CPPFLAGS="$CPPFLAGS $CPP_NGTCP2_CRYPTO_BORINGSSL"
     LIBS="$LIB_NGTCP2_CRYPTO_BORINGSSL $LIBS"
 
@@ -32219,6 +32297,7 @@ done
 
 else $as_nop
           LDFLAGS=$CLEANLDFLAGS
+        LDFLAGSPC=$CLEANLDFLAGSPC
         CPPFLAGS=$CLEANCPPFLAGS
         LIBS=$CLEANLIBS
 
@@ -32234,6 +32313,7 @@ fi
 
 if test "x$NGTCP2_ENABLED" = "x1" -a "x$GNUTLS_ENABLED" = "x1"; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -32405,6 +32485,7 @@ printf "%s\n" "$as_me: -I is $CPP_NGTCP2_CRYPTO_GNUTLS" >&6;}
 printf "%s\n" "$as_me: -L is $LD_NGTCP2_CRYPTO_GNUTLS" >&6;}
 
     LDFLAGS="$LDFLAGS $LD_NGTCP2_CRYPTO_GNUTLS"
+    LDFLAGSPC="$LDFLAGSPC $LD_NGTCP2_CRYPTO_GNUTLS"
     CPPFLAGS="$CPPFLAGS $CPP_NGTCP2_CRYPTO_GNUTLS"
     LIBS="$LIB_NGTCP2_CRYPTO_GNUTLS $LIBS"
 
@@ -32473,6 +32554,7 @@ done
 
 else $as_nop
           LDFLAGS=$CLEANLDFLAGS
+        LDFLAGSPC=$CLEANLDFLAGSPC
         CPPFLAGS=$CLEANCPPFLAGS
         LIBS=$CLEANLIBS
 
@@ -32488,6 +32570,7 @@ fi
 
 if test "x$NGTCP2_ENABLED" = "x1" -a "x$WOLFSSL_ENABLED" = "x1"; then
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -32659,6 +32742,7 @@ printf "%s\n" "$as_me: -I is $CPP_NGTCP2_CRYPTO_WOLFSSL" >&6;}
 printf "%s\n" "$as_me: -L is $LD_NGTCP2_CRYPTO_WOLFSSL" >&6;}
 
     LDFLAGS="$LDFLAGS $LD_NGTCP2_CRYPTO_WOLFSSL"
+    LDFLAGSPC="$LDFLAGSPC $LD_NGTCP2_CRYPTO_WOLFSSL"
     CPPFLAGS="$CPPFLAGS $CPP_NGTCP2_CRYPTO_WOLFSSL"
     LIBS="$LIB_NGTCP2_CRYPTO_WOLFSSL $LIBS"
 
@@ -32727,6 +32811,7 @@ done
 
 else $as_nop
           LDFLAGS=$CLEANLDFLAGS
+        LDFLAGSPC=$CLEANLDFLAGSPC
         CPPFLAGS=$CLEANCPPFLAGS
         LIBS=$CLEANLIBS
 
@@ -32819,6 +32904,7 @@ if test X"$want_nghttp3" != Xno; then
   fi
 
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -32990,6 +33076,7 @@ printf "%s\n" "$as_me: -I is $CPP_NGHTTP3" >&6;}
 printf "%s\n" "$as_me: -L is $LD_NGHTTP3" >&6;}
 
     LDFLAGS="$LDFLAGS $LD_NGHTTP3"
+    LDFLAGSPC="$LDFLAGSPC $LD_NGHTTP3"
     CPPFLAGS="$CPPFLAGS $CPP_NGHTTP3"
     LIBS="$LIB_NGHTTP3 $LIBS"
 
@@ -33057,6 +33144,7 @@ done
 
 else $as_nop
           LDFLAGS=$CLEANLDFLAGS
+        LDFLAGSPC=$CLEANLDFLAGSPC
         CPPFLAGS=$CLEANCPPFLAGS
         LIBS=$CLEANLIBS
 
@@ -33135,6 +33223,7 @@ if test X"$want_quiche" != Xno; then
   fi
 
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -33306,6 +33395,7 @@ printf "%s\n" "$as_me: -I is $CPP_QUICHE" >&6;}
 printf "%s\n" "$as_me: -L is $LD_QUICHE" >&6;}
 
     LDFLAGS="$LDFLAGS $LD_QUICHE"
+    LDFLAGSPC="$LDFLAGSPC $LD_QUICHE"
     CPPFLAGS="$CPPFLAGS $CPP_QUICHE"
     LIBS="$LIB_QUICHE $LIBS"
 
@@ -33447,6 +33537,7 @@ if test X"$want_msh3" != Xno; then
   fi
 
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -33455,6 +33546,7 @@ if test X"$want_msh3" != Xno; then
     CPP_MSH3="-I$want_msh3_path/include"
     DIR_MSH3="$want_msh3_path/lib"
     LDFLAGS="$LDFLAGS $LD_MSH3"
+    LDFLAGSPC="$LDFLAGSPC $LD_MSH3"
     CPPFLAGS="$CPPFLAGS $CPP_MSH3"
   fi
   LIBS="-lmsh3 $LIBS"
@@ -33514,7 +33606,9 @@ printf "%s\n" "#define USE_MSH3 1" >>confdefs.h
         export CURL_LIBRARY_PATH
         { printf "%s\n" "$as_me:${as_lineno-$LINENO}: Added $DIR_MSH3 to CURL_LIBRARY_PATH" >&5
 printf "%s\n" "$as_me: Added $DIR_MSH3 to CURL_LIBRARY_PATH" >&6;}
-        LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libmsh3"
+                if false; then
+          LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE libmsh3"
+        fi
         experimental="$experimental HTTP3"
 
 fi
@@ -33523,6 +33617,7 @@ done
 
 else $as_nop
         LDFLAGS=$CLEANLDFLAGS
+      LDFLAGSPC=$CLEANLDFLAGSPC
       CPPFLAGS=$CLEANCPPFLAGS
       LIBS=$CLEANLIBS
 
@@ -33559,6 +33654,7 @@ if test X"$want_libuv" != Xno; then
   fi
 
     CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
   CLEANLIBS="$LIBS"
 
@@ -33730,6 +33826,7 @@ printf "%s\n" "$as_me: -I is $CPP_LIBUV" >&6;}
 printf "%s\n" "$as_me: -L is $LD_LIBUV" >&6;}
 
     LDFLAGS="$LDFLAGS $LD_LIBUV"
+    LDFLAGSPC="$LDFLAGSPC $LD_LIBUV"
     CPPFLAGS="$CPPFLAGS $CPP_LIBUV"
     LIBS="$LIB_LIBUV $LIBS"
 
@@ -33798,6 +33895,7 @@ done
 
 else $as_nop
           LDFLAGS=$CLEANLDFLAGS
+        LDFLAGSPC=$CLEANLDFLAGSPC
         CPPFLAGS=$CLEANCPPFLAGS
         LIBS=$CLEANLIBS
 
@@ -44089,12 +44187,6 @@ printf "%s\n" "#define HAVE_DECL_GETPWUID_R_MISSING 1" >>confdefs.h
 fi
 
 
-ac_fn_c_check_func "$LINENO" "_fseeki64" "ac_cv_func__fseeki64"
-if test "x$ac_cv_func__fseeki64" = xyes
-then :
-  printf "%s\n" "#define HAVE__FSEEKI64 1" >>confdefs.h
-
-fi
 ac_fn_c_check_func "$LINENO" "eventfd" "ac_cv_func_eventfd"
 if test "x$ac_cv_func_eventfd" = xyes
 then :
@@ -44293,8 +44385,7 @@ printf "%s\n" "$as_me: WARNING: cannot determine non-blocking socket method." >&
   fi
 
 
-if test "x$BUILD_DOCS" != "x0" -o "x$USE_MANUAL" != "x0" -o "x$CURL_CA_EMBED" != "x"; then
-  # Extract the first word of "perl", so it can be a program name with args.
+# Extract the first word of "perl", so it can be a program name with args.
 set dummy perl; ac_word=$2
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
 printf %s "checking for $ac_word... " >&6; }
@@ -44342,6 +44433,7 @@ fi
 
 
 
+if test "x$BUILD_DOCS" != "x0" -o "x$USE_MANUAL" != "x0" -o "x$CURL_CA_EMBED" != "x"; then
   if test -z "$PERL"; then
     as_fn_error $? "perl was not found, needed for docs, manual and CA embed" "$LINENO" 5
   fi
@@ -44375,6 +44467,7 @@ fi
   if test "$want_ares" = "yes"; then
         clean_CPPFLAGS="$CPPFLAGS"
     clean_LDFLAGS="$LDFLAGS"
+    clean_LDFLAGSPC="$LDFLAGSPC"
     clean_LIBS="$LIBS"
     configure_runpath=`pwd`
     if test -n "$want_ares_path"; then
@@ -44704,6 +44797,7 @@ printf "%s\n" "$as_me: pkg-config: ares_CPPFLAGS: \"$ares_CPPFLAGS\"" >&6;}
     #
     CPPFLAGS="$clean_CPPFLAGS $ares_CPPFLAGS"
     LDFLAGS="$clean_LDFLAGS $ares_LDFLAGS"
+    LDFLAGSPC="$clean_LDFLAGSPC $ares_LDFLAGS"
     LIBS="$ares_LIBS $clean_LIBS"
     #
 
@@ -44747,6 +44841,7 @@ printf "%s\n" "no" >&6; }
       as_fn_error $? "c-ares library defective or too old" "$LINENO" 5
             CPPFLAGS="$clean_CPPFLAGS"
       LDFLAGS="$clean_LDFLAGS"
+      LDFLAGSPC="$clean_LDFLAGSPC"
       LIBS="$clean_LIBS"
       # prevent usage
       want_ares="no"
@@ -44834,7 +44929,9 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
     if test "x$build_for_macos" != xno; then
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }
-      LDFLAGS="$LDFLAGS -framework CoreFoundation -framework CoreServices -framework SystemConfiguration"
+      SYSCONFIG_LDFLAGS='-framework CoreFoundation -framework CoreServices -framework SystemConfiguration'
+      LDFLAGS="$LDFLAGS $SYSCONFIG_LDFLAGS"
+      LDFLAGSPC="$LDFLAGSPC $SYSCONFIG_LDFLAGS"
     else
       { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
 printf "%s\n" "no" >&6; }
@@ -45922,9 +46019,6 @@ done
 
     if test "x$ECH_ENABLED" = "x1"; then
 
-printf "%s\n" "#define USE_HTTPSRR 1" >>confdefs.h
-
-
 printf "%s\n" "#define USE_ECH 1" >>confdefs.h
 
     { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ECH_SUPPORT" >&5
@@ -46023,7 +46117,25 @@ fi
 
 
 
+LIBCURL_PC_LDFLAGS_PRIVATE=''
+set -- $INITIAL_LDFLAGS
+while test -n "$1"; do
+  case "$1" in
+    -L* | --library-path=* | -F*)
+      LIBCURL_PC_LDFLAGS_PRIVATE="$LIBCURL_PC_LDFLAGS_PRIVATE $1"
+      ;;
+    -framework)
+      if test -n "$2"; then
+        LIBCURL_PC_LDFLAGS_PRIVATE="$LIBCURL_PC_LDFLAGS_PRIVATE $1 $2"
+        shift
+      fi
+      ;;
+  esac
+  shift
+done
+LIBCURL_PC_LDFLAGS_PRIVATE="$LIBCURL_PC_LDFLAGS_PRIVATE $LDFLAGSPC"
 LIBCURL_PC_LIBS_PRIVATE="$LIBS$PTHREAD"
+
 
 
 
@@ -46368,6 +46480,7 @@ squeeze DEFS
 squeeze LDFLAGS
 squeeze LIBS
 
+squeeze LIBCURL_PC_LDFLAGS_PRIVATE
 squeeze LIBCURL_PC_LIBS_PRIVATE
 squeeze CURL_NETWORK_LIBS
 squeeze CURL_NETWORK_AND_TIME_LIBS
@@ -49202,6 +49315,7 @@ SUPPORT_PROTOCOLS_LOWER=`echo "$SUPPORT_PROTOCOLS" | tr A-Z a-z`
    CFLAGS extras:   ${CURL_CFLAG_EXTRAS}
    CPPFLAGS:        ${CPPFLAGS}
    LDFLAGS:         ${LDFLAGS}
+     curl-config:   ${LIBCURL_PC_LDFLAGS_PRIVATE}
    LIBS:            ${LIBS}
 
   curl version:     ${CURLVERSION}
@@ -49253,6 +49367,7 @@ printf "%s\n" "$as_me: Configured to build curl/libcurl:
    CFLAGS extras:   ${CURL_CFLAG_EXTRAS}
    CPPFLAGS:        ${CPPFLAGS}
    LDFLAGS:         ${LDFLAGS}
+     curl-config:   ${LIBCURL_PC_LDFLAGS_PRIVATE}
    LIBS:            ${LIBS}
 
   curl version:     ${CURLVERSION}

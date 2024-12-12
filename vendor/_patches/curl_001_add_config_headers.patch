@@ -1,8 +1,8 @@
-diff --git b/vendor/curl/lib/config-emscripten.h a/vendor/curl/lib/config-emscripten.h
+diff --git a/vendor/curl/lib/config-emscripten.h b/vendor/curl/lib/config-emscripten.h
 new file mode 100644
 index 000000000..9818942f1
 --- /dev/null
-+++ a/vendor/curl/lib/config-emscripten.h
++++ b/vendor/curl/lib/config-emscripten.h
 @@ -0,0 +1,996 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -1000,11 +1000,11 @@ index 000000000..9818942f1
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/config-freebsd.h a/vendor/curl/lib/config-freebsd.h
+diff --git a/vendor/curl/lib/config-freebsd.h b/vendor/curl/lib/config-freebsd.h
 new file mode 100644
 index 000000000..e0996cb46
 --- /dev/null
-+++ a/vendor/curl/lib/config-freebsd.h
++++ b/vendor/curl/lib/config-freebsd.h
 @@ -0,0 +1,1074 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -2080,11 +2080,11 @@ index 000000000..e0996cb46
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/config-linux.h a/vendor/curl/lib/config-linux.h
+diff --git a/vendor/curl/lib/config-linux.h b/vendor/curl/lib/config-linux.h
 new file mode 100644
 index 000000000..b7876ce6d
 --- /dev/null
-+++ a/vendor/curl/lib/config-linux.h
++++ b/vendor/curl/lib/config-linux.h
 @@ -0,0 +1,1038 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -3124,11 +3124,11 @@ index 000000000..b7876ce6d
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/config-macos.h a/vendor/curl/lib/config-macos.h
+diff --git a/vendor/curl/lib/config-macos.h b/vendor/curl/lib/config-macos.h
 new file mode 100644
 index 000000000..6aba01a73
 --- /dev/null
-+++ a/vendor/curl/lib/config-macos.h
++++ b/vendor/curl/lib/config-macos.h
 @@ -0,0 +1,1038 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -4168,11 +4168,11 @@ index 000000000..6aba01a73
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/config-openbsd.h a/vendor/curl/lib/config-openbsd.h
+diff --git a/vendor/curl/lib/config-openbsd.h b/vendor/curl/lib/config-openbsd.h
 new file mode 100644
 index 000000000..2ae6f3977
 --- /dev/null
-+++ a/vendor/curl/lib/config-openbsd.h
++++ b/vendor/curl/lib/config-openbsd.h
 @@ -0,0 +1,1080 @@
 +/* lib/curl_config.h.  Generated from curl_config.h.in by configure.  */
 +/* lib/curl_config.h.in.  Generated from configure.ac by autoheader.  */
@@ -5254,11 +5254,11 @@ index 000000000..2ae6f3977
 +
 +/* the signed version of size_t */
 +/* #undef ssize_t */
-diff --git b/vendor/curl/lib/curl_setup.h a/vendor/curl/lib/curl_setup.h
-index cfab14085..672930aeb 100644
---- b/vendor/curl/lib/curl_setup.h
-+++ a/vendor/curl/lib/curl_setup.h
-@@ -138,6 +138,26 @@
+diff --git a/vendor/curl/lib/curl_setup.h b/vendor/curl/lib/curl_setup.h
+index 50b4479f2..43050cb56 100644
+--- a/vendor/curl/lib/curl_setup.h
++++ b/vendor/curl/lib/curl_setup.h
+@@ -141,6 +141,26 @@
  #  endif
  #endif
  

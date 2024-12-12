@@ -32,6 +32,7 @@ if test "x$OPT_RUSTLS" != xno; then
 
   dnl backup the pre-ssl variables
   CLEANLDFLAGS="$LDFLAGS"
+  CLEANLDFLAGSPC="$LDFLAGSPC"
   CLEANCPPFLAGS="$CPPFLAGS"
 
   ## NEW CODE
@@ -77,6 +78,7 @@ if test "x$OPT_RUSTLS" != xno; then
         addcflags=-I$PREFIX_RUSTLS/include
 
         LDFLAGS="$LDFLAGS $addld"
+        LDFLAGSPC="$LDFLAGSPC $addld"
         if test "$addcflags" != "-I/usr/include"; then
             CPPFLAGS="$CPPFLAGS $addcflags"
         fi
@@ -110,6 +112,8 @@ if test "x$OPT_RUSTLS" != xno; then
       ;;
   esac
 
+  link_pkgconfig=''
+
   if test "$PKGTEST" = "yes"; then
 
     CURL_CHECK_PKGCONFIG(rustls, [$RUSTLS_PCDIR])
@@ -138,6 +142,7 @@ if test "x$OPT_RUSTLS" != xno; then
       dnl additional libs may be necessary.  Hope that we
       dnl don't need any.
       LIBS="$SSL_LIBS $LIBS"
+      link_pkgconfig=1
       ssl_msg="rustls"
       AC_DEFINE(USE_RUSTLS, 1, [if Rustls is enabled])
       AC_SUBST(USE_RUSTLS, [1])
@@ -155,8 +160,9 @@ if test "x$OPT_RUSTLS" != xno; then
   fi
 
   dnl finally, set flags to use this TLS backend
-  CPPFLAGS="$CLEAN_CPPFLAGS $SSL_CPPFLAGS"
-  LDFLAGS="$CLAN_LDFLAGS $SSL_LDFLAGS"
+  CPPFLAGS="$CLEANCPPFLAGS $SSL_CPPFLAGS"
+  LDFLAGS="$CLEANLDFLAGS $SSL_LDFLAGS"
+  LDFLAGSPC="$CLEANLDFLAGSPC $SSL_LDFLAGS"
 
   if test "x$USE_RUSTLS" = "xyes"; then
     AC_MSG_NOTICE([detected Rustls])
@@ -173,7 +179,9 @@ if test "x$OPT_RUSTLS" != xno; then
         AC_MSG_NOTICE([Added $LIB_RUSTLS to CURL_LIBRARY_PATH])
       fi
     fi
-    LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE rustls"
+    if test -n "$link_pkgconfig"; then
+      LIBCURL_PC_REQUIRES_PRIVATE="$LIBCURL_PC_REQUIRES_PRIVATE rustls"
+    fi
   fi
 
   test -z "$ssl_msg" || ssl_backends="${ssl_backends:+$ssl_backends, }$ssl_msg"
