@@ -52,7 +52,7 @@
 
     function end() {
         render(html`
-            <p>Bravo, répétez cet exercice autant de fois que nécessaire</p>
+            <p>C'est terminé, mais n'hésitez pas à répéter cet exercice <b>autant de fois que nécessaire</b> !</p>
             <div class="buttons" style="flex-direction: column;">
                 <a @click=${menu}>Recommencer</a>
             </div>
