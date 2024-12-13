@@ -731,10 +731,6 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 LogError("Missing title for page '%1'", SplitStrReverseAny(page.src_filename, RG_PATH_SEPARATORS));
                 valid = false;
             }
-            if (!page.menu) {
-                LogError("Missing menu for page '%1'", SplitStrReverseAny(page.src_filename, RG_PATH_SEPARATORS));
-                valid = false;
-            }
             if (!page.template_filename) {
                 LogError("Missing template for page '%1'", SplitStrReverseAny(page.src_filename, RG_PATH_SEPARATORS));
                 valid = false;
