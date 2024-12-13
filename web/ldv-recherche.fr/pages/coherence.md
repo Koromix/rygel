@@ -6,7 +6,7 @@
 
     function menu() {
         render(html`
-            <p>Cet exercice a pour but de vous aider à vous relaxer en alternant des inspirations profondes de 5 secondes, et des expirations profondes de 5 secondes.</p>
+            <p>Relaxez-vous en alternant des <b>inspirations et des expirations profondes</b> toutes les 5 secondes.</p>
             <div class="buttons" style="flex-direction: column;">
                 <a @click=${e => run(60)}>1 minute</a>
                 <a @click=${e => run(180)}>3 minutes</a>
@@ -103,13 +103,14 @@
 
     #bubble {
         display: flex;
-        border-radius: 50%;
         width: 150px;
         height: 150px;
+        margin-top: 28px;
         background: #417ad5;
         color: white;
         align-items: center;
         justify-content: center;
+        border-radius: 50%;
         transform: scale(1);
     }
     #bubble.animate { animation: breathe 5s ease-in-out infinite alternate; }
@@ -126,12 +127,19 @@
             background: #417ad5;
         }
         100% {
-            transform: scale(2);
+            transform: scale(1.8);
             background: #4e92ff;
         }
     }
     @keyframes progress {
         0% { --progress: 0%; }
         100% { --progress: 100%; }
+    }
+
+    @media screen and (max-width: 960px) {
+        #exercise > p {
+            margin-left: 0;
+            margin-right: 0;
+        }
     }
 </style>
