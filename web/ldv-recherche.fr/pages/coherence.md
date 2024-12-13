@@ -72,7 +72,6 @@
         flex: 1;
         margin: 0 1em;
         padding: 1em;
-        background: #fafafa;
         align-items: center;
         justify-content: center;
         flex-direction: column;
@@ -96,7 +95,7 @@
         top: 10px;
         width: calc(100% - 20px);
         height: 20px;
-        background: linear-gradient(to right, #4e92ff 0 var(--progress), white var(--progress));
+        background: linear-gradient(to right, #4e92ff 0 var(--progress), #f8f8f8 var(--progress));
         border-radius: 10px;
     }
     #progress.animate { animation: progress var(--duration) linear; }
