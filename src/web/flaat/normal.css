@@ -259,7 +259,7 @@ table + div.legend {
 }
 
 .buttons {
-    margin: 1em;
+    margin: 1em 0;
     display: flex;
     gap: 20px;
     justify-content: center;

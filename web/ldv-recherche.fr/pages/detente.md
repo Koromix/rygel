@@ -81,4 +81,8 @@
         font-size: 1.1em;
         font-weight: bold;
     }
+
+    @media screen and (max-width: 960px) {
+        .cards { flex-direction: column; }
+    }
 </style>
