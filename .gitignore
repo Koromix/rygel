@@ -24,6 +24,9 @@ package-lock.json
 /src/koffi/**/dist/
 /web/**/dist/
 
+/src/staks/dist/*
+!/src/staks/dist/favicon.png
+
 /src/drd/drdR/R/
 /src/drd/drdR/src/
 /src/drd/drdR_*
