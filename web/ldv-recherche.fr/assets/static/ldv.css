@@ -82,11 +82,7 @@ span[title] { border-bottom: 1px dotted #383838; }
 footer { gap: 3em; }
 footer > img { filter: none; }
 
-#logo > img {
-    margin: -16px;
-    width: calc(100% + 32px);
-    height: calc(100% + 36px);
-}
+#logo { height: 100% ; }
 
 .schema {
     display: block;
