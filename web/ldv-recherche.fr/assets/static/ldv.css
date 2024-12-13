@@ -61,9 +61,11 @@ span[title] { border-bottom: 1px dotted #383838; }
     flex-direction: column;
     margin: 0 auto 1em auto;
 }
-.banner > img { object-fit: contain; }
+.banner > img {
+    object-fit: contain;
+    margin-bottom: -1.8em;
+}
 .banner > .title {
-    margin-top: -1.8em;
     padding: 1em;
     align-self: start;
     background: #eca17f;
