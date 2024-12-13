@@ -48,6 +48,7 @@ function AppRunner(canvas) {
     let handle_draw = null;
     let handle_context_menu = null;
 
+    let is_touch = false;
     let touch_digits = -1;
     let touch_start = null;
     let touch_distance = 0;
@@ -64,6 +65,7 @@ function AppRunner(canvas) {
         ctrl: 0,
         alt: 0,
         delete: 0,
+        return: 0,
 
         a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0, h: 0, i: 0,
         j: 0, k: 0, l: 0, m: 0, n: 0, o: 0, p: 0, q: 0, r: 0,
@@ -92,6 +94,7 @@ function AppRunner(canvas) {
 
     Object.defineProperties(this,  {
         canvas: { value: canvas, writable: false, enumerable: true },
+        isTouch: { get: () => is_touch, enumerable: true },
 
         onUpdate: { get: () => handle_draw, set: func => { handle_update = func; }, enumerable: true },
         onDraw: { get: () => handle_draw, set: func => { handle_draw = func; }, enumerable: true },
@@ -137,11 +140,13 @@ function AppRunner(canvas) {
             e.preventDefault();
         });
 
+        is_touch = isTouchDevice();
+
         canvas.addEventListener('keydown', handleKeyEvent);
         canvas.addEventListener('keyup', handleKeyEvent);
         canvas.setAttribute('tabindex', '0');
 
-        if (!isTouchDevice()) {
+        if (!is_touch) {
             canvas.addEventListener('mousemove', handleMouseEvent);
             canvas.addEventListener('mousedown', handleMouseEvent);
             canvas.addEventListener('mouseup', handleMouseEvent);
@@ -203,6 +208,8 @@ function AppRunner(canvas) {
             updateKey('alt', e.type);
         } else if (code == 46) {
             updateKey('delete', e.type);
+        } else if (code == 13) {
+            updateKey('return', e.type);
         }
 
         if (key == 'z' || code == 38) {
@@ -279,10 +286,8 @@ function AppRunner(canvas) {
         let rect = canvas.getBoundingClientRect();
 
         // Prevent refresh when swipping up and other stuff
-        if (e.type == 'touchmove') {
-            e.preventDefault();
-            e.stopPropagation();
-        }
+        e.preventDefault();
+        e.stopPropagation();
 
         if (e.type == 'touchstart' || e.type == 'touchmove') {
             if (e.type == 'touchstart')
@@ -574,6 +579,13 @@ function AppRunner(canvas) {
         ctx.fillText(text, aligned.x + padding, aligned.y + height);
 
         ctx.restore();
+
+        let size = {
+            width: width,
+            height: height
+        };
+
+        return size;
     };
 
     // ------------------------------------------------------------------------
