@@ -77,8 +77,7 @@ async function run() {
         format: 'esm',
         target: 'es2020',
         loader: {
-            '.woff': 'file',
-            '.woff2': 'file',
+            '.woff2': 'dataurl',
             '.png': 'file',
             '.webp': 'file',
             '.ogg': 'file',
