@@ -30,7 +30,7 @@ const KEYBOARD_SHORTCUTS = [
     ['P', 'Mettre en pause'],
     ['G', `Afficher/cacher le fantôme`],
     ['B', `Modifier le fond d'écran`],
-    ['M', 'Activer/désactiver la musique'],
+    ['M', 'Modifier la musique'],
     null,
     ['H', `Afficher/cacher l'aide`],
     ['F', `Mode plein écran`]
@@ -41,8 +41,7 @@ const SQUARE_SIZE = 48;
 
 const DEFAULT_SETTINGS = {
     background: 'aurora',
-    soundtrack: 'themeA',
-    music: true,
+    music: 'serious_corporate',
     ghost: true,
     help: true
 };
@@ -126,18 +125,14 @@ function loadSettings() {
     }
 
     for (let key in user) {
-        if (!settings.hasOwnProperty(key))
-            continue;
-        if (typeof user[key] != typeof settings[key])
-            continue;
-
-        settings[key] = user[key];
+        if (settings.hasOwnProperty(key))
+            settings[key] = user[key];
     }
 
     if (!assets.backgrounds.hasOwnProperty(settings.background))
         settings.background = DEFAULT_SETTINGS.background;
-    if (!assets.soundtracks.hasOwnProperty(settings.soundtrack))
-        settings.soundtrack = DEFAULT_SETTINGS.soundtrack;
+    if (settings.music != null && !assets.musics.hasOwnProperty(settings.music))
+        settings.music = DEFAULT_SETTINGS.music;
 }
 
 function saveSettings() {
@@ -266,10 +261,8 @@ function update() {
         let x = 20 + size / 2;
         let y = 20 + size / 2;
 
-        if (button(music_key, x, y, size).clicked) {
-            settings.music = !settings.music;
-            saveSettings();
-        }
+        if (button(music_key, x, y, size).clicked)
+            toggleMusic();
         y += size + 20;
 
         if (button('background', x, y, size).clicked)
@@ -299,10 +292,8 @@ function update() {
         }
         if (pressed_keys.b == 1)
             toggleBackground();
-        if (pressed_keys.m == 1) {
-            settings.music = !settings.music;
-            saveSettings();
-        }
+        if (pressed_keys.m == 1)
+            toggleMusic();
         if (pressed_keys.h == 1) {
             settings.help = !settings.help;
             saveSettings();
@@ -314,9 +305,9 @@ function update() {
     }
 
     // Music sound
-    if (started && settings.music) {
-        let sound = assets.soundtracks[settings.soundtrack];
-        runner.play(sound);
+    if (started && settings.music != null) {
+        let sound = assets.musics[settings.music];
+        runner.playLoop(sound);
     }
 
     // Should only run once unless the game mode changes, in which case rerun
@@ -362,6 +353,8 @@ function update() {
                     play();
                     pressed_keys.space = 0;
                 }
+
+                runner.playOnce(assets.sounds.gameover, false);
             } break;
         }
     }
@@ -390,6 +383,17 @@ function toggleBackground() {
     let next = (idx + 1) % backgrounds.length;
 
     settings.background = backgrounds[next];
+
+    saveSettings();
+}
+
+function toggleMusic() {
+    let musics = Object.keys(assets.musics);
+
+    let idx = musics.indexOf(settings.music);
+    let next = idx + 1;
+
+    settings.music = musics[next] ?? null;
 
     saveSettings();
 }
@@ -514,8 +518,12 @@ function updateGame() {
         hold_block = piece.block;
         can_hold = false;
 
-        if (!spawnPiece(block))
+        if (!spawnPiece(block)) {
             game_mode = 'gameover';
+            return;
+        }
+
+        runner.playOnce(assets.sounds.hold);
 
         return;
     }
@@ -556,6 +564,8 @@ function updateGame() {
                     locking.time = now;
                 piece.actions++;
 
+                runner.playOnce(assets.sounds.move);
+
                 break;
             }
         }
@@ -571,6 +581,8 @@ function updateGame() {
             if (piece.actions < rules.MAX_ACTIONS && locking != null)
                 locking.time = now;
             piece.actions++;
+
+            runner.playOnce(assets.sounds.move);
         }
     }
 
@@ -653,6 +665,8 @@ function updateGame() {
         if (lines) {
             combo++;
             score += 50 * combo * level;
+
+            runner.playOnce(assets.sounds.clear);
         }
 
         let perfect = stack.every(value => !value);
@@ -666,7 +680,12 @@ function updateGame() {
             }
         }
 
-        level = Math.max(level, 1 + Math.floor(clears / 10));
+        let new_level = 1 + Math.floor(clears / 10);
+
+        if (new_level > level) {
+            level = new_level;
+            runner.playOnce(assets.sounds.levelup);
+        }
     }
 }
 
@@ -704,6 +723,8 @@ function spawnPiece(block) {
 }
 
 function lockPiece() {
+    runner.playOnce(assets.sounds.lock);
+
     for (let i = 0; i < piece.size; i++) {
         for (let j = 0; j < piece.size; j++) {
             if (!testShape(piece.size, piece.shape, i, j))

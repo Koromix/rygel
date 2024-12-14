@@ -22,8 +22,23 @@ import backgrounds_planet from '../assets/backgrounds/planet.webp';
 // Somewhere by psiipilehto: https://www.deviantart.com/psiipilehto/art/Somewhere-269008123
 import backgrounds_lonely from '../assets/backgrounds/somewhere.webp';
 
-// Tetris theme A by tuxmain: https://play.dogmazic.net/song.php?action=show_song&song_id=60597
-import soundtracks_themeA from '../assets/soundtracks/themeA.mp3';
+// Serious Corporate (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/767937/
+import musics_serious_corporate from '../assets/musics/serious_corporate.mp3';
+// Ambient Future Tech (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/745374/
+import musics_ambient_future_tech from '../assets/musics/ambient_future_tech.mp3';
+
+// powerup by BananaMilkshake: https://freesound.org/people/BananaMilkshake/sounds/632702/
+import sound_clear from '../assets/sounds/clear.mp3';
+// game over by Leszek_Szary: https://freesound.org/people/Leszek_Szary/sounds/133283/
+import sound_gameover from '../assets/sounds/gameover.mp3';
+// Notification Sound 1 by deadrobotmusic: https://freesound.org/people/deadrobotmusic/sounds/750607/
+import sound_hold from '../assets/sounds/hold.mp3';
+// Blip 1 by HenKonen: https://freesound.org/people/HenKonen/sounds/757175/
+import sound_lock from '../assets/sounds/lock.mp3';
+// You find a treasure by xkeril: https://freesound.org/people/xkeril/sounds/632661/
+import sound_levelup from '../assets/sounds/levelup.mp3';
+// Simple GUI click by qubodup: https://freesound.org/people/qubodup/sounds/159697/
+import sound_move from '../assets/sounds/move.mp3';
 
 import ui_background from '../assets/ui/background.png';
 import ui_clockwise from '../assets/ui/clockwise.png';
@@ -46,8 +61,18 @@ async function loadAssets() {
         somewhere: backgrounds_lonely
     };
 
-    assets.soundtracks = {
-        themeA: soundtracks_themeA
+    assets.musics = {
+        serious_corporate: musics_serious_corporate,
+        ambient_future_tech: musics_ambient_future_tech
+    };
+
+    assets.sounds = {
+        clear: sound_clear,
+        gameover: sound_gameover,
+        hold: sound_hold,
+        levelup: sound_levelup,
+        lock: sound_lock,
+        move: sound_move
     };
 
     assets.ui = {

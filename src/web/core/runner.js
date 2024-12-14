@@ -414,9 +414,13 @@ function AppRunner(canvas) {
 
                 if (audio != null) {
                     for (let sfx of old_sources.values()) {
-                        sfx.gain.gain.linearRampToValueAtTime(0, audio.currentTime + 0.5);
+                        if (sfx.persist)
+                            continue;
+
+                        sfx.gain.gain.linearRampToValueAtTime(0, audio.currentTime + 0.2);
                         setTimeout(() => sfx.src.stop(), 2000);
                     }
+
                     old_sources = new_sources;
                     new_sources = new Map;
                 }
@@ -600,13 +604,14 @@ function AppRunner(canvas) {
 
         if (options.loop == null)
             options.loop = false;
-        if (options.start == null)
-            options.start = true;
+        if (options.persist == null)
+            options.persist = true;
 
-        if (sfx == null && options.start) {
+        if (sfx == null) {
             sfx = {
                 src: audio.createBufferSource(),
-                gain: audio.createGain()
+                gain: audio.createGain(),
+                persist: options.persist
             };
 
             sfx.gain.connect(audio.destination);
@@ -625,12 +630,12 @@ function AppRunner(canvas) {
             new_sources.set(asset, sfx);
     };
 
-    this.play = function(asset) {
-        self.playSound(asset, { loop: true });
+    this.playLoop = function(asset) {
+        self.playSound(asset, { loop: true, persist: false });
     };
 
-    this.playOnce = function(asset, start = true) {
-        self.playSound(asset, { loop: false, start: start });
+    this.playOnce = function(asset, persist = true) {
+        self.playSound(asset, { loop: false, persist: persist });
     };
 }
 
