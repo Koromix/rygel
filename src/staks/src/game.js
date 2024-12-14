@@ -254,7 +254,7 @@ function update() {
 
     // Global touch buttons
     if (runner.isTouch) {
-        let music_key = settings.music ? 'sound' : 'silence';
+        let music_key = (settings.music != null) ? 'music' : 'silence';
         let pause_key = pause ? 'play' : 'pause';
 
         let size = 0.6 * BUTTON_SIZE;

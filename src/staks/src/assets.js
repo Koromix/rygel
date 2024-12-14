@@ -45,10 +45,10 @@ import ui_clockwise from '../assets/ui/clockwise.png';
 import ui_counterclock from '../assets/ui/counterclock.png';
 import ui_fullscreen from '../assets/ui/fullscreen.png';
 import ui_left from '../assets/ui/left.png';
+import ui_music from '../assets/ui/music.png';
 import ui_play from '../assets/ui/play.png';
 import ui_pause from '../assets/ui/pause.png';
 import ui_right from '../assets/ui/right.png';
-import ui_sound from '../assets/ui/sound.png';
 import ui_silence from '../assets/ui/silence.png';
 import ui_turbo from '../assets/ui/turbo.png';
 
@@ -81,10 +81,10 @@ async function loadAssets() {
         counterclock: ui_counterclock,
         fullscreen: ui_fullscreen,
         left: ui_left,
+        music: ui_music,
         pause: ui_pause,
         play: ui_play,
         right: ui_right,
-        sound: ui_sound,
         silence: ui_silence,
         turbo: ui_turbo
     };
