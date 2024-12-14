@@ -19,6 +19,12 @@ rm -rf src/sys/.git
 echo "replace $SYS_REQUIRE => ./sys" >> src/go.mod
 echo -n "" > src/go.sum
 
+rm -rf wasm
+npm install esbuild-wasm@$VERSION
+mv node_modules/esbuild-wasm wasm
+rm -rf node_modules
+rm package.json package-lock.json
+
 curl -O https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-$VERSION.tgz
 tar zx --strip-components=1 -f win32-x64-$VERSION.tgz package/esbuild.exe
 mv esbuild.exe bin/esbuild_windows_x64.exe

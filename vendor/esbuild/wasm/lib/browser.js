@@ -231,8 +231,7 @@ var buildLogLevelDefault = "warning";
 var transformLogLevelDefault = "silent";
 function validateTarget(target) {
   validateStringValue(target, "target");
-  if (target.indexOf(",") >= 0)
-    throw new Error(`Invalid target: ${target}`);
+  if (target.indexOf(",") >= 0) throw new Error(`Invalid target: ${target}`);
   return target;
 }
 var canBeAnything = () => null;
@@ -254,11 +253,9 @@ var mustBeStringOrURL = (value) => typeof value === "string" || value instanceof
 function getFlag(object, keys, key, mustBeFn) {
   let value = object[key];
   keys[key + ""] = true;
-  if (value === void 0)
-    return void 0;
+  if (value === void 0) return void 0;
   let mustBe = mustBeFn(value);
-  if (mustBe !== null)
-    throw new Error(`${quote(key)} must be ${mustBe}`);
+  if (mustBe !== null) throw new Error(`${quote(key)} must be ${mustBe}`);
   return value;
 }
 function checkForInvalidFlags(object, keys, where) {
@@ -299,10 +296,8 @@ function pushLogFlags(flags, options, keys, isTTY, logLevelDefault) {
   let color = getFlag(options, keys, "color", mustBeBoolean);
   let logLevel = getFlag(options, keys, "logLevel", mustBeString);
   let logLimit = getFlag(options, keys, "logLimit", mustBeInteger);
-  if (color !== void 0)
-    flags.push(`--color=${color}`);
-  else if (isTTY)
-    flags.push(`--color=true`);
+  if (color !== void 0) flags.push(`--color=${color}`);
+  else if (isTTY) flags.push(`--color=true`);
   flags.push(`--log-level=${logLevel || logLevelDefault}`);
   flags.push(`--log-limit=${logLimit || 0}`);
 }
@@ -345,94 +340,58 @@ function pushCommonFlags(flags, options, keys) {
   let keepNames = getFlag(options, keys, "keepNames", mustBeBoolean);
   let platform = getFlag(options, keys, "platform", mustBeString);
   let tsconfigRaw = getFlag(options, keys, "tsconfigRaw", mustBeStringOrObject);
-  if (legalComments)
-    flags.push(`--legal-comments=${legalComments}`);
-  if (sourceRoot !== void 0)
-    flags.push(`--source-root=${sourceRoot}`);
-  if (sourcesContent !== void 0)
-    flags.push(`--sources-content=${sourcesContent}`);
+  if (legalComments) flags.push(`--legal-comments=${legalComments}`);
+  if (sourceRoot !== void 0) flags.push(`--source-root=${sourceRoot}`);
+  if (sourcesContent !== void 0) flags.push(`--sources-content=${sourcesContent}`);
   if (target) {
-    if (Array.isArray(target))
-      flags.push(`--target=${Array.from(target).map(validateTarget).join(",")}`);
-    else
-      flags.push(`--target=${validateTarget(target)}`);
+    if (Array.isArray(target)) flags.push(`--target=${Array.from(target).map(validateTarget).join(",")}`);
+    else flags.push(`--target=${validateTarget(target)}`);
   }
-  if (format)
-    flags.push(`--format=${format}`);
-  if (globalName)
-    flags.push(`--global-name=${globalName}`);
-  if (platform)
-    flags.push(`--platform=${platform}`);
-  if (tsconfigRaw)
-    flags.push(`--tsconfig-raw=${typeof tsconfigRaw === "string" ? tsconfigRaw : JSON.stringify(tsconfigRaw)}`);
-  if (minify)
-    flags.push("--minify");
-  if (minifySyntax)
-    flags.push("--minify-syntax");
-  if (minifyWhitespace)
-    flags.push("--minify-whitespace");
-  if (minifyIdentifiers)
-    flags.push("--minify-identifiers");
-  if (lineLimit)
-    flags.push(`--line-limit=${lineLimit}`);
-  if (charset)
-    flags.push(`--charset=${charset}`);
-  if (treeShaking !== void 0)
-    flags.push(`--tree-shaking=${treeShaking}`);
-  if (ignoreAnnotations)
-    flags.push(`--ignore-annotations`);
-  if (drop)
-    for (let what of drop)
-      flags.push(`--drop:${validateStringValue(what, "drop")}`);
-  if (dropLabels)
-    flags.push(`--drop-labels=${Array.from(dropLabels).map((what) => validateStringValue(what, "dropLabels")).join(",")}`);
-  if (mangleProps)
-    flags.push(`--mangle-props=${mangleProps.source}`);
-  if (reserveProps)
-    flags.push(`--reserve-props=${reserveProps.source}`);
-  if (mangleQuoted !== void 0)
-    flags.push(`--mangle-quoted=${mangleQuoted}`);
-  if (jsx)
-    flags.push(`--jsx=${jsx}`);
-  if (jsxFactory)
-    flags.push(`--jsx-factory=${jsxFactory}`);
-  if (jsxFragment)
-    flags.push(`--jsx-fragment=${jsxFragment}`);
-  if (jsxImportSource)
-    flags.push(`--jsx-import-source=${jsxImportSource}`);
-  if (jsxDev)
-    flags.push(`--jsx-dev`);
-  if (jsxSideEffects)
-    flags.push(`--jsx-side-effects`);
+  if (format) flags.push(`--format=${format}`);
+  if (globalName) flags.push(`--global-name=${globalName}`);
+  if (platform) flags.push(`--platform=${platform}`);
+  if (tsconfigRaw) flags.push(`--tsconfig-raw=${typeof tsconfigRaw === "string" ? tsconfigRaw : JSON.stringify(tsconfigRaw)}`);
+  if (minify) flags.push("--minify");
+  if (minifySyntax) flags.push("--minify-syntax");
+  if (minifyWhitespace) flags.push("--minify-whitespace");
+  if (minifyIdentifiers) flags.push("--minify-identifiers");
+  if (lineLimit) flags.push(`--line-limit=${lineLimit}`);
+  if (charset) flags.push(`--charset=${charset}`);
+  if (treeShaking !== void 0) flags.push(`--tree-shaking=${treeShaking}`);
+  if (ignoreAnnotations) flags.push(`--ignore-annotations`);
+  if (drop) for (let what of drop) flags.push(`--drop:${validateStringValue(what, "drop")}`);
+  if (dropLabels) flags.push(`--drop-labels=${Array.from(dropLabels).map((what) => validateStringValue(what, "dropLabels")).join(",")}`);
+  if (mangleProps) flags.push(`--mangle-props=${mangleProps.source}`);
+  if (reserveProps) flags.push(`--reserve-props=${reserveProps.source}`);
+  if (mangleQuoted !== void 0) flags.push(`--mangle-quoted=${mangleQuoted}`);
+  if (jsx) flags.push(`--jsx=${jsx}`);
+  if (jsxFactory) flags.push(`--jsx-factory=${jsxFactory}`);
+  if (jsxFragment) flags.push(`--jsx-fragment=${jsxFragment}`);
+  if (jsxImportSource) flags.push(`--jsx-import-source=${jsxImportSource}`);
+  if (jsxDev) flags.push(`--jsx-dev`);
+  if (jsxSideEffects) flags.push(`--jsx-side-effects`);
   if (define) {
     for (let key in define) {
-      if (key.indexOf("=") >= 0)
-        throw new Error(`Invalid define: ${key}`);
+      if (key.indexOf("=") >= 0) throw new Error(`Invalid define: ${key}`);
       flags.push(`--define:${key}=${validateStringValue(define[key], "define", key)}`);
     }
   }
   if (logOverride) {
     for (let key in logOverride) {
-      if (key.indexOf("=") >= 0)
-        throw new Error(`Invalid log override: ${key}`);
+      if (key.indexOf("=") >= 0) throw new Error(`Invalid log override: ${key}`);
       flags.push(`--log-override:${key}=${validateStringValue(logOverride[key], "log override", key)}`);
     }
   }
   if (supported) {
     for (let key in supported) {
-      if (key.indexOf("=") >= 0)
-        throw new Error(`Invalid supported: ${key}`);
+      if (key.indexOf("=") >= 0) throw new Error(`Invalid supported: ${key}`);
       const value = supported[key];
-      if (typeof value !== "boolean")
-        throw new Error(`Expected value for supported ${quote(key)} to be a boolean, got ${typeof value} instead`);
+      if (typeof value !== "boolean") throw new Error(`Expected value for supported ${quote(key)} to be a boolean, got ${typeof value} instead`);
       flags.push(`--supported:${key}=${value}`);
     }
   }
-  if (pure)
-    for (let fn of pure)
-      flags.push(`--pure:${validateStringValue(fn, "pure")}`);
-  if (keepNames)
-    flags.push(`--keep-names`);
+  if (pure) for (let fn of pure) flags.push(`--pure:${validateStringValue(fn, "pure")}`);
+  if (keepNames) flags.push(`--keep-names`);
 }
 function flagsForBuildOptions(callName, options, isTTY, logLevelDefault, writeDefault) {
   var _a;
@@ -476,52 +435,35 @@ function flagsForBuildOptions(callName, options, isTTY, logLevelDefault, writeDe
   let mangleCache = getFlag(options, keys, "mangleCache", mustBeObject);
   keys.plugins = true;
   checkForInvalidFlags(options, keys, `in ${callName}() call`);
-  if (sourcemap)
-    flags.push(`--sourcemap${sourcemap === true ? "" : `=${sourcemap}`}`);
-  if (bundle)
-    flags.push("--bundle");
-  if (allowOverwrite)
-    flags.push("--allow-overwrite");
-  if (splitting)
-    flags.push("--splitting");
-  if (preserveSymlinks)
-    flags.push("--preserve-symlinks");
-  if (metafile)
-    flags.push(`--metafile`);
-  if (outfile)
-    flags.push(`--outfile=${outfile}`);
-  if (outdir)
-    flags.push(`--outdir=${outdir}`);
-  if (outbase)
-    flags.push(`--outbase=${outbase}`);
-  if (tsconfig)
-    flags.push(`--tsconfig=${tsconfig}`);
-  if (packages)
-    flags.push(`--packages=${packages}`);
+  if (sourcemap) flags.push(`--sourcemap${sourcemap === true ? "" : `=${sourcemap}`}`);
+  if (bundle) flags.push("--bundle");
+  if (allowOverwrite) flags.push("--allow-overwrite");
+  if (splitting) flags.push("--splitting");
+  if (preserveSymlinks) flags.push("--preserve-symlinks");
+  if (metafile) flags.push(`--metafile`);
+  if (outfile) flags.push(`--outfile=${outfile}`);
+  if (outdir) flags.push(`--outdir=${outdir}`);
+  if (outbase) flags.push(`--outbase=${outbase}`);
+  if (tsconfig) flags.push(`--tsconfig=${tsconfig}`);
+  if (packages) flags.push(`--packages=${packages}`);
   if (resolveExtensions) {
     let values = [];
     for (let value of resolveExtensions) {
       validateStringValue(value, "resolve extension");
-      if (value.indexOf(",") >= 0)
-        throw new Error(`Invalid resolve extension: ${value}`);
+      if (value.indexOf(",") >= 0) throw new Error(`Invalid resolve extension: ${value}`);
       values.push(value);
     }
     flags.push(`--resolve-extensions=${values.join(",")}`);
   }
-  if (publicPath)
-    flags.push(`--public-path=${publicPath}`);
-  if (entryNames)
-    flags.push(`--entry-names=${entryNames}`);
-  if (chunkNames)
-    flags.push(`--chunk-names=${chunkNames}`);
-  if (assetNames)
-    flags.push(`--asset-names=${assetNames}`);
+  if (publicPath) flags.push(`--public-path=${publicPath}`);
+  if (entryNames) flags.push(`--entry-names=${entryNames}`);
+  if (chunkNames) flags.push(`--chunk-names=${chunkNames}`);
+  if (assetNames) flags.push(`--asset-names=${assetNames}`);
   if (mainFields) {
     let values = [];
     for (let value of mainFields) {
       validateStringValue(value, "main field");
-      if (value.indexOf(",") >= 0)
-        throw new Error(`Invalid main field: ${value}`);
+      if (value.indexOf(",") >= 0) throw new Error(`Invalid main field: ${value}`);
       values.push(value);
     }
     flags.push(`--main-fields=${values.join(",")}`);
@@ -530,50 +472,40 @@ function flagsForBuildOptions(callName, options, isTTY, logLevelDefault, writeDe
     let values = [];
     for (let value of conditions) {
       validateStringValue(value, "condition");
-      if (value.indexOf(",") >= 0)
-        throw new Error(`Invalid condition: ${value}`);
+      if (value.indexOf(",") >= 0) throw new Error(`Invalid condition: ${value}`);
       values.push(value);
     }
     flags.push(`--conditions=${values.join(",")}`);
   }
-  if (external)
-    for (let name of external)
-      flags.push(`--external:${validateStringValue(name, "external")}`);
+  if (external) for (let name of external) flags.push(`--external:${validateStringValue(name, "external")}`);
   if (alias) {
     for (let old in alias) {
-      if (old.indexOf("=") >= 0)
-        throw new Error(`Invalid package name in alias: ${old}`);
+      if (old.indexOf("=") >= 0) throw new Error(`Invalid package name in alias: ${old}`);
       flags.push(`--alias:${old}=${validateStringValue(alias[old], "alias", old)}`);
     }
   }
   if (banner) {
     for (let type in banner) {
-      if (type.indexOf("=") >= 0)
-        throw new Error(`Invalid banner file type: ${type}`);
+      if (type.indexOf("=") >= 0) throw new Error(`Invalid banner file type: ${type}`);
       flags.push(`--banner:${type}=${validateStringValue(banner[type], "banner", type)}`);
     }
   }
   if (footer) {
     for (let type in footer) {
-      if (type.indexOf("=") >= 0)
-        throw new Error(`Invalid footer file type: ${type}`);
+      if (type.indexOf("=") >= 0) throw new Error(`Invalid footer file type: ${type}`);
       flags.push(`--footer:${type}=${validateStringValue(footer[type], "footer", type)}`);
     }
   }
-  if (inject)
-    for (let path of inject)
-      flags.push(`--inject:${validateStringValue(path, "inject")}`);
+  if (inject) for (let path of inject) flags.push(`--inject:${validateStringValue(path, "inject")}`);
   if (loader) {
     for (let ext in loader) {
-      if (ext.indexOf("=") >= 0)
-        throw new Error(`Invalid loader extension: ${ext}`);
+      if (ext.indexOf("=") >= 0) throw new Error(`Invalid loader extension: ${ext}`);
       flags.push(`--loader:${ext}=${validateStringValue(loader[ext], "loader", ext)}`);
     }
   }
   if (outExtension) {
     for (let ext in outExtension) {
-      if (ext.indexOf("=") >= 0)
-        throw new Error(`Invalid out extension: ${ext}`);
+      if (ext.indexOf("=") >= 0) throw new Error(`Invalid out extension: ${ext}`);
       flags.push(`--out-extension:${ext}=${validateStringValue(outExtension[ext], "out extension", ext)}`);
     }
   }
@@ -586,10 +518,8 @@ function flagsForBuildOptions(callName, options, isTTY, logLevelDefault, writeDe
           let input = getFlag(entryPoint, entryPointKeys, "in", mustBeString);
           let output = getFlag(entryPoint, entryPointKeys, "out", mustBeString);
           checkForInvalidFlags(entryPoint, entryPointKeys, "in entry point at index " + i);
-          if (input === void 0)
-            throw new Error('Missing property "in" for entry point at index ' + i);
-          if (output === void 0)
-            throw new Error('Missing property "out" for entry point at index ' + i);
+          if (input === void 0) throw new Error('Missing property "in" for entry point at index ' + i);
+          if (output === void 0) throw new Error('Missing property "out" for entry point at index ' + i);
           entries.push([output, input]);
         } else {
           entries.push(["", validateStringValue(entryPoint, "entry point at index " + i)]);
@@ -608,16 +538,11 @@ function flagsForBuildOptions(callName, options, isTTY, logLevelDefault, writeDe
     let sourcefile = getFlag(stdin, stdinKeys, "sourcefile", mustBeString);
     let loader2 = getFlag(stdin, stdinKeys, "loader", mustBeString);
     checkForInvalidFlags(stdin, stdinKeys, 'in "stdin" object');
-    if (sourcefile)
-      flags.push(`--sourcefile=${sourcefile}`);
-    if (loader2)
-      flags.push(`--loader=${loader2}`);
-    if (resolveDir)
-      stdinResolveDir = resolveDir;
-    if (typeof contents === "string")
-      stdinContents = encodeUTF8(contents);
-    else if (contents instanceof Uint8Array)
-      stdinContents = contents;
+    if (sourcefile) flags.push(`--sourcefile=${sourcefile}`);
+    if (loader2) flags.push(`--loader=${loader2}`);
+    if (resolveDir) stdinResolveDir = resolveDir;
+    if (typeof contents === "string") stdinContents = encodeUTF8(contents);
+    else if (contents instanceof Uint8Array) stdinContents = contents;
   }
   let nodePaths = [];
   if (nodePathsInput) {
@@ -649,16 +574,11 @@ function flagsForTransformOptions(callName, options, isTTY, logLevelDefault) {
   let footer = getFlag(options, keys, "footer", mustBeString);
   let mangleCache = getFlag(options, keys, "mangleCache", mustBeObject);
   checkForInvalidFlags(options, keys, `in ${callName}() call`);
-  if (sourcemap)
-    flags.push(`--sourcemap=${sourcemap === true ? "external" : sourcemap}`);
-  if (sourcefile)
-    flags.push(`--sourcefile=${sourcefile}`);
-  if (loader)
-    flags.push(`--loader=${loader}`);
-  if (banner)
-    flags.push(`--banner=${banner}`);
-  if (footer)
-    flags.push(`--footer=${footer}`);
+  if (sourcemap) flags.push(`--sourcemap=${sourcemap === true ? "external" : sourcemap}`);
+  if (sourcefile) flags.push(`--sourcefile=${sourcefile}`);
+  if (loader) flags.push(`--loader=${loader}`);
+  if (banner) flags.push(`--banner=${banner}`);
+  if (footer) flags.push(`--footer=${footer}`);
   return {
     flags,
     mangleCache: validateMangleCache(mangleCache)
@@ -698,8 +618,7 @@ function createChannel(streamIn) {
   };
   let afterClose = (error) => {
     closeData.didClose = true;
-    if (error)
-      closeData.reason = ": " + (error.message || error);
+    if (error) closeData.reason = ": " + (error.message || error);
     const text = "The service was stopped" + closeData.reason;
     for (let id in responseCallbacks) {
       responseCallbacks[id](text, null);
@@ -707,24 +626,20 @@ function createChannel(streamIn) {
     responseCallbacks = {};
   };
   let sendRequest = (refs, value, callback) => {
-    if (closeData.didClose)
-      return callback("The service is no longer running" + closeData.reason, null);
+    if (closeData.didClose) return callback("The service is no longer running" + closeData.reason, null);
     let id = nextRequestID++;
     responseCallbacks[id] = (error, response) => {
       try {
         callback(error, response);
       } finally {
-        if (refs)
-          refs.unref();
+        if (refs) refs.unref();
       }
     };
-    if (refs)
-      refs.ref();
+    if (refs) refs.ref();
     streamIn.writeToStdin(encodePacket({ id, isRequest: true, value }));
   };
   let sendResponse = (id, value) => {
-    if (closeData.didClose)
-      throw new Error("The service is no longer running" + closeData.reason);
+    if (closeData.didClose) throw new Error("The service is no longer running" + closeData.reason);
     streamIn.writeToStdin(encodePacket({ id, isRequest: false, value }));
   };
   let handleRequest = (id, request) => __async(this, null, function* () {
@@ -758,8 +673,8 @@ function createChannel(streamIn) {
     if (isFirstPacket) {
       isFirstPacket = false;
       let binaryVersion = String.fromCharCode(...bytes);
-      if (binaryVersion !== "0.20.2") {
-        throw new Error(`Cannot start service: Host version "${"0.20.2"}" does not match binary version ${quote(binaryVersion)}`);
+      if (binaryVersion !== "0.24.0") {
+        throw new Error(`Cannot start service: Host version "${"0.24.0"}" does not match binary version ${quote(binaryVersion)}`);
       }
       return;
     }
@@ -769,10 +684,8 @@ function createChannel(streamIn) {
     } else {
       let callback = responseCallbacks[packet.id];
       delete responseCallbacks[packet.id];
-      if (packet.value.error)
-        callback(packet.value.error, {});
-      else
-        callback(null, packet.value);
+      if (packet.value.error) callback(packet.value.error, {});
+      else callback(null, packet.value);
     }
   };
   let buildOrContext = ({ callName, refs, options, isTTY, defaultWD, callback }) => {
@@ -782,15 +695,13 @@ function createChannel(streamIn) {
     const buildRefs = {
       ref() {
         if (++refCount === 1) {
-          if (refs)
-            refs.ref();
+          if (refs) refs.ref();
         }
       },
       unref() {
         if (--refCount === 0) {
           delete requestCallbacksByKey[buildKey];
-          if (refs)
-            refs.unref();
+          if (refs) refs.unref();
         }
       }
     };
@@ -832,11 +743,9 @@ function createChannel(streamIn) {
           inputFS: inputPath !== null,
           input: inputPath !== null ? encodeUTF8(inputPath) : typeof input === "string" ? encodeUTF8(input) : input
         };
-        if (mangleCache)
-          request.mangleCache = mangleCache;
+        if (mangleCache) request.mangleCache = mangleCache;
         sendRequest(refs, request, (error, response) => {
-          if (error)
-            return callback(new Error(error), null);
+          if (error) return callback(new Error(error), null);
           let errors = replaceDetailsInMessages(response.errors, details);
           let warnings = replaceDetailsInMessages(response.warnings, details);
           let outstanding = 1;
@@ -849,15 +758,12 @@ function createChannel(streamIn) {
                 mangleCache: void 0,
                 legalComments: void 0
               };
-              if ("legalComments" in response)
-                result.legalComments = response == null ? void 0 : response.legalComments;
-              if (response.mangleCache)
-                result.mangleCache = response == null ? void 0 : response.mangleCache;
+              if ("legalComments" in response) result.legalComments = response == null ? void 0 : response.legalComments;
+              if (response.mangleCache) result.mangleCache = response == null ? void 0 : response.mangleCache;
               callback(null, result);
             }
           };
-          if (errors.length > 0)
-            return callback(failureErrorWithLog("Transform failed", errors, warnings), null);
+          if (errors.length > 0) return callback(failureErrorWithLog("Transform failed", errors, warnings), null);
           if (response.codeFS) {
             outstanding++;
             fs.readFile(response.code, (err, contents) => {
@@ -902,35 +808,28 @@ function createChannel(streamIn) {
     start(null);
   };
   let formatMessages2 = ({ callName, refs, messages, options, callback }) => {
-    if (!options)
-      throw new Error(`Missing second argument in ${callName}() call`);
+    if (!options) throw new Error(`Missing second argument in ${callName}() call`);
     let keys = {};
     let kind = getFlag(options, keys, "kind", mustBeString);
     let color = getFlag(options, keys, "color", mustBeBoolean);
     let terminalWidth = getFlag(options, keys, "terminalWidth", mustBeInteger);
     checkForInvalidFlags(options, keys, `in ${callName}() call`);
-    if (kind === void 0)
-      throw new Error(`Missing "kind" in ${callName}() call`);
-    if (kind !== "error" && kind !== "warning")
-      throw new Error(`Expected "kind" to be "error" or "warning" in ${callName}() call`);
+    if (kind === void 0) throw new Error(`Missing "kind" in ${callName}() call`);
+    if (kind !== "error" && kind !== "warning") throw new Error(`Expected "kind" to be "error" or "warning" in ${callName}() call`);
     let request = {
       command: "format-msgs",
       messages: sanitizeMessages(messages, "messages", null, "", terminalWidth),
       isWarning: kind === "warning"
     };
-    if (color !== void 0)
-      request.color = color;
-    if (terminalWidth !== void 0)
-      request.terminalWidth = terminalWidth;
+    if (color !== void 0) request.color = color;
+    if (terminalWidth !== void 0) request.terminalWidth = terminalWidth;
     sendRequest(refs, request, (error, response) => {
-      if (error)
-        return callback(new Error(error), null);
+      if (error) return callback(new Error(error), null);
       callback(null, response.messages);
     });
   };
   let analyzeMetafile2 = ({ callName, refs, metafile, options, callback }) => {
-    if (options === void 0)
-      options = {};
+    if (options === void 0) options = {};
     let keys = {};
     let color = getFlag(options, keys, "color", mustBeBoolean);
     let verbose = getFlag(options, keys, "verbose", mustBeBoolean);
@@ -939,13 +838,10 @@ function createChannel(streamIn) {
       command: "analyze-metafile",
       metafile
     };
-    if (color !== void 0)
-      request.color = color;
-    if (verbose !== void 0)
-      request.verbose = verbose;
+    if (color !== void 0) request.color = color;
+    if (verbose !== void 0) request.verbose = verbose;
     sendRequest(refs, request, (error, response) => {
-      if (error)
-        return callback(new Error(error), null);
+      if (error) return callback(new Error(error), null);
       callback(null, response.result);
     });
   };
@@ -979,14 +875,12 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
   if (typeof options === "object") {
     const value = options.plugins;
     if (value !== void 0) {
-      if (!Array.isArray(value))
-        return handleError(new Error(`"plugins" must be an array`), "");
+      if (!Array.isArray(value)) return handleError(new Error(`"plugins" must be an array`), "");
       plugins = value;
     }
   }
   if (plugins && plugins.length > 0) {
-    if (streamIn.isSync)
-      return handleError(new Error("Cannot use plugins in synchronous API calls"), "");
+    if (streamIn.isSync) return handleError(new Error("Cannot use plugins in synchronous API calls"), "");
     handlePlugins(
       buildKey,
       sendRequest,
@@ -999,8 +893,7 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
       details
     ).then(
       (result) => {
-        if (!result.ok)
-          return handleError(result.error, result.pluginName);
+        if (!result.ok) return handleError(result.error, result.pluginName);
         try {
           buildOrContextContinue(result.requestPlugins, result.runOnEndCallbacks, result.scheduleOnDisposeCallbacks);
         } catch (e) {
@@ -1029,8 +922,7 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
       nodePaths,
       mangleCache
     } = flagsForBuildOptions(callName, options, isTTY, buildLogLevelDefault, writeDefault);
-    if (write && !streamIn.hasFS)
-      throw new Error(`The "write" option is unavailable in this environment`);
+    if (write && !streamIn.hasFS) throw new Error(`The "write" option is unavailable in this environment`);
     const request = {
       command: "build",
       key: buildKey,
@@ -1043,10 +935,8 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
       nodePaths,
       context: isContext
     };
-    if (requestPlugins)
-      request.plugins = requestPlugins;
-    if (mangleCache)
-      request.mangleCache = mangleCache;
+    if (requestPlugins) request.plugins = requestPlugins;
+    if (mangleCache) request.mangleCache = mangleCache;
     const buildResponseToResult = (response, callback2) => {
       const result = {
         errors: replaceDetailsInMessages(response.errors, details),
@@ -1057,14 +947,10 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
       };
       const originalErrors = result.errors.slice();
       const originalWarnings = result.warnings.slice();
-      if (response.outputFiles)
-        result.outputFiles = response.outputFiles.map(convertOutputFiles);
-      if (response.metafile)
-        result.metafile = JSON.parse(response.metafile);
-      if (response.mangleCache)
-        result.mangleCache = response.mangleCache;
-      if (response.writeToStdout !== void 0)
-        console.log(decodeUTF8(response.writeToStdout).replace(/\n$/, ""));
+      if (response.outputFiles) result.outputFiles = response.outputFiles.map(convertOutputFiles);
+      if (response.metafile) result.metafile = JSON.parse(response.metafile);
+      if (response.mangleCache) result.mangleCache = response.mangleCache;
+      if (response.writeToStdout !== void 0) console.log(decodeUTF8(response.writeToStdout).replace(/\n$/, ""));
       runOnEndCallbacks(result, (onEndErrors, onEndWarnings) => {
         if (originalErrors.length > 0 || onEndErrors.length > 0) {
           const error = failureErrorWithLog("Build failed", originalErrors.concat(onEndErrors), originalWarnings.concat(onEndWarnings));
@@ -1082,8 +968,7 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
             errors: onEndErrors,
             warnings: onEndWarnings
           };
-          if (provideLatestResult)
-            provideLatestResult(err, result);
+          if (provideLatestResult) provideLatestResult(err, result);
           latestResultPromise = void 0;
           provideLatestResult = void 0;
           sendResponse(id, response);
@@ -1091,8 +976,7 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
         });
       });
     sendRequest(refs, request, (error, response) => {
-      if (error)
-        return callback(new Error(error), null);
+      if (error) return callback(new Error(error), null);
       if (!isContext) {
         return buildResponseToResult(response, (err, res) => {
           scheduleOnDisposeCallbacks();
@@ -1105,35 +989,32 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
       let didDispose = false;
       const result = {
         rebuild: () => {
-          if (!latestResultPromise)
-            latestResultPromise = new Promise((resolve, reject) => {
-              let settlePromise;
-              provideLatestResult = (err, result2) => {
-                if (!settlePromise)
-                  settlePromise = () => err ? reject(err) : resolve(result2);
+          if (!latestResultPromise) latestResultPromise = new Promise((resolve, reject) => {
+            let settlePromise;
+            provideLatestResult = (err, result2) => {
+              if (!settlePromise) settlePromise = () => err ? reject(err) : resolve(result2);
+            };
+            const triggerAnotherBuild = () => {
+              const request2 = {
+                command: "rebuild",
+                key: buildKey
               };
-              const triggerAnotherBuild = () => {
-                const request2 = {
-                  command: "rebuild",
-                  key: buildKey
-                };
-                sendRequest(refs, request2, (error2, response2) => {
-                  if (error2) {
-                    reject(new Error(error2));
-                  } else if (settlePromise) {
-                    settlePromise();
-                  } else {
-                    triggerAnotherBuild();
-                  }
-                });
-              };
-              triggerAnotherBuild();
-            });
+              sendRequest(refs, request2, (error2, response2) => {
+                if (error2) {
+                  reject(new Error(error2));
+                } else if (settlePromise) {
+                  settlePromise();
+                } else {
+                  triggerAnotherBuild();
+                }
+              });
+            };
+            triggerAnotherBuild();
+          });
           return latestResultPromise;
         },
         watch: (options2 = {}) => new Promise((resolve, reject) => {
-          if (!streamIn.hasFS)
-            throw new Error(`Cannot use the "watch" API in this environment`);
+          if (!streamIn.hasFS) throw new Error(`Cannot use the "watch" API in this environment`);
           const keys = {};
           checkForInvalidFlags(options2, keys, `in watch() call`);
           const request2 = {
@@ -1141,15 +1022,12 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
             key: buildKey
           };
           sendRequest(refs, request2, (error2) => {
-            if (error2)
-              reject(new Error(error2));
-            else
-              resolve(void 0);
+            if (error2) reject(new Error(error2));
+            else resolve(void 0);
           });
         }),
         serve: (options2 = {}) => new Promise((resolve, reject) => {
-          if (!streamIn.hasFS)
-            throw new Error(`Cannot use the "serve" API in this environment`);
+          if (!streamIn.hasFS) throw new Error(`Cannot use the "serve" API in this environment`);
           const keys = {};
           const port = getFlag(options2, keys, "port", mustBeInteger);
           const host = getFlag(options2, keys, "host", mustBeString);
@@ -1164,21 +1042,14 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
             key: buildKey,
             onRequest: !!onRequest
           };
-          if (port !== void 0)
-            request2.port = port;
-          if (host !== void 0)
-            request2.host = host;
-          if (servedir !== void 0)
-            request2.servedir = servedir;
-          if (keyfile !== void 0)
-            request2.keyfile = keyfile;
-          if (certfile !== void 0)
-            request2.certfile = certfile;
-          if (fallback !== void 0)
-            request2.fallback = fallback;
+          if (port !== void 0) request2.port = port;
+          if (host !== void 0) request2.host = host;
+          if (servedir !== void 0) request2.servedir = servedir;
+          if (keyfile !== void 0) request2.keyfile = keyfile;
+          if (certfile !== void 0) request2.certfile = certfile;
+          if (fallback !== void 0) request2.fallback = fallback;
           sendRequest(refs, request2, (error2, response2) => {
-            if (error2)
-              return reject(new Error(error2));
+            if (error2) return reject(new Error(error2));
             if (onRequest) {
               requestCallbacks["serve-request"] = (id, request3) => {
                 onRequest(request3.args);
@@ -1189,8 +1060,7 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
           });
         }),
         cancel: () => new Promise((resolve) => {
-          if (didDispose)
-            return resolve();
+          if (didDispose) return resolve();
           const request2 = {
             command: "cancel",
             key: buildKey
@@ -1200,8 +1070,7 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
           });
         }),
         dispose: () => new Promise((resolve) => {
-          if (didDispose)
-            return resolve();
+          if (didDispose) return resolve();
           didDispose = true;
           const request2 = {
             command: "dispose",
@@ -1232,15 +1101,12 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
   plugins = [...plugins];
   for (let item of plugins) {
     let keys = {};
-    if (typeof item !== "object")
-      throw new Error(`Plugin at index ${i} must be an object`);
+    if (typeof item !== "object") throw new Error(`Plugin at index ${i} must be an object`);
     const name = getFlag(item, keys, "name", mustBeString);
-    if (typeof name !== "string" || name === "")
-      throw new Error(`Plugin at index ${i} is missing a name`);
+    if (typeof name !== "string" || name === "") throw new Error(`Plugin at index ${i} is missing a name`);
     try {
       let setup = getFlag(item, keys, "setup", mustBeFunction);
-      if (typeof setup !== "function")
-        throw new Error(`Plugin is missing a setup function`);
+      if (typeof setup !== "function") throw new Error(`Plugin is missing a setup function`);
       checkForInvalidFlags(item, keys, `on plugin ${quote(name)}`);
       let plugin = {
         name,
@@ -1251,10 +1117,8 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
       };
       i++;
       let resolve = (path, options = {}) => {
-        if (!isSetupDone)
-          throw new Error('Cannot call "resolve" before plugin setup has completed');
-        if (typeof path !== "string")
-          throw new Error(`The path to resolve must be a string`);
+        if (!isSetupDone) throw new Error('Cannot call "resolve" before plugin setup has completed');
+        if (typeof path !== "string") throw new Error(`The path to resolve must be a string`);
         let keys2 = /* @__PURE__ */ Object.create(null);
         let pluginName = getFlag(options, keys2, "pluginName", mustBeString);
         let importer = getFlag(options, keys2, "importer", mustBeString);
@@ -1262,6 +1126,7 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
         let resolveDir = getFlag(options, keys2, "resolveDir", mustBeString);
         let kind = getFlag(options, keys2, "kind", mustBeString);
         let pluginData = getFlag(options, keys2, "pluginData", canBeAnything);
+        let importAttributes = getFlag(options, keys2, "with", mustBeObject);
         checkForInvalidFlags(options, keys2, "in resolve() call");
         return new Promise((resolve2, reject) => {
           const request = {
@@ -1270,34 +1135,26 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
             key: buildKey,
             pluginName: name
           };
-          if (pluginName != null)
-            request.pluginName = pluginName;
-          if (importer != null)
-            request.importer = importer;
-          if (namespace != null)
-            request.namespace = namespace;
-          if (resolveDir != null)
-            request.resolveDir = resolveDir;
-          if (kind != null)
-            request.kind = kind;
-          else
-            throw new Error(`Must specify "kind" when calling "resolve"`);
-          if (pluginData != null)
-            request.pluginData = details.store(pluginData);
+          if (pluginName != null) request.pluginName = pluginName;
+          if (importer != null) request.importer = importer;
+          if (namespace != null) request.namespace = namespace;
+          if (resolveDir != null) request.resolveDir = resolveDir;
+          if (kind != null) request.kind = kind;
+          else throw new Error(`Must specify "kind" when calling "resolve"`);
+          if (pluginData != null) request.pluginData = details.store(pluginData);
+          if (importAttributes != null) request.with = sanitizeStringMap(importAttributes, "with");
           sendRequest(refs, request, (error, response) => {
-            if (error !== null)
-              reject(new Error(error));
-            else
-              resolve2({
-                errors: replaceDetailsInMessages(response.errors, details),
-                warnings: replaceDetailsInMessages(response.warnings, details),
-                path: response.path,
-                external: response.external,
-                sideEffects: response.sideEffects,
-                namespace: response.namespace,
-                suffix: response.suffix,
-                pluginData: details.load(response.pluginData)
-              });
+            if (error !== null) reject(new Error(error));
+            else resolve2({
+              errors: replaceDetailsInMessages(response.errors, details),
+              warnings: replaceDetailsInMessages(response.warnings, details),
+              path: response.path,
+              external: response.external,
+              sideEffects: response.sideEffects,
+              namespace: response.namespace,
+              suffix: response.suffix,
+              pluginData: details.load(response.pluginData)
+            });
           });
         });
       };
@@ -1323,8 +1180,7 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
           let filter = getFlag(options, keys2, "filter", mustBeRegExp);
           let namespace = getFlag(options, keys2, "namespace", mustBeString);
           checkForInvalidFlags(options, keys2, `in onResolve() call for plugin ${quote(name)}`);
-          if (filter == null)
-            throw new Error(`onResolve() call is missing a filter`);
+          if (filter == null) throw new Error(`onResolve() call is missing a filter`);
           let id = nextCallbackID++;
           onResolveCallbacks[id] = { name, callback, note: registeredNote };
           plugin.onResolve.push({ id, filter: filter.source, namespace: namespace || "" });
@@ -1336,8 +1192,7 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
           let filter = getFlag(options, keys2, "filter", mustBeRegExp);
           let namespace = getFlag(options, keys2, "namespace", mustBeString);
           checkForInvalidFlags(options, keys2, `in onLoad() call for plugin ${quote(name)}`);
-          if (filter == null)
-            throw new Error(`onLoad() call is missing a filter`);
+          if (filter == null) throw new Error(`onLoad() call is missing a filter`);
           let id = nextCallbackID++;
           onLoadCallbacks[id] = { name, callback, note: registeredNote };
           plugin.onLoad.push({ id, filter: filter.source, namespace: namespace || "" });
@@ -1347,29 +1202,26 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
         },
         esbuild: streamIn.esbuild
       });
-      if (promise)
-        yield promise;
+      if (promise) yield promise;
       requestPlugins.push(plugin);
     } catch (e) {
       return { ok: false, error: e, pluginName: name };
     }
   }
   requestCallbacks["on-start"] = (id, request) => __async(void 0, null, function* () {
+    details.clear();
     let response = { errors: [], warnings: [] };
     yield Promise.all(onStartCallbacks.map((_0) => __async(void 0, [_0], function* ({ name, callback, note }) {
       try {
         let result = yield callback();
         if (result != null) {
-          if (typeof result !== "object")
-            throw new Error(`Expected onStart() callback in plugin ${quote(name)} to return an object`);
+          if (typeof result !== "object") throw new Error(`Expected onStart() callback in plugin ${quote(name)} to return an object`);
           let keys = {};
           let errors = getFlag(result, keys, "errors", mustBeArray);
           let warnings = getFlag(result, keys, "warnings", mustBeArray);
           checkForInvalidFlags(result, keys, `from onStart() callback in plugin ${quote(name)}`);
-          if (errors != null)
-            response.errors.push(...sanitizeMessages(errors, "errors", details, name, void 0));
-          if (warnings != null)
-            response.warnings.push(...sanitizeMessages(warnings, "warnings", details, name, void 0));
+          if (errors != null) response.errors.push(...sanitizeMessages(errors, "errors", details, name, void 0));
+          if (warnings != null) response.warnings.push(...sanitizeMessages(warnings, "warnings", details, name, void 0));
         }
       } catch (e) {
         response.errors.push(extractErrorMessageV8(e, streamIn, details, note && note(), name));
@@ -1388,11 +1240,11 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
           namespace: request.namespace,
           resolveDir: request.resolveDir,
           kind: request.kind,
-          pluginData: details.load(request.pluginData)
+          pluginData: details.load(request.pluginData),
+          with: request.with
         });
         if (result != null) {
-          if (typeof result !== "object")
-            throw new Error(`Expected onResolve() callback in plugin ${quote(name)} to return an object`);
+          if (typeof result !== "object") throw new Error(`Expected onResolve() callback in plugin ${quote(name)} to return an object`);
           let keys = {};
           let pluginName = getFlag(result, keys, "pluginName", mustBeString);
           let path = getFlag(result, keys, "path", mustBeString);
@@ -1407,28 +1259,17 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
           let watchDirs = getFlag(result, keys, "watchDirs", mustBeArray);
           checkForInvalidFlags(result, keys, `from onResolve() callback in plugin ${quote(name)}`);
           response.id = id2;
-          if (pluginName != null)
-            response.pluginName = pluginName;
-          if (path != null)
-            response.path = path;
-          if (namespace != null)
-            response.namespace = namespace;
-          if (suffix != null)
-            response.suffix = suffix;
-          if (external != null)
-            response.external = external;
-          if (sideEffects != null)
-            response.sideEffects = sideEffects;
-          if (pluginData != null)
-            response.pluginData = details.store(pluginData);
-          if (errors != null)
-            response.errors = sanitizeMessages(errors, "errors", details, name, void 0);
-          if (warnings != null)
-            response.warnings = sanitizeMessages(warnings, "warnings", details, name, void 0);
-          if (watchFiles != null)
-            response.watchFiles = sanitizeStringArray(watchFiles, "watchFiles");
-          if (watchDirs != null)
-            response.watchDirs = sanitizeStringArray(watchDirs, "watchDirs");
+          if (pluginName != null) response.pluginName = pluginName;
+          if (path != null) response.path = path;
+          if (namespace != null) response.namespace = namespace;
+          if (suffix != null) response.suffix = suffix;
+          if (external != null) response.external = external;
+          if (sideEffects != null) response.sideEffects = sideEffects;
+          if (pluginData != null) response.pluginData = details.store(pluginData);
+          if (errors != null) response.errors = sanitizeMessages(errors, "errors", details, name, void 0);
+          if (warnings != null) response.warnings = sanitizeMessages(warnings, "warnings", details, name, void 0);
+          if (watchFiles != null) response.watchFiles = sanitizeStringArray(watchFiles, "watchFiles");
+          if (watchDirs != null) response.watchDirs = sanitizeStringArray(watchDirs, "watchDirs");
           break;
         }
       } catch (e) {
@@ -1451,8 +1292,7 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
           with: request.with
         });
         if (result != null) {
-          if (typeof result !== "object")
-            throw new Error(`Expected onLoad() callback in plugin ${quote(name)} to return an object`);
+          if (typeof result !== "object") throw new Error(`Expected onLoad() callback in plugin ${quote(name)} to return an object`);
           let keys = {};
           let pluginName = getFlag(result, keys, "pluginName", mustBeString);
           let contents = getFlag(result, keys, "contents", mustBeStringOrUint8Array);
@@ -1465,26 +1305,16 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
           let watchDirs = getFlag(result, keys, "watchDirs", mustBeArray);
           checkForInvalidFlags(result, keys, `from onLoad() callback in plugin ${quote(name)}`);
           response.id = id2;
-          if (pluginName != null)
-            response.pluginName = pluginName;
-          if (contents instanceof Uint8Array)
-            response.contents = contents;
-          else if (contents != null)
-            response.contents = encodeUTF8(contents);
-          if (resolveDir != null)
-            response.resolveDir = resolveDir;
-          if (pluginData != null)
-            response.pluginData = details.store(pluginData);
-          if (loader != null)
-            response.loader = loader;
-          if (errors != null)
-            response.errors = sanitizeMessages(errors, "errors", details, name, void 0);
-          if (warnings != null)
-            response.warnings = sanitizeMessages(warnings, "warnings", details, name, void 0);
-          if (watchFiles != null)
-            response.watchFiles = sanitizeStringArray(watchFiles, "watchFiles");
-          if (watchDirs != null)
-            response.watchDirs = sanitizeStringArray(watchDirs, "watchDirs");
+          if (pluginName != null) response.pluginName = pluginName;
+          if (contents instanceof Uint8Array) response.contents = contents;
+          else if (contents != null) response.contents = encodeUTF8(contents);
+          if (resolveDir != null) response.resolveDir = resolveDir;
+          if (pluginData != null) response.pluginData = details.store(pluginData);
+          if (loader != null) response.loader = loader;
+          if (errors != null) response.errors = sanitizeMessages(errors, "errors", details, name, void 0);
+          if (warnings != null) response.warnings = sanitizeMessages(warnings, "warnings", details, name, void 0);
+          if (watchFiles != null) response.watchFiles = sanitizeStringArray(watchFiles, "watchFiles");
+          if (watchDirs != null) response.watchDirs = sanitizeStringArray(watchDirs, "watchDirs");
           break;
         }
       } catch (e) {
@@ -1506,16 +1336,13 @@ var handlePlugins = (buildKey, sendRequest, sendResponse, refs, streamIn, reques
           try {
             const value = yield callback(result);
             if (value != null) {
-              if (typeof value !== "object")
-                throw new Error(`Expected onEnd() callback in plugin ${quote(name)} to return an object`);
+              if (typeof value !== "object") throw new Error(`Expected onEnd() callback in plugin ${quote(name)} to return an object`);
               let keys = {};
               let errors = getFlag(value, keys, "errors", mustBeArray);
               let warnings = getFlag(value, keys, "warnings", mustBeArray);
               checkForInvalidFlags(value, keys, `from onEnd() callback in plugin ${quote(name)}`);
-              if (errors != null)
-                newErrors = sanitizeMessages(errors, "errors", details, name, void 0);
-              if (warnings != null)
-                newWarnings = sanitizeMessages(warnings, "warnings", details, name, void 0);
+              if (errors != null) newErrors = sanitizeMessages(errors, "errors", details, name, void 0);
+              if (warnings != null) newWarnings = sanitizeMessages(warnings, "warnings", details, name, void 0);
             }
           } catch (e) {
             newErrors = [extractErrorMessageV8(e, streamIn, details, note && note(), name)];
@@ -1556,12 +1383,14 @@ function createObjectStash() {
   const map = /* @__PURE__ */ new Map();
   let nextID = 0;
   return {
+    clear() {
+      map.clear();
+    },
     load(id) {
       return map.get(id);
     },
     store(value) {
-      if (value === void 0)
-        return -1;
+      if (value === void 0) return -1;
       const id = nextID++;
       map.set(id, value);
       return id;
@@ -1572,8 +1401,7 @@ function extractCallerV8(e, streamIn, ident) {
   let note;
   let tried = false;
   return () => {
-    if (tried)
-      return note;
+    if (tried) return note;
     tried = true;
     try {
       let lines = (e.stack + "").split("\n");
@@ -1605,8 +1433,7 @@ function parseStackLinesV8(streamIn, lines, ident) {
   if (streamIn.readFileSync && !lines[0].startsWith(at) && lines[1].startsWith(at)) {
     for (let i = 1; i < lines.length; i++) {
       let line = lines[i];
-      if (!line.startsWith(at))
-        continue;
+      if (!line.startsWith(at)) continue;
       line = line.slice(at.length);
       while (true) {
         let match = /^(?:new |async )?\S+ \((.*)\)$/.exec(line);
@@ -1649,10 +1476,8 @@ function parseStackLinesV8(streamIn, lines, ident) {
 function failureErrorWithLog(text, errors, warnings) {
   let limit = 5;
   text += errors.length < 1 ? "" : ` with ${errors.length} error${errors.length < 2 ? "" : "s"}:` + errors.slice(0, limit + 1).map((e, i) => {
-    if (i === limit)
-      return "\n...";
-    if (!e.location)
-      return `
+    if (i === limit) return "\n...";
+    if (!e.location) return `
 error: ${e.text}`;
     let { file, line, column } = e.location;
     let pluginText = e.pluginName ? `[plugin: ${e.pluginName}] ` : "";
@@ -1681,8 +1506,7 @@ function replaceDetailsInMessages(messages, stash) {
   return messages;
 }
 function sanitizeLocation(location2, where, terminalWidth) {
-  if (location2 == null)
-    return null;
+  if (location2 == null) return null;
   let keys = {};
   let file = getFlag(location2, keys, "file", mustBeString);
   let namespace = getFlag(location2, keys, "namespace", mustBeString);
@@ -1752,9 +1576,17 @@ function sanitizeMessages(messages, property, stash, fallbackPluginName, termina
 function sanitizeStringArray(values, property) {
   const result = [];
   for (const value of values) {
-    if (typeof value !== "string")
-      throw new Error(`${quote(property)} must be an array of strings`);
+    if (typeof value !== "string") throw new Error(`${quote(property)} must be an array of strings`);
     result.push(value);
+  }
+  return result;
+}
+function sanitizeStringMap(map, property) {
+  const result = /* @__PURE__ */ Object.create(null);
+  for (const key in map) {
+    const value = map[key];
+    if (typeof value !== "string") throw new Error(`key ${quote(key)} in object ${quote(property)} must be a string`);
+    result[key] = value;
   }
   return result;
 }
@@ -1776,7 +1608,7 @@ function convertOutputFiles({ path, contents, hash }) {
 }
 
 // lib/npm/browser.ts
-var version = "0.20.2";
+var version = "0.24.0";
 var build = (options) => ensureServiceIsRunning().build(options);
 var context = (options) => ensureServiceIsRunning().context(options);
 var transform = (input, options) => ensureServiceIsRunning().transform(input, options);
@@ -1795,18 +1627,15 @@ var analyzeMetafileSync = () => {
   throw new Error(`The "analyzeMetafileSync" API only works in node`);
 };
 var stop = () => {
-  if (stopService)
-    stopService();
+  if (stopService) stopService();
   return Promise.resolve();
 };
 var initializePromise;
 var stopService;
 var longLivedService;
 var ensureServiceIsRunning = () => {
-  if (longLivedService)
-    return longLivedService;
-  if (initializePromise)
-    throw new Error('You need to wait for the promise returned from "initialize" to be resolved before calling this');
+  if (longLivedService) return longLivedService;
+  if (initializePromise) throw new Error('You need to wait for the promise returned from "initialize" to be resolved before calling this');
   throw new Error('You need to call "initialize" before calling this');
 };
 var initialize = (options) => {
@@ -1814,10 +1643,8 @@ var initialize = (options) => {
   let wasmURL = options.wasmURL;
   let wasmModule = options.wasmModule;
   let useWorker = options.worker !== false;
-  if (!wasmURL && !wasmModule)
-    throw new Error('Must provide either the "wasmURL" option or the "wasmModule" option');
-  if (initializePromise)
-    throw new Error('Cannot call "initialize" more than once');
+  if (!wasmURL && !wasmModule) throw new Error('Must provide either the "wasmURL" option or the "wasmModule" option');
+  if (initializePromise) throw new Error('Cannot call "initialize" more than once');
   initializePromise = startRunningService(wasmURL || "", wasmModule, useWorker);
   initializePromise.catch(() => {
     initializePromise = void 0;
@@ -1826,8 +1653,10 @@ var initialize = (options) => {
 };
 var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, null, function* () {
   let worker;
+  let rejectAllWith;
+  const rejectAllPromise = new Promise((resolve) => rejectAllWith = resolve);
   if (useWorker) {
-    let blob = new Blob([`onmessage=${'((postMessage) => {\n      // Copyright 2018 The Go Authors. All rights reserved.\n      // Use of this source code is governed by a BSD-style\n      // license that can be found in the LICENSE file.\n      var __async = (__this, __arguments, generator) => {\n        return new Promise((resolve, reject) => {\n          var fulfilled = (value) => {\n            try {\n              step(generator.next(value));\n            } catch (e) {\n              reject(e);\n            }\n          };\n          var rejected = (value) => {\n            try {\n              step(generator.throw(value));\n            } catch (e) {\n              reject(e);\n            }\n          };\n          var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);\n          step((generator = generator.apply(__this, __arguments)).next());\n        });\n      };\n      let onmessage;\n      let globalThis = {};\n      for (let o = self; o; o = Object.getPrototypeOf(o))\n        for (let k of Object.getOwnPropertyNames(o))\n          if (!(k in globalThis))\n            Object.defineProperty(globalThis, k, { get: () => self[k] });\n      "use strict";\n      (() => {\n        const enosys = () => {\n          const err = new Error("not implemented");\n          err.code = "ENOSYS";\n          return err;\n        };\n        if (!globalThis.fs) {\n          let outputBuf = "";\n          globalThis.fs = {\n            constants: { O_WRONLY: -1, O_RDWR: -1, O_CREAT: -1, O_TRUNC: -1, O_APPEND: -1, O_EXCL: -1 },\n            // unused\n            writeSync(fd, buf) {\n              outputBuf += decoder.decode(buf);\n              const nl = outputBuf.lastIndexOf("\\n");\n              if (nl != -1) {\n                console.log(outputBuf.substring(0, nl));\n                outputBuf = outputBuf.substring(nl + 1);\n              }\n              return buf.length;\n            },\n            write(fd, buf, offset, length, position, callback) {\n              if (offset !== 0 || length !== buf.length || position !== null) {\n                callback(enosys());\n                return;\n              }\n              const n = this.writeSync(fd, buf);\n              callback(null, n);\n            },\n            chmod(path, mode, callback) {\n              callback(enosys());\n            },\n            chown(path, uid, gid, callback) {\n              callback(enosys());\n            },\n            close(fd, callback) {\n              callback(enosys());\n            },\n            fchmod(fd, mode, callback) {\n              callback(enosys());\n            },\n            fchown(fd, uid, gid, callback) {\n              callback(enosys());\n            },\n            fstat(fd, callback) {\n              callback(enosys());\n            },\n            fsync(fd, callback) {\n              callback(null);\n            },\n            ftruncate(fd, length, callback) {\n              callback(enosys());\n            },\n            lchown(path, uid, gid, callback) {\n              callback(enosys());\n            },\n            link(path, link, callback) {\n              callback(enosys());\n            },\n            lstat(path, callback) {\n              callback(enosys());\n            },\n            mkdir(path, perm, callback) {\n              callback(enosys());\n            },\n            open(path, flags, mode, callback) {\n              callback(enosys());\n            },\n            read(fd, buffer, offset, length, position, callback) {\n              callback(enosys());\n            },\n            readdir(path, callback) {\n              callback(enosys());\n            },\n            readlink(path, callback) {\n              callback(enosys());\n            },\n            rename(from, to, callback) {\n              callback(enosys());\n            },\n            rmdir(path, callback) {\n              callback(enosys());\n            },\n            stat(path, callback) {\n              callback(enosys());\n            },\n            symlink(path, link, callback) {\n              callback(enosys());\n            },\n            truncate(path, length, callback) {\n              callback(enosys());\n            },\n            unlink(path, callback) {\n              callback(enosys());\n            },\n            utimes(path, atime, mtime, callback) {\n              callback(enosys());\n            }\n          };\n        }\n        if (!globalThis.process) {\n          globalThis.process = {\n            getuid() {\n              return -1;\n            },\n            getgid() {\n              return -1;\n            },\n            geteuid() {\n              return -1;\n            },\n            getegid() {\n              return -1;\n            },\n            getgroups() {\n              throw enosys();\n            },\n            pid: -1,\n            ppid: -1,\n            umask() {\n              throw enosys();\n            },\n            cwd() {\n              throw enosys();\n            },\n            chdir() {\n              throw enosys();\n            }\n          };\n        }\n        if (!globalThis.crypto) {\n          throw new Error("globalThis.crypto is not available, polyfill required (crypto.getRandomValues only)");\n        }\n        if (!globalThis.performance) {\n          throw new Error("globalThis.performance is not available, polyfill required (performance.now only)");\n        }\n        if (!globalThis.TextEncoder) {\n          throw new Error("globalThis.TextEncoder is not available, polyfill required");\n        }\n        if (!globalThis.TextDecoder) {\n          throw new Error("globalThis.TextDecoder is not available, polyfill required");\n        }\n        const encoder = new TextEncoder("utf-8");\n        const decoder = new TextDecoder("utf-8");\n        globalThis.Go = class {\n          constructor() {\n            this.argv = ["js"];\n            this.env = {};\n            this.exit = (code) => {\n              if (code !== 0) {\n                console.warn("exit code:", code);\n              }\n            };\n            this._exitPromise = new Promise((resolve) => {\n              this._resolveExitPromise = resolve;\n            });\n            this._pendingEvent = null;\n            this._scheduledTimeouts = /* @__PURE__ */ new Map();\n            this._nextCallbackTimeoutID = 1;\n            const setInt64 = (addr, v) => {\n              this.mem.setUint32(addr + 0, v, true);\n              this.mem.setUint32(addr + 4, Math.floor(v / 4294967296), true);\n            };\n            const getInt64 = (addr) => {\n              const low = this.mem.getUint32(addr + 0, true);\n              const high = this.mem.getInt32(addr + 4, true);\n              return low + high * 4294967296;\n            };\n            const loadValue = (addr) => {\n              const f = this.mem.getFloat64(addr, true);\n              if (f === 0) {\n                return void 0;\n              }\n              if (!isNaN(f)) {\n                return f;\n              }\n              const id = this.mem.getUint32(addr, true);\n              return this._values[id];\n            };\n            const storeValue = (addr, v) => {\n              const nanHead = 2146959360;\n              if (typeof v === "number" && v !== 0) {\n                if (isNaN(v)) {\n                  this.mem.setUint32(addr + 4, nanHead, true);\n                  this.mem.setUint32(addr, 0, true);\n                  return;\n                }\n                this.mem.setFloat64(addr, v, true);\n                return;\n              }\n              if (v === void 0) {\n                this.mem.setFloat64(addr, 0, true);\n                return;\n              }\n              let id = this._ids.get(v);\n              if (id === void 0) {\n                id = this._idPool.pop();\n                if (id === void 0) {\n                  id = this._values.length;\n                }\n                this._values[id] = v;\n                this._goRefCounts[id] = 0;\n                this._ids.set(v, id);\n              }\n              this._goRefCounts[id]++;\n              let typeFlag = 0;\n              switch (typeof v) {\n                case "object":\n                  if (v !== null) {\n                    typeFlag = 1;\n                  }\n                  break;\n                case "string":\n                  typeFlag = 2;\n                  break;\n                case "symbol":\n                  typeFlag = 3;\n                  break;\n                case "function":\n                  typeFlag = 4;\n                  break;\n              }\n              this.mem.setUint32(addr + 4, nanHead | typeFlag, true);\n              this.mem.setUint32(addr, id, true);\n            };\n            const loadSlice = (addr) => {\n              const array = getInt64(addr + 0);\n              const len = getInt64(addr + 8);\n              return new Uint8Array(this._inst.exports.mem.buffer, array, len);\n            };\n            const loadSliceOfValues = (addr) => {\n              const array = getInt64(addr + 0);\n              const len = getInt64(addr + 8);\n              const a = new Array(len);\n              for (let i = 0; i < len; i++) {\n                a[i] = loadValue(array + i * 8);\n              }\n              return a;\n            };\n            const loadString = (addr) => {\n              const saddr = getInt64(addr + 0);\n              const len = getInt64(addr + 8);\n              return decoder.decode(new DataView(this._inst.exports.mem.buffer, saddr, len));\n            };\n            const timeOrigin = Date.now() - performance.now();\n            this.importObject = {\n              go: {\n                // Go\'s SP does not change as long as no Go code is running. Some operations (e.g. calls, getters and setters)\n                // may synchronously trigger a Go event handler. This makes Go code get executed in the middle of the imported\n                // function. A goroutine can switch to a new stack if the current stack is too small (see morestack function).\n                // This changes the SP, thus we have to update the SP used by the imported function.\n                // func wasmExit(code int32)\n                "runtime.wasmExit": (sp) => {\n                  sp >>>= 0;\n                  const code = this.mem.getInt32(sp + 8, true);\n                  this.exited = true;\n                  delete this._inst;\n                  delete this._values;\n                  delete this._goRefCounts;\n                  delete this._ids;\n                  delete this._idPool;\n                  this.exit(code);\n                },\n                // func wasmWrite(fd uintptr, p unsafe.Pointer, n int32)\n                "runtime.wasmWrite": (sp) => {\n                  sp >>>= 0;\n                  const fd = getInt64(sp + 8);\n                  const p = getInt64(sp + 16);\n                  const n = this.mem.getInt32(sp + 24, true);\n                  globalThis.fs.writeSync(fd, new Uint8Array(this._inst.exports.mem.buffer, p, n));\n                },\n                // func resetMemoryDataView()\n                "runtime.resetMemoryDataView": (sp) => {\n                  sp >>>= 0;\n                  this.mem = new DataView(this._inst.exports.mem.buffer);\n                },\n                // func nanotime1() int64\n                "runtime.nanotime1": (sp) => {\n                  sp >>>= 0;\n                  setInt64(sp + 8, (timeOrigin + performance.now()) * 1e6);\n                },\n                // func walltime() (sec int64, nsec int32)\n                "runtime.walltime": (sp) => {\n                  sp >>>= 0;\n                  const msec = (/* @__PURE__ */ new Date()).getTime();\n                  setInt64(sp + 8, msec / 1e3);\n                  this.mem.setInt32(sp + 16, msec % 1e3 * 1e6, true);\n                },\n                // func scheduleTimeoutEvent(delay int64) int32\n                "runtime.scheduleTimeoutEvent": (sp) => {\n                  sp >>>= 0;\n                  const id = this._nextCallbackTimeoutID;\n                  this._nextCallbackTimeoutID++;\n                  this._scheduledTimeouts.set(id, setTimeout(\n                    () => {\n                      this._resume();\n                      while (this._scheduledTimeouts.has(id)) {\n                        console.warn("scheduleTimeoutEvent: missed timeout event");\n                        this._resume();\n                      }\n                    },\n                    getInt64(sp + 8) + 1\n                    // setTimeout has been seen to fire up to 1 millisecond early\n                  ));\n                  this.mem.setInt32(sp + 16, id, true);\n                },\n                // func clearTimeoutEvent(id int32)\n                "runtime.clearTimeoutEvent": (sp) => {\n                  sp >>>= 0;\n                  const id = this.mem.getInt32(sp + 8, true);\n                  clearTimeout(this._scheduledTimeouts.get(id));\n                  this._scheduledTimeouts.delete(id);\n                },\n                // func getRandomData(r []byte)\n                "runtime.getRandomData": (sp) => {\n                  sp >>>= 0;\n                  crypto.getRandomValues(loadSlice(sp + 8));\n                },\n                // func finalizeRef(v ref)\n                "syscall/js.finalizeRef": (sp) => {\n                  sp >>>= 0;\n                  const id = this.mem.getUint32(sp + 8, true);\n                  this._goRefCounts[id]--;\n                  if (this._goRefCounts[id] === 0) {\n                    const v = this._values[id];\n                    this._values[id] = null;\n                    this._ids.delete(v);\n                    this._idPool.push(id);\n                  }\n                },\n                // func stringVal(value string) ref\n                "syscall/js.stringVal": (sp) => {\n                  sp >>>= 0;\n                  storeValue(sp + 24, loadString(sp + 8));\n                },\n                // func valueGet(v ref, p string) ref\n                "syscall/js.valueGet": (sp) => {\n                  sp >>>= 0;\n                  const result = Reflect.get(loadValue(sp + 8), loadString(sp + 16));\n                  sp = this._inst.exports.getsp() >>> 0;\n                  storeValue(sp + 32, result);\n                },\n                // func valueSet(v ref, p string, x ref)\n                "syscall/js.valueSet": (sp) => {\n                  sp >>>= 0;\n                  Reflect.set(loadValue(sp + 8), loadString(sp + 16), loadValue(sp + 32));\n                },\n                // func valueDelete(v ref, p string)\n                "syscall/js.valueDelete": (sp) => {\n                  sp >>>= 0;\n                  Reflect.deleteProperty(loadValue(sp + 8), loadString(sp + 16));\n                },\n                // func valueIndex(v ref, i int) ref\n                "syscall/js.valueIndex": (sp) => {\n                  sp >>>= 0;\n                  storeValue(sp + 24, Reflect.get(loadValue(sp + 8), getInt64(sp + 16)));\n                },\n                // valueSetIndex(v ref, i int, x ref)\n                "syscall/js.valueSetIndex": (sp) => {\n                  sp >>>= 0;\n                  Reflect.set(loadValue(sp + 8), getInt64(sp + 16), loadValue(sp + 24));\n                },\n                // func valueCall(v ref, m string, args []ref) (ref, bool)\n                "syscall/js.valueCall": (sp) => {\n                  sp >>>= 0;\n                  try {\n                    const v = loadValue(sp + 8);\n                    const m = Reflect.get(v, loadString(sp + 16));\n                    const args = loadSliceOfValues(sp + 32);\n                    const result = Reflect.apply(m, v, args);\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 56, result);\n                    this.mem.setUint8(sp + 64, 1);\n                  } catch (err) {\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 56, err);\n                    this.mem.setUint8(sp + 64, 0);\n                  }\n                },\n                // func valueInvoke(v ref, args []ref) (ref, bool)\n                "syscall/js.valueInvoke": (sp) => {\n                  sp >>>= 0;\n                  try {\n                    const v = loadValue(sp + 8);\n                    const args = loadSliceOfValues(sp + 16);\n                    const result = Reflect.apply(v, void 0, args);\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 40, result);\n                    this.mem.setUint8(sp + 48, 1);\n                  } catch (err) {\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 40, err);\n                    this.mem.setUint8(sp + 48, 0);\n                  }\n                },\n                // func valueNew(v ref, args []ref) (ref, bool)\n                "syscall/js.valueNew": (sp) => {\n                  sp >>>= 0;\n                  try {\n                    const v = loadValue(sp + 8);\n                    const args = loadSliceOfValues(sp + 16);\n                    const result = Reflect.construct(v, args);\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 40, result);\n                    this.mem.setUint8(sp + 48, 1);\n                  } catch (err) {\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 40, err);\n                    this.mem.setUint8(sp + 48, 0);\n                  }\n                },\n                // func valueLength(v ref) int\n                "syscall/js.valueLength": (sp) => {\n                  sp >>>= 0;\n                  setInt64(sp + 16, parseInt(loadValue(sp + 8).length));\n                },\n                // valuePrepareString(v ref) (ref, int)\n                "syscall/js.valuePrepareString": (sp) => {\n                  sp >>>= 0;\n                  const str = encoder.encode(String(loadValue(sp + 8)));\n                  storeValue(sp + 16, str);\n                  setInt64(sp + 24, str.length);\n                },\n                // valueLoadString(v ref, b []byte)\n                "syscall/js.valueLoadString": (sp) => {\n                  sp >>>= 0;\n                  const str = loadValue(sp + 8);\n                  loadSlice(sp + 16).set(str);\n                },\n                // func valueInstanceOf(v ref, t ref) bool\n                "syscall/js.valueInstanceOf": (sp) => {\n                  sp >>>= 0;\n                  this.mem.setUint8(sp + 24, loadValue(sp + 8) instanceof loadValue(sp + 16) ? 1 : 0);\n                },\n                // func copyBytesToGo(dst []byte, src ref) (int, bool)\n                "syscall/js.copyBytesToGo": (sp) => {\n                  sp >>>= 0;\n                  const dst = loadSlice(sp + 8);\n                  const src = loadValue(sp + 32);\n                  if (!(src instanceof Uint8Array || src instanceof Uint8ClampedArray)) {\n                    this.mem.setUint8(sp + 48, 0);\n                    return;\n                  }\n                  const toCopy = src.subarray(0, dst.length);\n                  dst.set(toCopy);\n                  setInt64(sp + 40, toCopy.length);\n                  this.mem.setUint8(sp + 48, 1);\n                },\n                // func copyBytesToJS(dst ref, src []byte) (int, bool)\n                "syscall/js.copyBytesToJS": (sp) => {\n                  sp >>>= 0;\n                  const dst = loadValue(sp + 8);\n                  const src = loadSlice(sp + 16);\n                  if (!(dst instanceof Uint8Array || dst instanceof Uint8ClampedArray)) {\n                    this.mem.setUint8(sp + 48, 0);\n                    return;\n                  }\n                  const toCopy = src.subarray(0, dst.length);\n                  dst.set(toCopy);\n                  setInt64(sp + 40, toCopy.length);\n                  this.mem.setUint8(sp + 48, 1);\n                },\n                "debug": (value) => {\n                  console.log(value);\n                }\n              }\n            };\n          }\n          run(instance) {\n            return __async(this, null, function* () {\n              if (!(instance instanceof WebAssembly.Instance)) {\n                throw new Error("Go.run: WebAssembly.Instance expected");\n              }\n              this._inst = instance;\n              this.mem = new DataView(this._inst.exports.mem.buffer);\n              this._values = [\n                // JS values that Go currently has references to, indexed by reference id\n                NaN,\n                0,\n                null,\n                true,\n                false,\n                globalThis,\n                this\n              ];\n              this._goRefCounts = new Array(this._values.length).fill(Infinity);\n              this._ids = /* @__PURE__ */ new Map([\n                // mapping from JS values to reference ids\n                [0, 1],\n                [null, 2],\n                [true, 3],\n                [false, 4],\n                [globalThis, 5],\n                [this, 6]\n              ]);\n              this._idPool = [];\n              this.exited = false;\n              let offset = 4096;\n              const strPtr = (str) => {\n                const ptr = offset;\n                const bytes = encoder.encode(str + "\\0");\n                new Uint8Array(this.mem.buffer, offset, bytes.length).set(bytes);\n                offset += bytes.length;\n                if (offset % 8 !== 0) {\n                  offset += 8 - offset % 8;\n                }\n                return ptr;\n              };\n              const argc = this.argv.length;\n              const argvPtrs = [];\n              this.argv.forEach((arg) => {\n                argvPtrs.push(strPtr(arg));\n              });\n              argvPtrs.push(0);\n              const keys = Object.keys(this.env).sort();\n              keys.forEach((key) => {\n                argvPtrs.push(strPtr(`${key}=${this.env[key]}`));\n              });\n              argvPtrs.push(0);\n              const argv = offset;\n              argvPtrs.forEach((ptr) => {\n                this.mem.setUint32(offset, ptr, true);\n                this.mem.setUint32(offset + 4, 0, true);\n                offset += 8;\n              });\n              const wasmMinDataAddr = 4096 + 8192;\n              if (offset >= wasmMinDataAddr) {\n                throw new Error("total length of command line and environment variables exceeds limit");\n              }\n              this._inst.exports.run(argc, argv);\n              if (this.exited) {\n                this._resolveExitPromise();\n              }\n              yield this._exitPromise;\n            });\n          }\n          _resume() {\n            if (this.exited) {\n              throw new Error("Go program has already exited");\n            }\n            this._inst.exports.resume();\n            if (this.exited) {\n              this._resolveExitPromise();\n            }\n          }\n          _makeFuncWrapper(id) {\n            const go = this;\n            return function() {\n              const event = { id, this: this, args: arguments };\n              go._pendingEvent = event;\n              go._resume();\n              return event.result;\n            };\n          }\n        };\n      })();\n      onmessage = ({ data: wasm }) => {\n        let decoder = new TextDecoder();\n        let fs = globalThis.fs;\n        let stderr = "";\n        fs.writeSync = (fd, buffer) => {\n          if (fd === 1) {\n            postMessage(buffer);\n          } else if (fd === 2) {\n            stderr += decoder.decode(buffer);\n            let parts = stderr.split("\\n");\n            if (parts.length > 1)\n              console.log(parts.slice(0, -1).join("\\n"));\n            stderr = parts[parts.length - 1];\n          } else {\n            throw new Error("Bad write");\n          }\n          return buffer.length;\n        };\n        let stdin = [];\n        let resumeStdin;\n        let stdinPos = 0;\n        onmessage = ({ data }) => {\n          if (data.length > 0) {\n            stdin.push(data);\n            if (resumeStdin)\n              resumeStdin();\n          }\n          return go;\n        };\n        fs.read = (fd, buffer, offset, length, position, callback) => {\n          if (fd !== 0 || offset !== 0 || length !== buffer.length || position !== null) {\n            throw new Error("Bad read");\n          }\n          if (stdin.length === 0) {\n            resumeStdin = () => fs.read(fd, buffer, offset, length, position, callback);\n            return;\n          }\n          let first = stdin[0];\n          let count = Math.max(0, Math.min(length, first.length - stdinPos));\n          buffer.set(first.subarray(stdinPos, stdinPos + count), offset);\n          stdinPos += count;\n          if (stdinPos === first.length) {\n            stdin.shift();\n            stdinPos = 0;\n          }\n          callback(null, count);\n        };\n        let go = new globalThis.Go();\n        go.argv = ["", `--service=${"0.20.2"}`];\n        tryToInstantiateModule(wasm, go).then(\n          (instance) => {\n            postMessage(null);\n            go.run(instance);\n          },\n          (error) => {\n            postMessage(error);\n          }\n        );\n        return go;\n      };\n      function tryToInstantiateModule(wasm, go) {\n        return __async(this, null, function* () {\n          if (wasm instanceof WebAssembly.Module) {\n            return WebAssembly.instantiate(wasm, go.importObject);\n          }\n          const res = yield fetch(wasm);\n          if (!res.ok)\n            throw new Error(`Failed to download ${JSON.stringify(wasm)}`);\n          if ("instantiateStreaming" in WebAssembly && /^application\\/wasm($|;)/i.test(res.headers.get("Content-Type") || "")) {\n            const result2 = yield WebAssembly.instantiateStreaming(res, go.importObject);\n            return result2.instance;\n          }\n          const bytes = yield res.arrayBuffer();\n          const result = yield WebAssembly.instantiate(bytes, go.importObject);\n          return result.instance;\n        });\n      }\n      return (m) => onmessage(m);\n    })'}(postMessage)`], { type: "text/javascript" });
+    let blob = new Blob([`onmessage=${'((postMessage) => {\n      // Copyright 2018 The Go Authors. All rights reserved.\n      // Use of this source code is governed by a BSD-style\n      // license that can be found in the LICENSE file.\n      var __async = (__this, __arguments, generator) => {\n        return new Promise((resolve, reject) => {\n          var fulfilled = (value) => {\n            try {\n              step(generator.next(value));\n            } catch (e) {\n              reject(e);\n            }\n          };\n          var rejected = (value) => {\n            try {\n              step(generator.throw(value));\n            } catch (e) {\n              reject(e);\n            }\n          };\n          var step = (x) => x.done ? resolve(x.value) : Promise.resolve(x.value).then(fulfilled, rejected);\n          step((generator = generator.apply(__this, __arguments)).next());\n        });\n      };\n      let onmessage;\n      let globalThis = {};\n      for (let o = self; o; o = Object.getPrototypeOf(o))\n        for (let k of Object.getOwnPropertyNames(o))\n          if (!(k in globalThis))\n            Object.defineProperty(globalThis, k, { get: () => self[k] });\n      "use strict";\n      (() => {\n        const enosys = () => {\n          const err = new Error("not implemented");\n          err.code = "ENOSYS";\n          return err;\n        };\n        if (!globalThis.fs) {\n          let outputBuf = "";\n          globalThis.fs = {\n            constants: { O_WRONLY: -1, O_RDWR: -1, O_CREAT: -1, O_TRUNC: -1, O_APPEND: -1, O_EXCL: -1 },\n            // unused\n            writeSync(fd, buf) {\n              outputBuf += decoder.decode(buf);\n              const nl = outputBuf.lastIndexOf("\\n");\n              if (nl != -1) {\n                console.log(outputBuf.substring(0, nl));\n                outputBuf = outputBuf.substring(nl + 1);\n              }\n              return buf.length;\n            },\n            write(fd, buf, offset, length, position, callback) {\n              if (offset !== 0 || length !== buf.length || position !== null) {\n                callback(enosys());\n                return;\n              }\n              const n = this.writeSync(fd, buf);\n              callback(null, n);\n            },\n            chmod(path, mode, callback) {\n              callback(enosys());\n            },\n            chown(path, uid, gid, callback) {\n              callback(enosys());\n            },\n            close(fd, callback) {\n              callback(enosys());\n            },\n            fchmod(fd, mode, callback) {\n              callback(enosys());\n            },\n            fchown(fd, uid, gid, callback) {\n              callback(enosys());\n            },\n            fstat(fd, callback) {\n              callback(enosys());\n            },\n            fsync(fd, callback) {\n              callback(null);\n            },\n            ftruncate(fd, length, callback) {\n              callback(enosys());\n            },\n            lchown(path, uid, gid, callback) {\n              callback(enosys());\n            },\n            link(path, link, callback) {\n              callback(enosys());\n            },\n            lstat(path, callback) {\n              callback(enosys());\n            },\n            mkdir(path, perm, callback) {\n              callback(enosys());\n            },\n            open(path, flags, mode, callback) {\n              callback(enosys());\n            },\n            read(fd, buffer, offset, length, position, callback) {\n              callback(enosys());\n            },\n            readdir(path, callback) {\n              callback(enosys());\n            },\n            readlink(path, callback) {\n              callback(enosys());\n            },\n            rename(from, to, callback) {\n              callback(enosys());\n            },\n            rmdir(path, callback) {\n              callback(enosys());\n            },\n            stat(path, callback) {\n              callback(enosys());\n            },\n            symlink(path, link, callback) {\n              callback(enosys());\n            },\n            truncate(path, length, callback) {\n              callback(enosys());\n            },\n            unlink(path, callback) {\n              callback(enosys());\n            },\n            utimes(path, atime, mtime, callback) {\n              callback(enosys());\n            }\n          };\n        }\n        if (!globalThis.process) {\n          globalThis.process = {\n            getuid() {\n              return -1;\n            },\n            getgid() {\n              return -1;\n            },\n            geteuid() {\n              return -1;\n            },\n            getegid() {\n              return -1;\n            },\n            getgroups() {\n              throw enosys();\n            },\n            pid: -1,\n            ppid: -1,\n            umask() {\n              throw enosys();\n            },\n            cwd() {\n              throw enosys();\n            },\n            chdir() {\n              throw enosys();\n            }\n          };\n        }\n        if (!globalThis.crypto) {\n          throw new Error("globalThis.crypto is not available, polyfill required (crypto.getRandomValues only)");\n        }\n        if (!globalThis.performance) {\n          throw new Error("globalThis.performance is not available, polyfill required (performance.now only)");\n        }\n        if (!globalThis.TextEncoder) {\n          throw new Error("globalThis.TextEncoder is not available, polyfill required");\n        }\n        if (!globalThis.TextDecoder) {\n          throw new Error("globalThis.TextDecoder is not available, polyfill required");\n        }\n        const encoder = new TextEncoder("utf-8");\n        const decoder = new TextDecoder("utf-8");\n        globalThis.Go = class {\n          constructor() {\n            this.argv = ["js"];\n            this.env = {};\n            this.exit = (code) => {\n              if (code !== 0) {\n                console.warn("exit code:", code);\n              }\n            };\n            this._exitPromise = new Promise((resolve) => {\n              this._resolveExitPromise = resolve;\n            });\n            this._pendingEvent = null;\n            this._scheduledTimeouts = /* @__PURE__ */ new Map();\n            this._nextCallbackTimeoutID = 1;\n            const setInt64 = (addr, v) => {\n              this.mem.setUint32(addr + 0, v, true);\n              this.mem.setUint32(addr + 4, Math.floor(v / 4294967296), true);\n            };\n            const setInt32 = (addr, v) => {\n              this.mem.setUint32(addr + 0, v, true);\n            };\n            const getInt64 = (addr) => {\n              const low = this.mem.getUint32(addr + 0, true);\n              const high = this.mem.getInt32(addr + 4, true);\n              return low + high * 4294967296;\n            };\n            const loadValue = (addr) => {\n              const f = this.mem.getFloat64(addr, true);\n              if (f === 0) {\n                return void 0;\n              }\n              if (!isNaN(f)) {\n                return f;\n              }\n              const id = this.mem.getUint32(addr, true);\n              return this._values[id];\n            };\n            const storeValue = (addr, v) => {\n              const nanHead = 2146959360;\n              if (typeof v === "number" && v !== 0) {\n                if (isNaN(v)) {\n                  this.mem.setUint32(addr + 4, nanHead, true);\n                  this.mem.setUint32(addr, 0, true);\n                  return;\n                }\n                this.mem.setFloat64(addr, v, true);\n                return;\n              }\n              if (v === void 0) {\n                this.mem.setFloat64(addr, 0, true);\n                return;\n              }\n              let id = this._ids.get(v);\n              if (id === void 0) {\n                id = this._idPool.pop();\n                if (id === void 0) {\n                  id = this._values.length;\n                }\n                this._values[id] = v;\n                this._goRefCounts[id] = 0;\n                this._ids.set(v, id);\n              }\n              this._goRefCounts[id]++;\n              let typeFlag = 0;\n              switch (typeof v) {\n                case "object":\n                  if (v !== null) {\n                    typeFlag = 1;\n                  }\n                  break;\n                case "string":\n                  typeFlag = 2;\n                  break;\n                case "symbol":\n                  typeFlag = 3;\n                  break;\n                case "function":\n                  typeFlag = 4;\n                  break;\n              }\n              this.mem.setUint32(addr + 4, nanHead | typeFlag, true);\n              this.mem.setUint32(addr, id, true);\n            };\n            const loadSlice = (addr) => {\n              const array = getInt64(addr + 0);\n              const len = getInt64(addr + 8);\n              return new Uint8Array(this._inst.exports.mem.buffer, array, len);\n            };\n            const loadSliceOfValues = (addr) => {\n              const array = getInt64(addr + 0);\n              const len = getInt64(addr + 8);\n              const a = new Array(len);\n              for (let i = 0; i < len; i++) {\n                a[i] = loadValue(array + i * 8);\n              }\n              return a;\n            };\n            const loadString = (addr) => {\n              const saddr = getInt64(addr + 0);\n              const len = getInt64(addr + 8);\n              return decoder.decode(new DataView(this._inst.exports.mem.buffer, saddr, len));\n            };\n            const timeOrigin = Date.now() - performance.now();\n            this.importObject = {\n              _gotest: {\n                add: (a, b) => a + b\n              },\n              gojs: {\n                // Go\'s SP does not change as long as no Go code is running. Some operations (e.g. calls, getters and setters)\n                // may synchronously trigger a Go event handler. This makes Go code get executed in the middle of the imported\n                // function. A goroutine can switch to a new stack if the current stack is too small (see morestack function).\n                // This changes the SP, thus we have to update the SP used by the imported function.\n                // func wasmExit(code int32)\n                "runtime.wasmExit": (sp) => {\n                  sp >>>= 0;\n                  const code = this.mem.getInt32(sp + 8, true);\n                  this.exited = true;\n                  delete this._inst;\n                  delete this._values;\n                  delete this._goRefCounts;\n                  delete this._ids;\n                  delete this._idPool;\n                  this.exit(code);\n                },\n                // func wasmWrite(fd uintptr, p unsafe.Pointer, n int32)\n                "runtime.wasmWrite": (sp) => {\n                  sp >>>= 0;\n                  const fd = getInt64(sp + 8);\n                  const p = getInt64(sp + 16);\n                  const n = this.mem.getInt32(sp + 24, true);\n                  globalThis.fs.writeSync(fd, new Uint8Array(this._inst.exports.mem.buffer, p, n));\n                },\n                // func resetMemoryDataView()\n                "runtime.resetMemoryDataView": (sp) => {\n                  sp >>>= 0;\n                  this.mem = new DataView(this._inst.exports.mem.buffer);\n                },\n                // func nanotime1() int64\n                "runtime.nanotime1": (sp) => {\n                  sp >>>= 0;\n                  setInt64(sp + 8, (timeOrigin + performance.now()) * 1e6);\n                },\n                // func walltime() (sec int64, nsec int32)\n                "runtime.walltime": (sp) => {\n                  sp >>>= 0;\n                  const msec = (/* @__PURE__ */ new Date()).getTime();\n                  setInt64(sp + 8, msec / 1e3);\n                  this.mem.setInt32(sp + 16, msec % 1e3 * 1e6, true);\n                },\n                // func scheduleTimeoutEvent(delay int64) int32\n                "runtime.scheduleTimeoutEvent": (sp) => {\n                  sp >>>= 0;\n                  const id = this._nextCallbackTimeoutID;\n                  this._nextCallbackTimeoutID++;\n                  this._scheduledTimeouts.set(id, setTimeout(\n                    () => {\n                      this._resume();\n                      while (this._scheduledTimeouts.has(id)) {\n                        console.warn("scheduleTimeoutEvent: missed timeout event");\n                        this._resume();\n                      }\n                    },\n                    getInt64(sp + 8)\n                  ));\n                  this.mem.setInt32(sp + 16, id, true);\n                },\n                // func clearTimeoutEvent(id int32)\n                "runtime.clearTimeoutEvent": (sp) => {\n                  sp >>>= 0;\n                  const id = this.mem.getInt32(sp + 8, true);\n                  clearTimeout(this._scheduledTimeouts.get(id));\n                  this._scheduledTimeouts.delete(id);\n                },\n                // func getRandomData(r []byte)\n                "runtime.getRandomData": (sp) => {\n                  sp >>>= 0;\n                  crypto.getRandomValues(loadSlice(sp + 8));\n                },\n                // func finalizeRef(v ref)\n                "syscall/js.finalizeRef": (sp) => {\n                  sp >>>= 0;\n                  const id = this.mem.getUint32(sp + 8, true);\n                  this._goRefCounts[id]--;\n                  if (this._goRefCounts[id] === 0) {\n                    const v = this._values[id];\n                    this._values[id] = null;\n                    this._ids.delete(v);\n                    this._idPool.push(id);\n                  }\n                },\n                // func stringVal(value string) ref\n                "syscall/js.stringVal": (sp) => {\n                  sp >>>= 0;\n                  storeValue(sp + 24, loadString(sp + 8));\n                },\n                // func valueGet(v ref, p string) ref\n                "syscall/js.valueGet": (sp) => {\n                  sp >>>= 0;\n                  const result = Reflect.get(loadValue(sp + 8), loadString(sp + 16));\n                  sp = this._inst.exports.getsp() >>> 0;\n                  storeValue(sp + 32, result);\n                },\n                // func valueSet(v ref, p string, x ref)\n                "syscall/js.valueSet": (sp) => {\n                  sp >>>= 0;\n                  Reflect.set(loadValue(sp + 8), loadString(sp + 16), loadValue(sp + 32));\n                },\n                // func valueDelete(v ref, p string)\n                "syscall/js.valueDelete": (sp) => {\n                  sp >>>= 0;\n                  Reflect.deleteProperty(loadValue(sp + 8), loadString(sp + 16));\n                },\n                // func valueIndex(v ref, i int) ref\n                "syscall/js.valueIndex": (sp) => {\n                  sp >>>= 0;\n                  storeValue(sp + 24, Reflect.get(loadValue(sp + 8), getInt64(sp + 16)));\n                },\n                // valueSetIndex(v ref, i int, x ref)\n                "syscall/js.valueSetIndex": (sp) => {\n                  sp >>>= 0;\n                  Reflect.set(loadValue(sp + 8), getInt64(sp + 16), loadValue(sp + 24));\n                },\n                // func valueCall(v ref, m string, args []ref) (ref, bool)\n                "syscall/js.valueCall": (sp) => {\n                  sp >>>= 0;\n                  try {\n                    const v = loadValue(sp + 8);\n                    const m = Reflect.get(v, loadString(sp + 16));\n                    const args = loadSliceOfValues(sp + 32);\n                    const result = Reflect.apply(m, v, args);\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 56, result);\n                    this.mem.setUint8(sp + 64, 1);\n                  } catch (err) {\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 56, err);\n                    this.mem.setUint8(sp + 64, 0);\n                  }\n                },\n                // func valueInvoke(v ref, args []ref) (ref, bool)\n                "syscall/js.valueInvoke": (sp) => {\n                  sp >>>= 0;\n                  try {\n                    const v = loadValue(sp + 8);\n                    const args = loadSliceOfValues(sp + 16);\n                    const result = Reflect.apply(v, void 0, args);\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 40, result);\n                    this.mem.setUint8(sp + 48, 1);\n                  } catch (err) {\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 40, err);\n                    this.mem.setUint8(sp + 48, 0);\n                  }\n                },\n                // func valueNew(v ref, args []ref) (ref, bool)\n                "syscall/js.valueNew": (sp) => {\n                  sp >>>= 0;\n                  try {\n                    const v = loadValue(sp + 8);\n                    const args = loadSliceOfValues(sp + 16);\n                    const result = Reflect.construct(v, args);\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 40, result);\n                    this.mem.setUint8(sp + 48, 1);\n                  } catch (err) {\n                    sp = this._inst.exports.getsp() >>> 0;\n                    storeValue(sp + 40, err);\n                    this.mem.setUint8(sp + 48, 0);\n                  }\n                },\n                // func valueLength(v ref) int\n                "syscall/js.valueLength": (sp) => {\n                  sp >>>= 0;\n                  setInt64(sp + 16, parseInt(loadValue(sp + 8).length));\n                },\n                // valuePrepareString(v ref) (ref, int)\n                "syscall/js.valuePrepareString": (sp) => {\n                  sp >>>= 0;\n                  const str = encoder.encode(String(loadValue(sp + 8)));\n                  storeValue(sp + 16, str);\n                  setInt64(sp + 24, str.length);\n                },\n                // valueLoadString(v ref, b []byte)\n                "syscall/js.valueLoadString": (sp) => {\n                  sp >>>= 0;\n                  const str = loadValue(sp + 8);\n                  loadSlice(sp + 16).set(str);\n                },\n                // func valueInstanceOf(v ref, t ref) bool\n                "syscall/js.valueInstanceOf": (sp) => {\n                  sp >>>= 0;\n                  this.mem.setUint8(sp + 24, loadValue(sp + 8) instanceof loadValue(sp + 16) ? 1 : 0);\n                },\n                // func copyBytesToGo(dst []byte, src ref) (int, bool)\n                "syscall/js.copyBytesToGo": (sp) => {\n                  sp >>>= 0;\n                  const dst = loadSlice(sp + 8);\n                  const src = loadValue(sp + 32);\n                  if (!(src instanceof Uint8Array || src instanceof Uint8ClampedArray)) {\n                    this.mem.setUint8(sp + 48, 0);\n                    return;\n                  }\n                  const toCopy = src.subarray(0, dst.length);\n                  dst.set(toCopy);\n                  setInt64(sp + 40, toCopy.length);\n                  this.mem.setUint8(sp + 48, 1);\n                },\n                // func copyBytesToJS(dst ref, src []byte) (int, bool)\n                "syscall/js.copyBytesToJS": (sp) => {\n                  sp >>>= 0;\n                  const dst = loadValue(sp + 8);\n                  const src = loadSlice(sp + 16);\n                  if (!(dst instanceof Uint8Array || dst instanceof Uint8ClampedArray)) {\n                    this.mem.setUint8(sp + 48, 0);\n                    return;\n                  }\n                  const toCopy = src.subarray(0, dst.length);\n                  dst.set(toCopy);\n                  setInt64(sp + 40, toCopy.length);\n                  this.mem.setUint8(sp + 48, 1);\n                },\n                "debug": (value) => {\n                  console.log(value);\n                }\n              }\n            };\n          }\n          run(instance) {\n            return __async(this, null, function* () {\n              if (!(instance instanceof WebAssembly.Instance)) {\n                throw new Error("Go.run: WebAssembly.Instance expected");\n              }\n              this._inst = instance;\n              this.mem = new DataView(this._inst.exports.mem.buffer);\n              this._values = [\n                // JS values that Go currently has references to, indexed by reference id\n                NaN,\n                0,\n                null,\n                true,\n                false,\n                globalThis,\n                this\n              ];\n              this._goRefCounts = new Array(this._values.length).fill(Infinity);\n              this._ids = /* @__PURE__ */ new Map([\n                // mapping from JS values to reference ids\n                [0, 1],\n                [null, 2],\n                [true, 3],\n                [false, 4],\n                [globalThis, 5],\n                [this, 6]\n              ]);\n              this._idPool = [];\n              this.exited = false;\n              let offset = 4096;\n              const strPtr = (str) => {\n                const ptr = offset;\n                const bytes = encoder.encode(str + "\\0");\n                new Uint8Array(this.mem.buffer, offset, bytes.length).set(bytes);\n                offset += bytes.length;\n                if (offset % 8 !== 0) {\n                  offset += 8 - offset % 8;\n                }\n                return ptr;\n              };\n              const argc = this.argv.length;\n              const argvPtrs = [];\n              this.argv.forEach((arg) => {\n                argvPtrs.push(strPtr(arg));\n              });\n              argvPtrs.push(0);\n              const keys = Object.keys(this.env).sort();\n              keys.forEach((key) => {\n                argvPtrs.push(strPtr(`${key}=${this.env[key]}`));\n              });\n              argvPtrs.push(0);\n              const argv = offset;\n              argvPtrs.forEach((ptr) => {\n                this.mem.setUint32(offset, ptr, true);\n                this.mem.setUint32(offset + 4, 0, true);\n                offset += 8;\n              });\n              const wasmMinDataAddr = 4096 + 8192;\n              if (offset >= wasmMinDataAddr) {\n                throw new Error("total length of command line and environment variables exceeds limit");\n              }\n              this._inst.exports.run(argc, argv);\n              if (this.exited) {\n                this._resolveExitPromise();\n              }\n              yield this._exitPromise;\n            });\n          }\n          _resume() {\n            if (this.exited) {\n              throw new Error("Go program has already exited");\n            }\n            this._inst.exports.resume();\n            if (this.exited) {\n              this._resolveExitPromise();\n            }\n          }\n          _makeFuncWrapper(id) {\n            const go = this;\n            return function() {\n              const event = { id, this: this, args: arguments };\n              go._pendingEvent = event;\n              go._resume();\n              return event.result;\n            };\n          }\n        };\n      })();\n      onmessage = ({ data: wasm }) => {\n        let decoder = new TextDecoder();\n        let fs = globalThis.fs;\n        let stderr = "";\n        fs.writeSync = (fd, buffer) => {\n          if (fd === 1) {\n            postMessage(buffer);\n          } else if (fd === 2) {\n            stderr += decoder.decode(buffer);\n            let parts = stderr.split("\\n");\n            if (parts.length > 1) console.log(parts.slice(0, -1).join("\\n"));\n            stderr = parts[parts.length - 1];\n          } else {\n            throw new Error("Bad write");\n          }\n          return buffer.length;\n        };\n        let stdin = [];\n        let resumeStdin;\n        let stdinPos = 0;\n        onmessage = ({ data }) => {\n          if (data.length > 0) {\n            stdin.push(data);\n            if (resumeStdin) resumeStdin();\n          }\n          return go;\n        };\n        fs.read = (fd, buffer, offset, length, position, callback) => {\n          if (fd !== 0 || offset !== 0 || length !== buffer.length || position !== null) {\n            throw new Error("Bad read");\n          }\n          if (stdin.length === 0) {\n            resumeStdin = () => fs.read(fd, buffer, offset, length, position, callback);\n            return;\n          }\n          let first = stdin[0];\n          let count = Math.max(0, Math.min(length, first.length - stdinPos));\n          buffer.set(first.subarray(stdinPos, stdinPos + count), offset);\n          stdinPos += count;\n          if (stdinPos === first.length) {\n            stdin.shift();\n            stdinPos = 0;\n          }\n          callback(null, count);\n        };\n        let go = new globalThis.Go();\n        go.argv = ["", `--service=${"0.24.0"}`];\n        tryToInstantiateModule(wasm, go).then(\n          (instance) => {\n            postMessage(null);\n            go.run(instance);\n          },\n          (error) => {\n            postMessage(error);\n          }\n        );\n        return go;\n      };\n      function tryToInstantiateModule(wasm, go) {\n        return __async(this, null, function* () {\n          if (wasm instanceof WebAssembly.Module) {\n            return WebAssembly.instantiate(wasm, go.importObject);\n          }\n          const res = yield fetch(wasm);\n          if (!res.ok) throw new Error(`Failed to download ${JSON.stringify(wasm)}`);\n          if ("instantiateStreaming" in WebAssembly && /^application\\/wasm($|;)/i.test(res.headers.get("Content-Type") || "")) {\n            const result2 = yield WebAssembly.instantiateStreaming(res, go.importObject);\n            return result2.instance;\n          }\n          const bytes = yield res.arrayBuffer();\n          const result = yield WebAssembly.instantiate(bytes, go.importObject);\n          return result.instance;\n        });\n      }\n      return (m) => onmessage(m);\n    })'}(postMessage)`], { type: "text/javascript" });
     worker = new Worker(URL.createObjectURL(blob));
   } else {
     let onmessage = ((postMessage) => {
@@ -2023,6 +1852,9 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
               this.mem.setUint32(addr + 0, v, true);
               this.mem.setUint32(addr + 4, Math.floor(v / 4294967296), true);
             };
+            const setInt32 = (addr, v) => {
+              this.mem.setUint32(addr + 0, v, true);
+            };
             const getInt64 = (addr) => {
               const low = this.mem.getUint32(addr + 0, true);
               const high = this.mem.getInt32(addr + 4, true);
@@ -2106,7 +1938,10 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
             };
             const timeOrigin = Date.now() - performance.now();
             this.importObject = {
-              go: {
+              _gotest: {
+                add: (a, b) => a + b
+              },
+              gojs: {
                 // Go's SP does not change as long as no Go code is running. Some operations (e.g. calls, getters and setters)
                 // may synchronously trigger a Go event handler. This makes Go code get executed in the middle of the imported
                 // function. A goroutine can switch to a new stack if the current stack is too small (see morestack function).
@@ -2161,8 +1996,7 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
                         this._resume();
                       }
                     },
-                    getInt64(sp + 8) + 1
-                    // setTimeout has been seen to fire up to 1 millisecond early
+                    getInt64(sp + 8)
                   ));
                   this.mem.setInt32(sp + 16, id, true);
                 },
@@ -2426,8 +2260,7 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
           } else if (fd === 2) {
             stderr += decoder.decode(buffer);
             let parts = stderr.split("\n");
-            if (parts.length > 1)
-              console.log(parts.slice(0, -1).join("\n"));
+            if (parts.length > 1) console.log(parts.slice(0, -1).join("\n"));
             stderr = parts[parts.length - 1];
           } else {
             throw new Error("Bad write");
@@ -2440,8 +2273,7 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
         onmessage = ({ data }) => {
           if (data.length > 0) {
             stdin.push(data);
-            if (resumeStdin)
-              resumeStdin();
+            if (resumeStdin) resumeStdin();
           }
           return go;
         };
@@ -2464,7 +2296,7 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
           callback(null, count);
         };
         let go = new globalThis.Go();
-        go.argv = ["", `--service=${"0.20.2"}`];
+        go.argv = ["", `--service=${"0.24.0"}`];
         tryToInstantiateModule(wasm, go).then(
           (instance) => {
             postMessage(null);
@@ -2482,8 +2314,7 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
             return WebAssembly.instantiate(wasm, go.importObject);
           }
           const res = yield fetch(wasm);
-          if (!res.ok)
-            throw new Error(`Failed to download ${JSON.stringify(wasm)}`);
+          if (!res.ok) throw new Error(`Failed to download ${JSON.stringify(wasm)}`);
           if ("instantiateStreaming" in WebAssembly && /^application\/wasm($|;)/i.test(res.headers.get("Content-Type") || "")) {
             const result2 = yield WebAssembly.instantiateStreaming(res, go.importObject);
             return result2.instance;
@@ -2498,7 +2329,13 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
     let go;
     worker = {
       onmessage: null,
-      postMessage: (data) => setTimeout(() => go = onmessage({ data })),
+      postMessage: (data) => setTimeout(() => {
+        try {
+          go = onmessage({ data });
+        } catch (error) {
+          rejectAllWith(error);
+        }
+      }),
       terminate() {
         if (go)
           for (let timeout of go._scheduledTimeouts.values())
@@ -2514,10 +2351,8 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
   });
   worker.onmessage = ({ data: error }) => {
     worker.onmessage = ({ data }) => readFromStdout(data);
-    if (error)
-      firstMessageReject(error);
-    else
-      firstMessageResolve();
+    if (error) firstMessageReject(error);
+    else firstMessageResolve();
   };
   worker.postMessage(wasmModule || new URL(wasmURL, location.href).toString());
   let { readFromStdout, service } = createChannel({
@@ -2536,52 +2371,67 @@ var startRunningService = (wasmURL, wasmModule, useWorker) => __async(void 0, nu
     longLivedService = void 0;
   };
   longLivedService = {
-    build: (options) => new Promise((resolve, reject) => service.buildOrContext({
-      callName: "build",
-      refs: null,
-      options,
-      isTTY: false,
-      defaultWD: "/",
-      callback: (err, res) => err ? reject(err) : resolve(res)
-    })),
-    context: (options) => new Promise((resolve, reject) => service.buildOrContext({
-      callName: "context",
-      refs: null,
-      options,
-      isTTY: false,
-      defaultWD: "/",
-      callback: (err, res) => err ? reject(err) : resolve(res)
-    })),
-    transform: (input, options) => new Promise((resolve, reject) => service.transform({
-      callName: "transform",
-      refs: null,
-      input,
-      options: options || {},
-      isTTY: false,
-      fs: {
-        readFile(_, callback) {
-          callback(new Error("Internal error"), null);
+    build: (options) => new Promise((resolve, reject) => {
+      rejectAllPromise.then(reject);
+      service.buildOrContext({
+        callName: "build",
+        refs: null,
+        options,
+        isTTY: false,
+        defaultWD: "/",
+        callback: (err, res) => err ? reject(err) : resolve(res)
+      });
+    }),
+    context: (options) => new Promise((resolve, reject) => {
+      rejectAllPromise.then(reject);
+      service.buildOrContext({
+        callName: "context",
+        refs: null,
+        options,
+        isTTY: false,
+        defaultWD: "/",
+        callback: (err, res) => err ? reject(err) : resolve(res)
+      });
+    }),
+    transform: (input, options) => new Promise((resolve, reject) => {
+      rejectAllPromise.then(reject);
+      service.transform({
+        callName: "transform",
+        refs: null,
+        input,
+        options: options || {},
+        isTTY: false,
+        fs: {
+          readFile(_, callback) {
+            callback(new Error("Internal error"), null);
+          },
+          writeFile(_, callback) {
+            callback(null);
+          }
         },
-        writeFile(_, callback) {
-          callback(null);
-        }
-      },
-      callback: (err, res) => err ? reject(err) : resolve(res)
-    })),
-    formatMessages: (messages, options) => new Promise((resolve, reject) => service.formatMessages({
-      callName: "formatMessages",
-      refs: null,
-      messages,
-      options,
-      callback: (err, res) => err ? reject(err) : resolve(res)
-    })),
-    analyzeMetafile: (metafile, options) => new Promise((resolve, reject) => service.analyzeMetafile({
-      callName: "analyzeMetafile",
-      refs: null,
-      metafile: typeof metafile === "string" ? metafile : JSON.stringify(metafile),
-      options,
-      callback: (err, res) => err ? reject(err) : resolve(res)
-    }))
+        callback: (err, res) => err ? reject(err) : resolve(res)
+      });
+    }),
+    formatMessages: (messages, options) => new Promise((resolve, reject) => {
+      rejectAllPromise.then(reject);
+      service.formatMessages({
+        callName: "formatMessages",
+        refs: null,
+        messages,
+        options,
+        callback: (err, res) => err ? reject(err) : resolve(res)
+      });
+    }),
+    analyzeMetafile: (metafile, options) => new Promise((resolve, reject) => {
+      rejectAllPromise.then(reject);
+      service.analyzeMetafile({
+        callName: "analyzeMetafile",
+        refs: null,
+        metafile: typeof metafile === "string" ? metafile : JSON.stringify(metafile),
+        options,
+        callback: (err, res) => err ? reject(err) : resolve(res)
+      });
+    })
   };
 });
 var browser_default = browser_exports;
