@@ -253,32 +253,33 @@ function update() {
     }
 
     // Global touch buttons
-    if (runner.isTouch) {
+    if (runner.isTouch || game_mode == 'play') {
         let music_key = (settings.music != null) ? 'music' : 'silence';
         let pause_key = pause ? 'play' : 'pause';
 
         let size = 0.6 * BUTTON_SIZE;
-        let x = 20 + size / 2;
-        let y = 20 + size / 2;
+        let x = runner.isTouch ? (20 + size / 2) : (layout.bag.left + size / 2);
+        let y = runner.isTouch ? (20 + size / 2) : (layout.well.top + layout.well.height - size / 2);
+        let delta = runner.isTouch ? (size + 20) : -(size + 20);
 
         if (button(music_key, x, y, size).clicked)
             toggleMusic();
-        y += size + 20;
+        y += delta;
 
         if (button('background', x, y, size).clicked)
             toggleBackground();
-        y += size + 20;
+        y += delta;
 
         if (canvas.requestFullscreen != null) {
             if (button('fullscreen', x, y, size).clicked)
                 toggleFullScreen();
-            y += size + 20;
+            y += delta;
         }
 
-        if (game_mode == 'play') {
+        if (runner.isTouch && game_mode == 'play') {
             if (button(pause_key, x, y, size).clicked)
                 pause = !pause;
-            y += size + 20;
+            y += delta;
         }
     }
 
