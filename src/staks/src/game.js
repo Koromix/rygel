@@ -751,7 +751,6 @@ function isPieceFloating(piece) {
 
 function isPieceValid(piece, strict) {
     let bottom = rules.ROWS;
-    let top = 0;
     let left = rules.COLUMNS;
     let right = 0;
 
@@ -768,7 +767,6 @@ function isPieceValid(piece, strict) {
                 return false;
 
             bottom = Math.min(bottom, row);
-            top = Math.max(top, row + 1);
             left = Math.min(left, column);
             right = Math.max(right, column + 1);
         }
@@ -776,7 +774,7 @@ function isPieceValid(piece, strict) {
 
     if (bottom < 0)
         return false;
-    if (strict && top > rules.ROWS)
+    if (strict && bottom >= rules.ROWS)
         return false;
     if (left < 0)
         return false;
