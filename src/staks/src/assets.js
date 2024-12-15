@@ -26,6 +26,12 @@ import backgrounds_lonely from '../assets/backgrounds/somewhere.webp';
 import musics_serious_corporate from '../assets/musics/serious_corporate.mp3';
 // Ambient Future Tech (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/745374/
 import musics_ambient_future_tech from '../assets/musics/ambient_future_tech.mp3';
+// Summer Beauty (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/747784/
+import musics_summer_beauty from '../assets/musics/summer_beauty.mp3';
+// Tech Corporation (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/756428/
+import musics_tech_corporation from '../assets/musics/tech_corporation.mp3';
+// Architecture (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/755320/
+import musics_architecture from '../assets/musics/architecture.mp3';
 
 // powerup by BananaMilkshake: https://freesound.org/people/BananaMilkshake/sounds/632702/
 import sound_clear from '../assets/sounds/clear.mp3';
@@ -63,7 +69,10 @@ async function loadAssets() {
 
     assets.musics = {
         serious_corporate: musics_serious_corporate,
-        ambient_future_tech: musics_ambient_future_tech
+        ambient_future_tech: musics_ambient_future_tech,
+        summer_beauty: musics_summer_beauty,
+        tech_corporation: musics_tech_corporation,
+        architecture: musics_architecture
     };
 
     assets.sounds = {
