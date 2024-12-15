@@ -13,12 +13,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../web/core/common.js';
 import { AppRunner } from '../../web/core/runner.js';
 import { loadAssets, assets } from './assets.js';
 import * as rules from './rules.js';
 
 import '../../../vendor/opensans/OpenSans.css';
+import './game.css';
 
 const KEYBOARD_SHORTCUTS = [
     ['← / →', `Déplacement latéral`],
@@ -49,8 +51,11 @@ const DEFAULT_SETTINGS = {
     help: true
 };
 
-// Application
+// DOM nodes
 let canvas = null;
+let attributions = null;
+
+// Render and input API
 let runner = null;
 let ctx = null;
 let mouse_state = null;
@@ -103,7 +108,28 @@ let text_lines = null;
 // ------------------------------------------------------------------------
 
 async function start(root) {
-    canvas = root;
+    await loadAssets();
+    loadSettings();
+
+    for (let block of rules.BLOCKS) {
+        let trail = ctz(block.shape);
+        let lead = clz(block.shape) - (32 - block.size * block.size);
+
+        block.top = block.size - Math.floor(trail / block.size);
+        block.bottom = Math.floor(lead / block.size);
+    }
+
+    render(html`
+        <div class="stk_game">
+            <div class="stk_attributions">
+                Musiques par <a href="https://freesound.org/people/AudioCoffee/" target="_blank">AudioCoffee</a><br>
+                Fonds d'écran par <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>, <a href="https://fr.m.wikipedia.org/wiki/Fichier:Fomalhaut_planet.jpg">NASA et ESA</a>
+            </div>
+            <canvas class="stk_canvas"></canvas>
+        </div>
+    `, root)
+    canvas = root.querySelector('.stk_canvas');
+    attributions = root.querySelector('.stk_attributions');
 
     runner = new AppRunner(canvas);
     ctx = canvas.getContext('2d');
@@ -113,27 +139,12 @@ async function start(root) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    await loadAssets();
-    loadSettings();
-
-    init();
-
     runner.updateFrequency = 120;
     runner.onUpdate = update;
     runner.onDraw = draw;
     runner.start();
 
     document.body.classList.remove('loading');
-}
-
-function init() {
-    for (let block of rules.BLOCKS) {
-        let trail = ctz(block.shape);
-        let lead = clz(block.shape) - (32 - block.size * block.size);
-
-        block.top = block.size - Math.floor(trail / block.size);
-        block.bottom = Math.floor(lead / block.size);
-    }
 }
 
 function loadSettings() {
@@ -939,6 +950,8 @@ function draw() {
 }
 
 function drawText() {
+    attributions.classList.add('active');
+
     let font = '20px Open Sans';
     ctx.fillStyle = 'white';
 
@@ -952,6 +965,8 @@ function drawText() {
 }
 
 function drawGame() {
+    attributions.classList.remove('active');
+
     drawWell();
     drawBag();
     drawLevel();
