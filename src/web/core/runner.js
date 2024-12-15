@@ -48,7 +48,6 @@ function AppRunner(canvas) {
     let handle_draw = null;
     let handle_context_menu = null;
 
-    let is_touch = false;
     let touch_digits = -1;
     let touch_start = null;
     let touch_distance = 0;
@@ -97,7 +96,7 @@ function AppRunner(canvas) {
 
     Object.defineProperties(this,  {
         canvas: { value: canvas, writable: false, enumerable: true },
-        isTouch: { get: () => is_touch, enumerable: true },
+        isTouch: { get: isTouchDevice, enumerable: true },
 
         onUpdate: { get: () => handle_draw, set: func => { handle_update = func; }, enumerable: true },
         onDraw: { get: () => handle_draw, set: func => { handle_draw = func; }, enumerable: true },
@@ -145,18 +144,14 @@ function AppRunner(canvas) {
             e.preventDefault();
         });
 
-        is_touch = isTouchDevice();
-
         canvas.addEventListener('keydown', handleKeyEvent);
         canvas.addEventListener('keyup', handleKeyEvent);
         canvas.setAttribute('tabindex', '0');
 
-        if (!is_touch) {
-            canvas.addEventListener('mousemove', handleMouseEvent);
-            canvas.addEventListener('mousedown', handleMouseEvent);
-            canvas.addEventListener('mouseup', handleMouseEvent);
-            canvas.addEventListener('wheel', handleMouseEvent);
-        }
+        canvas.addEventListener('mousemove', handleMouseEvent);
+        canvas.addEventListener('mousedown', handleMouseEvent);
+        canvas.addEventListener('mouseup', handleMouseEvent);
+        canvas.addEventListener('wheel', handleMouseEvent);
 
         canvas.addEventListener('touchstart', handleTouchEvent);
         canvas.addEventListener('touchmove', handleTouchEvent);
@@ -236,6 +231,9 @@ function AppRunner(canvas) {
     }
 
     function handleMouseEvent(e) {
+        if (isTouchDevice())
+            return;
+
         canvas.focus();
         self.busy();
 
