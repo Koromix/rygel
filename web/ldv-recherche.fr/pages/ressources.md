@@ -1,5 +1,4 @@
 <div class="banner">
-    <img src="{{ ASSET static/banners/ressources.webp }}" alt="" />
     <div class="title">Ressources</div>
 </div>
 

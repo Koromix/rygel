@@ -1,5 +1,4 @@
 <div class="banner">
-    <img src="{{ ASSET static/banners/index.webp }}" alt="" />
     <div class="title">À la une</div>
     <div class="intro">
         <p><b>L'étude SocioTrauma est en ligne !</b>
