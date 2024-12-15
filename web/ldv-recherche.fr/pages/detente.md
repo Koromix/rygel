@@ -24,7 +24,7 @@
         </div>
     </div>
     <div class="card" style="flex: 5;">
-        <img src="{{ ASSET static/detente/jeu_snake.webp }}" alt="" />
+        <img src="{{ ASSET static/detente/jeu_staks.webp }}" alt="" />
         <div>
             <p class="title">Jouez à un jeu</p>
             <p>Lancez une partie pour vous changer les idées !<br><br></p>
