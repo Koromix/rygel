@@ -862,14 +862,6 @@ function rotateRight(piece) {
     piece.angle = (piece.angle + 1) % 4;
 }
 
-function testShape(size, shape, i, j) {
-    let shift = size * (size - i) - j - 1;
-    let mask = 1 << shift;
-
-    let hit = !!(shape & mask);
-    return hit;
-}
-
 function clearStack() {
     let lines = 0;
 
@@ -1279,6 +1271,14 @@ function isInsideRect(x, y, rect) {
                   y >= rect.top &&
                   y <= rect.top + rect.height);
     return inside;
+}
+
+function testShape(size, shape, i, j) {
+    let shift = size * (size - i) - j - 1;
+    let mask = 1 << shift;
+
+    let hit = !!(shape & mask);
+    return hit;
 }
 
 export { start }
