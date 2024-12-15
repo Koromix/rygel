@@ -30,7 +30,7 @@ const KEYBOARD_SHORTCUTS = [
     ['P', 'Mettre en pause'],
     ['G', `Afficher/cacher le fantôme`],
     ['B', `Modifier le fond d'écran`],
-    ['M', 'Modifier la musique'],
+    ['M', 'Activer/désactiver le son'],
     null,
     ['H', `Afficher/cacher l'aide`],
     ['F', `Mode plein écran`]
@@ -41,6 +41,7 @@ const SQUARE_SIZE = 48;
 
 const DEFAULT_SETTINGS = {
     background: 'aurora',
+    sound: true,
     music: 'serious_corporate',
     ghost: true,
     help: true
@@ -131,7 +132,7 @@ function loadSettings() {
 
     if (!assets.backgrounds.hasOwnProperty(settings.background))
         settings.background = DEFAULT_SETTINGS.background;
-    if (settings.music != null && !assets.musics.hasOwnProperty(settings.music))
+    if (!assets.musics.hasOwnProperty(settings.music))
         settings.music = DEFAULT_SETTINGS.music;
 }
 
@@ -254,7 +255,7 @@ function update() {
 
     // Global touch buttons
     if (runner.isTouch || game_mode == 'play') {
-        let music_key = (settings.music != null) ? 'music' : 'silence';
+        let sound_key = settings.sound ? 'sound' : 'silence';
         let pause_key = pause ? 'play' : 'pause';
 
         let size = 0.6 * BUTTON_SIZE;
@@ -262,8 +263,10 @@ function update() {
         let y = runner.isTouch ? (20 + size / 2) : (layout.well.top + layout.well.height - size / 2);
         let delta = runner.isTouch ? (size + 20) : -(size + 20);
 
-        if (button(music_key, x, y, size).clicked)
-            toggleMusic();
+        if (button(sound_key, x, y, size).clicked) {
+            settings.sound = !settings.sound;
+            saveSettings();
+        }
         y += delta;
 
         if (button('background', x, y, size).clicked)
@@ -293,8 +296,10 @@ function update() {
         }
         if (pressed_keys.b == 1)
             toggleBackground();
-        if (pressed_keys.m == 1)
-            toggleMusic();
+        if (pressed_keys.m == 1) {
+            settings.sound = !settings.sound;
+            saveSettings();
+        }
         if (pressed_keys.h == 1) {
             settings.help = !settings.help;
             saveSettings();
@@ -305,10 +310,21 @@ function update() {
             show_debug = !show_debug;
     }
 
-    // Music sound
-    if (started && settings.music != null) {
+    runner.volume = settings.sound ? 1 : 0;
+
+    // Play music
+    if (started) {
         let sound = assets.musics[settings.music];
-        runner.playLoop(sound);
+        let handle = runner.playOnce(sound);
+
+        if (handle.ended) {
+            let musics = Object.keys(assets.musics);
+            let idx = musics.indexOf(settings.music);
+            let next = (idx + 1) % musics.length;
+
+            settings.music = musics[next] ?? null;
+            saveSettings();
+        }
     }
 
     // Should only run once unless the game mode changes, in which case rerun
@@ -379,23 +395,10 @@ function toggleFullScreen() {
 
 function toggleBackground() {
     let backgrounds = Object.keys(assets.backgrounds);
-
     let idx = backgrounds.indexOf(settings.background);
     let next = (idx + 1) % backgrounds.length;
 
     settings.background = backgrounds[next];
-
-    saveSettings();
-}
-
-function toggleMusic() {
-    let musics = Object.keys(assets.musics);
-
-    let idx = musics.indexOf(settings.music);
-    let next = idx + 1;
-
-    settings.music = musics[next] ?? null;
-
     saveSettings();
 }
 

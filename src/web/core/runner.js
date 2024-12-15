@@ -92,6 +92,9 @@ function AppRunner(canvas) {
     let old_sources = new Map;
     let new_sources = new Map;
 
+    let volume_node = null;
+    let volume = 1;
+
     Object.defineProperties(this,  {
         canvas: { value: canvas, writable: false, enumerable: true },
         isTouch: { get: () => is_touch, enumerable: true },
@@ -120,7 +123,9 @@ function AppRunner(canvas) {
                 ignore_new_cursor = true;
             },
             enumerable: true
-        }
+        },
+
+        volume: { get: () => volume, set: setVolume, enumerable: true }
     });
 
     // ------------------------------------------------------------------------
@@ -600,6 +605,12 @@ function AppRunner(canvas) {
         if (audio == null)
             audio = new AudioContext;
 
+        if (volume_node == null) {
+            volume_node = audio.createGain();
+            volume_node.gain.setValueAtTime(volume, audio.currentTime);
+            volume_node.connect(audio.destination);
+        }
+
         let sfx = old_sources.get(asset) || new_sources.get(asset);
 
         if (options.loop == null)
@@ -611,10 +622,16 @@ function AppRunner(canvas) {
             sfx = {
                 src: audio.createBufferSource(),
                 gain: audio.createGain(),
-                persist: options.persist
+                persist: options.persist,
+
+                handle: {
+                    ended: false
+                }
             };
 
-            sfx.gain.connect(audio.destination);
+            sfx.src.addEventListener('ended', () => { sfx.handle.ended = true; });
+
+            sfx.gain.connect(volume_node);
             sfx.src.buffer = asset;
             sfx.src.loop = options.loop;
             sfx.src.connect(sfx.gain);
@@ -625,18 +642,31 @@ function AppRunner(canvas) {
             sfx.src.start();
         }
 
-        old_sources.delete(asset);
         if (sfx != null)
             new_sources.set(asset, sfx);
+        old_sources.delete(asset);
+
+        return sfx.handle;
     };
 
     this.playLoop = function(asset) {
-        self.playSound(asset, { loop: true, persist: false });
+        return self.playSound(asset, { loop: true, persist: false });
     };
 
     this.playOnce = function(asset, persist = true) {
-        self.playSound(asset, { loop: false, persist: persist });
+        return self.playSound(asset, { loop: false, persist: persist });
     };
+
+    function setVolume(value) {
+        if (value == volume)
+            return;
+
+        value = Util.clamp(value, 0, 1);
+        volume = value;
+
+        if (volume_node != null)
+            volume_node.gain.setValueAtTime(volume, audio.currentTime + 0.2);
+    }
 }
 
 async function loadTexture(url) {
