@@ -14,9 +14,11 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Util, Log } from '../../web/core/common.js';
-import { runner, canvas, ctx, mouse_state, pressed_keys } from './main.js';
-import { assets } from './assets.js';
+import { AppRunner } from '../../web/core/runner.js';
+import { loadAssets, assets } from './assets.js';
 import * as rules from './rules.js';
+
+import '../../../vendor/opensans/OpenSans.css';
 
 const KEYBOARD_SHORTCUTS = [
     ['← / →', `Déplacement latéral`],
@@ -46,6 +48,13 @@ const DEFAULT_SETTINGS = {
     ghost: true,
     help: true
 };
+
+// Application
+let canvas = null;
+let runner = null;
+let ctx = null;
+let mouse_state = null;
+let pressed_keys = null;
 
 // Global state
 let game_mode = 'start';
@@ -93,9 +102,31 @@ let text_lines = null;
 // Init
 // ------------------------------------------------------------------------
 
-async function init() {
+async function start(root) {
+    canvas = root;
+
+    runner = new AppRunner(canvas);
+    ctx = canvas.getContext('2d');
+    mouse_state = runner.mouseState;
+    pressed_keys = runner.pressedKeys;
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    await loadAssets();
     loadSettings();
 
+    init();
+
+    runner.updateFrequency = 120;
+    runner.onUpdate = update;
+    runner.onDraw = draw;
+    runner.start();
+
+    document.body.classList.remove('loading');
+}
+
+function init() {
     for (let block of rules.BLOCKS) {
         let trail = ctz(block.shape);
         let lead = clz(block.shape) - (32 - block.size * block.size);
@@ -103,9 +134,6 @@ async function init() {
         block.top = block.size - Math.floor(trail / block.size);
         block.bottom = Math.floor(lead / block.size);
     }
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
 }
 
 function loadSettings() {
@@ -1253,8 +1281,4 @@ function isInsideRect(x, y, rect) {
     return inside;
 }
 
-export {
-    init,
-    update,
-    draw
-}
+export { start }

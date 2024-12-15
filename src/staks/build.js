@@ -55,7 +55,7 @@ async function main() {
 
 async function run() {
     let src_filenames = [
-        './src/main.js'
+        './src/game.js'
     ];
 
     let html = {
