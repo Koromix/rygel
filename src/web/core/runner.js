@@ -215,15 +215,13 @@ function AppRunner(canvas) {
             updateKey('delete', e.type);
         } else if (code == 13) {
             updateKey('return', e.type);
-        }
-
-        if (key == 'z' || code == 38) {
+        } else if (code == 38) {
             updateKey('up', e.type);
-        } else if (key == 's' || code == 40) {
+        } else if (code == 40) {
             updateKey('down', e.type);
-        } else if (key == 'q' || code == 37) {
+        } else if (code == 37) {
             updateKey('left', e.type);
-        } else if (key == 'd' || code == 39) {
+        } else if (code == 39) {
             updateKey('right', e.type);
         }
     }
