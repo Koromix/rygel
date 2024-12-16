@@ -24,8 +24,11 @@ function initCards() {
 
     for (let cardset of cardsets) {
         let cards = Array.from(cardset.querySelectorAll('.card'));
+        let active = 0;
 
-        function toggle(active) {
+        function toggle(idx) {
+            active = idx;
+
             let left = -Math.floor((cards.length - 1) / 2);
             let right = Math.floor(cards.length / 2);
 
@@ -43,11 +46,59 @@ function initCards() {
             }
         }
 
-        for (let i = 0; i < cards.length; i++)
-            cards[i].addEventListener('click', () => toggle(i));
+        for (let i = 0; i < cards.length; i++) {
+            cards[i].addEventListener('click', () => {
+                if (isTouchDevice())
+                    return;
+                toggle(i)
+            });
+        }
 
         let middle = Math.floor((cards.length - 1) / 2);
         toggle(middle);
+
+        detectSwipe(cardset, delta => {
+            let idx = active + delta;
+
+            if (idx >= cards.length) {
+                idx = 0;
+            } else if (idx < 0) {
+                idx = cards.length - 1;
+            }
+
+            toggle(idx);
+        });
     }
 }
 
+function detectSwipe(el, func) {
+    let start = null;
+
+    el.addEventListener('touchstart', e => {
+        console.log('start', e);
+        start = e.changedTouches[0].screenX
+    });
+    el.addEventListener('touchend', e => {
+        console.log('end', e);
+
+        let end = e.changedTouches[0].screenX;
+        let delta = end - start;
+
+        if (delta <= -10) {
+            func(1);
+        } else if (delta >= 10) {
+            func(-1);
+        }
+    });
+}
+
+function isTouchDevice() {
+    if (!('ontouchstart' in window))
+        return false;
+    if (!navigator.maxTouchPoints)
+        return false;
+    if (navigator.msMaxTouchPoints)
+        return false;
+
+    return true;
+}
