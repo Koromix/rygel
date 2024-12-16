@@ -725,16 +725,12 @@ function updateGame() {
         let perfect = stack.every(value => !value);
 
         let action = 0;
-        let difficult = false;
 
         switch (clears) {
             case 1: { action += 100 * level; } break;
             case 2: { action += 300 * level; } break;
             case 3: { action += 500 * level; } break;
-            case 4: {
-                action += 800 * level;
-                difficult = true;
-            } break;
+            case 4: { action += 800 * level; } break;
         }
 
         if (clears) {
@@ -754,8 +750,6 @@ function updateGame() {
                     case 2: { action += 1200; } break;
                     case 3: { action += 1600; } break;
                 }
-
-                difficult = true;
             } break;
             case 'miniT': {
                 switch (clears) {
@@ -764,8 +758,6 @@ function updateGame() {
                     case 2: { action += 400; } break;
                     case 3: { /* Apparently impossible */ } break;
                 }
-
-                difficult = true;
             } break;
         }
 
@@ -778,10 +770,10 @@ function updateGame() {
             }
         }
 
-        back2back &&= difficult;
+        back2back &&= (special == 'T' || clears == 4);
         if (back2back)
             action *= 1.5;
-        back2back = difficult;
+        back2back = (special != null || clears == 4);
 
         lines += clears;
         score += action;
