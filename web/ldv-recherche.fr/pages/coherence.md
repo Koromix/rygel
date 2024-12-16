@@ -26,7 +26,7 @@
         let bubble = root.querySelector('#bubble');
 
         progress.addEventListener('animationend', end);
-        progress.style.setProperty('--duration', duration + ('s'));
+        progress.style.setProperty('--duration', duration + 's');
 
         bubble.addEventListener('animationiteration', update);
         update();
@@ -91,9 +91,9 @@
 
     #progress {
         position: absolute;
-        left: 10px;
-        top: 10px;
-        width: calc(100% - 20px);
+        left: 4px;
+        top: 4px;
+        width: calc(100% - 8px);
         height: 20px;
         background: linear-gradient(to right, #4e92ff 0 var(--progress), #f8f8f8 var(--progress));
         border-radius: 10px;
@@ -102,33 +102,42 @@
 
     #bubble {
         display: flex;
-        width: 150px;
-        height: 150px;
+        width: 280px;
+        height: 280px;
         margin-top: 28px;
         background: #417ad5;
         color: white;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
-        transform: scale(1);
+        transform: scale(0.5);
     }
-    #bubble.animate { animation: breathe 5s ease-in-out infinite alternate; }
-    #bubble.animate > span { animation: breathe 5s ease-in-out infinite alternate; }
+    #bubble > span {
+        margin-top: -6px;
+        font-size: 4em;
+        transform: scale(0.6);
+    }
+    #bubble.animate { animation: bubble 5s ease-in-out infinite alternate; }
+    #bubble.animate > span { animation: text 5s ease-in-out infinite alternate; }
     #bubble.done {
         animation: none;
         transform: scale(1);
         background: #e477e1;
     }
 
-    @keyframes breathe {
+    @keyframes bubble {
         0% {
-            transform: scale(1);
+            transform: scale(0.5);
             background: #417ad5;
         }
         100% {
-            transform: scale(1.8);
+            transform: scale(1);
             background: #4e92ff;
         }
+    }
+    @keyframes text {
+        0% { transform: scale(0.6); }
+        100% { transform: scale(1); }
     }
     @keyframes progress {
         0% { --progress: 0%; }
