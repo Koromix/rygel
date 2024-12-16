@@ -498,7 +498,9 @@ function updateGame() {
     if (isInsideRect(mouse_state.x, mouse_state.y, layout.level)) {
         if (mouse_state.left == 1)
             level++;
+
         runner.cursor = 'pointer';
+        mouse_state.left = 0;
     }
 
     if (pause)
@@ -548,7 +550,13 @@ function updateGame() {
         if (isInsideRect(mouse_state.x, mouse_state.y, layout.hold)) {
             if (mouse_state.left == 1)
                 hold = true;
-            runner.cursor = 'pointer';
+            mouse_state.left = 0;
+        }
+
+        if (isInsideRect(mouse_state.x, mouse_state.y, expandRect(layout.well, -40, -40))) {
+            if (mouse_state.left == 1)
+                drop = true;
+            mouse_state.left = 0;
         }
     } else {
         move = (pressed_keys.right == 1) - (pressed_keys.left == 1);
@@ -1300,6 +1308,17 @@ function isInsideRect(x, y, rect) {
                   y >= rect.top &&
                   y <= rect.top + rect.height);
     return inside;
+}
+
+function expandRect(rect, sx, sy) {
+    let expanded = {
+        left: rect.left - sx,
+        top: rect.top - sy,
+        width: rect.width + sx * 2,
+        height: rect.height + sy * 2
+    };
+
+    return expanded;
 }
 
 function testShape(size, shape, i, j) {
