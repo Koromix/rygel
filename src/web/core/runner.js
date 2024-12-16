@@ -300,7 +300,7 @@ function AppRunner(canvas) {
                 mouse_state.x = (e.touches[0].pageX - rect.left) * window.devicePixelRatio;
                 mouse_state.y = (e.touches[0].pageY - rect.top) * window.devicePixelRatio;
 
-                if (!mouse_state.left)
+                if (e.type == 'touchstart' && !mouse_state.left)
                     mouse_state.left = 1;
             } else if (touch_digits == 2) {
                 let p1 = { x: e.touches[0].pageX - rect.left, y: e.touches[0].pageY - rect.top };
@@ -336,7 +336,7 @@ function AppRunner(canvas) {
                 touch_start = {
                     x: mouse_state.x,
                     y: mouse_state.y,
-                    counter: update_counter
+                    counter: draw_counter
                 };
 
                 mouse_state.moving = false;
@@ -347,8 +347,11 @@ function AppRunner(canvas) {
 
             mouse_state.contact = false;
 
+            if (draw_counter - touch_start.counter >= 20)
+                skip_clicks = 1;
             if (touch_digits == 1) {
-                mouse_state.left = skip_clicks ? 0 : -1;
+                if (mouse_state.left)
+                    mouse_state.left = skip_clicks ? 0 : -1;
                 mouse_state.moving = false;
             }
             skip_clicks = 0;
