@@ -82,6 +82,8 @@ let level = null;
 let clears = null;
 let score = null;
 let combo = null;
+let special = null;
+let back2back = null;
 
 // User settings
 let settings = Object.assign({}, DEFAULT_SETTINGS);
@@ -198,7 +200,9 @@ function play() {
     level = 1;
     clears = 0;
     score = 0;
-    combo = 0;
+    combo = -1;
+    special = null;
+    back2back = false;
 
     started = true;
 }
@@ -588,14 +592,15 @@ function updateGame() {
         let edit = Object.assign({}, piece);
 
         let kicks = null;
+        let valid = false;
 
         if (rotate > 0) {
-            rotateRight(edit);
+            rotatePiece(edit);
             kicks = edit.kicks[piece.angle];
         } else {
-            rotateRight(edit);
-            rotateRight(edit);
-            rotateRight(edit);
+            rotatePiece(edit);
+            rotatePiece(edit);
+            rotatePiece(edit);
 
             kicks = edit.kicks[piece.angle].slice();
 
@@ -610,19 +615,28 @@ function updateGame() {
             edit.column = piece.column + kick[1];
 
             if (isPieceValid(edit, false)) {
-                piece.row = edit.row;
-                piece.column = edit.column;
-                piece.shape = edit.shape;
-                piece.angle = edit.angle;
-
-                if (locking != null)
-                    locking.time = now;
-                piece.actions++;
-
-                runner.playOnce(assets.sounds.move);
-
+                valid = true;
                 break;
             }
+        }
+
+        if (valid) {
+            piece.row = edit.row;
+            piece.column = edit.column;
+            piece.shape = edit.shape;
+            piece.angle = edit.angle;
+
+            if (locking != null)
+                locking.time = now;
+            piece.actions++;
+
+            if (piece.type == 'T') {
+                special = detectTSpin(piece);
+            } else {
+                special = null;
+            }
+
+            runner.playOnce(assets.sounds.move);
         }
     }
 
@@ -636,6 +650,8 @@ function updateGame() {
             if (piece.actions < rules.MAX_ACTIONS && locking != null)
                 locking.time = now;
             piece.actions++;
+
+            special = null;
 
             runner.playOnce(assets.sounds.move);
         }
@@ -706,34 +722,70 @@ function updateGame() {
     // Clear stack and score
     if (piece == null) {
         let lines = clearStack();
+        let perfect = stack.every(value => !value);
+
+        let action = 0;
+        let difficult = false;
 
         clears += lines;
 
         switch (lines) {
-            case 0: { combo = -1; } break;
-            case 1: { score += 100 * level; } break;
-            case 2: { score += 300 * level; } break;
-            case 3: { score += 500 * level; } break;
-            case 4: { score += 800 * level; } break;
+            case 1: { action += 100 * level; } break;
+            case 2: { action += 300 * level; } break;
+            case 3: { action += 500 * level; } break;
+            case 4: {
+                action += 800 * level;
+                difficult = true;
+            } break;
         }
 
         if (lines) {
             combo++;
-            score += 50 * combo * level;
+            action += 50 * combo * level;
 
             runner.playOnce(assets.sounds.clear);
+        } else {
+            combo = -1;
         }
 
-        let perfect = stack.every(value => !value);
+        switch (special) {
+            case 'T': {
+                switch (lines) {
+                    case 0: { action += 400; } break;
+                    case 1: { action += 800; } break;
+                    case 2: { action += 1200; } break;
+                    case 3: { action += 1600; } break;
+                }
+
+                difficult = true;
+            } break;
+            case 'miniT': {
+                switch (lines) {
+                    case 0: { action += 100; } break;
+                    case 1: { action += 200; } break;
+                    case 2: { action += 400; } break;
+                    case 3: { /* Apparently impossible */ } break;
+                }
+
+                difficult = true;
+            } break;
+        }
 
         if (perfect) {
             switch (lines) {
-                case 1: { score += 800 * level; } break;
-                case 2: { score += 1200 * level; } break;
-                case 3: { score += 1800 * level; } break;
-                case 4: { score += 2000 * level; } break;
+                case 1: { action += 800 * level; } break;
+                case 2: { action += 1200 * level; } break;
+                case 3: { action += 1800 * level; } break;
+                case 4: { action += 2000 * level; } break;
             }
         }
+
+        back2back &&= difficult;
+        if (back2back)
+            action *= 1.5;
+        back2back = difficult;
+
+        score += action;
 
         let new_level = 1 + Math.floor(clears / 10);
 
@@ -750,10 +802,7 @@ function spawnPiece(block) {
         column: Math.floor(rules.COLUMNS / 2 - block.size / 2),
 
         block: block,
-        color: block.color,
-        kicks: block.kicks,
-        size: block.size,
-        shape: block.shape,
+        ...block,
         angle: 0,
 
         actions: 0
@@ -773,6 +822,7 @@ function spawnPiece(block) {
 
     gravity = now;
     locking = null;
+    special = null;
 
     return true;
 }
@@ -838,51 +888,87 @@ function isPieceValid(piece, strict) {
     return true;
 }
 
-function rotateRight(piece) {
+function rotatePiece(piece) {
+    piece.shape = rotateShape(piece.size, piece.shape);
+    piece.angle = (piece.angle + 1) % 4;
+}
+
+function rotateShape(size, shape) {
     let rotated = 0;
 
-    switch (piece.size) {
+    switch (size) {
         case 2: {
-            rotated |= (piece.shape & 0b10_00) ? 0b00_10 : 0;
-            rotated |= (piece.shape & 0b01_00) ? 0b10_00 : 0;
-            rotated |= (piece.shape & 0b00_10) ? 0b00_01 : 0;
-            rotated |= (piece.shape & 0b00_01) ? 0b01_00 : 0;
+            rotated |= (shape & 0b10_00) ? 0b00_10 : 0;
+            rotated |= (shape & 0b01_00) ? 0b10_00 : 0;
+            rotated |= (shape & 0b00_10) ? 0b00_01 : 0;
+            rotated |= (shape & 0b00_01) ? 0b01_00 : 0;
         } break;
 
         case 3: {
-            rotated |= (piece.shape & 0b100_000_000) ? 0b000_000_100 : 0;
-            rotated |= (piece.shape & 0b010_000_000) ? 0b000_100_000 : 0;
-            rotated |= (piece.shape & 0b001_000_000) ? 0b100_000_000 : 0;
-            rotated |= (piece.shape & 0b000_100_000) ? 0b000_000_010 : 0;
-            rotated |= (piece.shape & 0b000_010_000) ? 0b000_010_000 : 0;
-            rotated |= (piece.shape & 0b000_001_000) ? 0b010_000_000 : 0;
-            rotated |= (piece.shape & 0b000_000_100) ? 0b000_000_001 : 0;
-            rotated |= (piece.shape & 0b000_000_010) ? 0b000_001_000 : 0;
-            rotated |= (piece.shape & 0b000_000_001) ? 0b001_000_000 : 0;
+            rotated |= (shape & 0b100_000_000) ? 0b000_000_100 : 0;
+            rotated |= (shape & 0b010_000_000) ? 0b000_100_000 : 0;
+            rotated |= (shape & 0b001_000_000) ? 0b100_000_000 : 0;
+            rotated |= (shape & 0b000_100_000) ? 0b000_000_010 : 0;
+            rotated |= (shape & 0b000_010_000) ? 0b000_010_000 : 0;
+            rotated |= (shape & 0b000_001_000) ? 0b010_000_000 : 0;
+            rotated |= (shape & 0b000_000_100) ? 0b000_000_001 : 0;
+            rotated |= (shape & 0b000_000_010) ? 0b000_001_000 : 0;
+            rotated |= (shape & 0b000_000_001) ? 0b001_000_000 : 0;
         } break;
 
         case 4: {
-            rotated |= (piece.shape & 0b1000_0000_0000_0000) ? 0b0000_0000_0000_1000 : 0;
-            rotated |= (piece.shape & 0b0100_0000_0000_0000) ? 0b0000_0000_1000_0000 : 0;
-            rotated |= (piece.shape & 0b0010_0000_0000_0000) ? 0b0000_1000_0000_0000 : 0;
-            rotated |= (piece.shape & 0b0001_0000_0000_0000) ? 0b1000_0000_0000_0000 : 0;
-            rotated |= (piece.shape & 0b0000_1000_0000_0000) ? 0b0000_0000_0000_0100 : 0;
-            rotated |= (piece.shape & 0b0000_0100_0000_0000) ? 0b0000_0000_0100_0000 : 0;
-            rotated |= (piece.shape & 0b0000_0010_0000_0000) ? 0b0000_0100_0000_0000 : 0;
-            rotated |= (piece.shape & 0b0000_0001_0000_0000) ? 0b0100_0000_0000_0000 : 0;
-            rotated |= (piece.shape & 0b0000_0000_1000_0000) ? 0b0000_0000_0000_0010 : 0;
-            rotated |= (piece.shape & 0b0000_0000_0100_0000) ? 0b0000_0000_0010_0000 : 0;
-            rotated |= (piece.shape & 0b0000_0000_0010_0000) ? 0b0000_0010_0000_0000 : 0;
-            rotated |= (piece.shape & 0b0000_0000_0001_0000) ? 0b0010_0000_0000_0000 : 0;
-            rotated |= (piece.shape & 0b0000_0000_0000_1000) ? 0b0000_0000_0000_0001 : 0;
-            rotated |= (piece.shape & 0b0000_0000_0000_0100) ? 0b0000_0000_0001_0000 : 0;
-            rotated |= (piece.shape & 0b0000_0000_0000_0010) ? 0b0000_0001_0000_0000 : 0;
-            rotated |= (piece.shape & 0b0000_0000_0000_0001) ? 0b0001_0000_0000_0000 : 0;
+            rotated |= (shape & 0b1000_0000_0000_0000) ? 0b0000_0000_0000_1000 : 0;
+            rotated |= (shape & 0b0100_0000_0000_0000) ? 0b0000_0000_1000_0000 : 0;
+            rotated |= (shape & 0b0010_0000_0000_0000) ? 0b0000_1000_0000_0000 : 0;
+            rotated |= (shape & 0b0001_0000_0000_0000) ? 0b1000_0000_0000_0000 : 0;
+            rotated |= (shape & 0b0000_1000_0000_0000) ? 0b0000_0000_0000_0100 : 0;
+            rotated |= (shape & 0b0000_0100_0000_0000) ? 0b0000_0000_0100_0000 : 0;
+            rotated |= (shape & 0b0000_0010_0000_0000) ? 0b0000_0100_0000_0000 : 0;
+            rotated |= (shape & 0b0000_0001_0000_0000) ? 0b0100_0000_0000_0000 : 0;
+            rotated |= (shape & 0b0000_0000_1000_0000) ? 0b0000_0000_0000_0010 : 0;
+            rotated |= (shape & 0b0000_0000_0100_0000) ? 0b0000_0000_0010_0000 : 0;
+            rotated |= (shape & 0b0000_0000_0010_0000) ? 0b0000_0010_0000_0000 : 0;
+            rotated |= (shape & 0b0000_0000_0001_0000) ? 0b0010_0000_0000_0000 : 0;
+            rotated |= (shape & 0b0000_0000_0000_1000) ? 0b0000_0000_0000_0001 : 0;
+            rotated |= (shape & 0b0000_0000_0000_0100) ? 0b0000_0000_0001_0000 : 0;
+            rotated |= (shape & 0b0000_0000_0000_0010) ? 0b0000_0001_0000_0000 : 0;
+            rotated |= (shape & 0b0000_0000_0000_0001) ? 0b0001_0000_0000_0000 : 0;
         } break;
     }
 
-    piece.shape = rotated;
-    piece.angle = (piece.angle + 1) % 4;
+    return rotated;
+}
+
+function detectTSpin(piece) {
+    let front = 0b000_000_101;
+    let back = 0b101_000_000;
+
+    for (let i = 0; i < piece.angle; i++) {
+        front = rotateShape(3, front);
+        back = rotateShape(3, back);
+    }
+
+    let major = 0;
+    let minor = 0;
+
+    for (let i = 0; i < 3; i++) {
+        for (let j = 0; j < 3; j++) {
+            let row = piece.row + i;
+            let column = piece.column + j;
+            let idx = (row * rules.COLUMNS) + column;
+
+            major += testShape(3, front, i, j) && stack[idx];
+            minor += testShape(3, back, i, j) && stack[idx];
+        }
+    }
+
+    if (major == 2 && minor) {
+        return 'T';
+    } else if (minor == 2 && major) {
+        return 'miniT';
+    } else {
+        return null;
+    }
 }
 
 function clearStack() {
@@ -1300,6 +1386,15 @@ function ctz(i) {
 
     i &= -i;
     return 31 - clz(i);
+}
+
+function popcnt(i) {
+    i = i - ((i >>> 1) & 0x55555555);
+    i = (i & 0x33333333) + ((i >>> 2) & 0x33333333);
+    i = (i + (i >>> 4)) & 0x0f0f0f0f;
+    i = i + (i >>> 8);
+    i = i + (i >>> 16);
+    return i & 0x0000003f;
 }
 
 function isInsideRect(x, y, rect) {

@@ -55,13 +55,13 @@ const COLORS = [
 ];
 
 const BLOCKS = [
-    { color: 1, size: 4, shape: 0b0000000011110000, kicks: kicks_I }, // I
-    { color: 2, size: 3, shape: 0b000111100, kicks: kicks_JLTSZ },    // J
-    { color: 3, size: 3, shape: 0b000111001, kicks: kicks_JLTSZ },    // L
-    { color: 4, size: 2, shape: 0b1111, kicks: kicks_O },             // O
-    { color: 5, size: 3, shape: 0b000110011, kicks: kicks_JLTSZ },    // S
-    { color: 6, size: 3, shape: 0b000111010, kicks: kicks_JLTSZ },    // T
-    { color: 7, size: 3, shape: 0b000011110, kicks: kicks_JLTSZ }     // Z
+    { type: 'I', color: 1, size: 4, shape: 0b0000_0000_1111_0000, kicks: kicks_I },
+    { type: 'J', color: 2, size: 3, shape: 0b000_111_100, kicks: kicks_JLTSZ },
+    { type: 'L', color: 3, size: 3, shape: 0b000_111_001, kicks: kicks_JLTSZ },
+    { type: 'O', color: 4, size: 2, shape: 0b11_11, kicks: kicks_O },
+    { type: 'S', color: 5, size: 3, shape: 0b000_110_011, kicks: kicks_JLTSZ },
+    { type: 'T', color: 6, size: 3, shape: 0b000_111_010, kicks: kicks_JLTSZ },
+    { type: 'Z', color: 7, size: 3, shape: 0b000_011_110, kicks: kicks_JLTSZ }
 ];
 
 export {
