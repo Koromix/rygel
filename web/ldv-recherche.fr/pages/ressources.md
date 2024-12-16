@@ -2,171 +2,130 @@
     <div class="title">Ressources</div>
 </div>
 
-<div class="tel_3114">
-    <img src="{{ ASSET static/misc/3114.webp }}" width="183" height="86" alt="" />
-    <div>
-        <p>Le <a href="https://3114.fr/">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
-        <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires, ou si vous voulez aider une personne en souffrance</b>, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
-    </div>
-</div>
-
-# La fiche « Lignes de Vie »
-
-<div class="columns">
-    <img src="{{ ASSET static/misc/flyer.webp }}" style="flex: 1;" alt="" />
-    <div style="flex: 2;">
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt <b>ut labore et dolore magna aliqua</b>. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure <b>dolor in reprehenderit in voluptate velit esse cillum dolore</b> eu fugiat nulla pariatur.
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, <b>quis nostrud exercitation ullamco laboris nisi ut aliquip ex</b> ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-        <div class="buttons">
-            <a href="https://demheter.fr/" target="_blank">Visiter le site</a>
+<div class="cards">
+    <div class="card">
+        <img src="{{ ASSET static/livres/traiter_la_depression.jpg }}" alt="" />
+        <div>
+            <div class="title">Traiter la dépression et les troubles de l'humeur</div>
+            <div class="buttons">
+                <a href="https://www.dunod.com/sciences-humaines-et-sociales/traiter-depression-et-troubles-humeur-10-cas-pratiques-en-tcc" target="_blank">En savoir plus</a>
+            </div>
         </div>
     </div>
-</div>
-
-# Ressources du Cn2r
-
-<div class="columns">
-    <img src="{{ ASSET static/misc/cn2r.png }}" style="flex: 1;" alt="" />
-    <div style="flex: 2;">
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt <b>ut labore et dolore magna aliqua</b>. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure <b>dolor in reprehenderit in voluptate velit esse cillum dolore</b> eu fugiat nulla pariatur.
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, <b>quis nostrud exercitation ullamco laboris nisi ut aliquip ex</b> ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-        <div class="buttons">
-            <a href="https://cn2r.fr/" target="_blank">Visiter le site</a>
+    <div class="card">
+        <img src="{{ ASSET static/livres/les_troubles_bipolaires.jpg }}" alt="" />
+        <div>
+            <div class="title">Les troubles bipolaires : de la cyclothymie au syndrome maniaco-dépressif</div>
+            <div class="buttons">
+                <a href="https://www.dunod.com/sciences-humaines-et-sociales/troubles-bipolaires-cyclothymie-au-syndrome-maniaco-depressif" target="_blank">En savoir plus</a>
+            </div>
         </div>
     </div>
-</div>
-
-# Bibliothèque de Lignes de Vie
-
-<div class="columns book">
-    <img src="{{ ASSET static/livres/les_troubles_bipolaires.jpg }}" style="flex: 1;" alt="" />
-    <div style="flex: 2;">
-        <p class="insist">Les troubles bipolaires : de la cyclothymie au syndrome maniaco-dépressif - 3e édition
-        <p class="subtitle">Dépistage du trouble - Prises en charge éducatives et psychothérapeutiques - Prévention des rechutes
-        <p><a href="https://www.dunod.com/livres-christine-mirabel-sarron" target="_blank">Christine Mirabel-Sarron</a>, <a href="https://www.dunod.com/livres-isabelle-leygnac-solignac" target="_blank">Isabelle Leygnac-Solignac</a>
-        <p>
-            <b>Parution</b>: mai 2015<br>
-            <b>Collection</b> : <a href="https://www.dunod.com/collection/ateliers-du-praticien" target="_blank">Les Ateliers du praticien</a><br>
-            <b>Éditions</b> : Dunod
-        </p>
-        <p>La terminologie « troubles bi-polaires » correspond à ce qui était autrefois présenté comme psychose maniaco-dépressive. Cette pathologie mentale grave affecte des millions de personnes. Plus de 12 % de la population mondiale serait concernée. Cet ouvrage brosse un état des lieux pour proposer traitement et réduction des troubles psychosociaux.
-        <div class="buttons">
-            <a href="https://www.dunod.com/sciences-humaines-et-sociales/troubles-bipolaires-cyclothymie-au-syndrome-maniaco-depressif" target="_blank">En savoir plus</a>
+    <div class="card">
+        <img src="{{ ASSET static/livres/apprendre_a_soigner_les_depressions.jpg }}" alt="" />
+        <div>
+            <div class="title">Apprendre à soigner les dépressions</div>
+            <div class="buttons">
+                <a href="https://www.dunod.com/sciences-humaines-et-sociales/apprendre-soigner-depressions-avec-therapies-comportementales-et-0" target="_blank">En savoir plus</a>
+            </div>
         </div>
     </div>
-</div>
-
-<div class="columns book">
-    <img src="{{ ASSET static/livres/traiter_la_depression.jpg }}" style="flex: 1;" alt="" />
-    <div style="flex: 2;">
-        <p class="insist">Traiter la dépression et les troubles de l'humeur
-        <p class="subtitle">10 cas pratiques en TCC
-        <p><a href="https://www.dunod.com/livres-stephane-rusinek" target="_blank">Stéphane Rusinek</a>, <a href="https://www.dunod.com/livres-nathalie-bascop" target="_blank">Nathalie Bascop</a>, <a href="https://www.dunod.com/livres-cyrille-bouvet" target="_blank">Cyrille Bouvet</a>, <a href="https://www.dunod.com/livres-frederic-chapelle" target="_blank">Frédéric Chapelle</a>, <a href="https://www.dunod.com/livres-jeremy-fonseca-das-neves" target="_blank">Jérémy Fonseca das Neves</a> et al.
-        <p>
-            <b>Parution</b> : août 2017<br>
-            <b>Collection</b> : <a href="https://www.dunod.com/collection/ateliers-du-praticien" target="_blank">Les Ateliers du praticien</a><br>
-            <b>Éditions</b> : Dunod
-        </p>
-        <p>Les troubles de l'humeur comprennent l'ensemble des troubles comportant un aspect dépressif (dépression, bipolarité, cyclothymie...). Cet ouvrage va permettre aux professionnels :
-        <ul>
-            <li>D’utiliser protocoles et outils facilement utilisables pour aborder d’emblée la pratique  ;
-            <li>De disposer d’un panel représentatif des techniques utilisées en thérapie cognitive et comportementale  ;
-            <li>De disposer de fiches claires et précises pour l’organisation de séances de thérapie.
-        </ul>
-        <p>
-        <div class="buttons">
-            <a href="https://www.dunod.com/sciences-humaines-et-sociales/traiter-depression-et-troubles-humeur-10-cas-pratiques-en-tcc" target="_blank">En savoir plus</a>
+    <div class="card">
+        <img src="{{ ASSET static/livres/humeur_normale_a_la_depression.jpg }}" alt="" />
+        <div>
+            <div class="title">De l'humeur normale à la dépression</div>
+            <div class="buttons">
+                <a href="https://www.deboecksuperieur.com/ouvrage/9782353273546-de-l-humeur-normale-la-depression-en-psychologie-cognitive-neurosciences-et" target="_blank">En savoir plus</a>
+            </div>
         </div>
     </div>
-</div>
-
-<div class="columns book">
-    <img src="{{ ASSET static/livres/apprendre_a_soigner_les_depressions.jpg }}" style="flex: 1;" alt="" />
-    <div style="flex: 2;">
-        <p class="insist">Apprendre à soigner les dépressions - 2e édition
-        <p class="subtitle">Avec les thérapies comportementales et cognitives
-        <p><a href="https://www.dunod.com/livres-christine-mirabel-sarron" target="_blank">Christine Mirabel-Sarron</a>, <a href="https://www.dunod.com/livres-aurelie-docteur" target="_blank">Aurélie Docteur</a>
-        <p>
-            <b>Parution</b> : mars 2021<br>
-            <b>Collection</b> : <a href="https://www.dunod.com/collection/ateliers-du-praticien" target="_blank">Les Ateliers du praticien</a><br>
-            <b>Éditions</b> : Dunod
-        </p>
-        <p>En 15 leçons, cet ouvrage pratique fournit aux cliniciens un guide de prise en charge TCC du patient déprimé étape par étape :
-        <ul>
-            <li>Repérer les signes cardinaux de la dépression ;
-            <li>En comprendre la psychopathologie ;
-            <li>Mener une analyse TCC des symptômes ;
-            <li>Définir un contrat thérapeutique ;
-            <li>Découvrir les stratégies psychologiques TCC en phase aiguë et celles pour la prévention des rechutes.
-        </ul>
-        <div class="buttons">
-            <a href="https://www.dunod.com/sciences-humaines-et-sociales/apprendre-soigner-depressions-avec-therapies-comportementales-et-0" target="_blank">En savoir plus</a>
-        </div>
-    </div>
-</div>
-
-<div class="columns book">
-    <img src="{{ ASSET static/livres/humeur_normale_a_la_depression.jpg }}" style="flex: 1;" alt="" />
-    <div style="flex: 2;">
-        <p class="insist">De l'humeur normale à la dépression
-        <p class="subtitle">En psychologie cognitive, neurosciences et psychiatrie
-        <p><a href="https://www.deboecksuperieur.com/auteur/eric-laurent" target="_blank">Eric Laurent</a>, <a href="https://www.deboecksuperieur.com/auteur/pierre-vandel" target="_blank">Pierre Vandel</a>
-        <p>
-            <b>Parution</b>: octobre 2016<br>
-            <b>Collection</b> : <a href="https://www.deboecksuperieur.com/collection/neuropsychologie" target="_blank">Neuropsychologie</a><br>
-            <b>Éditions</b> : Deboeck
-        </p>
-        <p>Que ce soit dans la vie professionnelle ou dans la vie privée, les concepts employés pour décrire les états affectifs sont multiples : humeur, émotion, burnout, dépression, bipolarité.
-        <p>Les auteurs distinguent ces concepts et abordent les aspects théoriques et pratiques de l’humeur normale et de l’humeur pathologique. Ils présentent à la fois les déterminants de l’humeur, ses conséquences et font le point sur les nombreuses méthodes qui permettent d’évaluer l’humeur et de prendre en charge ses pathologies.
-        <p>Le caractère interdisciplinaire de l’ouvrage est associé à une multiplicité de niveaux d’analyse qui constituent autant de perspectives de compréhension et de transformation de ce processus complexe.
-        <div class="buttons">
-            <a href="https://www.deboecksuperieur.com/ouvrage/9782353273546-de-l-humeur-normale-la-depression-en-psychologie-cognitive-neurosciences-et" target="_blank">En savoir plus</a>
-        </div>
-    </div>
-</div>
-
-<div class="columns book">
-    <img src="{{ ASSET static/livres/psychoeducation_dans_depression.jpg }}" style="flex: 1;" alt="" />
-    <div style="flex: 2;">
-        <p class="insist">Mettre en oeuvre un programme de psychoéducation pour la dépression
-        <p><a href="https://www.dunod.com/livres-luisa-weiner" target="_blank">Luisa Weiner</a>, <a href="https://www.dunod.com/livres-enzo-lachaux" target="_blank">Enzo Lachaux</a>
-        <p>
-            <b>Parution</b>: janvier 2022<br>
-            <b>Collection</b> : <a href="https://www.dunod.com/collection/ateliers-du-praticien" target="_blank">Les Ateliers du praticien</a><br>
-            <b>Éditions</b> : Dunod
-        </p>
-        <p>La dépression est une problématique de santé mentale très fréquente avec des facettes cliniques variées. Face à cette complexité, les cliniciens sont souvent confrontés au dilemme suivant : comment offrir un accompagnement psychothérapique de qualité qui soit accessible à un grand nombre de patients ?
-        <p>L’une des réponses réside dans l’offre d’une thérapie groupale suivant un modèle flexible et des principes validés empiriquement par la recherche en psychologie.
-        <p>Riche des apports des Thérapies Comportementales et Cognitives (TCC), le programme IDEM-dépression est un programme groupal de psychoéducation pour les patients présentant une dépression, quelles que soient sa sévérité et sa présentation clinique.
-        <div class="buttons">
-            <a href="https://www.dunod.com/sciences-humaines-et-sociales/mettre-en-oeuvre-un-programme-psychoeducation-pour-depression" target="_blank">En savoir plus</a>
+    <div class="card">
+        <img src="{{ ASSET static/livres/psychoeducation_dans_depression.jpg }}" alt="" />
+        <div>
+            <div class="title">Mettre en oeuvre un programme de psychoéducation pour la dépression</div>
+            <div class="buttons">
+                <a href="https://www.dunod.com/sciences-humaines-et-sociales/mettre-en-oeuvre-un-programme-psychoeducation-pour-depression" target="_blank">En savoir plus</a>
+            </div>
         </div>
     </div>
 </div>
 
 <style>
-    .tel_3114 {
+    .cards {
         display: flex;
-        max-width: 900px;
-        margin: 0 auto 1em auto;
-        padding: 2em;
+        flex-wrap: wrap;
+        gap: 1em;
+        justify-content: center;
         align-items: center;
-        gap: 60px;
-        border: 3px solid #d9bf69;
+    }
+    .card {
+        display: flex;
+        position: relative;
+        width: 400px;
+        height: 400px;
+        align-items: end;
+        overflow: hidden;
+        border-radius: 16px;
+        user-select: none;
+    }
+    .card > img {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+    .card > div {
+        width: 100%;
+        margin-top: 150px;
+        padding: 1em;
+        z-index: 2;
+        background: #ffffff88;
+        backdrop-filter: blur(16px);
+    }
+    .card .title {
+        color: #364b9b;
+        font-weight: bold;
     }
 
-    .book { padding-top: 3em; }
-    .book + .book {
-        margin-top: 3em;
-        border-top: 1px solid #ccc;
-    }
-    .book .subtitle { margin-top: 0; }
+    .js .cards { height: 400px; }
+    .js .card {
+        --index: calc(max(-1 * var(--position), var(--position)));
 
-    @media screen and (max-width: 960px) {
-        .tel_3114 {
-            flex-direction: column;
-            gap: 20px;
-        }
-        .tel_3114 > img { margin: 0.5em 0; }
+        position: absolute;
+        margin-left: calc(var(--position) * 15%);
+        filter: blur(calc(var(--index) * 2px));
+        transform: scaleY(calc(1 - 0.05 * var(--index)));
+        z-index: calc(10 - var(--index));
+        transition: all 0.2s ease-in;
     }
+    .js .card:not(.active) { cursor: pointer; }
 </style>
+
+<script>
+    let root = document.querySelector('.cards');
+    let cards = Array.from(root.querySelectorAll('.card'));
+
+    function toggle(active) {
+        let left = -Math.floor((cards.length - 1) / 2);
+        let right = Math.floor(cards.length / 2);
+
+        for (let i = -1; i >= left; i--) {
+            let idx = active + i;
+            if (idx < 0)
+                idx = cards.length + idx;
+            cards[idx].style.setProperty('--position', i);
+            cards[idx].classList.toggle('active', i == 0);
+        }
+        for (let i = 0; i <= right; i++) {
+            let idx = (active + i) % cards.length;
+            cards[idx].style.setProperty('--position', i);
+            cards[idx].classList.toggle('active', i == 0);
+        }
+    }
+
+    for (let i = 0; i < cards.length; i++)
+        cards[i].addEventListener('click', () => toggle(i));
+
+    let middle = Math.floor((cards.length - 1) / 2);
+    toggle(middle);
+</script>
