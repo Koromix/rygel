@@ -90,7 +90,9 @@ let show_debug = false;
 // UI state
 let ui_mode = null;
 let layout = {
-    block: null,
+    square: null,
+    button: null,
+
     well: null,
     bag: null,
     level: null,
@@ -212,19 +214,19 @@ function update() {
 
     // Global layout
     {
-        let padding = runner.isTouch ? 8 : 16;
+        let padding = 16;
 
         let width = canvas.width - padding * 2;
         let height = canvas.height - padding * 2;
 
         // Account for touch controls
         if (runner.isTouch)
-            height -= 100 + padding;
+            height -= 100 * window.devicePixelRatio + padding;
 
         // Make sure things fit, and square size divides by two nicely
         let square = Math.floor(Math.min(
             Math.min(width / rules.COLUMNS, height / (rules.ROWS + rules.EXTRA_TOP)),
-            SQUARE_SIZE
+            SQUARE_SIZE * window.devicePixelRatio
         ) / 2) * 2;
 
         width = rules.COLUMNS * square;
@@ -234,6 +236,8 @@ function update() {
         let top = runner.isTouch ? padding : (canvas.height / 2 - height / 2);
 
         layout.square = square;
+        layout.button = BUTTON_SIZE * window.devicePixelRatio;
+
         layout.well = {
             left: left,
             top: top,
@@ -250,13 +254,13 @@ function update() {
             left: layout.bag.left,
             top: layout.bag.top + layout.bag.height + padding,
             width: layout.bag.width,
-            height: 40
+            height: Math.max(40, 30 * window.devicePixelRatio)
         };
         layout.score = {
             left: layout.bag.left,
             top: layout.level.top + layout.level.height + padding,
             width: layout.bag.width,
-            height: 40
+            height: Math.max(40, 30 * window.devicePixelRatio)
         };
 
         if (runner.isTouch) {
@@ -297,7 +301,7 @@ function update() {
         let sound_key = settings.sound ? 'sound' : 'silence';
         let pause_key = pause ? 'play' : 'pause';
 
-        let size = 0.6 * BUTTON_SIZE;
+        let size = 0.6 * layout.button;
         let x = runner.isTouch ? (20 + size / 2) : (layout.bag.left + size / 2);
         let y = runner.isTouch ? (20 + size / 2) : (layout.well.top + layout.well.height - size / 2);
         let delta = runner.isTouch ? (size + 20) : -(size + 20);
@@ -377,7 +381,7 @@ function update() {
                 ui_mode = 'text';
 
                 text_lines = [
-                    [0, '20px Open Sans', runner.isTouch ? `Touchez l'écran pour commencer`
+                    [0, '28pt Open Sans', runner.isTouch ? `Touchez l'écran pour commencer`
                                                          : `Appuyez sur la touche entrée ⏎\uFE0E pour commencer`]
                 ];
 
@@ -396,12 +400,12 @@ function update() {
                 ui_mode = 'text';
 
                 text_lines = [
-                    [68, '20px Open Sans', `Bien joué !`],
-                    [40, '20px Open Sans', `Niveau`],
-                    [48, 'bold 34px Open Sans', level],
-                    [40, '20px Open Sans', `Score`],
-                    [68, 'bold 34px Open Sans', score],
-                    [0, '20px Open Sans', runner.isTouch ? `Touchez l'écran pour recommencer`
+                    [80, '24pt Open Sans', `Bien joué !`],
+                    [38, '24pt Open Sans', `Niveau`],
+                    [20, 'bold 40pt Open Sans', level],
+                    [38, '24pt Open Sans', `Score`],
+                    [80, 'bold 40pt Open Sans', score],
+                    [0, '24pt Open Sans', runner.isTouch ? `Touchez l'écran pour recommencer`
                                                          : `Appuyez sur la touche entrée ⏎\uFE0E pour recommencer`]
                 ];
 
@@ -527,19 +531,19 @@ function updateGame() {
     // Respond to user input
     if (runner.isTouch) {
         move = 0;
-        move += button('right', layout.ui.left + 0.25 * layout.ui.width + 0.7 * BUTTON_SIZE,
-                                layout.ui.top + 0.3 * layout.ui.height, BUTTON_SIZE).clicked;
-        move -= button('left', layout.ui.left + 0.25 * layout.ui.width - 0.7 * BUTTON_SIZE,
-                               layout.ui.top + 0.3 * layout.ui.height, BUTTON_SIZE).clicked;
+        move += button('right', layout.ui.left + 0.25 * layout.ui.width + 0.7 * layout.button,
+                                layout.ui.top + 0.3 * layout.ui.height, layout.button).clicked;
+        move -= button('left', layout.ui.left + 0.25 * layout.ui.width - 0.7 * layout.button,
+                               layout.ui.top + 0.3 * layout.ui.height, layout.button).clicked;
 
         rotate = 0;
-        rotate += button('clockwise', layout.ui.left + 0.75 * layout.ui.width + 0.7 * BUTTON_SIZE,
-                                      layout.ui.top + 0.5 * layout.ui.height, BUTTON_SIZE).clicked;
-        rotate -= button('counterclock', layout.ui.left + 0.75 * layout.ui.width - 0.7 * BUTTON_SIZE,
-                                         layout.ui.top + 0.5 * layout.ui.height, BUTTON_SIZE).clicked;
+        rotate += button('clockwise', layout.ui.left + 0.75 * layout.ui.width + 0.7 * layout.button,
+                                      layout.ui.top + 0.5 * layout.ui.height, layout.button).clicked;
+        rotate -= button('counterclock', layout.ui.left + 0.75 * layout.ui.width - 0.7 * layout.button,
+                                         layout.ui.top + 0.5 * layout.ui.height, layout.button).clicked;
 
         turbo = button('turbo', layout.ui.left + 0.25 * layout.ui.width,
-                                layout.ui.top + 0.85 * layout.ui.height, 0.7 * BUTTON_SIZE).pressed >= 1;
+                                layout.ui.top + 0.85 * layout.ui.height, 0.7 * layout.button).pressed >= 1;
 
         if (isInsideRect(mouse_state.x, mouse_state.y, layout.hold)) {
             if (mouse_state.left == 1)
@@ -955,12 +959,26 @@ function drawText() {
     let font = '20px Open Sans';
     ctx.fillStyle = 'white';
 
-    let y = canvas.height / 2 - text_lines.reduce((acc, line) => acc + line[0], 0) / 2;
-
-    for (let line of text_lines) {
+    let lines = text_lines.map(line => {
         ctx.font = line[1];
-        runner.text(canvas.width / 2, y, line[2], { align: 5 });
-        y += line[0];
+
+        let m = runner.measure(line[2]);
+        let obj = {
+            font: line[1],
+            text: line[2],
+            height: m.height + line[0]
+        };
+
+        return obj;
+    });
+
+    let y = canvas.height / 2 - lines.reduce((acc, line) => acc + line.height, 0) / 2;
+
+    for (let line of lines) {
+        ctx.font = line.font;
+        runner.text(canvas.width / 2, y, line.text, { align: 5 });
+
+        y += line.height;
     }
 }
 
@@ -987,7 +1005,7 @@ function drawWell() {
         let x = layout.well.width / 2;
         let y = layout.well.height / 2;
 
-        ctx.font = '24px Open Sans';
+        ctx.font = '24pt Open Sans';
         ctx.fillStyle = 'white';
         runner.text(x, y, 'PAUSE', { align: 5 });
 
@@ -1103,7 +1121,7 @@ function drawLevel() {
     ctx.translate(layout.level.left, layout.level.top);
     drawArea(0, 0, layout.level.width, layout.level.height);
 
-    ctx.font = '22px Open Sans';
+    ctx.font = '20pt Open Sans';
     ctx.fillStyle = 'white';
     runner.text(layout.level.width / 2, layout.level.height / 2, level, { align: 5 });
 
@@ -1116,11 +1134,7 @@ function drawScore() {
     ctx.translate(layout.score.left, layout.score.top);
     drawArea(0, 0, layout.score.width, layout.score.height);
 
-    if (!runner.isTouch && score < 100000) {
-        ctx.font = '24px Open Sans';
-    } else {
-        ctx.font = '14px Open Sans';
-    }
+    ctx.font = '20pt Open Sans';
     ctx.fillStyle = 'white';
     runner.text(layout.score.width / 2, layout.score.height / 2, score, { align: 5 });
 
@@ -1167,7 +1181,7 @@ function drawShortcuts() {
 
     for (let shortcut of KEYBOARD_SHORTCUTS) {
         if (shortcut != null) {
-            width = Math.max(width, 114 + ctx.measureText(shortcut[1]).width);
+            width = Math.max(width, 114 + runner.measure(shortcut[1]).width);
             height += 8;
         }
 

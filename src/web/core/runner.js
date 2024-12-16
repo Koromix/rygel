@@ -239,8 +239,8 @@ function AppRunner(canvas) {
 
         let rect = canvas.getBoundingClientRect();
 
-        mouse_state.x = e.clientX - rect.left;
-        mouse_state.y = e.clientY - rect.top;
+        mouse_state.x = (e.clientX - rect.left) * window.devicePixelRatio;
+        mouse_state.y = (e.clientY - rect.top) * window.devicePixelRatio;
 
         if ((e.buttons & 0b001) && !mouse_state.left) {
             mouse_state.left = 1;
@@ -297,8 +297,8 @@ function AppRunner(canvas) {
                 return;
 
             if (touch_digits == 1) {
-                mouse_state.x = e.touches[0].pageX - rect.left;
-                mouse_state.y = e.touches[0].pageY - rect.top;
+                mouse_state.x = (e.touches[0].pageX - rect.left) * window.devicePixelRatio;
+                mouse_state.y = (e.touches[0].pageY - rect.top) * window.devicePixelRatio;
 
                 if (!mouse_state.left)
                     mouse_state.left = 1;
@@ -306,15 +306,15 @@ function AppRunner(canvas) {
                 let p1 = { x: e.touches[0].pageX - rect.left, y: e.touches[0].pageY - rect.top };
                 let p2 = { x: e.touches[1].pageX - rect.left, y: e.touches[1].pageY - rect.top };
 
-                mouse_state.x = (p1.x + p2.x) / 2;
-                mouse_state.y = (p1.y + p2.y) / 2;
+                mouse_state.x = (p1.x + p2.x) / 2 * window.devicePixelRatio;
+                mouse_state.y = (p1.y + p2.y) / 2 * window.devicePixelRatio;
 
                 let new_distance = computeDistance(p1, p2);
 
                 mouse_state.left = 0;
 
                 // Give some time for stabilisation :)
-                if (update_counter - touch_start.counter >= 6) {
+                if (draw_counter - touch_start.counter >= 6) {
                     if (new_distance / touch_distance >= 1.2) {
                         mouse_state.wheel--;
                         touch_distance = new_distance;
@@ -459,11 +459,11 @@ function AppRunner(canvas) {
         // Accessing canvas.width or canvas.height (even for reading) seems to trigger
         // a reset or something, and can cause flicker on Firefox Mobile.
         if (rect.width != prev_canvas_width) {
-            canvas.width = rect.width;
+            canvas.width = rect.width * window.devicePixelRatio;
             prev_canvas_width = rect.width;
         }
         if (rect.height != prev_canvas_height) {
-            canvas.height = rect.height;
+            canvas.height = rect.height * window.devicePixelRatio;
             prev_canvas_height = rect.height;
         }
     }
@@ -519,6 +519,17 @@ function AppRunner(canvas) {
         return { x: x, y: y };
     };
 
+    this.measure = function(text) {
+        let measure = ctx.measureText(text);
+
+        let m = {
+            width: measure.width,
+            height: measure.actualBoundingBoxAscent + measure.actualBoundingBoxDescent
+        };
+
+        return m;
+    };
+
     this.text = function(x, y, text, options = {}) {
         let mat = ctx.getTransform();
 
@@ -532,6 +543,7 @@ function AppRunner(canvas) {
 
         let padding = (options.padding != null) ? options.padding : 0;
 
+        let m = null;
         let width = null;
         let height = null;
 
@@ -540,14 +552,18 @@ function AppRunner(canvas) {
         } else if (typeof text == 'object') {
             width = 22 + padding * 2;
         } else {
-            width = ctx.measureText(text).width + padding * 2;
+            if (m == null)
+                m = self.measure(text);
+            width = m.width + padding * 2;
         }
         if (options.height != null) {
             height = options.height;
         } else if (typeof text == 'object') {
             height = 38;
         } else {
-            height = ctx.measureText(text).actualBoundingBoxAscent;
+            if (m == null)
+                m = self.measureText(text);
+            height = m.height;
         }
 
         let align = null;
