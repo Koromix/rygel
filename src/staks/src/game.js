@@ -79,7 +79,7 @@ let locking = null;
 
 // Scoring
 let level = null;
-let clears = null;
+let lines = null;
 let score = null;
 let combo = null;
 let special = null;
@@ -198,7 +198,7 @@ function play() {
     locking = null;
 
     level = 1;
-    clears = 0;
+    lines = 0;
     score = 0;
     combo = -1;
     special = null;
@@ -721,15 +721,13 @@ function updateGame() {
 
     // Clear stack and score
     if (piece == null) {
-        let lines = clearStack();
+        let clears = clearStack();
         let perfect = stack.every(value => !value);
 
         let action = 0;
         let difficult = false;
 
-        clears += lines;
-
-        switch (lines) {
+        switch (clears) {
             case 1: { action += 100 * level; } break;
             case 2: { action += 300 * level; } break;
             case 3: { action += 500 * level; } break;
@@ -739,7 +737,7 @@ function updateGame() {
             } break;
         }
 
-        if (lines) {
+        if (clears) {
             combo++;
             action += 50 * combo * level;
 
@@ -750,7 +748,7 @@ function updateGame() {
 
         switch (special) {
             case 'T': {
-                switch (lines) {
+                switch (clears) {
                     case 0: { action += 400; } break;
                     case 1: { action += 800; } break;
                     case 2: { action += 1200; } break;
@@ -760,7 +758,7 @@ function updateGame() {
                 difficult = true;
             } break;
             case 'miniT': {
-                switch (lines) {
+                switch (clears) {
                     case 0: { action += 100; } break;
                     case 1: { action += 200; } break;
                     case 2: { action += 400; } break;
@@ -772,7 +770,7 @@ function updateGame() {
         }
 
         if (perfect) {
-            switch (lines) {
+            switch (clears) {
                 case 1: { action += 800 * level; } break;
                 case 2: { action += 1200 * level; } break;
                 case 3: { action += 1800 * level; } break;
@@ -785,9 +783,10 @@ function updateGame() {
             action *= 1.5;
         back2back = difficult;
 
+        lines += clears;
         score += action;
 
-        let new_level = 1 + Math.floor(clears / 10);
+        let new_level = 1 + Math.floor(lines / 10);
 
         if (new_level > level) {
             level = new_level;
