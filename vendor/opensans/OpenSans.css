@@ -4,8 +4,7 @@
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: local('Open Sans Regular'), local('OpenSans-Regular'),
-       url('OpenSans_v17_Latin_Regular.woff2') format('woff2');
+  src: url('OpenSans_v17_Latin_Regular.woff2') format('woff2');
 }
 
 /* open-sans-italic - latin */
@@ -14,8 +13,7 @@
   font-style: italic;
   font-weight: 400;
   font-display: swap;
-  src: local('Open Sans Italic'), local('OpenSans-Italic'),
-       url('OpenSans_v17_Latin_Italic.woff2') format('woff2');
+  src: url('OpenSans_v17_Latin_Italic.woff2') format('woff2');
 }
 
 /* open-sans-700 - latin */
@@ -24,8 +22,7 @@
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: local('Open Sans Bold'), local('OpenSans-Bold'),
-       url('OpenSans_v17_Latin_Bold.woff2') format('woff2');
+  src: url('OpenSans_v17_Latin_Bold.woff2') format('woff2');
 }
 
 /* open-sans-700italic - latin */
@@ -34,6 +31,5 @@
   font-style: italic;
   font-weight: 700;
   font-display: swap;
-  src: local('Open Sans Bold Italic'), local('OpenSans-BoldItalic'),
-       url('OpenSans_v17_Latin_BoldItalic.woff2') format('woff2');
+  src: url('OpenSans_v17_Latin_BoldItalic.woff2') format('woff2');
 }

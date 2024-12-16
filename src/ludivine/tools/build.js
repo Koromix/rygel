@@ -78,7 +78,7 @@ async function run() {
             '.png': 'file',
             '.webp': 'file',
             '.wasm': 'copy',
-            '.woff2': 'file'
+            '.woff2': 'dataurl'
         },
         outdir: 'build/'
     });
