@@ -56,15 +56,14 @@
         position: relative;
         min-width: 40%;
         align-items: end;
+        overflow: hidden;
+        border-radius: 16px;
     }
     .card > img {
         position: absolute;
         left: 0;
         top: 0;
         width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 16px;
     }
     .card > div {
         width: 100%;
