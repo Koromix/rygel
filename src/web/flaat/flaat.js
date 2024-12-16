@@ -18,9 +18,6 @@ window.addEventListener('load', e => {
     initMenu();
     initSide();
     initScroll();
-
-    document.documentElement.classList.remove('nojs');
-    document.documentElement.classList.add('js');
 });
 
 function initDeploy() {
@@ -148,3 +145,7 @@ function findParent(el, func) {
         el = el.parentElement;
     return el;
 }
+
+
+document.documentElement.classList.remove('nojs');
+document.documentElement.classList.add('js');
