@@ -2,7 +2,11 @@
     <div class="title">Ressources</div>
 </div>
 
-<div class="cards">
+<div class="tabbar">
+    <a class="active">Livres</a>
+    <a href="/videos">Vidéos</a>
+</div>
+<div class="tab cardset">
     <div class="card">
         <img src="{{ ASSET static/livres/traiter_la_depression.jpg }}" alt="" />
         <div>
@@ -49,83 +53,3 @@
         </div>
     </div>
 </div>
-
-<style>
-    .cards {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1em;
-        justify-content: center;
-        align-items: center;
-    }
-    .card {
-        display: flex;
-        position: relative;
-        width: 400px;
-        height: 400px;
-        align-items: end;
-        overflow: hidden;
-        border-radius: 16px;
-        user-select: none;
-    }
-    .card > img {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-    }
-    .card > div {
-        width: 100%;
-        margin-top: 150px;
-        padding: 1em;
-        z-index: 2;
-        background: #ffffff88;
-        backdrop-filter: blur(16px);
-    }
-    .card .title {
-        color: #364b9b;
-        font-weight: bold;
-    }
-
-    .js .cards { height: 400px; }
-    .js .card {
-        --index: calc(max(-1 * var(--position), var(--position)));
-
-        position: absolute;
-        margin-left: calc(var(--position) * 15%);
-        filter: blur(calc(var(--index) * 2px));
-        transform: scaleY(calc(1 - 0.05 * var(--index)));
-        z-index: calc(10 - var(--index));
-        transition: all 0.2s ease-in;
-    }
-    .js .card:not(.active) { cursor: pointer; }
-</style>
-
-<script>
-    let root = document.querySelector('.cards');
-    let cards = Array.from(root.querySelectorAll('.card'));
-
-    function toggle(active) {
-        let left = -Math.floor((cards.length - 1) / 2);
-        let right = Math.floor(cards.length / 2);
-
-        for (let i = -1; i >= left; i--) {
-            let idx = active + i;
-            if (idx < 0)
-                idx = cards.length + idx;
-            cards[idx].style.setProperty('--position', i);
-            cards[idx].classList.toggle('active', i == 0);
-        }
-        for (let i = 0; i <= right; i++) {
-            let idx = (active + i) % cards.length;
-            cards[idx].style.setProperty('--position', i);
-            cards[idx].classList.toggle('active', i == 0);
-        }
-    }
-
-    for (let i = 0; i < cards.length; i++)
-        cards[i].addEventListener('click', () => toggle(i));
-
-    let middle = Math.floor((cards.length - 1) / 2);
-    toggle(middle);
-</script>

@@ -2,8 +2,8 @@
     <div class="title">Espace détente</div>
 </div>
 
-<div class="cards">
-    <div class="card" style="flex: 8;">
+<div class="tileset">
+    <div class="tile" style="flex: 8;">
         <img src="{{ ASSET static/detente/coherence_cardiaque.webp }}" alt="" />
         <div>
             <p class="title">Cohérence cardiaque</p>
@@ -13,7 +13,7 @@
             </div>
         </div>
     </div>
-    <div class="card" style="flex: 7;">
+    <div class="tile" style="flex: 7;">
         <img src="{{ ASSET static/detente/etirements_doux.webp }}" alt="" />
         <div>
             <p class="title">Étirements doux</p>
@@ -23,7 +23,7 @@
             </div>
         </div>
     </div>
-    <div class="card" style="flex: 5;">
+    <div class="tile" style="flex: 5;">
         <img src="{{ ASSET static/detente/jeu_staks.webp }}" alt="" />
         <div>
             <p class="title">Jouez à un jeu</p>
@@ -33,7 +33,7 @@
             </div>
         </div>
     </div>
-    <div class="card" style="flex: 8;">
+    <div class="tile" style="flex: 8;">
         <img src="{{ ASSET static/detente/ecriture_expressive.webp }}" alt="" />
         <div>
             <p class="title">Écrivez dans votre journal</p>
@@ -46,12 +46,12 @@
 </div>
 
 <style>
-    .cards {
+    .tileset {
         display: flex;
         flex-wrap: wrap;
         gap: 1em;
     }
-    .card {
+    .tile {
         display: flex;
         position: relative;
         min-width: 40%;
@@ -59,13 +59,16 @@
         overflow: hidden;
         border-radius: 16px;
     }
-    .card > img {
+    .tile > img {
         position: absolute;
         left: 0;
         top: 0;
         width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top;
     }
-    .card > div {
+    .tile > div {
         width: 100%;
         margin-top: 150px;
         padding: 1em;
@@ -74,7 +77,7 @@
         backdrop-filter: blur(16px);
         border-radius: 0 0 16px 16px;
     }
-    .card .title {
+    .tile .title {
         color: #364b9b;
         text-transform: uppercase;
         font-size: 1.1em;
@@ -82,6 +85,6 @@
     }
 
     @media screen and (max-width: 960px) {
-        .cards { flex-direction: column; }
+        .tileset { flex-direction: column; }
     }
 </style>

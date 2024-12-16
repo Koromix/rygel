@@ -123,7 +123,7 @@ a:has(> img) { text-decoration: none !important; }
     padding: 12px 1em 10px 1em;
     display: flex;
     flex-direction: column;
-    background: white;
+    background: var(--top_background);
     border-left: 2px solid var(--primary_color);
     border-bottom: 2px solid var(--primary_color);
 }
@@ -268,7 +268,7 @@ table + div.legend {
 .buttons > a {
     display: block;
     width: 40%;
-    min-width: 250px;
+    min-width: 14em;
     background: var(--secondary_color);
     color: white;
     padding: 0.6em 1em;
