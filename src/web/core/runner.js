@@ -65,6 +65,7 @@ function AppRunner(canvas) {
         alt: 0,
         delete: 0,
         return: 0,
+        pause: 0,
 
         a: 0, b: 0, c: 0, d: 0, e: 0, f: 0, g: 0, h: 0, i: 0,
         j: 0, k: 0, l: 0, m: 0, n: 0, o: 0, p: 0, q: 0, r: 0,
@@ -218,6 +219,8 @@ function AppRunner(canvas) {
             updateKey('left', e.type);
         } else if (code == 39) {
             updateKey('right', e.type);
+        } else if (code == 19) {
+            updateKey('pause', e.type);
         }
     }
 

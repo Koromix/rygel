@@ -345,7 +345,7 @@ function update() {
 
     // Simple shortcuts
     if (!runner.isTouch) {
-        if (pressed_keys.p == 1)
+        if (pressed_keys.p == 1 || pressed_keys.pause == 1)
             pause = !pause;
         if (pressed_keys.g == 1) {
             settings.ghost = !settings.ghost;
