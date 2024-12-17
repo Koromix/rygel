@@ -15,7 +15,7 @@
         `, root);
     }
 
-    function run(duration) {
+    async function run(duration) {
         render(html`
             <div id="progress"></div>
             <div id="bubble"><span></span></div>
@@ -23,6 +23,12 @@
 
         let progress = root.querySelector('#progress');
         let bubble = root.querySelector('#bubble');
+        let span = bubble.querySelector('span');
+
+        for (let i = 3; i > 0; i--) {
+            render(i, span);
+            await wait(1000);
+        }
 
         progress.addEventListener('animationend', end);
         progress.style.setProperty('--duration', duration + 's');
@@ -30,10 +36,8 @@
         bubble.addEventListener('animationiteration', update);
         update();
 
-        setTimeout(() => {
-            bubble.classList.add('animate');
-            progress.classList.add('animate');
-        }, 1000);
+        bubble.classList.add('animate');
+        progress.classList.add('animate');
 
         function update(e) {
             let elasped = e?.elapsedTime ?? 0;
@@ -56,6 +60,11 @@
                 <a @click=${menu}>Recommencer</a>
             </div>
         `, root);
+    }
+
+    async function wait(ms) {
+        let p = new Promise((resolve, reject) => setTimeout(resolve, ms));
+        await p;
     }
 
     menu();
@@ -114,7 +123,6 @@
     #bubble > span {
         margin-top: -6px;
         font-size: 4em;
-        transform: scale(0.6);
     }
     #bubble.animate { animation: bubble 5s ease-in-out infinite alternate; }
     #bubble.animate > span { animation: text 5s ease-in-out infinite alternate; }
