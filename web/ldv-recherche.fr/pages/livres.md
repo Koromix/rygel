@@ -5,7 +5,10 @@
 <div class="tabbar">
     <a class="active">Livres</a>
     <a href="/videos">Vidéos</a>
+    <div style="flex: 1;"></div>
+    <a href="https://3114.fr/je-suis-en-souffrance/" onclick="app.sos(event); return false" style="background: #d97069;">SOS</a>
 </div>
+
 <div class="tab cardset">
     <div class="card">
         <img src="{{ ASSET static/livres/traiter_la_depression.jpg }}" alt="" />

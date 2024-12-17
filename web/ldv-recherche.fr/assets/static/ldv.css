@@ -38,6 +38,68 @@ h1:not(:first-of-type) { margin-top: 2em; }
 
 span[title] { border-bottom: 1px dotted #383838; }
 
+dialog {
+    position: absolute;
+    top: auto;
+    left: auto;
+    right: 0;
+    width: 600px;
+    max-width: 90vw;
+    box-sizing: border-box;
+    padding: 0;
+    background: none;
+    border: none;
+    outline: none;
+    z-index: 9999;
+    cursor: default;
+}
+dialog > div {
+    background: #f8f8f8;
+    border: 4px solid #ccc;
+    border-radius: 16px;
+    padding: 2em;
+}
+dialog.left > div { border-radius: 0 16px 16px 16px; }
+dialog.right > div { border-radius: 16px 0 16px 16px; }
+
+#sos > div {
+    display: flex;
+    background: #fdfbf8;
+    border-color: #d97069;
+    align-items: center;
+    gap: 2em;
+}
+
+@media screen and (max-width: 960px) {
+    dialog {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: none;
+        height: 100%;
+        padding: 2em;
+        background: #00000088;
+        z-index: 999;
+        border: none;
+        align-items: center;
+        justify-content: center;
+    }
+    dialog[open] { display: flex; }
+    dialog > div {
+        top: 0;
+        left: revert;
+        right: revert;
+        margin: 0 auto;
+        border-radius: 16px !important;
+    }
+
+    #sos > div {
+        flex-direction: column;
+        z-index: 1;
+    }
+}
+
 .buttons {
     margin-top: 2em;
     justify-content: space-evenly;
@@ -103,6 +165,7 @@ p + .columns { margin-top: 2em; }
     gap: 0.8em;
 }
 .tabbar > a {
+    position: relative;
     padding: 0.4em 1em 0.5em 1em;
     background: #f5d0bf;
     cursor: pointer;
@@ -330,4 +393,19 @@ p + .columns { margin-top: 2em; }
     }
 
     .inline { display: none; }
+}
+
+#sos > div {
+    display: flex;
+    background: #fdfbf8;
+    border-color: #d97069;
+    align-items: center;
+    gap: 2em;
+}
+
+@media screen and (max-width: 960px) {
+    #sos > div {
+        flex-direction: column;
+        z-index: 1;
+    }
 }

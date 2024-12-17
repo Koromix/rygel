@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import '../../../../src/web/flaat/flaat.js';
 
 window.addEventListener('load', e => {
@@ -71,6 +72,66 @@ function initCards() {
     }
 }
 
+function sos(e) {
+    dialog(e, 'sos', html`
+        <div>
+            <img src=${assets['3114']} width="183" height="86" alt="">
+            <div>
+                <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
+                <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le 3114.
+            </div>
+        </div>
+    `);
+
+    if (e.target == e.currentTarget)
+        e.preventDefault();
+}
+
+function dialog(e, id, content) {
+    let parent = e.currentTarget;
+    let dlg = document.getElementById(id);
+
+    if (dlg == null) {
+        dlg = document.createElement('dialog');
+        dlg.id = id ?? '';
+    }
+
+    render(html`
+        <div @click=${stop}>
+            <img src=${assets['3114']} width="183" height="86" alt="">
+            <div>
+                <p>Le <a href="tel:3114">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
+                <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
+            </div>
+        </div>
+    `, dlg);
+
+    if (!dlg.open) {
+        let parent = e.currentTarget;
+
+        if (parent.tagName == 'A') {
+            let rect = parent.getBoundingClientRect();
+            let right = (rect.left + rect.width >= window.innerWidth / 2);
+
+            dlg.classList.add(right ? 'right' : 'left');
+
+            parent.appendChild(dlg);
+        } else {
+            document.body.appendChild(dlg);
+        }
+
+        dlg.show();
+    } else {
+        dlg.close();
+        dlg.parentNode.removeChild(dlg);
+    }
+
+    function stop(e) {
+        if (e.target != parent && e.target.tagName == 'A')
+            e.stopPropagation();
+    }
+}
+
 function detectSwipe(el, func) {
     let start = null;
 
@@ -102,3 +163,5 @@ function isTouchDevice() {
 
     return true;
 }
+
+export { sos }
