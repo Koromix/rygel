@@ -35,6 +35,7 @@
 
     #top menu {
         height: var(--small_height);
+        padding-top: 16px;
         padding-left: 60px;
         flex-direction: column;
         gap: 0;
