@@ -244,7 +244,7 @@ p + .columns { margin-top: 2em; }
     margin-left: calc(var(--position) * 12%);
     filter: blur(calc(var(--index) * 2px));
     transform: scaleY(calc(1 - 0.05 * var(--index)));
-    z-index: calc(10 - var(--index));
+    z-index: calc(6 - var(--index));
     transition: all 0.2s ease-in;
 
     cursor: pointer;
