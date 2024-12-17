@@ -14,7 +14,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util } from '../../../src/web/core/common.js';
 import '../../../src/web/flaat/flaat.js';
+
+import './ldv.css';
 
 window.addEventListener('load', e => {
     initCards();
@@ -102,7 +105,7 @@ function randomCard(cards) {
     let idx = null;
 
     do {
-        idx = getRandomInt(0, cards.length);
+        idx = Util.getRandomInt(0, cards.length);
     } while (idx == active);
 
     toggleCard(cards, idx);
@@ -199,14 +202,6 @@ function isTouchDevice() {
 
     return true;
 }
-
-function getRandomInt(min, max) {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-
-    let rnd = Math.floor(Math.random() * (max - min)) + min;
-    return rnd;
-};
 
 export {
     render,
