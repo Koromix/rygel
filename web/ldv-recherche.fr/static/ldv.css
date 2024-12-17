@@ -146,6 +146,10 @@ button {
     border-left: 4px solid #eca17f;
 }
 
+@media screen and (max-width: 960px) {
+    .banner > .intro { margin: -2px 1.5em 1em 1.5em; }
+}
+
 footer { gap: 3em; }
 footer > img { filter: none; }
 
