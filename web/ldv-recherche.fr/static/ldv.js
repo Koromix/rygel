@@ -164,4 +164,9 @@ function isTouchDevice() {
     return true;
 }
 
-export { sos }
+export {
+    render,
+    html,
+
+    sos
+}

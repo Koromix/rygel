@@ -1,6 +1,5 @@
 <div id="exercise"></div>
 
-<script src="{{ ASSET static/interactive.min.js }}"></script>
 <script>
     let root = document.querySelector('#exercise');
 

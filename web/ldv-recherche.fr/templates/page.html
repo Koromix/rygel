@@ -11,12 +11,15 @@
         <meta name="theme-color" content="#3c7778">
         <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
 
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
         <script>
             var assets = {
                 '3114': '{{ ASSET static/misc/3114.webp }}'
             };
+
+            window.render = app.render;
+            window.html = app.html;
         </script>
-        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
     </head>
 
     <body>
