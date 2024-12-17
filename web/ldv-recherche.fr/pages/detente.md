@@ -25,7 +25,7 @@
             <p class="title">Jouez à un jeu</p>
             <p>Lancez une partie pour vous changer les idées !<br><br></p>
             <div class="buttons">
-                <a href="https://koromix.dev/test/staks">Jouer</a>
+                <a href="/staks">Jouer</a>
             </div>
         </div>
     </div>

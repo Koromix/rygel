@@ -62,7 +62,9 @@ import ui_turbo from '../assets/ui/turbo.png';
 
 let assets = {};
 
-async function loadAssets() {
+async function loadAssets(prefix) {
+    prefix = prefix.replace(/\/+$/g, '');
+
     assets.backgrounds = {
         aurora: backgrounds_aurora,
         planet: backgrounds_planet,
@@ -106,7 +108,7 @@ async function loadAssets() {
     let resources = objects.flatMap(obj => Object.keys(obj).map(key => ({ obj, key })));
 
     await Promise.all(resources.map(async res => {
-        let url = 'static/' + res.obj[res.key];
+        let url = prefix + '/' + res.obj[res.key];
 
         if (url.endsWith('.png') || url.endsWith('.webp')) {
             res.obj[res.key] = await loadTexture(url);

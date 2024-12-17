@@ -112,8 +112,9 @@ let text_lines = null;
 // Init
 // ------------------------------------------------------------------------
 
-async function start(root) {
-    await loadAssets();
+async function start(root, prefix) {
+    await loadAssets(prefix);
+
     loadSettings();
 
     for (let block of rules.BLOCKS) {
