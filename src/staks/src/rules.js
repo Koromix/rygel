@@ -16,7 +16,7 @@
 const ROWS = 20;
 const COLUMNS = 10;
 const EXTRA_ROWS = 4;
-const EXTRA_TOP = 0.3;
+const EXTRA_TOP = 0.12;
 
 const DEFAULT_DELAY = 150;
 const TURBO_DELAY = 5;
