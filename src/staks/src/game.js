@@ -91,6 +91,7 @@ let show_debug = false;
 // UI state
 let ui_mode = null;
 let layout = {
+    padding: null,
     square: null,
     button: null,
 
@@ -236,6 +237,7 @@ function update() {
         let left = canvas.width / 2 - width / 2;
         let top = runner.isTouch ? padding : (canvas.height / 2 - height / 2);
 
+        layout.padding = padding;
         layout.square = square;
         layout.button = BUTTON_SIZE * window.devicePixelRatio;
 
@@ -327,6 +329,16 @@ function update() {
             if (button(pause_key, x, y, size).clicked)
                 pause = !pause;
             y += delta;
+        }
+
+        if (!runner.isTouch && game_mode == 'play' && !settings.help) {
+            let clicked = button('help', layout.well.left - layout.padding - size / 2,
+                                         layout.well.top + layout.well.height - size / 2, size).clicked;
+
+            if (clicked) {
+                settings.help = true;
+                pause = true;
+            }
         }
     }
 
