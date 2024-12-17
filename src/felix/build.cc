@@ -1422,7 +1422,7 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
     reader.Close();
 
     if (!prefix.ptr) {
-        LogError("Failed to find entryPiont in esbuild meta file '%1'", filename);
+        LogError("Failed to find entryPoint in esbuild meta file '%1'", filename);
         return false; 
     }
 
