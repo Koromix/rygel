@@ -175,12 +175,10 @@ function detectSwipe(el, func) {
     let start = null;
 
     el.addEventListener('touchstart', e => {
-        console.log('start', e);
-        start = e.changedTouches[0].screenX
+        start = e.changedTouches[0].screenX;
     });
-    el.addEventListener('touchend', e => {
-        console.log('end', e);
 
+    el.addEventListener('touchend', e => {
         let end = e.changedTouches[0].screenX;
         let delta = end - start;
 
