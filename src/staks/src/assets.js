@@ -53,6 +53,7 @@ import ui_fullscreen from '../assets/ui/fullscreen.png';
 import ui_left from '../assets/ui/left.png';
 import ui_play from '../assets/ui/play.png';
 import ui_pause from '../assets/ui/pause.png';
+import ui_retry from '../assets/ui/retry.png';
 import ui_right from '../assets/ui/right.png';
 import ui_silence from '../assets/ui/silence.png';
 import ui_sound from '../assets/ui/sound.png';
@@ -92,6 +93,7 @@ async function loadAssets() {
         left: ui_left,
         pause: ui_pause,
         play: ui_play,
+        retry: ui_retry,
         right: ui_right,
         silence: ui_silence,
         sound: ui_sound,

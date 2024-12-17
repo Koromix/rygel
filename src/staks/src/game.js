@@ -64,7 +64,6 @@ let pressed_keys = null;
 // Global state
 let game_mode = 'start';
 let now = null;
-let started = false;
 
 // Game state
 let pause = false;
@@ -203,8 +202,6 @@ function play() {
     combo = -1;
     special = null;
     back2back = false;
-
-    started = true;
 }
 
 // ------------------------------------------------------------------------
@@ -360,7 +357,7 @@ function update() {
     runner.volume = settings.sound ? 1 : 0;
 
     // Play music
-    if (started) {
+    if (game_mode != 'start') {
         let sound = assets.musics[settings.music];
         let handle = runner.playOnce(sound);
 
@@ -408,14 +405,19 @@ function update() {
                     [38, '24pt Open Sans', `Niveau`],
                     [20, 'bold 40pt Open Sans', level],
                     [38, '24pt Open Sans', `Score`],
-                    [80, 'bold 40pt Open Sans', score],
-                    [0, '24pt Open Sans', runner.isTouch ? `Touchez l'écran pour recommencer`
-                                                         : `Appuyez sur la touche entrée ⏎\uFE0E pour recommencer`]
+                    [80, 'bold 40pt Open Sans', score]
                 ];
 
-                if (mouse_state.left == -1 || pressed_keys.return == -1) {
-                    play();
-                    pressed_keys.space = 0;
+                if (runner.isTouch) {
+                    if (button('retry', canvas.width / 2, 3 * canvas.height / 4, layout.button).clicked)
+                        play();
+                } else {
+                    text_lines.push([0, '24pt Open Sans', `Appuyez sur la touche entrée ⏎\uFE0E pour recommencer`]);
+
+                    if (pressed_keys.return == -1) {
+                        play();
+                        pressed_keys.space = 0;
+                    }
                 }
 
                 runner.playOnce(assets.sounds.gameover, false);
