@@ -23,6 +23,9 @@ import '../../../vendor/opensans/OpenSans.css';
 import './game.css';
 
 const KEYBOARD_SHORTCUTS = [
+    ['P', 'Mettre en pause'],
+    ['F', `Mode plein écran`],
+    null,
     ['← / →', `Déplacement latéral`],
     ['↑', `Rotation horaire`],
     ['Control', `Rotation anti-horaire`],
@@ -31,13 +34,11 @@ const KEYBOARD_SHORTCUTS = [
     null,
     ['C', `Mettre la pièce de côté (hold)`],
     null,
-    ['P', 'Mettre en pause'],
     ['G', `Afficher/cacher le fantôme`],
     ['B', `Modifier le fond d'écran`],
     ['M', 'Activer/désactiver le son'],
     null,
-    ['H', `Afficher/cacher l'aide`],
-    ['F', `Mode plein écran`]
+    ['H', `Afficher/cacher l'aide`]
 ];
 
 const BUTTON_SIZE = 56;
