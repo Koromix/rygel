@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import '../../../../src/web/flaat/flaat.js';
+import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import '../../../src/web/flaat/flaat.js';
 
 window.addEventListener('load', e => {
     initCards();
