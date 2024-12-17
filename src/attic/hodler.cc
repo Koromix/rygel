@@ -382,7 +382,7 @@ static void RenderAsset(Span<const char> path, const FileHash *hash, StreamWrite
 static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *alloc)
 {
     HeapArray<char> content;
-    if (ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
+    if (page->src_filename && ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
         return false;
     Span<const char> remain = TrimStr(content.As());
 
@@ -770,7 +770,11 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
 
             do {
                 if (prop.key == "SourceFile") {
-                    page.src_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
+                    if (prop.value.len) {
+                        page.src_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
+                    } else {
+                        page.src_filename = nullptr;
+                    }
                 } else if (prop.key == "Title") {
                     page.title = DuplicateString(prop.value, &temp_alloc).ptr;
                 } else if (prop.key == "Menu") {
