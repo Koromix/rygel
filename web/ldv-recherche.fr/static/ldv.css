@@ -115,7 +115,6 @@ button {
     padding: 0.6em 1em;
     font-weight: bold;
     font-size: 1.1em;
-    width: 30%;
 }
 
 #top menu { justify-content: space-between; }
@@ -253,7 +252,6 @@ p + .columns { margin-top: 2em; }
 
 @media screen and (max-width: 960px) {
     .js .cardset { font-size: 0.8em; }
-    .js .cardset .buttons > a { min-width: 10em; }
 }
 
 .note {
