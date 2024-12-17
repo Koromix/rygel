@@ -100,6 +100,11 @@ dialog.right > div { border-radius: 16px 0 16px 16px; }
     }
 }
 
+button {
+    border-radius: 10px;
+    font-weight: bold;
+}
+
 .buttons {
     margin-top: 2em;
     justify-content: space-evenly;
@@ -180,7 +185,7 @@ p + .columns { margin-top: 2em; }
     cursor: default;
 }
 .tab {
-    padding: 3em 1em;
+    padding: 1em;
     background: #fdfbf8;
     border-bottom-left-radius: 16px;
     border-bottom-right-radius: 16px;
@@ -192,6 +197,7 @@ p + .columns { margin-top: 2em; }
     gap: 1em;
     justify-content: center;
     align-items: center;
+    padding: 2em 0;
 }
 .card {
     display: flex;

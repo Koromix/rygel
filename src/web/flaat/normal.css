@@ -258,6 +258,27 @@ table + div.legend {
     font-size: 0.8em;
 }
 
+button {
+    padding: 0.6em 1em;
+    background: var(--secondary_color);
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+button:hover {
+    filter: brightness(80%) contrast(150%);
+    color: white;
+}
+button::disabled {
+    pointer-events: none;
+    filter: saturate(10%);
+}
+button > img {
+    width: 32px;
+    height: 32px;
+    transform: translateY(2px);
+}
+
 .buttons {
     margin: 1em 0;
     display: flex;

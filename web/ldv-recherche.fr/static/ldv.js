@@ -25,7 +25,6 @@ function initCards() {
 
     for (let cardset of cardsets) {
         let cards = Array.from(cardset.querySelectorAll('.card'));
-        let active = 0;
 
         function toggle(idx) {
             active = idx;
@@ -51,7 +50,7 @@ function initCards() {
             cards[i].addEventListener('click', () => {
                 if (isTouchDevice())
                     return;
-                toggle(i)
+                toggleCard(cards, i);
             });
         }
 
@@ -70,6 +69,43 @@ function initCards() {
             toggle(idx);
         });
     }
+}
+
+function toggleCard(cards, active) {
+    let left = -Math.floor((cards.length - 1) / 2);
+    let right = Math.floor(cards.length / 2);
+
+    for (let i = -1; i >= left; i--) {
+        let idx = active + i;
+        if (idx < 0)
+            idx = cards.length + idx;
+        cards[idx].style.setProperty('--position', i);
+        cards[idx].classList.toggle('active', i == 0);
+    }
+    for (let i = 0; i <= right; i++) {
+        let idx = (active + i) % cards.length;
+        cards[idx].style.setProperty('--position', i);
+        cards[idx].classList.toggle('active', i == 0);
+    }
+}
+
+function randomCard(cards) {
+    if (!Array.isArray(cards)) {
+        if (typeof cards == 'string')
+            cards = document.querySelector(cards);
+        if (!(cards instanceof NodeList))
+            cards = cards.querySelectorAll('.card');
+        cards = Array.from(cards);
+    }
+
+    let active = cards.findIndex(card => card.classList.contains('active'));
+    let idx = null;
+
+    do {
+        idx = getRandomInt(0, cards.length);
+    } while (idx == active);
+
+    toggleCard(cards, idx);
 }
 
 function sos(e) {
@@ -164,9 +200,20 @@ function isTouchDevice() {
     return true;
 }
 
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+
+    let rnd = Math.floor(Math.random() * (max - min)) + min;
+    return rnd;
+};
+
 export {
     render,
     html,
 
+    randomCard,
+
+    dialog,
     sos
 }
