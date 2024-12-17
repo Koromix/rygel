@@ -172,20 +172,36 @@ function dialog(e, id, content) {
 }
 
 function detectSwipe(el, func) {
+    let identifier = null;
     let start = null;
+    let scroll = null;
 
     el.addEventListener('touchstart', e => {
-        start = e.changedTouches[0].screenX;
+        if (e.changedTouches.length != 1)
+            return;
+
+        let touch = e.changedTouches[0];
+
+        identifier = touch.identifier;
+        start = touch.screenX;
+        scroll = touch.pageY;
     });
 
     el.addEventListener('touchend', e => {
-        let end = e.changedTouches[0].screenX;
-        let delta = end - start;
+        for (let touch of e.changedTouches) {
+            if (touch.identifier !== identifier)
+                continue;
 
-        if (delta <= -10) {
-            func(1);
-        } else if (delta >= 10) {
-            func(-1);
+            let dx = touch.screenX - start;
+            let dy = Math.abs(touch.pageY - scroll);
+
+            if (dy < 20) {
+                if (dx <= -10) {
+                    func(1);
+                } else if (dx >= 10) {
+                    func(-1);
+                }
+            }
         }
     });
 }
