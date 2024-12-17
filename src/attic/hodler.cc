@@ -14,6 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "src/core/base/base.hh"
+#include "src/core/wrap/json.hh"
 extern "C" {
     #include "vendor/cmark-gfm/src/cmark-gfm.h"
     #include "vendor/cmark-gfm/extensions/cmark-gfm-core-extensions.h"
@@ -240,20 +241,60 @@ missing:
     return nullptr;
 }
 
-static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, uint8_t out_hash[32], bool gzip)
+static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<const char *> *out_filenames)
 {
-    char cmd[4096];
+    RG_ASSERT(alloc);
+
+    Size prev_len = out_filenames->len;
+    RG_DEFER_N(err_guard) { out_filenames->RemoveFrom(prev_len); };
+
+    StreamReader reader(filename);
+    if (!reader.IsValid())
+        return false;
+    json_Parser parser(&reader, alloc);
+
+    parser.ParseObject();
+    while (parser.InObject()) {
+        Span<const char> key = {};
+        parser.ParseKey(&key);
+
+        if (key == "outputs") {
+            parser.ParseObject();
+            while (parser.InObject()) {
+                Span<const char> output = {};
+                parser.ParseKey(&output);
+
+                const char *dest_filename = NormalizePath(output, alloc).ptr;
+                out_filenames->Append(dest_filename);
+
+                parser.Skip();
+            }
+        } else {
+            parser.Skip();
+        }
+    }
+    if (!parser.IsValid())
+        return false;
+    reader.Close();
+
+    err_guard.Disable();
+    return true;
+}
+
+static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, bool gzip,
+                         Allocator *alloc, HeapArray<FileHash> *out_hashes)
+{
+    Span<const char> basename = SplitStrReverseAny(bundle.name, RG_PATH_SEPARATORS);
+    Span<const char> prefix = MakeSpan(bundle.name, basename.ptr - bundle.name);
+
+    const char *meta_filename = Fmt(alloc, "%1.meta", bundle.dest_filename).ptr;
+    RG_DEFER { UnlinkFile(meta_filename); };
 
     // Prepare command
-    if (bundle.options) {
-        Fmt(cmd, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
-                 "  --minify --platform=browser --target=es6 --sourcemap=linked %4",
-            esbuild_binary, bundle.src_filename, bundle.dest_filename, bundle.options);
-    } else {
-        Fmt(cmd, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
-                 "  --minify --platform=browser --target=es6 --sourcemap=linked",
-            esbuild_binary, bundle.src_filename, bundle.dest_filename);
-    }
+    const char *options = bundle.options ? bundle.options : "";
+    const char *cmd = Fmt(alloc, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
+                                 "  --minify --platform=browser --target=es6 --sourcemap=linked --metafile=\"%4\" %5",
+                          esbuild_binary, bundle.src_filename, bundle.dest_filename, meta_filename, options).ptr;
 
     // Run esbuild
     {
@@ -271,37 +312,56 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
         }
     }
 
-    StreamReader reader(bundle.dest_filename);
+    // List output files
+    HeapArray<const char *> dest_filenames;
+    if (!ParseEsbuildMeta(meta_filename, alloc, &dest_filenames))
+        return false;
 
-    // Compute destination hash
-    {
-        crypto_hash_sha256_state state;
-        crypto_hash_sha256_init(&state);
+    // Handle output files
+    for (const char *dest_filename: dest_filenames) {
+        FileHash hash = {};
 
-        do {
-            LocalArray<uint8_t, 16384> buf;
-            buf.len = reader.Read(buf.data);
-            if (buf.len < 0)
+        Span<const char> basename = SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS);
+        const char *name = Fmt(alloc, "%1%2", prefix, basename).ptr;
+        const char *gzip_filename = Fmt(alloc, "%1.gz", dest_filename).ptr;
+
+        hash.name = name;
+        hash.filename = dest_filename;
+
+        StreamReader reader(dest_filename);
+
+        // Compute destination hash
+        {
+            crypto_hash_sha256_state state;
+            crypto_hash_sha256_init(&state);
+
+            do {
+                LocalArray<uint8_t, 16384> buf;
+                buf.len = reader.Read(buf.data);
+                if (buf.len < 0)
+                    return false;
+
+                crypto_hash_sha256_update(&state, buf.data, buf.len);
+            } while (!reader.IsEOF());
+
+            crypto_hash_sha256_final(&state, hash.sha256);
+        }
+
+        // Precompress file
+        if (gzip) {
+            reader.Rewind();
+
+            StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
+
+            if (!SpliceStream(&reader, -1, &writer))
                 return false;
+            if (!writer.Close())
+                return false;
+        } else {
+            UnlinkFile(gzip_filename);
+        }
 
-            crypto_hash_sha256_update(&state, buf.data, buf.len);
-        } while (!reader.IsEOF());
-
-        crypto_hash_sha256_final(&state, out_hash);
-    }
-
-    // Precompress file
-    if (gzip) {
-        reader.Rewind();
-
-        StreamWriter writer(bundle.gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
-
-        if (!SpliceStream(&reader, -1, &writer))
-            return false;
-        if (!writer.Close())
-            return false;
-    } else {
-        UnlinkFile(bundle.gzip_filename);
+        out_hashes->Append(hash);
     }
 
     return true;
@@ -964,16 +1024,30 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
     // Bundle JS files
     {
         Async async;
+        std::mutex mutex;
 
         for (const AssetBundle &bundle: bundles) {
-            FileHash *hash = assets.hashes.AppendDefault();
+            async.Run([=, &assets, &mutex, &temp_alloc] {
+                BlockAllocator thread_alloc;
 
-            hash->name = bundle.name;
-            hash->filename = bundle.dest_filename;
+                HeapArray<FileHash> hashes;
+                if (!BundleScript(bundle, esbuild_path, gzip, &thread_alloc, &hashes))
+                    return false;
 
-            async.Run([=] { return BundleScript(bundle, esbuild_path, hash->sha256, gzip); });
+                std::lock_guard<std::mutex> lock(mutex);
 
-            assets.map.Set(hash);
+                for (const FileHash &hash: hashes) {
+                    FileHash *copy = assets.hashes.AppendDefault();
+
+                    copy->name = DuplicateString(hash.name, &temp_alloc).ptr;
+                    copy->filename = DuplicateString(hash.filename, &temp_alloc).ptr;
+                    MemCpy(copy->sha256, hash.sha256, RG_SIZE(hash.sha256));
+
+                    assets.map.Set(copy);
+                }
+
+                return true;
+            });
         }
 
         if (!async.Sync())
