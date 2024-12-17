@@ -1,7 +1,3 @@
-<div class="banner">
-    <div class="title">Études</div>
-</div>
-
 # Pourquoi participer à nos études ?
 
 <div class="columns">

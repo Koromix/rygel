@@ -1,7 +1,3 @@
-<div class="banner">
-    <div class="title">Ressources</div>
-</div>
-
 <div class="tabbar">
     <a href="/livres">Livres</a>
     <a href="/videos" class="active">Vidéos</a>

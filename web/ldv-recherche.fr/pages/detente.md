@@ -1,7 +1,3 @@
-<div class="banner">
-    <div class="title">Espace détente</div>
-</div>
-
 <div class="tileset">
     <div class="tile" style="flex: 8;">
         <img src="{{ ASSET static/detente/coherence_cardiaque.webp }}" alt="" />
