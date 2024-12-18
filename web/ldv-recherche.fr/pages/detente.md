@@ -1,15 +1,25 @@
 <div class="tileset">
-    <div class="tile" style="flex: 8;">
+    <div class="tile" style="flex: 6;">
         <img src="{{ ASSET static/detente/coherence_cardiaque.webp }}" alt="" />
         <div>
             <p class="title">Cohérence cardiaque</p>
-            <p>La cohérence cardiaque est une <b>technique de respiration simple</b>, mais très efficace, visant à apaiser le corps et l’esprit <b>par le contrôle du rythme cardiaque</b>.</p>
+            <p>Pratiquez cette <b>technique de respiration</b> simple pour contrôler votre <b>rythme cardiaque</b> et apaiser votre esprit.</p>
             <div class="buttons">
                 <a href="/coherence">Commencer</a>
             </div>
         </div>
     </div>
-    <div class="tile" style="flex: 7;">
+    <div class="tile" style="flex: 5;">
+        <img src="{{ ASSET static/detente/jeu_staks.webp }}" alt="" />
+        <div>
+            <p class="title">Jouez à un jeu</p>
+            <p>Lancez une partie de <b>blocs qui tombent</b> pour vous changer les idées !</p>
+            <div class="buttons">
+                <a href="/staks">Jouer</a>
+            </div>
+        </div>
+    </div>
+    <div class="tile" style="flex: 5;">
         <img src="{{ ASSET static/detente/etirements_doux.webp }}" alt="" />
         <div>
             <p class="title">Étirements doux</p>
@@ -19,17 +29,7 @@
             </div>
         </div>
     </div>
-    <div class="tile" style="flex: 5;">
-        <img src="{{ ASSET static/detente/jeu_staks.webp }}" alt="" />
-        <div>
-            <p class="title">Jouez à un jeu</p>
-            <p>Lancez une partie pour vous changer les idées !<br><br></p>
-            <div class="buttons">
-                <a href="/staks">Jouer</a>
-            </div>
-        </div>
-    </div>
-    <div class="tile" style="flex: 8;">
+    <div class="tile" style="flex: 6;">
         <img src="{{ ASSET static/detente/ecriture_expressive.webp }}" alt="" />
         <div>
             <p class="title">Écrivez dans votre journal</p>
