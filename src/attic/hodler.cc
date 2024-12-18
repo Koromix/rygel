@@ -786,6 +786,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             PageData page = {};
 
             page.name = SectionToPageName(prop.section, &temp_alloc);
+            page.title = page.name;
             page.src_filename = NormalizePath(prop.section, source_dir, &temp_alloc).ptr;
             page.description = "";
             page.toc = true;
@@ -813,10 +814,6 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 }
             } while (ini.NextInSection(&prop));
 
-            if (!page.title) {
-                LogError("Missing title for page '%1'", page.name);
-                valid = false;
-            }
             if (!page.template_filename) {
                 LogError("Missing template for page '%1'", page.name);
                 valid = false;
