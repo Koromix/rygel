@@ -42,7 +42,7 @@ const KEYBOARD_SHORTCUTS = [
 ];
 
 const BUTTON_SIZE = 56;
-const SQUARE_SIZE = 48;
+const SQUARE_SIZE = 64;
 
 const DEFAULT_SETTINGS = {
     background: 'aurora',
