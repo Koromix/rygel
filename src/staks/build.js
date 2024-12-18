@@ -55,7 +55,8 @@ async function main() {
 
 async function run() {
     let src_filenames = [
-        './src/game.js'
+        './src/game.js',
+        './src/index.html'
     ];
 
     let html = {
@@ -88,11 +89,18 @@ async function run() {
             {
                 name: 'html',
                 setup: build => {
-                    build.onEnd(result => {
-                        let template = fs.readFileSync('./src/index.html', { encoding: 'UTF-8' });
+                    build.onLoad({ filter: /\.html$/ }, args => {
+                        let template = fs.readFileSync(args.path, { encoding: 'UTF-8' });
                         let html = Mustache.render(template, { buster: (new Date).valueOf() });
 
-                        fs.writeFileSync('./dist/index.html', html);
+                        return {
+                            contents: html,
+                            loader: 'copy'
+                        };
+                    });
+
+                    build.onEnd(result => {
+                        fs.renameSync('./dist/static/index.html', './dist/index.html');
                     });
                 }
             }
