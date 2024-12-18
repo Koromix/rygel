@@ -624,13 +624,35 @@ static Size RenderMenu(Span<const PageData> pages, Size active_idx,
 
         return j;
     } else {
-        bool active = (active_idx == idx);
+        Size i = idx;
+        Size j = i + 1;
+
+        while (j < end) {
+            Span<const char> menu = pages[j].menu;
+
+            for (Size i = 0; i <= depth; i++) {
+                Span<const char> remain = menu;
+                TrimStr(SplitStr(remain, '/', &remain));
+
+                if (!remain.len)
+                    break;
+
+                menu = remain;
+            }
+
+            if (!TestStr(menu, title))
+                break;
+
+            j++;
+        }
+
+        bool active = (active_idx >= i && active_idx < j);
         int margin = std::max(0, depth - 1);
 
         Print(writer, "<a href=\"%1\"%2 style=\"margin-left: %3em;\">%4</a>", page->url, active ? " class=\"active\"" : "", margin, title);
         PrintLn(writer, "%1", depth ? "" : "</li>");
 
-        return idx + 1;
+        return j;
     }
 }
 
