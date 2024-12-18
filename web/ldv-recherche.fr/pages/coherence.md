@@ -119,6 +119,7 @@
         justify-content: center;
         border-radius: 50%;
         transform: scale(0.5);
+        user-select: none;
     }
     #bubble > span {
         margin-top: -6px;
