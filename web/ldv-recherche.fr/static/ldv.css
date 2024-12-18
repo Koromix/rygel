@@ -195,6 +195,7 @@ p + .columns { margin-top: 2em; }
 }
 
 .cardset {
+    position: relative;
     display: flex;
     flex-wrap: wrap;
     gap: 1em;
@@ -202,6 +203,13 @@ p + .columns { margin-top: 2em; }
     align-items: center;
     padding: 2em 0;
 }
+.cardset > .arrows {
+    display: flex;
+    position: absolute;
+    left: 0;
+    width: 100%;
+}
+.cardset > .arrows > img { cursor: pointer; }
 .card {
     display: flex;
     position: relative;
@@ -252,6 +260,7 @@ p + .columns { margin-top: 2em; }
 
 @media screen and (max-width: 960px) {
     .js .cardset { font-size: 0.8em; }
+    .cardset > .arrows { display: none; }
 }
 
 .note {

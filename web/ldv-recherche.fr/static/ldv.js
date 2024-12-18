@@ -30,48 +30,57 @@ function initCards() {
         let cards = Array.from(cardset.querySelectorAll('.card'));
         let shuffle = Util.shuffle(Util.sequence(cards.length));
 
+        let arrows = document.createElement('div');
+        render(html`
+            <img style="left: 16px;" src=${assets.left} alt="" @click=${e => toggleCard(cards, -1)} />
+            <div style="flex: 1;"></div>
+            <img style="right: 16px;" src=${assets.right} alt="" @click=${e => toggleCard(cards, 1)} />
+        `, arrows);
+        arrows.classList.add('arrows');
+        cardset.appendChild(arrows);
+
         for (let i = 0; i < cards.length; i++) {
             let card = cards[i];
 
             card.addEventListener('click', () => {
                 if (isTouchDevice())
                     return;
-                toggleCard(cards, i);
+                activateCard(cards, i);
             });
             card.dataset.rnd = shuffle[i];
         }
 
-        toggleCard(cards, shuffle[0]);
+        activateCard(cards, shuffle[0]);
 
-        detectSwipe(cardset, delta => {
-            let idx = active + delta;
-
-            if (idx >= cards.length) {
-                idx = 0;
-            } else if (idx < 0) {
-                idx = cards.length - 1;
-            }
-
-            toggleCard(cards, idx);
-        });
+        detectSwipe(cardset, delta => toggleCard(cards, delta));
     }
 }
 
-function toggleCard(cards, active) {
+function toggleCard(cards, delta) {
+    let active = cards.findIndex(card => card.classList.contains('active'));
+    let idx = offset(active, cards.length, delta);
+
+    activateCard(cards, idx);
+}
+
+function activateCard(cards, active) {
     let left = -Math.floor((cards.length - 1) / 2);
     let right = Math.floor(cards.length / 2);
 
     for (let i = -1; i >= left; i--) {
-        let idx = active + i;
-        if (idx < 0)
-            idx = cards.length + idx;
-        cards[idx].style.setProperty('--position', i);
-        cards[idx].classList.toggle('active', i == 0);
+        let idx = offset(active, cards.length, i);
+        let card = cards[idx];
+
+        card.style.setProperty('--position', i);
+        card.classList.toggle('active', i == 0);
     }
+
     for (let i = 0; i <= right; i++) {
-        let idx = (active + i) % cards.length;
-        cards[idx].style.setProperty('--position', i);
-        cards[idx].classList.toggle('active', i == 0);
+        let idx = offset(active, cards.length, i);
+        let card = cards[idx];
+
+        card.style.setProperty('--position', i);
+        card.classList.toggle('active', i == 0);
     }
 }
 
@@ -88,7 +97,7 @@ function randomCard(cards) {
     let rnd = (parseInt(active.dataset.rnd, 10) + 1) % cards.length;
     let next = cards.findIndex(card => card.dataset.rnd == rnd);
 
-    toggleCard(cards, next);
+    activateCard(cards, next);
 }
 
 function sos(e) {
@@ -187,6 +196,11 @@ function isTouchDevice() {
         return false;
 
     return true;
+}
+
+function offset(start, length, delta) {
+    let idx = (start + length + delta) % length;
+    return idx;
 }
 
 export {
