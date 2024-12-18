@@ -45,13 +45,13 @@ const kicks_O = [
 const COLORS = [
     null, // Color 0 is invalid
 
-    '#2df0f0',
-    '#2d2df0',
-    '#f0a32d',
-    '#f0f02d',
-    '#2df02d',
-    '#a32df0',
-    '#f02d2d'
+    '#3dd6ff',
+    '#1e4fc2',
+    '#ff8a2b',
+    '#ffd900',
+    '#55ec55',
+    '#c73daf',
+    '#f40812'
 ];
 
 const BLOCKS = [
