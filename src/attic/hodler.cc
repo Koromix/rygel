@@ -814,11 +814,11 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             } while (ini.NextInSection(&prop));
 
             if (!page.title) {
-                LogError("Missing title for page '%1'", SplitStrReverseAny(page.src_filename, RG_PATH_SEPARATORS));
+                LogError("Missing title for page '%1'", page.name);
                 valid = false;
             }
             if (!page.template_filename) {
-                LogError("Missing template for page '%1'", SplitStrReverseAny(page.src_filename, RG_PATH_SEPARATORS));
+                LogError("Missing template for page '%1'", page.name);
                 valid = false;
             }
 
