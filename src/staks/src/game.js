@@ -53,6 +53,7 @@ const DEFAULT_SETTINGS = {
 };
 
 // DOM nodes
+let main = null;
 let canvas = null;
 let attributions = null;
 
@@ -133,7 +134,8 @@ async function start(root, prefix) {
             </div>
             <canvas class="stk_canvas"></canvas>
         </div>
-    `, root)
+    `, root);
+    main = root.querySelector('.stk_game');
     canvas = root.querySelector('.stk_canvas');
     attributions = root.querySelector('.stk_attributions');
 
@@ -319,7 +321,7 @@ function update() {
             toggleBackground();
         y += delta;
 
-        if (canvas.requestFullscreen != null) {
+        if (main.requestFullscreen != null) {
             if (button('fullscreen', x, y, size).clicked)
                 toggleFullScreen();
             y += delta;
@@ -441,11 +443,11 @@ function update() {
 }
 
 function toggleFullScreen() {
-    let fullscreen = (document.fullscreenElement == canvas);
+    let fullscreen = (document.fullscreenElement == main);
 
     if (!fullscreen) {
         try {
-            canvas.requestFullscreen();
+            main.requestFullscreen();
         } catch (err) {
             console.error(err);
         }
