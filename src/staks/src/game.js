@@ -149,8 +149,6 @@ async function start(root, prefix) {
     runner.onUpdate = update;
     runner.onDraw = draw;
     runner.start();
-
-    document.body.classList.remove('loading');
 }
 
 function loadSettings() {

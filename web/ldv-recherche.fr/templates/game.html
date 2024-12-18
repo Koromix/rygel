@@ -9,17 +9,15 @@
         <link rel="icon" href="favicon.png"/>
 
         <style>
-            html {
-                height: 100%;
-            }
+            html { height: 100%; }
 
             body {
                 display: flex;
                 height: 100%;
                 margin: 0;
                 padding: 0;
-                background-color: #242525;
-                color: white;
+                background-color: white;
+                color: #262626;
                 font-family: 'Open Sans', sans-serif;
                 font-size: 18px;
                 align-items: center;
@@ -39,8 +37,8 @@
                 height: 48px;
                 margin: 1px;
                 border-radius: 50%;
-                border: 12px solid white;
-                border-color: white transparent white transparent;
+                border: 12px solid #262626;
+                border-color: #262626 transparent #262626 transparent;
                 animation: spinner 0.8s ease-in-out infinite;
             }
             .loading > * { display: none !important; }
@@ -92,8 +90,24 @@
 
             import { start } from './{{ ASSET static/staks/game.js }}';
 
-            let main = document.querySelector('main');
-            start(main, 'static/staks');
+            run();
+
+            async function run() {
+                try {
+                    let main = document.querySelector('main');
+                    await start(main, 'static/staks');
+                } catch (err) {
+                    console.error(err);
+
+                    document.body.innerHTML =
+                        '<div class="gp_fatal"><div>' +
+                            '<span style="color: red;">⚠\uFE0E <b>Une erreur est survenue pendant le chargement</b></span><br/>' +
+                            err.message +
+                        '</div></div>';
+                } finally {
+                    document.body.classList.remove('loading');
+                }
+            }
         </script>
     </body>
 </html>
