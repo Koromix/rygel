@@ -49,16 +49,20 @@ function initCards() {
             }
         }
 
+        let shuffle = Util.shuffle(Util.sequence(cards.length));
+
         for (let i = 0; i < cards.length; i++) {
-            cards[i].addEventListener('click', () => {
+            let card = cards[i];
+
+            card.addEventListener('click', () => {
                 if (isTouchDevice())
                     return;
                 toggleCard(cards, i);
             });
+            card.dataset.rnd = shuffle[i];
         }
 
-        let middle = Math.floor((cards.length - 1) / 2);
-        toggle(middle);
+        toggle(shuffle[0]);
 
         detectSwipe(cardset, delta => {
             let idx = active + delta;
@@ -101,14 +105,11 @@ function randomCard(cards) {
         cards = Array.from(cards);
     }
 
-    let active = cards.findIndex(card => card.classList.contains('active'));
-    let idx = null;
+    let active = cards.find(card => card.classList.contains('active'));
+    let rnd = (parseInt(active.dataset.rnd, 10) + 1) % cards.length;
+    let next = cards.findIndex(card => card.dataset.rnd == rnd);
 
-    do {
-        idx = Util.getRandomInt(0, cards.length);
-    } while (idx == active);
-
-    toggleCard(cards, idx);
+    toggleCard(cards, next);
 }
 
 function sos(e) {
