@@ -17,8 +17,8 @@
 @import url('print.css');
 
 html {
-    --primary_color: #364b9b;
-    --secondary_color: #d9bf69;
+    --primary_color: #417ad5;
+    --secondary_color: #f6743c;
 
     --top_height: 80px;
     --top_background: #fdfbf8;
@@ -31,8 +31,8 @@ main a:hover { color: #26346c; }
 main a:has(> img) { text-decoration: none !important; }
 
 h1 {
-    color: #364b9b;
-    border-bottom: 1px solid #ccc;
+    color: #417ad5;
+    border-bottom: 1px solid #417ad555;
 }
 h1:not(:first-of-type) { margin-top: 2em; }
 
@@ -100,10 +100,7 @@ dialog.right > div { border-radius: 16px 0 16px 16px; }
     }
 }
 
-button {
-    border-radius: 10px;
-    font-weight: bold;
-}
+button { border-radius: 10px; }
 
 .buttons {
     margin-top: 2em;
@@ -113,11 +110,17 @@ button {
 .buttons > a {
     border-radius: 10px;
     padding: 0.6em 1em;
-    font-weight: bold;
     font-size: 1.1em;
 }
 
-#top menu { justify-content: space-between; }
+#top menu {
+    gap: 2em;
+    text-transform: none;
+}
+#top li > a {
+    border-bottom: none;
+    text-transform: none;
+}
 #top.border { border-bottom-color: var(--top_background); }
 
 .banner {
@@ -132,17 +135,19 @@ button {
     margin-bottom: -1.8em;
 }
 .banner > .title {
-    padding: 1em;
+    padding: 0.8em 1.2em;
     align-self: start;
-    background: #eca17f;
-    font-weight: bold;
+    background: #f6743c;
     color: white;
     border-radius: 16px;
+    z-index: 1;
 }
 .banner > .intro {
-    margin: -2px 4em 1em 4em;
-    padding: 1em;
-    border-left: 4px solid #eca17f;
+    margin: -20px 2em 1em 2em;
+    padding: calc(1em + 20px) 1em 1em 1em;
+    border-left: 4px solid #f6743c;
+    border-radius: 0 16px 16px 0;
+    background: #fdfbf8;
 }
 
 @media screen and (max-width: 960px) {
@@ -184,7 +189,7 @@ p + .columns { margin-top: 2em; }
 }
 .tabbar > a:hover { color: white; }
 .tabbar > a.active {
-    background: #eca17f;
+    background: #f6743c;
     cursor: default;
 }
 .tab {
@@ -238,7 +243,7 @@ p + .columns { margin-top: 2em; }
     backdrop-filter: blur(16px);
 }
 .card .title {
-    color: #364b9b;
+    color: var(--primary_color);
     font-weight: bold;
 }
 
@@ -289,7 +294,7 @@ p + .columns { margin-top: 2em; }
 }
 .team + .team { margin-top: 48px; }
 .team > div {
-    background: #ebedf5;
+    background: #fdfbf8;
     padding: 1em 0.5em;
     display: flex;
     flex-direction: column;
@@ -302,7 +307,7 @@ p + .columns { margin-top: 2em; }
     width: 133px;
     height: 133px;
     border-radius: 50%;
-    border: 5px solid #e9a07f;
+    border: 4px solid #f6743c;
 }
 .team .name {
     font-weight: bold;
@@ -414,8 +419,8 @@ p + .columns { margin-top: 2em; }
 
 #sos > div {
     display: flex;
-    background: #fdfbf8;
-    border-color: #d97069;
+    background: white;
+    border-color: #e22e22;
     align-items: center;
     gap: 2em;
 }

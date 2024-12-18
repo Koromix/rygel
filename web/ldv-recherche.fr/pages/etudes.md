@@ -1,7 +1,7 @@
 # Pourquoi participer à nos études ?
 
 <div class="columns">
-    <img src="{{ ASSET static/misc/path.webp }}" style="flex: 1;" alt="" />
+    <img src="{{ ASSET static/misc/glass.webp }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
         <p>Les études conduites par le <b>Centre National de Ressources et de Résilience</b> (CN2R) visent à <b>améliorer la compréhension</b>, la <b>prévention</b> et le <b>traitement des psychotraumatismes</b>.
         <p>Ce centre, co-piloté par l'AP-HP et le CHU de Lille, se concentre sur plusieurs missions clés pour <b>répondre aux besoins des personnes touchées</b> par des traumatismes psychologiques liés à des événements comme les attentats, la violence domestique, ou le harcèlement scolaire.

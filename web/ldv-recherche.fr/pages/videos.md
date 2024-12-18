@@ -2,7 +2,7 @@
     <a href="/livres">Livres</a>
     <a href="/videos" class="active">Vidéos</a>
     <div style="flex: 1;"></div>
-    <a href="https://3114.fr/je-suis-en-souffrance/" onclick="app.sos(event); return false" style="background: #d97069;">SOS</a>
+    <a href="https://3114.fr/je-suis-en-souffrance/" onclick="app.sos(event); return false" style="background: #e22e22;">SOS</a>
 </div>
 
 <div class="tab">
