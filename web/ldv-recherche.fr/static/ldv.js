@@ -28,27 +28,6 @@ function initCards() {
 
     for (let cardset of cardsets) {
         let cards = Array.from(cardset.querySelectorAll('.card'));
-
-        function toggle(idx) {
-            active = idx;
-
-            let left = -Math.floor((cards.length - 1) / 2);
-            let right = Math.floor(cards.length / 2);
-
-            for (let i = -1; i >= left; i--) {
-                let idx = active + i;
-                if (idx < 0)
-                    idx = cards.length + idx;
-                cards[idx].style.setProperty('--position', i);
-                cards[idx].classList.toggle('active', i == 0);
-            }
-            for (let i = 0; i <= right; i++) {
-                let idx = (active + i) % cards.length;
-                cards[idx].style.setProperty('--position', i);
-                cards[idx].classList.toggle('active', i == 0);
-            }
-        }
-
         let shuffle = Util.shuffle(Util.sequence(cards.length));
 
         for (let i = 0; i < cards.length; i++) {
@@ -62,7 +41,7 @@ function initCards() {
             card.dataset.rnd = shuffle[i];
         }
 
-        toggle(shuffle[0]);
+        toggleCard(cards, shuffle[0]);
 
         detectSwipe(cardset, delta => {
             let idx = active + delta;
@@ -73,7 +52,7 @@ function initCards() {
                 idx = cards.length - 1;
             }
 
-            toggle(idx);
+            toggleCard(cards, idx);
         });
     }
 }
@@ -136,15 +115,7 @@ function dialog(e, id, content) {
         dlg.id = id ?? '';
     }
 
-    render(html`
-        <div @click=${stop}>
-            <img src=${assets['3114']} width="183" height="86" alt="">
-            <div>
-                <p>Le <a href="tel:3114">3114</a> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
-                <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
-            </div>
-        </div>
-    `, dlg);
+    render(content, dlg);
 
     if (!dlg.open) {
         let parent = e.currentTarget;
