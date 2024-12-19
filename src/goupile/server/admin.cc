@@ -1546,12 +1546,15 @@ void HandleInstanceDelete(http_IO *io)
         }
     }
 
-    bool conflict;
-    if (!ArchiveInstances(instance, &conflict)) {
-        if (conflict) {
-            io->SendError(409, "Archive already exists");
+    // Be safe...
+    {
+        bool conflict;
+        if (!ArchiveInstances(instance, &conflict)) {
+            if (conflict) {
+                io->SendError(409, "Archive already exists");
+            }
+            return;
         }
-        return;
     }
 
     // Copy filenames to avoid use-after-free
@@ -2148,6 +2151,117 @@ void HandleInstancePermissions(http_IO *io)
     json.EndObject();
 
     json.Finish();
+}
+
+void HandleInstanceMigrate(http_IO *io)
+{
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->IsAdmin()) {
+        LogError("Non-admin users are not allowed to list users");
+        io->SendError(403);
+        return;
+    }
+
+    const char *instance_key = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "instance") {
+                parser.ParseString(&instance_key);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing values
+    if (!instance_key) {
+        LogError("Missing 'instance' parameter");
+        io->SendError(422);
+        return;
+    }
+
+    InstanceHolder *instance = gp_domain.Ref(instance_key);
+    if (!instance) {
+        LogError("Instance '%1' does not exist", instance_key);
+        io->SendError(404);
+        return;
+    }
+    RG_DEFER_N(ref_guard) { instance->Unref(); };
+
+    // Can this admin user touch this instance?
+    if (!session->IsRoot()) {
+        sq_Statement stmt;
+        if (!gp_domain.db.Prepare(R"(SELECT instance FROM dom_permissions
+                                     WHERE userid = ?1 AND instance = ?2 AND
+                                           permissions & ?3)", &stmt))
+            return;
+        sqlite3_bind_int64(stmt, 1, session->userid);
+        sqlite3_bind_text(stmt, 2, instance->master->key.ptr, -1, SQLITE_STATIC);
+        sqlite3_bind_int(stmt, 3, (int)UserPermission::BuildAdmin);
+
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                LogError("Instance '%1' does not exist", instance_key);
+                io->SendError(404);
+            }
+            return;
+        }
+    }
+
+    // Make sure it is a legacy instance
+    if (!instance->legacy) {
+        LogError("Instance '%1' is not legacy", instance_key);
+        io->SendError(422);
+        return;
+    }
+
+    // Migration can take a long time, don't timeout because request looks idle
+    io->SetTimeout(120000);
+
+    // Be safe...
+    {
+        bool conflict;
+        if (!ArchiveInstances(instance, &conflict)) {
+            if (conflict) {
+                io->SendError(409, "Archive already exists");
+            }
+            return;
+        }
+    }
+
+    if (!MigrateInstance(instance->db, InstanceVersion))
+        return;
+
+    // Don't use instance after that!
+    instance->Unref();
+    instance = nullptr;
+    ref_guard.Disable();
+
+    if (!gp_domain.SyncInstance(instance_key))
+        return;
+
+    io->SendText(200, "{}", "application/json");
 }
 
 void HandleArchiveCreate(http_IO *io)

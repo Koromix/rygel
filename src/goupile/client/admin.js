@@ -516,6 +516,15 @@ function runConfigureInstanceDialog(e, instance) {
                         help: 'Attention, ceci remet les développements à zéro'
                     });
                 });
+
+                if (profile.root && instance.legacy) {
+                    d.tab('Migration', () => {
+                        d.output(html`
+                            <p>Attention, la migration en V3 est susceptible d'entrainer des <span style="color: red; font-weight: bold;">bugs et une perte de données</span> !</p>
+                            <button type="button" @click=${UI.wrap(e => runMigrateDialog(e, instance))}>Migrer en V3</button>
+                        `);
+                    });
+                }
             });
 
             d.action('Configurer', { disabled: !d.isValid() }, async () => {
@@ -574,6 +583,30 @@ function checkCryptoKey(str) {
     } catch (err) {
         return false;
     }
+}
+
+async function runMigrateDialog(e, instance) {
+    return UI.dialog(e, `Migration de ${instance.key}`, {}, (d, resolve, reject) => {
+        d.output(`Voulez-vous vraiment migrer le projet '${instance.key}' ?`);
+
+        d.action('Migrer', {}, async () => {
+            try {
+                await Net.post('/admin/api/instances/migrate', {
+                    instance: instance.key
+                }, { timeout: 180000 });
+
+                resolve();
+                Log.success(`Projet '${instance.key}' migré`);
+
+                instances = null;
+
+                go();
+            } catch (err) {
+                Log.error(err);
+                d.refresh();
+            }
+        });
+    });
 }
 
 function runDeleteInstanceDialog(e, instance) {
