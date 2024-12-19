@@ -253,7 +253,7 @@ function update() {
             left: left + (rules.COLUMNS * layout.square) + padding,
             top: top,
             width: (runner.isTouch ? 7 : 5) / 2 * layout.square,
-            height: 6.5 * layout.square
+            height: (1 + rules.VISIBLE_BAG_SIZE * 4) / 2 * layout.square
         };
         layout.level = {
             left: layout.bag.left,
@@ -1200,7 +1200,7 @@ function drawBag() {
 
     let square = layout.square * 0.5;
 
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < rules.VISIBLE_BAG_SIZE; i++) {
         let block = bag[i];
 
         if (block != null) {

@@ -23,6 +23,8 @@ const TURBO_DELAY = 5;
 const LOCK_DELAY = 500;
 const MAX_ACTIONS = 20;
 
+const VISIBLE_BAG_SIZE = 3;
+
 const kicks_I = [
     [[0, 0], [0, -2], [0,  1], [-1, -2], [ 2,  1]],
     [[0, 0], [0, -1], [0,  2], [ 2, -1], [-1,  2]],
@@ -69,6 +71,8 @@ export {
     COLUMNS,
     EXTRA_ROWS,
     EXTRA_TOP,
+
+    VISIBLE_BAG_SIZE,
 
     DEFAULT_DELAY,
     TURBO_DELAY,
