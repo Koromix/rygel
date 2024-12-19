@@ -17,8 +17,9 @@
 
 const fs = require('fs');
 const path = require('path');
-const esbuild = require('../../../vendor/esbuild/wasm');
-const experiments = require('../src/track/experiments/experiments.json');
+const esbuild = require('../../vendor/esbuild/wasm');
+const Mustache = require('../../vendor/mustache');
+const experiments = require('./src/track/experiments/experiments.json');
 
 let watch = false;
 
@@ -54,10 +55,12 @@ async function main() {
 }
 
 async function run() {
-    process.chdir(__dirname + '/..');
+    process.chdir(__dirname);
 
     let src_filenames = [
-        './ludivine.js',
+        './src/index.html',
+        './src/ludivine.js',
+
         '../../vendor/sqlite3mc/wasm/jswasm/sqlite3.wasm',
         '../../vendor/sqlite3mc/wasm/jswasm/sqlite3-opfs-async-proxy.js',
         '../../vendor/sqlite3mc/wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs',
@@ -80,7 +83,29 @@ async function run() {
             '.wasm': 'copy',
             '.woff2': 'dataurl'
         },
-        outdir: 'build/'
+        outdir: 'dist/static/',
+        plugins: [
+            {
+                name: 'html',
+                setup: build => {
+                    build.onLoad({ filter: /\.html$/ }, args => {
+                        let template = fs.readFileSync(args.path, { encoding: 'UTF-8' });
+                        let html = Mustache.render(template, { buster: (new Date).valueOf() });
+
+                        return {
+                            contents: html,
+                            loader: 'copy'
+                        };
+                    });
+
+                    build.onEnd(result => {
+                        if (fs.existsSync('./dist/static/index.html'))
+                            fs.copyFileSync('./dist/static/index.html', './dist/index.html');
+                        fs.copyFileSync('./assets/ldv.png', './dist/favicon.png');
+                    });
+                }
+            }
+        ]
     });
 
     await ctx.rebuild();

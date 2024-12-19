@@ -27,6 +27,9 @@ import ui_redo from '../../assets/ui/redo.png';
 import ui_save from '../../assets/ui/save.png';
 import ui_undo from '../../assets/ui/undo.png';
 
+import app_logo from '../../assets/logo.webp';
+import app_footer from '../../assets/footer.webp';
+
 import main_configure from '../../assets/main/configure.png';
 import main_copy from '../../assets/main/copy.png';
 import main_dashboard from '../../assets/main/dashboard.png';
@@ -53,18 +56,12 @@ import network_work from '../../assets/network/work.png';
 let assets = {};
 let textures = {};
 
-async function loadAssets() {
-    assets.ui = {
-        left: ui_left,
-        right: ui_right,
-        busy: ui_busy,
-        move: ui_move,
-        delete: ui_delete,
-        mouse: ui_mouse,
-        open: ui_open,
-        redo: ui_redo,
-        save: ui_save,
-        undo: ui_undo
+async function loadAssets(prefix) {
+    prefix = prefix.replace(/\/+$/g, '') + '/';
+
+    assets.app = {
+        logo: app_logo,
+        footer: app_footer
     };
 
     assets.main = {
@@ -94,6 +91,19 @@ async function loadAssets() {
         work: network_work
     };
 
+    assets.ui = {
+        left: ui_left,
+        right: ui_right,
+        busy: ui_busy,
+        move: ui_move,
+        delete: ui_delete,
+        mouse: ui_mouse,
+        open: ui_open,
+        redo: ui_redo,
+        save: ui_save,
+        undo: ui_undo
+    };
+
     let categories = Object.keys(assets);
 
     for (let category of categories) {
@@ -102,7 +112,7 @@ async function loadAssets() {
         textures[category] = {};
 
         await Promise.all(keys.map(async key => {
-            let url = 'build/' + assets[category][key];
+            let url = prefix + assets[category][key];
 
             textures[category][key] = await loadTexture(url);
             assets[category][key] = url;

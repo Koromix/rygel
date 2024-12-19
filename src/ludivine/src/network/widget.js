@@ -19,7 +19,7 @@ import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from '../lib/cons
 import { computeAge, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';
 import { assets, textures } from '../lib/assets.js';
-import * as app from '../app.js';
+import * as app from '../ludivine.js';
 
 const TOOLS = {
     move: { title: 'Déplacer', icon: 'move' },

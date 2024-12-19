@@ -92,14 +92,14 @@ let active_mod = null;
 
 let calendar = new SmallCalendar;
 
-async function start(root) {
+async function start(root, prefix) {
     Log.pushHandler(UI.notifyHandler);
 
     // Adapt to viewport
     window.addEventListener('resize', adaptToViewport);
     adaptToViewport();
 
-    await loadAssets();
+    await loadAssets(prefix);
 
     await initSQLite();
     db = await openDatabase(DATABASE_FILENAME, 'c');
@@ -135,7 +135,7 @@ function adaptToViewport() {
 }
 
 async function initSQLite() {
-    let url = './build/sqlite3-worker1-bundler-friendly.js';
+    let url = './static/sqlite3-worker1-bundler-friendly.js';
     await sqlite3.init(url);
 }
 
@@ -306,7 +306,7 @@ async function runDashboard() {
     render(html`
         <nav id="top">
             <menu>
-                <a id="logo" href="https://ldv-recherche.fr/"><img src="assets/logo.webp" alt="Logo Lignes de Vie" /></a>
+                <a id="logo" href="https://ldv-recherche.fr/"><img src=${assets.app.logo} alt="Logo Lignes de Vie" /></a>
             </menu>
         </nav>
 
@@ -423,7 +423,7 @@ async function runDashboard() {
 
         <footer>
             <div>Lignes de Vie © 2024</div>
-            <img src="assets/footer.webp" alt="" width="79" height="64">
+            <img src=${assets.app.footer} alt="" width="79" height="64">
             <div style="font-size: 0.8em;">
                 Cn2r, 103 Bld de la liberté, 59000 LILLE<br>
                 <a href="mailto:contact@cn2r.fr" style="font-weight: bold; color: inherit;">contact@cn2r.fr</a>

@@ -19,7 +19,7 @@ import { AppRunner } from '../../../web/core/runner.js';
 import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
 import * as UI from '../lib/ui.js';
 import { assets } from '../lib/assets.js';
-import * as app from '../app.js';
+import * as app from '../ludivine.js';
 import { NetworkWidget } from './widget.js';
 
 const DATA_VERSION = 1;

@@ -75,7 +75,7 @@
             T = {};
         </script>
 
-        <link rel="stylesheet" href="build/ludivine.css" async/>
+        <link rel="stylesheet" href="static/ludivine.css?buster={{ buster }}" async/>
     </head>
 
     <body>
@@ -105,9 +105,29 @@
 
         <div id="root"></div>
 
-        <script>
+        <script type="module">
             document.body.classList.add('loading');
+
+            import { start } from './static/ludivine.js?buster={{ buster }}';
+
+            run();
+
+            async function run() {
+                try {
+                    let root = document.querySelector('#root');
+                    await start(root, 'static');
+                } catch (err) {
+                    console.error(err);
+
+                    document.body.innerHTML =
+                        '<div id="fatal"><div>' +
+                            '<span style="color: red;">⚠\uFE0E <b>Une erreur est survenue pendant le chargement</b></span><br/>' +
+                            err.message +
+                        '</div></div>';
+                } finally {
+                    document.body.classList.remove('loading');
+                }
+            }
         </script>
-        <script type="module" src="build/ludivine.js"></script>
     </body>
 </html>
