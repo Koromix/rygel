@@ -100,7 +100,7 @@ dialog.right > div { border-radius: 16px 0 16px 16px; }
     }
 }
 
-button { border-radius: 10px; }
+button { border-radius: 20px; }
 
 .buttons {
     margin-top: 2em;
@@ -108,7 +108,7 @@ button { border-radius: 10px; }
     gap: 20px;
 }
 .buttons > a {
-    border-radius: 10px;
+    border-radius: 30px;
     padding: 0.6em 1em;
     font-size: 1.1em;
 }
@@ -139,7 +139,7 @@ button { border-radius: 10px; }
     align-self: start;
     background: #e9a07f;
     color: white;
-    border-radius: 16px;
+    border-radius: 10px;
     z-index: 1;
 }
 .banner > .intro {
