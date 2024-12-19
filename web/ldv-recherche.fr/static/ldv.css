@@ -18,7 +18,7 @@
 
 html {
     --primary_color: #417ad5;
-    --secondary_color: #f6743c;
+    --secondary_color: #e98456;
 
     --top_height: 80px;
     --top_background: #fdfbf8;
@@ -137,7 +137,7 @@ button { border-radius: 10px; }
 .banner > .title {
     padding: 0.8em 1.2em;
     align-self: start;
-    background: #f6743c;
+    background: #e9a07f;
     color: white;
     border-radius: 16px;
     z-index: 1;
@@ -145,7 +145,7 @@ button { border-radius: 10px; }
 .banner > .intro {
     margin: -20px 2em 1em 2em;
     padding: calc(1em + 20px) 1em 1em 1em;
-    border-left: 4px solid #f6743c;
+    border-left: 4px solid #e9a07f;
     border-radius: 0 16px 16px 0;
     background: #fdfbf8;
 }
@@ -189,7 +189,7 @@ p + .columns { margin-top: 2em; }
 }
 .tabbar > a:hover { color: white; }
 .tabbar > a.active {
-    background: #f6743c;
+    background: #e98456;
     cursor: default;
 }
 .tab {
@@ -307,7 +307,7 @@ p + .columns { margin-top: 2em; }
     width: 133px;
     height: 133px;
     border-radius: 50%;
-    border: 4px solid #f6743c;
+    border: 4px solid #e9a07f;
 }
 .team .name {
     font-weight: bold;
