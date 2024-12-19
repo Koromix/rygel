@@ -54,9 +54,11 @@ async function main() {
 }
 
 async function run() {
+    process.chdir(__dirname);
+
     let src_filenames = [
-        './src/game.js',
-        './src/index.html'
+        './src/index.html',
+        './src/game.js'
     ];
 
     let html = {
@@ -100,7 +102,9 @@ async function run() {
                     });
 
                     build.onEnd(result => {
-                        fs.renameSync('./dist/static/index.html', './dist/index.html');
+                        if (fs.existsSync('./dist/static/index.html'))
+                            fs.copyFileSync('./dist/static/index.html', './dist/index.html');
+                        fs.copyFileSync('./assets/staks.png', './dist/favicon.png');
                     });
                 }
             }

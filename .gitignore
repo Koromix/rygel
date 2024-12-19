@@ -25,7 +25,6 @@ package-lock.json
 /web/**/dist/
 
 /src/staks/dist/*
-!/src/staks/dist/favicon.png
 
 /src/drd/drdR/R/
 /src/drd/drdR/src/
