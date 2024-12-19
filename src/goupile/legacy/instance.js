@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg, until } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/core/common.js';
+import { Util, Log, Net, LruMap, Mutex, LocalDate, LocalTime } from '../../web/core/base.js';
 import * as mixer from '../../web/core/mixer.js';
 import * as IDB from '../../web/core/indexedDB.js';
 import { ApplicationInfo, FormInfo, PageInfo, ApplicationBuilder } from './instance_app.js';

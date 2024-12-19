@@ -15,7 +15,7 @@
 
 import fetch from 'node-fetch';
 import querystring from 'querystring';
-import { Util } from '../../../web/core/common.js';
+import { Util } from '../../../web/core/base.js';
 
 function FileInfo(filename = null, buffer = null) {
     this.filename = filename;

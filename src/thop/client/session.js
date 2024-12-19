@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../web/core/common.js';
+import { Util, Log, Net } from '../../web/core/base.js';
 import * as thop from './thop.js';
 import { settings } from './thop.js';
 

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util } from '../../../web/core/common.js';
+import { Util } from '../../../web/core/base.js';
 import { loadTexture } from '../../../web/core/runner.js';
 
 import ui_left from '../../assets/ui/left.png';

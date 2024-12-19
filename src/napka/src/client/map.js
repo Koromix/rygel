@@ -17,7 +17,7 @@
 import { render, html } from '../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../node_modules/lit/directives/unsafe-html.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
-import { Util, Log, Net } from '../../../web/core/common.js';
+import { Util, Log, Net } from '../../../web/core/base.js';
 import { UI } from '../lib/ui.js';
 import * as parse from '../lib/parse.js';
 import { AppRunner } from '../../../web/core/runner.js';

@@ -15,7 +15,7 @@
 
 import { render, html, svg,
          directive, Directive, noChange, nothing } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/core/common.js';
+import { Util, Log, Net, Mutex, LocalDate, LocalTime } from '../../web/core/base.js';
 import { profile } from '../client/goupile.js';
 import * as UI from '../client/ui.js';
 

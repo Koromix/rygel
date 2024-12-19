@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, LocalDate } from '../../web/core/common.js';
+import { Util, Log, LocalDate } from '../../web/core/base.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { SmallCalendar } from '../../web/widgets/smallcalendar.js';
 import { GENDERS } from './lib/constants.js';
@@ -26,6 +26,7 @@ import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
 
 import '../../../vendor/opensans/OpenSans.css';
+
 import './styles/base.css';
 import './styles/base_small.css';
 import './styles/ludivine.css';

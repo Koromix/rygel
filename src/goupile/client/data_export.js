@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util, Log, Net, Mutex, LocalDate } from '../../web/core/common.js';
+import { Util, Log, Net, Mutex, LocalDate } from '../../web/core/base.js';
 import { Base64 } from '../../web/core/mixer.js';
 import * as goupile from './goupile.js';
 import { profile } from './goupile.js';

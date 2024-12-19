@@ -1,5 +1,5 @@
 import { render, html } from '../../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Net } from '../../../../../web/core/common.js';
+import { Util, Net } from '../../../../../web/core/base.js';
 
 const BACKGROUND = '#7f7f7f';
 const WAIT_MIN = 500;

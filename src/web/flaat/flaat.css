@@ -20,6 +20,8 @@
    OTHER DEALINGS IN THE SOFTWARE. */
 
 @import url('../../../vendor/opensans/OpenSans.css');
+@import url('../core/reset.css');
+
 @import url('./normal.css');
 @import url('./small.css');
 @import url('./print.css');
