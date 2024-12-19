@@ -5,7 +5,7 @@
         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin pulvinar, lacus sit amet tempor tincidunt, magna purus lobortis massa, eget consectetur nunc arcu vel lectus. Fusce non suscipit nisl, et euismod tortor.
         <div class="actions">
             <a href="etudes#etude-1-sociotrauma">En savoir plus</a>
-            <a>Participer à l’étude</a>
+            <a class="disabled">Participer à l’étude</a>
         </div>
     </div>
 </div>
@@ -39,7 +39,7 @@ Si vous désirez participer, utilisez notre web-application, créez votre compte
 
 <div class="actions">
     <a href="/etudes">Découvrir nos études</a>
-    <a href="https://beta.goupile.fr/ldv/" target="_blank">Participer</a>
+    <a class="disabled">Participer</a>
 </div>
 
 # Philosophie et protection des données
@@ -57,5 +57,5 @@ Si vous désirez participer, utilisez notre web-application, créez votre compte
 Lorem ipsum dolor sit **amet, consectetur adipiscing elit. Quisque tincidunt**, erat non volutpat convallis, turpis ipsum maximus magna, a aliquam neque leo sit amet orci. Sed vel metus id velit auctor gravida. Integer sit amet velit sit amet purus dictum tincidunt non id turpis. Ut facilisis dolor in nunc congue, **ac fermentum nunc interdum**. Vivamus vel urna eget eros luctus cursus. Nam viverra,
 
 <div class="actions">
-    <a>Soumettre une étude</a>
+    <a class="disabled">Soumettre une étude</a>
 </div>
