@@ -4,7 +4,7 @@
         <div>
             <p class="title">Cohérence cardiaque</p>
             <p>Pratiquez cette <b>technique de respiration</b> simple pour contrôler votre <b>rythme cardiaque</b> et apaiser votre esprit.</p>
-            <div class="buttons">
+            <div class="actions">
                 <a href="/coherence">Commencer</a>
             </div>
         </div>
@@ -14,7 +14,7 @@
         <div>
             <p class="title">Jouez à un jeu</p>
             <p>Lancez une partie de <b>blocs qui tombent</b> pour vous changer les idées !</p>
-            <div class="buttons">
+            <div class="actions">
                 <a href="/staks">Jouer</a>
             </div>
         </div>
@@ -24,7 +24,7 @@
         <div>
             <p class="title">Étirements doux</p>
             <p>Ces exercices simples peuvent être réalisés <b>en toute autonomie</b> et apportent une <b>sensation de légèreté et de bien-être</b>.</p>
-            <div class="buttons">
+            <div class="actions">
                 <a class="disabled">Non disponible</a>
             </div>
         </div>
@@ -34,53 +34,9 @@
         <div>
             <p class="title">Écrivez dans votre journal</p>
             <p>L'écriture expressive est un exercice qui consiste à <b>écrire librement ses pensées</b>, émotions, ou ressentis, sans se soucier de la structure ou de la forme.</p>
-            <div class="buttons">
+            <div class="actions">
                 <a class="disabled">Connectez-vous</a>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .tileset {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1em;
-    }
-    .tile {
-        display: flex;
-        position: relative;
-        min-width: 40%;
-        align-items: end;
-        overflow: hidden;
-        border-radius: 16px;
-    }
-    .tile > img {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: top;
-    }
-    .tile > div {
-        width: 100%;
-        margin-top: 150px;
-        padding: 1em;
-        z-index: 2;
-        background: #ffffff88;
-        backdrop-filter: blur(16px);
-        border-radius: 0 0 16px 16px;
-    }
-    .tile .title {
-        color: #364b9b;
-        text-transform: uppercase;
-        font-size: 1.1em;
-        font-weight: bold;
-    }
-
-    @media screen and (max-width: 960px) {
-        .tileset { flex-direction: column; }
-    }
-</style>

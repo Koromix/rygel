@@ -20,7 +20,9 @@
    OTHER DEALINGS IN THE SOFTWARE. */
 
 html {
-    --anchor_color: var(--primary_color);
+    --top_color: #ccc;
+    --anchor_color: #383838;
+    --button_color: #888;
 
     --top_height: 90px;
     --top_padding: 6px;
@@ -49,7 +51,7 @@ body {
 }
 
 a {
-    color: var(--anchor_color, #383838);
+    color: var(--anchor_color);
     cursor: pointer;
     text-decoration: none;
 }
@@ -101,16 +103,16 @@ a:has(> img) { text-decoration: none !important; }
 }
 #top li > a:hover, #top li.active > a {
     margin-bottom: -1px;
-    border-bottom: 2px solid var(--primary_color);
-    color: var(--primary_color);
+    border-bottom: 2px solid var(--top_color);
+    color: var(--top_color);
 }
 #top li > a.active {
     font-weight: bold;
-    border-bottom-color: var(--primary_color);
-    color: var(--primary_color);
+    border-bottom-color: var(--top_color);
+    color: var(--top_color);
 }
 #top li > div { display: none; }
-.nojs #top li:has(> div):hover, #top li:has(> div).active { border-left-color: var(--primary_color); }
+.nojs #top li:has(> div):hover, #top li:has(> div).active { border-left-color: var(--top_color); }
 .nojs #top li:has(> div):hover > a, #top li:has(> div).active > a {
     margin-bottom: 1px;
     border-bottom: none;
@@ -124,8 +126,8 @@ a:has(> img) { text-decoration: none !important; }
     display: flex;
     flex-direction: column;
     background: var(--top_background);
-    border-left: 2px solid var(--primary_color);
-    border-bottom: 2px solid var(--primary_color);
+    border-left: 2px solid var(--top_color);
+    border-bottom: 2px solid var(--top_color);
 }
 #top li > div > a { margin-top: 3px; }
 #top li > div > a.active { font-weight: bold; }
@@ -260,13 +262,13 @@ table + div.legend {
 
 button {
     padding: 0.6em 1em;
-    background: var(--secondary_color);
+    background: var(--button_color);
     border: none;
     color: white;
     cursor: pointer;
 }
 button:hover {
-    filter: brightness(80%) contrast(150%);
+    background: color-mix(in srgb, var(--button_color) 90%, black);
     color: white;
 }
 button::disabled {
@@ -279,28 +281,28 @@ button > img {
     transform: translateY(2px);
 }
 
-.buttons {
+.actions {
     margin: 1em 0;
     display: flex;
     gap: 20px;
     justify-content: center;
     flex-wrap: wrap;
 }
-.buttons > a {
+.actions > a {
     display: block;
     width: 30%;
     min-width: 10em;
-    background: var(--secondary_color);
+    background: var(--button_color);
     color: white;
     padding: 0.6em 1em;
     text-decoration: none;
     text-align: center;
 }
-.buttons > a:hover {
-    filter: brightness(80%) contrast(150%);
+.actions > a:hover {
+    background: color-mix(in srgb, var(--button_color) 90%, black);
     color: white;
 }
-.buttons > a.disabled {
+.actions > a.disabled {
     pointer-events: none;
     filter: saturate(10%);
 }

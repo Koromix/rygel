@@ -20,7 +20,7 @@ html {
     --top_height: 70px;
     --small_height: 70px;
 
-    --primary_color: #383838;
+    --top_color: #383838;
 }
 
 main a { text-decoration: underline; }

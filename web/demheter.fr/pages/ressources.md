@@ -12,7 +12,7 @@
 
 Consultez le site de la [Fondation FondaMental](https://www.fondation-fondamental.org/) pour en apprendre davantage.
 
-<div class="buttons">
+<div class="actions">
     <a href="https://www.fondation-fondamental.org/les-maladies-mentales/les-troubles-bipolaires" target="_blank">Troubles bipolaires</a>
     <a href="https://www.fondation-fondamental.org/les-maladies-mentales/depression-resistante" target="_blank">Dépression résistante</a>
 </div>
@@ -21,7 +21,7 @@ Consultez le site de la [Fondation FondaMental](https://www.fondation-fondamenta
 
 Le site [Psychiaclic](https://psychiaclic.org) met à disposition des fiches synthétiques d'aide au diagnostic et à la prise en charge.
 
-<div class="buttons">
+<div class="actions">
     <a href="https://www.psychiaclic.fr/troubles-psychiatriques/trouble-bipolaire" target="_blank">Troubles bipolaires</a>
     <a href="https://www.psychiaclic.fr/aide-diagnostic/humeur-affect" target="_blank">Dépression et troubles de l'humeur</a>
 </div>
@@ -57,7 +57,7 @@ Apprenez à identifier la catatonie (ou syndrome catatonique) grâce aux vidéos
 
 Le site [tccmontreal.com](https://tccmontreal.com) fournit des guides de pratique pour les thérapeutes selon les diagnostics.
 
-<div class="buttons">
+<div class="actions">
     <a href="https://tccmontreal.com/guides-de-pratique-selon-les-diagnostics/" target="_blank">Guides de pratique TCC Montréal</a>
 </div>
 

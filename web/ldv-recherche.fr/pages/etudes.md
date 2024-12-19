@@ -27,7 +27,7 @@
     <img src="{{ ASSET static/misc/hands.webp }}" style="flex: 1;" alt="" />
 </div>
 
-<div class="buttons">
+<div class="actions">
     <a>Participer à cette étude</a>
     <a class="disabled">Résultats bientôts disponibles</a>
 </div>
@@ -42,7 +42,7 @@
     </div>
 </div>
 
-<div class="buttons">
+<div class="actions">
     <a>Participer à cette étude</a>
     <a class="disabled">Résultats bientôts disponibles</a>
 </div>

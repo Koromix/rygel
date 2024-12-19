@@ -9,7 +9,7 @@ Ce projet est sponsorisé par NLnet : https://nlnet.nl/project/Goupile/
 
 Vous pouvez tester certaines fonctionnalités dans notre instance de démonstration en ligne :
 
-<div class="buttons">
+<div class="actions">
     <a href="https://demo.goupile.fr/" target="_blank">Démonstration en ligne</a>
 </div>
 

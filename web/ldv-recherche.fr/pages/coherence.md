@@ -6,7 +6,7 @@
     function menu() {
         render(html`
             <p>Relaxez-vous en alternant des <b>inspirations et des expirations profondes</b> toutes les 5 secondes.</p>
-            <div class="buttons" style="flex-direction: column;">
+            <div class="actions" style="flex-direction: column;">
                 <a @click=${e => run(60)}>1 minute</a>
                 <a @click=${e => run(180)}>3 minutes</a>
                 <a @click=${e => run(300)}>5 minutes</a>
@@ -56,7 +56,7 @@
     function end() {
         render(html`
             <p>C'est terminé, mais n'hésitez pas à répéter cet exercice <b>autant de fois que nécessaire</b> !</p>
-            <div class="buttons" style="flex-direction: column;">
+            <div class="actions" style="flex-direction: column;">
                 <a @click=${menu}>Recommencer</a>
             </div>
         `, root);

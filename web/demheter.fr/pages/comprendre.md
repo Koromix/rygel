@@ -10,7 +10,7 @@
 
 Le site de [Psycom](https://www.psycom.org/) peut vous aider à vous orienter et fournit des outils pratiques.
 
-<div class="buttons">
+<div class="actions">
     <a href="https://www.psycom.org/sorienter/" target="_blank">Ressources pour s'orienter</a>
     <a href="https://www.psycom.org/agir/" target="_blank">Outils pratiques</a>
 </div>

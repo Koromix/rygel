@@ -17,8 +17,9 @@
 @import url('print.css');
 
 html {
-    --primary_color: #ff6600;
-    --secondary_color: #4b9596;
+    --top_color: #ff6600;
+    --anchor_color: #4b9596;
+    --button_color: #4b9596;
 
     --top_height: 120px;
     --top_padding: 16px;
@@ -60,7 +61,7 @@ span[title] { border-bottom: 1px dotted #383838; }
     margin: 1em auto;
     padding: 0.5em;
     border-top: none;
-    border-left: 2px solid var(--primary_color);
+    border-left: 2px solid #ffb963;
     border-radius: 2px;
     box-shadow: 0 0.2rem 0.5rem rgba(0, 0, 0, 0.05),0 0 .0625rem rgba(0, 0, 0, 0.1);
 }
