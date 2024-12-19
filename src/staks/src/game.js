@@ -113,8 +113,8 @@ let text_lines = null;
 // Init
 // ------------------------------------------------------------------------
 
-async function start(root, prefix) {
-    await loadAssets(prefix);
+async function load(prefix, progress = null) {
+    await loadAssets(prefix, progress);
 
     loadSettings();
 
@@ -125,7 +125,9 @@ async function start(root, prefix) {
         block.top = block.size - Math.floor(trail / block.size);
         block.bottom = Math.floor(lead / block.size);
     }
+}
 
+async function start(root) {
     render(html`
         <div class="stk_game">
             <div class="stk_attributions">
@@ -1431,4 +1433,7 @@ function testShape(size, shape, i, j) {
     return hit;
 }
 
-export { start }
+export {
+    load,
+    start
+}

@@ -16,8 +16,8 @@
                 height: 100%;
                 margin: 0;
                 padding: 0;
-                background-color: white;
-                color: #262626;
+                background-color: #262626;
+                color: white;
                 font-family: 'Open Sans', sans-serif;
                 font-size: 18px;
                 align-items: center;
@@ -33,16 +33,25 @@
             .loading::after {
                 content: ' ';
                 display: block;
-                width: 48px;
-                height: 48px;
+                width: 80px;
+                height: 80px;
                 margin: 1px;
                 border-radius: 50%;
-                border: 12px solid #262626;
-                border-color: #262626 transparent #262626 transparent;
-                animation: spinner 0.8s ease-in-out infinite;
+                border: 12px solid white;
+                border-color: white transparent white transparent;
+                animation: spin 1.6s ease-in-out infinite;
             }
-            .loading > * { display: none !important; }
-            @keyframes spinner {
+            .loading > main {
+                position: absolute;
+                left: 0;
+                height: 0;
+                z-index: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            @keyframes spin {
                 0% { transform: rotate(0deg); }
                 100% { transform: rotate(360deg); }
             }
@@ -57,7 +66,7 @@
             }
         </style>
 
-        <link rel="stylesheet" href="{{ ASSET static/staks/game.css }}" async/>
+        <link rel="stylesheet" href="{{ ASSET static/staks/game.css }}" />
     </head>
 
     <body>
@@ -88,14 +97,21 @@
         <script type="module">
             document.body.classList.add('loading');
 
-            import { start } from './{{ ASSET static/staks/game.js }}';
+            import { load, start } from './{{ ASSET static/staks/game.js }}';
 
             run();
 
             async function run() {
                 try {
                     let main = document.querySelector('main');
-                    await start(main, 'static/staks');
+
+                    await load('static/staks', (value, total) => {
+                        let progress = Math.floor(value / total * 100);
+                        main.innerHTML = progress + '%';
+                    });
+                    main.innerHTML = '';
+
+                    await start(main);
                 } catch (err) {
                     console.error(err);
 

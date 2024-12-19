@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { Util } from '../../web/core/common.js';
 import { loadTexture, loadSound } from '../../web/core/runner.js';
 
 // Aurora Night by psiipilehto: https://www.deviantart.com/psiipilehto/art/Aurora-Night-608184628
@@ -62,8 +63,11 @@ import ui_turbo from '../assets/ui/turbo.png';
 
 let assets = {};
 
-async function loadAssets(prefix) {
-    prefix = prefix.replace(/\/+$/g, '');
+async function loadAssets(prefix, progress) {
+    prefix = prefix.replace(/\/+$/g, '') + '/';
+
+    if (progress == null)
+        progress = (value, total) => {};
 
     assets.backgrounds = {
         aurora: backgrounds_aurora,
@@ -106,16 +110,25 @@ async function loadAssets(prefix) {
 
     let objects = Object.values(assets);
     let resources = objects.flatMap(obj => Object.keys(obj).map(key => ({ obj, key })));
+    let downloaded = 0;
 
-    await Promise.all(resources.map(async res => {
-        let url = prefix + '/' + res.obj[res.key];
+    resources = Util.shuffle(resources);
 
-        if (url.endsWith('.png') || url.endsWith('.webp')) {
-            res.obj[res.key] = await loadTexture(url);
-        } else if (url.endsWith('.mp3')) {
-            res.obj[res.key] = await loadSound(url);
-        } else {
-            throw new Error(`Unknown resource type for '${url}'`);
+    await Promise.all(Util.mapRange(0, 3, async start => {
+        for (let i = start; i < resources.length; i += 3) {
+            let res = resources[i];
+            let url = prefix + res.obj[res.key];
+
+            if (url.endsWith('.png') || url.endsWith('.webp')) {
+                res.obj[res.key] = await loadTexture(url);
+            } else if (url.endsWith('.mp3')) {
+                res.obj[res.key] = await loadSound(url);
+            } else {
+                throw new Error(`Unknown resource type for '${url}'`);
+            }
+
+            downloaded++;
+            progress(downloaded, resources.length);
         }
     }));
 }
