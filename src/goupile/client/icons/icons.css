@@ -24,6 +24,7 @@ button.icon { text-align: right; }
 .icon.archives { background-image: url('archives.webp'); }
 .icon.code { background-image: url('code.webp'); }
 .icon.data { background-image: url('data.webp'); }
+.icon.design { background-image: url('design.webp'); }
 .icon.down { background-image: url('down.webp'); }
 .icon.dual { background-image: url('dual.webp'); }
 .icon.home { background-image: url('home.webp'); }

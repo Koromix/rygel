@@ -204,7 +204,7 @@ function renderMenu() {
         <nav class=${goupile.isLocked() ? 'ui_toolbar locked' : 'ui_toolbar'} id="ui_top" style="z-index: 999999;">
             ${goupile.hasPermission('build_code') ? html`
                 <div class="drop">
-                    <button class=${'icon code' + (profile.develop ? ' active' : '')}
+                    <button class=${'icon design' + (profile.develop ? ' active' : '')}
                             @click=${UI.deployMenu}>Conception</button>
                     <div>
                         <button class=${profile.develop ? 'active' : ''}
