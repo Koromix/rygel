@@ -234,8 +234,8 @@ p + .columns { margin-top: 2em; }
     backdrop-filter: blur(16px);
 }
 .card .title {
-    color: var(--anchor_color);
     font-weight: bold;
+    color: #364b9b;
 }
 
 .js .cardset { height: 400px; }
@@ -291,10 +291,9 @@ p + .columns { margin-top: 2em; }
     border-radius: 0 0 16px 16px;
 }
 .tile .title {
-    color: #364b9b;
     text-transform: uppercase;
-    font-size: 1.1em;
     font-weight: bold;
+    color: #364b9b;
 }
 
 @media screen and (max-width: 960px) {
