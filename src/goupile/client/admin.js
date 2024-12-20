@@ -517,14 +517,14 @@ function runConfigureInstanceDialog(e, instance) {
                     });
                 });
 
-                if (profile.root && instance.legacy) {
+                /* if (profile.root && instance.legacy) {
                     d.tab('Migration', () => {
                         d.output(html`
                             <p>Attention, la migration en V3 est susceptible d'entrainer des <span style="color: red; font-weight: bold;">bugs et une perte de données</span> !</p>
                             <button type="button" @click=${UI.wrap(e => runMigrateDialog(e, instance))}>Migrer en V3</button>
                         `);
                     });
-                }
+                } */
             });
 
             d.action('Configurer', { disabled: !d.isValid() }, async () => {
