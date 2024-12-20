@@ -90,6 +90,11 @@ dialog.right > div { border-radius: 16px 0 16px 16px; }
 
 button { border-radius: 20px; }
 
+.insist {
+    font-weight: bold;
+    color: #364b9b;
+}
+
 .actions {
     margin-top: 2em;
     justify-content: space-evenly;
@@ -233,10 +238,6 @@ p + .columns { margin-top: 2em; }
     background: #ffffff88;
     backdrop-filter: blur(16px);
 }
-.card .title {
-    font-weight: bold;
-    color: #364b9b;
-}
 
 .js .cardset { height: 400px; }
 .js .card {
@@ -289,11 +290,6 @@ p + .columns { margin-top: 2em; }
     background: #ffffff88;
     backdrop-filter: blur(16px);
     border-radius: 0 0 16px 16px;
-}
-.tile .title {
-    text-transform: uppercase;
-    font-weight: bold;
-    color: #364b9b;
 }
 
 @media screen and (max-width: 960px) {

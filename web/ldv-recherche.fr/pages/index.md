@@ -1,7 +1,7 @@
 <div class="banner">
     <div class="title">À la une</div>
     <div class="intro">
-        <p><b>L'étude SocioTrauma est en ligne !</b>
+        <p class="insist">L'étude SocioTrauma est en ligne !
         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Proin pulvinar, lacus sit amet tempor tincidunt, magna purus lobortis massa, eget consectetur nunc arcu vel lectus. Fusce non suscipit nisl, et euismod tortor.
         <div class="actions">
             <a href="etudes#etude-1-sociotrauma">En savoir plus</a>
