@@ -2,6 +2,13 @@
 
 ## Goupile 3.8
 
+### Goupile 3.8.1 (20/12/2024)
+
+- Retrait du bouton « Enregistrer » si le bouton « Suivant » est affiché
+- Correction d'un bug de concurrence entre la sauvegarde automatique et la confirmation dans les anciennes instances
+- Utilisation de la nouvelle icône de conception (plutôt que code) dans les anciennes instances
+- Mise à jour des exigences relatives à la version du navigateur
+
 ### Goupile 3.8.0 (20/12/2024)
 
 - Suppression du droit utilisateur *New* en faveur de l'option de page `claim`

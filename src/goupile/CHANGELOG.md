@@ -2,7 +2,14 @@
 
 ## Goupile 3.8
 
-### Goupile 3.8.0  (2024-12-20)
+### Goupile 3.8.1 (2024-12-20)
+
+- Skip confusing Save button when Next is available
+- Fix concurrency issue between autosave and confirm in legacy instances
+- Replace code icon with design icon in legacy instances
+- Update browser version requirements
+
+### Goupile 3.8.0 (2024-12-20)
 
 - Drop *New* user permission in favor of page `claim` option
 - Improve support for dynamic `enabled` page option
