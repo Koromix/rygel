@@ -103,7 +103,7 @@ async function run() {
 
                     build.onEnd(result => {
                         if (fs.existsSync('./dist/static/index.html'))
-                            fs.copyFileSync('./dist/static/index.html', './dist/index.html');
+                            fs.renameSync('./dist/static/index.html', './dist/index.html');
                         fs.copyFileSync('./assets/staks.png', './dist/favicon.png');
                     });
                 }
