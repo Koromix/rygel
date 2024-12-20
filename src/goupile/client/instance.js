@@ -999,7 +999,7 @@ function addAutomaticActions(builder, model) {
                 form_builder.triggerErrors();
 
                 await data_mutex.run(async () => {
-                    let keep_open = goupile.hasPermission('data_read') || form_meta.claim;
+                    let keep_open = goupile.hasPermission('data_read') || route.page.claim;
 
                     await saveRecord(form_thread.tid, form_entry, form_data, form_meta);
 
@@ -2103,7 +2103,7 @@ async function saveRecord(tid, entry, data, meta) {
         entry.tags = Array.from(tags);
     }
 
-    await records.save(tid, entry, ENV.version, meta.constraints, meta.claim, meta.signup);
+    await records.save(tid, entry, ENV.version, meta.constraints, route.page.claim, meta.signup);
 
     if (!profile.userid) {
         window.onbeforeunload = null;

@@ -51,6 +51,7 @@ function ApplicationBuilder(app) {
             sequence: false,
             progress: true,
             enabled: true,
+            claim: true,
             icon: null,
             help: null,
         }
@@ -68,6 +69,7 @@ function ApplicationBuilder(app) {
         sequence: makeOptionProperty('sequence'),
         progress: makeOptionProperty('progress'),
         enabled: makeOptionProperty('enabled'),
+        claim: makeOptionProperty('claim'),
         icon: makeOptionProperty('icon'),
         help: makeOptionProperty('help')
     });
