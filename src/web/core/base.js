@@ -14,39 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 // ------------------------------------------------------------------------
-// Compatibility
-// ------------------------------------------------------------------------
-
-if (String.prototype.format == null) {
-    String.prototype.format = function(...args) {
-        let str = this.replace(/{(\d+)}/g, (match, idx) => {
-            idx = parseInt(idx, 10) - 1;
-
-            if (idx >= args.length)
-                return match;
-
-            let arg = args[idx];
-            return (arg != null) ? arg : '';
-        });
-
-        return str;
-    }
-}
-
-if (typeof Blob !== 'undefined' && !Blob.prototype.text) {
-    Blob.prototype.text = function() {
-        return new Promise((resolve, reject) => {
-            var reader = new FileReader;
-
-            reader.onload = e => resolve(e.target.result);
-            reader.onerror = e => reject(new Error(e.target.error));
-
-            reader.readAsText(this);
-        });
-    };
-}
-
-// ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
 
