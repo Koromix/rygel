@@ -842,8 +842,7 @@ function renderPage() {
 
             nav_sequence = {
                 prev: null,
-                next: null,
-                stay: true
+                next: null
             };
 
             if (sequence != null) {
@@ -852,19 +851,15 @@ function renderPage() {
                 if (idx - 1 >= 0) {
                     let page = app.pages.get(sequence[idx - 1]);
 
-                    if (page != null) {
+                    if (page != null)
                         nav_sequence.prev = page.url;
-                        nav_sequence.stay = form_record.saved;
-                    }
                 }
 
                 if (idx >= 0 && idx + 1 < sequence.length) {
                     let page = app.pages.get(sequence[idx + 1]);
 
-                    if (page != null) {
+                    if (page != null)
                         nav_sequence.next = page.url;
-                        nav_sequence.stay = form_record.saved;
-                    }
                 }
             }
         }
@@ -984,11 +979,8 @@ function renderPage() {
                         go(e, url);
                     });
                 }
-
-                if (nav_sequence.stay)
-                    form_builder.action('-');
             }
-            if (nav_sequence.stay || nav_sequence.next == null) {
+            if (nav_sequence.next == null) {
                 let name = (!form_record.saved || form_state.hasChanged()) ? 'Enregistrer' : '✓ Enregistré';
 
                 form_builder.action(name, {disabled: !form_state.hasChanged(),
