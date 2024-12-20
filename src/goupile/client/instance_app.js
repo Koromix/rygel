@@ -52,8 +52,9 @@ function ApplicationBuilder(app) {
             progress: true,
             enabled: true,
             claim: true,
+            confirm: null,
             icon: null,
-            help: null,
+            help: null
         }
     ];
 
@@ -70,6 +71,7 @@ function ApplicationBuilder(app) {
         progress: makeOptionProperty('progress'),
         enabled: makeOptionProperty('enabled'),
         claim: makeOptionProperty('claim'),
+        confirm: makeOptionProperty('confirm'),
         icon: makeOptionProperty('icon'),
         help: makeOptionProperty('help')
     });
