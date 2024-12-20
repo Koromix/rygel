@@ -1,5 +1,91 @@
 # Changelog
 
+## 0.24.1
+
+* Allow `es2024` as a target in `tsconfig.json` ([#4004](https://github.com/evanw/esbuild/issues/4004))
+
+    TypeScript recently [added `es2024`](https://devblogs.microsoft.com/typescript/announcing-typescript-5-7/#support-for---target-es2024-and---lib-es2024) as a compilation target, so esbuild now supports this in the `target` field of `tsconfig.json` files, such as in the following configuration file:
+
+    ```json
+    {
+      "compilerOptions": {
+        "target": "ES2024"
+      }
+    }
+    ```
+
+    As a reminder, the only thing that esbuild uses this field for is determining whether or not to use legacy TypeScript behavior for class fields. You can read more in [the documentation](https://esbuild.github.io/content-types/#tsconfig-json).
+
+    This fix was contributed by [@billyjanitsch](https://github.com/billyjanitsch).
+
+* Allow automatic semicolon insertion after `get`/`set`
+
+    This change fixes a grammar bug in the parser that incorrectly treated the following code as a syntax error:
+
+    ```ts
+    class Foo {
+      get
+      *x() {}
+      set
+      *y() {}
+    }
+    ```
+
+    The above code will be considered valid starting with this release. This change to esbuild follows a [similar change to TypeScript](https://github.com/microsoft/TypeScript/pull/60225) which will allow this syntax starting with TypeScript 5.7.
+
+* Allow quoted property names in `--define` and `--pure` ([#4008](https://github.com/evanw/esbuild/issues/4008))
+
+    The `define` and `pure` API options now accept identifier expressions containing quoted property names. Previously all identifiers in the identifier expression had to be bare identifiers. This change now makes `--define` and `--pure` consistent with `--global-name`, which already supported quoted property names. For example, the following is now possible:
+
+    ```js
+    // The following code now transforms to "return true;\n"
+    console.log(esbuild.transformSync(
+      `return process.env['SOME-TEST-VAR']`,
+      { define: { 'process.env["SOME-TEST-VAR"]': 'true' } },
+    ))
+    ```
+
+    Note that if you're passing values like this on the command line using esbuild's `--define` flag, then you'll need to know how to escape quote characters for your shell. You may find esbuild's JavaScript API more ergonomic and portable than writing shell code.
+
+* Minify empty `try`/`catch`/`finally` blocks ([#4003](https://github.com/evanw/esbuild/issues/4003))
+
+    With this release, esbuild will now attempt to minify empty `try` blocks:
+
+    ```js
+    // Original code
+    try {} catch { foo() } finally { bar() }
+
+    // Old output (with --minify)
+    try{}catch{foo()}finally{bar()}
+
+    // New output (with --minify)
+    bar();
+    ```
+
+    This can sometimes expose additional minification opportunities.
+
+* Include `entryPoint` metadata for the `copy` loader ([#3985](https://github.com/evanw/esbuild/issues/3985))
+
+    Almost all entry points already include a `entryPoint` field in the `outputs` map in esbuild's build metadata. However, this wasn't the case for the `copy` loader as that loader is a special-case that doesn't behave like other loaders. This release adds the `entryPoint` field in this case.
+
+* Source mappings may now contain `null` entries ([#3310](https://github.com/evanw/esbuild/issues/3310), [#3878](https://github.com/evanw/esbuild/issues/3878))
+
+    With this change, sources that result in an empty source map may now emit a `null` source mapping (i.e. one with a generated position but without a source index or original position). This change improves source map accuracy by fixing a problem where minified code from a source without any source mappings could potentially still be associated with a mapping from another source file earlier in the generated output on the same minified line. It manifests as nonsensical files in source mapped stack traces. Now the `null` mapping "resets" the source map so that any lookups into the minified code without any mappings resolves to `null` (which appears as the output file in stack traces) instead of the incorrect source file.
+
+    This change shouldn't affect anything in most situations. I'm only mentioning it in the release notes in case it introduces a bug with source mapping. It's part of a work-in-progress future feature that will let you omit certain unimportant files from the generated source map to reduce source map size.
+
+* Avoid using the parent directory name for determinism ([#3998](https://github.com/evanw/esbuild/issues/3998))
+
+    To make generated code more readable, esbuild includes the name of the source file when generating certain variable names within the file. Specifically bundling a CommonJS file generates a variable to store the lazily-evaluated module initializer. However, if a file is named `index.js` (or with a different extension), esbuild will use the name of the parent directory instead for a better name (since many packages have files all named `index.js` but have unique directory names).
+
+    This is problematic when the bundle entry point is named `index.js` and the parent directory name is non-deterministic (e.g. a temporary directory created by a build script). To avoid non-determinism in esbuild's output, esbuild will now use `index` instead of the parent directory in this case. Specifically this will happen if the parent directory is equal to esbuild's `outbase` API option, which defaults to the [lowest common ancestor](https://en.wikipedia.org/wiki/Lowest_common_ancestor) of all user-specified entry point paths.
+
+* Experimental support for esbuild on NetBSD ([#3974](https://github.com/evanw/esbuild/pull/3974))
+
+    With this release, esbuild now has a published binary executable for [NetBSD](https://www.netbsd.org/) in the [`@esbuild/netbsd-arm64`](https://www.npmjs.com/package/@esbuild/netbsd-arm64) npm package, and esbuild's installer has been modified to attempt to use it when on NetBSD. Hopefully this makes installing esbuild via npm work on NetBSD. This change was contributed by [@bsiegert](https://github.com/bsiegert).
+
+    ⚠️ Note: NetBSD is not one of [Node's supported platforms](https://nodejs.org/api/process.html#process_process_platform), so installing esbuild may or may not work on NetBSD depending on how Node has been patched. This is not a problem with esbuild. ⚠️
+
 ## 0.24.0
 
 **_This release deliberately contains backwards-incompatible changes._** To avoid automatically picking up releases like this, you should either be pinning the exact version of `esbuild` in your `package.json` file (recommended) or be using a version range syntax that only accepts patch upgrades such as `^0.23.0` or `~0.23.0`. See npm's documentation about [semver](https://docs.npmjs.com/cli/v6/using-npm/semver/) for more information.
