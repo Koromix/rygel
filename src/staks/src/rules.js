@@ -44,26 +44,14 @@ const kicks_O = [
     [[0, 0]]
 ];
 
-const COLORS = [
-    null, // Color 0 is invalid
-
-    '#3dd6ff',
-    '#1e4fc2',
-    '#ff8a2b',
-    '#ffd900',
-    '#55ec55',
-    '#c73daf',
-    '#f40812'
-];
-
 const BLOCKS = [
-    { type: 'I', color: 1, size: 4, shape: 0b0000_0000_1111_0000, kicks: kicks_I },
-    { type: 'J', color: 2, size: 3, shape: 0b000_111_100, kicks: kicks_JLTSZ },
-    { type: 'L', color: 3, size: 3, shape: 0b000_111_001, kicks: kicks_JLTSZ },
-    { type: 'O', color: 4, size: 2, shape: 0b11_11, kicks: kicks_O },
-    { type: 'S', color: 5, size: 3, shape: 0b000_110_011, kicks: kicks_JLTSZ },
-    { type: 'T', color: 6, size: 3, shape: 0b000_111_010, kicks: kicks_JLTSZ },
-    { type: 'Z', color: 7, size: 3, shape: 0b000_011_110, kicks: kicks_JLTSZ }
+    { type: 'I', color: '#3dd6ff', size: 4, shape: 0b0000_0000_1111_0000, kicks: kicks_I },
+    { type: 'J', color: '#1e4fc2', size: 3, shape: 0b000_111_100, kicks: kicks_JLTSZ },
+    { type: 'L', color: '#ff8a2b', size: 3, shape: 0b000_111_001, kicks: kicks_JLTSZ },
+    { type: 'O', color: '#ffd900', size: 2, shape: 0b11_11, kicks: kicks_O },
+    { type: 'S', color: '#55ec55', size: 3, shape: 0b000_110_011, kicks: kicks_JLTSZ },
+    { type: 'T', color: '#c73daf', size: 3, shape: 0b000_111_010, kicks: kicks_JLTSZ },
+    { type: 'Z', color: '#f40812', size: 3, shape: 0b000_011_110, kicks: kicks_JLTSZ }
 ];
 
 export {
@@ -79,6 +67,5 @@ export {
     LOCK_DELAY,
     MAX_ACTIONS,
 
-    COLORS,
     BLOCKS
 };

@@ -69,7 +69,7 @@ let now = null;
 
 // Game state
 let pause = false;
-let stack = new Uint8Array((rules.ROWS + rules.EXTRA_ROWS) * rules.COLUMNS);
+let stack = new Int8Array((rules.ROWS + rules.EXTRA_ROWS) * rules.COLUMNS);
 let bag = null;
 let piece = null;
 let hold_block = null;
@@ -118,9 +118,13 @@ async function load(prefix, progress = null) {
 
     loadSettings();
 
-    for (let block of rules.BLOCKS) {
+    for (let i = 0; i < rules.BLOCKS.length; i++) {
+        let block = rules.BLOCKS[i];
+
         let trail = ctz(block.shape);
         let lead = clz(block.shape) - (32 - block.size * block.size);
+
+        block.value = i;
 
         block.top = block.size - Math.floor(trail / block.size);
         block.bottom = Math.floor(lead / block.size);
@@ -192,7 +196,7 @@ function play() {
     game_mode = 'play';
 
     pause = false;
-    stack.fill(0);
+    stack.fill(-1);
     bag = [];
     piece = null;
     hold_block = null;
@@ -740,7 +744,7 @@ function updateGame() {
     // Clear stack and score
     if (piece == null) {
         let clears = clearStack();
-        let perfect = stack.every(value => !value);
+        let perfect = stack.every(value => value < 0);
 
         let action = 0;
 
@@ -848,7 +852,7 @@ function lockPiece() {
             let column = piece.column + j;
             let idx = (row * rules.COLUMNS) + column;
 
-            stack[idx] = piece.color;
+            stack[idx] = piece.value;
         }
     }
 
@@ -876,7 +880,7 @@ function isPieceValid(piece, strict) {
             let column = piece.column + j;
             let idx = (row * rules.COLUMNS) + column;
 
-            if (stack[idx])
+            if (stack[idx] >= 0)
                 return false;
 
             bottom = Math.min(bottom, row);
@@ -966,8 +970,8 @@ function detectTSpin(piece) {
             let column = piece.column + j;
             let idx = (row * rules.COLUMNS) + column;
 
-            major += testShape(3, front, i, j) && stack[idx];
-            minor += testShape(3, back, i, j) && stack[idx];
+            major += testShape(3, front, i, j) && (stack[idx] >= 0);
+            minor += testShape(3, back, i, j) && (stack[idx] >= 0);
         }
     }
 
@@ -1004,7 +1008,7 @@ function isRowFull(row) {
     for (let column = 0; column < rules.COLUMNS; column++) {
         let idx = (row * rules.COLUMNS) + column;
 
-        if (!stack[idx])
+        if (stack[idx] < 0)
             return false;
     }
 
@@ -1149,14 +1153,14 @@ function drawWell() {
     for (let i = 0; i < stack.length; i++) {
         let value = stack[i];
 
-        if (value) {
+        if (value >= 0) {
             let row = Math.floor(i / rules.COLUMNS);
             let column = i % rules.COLUMNS;
 
             let x = column * layout.square;
             let y = (rules.ROWS - row - 1) * layout.square;
 
-            let color = rules.COLORS[value];
+            let color = rules.BLOCKS[value].color;
             drawSquare(x, y, layout.square, color);
         }
     }
@@ -1210,8 +1214,7 @@ function drawBag() {
             let x = layout.bag.width / 2 - (block.size * square) / 2;
             let y = top * square;
 
-            let color = rules.COLORS[block.color];
-            drawShape(x, y, block.size, block.shape, square, color);
+            drawShape(x, y, block.size, block.shape, square, block.color);
         }
     }
 
@@ -1264,8 +1267,7 @@ function drawHold() {
         let x = layout.hold.width / 2 - (block.size * square) / 2;
         let y = top * square;
 
-        let color = rules.COLORS[block.color];
-        drawShape(x, y, block.size, block.shape, square, color);
+        drawShape(x, y, block.size, block.shape, square, block.color);
     }
 
     ctx.restore();
@@ -1327,7 +1329,7 @@ function drawArea(x, y, width, height) {
 
 function drawPiece(piece, color = null) {
     if (color == null)
-        color = rules.COLORS[piece.color];
+        color = piece.color;
 
     let x = piece.column * layout.square;
     let y = (rules.ROWS - piece.row - piece.size) * layout.square;
