@@ -1,5 +1,21 @@
 # Historique des versions
 
+## Goupile 3.8
+
+### Goupile 3.8.0 (20/12/2024)
+
+- Suppression du droit utilisateur *New* en faveur de l'option de page `claim`
+- Amélioration de la prise en charge de l'activation dynamique des pages avec `enabled`
+- Ajout d'une confirmation optionnelle lors de l'enregistrement (option `confirm`)
+- Affichage du suffixe d'état dans le menu de gauche même en verrouillage
+- Utilisation d'icônes différentes pour le menu de conception et le panneau de code
+- Correction d'une erreur empêchant la suppression de l'email ou du téléphone d'un utilisateur
+- Correction du blocage du chargement lorsque l'enregistrement n'existe pas
+- Correction de la boîte de dialogue erronée « confirmer les modifications » après un changement de code
+- Suppression du filtre et des options d'export mal conçus
+- Réduction des erreurs inattendues causées par des modifications de fichiers en double
+- Réduction des erreurs (sans danger) « single SQLite value » lors de la modification d'anciens enregistrements
+
 ## Goupile 3.7
 
 ### Goupile 3.7.7 (23/11/2024)

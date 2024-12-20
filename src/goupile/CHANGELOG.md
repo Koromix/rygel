@@ -1,5 +1,21 @@
 # Goupile changelog
 
+## Goupile 3.8
+
+### Goupile 3.8.0  (2024-12-20)
+
+- Drop *New* user permission in favor of page `claim` option
+- Improve support for dynamic `enabled` page option
+- Add support for optional confirmation when saving page (option `confirm`)
+- Always show status suffix in left menu
+- Use different icons for conception menu and code panel
+- Fix error when emptying user email or phone
+- Fix stuck loading when record does not exist
+- Avoid erroneous "confirm changes" dialog after code change
+- Drop ill-designed export filter and dialog options
+- Reduce unexpected errors caused by duplicate file changes
+- Avoid noisy "single SQLite value" error when saving legacy records
+
 ## Goupile 3.7
 
 ### Goupile 3.7.7 (2024-11-23)
