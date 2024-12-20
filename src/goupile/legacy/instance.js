@@ -1354,17 +1354,17 @@ async function saveRecord(e, record, hid, values, page, options = {}) {
     if (isReadOnly(record))
         throw new Error('You are not allowed to save data');
 
-    let silent = options.silent ?? false;
-    let claim = (options.stay ?? true) || page.getOption('claim', record, true);
-    let confirm = (options.confirm ?? !silent) && page.getOption('confirm', record, !claim);
-
-    if (confirm) {
-        let text = claim ? html`Confirmez-vous l'enregistrement ?`
-                         : html`Confirmez-vous la <b>finalisation de cet enregistrement</b> ?`;
-        await UI.confirm(e, text, 'Continuer', () => {});
-    }
-
     await mutex.run(async () => {
+        let silent = options.silent ?? false;
+        let claim = (options.stay ?? true) || page.getOption('claim', record, true);
+        let confirm = (options.confirm ?? !silent) && page.getOption('confirm', record, !claim);
+
+        if (confirm) {
+            let text = claim ? html`Confirmez-vous l'enregistrement ?`
+                             : html`Confirmez-vous la <b>finalisation de cet enregistrement</b> ?`;
+            await UI.confirm(e, text, 'Continuer', () => {});
+        }
+
         let progress = Log.progress('Enregistrement en cours');
 
         try {
