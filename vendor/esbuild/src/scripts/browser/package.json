@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "puppeteer": "23.11.1"
+    "puppeteer": "19.2.2"
   }
 }

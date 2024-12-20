@@ -4618,27 +4618,23 @@ func TestInjectDuplicate(t *testing.T) {
 }
 
 func TestInject(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"chain", "prop"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"chain.prop": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"replace"},
 			},
 		},
-		{
-			KeyParts: []string{"obj", "defined"},
+		"obj.defined": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.EString{Value: helpers.StringToUTF16("defined")},
 			},
 		},
-		{
-			KeyParts: []string{"injectedAndDefined"},
+		"injectedAndDefined": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.EString{Value: helpers.StringToUTF16("should be used")},
 			},
 		},
-		{
-			KeyParts: []string{"injected", "and", "defined"},
+		"injected.and.defined": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.EString{Value: helpers.StringToUTF16("should be used")},
 			},
@@ -4718,27 +4714,23 @@ func TestInject(t *testing.T) {
 }
 
 func TestInjectNoBundle(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"chain", "prop"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"chain.prop": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"replace"},
 			},
 		},
-		{
-			KeyParts: []string{"obj", "defined"},
+		"obj.defined": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.EString{Value: helpers.StringToUTF16("defined")},
 			},
 		},
-		{
-			KeyParts: []string{"injectedAndDefined"},
+		"injectedAndDefined": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.EString{Value: helpers.StringToUTF16("should be used")},
 			},
 		},
-		{
-			KeyParts: []string{"injected", "and", "defined"},
+		"injected.and.defined": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.EString{Value: helpers.StringToUTF16("should be used")},
 			},
@@ -4812,15 +4804,13 @@ func TestInjectNoBundle(t *testing.T) {
 }
 
 func TestInjectJSX(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"React", "createElement"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"React.createElement": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"el"},
 			},
 		},
-		{
-			KeyParts: []string{"React", "Fragment"},
+		"React.Fragment": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"frag"},
 			},
@@ -4937,10 +4927,9 @@ func TestInjectImportOrder(t *testing.T) {
 }
 
 func TestInjectAssign(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{{
-		KeyParts:   []string{"defined"},
-		DefineExpr: &config.DefineExpr{Parts: []string{"some", "define"}},
-	}})
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"defined": {DefineExpr: &config.DefineExpr{Parts: []string{"some", "define"}}},
+	})
 	default_suite.expectBundled(t, bundled{
 		files: map[string]string{
 			"/entry.js": `
@@ -5015,9 +5004,9 @@ func TestInjectWithDefine(t *testing.T) {
 					"both":  {DefineExpr: &config.DefineExpr{Constant: &js_ast.EString{Value: helpers.StringToUTF16("define")}}},
 					"first": {DefineExpr: &config.DefineExpr{Parts: []string{"second"}}},
 				},
-				DotDefines: map[string][]config.DefineData{
-					"th": {{KeyParts: []string{"bo", "th"}, DefineExpr: &config.DefineExpr{Constant: &js_ast.EString{Value: helpers.StringToUTF16("defi.ne")}}}},
-					"st": {{KeyParts: []string{"fir", "st"}, DefineExpr: &config.DefineExpr{Parts: []string{"seco", "nd"}}}},
+				DotDefines: map[string][]config.DotDefine{
+					"th": {{Parts: []string{"bo", "th"}, Data: config.DefineData{DefineExpr: &config.DefineExpr{Constant: &js_ast.EString{Value: helpers.StringToUTF16("defi.ne")}}}}},
+					"st": {{Parts: []string{"fir", "st"}, Data: config.DefineData{DefineExpr: &config.DefineExpr{Parts: []string{"seco", "nd"}}}}},
 				},
 			},
 		},
@@ -5086,21 +5075,18 @@ func TestAvoidTDZNoBundle(t *testing.T) {
 }
 
 func TestDefineImportMeta(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"import", "meta"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"import.meta": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 1},
 			},
 		},
-		{
-			KeyParts: []string{"import", "meta", "foo"},
+		"import.meta.foo": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 2},
 			},
 		},
-		{
-			KeyParts: []string{"import", "meta", "foo", "bar"},
+		"import.meta.foo.bar": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 3},
 			},
@@ -5133,9 +5119,8 @@ func TestDefineImportMeta(t *testing.T) {
 }
 
 func TestDefineImportMetaES5(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"import", "meta", "x"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"import.meta.x": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 1},
 			},
@@ -5208,21 +5193,18 @@ func TestInjectImportMeta(t *testing.T) {
 }
 
 func TestDefineThis(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"this"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"this": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 1},
 			},
 		},
-		{
-			KeyParts: []string{"this", "foo"},
+		"this.foo": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 2},
 			},
 		},
-		{
-			KeyParts: []string{"this", "foo", "bar"},
+		"this.foo.bar": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 3},
 			},
@@ -5277,12 +5259,13 @@ func TestDefineThis(t *testing.T) {
 }
 
 func TestDefineOptionalChain(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{{
-		KeyParts: []string{"a", "b", "c"},
-		DefineExpr: &config.DefineExpr{
-			Constant: &js_ast.ENumber{Value: 1},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"a.b.c": {
+			DefineExpr: &config.DefineExpr{
+				Constant: &js_ast.ENumber{Value: 1},
+			},
 		},
-	}})
+	})
 	default_suite.expectBundled(t, bundled{
 		files: map[string]string{
 			"/entry.js": `
@@ -5311,12 +5294,13 @@ func TestDefineOptionalChain(t *testing.T) {
 }
 
 func TestDefineOptionalChainLowered(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{{
-		KeyParts: []string{"a", "b", "c"},
-		DefineExpr: &config.DefineExpr{
-			Constant: &js_ast.ENumber{Value: 1},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"a.b.c": {
+			DefineExpr: &config.DefineExpr{
+				Constant: &js_ast.ENumber{Value: 1},
+			},
 		},
-	}})
+	})
 	default_suite.expectBundled(t, bundled{
 		files: map[string]string{
 			"/entry.js": `
@@ -5347,15 +5331,13 @@ func TestDefineOptionalChainLowered(t *testing.T) {
 
 // See: https://github.com/evanw/esbuild/issues/3551
 func TestDefineOptionalChainPanicIssue3551(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"x"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"x": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 1},
 			},
 		},
-		{
-			KeyParts: []string{"a", "b"},
+		"a.b": {
 			DefineExpr: &config.DefineExpr{
 				Constant: &js_ast.ENumber{Value: 1},
 			},
@@ -5407,27 +5389,23 @@ func TestDefineOptionalChainPanicIssue3551(t *testing.T) {
 
 // See: https://github.com/evanw/esbuild/issues/2407
 func TestDefineInfiniteLoopIssue2407(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"a", "b"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"a.b": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"b", "c"},
 			},
 		},
-		{
-			KeyParts: []string{"b", "c"},
+		"b.c": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"c", "a"},
 			},
 		},
-		{
-			KeyParts: []string{"c", "a"},
+		"c.a": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"a", "b"},
 			},
 		},
-		{
-			KeyParts: []string{"x", "y"},
+		"x.y": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"y"},
 			},
@@ -5450,39 +5428,33 @@ func TestDefineInfiniteLoopIssue2407(t *testing.T) {
 }
 
 func TestDefineAssignWarning(t *testing.T) {
-	defines := config.ProcessDefines([]config.DefineData{
-		{
-			KeyParts: []string{"a"},
+	defines := config.ProcessDefines(map[string]config.DefineData{
+		"a": {
 			DefineExpr: &config.DefineExpr{
 				Constant: js_ast.ENullShared,
 			},
 		},
-		{
-			KeyParts: []string{"b", "c"},
+		"b.c": {
 			DefineExpr: &config.DefineExpr{
 				Constant: js_ast.ENullShared,
 			},
 		},
-		{
-			KeyParts: []string{"d"},
+		"d": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"ident"},
 			},
 		},
-		{
-			KeyParts: []string{"e", "f"},
+		"e.f": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"ident"},
 			},
 		},
-		{
-			KeyParts: []string{"g"},
+		"g": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"dot", "chain"},
 			},
 		},
-		{
-			KeyParts: []string{"h", "i"},
+		"h.i": {
 			DefineExpr: &config.DefineExpr{
 				Parts: []string{"dot", "chain"},
 			},
@@ -9120,54 +9092,6 @@ func TestStringExportNamesIIFE(t *testing.T) {
 			OutputFormat:          config.FormatIIFE,
 			UnsupportedJSFeatures: compat.ArbitraryModuleNamespaceNames,
 			GlobalName:            []string{"global", "name"},
-		},
-	})
-}
-
-func TestSourceIdentifierNameIndexSingleEntry(t *testing.T) {
-	default_suite.expectBundled(t, bundled{
-		files: map[string]string{
-			// Generate identifier names for top-level and nested files
-			"/Users/user/project/index.js": `
-				require('.')
-				require('pkg')
-				require('./nested')
-			`,
-			"/Users/user/project/nested/index.js":           `exports.nested = true`,
-			"/Users/user/project/node_modules/pkg/index.js": `exports.pkg = true`,
-		},
-		entryPaths: []string{"/Users/user/project/index.js"},
-		options: config.Options{
-			Mode:         config.ModeBundle,
-			AbsOutputDir: "/Users/user/project/out",
-		},
-	})
-}
-
-func TestSourceIdentifierNameIndexMultipleEntry(t *testing.T) {
-	default_suite.expectBundled(t, bundled{
-		files: map[string]string{
-			// Generate identifier names for top-level and nested files
-			"/Users/user/project/home/index.js": `
-				require('.')
-				require('pkg')
-				require('../common')
-			`,
-			"/Users/user/project/about/index.js": `
-				require('.')
-				require('pkg')
-				require('../common')
-			`,
-			"/Users/user/project/common/index.js":           `exports.common = true`,
-			"/Users/user/project/node_modules/pkg/index.js": `exports.pkg = true`,
-		},
-		entryPaths: []string{
-			"/Users/user/project/home/index.js",
-			"/Users/user/project/about/index.js",
-		},
-		options: config.Options{
-			Mode:         config.ModeBundle,
-			AbsOutputDir: "/Users/user/project/out",
 		},
 	})
 }

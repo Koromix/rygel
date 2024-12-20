@@ -2,7 +2,6 @@ package sourcemap
 
 import (
 	"bytes"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/evanw/esbuild/internal/ast"
@@ -427,28 +426,20 @@ func AppendSourceMapChunk(j *helpers.Joiner, prevEndState SourceMapState, startS
 	// case below instead. Original names are optional and are often omitted, so
 	// we handle it uniformly by saving an index to the first original name,
 	// which may or may not be a part of the first mapping.
-	var sourceIndex int
-	var originalLine int
-	var originalColumn int
-	omitSource := false
 	generatedColumn, i := DecodeVLQ(buffer.Data, semicolons)
-	if i == len(buffer.Data) || strings.IndexByte(",;", buffer.Data[i]) != -1 {
-		omitSource = true
-	} else {
-		sourceIndex, i = DecodeVLQ(buffer.Data, i)
-		originalLine, i = DecodeVLQ(buffer.Data, i)
-		originalColumn, i = DecodeVLQ(buffer.Data, i)
-	}
+	sourceIndex, i := DecodeVLQ(buffer.Data, i)
+	originalLine, i := DecodeVLQ(buffer.Data, i)
+	originalColumn, i := DecodeVLQ(buffer.Data, i)
 
 	// Rewrite the first mapping to be relative to the end state of the previous
 	// chunk. We now know what the end state is because we're in the second pass
 	// where all chunks have already been generated.
-	startState.GeneratedColumn += generatedColumn
 	startState.SourceIndex += sourceIndex
+	startState.GeneratedColumn += generatedColumn
 	startState.OriginalLine += originalLine
 	startState.OriginalColumn += originalColumn
 	prevEndState.HasOriginalName = false // This is handled separately below
-	rewritten, _ := appendMappingToBuffer(nil, j.LastByte(), prevEndState, startState, omitSource)
+	rewritten, _ := appendMappingToBuffer(nil, j.LastByte(), prevEndState, startState)
 	j.AddBytes(rewritten)
 
 	// Next, if there's an original name, we need to rewrite that as well to be
@@ -467,9 +458,7 @@ func AppendSourceMapChunk(j *helpers.Joiner, prevEndState SourceMapState, startS
 	j.AddBytes(buffer.Data[i:])
 }
 
-func appendMappingToBuffer(
-	buffer []byte, lastByte byte, prevState SourceMapState, currentState SourceMapState, omitSource bool,
-) ([]byte, ast.Index32) {
+func appendMappingToBuffer(buffer []byte, lastByte byte, prevState SourceMapState, currentState SourceMapState) ([]byte, ast.Index32) {
 	// Put commas in between mappings
 	if lastByte != 0 && lastByte != ';' && lastByte != '"' {
 		buffer = append(buffer, ',')
@@ -477,11 +466,9 @@ func appendMappingToBuffer(
 
 	// Record the mapping (note that the generated line is recorded using ';' elsewhere)
 	buffer = encodeVLQ(buffer, currentState.GeneratedColumn-prevState.GeneratedColumn)
-	if !omitSource {
-		buffer = encodeVLQ(buffer, currentState.SourceIndex-prevState.SourceIndex)
-		buffer = encodeVLQ(buffer, currentState.OriginalLine-prevState.OriginalLine)
-		buffer = encodeVLQ(buffer, currentState.OriginalColumn-prevState.OriginalColumn)
-	}
+	buffer = encodeVLQ(buffer, currentState.SourceIndex-prevState.SourceIndex)
+	buffer = encodeVLQ(buffer, currentState.OriginalLine-prevState.OriginalLine)
+	buffer = encodeVLQ(buffer, currentState.OriginalColumn-prevState.OriginalColumn)
 
 	// Record the optional original name
 	var nameOffset ast.Index32
@@ -833,7 +820,7 @@ func (b *ChunkBuilder) appendMappingWithoutRemapping(currentState SourceMapState
 	}
 
 	var nameOffset ast.Index32
-	b.sourceMap, nameOffset = appendMappingToBuffer(b.sourceMap, lastByte, b.prevState, currentState, false)
+	b.sourceMap, nameOffset = appendMappingToBuffer(b.sourceMap, lastByte, b.prevState, currentState)
 	prevOriginalName := b.prevState.OriginalName
 	b.prevState = currentState
 	if !currentState.HasOriginalName {

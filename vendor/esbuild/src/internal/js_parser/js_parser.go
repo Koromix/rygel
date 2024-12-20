@@ -2136,50 +2136,47 @@ func (p *parser) parseProperty(startLoc logger.Loc, kind js_ast.PropertyKind, op
 			couldBeModifierKeyword := p.lexer.IsIdentifierOrKeyword()
 			if !couldBeModifierKeyword {
 				switch p.lexer.Token {
-				case js_lexer.TOpenBracket, js_lexer.TNumericLiteral, js_lexer.TStringLiteral, js_lexer.TPrivateIdentifier:
+				case js_lexer.TOpenBracket, js_lexer.TNumericLiteral, js_lexer.TStringLiteral,
+					js_lexer.TAsterisk, js_lexer.TPrivateIdentifier:
 					couldBeModifierKeyword = true
-				case js_lexer.TAsterisk:
-					if opts.isAsync || (raw != "get" && raw != "set") {
-						couldBeModifierKeyword = true
-					}
 				}
 			}
 
 			// If so, check for a modifier keyword
 			if couldBeModifierKeyword {
-				switch raw {
+				switch name.String {
 				case "get":
-					if !opts.isAsync {
+					if !opts.isAsync && raw == name.String {
 						p.markSyntaxFeature(compat.ObjectAccessors, nameRange)
 						return p.parseProperty(startLoc, js_ast.PropertyGetter, opts, nil)
 					}
 
 				case "set":
-					if !opts.isAsync {
+					if !opts.isAsync && raw == name.String {
 						p.markSyntaxFeature(compat.ObjectAccessors, nameRange)
 						return p.parseProperty(startLoc, js_ast.PropertySetter, opts, nil)
 					}
 
 				case "accessor":
-					if !p.lexer.HasNewlineBefore && !opts.isAsync && opts.isClass {
+					if !p.lexer.HasNewlineBefore && !opts.isAsync && opts.isClass && raw == name.String {
 						return p.parseProperty(startLoc, js_ast.PropertyAutoAccessor, opts, nil)
 					}
 
 				case "async":
-					if !p.lexer.HasNewlineBefore && !opts.isAsync {
+					if !p.lexer.HasNewlineBefore && !opts.isAsync && raw == name.String {
 						opts.isAsync = true
 						opts.asyncRange = nameRange
 						return p.parseProperty(startLoc, js_ast.PropertyMethod, opts, nil)
 					}
 
 				case "static":
-					if !opts.isStatic && !opts.isAsync && opts.isClass {
+					if !opts.isStatic && !opts.isAsync && opts.isClass && raw == name.String {
 						opts.isStatic = true
 						return p.parseProperty(startLoc, kind, opts, nil)
 					}
 
 				case "declare":
-					if !p.lexer.HasNewlineBefore && opts.isClass && p.options.ts.Parse && opts.tsDeclareRange.Len == 0 {
+					if !p.lexer.HasNewlineBefore && opts.isClass && p.options.ts.Parse && opts.tsDeclareRange.Len == 0 && raw == name.String {
 						opts.tsDeclareRange = nameRange
 						scopeIndex := len(p.scopesInOrder)
 
@@ -2216,7 +2213,7 @@ func (p *parser) parseProperty(startLoc logger.Loc, kind js_ast.PropertyKind, op
 					}
 
 				case "abstract":
-					if !p.lexer.HasNewlineBefore && opts.isClass && p.options.ts.Parse && !opts.isTSAbstract {
+					if !p.lexer.HasNewlineBefore && opts.isClass && p.options.ts.Parse && !opts.isTSAbstract && raw == name.String {
 						opts.isTSAbstract = true
 						scopeIndex := len(p.scopesInOrder)
 
@@ -2252,7 +2249,7 @@ func (p *parser) parseProperty(startLoc logger.Loc, kind js_ast.PropertyKind, op
 
 				case "private", "protected", "public", "readonly", "override":
 					// Skip over TypeScript keywords
-					if opts.isClass && p.options.ts.Parse {
+					if opts.isClass && p.options.ts.Parse && raw == name.String {
 						return p.parseProperty(startLoc, kind, opts, nil)
 					}
 				}
@@ -10774,13 +10771,6 @@ func (p *parser) visitAndAppendStmt(stmts []js_ast.Stmt, stmt js_ast.Stmt) []js_
 		p.popScope()
 
 		if s.Catch != nil {
-			old := p.isControlFlowDead
-
-			// If the try body is empty, then the catch body is dead
-			if len(s.Block.Stmts) == 0 {
-				p.isControlFlowDead = true
-			}
-
 			p.pushScopeForVisitPass(js_ast.ScopeCatchBinding, s.Catch.Loc)
 			if s.Catch.BindingOrNil.Data != nil {
 				p.visitBinding(s.Catch.BindingOrNil, bindingOpts{})
@@ -10792,52 +10782,12 @@ func (p *parser) visitAndAppendStmt(stmts []js_ast.Stmt, stmt js_ast.Stmt) []js_
 
 			p.lowerObjectRestInCatchBinding(s.Catch)
 			p.popScope()
-
-			p.isControlFlowDead = old
 		}
 
 		if s.Finally != nil {
 			p.pushScopeForVisitPass(js_ast.ScopeBlock, s.Finally.Loc)
 			s.Finally.Block.Stmts = p.visitStmts(s.Finally.Block.Stmts, stmtsNormal)
 			p.popScope()
-		}
-
-		// Drop the whole thing if the try body is empty
-		if p.options.minifySyntax && len(s.Block.Stmts) == 0 {
-			keepCatch := false
-
-			// Certain "catch" blocks need to be preserved:
-			//
-			//   try {} catch { let foo } // Can be removed
-			//   try {} catch { var foo } // Must be kept
-			//
-			if s.Catch != nil {
-				for _, stmt2 := range s.Catch.Block.Stmts {
-					if shouldKeepStmtInDeadControlFlow(stmt2) {
-						keepCatch = true
-						break
-					}
-				}
-			}
-
-			// Make sure to preserve the "finally" block if present
-			if !keepCatch {
-				if s.Finally == nil {
-					return stmts
-				}
-				finallyNeedsBlock := false
-				for _, stmt2 := range s.Finally.Block.Stmts {
-					if statementCaresAboutScope(stmt2) {
-						finallyNeedsBlock = true
-						break
-					}
-				}
-				if !finallyNeedsBlock {
-					return append(stmts, s.Finally.Block.Stmts...)
-				}
-				block := s.Finally.Block
-				stmt = js_ast.Stmt{Loc: s.Finally.Loc, Data: &block}
-			}
 		}
 
 	case *js_ast.SSwitch:
@@ -12022,8 +11972,8 @@ func (p *parser) instantiateDefineExpr(loc logger.Loc, expr config.DefineExpr, o
 		// Substitute user-specified defines
 		if defines, ok := p.options.defines.DotDefines[parts[len(parts)-1]]; ok {
 			for _, define := range defines {
-				if define.DefineExpr != nil && helpers.StringArraysEqual(define.KeyParts, parts) {
-					return p.instantiateDefineExpr(loc, *define.DefineExpr, opts)
+				if define.Data.DefineExpr != nil && helpers.StringArraysEqual(define.Parts, parts) {
+					return p.instantiateDefineExpr(loc, *define.Data.DefineExpr, opts)
 				}
 			}
 		}
@@ -12956,10 +12906,10 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 		// Check both user-specified defines and known globals
 		if defines, ok := p.options.defines.DotDefines["meta"]; ok {
 			for _, define := range defines {
-				if p.isDotOrIndexDefineMatch(expr, define.KeyParts) {
+				if p.isDotOrIndexDefineMatch(expr, define.Parts) {
 					// Substitute user-specified defines
-					if define.DefineExpr != nil {
-						return p.instantiateDefineExpr(expr.Loc, *define.DefineExpr, identifierOpts{
+					if define.Data.DefineExpr != nil {
+						return p.instantiateDefineExpr(expr.Loc, *define.Data.DefineExpr, identifierOpts{
 							assignTarget:   in.assignTarget,
 							isCallTarget:   isCallTarget,
 							isDeleteTarget: isDeleteTarget,
@@ -13587,10 +13537,10 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 		// Check both user-specified defines and known globals
 		if defines, ok := p.options.defines.DotDefines[e.Name]; ok {
 			for _, define := range defines {
-				if p.isDotOrIndexDefineMatch(expr, define.KeyParts) {
+				if p.isDotOrIndexDefineMatch(expr, define.Parts) {
 					// Substitute user-specified defines
-					if define.DefineExpr != nil {
-						new := p.instantiateDefineExpr(expr.Loc, *define.DefineExpr, identifierOpts{
+					if define.Data.DefineExpr != nil {
+						new := p.instantiateDefineExpr(expr.Loc, *define.Data.DefineExpr, identifierOpts{
 							assignTarget:   in.assignTarget,
 							isCallTarget:   isCallTarget,
 							isDeleteTarget: isDeleteTarget,
@@ -13606,13 +13556,13 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 					}
 
 					// Copy the side effect flags over in case this expression is unused
-					if define.Flags.Has(config.CanBeRemovedIfUnused) {
+					if define.Data.Flags.Has(config.CanBeRemovedIfUnused) {
 						e.CanBeRemovedIfUnused = true
 					}
-					if define.Flags.Has(config.CallCanBeUnwrappedIfUnused) && !p.options.ignoreDCEAnnotations {
+					if define.Data.Flags.Has(config.CallCanBeUnwrappedIfUnused) && !p.options.ignoreDCEAnnotations {
 						e.CallCanBeUnwrappedIfUnused = true
 					}
-					if define.Flags.Has(config.IsSymbolInstance) {
+					if define.Data.Flags.Has(config.IsSymbolInstance) {
 						e.IsSymbolInstance = true
 					}
 					break
@@ -13709,10 +13659,10 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 		if str, ok := e.Index.Data.(*js_ast.EString); ok {
 			if defines, ok := p.options.defines.DotDefines[helpers.UTF16ToString(str.Value)]; ok {
 				for _, define := range defines {
-					if p.isDotOrIndexDefineMatch(expr, define.KeyParts) {
+					if p.isDotOrIndexDefineMatch(expr, define.Parts) {
 						// Substitute user-specified defines
-						if define.DefineExpr != nil {
-							new := p.instantiateDefineExpr(expr.Loc, *define.DefineExpr, identifierOpts{
+						if define.Data.DefineExpr != nil {
+							new := p.instantiateDefineExpr(expr.Loc, *define.Data.DefineExpr, identifierOpts{
 								assignTarget:   in.assignTarget,
 								isCallTarget:   isCallTarget,
 								isDeleteTarget: isDeleteTarget,
@@ -13732,13 +13682,13 @@ func (p *parser) visitExprInOut(expr js_ast.Expr, in exprIn) (js_ast.Expr, exprO
 						}
 
 						// Copy the side effect flags over in case this expression is unused
-						if define.Flags.Has(config.CanBeRemovedIfUnused) {
+						if define.Data.Flags.Has(config.CanBeRemovedIfUnused) {
 							e.CanBeRemovedIfUnused = true
 						}
-						if define.Flags.Has(config.CallCanBeUnwrappedIfUnused) && !p.options.ignoreDCEAnnotations {
+						if define.Data.Flags.Has(config.CallCanBeUnwrappedIfUnused) && !p.options.ignoreDCEAnnotations {
 							e.CallCanBeUnwrappedIfUnused = true
 						}
-						if define.Flags.Has(config.IsSymbolInstance) {
+						if define.Data.Flags.Has(config.IsSymbolInstance) {
 							e.IsSymbolInstance = true
 						}
 						break

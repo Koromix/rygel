@@ -386,11 +386,11 @@ func validateSupported(log logger.Log, supported map[string]bool) (
 	return
 }
 
-func validateGlobalName(log logger.Log, text string, path string) []string {
+func validateGlobalName(log logger.Log, text string) []string {
 	if text != "" {
 		source := logger.Source{
-			KeyPath:    logger.Path{Text: path},
-			PrettyPath: path,
+			KeyPath:    logger.Path{Text: "(global path)"},
+			PrettyPath: "(global name)",
 			Contents:   text,
 		}
 
@@ -524,18 +524,6 @@ func validateJSXExpr(log logger.Log, text string, name string) config.DefineExpr
 	return config.DefineExpr{}
 }
 
-// This returns an arbitrary but unique key for each unique array of strings
-func mapKeyForDefine(parts []string) string {
-	var sb strings.Builder
-	var n [4]byte
-	for _, part := range parts {
-		binary.LittleEndian.PutUint32(n[:], uint32(len(part)))
-		sb.Write(n[:])
-		sb.WriteString(part)
-	}
-	return sb.String()
-}
-
 func validateDefines(
 	log logger.Log,
 	defines map[string]string,
@@ -545,36 +533,32 @@ func validateDefines(
 	minify bool,
 	drop Drop,
 ) (*config.ProcessedDefines, []config.InjectedDefine) {
-	// Sort injected defines for determinism, since the imports will be injected
-	// into every file in the order that we return them from this function
-	sortedKeys := make([]string, 0, len(defines))
-	for key := range defines {
-		sortedKeys = append(sortedKeys, key)
-	}
-	sort.Strings(sortedKeys)
-
 	rawDefines := make(map[string]config.DefineData)
-	nodeEnvParts := []string{"process", "env", "NODE_ENV"}
-	nodeEnvMapKey := mapKeyForDefine(nodeEnvParts)
-	var injectedDefines []config.InjectedDefine
+	var valueToInject map[string]config.InjectedDefine
+	var definesToInject []string
 
-	for _, key := range sortedKeys {
-		value := defines[key]
-		keyParts := validateGlobalName(log, key, "(define name)")
-		if keyParts == nil {
-			continue
+	for key, value := range defines {
+		// The key must be a dot-separated identifier list
+		for _, part := range strings.Split(key, ".") {
+			if !js_ast.IsIdentifier(part) {
+				if part == key {
+					log.AddError(nil, logger.Range{}, fmt.Sprintf("The define key %q must be a valid identifier", key))
+				} else {
+					log.AddError(nil, logger.Range{}, fmt.Sprintf("The define key %q contains invalid identifier %q", key, part))
+				}
+				continue
+			}
 		}
-		mapKey := mapKeyForDefine(keyParts)
 
 		// Parse the value
 		defineExpr, injectExpr := js_parser.ParseDefineExprOrJSON(value)
 
 		// Define simple expressions
 		if defineExpr.Constant != nil || len(defineExpr.Parts) > 0 {
-			rawDefines[mapKey] = config.DefineData{KeyParts: keyParts, DefineExpr: &defineExpr}
+			rawDefines[key] = config.DefineData{DefineExpr: &defineExpr}
 
 			// Try to be helpful for common mistakes
-			if len(defineExpr.Parts) == 1 && mapKey == nodeEnvMapKey {
+			if len(defineExpr.Parts) == 1 && key == "process.env.NODE_ENV" {
 				data := logger.MsgData{
 					Text: fmt.Sprintf("%q is defined as an identifier instead of a string (surround %q with quotes to get a string)", key, value),
 				}
@@ -622,18 +606,32 @@ func validateDefines(
 
 		// Inject complex expressions
 		if injectExpr != nil {
-			index := ast.MakeIndex32(uint32(len(injectedDefines)))
-			injectedDefines = append(injectedDefines, config.InjectedDefine{
+			definesToInject = append(definesToInject, key)
+			if valueToInject == nil {
+				valueToInject = make(map[string]config.InjectedDefine)
+			}
+			valueToInject[key] = config.InjectedDefine{
 				Source: logger.Source{Contents: value},
 				Data:   injectExpr,
 				Name:   key,
-			})
-			rawDefines[mapKey] = config.DefineData{KeyParts: keyParts, DefineExpr: &config.DefineExpr{InjectedDefineIndex: index}}
+			}
 			continue
 		}
 
 		// Anything else is unsupported
 		log.AddError(nil, logger.Range{}, fmt.Sprintf("Invalid define value (must be an entity name or valid JSON syntax): %s", value))
+	}
+
+	// Sort injected defines for determinism, since the imports will be injected
+	// into every file in the order that we return them from this function
+	var injectedDefines []config.InjectedDefine
+	if len(definesToInject) > 0 {
+		injectedDefines = make([]config.InjectedDefine, len(definesToInject))
+		sort.Strings(definesToInject)
+		for i, key := range definesToInject {
+			injectedDefines[i] = valueToInject[key]
+			rawDefines[key] = config.DefineData{DefineExpr: &config.DefineExpr{InjectedDefineIndex: ast.MakeIndex32(uint32(i))}}
+		}
 	}
 
 	// If we're bundling for the browser, add a special-cased define for
@@ -643,16 +641,16 @@ func validateDefines(
 	// is only done if it's not already defined so that you can override it if
 	// necessary.
 	if isBuildAPI && platform == config.PlatformBrowser {
-		if _, process := rawDefines[mapKeyForDefine([]string{"process"})]; !process {
-			if _, processEnv := rawDefines[mapKeyForDefine([]string{"process.env"})]; !processEnv {
-				if _, processEnvNodeEnv := rawDefines[nodeEnvMapKey]; !processEnvNodeEnv {
+		if _, process := rawDefines["process"]; !process {
+			if _, processEnv := rawDefines["process.env"]; !processEnv {
+				if _, processEnvNodeEnv := rawDefines["process.env.NODE_ENV"]; !processEnvNodeEnv {
 					var value []uint16
 					if minify {
 						value = helpers.StringToUTF16("production")
 					} else {
 						value = helpers.StringToUTF16("development")
 					}
-					rawDefines[nodeEnvMapKey] = config.DefineData{KeyParts: nodeEnvParts, DefineExpr: &config.DefineExpr{Constant: &js_ast.EString{Value: value}}}
+					rawDefines["process.env.NODE_ENV"] = config.DefineData{DefineExpr: &config.DefineExpr{Constant: &js_ast.EString{Value: value}}}
 				}
 			}
 		}
@@ -660,35 +658,29 @@ func validateDefines(
 
 	// If we're dropping all console API calls, replace each one with undefined
 	if (drop & DropConsole) != 0 {
-		consoleParts := []string{"console"}
-		consoleMapKey := mapKeyForDefine(consoleParts)
-		define := rawDefines[consoleMapKey]
-		define.KeyParts = consoleParts
+		define := rawDefines["console"]
 		define.Flags |= config.MethodCallsMustBeReplacedWithUndefined
-		rawDefines[consoleMapKey] = define
+		rawDefines["console"] = define
 	}
 
 	for _, key := range pureFns {
-		keyParts := validateGlobalName(log, key, "(pure name)")
-		if keyParts == nil {
-			continue
+		// The key must be a dot-separated identifier list
+		for _, part := range strings.Split(key, ".") {
+			if !js_ast.IsIdentifier(part) {
+				log.AddError(nil, logger.Range{}, fmt.Sprintf("Invalid pure function: %q", key))
+				continue
+			}
 		}
-		mapKey := mapKeyForDefine(keyParts)
 
 		// Merge with any previously-specified defines
-		define := rawDefines[mapKey]
-		define.KeyParts = keyParts
+		define := rawDefines[key]
 		define.Flags |= config.CallCanBeUnwrappedIfUnused
-		rawDefines[mapKey] = define
+		rawDefines[key] = define
 	}
 
 	// Processing defines is expensive. Process them once here so the same object
 	// can be shared between all parsers we create using these arguments.
-	definesArray := make([]config.DefineData, 0, len(rawDefines))
-	for _, define := range rawDefines {
-		definesArray = append(definesArray, define)
-	}
-	processed := config.ProcessDefines(definesArray)
+	processed := config.ProcessDefines(rawDefines)
 	return &processed, injectedDefines
 }
 
@@ -1271,7 +1263,7 @@ func validateBuildOptions(
 		ASCIIOnly:             validateASCIIOnly(buildOpts.Charset),
 		IgnoreDCEAnnotations:  buildOpts.IgnoreAnnotations,
 		TreeShaking:           validateTreeShaking(buildOpts.TreeShaking, buildOpts.Bundle, buildOpts.Format),
-		GlobalName:            validateGlobalName(log, buildOpts.GlobalName, "(global name)"),
+		GlobalName:            validateGlobalName(log, buildOpts.GlobalName),
 		CodeSplitting:         buildOpts.Splitting,
 		OutputFormat:          validateFormat(buildOpts.Format),
 		AbsOutputFile:         validatePath(log, realFS, buildOpts.Outfile, "outfile path"),
@@ -1715,7 +1707,7 @@ func transformImpl(input string, transformOpts TransformOptions) TransformResult
 		SourceRoot:            transformOpts.SourceRoot,
 		ExcludeSourcesContent: transformOpts.SourcesContent == SourcesContentExclude,
 		OutputFormat:          validateFormat(transformOpts.Format),
-		GlobalName:            validateGlobalName(log, transformOpts.GlobalName, "(global name)"),
+		GlobalName:            validateGlobalName(log, transformOpts.GlobalName),
 		MinifySyntax:          transformOpts.MinifySyntax,
 		MinifyWhitespace:      transformOpts.MinifyWhitespace,
 		MinifyIdentifiers:     transformOpts.MinifyIdentifiers,

@@ -1194,7 +1194,6 @@ func TestLoaderCopyWithBundleEntryPoint(t *testing.T) {
 				".css":  config.LoaderCSS,
 				".file": config.LoaderCopy,
 			},
-			NeedsMetafile: true,
 		},
 	})
 }

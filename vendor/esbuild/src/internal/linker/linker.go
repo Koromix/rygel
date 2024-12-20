@@ -5849,16 +5849,6 @@ func (c *linkerContext) generateChunkJS(chunkIndex int, chunkWaitGroup *sync.Wai
 			// Ignore empty source map chunks
 			if compileResult.SourceMapChunk.ShouldIgnore {
 				prevOffset.AdvanceBytes(compileResult.JS)
-
-				// Include a null entry in the source map
-				if c.options.SourceMap != config.SourceMapNone {
-					if n := len(compileResultsForSourceMap); n > 0 && !compileResultsForSourceMap[n-1].isNullEntry {
-						compileResultsForSourceMap = append(compileResultsForSourceMap, compileResultForSourceMap{
-							sourceIndex: compileResult.sourceIndex,
-							isNullEntry: true,
-						})
-					}
-				}
 			} else {
 				prevOffset = sourcemap.LineColumnOffset{}
 
@@ -6340,16 +6330,6 @@ func (c *linkerContext) generateChunkCSS(chunkIndex int, chunkWaitGroup *sync.Wa
 		// Ignore empty source map chunks
 		if compileResult.SourceMapChunk.ShouldIgnore {
 			prevOffset.AdvanceBytes(compileResult.CSS)
-
-			// Include a null entry in the source map
-			if c.options.SourceMap != config.SourceMapNone && compileResult.sourceIndex.IsValid() {
-				if n := len(compileResultsForSourceMap); n > 0 && !compileResultsForSourceMap[n-1].isNullEntry {
-					compileResultsForSourceMap = append(compileResultsForSourceMap, compileResultForSourceMap{
-						sourceIndex: compileResult.sourceIndex.GetIndex(),
-						isNullEntry: true,
-					})
-				}
-			}
 		} else {
 			prevOffset = sourcemap.LineColumnOffset{}
 
@@ -6922,7 +6902,6 @@ type compileResultForSourceMap struct {
 	sourceMapChunk  sourcemap.Chunk
 	generatedOffset sourcemap.LineColumnOffset
 	sourceIndex     uint32
-	isNullEntry     bool
 }
 
 func (c *linkerContext) generateSourceMapForChunk(
@@ -6950,9 +6929,6 @@ func (c *linkerContext) generateSourceMapForChunk(
 			continue
 		}
 		sourceIndexToSourcesIndex[result.sourceIndex] = nextSourcesIndex
-		if result.isNullEntry {
-			continue
-		}
 		file := &c.graph.Files[result.sourceIndex]
 
 		// Simple case: no nested source map
@@ -7068,38 +7044,28 @@ func (c *linkerContext) generateSourceMapForChunk(
 			startState.GeneratedColumn += prevColumnOffset
 		}
 
-		if result.isNullEntry {
-			// Emit a "null" mapping
-			chunk.Buffer.Data = []byte("A")
-			sourcemap.AppendSourceMapChunk(&j, prevEndState, startState, chunk.Buffer)
+		// Append the precomputed source map chunk
+		sourcemap.AppendSourceMapChunk(&j, prevEndState, startState, chunk.Buffer)
 
-			// Only the generated position was advanced
-			prevEndState.GeneratedLine = startState.GeneratedLine
-			prevEndState.GeneratedColumn = startState.GeneratedColumn
+		// Generate the relative offset to start from next time
+		prevOriginalName := prevEndState.OriginalName
+		prevEndState = chunk.EndState
+		prevEndState.SourceIndex += sourcesIndex
+		if chunk.Buffer.FirstNameOffset.IsValid() {
+			prevEndState.OriginalName += totalQuotedNameLen
 		} else {
-			// Append the precomputed source map chunk
-			sourcemap.AppendSourceMapChunk(&j, prevEndState, startState, chunk.Buffer)
-
-			// Generate the relative offset to start from next time
-			prevOriginalName := prevEndState.OriginalName
-			prevEndState = chunk.EndState
-			prevEndState.SourceIndex += sourcesIndex
-			if chunk.Buffer.FirstNameOffset.IsValid() {
-				prevEndState.OriginalName += totalQuotedNameLen
-			} else {
-				// It's possible for a chunk to have mappings but for none of those
-				// mappings to have an associated name. The name is optional and is
-				// omitted when the mapping is for a non-name token or if the final
-				// and original names are the same. In that case we need to restore
-				// the previous original name end state since it wasn't modified after
-				// all. If we don't do this, then files after this will adjust their
-				// name offsets assuming that the previous generated mapping has this
-				// file's offset, which is wrong.
-				prevEndState.OriginalName = prevOriginalName
-			}
-			prevColumnOffset = chunk.FinalGeneratedColumn
-			totalQuotedNameLen += len(chunk.QuotedNames)
+			// It's possible for a chunk to have mappings but for none of those
+			// mappings to have an associated name. The name is optional and is
+			// omitted when the mapping is for a non-name token or if the final
+			// and original names are the same. In that case we need to restore
+			// the previous original name end state since it wasn't modified after
+			// all. If we don't do this, then files after this will adjust their
+			// name offsets assuming that the previous generated mapping has this
+			// file's offset, which is wrong.
+			prevEndState.OriginalName = prevOriginalName
 		}
+		prevColumnOffset = chunk.FinalGeneratedColumn
+		totalQuotedNameLen += len(chunk.QuotedNames)
 
 		// If this was all one line, include the column offset from the start
 		if prevEndState.GeneratedLine == 0 {

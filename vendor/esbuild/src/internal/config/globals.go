@@ -2,6 +2,7 @@ package config
 
 import (
 	"math"
+	"strings"
 	"sync"
 
 	"github.com/evanw/esbuild/internal/ast"
@@ -867,7 +868,6 @@ type DefineExpr struct {
 }
 
 type DefineData struct {
-	KeyParts   []string
 	DefineExpr *DefineExpr
 	Flags      DefineFlags
 }
@@ -905,9 +905,14 @@ func mergeDefineData(old DefineData, new DefineData) DefineData {
 	return new
 }
 
+type DotDefine struct {
+	Data  DefineData
+	Parts []string
+}
+
 type ProcessedDefines struct {
 	IdentifierDefines map[string]DefineData
-	DotDefines        map[string][]DefineData
+	DotDefines        map[string][]DotDefine
 }
 
 // This transformation is expensive, so we only want to do it once. Make sure
@@ -915,7 +920,7 @@ type ProcessedDefines struct {
 // doesn't have an efficient way to copy a map and the overhead of copying
 // all of the properties into a new map once for every new parser noticeably
 // slows down our benchmarks.
-func ProcessDefines(userDefines []DefineData) ProcessedDefines {
+func ProcessDefines(userDefines map[string]DefineData) ProcessedDefines {
 	// Optimization: reuse known globals if there are no user-specified defines
 	hasUserDefines := len(userDefines) != 0
 	if !hasUserDefines {
@@ -929,7 +934,7 @@ func ProcessDefines(userDefines []DefineData) ProcessedDefines {
 
 	result := ProcessedDefines{
 		IdentifierDefines: make(map[string]DefineData),
-		DotDefines:        make(map[string][]DefineData),
+		DotDefines:        make(map[string][]DotDefine),
 	}
 
 	// Mark these property accesses as free of side effects. That means they can
@@ -951,7 +956,7 @@ func ProcessDefines(userDefines []DefineData) ProcessedDefines {
 				flags |= IsSymbolInstance
 			}
 
-			result.DotDefines[tail] = append(result.DotDefines[tail], DefineData{KeyParts: parts, Flags: flags})
+			result.DotDefines[tail] = append(result.DotDefines[tail], DotDefine{Parts: parts, Data: DefineData{Flags: flags}})
 		}
 	}
 
@@ -968,29 +973,31 @@ func ProcessDefines(userDefines []DefineData) ProcessedDefines {
 
 	// Then copy the user-specified defines in afterwards, which will overwrite
 	// any known globals above.
-	for _, data := range userDefines {
+	for key, data := range userDefines {
+		parts := strings.Split(key, ".")
+
 		// Identifier defines are special-cased
-		if len(data.KeyParts) == 1 {
-			name := data.KeyParts[0]
-			result.IdentifierDefines[name] = mergeDefineData(result.IdentifierDefines[name], data)
+		if len(parts) == 1 {
+			result.IdentifierDefines[key] = mergeDefineData(result.IdentifierDefines[key], data)
 			continue
 		}
 
-		tail := data.KeyParts[len(data.KeyParts)-1]
+		tail := parts[len(parts)-1]
 		dotDefines := result.DotDefines[tail]
 		found := false
 
 		// Try to merge with existing dot defines first
 		for i, define := range dotDefines {
-			if helpers.StringArraysEqual(data.KeyParts, define.KeyParts) {
-				dotDefines[i] = mergeDefineData(dotDefines[i], data)
+			if helpers.StringArraysEqual(parts, define.Parts) {
+				define := &dotDefines[i]
+				define.Data = mergeDefineData(define.Data, data)
 				found = true
 				break
 			}
 		}
 
 		if !found {
-			dotDefines = append(dotDefines, data)
+			dotDefines = append(dotDefines, DotDefine{Parts: parts, Data: data})
 		}
 		result.DotDefines[tail] = dotDefines
 	}
