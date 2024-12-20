@@ -992,7 +992,7 @@ function addAutomaticActions(builder, model) {
         if (can_save) {
             let label = route.page.sequence ? '+Continuer' : '+Enregistrer';
 
-            builder.action(label, { disabled: form_thread.locked || !form_state.hasChanged(), color: '#2d8261' }, async e => {
+            builder.action(label, { color: '#2d8261' }, async e => {
                 form_builder.triggerErrors();
 
                 await data_mutex.run(async () => {
