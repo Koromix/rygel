@@ -318,7 +318,7 @@ function renderDropItem(page, first) {
         return html`<button class=${'icon home' + (active ? ' active' : '')} ?disabled=${!enabled}
                             @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
     } else {
-        let suffix = makeStatusText(status);
+        let suffix = !goupile.isLocked() ? makeStatusText(status) : '';
 
         return html`
             <span style="align-self: center; margin: 0 6px;">›</span>
@@ -332,9 +332,6 @@ function renderDropItem(page, first) {
 }
 
 function makeStatusText(status) {
-    if (goupile.isLocked())
-        return '';
-
     if (!status.enabled) {
         return profile.develop ? '❌\uFE0E' : '';
     } else if (status.complete) {
