@@ -985,34 +985,23 @@ function detectTSpin(piece) {
 }
 
 function clearStack() {
-    let lines = 0;
+    let cleared = 0;
 
     for (let row = 0; row < rules.ROWS; row++) {
-        let clear = isRowFull(row);
+        let start = row * rules.COLUMNS;
+        let end = start + rules.COLUMNS;
+
+        let clear = stack.subarray(start, end).every(value => value >= 0);
 
         if (clear) {
-            let dest = row * rules.COLUMNS;
-            let src = dest + rules.COLUMNS;
-
-            stack.copyWithin(dest, src, stack.length);
+            stack.copyWithin(start, end, stack.length);
             row--;
 
-            lines++;
+            cleared++;
         }
     }
 
-    return lines;
-}
-
-function isRowFull(row) {
-    for (let column = 0; column < rules.COLUMNS; column++) {
-        let idx = (row * rules.COLUMNS) + column;
-
-        if (stack[idx] < 0)
-            return false;
-    }
-
-    return true;
+    return cleared;
 }
 
 // ------------------------------------------------------------------------
