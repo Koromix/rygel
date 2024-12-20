@@ -306,6 +306,7 @@ html.small #ins_tasks { display: flex; }
 
 #ins_data td:not(.active).partial a { color: #346bb8; }
 #ins_data td:not(.active).complete a { color: #298a6a; }
+#ins_data td:not(.active).disabled a { color: inherit; }
 
 /* -------------------- Misc -------------------- */
 

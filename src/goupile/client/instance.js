@@ -311,30 +311,33 @@ function isMenuWide(page) {
 function renderDropItem(page, first) {
     let active = (route.page == page);
     let url = contextualizeURL(page.url, form_thread);
-    let status = makeStatusText(page, form_thread);
+    let status = computeStatus(page, form_thread);
+    let enabled = status.enabled || profile.develop;
 
     if (first) {
-        return html`<button class=${'icon home' + (active ? ' active' : '')}
+        return html`<button class=${'icon home' + (active ? ' active' : '')} ?disabled=${!enabled}
                             @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}></button>`;
     } else {
+        let suffix = makeStatusText(status);
+
         return html`
             <span style="align-self: center; margin: 0 6px;">›</span>
-            <button class=${active ? 'active' : ''}
+            <button class=${active ? 'active' : ''} ?disabled=${!enabled}
                     @click=${UI.wrap(e => (page != route.page) ? go(e, url) : togglePanels(null, true))}>
                 <div style="flex: 1;">${page.title}</div>
-                ${status ? html`&nbsp;&nbsp;<span class="ins_status">${status}</span>` : ''}
+                ${suffix ? html`&nbsp;&nbsp;<span class="ins_status">${suffix}</span>` : ''}
            </button>
         `;
     }
 }
 
-function makeStatusText(page, thread) {
+function makeStatusText(status) {
     if (goupile.isLocked())
         return '';
 
-    let status = computeStatus(page, thread);
-
-    if (status.complete) {
+    if (!status.enabled) {
+        return profile.develop ? '❌\uFE0E' : '';
+    } else if (status.complete) {
         return '✓\uFE0E';
     } else if (status.filled && page.progress) {
         let progress = Math.floor(100 * status.filled / status.total);
@@ -345,11 +348,12 @@ function makeStatusText(page, thread) {
 }
 
 function computeStatus(page, thread) {
-    if (!page.enabled) {
+    if (!isPageEnabled(page, thread)) {
         let status = {
             filled: 0,
             total: 0,
-            complete: false
+            complete: false,
+            enabled: false
         };
 
         return status;
@@ -359,7 +363,8 @@ function computeStatus(page, thread) {
         let status = {
             filled: 0,
             total: 0,
-            complete: false
+            complete: false,
+            enabled: true
         };
 
         for (let child of page.children) {
@@ -377,11 +382,26 @@ function computeStatus(page, thread) {
         let status = {
             filled: 0 + complete,
             total: 1,
-            complete: complete
+            complete: complete,
+            enabled: true
         };
 
         return status;
     }
+}
+
+function isPageEnabled(page, thread) {
+    let enabled = page.enabled;
+
+    if (typeof enabled == 'function') {
+        try {
+            enabled = enabled(thread);
+        } catch (err) {
+            triggerError(err);
+        }
+    }
+
+    return !!enabled;
 }
 
 async function generateExportKey(e) {
@@ -648,7 +668,10 @@ function renderData() {
                                     let url = col.page.url + `/${row.tid}`;
                                     let highlight = active && route.page.chain.includes(col.page);
 
-                                    if (status.complete) {
+                                    if (!status.enabled) {
+                                        return html`<td class="disabled"
+                                                        title=${col.page.title}><a href=${url}>${summary ?? '❌\uFE0E N/A'}</a></td>`;
+                                    } else if (status.complete) {
                                         return html`<td class=${highlight ? 'complete active' : 'complete'}
                                                         title=${col.page.title}><a href=${url}>${summary ?? '✓\uFE0E Complet'}</a></td>`;
                                     } else if (status.filled) {
@@ -812,6 +835,13 @@ async function renderPage() {
             </div>
             <div style="flex: 1;"></div>
 
+            ${profile.develop && !isPageEnabled(route.page, form_thread) ? html`
+                <div id="ins_develop">
+                    Cette page n'est théoriquement pas activée<br/>
+                    Le mode de conception vous permet d'y accéder.
+                </div>
+            ` : ''}
+
             ${model.actions.length || app.shortcuts.length ? html`
                 <nav class="ui_toolbar" id="ins_tasks" style="z-index: 999999;">
                     ${renderShortcuts()}
@@ -864,7 +894,7 @@ function defaultFormPage(ctx) {
 
                 let cls = 'ins_level';
 
-                if (!child.enabled) {
+                if (!status.enabled) {
                     cls += ' disabled';
                     text = 'Non disponible';
                 } else if (status.complete) {
@@ -900,7 +930,7 @@ function defaultFormPage(ctx) {
                 let cls = 'ins_tile';
                 let text = null;
 
-                if (!child.enabled) {
+                if (!status.enabled) {
                     cls += ' disabled';
                     text = 'Non disponible';
                 } else if (status.complete) {
@@ -1099,24 +1129,26 @@ function addAutomaticTags(variables) {
 }
 
 function renderPageMenu(page) {
-    if (!page.children.some(child => child.enabled))
+    if (!page.children.length)
+        return '';
+    if (!profile.develop && !page.children.some(child => isPageEnabled(child)))
         return '';
 
     return html`
         <a href=${contextualizeURL(page.url, form_thread)}>${page.title}</a>
         <ul>
-            ${Util.map(page.children, child => {
-                if (!child.enabled)
-                    return '';
-
+            ${Util.map(page.children, (child, idx) => {
                 let active = route.page.chain.includes(child);
                 let url = contextualizeURL(child.url, form_thread);
-                let status = makeStatusText(child, form_thread);
+                let status = computeStatus(child, form_thread);
+
+                if (!profile.develop && !status.enabled)
+                    return '';
 
                 return html`
                     <li><a class=${active ? 'active' : ''} href=${url}>
                         <div style="flex: 1;">${child.title}</div>
-                        <span style="font-size: 0.9em;">${status}</span>
+                        <span style="font-size: 0.9em;">${makeStatusText(status)}</span>
                     </a></li>
                 `;
             })}
@@ -1977,6 +2009,9 @@ async function openRecord(tid, anchor, page) {
         new_data = new MagicData;
         new_state = new FormState(new_data);
     }
+
+    if (!profile.develop && !isPageEnabled(page, new_thread))
+        page = page.chain[0];
 
     // Copy UI state if needed
     if (form_state != null && page == route.page) {
