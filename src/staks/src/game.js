@@ -614,7 +614,7 @@ function updateGame() {
         let edit = Object.assign({}, piece);
 
         let kicks = null;
-        let valid = false;
+        let valid = null;
 
         if (rotate > 0) {
             rotatePiece(edit);
@@ -637,12 +637,12 @@ function updateGame() {
             edit.column = piece.column + kick[1];
 
             if (isPieceValid(edit, false)) {
-                valid = true;
+                valid = kick;
                 break;
             }
         }
 
-        if (valid) {
+        if (valid != null) {
             piece.row = edit.row;
             piece.column = edit.column;
             piece.shape = edit.shape;
@@ -653,7 +653,7 @@ function updateGame() {
             piece.actions++;
 
             if (piece.type == 'T') {
-                special = detectTSpin(piece);
+                special = detectTSpin(piece, valid);
             } else {
                 special = null;
             }
@@ -952,7 +952,10 @@ function rotateShape(size, shape) {
     return rotated;
 }
 
-function detectTSpin(piece) {
+function detectTSpin(piece, kick) {
+    if (kick[0] || kick[1])
+        return null;
+
     let front = 0b000_000_101;
     let back = 0b101_000_000;
 
