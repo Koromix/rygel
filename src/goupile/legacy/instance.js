@@ -994,6 +994,8 @@ function renderPage() {
             }
 
             if (!goupile.isLocked()) {
+                let can_forget = form_state.hasChanged() && !route.page.getOption('autosave', form_record, false);
+
                 if (form_state.just_triggered) {
                     form_builder.action('Forcer l\'enregistrement', {}, async e => {
                         await UI.confirm(e, html`Confirmez-vous l'enregistrement <b>malgré la présence d'erreurs</b> ?`,
@@ -1004,10 +1006,10 @@ function renderPage() {
                     });
                 }
 
-                if (form_state.hasChanged()) {
+                if (can_forget) {
                     form_builder.action('-');
 
-                    form_builder.action('Oublier', {color: '#db0a0a', always: form_record.saved}, async e => {
+                    form_builder.action('Oublier', {color: '#db0a0a'}, async e => {
                         await UI.confirm(e, html`Souhaitez-vous réellement <b>annuler les modifications en cours</b> ?`,
                                             'Oublier', () => {});
 
