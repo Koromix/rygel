@@ -172,7 +172,7 @@ function saveSettings() {
 }
 
 // ------------------------------------------------------------------------
-// Update
+// Main
 // ------------------------------------------------------------------------
 
 function update() {
@@ -383,6 +383,9 @@ function update() {
         runner.playOnce(assets.sounds.gameover, false);
     }
 
+    // Apply user settings
+    game.showGhost = settings.ghost;
+
     let now = performance.now();
     game.update(now);
 
@@ -438,6 +441,9 @@ function draw() {
     if (game.isPlaying) {
         attributions.classList.remove('active');
         game.draw();
+
+        if (settings.help && layout.help != null)
+            drawHelp();
     } else {
         attributions.classList.add('active');
         drawMenu();
@@ -489,6 +495,60 @@ function drawMenu() {
     }
 }
 
+function drawHelp() {
+    ctx.save();
+
+    ctx.font = '14px Open Sans';
+    ctx.fillStyle = 'white';
+
+    let x = layout.help.right;
+    let y = layout.help.bottom;
+    let width = 0;
+    let height = 18;
+
+    for (let shortcut of KEYBOARD_SHORTCUTS) {
+        if (shortcut != null) {
+            width = Math.max(width, 114 + runner.measure(shortcut[1]).width);
+            height += 8;
+        }
+
+        height += 10;
+    }
+
+    drawArea(x - width, y - height, width, height);
+    y -= 12;
+
+    for (let i = KEYBOARD_SHORTCUTS.length - 1; i >= 0; i--) {
+        let shortcut = KEYBOARD_SHORTCUTS[i];
+
+        if (shortcut != null) {
+            runner.text(x - 12, y, shortcut[0], { align: 3 });
+            runner.text(x - 92, y, shortcut[1], { align: 3 });
+
+            y -= 8;
+        }
+
+        y -= 10;
+    }
+
+    ctx.restore();
+}
+
+function drawArea(x, y, width, height) {
+    ctx.beginPath();
+    ctx.rect(x, y, width, height);
+
+    ctx.save();
+
+    ctx.fillStyle = 'black';
+    ctx.globalAlpha = 0.75;
+    ctx.fill();
+
+    ctx.restore();
+
+    ctx.clip();
+}
+
 // ------------------------------------------------------------------------
 // Game
 // ------------------------------------------------------------------------
@@ -522,12 +582,16 @@ function Game() {
     let special = null;
     let back2back = false;
 
+    // Settings
+    let show_ghost = true;
+
     Object.defineProperties(this, {
         hasStarted: { get: () => started, enumerable: true },
         isPlaying: { get: () => started && !gameover, enumerable: true },
         isOver: { get: () => gameover, enumerable: true },
 
         pause: { get: () => pause, set: value => { pause = value; }, enumerable: true },
+        showGhost: { get: () => show_ghost, set: value => { show_ghost = value; }, enumerable: true },
 
         score: { get: () => score, enumerable: true },
         level: { get: () => level, enumerable: true },
@@ -1040,10 +1104,7 @@ function Game() {
         drawLevel();
         drawScore();
         drawHold();
-
-        if (settings.help && layout.help != null)
-            drawShortcuts();
-    }
+    };
 
     function drawWell() {
         ctx.save();
@@ -1109,7 +1170,7 @@ function Game() {
         }
 
         // Draw ghost
-        if (settings.ghost && ghost != null) {
+        if (show_ghost && ghost != null) {
             ctx.save();
 
             ctx.globalAlpha = 0.1;
@@ -1214,60 +1275,6 @@ function Game() {
         }
 
         ctx.restore();
-    }
-
-    function drawShortcuts() {
-        ctx.save();
-
-        ctx.font = '14px Open Sans';
-        ctx.fillStyle = 'white';
-
-        let x = layout.help.right;
-        let y = layout.help.bottom;
-        let width = 0;
-        let height = 18;
-
-        for (let shortcut of KEYBOARD_SHORTCUTS) {
-            if (shortcut != null) {
-                width = Math.max(width, 114 + runner.measure(shortcut[1]).width);
-                height += 8;
-            }
-
-            height += 10;
-        }
-
-        drawArea(x - width, y - height, width, height);
-        y -= 12;
-
-        for (let i = KEYBOARD_SHORTCUTS.length - 1; i >= 0; i--) {
-            let shortcut = KEYBOARD_SHORTCUTS[i];
-
-            if (shortcut != null) {
-                runner.text(x - 12, y, shortcut[0], { align: 3 });
-                runner.text(x - 92, y, shortcut[1], { align: 3 });
-
-                y -= 8;
-            }
-
-            y -= 10;
-        }
-
-        ctx.restore();
-    }
-
-    function drawArea(x, y, width, height) {
-        ctx.beginPath();
-        ctx.rect(x, y, width, height);
-
-        ctx.save();
-
-        ctx.fillStyle = 'black';
-        ctx.globalAlpha = 0.75;
-        ctx.fill();
-
-        ctx.restore();
-
-        ctx.clip();
     }
 
     function drawPiece(piece, color = null) {
