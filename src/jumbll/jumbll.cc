@@ -2032,7 +2032,7 @@ By default, the first of the following config files will be used:
 #define HANDLE_COMMAND(Cmd, Func, ReadConfig) \
         do { \
             if (TestStr(cmd, RG_STRINGIFY(Cmd))) { \
-                bool load = (ReadConfig) && TestFile(config_filename); \
+                bool load = (ReadConfig) && config_filename && TestFile(config_filename); \
                  \
                 if (load) { \
                     if (!LoadConfig(config_filename, &config)) \
