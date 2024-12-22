@@ -155,6 +155,8 @@ const VariadicIntFunc = koffi.proto('int VariadicIntFunc(int n, ...)');
 const Enum1 = koffi.enumeration('Enum1', { A: 0, B: 42 });
 const Enum2 = koffi.enumeration('Enum2', { A: -1, B: 2147483647 });
 
+const OpaqueStruct = koffi.opaque('OpaqueStruct');
+
 main();
 
 async function main() {
@@ -291,6 +293,7 @@ async function test() {
     const GetEnumPrimitive3 = lib.func('const char *GetEnumPrimitive3()');
     const GetEnumPrimitive4 = lib.func('const char *GetEnumPrimitive4()');
     const GetEnumPrimitive5 = lib.func('const char *GetEnumPrimitive5()');
+    const FillOpaqueStruct = lib.func('void FillOpaqueStruct(unsigned int value, _Out_ OpaqueStruct *opaque)');
 
     // Simple signed value returns
     assert.equal(GetMinusOne1(), -1);
@@ -953,6 +956,22 @@ async function test() {
     assert.equal(koffi.enumeration('EnumX', {}, 'uint64_t').primitive, 'UInt64');
     assert.equal(koffi.enumeration('EnumY', {}, 'short').primitive, 'Int16');
     assert.throws(() => koffi.enumeration({}, 'float'), /Expected integer type for underlying enum storage type/);
+
+    // Redefine opaque type to concrete struct
+    {
+        koffi.struct(OpaqueStruct, {
+            a: 'int',
+            b: 'int',
+            c: 'int',
+            d: 'int'
+        });
+
+        let opaque = {};
+        FillOpaqueStruct(0xFB422708, opaque);
+
+        assert.throws(() => koffi.struct(OpaqueStruct, { dummy: 'int' }), /Cannot redefine non-opaque type/);
+        assert.deepEqual(opaque, { a: 0xFB, b: 0x42, c: 0x27, d: 0x8 });
+    }
 
     lib.unload();
 }

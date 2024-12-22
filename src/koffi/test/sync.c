@@ -195,6 +195,13 @@ typedef enum Enum3 { Enum3_A = -1, Enum3_B = 2147483648u } Enum3;
 typedef enum Enum4 { Enum4_A = 0, Enum4_B = 2147483648u } Enum4;
 typedef enum Enum5 { Enum5_A = 0, Enum5_B = 9223372036854775808ull } Enum5;
 
+typedef struct OpaqueStruct {
+    int a;
+    int b;
+    int c;
+    int d;
+} OpaqueStruct;
+
 EXPORT int sym_int = 0;
 EXPORT const char *sym_str = NULL;
 EXPORT int sym_int3[3] = { 0, 0, 0 };
@@ -1080,3 +1087,11 @@ EXPORT const char *GetEnumPrimitive4() { return GET_ENUM_PRIMITIVE(Enum4); }
 EXPORT const char *GetEnumPrimitive5() { return GET_ENUM_PRIMITIVE(Enum5); }
 
 #undef GET_ENUM_PRIMITIVE
+
+EXPORT void FillOpaqueStruct(unsigned int value, OpaqueStruct *opaque)
+{
+    opaque->a = (value >> 24) & 0xFF;
+    opaque->b = (value >> 16) & 0xFF;
+    opaque->c = (value >> 8) & 0xFF;
+    opaque->d = (value >> 0) & 0xFF;
+}

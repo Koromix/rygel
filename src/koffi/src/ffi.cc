@@ -227,8 +227,9 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     }
 
     bool named = (info.Length() >= 2);
+    bool redefine = named && CheckValueTag(info[0], &TypeInfoMarker);
 
-    if (named && !info[0].IsString()) {
+    if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
@@ -257,8 +258,20 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     };
 
     TypeInfo *type = instance->types.AppendDefault();
+    TypeInfo *replace = nullptr;
 
-    if (named) {
+    if (redefine) {
+        Napi::Object obj = name.As<Napi::Object>();
+        TypeObject *defn = TypeObject::Unwrap(obj);
+
+        replace = (TypeInfo *)defn->GetType();
+        type->name = replace->name;
+
+        if (replace->primitive != PrimitiveKind::Void || replace == instance->void_type) {
+            ThrowError<Napi::TypeError>(env, "Cannot redefine non-opaque type %1", replace->name);
+            return env.Null();
+        }
+    } else if (named) {
         type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
 
         if (!MapType(env, instance, type, type->name))
@@ -349,6 +362,11 @@ static Napi::Value CreateStructType(const Napi::CallbackInfo &info, bool pad)
     type->flags &= ~(int)TypeFlag::IsIncomplete;
     err_guard.Disable();
 
+    if (replace) {
+        std::swap(*type, *replace);
+        type = replace;
+    }
+
     return FinalizeType(env, instance, type);
 }
 
@@ -373,8 +391,9 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     }
 
     bool named = (info.Length() >= 2);
+    bool redefine = named && CheckValueTag(info[0], &TypeInfoMarker);
 
-    if (named && !info[0].IsString()) {
+    if (named && !info[0].IsString() && !redefine) {
         ThrowError<Napi::TypeError>(env, "Unexpected %1 value for name, expected string", GetValueType(info[0]));
         return env.Null();
     }
@@ -403,8 +422,20 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     };
 
     TypeInfo *type = instance->types.AppendDefault();
+    TypeInfo *replace = nullptr;
 
-    if (named) {
+    if (redefine) {
+        Napi::Object obj = name.As<Napi::Object>();
+        TypeObject *defn = TypeObject::Unwrap(obj);
+
+        replace = (TypeInfo *)defn->GetType();
+        type->name = replace->name;
+
+        if (replace->primitive != PrimitiveKind::Void || replace == instance->void_type) {
+            ThrowError<Napi::TypeError>(env, "Cannot redefine non-opaque type %1", replace->name);
+            return env.Null();
+        }
+    } else if (named) {
         type->name = DuplicateString(name.Utf8Value().c_str(), &instance->str_alloc).ptr;
 
         if (!MapType(env, instance, type, type->name))
@@ -489,6 +520,11 @@ static Napi::Value CreateUnionType(const Napi::CallbackInfo &info)
     // Union constructor
     Napi::Function constructor = UnionObject::InitClass(env, type);
     type->construct.Reset(constructor, 1);
+
+    if (replace) {
+        std::swap(*type, *replace);
+        type = replace;
+    }
 
     return FinalizeType(env, instance, type);
 }
