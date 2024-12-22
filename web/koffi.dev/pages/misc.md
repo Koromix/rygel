@@ -50,6 +50,39 @@ console.log(koffi.types.long.size);
 
 You can alias a type with `koffi.alias(name, type)`. Aliased types are completely equivalent.
 
+## Circular references
+
+In some cases, composite types can point to each other and thus depend on each other. This can also happen when a function takes a pointer to a struct that also contains a function pointer.
+
+To deal with this, you can create an opaque type and redefine it later to a concrete struct or union type, as shown below.
+
+```js
+const Type1 = koffi.opaque('Type1');
+
+const Type2 = koffi.struct('Type2', {
+    ptr: 'Type1 *',
+    i: 'int'
+});
+
+// Redefine Type1 to a concrete type
+koffi.struct(Type1, {
+    ptr: 'Type2 *',
+    f: 'float'
+});
+```
+
+> [!NOTE]
+> You must use a proper type object when you redefine the type. If you only have the name, use `koffi.resolve()` to get a type object from a type string.
+>
+> ```js
+> const MyType = koffi.opaque('MyType');
+>
+> // This does not work, you must use the MyType object and not a type string
+> koffi.struct('MyType', {
+>      ptr: 'Type2 *',
+>      f: 'float'
+> });
+
 # Settings
 
 ## Memory usage
