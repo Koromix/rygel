@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" class="nojs">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>{{ TITLE }}</title>
+        <meta name="author" content="Niels Martignène">
+        <meta name="description" content="{{ DESCRIPTION }}">
+        <link rel="icon" href="{{ ASSET favicon.png }}">
+
+        <meta name="theme-color" content="#6aa051">
+        <link rel="stylesheet" href="{{ ASSET static/site.min.css }}">
+
+        <script type="text/javascript" src="{{ ASSET static/site.min.js }}"></script>
+        <script type="text/javascript" src="{{ ASSET static/highlight.min.js }}"></script>
+    </head>
+
+    <body>
+        <div id="deploy"></div>
+
+        <nav id="top">
+            <menu>
+                <a id="logo" href="/"><img src="{{ ASSET static/logo.webp }}" width="370" height="198" alt="" /></a>
+
+{{ LINKS }}
+
+                <div style="flex: 1;"></div>
+
+                <li><a href="https://www.npmjs.com/package/koffi" style="border-bottom-color: transparent; margin-top: 8px;"><img src="https://img.shields.io/npm/v/koffi?color=brightgreen&cacheSeconds=7200" alt="NPM"/></a></li>
+                <li><a href="https://github.com/Koromix/koffi" style="border-bottom-color: transparent; margin-top: 8px;"><img src="https://img.shields.io/badge/GitHub-Koffi-ff6600" alt="GitHub"/></a></li>
+            </menu>
+        </nav>
+
+        {{ TOC }}
+
+        <main>
+            {{ CONTENT }}
+        </main>
+
+        <footer>
+            <div>Koffi © 2024</div>
+            <div style="font-size: 0.8em;">
+                Niels Martignène (<a href="https://github.com/Koromix/" target="_blank">Koromix</a>)<br>
+                <a href="mailto:niels.martignene@protonmail.com" style="font-weight: bold; color: inherit;">niels.martignene@protonmail.com</a>
+            </div>
+        </footer>
+    </body>
+</html>
