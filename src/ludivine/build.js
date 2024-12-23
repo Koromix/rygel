@@ -81,7 +81,7 @@ async function run() {
             '.png': 'file',
             '.webp': 'file',
             '.wasm': 'copy',
-            '.woff2': 'dataurl'
+            '.woff2': 'file'
         },
         outdir: 'dist/static/',
         plugins: [
