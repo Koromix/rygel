@@ -6,6 +6,10 @@
 > This software has not been stabilized yet and **must not be used as your primary backup** tool.
 > You've been warned!
 
+### Rekkord 0.35 (2024-12-25)
+
+- Fix error when listing empty directories and snapshots (regression introduced in Rekkord 0.30)
+
 ### Rekkord 0.34 (2024-12-09)
 
 - Use more standard syntax in usage texts
