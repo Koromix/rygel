@@ -1005,7 +1005,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             MigrateLegacyEntries(&blob, 0);
         } [[fallthrough]];
         case rk_BlobType::Directory2: {
-            if (blob.len <= RG_SIZE(DirectoryHeader)) {
+            if (blob.len < RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed directory blob '%1'", hash);
                 return false;
             }
@@ -1042,7 +1042,7 @@ bool rk_List(rk_Disk *disk, const rk_Hash &hash, const rk_ListSettings &settings
             MigrateLegacyEntries(&blob, RG_SIZE(SnapshotHeader2));
         } [[fallthrough]];
         case rk_BlobType::Snapshot3: {
-            if (blob.len <= RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
+            if (blob.len < RG_SIZE(SnapshotHeader2) + RG_SIZE(DirectoryHeader)) {
                 LogError("Malformed snapshot blob '%1'", hash);
                 return false;
             }
