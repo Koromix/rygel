@@ -45,13 +45,13 @@ const kicks_O = [
 ];
 
 const BLOCKS = [
-    { type: 'I', color: '#3dd6ff', size: 4, shape: 0b0000_0000_1111_0000, kicks: kicks_I },
-    { type: 'J', color: '#1e4fc2', size: 3, shape: 0b000_111_100, kicks: kicks_JLTSZ },
-    { type: 'L', color: '#ff8a2b', size: 3, shape: 0b000_111_001, kicks: kicks_JLTSZ },
-    { type: 'O', color: '#ffd900', size: 2, shape: 0b11_11, kicks: kicks_O },
-    { type: 'S', color: '#55ec55', size: 3, shape: 0b000_110_011, kicks: kicks_JLTSZ },
-    { type: 'T', color: '#c73daf', size: 3, shape: 0b000_111_010, kicks: kicks_JLTSZ },
-    { type: 'Z', color: '#f40812', size: 3, shape: 0b000_011_110, kicks: kicks_JLTSZ }
+    { type: 'I', color: '#2df0f0', size: 4, shape: 0b0000_0000_1111_0000, kicks: kicks_I },
+    { type: 'J', color: '#2d2df0', size: 3, shape: 0b000_111_100, kicks: kicks_JLTSZ },
+    { type: 'L', color: '#f0a32d', size: 3, shape: 0b000_111_001, kicks: kicks_JLTSZ },
+    { type: 'O', color: '#f0f02d', size: 2, shape: 0b11_11, kicks: kicks_O },
+    { type: 'S', color: '#2df02d', size: 3, shape: 0b000_110_011, kicks: kicks_JLTSZ },
+    { type: 'T', color: '#a32df0', size: 3, shape: 0b000_111_010, kicks: kicks_JLTSZ },
+    { type: 'Z', color: '#f02d2d', size: 3, shape: 0b000_011_110, kicks: kicks_JLTSZ }
 ];
 
 export {
