@@ -1271,7 +1271,14 @@ function Game() {
             let x = layout.hold.width / 2 - (block.size * square) / 2;
             let y = top * square;
 
-            drawShape(x, y, block.size, block.shape, square, block.color);
+            let color = block.color;
+
+            if (!can_hold) {
+                ctx.globalAlpha = 0.1;
+                color = 'white';
+            }
+
+            drawShape(x, y, block.size, block.shape, square, color);
         }
 
         ctx.restore();
