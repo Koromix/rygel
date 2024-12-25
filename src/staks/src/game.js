@@ -780,10 +780,11 @@ function Game() {
             if (gravity == null)
                 gravity = now;
 
-            let delay = 725 * Math.pow(0.85, level) + level;
+            let speed = Math.min(20, level);
+            let delay = 1000 * Math.pow(0.8 - ((speed - 1) * 0.007), speed - 1);
 
-            if (turbo)
-                delay = Math.min(rules.TURBO_DELAY, delay);
+            if (turbo && delay > rules.TURBO_DELAY)
+                delay = rules.TURBO_DELAY;
 
             if (now >= gravity + delay) {
                 if (isPieceFloating(piece)) {
