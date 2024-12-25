@@ -568,6 +568,7 @@ function Game() {
     let piece = null;
 
     // Actions
+    let das = null;
     let hold_block = null;
     let can_hold = true;
     let ghost = null;
@@ -648,9 +649,9 @@ function Game() {
         if (runner.isTouch) {
             move = 0;
             move += button('right', layout.ui.left + 0.25 * layout.ui.width + 0.7 * layout.button,
-                                    layout.ui.top + 0.3 * layout.ui.height, layout.button).clicked;
+                                    layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
             move -= button('left', layout.ui.left + 0.25 * layout.ui.width - 0.7 * layout.button,
-                                   layout.ui.top + 0.3 * layout.ui.height, layout.button).clicked;
+                                   layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
 
             rotate = 0;
             rotate += button('clockwise', layout.ui.left + 0.75 * layout.ui.width + 0.7 * layout.button,
@@ -673,7 +674,7 @@ function Game() {
                 mouse_state.left = 0;
             }
         } else {
-            move = (pressed_keys.right == 1) - (pressed_keys.left == 1);
+            move = (pressed_keys.right >= 1) - (pressed_keys.left >= 1);
             rotate = (pressed_keys.up == 1 || pressed_keys.x == 1) - (pressed_keys.ctrl == 1 || pressed_keys.z == 1);
             turbo = (pressed_keys.down >= 1);
             drop = (pressed_keys.space == 1);
@@ -752,6 +753,16 @@ function Game() {
 
         // Perform lateral movement
         if (move) {
+            let first = (das == null);
+
+            if (first) {
+                das = now + rules.DAS_DELAY;
+            } else if (now >= das) {
+                das = now + rules.DAS_PERIOD;
+            } else {
+                move = 0;
+            }
+
             let edit = Object.assign({}, piece);
             edit.column += move;
 
@@ -759,12 +770,14 @@ function Game() {
                 piece.column = edit.column;
                 if (piece.actions < rules.MAX_ACTIONS && locking != null)
                     locking.time = now;
-                piece.actions++;
+                piece.actions += first;
 
                 special = null;
 
                 runner.playOnce(assets.sounds.move);
             }
+        } else {
+            das = null;
         }
 
         // Compute ghost
@@ -925,6 +938,7 @@ function Game() {
                 return false;
         }
 
+        das = null;
         gravity = now;
         locking = null;
         special = null;

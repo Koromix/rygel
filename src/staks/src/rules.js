@@ -21,6 +21,8 @@ const EXTRA_TOP = 0.12;
 const DEFAULT_DELAY = 150;
 const TURBO_DELAY = 5;
 const LOCK_DELAY = 500;
+const DAS_DELAY = 200;
+const DAS_PERIOD = 50;
 const MAX_ACTIONS = 20;
 
 const VISIBLE_BAG_SIZE = 3;
@@ -60,12 +62,14 @@ export {
     EXTRA_ROWS,
     EXTRA_TOP,
 
-    VISIBLE_BAG_SIZE,
-
     DEFAULT_DELAY,
     TURBO_DELAY,
     LOCK_DELAY,
+    DAS_DELAY,
+    DAS_PERIOD,
     MAX_ACTIONS,
+
+    VISIBLE_BAG_SIZE,
 
     BLOCKS
 };
