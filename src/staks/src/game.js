@@ -566,14 +566,15 @@ function Game() {
     // Pieces
     let bag = [];
     let piece = null;
+    let ghost = null;
 
     // Actions
     let das = null;
     let hold_block = null;
     let can_hold = true;
-    let ghost = null;
-    let gravity = null;
-    let locking = null;
+    let gravity_start = null;
+    let lock_start = null;
+    let lock_since = null;
 
     // Scoring
     let level = 1;
@@ -737,8 +738,7 @@ function Game() {
                 piece.shape = edit.shape;
                 piece.angle = edit.angle;
 
-                if (locking != null)
-                    locking.counter = counter;
+                lock_start = counter;
                 piece.actions++;
 
                 if (piece.type == 'T') {
@@ -768,8 +768,8 @@ function Game() {
 
             if (isPieceValid(edit, false)) {
                 piece.column = edit.column;
-                if (piece.actions < rules.MAX_ACTIONS && locking != null)
-                    locking.counter = counter;
+                if (piece.actions < rules.MAX_ACTIONS)
+                    lock_start = counter;
                 piece.actions += first;
 
                 special = null;
@@ -790,8 +790,8 @@ function Game() {
 
         // Run gravity
         {
-            if (gravity == null)
-                gravity = counter;
+            if (gravity_start == null)
+                gravity_start = counter;
 
             let delay = computeGravity(level);
 
@@ -801,8 +801,8 @@ function Game() {
             if (turbo)
                 delay = rules.TURBO_DELAY;
 
-            while (counter >= gravity + delay) {
-                gravity = counter;
+            while (counter >= gravity_start + delay) {
+                gravity_start = counter;
 
                 if (!isPieceFloating(piece))
                     break;
@@ -831,15 +831,13 @@ function Game() {
             score += 2 * delta;
         } else {
             if (isPieceFloating(piece)) {
-                locking = null;
-            } else if (locking == null) {
-                locking = {
-                    start: counter,
-                    counter: counter
-                };
+                lock_start = null;
+            } else if (lock_start == null) {
+                lock_start = counter;
+                lock_since = counter;
             }
 
-            if (locking != null && counter >= locking.counter + rules.LOCK_DELAY) {
+            if (lock_start != null && counter >= lock_start + rules.LOCK_DELAY) {
                 if (!isPieceValid(piece, true)) {
                     gameover = true;
                     return;
@@ -953,8 +951,8 @@ function Game() {
         }
 
         das = null;
-        gravity = counter;
-        locking = null;
+        gravity_start = counter;
+        lock_start = null;
         special = null;
 
         return true;
@@ -1212,8 +1210,8 @@ function Game() {
         if (piece != null) {
             ctx.save();
 
-            if (locking != null) {
-                let delay = runner.updateCounter - locking.start;
+            if (lock_start != null) {
+                let delay = runner.updateCounter - lock_since;
                 let alpha = 0.7 + Math.cos(delay / 24) * 0.3;
 
                 ctx.globalAlpha = alpha;
