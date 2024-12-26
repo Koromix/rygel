@@ -20,8 +20,8 @@ const EXTRA_TOP = 0.12;
 
 const TURBO_DELAY = 5;
 const LOCK_DELAY = 500;
-const DAS_DELAY = 200;
-const DAS_PERIOD = 50;
+const DAS_DELAY = 160;
+const DAS_PERIOD = 80;
 const MAX_ACTIONS = 20;
 
 const VISIBLE_BAG_SIZE = 3;
