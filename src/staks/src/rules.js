@@ -21,8 +21,8 @@ const EXTRA_TOP = 0.12;
 // Delays relative to game speed of 480 updates/second
 const TURBO_DELAY = 4; // ~8.33 ms
 const LOCK_DELAY = 240; // 500 ms
-const DAS_DELAY = 80; // ~166.66 ms
-const DAS_PERIOD = 40; // ~83.33 ms
+const DAS_DELAY = 80; // ~166.67 ms
+const DAS_PERIOD = 8; // ~16.67 ms
 const MAX_ACTIONS = 20;
 
 const VISIBLE_BAG_SIZE = 3;
