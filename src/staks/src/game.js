@@ -641,7 +641,7 @@ function Game() {
         }
 
         let move = 0;
-        let rotate = false;
+        let rotate = 0;
         let turbo = false;
         let drop = false;
         let hold = false;
