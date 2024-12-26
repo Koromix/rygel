@@ -18,7 +18,6 @@ const COLUMNS = 10;
 const EXTRA_ROWS = 4;
 const EXTRA_TOP = 0.12;
 
-const DEFAULT_DELAY = 150;
 const TURBO_DELAY = 5;
 const LOCK_DELAY = 500;
 const DAS_DELAY = 200;
@@ -62,7 +61,6 @@ export {
     EXTRA_ROWS,
     EXTRA_TOP,
 
-    DEFAULT_DELAY,
     TURBO_DELAY,
     LOCK_DELAY,
     DAS_DELAY,
