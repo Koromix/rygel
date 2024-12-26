@@ -570,6 +570,7 @@ function Game() {
 
     // Actions
     let das_start = null;
+    let das_left = false;
     let das_count = null;
     let hold_block = null;
     let can_hold = true;
@@ -763,8 +764,13 @@ function Game() {
                     move = right - left;
 
                     das_start = counter;
+                    das_left = left;
                     das_count = 0;
                 } else if (counter >= das_start + rules.DAS_DELAY) {
+                    if (das_left != left)
+                        das_count = 0;
+                    das_left = left;
+
                     das_count++;
 
                     if (das_count >= rules.DAS_PERIOD)
