@@ -841,7 +841,7 @@ function Game() {
         }
 
         // Lock piece?
-        if (drop && !turbo) {
+        if (drop) {
             let delta = piece.row - ghost.row;
 
             piece.row = ghost.row;
