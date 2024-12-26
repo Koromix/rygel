@@ -90,6 +90,11 @@ dialog.right > div { border-radius: 16px 0 16px 16px; }
 
 button { border-radius: 20px; }
 
+.insist {
+    font-weight: bold;
+    color: #364b9b;
+}
+
 .actions {
     margin-top: 2em;
     justify-content: space-evenly;
