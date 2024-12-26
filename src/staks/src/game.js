@@ -132,7 +132,7 @@ async function start(root) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    runner.updateFrequency = 120;
+    runner.updateFrequency = 480;
     runner.onUpdate = update;
     runner.onDraw = draw;
     runner.start();
@@ -386,8 +386,8 @@ function update() {
     // Apply user settings
     game.showGhost = settings.ghost;
 
-    let now = performance.now();
-    game.update(now);
+    let counter = runner.updateCounter;
+    game.update(counter);
 
     canvas.focus();
 }
@@ -605,7 +605,7 @@ function Game() {
         pause = false;
     };
 
-    this.update = function(now) {
+    this.update = function(counter) {
         if (!started || gameover)
             return;
 
@@ -738,7 +738,7 @@ function Game() {
                 piece.angle = edit.angle;
 
                 if (locking != null)
-                    locking.time = now;
+                    locking.counter = counter;
                 piece.actions++;
 
                 if (piece.type == 'T') {
@@ -756,9 +756,9 @@ function Game() {
             let first = (das == null);
 
             if (first) {
-                das = now + rules.DAS_DELAY;
-            } else if (now >= das) {
-                das = now + rules.DAS_PERIOD;
+                das = counter + rules.DAS_DELAY;
+            } else if (counter >= das) {
+                das = counter + rules.DAS_PERIOD;
             } else {
                 move = 0;
             }
@@ -769,7 +769,7 @@ function Game() {
             if (isPieceValid(edit, false)) {
                 piece.column = edit.column;
                 if (piece.actions < rules.MAX_ACTIONS && locking != null)
-                    locking.time = now;
+                    locking.counter = counter;
                 piece.actions += first;
 
                 special = null;
@@ -791,24 +791,27 @@ function Game() {
         // Run gravity
         {
             if (gravity == null)
-                gravity = now;
+                gravity = counter;
 
-            let speed = Math.min(20, level);
-            let delay = 1000 * Math.pow(0.8 - ((speed - 1) * 0.007), speed - 1);
+            let delay = computeGravity(level);
 
-            if (turbo && delay > rules.TURBO_DELAY)
+            // Don't add bonus points if turbo is slow
+            turbo &&= (delay >= rules.TURBO_DELAY);
+
+            if (turbo)
                 delay = rules.TURBO_DELAY;
 
-            if (now >= gravity + delay) {
-                if (isPieceFloating(piece)) {
-                    piece.row--;
-                    piece.actions = 0;
+            while (counter >= gravity + delay) {
+                gravity = counter;
 
-                    if (turbo)
-                        score++;
-                }
+                if (!isPieceFloating(piece))
+                    break;
 
-                gravity = now;
+                piece.row--;
+                piece.actions = 0;
+
+                if (turbo)
+                    score++;
             }
         }
 
@@ -831,12 +834,12 @@ function Game() {
                 locking = null;
             } else if (locking == null) {
                 locking = {
-                    time: now,
-                    frame: runner.drawCounter
+                    start: counter,
+                    counter: counter
                 };
             }
 
-            if (locking != null && now >= locking.time + rules.LOCK_DELAY) {
+            if (locking != null && counter >= locking.counter + rules.LOCK_DELAY) {
                 if (!isPieceValid(piece, true)) {
                     gameover = true;
                     return;
@@ -914,7 +917,18 @@ function Game() {
         }
     }
 
-    function spawnPiece(block, now) {
+    function computeGravity(level) {
+        if (level < 20) {
+            let speed = level - 1;
+            let delay = 480 * Math.pow(0.8 - (speed * 0.007), speed);
+
+            return delay;
+        } else {
+            return 0;
+        }
+    }
+
+    function spawnPiece(block, counter) {
         piece = {
             row: rules.ROWS - block.top,
             column: Math.floor(rules.COLUMNS / 2 - block.size / 2),
@@ -939,7 +953,7 @@ function Game() {
         }
 
         das = null;
-        gravity = now;
+        gravity = counter;
         locking = null;
         special = null;
 
@@ -1199,8 +1213,8 @@ function Game() {
             ctx.save();
 
             if (locking != null) {
-                let frames = runner.drawCounter - locking.frame;
-                let alpha = 0.7 + Math.cos(frames / 2) * 0.3;
+                let delay = runner.updateCounter - locking.start;
+                let alpha = 0.7 + Math.cos(delay / 24) * 0.3;
 
                 ctx.globalAlpha = alpha;
             }
