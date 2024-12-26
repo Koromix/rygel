@@ -569,7 +569,8 @@ function Game() {
     let ghost = null;
 
     // Actions
-    let das = null;
+    let das_start = null;
+    let das_count = null;
     let hold_block = null;
     let can_hold = true;
     let gravity_start = null;
@@ -640,7 +641,8 @@ function Game() {
             can_hold = true;
         }
 
-        let move = 0;
+        let left = false;
+        let right = false;
         let rotate = 0;
         let turbo = false;
         let drop = false;
@@ -648,11 +650,10 @@ function Game() {
 
         // Respond to user input
         if (runner.isTouch) {
-            move = 0;
-            move += button('right', layout.ui.left + 0.25 * layout.ui.width + 0.7 * layout.button,
+            left = button('left', layout.ui.left + 0.25 * layout.ui.width - 0.7 * layout.button,
+                                  layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
+            right = button('right', layout.ui.left + 0.25 * layout.ui.width + 0.7 * layout.button,
                                     layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
-            move -= button('left', layout.ui.left + 0.25 * layout.ui.width - 0.7 * layout.button,
-                                   layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
 
             rotate = 0;
             rotate += button('clockwise', layout.ui.left + 0.75 * layout.ui.width + 0.7 * layout.button,
@@ -675,7 +676,8 @@ function Game() {
                 mouse_state.left = 0;
             }
         } else {
-            move = (pressed_keys.right >= 1) - (pressed_keys.left >= 1);
+            left = (pressed_keys.left >= 1);
+            right = (pressed_keys.right >= 1);
             rotate = (pressed_keys.up == 1 || pressed_keys.x == 1) - (pressed_keys.ctrl == 1 || pressed_keys.z == 1);
             turbo = (pressed_keys.down >= 1);
             drop = (pressed_keys.space == 1);
@@ -751,33 +753,50 @@ function Game() {
             }
         }
 
-        // Perform lateral movement
-        if (move) {
-            let first = (das == null);
+        // Perform lateral movement and handle DAS
+        for (;;) {
+            let first = (das_start == null);
+            let move = 0;
 
-            if (first) {
-                das = counter + rules.DAS_DELAY;
-            } else if (counter >= das) {
-                das = counter + rules.DAS_PERIOD;
-            } else {
-                move = 0;
+            if (left != right) {
+                if (das_start == null) {
+                    move = right - left;
+
+                    das_start = counter;
+                    das_count = 0;
+                } else if (counter >= das_start + rules.DAS_DELAY) {
+                    das_count++;
+
+                    if (das_count >= rules.DAS_PERIOD)
+                        move += right - left;
+                }
+            } else if (!left) { // Implies !right given previous condition 
+                das_start = null;
             }
+
+            if (!move)
+                break;
 
             let edit = Object.assign({}, piece);
             edit.column += move;
 
-            if (isPieceValid(edit, false)) {
+            if (!isPieceValid(edit, false))
+                break;
+
+            // Confirm move
+            {
                 piece.column = edit.column;
+
                 if (piece.actions < rules.MAX_ACTIONS)
                     lock_start = counter;
                 piece.actions += first;
+
+                das_count -= rules.DAS_PERIOD;
 
                 special = null;
 
                 runner.playOnce(assets.sounds.move);
             }
-        } else {
-            das = null;
         }
 
         // Compute ghost
@@ -950,7 +969,6 @@ function Game() {
                 return false;
         }
 
-        das = null;
         gravity_start = counter;
         lock_start = null;
         special = null;
