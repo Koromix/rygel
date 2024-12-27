@@ -100,11 +100,22 @@ async function load(prefix, progress = null) {
     for (let i = 0; i < rules.BLOCKS.length; i++) {
         let block = rules.BLOCKS[i];
 
-        let trail = ctz(block.shape);
-        let lead = clz(block.shape) - (32 - block.size * block.size);
+        let trail = 0;
+        let lead = 0;
+
+        for (let j = 0; j < block.shape.length; j++) {
+            if (block.shape[j])
+                break;
+            lead++;
+        }
+        for (let j = block.shape.length - 1; j >= 0; j--) {
+            if (block.shape[j])
+                break;
+            trail++;
+        }
 
         block.value = i;
-
+        block.size = Math.sqrt(block.shape.length);
         block.top = block.size - Math.floor(trail / block.size);
         block.bottom = Math.floor(lead / block.size);
     }
@@ -987,14 +998,13 @@ function Game() {
 
         for (let i = 0; i < piece.size; i++) {
             for (let j = 0; j < piece.size; j++) {
-                if (!testShape(piece.size, piece.shape, i, j))
+                if (!piece.shape[i * piece.size + j])
                     continue;
 
                 let row = piece.row + i;
                 let column = piece.column + j;
-                let idx = (row * rules.COLUMNS) + column;
 
-                grid[idx] = piece.value;
+                grid[row * rules.COLUMNS + column] = piece.value;
             }
         }
 
@@ -1015,14 +1025,13 @@ function Game() {
 
         for (let i = 0; i < piece.size; i++) {
             for (let j = 0; j < piece.size; j++) {
-                if (!testShape(piece.size, piece.shape, i, j))
+                if (!piece.shape[i * piece.size + j])
                     continue;
 
                 let row = piece.row + i;
                 let column = piece.column + j;
-                let idx = (row * rules.COLUMNS) + column;
 
-                if (grid[idx] >= 0)
+                if (grid[row * rules.COLUMNS + column] >= 0)
                     return false;
 
                 bottom = Math.min(bottom, row);
@@ -1049,46 +1058,15 @@ function Game() {
     }
 
     function rotateShape(size, shape) {
-        let rotated = 0;
+        let rotated = new Uint8Array(size * size);
 
-        switch (size) {
-            case 2: {
-                rotated |= (shape & 0b10_00) ? 0b00_10 : 0;
-                rotated |= (shape & 0b01_00) ? 0b10_00 : 0;
-                rotated |= (shape & 0b00_10) ? 0b00_01 : 0;
-                rotated |= (shape & 0b00_01) ? 0b01_00 : 0;
-            } break;
+        for (let i = 0; i < size; i++) {
+            for (let j = 0; j < size; j++) {
+                let i2 = size - 1 - j;
+                let j2 = i;
 
-            case 3: {
-                rotated |= (shape & 0b100_000_000) ? 0b000_000_100 : 0;
-                rotated |= (shape & 0b010_000_000) ? 0b000_100_000 : 0;
-                rotated |= (shape & 0b001_000_000) ? 0b100_000_000 : 0;
-                rotated |= (shape & 0b000_100_000) ? 0b000_000_010 : 0;
-                rotated |= (shape & 0b000_010_000) ? 0b000_010_000 : 0;
-                rotated |= (shape & 0b000_001_000) ? 0b010_000_000 : 0;
-                rotated |= (shape & 0b000_000_100) ? 0b000_000_001 : 0;
-                rotated |= (shape & 0b000_000_010) ? 0b000_001_000 : 0;
-                rotated |= (shape & 0b000_000_001) ? 0b001_000_000 : 0;
-            } break;
-
-            case 4: {
-                rotated |= (shape & 0b1000_0000_0000_0000) ? 0b0000_0000_0000_1000 : 0;
-                rotated |= (shape & 0b0100_0000_0000_0000) ? 0b0000_0000_1000_0000 : 0;
-                rotated |= (shape & 0b0010_0000_0000_0000) ? 0b0000_1000_0000_0000 : 0;
-                rotated |= (shape & 0b0001_0000_0000_0000) ? 0b1000_0000_0000_0000 : 0;
-                rotated |= (shape & 0b0000_1000_0000_0000) ? 0b0000_0000_0000_0100 : 0;
-                rotated |= (shape & 0b0000_0100_0000_0000) ? 0b0000_0000_0100_0000 : 0;
-                rotated |= (shape & 0b0000_0010_0000_0000) ? 0b0000_0100_0000_0000 : 0;
-                rotated |= (shape & 0b0000_0001_0000_0000) ? 0b0100_0000_0000_0000 : 0;
-                rotated |= (shape & 0b0000_0000_1000_0000) ? 0b0000_0000_0000_0010 : 0;
-                rotated |= (shape & 0b0000_0000_0100_0000) ? 0b0000_0000_0010_0000 : 0;
-                rotated |= (shape & 0b0000_0000_0010_0000) ? 0b0000_0010_0000_0000 : 0;
-                rotated |= (shape & 0b0000_0000_0001_0000) ? 0b0010_0000_0000_0000 : 0;
-                rotated |= (shape & 0b0000_0000_0000_1000) ? 0b0000_0000_0000_0001 : 0;
-                rotated |= (shape & 0b0000_0000_0000_0100) ? 0b0000_0000_0001_0000 : 0;
-                rotated |= (shape & 0b0000_0000_0000_0010) ? 0b0000_0001_0000_0000 : 0;
-                rotated |= (shape & 0b0000_0000_0000_0001) ? 0b0001_0000_0000_0000 : 0;
-            } break;
+                rotated[i2 * size + j2] = shape[i * size + j];
+            }
         }
 
         return rotated;
@@ -1113,10 +1091,9 @@ function Game() {
             for (let j = 0; j < 3; j++) {
                 let row = piece.row + i;
                 let column = piece.column + j;
-                let idx = (row * rules.COLUMNS) + column;
 
-                major += testShape(3, front, i, j) && (grid[idx] >= 0);
-                minor += testShape(3, back, i, j) && (grid[idx] >= 0);
+                major += front[i * 3 + j] && (grid[row * rules.COLUMNS + column] >= 0);
+                minor += back[i * 3 + j] && (grid[row * rules.COLUMNS + column] >= 0);
             }
         }
 
@@ -1350,7 +1327,7 @@ function Game() {
 
         for (let i = 0; i < size; i++) {
             for (let j = 0; j < size; j++) {
-                if (!testShape(size, shape, i, j))
+                if (!shape[i * size + j])
                     continue;
 
                 let x2 = x + j * pixels;
@@ -1441,37 +1418,6 @@ function drawButtons() {
 // ------------------------------------------------------------------------
 // Utility
 // ------------------------------------------------------------------------
-
-function clz(i) {
-    return Math.clz32(i);
-}
-
-function ctz(i) {
-    i >>>= 0;
-
-    if (i === 0)
-        return 32;
-
-    i &= -i;
-    return 31 - clz(i);
-}
-
-function popcnt(i) {
-    i = i - ((i >>> 1) & 0x55555555);
-    i = (i & 0x33333333) + ((i >>> 2) & 0x33333333);
-    i = (i + (i >>> 4)) & 0x0f0f0f0f;
-    i = i + (i >>> 8);
-    i = i + (i >>> 16);
-    return i & 0x0000003f;
-}
-
-function testShape(size, shape, i, j) {
-    let shift = size * (size - i) - j - 1;
-    let mask = 1 << shift;
-
-    let hit = !!(shape & mask);
-    return hit;
-}
 
 function isInsideRect(x, y, rect) {
     let inside = (x >= rect.left &&
