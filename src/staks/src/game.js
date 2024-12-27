@@ -198,7 +198,7 @@ function update() {
         ) / 2) * 2;
 
         width = rules.COLUMNS * square;
-        height = (rules.ROWS + rules.EXTRA_TOP) * square;
+        height = Math.ceil((rules.ROWS + rules.EXTRA_TOP) * square);
 
         let left = canvas.width / 2 - width / 2;
         let top = runner.isTouch ? padding : (canvas.height / 2 - height / 2);
@@ -1201,7 +1201,7 @@ function Game() {
             ctx.restore();
         }
 
-        let adjust = Math.floor(rules.EXTRA_TOP * layout.square)
+        let adjust = layout.well.height - rules.ROWS * layout.square;
         ctx.translate(0, adjust);
 
         // Draw grid
