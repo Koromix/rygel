@@ -47,13 +47,13 @@ const kicks_O = [
 ];
 
 const BLOCKS = [
-    { type: 'I', color: '#2df0f0', shape: new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0]), kicks: kicks_I },
-    { type: 'J', color: '#2d2df0', shape: new Uint8Array([0, 0, 0, 1, 1, 1, 1, 0, 0]), kicks: kicks_JLTSZ },
-    { type: 'L', color: '#f0a32d', shape: new Uint8Array([0, 0, 0, 1, 1, 1, 0, 0, 1]), kicks: kicks_JLTSZ },
-    { type: 'O', color: '#f0f02d', shape: new Uint8Array([1, 1, 1, 1]), kicks: kicks_O },
-    { type: 'S', color: '#2df02d', shape: new Uint8Array([0, 0, 0, 1, 1, 0, 0, 1, 1]), kicks: kicks_JLTSZ },
-    { type: 'T', color: '#a32df0', shape: new Uint8Array([0, 0, 0, 1, 1, 1, 0, 1, 0]), kicks: kicks_JLTSZ },
-    { type: 'Z', color: '#f02d2d', shape: new Uint8Array([0, 0, 0, 0, 1, 1, 1, 1, 0]), kicks: kicks_JLTSZ }
+    { type: 'I', color: 0x2df0f0, shape: new Uint8Array([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0]), kicks: kicks_I },
+    { type: 'J', color: 0x2d2df0, shape: new Uint8Array([0, 0, 0, 1, 1, 1, 1, 0, 0]), kicks: kicks_JLTSZ },
+    { type: 'L', color: 0xf0a32d, shape: new Uint8Array([0, 0, 0, 1, 1, 1, 0, 0, 1]), kicks: kicks_JLTSZ },
+    { type: 'O', color: 0xf0f02d, shape: new Uint8Array([1, 1, 1, 1]), kicks: kicks_O },
+    { type: 'S', color: 0x2df02d, shape: new Uint8Array([0, 0, 0, 1, 1, 0, 0, 1, 1]), kicks: kicks_JLTSZ },
+    { type: 'T', color: 0xa32df0, shape: new Uint8Array([0, 0, 0, 1, 1, 1, 0, 1, 0]), kicks: kicks_JLTSZ },
+    { type: 'Z', color: 0xf02d2d, shape: new Uint8Array([0, 0, 0, 0, 1, 1, 1, 1, 0]), kicks: kicks_JLTSZ }
 ];
 
 export {

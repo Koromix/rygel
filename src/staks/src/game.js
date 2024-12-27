@@ -1156,7 +1156,7 @@ function Game() {
         {
             ctx.save();
 
-            ctx.globalAlpha = 0.05;
+            ctx.globalAlpha = 0.03;
             ctx.strokeStyle = 'white';
 
             for (let y = layout.well.height - layout.square; y > 0; y -= layout.square) {
@@ -1181,7 +1181,7 @@ function Game() {
         let adjust = layout.well.height - rules.ROWS * layout.square;
         ctx.translate(0, adjust);
 
-        // Draw grid
+        // Draw stack
         for (let i = 0; i < grid.length; i++) {
             let value = grid[i];
 
@@ -1193,7 +1193,7 @@ function Game() {
                 let y = (rules.ROWS - row - 1) * layout.square;
 
                 let color = rules.BLOCKS[value].color;
-                drawSquare(x, y, layout.square, color);
+                drawSquare(x, y, layout.square, color, true);
             }
         }
 
@@ -1202,7 +1202,7 @@ function Game() {
             ctx.save();
 
             ctx.globalAlpha = 0.1;
-            drawPiece(ghost, 'white');
+            drawPiece(ghost, 0xffffff, false);
 
             ctx.restore();
         }
@@ -1299,30 +1299,28 @@ function Game() {
             let x = layout.hold.width / 2 - (block.size * square) / 2;
             let y = top * square;
 
-            let color = block.color;
-
-            if (!can_hold) {
+            if (can_hold) {
+                drawShape(x, y, block.size, block.shape, square, block.color);
+            } else {
                 ctx.globalAlpha = 0.1;
-                color = 'white';
+                drawShape(x, y, block.size, block.shape, square, 0xffffff, false);
             }
-
-            drawShape(x, y, block.size, block.shape, square, color);
         }
 
         ctx.restore();
     }
 
-    function drawPiece(piece, color = null) {
+    function drawPiece(piece, color = null, outline = true) {
         if (color == null)
             color = piece.color;
 
         let x = piece.column * layout.square;
         let y = (rules.ROWS - piece.row - piece.size) * layout.square;
 
-        drawShape(x, y, piece.size, piece.shape, layout.square, color);
+        drawShape(x, y, piece.size, piece.shape, layout.square, color, outline);
     }
 
-    function drawShape(x, y, size, shape, pixels, color) {
+    function drawShape(x, y, size, shape, pixels, color, outline = true) {
         y += (size - 1) * pixels;
 
         for (let i = 0; i < size; i++) {
@@ -1333,21 +1331,34 @@ function Game() {
                 let x2 = x + j * pixels;
                 let y2 = y - i * pixels;
 
-                drawSquare(x2, y2, pixels, color);
+                drawSquare(x2, y2, pixels, color, outline);
             }
         }
     }
 
-    function drawSquare(x, y, pixels, color) {
-        ctx.fillStyle = color;
-        ctx.strokeStyle = '#00000022';
-        ctx.lineWidth = 1;
-
+    function drawSquare(x, y, pixels, color, outline) {
         ctx.beginPath();
-        ctx.rect(x + 0.5, y + 0.5, pixels, pixels);
+        ctx.rect(x + 0.5, y + 0.5, pixels - 0.5, pixels - 0.5);
 
+        ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
         ctx.fill();
-        ctx.stroke();
+
+        if (outline) {
+            ctx.strokeStyle = '#' + shadeColor(color, 0.2).toString(16).padStart(6, '0');
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        }
+    }
+
+    function shadeColor(color, factor) {
+        factor = 1 - factor;
+
+        let r = ((color >> 16) & 0xFF) * factor;
+        let g = ((color >> 8) & 0xFF) * factor;
+        let b = ((color >> 0) & 0xFF) * factor;
+        let shaded = (r << 16) | (g << 8) | b;
+
+        return shaded;
     }
 }
 
