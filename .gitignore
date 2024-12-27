@@ -43,5 +43,6 @@ package-lock.json
 /deploy/qemu/machines/**
 
 /vendor/spidermonkey/spidermonkey/
+!/vendor/esbuild/native/node_modules/
 
 !.gitkeep

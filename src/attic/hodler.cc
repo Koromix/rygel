@@ -194,7 +194,7 @@ static const char *TextToID(Span<const char> text, char replace_char, Allocator 
     return id.ptr;
 }
 
-static const char *FindEsbuild(const char *path, [[maybe_unused]] Allocator *alloc)
+static const char *FindEsbuild(const char *path, Allocator *alloc)
 {
     // Try environment first
     {
@@ -214,24 +214,44 @@ static const char *FindEsbuild(const char *path, [[maybe_unused]] Allocator *all
     }
 
     if (file_info.type == FileType::Directory) {
-#if defined(_WIN64)
-        const char *binary = Fmt(alloc, "%1%/esbuild_windows_x64.exe", path).ptr;
-#elif defined(__linux__) && defined(__x86_64__)
-        const char *binary = Fmt(alloc, "%1%/esbuild_linux_x64", path).ptr;
-#elif defined(__linux__) && defined(__aarch64__)
-        const char *binary = Fmt(alloc, "%1%/esbuild_linux_arm64", path).ptr;
-#elif defined(__APPLE__) && defined(__x86_64__)
-        const char *binary = Fmt(alloc, "%1%/esbuild_macos_x64", path).ptr;
-#elif defined(__APPLE__) && defined(__aarch64__)
-        const char *binary = Fmt(alloc, "%1%/esbuild_macos_arm64", path).ptr;
+#if defined(_WIN32)
+        const char *os = "win32";
+#elif defined(__linux__)
+        const char *os = "linux";
+#elif defined(__APPLE__)
+        const char *os = "darwin";
+#elif defined(__FreeBSD__)
+        const char *os = "freebsd";
+#elif defined(__OpenBSD__)
+        const char *os = "openbsd";
 #else
-        const char *binary = nullptr;
+        const char *os = nullptr;
 #endif
 
-        if (!binary || !TestFile(binary))
-            goto missing;
+#if defined(__i386__) || defined(_M_IX86)
+        const char *arch = "ia32";
+#elif defined(__x86_64__) || defined(_M_AMD64)
+        const char *arch = "x64";
+#elif defined(__aarch64__) || defined(_M_ARM64)
+        const char *arch = "arm64";
+#else
+        const char *arch = nullptr;
+#endif
 
-        path = binary;
+        if (os && arch) {
+            char suffix[64];
+            Fmt(suffix, "%1-%2/bin/esbuild%3", os, arch, RG_EXECUTABLE_EXTENSION);
+
+            const char *binary = NormalizePath(suffix, path, alloc).ptr;
+
+            if (TestFile(binary)) {
+                path = binary;
+            } else {
+                goto missing;
+            }
+        } else {
+            goto missing;
+        }
     }
 
     return path;

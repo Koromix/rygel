@@ -8,4 +8,5 @@ go 1.13
 // compile with Go 1.13. Please do not change this. For more info,
 // please read this: https://esbuild.github.io/faq/#old-go-version
 require golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
+
 replace golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 => ./sys

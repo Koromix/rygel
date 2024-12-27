@@ -35,23 +35,42 @@ bool Builder::PrepareEsbuild()
 
     // Try embedded builds
     {
-#if defined(_WIN64)
-        const char *binary = "vendor\\esbuild\\bin\\esbuild_windows_x64.exe";
-#elif defined(__linux__) && defined(__x86_64__)
-        const char *binary = "vendor/esbuild/bin/esbuild_linux_x64";
-#elif defined(__linux__) && defined(__aarch64__)
-        const char *binary = "vendor/esbuild/bin/esbuild_linux_arm64";
-#elif defined(__APPLE__) && defined(__x86_64__)
-        const char *binary = "vendor/esbuild/bin/esbuild_macos_x64";
-#elif defined(__APPLE__) && defined(__aarch64__)
-        const char *binary = "vendor/esbuild/bin/esbuild_macos_arm64";
+        const char *prefix = "vendor/esbuild/native/node_modules/@esbuild";
+
+#if defined(_WIN32)
+        const char *os = "win32";
+#elif defined(__linux__)
+        const char *os = "linux";
+#elif defined(__APPLE__)
+        const char *os = "darwin";
+#elif defined(__FreeBSD__)
+        const char *os = "freebsd";
+#elif defined(__OpenBSD__)
+        const char *os = "openbsd";
 #else
-        const char *binary = nullptr;
+        const char *os = nullptr;
 #endif
 
-        if (binary && TestFile(binary)) {
-            esbuild_binary = binary;
-            return true;
+#if defined(__i386__) || defined(_M_IX86)
+        const char *arch = "ia32";
+#elif defined(__x86_64__) || defined(_M_AMD64)
+        const char *arch = "x64";
+#elif defined(__aarch64__) || defined(_M_ARM64)
+        const char *arch = "arm64";
+#else
+        const char *arch = nullptr;
+#endif
+
+        if (os && arch) {
+            char suffix[64];
+            Fmt(suffix, "%1-%2/bin/esbuild%3", os, arch, RG_EXECUTABLE_EXTENSION);
+
+            const char *binary = NormalizePath(suffix, prefix, &str_alloc).ptr;
+
+            if (TestFile(binary)) {
+                esbuild_binary = binary;
+                return true;
+            }
         }
     }
 

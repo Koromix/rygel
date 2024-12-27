@@ -17,7 +17,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const esbuild = require('../../vendor/esbuild/wasm');
+const esbuild = require('../../vendor/esbuild/native');
 const Mustache = require('../../vendor/mustache');
 
 let watch = false;
