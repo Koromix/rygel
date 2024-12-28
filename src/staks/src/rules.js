@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { Util, Log } from '../../web/core/base.js';
+
 const ROWS = 20;
 const COLUMNS = 10;
 const EXTRA_ROWS = 4;
@@ -24,8 +26,6 @@ const LOCK_DELAY = 240; // 500 ms
 const DAS_DELAY = 88; // ~183.33 ms
 const DAS_PERIOD = 40; // ~83.33 ms
 const MAX_ACTIONS = 20;
-
-const VISIBLE_BAG_SIZE = 3;
 
 const kicks_I = [
     [[0, 0], [0, -2], [0,  1], [-1, -2], [ 2,  1]],
@@ -56,6 +56,30 @@ const BLOCKS = [
     { type: 'Z', color: 0xf02d2d, shape: new Uint8Array([0, 0, 0, 0, 1, 1, 1, 1, 0]), kicks: kicks_JLTSZ }
 ];
 
+function* BAG_GENERATOR() {
+    let Z = BLOCKS.findIndex(block => block.type == 'Z');
+    let S = BLOCKS.findIndex(block => block.type == 'S');
+
+    let history = [Z, Z, S, S];
+
+    for (;;) {
+        let block = null;
+
+        for (let i = 0; i < 6; i++) {
+            let rnd = Util.getRandomInt(0, BLOCKS.length);
+
+            block = BLOCKS[rnd];
+
+            if (!history.includes(block))
+                break;
+        }
+
+        history.shift();
+        yield block;
+    }
+};
+const BAG_SIZE = 3;
+
 export {
     ROWS,
     COLUMNS,
@@ -68,7 +92,8 @@ export {
     DAS_PERIOD,
     MAX_ACTIONS,
 
-    VISIBLE_BAG_SIZE,
+    BLOCKS,
 
-    BLOCKS
+    BAG_GENERATOR,
+    BAG_SIZE
 };

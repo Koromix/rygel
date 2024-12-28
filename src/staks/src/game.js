@@ -227,7 +227,7 @@ function update() {
             left: left + (rules.COLUMNS * layout.square) + padding,
             top: top,
             width: (runner.isTouch ? 7 : 5) / 2 * layout.square,
-            height: (1 + rules.VISIBLE_BAG_SIZE * 4) / 2 * layout.square
+            height: (1 + rules.BAG_SIZE * 4) / 2 * layout.square
         };
         layout.level = {
             left: layout.bag.left,
@@ -534,12 +534,15 @@ function Game() {
     let gameover = false;
     let pause = false;
 
+    // Bag
+    let bag_generator = rules.BAG_GENERATOR();
+    let bag_draw = [];
+
     // Well
     let grid = new Int8Array((rules.ROWS + rules.EXTRA_ROWS) * rules.COLUMNS);
     grid.fill(-1);
 
     // Pieces
-    let bag = [];
     let piece = null;
     let ghost = null;
 
@@ -604,15 +607,15 @@ function Game() {
         if (pause)
             return;
 
-        // Draw next pieces
-        if (bag.length < rules.BLOCKS.length) {
-            let draw = Util.shuffle(rules.BLOCKS);
-            bag.push(...draw);
+        // Draw next pieces (TGM-like randomizer with 6 tries)
+        while (bag_draw.length < rules.BLOCKS.length) {
+            let block = bag_generator.next().value;
+            bag_draw.push(block);
         }
 
         // Generate new piece if needed
         if (piece == null) {
-            let block = bag.shift();
+            let block = bag_draw.shift();
 
             if (!spawnPiece(block)) {
                 gameover = true;
@@ -667,7 +670,7 @@ function Game() {
 
         // Hold piece when requested
         if (hold && can_hold) {
-            let block = hold_block ?? bag.shift();
+            let block = hold_block ?? bag_draw.shift();
 
             hold_block = piece.block;
             can_hold = false;
@@ -1229,8 +1232,8 @@ function Game() {
 
         let square = layout.square * 0.5;
 
-        for (let i = 0; i < rules.VISIBLE_BAG_SIZE; i++) {
-            let block = bag[i];
+        for (let i = 0; i < rules.BAG_SIZE; i++) {
+            let block = bag_draw[i];
 
             if (block != null) {
                 let top = 0.5 + i * 4 + 2 - block.size / 2 - 0.5 * (block.size - block.top - block.bottom);
