@@ -1150,7 +1150,7 @@ function Game() {
 
                     if (value >= 0) {
                         let color = rules.BLOCKS[value].color;
-                        generateParticles(row, column, start, 15, color);
+                        generateParticles(row, column, start, 60, color);
                     }
                 }
 
@@ -1194,12 +1194,11 @@ function Game() {
 
     this.draw = function() {
         drawWell();
+        drawParticles();
         drawBag();
         drawLevel();
         drawScore();
         drawHold();
-
-        drawParticles();
 
         if (gameover) {
             ctx.save();
