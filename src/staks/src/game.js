@@ -591,7 +591,9 @@ function Game() {
             return;
 
         if (gameover) {
+            pause = false;
             runner.playOnce(assets.sounds.gameover, false);
+
             return;
         }
 
