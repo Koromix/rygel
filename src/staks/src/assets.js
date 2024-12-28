@@ -55,10 +55,10 @@ import ui_help from '../assets/ui/help.png';
 import ui_left from '../assets/ui/left.png';
 import ui_play from '../assets/ui/play.png';
 import ui_pause from '../assets/ui/pause.png';
-import ui_retry from '../assets/ui/retry.png';
 import ui_right from '../assets/ui/right.png';
 import ui_silence from '../assets/ui/silence.png';
 import ui_sound from '../assets/ui/sound.png';
+import ui_start from '../assets/ui/start.png';
 import ui_turbo from '../assets/ui/turbo.png';
 
 let assets = {};
@@ -101,10 +101,10 @@ async function loadAssets(prefix, progress) {
         left: ui_left,
         pause: ui_pause,
         play: ui_play,
-        retry: ui_retry,
         right: ui_right,
         silence: ui_silence,
         sound: ui_sound,
+        start: ui_start,
         turbo: ui_turbo
     };
 

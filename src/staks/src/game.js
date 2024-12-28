@@ -18,6 +18,7 @@ import { Util, Log } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
 import { loadAssets, assets } from './assets.js';
 import * as rules from './rules.js';
+import { UI } from './ui.js';
 
 import '../../../vendor/opensans/OpenSans.css';
 import './game.css';
@@ -62,6 +63,7 @@ let runner = null;
 let ctx = null;
 let mouse_state = null;
 let pressed_keys = null;
+let ui = null;
 
 // Game state
 let game = new Game;
@@ -84,9 +86,6 @@ let layout = {
     help: null,
     ui: null
 };
-let buttons = new Map;
-let prev_buttons = null;
-let menu_lines = null;
 
 // ------------------------------------------------------------------------
 // Init
@@ -136,9 +135,11 @@ async function start(root) {
     attributions = root.querySelector('.stk_attributions');
 
     runner = new AppRunner(canvas);
-    ctx = canvas.getContext('2d');
+    ctx = runner.ctx;
     mouse_state = runner.mouseState;
     pressed_keys = runner.pressedKeys;
+
+    ui = new UI(runner);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -187,9 +188,7 @@ function saveSettings() {
 // ------------------------------------------------------------------------
 
 function update() {
-    // Reset UI buttons
-    prev_buttons = buttons;
-    buttons = new Map;
+    ui.begin();
 
     // Global layout
     {
@@ -286,31 +285,31 @@ function update() {
         let y = runner.isTouch ? (20 + size / 2) : (layout.well.top + layout.well.height - size / 2);
         let delta = runner.isTouch ? (size + 20) : -(size + 20);
 
-        if (button(sound_key, x, y, size).clicked) {
+        if (ui.button(sound_key, x, y, size).clicked) {
             settings.sound = !settings.sound;
             saveSettings();
         }
         y += delta;
 
-        if (button('background', x, y, size).clicked)
+        if (ui.button('background', x, y, size).clicked)
             toggleBackground();
         y += delta;
 
         if (main.requestFullscreen != null) {
-            if (button('fullscreen', x, y, size).clicked)
+            if (ui.button('fullscreen', x, y, size).clicked)
                 toggleFullScreen();
             y += delta;
         }
 
         if (game.isPlaying && runner.isTouch) {
-            if (button(pause_key, x, y, size).clicked)
+            if (ui.button(pause_key, x, y, size).clicked)
                 game.pause = !game.pause;
             y += delta;
         }
 
         if (game.isPlaying && !runner.isTouch && !settings.help) {
-            let clicked = button('help', layout.well.left - layout.padding - size / 2,
-                                         layout.well.top + layout.well.height - size / 2, size).clicked;
+            let clicked = ui.button('help', layout.well.left - layout.padding - size / 2,
+                                            layout.well.top + layout.well.height - size / 2, size).clicked;
 
             if (clicked) {
                 settings.help = true;
@@ -360,38 +359,19 @@ function update() {
         }
     }
 
-    if (!game.hasStarted) {
-        menu_lines = [
-            [0, '28pt Open Sans', runner.isTouch ? `Touchez l'écran pour commencer`
-                                                 : `Appuyez sur la touche entrée ⏎\uFE0E pour commencer`]
-        ];
-
-        if (mouse_state.left == -1 || pressed_keys.return == -1) {
-            play();
-            pressed_keys.space = 0;
-        }
-    } else if (game.isOver) {
-        menu_lines = [
-            [80, '24pt Open Sans', `Bien joué !`],
-            [38, '24pt Open Sans', `Niveau`],
-            [20, 'bold 40pt Open Sans', game.level],
-            [38, '24pt Open Sans', `Score`],
-            [80, 'bold 40pt Open Sans', game.score]
-        ];
-
+    if (!game.isPlaying) {
         if (runner.isTouch) {
-            if (button('retry', canvas.width / 2, 3 * canvas.height / 4, layout.button).clicked)
+            let x = canvas.width / 2;
+            let y = canvas.height / 2 + 150;
+
+            if (ui.button('start', x, y, layout.button).clicked)
                 play();
         } else {
-            menu_lines.push([0, '24pt Open Sans', `Appuyez sur la touche entrée ⏎\uFE0E pour recommencer`]);
-
-            if (pressed_keys.return == -1) {
+            if (mouse_state.left == -1 || pressed_keys.return == -1) {
                 play();
                 pressed_keys.space = 0;
             }
         }
-
-        runner.playOnce(assets.sounds.gameover, false);
     }
 
     // Apply user settings
@@ -449,7 +429,7 @@ function draw() {
         ctx.drawImage(img, origx, origy, img.width * factor, img.height * factor);
     }
 
-    if (game.isPlaying) {
+    if (game.hasStarted) {
         attributions.classList.remove('active');
         game.draw();
 
@@ -457,10 +437,10 @@ function draw() {
             drawHelp();
     } else {
         attributions.classList.add('active');
-        drawMenu();
+        drawStart();
     }
 
-    drawButtons();
+    ui.draw();
 
     if (show_debug) {
         ctx.save();
@@ -479,31 +459,15 @@ function draw() {
     }
 }
 
-function drawMenu() {
+function drawStart() {
     let font = '20px Open Sans';
     ctx.fillStyle = 'white';
 
-    let lines = menu_lines.map(line => {
-        ctx.font = line[1];
+    let text = runner.isTouch ? `Appuyez sur le bouton pour commencer`
+                              : `Appuyez sur la touche entrée ⏎\uFE0E pour commencer`;
 
-        let m = runner.measure(line[2]);
-        let obj = {
-            font: line[1],
-            text: line[2],
-            height: m.height + line[0]
-        };
-
-        return obj;
-    });
-
-    let y = canvas.height / 2 - lines.reduce((acc, line) => acc + line.height, 0) / 2;
-
-    for (let line of lines) {
-        ctx.font = line.font;
-        runner.text(canvas.width / 2, y, line.text, { align: 5 });
-
-        y += line.height;
-    }
+    ctx.font = '28pt Open Sans';
+    runner.text(canvas.width / 2, canvas.height / 2, text, { align: 5 });
 }
 
 function drawHelp() {
@@ -620,8 +584,13 @@ function Game() {
     };
 
     this.update = function(counter) {
-        if (!started || gameover)
+        if (!started)
             return;
+
+        if (gameover) {
+            runner.playOnce(assets.sounds.gameover, false);
+            return;
+        }
 
         // Increase level manually
         if (isInsideRect(mouse_state.x, mouse_state.y, layout.level)) {
@@ -662,19 +631,19 @@ function Game() {
 
         // Respond to user input
         if (runner.isTouch) {
-            left = button('left', layout.ui.left + 0.25 * layout.ui.width - 0.7 * layout.button,
-                                  layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
-            right = button('right', layout.ui.left + 0.25 * layout.ui.width + 0.7 * layout.button,
-                                    layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
+            left = ui.button('left', layout.ui.left + 0.25 * layout.ui.width - 0.7 * layout.button,
+                                     layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
+            right = ui.button('right', layout.ui.left + 0.25 * layout.ui.width + 0.7 * layout.button,
+                                       layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
 
             rotate = 0;
-            rotate += button('clockwise', layout.ui.left + 0.75 * layout.ui.width + 0.7 * layout.button,
-                                          layout.ui.top + 0.5 * layout.ui.height, layout.button).clicked;
-            rotate -= button('counterclock', layout.ui.left + 0.75 * layout.ui.width - 0.7 * layout.button,
+            rotate += ui.button('clockwise', layout.ui.left + 0.75 * layout.ui.width + 0.7 * layout.button,
                                              layout.ui.top + 0.5 * layout.ui.height, layout.button).clicked;
+            rotate -= ui.button('counterclock', layout.ui.left + 0.75 * layout.ui.width - 0.7 * layout.button,
+                                                layout.ui.top + 0.5 * layout.ui.height, layout.button).clicked;
 
-            turbo = button('turbo', layout.ui.left + 0.25 * layout.ui.width,
-                                    layout.ui.top + 0.85 * layout.ui.height, 0.7 * layout.button).pressed >= 1;
+            turbo = ui.button('turbo', layout.ui.left + 0.25 * layout.ui.width,
+                                       layout.ui.top + 0.85 * layout.ui.height, 0.7 * layout.button).pressed >= 1;
 
             if (isInsideRect(mouse_state.x, mouse_state.y, layout.hold)) {
                 if (mouse_state.left == 1)
@@ -1132,6 +1101,22 @@ function Game() {
         drawLevel();
         drawScore();
         drawHold();
+
+        if (gameover) {
+            ctx.save();
+
+            ctx.translate(layout.well.left, layout.well.top);
+
+            let x = layout.well.width / 2;
+            let y = layout.well.height / 2;
+
+            ctx.font = 'bold 24pt Open Sans';
+            ctx.fillStyle = 'white';
+            ctx.globalAlpha = 1;
+            runner.text(x, y, 'GAME OVER', { align: 5 });
+
+            ctx.restore();
+        }
     };
 
     function drawWell() {
@@ -1144,7 +1129,7 @@ function Game() {
             let x = layout.well.width / 2;
             let y = layout.well.height / 2;
 
-            ctx.font = '24pt Open Sans';
+            ctx.font = 'bold 24pt Open Sans';
             ctx.fillStyle = 'white';
             runner.text(x, y, 'PAUSE', { align: 5 });
 
@@ -1152,11 +1137,14 @@ function Game() {
             return;
         }
 
+        if (gameover)
+            ctx.globalAlpha = 0.1;
+
         // Draw grid
         {
             ctx.save();
 
-            ctx.globalAlpha = 0.03;
+            ctx.globalAlpha *= 0.03;
             ctx.strokeStyle = 'white';
 
             for (let y = layout.well.height - layout.square; y > 0; y -= layout.square) {
@@ -1201,7 +1189,7 @@ function Game() {
         if (show_ghost && ghost != null) {
             ctx.save();
 
-            ctx.globalAlpha = 0.1;
+            ctx.globalAlpha *= 0.1;
             drawPiece(ghost, 0xffffff, false);
 
             ctx.restore();
@@ -1215,7 +1203,7 @@ function Game() {
                 let delay = runner.updateCounter - lock_since;
                 let alpha = 0.7 + Math.cos(delay / 24) * 0.3;
 
-                ctx.globalAlpha = alpha;
+                ctx.globalAlpha *= alpha;
             }
             drawPiece(piece);
 
@@ -1359,70 +1347,6 @@ function Game() {
         let shaded = (r << 16) | (g << 8) | b;
 
         return shaded;
-    }
-}
-
-// ------------------------------------------------------------------------
-// Buttons
-// ------------------------------------------------------------------------
-
-function button(key, x, y, size) {
-    let prev = prev_buttons.get(key);
-
-    let img = assets.ui[key];
-
-    let btn = {
-        rect: {
-            left: x - size / 2,
-            top: y - size / 2,
-            width: size,
-            height: size,
-        },
-        pos: {
-            x: x,
-            y: y,
-        },
-        size: size,
-
-        img: img,
-
-        clicked: false,
-        pressed: 0
-    };
-
-    if (isInsideRect(mouse_state.x, mouse_state.y, btn.rect)) {
-        if (mouse_state.left == 1)
-            btn.clicked = true;
-        if (mouse_state.left >= 1)
-            btn.pressed = (prev?.pressed ?? 0) + 1;
-
-        runner.cursor = 'pointer';
-        mouse_state.left = 0;
-    }
-
-    buttons.set(key, btn);
-
-    let status = {
-        clicked: prev?.clicked ?? false,
-        pressed: prev?.pressed ?? 0
-    };
-
-    return status;
-}
-
-function drawButtons() {
-    ctx.fillStyle = 'white';
-
-    for (let btn of buttons.values()) {
-        ctx.beginPath();
-        ctx.arc(btn.pos.x, btn.pos.y, btn.size / 2, 0, 2 * Math.PI);
-        ctx.fill();
-
-        let size = 0.5 * btn.size;
-        let left = btn.pos.x - size / 2;
-        let top = btn.pos.y - size / 2;
-
-        ctx.drawImage(btn.img, left, top, size, size);
     }
 }
 

@@ -97,6 +97,8 @@ function AppRunner(canvas) {
 
     Object.defineProperties(this,  {
         canvas: { value: canvas, writable: false, enumerable: true },
+        ctx: { value: ctx, writable: false, enumerable: true },
+
         isTouch: { get: isTouchDevice, enumerable: true },
 
         onUpdate: { get: () => handle_draw, set: func => { handle_update = func; }, enumerable: true },
