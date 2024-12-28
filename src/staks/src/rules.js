@@ -25,6 +25,8 @@ const TURBO_DELAY = 4; // ~8.33 ms
 const LOCK_DELAY = 240; // 500 ms
 const DAS_DELAY = 88; // ~183.33 ms
 const DAS_PERIOD = 40; // ~83.33 ms
+const CLEAR_DELAY = 160; // ~333.33 ms
+
 const MAX_ACTIONS = 20;
 
 const kicks_I = [
@@ -90,6 +92,8 @@ export {
     LOCK_DELAY,
     DAS_DELAY,
     DAS_PERIOD,
+    CLEAR_DELAY,
+
     MAX_ACTIONS,
 
     BLOCKS,

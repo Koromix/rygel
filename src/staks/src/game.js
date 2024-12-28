@@ -374,11 +374,8 @@ function update() {
         }
     }
 
-    // Apply user settings
     game.showGhost = settings.ghost;
-
-    let counter = runner.updateCounter;
-    game.update(counter);
+    game.update();
 
     canvas.focus();
 }
@@ -533,6 +530,7 @@ function Game() {
     let started = false;
     let gameover = false;
     let pause = false;
+    let counter = 0;
 
     // Bag
     let bag_generator = rules.BAG_GENERATOR();
@@ -555,6 +553,11 @@ function Game() {
     let gravity_start = null;
     let lock_start = null;
     let lock_since = null;
+    let clear_start = null;
+    let clear_rows = null;
+
+    // Pure animations
+    let particles = [];
 
     // Scoring
     let level = 1;
@@ -586,14 +589,29 @@ function Game() {
         pause = false;
     };
 
-    this.update = function(counter) {
+    this.update = function() {
         if (!started)
             return;
+
+        // Increase level manually
+        if (isInsideRect(mouse_state.x, mouse_state.y, layout.level)) {
+            if (mouse_state.left == 1)
+                level++;
+
+            runner.cursor = 'pointer';
+            mouse_state.left = 0;
+        }
+
+        counter++;
 
         if (gameover) {
             pause = false;
             runner.playOnce(assets.sounds.gameover, false);
 
+            return;
+        }
+        if (pause) {
+            counter--;
             return;
         }
 
@@ -606,8 +624,6 @@ function Game() {
             mouse_state.left = 0;
         }
 
-        if (pause)
-            return;
 
         // Draw next pieces (TGM-like randomizer with 6 tries)
         while (bag_draw.length < rules.BLOCKS.length) {
@@ -615,18 +631,7 @@ function Game() {
             bag_draw.push(block);
         }
 
-        // Generate new piece if needed
-        if (piece == null) {
-            let block = bag_draw.shift();
-
-            if (!spawnPiece(block)) {
-                gameover = true;
-                return;
-            }
-
-            can_hold = true;
-        }
-
+        // User actions
         let left = false;
         let right = false;
         let rotate = 0;
@@ -671,25 +676,61 @@ function Game() {
             hold = (pressed_keys.c == 1);
         }
 
-        // Hold piece when requested
-        if (hold && can_hold) {
-            let block = hold_block ?? bag_draw.shift();
+        // Perform lateral movement and handle DAS
+        for (;;) {
+            let first = (das_start == null);
+            let move = 0;
 
-            hold_block = piece.block;
-            can_hold = false;
+            if (left != right) {
+                if (das_start == null) {
+                    move = right - left;
 
-            if (!spawnPiece(block)) {
-                gameover = true;
-                return;
+                    das_start = counter;
+                    das_left = left;
+                    das_count = 0;
+                } else if (counter >= das_start + rules.DAS_DELAY) {
+                    if (das_left != left)
+                        das_count = 0;
+                    das_left = left;
+
+                    das_count++;
+
+                    if (das_count >= rules.DAS_PERIOD)
+                        move += right - left;
+                }
+            } else if (!left) { // Implies !right given previous condition 
+                das_start = null;
             }
 
-            runner.playOnce(assets.sounds.hold);
+            if (piece == null)
+                break;
+            if (!move)
+                break;
 
-            return;
+            let edit = Object.assign({}, piece);
+            edit.column += move;
+
+            if (!isPieceValid(edit, false))
+                break;
+
+            // Confirm move
+            {
+                piece.column = edit.column;
+
+                if (piece.actions < rules.MAX_ACTIONS)
+                    lock_start = counter;
+                piece.actions += first;
+
+                das_count -= rules.DAS_PERIOD;
+
+                special = null;
+
+                runner.playOnce(assets.sounds.move);
+            }
         }
 
         // Perform rotation
-        if (rotate && piece.actions < rules.MAX_ACTIONS) {
+        if (piece != null && rotate && piece.actions < rules.MAX_ACTIONS) {
             let edit = Object.assign({}, piece);
 
             let kicks = null;
@@ -740,67 +781,26 @@ function Game() {
             }
         }
 
-        // Perform lateral movement and handle DAS
-        for (;;) {
-            let first = (das_start == null);
-            let move = 0;
+        // Hold piece when requested
+        if (piece != null && hold && can_hold) {
+            let block = hold_block ?? bag_draw.shift();
 
-            if (left != right) {
-                if (das_start == null) {
-                    move = right - left;
+            hold_block = piece.block;
+            can_hold = false;
 
-                    das_start = counter;
-                    das_left = left;
-                    das_count = 0;
-                } else if (counter >= das_start + rules.DAS_DELAY) {
-                    if (das_left != left)
-                        das_count = 0;
-                    das_left = left;
-
-                    das_count++;
-
-                    if (das_count >= rules.DAS_PERIOD)
-                        move += right - left;
-                }
-            } else if (!left) { // Implies !right given previous condition 
-                das_start = null;
+            if (!spawnPiece(block)) {
+                gameover = true;
+                return;
             }
 
-            if (!move)
-                break;
+            runner.playOnce(assets.sounds.hold);
 
-            let edit = Object.assign({}, piece);
-            edit.column += move;
-
-            if (!isPieceValid(edit, false))
-                break;
-
-            // Confirm move
-            {
-                piece.column = edit.column;
-
-                if (piece.actions < rules.MAX_ACTIONS)
-                    lock_start = counter;
-                piece.actions += first;
-
-                das_count -= rules.DAS_PERIOD;
-
-                special = null;
-
-                runner.playOnce(assets.sounds.move);
-            }
-        }
-
-        // Compute ghost
-        {
-            ghost = Object.assign({}, piece);
-
-            while (isPieceFloating(ghost))
-                ghost.row--;
+            // Prevent other user actions
+            return;
         }
 
         // Run gravity
-        {
+        if (piece != null) {
             if (gravity_start == null)
                 gravity_start = counter;
 
@@ -826,103 +826,78 @@ function Game() {
             }
         }
 
-        // Lock piece?
-        if (drop) {
-            let delta = piece.row - ghost.row;
+        // Compute ghost
+        if (piece != null) {
+            ghost = Object.assign({}, piece);
 
-            piece.row = ghost.row;
-
-            if (!isPieceValid(piece, true)) {
-                gameover = true;
-                return;
-            }
-
-            lockPiece();
-
-            score += 2 * delta;
+            while (isPieceFloating(ghost))
+                ghost.row--;
         } else {
-            if (isPieceFloating(piece)) {
-                lock_start = null;
-            } else if (lock_start == null) {
-                lock_start = counter;
-                lock_since = counter;
-            }
+            ghost = null;
+        }
 
-            if (lock_start != null && counter >= lock_start + rules.LOCK_DELAY) {
+        // Lock piece?
+        if (piece != null) {
+            if (drop) {
+                let delta = piece.row - ghost.row;
+
+                piece.row = ghost.row;
+
                 if (!isPieceValid(piece, true)) {
                     gameover = true;
                     return;
                 }
 
-                lockPiece();
+                lockAndScore();
+
+                score += 2 * delta;
+            } else {
+                if (isPieceFloating(piece)) {
+                    lock_start = null;
+                } else if (lock_start == null) {
+                    lock_start = counter;
+                    lock_since = counter;
+                }
+
+                if (lock_start != null && counter >= lock_start + rules.LOCK_DELAY) {
+                    if (!isPieceValid(piece, true)) {
+                        gameover = true;
+                        return;
+                    }
+
+                    lockAndScore();
+                }
             }
         }
 
-        // Clear grid and score
-        if (piece == null) {
-            let clears = clearStack();
-            let perfect = grid.every(value => value < 0);
+        // Clear stack after clear delay
+        if (clear_start != null && counter >= clear_start + rules.CLEAR_DELAY) {
+            clearStack(clear_rows);
+            clear_start = null;
+        }
 
-            let action = 0;
+        // Generate new piece if needed
+        if (piece == null && clear_start == null) {
+            let block = bag_draw.shift();
 
-            switch (clears) {
-                case 1: { action += 100 * level; } break;
-                case 2: { action += 300 * level; } break;
-                case 3: { action += 500 * level; } break;
-                case 4: { action += 800 * level; } break;
+            if (!spawnPiece(block)) {
+                gameover = true;
+                return;
             }
 
-            if (clears) {
-                combo++;
-                action += 50 * combo * level;
+            can_hold = true;
+        }
 
-                runner.playOnce(assets.sounds.clear);
-            } else {
-                combo = -1;
+        // Clean up particles
+        {
+            let j = 0;
+            for (let i = 0; i < particles.length; i++) {
+                let particle = particles[i];
+
+                particles[j] = particle;
+                j += (counter - particle.start < 480);
             }
-
-            switch (special) {
-                case 'T': {
-                    switch (clears) {
-                        case 0: { action += 400; } break;
-                        case 1: { action += 800; } break;
-                        case 2: { action += 1200; } break;
-                        case 3: { action += 1600; } break;
-                    }
-                } break;
-                case 'miniT': {
-                    switch (clears) {
-                        case 0: { action += 100; } break;
-                        case 1: { action += 200; } break;
-                        case 2: { action += 400; } break;
-                        case 3: { /* Apparently impossible */ } break;
-                    }
-                } break;
-            }
-
-            if (perfect) {
-                switch (clears) {
-                    case 1: { action += 800 * level; } break;
-                    case 2: { action += 1200 * level; } break;
-                    case 3: { action += 1800 * level; } break;
-                    case 4: { action += 2000 * level; } break;
-                }
-            }
-
-            back2back &&= (special == 'T' || clears == 4);
-            if (back2back)
-                action *= 1.5;
-            back2back = (special != null || clears == 4);
-
-            lines += clears;
-            score += action;
-
-            let new_level = 1 + Math.floor(lines / 10);
-
-            if (new_level > level) {
-                level = new_level;
-                runner.playOnce(assets.sounds.levelup);
-            }
+            particles.length = j;
         }
     }
 
@@ -937,7 +912,7 @@ function Game() {
         }
     }
 
-    function spawnPiece(block, counter) {
+    function spawnPiece(block) {
         piece = {
             row: rules.ROWS - block.top,
             column: Math.floor(rules.COLUMNS / 2 - block.size / 2),
@@ -969,24 +944,6 @@ function Game() {
         special = null;
 
         return true;
-    }
-
-    function lockPiece() {
-        runner.playOnce(assets.sounds.lock);
-
-        for (let i = 0; i < piece.size; i++) {
-            for (let j = 0; j < piece.size; j++) {
-                if (!piece.shape[i * piece.size + j])
-                    continue;
-
-                let row = piece.row + i;
-                let column = piece.column + j;
-
-                grid[row * rules.COLUMNS + column] = piece.value;
-            }
-        }
-
-        piece = null;
     }
 
     function isPieceFloating(piece) {
@@ -1084,24 +1041,153 @@ function Game() {
         }
     }
 
-    function clearStack() {
-        let cleared = 0;
+    function lockAndScore() {
+        runner.playOnce(assets.sounds.lock);
+
+        for (let i = 0; i < piece.size; i++) {
+            for (let j = 0; j < piece.size; j++) {
+                if (!piece.shape[i * piece.size + j])
+                    continue;
+
+                let row = piece.row + i;
+                let column = piece.column + j;
+
+                grid[row * rules.COLUMNS + column] = piece.value;
+            }
+        }
+
+        let [clears, perfect] = listClears();
+
+        if (clears.length) {
+            clear_start = counter;
+            clear_rows = clears;
+        } else {
+            clear_start = null;
+        }
+        clears = clears.length;
+
+        let action = 0;
+
+        switch (clears) {
+            case 1: { action += 100 * level; } break;
+            case 2: { action += 300 * level; } break;
+            case 3: { action += 500 * level; } break;
+            case 4: { action += 800 * level; } break;
+        }
+
+        if (clears) {
+            combo++;
+            action += 50 * combo * level;
+
+            runner.playOnce(assets.sounds.clear);
+        } else {
+            combo = -1;
+        }
+
+        switch (special) {
+            case 'T': {
+                switch (clears) {
+                    case 0: { action += 400; } break;
+                    case 1: { action += 800; } break;
+                    case 2: { action += 1200; } break;
+                    case 3: { action += 1600; } break;
+                }
+            } break;
+            case 'miniT': {
+                switch (clears) {
+                    case 0: { action += 100; } break;
+                    case 1: { action += 200; } break;
+                    case 2: { action += 400; } break;
+                    case 3: { /* Apparently impossible */ } break;
+                }
+            } break;
+        }
+
+        if (perfect) {
+            switch (clears) {
+                case 1: { action += 800 * level; } break;
+                case 2: { action += 1200 * level; } break;
+                case 3: { action += 1800 * level; } break;
+                case 4: { action += 2000 * level; } break;
+            }
+        }
+
+        back2back &&= (special == 'T' || clears == 4);
+        if (back2back)
+            action *= 1.5;
+        back2back = (special != null || clears == 4);
+
+        lines += clears;
+        score += action;
+
+        let new_level = 1 + Math.floor(lines / 10);
+
+        if (new_level > level) {
+            level = new_level;
+            runner.playOnce(assets.sounds.levelup);
+        }
+
+        piece = null;
+    }
+
+    function listClears() {
+        let clears = [];
+        let perfect = true;
 
         for (let row = 0; row < rules.ROWS; row++) {
             let start = row * rules.COLUMNS;
             let end = start + rules.COLUMNS;
+            let cells = grid.subarray(start, end);
 
-            let clear = grid.subarray(start, end).every(value => value >= 0);
+            let clear = cells.every(value => value >= 0);
+            let empty = cells.every(value => value < 0);
 
             if (clear) {
-                grid.copyWithin(start, end, grid.length);
-                row--;
-
-                cleared++;
+                clears.push(row);
+            } else if (!empty) {
+                perfect = false;
             }
         }
 
-        return cleared;
+        return [clears, perfect];
+    }
+
+    function clearStack(rows) {
+        for (let i = rows.length - 1; i >= 0; i--) {
+            let row = rows[i];
+
+            for (let column = 0; column < rules.COLUMNS; column++) {
+                let value = grid[row * rules.COLUMNS + column];
+
+                if (value >= 0) {
+                    let color = rules.BLOCKS[value].color;
+                    generateParticles(row, column, 15, color);
+                }
+            }
+
+            let start = row * rules.COLUMNS;
+            let end = start + rules.COLUMNS;
+
+            grid.copyWithin(start, end, grid.length);
+        }
+    }
+
+    function generateParticles(row, column, count, color) {
+        color = '#' + color.toString(16).padStart(6, '0');
+
+        for (let i = 0; i < count; i++) {
+            let particle = {
+                column: column,
+                row: row,
+                color: color,
+
+                start: counter,
+                vx: Util.getRandomFloat(-1.5, 1.5),
+                vy: Util.getRandomFloat(-1, 1),
+            };
+
+            particles.push(particle);
+        }
     }
 
     this.draw = function() {
@@ -1110,6 +1196,8 @@ function Game() {
         drawLevel();
         drawScore();
         drawHold();
+
+        drawParticles();
 
         if (gameover) {
             ctx.save();
@@ -1183,6 +1271,8 @@ function Game() {
             let value = grid[i];
 
             if (value >= 0) {
+                ctx.save();
+
                 let row = Math.floor(i / rules.COLUMNS);
                 let column = i % rules.COLUMNS;
 
@@ -1190,7 +1280,18 @@ function Game() {
                 let y = (rules.ROWS - row - 1) * layout.square;
 
                 let color = rules.BLOCKS[value].color;
+
+                if (clear_start != null && clear_rows.includes(row)) {
+                    let progress = (counter - clear_start) / rules.CLEAR_DELAY;
+                    let factor = progress < 0.5 ? (8 * Math.pow(progress, 4))
+                                                : (1 - Math.pow(-2 * progress + 2, 4) / 2);
+
+                    color = mixColors(0xFFFFFF, color, factor);
+                }
+
                 drawSquare(x, y, layout.square, color, true);
+
+                ctx.restore();
             }
         }
 
@@ -1199,7 +1300,7 @@ function Game() {
             ctx.save();
 
             ctx.globalAlpha *= 0.1;
-            drawPiece(ghost, 0xffffff, false);
+            drawPiece(ghost, 0xFFFFFF, false);
 
             ctx.restore();
         }
@@ -1209,7 +1310,7 @@ function Game() {
             ctx.save();
 
             if (lock_start != null) {
-                let delay = runner.updateCounter - lock_since;
+                let delay = counter - lock_since;
                 let alpha = 0.7 + Math.cos(delay / 24) * 0.3;
 
                 ctx.globalAlpha *= alpha;
@@ -1300,8 +1401,29 @@ function Game() {
                 drawShape(x, y, block.size, block.shape, square, block.color);
             } else {
                 ctx.globalAlpha = 0.1;
-                drawShape(x, y, block.size, block.shape, square, 0xffffff, false);
+                drawShape(x, y, block.size, block.shape, square, 0xFFFFFF, false);
             }
+        }
+
+        ctx.restore();
+    }
+
+    function drawParticles() {
+        ctx.save();
+
+        ctx.translate(layout.well.left, layout.well.top);
+
+        for (let particle of particles) {
+            let delay = counter - particle.start;
+            let x = particle.column * layout.square + layout.square / 2;
+            let y = (rules.ROWS - particle.row - 1) * layout.square + layout.square / 2;
+
+            x += delay * particle.vx;
+            y += delay * (particle.vy + 0.01 * delay);
+
+            ctx.globalAlpha = Math.max(0, 1 - delay / 240);
+            ctx.fillStyle = particle.color;
+            ctx.fillRect(x - 3, y - 3, 6, 6);
         }
 
         ctx.restore();
@@ -1341,21 +1463,26 @@ function Game() {
         ctx.fill();
 
         if (outline) {
-            ctx.strokeStyle = '#' + shadeColor(color, 0.2).toString(16).padStart(6, '0');
+            ctx.strokeStyle = '#' + mixColors(color, 0, 0.8).toString(16).padStart(6, '0');
             ctx.lineWidth = 1;
             ctx.stroke();
         }
     }
 
-    function shadeColor(color, factor) {
-        factor = 1 - factor;
+    function mixColors(color1, color2, factor) {
+        let r1 = (color1 >> 16) & 0xFF;
+        let g1 = (color1 >> 8) & 0xFF;
+        let b1 = (color1 >> 0) & 0xFF;
+        let r2 = (color2 >> 16) & 0xFF;
+        let g2 = (color2 >> 8) & 0xFF;
+        let b2 = (color2 >> 0) & 0xFF;
 
-        let r = ((color >> 16) & 0xFF) * factor;
-        let g = ((color >> 8) & 0xFF) * factor;
-        let b = ((color >> 0) & 0xFF) * factor;
-        let shaded = (r << 16) | (g << 8) | b;
+        let r = r1 * factor + r2 * (1 - factor);
+        let g = g1 * factor + g2 * (1 - factor);
+        let b = b1 * factor + b2 * (1 - factor);
+        let color = (r << 16) | (g << 8) | b;
 
-        return shaded;
+        return color;
     }
 }
 
