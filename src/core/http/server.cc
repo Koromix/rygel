@@ -392,24 +392,12 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     RG_ASSERT(socket);
     RG_ASSERT(!incoming.reading);
 
-    // Only allow Gzip for now, to reduce attack surface
-    CompressionType compression_type = CompressionType::None;
-    if (const char *str = request.GetHeaderValue("Content-Encoding"); str) {
-        if (max_len < 0) {
-            LogError("Refusing Content-Encoding without server limit");
-            SendError(400);
-            return false;
-        }
-
-        if (TestStr(str, "gzip")) {
-            compression_type = CompressionType::Gzip;
-        } else {
-            LogError("Refusing Content-Encoding value other than gzip");
-            SendError(400);
-            return false;
-        }
+    // Safety checks
+    if (request.GetHeaderValue("Content-Encoding")) {
+        LogError("Refusing request body with Content-Encoding header");
+        SendError(400);
+        return false;
     }
-
     if (max_len >= 0 && request.body_len > max_len) {
         LogError("HTTP body is too big (max = %1)", FmtDiskSize(max_len));
         SendError(413);
@@ -421,7 +409,7 @@ bool http_IO::OpenForRead(Size max_len, StreamReader *out_st)
     incoming.reading = true;
     timeout_at = GetMonotonicTime() + daemon->send_timeout;
 
-    bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>", compression_type);
+    bool success = out_st->Open([this](Span<uint8_t> out_buf) { return ReadDirect(out_buf); }, "<http>");
     RG_ASSERT(success);
 
     // Additional precaution
