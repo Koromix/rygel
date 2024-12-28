@@ -84,7 +84,7 @@ let layout = {
     score: null,
     hold: null,
     help: null,
-    ui: null
+    input: null
 };
 
 // ------------------------------------------------------------------------
@@ -253,7 +253,7 @@ function update() {
             };
 
             layout.help = null;
-            layout.ui = {
+            layout.input = {
                 left: padding,
                 top: bottom + padding,
                 width: canvas.width - padding * 2,
@@ -271,7 +271,7 @@ function update() {
                 right: left - padding,
                 bottom: top + height
             };
-            layout.ui = null;
+            layout.input = null;
         }
     }
 
@@ -634,29 +634,30 @@ function Game() {
 
         // Respond to user input
         if (runner.isTouch) {
-            left = ui.button('left', layout.ui.left + 0.25 * layout.ui.width - 0.7 * layout.button,
-                                     layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
-            right = ui.button('right', layout.ui.left + 0.25 * layout.ui.width + 0.7 * layout.button,
-                                       layout.ui.top + 0.3 * layout.ui.height, layout.button).pressed >= 1;
+            let rect = layout.input;
 
-            rotate = 0;
-            rotate += ui.button('clockwise', layout.ui.left + 0.75 * layout.ui.width + 0.7 * layout.button,
-                                             layout.ui.top + 0.5 * layout.ui.height, layout.button).clicked;
-            rotate -= ui.button('counterclock', layout.ui.left + 0.75 * layout.ui.width - 0.7 * layout.button,
-                                                layout.ui.top + 0.5 * layout.ui.height, layout.button).clicked;
+            left = ui.button('left', rect.left + 0.25 * rect.width - 0.7 * layout.button,
+                                     rect.top + 0.3 * rect.height, layout.button).pressed >= 1;
+            right = ui.button('right', rect.left + 0.25 * rect.width + 0.7 * layout.button,
+                                       rect.top + 0.3 * rect.height, layout.button).pressed >= 1;
 
-            turbo = ui.button('turbo', layout.ui.left + 0.25 * layout.ui.width,
-                                       layout.ui.top + 0.85 * layout.ui.height, 0.7 * layout.button).pressed >= 1;
+            rotate += ui.button('clockwise', rect.left + 0.75 * rect.width + 0.7 * layout.button,
+                                             rect.top + 0.5 * rect.height, layout.button).clicked;
+            rotate -= ui.button('counterclock', rect.left + 0.75 * rect.width - 0.7 * layout.button,
+                                                rect.top + 0.5 * rect.height, layout.button).clicked;
 
-            if (isInsideRect(mouse_state.x, mouse_state.y, layout.hold)) {
-                if (mouse_state.left == 1)
-                    hold = true;
-                mouse_state.left = 0;
-            }
+            turbo = ui.button('turbo', rect.left + 0.25 * rect.width,
+                                       rect.top + 0.85 * rect.height, 0.7 * layout.button).pressed >= 1;
 
             if (isInsideRect(mouse_state.x, mouse_state.y, expandRect(layout.well, -40, -40))) {
                 if (mouse_state.left == 1)
                     drop = true;
+                mouse_state.left = 0;
+            }
+
+            if (isInsideRect(mouse_state.x, mouse_state.y, layout.hold)) {
+                if (mouse_state.left == 1)
+                    hold = true;
                 mouse_state.left = 0;
             }
         } else {
