@@ -951,10 +951,13 @@ function Game() {
                     break;
             }
 
-            if (!isPieceValid(piece, false))
+            if (!isPieceValid(piece, false)) {
+                piece = null;
                 return false;
+            }
         }
 
+        ghost = null;
         gravity_start = counter;
         lock_start = null;
         special = null;
