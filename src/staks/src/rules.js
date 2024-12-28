@@ -59,27 +59,13 @@ const BLOCKS = [
 ];
 
 function* BAG_GENERATOR() {
-    let Z = BLOCKS.findIndex(block => block.type == 'Z');
-    let S = BLOCKS.findIndex(block => block.type == 'S');
-
-    let history = [Z, Z, S, S];
-
     for (;;) {
-        let block = null;
+        let draw = Util.shuffle(BLOCKS);
 
-        for (let i = 0; i < 6; i++) {
-            let rnd = Util.getRandomInt(0, BLOCKS.length);
-
-            block = BLOCKS[rnd];
-
-            if (!history.includes(block))
-                break;
-        }
-
-        history.shift();
-        yield block;
+        for (let block of draw)
+            yield block;
     }
-};
+}
 const BAG_SIZE = 3;
 
 export {
