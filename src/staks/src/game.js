@@ -1147,7 +1147,7 @@ function Game() {
             ctx.globalAlpha = 0.1;
 
         // Draw grid
-        {
+        if (!gameover) {
             ctx.save();
 
             ctx.globalAlpha *= 0.03;
