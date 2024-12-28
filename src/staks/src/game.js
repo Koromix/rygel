@@ -1143,6 +1143,17 @@ function Game() {
             let empty = cells.every(value => value < 0);
 
             if (clear) {
+                let start = Math.max(counter, counter + rules.CLEAR_DELAY - 40);
+
+                for (let column = 0; column < rules.COLUMNS; column++) {
+                    let value = cells[column];
+
+                    if (value >= 0) {
+                        let color = rules.BLOCKS[value].color;
+                        generateParticles(row, column, start, 15, color);
+                    }
+                }
+
                 clears.push(row);
             } else if (!empty) {
                 perfect = false;
@@ -1156,15 +1167,6 @@ function Game() {
         for (let i = rows.length - 1; i >= 0; i--) {
             let row = rows[i];
 
-            for (let column = 0; column < rules.COLUMNS; column++) {
-                let value = grid[row * rules.COLUMNS + column];
-
-                if (value >= 0) {
-                    let color = rules.BLOCKS[value].color;
-                    generateParticles(row, column, 15, color);
-                }
-            }
-
             let start = row * rules.COLUMNS;
             let end = start + rules.COLUMNS;
 
@@ -1172,7 +1174,7 @@ function Game() {
         }
     }
 
-    function generateParticles(row, column, count, color) {
+    function generateParticles(row, column, start, count, color) {
         color = '#' + color.toString(16).padStart(6, '0');
 
         for (let i = 0; i < count; i++) {
@@ -1181,7 +1183,7 @@ function Game() {
                 row: row,
                 color: color,
 
-                start: counter,
+                start: start,
                 vx: Util.getRandomFloat(-1.5, 1.5),
                 vy: Util.getRandomFloat(-1, 1),
             };
@@ -1415,6 +1417,10 @@ function Game() {
 
         for (let particle of particles) {
             let delay = counter - particle.start;
+
+            if (delay < 0)
+                continue;
+
             let x = particle.column * layout.square + layout.square / 2;
             let y = (rules.ROWS - particle.row - 1) * layout.square + layout.square / 2;
 
