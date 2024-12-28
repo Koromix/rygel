@@ -3708,28 +3708,28 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
                      (int)OpenFlag::Append)) {
         case (int)OpenFlag::Read: {
             access = GENERIC_READ;
-            share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
             creation = OPEN_EXISTING;
             attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_RDONLY | _O_BINARY | _O_NOINHERIT;
         } break;
         case (int)OpenFlag::Write: {
             access = GENERIC_WRITE;
-            share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
             creation = CREATE_ALWAYS;
             attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_WRONLY | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
         case (int)OpenFlag::Read | (int)OpenFlag::Write: {
             access = GENERIC_READ | GENERIC_WRITE;
-            share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
             creation = CREATE_ALWAYS;
             attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_RDWR | _O_CREAT | _O_TRUNC | _O_BINARY | _O_NOINHERIT;
         } break;
         case (int)OpenFlag::Append: {
             access = GENERIC_WRITE;
-            share = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            share = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
             creation = OPEN_ALWAYS;
             attributes = FILE_ATTRIBUTE_NORMAL;
             oflags = _O_WRONLY | _O_CREAT | _O_APPEND | _O_BINARY | _O_NOINHERIT;
@@ -3762,7 +3762,6 @@ OpenResult OpenFile(const char *filename, unsigned int flags, unsigned int silen
         creation = CREATE_NEW;
         oflags |= (int)_O_EXCL;
     }
-    share |= FILE_SHARE_DELETE;
 
     HANDLE h = nullptr;
     int fd = -1;
