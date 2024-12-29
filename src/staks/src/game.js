@@ -1186,6 +1186,7 @@ function Game() {
                 start: start,
                 vx: Util.getRandomFloat(-1.5, 1.5),
                 vy: Util.getRandomFloat(-1, 1),
+                size: Util.getRandomInt(4, 8)
             };
 
             particles.push(particle);
@@ -1417,12 +1418,15 @@ function Game() {
             let x = particle.column * layout.square + layout.square / 2;
             let y = (rules.ROWS - particle.row - 1) * layout.square + layout.square / 2;
 
+            let alpha = Math.max(0, 1 - delay / 240);
+            let size = particle.size;
+
             x += delay * particle.vx;
             y += delay * (particle.vy + 0.01 * delay);
 
-            ctx.globalAlpha = Math.max(0, 1 - delay / 240);
+            ctx.globalAlpha = alpha;
             ctx.fillStyle = particle.color;
-            ctx.fillRect(x - 3, y - 3, 6, 6);
+            ctx.fillRect(x - size / 2, y - size / 2, size, size);
         }
 
         ctx.restore();
