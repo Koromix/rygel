@@ -535,7 +535,9 @@ bool http_IO::OpenForWrite(int status, CompressionType encoding, int64_t len, St
 
         while (incoming.read < discard) {
             uint8_t buf[65535];
-            ReadDirect(buf);
+
+            if (ReadDirect(buf) < 0)
+                return false;
         }
     }
 
