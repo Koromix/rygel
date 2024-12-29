@@ -864,7 +864,7 @@ function Game() {
                 lockAndScore();
 
                 hit_force += 4 + Math.min(3, delta / 2);
-                runner.playOnce(assets.sounds.hard);
+                runner.playOnce(assets.sounds.lock);
 
                 score += 2 * delta;
             } else {
@@ -884,7 +884,7 @@ function Game() {
                     lockAndScore();
 
                     hit_force = 4;
-                    runner.playOnce(assets.sounds.soft);
+                    runner.playOnce(assets.sounds.lock);
                 }
             }
         }
