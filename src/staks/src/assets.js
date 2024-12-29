@@ -38,14 +38,16 @@ import musics_architecture from '../assets/musics/architecture.mp3';
 import sound_clear from '../assets/sounds/clear.mp3';
 // game over by Leszek_Szary: https://freesound.org/people/Leszek_Szary/sounds/133283/
 import sound_gameover from '../assets/sounds/gameover.mp3';
+// book-impact-03 by Adrian_Gomar: https://freesound.org/people/Adrian_Gomar/sounds/240989/
+import sound_hard from '../assets/sounds/hard.mp3';
 // Notification Sound 1 by deadrobotmusic: https://freesound.org/people/deadrobotmusic/sounds/750607/
 import sound_hold from '../assets/sounds/hold.mp3';
-// Blip 1 by HenKonen: https://freesound.org/people/HenKonen/sounds/757175/
-import sound_lock from '../assets/sounds/lock.mp3';
 // You find a treasure by xkeril: https://freesound.org/people/xkeril/sounds/632661/
 import sound_levelup from '../assets/sounds/levelup.mp3';
 // Simple GUI click by qubodup: https://freesound.org/people/qubodup/sounds/159697/
 import sound_move from '../assets/sounds/move.mp3';
+// Blip 1 by HenKonen: https://freesound.org/people/HenKonen/sounds/757175/
+import sound_soft from '../assets/sounds/soft.mp3';
 
 import ui_background from '../assets/ui/background.png';
 import ui_clockwise from '../assets/ui/clockwise.png';
@@ -86,10 +88,11 @@ async function loadAssets(prefix, progress) {
     assets.sounds = {
         clear: sound_clear,
         gameover: sound_gameover,
+        hard: sound_hard,
         hold: sound_hold,
         levelup: sound_levelup,
-        lock: sound_lock,
-        move: sound_move
+        move: sound_move,
+        soft: sound_soft
     };
 
     assets.ui = {

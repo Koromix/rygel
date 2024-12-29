@@ -656,8 +656,7 @@ function AppRunner(canvas) {
             sfx.src.loop = options.loop;
             sfx.src.connect(sfx.gain);
 
-            sfx.gain.gain.setValueAtTime(0, audio.currentTime);
-            sfx.gain.gain.linearRampToValueAtTime(1, audio.currentTime + 0.2);
+            sfx.gain.gain.setValueAtTime(1, audio.currentTime);
 
             sfx.src.start();
         }

@@ -554,8 +554,10 @@ function Game() {
     let clear_start = null;
     let clear_rows = null;
 
-    // Pure animations
+    // Animations
     let particles = [];
+    let hit_force = 0;
+    let hit_value = 0;
 
     // Scoring
     let level = 1;
@@ -591,28 +593,45 @@ function Game() {
         if (!started)
             return;
 
-        // Increase level manually
-        if (isInsideRect(mouse_state.x, mouse_state.y, layout.level)) {
-            if (mouse_state.left == 1)
-                level++;
-
-            runner.cursor = 'pointer';
-            mouse_state.left = 0;
-        }
-
-        counter++;
-
-        if (gameover) {
+        if (gameover)
             pause = false;
-            runner.playOnce(assets.sounds.gameover, false);
 
-            return;
-        }
-        if (pause) {
-            counter--;
-            return;
+        // Run game simulation
+        if (!pause) {
+            counter++;
+
+            if (!gameover) {
+                updatePlay();
+            } else {
+                runner.playOnce(assets.sounds.gameover, false);
+            }
         }
 
+        // Clean up particles
+        {
+            let j = 0;
+            for (let i = 0; i < particles.length; i++) {
+                let particle = particles[i];
+
+                particles[j] = particle;
+                j += (counter - particle.start < 480);
+            }
+            particles.length = j;
+        }
+
+        // Update fast fall animation
+        {
+            hit_value += hit_force / 10;
+            hit_force -= 0.3;
+
+            if (hit_value < 0) {
+                hit_value = 0;
+                hit_force = 0;
+            }
+        }
+    }
+
+    function updatePlay() {
         // Increase level manually
         if (isInsideRect(mouse_state.x, mouse_state.y, layout.level)) {
             if (mouse_state.left == 1)
@@ -621,7 +640,6 @@ function Game() {
             runner.cursor = 'pointer';
             mouse_state.left = 0;
         }
-
 
         // Draw next pieces (TGM-like randomizer with 6 tries)
         while (bag_draw.length < rules.BLOCKS.length) {
@@ -792,9 +810,6 @@ function Game() {
             }
 
             runner.playOnce(assets.sounds.hold);
-
-            // Prevent other user actions
-            return;
         }
 
         // Run gravity
@@ -848,6 +863,9 @@ function Game() {
 
                 lockAndScore();
 
+                hit_force += 4 + Math.min(3, delta / 2);
+                runner.playOnce(assets.sounds.hard);
+
                 score += 2 * delta;
             } else {
                 if (isPieceFloating(piece)) {
@@ -864,6 +882,9 @@ function Game() {
                     }
 
                     lockAndScore();
+
+                    hit_force = 4;
+                    runner.playOnce(assets.sounds.soft);
                 }
             }
         }
@@ -884,18 +905,6 @@ function Game() {
             }
 
             can_hold = true;
-        }
-
-        // Clean up particles
-        {
-            let j = 0;
-            for (let i = 0; i < particles.length; i++) {
-                let particle = particles[i];
-
-                particles[j] = particle;
-                j += (counter - particle.start < 480);
-            }
-            particles.length = j;
         }
     }
 
@@ -1040,8 +1049,6 @@ function Game() {
     }
 
     function lockAndScore() {
-        runner.playOnce(assets.sounds.lock);
-
         for (let i = 0; i < piece.size; i++) {
             for (let j = 0; j < piece.size; j++) {
                 if (!piece.shape[i * piece.size + j])
@@ -1220,7 +1227,7 @@ function Game() {
     function drawWell() {
         ctx.save();
 
-        ctx.translate(layout.well.left, layout.well.top);
+        ctx.translate(layout.well.left, layout.well.top + hit_value);
         drawArea(0, 0, layout.well.width, layout.well.height);
 
         if (pause) {
@@ -1320,7 +1327,7 @@ function Game() {
     function drawBag() {
         ctx.save();
 
-        ctx.translate(layout.bag.left, layout.bag.top);
+        ctx.translate(layout.bag.left, layout.bag.top + hit_value);
         drawArea(0, 0, layout.bag.width, layout.bag.height);
 
         if (pause) {
@@ -1348,7 +1355,7 @@ function Game() {
     function drawLevel() {
         ctx.save();
 
-        ctx.translate(layout.level.left, layout.level.top);
+        ctx.translate(layout.level.left, layout.level.top + hit_value);
         drawArea(0, 0, layout.level.width, layout.level.height);
 
         ctx.font = '20pt Open Sans';
@@ -1361,7 +1368,7 @@ function Game() {
     function drawScore() {
         ctx.save();
 
-        ctx.translate(layout.score.left, layout.score.top);
+        ctx.translate(layout.score.left, layout.score.top + hit_value);
         drawArea(0, 0, layout.score.width, layout.score.height);
 
         ctx.font = '20pt Open Sans';
@@ -1374,7 +1381,7 @@ function Game() {
     function drawHold() {
         ctx.save();
 
-        ctx.translate(layout.hold.left, layout.hold.top);
+        ctx.translate(layout.hold.left, layout.hold.top + hit_value);
         drawArea(0, 0, layout.hold.width, layout.hold.height);
 
         if (pause) {
