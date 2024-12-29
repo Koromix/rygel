@@ -149,7 +149,6 @@ server {
         proxy_read_timeout 180;
         send_timeout 180;
 
-        proxy_request_buffering off;
         client_max_body_size 256M;
 
         proxy_set_header Host $host;
