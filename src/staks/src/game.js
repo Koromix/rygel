@@ -632,15 +632,6 @@ function Game() {
     }
 
     function updatePlay() {
-        // Increase level manually
-        if (isInsideRect(mouse_state.x, mouse_state.y, layout.level)) {
-            if (mouse_state.left == 1)
-                level++;
-
-            runner.cursor = 'pointer';
-            mouse_state.left = 0;
-        }
-
         // Draw next pieces (TGM-like randomizer with 6 tries)
         while (bag_draw.length < rules.BLOCKS.length) {
             let block = bag_generator.next().value;
