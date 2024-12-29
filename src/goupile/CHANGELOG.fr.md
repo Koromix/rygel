@@ -2,6 +2,12 @@
 
 ## Goupile 3.8
 
+### Goupile 3.8.2 (29/12/2024)
+
+- Correction d'une possible boucle infinie après l'échec d'une requête HTTP*
+- Retrait de l'action d'oubli lorsque la sauvegarde automatique est utilisée
+- Refus des corps de requête HTTP compressés
+
 ### Goupile 3.8.1 (20/12/2024)
 
 - Retrait du bouton « Enregistrer » si le bouton « Suivant » est affiché

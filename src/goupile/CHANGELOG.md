@@ -2,6 +2,12 @@
 
 ## Goupile 3.8
 
+### Goupile 3.8.2 (2024-12-29)
+
+- Fix possible infinite loop after failed HTTP request
+- Hide forget action when autosave is in use
+- Refuse compressed HTTP request bodies
+
 ### Goupile 3.8.1 (2024-12-20)
 
 - Skip confusing Save button when Next is available
