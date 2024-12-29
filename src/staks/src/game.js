@@ -319,28 +319,26 @@ function update() {
     }
 
     // Simple shortcuts
-    if (!runner.isTouch) {
-        if (pressed_keys.p == 1 || pressed_keys.pause == 1)
-            game.pause = !game.pause;
-        if (pressed_keys.g == 1) {
-            settings.ghost = !settings.ghost;
-            saveSettings();
-        }
-        if (pressed_keys.b == 1)
-            toggleBackground();
-        if (pressed_keys.m == 1) {
-            settings.sound = !settings.sound;
-            saveSettings();
-        }
-        if (pressed_keys.h == 1) {
-            settings.help = !settings.help;
-            saveSettings();
-        }
-        if (pressed_keys.f == 1)
-            toggleFullScreen();
-        if (pressed_keys.tab == 1)
-            show_debug = !show_debug;
+    if (pressed_keys.p == 1 || pressed_keys.pause == 1)
+        game.pause = !game.pause;
+    if (pressed_keys.g == 1) {
+        settings.ghost = !settings.ghost;
+        saveSettings();
     }
+    if (pressed_keys.b == 1)
+        toggleBackground();
+    if (pressed_keys.m == 1) {
+        settings.sound = !settings.sound;
+        saveSettings();
+    }
+    if (pressed_keys.h == 1) {
+        settings.help = !settings.help;
+        saveSettings();
+    }
+    if (pressed_keys.f == 1)
+        toggleFullScreen();
+    if (pressed_keys.tab == 1)
+        show_debug = !show_debug;
 
     runner.volume = settings.sound ? 1 : 0;
 
