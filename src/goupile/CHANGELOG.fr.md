@@ -4,7 +4,7 @@
 
 ### Goupile 3.8.2 (29/12/2024)
 
-- Correction d'une possible boucle infinie après l'échec d'une requête HTTP*
+- Correction d'une possible boucle infinie après l'échec d'une requête HTTP
 - Retrait de l'action d'oubli lorsque la sauvegarde automatique est utilisée
 - Refus des corps de requête HTTP compressés
 
