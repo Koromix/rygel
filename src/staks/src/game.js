@@ -1200,18 +1200,19 @@ function Game() {
         drawScore();
         drawHold();
 
-        if (gameover) {
+        if (gameover || pause) {
             ctx.save();
 
             ctx.translate(layout.well.left, layout.well.top);
 
             let x = layout.well.width / 2;
             let y = layout.well.height / 2;
+            let text = gameover ? 'GAME OVER' : 'PAUSE';
 
             ctx.font = 'bold 24pt Open Sans';
             ctx.fillStyle = 'white';
             ctx.globalAlpha = 1;
-            runner.text(x, y, 'GAME OVER', { align: 5 });
+            runner.text(x, y, text, { align: 5 });
 
             ctx.restore();
         }
@@ -1224,13 +1225,6 @@ function Game() {
         drawArea(0, 0, layout.well.width, layout.well.height);
 
         if (pause) {
-            let x = layout.well.width / 2;
-            let y = layout.well.height / 2;
-
-            ctx.font = 'bold 24pt Open Sans';
-            ctx.fillStyle = 'white';
-            runner.text(x, y, 'PAUSE', { align: 5 });
-
             ctx.restore();
             return;
         }
