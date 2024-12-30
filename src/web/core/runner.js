@@ -100,6 +100,7 @@ function AppRunner(canvas) {
         ctx: { value: ctx, writable: false, enumerable: true },
 
         isTouch: { get: isTouchDevice, enumerable: true },
+        isPortrait: { get: isPortrait, enumerable: true },
 
         onUpdate: { get: () => handle_draw, set: func => { handle_update = func; }, enumerable: true },
         onDraw: { get: () => handle_draw, set: func => { handle_draw = func; }, enumerable: true },
@@ -180,6 +181,11 @@ function AppRunner(canvas) {
             return false;
 
         return true;
+    }
+
+    function isPortrait() {
+        let portrait = (canvas.height > canvas.width);
+        return portrait;
     }
 
     // ------------------------------------------------------------------------

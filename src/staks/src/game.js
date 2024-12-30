@@ -192,13 +192,13 @@ function update() {
 
     // Global layout
     {
-        let padding = 16;
+        let padding = runner.isTouch ? 8 : 16;
 
         let width = canvas.width - padding * 2;
         let height = canvas.height - padding * 2;
 
-        // Account for touch controls
-        if (runner.isTouch)
+        // Account for touch controls at the bottom
+        if (runner.isTouch && runner.isPortrait)
             height -= 100 * window.devicePixelRatio + padding;
 
         // Make sure things fit, and square size divides by two nicely
@@ -211,7 +211,7 @@ function update() {
         height = Math.ceil((rules.ROWS + rules.EXTRA_TOP) * square);
 
         let left = canvas.width / 2 - width / 2;
-        let top = runner.isTouch ? padding : (canvas.height / 2 - height / 2);
+        let top = (runner.isTouch && runner.isPortrait) ? padding : (canvas.height / 2 - height / 2);
 
         layout.padding = padding;
         layout.square = square;
@@ -245,20 +245,37 @@ function update() {
         if (runner.isTouch) {
             let bottom = top + height;
 
-            layout.hold = {
-                left: layout.bag.left,
-                top: bottom - 2.5 * layout.square,
-                width: layout.bag.width,
-                height: 2.5 * layout.square
-            };
+            if (runner.isPortrait) {
+                layout.hold = {
+                    left: layout.bag.left,
+                    top: bottom - 2.5 * layout.square,
+                    width: layout.bag.width,
+                    height: 2.5 * layout.square
+                };
 
-            layout.help = null;
-            layout.input = {
-                left: padding,
-                top: bottom + padding,
-                width: canvas.width - padding * 2,
-                height: canvas.height - bottom - padding * 2
-            };
+                layout.help = null;
+                layout.input = {
+                    left: padding,
+                    top: bottom + padding,
+                    width: canvas.width - padding * 2,
+                    height: canvas.height - bottom - padding * 2
+                };
+            } else {
+                layout.hold = {
+                    left: layout.bag.left,
+                    top: bottom - 2.5 * layout.square,
+                    width: layout.bag.width,
+                    height: 2.5 * layout.square
+                };
+
+                layout.help = null;
+                layout.input = {
+                    left: padding,
+                    top: canvas.height - padding - 300,
+                    width: canvas.width - padding * 2,
+                    height: 300
+                };
+            }
         } else {
             layout.hold = {
                 left: left - padding - layout.bag.width,
@@ -281,40 +298,54 @@ function update() {
         let pause_key = game.pause ? 'play' : 'pause';
 
         let size = 0.6 * layout.button;
-        let x = runner.isTouch ? (20 + size / 2) : (layout.bag.left + size / 2);
-        let y = runner.isTouch ? (20 + size / 2) : (layout.well.top + layout.well.height - size / 2);
-        let delta = runner.isTouch ? (size + 20) : -(size + 20);
+        let x = 0, y = 0;
+        let dx = 0, dy = 0;
+
+        if (runner.isTouch && runner.isPortrait) {
+            x = 20 + size / 2;
+            y = 20 + size / 2;
+            dy = size + 20;
+        } else if (runner.isTouch) {
+            x = 20 + size / 2;
+            y = 20 + size / 2;
+            dx = size + 20;
+        } else {
+            x = layout.bag.left + size / 2;
+            y = layout.well.top + layout.well.height - size / 2;
+            dy = -size - 20;
+        }
 
         if (ui.button(sound_key, x, y, size).clicked) {
             settings.sound = !settings.sound;
             saveSettings();
         }
-        y += delta;
+        x += dx; y += dy;
 
         if (ui.button('background', x, y, size).clicked)
             toggleBackground();
-        y += delta;
+        x += dx; y += dy;
 
         if (main.requestFullscreen != null) {
             if (ui.button('fullscreen', x, y, size).clicked)
                 toggleFullScreen();
-            y += delta;
+            x += dx; y += dy;
         }
 
         if (game.isPlaying && runner.isTouch) {
             if (ui.button(pause_key, x, y, size).clicked)
                 game.pause = !game.pause;
-            y += delta;
+            x += dx; y += dy;
         }
+    }
+    if (game.isPlaying && !runner.isTouch && !settings.help) {
+        let size = 0.6 * layout.button;
 
-        if (game.isPlaying && !runner.isTouch && !settings.help) {
-            let clicked = ui.button('help', layout.well.left - layout.padding - size / 2,
-                                            layout.well.top + layout.well.height - size / 2, size).clicked;
+        let clicked = ui.button('help', layout.well.left - layout.padding - size / 2,
+                                        layout.well.top + layout.well.height - size / 2, size).clicked;
 
-            if (clicked) {
-                settings.help = true;
-                game.pause = true;
-            }
+        if (clicked) {
+            settings.help = true;
+            game.pause = true;
         }
     }
 
@@ -649,18 +680,20 @@ function Game() {
         if (runner.isTouch) {
             let rect = layout.input;
 
-            left = ui.button('left', rect.left + 0.25 * rect.width - 0.7 * layout.button,
+            left = ui.button('left', rect.left + 0.8 * layout.button,
                                      rect.top + 0.3 * rect.height, layout.button).pressed >= 1;
-            right = ui.button('right', rect.left + 0.25 * rect.width + 0.7 * layout.button,
+            right = ui.button('right', rect.left + 2.2 * layout.button,
                                        rect.top + 0.3 * rect.height, layout.button).pressed >= 1;
+            turbo = ui.button('turbo', rect.left + 1.5 * layout.button,
+                                       rect.top + 0.8 * rect.height, 0.7 * layout.button).pressed >= 1;
 
-            rotate += ui.button('clockwise', rect.left + 0.75 * rect.width + 0.7 * layout.button,
-                                             rect.top + 0.5 * rect.height, layout.button).clicked;
-            rotate -= ui.button('counterclock', rect.left + 0.75 * rect.width - 0.7 * layout.button,
-                                                rect.top + 0.5 * rect.height, layout.button).clicked;
-
-            turbo = ui.button('turbo', rect.left + 0.25 * rect.width,
-                                       rect.top + 0.85 * rect.height, 0.7 * layout.button).pressed >= 1;
+            rotate += ui.button('clockwise', rect.left + rect.width - 0.8 * layout.button,
+                                             rect.top + 0.3 * rect.height, layout.button).clicked;
+            rotate -= ui.button('counterclock', rect.left + rect.width - 2.2 * layout.button,
+                                                rect.top + 0.3 * rect.height, layout.button).clicked;
+            if (!runner.isPortrait)
+                drop = ui.button('drop', rect.left + rect.width - 1.5 * layout.button,
+                                         rect.top + 0.8 * rect.height, 0.7 * layout.button).clicked;
 
             if (isInsideRect(mouse_state.x, mouse_state.y, expandRect(layout.well, -40, -40))) {
                 if (mouse_state.left == 1)
