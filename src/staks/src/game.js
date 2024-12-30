@@ -215,7 +215,10 @@ function update() {
 
         layout.padding = padding;
         layout.square = square;
-        layout.button = BUTTON_SIZE * window.devicePixelRatio;
+        layout.button = Math.round(BUTTON_SIZE * window.devicePixelRatio);
+
+        if (runner.isTouch && !runner.isPortrait)
+            layout.button = Math.round(layout.button * 1.2);
 
         layout.well = {
             left: left,
@@ -302,17 +305,17 @@ function update() {
         let dx = 0, dy = 0;
 
         if (runner.isTouch && runner.isPortrait) {
-            x = 20 + size / 2;
-            y = 20 + size / 2;
-            dy = size + 20;
+            x = 25 + size / 2;
+            y = 25 + size / 2;
+            dy = size + 25;
         } else if (runner.isTouch) {
-            x = 20 + size / 2;
-            y = 20 + size / 2;
-            dx = size + 20;
+            x = 25 + size / 2;
+            y = 25 + size / 2;
+            dx = size + 25;
         } else {
             x = layout.bag.left + size / 2;
             y = layout.well.top + layout.well.height - size / 2;
-            dy = -size - 20;
+            dy = -size - 25;
         }
 
         if (ui.button(sound_key, x, y, size).clicked) {
