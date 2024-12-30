@@ -274,7 +274,7 @@ function update() {
                 layout.help = null;
                 layout.input = {
                     left: padding,
-                    top: canvas.height - padding - 300,
+                    top: canvas.height / 2 - 80,
                     width: canvas.width - padding * 2,
                     height: 300
                 };
