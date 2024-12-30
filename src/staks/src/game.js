@@ -48,7 +48,6 @@ const SQUARE_SIZE = 40;
 const DEFAULT_SETTINGS = {
     background: 'aurora',
     sound: true,
-    music: 'serious_corporate',
     ghost: true,
     help: true
 };
@@ -70,6 +69,7 @@ let game = new Game;
 
 // User settings
 let settings = Object.assign({}, DEFAULT_SETTINGS);
+let current_music = null;
 let show_debug = false;
 
 // UI state
@@ -95,6 +95,7 @@ async function load(prefix, progress = null) {
     await loadAssets(prefix, progress);
 
     loadSettings();
+    current_music = Object.keys(assets.musics)[0];
 
     for (let i = 0; i < rules.BLOCKS.length; i++) {
         let block = rules.BLOCKS[i];
@@ -124,7 +125,7 @@ async function start(root) {
     render(html`
         <div class="stk_game">
             <div class="stk_attributions">
-                Musiques par <a href="https://freesound.org/people/AudioCoffee/" target="_blank">AudioCoffee</a><br>
+                Musiques par <a href="https://freemusicarchive.org/music/audiocoffee/" target="_blank">AudioCoffee</a><br>
                 Fonds d'écran par <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>, <a href="https://fr.m.wikipedia.org/wiki/Fichier:Fomalhaut_planet.jpg" target=_"blank">NASA et ESA</a>
             </div>
             <canvas class="stk_canvas"></canvas>
@@ -174,8 +175,6 @@ function loadSettings() {
 
     if (!assets.backgrounds.hasOwnProperty(settings.background))
         settings.background = DEFAULT_SETTINGS.background;
-    if (!assets.musics.hasOwnProperty(settings.music))
-        settings.music = DEFAULT_SETTINGS.music;
 }
 
 function saveSettings() {
@@ -378,15 +377,15 @@ function update() {
 
     // Play music
     if (game.hasStarted) {
-        let sound = assets.musics[settings.music];
+        let sound = assets.musics[current_music];
         let handle = runner.playOnce(sound);
 
         if (handle.ended) {
             let musics = Object.keys(assets.musics);
-            let idx = musics.indexOf(settings.music);
+            let idx = musics.indexOf(current_music);
             let next = (idx + 1) % musics.length;
 
-            settings.music = musics[next] ?? null;
+            current_music = musics[next] ?? null;
             saveSettings();
         }
     }

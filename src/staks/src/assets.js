@@ -23,16 +23,26 @@ import backgrounds_planet from '../assets/backgrounds/planet.webp';
 // Somewhere by psiipilehto: https://www.deviantart.com/psiipilehto/art/Somewhere-269008123
 import backgrounds_lonely from '../assets/backgrounds/somewhere.webp';
 
-// Serious Corporate (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/767937/
-import musics_serious_corporate from '../assets/musics/serious_corporate.mp3';
-// Ambient Future Tech (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/745374/
+// Abstract Piano Ambient by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/tomorrow/abstract-piano-ambient/
+import musics_abstract_piano_ambient from '../assets/musics/abstract_piano_ambient.mp3';
+// Ambient Future Tech by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/sci-fi-times/ambient-future-tech/
 import musics_ambient_future_tech from '../assets/musics/ambient_future_tech.mp3';
-// Summer Beauty (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/747784/
-import musics_summer_beauty from '../assets/musics/summer_beauty.mp3';
-// Tech Corporation (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/756428/
-import musics_tech_corporation from '../assets/musics/tech_corporation.mp3';
-// Architecture (short ver.) by AudioCoffee: https://freesound.org/people/AudioCoffee/sounds/755320/
+// Architecture by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/motivational-style/architecture-1/
 import musics_architecture from '../assets/musics/architecture.mp3';
+// Medical by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/sci-fi-times/medical-2/
+import musics_medical from '../assets/musics/medical.mp3'
+// Motivational Day by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/motivational-style/motivational-day-1/
+import musics_motivational_day from '../assets/musics/motivational_day.mp3'
+// Motivational Stylish Background by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/pop-inspiration/motivational-stylish-background/
+import musics_motivational_stylish_background from '../assets/musics/motivational_stylish_background.mp3';
+// Serious Corporate by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/corporate/serious-corporate/
+import musics_serious_corporate from '../assets/musics/serious_corporate.mp3';
+// Summer Beauty by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/life/summer-beauty/
+import musics_summer_beauty from '../assets/musics/summer_beauty.mp3';
+// Summer Every Day by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/pop-inspiration/summer-every-day/
+import musics_summer_every_day from '../assets/musics/summer_every_day.mp3';
+// Tech Corporation by AudioCoffee: https://freemusicarchive.org/music/becouse-heart/technology-1/tech-corporation/
+import musics_tech_corporation from '../assets/musics/tech_corporation.mp3';
 
 // powerup by BananaMilkshake: https://freesound.org/people/BananaMilkshake/sounds/632702/
 import sound_clear from '../assets/sounds/clear.mp3';
@@ -77,11 +87,16 @@ async function loadAssets(prefix, progress) {
     };
 
     assets.musics = {
-        serious_corporate: musics_serious_corporate,
+        abstract_piano_ambient: musics_abstract_piano_ambient,
         ambient_future_tech: musics_ambient_future_tech,
+        architecture: musics_architecture,
+        medical: musics_medical,
+        motivational_day: musics_motivational_day,
+        motivational_stylish_background: musics_motivational_stylish_background,
+        serious_corporate: musics_serious_corporate,
         summer_beauty: musics_summer_beauty,
-        tech_corporation: musics_tech_corporation,
-        architecture: musics_architecture
+        summer_every_day: musics_summer_every_day,
+        tech_corporation: musics_tech_corporation
     };
 
     assets.sounds = {
@@ -109,6 +124,9 @@ async function loadAssets(prefix, progress) {
         start: ui_start,
         turbo: ui_turbo
     };
+
+    // Shuffle musics
+    assets.musics = Util.shuffle(Object.keys(assets.musics)).reduce((obj, key) => { obj[key] = assets.musics[key]; return obj; }, {});
 
     let objects = Object.values(assets);
     let resources = objects.flatMap(obj => Object.keys(obj).map(key => ({ obj, key })));
