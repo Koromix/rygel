@@ -334,9 +334,21 @@ function update() {
         }
 
         if (game.isPlaying && runner.isTouch) {
-            if (ui.button(pause_key, x, y, size).clicked)
-                game.pause = !game.pause;
+            if (ui.button('ghost', x, y, size).clicked) {
+                settings.ghost = !settings.ghost;
+                saveSettings();
+            }
             x += dx; y += dy;
+
+            if (runner.isPortrait) {
+                y += dy;
+                if (ui.button(pause_key, x, y, size).clicked)
+                    game.pause = !game.pause;
+                x += dx; y += dy;
+            } else {
+                if (ui.button(pause_key, canvas.width - 25 - size / 2, y, size).clicked)
+                    game.pause = !game.pause;
+            }
         }
     }
     if (game.isPlaying && !runner.isTouch && !settings.help) {

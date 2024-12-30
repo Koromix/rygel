@@ -66,6 +66,7 @@ import ui_clockwise from '../assets/ui/clockwise.png';
 import ui_counterclock from '../assets/ui/counterclock.png';
 import ui_drop from '../assets/ui/drop.png';
 import ui_fullscreen from '../assets/ui/fullscreen.png';
+import ui_ghost from '../assets/ui/ghost.png';
 import ui_help from '../assets/ui/help.png';
 import ui_left from '../assets/ui/left.png';
 import ui_play from '../assets/ui/play.png';
@@ -120,6 +121,7 @@ async function loadAssets(prefix, progress) {
         counterclock: ui_counterclock,
         drop: ui_drop,
         fullscreen: ui_fullscreen,
+        ghost: ui_ghost,
         help: ui_help,
         left: ui_left,
         pause: ui_pause,
