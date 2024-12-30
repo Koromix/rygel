@@ -385,6 +385,8 @@ function update() {
     }
     if (pressed_keys.f == 1)
         toggleFullScreen();
+    if (pressed_keys.j == 1)
+        toggleMusic();
     if (pressed_keys.tab == 1)
         show_debug = !show_debug;
 
@@ -393,16 +395,10 @@ function update() {
     // Play music
     if (game.hasStarted) {
         let sound = assets.musics[current_music];
-        let handle = runner.playOnce(sound);
+        let handle = runner.playOnce(sound, false);
 
-        if (handle.ended) {
-            let musics = Object.keys(assets.musics);
-            let idx = musics.indexOf(current_music);
-            let next = (idx + 1) % musics.length;
-
-            current_music = musics[next] ?? null;
-            saveSettings();
-        }
+        if (handle.ended)
+            toggleMusic();
     }
 
     if (!game.isPlaying) {
@@ -455,6 +451,14 @@ function toggleBackground() {
 
     settings.background = backgrounds[next];
     saveSettings();
+}
+
+function toggleMusic() {
+    let musics = Object.keys(assets.musics);
+    let idx = musics.indexOf(current_music);
+    let next = (idx + 1) % musics.length;
+
+    current_music = musics[next] ?? null;
 }
 
 function play() {
