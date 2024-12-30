@@ -18,10 +18,14 @@ import { loadTexture, loadSound } from '../../web/core/runner.js';
 
 // Aurora Night by psiipilehto: https://www.deviantart.com/psiipilehto/art/Aurora-Night-608184628
 import backgrounds_aurora from '../assets/backgrounds/aurora.webp';
+// Winter scenery by psiipilehto: https://www.deviantart.com/psiipilehto/art/winter-scenery-346519787
+import backgrounds_winter from '../assets/backgrounds/winter.webp';
 // Illustration of Fomalhaut b by ESA, NASA, and L. Calcada: https://fr.m.wikipedia.org/wiki/Fichier:Fomalhaut_planet.jpg
 import backgrounds_planet from '../assets/backgrounds/planet.webp';
 // Somewhere by psiipilehto: https://www.deviantart.com/psiipilehto/art/Somewhere-269008123
 import backgrounds_lonely from '../assets/backgrounds/somewhere.webp';
+// Beneath lies serenity by psiipilehto: https://www.deviantart.com/psiipilehto/art/beneath-lies-serenity-372373739
+import backgrounds_serenity from '../assets/backgrounds/serenity.webp';
 
 // Abstract Piano Ambient by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/tomorrow/abstract-piano-ambient/
 import musics_abstract_piano_ambient from '../assets/musics/abstract_piano_ambient.mp3';
@@ -82,8 +86,10 @@ async function loadAssets(prefix, progress) {
 
     assets.backgrounds = {
         aurora: backgrounds_aurora,
+        winter: backgrounds_winter,
         planet: backgrounds_planet,
-        somewhere: backgrounds_lonely
+        somewhere: backgrounds_lonely,
+        serenity: backgrounds_serenity
     };
 
     assets.musics = {
