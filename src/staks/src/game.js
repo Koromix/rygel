@@ -455,13 +455,12 @@ function draw() {
 }
 
 function drawStart() {
-    let font = '20px Open Sans';
+    ctx.font = '32px Open Sans';
     ctx.fillStyle = 'white';
 
     let text = runner.isTouch ? `Appuyez sur le bouton pour commencer`
                               : `Appuyez sur la touche entrée ⏎\uFE0E pour commencer`;
 
-    ctx.font = '28pt Open Sans';
     runner.text(canvas.width / 2, canvas.height / 2, text, { align: 5 });
 }
 
@@ -479,7 +478,7 @@ function drawHelp() {
     for (let shortcut of KEYBOARD_SHORTCUTS) {
         if (shortcut != null) {
             width = Math.max(width, 114 + runner.measure(shortcut[1]).width);
-            height += 8;
+            height += 10;
         }
 
         height += 10;
@@ -495,7 +494,7 @@ function drawHelp() {
             runner.text(x - 12, y, shortcut[0], { align: 3 });
             runner.text(x - 92, y, shortcut[1], { align: 3 });
 
-            y -= 8;
+            y -= 10;
         }
 
         y -= 10;
@@ -1206,7 +1205,7 @@ function Game() {
             let y = layout.well.height / 2;
             let text = gameover ? 'GAME OVER' : 'PAUSE';
 
-            ctx.font = 'bold 24pt Open Sans';
+            ctx.font = 'bold 32px Open Sans';
             ctx.fillStyle = 'white';
             ctx.globalAlpha = 1;
             runner.text(x, y, text, { align: 5 });
@@ -1349,7 +1348,7 @@ function Game() {
         ctx.translate(layout.level.left, layout.level.top + hit_value);
         drawArea(0, 0, layout.level.width, layout.level.height);
 
-        ctx.font = '20pt Open Sans';
+        ctx.font = runner.isTouch ? '22px Open Sans' : '16px Open Sans';
         ctx.fillStyle = 'white';
         runner.text(layout.level.width / 2, layout.level.height / 2, level, { align: 5 });
 
@@ -1362,7 +1361,7 @@ function Game() {
         ctx.translate(layout.score.left, layout.score.top + hit_value);
         drawArea(0, 0, layout.score.width, layout.score.height);
 
-        ctx.font = '20pt Open Sans';
+        ctx.font = runner.isTouch ? '22px Open Sans' : '16px Open Sans';
         ctx.fillStyle = 'white';
         runner.text(layout.score.width / 2, layout.score.height / 2, score, { align: 5 });
 
