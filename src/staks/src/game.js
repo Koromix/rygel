@@ -212,6 +212,9 @@ function update() {
         let left = canvas.width / 2 - width / 2;
         let top = (runner.isTouch && runner.isPortrait) ? padding : (canvas.height / 2 - height / 2);
 
+        if (runner.isTouch)
+            left -= (padding + 2.5 * layout.square) / 2;
+
         layout.padding = padding;
         layout.square = square;
         layout.button = Math.round(BUTTON_SIZE * window.devicePixelRatio);
@@ -304,17 +307,17 @@ function update() {
         let dx = 0, dy = 0;
 
         if (runner.isTouch && runner.isPortrait) {
-            x = 25 + size / 2;
-            y = 25 + size / 2;
-            dy = size + 25;
+            x = 20 + size / 2;
+            y = 20 + size / 2;
+            dy = size + 20;
         } else if (runner.isTouch) {
-            x = 25 + size / 2;
-            y = 25 + size / 2;
-            dx = size + 25;
+            x = 20 + size / 2;
+            y = 20 + size / 2;
+            dx = size + 20;
         } else {
             x = layout.bag.left + size / 2;
             y = layout.well.top + layout.well.height - size / 2;
-            dy = -size - 25;
+            dy = -size - 20;
         }
 
         if (ui.button(sound_key, x, y, size).clicked) {
@@ -346,7 +349,7 @@ function update() {
                     game.pause = !game.pause;
                 x += dx; y += dy;
             } else {
-                if (ui.button(pause_key, canvas.width - 25 - size / 2, y, size).clicked)
+                if (ui.button(pause_key, canvas.width - 20 - size / 2, y, size).clicked)
                     game.pause = !game.pause;
             }
         }
@@ -404,11 +407,19 @@ function update() {
 
     if (!game.isPlaying) {
         if (runner.isTouch) {
-            let x = canvas.width / 2;
-            let y = canvas.height / 2 + 150;
+            if (game.hasStarted) {
+                let x = layout.well.left + layout.well.width / 2;
+                let y = layout.well.top + layout.well.height / 2 + 150;
 
-            if (ui.button('start', x, y, layout.button).clicked)
-                play();
+                if (ui.button('start', x, y, layout.button).clicked)
+                    play();
+            } else {
+                let x = canvas.width / 2;
+                let y = canvas.height / 2 + 150;
+
+                if (ui.button('start', x, y, layout.button).clicked)
+                    play();
+            }
         } else {
             if (mouse_state.left == -1 || pressed_keys.return == -1) {
                 play();
