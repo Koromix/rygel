@@ -691,7 +691,7 @@ function Game() {
     }
 
     function updatePlay() {
-        // Draw next pieces (TGM-like randomizer with 6 tries)
+        // Draw next pieces
         while (bag_draw.length < rules.BLOCKS.length) {
             let block = bag_generator.next().value;
             bag_draw.push(block);
