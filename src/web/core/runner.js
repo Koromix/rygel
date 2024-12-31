@@ -88,6 +88,7 @@ function AppRunner(canvas) {
     let ignore_new_cursor = false;
 
     let audio = null;
+    let audio_started = false;
     let volume_node = null;
     let volume = 1;
     let sound_buffers = new LruMap(16);
@@ -629,8 +630,20 @@ function AppRunner(canvas) {
     // ------------------------------------------------------------------------
 
     function initSound() {
-        if (audio != null)
-            return;
+        if (audio != null) {
+            let running = (audio.state == 'running');
+
+            // Force audio reset after suspend to make sure things work
+            if (running || !audio_started) {
+                audio_started ||= running;
+                return;
+            }
+
+            audio.close();
+
+            audio = null;
+            audio_started = false;
+        }
 
         audio = new AudioContext;
 
