@@ -856,7 +856,7 @@ function LruMap(limit) {
 
     let self = this;
 
-    let map = {};
+    let map = new Map;
     let size = 0;
 
     Object.defineProperties(this, {
@@ -883,9 +883,9 @@ function LruMap(limit) {
     }
 
     this.set = function(key, value) {
-        let bucket = map[key];
+        let bucket = map.get(key);
 
-        if (bucket) {
+        if (bucket != null) {
             bucket.value = value;
 
             if (root_bucket.prev !== bucket) {
@@ -903,28 +903,29 @@ function LruMap(limit) {
                 next: null
             };
 
-            map[key] = bucket;
+            map.set(key, bucket);
             link(bucket);
             size++;
         }
     };
 
     this.delete = function(key) {
-        let bucket = map[key];
-        if (bucket)
+        let bucket = map.get(key);
+
+        if (bucket != null)
             deleteBucket(bucket);
     };
 
     function deleteBucket(bucket) {
         unlink(bucket);
-        delete map[bucket.key];
+        map.delete(bucket.key);
         size--;
     }
 
     this.get = function(key) {
-        let bucket = map[key];
+        let bucket = map.get(key);
 
-        if (bucket) {
+        if (bucket != null) {
             if (bucket.next !== root_bucket) {
                 unlink(bucket);
                 link(bucket);
@@ -937,8 +938,7 @@ function LruMap(limit) {
     };
 
     this.has = function(key) {
-        let bucket = map[key];
-        return bucket !== undefined;
+        return map.has(key);
     };
 
     this.newest = function() { return root_bucket.prev.key; };
@@ -948,34 +948,15 @@ function LruMap(limit) {
         root_bucket.prev = root_bucket;
         root_bucket.next = root_bucket;
 
-        map = {};
+        map.clear();
         size = 0;
     };
 
-    this.entries = function*() {
-        let it = root_bucket.next;
-        while (it !== root_bucket) {
-            yield [it.key, it.value];
-            it = it.next;
-        }
-    };
+    this.entries = function() { return map.entries(); };
     this[Symbol.iterator] = self.entries;
 
-    this.keys = function*() {
-        let it = root_bucket.next;
-        while (it !== root_bucket) {
-            yield it.key;
-            it = it.next;
-        }
-    };
-
-    this.values = function*() {
-        let it = root_bucket.next;
-        while (it !== root_bucket) {
-            yield it.value;
-            it = it.next;
-        }
-    };
+    this.keys = function() { return map.keys(); };
+    this.values = function() { return map.values(); };
 }
 
 function BTree(order = 64) {
