@@ -83,8 +83,8 @@ async function run() {
             '.woff2': 'dataurl',
             '.png': 'file',
             '.webp': 'file',
-            '.ogg': 'file',
-            '.mp3': 'file'
+            '.webm': 'file',
+            '.opus': 'file'
         },
         outdir: 'dist/static/',
         plugins: [

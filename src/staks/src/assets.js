@@ -15,6 +15,13 @@
 
 import { Util } from '../../web/core/base.js';
 
+// Brief recap of various commands used to convert sound files:
+//
+// * WAV volume adjustment: sox -v FACTOR input.wav output.wav
+// * Music opus encoding: opusenc --music --discard-comments --discard-comments input.wav input.opus
+// * Sound opus encoding: opusenc --downmix-mono --discard-comments --discard-comments input.wav input.opus
+// * Convert Ogg (Opus) container to WebM: ffmpeg -i input.opus -acodec copy output.webm
+
 // Aurora Night by psiipilehto: https://www.deviantart.com/psiipilehto/art/Aurora-Night-608184628
 import backgrounds_aurora from '../assets/backgrounds/aurora.webp';
 // Winter scenery by psiipilehto: https://www.deviantart.com/psiipilehto/art/winter-scenery-346519787
@@ -27,38 +34,38 @@ import backgrounds_lonely from '../assets/backgrounds/somewhere.webp';
 import backgrounds_serenity from '../assets/backgrounds/serenity.webp';
 
 // Abstract Piano Ambient by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/tomorrow/abstract-piano-ambient/
-import musics_abstract_piano_ambient from '../assets/musics/abstract_piano_ambient.mp3';
+import musics_abstract_piano_ambient from '../assets/musics/abstract_piano_ambient.webm';
 // Ambient Future Tech by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/sci-fi-times/ambient-future-tech/
-import musics_ambient_future_tech from '../assets/musics/ambient_future_tech.mp3';
+import musics_ambient_future_tech from '../assets/musics/ambient_future_tech.webm';
 // Architecture by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/motivational-style/architecture-1/
-import musics_architecture from '../assets/musics/architecture.mp3';
+import musics_architecture from '../assets/musics/architecture.webm';
 // Medical by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/sci-fi-times/medical-2/
-import musics_medical from '../assets/musics/medical.mp3'
+import musics_medical from '../assets/musics/medical.webm'
 // Motivational Day by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/motivational-style/motivational-day-1/
-import musics_motivational_day from '../assets/musics/motivational_day.mp3'
+import musics_motivational_day from '../assets/musics/motivational_day.webm'
 // Motivational Stylish Background by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/pop-inspiration/motivational-stylish-background/
-import musics_motivational_stylish_background from '../assets/musics/motivational_stylish_background.mp3';
+import musics_motivational_stylish_background from '../assets/musics/motivational_stylish_background.webm';
 // Serious Corporate by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/corporate/serious-corporate/
-import musics_serious_corporate from '../assets/musics/serious_corporate.mp3';
+import musics_serious_corporate from '../assets/musics/serious_corporate.webm';
 // Summer Beauty by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/life/summer-beauty/
-import musics_summer_beauty from '../assets/musics/summer_beauty.mp3';
+import musics_summer_beauty from '../assets/musics/summer_beauty.webm';
 // Summer Every Day by AudioCoffee: https://freemusicarchive.org/music/audiocoffee/pop-inspiration/summer-every-day/
-import musics_summer_every_day from '../assets/musics/summer_every_day.mp3';
+import musics_summer_every_day from '../assets/musics/summer_every_day.webm';
 // Tech Corporation by AudioCoffee: https://freemusicarchive.org/music/becouse-heart/technology-1/tech-corporation/
-import musics_tech_corporation from '../assets/musics/tech_corporation.mp3';
+import musics_tech_corporation from '../assets/musics/tech_corporation.webm';
 
 // powerup by BananaMilkshake: https://freesound.org/people/BananaMilkshake/sounds/632702/
-import sound_clear from '../assets/sounds/clear.mp3';
+import sound_clear from '../assets/sounds/clear.webm';
 // game over by Leszek_Szary: https://freesound.org/people/Leszek_Szary/sounds/133283/
-import sound_gameover from '../assets/sounds/gameover.mp3';
+import sound_gameover from '../assets/sounds/gameover.webm';
 // Notification Sound 1 by deadrobotmusic: https://freesound.org/people/deadrobotmusic/sounds/750607/
-import sound_hold from '../assets/sounds/hold.mp3';
+import sound_hold from '../assets/sounds/hold.webm';
 // You find a treasure by xkeril: https://freesound.org/people/xkeril/sounds/632661/
-import sound_levelup from '../assets/sounds/levelup.mp3';
+import sound_levelup from '../assets/sounds/levelup.webm';
 // Blip 1 by HenKonen: https://freesound.org/people/HenKonen/sounds/757175/
-import sound_lock from '../assets/sounds/lock.mp3';
+import sound_lock from '../assets/sounds/lock.webm';
 // Simple GUI click by qubodup: https://freesound.org/people/qubodup/sounds/159697/
-import sound_move from '../assets/sounds/move.mp3';
+import sound_move from '../assets/sounds/move.webm';
 
 import ui_background from '../assets/ui/background.png';
 import ui_clockwise from '../assets/ui/clockwise.png';
@@ -155,7 +162,7 @@ async function loadAssets(prefix, progress) {
                 res.obj[res.key] = url;
             } else if (url.endsWith('.png') || url.endsWith('.webp')) {
                 res.obj[res.key] = await loadTexture(url);
-            } else if (url.endsWith('.mp3')) {
+            } else if (url.endsWith('.webm')) {
                 res.obj[res.key] = await loadSound(url);
             } else {
                 throw new Error(`Unknown resource type for '${url}'`);
