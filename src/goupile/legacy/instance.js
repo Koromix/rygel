@@ -1589,8 +1589,10 @@ function enablePersistence() {
 
 async function syncEditor() {
     if (editor_el == null) {
-        if (typeof ace === 'undefined')
-            await Net.loadScript(`${ENV.urls.static}ace/ace.js`);
+        if (typeof ace === 'undefined') {
+            await import(`${ENV.urls.static}ace/ace.js`);
+            ace.config.set('basePath', `${ENV.urls.static}ace`);
+        }
 
         editor_el = document.createElement('div');
         editor_el.setAttribute('style', 'flex: 1;');
