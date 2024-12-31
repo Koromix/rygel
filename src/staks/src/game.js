@@ -1126,10 +1126,22 @@ function Game() {
         let action = 0;
 
         switch (clears) {
-            case 1: { action += 100 * level; } break;
-            case 2: { action += 300 * level; } break;
-            case 3: { action += 500 * level; } break;
-            case 4: { action += 800 * level; } break;
+            case 1: {
+                action += 100 * level;
+                logAction('Single');
+            } break;
+            case 2: {
+                action += 300 * level;
+                logAction('Double');
+            } break;
+            case 3: {
+                action += 500 * level;
+                logAction('Triple');
+            } break;
+            case 4: {
+                action += 800 * level;
+                logAction('Quad');
+            } break;
         }
 
         if (clears) {
@@ -1137,6 +1149,9 @@ function Game() {
             action += 50 * combo * level;
 
             runner.playOnce(assets.sounds.clear);
+
+            if (combo)
+                logAction(`Combo x${combo}`);
         } else {
             combo = -1;
         }
@@ -1149,6 +1164,8 @@ function Game() {
                     case 2: { action += 1200; } break;
                     case 3: { action += 1600; } break;
                 }
+
+                logAction('T-spin');
             } break;
             case 'miniT': {
                 switch (clears) {
@@ -1157,6 +1174,8 @@ function Game() {
                     case 2: { action += 400; } break;
                     case 3: { /* Apparently impossible */ } break;
                 }
+
+                logAction('Mini T-spin');
             } break;
         }
 
@@ -1167,11 +1186,15 @@ function Game() {
                 case 3: { action += 1800 * level; } break;
                 case 4: { action += 2000 * level; } break;
             }
+
+            logAction('All Clear');
         }
 
         back2back &&= (special == 'T' || clears == 4);
-        if (back2back)
+        if (back2back) {
             action *= 1.5;
+            logAction('Back-to-back Bonus');
+        }
         back2back = (special != null || clears == 4);
 
         lines += clears;
@@ -1181,7 +1204,9 @@ function Game() {
 
         if (new_level > level) {
             level = new_level;
+
             runner.playOnce(assets.sounds.levelup);
+            logAction('Level up');
         }
 
         piece = null;
@@ -1248,6 +1273,10 @@ function Game() {
 
             particles.push(particle);
         }
+    }
+
+    function logAction(action) {
+        console.log(`${action}!`);
     }
 
     this.draw = function() {
