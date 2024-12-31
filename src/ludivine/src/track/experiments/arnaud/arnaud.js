@@ -1,5 +1,6 @@
 import { render, html } from '../../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Net } from '../../../../../web/core/base.js';
+import { loadTexture } from '../../../lib/util.js';
 
 const BACKGROUND = '#7f7f7f';
 const IMAGES = 24;
@@ -445,7 +446,7 @@ async function loadImages(genre, progress) {
         for (let i = 0; i < IMAGES; i++) {
             let url = prefix + `${images[key]}/${i + 1}.jpg`;
 
-            Net.loadImage(url)
+            loadTexture(url)
                 .then(img => { array[i] = img; loaded++; })
                 .catch(err => { failed = true });
 

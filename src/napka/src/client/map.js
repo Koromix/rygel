@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-
 import { render, html } from '../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../node_modules/lit/directives/unsafe-html.js';
 import MarkdownIt from '../../node_modules/markdown-it/dist/markdown-it.js';
@@ -44,7 +43,7 @@ let complete_div = null;
 let edit_changes = new Set;
 let edit_key = null;
 
-export async function start(prov, options = {}) {
+async function start(prov, options = {}) {
     Log.pushHandler(UI.notifyHandler);
 
     provider = prov;
@@ -110,7 +109,7 @@ export async function start(prov, options = {}) {
     document.body.classList.remove('loading');
 }
 
-export function zoom(delta) {
+function zoom(delta) {
     map.zoom(delta);
 }
 
@@ -188,7 +187,7 @@ function renderMenu() {
     `, menu_el);
 }
 
-export async function login() {
+async function login() {
     await UI.dialog({
         submit_on_return: false,
 
@@ -221,7 +220,7 @@ export async function login() {
     });
 }
 
-export async function logout() {
+async function logout() {
     profile = await Net.post('api/admin/logout') || {};
     renderMenu();
 }
@@ -307,7 +306,7 @@ function showAddress(e, result) {
     map.move(result.latitude, result.longitude, 14);
 }
 
-export function refreshMap() {
+function refreshMap() {
     map_markers.length = 0;
 
     // Run filters
@@ -409,7 +408,7 @@ function handlePopupClick(e) {
     closeAddress();
 }
 
-export function makeField(entry, key, type, view = null) {
+function makeField(entry, key, type, view = null) {
     let value = entry[key];
 
     if (type == 'address' && value != null) {
@@ -489,7 +488,7 @@ export function makeField(entry, key, type, view = null) {
     }
 }
 
-export function makeEdit(entry, key) {
+function makeEdit(entry, key) {
     if (!isConnected())
         return '';
 
@@ -566,7 +565,7 @@ async function editEnum(entry, key, value) {
     UI.runDialog();
 }
 
-export async function updateEntry(entry) {
+async function updateEntry(entry) {
     let payload = { id: entry.id };
 
     for (let key of edit_changes.values())
@@ -578,7 +577,7 @@ export async function updateEntry(entry) {
     refreshMap();
 }
 
-export async function deleteEntry(id) {
+async function deleteEntry(id) {
     await Net.post('api/admin/delete', {
         id: id
     });
@@ -587,11 +586,36 @@ export async function deleteEntry(id) {
     refreshMap();
 }
 
-export function renderMarkdown(text) {
+function renderMarkdown(text) {
     let html = markdown.render(text);
     return html;
 }
 
-export function isConnected() {
+function isConnected() {
     return profile.userid != null;
+}
+
+async function loadTexture(url) {
+    let response = await Net.fetch(url);
+
+    let blob = await response.blob();
+    let texture = await createImageBitmap(blob);
+
+    return texture;
+}
+
+export {
+    start,
+
+    zoom,
+    login,
+    logout,
+    updateEntry,
+    deleteEntry,
+    refreshMap,
+    makeField,
+    makeEdit,
+    renderMarkdown,
+    isConnected,
+    loadTexture
 }

@@ -695,7 +695,11 @@ function AppRunner(canvas) {
 }
 
 async function loadTexture(url) {
-    let texture = await Net.loadImage(url);
+    let response = await self.fetch(url);
+
+    let blob = await response.blob();
+    let texture = await createImageBitmap(blob);
+
     return texture;
 }
 

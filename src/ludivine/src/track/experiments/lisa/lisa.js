@@ -1,5 +1,6 @@
 import { render, html } from '../../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Net } from '../../../../../web/core/base.js';
+import { loadTexture } from '../../../lib/util.js';
 
 const BACKGROUND = '#7f7f7f';
 const WAIT_MIN = 500;
@@ -450,7 +451,7 @@ async function loadImages(progress) {
         let img = IMAGES[i];
 
         let url = `${prefix}${img.directory}/${img.directory}_m_${img.genre}_n_${img.subject}.jpg`;
-        Net.loadImage(url)
+        loadTexture(url)
             .then(img => {
                 images.neutrals[i * 4] = img;
                 images.neutrals[i * 4 + 1] = img;
@@ -464,7 +465,7 @@ async function loadImages(progress) {
         for (let j = 0; j < 4; j++) {
             let emotion = 'adfs'[j];
             let url = `${prefix}${img.directory}/emotion/${img.directory}_m_${img.genre}_${emotion}_${img.subject}.jpg`;
-            Net.loadImage(url)
+            loadTexture(url)
                 .then(img => { images.negatives[i * 4 + j] = img; loaded++; })
                 .catch(err => { failed = true });
             total++;

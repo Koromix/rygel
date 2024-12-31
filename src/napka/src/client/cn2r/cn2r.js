@@ -18,8 +18,8 @@ import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js'
 import { Util, Log, Net } from '../../../../web/core/base.js';
 import { UI } from '../../lib/ui.js';
 import * as parse from '../../lib/parse.js';
-import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown,
-         login, logout, isConnected } from '../map.js';
+import { start, zoom, makeField, makeEdit, updateEntry, deleteEntry,
+         renderMarkdown, login, logout, isConnected, loadTexture } from '../map.js';
 
 const ICONS = {
     crp: 'static/icons/crp.png',
@@ -37,7 +37,7 @@ function Cn2rProvider() {
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
             Net.get('api/entries/etablissements'),
-            Promise.all(Object.values(ICONS).map(url => Net.loadImage(url)))
+            Promise.all(Object.values(ICONS).map(loadTexture))
         ]);
 
         entries = data.rows;

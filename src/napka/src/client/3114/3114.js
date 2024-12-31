@@ -18,7 +18,8 @@ import { render, html } from '../../../node_modules/lit/html.js';
 import { unsafeHTML } from '../../../node_modules/lit/directives/unsafe-html.js';
 import { Util, Log, Net } from '../../../../web/core/base.js';
 import * as parse from '../../lib/parse.js';
-import { start, zoom, refreshMap, makeField, makeEdit, updateEntry, deleteEntry, renderMarkdown, isConnected } from '../map.js';
+import { start, zoom, refreshMap, makeField, makeEdit, updateEntry, deleteEntry,
+         renderMarkdown, isConnected, loadTexture } from '../map.js';
 
 const ICONS = {
     'Psychiatrie du secteur public': 'static/icons/hospital.png',
@@ -45,7 +46,7 @@ function PpnpsProvider() {
     this.loadMap = async function() {
         let [data, images] = await Promise.all([
             Net.get('api/entries/commun'),
-            Promise.all(Object.values(ICONS).map(url => Net.loadImage(url)))
+            Promise.all(Object.values(ICONS).map(loadTexture))
         ]);
 
         entries = data.rows;

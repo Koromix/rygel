@@ -67,8 +67,18 @@ function dateToString(date) {
     return str;
 }
 
+async function loadTexture(url) {
+    let response = await Net.fetch(url);
+
+    let blob = await response.blob();
+    let texture = await createImageBitmap(blob);
+
+    return texture;
+}
+
 export {
     computeAge,
     computeAgeMonths,
-    dateToString
+    dateToString,
+    loadTexture
 }
