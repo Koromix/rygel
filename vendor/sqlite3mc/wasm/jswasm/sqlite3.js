@@ -3905,6 +3905,27 @@ function createWasm() {
       return 0;
     };
 
+  
+  var runtimeKeepaliveCounter = 0;
+  var keepRuntimeAlive = () => noExitRuntime || runtimeKeepaliveCounter > 0;
+  
+  var _proc_exit = (code) => {
+      EXITSTATUS = code;
+      if (!keepRuntimeAlive()) {
+        if (Module['onExit']) Module['onExit'](code);
+        ABORT = true;
+      }
+      quit_(code, new ExitStatus(code));
+    };
+  
+  
+  var exitJS = (status, implicit) => {
+      EXITSTATUS = status;
+  
+      _proc_exit(status);
+    };
+  var _exit = exitJS;
+
   function _fd_close(fd) {
   try {
   
@@ -4149,6 +4170,8 @@ var wasmImports = {
   environ_get: _environ_get,
   
   environ_sizes_get: _environ_sizes_get,
+  
+  exit: _exit,
   
   fd_close: _fd_close,
   

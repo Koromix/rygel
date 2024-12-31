@@ -1,0 +1,85 @@
+diff --git a/vendor/sqlite3mc/sqlite3mc.c b/vendor/sqlite3mc/sqlite3mc.c
+index c38bf6063a..7f2e50c497 100644
+--- a/vendor/sqlite3mc/sqlite3mc.c
++++ b/vendor/sqlite3mc/sqlite3mc.c
+@@ -283895,7 +283895,7 @@ softaes_block_encrypt(const SoftAesBlock block, const SoftAesBlock rk)
+ }
+ #else
+ 
+-uint32_t _aes_lut[256] __attribute__((visibility("hidden"))) = {
++static uint32_t _aes_lut[256] __attribute__((visibility("hidden"))) = {
+     0xa56363c6, 0x847c7cf8, 0x997777ee, 0x8d7b7bf6, 0x0df2f2ff, 0xbd6b6bd6, 0xb16f6fde, 0x54c5c591,
+     0x50303060, 0x03010102, 0xa96767ce, 0x7d2b2b56, 0x19fefee7, 0x62d7d7b5, 0xe6abab4d, 0x9a7676ec,
+     0x45caca8f, 0x9d82821f, 0x40c9c989, 0x877d7dfa, 0x15fafaef, 0xeb5959b2, 0xc947478e, 0x0bf0f0fb,
+@@ -287118,7 +287118,7 @@ AEGIS_API_IMPL_LIST_MAC
+ /* #include "implementations.h" */
+ 
+ 
+-extern struct aegis128l_implementation aegis128l_soft_implementation;
++// extern struct aegis128l_implementation aegis128l_soft_implementation;
+ 
+ #endif /* AEGIS128L_SOFT_H */
+ /*** End of #include "aegis128l_soft.h" ***/
+@@ -287962,7 +287962,7 @@ AEGIS_state_mac_clone(aegis128l_mac_state *dst, const aegis128l_mac_state *src)
+ /*** End of #include "aegis128l_common.h" ***/
+ 
+ 
+-struct aegis128l_implementation aegis128l_soft_implementation = {
++static struct aegis128l_implementation aegis128l_soft_implementation = {
+ /* #include "../common/func_table.h" */
+ /*** Begin of #include "../common/func_table.h" ***/
+ /*
+@@ -292909,7 +292909,7 @@ AEGIS_API_IMPL_LIST_MAC
+ /* #include "implementations.h" */
+ 
+ 
+-extern struct aegis128x2_implementation aegis128x2_soft_implementation;
++// extern struct aegis128x2_implementation aegis128x2_soft_implementation;
+ 
+ #endif /* AEGIS128X2_SOFT_H */
+ /*** End of #include "aegis128x2_soft.h" ***/
+@@ -293864,7 +293864,7 @@ AEGIS_state_mac_clone(aegis128x2_mac_state *dst, const aegis128x2_mac_state *src
+ /*** End of #include "aegis128x2_common.h" ***/
+ 
+ 
+-struct aegis128x2_implementation aegis128x2_soft_implementation = {
++static struct aegis128x2_implementation aegis128x2_soft_implementation = {
+ /* #include "../common/func_table.h" */
+ /*** Begin of #include "../common/func_table.h" ***/
+ /*
+@@ -300031,7 +300031,7 @@ AEGIS_API_IMPL_LIST_MAC
+ /* #include "implementations.h" */
+ 
+ 
+-extern struct aegis128x4_implementation aegis128x4_soft_implementation;
++// extern struct aegis128x4_implementation aegis128x4_soft_implementation;
+ 
+ #endif /* AEGIS128X4_SOFT_H */
+ /*** End of #include "aegis128x4_soft.h" ***/
+@@ -301008,7 +301008,7 @@ AEGIS_state_mac_clone(aegis128x4_mac_state *dst, const aegis128x4_mac_state *src
+ /*** End of #include "aegis128x4_common.h" ***/
+ 
+ 
+-struct aegis128x4_implementation aegis128x4_soft_implementation = {
++static struct aegis128x4_implementation aegis128x4_soft_implementation = {
+ /* #include "../common/func_table.h" */
+ /*** Begin of #include "../common/func_table.h" ***/
+ /*
+@@ -304472,7 +304472,7 @@ AEGIS_API_IMPL_LIST_MAC
+ /* #include "implementations.h" */
+ 
+ 
+-extern struct aegis256_implementation aegis256_soft_implementation;
++// extern struct aegis256_implementation aegis256_soft_implementation;
+ 
+ #endif /* AEGIS256_SOFT_H */
+ /*** End of #include "aegis256_soft.h" ***/
+@@ -305297,7 +305297,7 @@ AEGIS_state_mac_clone(aegis256_mac_state *dst, const aegis256_mac_state *src)
+ /*** End of #include "aegis256_common.h" ***/
+ 
+ 
+-struct aegis256_implementation aegis256_soft_implementation = {
++static struct aegis256_implementation aegis256_soft_implementation = {
+ /* #include "../common/func_table.h" */
+ /*** Begin of #include "../common/func_table.h" ***/
+ /*
