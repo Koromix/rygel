@@ -14,7 +14,6 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Util } from '../../web/core/base.js';
-import { loadTexture, loadSound } from '../../web/core/runner.js';
 
 // Aurora Night by psiipilehto: https://www.deviantart.com/psiipilehto/art/Aurora-Night-608184628
 import backgrounds_aurora from '../assets/backgrounds/aurora.webp';
@@ -77,23 +76,16 @@ import ui_sound from '../assets/ui/sound.png';
 import ui_start from '../assets/ui/start.png';
 import ui_turbo from '../assets/ui/turbo.png';
 
-let assets = {};
-
-async function loadAssets(prefix, progress) {
-    prefix = prefix.replace(/\/+$/g, '') + '/';
-
-    if (progress == null)
-        progress = (value, total) => {};
-
-    assets.backgrounds = {
+const assets = {
+    backgrounds: {
         aurora: backgrounds_aurora,
         winter: backgrounds_winter,
         planet: backgrounds_planet,
         somewhere: backgrounds_lonely,
         serenity: backgrounds_serenity
-    };
+    },
 
-    assets.musics = {
+    musics: {
         abstract_piano_ambient: musics_abstract_piano_ambient,
         ambient_future_tech: musics_ambient_future_tech,
         architecture: musics_architecture,
@@ -104,18 +96,18 @@ async function loadAssets(prefix, progress) {
         summer_beauty: musics_summer_beauty,
         summer_every_day: musics_summer_every_day,
         tech_corporation: musics_tech_corporation
-    };
+    },
 
-    assets.sounds = {
+    sounds: {
         clear: sound_clear,
         gameover: sound_gameover,
         hold: sound_hold,
         levelup: sound_levelup,
         lock: sound_lock,
         move: sound_move
-    };
+    },
 
-    assets.ui = {
+    ui: {
         background: ui_background,
         clockwise: ui_clockwise,
         counterclock: ui_counterclock,
@@ -131,13 +123,25 @@ async function loadAssets(prefix, progress) {
         sound: ui_sound,
         start: ui_start,
         turbo: ui_turbo
-    };
+    }
+};
 
-    // Shuffle musics
-    assets.musics = Util.shuffle(Object.keys(assets.musics)).reduce((obj, key) => { obj[key] = assets.musics[key]; return obj; }, {});
+// Shuffle musics
+assets.musics = Util.shuffle(Object.keys(assets.musics)).reduce((obj, key) => { obj[key] = assets.musics[key]; return obj; }, {});
 
-    let objects = Object.values(assets);
-    let resources = objects.flatMap(obj => Object.keys(obj).map(key => ({ obj, key })));
+const LAZY_CATEGORIES = ['musics'];
+
+async function loadAssets(prefix, progress) {
+    prefix = prefix.replace(/\/+$/g, '') + '/';
+
+    if (progress == null)
+        progress = (value, total) => {};
+
+    let categories = Object.keys(assets);
+    let resources = categories.flatMap(category => {
+        let obj = assets[category];
+        return Object.keys(obj).map(key => ({ category, obj, key }));
+    });
     let downloaded = 0;
 
     resources = Util.shuffle(resources);
@@ -147,7 +151,9 @@ async function loadAssets(prefix, progress) {
             let res = resources[i];
             let url = prefix + res.obj[res.key];
 
-            if (url.endsWith('.png') || url.endsWith('.webp')) {
+            if (LAZY_CATEGORIES.includes(res.category)) {
+                res.obj[res.key] = url;
+            } else if (url.endsWith('.png') || url.endsWith('.webp')) {
                 res.obj[res.key] = await loadTexture(url);
             } else if (url.endsWith('.mp3')) {
                 res.obj[res.key] = await loadSound(url);
@@ -161,7 +167,24 @@ async function loadAssets(prefix, progress) {
     }));
 }
 
+async function loadTexture(url) {
+    let response = await self.fetch(url);
+
+    let blob = await response.blob();
+    let texture = await createImageBitmap(blob);
+
+    return texture;
+}
+
+async function loadSound(url) {
+    let response = await fetch(url);
+    let buf = await response.arrayBuffer();
+
+    return buf;
+}
+
 export {
-    loadAssets,
-    assets
+    assets,
+
+    loadAssets
 }

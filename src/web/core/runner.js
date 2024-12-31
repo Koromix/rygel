@@ -13,9 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util, Log, Net } from './base.js';
-
-let audio = null;
+import { Util, Log, Net, LruMap } from './base.js';
 
 function AppRunner(canvas) {
     let self = this;
@@ -89,11 +87,13 @@ function AppRunner(canvas) {
     let cursor = 'default';
     let ignore_new_cursor = false;
 
-    let old_sources = new Map;
-    let new_sources = new Map;
-
+    let audio = null;
     let volume_node = null;
     let volume = 1;
+    let sound_buffers = new LruMap(16);
+
+    let old_sources = new Map;
+    let new_sources = new Map;
 
     Object.defineProperties(this,  {
         canvas: { value: canvas, writable: false, enumerable: true },
@@ -432,6 +432,7 @@ function AppRunner(canvas) {
                         if (sfx.persist)
                             continue;
 
+                        sfx.play = false;
                         sfx.gain.gain.linearRampToValueAtTime(0, audio.currentTime + 0.2);
                         setTimeout(() => sfx.src.stop(), 2000);
                     }
@@ -627,18 +628,36 @@ function AppRunner(canvas) {
     // Sound
     // ------------------------------------------------------------------------
 
+    function initSound() {
+        if (audio != null)
+            return;
+
+        audio = new AudioContext;
+
+        volume_node = audio.createGain();
+        volume_node.gain.setValueAtTime(volume, audio.currentTime);
+        volume_node.connect(audio.destination);
+
+        sound_buffers.clear();
+        old_sources.clear();
+        new_sources.clear();
+    }
+
+    this.playOnce = function(asset, cache = true) {
+        return self.playSound(asset, { persist: false, cache: cache });
+    };
+
+    this.playFull = function(asset, cache = true) {
+        return self.playSound(asset, { persist: true, cache: cache });
+    };
+
     this.playSound = function(asset, options = {}) {
-        if (audio == null)
-            audio = new AudioContext;
+        initSound();
 
-        if (volume_node == null) {
-            volume_node = audio.createGain();
-            volume_node.gain.setValueAtTime(volume, audio.currentTime);
-            volume_node.connect(audio.destination);
-        }
+        let sfx = old_sources.get(asset) ?? new_sources.get(asset);
 
-        let sfx = old_sources.get(asset) || new_sources.get(asset);
-
+        if (options.cache == null)
+            options.cache = true;
         if (options.loop == null)
             options.loop = false;
         if (options.persist == null)
@@ -646,6 +665,8 @@ function AppRunner(canvas) {
 
         if (sfx == null) {
             sfx = {
+                play: true,
+
                 src: audio.createBufferSource(),
                 gain: audio.createGain(),
                 persist: options.persist,
@@ -655,16 +676,37 @@ function AppRunner(canvas) {
                 }
             };
 
-            sfx.src.addEventListener('ended', () => { sfx.handle.ended = true; });
+            let buf = sound_buffers.get(asset);
+
+            if (buf instanceof AudioBuffer) {
+                startSound(sfx, buf);
+            } else {
+                if (buf == null) {
+                    let copy = new ArrayBuffer(asset.byteLength);
+                    new Uint8Array(copy).set(new Uint8Array(asset));
+
+                    buf = audio.decodeAudioData(copy);
+                }
+
+                buf.then(decoded => {
+                    if (options.cache)
+                        sound_buffers.set(asset, decoded);
+                    startSound(sfx, decoded);
+                });
+                buf.catch(err => {
+                    sound_buffers.delete(asset);
+                    console.error(err);
+                });
+
+                if (options.cache)
+                    sound_buffers.set(asset, buf);
+            }
 
             sfx.gain.connect(volume_node);
-            sfx.src.buffer = asset;
             sfx.src.loop = options.loop;
             sfx.src.connect(sfx.gain);
 
-            sfx.gain.gain.setValueAtTime(1, audio.currentTime);
-
-            sfx.src.start();
+            sfx.src.addEventListener('ended', () => { sfx.handle.ended = true; });
         }
 
         if (sfx != null)
@@ -674,13 +716,15 @@ function AppRunner(canvas) {
         return sfx.handle;
     };
 
-    this.playLoop = function(asset) {
-        return self.playSound(asset, { loop: true, persist: false });
-    };
+    function startSound(sfx, buf) {
+        if (!sfx.play)
+            return;
 
-    this.playOnce = function(asset, persist = true) {
-        return self.playSound(asset, { loop: false, persist: persist });
-    };
+        sfx.src.buffer = buf;
+        sfx.gain.gain.setValueAtTime(1, audio.currentTime);
+
+        sfx.src.start();
+    }
 
     function setVolume(value) {
         if (value == volume)
@@ -694,29 +738,4 @@ function AppRunner(canvas) {
     }
 }
 
-async function loadTexture(url) {
-    let response = await self.fetch(url);
-
-    let blob = await response.blob();
-    let texture = await createImageBitmap(blob);
-
-    return texture;
-}
-
-async function loadSound(url) {
-    if (audio == null)
-        audio = new AudioContext;
-
-    let response = await fetch(url);
-    let buf = await response.arrayBuffer();
-    let sound = await audio.decodeAudioData(buf);
-
-    return sound;
-}
-
-export {
-    AppRunner,
-
-    loadTexture,
-    loadSound
-}
+export { AppRunner }

@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../web/core/base.js';
+import { Util, Log, Net, LruMap } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
 import { loadAssets, assets } from './assets.js';
 import * as rules from './rules.js';
@@ -69,8 +69,11 @@ let game = new Game;
 
 // User settings
 let settings = Object.assign({}, DEFAULT_SETTINGS);
-let current_music = null;
 let show_debug = false;
+
+// Background music
+let music_buffers = new LruMap(2);
+let music_idx = 0;
 
 // UI state
 let layout = {
@@ -95,7 +98,6 @@ async function load(prefix, progress = null) {
     await loadAssets(prefix, progress);
 
     loadSettings();
-    current_music = Object.keys(assets.musics)[0];
 
     for (let i = 0; i < rules.BLOCKS.length; i++) {
         let block = rules.BLOCKS[i];
@@ -393,12 +395,21 @@ function update() {
     runner.volume = settings.sound ? 1 : 0;
 
     // Play music
-    if (game.hasStarted) {
-        let sound = assets.musics[current_music];
-        let handle = runner.playOnce(sound, false);
+    if (settings.sound) {
+        if (game.hasStarted) {
+            loadMusics(true);
 
-        if (handle.ended)
-            toggleMusic();
+            let sound = music_buffers.get(music_idx);
+
+            if (sound instanceof ArrayBuffer) {
+                let handle = runner.playOnce(sound, false);
+
+                if (handle.ended)
+                    toggleMusic();
+            }
+        } else {
+            loadMusics(false);
+        }
     }
 
     if (!game.isPlaying) {
@@ -445,20 +456,46 @@ function toggleFullScreen() {
 }
 
 function toggleBackground() {
-    let backgrounds = Object.keys(assets.backgrounds);
-    let idx = backgrounds.indexOf(settings.background);
-    let next = (idx + 1) % backgrounds.length;
+    let keys = Object.keys(assets.backgrounds);
+    let idx = keys.indexOf(settings.background);
+    let next = (idx + 1) % keys.length;
 
-    settings.background = backgrounds[next];
+    settings.background = keys[next];
     saveSettings();
 }
 
-function toggleMusic() {
-    let musics = Object.keys(assets.musics);
-    let idx = musics.indexOf(current_music);
-    let next = (idx + 1) % musics.length;
+function loadMusics(preload) {
+    let keys = Object.keys(assets.musics);
+    let indices = [music_idx];
 
-    current_music = musics[next] ?? null;
+    if (preload) {
+        let next = (music_idx + 1) % keys.length;
+        indices.push(next);
+    }
+
+    for (let idx of indices) {
+        let buf = music_buffers.get(idx);
+
+        if (buf == null) {
+            let url = assets.musics[keys[idx]];
+
+            let p = Net.fetch(url);
+
+            p = p.then(response => response.arrayBuffer())
+                 .then(buf => { music_buffers.set(idx, buf); });
+            p.catch(err => {
+                music_buffers.delete(idx);
+                console.error(err);
+            });
+
+            music_buffers.set(idx, p);
+        }
+    }
+}
+
+function toggleMusic() {
+    let keys = Object.keys(assets.musics);
+    music_idx = (music_idx + 1) % keys.length;
 }
 
 function play() {
@@ -662,7 +699,7 @@ function Game() {
             if (!gameover) {
                 updatePlay();
             } else {
-                runner.playOnce(assets.sounds.gameover, false);
+                runner.playOnce(assets.sounds.gameover);
             }
         }
 
@@ -793,7 +830,7 @@ function Game() {
 
                 special = null;
 
-                runner.playOnce(assets.sounds.move);
+                runner.playFull(assets.sounds.move);
             }
         }
 
@@ -845,7 +882,7 @@ function Game() {
                     special = null;
                 }
 
-                runner.playOnce(assets.sounds.move);
+                runner.playFull(assets.sounds.move);
             }
         }
 
@@ -861,7 +898,7 @@ function Game() {
                 return;
             }
 
-            runner.playOnce(assets.sounds.hold);
+            runner.playFull(assets.sounds.hold);
         }
 
         // Run gravity
@@ -916,7 +953,7 @@ function Game() {
                 lockAndScore();
 
                 hit_force += 4 + Math.min(3, delta / 2);
-                runner.playOnce(assets.sounds.lock);
+                runner.playFull(assets.sounds.lock);
 
                 score += 2 * delta;
             } else {
@@ -936,7 +973,7 @@ function Game() {
                     lockAndScore();
 
                     hit_force = 4;
-                    runner.playOnce(assets.sounds.lock);
+                    runner.playFull(assets.sounds.lock);
                 }
             }
         }
@@ -1148,7 +1185,7 @@ function Game() {
             combo++;
             action += 50 * combo * level;
 
-            runner.playOnce(assets.sounds.clear);
+            runner.playFull(assets.sounds.clear);
 
             if (combo)
                 logAction(`Combo x${combo}`);
@@ -1205,7 +1242,7 @@ function Game() {
         if (new_level > level) {
             level = new_level;
 
-            runner.playOnce(assets.sounds.levelup);
+            runner.playFull(assets.sounds.levelup);
             logAction('Level up');
         }
 
