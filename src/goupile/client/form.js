@@ -2054,28 +2054,8 @@ instead of:
     }
 
     function makeTextExtra(key, options, value) {
-        let extra = '';
-
-        if (options.voice) {
-            if (!ENV.use_offline)
-               throw new Error('Enable offline use to support voice recognition');
-
-            let language = null;
-
-            switch (options.voice) {
-                case 'en': { language = 'vosk-model-small-en-us-0.15'; } break;
-                case 'fr': { language = 'vosk-model-small-fr-pguyot-0.3'; } break;
-
-                default: throw new Error(`Unsupported '${options.voice}' for voice recognition`);
-            }
-
-            extra = html`${extra}${extra ? ', ' : ''}<a @click=${UI.wrap(e => handleVocalClick(e, key, value, language))}>dicter</a>`;
-        }
-
-        if (extra)
-            extra = html`(${extra})`;
-
-        return extra;
+        // Not used anymore but keep this just in case
+        return '';
     }
 
     async function handleVocalClick(e, key, value, language) {
@@ -2083,7 +2063,7 @@ instead of:
             return;
 
         if (typeof loadVosklet === 'undefined')
-            await Net.loadScript(`${ENV.urls.static}vosklet/Vosklet.min.js`);
+            await import(`${ENV.urls.static}vosklet/Vosklet.min.js`);
 
         let vosklet = null;
         let stream = null;
