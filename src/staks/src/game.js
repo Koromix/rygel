@@ -604,12 +604,13 @@ function drawHelp() {
 
 function drawArea(x, y, width, height) {
     ctx.beginPath();
-    ctx.rect(x, y, width, height);
+    ctx.roundRect(x, y, width, height, 8);
 
     ctx.save();
 
-    ctx.fillStyle = 'black';
     ctx.globalAlpha = 0.75;
+    ctx.fillStyle = 'black';
+
     ctx.fill();
 
     ctx.restore();
