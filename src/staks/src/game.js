@@ -214,8 +214,10 @@ function update() {
         let left = canvas.width / 2 - width / 2;
         let top = (runner.isTouch && runner.isPortrait) ? padding : (canvas.height / 2 - height / 2);
 
-        if (runner.isTouch)
-            left -= (padding + 2.5 * layout.square) / 2;
+        if (runner.isTouch) {
+            let factor = runner.isPortrait ? 0.25 : 0.5;
+            left -= factor * (padding + 2.5 * layout.square);
+        }
 
         layout.padding = padding;
         layout.square = square;
@@ -233,7 +235,7 @@ function update() {
         layout.bag = {
             left: left + (rules.COLUMNS * layout.square) + padding,
             top: top,
-            width: (runner.isTouch ? 7 : 5) / 2 * layout.square,
+            width: 2.5 * layout.square,
             height: (1 + rules.BAG_SIZE * 4) / 2 * layout.square
         };
         layout.level = {
@@ -304,22 +306,22 @@ function update() {
         let sound_key = settings.sound ? 'sound' : 'silence';
         let pause_key = game.pause ? 'play' : 'pause';
 
-        let size = 0.6 * layout.button;
+        let size = 0.5 * layout.button;
         let x = 0, y = 0;
         let dx = 0, dy = 0;
 
         if (runner.isTouch && runner.isPortrait) {
-            x = 20 + size / 2;
-            y = 20 + size / 2;
-            dy = size + 20;
+            x = 18 + size / 2;
+            y = 18 + size / 2;
+            dy = size + 26;
         } else if (runner.isTouch) {
-            x = 20 + size / 2;
-            y = 20 + size / 2;
-            dx = size + 20;
+            x = 18 + size / 2;
+            y = 18 + size / 2;
+            dx = size + 26;
         } else {
             x = layout.bag.left + size / 2;
             y = layout.well.top + layout.well.height - size / 2;
-            dy = -size - 20;
+            dy = -size - 26;
         }
 
         if (ui.button(sound_key, x, y, size).clicked) {
@@ -351,13 +353,13 @@ function update() {
                     game.pause = !game.pause;
                 x += dx; y += dy;
             } else {
-                if (ui.button(pause_key, canvas.width - 20 - size / 2, y, size).clicked)
+                if (ui.button(pause_key, canvas.width - 18 - size / 2, y, size).clicked)
                     game.pause = !game.pause;
             }
         }
     }
     if (game.isPlaying && !runner.isTouch && !settings.help) {
-        let size = 0.6 * layout.button;
+        let size = 0.5 * layout.button;
 
         let clicked = ui.button('help', layout.well.left - layout.padding - size / 2,
                                         layout.well.top + layout.well.height - size / 2, size).clicked;
