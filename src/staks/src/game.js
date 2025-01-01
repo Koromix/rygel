@@ -1476,7 +1476,7 @@ function Game() {
         ctx.translate(layout.level.left, layout.level.top + hit_value);
         drawArea(0, 0, layout.level.width, layout.level.height);
 
-        ctx.font = runner.isTouch ? '22px Open Sans' : '16px Open Sans';
+        ctx.font = runner.isTouch ? '24px Open Sans' : '16px Open Sans';
         ctx.fillStyle = 'white';
         runner.text(layout.level.width / 2, layout.level.height / 2, level, { align: 5 });
 
@@ -1489,7 +1489,7 @@ function Game() {
         ctx.translate(layout.score.left, layout.score.top + hit_value);
         drawArea(0, 0, layout.score.width, layout.score.height);
 
-        ctx.font = runner.isTouch ? '22px Open Sans' : '16px Open Sans';
+        ctx.font = runner.isTouch ? '24px Open Sans' : '16px Open Sans';
         ctx.fillStyle = 'white';
         runner.text(layout.score.width / 2, layout.score.height / 2, score, { align: 5 });
 
