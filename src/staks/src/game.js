@@ -46,7 +46,7 @@ const BUTTON_SIZE = 56;
 const SQUARE_SIZE = 40;
 
 const DEFAULT_SETTINGS = {
-    background: 'aurora',
+    background: 'winter',
     sound: true,
     ghost: true,
     help: true
