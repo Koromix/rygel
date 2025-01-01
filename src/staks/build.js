@@ -105,6 +105,7 @@ async function run() {
                         if (fs.existsSync('./dist/static/index.html'))
                             fs.renameSync('./dist/static/index.html', './dist/index.html');
                         fs.copyFileSync('./assets/staks.png', './dist/favicon.png');
+                        fs.copyFileSync('./src/manifest.json', './dist/manifest.json');
                     });
                 }
             }

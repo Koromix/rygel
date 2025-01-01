@@ -1,0 +1,20 @@
+{
+    "id": "staks",
+
+    "name": "Staks",
+    "short_name": "Staks",
+    "categories": ["games"],
+
+    "start_url": ".",
+
+    "icons": [
+        {
+            "src": "favicon.png",
+            "type": "image/png",
+            "sizes": "16x16 24x24 32x32 48x48 64x64 128x128 192x192 512x512"
+        }
+    ],
+    "display": "fullscreen",
+    "background_color": "#262626",
+    "theme_color": "#262626"
+}
