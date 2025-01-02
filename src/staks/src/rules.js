@@ -20,12 +20,15 @@ const COLUMNS = 10;
 const EXTRA_ROWS = 4;
 const EXTRA_TOP = 0.12;
 
-// Delays relative to game speed of 480 updates/second
-const TURBO_DELAY = 4; // ~8.33 ms
-const LOCK_DELAY = 240; // 500 ms
-const DAS_DELAY = 80; // ~166.67 ms
-const DAS_PERIOD = 16; // ~33.33 ms
-const CLEAR_DELAY = 160; // ~333.33 ms
+// Game updates/second
+const UPDATE_FREQUENCY = 240;
+
+// Delays relative to game speed above
+const TURBO_DELAY = 2; // ~8.33 ms
+const LOCK_DELAY = 120; // 500 ms
+const DAS_DELAY = 40; // ~166.67 ms
+const DAS_PERIOD = 8; // ~33.33 ms
+const CLEAR_DELAY = 80; // ~333.33 ms
 
 const MAX_ACTIONS = 20;
 
@@ -73,6 +76,8 @@ export {
     COLUMNS,
     EXTRA_ROWS,
     EXTRA_TOP,
+
+    UPDATE_FREQUENCY,
 
     TURBO_DELAY,
     LOCK_DELAY,

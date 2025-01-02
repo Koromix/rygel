@@ -148,7 +148,7 @@ async function start(root) {
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
 
-    runner.updateFrequency = 480;
+    runner.updateFrequency = rules.UPDATE_FREQUENCY;
     runner.idleTimeout = 5000;
     runner.onUpdate = update;
     runner.onDraw = draw;
@@ -695,22 +695,10 @@ function Game() {
             }
         }
 
-        // Clean up particles
-        {
-            let j = 0;
-            for (let i = 0; i < particles.length; i++) {
-                let particle = particles[i];
-
-                particles[j] = particle;
-                j += (counter - particle.start < 480);
-            }
-            particles.length = j;
-        }
-
         // Update fast fall animation
         {
             hit_value += hit_force / 10;
-            hit_force -= 0.3;
+            hit_force -= 100 / rules.UPDATE_FREQUENCY;
 
             if (hit_value < 0) {
                 hit_value = 0;
@@ -992,7 +980,7 @@ function Game() {
     function computeGravity(level) {
         if (level < 20) {
             let speed = level - 1;
-            let delay = 480 * Math.pow(0.8 - (speed * 0.007), speed);
+            let delay = rules.UPDATE_FREQUENCY * Math.pow(0.8 - (speed * 0.007), speed);
 
             return delay;
         } else {
@@ -1517,30 +1505,35 @@ function Game() {
         ctx.restore();
     }
 
+    // Also cleans them up
     function drawParticles() {
         ctx.save();
 
         ctx.translate(layout.well.left, layout.well.top);
 
-        for (let particle of particles) {
+        let j = 0;
+        for (let i = 0; i < particles.length; i++) {
+            let particle = particles[i];
+
             let delay = counter - particle.start;
+            let alpha = Math.max(0, 1 - delay / rules.UPDATE_FREQUENCY);
 
-            if (delay < 0)
-                continue;
+            particles[j] = particle;
+            j += (alpha > 0);
 
-            let x = particle.column * layout.square + layout.square / 2;
-            let y = (rules.ROWS - particle.row - 1) * layout.square + layout.square / 2;
+            if (delay >= 0) {
+                let x = particle.column * layout.square + layout.square / 2;
+                let y = (rules.ROWS - particle.row - 1) * layout.square + layout.square / 2;
 
-            let alpha = Math.max(0, 1 - delay / 240);
-            let size = particle.size;
+                x += delay * particle.vx;
+                y += delay * (particle.vy + 0.01 * delay);
 
-            x += delay * particle.vx;
-            y += delay * (particle.vy + 0.01 * delay);
-
-            ctx.globalAlpha = alpha;
-            ctx.fillStyle = particle.color;
-            ctx.fillRect(x - size / 2, y - size / 2, size, size);
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = particle.color;
+                ctx.fillRect(x - particle.size / 2, y - particle.size / 2, particle.size, particle.size);
+            }
         }
+        particles.length = j;
 
         ctx.restore();
     }
