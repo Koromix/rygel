@@ -604,7 +604,7 @@ function drawHelp() {
 
 function drawArea(x, y, width, height) {
     ctx.beginPath();
-    ctx.roundRect(x, y, width, height, 8);
+    ctx.roundRect(x, y, width, height, 4);
 
     ctx.save();
 
@@ -1411,7 +1411,7 @@ function Game() {
                     color = mixColors(0xFFFFFF, color, factor);
                 }
 
-                drawSquare(x, y, layout.square, color, true);
+                drawSquare(x, y, layout.square, color);
 
                 ctx.restore();
             }
@@ -1422,7 +1422,7 @@ function Game() {
             ctx.save();
 
             ctx.globalAlpha *= 0.1;
-            drawPiece(ghost, 0xFFFFFF, false);
+            drawPiece(ghost, 0xFFFFFF);
 
             ctx.restore();
         }
@@ -1523,7 +1523,7 @@ function Game() {
                 drawShape(x, y, block.size, block.shape, square, block.color);
             } else {
                 ctx.globalAlpha = 0.1;
-                drawShape(x, y, block.size, block.shape, square, 0xFFFFFF, false);
+                drawShape(x, y, block.size, block.shape, square, 0xFFFFFF);
             }
         }
 
@@ -1558,17 +1558,17 @@ function Game() {
         ctx.restore();
     }
 
-    function drawPiece(piece, color = null, outline = true) {
+    function drawPiece(piece, color = null) {
         if (color == null)
             color = piece.color;
 
         let x = piece.column * layout.square;
         let y = (rules.ROWS - piece.row - piece.size) * layout.square;
 
-        drawShape(x, y, piece.size, piece.shape, layout.square, color, outline);
+        drawShape(x, y, piece.size, piece.shape, layout.square, color);
     }
 
-    function drawShape(x, y, size, shape, pixels, color, outline = true) {
+    function drawShape(x, y, size, shape, pixels, color) {
         y += (size - 1) * pixels;
 
         for (let i = 0; i < size; i++) {
@@ -1579,23 +1579,17 @@ function Game() {
                 let x2 = x + j * pixels;
                 let y2 = y - i * pixels;
 
-                drawSquare(x2, y2, pixels, color, outline);
+                drawSquare(x2, y2, pixels, color);
             }
         }
     }
 
-    function drawSquare(x, y, pixels, color, outline) {
+    function drawSquare(x, y, pixels, color) {
         ctx.beginPath();
         ctx.rect(x + 0.5, y + 0.5, pixels - 0.5, pixels - 0.5);
 
         ctx.fillStyle = '#' + color.toString(16).padStart(6, '0');
         ctx.fill();
-
-        if (outline) {
-            ctx.strokeStyle = '#' + mixColors(color, 0, 0.8).toString(16).padStart(6, '0');
-            ctx.lineWidth = 1;
-            ctx.stroke();
-        }
     }
 
     function mixColors(color1, color2, factor) {
