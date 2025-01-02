@@ -18,8 +18,8 @@ import { Util } from '../../web/core/base.js';
 // Brief recap of various commands used to convert sound files:
 //
 // * WAV volume adjustment: sox -v FACTOR input.wav output.wav
-// * Music opus encoding: opusenc --music --discard-comments --discard-comments input.wav input.opus
-// * Sound opus encoding: opusenc --downmix-mono --discard-comments --discard-comments input.wav input.opus
+// * Music opus encoding: opusenc --music --discard-comments --discard-pictures input.wav input.opus
+// * Sound opus encoding: opusenc --downmix-mono --discard-comments --discard-pictures input.wav input.opus
 // * Convert Ogg (Opus) container to WebM: ffmpeg -i input.opus -acodec copy output.webm
 
 // Winter scenery by psiipilehto: https://www.deviantart.com/psiipilehto/art/winter-scenery-346519787
