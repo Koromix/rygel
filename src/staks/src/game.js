@@ -1249,7 +1249,7 @@ function Game() {
 
                     if (value >= 0) {
                         let color = rules.BLOCKS[value].color;
-                        generateParticles(row, column, start, 60, color);
+                        emitParticles(row, column, start, 100, color);
                     }
                 }
 
@@ -1273,7 +1273,7 @@ function Game() {
         }
     }
 
-    function generateParticles(row, column, start, count, color) {
+    function emitParticles(row, column, start, count, color) {
         color = '#' + color.toString(16).padStart(6, '0');
 
         for (let i = 0; i < count; i++) {
@@ -1283,9 +1283,10 @@ function Game() {
                 color: color,
 
                 start: start,
+                health: Util.getRandomFloat(0.4, 2),
+                size: Util.getRandomInt(4, 8),
                 vx: Util.getRandomFloat(-1.5, 1.5),
-                vy: Util.getRandomFloat(-1, 1),
-                size: Util.getRandomInt(4, 8)
+                vy: Util.getRandomFloat(-1, 1)
             };
 
             particles.push(particle);
@@ -1516,7 +1517,7 @@ function Game() {
             let particle = particles[i];
 
             let delay = counter - particle.start;
-            let alpha = Math.max(0, 1 - delay / rules.UPDATE_FREQUENCY);
+            let alpha = Math.max(0, 1 - delay / particle.health / rules.UPDATE_FREQUENCY);
 
             particles[j] = particle;
             j += (alpha > 0);
@@ -1526,7 +1527,7 @@ function Game() {
                 let y = (rules.ROWS - particle.row - 1) * layout.square + layout.square / 2;
 
                 x += delay * particle.vx;
-                y += delay * (particle.vy + 0.01 * delay);
+                y += delay * (particle.vy + 0.008 * delay);
 
                 ctx.globalAlpha = alpha;
                 ctx.fillStyle = particle.color;
