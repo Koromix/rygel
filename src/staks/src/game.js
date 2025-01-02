@@ -120,6 +120,7 @@ async function load(prefix, progress = null) {
         block.size = Math.sqrt(block.shape.length);
         block.top = block.size - Math.floor(trail / block.size);
         block.bottom = Math.floor(lead / block.size);
+        block.middle = (block.top + block.bottom) / 2;
     }
 }
 
@@ -252,32 +253,32 @@ function update() {
             height: Math.max(40, 30 * window.devicePixelRatio)
         };
 
-        if (runner.isTouch) {
+        if (runner.isTouch && runner.isPortrait) {
             let bottom = top + height;
 
-            if (runner.isPortrait) {
-                layout.hold = {
-                    left: layout.bag.left,
-                    top: bottom - 2.5 * layout.square,
-                    width: layout.bag.width,
-                    height: 2.5 * layout.square
-                };
+            layout.hold = {
+                left: layout.bag.left,
+                top: bottom - 2.5 * layout.square,
+                width: layout.bag.width,
+                height: Math.max(100, 2.5 * layout.square)
+            };
 
-                layout.help = null;
-                layout.input = {
-                    left: padding,
-                    top: bottom + padding,
-                    width: canvas.width - padding * 2,
-                    height: canvas.height - bottom - padding * 2
-                };
-            } else {
-                layout.hold = {
-                    left: layout.bag.left,
-                    top: bottom - 2.5 * layout.square,
-                    width: layout.bag.width,
-                    height: 2.5 * layout.square
-                };
+            layout.help = null;
+            layout.input = {
+                left: padding,
+                top: bottom + padding,
+                width: canvas.width - padding * 2,
+                height: canvas.height - bottom - padding * 2
+            };
+        } else {
+            layout.hold = {
+                left: left - padding - layout.bag.width,
+                top: top,
+                width: layout.bag.width,
+                height: Math.max(100, 2.5 * layout.square)
+            };
 
+            if (runner.isTouch) {
                 layout.help = null;
                 layout.input = {
                     left: padding,
@@ -285,20 +286,13 @@ function update() {
                     width: canvas.width - padding * 2,
                     height: 300
                 };
+            } else {
+                layout.help = {
+                    right: left - padding,
+                    bottom: top + height
+                };
+                layout.input = null;
             }
-        } else {
-            layout.hold = {
-                left: left - padding - layout.bag.width,
-                top: top,
-                width: layout.bag.width,
-                height: 2.5 * layout.square
-            };
-
-            layout.help = {
-                right: left - padding,
-                bottom: top + height
-            };
-            layout.input = null;
         }
     }
 
@@ -307,22 +301,18 @@ function update() {
         let sound_key = settings.sound ? 'sound' : 'silence';
         let pause_key = game.pause ? 'play' : 'pause';
 
-        let size = 0.5 * layout.button;
+        let size = (runner.isTouch ? 0.5 : 0.7) * layout.button;
         let x = 0, y = 0;
         let dx = 0, dy = 0;
 
         if (runner.isTouch && runner.isPortrait) {
             x = 18 + size / 2;
             y = 18 + size / 2;
-            dy = size + 26;
-        } else if (runner.isTouch) {
-            x = 18 + size / 2;
-            y = 18 + size / 2;
-            dx = size + 26;
+            dy = size + 20;
         } else {
-            x = layout.bag.left + size / 2;
-            y = layout.well.top + layout.well.height - size / 2;
-            dy = -size - 26;
+            x = canvas.width - 18 - size / 2;
+            y = 18 + size / 2;
+            dx = -size - 20;
         }
 
         if (ui.button(sound_key, x, y, size).clicked) {
@@ -348,19 +338,13 @@ function update() {
             }
             x += dx; y += dy;
 
-            if (runner.isPortrait) {
-                y += dy;
-                if (ui.button(pause_key, x, y, size).clicked)
-                    game.pause = !game.pause;
-                x += dx; y += dy;
-            } else {
-                if (ui.button(pause_key, canvas.width - 18 - size / 2, y, size).clicked)
-                    game.pause = !game.pause;
-            }
+            if (ui.button(pause_key, 18 + size / 2, y, size).clicked)
+                game.pause = !game.pause;
+            x += dx; y += dy;
         }
     }
     if (game.isPlaying && !runner.isTouch && !settings.help) {
-        let size = 0.5 * layout.button;
+        let size = 0.7 * layout.button;
 
         let clicked = ui.button('help', layout.well.left - layout.padding - size / 2,
                                         layout.well.top + layout.well.height - size / 2, size).clicked;
@@ -1463,9 +1447,8 @@ function Game() {
             let block = bag_draw[i];
 
             if (block != null) {
-                let top = 0.5 + i * 4 + 2 - block.size / 2 - 0.5 * (block.size - block.top - block.bottom);
                 let x = layout.bag.width / 2 - (block.size * square) / 2;
-                let y = top * square;
+                let y = (2.5 + i * 4 + block.middle - block.size) * square;
 
                 drawShape(x, y, block.size, block.shape, square, block.color);
             }
@@ -1516,9 +1499,8 @@ function Game() {
         if (hold_block != null) {
             let block = hold_block;
 
-            let top = 0.5 + 2 - block.size / 2 - 0.5 * (block.size - block.top - block.bottom);
-            let x = layout.hold.width / 2 - (block.size * square) / 2;
-            let y = top * square;
+            let x = layout.hold.width / 2 - (block.size / 2) * square;
+            let y = layout.hold.height / 2 + (block.middle - block.size) * square;
 
             if (can_hold) {
                 drawShape(x, y, block.size, block.shape, square, block.color);
