@@ -433,9 +433,13 @@ function AppRunner(canvas) {
                         if (sfx.persist)
                             continue;
 
-                        sfx.play = false;
+                        setTimeout(() => {
+                            if (sfx.src.buffer != null)
+                                sfx.src.stop();
+                        }, 2000);
                         sfx.gain.gain.linearRampToValueAtTime(0, audio.currentTime + 0.2);
-                        setTimeout(() => sfx.src.stop(), 2000);
+
+                        sfx.play = false;
                     }
 
                     old_sources = new_sources;
