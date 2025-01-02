@@ -37,7 +37,8 @@ const KEYBOARD_SHORTCUTS = [
     null,
     ['G', `Afficher/cacher le fantôme`],
     ['B', `Modifier le fond d'écran`],
-    ['M', 'Activer/désactiver le son'],
+    ['S', 'Activer/désactiver le son'],
+    ['M', 'Activer/désactiver la musique'],
     null,
     ['H', `Afficher/cacher l'aide`]
 ];
@@ -47,6 +48,7 @@ const SQUARE_SIZE = 40;
 
 const DEFAULT_SETTINGS = {
     background: 'aurora',
+    music: true,
     sound: true,
     ghost: true,
     help: true
@@ -301,9 +303,6 @@ function update() {
 
     // Global touch buttons
     if (runner.isTouch || game.isPlaying) {
-        let sound_key = settings.sound ? 'sound' : 'silence';
-        let pause_key = game.pause ? 'play' : 'pause';
-
         let size = (runner.isTouch ? 0.5 : 0.7) * layout.button;
         let x = 0, y = 0;
         let dx = 0, dy = 0;
@@ -318,8 +317,14 @@ function update() {
             dx = -size - 20;
         }
 
-        if (ui.button(sound_key, x, y, size).clicked) {
+        if (ui.button('sound' + (0 + settings.sound), x, y, size).clicked) {
             settings.sound = !settings.sound;
+            saveSettings();
+        }
+        x += dx; y += dy;
+
+        if (ui.button('music' + (0 + settings.music), x, y, size).clicked) {
+            settings.music = !settings.music;
             saveSettings();
         }
         x += dx; y += dy;
@@ -341,7 +346,7 @@ function update() {
             }
             x += dx; y += dy;
 
-            if (ui.button(pause_key, 18 + size / 2, y, size).clicked)
+            if (ui.button('play' + (0 + !game.pause), 18 + size / 2, y, size).clicked)
                 game.pause = !game.pause;
             x += dx; y += dy;
         }
@@ -367,8 +372,12 @@ function update() {
     }
     if (pressed_keys.b == 1)
         toggleBackground();
-    if (pressed_keys.m == 1) {
+    if (pressed_keys.s == 1) {
         settings.sound = !settings.sound;
+        saveSettings();
+    }
+    if (pressed_keys.m == 1) {
+        settings.music = !settings.music;
         saveSettings();
     }
     if (pressed_keys.h == 1) {
@@ -385,7 +394,7 @@ function update() {
     runner.volume = settings.sound ? 1 : 0;
 
     // Play music
-    if (settings.sound) {
+    if (settings.sound && settings.music) {
         if (game.hasStarted) {
             loadMusics(true);
 
@@ -1535,6 +1544,8 @@ function Game() {
             }
         }
         particles.length = j;
+
+        console.log(j);
 
         ctx.restore();
     }

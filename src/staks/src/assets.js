@@ -75,11 +75,13 @@ import ui_fullscreen from '../assets/ui/fullscreen.png';
 import ui_ghost from '../assets/ui/ghost.png';
 import ui_help from '../assets/ui/help.png';
 import ui_left from '../assets/ui/left.png';
-import ui_play from '../assets/ui/play.png';
-import ui_pause from '../assets/ui/pause.png';
+import ui_music0 from '../assets/ui/music0.png';
+import ui_music1 from '../assets/ui/music1.png';
+import ui_play0 from '../assets/ui/play0.png';
+import ui_play1 from '../assets/ui/play1.png';
 import ui_right from '../assets/ui/right.png';
-import ui_silence from '../assets/ui/silence.png';
-import ui_sound from '../assets/ui/sound.png';
+import ui_sound0 from '../assets/ui/sound0.png';
+import ui_sound1 from '../assets/ui/sound1.png';
 import ui_start from '../assets/ui/start.png';
 import ui_turbo from '../assets/ui/turbo.png';
 
@@ -123,11 +125,13 @@ const assets = {
         ghost: ui_ghost,
         help: ui_help,
         left: ui_left,
-        pause: ui_pause,
-        play: ui_play,
+        music0: ui_music0,
+        music1: ui_music1,
+        play0: ui_play0,
+        play1: ui_play1,
         right: ui_right,
-        silence: ui_silence,
-        sound: ui_sound,
+        sound0: ui_sound0,
+        sound1: ui_sound1,
         start: ui_start,
         turbo: ui_turbo
     }
