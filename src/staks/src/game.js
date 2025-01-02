@@ -346,7 +346,7 @@ function update() {
             }
             x += dx; y += dy;
 
-            if (ui.button('play' + (0 + !game.pause), 18 + size / 2, y, size).clicked)
+            if (ui.button('pause' + (0 + game.pause), 18 + size / 2, y, size).clicked)
                 game.pause = !game.pause;
             x += dx; y += dy;
         }

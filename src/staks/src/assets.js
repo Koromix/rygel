@@ -77,8 +77,8 @@ import ui_help from '../assets/ui/help.png';
 import ui_left from '../assets/ui/left.png';
 import ui_music0 from '../assets/ui/music0.png';
 import ui_music1 from '../assets/ui/music1.png';
-import ui_play0 from '../assets/ui/play0.png';
-import ui_play1 from '../assets/ui/play1.png';
+import ui_pause0 from '../assets/ui/pause0.png';
+import ui_pause1 from '../assets/ui/pause1.png';
 import ui_right from '../assets/ui/right.png';
 import ui_sound0 from '../assets/ui/sound0.png';
 import ui_sound1 from '../assets/ui/sound1.png';
@@ -127,8 +127,8 @@ const assets = {
         left: ui_left,
         music0: ui_music0,
         music1: ui_music1,
-        play0: ui_play0,
-        play1: ui_play1,
+        pause0: ui_pause0,
+        pause1: ui_pause1,
         right: ui_right,
         sound0: ui_sound0,
         sound1: ui_sound1,
