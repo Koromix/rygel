@@ -22,10 +22,10 @@ import { Util } from '../../web/core/base.js';
 // * Sound opus encoding: opusenc --downmix-mono --discard-comments --discard-pictures input.wav input.opus
 // * Convert Ogg (Opus) container to WebM: ffmpeg -i input.opus -acodec copy output.webm
 
-// Winter scenery by psiipilehto: https://www.deviantart.com/psiipilehto/art/winter-scenery-346519787
-import backgrounds_winter from '../assets/backgrounds/winter.webp';
 // Aurora Night by psiipilehto: https://www.deviantart.com/psiipilehto/art/Aurora-Night-608184628
 import backgrounds_aurora from '../assets/backgrounds/aurora.webp';
+// Winter scenery by psiipilehto: https://www.deviantart.com/psiipilehto/art/winter-scenery-346519787
+import backgrounds_winter from '../assets/backgrounds/winter.webp';
 // Illustration of Fomalhaut b by ESA, NASA, and L. Calcada: https://fr.m.wikipedia.org/wiki/Fichier:Fomalhaut_planet.jpg
 import backgrounds_planet from '../assets/backgrounds/planet.webp';
 // Somewhere by psiipilehto: https://www.deviantart.com/psiipilehto/art/Somewhere-269008123
@@ -85,8 +85,8 @@ import ui_turbo from '../assets/ui/turbo.png';
 
 const assets = {
     backgrounds: {
-        winter: backgrounds_winter,
         aurora: backgrounds_aurora,
+        winter: backgrounds_winter,
         planet: backgrounds_planet,
         somewhere: backgrounds_lonely,
         serenity: backgrounds_serenity
