@@ -197,7 +197,7 @@ function update() {
 
     // Global layout
     {
-        let padding = 16;
+        let padding = runner.isTouch ? 16 : 8;
 
         let width = canvas.width - padding * 2;
         let height = canvas.height - padding * 2;
