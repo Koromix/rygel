@@ -199,9 +199,11 @@ function update() {
         let width = canvas.width - padding * 2;
         let height = canvas.height - padding * 2;
 
-        // Account for touch controls at the bottom
-        if (runner.isTouch && runner.isPortrait)
+        // Account for touch controls
+        if (runner.isTouch && runner.isPortrait) {
+            width -= 200 + padding;
             height -= 100 * window.devicePixelRatio + padding;
+        }
 
         // Make sure things fit, and square size divides by two nicely
         let square = Math.round(Math.min(
@@ -405,13 +407,13 @@ function update() {
                 let x = layout.well.left + layout.well.width / 2;
                 let y = layout.well.top + layout.well.height / 2 + 150;
 
-                if (ui.button('start', x, y, layout.button).clicked)
+                if (ui.button('start', x, y, 1.2 * layout.button).clicked)
                     play();
             } else {
                 let x = canvas.width / 2;
                 let y = canvas.height / 2 + 150;
 
-                if (ui.button('start', x, y, layout.button).clicked)
+                if (ui.button('start', x, y, 1.2 * layout.button).clicked)
                     play();
             }
         } else {
