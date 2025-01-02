@@ -203,7 +203,7 @@ function update() {
             height -= 100 * window.devicePixelRatio + padding;
 
         // Make sure things fit, and square size divides by two nicely
-        let square = Math.floor(Math.min(
+        let square = Math.round(Math.min(
             Math.min(width / rules.COLUMNS, height / (rules.ROWS + rules.EXTRA_TOP)),
             SQUARE_SIZE * window.devicePixelRatio
         ) / 2) * 2;
@@ -213,10 +213,11 @@ function update() {
 
         let left = canvas.width / 2 - width / 2;
         let top = (runner.isTouch && runner.isPortrait) ? padding : (canvas.height / 2 - height / 2);
+        let bag = Math.max(120, 2.5 * layout.square);
 
         if (runner.isTouch) {
             let factor = runner.isPortrait ? 0.25 : 0.5;
-            left -= factor * (padding + 2.5 * layout.square);
+            left -= factor * (padding + bag);
         }
 
         layout.padding = padding;
@@ -235,7 +236,7 @@ function update() {
         layout.bag = {
             left: left + (rules.COLUMNS * layout.square) + padding,
             top: top,
-            width: 2.5 * layout.square,
+            width: bag,
             height: (1 + rules.BAG_SIZE * 4) / 2 * layout.square
         };
         layout.level = {
