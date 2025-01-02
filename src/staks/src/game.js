@@ -149,6 +149,7 @@ async function start(root) {
     ctx.imageSmoothingQuality = 'high';
 
     runner.updateFrequency = 480;
+    runner.idleTimeout = 5000;
     runner.onUpdate = update;
     runner.onDraw = draw;
     runner.start();
@@ -688,6 +689,7 @@ function Game() {
 
             if (!gameover) {
                 updatePlay();
+                runner.busy();
             } else {
                 runner.playOnce(assets.sounds.gameover);
             }

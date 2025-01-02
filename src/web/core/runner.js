@@ -723,7 +723,10 @@ function AppRunner(canvas) {
             sfx.src.loop = options.loop;
             sfx.src.connect(sfx.gain);
 
-            sfx.src.addEventListener('ended', () => { sfx.handle.ended = true; });
+            sfx.src.addEventListener('ended', () => {
+                sfx.handle.ended = true;
+                self.busy();
+            });
         }
 
         if (sfx != null)
