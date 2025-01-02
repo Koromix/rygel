@@ -534,7 +534,7 @@ function draw() {
         {
             let text = `FPS : ${(1000 / runner.frameTime).toFixed(0)} (${runner.frameTime.toFixed(1)} ms)` +
                        ` | Update : ${runner.updateTime.toFixed(1)} ms | Draw : ${runner.drawTime.toFixed(1)} ms`;
-            runner.text(canvas.width - 12, 12, text, { align: 9 });
+            runner.text(12, 12, text, { align: 7 });
         }
 
         ctx.restore();
