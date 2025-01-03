@@ -15,7 +15,7 @@
 
 import { render, html, svg, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, LocalDate } from '../../web/core/base.js';
-import * as UI from '../../web/flaat/ui.js';
+import * as UI from '../../web/flat/ui.js';
 import { PictureCropper } from '../../web/widgets/picture.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { SmallCalendar } from '../../web/widgets/smallcalendar.js';

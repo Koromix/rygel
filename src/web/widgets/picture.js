@@ -15,7 +15,7 @@
 
 import { render, html, live } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../core/base.js';
-import * as UI from '../flaat/ui.js';
+import * as UI from '../flat/ui.js';
 
 import './picture.css';
 
