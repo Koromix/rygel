@@ -1549,8 +1549,6 @@ function Game() {
         }
         particles.length = j;
 
-        console.log(j);
-
         ctx.restore();
     }
 
