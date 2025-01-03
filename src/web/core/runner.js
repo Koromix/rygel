@@ -89,8 +89,6 @@ function AppRunner(canvas) {
 
     let audio = null;
     let audio_started = false;
-    let volume_node = null;
-    let volume = 1;
     let sound_buffers = new LruMap(16);
 
     let old_sources = new Map;
@@ -127,9 +125,7 @@ function AppRunner(canvas) {
                 ignore_new_cursor = true;
             },
             enumerable: true
-        },
-
-        volume: { get: () => volume, set: setVolume, enumerable: true }
+        }
     });
 
     // ------------------------------------------------------------------------
@@ -633,7 +629,7 @@ function AppRunner(canvas) {
     // Sound
     // ------------------------------------------------------------------------
 
-    function initSound() {
+    function initAudio() {
         if (audio != null) {
             let running = (audio.state == 'running');
 
@@ -651,110 +647,131 @@ function AppRunner(canvas) {
 
         audio = new AudioContext;
 
-        volume_node = audio.createGain();
-        volume_node.gain.setValueAtTime(volume, audio.currentTime);
-        volume_node.connect(audio.destination);
-
         sound_buffers.clear();
         old_sources.clear();
         new_sources.clear();
     }
 
-    this.playOnce = function(asset, cache = true) {
-        return self.playSound(asset, { persist: false, cache: cache });
+    this.createTrack = function(volume = 1) {
+        let track = new AudioTrack(self, volume);
+        return track;
     };
 
-    this.playFull = function(asset, cache = true) {
-        return self.playSound(asset, { persist: true, cache: cache });
-    };
+    function AudioTrack(runner, volume) {
+        let self = this;
 
-    this.playSound = function(asset, options = {}) {
-        initSound();
+        let node = null;
 
-        let sfx = old_sources.get(asset) ?? new_sources.get(asset);
+        Object.defineProperties(this,  {
+            volume: { get: () => volume, set: setVolume, enumerable: true }
+        });
 
-        if (options.cache == null)
-            options.cache = true;
-        if (options.loop == null)
-            options.loop = false;
-        if (options.persist == null)
-            options.persist = true;
+        function initTrack() {
+            initAudio();
 
-        if (sfx == null) {
-            sfx = {
-                play: true,
-
-                src: audio.createBufferSource(),
-                gain: audio.createGain(),
-                persist: options.persist,
-
-                handle: {
-                    ended: false
-                }
-            };
-
-            let buf = sound_buffers.get(asset);
-
-            if (buf instanceof AudioBuffer) {
-                startSound(sfx, buf);
-            } else {
-                if (buf == null) {
-                    let copy = new ArrayBuffer(asset.byteLength);
-                    new Uint8Array(copy).set(new Uint8Array(asset));
-
-                    buf = audio.decodeAudioData(copy);
-                }
-
-                buf.then(decoded => {
-                    if (options.cache)
-                        sound_buffers.set(asset, decoded);
-                    startSound(sfx, decoded);
-                });
-                buf.catch(err => {
-                    sound_buffers.delete(asset);
-                    console.error(err);
-                });
-
-                if (options.cache)
-                    sound_buffers.set(asset, buf);
+            if (node?.context != audio) {
+                node = new GainNode(audio);
+                node.gain.setValueAtTime(volume, audio.currentTime);
+                node.connect(audio.destination);
             }
-
-            sfx.gain.connect(volume_node);
-            sfx.src.loop = options.loop;
-            sfx.src.connect(sfx.gain);
-
-            sfx.src.addEventListener('ended', () => {
-                sfx.handle.ended = true;
-                self.busy();
-            });
         }
 
-        if (sfx != null)
-            new_sources.set(asset, sfx);
-        old_sources.delete(asset);
+        this.playOnce = function(asset, cache = true) {
+            return self.playSound(asset, { persist: false, cache: cache });
+        };
 
-        return sfx.handle;
-    };
+        this.playFull = function(asset, cache = true) {
+            return self.playSound(asset, { persist: true, cache: cache });
+        };
 
-    function startSound(sfx, buf) {
-        if (!sfx.play)
-            return;
+        this.playSound = function(asset, options = {}) {
+            initTrack();
 
-        sfx.src.buffer = buf;
-        sfx.gain.gain.setValueAtTime(1, audio.currentTime);
+            let sfx = old_sources.get(asset) ?? new_sources.get(asset);
 
-        sfx.src.start();
-    }
+            if (options.cache == null)
+                options.cache = true;
+            if (options.loop == null)
+                options.loop = false;
+            if (options.persist == null)
+                options.persist = true;
 
-    function setVolume(value) {
-        if (value == volume)
-            return;
+            if (sfx == null) {
+                sfx = {
+                    play: true,
 
-        value = Util.clamp(value, 0, 1);
-        volume = value;
+                    src: audio.createBufferSource(),
+                    gain: audio.createGain(),
+                    persist: options.persist,
 
-        if (volume_node != null)
-            volume_node.gain.setValueAtTime(volume, audio.currentTime + 0.2);
+                    handle: {
+                        ended: false
+                    }
+                };
+
+                let buf = sound_buffers.get(asset);
+
+                if (buf instanceof AudioBuffer) {
+                    startSound(sfx, buf);
+                } else {
+                    if (buf == null) {
+                        let copy = new ArrayBuffer(asset.byteLength);
+                        new Uint8Array(copy).set(new Uint8Array(asset));
+
+                        buf = audio.decodeAudioData(copy);
+                    }
+
+                    buf.then(decoded => {
+                        if (options.cache)
+                            sound_buffers.set(asset, decoded);
+                        startSound(sfx, decoded);
+                    });
+                    buf.catch(err => {
+                        sound_buffers.delete(asset);
+                        console.error(err);
+                    });
+
+                    if (options.cache)
+                        sound_buffers.set(asset, buf);
+                }
+
+                sfx.gain.connect(node);
+                sfx.src.loop = options.loop;
+                sfx.src.connect(sfx.gain);
+
+                sfx.src.addEventListener('ended', () => {
+                    sfx.handle.ended = true;
+                    runner.busy();
+                });
+            }
+
+            if (sfx != null)
+                new_sources.set(asset, sfx);
+            old_sources.delete(asset);
+
+            return sfx.handle;
+        };
+
+        function startSound(sfx, buf) {
+            if (!sfx.play)
+                return;
+
+            sfx.src.buffer = buf;
+            sfx.gain.gain.setValueAtTime(1, audio.currentTime);
+
+            sfx.src.start();
+        }
+
+        function setVolume(value) {
+            if (value == volume)
+                return;
+
+            value = Util.clamp(value, 0, 1);
+            volume = value;
+
+            if (node != null)
+                node.gain.setValueAtTime(volume, audio.currentTime + 0.2);
+        }
     }
 }
 

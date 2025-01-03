@@ -73,7 +73,9 @@ let game = new Game;
 let settings = Object.assign({}, DEFAULT_SETTINGS);
 let show_debug = false;
 
-// Background music
+// Sound
+let music = null;
+let sfx = null;
 let music_buffers = new LruMap(2);
 let music_idx = 0;
 
@@ -144,6 +146,9 @@ async function start(root) {
     ctx = runner.ctx;
     mouse_state = runner.mouseState;
     pressed_keys = runner.pressedKeys;
+
+    sfx = runner.createTrack();
+    music = runner.createTrack();
 
     ui = new UI(runner);
 
@@ -395,23 +400,21 @@ function update() {
     if (pressed_keys.tab == 1)
         show_debug = !show_debug;
 
-    runner.volume = settings.sound ? 1 : 0;
+    sfx.volume = 0 + settings.sound;
+    music.volume = 0 + (settings.sound && settings.music);
 
     // Play music
-    if (settings.sound && settings.music) {
-        if (game.hasStarted) {
-            loadMusics(true);
+    {
+        if (music.volume)
+            loadMusics(game.hasStarted);
 
-            let sound = music_buffers.get(music_idx);
+        let asset = music_buffers.get(music_idx);
 
-            if (sound instanceof ArrayBuffer) {
-                let handle = runner.playOnce(sound, false);
+        if (asset instanceof ArrayBuffer) {
+            let handle = music.playOnce(asset, false);
 
-                if (handle.ended)
-                    toggleMusic();
-            }
-        } else {
-            loadMusics(false);
+            if (handle.ended)
+                toggleMusic();
         }
     }
 
@@ -704,7 +707,7 @@ function Game() {
                 updatePlay();
                 runner.busy();
             } else {
-                runner.playOnce(assets.sounds.gameover);
+                sfx.playOnce(assets.sounds.gameover);
             }
         }
 
@@ -823,7 +826,7 @@ function Game() {
 
                 special = null;
 
-                runner.playFull(assets.sounds.move);
+                sfx.playFull(assets.sounds.move);
             }
         }
 
@@ -875,7 +878,7 @@ function Game() {
                     special = null;
                 }
 
-                runner.playFull(assets.sounds.move);
+                sfx.playFull(assets.sounds.move);
             }
         }
 
@@ -891,7 +894,7 @@ function Game() {
                 return;
             }
 
-            runner.playFull(assets.sounds.hold);
+            sfx.playFull(assets.sounds.hold);
         }
 
         // Run gravity
@@ -946,7 +949,7 @@ function Game() {
                 lockAndScore();
 
                 hit_force += 4 + Math.min(3, delta / 2);
-                runner.playFull(assets.sounds.lock);
+                sfx.playFull(assets.sounds.lock);
 
                 score += 2 * delta;
             } else {
@@ -966,7 +969,7 @@ function Game() {
                     lockAndScore();
 
                     hit_force = 4;
-                    runner.playFull(assets.sounds.lock);
+                    sfx.playFull(assets.sounds.lock);
                 }
             }
         }
@@ -1178,7 +1181,7 @@ function Game() {
             combo++;
             action += 50 * combo * level;
 
-            runner.playFull(assets.sounds.clear);
+            sfx.playFull(assets.sounds.clear);
 
             if (combo)
                 logAction(`Combo x${combo}`);
@@ -1235,7 +1238,7 @@ function Game() {
         if (new_level > level) {
             level = new_level;
 
-            runner.playFull(assets.sounds.levelup);
+            sfx.playFull(assets.sounds.levelup);
             logAction('Level up');
         }
 
