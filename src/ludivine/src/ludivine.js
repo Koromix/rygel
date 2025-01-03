@@ -15,22 +15,20 @@
 
 import { render, html, svg, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, LocalDate } from '../../web/core/base.js';
+import * as UI from '../../web/flaat/ui.js';
+import { PictureCropper } from '../../web/widgets/picture.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { SmallCalendar } from '../../web/widgets/smallcalendar.js';
 import { GENDERS } from './lib/constants.js';
 import { computeAge, dateToString } from './lib/util.js';
-import * as UI from './lib/ui.js';
-import { PictureCropper } from './lib/picture.js';
 import { assets, loadAssets } from './lib/assets.js';
 import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
 
 import '../../../vendor/opensans/OpenSans.css';
 
-import './styles/base.css';
-import './styles/base_small.css';
 import './styles/ludivine.css';
-import './styles/ludivine_small.css';
+import './styles/small.css';
 
 const DATABASE_FILENAME = 'LDV.db';
 const DATABASE_VERSION = 3;
@@ -434,8 +432,6 @@ async function runDashboard() {
 
 async function changePicture() {
     let cropper = new PictureCropper('Avatar', 256);
-
-    console.log(assets.main);
 
     cropper.defaultURL = assets.main.user;
     cropper.imageFormat = 'image/webp';

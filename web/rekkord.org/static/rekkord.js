@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import '../../../src/web/flaat/flaat.js';
+import '../../../src/web/flaat/static.js';
 import * as hljs from '../../../vendor/highlight.js/highlight.js';
 
 window.addEventListener('load', e => {

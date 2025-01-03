@@ -13,9 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/core/base.js';
-import * as UI from './ui.js';
+import { render, html, live } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log } from '../core/base.js';
+import * as UI from '../flaat/ui.js';
+
+import './picture.css';
 
 if (typeof T == 'undefined')
     T = {};
@@ -83,24 +85,6 @@ function PictureCropper(title, size) {
                 redraw();
 
                 return html`
-                    <style>
-                        .pic_cropper {
-                            margin: 0 auto 0.5em auto;
-                            position: relative;
-                            border: 1px solid #ededf0;
-                            overflow: hidden;
-                            cursor: grab;
-                        }
-                        .pic_cropper.default { cursor: inherit !important; }
-
-                        .pic_legend {
-                            text-align: center;
-                            font-size: 0.9em;
-                            font-style: italic;
-                            filter: opacity(0.75);
-                        }
-                    </style>
-
                     <div class="title">
                         ${title}
                         <div style="flex: 1;"></div>

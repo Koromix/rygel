@@ -15,7 +15,7 @@
 
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util } from '../../../src/web/core/base.js';
-import '../../../src/web/flaat/flaat.js';
+import '../../../src/web/flaat/static.js';
 
 import './ldv.css';
 

@@ -13,18 +13,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, noChange, directive, Directive } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../web/core/base.js';
+import { render, html, noChange, directive, Directive } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log } from '../core/base.js';
 
 if (typeof T == 'undefined')
     T = {};
 
 Object.assign(T, {
-    cancel: 'Annuler',
-    confirm: 'Confirmer',
-    confirm_action: 'Confirmer l\'action',
-    error_has_occured: 'Une erreur est survenue',
-    filter: 'Filtrer'
+    cancel: 'Cancel',
+    confirm: 'Confirm',
+    confirm_not_reversible: 'Be careful, this action cannot be reversed!',
+    error_has_occured: 'An error has occured',
+    filter: 'Filter'
 });
 
 let run_func = () => {};
@@ -169,12 +169,12 @@ function confirm(action, func = null) {
         return dialog({
             run: (render, close) => html`
                 <div class="title">
-                    ${T.confirm_action}
+                    ${action}
                     <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${wrap(close)}>✖\uFE0E</button>
                 </div>
 
-                <div class="main">${action}</div>
+                <div class="main">${T.confirm_not_reversible}</div>
 
                 <div class="footer">
                     <button type="button" class="secondary" @click=${wrap(close)}>${T.cancel}</button>
@@ -201,7 +201,10 @@ function dialog(options = {}) {
         reject: null,
 
         resolve_on_submit: options.resolve_on_submit,
-        can_be_closed: options.can_be_closed
+        can_be_closed: options.can_be_closed,
+
+        submit: options.submit,
+        submitted: false
     };
 
     if (!init_dialogs) {
@@ -217,8 +220,7 @@ function dialog(options = {}) {
         init_dialogs = true;
     }
 
-    let dlg_el = document.createElement('div');
-    dlg_el.className = 'dialog';
+    let dlg_el = document.createElement('dialog');
 
     let p = new Promise((resolve, reject) => {
         dlg.update = () => {
@@ -226,8 +228,10 @@ function dialog(options = {}) {
                 return;
 
             render(html`
-                <form @click=${e => e.stopPropagation()}
-                      @submit=${wrap(e => submit(e, options.submit, dlg))}>
+                <form class=${dlg.submitted ? 'submitted' : ''}
+                      @click=${e => e.stopPropagation()}
+                      @invalid=${{ handleEvent: e => handleInvalid(e, dlg), capture: true }}
+                      @submit=${wrap(e => handleSubmit(e, dlg))}>
                     ${options.run(dlg.update, () => reject())}
                 </form>
             `, dlg_el);
@@ -278,25 +282,35 @@ function dialog(options = {}) {
     if (options.can_be_closed)
         p.close = () => dlg.reject();
 
+    if (dlg_el.show != null)
+        dlg_el.show();
+
     return p;
 }
 
-async function submit(e, apply, dlg) {
+function handleInvalid(e, dlg) {
+    dlg.submitted = true;
+    window.requestAnimationFrame(dlg.update);
+}
+
+async function handleSubmit(e, dlg) {
     try {
         let values = [];
 
-        if (apply != null) {
-            let ret = await apply(e.target.elements);
+        if (dlg.submit != null) {
+            let ret = await dlg.submit(e.target.elements);
             values.push(ret);
         }
+
+        dlg.submitted = true;
 
         if (dlg.resolve_on_submit) {
             dlg.resolve(...values);
         } else {
-            window.requestAnimationFrame(dlg.update, 0);
+            window.requestAnimationFrame(dlg.update);
         }
     } catch (err) {
-        window.requestAnimationFrame(dlg.update, 0);
+        window.requestAnimationFrame(dlg.update);
         throw err;
     }
 }
@@ -329,8 +343,11 @@ class SelectDirective extends Directive {
 const selectValue = directive(SelectDirective);
 
 class ReorderDirective extends Directive {
-    item = null;
     installed = false;
+
+    items = null;
+    item = null;
+    finalize = null;
 
     update(part, [items, item, enable, finalize]) {
         let el = part.element;
@@ -339,16 +356,19 @@ class ReorderDirective extends Directive {
         if (enable == null)
             enable = true;
 
-        grab.setAttribute('draggable', enable ? 'true' : 'false');
-        this.item = item;
-
         if (!this.installed) {
-            grab.addEventListener('dragstart', wrap(e => dragStart(e, items, this.item)));
-            grab.addEventListener('dragover', wrap(e => dragOver(e, items, this.item)));
-            grab.addEventListener('dragend', wrap(e => dragEnd(e, finalize)));
+            grab.addEventListener('dragstart', wrap(e => dragStart(e, this.items, this.item)));
+            grab.addEventListener('dragover', wrap(e => dragOver(e, this.items, this.item)));
+            grab.addEventListener('dragend', wrap(e => dragEnd(e, this.finalize)));
 
             this.installed = true;
         }
+
+        this.items = items;
+        this.item = item;
+        this.finalize = finalize;
+
+        grab.setAttribute('draggable', enable ? 'true' : 'false');
 
         return noChange;
     }
@@ -424,13 +444,21 @@ function reorder(items, idx1, idx2) {
     }
 }
 
-function tableHeader(key, by, title) {
-    let info = table_orders[key];
+function tableHeader(key, title, by, func = null) {
+    if (func == null) {
+        if (typeof by == 'function') {
+            func = by;
+        } else {
+            func = value => value[by];
+        }
+    }
+    by = String(by);
 
-    let ascending = (info != null && info.by_str == String(by)) ? info.ascending : null;
+    let info = table_orders[key];
+    let ascending = (info != null && info.by == by) ? info.ascending : null;
 
     return html`
-        <th class="item" @click=${e => { setOrder(key, by); run_func(); }}>
+        <th class="item" @click=${e => { sortTable(key, by, func); run_func(); }}>
             ${title}
             <div class="arrows">
                 <span class=${'up' + (ascending === false ? ' active' : '')}></span>
@@ -440,14 +468,11 @@ function tableHeader(key, by, title) {
     `;
 }
 
-function setOrder(key, by, ascending = null) {
-    let by_str = String(by);
-    let by_func = (typeof by == 'function') ? by : (value => value[by_str]);
-
+function sortTable(key, by, func, ascending = null) {
     if (ascending == null) {
         let order = table_orders[key];
 
-        if (order != null && order.by_str == String(by)) {
+        if (order != null && order.by == by) {
             ascending = !order.ascending;
         } else {
             ascending = true;
@@ -455,8 +480,8 @@ function setOrder(key, by, ascending = null) {
     }
 
     let order = {
-        by_str: by_str,
-        by_func: by_func,
+        by: by,
+        func: func,
         ascending: ascending,
 
         comparator: null,
@@ -464,7 +489,7 @@ function setOrder(key, by, ascending = null) {
     };
 
     order.language = document.documentElement.lang || 'en';
-    order.comparator = makeComparator(order, order.language);
+    order.comparator = makeComparator(order);
 
     table_orders[key] = order;
 }
@@ -474,10 +499,10 @@ function tableFilter(key, ...keys) {
 
     return html`<input type="search" placeholder=${T.filter + '...'} style="width: 10em;"
                        value=${(filter != null) ? filter.str : ''}
-                       @input=${e => { setFilter(key, e.target.value, keys); run_func(); }} />`;
+                       @input=${e => { filterTable(key, e.target.value, keys); run_func(); }} />`;
 };
 
-function setFilter(key, str, keys) {
+function filterTable(key, str, keys) {
     if (str) {
         let filter = {
             str: str,
@@ -490,12 +515,21 @@ function setFilter(key, str, keys) {
     }
 }
 
-function tableValues(key, values, default_by = null) {
+function tableValues(key, values, by = null, func = null) {
     let order = table_orders[key];
     let filter = table_filters[key];
 
-    if (order == null && default_by != null) {
-        setOrder(key, default_by);
+    if (order == null && by != null) {
+        if (func == null) {
+            if (typeof by == 'function') {
+                func = by;
+            } else {
+                func = value => value[by];
+            }
+        }
+        by = String(by);
+
+        sortTable(key, by, func);
         order = table_orders[key];
     }
     if (order != null) {
@@ -503,7 +537,7 @@ function tableValues(key, values, default_by = null) {
 
         if (lang != order.language) {
             order.language = lang;
-            order.comparator = makeComparator(order, lang);
+            order.comparator = makeComparator(order);
         }
 
         values = values.slice().sort(order.comparator);
@@ -528,16 +562,16 @@ function tableValues(key, values, default_by = null) {
     return values;
 };
 
-function makeComparator(order, language) {
-    let collator = new Intl.Collator(language, {
+function makeComparator(order) {
+    let collator = new Intl.Collator(order.language, {
         numeric: true,
         ignorePunctuation: true,
         sensitivity: 'base'
     });
 
     let comparator = (obj1, obj2) => {
-        let value1 = order.by_func(obj1);
-        let value2 = order.by_func(obj2);
+        let value1 = order.func(obj1);
+        let value2 = order.func(obj2);
 
         if (value1 === '')
             value1 = null;

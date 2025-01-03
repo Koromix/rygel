@@ -15,9 +15,9 @@
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
+import * as UI from '../../../web/flaat/ui.js';
 import { AppRunner } from '../../../web/core/runner.js';
 import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
-import * as UI from '../lib/ui.js';
 import { assets } from '../lib/assets.js';
 import * as app from '../ludivine.js';
 import { NetworkWidget } from './widget.js';

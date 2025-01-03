@@ -13,14 +13,18 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-.medium {
-    & .net_menu {
+@media screen and (max-width: 960px) {
+    body { font-size: 13px; }
+}
+
+@media screen and (max-width: 1300px) {
+    .net_menu {
         left: 12px;
         top: 12px;
         width: calc(100% - 24px);
         height: 36px;
     }
-    & .net_toolbox {
+    .net_toolbox {
         flex-direction: row;
 
         left: 12px;
@@ -28,7 +32,7 @@
         width: calc(100% - 24px);
         height: 36px;
     }
-    & .net_canvas {
+    .net_canvas {
         left: 12px;
         top: 60px;
         width: calc(100% - 24px);
