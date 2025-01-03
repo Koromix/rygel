@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { Util, Log, Net } from '../../../web/core/base.js';
+
 function computeAge(from, to = null) {
     if (!(from instanceof Date))
         from = new Date(from);

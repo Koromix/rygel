@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { Util } from '../../../web/core/base.js';
-import { loadTexture } from '../../../web/core/runner.js';
+import { loadTexture } from './util.js';
 
 import ui_left from '../../assets/ui/left.png';
 import ui_right from '../../assets/ui/right.png';
