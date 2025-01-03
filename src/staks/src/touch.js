@@ -19,7 +19,7 @@ import { AppRunner } from '../../web/core/runner.js';
 import { loadAssets, assets } from './assets.js';
 import * as rules from './rules.js';
 
-function UI(runner) {
+function TouchInterface(runner) {
     let self = this;
 
     // Render and input API
@@ -105,4 +105,4 @@ function isInsideRect(x, y, rect) {
     return inside;
 }
 
-export { UI }
+export { TouchInterface }

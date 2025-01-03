@@ -18,7 +18,7 @@ import { Util, Log, Net, LruMap } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
 import { loadAssets, assets } from './assets.js';
 import * as rules from './rules.js';
-import { UI } from './ui.js';
+import { TouchInterface } from './touch.js';
 
 import '../../../vendor/opensans/OpenSans.css';
 import './game.css';
@@ -64,7 +64,7 @@ let runner = null;
 let ctx = null;
 let mouse_state = null;
 let pressed_keys = null;
-let ui = null;
+let touch = null;
 
 // Game state
 let game = new Game;
@@ -150,7 +150,7 @@ async function start(root) {
     sfx = runner.createTrack();
     music = runner.createTrack();
 
-    ui = new UI(runner);
+    touch = new TouchInterface(runner);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -202,7 +202,7 @@ function saveSettings() {
 // ------------------------------------------------------------------------
 
 function update() {
-    ui.begin();
+    touch.begin();
 
     // Global layout
     {
@@ -326,36 +326,36 @@ function update() {
             dx = -size - 20;
         }
 
-        if (ui.button('sound' + (0 + settings.sound), x, y, size).clicked) {
+        if (touch.button('sound' + (0 + settings.sound), x, y, size).clicked) {
             settings.sound = !settings.sound;
             saveSettings();
         }
         x += dx; y += dy;
 
-        if (ui.button('music' + (0 + settings.music), x, y, size).clicked) {
+        if (touch.button('music' + (0 + settings.music), x, y, size).clicked) {
             settings.music = !settings.music;
             saveSettings();
         }
         x += dx; y += dy;
 
-        if (ui.button('background', x, y, size).clicked)
+        if (touch.button('background', x, y, size).clicked)
             toggleBackground();
         x += dx; y += dy;
 
         if (main.requestFullscreen != null) {
-            if (ui.button('fullscreen', x, y, size).clicked)
+            if (touch.button('fullscreen', x, y, size).clicked)
                 toggleFullScreen();
             x += dx; y += dy;
         }
 
         if (game.isPlaying && runner.isTouch) {
-            if (ui.button('ghost', x, y, size).clicked) {
+            if (touch.button('ghost', x, y, size).clicked) {
                 settings.ghost = !settings.ghost;
                 saveSettings();
             }
             x += dx; y += dy;
 
-            if (ui.button('pause' + (0 + game.pause), 18 + size / 2, y, size).clicked)
+            if (touch.button('pause' + (0 + game.pause), 18 + size / 2, y, size).clicked)
                 game.pause = !game.pause;
             x += dx; y += dy;
         }
@@ -363,8 +363,8 @@ function update() {
     if (game.isPlaying && !runner.isTouch && !settings.help) {
         let size = 0.7 * layout.button;
 
-        let clicked = ui.button('help', layout.well.left - layout.padding - size / 2,
-                                        layout.well.top + layout.well.height - size / 2, size).clicked;
+        let clicked = touch.button('help', layout.well.left - layout.padding - size / 2,
+                                           layout.well.top + layout.well.height - size / 2, size).clicked;
 
         if (clicked) {
             settings.help = true;
@@ -424,13 +424,13 @@ function update() {
                 let x = layout.well.left + layout.well.width / 2;
                 let y = layout.well.top + layout.well.height / 2 + 150;
 
-                if (ui.button('start', x, y, 1.2 * layout.button).clicked)
+                if (touch.button('start', x, y, 1.2 * layout.button).clicked)
                     play();
             } else {
                 let x = canvas.width / 2;
                 let y = canvas.height / 2 + 150;
 
-                if (ui.button('start', x, y, 1.2 * layout.button).clicked)
+                if (touch.button('start', x, y, 1.2 * layout.button).clicked)
                     play();
             }
         } else {
@@ -538,7 +538,7 @@ function draw() {
         drawStart();
     }
 
-    ui.draw();
+    touch.draw();
 
     if (show_debug) {
         ctx.save();
@@ -742,20 +742,20 @@ function Game() {
         if (runner.isTouch) {
             let rect = layout.input;
 
-            left = ui.button('left', rect.left + 0.8 * layout.button,
-                                     rect.top + 0.3 * rect.height, layout.button).pressed >= 1;
-            right = ui.button('right', rect.left + 2.2 * layout.button,
-                                       rect.top + 0.3 * rect.height, layout.button).pressed >= 1;
-            turbo = ui.button('turbo', rect.left + 1.5 * layout.button,
-                                       rect.top + 0.8 * rect.height, 0.7 * layout.button).pressed >= 1;
+            left = touch.button('left', rect.left + 0.8 * layout.button,
+                                        rect.top + 0.3 * rect.height, layout.button).pressed >= 1;
+            right = touch.button('right', rect.left + 2.2 * layout.button,
+                                          rect.top + 0.3 * rect.height, layout.button).pressed >= 1;
+            turbo = touch.button('turbo', rect.left + 1.5 * layout.button,
+                                          rect.top + 0.8 * rect.height, 0.7 * layout.button).pressed >= 1;
 
-            rotate += ui.button('clockwise', rect.left + rect.width - 0.8 * layout.button,
-                                             rect.top + 0.3 * rect.height, layout.button).clicked;
-            rotate -= ui.button('counterclock', rect.left + rect.width - 2.2 * layout.button,
+            rotate += touch.button('clockwise', rect.left + rect.width - 0.8 * layout.button,
                                                 rect.top + 0.3 * rect.height, layout.button).clicked;
+            rotate -= touch.button('counterclock', rect.left + rect.width - 2.2 * layout.button,
+                                                   rect.top + 0.3 * rect.height, layout.button).clicked;
             if (!runner.isPortrait)
-                drop = ui.button('drop', rect.left + rect.width - 1.5 * layout.button,
-                                         rect.top + 0.8 * rect.height, 0.7 * layout.button).clicked;
+                drop = touch.button('drop', rect.left + rect.width - 1.5 * layout.button,
+                                            rect.top + 0.8 * rect.height, 0.7 * layout.button).clicked;
 
             if (isInsideRect(mouse_state.x, mouse_state.y, expandRect(layout.well, -40, -40))) {
                 if (mouse_state.left == 1)
