@@ -38,7 +38,7 @@
     position: absolute;
     left: 12px;
     bottom: 8px;
-    font-size: 12px;
+    font-size: 15px;
     color: white;
 }
 .stk_attributions.active { display: block; }
