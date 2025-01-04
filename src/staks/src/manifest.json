@@ -1,8 +1,8 @@
 {
     "id": "staks",
 
-    "name": "Staks",
-    "short_name": "Staks",
+    "name": "STAKS",
+    "short_name": "STAKS",
     "categories": ["games"],
 
     "start_url": ".",
