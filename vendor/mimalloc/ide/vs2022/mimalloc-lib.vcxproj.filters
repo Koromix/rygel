@@ -19,10 +19,16 @@
     <ClCompile Include="..\..\src\bitmap.c">
       <Filter>Sources</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\free.c">
+      <Filter>Sources</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\heap.c">
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\init.c">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\libc.c">
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\options.c">
@@ -46,16 +52,13 @@
     <ClCompile Include="..\..\src\random.c">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\segment.c">
-      <Filter>Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\src\segment-map.c">
-      <Filter>Sources</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\src\stats.c">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\libc.c">
+    <ClCompile Include="..\..\src\page-map.c">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\arena-meta.c">
       <Filter>Sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -72,16 +75,10 @@
     <ClInclude Include="$(ProjectDir)..\..\include\mimalloc.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\mimalloc-etw.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\include\mimalloc-etw-gen.h">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\include\mimalloc-new-delete.h">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\mimalloc-override.h">
+    <ClInclude Include="$(ProjectDir)..\..\include\mimalloc-override.h">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\include\mimalloc\track.h">
@@ -93,18 +90,16 @@
     <ClInclude Include="..\..\include\mimalloc\prim.h">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\include\mimalloc\bits.h">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Headers">
-      <UniqueIdentifier>{9ef1cf48-7bb2-4af1-8cc1-603486e08a7a}</UniqueIdentifier>
+      <UniqueIdentifier>{1430490c-e711-4ace-a1b8-36f4d5105873}</UniqueIdentifier>
     </Filter>
     <Filter Include="Sources">
-      <UniqueIdentifier>{cfcf1674-81e3-487a-a8dd-5f956ae4007d}</UniqueIdentifier>
+      <UniqueIdentifier>{461c78ef-04b0-44d1-a0ca-7d488abaa592}</UniqueIdentifier>
     </Filter>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\include\mimalloc-etw-gen.man">
-      <Filter>Headers</Filter>
-    </None>
   </ItemGroup>
 </Project>
