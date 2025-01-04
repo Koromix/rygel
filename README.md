@@ -16,7 +16,7 @@ Most projects are licensed under the [GPL 3.0 license](https://www.gnu.org/licen
 | *meestic*  | Control the keyboard lighting on MSI Delta 15 laptops                            | Felix      | **Good** | GPL 3     |
 | *napka*    | List and map of mental healthcare resources in France                            | Node.js    | **WIP**  | GPL 3     |
 | *rekkord*  | Backup tool with deduplication and asymmetric encryption                         | Felix      | **WIP**  | GPL 3     |
-| *staks*    | Simple Tetris-like game for web browsers                                         | Node.js    | **Good** | GPL 3     |
+| *staks*    | Simple stacker-like game for web browsers                                        | Node.js    | **Good** | GPL 3     |
 | *thop*     | Web-based institutional PMSI (MCO) reporting tool based on libdrd                | Felix      | **Good** | GPL 3     |
 | *tytools*  | Independent tools to manage, flash and communicate with Teensy microcontrollers  | Felix      | **Good** | Unlicense |
 | *web*      | Reusable utility functions and HTML/CSS/JS widgets                               | Felix      | **Good** | MIT       |
