@@ -1,3 +1,13 @@
+# Staks
+
+Staks is a simple staker game playable in a browser.
+
+<div class="actions">
+    <a href="staks">Play Staks</a>
+</div>
+
+You can find out more in the [code repository](https://github.com/Koromix/rygel/tree/master/src/staks).
+
 # Nestor
 
 Nestor is a **small HTTP server made for local testing**. It can serve static file, proxy remote websites (GET only), and you can customize the headers with a simple config file.
