@@ -33,7 +33,7 @@ const KEYBOARD_SHORTCUTS = [
     ['↓', `Descente rapide`],
     ['Espace', `Verrouillage immédiat`],
     null,
-    ['C', `Mettre la pièce de côté (hold)`],
+    ['C', `Mettre la pièce en réserve (hold)`],
     null,
     ['G', `Afficher/cacher le fantôme`],
     ['B', `Modifier le fond d'écran`],
