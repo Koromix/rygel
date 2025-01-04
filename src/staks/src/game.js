@@ -354,17 +354,31 @@ function update() {
                 saveSettings();
             }
             x += dx; y += dy;
+        }
+    }
+    if (game.isPlaying && runner.isTouch) {
+        if (runner.isPortrait) {
+            let size = 0.7 * layout.button;
+            let x = layout.score.left + layout.score.width / 2;
+            let y = (layout.score.top + layout.score.height + layout.hold.top) / 2;
 
-            if (touch.button('pause' + (0 + game.pause), 18 + size / 2, y, size).clicked)
+            if (touch.button('pause' + (0 + game.pause), x, y, size).clicked)
                 game.pause = !game.pause;
-            x += dx; y += dy;
+        } else {
+            let size = 0.7 * layout.button;
+            let x = 18 + size / 2;
+            let y = 18 + size / 2;
+
+            if (touch.button('pause' + (0 + game.pause), x, y, size).clicked)
+                game.pause = !game.pause;
         }
     }
     if (game.isPlaying && !runner.isTouch && !settings.help) {
         let size = 0.7 * layout.button;
+        let x = layout.well.left - layout.padding - size / 2;
+        let y = layout.well.top + layout.well.height - size / 2;
 
-        let clicked = touch.button('help', layout.well.left - layout.padding - size / 2,
-                                           layout.well.top + layout.well.height - size / 2, size).clicked;
+        let clicked = touch.button('help', x, y, size).clicked;
 
         if (clicked) {
             settings.help = true;
