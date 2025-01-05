@@ -16,10 +16,9 @@
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
-import { loadAssets, assets } from './assets.js';
 import * as rules from './rules.js';
 
-function TouchInterface(runner) {
+function TouchInterface(runner, assets) {
     let self = this;
 
     // Render and input API

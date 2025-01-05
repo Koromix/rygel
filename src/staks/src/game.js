@@ -16,7 +16,7 @@
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
-import { loadAssets, assets } from './assets.js';
+import { loadAssets } from './assets.js';
 import * as rules from './rules.js';
 import { TouchInterface } from './touch.js';
 
@@ -54,6 +54,9 @@ const DEFAULT_SETTINGS = {
     ghost: true,
     help: true
 };
+
+// Assets
+let assets = null;
 
 // DOM nodes
 let main = null;
@@ -100,7 +103,7 @@ let layout = {
 // ------------------------------------------------------------------------
 
 async function load(prefix, progress = null) {
-    await loadAssets(prefix, progress);
+    assets = await loadAssets(prefix, progress);
 
     loadSettings();
 
@@ -151,7 +154,7 @@ async function start(root) {
     sfx = runner.createTrack(32);
     music = runner.createTrack(1);
 
-    touch = new TouchInterface(runner);
+    touch = new TouchInterface(runner, assets);
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';

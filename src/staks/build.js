@@ -84,7 +84,7 @@ async function run() {
             '.png': 'file',
             '.webp': 'file',
             '.webm': 'file',
-            '.opus': 'file'
+            '.mp3': 'file'
         },
         outdir: 'dist/static/',
         plugins: [
