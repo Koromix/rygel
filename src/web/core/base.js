@@ -824,15 +824,6 @@ const Net = new function() {
         });
     };
 
-    this.loadImage = async function(url) {
-        let response = await self.fetch(url);
-
-        let blob = await response.blob();
-        let img = await createImageBitmap(blob);
-
-        return img;
-    };
-
     this.readError = async function(response, nice = true) {
         let text = (await response.text()).trim();
 
