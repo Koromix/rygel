@@ -377,7 +377,7 @@ function update() {
                 game.pause = !game.pause;
         }
     }
-    if (game.isPlaying && !runner.isTouch && !settings.help) {
+    if (game.hasStarted && !runner.isTouch && !settings.help) {
         let size = 0.7 * layout.button;
         let x = layout.well.left - layout.padding - size / 2;
         let y = layout.well.top + layout.well.height - size / 2;
