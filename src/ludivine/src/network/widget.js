@@ -1104,12 +1104,13 @@ function NetworkWidget(mod, world) {
             }
 
             ctx.font = '13px Open Sans';
+            ctx.fillStyle = '#777777';
 
             for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
                 let level = PROXIMITY_LEVELS[i];
                 let radius = world.levels[i].radius;
 
-                runner.text(0, radius - 0.03, level.text, { align: 2, color: '#777777' });
+                runner.text(0, radius - 0.03, level.text, { align: 2 });
             }
 
             ctx.restore();
@@ -1209,6 +1210,7 @@ function NetworkWidget(mod, world) {
         // Name persons
         if (!mod.anonymous) {
             ctx.font = '12px Open Sans';
+            ctx.fillStyle = '#000000';
 
             for (let i = persons.length - 1; i >= 0; i--) {
                 let p = persons[i];

@@ -604,6 +604,7 @@ function AppRunner(canvas) {
 
         let pos = { x: x, y: y };
         let aligned = self.align(pos, width, height, align);
+        let fill = options.color ?? ctx.fillStyle ?? 'black';
 
         if (options.background != null) {
             ctx.fillStyle = options.background;
@@ -611,7 +612,7 @@ function AppRunner(canvas) {
         }
 
         ctx.textAlign = 'left';
-        ctx.fillStyle = options.color ?? ctx.fillStyle ?? 'black';
+        ctx.fillStyle = fill;
         ctx.fillText(text, aligned.x + padding, aligned.y + height);
 
         ctx.restore();
