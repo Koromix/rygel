@@ -43,6 +43,7 @@ const KEYBOARD_SHORTCUTS = [
     ['H', `Afficher/cacher l'aide`]
 ];
 
+const AREA_RADIUS = 4;
 const BUTTON_SIZE = 56;
 const SQUARE_SIZE = 40;
 
@@ -621,8 +622,14 @@ function drawHelp() {
 }
 
 function drawArea(x, y, width, height) {
+    // Support older browsers without roundRect()
     ctx.beginPath();
-    ctx.roundRect(x, y, width, height, 4);
+    ctx.moveTo(x + width / 2, y);
+    ctx.arcTo(x + width, y, x + width, y + height / 2, AREA_RADIUS);
+    ctx.arcTo(x + width, y + height, x + width / 2, y + height, AREA_RADIUS);
+    ctx.arcTo(x, y + height, x, y + height / 2, AREA_RADIUS);
+    ctx.arcTo(x, y, x + width / 2, y, AREA_RADIUS);
+    ctx.closePath();
 
     ctx.save();
 
