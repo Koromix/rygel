@@ -148,8 +148,8 @@ async function start(root) {
     mouse_state = runner.mouseState;
     pressed_keys = runner.pressedKeys;
 
-    sfx = runner.createTrack();
-    music = runner.createTrack();
+    sfx = runner.createTrack(32);
+    music = runner.createTrack(1);
 
     touch = new TouchInterface(runner);
 

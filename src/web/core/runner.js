@@ -89,7 +89,6 @@ function AppRunner(canvas) {
 
     let audio = null;
     let audio_started = false;
-    let sound_buffers = new LruMap(16);
 
     let old_sources = new Map;
     let new_sources = new Map;
@@ -647,20 +646,22 @@ function AppRunner(canvas) {
 
         audio = new AudioContext;
 
-        sound_buffers.clear();
         old_sources.clear();
         new_sources.clear();
     }
 
-    this.createTrack = function(volume = 1) {
-        let track = new AudioTrack(self, volume);
+    this.createTrack = function(cache) {
+        let track = new AudioTrack(self, cache);
         return track;
     };
 
-    function AudioTrack(runner, volume) {
+    function AudioTrack(runner, cache) {
         let self = this;
 
         let node = null;
+
+        let volume = 1;
+        let sound_buffers = new LruMap(cache);
 
         Object.defineProperties(this,  {
             volume: { get: () => volume, set: setVolume, enumerable: true }
@@ -673,6 +674,8 @@ function AppRunner(canvas) {
                 node = new GainNode(audio);
                 node.gain.setValueAtTime(volume, audio.currentTime);
                 node.connect(audio.destination);
+
+                sound_buffers.clear();
             }
         }
 

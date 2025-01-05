@@ -842,8 +842,8 @@ const Net = new function() {
 // ------------------------------------------------------------------------
 
 function LruMap(limit) {
-    if (limit == null || limit < 2)
-        throw new Error('LruMap limit must be >= 2');
+    if (limit == null || limit < 1)
+        throw new Error('LruMap limit must be >= 1');
 
     let self = this;
 
