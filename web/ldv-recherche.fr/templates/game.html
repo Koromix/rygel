@@ -77,18 +77,22 @@
                 <b>Mozilla Firefox</b> <span class="version">(version ≥ 116)</span><br/>
                 <b>Google Chrome</b> <span class="version">(version ≥ 87)</span><br/>
                 <b>Microsoft Edge</b> <span class="version">(version ≥ 87)</span><br/>
-                <b>Apple Safari</b> <span class="version">(version ≥ 14)</span>
+                <b>Apple Safari</b> <span class="version">(version ≥ 15)</span>
             </div></div>
         </noscript>
-        <script nomodule>
-            document.body.innerHTML +=
-                '<div id="fatal"><div>' +
-                    '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
+        <script>
+            var SUPPORTED_BROWSERS =
                     'Nous vous recommandons <u>l\'un de ces navigateurs</u> :<br/><br/>' + 
                     '<b>Mozilla Firefox</b> <span class="browser">(version ≥ 116)</span><br/>' +
                     '<b>Google Chrome</b> <span class="browser">(version ≥ 87)</span><br/>' +
                     '<b>Microsoft Edge</b> <span class="browser">(version ≥ 87)</span><br/>' + 
-                    '<b>Apple Safari</b> <span class="browser">(version ≥ 14)</span>' +
+                    '<b>Apple Safari</b> <span class="browser">(version ≥ 15)</span>';
+        </script>
+        <script nomodule>
+            document.body.innerHTML +=
+                '<div id="fatal"><div>' +
+                    '<span style="color: red;">⚠\uFE0E <b>Ce navigateur n\'est pas supporté, ou il s\'agit d\'une version trop ancienne</b></span><br/><br/>' +
+                    SUPPORTED_BROWSERS +
                 '</div></div>';
         </script>
 
@@ -118,7 +122,8 @@
                     document.body.innerHTML =
                         '<div id="fatal"><div>' +
                             '<span style="color: red;">⚠\uFE0E <b>Une erreur est survenue pendant le chargement</b></span><br/>' +
-                            err.message +
+                            err.message + '<br/><br/>' +
+                            window.SUPPORTED_BROWSERS +
                         '</div></div>';
                 } finally {
                     document.body.classList.remove('loading');

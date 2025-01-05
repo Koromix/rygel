@@ -143,6 +143,9 @@ assets.musics = Util.shuffle(Object.keys(assets.musics)).reduce((obj, key) => { 
 const LAZY_CATEGORIES = ['musics'];
 
 async function loadAssets(prefix, progress) {
+    if (window.createImageBitmap == null)
+        throw new Error('ImageBitmap support is not available (old browser?)');
+
     prefix = prefix.replace(/\/+$/g, '') + '/';
 
     if (progress == null)
