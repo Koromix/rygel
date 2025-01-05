@@ -457,7 +457,8 @@ function NetworkModule(db, test, root_el) {
         if (typeof path != 'string' || !path.match(/^world(\.[a-zA-Z][a-zA-Z_0-9]+(\[[0-9]+\])?)+$/))
             throw new Error('Unsafe named reference in serialized history');
 
-        let value = eval(path);
+        let func = new Function('world', 'return ' + path);
+        let value = func(world);
 
         if (value == null)
             throw new Error('Failed to restore named reference');
