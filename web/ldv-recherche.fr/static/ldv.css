@@ -297,17 +297,32 @@ p + .columns { margin-top: 2em; }
     }
 }
 
+#sos {
+    padding: 1em;
+    align-items: center;
+}
 #sos > div {
     display: flex;
-    background: white;
-    border-color: #e22e22;
-    align-items: center;
     gap: 2em;
+    padding: 1.5em;
+    background: white;
+    border: 4px solid #e22e22;
+    align-items: center;
+}
+
+@media screen and (min-width: 961px) {
+    #sos {
+        position: absolute;
+        left: auto;
+        top: auto;
+        right: 0;
+        width: 600px;
+        height: auto;
+        padding: 0;
+        z-index: 999;
+    }
 }
 
 @media screen and (max-width: 960px) {
-    #sos > div {
-        flex-direction: column;
-        z-index: 1;
-    }
+    #sos > div { flex-direction: column; }
 }

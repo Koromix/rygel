@@ -379,9 +379,10 @@ dialog {
     z-index: 9999;
     left: 0;
     top: 0;
+    box-sizing: border-box;
     width: 100%;
     height: 100%;
-    padding-top: 44px;
+    padding: 44px 1em 1em 1em;
     display: flex;
     align-items: start;
     justify-content: center;
