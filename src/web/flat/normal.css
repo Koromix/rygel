@@ -324,6 +324,11 @@ button > img {
     height: 16px;
     transform: translateY(2px);
 }
+button > img:only-child {
+    width: 32px;
+    height: 32px;
+    transform: translateY(4px);
+}
 button.secondary {
     background: #ddd;
     color: black;
