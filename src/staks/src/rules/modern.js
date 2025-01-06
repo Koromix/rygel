@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util, Log } from '../../web/core/base.js';
+import { Util, Log } from '../../../web/core/base.js';
 
 const ROWS = 20;
 const COLUMNS = 10;
@@ -30,6 +30,7 @@ const DAS_DELAY = 40; // ~166.67 ms
 const DAS_PERIOD = 8; // ~33.33 ms
 const CLEAR_DELAY = 80; // ~333.33 ms
 
+const HOLD = true;
 const MAX_ACTIONS = 20;
 
 const kicks_I = [
@@ -85,6 +86,7 @@ export {
     DAS_PERIOD,
     CLEAR_DELAY,
 
+    HOLD,
     MAX_ACTIONS,
 
     BLOCKS,

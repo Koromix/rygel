@@ -16,7 +16,6 @@
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
-import * as rules from './rules.js';
 
 function TouchInterface(runner, assets) {
     let self = this;

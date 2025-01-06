@@ -17,7 +17,7 @@ import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
 import { loadAssets } from './assets.js';
-import * as rules from './rules.js';
+import * as rules from './rules/modern.js';
 import { TouchInterface } from './touch.js';
 
 import '../../../vendor/opensans/OpenSans.css';
@@ -674,7 +674,7 @@ function Game() {
     let das_left = false;
     let das_count = null;
     let hold_block = null;
-    let can_hold = true;
+    let can_hold = rules.HOLD;
     let gravity_start = null;
     let lock_start = null;
     let lock_since = null;
@@ -1013,7 +1013,7 @@ function Game() {
                 return;
             }
 
-            can_hold = true;
+            can_hold = rules.HOLD;
         }
     }
 
@@ -1517,6 +1517,9 @@ function Game() {
     }
 
     function drawHold() {
+        if (!rules.HOLD)
+            return;
+
         ctx.save();
 
         ctx.translate(layout.hold.left, layout.hold.top + hit_value);
