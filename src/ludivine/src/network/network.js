@@ -95,9 +95,6 @@ function NetworkModule(db, test, root_el) {
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
 
-        // Adapt to viewport
-        window.addEventListener('resize', runner.busy);
-
         // Load existing world
         {
             let payload = await db.pluck('SELECT payload FROM tests WHERE id = ?', test.id);
