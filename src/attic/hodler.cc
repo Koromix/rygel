@@ -402,7 +402,7 @@ static void RenderAsset(Span<const char> path, const FileHash *hash, StreamWrite
 static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *alloc)
 {
     HeapArray<char> content;
-    if (page->src_filename && ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
+    if (ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
         return false;
     Span<const char> remain = TrimStr(content.As());
 
@@ -679,10 +679,15 @@ static Size RenderMenu(Span<const PageData> pages, Size active_idx,
 static bool RenderTemplate(const char *template_filename, Span<const PageData> pages, Size page_idx,
                            const AssetSet &assets, const char *dest_filename)
 {
+    const PageData &page = pages[page_idx];
+
+    if (!template_filename) {
+        bool success = WriteFile(page.html, dest_filename, (int)StreamWriterFlag::Atomic);
+        return success;
+    }
+
     StreamReader reader(template_filename);
     StreamWriter writer(dest_filename, (int)StreamWriterFlag::Atomic);
-
-    const PageData &page = pages[page_idx];
 
     bool success = PatchFile(&reader, &writer, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
@@ -813,11 +818,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
 
             do {
                 if (prop.key == "SourceFile") {
-                    if (prop.value.len) {
-                        page.src_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
-                    } else {
-                        page.src_filename = nullptr;
-                    }
+                    page.src_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
                 } else if (prop.key == "Title") {
                     page.title = DuplicateString(prop.value, &temp_alloc).ptr;
                 } else if (prop.key == "Menu") {
@@ -833,11 +834,6 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                     valid = false;
                 }
             } while (ini.NextInSection(&prop));
-
-            if (!page.template_filename) {
-                LogError("Missing template for page '%1'", page.name);
-                valid = false;
-            }
 
             if (TestStr(page.name, "index")) {
                 page.url = "/";
@@ -1097,10 +1093,19 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             return false;
     }
 
-    // Render markdown
+    // Render pages
     for (PageData &page: pages) {
-        if (!RenderMarkdown(&page, assets, &temp_alloc))
+        Span<const char> ext = GetPathExtension(page.src_filename);
+
+        if (ext == ".html") {
+            page.template_filename = page.src_filename;
+        } else if (ext == ".md") {
+            if (!RenderMarkdown(&page, assets, &temp_alloc))
+                return false;
+        } else {
+            LogError("Cannot render pages with '%1' extension", ext);
             return false;
+        }
     }
 
     // Render templates
@@ -1108,7 +1113,8 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
         Async async;
 
         for (Size i = 0; i < pages.len; i++) {
-            Span<const char> ext = GetPathExtension(pages[i].template_filename);
+            const char *template_filename = pages[i].template_filename;
+            Span<const char> ext = template_filename ? GetPathExtension(pages[i].template_filename) : ".html";
 
             const char *dest_filename;
             if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
@@ -1123,7 +1129,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
             async.Run([=, &pages, &assets]() {
-                if (!RenderTemplate(pages[i].template_filename, pages, i, assets, dest_filename))
+                if (!RenderTemplate(template_filename, pages, i, assets, dest_filename))
                     return false;
 
                 if (gzip_file) {
