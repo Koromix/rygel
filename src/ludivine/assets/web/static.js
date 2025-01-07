@@ -17,7 +17,7 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util } from '../../../web/core/base.js';
 import '../../../web/flat/static.js';
 
-import './../ldv.css';
+import '../styles/ldv.css';
 
 window.addEventListener('load', e => {
     initCards();

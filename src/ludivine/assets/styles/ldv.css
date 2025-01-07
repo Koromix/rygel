@@ -13,8 +13,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-@import url('../../web/flat/flat.css');
-@import url('print.css');
+@import url('../../../web/flat/flat.css');
+@import url('./print.css');
 
 html {
     --top_color: #417ad5;
@@ -308,21 +308,4 @@ p + .columns { margin-top: 2em; }
     background: white;
     border: 4px solid #e22e22;
     align-items: center;
-}
-
-@media screen and (min-width: 961px) {
-    #sos {
-        position: absolute;
-        left: auto;
-        top: auto;
-        right: 0;
-        width: 600px;
-        height: auto;
-        padding: 0;
-        z-index: 999;
-    }
-}
-
-@media screen and (max-width: 960px) {
-    #sos > div { flex-direction: column; }
 }
