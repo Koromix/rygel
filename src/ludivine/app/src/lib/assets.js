@@ -27,8 +27,8 @@ import ui_redo from '../../../assets/app/ui/redo.png';
 import ui_save from '../../../assets/app/ui/save.png';
 import ui_undo from '../../../assets/app/ui/undo.png';
 
-import app_logo from '../../../assets/app/logo.webp';
-import app_footer from '../../../assets/app/footer.webp';
+import app_logo from '../../../assets/logo.webp';
+import app_footer from '../../../assets/footer.webp';
 
 import main_configure from '../../../assets/app/main/configure.png';
 import main_copy from '../../../assets/app/main/copy.png';
