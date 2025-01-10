@@ -52,6 +52,49 @@ function initCards() {
 
         activateCard(cards, shuffle[0]);
 
+        if (cardset == cardsets[0]) {
+            let key_timer = null;
+            let key_left = false;
+            let key_right = false;
+
+            window.addEventListener('keydown', e => {
+                if (e.keyCode == 37 && !key_left) {
+                    key_left = true;
+                    toggle(false);
+                } else if (e.keyCode == 39 && !key_right) {
+                    key_right = true;
+                    toggle(false);
+                }
+            });
+            window.addEventListener('keyup', e => {
+                if (e.keyCode == 37) {
+                    key_left = false;
+                } else if (e.keyCode == 39) {
+                    key_right = false;
+                }
+
+                if (key_timer != null && !key_left && !key_right)
+                    clearTimeout(key_timer);
+                key_timer = null;
+            });
+
+            function toggle(repeat) {
+                let delta = key_right - key_left;
+
+                if (delta)
+                    toggleCard(cards, delta);
+
+                if (key_timer == null) {
+                    let delay = repeat ? 300 : 600;
+
+                    key_timer = setTimeout(() => {
+                        key_timer = null;
+                        toggle(true);
+                    }, delay);
+                }
+            }
+        }
+
         detectSwipe(cardset, delta => toggleCard(cards, delta));
     }
 }
