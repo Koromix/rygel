@@ -29,9 +29,6 @@ function initCards() {
     for (let cardset of cardsets) {
         let cards = Array.from(cardset.querySelectorAll('.card'));
 
-        let seq = Util.sequence(0, cards.length);
-        let shuffle = Util.shuffle(seq);
-
         let arrows = document.createElement('div');
         render(html`
             <img style="left: 16px;" src=${assets.left} alt="" @click=${e => toggleCard(cards, -1)} />
@@ -49,10 +46,10 @@ function initCards() {
                     return;
                 activateCard(cards, i);
             });
-            card.dataset.rnd = shuffle[i];
         }
 
-        activateCard(cards, shuffle[0]);
+        shuffleCards(cards);
+        activateCard(cards, 0);
 
         if (cardset == cardsets[0]) {
             let key_timer = null;
@@ -101,6 +98,16 @@ function initCards() {
     }
 }
 
+function shuffleCards(cards) {
+    let seq = Util.sequence(0, cards.length);
+    let shuffle = Util.shuffle(seq);
+
+    for (let i = 0; i < cards.length; i++) {
+        let card = cards[i];
+        card.dataset.rnd = shuffle[i];
+    }
+}
+
 function toggleCard(cards, delta) {
     let active = cards.findIndex(card => card.classList.contains('active'));
     let idx = offset(active, cards.length, delta);
@@ -140,8 +147,11 @@ function randomCard(cards) {
 
     let active = cards.find(card => card.classList.contains('active'));
     let rnd = (parseInt(active.dataset.rnd, 10) + 1) % cards.length;
-    let next = cards.findIndex(card => card.dataset.rnd == rnd);
 
+    if (!rnd)
+        shuffleCards(cards);
+
+    let next = cards.findIndex(card => card.dataset.rnd == rnd);
     activateCard(cards, next);
 }
 
