@@ -18,8 +18,8 @@ import { Util } from '../../web/core/base.js';
 // Brief recap of various commands used to produce sound files:
 //
 // * WAV volume adjustment: sox -v FACTOR input.wav output.wav
-// * Music opus encoding: opusenc --music --discard-comments --discard-pictures input.wav input.opus
-// * Sound opus encoding: opusenc --downmix-mono --discard-comments --discard-pictures input.wav input.opus
+// * Music opus encoding: opusenc --music --discard-comments --discard-pictures input.wav output.opus
+// * Sound opus encoding: opusenc --downmix-mono --discard-comments --discard-pictures input.wav output.opus
 // * Convert Ogg (Opus) container to WebM: ffmpeg -i input.opus -acodec copy output.webm
 //
 // * Convert audio to MP3 for older browsers: ffmpeg -i input.webm -codec:a libmp3lame -qscale:a 4 output.mp3
