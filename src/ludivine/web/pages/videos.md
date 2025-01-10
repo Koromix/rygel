@@ -53,5 +53,10 @@
             </div>
         </div>
     </div>
-    <button onclick="app.randomCard('.cardset')"><img src="{{ ASSET static/misc/dice.webp }}" alt="Choix aléatoire" /></button>
+    <button id="randomize" onclick="app.randomCard('.cardset')"><img src="{{ ASSET static/misc/dice.webp }}" alt="Choix aléatoire" /></button>
 </div>
+
+<script>
+    let button = document.querySelector('#randomize');
+    button.style.display = 'block';
+</script>
