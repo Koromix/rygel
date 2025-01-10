@@ -28,7 +28,9 @@ function initCards() {
 
     for (let cardset of cardsets) {
         let cards = Array.from(cardset.querySelectorAll('.card'));
-        let shuffle = Util.shuffle(Util.sequence(cards.length));
+
+        let seq = Util.sequence(0, cards.length);
+        let shuffle = Util.shuffle(seq);
 
         let arrows = document.createElement('div');
         render(html`

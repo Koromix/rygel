@@ -485,8 +485,8 @@ const Util = new function() {
         return Math.random() * (max - min) + min;
     };
 
-    this.sequence = function(n) {
-        let seq = (new Array(n)).fill(0).map((v, idx) => idx);
+    this.sequence = function(start, count) {
+        let seq = (new Array(count)).fill(0).map((v, idx) => start + idx);
         return seq;
     };
 
