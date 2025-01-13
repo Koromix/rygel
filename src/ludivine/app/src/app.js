@@ -306,19 +306,24 @@ async function runDashboard() {
         </nav>
 
        <main>
-            <div class="dashboard">
+            <div class="tabbar">
+                <a class="active">Profil</a>
+                <a>Tableau de bord</a>
+            </div>
+
+            <div class="tab dashboard">
                 <div class="column">
                     <div class="box profile">
                         <div class="title">${identity.name} (${age} ${age > 1 ? 'ans' : 'an'})</div>
                         <img class="picture" src=${identity.picture ?? assets.main.user} alt=""/>
-                        <button type="button" class="secondary"
+                        <button type="button"
                                 @click=${UI.wrap(e => changeIdentity().then(runDashboard))}>Modifier mon identité</button>
-                        <button type="button" class="secondary"
+                        <button type="button"
                                 @click=${UI.wrap(e => changePicture().then(runDashboard))}>Modifier mon avatar</button>
                     </div>
 
                     <div class="box">
-                        <button type="button" class="secondary"
+                        <button type="button"
                                 @click=${UI.insist(e => exportDatabase(identity.name))}>Exporter mes données</button>
                         <button type="button" class="danger"
                                 @click=${UI.confirm('Suppression définitive de toutes les données', deleteDatabase)}>Supprimer mon profil</button>
@@ -341,7 +346,7 @@ async function runDashboard() {
                                         <div class=${study.online ? 'stake' : 'stake disabled'}>
                                             ${renderProgress(stake != null ? 20 : 0, 100)}
                                             ${stake != null ?
-                                                html`<button type="button" class="small"
+                                                html`<button type="button" class="secondary small"
                                                              @click=${UI.wrap(e => openStudy(study))}>Reprendre</button>` : ''}
                                             ${stake == null && study.online ?
                                                 html`<button type="button" class="secondary small"

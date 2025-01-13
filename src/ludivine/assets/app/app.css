@@ -51,7 +51,7 @@ dialog { font-size: 15px; }
     flex-direction: column;
     padding: 1em;
     gap: 1em;
-    background: #f8f8f8;
+    background: #faefe9;
     border-radius: 16px;
 }
 .dashboard .title {
@@ -84,7 +84,7 @@ dialog { font-size: 15px; }
 .study {
     display: flex;
     width: 40%;
-    background: #efefef;
+    background: white;
     border-radius: 10px;
     padding: 0.5em 1em;
     align-items: center;
