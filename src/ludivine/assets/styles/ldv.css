@@ -17,9 +17,9 @@
 @import url('./print.css');
 
 html {
-    --top_color: #417ad5;
-    --button_color: #e98456;
-    --anchor_color: #417ad5;
+    --top_color: #364b9b;
+    --button_color: #e9a07f;
+    --anchor_color: #000552;
 
     --top_height: 80px;
     --top_background: #fdfbf8;
@@ -32,8 +32,8 @@ main a:hover { color: #26346c; }
 main a:has(> img) { text-decoration: none !important; }
 
 h1 {
-    color: #417ad5;
-    border-bottom: 1px solid #417ad555;
+    color: #364b9b;
+    border-bottom: 1px solid #364b9b55;
 }
 h1:not(:first-of-type) { margin-top: 2em; }
 
@@ -131,7 +131,7 @@ p + .columns { margin-top: 2em; }
 }
 .tabbar > a:hover { color: white; }
 .tabbar > a.active {
-    background: #e98456;
+    background: #e9a07f;
     cursor: default;
 }
 .tab {

@@ -35,21 +35,30 @@
 
 # Comment participer ?
 
-Si vous désirez participer, utilisez notre web-application, créez votre compte et participer à l'enquête qui vous intéresse le plus.
-
-<div class="actions">
-    <a href="/etudes">Découvrir nos études</a>
-    <a class="disabled">Participer</a>
+<div class="columns">
+    <img src="{{ ASSET static/illustrations/participer.webp }}" style="flex: 1;" alt="" />
+    <div style="flex: 3;">
+        <p>Pour participer au programme de recherche Lignes de Vie, seules deux conditions doivent être remplies :
+        <ul>
+            <li>Vous devez <b>être majeur(e)</b> et en capacité de donner un consentement libre et éclairé,
+            <li>Vous devez avoir été <b>confronté(e) à un événement potentiellement traumatique</b> durant le mois précédant l'inscription.
+        </ul>
+        <p>Si vous désirez participer, créez votre compte en cliquant sur le bouton ci-dessous et choisissez l'étude à laquelle vous souhaitez répondre.
+        <div class="actions">
+            <a href="/etudes">Découvrir nos études</a>
+            <a class="disabled">Participer</a>
+        </div>
+    </div>
 </div>
 
 # Philosophie et protection des données
 
 <div class="columns">
-    <img src="{{ ASSET static/illustrations/donnees.webp }}" style="flex: 1;" alt="" />
     <div style="flex: 3;">
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque tincidunt, erat non volutpat convallis, turpis <b>ipsum maximus magna, a aliquam neque</b> leo sit amet orci. Sed vel metus id velit auctor gravida. Integer sit amet velit sit amet purus dictum tincidunt non id turpis. Ut facilisis dolor in nunc congue, ac fermentum nunc interdum. Vivamus vel urna eget eros luctus cursus. Nam viverra,
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque tincidunt, erat non volutpat convallis, <b>turpis ipsum maximus magna</b>, a aliquam neque leo sit amet orci. Sed vel metus id velit auctor gravida. Integer sit amet velit sit amet purus dictum tincidunt non id turpis. <b>Ut facilisis dolor</b> in nunc congue, ac fermentum nunc interdum. Vivamus vel urna eget eros luctus cursus. Nam viverra,
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque tincidunt, erat non volutpat convallis, turpis <b>ipsum maximus magna, a aliquam neque</b> leo sit amet orci. Sed vel metus id velit auctor gravida. Integer sit amet velit sit amet purus dictum tincidunt non id turpis. Ut facilisis dolor in nunc congue, ac fermentum nunc interdum. Vivamus vel urna eget eros luctus cursus. Nam viverra.
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Quisque tincidunt, erat non volutpat convallis, <b>turpis ipsum maximus magna</b>, a aliquam neque leo sit amet orci. Sed vel metus id velit auctor gravida. Integer sit amet velit sit amet purus dictum tincidunt non id turpis. <b>Ut facilisis dolor</b> in nunc congue, ac fermentum nunc interdum. Vivamus vel urna eget eros luctus cursus. Nam viverra.
     </div>
+    <img src="{{ ASSET static/illustrations/donnees.webp }}" style="flex: 1;" alt="" />
 </div>
 
 # Soumettre une étude

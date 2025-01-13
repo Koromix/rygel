@@ -3,16 +3,15 @@
 <div class="columns">
     <img src="{{ ASSET static/illustrations/calypso.webp }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
-        <p>Les études conduites par le <b>Centre National de Ressources et de Résilience</b> (CN2R) visent à <b>améliorer la compréhension</b>, la <b>prévention</b> et le <b>traitement des psychotraumatismes</b>.
-        <p>Ce centre, co-piloté par l'AP-HP et le CHU de Lille, se concentre sur plusieurs missions clés pour <b>répondre aux besoins des personnes touchées</b> par des traumatismes psychologiques liés à des événements comme les attentats, la violence domestique, ou le harcèlement scolaire.
-        <p>Objectifs principaux des études du CN2R :
+        <p>Les études conduites dans le cadre de Lignes de vie visent à améliorer la compréhension des répercussions des événements traumatiques, d'améliorer leur prévention, ainsi que la prise en charge des troubles psychiques post-traumatiques.
+        <p>Les objectifs principaux de ces études sont :</p>
         <ul>
-            <li>Développer des connaissances scientifiques
-            <li>Améliorer la prise en charge des victimes
-            <li>Favoriser la résilience
-            <li>Sensibilisation et formation
-            <li>Orienter les politiques publiques
+            <li><b>Développer les connaissances scientifiques</b> sur les psychotraumatismes
+            <li><b>Améliorier</b> de la prise en charge des victimes grâce à une meilleure compréhension des trajectoires post-traumatiques
+            <li><b>Favoriser la résilience</b>
+            <li><b>Améliorer les sensibilisations</b> et formations sur les psychotraumatismes
         </ul>
+        <p>En résumé, les études présentées dans Lignes de vie jouent un rôle essentiel pour renforcer la résilience de la société face aux événements traumatisants, en améliorant à la fois la connaissance scientifique et la qualité des soins psychologiques disponibles.
         <p>En résumé, les études du CN2R jouent un <b>rôle essentiel pour renforcer la résilience de la société face aux événements traumatisants</b>, en améliorant à la fois la connaissance scientifique et la qualité des soins psychologiques disponibles.
     </div>
 </div>
@@ -21,8 +20,9 @@
 
 <div class="columns">
     <div style="flex: 2;">
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus vehicula pretium libero non placerat. Vestibulum gravida sapien rutrum feugiat faucibus. Praesent semper erat in nunc tempus, et imperdiet nisl molestie. Pellentesque luctus volutpat sollicitudin. Vestibulum id accumsan tellus. Vestibulum laoreet vulputate risus, id sagittis quam porttitor ut.
-        <p>Duis tempor a dui sed consequat. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas vitae dui venenatis, consectetur enim eu, luctus velit. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Aenean accumsan, magna ac dapibus facilisis, elit tellus scelerisque nunc, a vulputate est quam id neque. Nulla mattis ante ac libero rutrum euismod.
+        <p>L'étude Sociotrauma observe les <b>liens sociaux des personnes</b> et a pour objectif vise à comprendre comment les relations sociales, qu'il s'agisse de soutien ou de réactions négatives, influence l'évolution psychologique des personnes ayant été exposé à un événement potentiellement traumatique, afin d'étudier l'impact de l'environnement social sur ces dernières.
+        <p>Elle vise à comprendre <b>comment le soutien ou, au contraire, l'absence de soutien de l'entourage</b> peut influencer le développement de symptômes post(traumatiques.
+        <p>Il s'agit d'une étude longitudinale qui propose des questionnaires similaires à <b>plusieurs temporalités différentes après exposition</b> qui suit les participants sur une longue période, avec plusieurs séries de questionnaires à différents moments après l'évènement, afin d'observer comment leurs relations sociales et leur bien-être évoluent au fil du temps.
     </div>
     <img src="{{ ASSET static/illustrations/sociotrauma.webp }}" style="flex: 1;" alt="" />
 </div>
