@@ -29,6 +29,13 @@ main {
 }
 dialog { font-size: 15px; }
 
+#top .picture {
+    width: 51px;
+    height: 51px;
+    border-radius: 50%;
+    border: 3px solid #e9a07f;
+}
+
 .dashboard {
     display: flex;
     height: calc(100% - 4em);

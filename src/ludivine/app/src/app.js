@@ -302,6 +302,8 @@ async function runDashboard() {
         <nav id="top">
             <menu>
                 <a id="logo" href="https://ldv-recherche.fr/"><img src=${assets.app.logo} alt="Logo Lignes de Vie" /></a>
+                <div style="flex: 1;"></div>
+                <img class="picture" src=${identity.picture ?? assets.main.user} alt="" />
             </menu>
         </nav>
 
