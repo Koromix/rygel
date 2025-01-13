@@ -15,7 +15,7 @@
             <p class="reference">Jouez à un jeu</p>
             <p>Lancez une partie de <b>blocs qui tombent</b> pour vous changer les idées.</p>
             <div class="actions">
-                <a href="/staks">Jouer</a>
+                <a href="/blocs">Jouer</a>
             </div>
         </div>
     </div>
