@@ -255,10 +255,14 @@ p + .columns { margin-top: 2em; }
     padding: 1em 0.5em;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 20px;
     width: 210px;
     align-items: center;
     border-radius: 30px;
+}
+.team .name {
+    font-weight: bold;
+    text-align: center;
 }
 .team img {
     width: 133px;
@@ -266,20 +270,12 @@ p + .columns { margin-top: 2em; }
     border-radius: 50%;
     border: 4px solid #e9a07f;
 }
-.team .name {
-    font-weight: bold;
-    text-align: center;
-}
-.team .title {
-    text-align: center;
-    margin-bottom: 1em;
-}
 .team .mission {
     font-style: italic;
     text-align: center;
     font-size: 0.8em;
-    margin-top: -8px;
 }
+.team .mission + .mission { margin-top: -14px; }
 
 @media screen and (max-width: 960px) {
     .columns { display: block; }
