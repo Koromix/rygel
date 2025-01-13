@@ -7,9 +7,9 @@
         <p>Les objectifs principaux de ces études sont :</p>
         <ul>
             <li><b>Développer les connaissances scientifiques</b> sur les psychotraumatismes
-            <li><b>Améliorier</b> de la prise en charge des victimes grâce à une meilleure compréhension des trajectoires post-traumatiques
-            <li><b>Favoriser la résilience</b>
-            <li><b>Améliorer les sensibilisations</b> et formations sur les psychotraumatismes
+            <li><b>Améliorer</b> la prise en charge des victimes grâce à une meilleure compréhension des trajectoires post-traumatiques
+            <li><b>Favoriser la résilience</b> post-traumatique
+            <li><b>Sensibiliser et former</b> la population sur le sujet des psychotraumatismes
         </ul>
         <p>En résumé, les études présentées dans Lignes de vie jouent un rôle essentiel pour renforcer la résilience de la société face aux événements traumatisants, en améliorant à la fois la connaissance scientifique et la qualité des soins psychologiques disponibles.
         <p>En résumé, les études du CN2R jouent un <b>rôle essentiel pour renforcer la résilience de la société face aux événements traumatisants</b>, en améliorant à la fois la connaissance scientifique et la qualité des soins psychologiques disponibles.
