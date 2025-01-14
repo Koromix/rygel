@@ -1,7 +1,7 @@
 # Pourquoi participer à nos études ?
 
 <div class="columns">
-    <img src="{{ ASSET static/illustrations/calypso.webp }}" style="flex: 1;" alt="" />
+    <img src="{{ ASSET static/illustrations/participer.webp }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
         <p>Les études conduites dans le cadre de Lignes de vie visent à améliorer la compréhension des répercussions des événements traumatiques, d'améliorer leur prévention, ainsi que la prise en charge des troubles psychiques post-traumatiques.
         <p>Les objectifs principaux de ces études sont :</p>
