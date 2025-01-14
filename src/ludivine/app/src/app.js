@@ -27,7 +27,7 @@ import { TrackModule } from './track/track.js';
 
 import '../../assets/app/app.css';
 
-const DATABASE_FILENAME = 'LDV4.db';
+const DATABASE_FILENAME = 'LDV5.db';
 const DATABASE_VERSION = 1;
 
 const PROJECTS = [
@@ -168,9 +168,11 @@ async function openDatabase(filename, flags) {
                         visible INTEGER CHECK (visible IN (0, 1)) NOT NULL,
                         status TEXT CHECK (status IN ('empty', 'draft', 'done')) NOT NULL,
                         title TEXT NOT NULL,
-                        timestamp INTEGER NOT NULL,
                         schedule TEXT,
+                        ctime INTEGER,
                         mtime INTEGER,
+                        date INTEGER NOT NULL,
+                        timestamp INTEGER NOT NULL,
                         payload BLOB
                     );
 
@@ -294,7 +296,11 @@ async function runDashboard() {
                                      LEFT JOIN tests t1 ON (t1.study = s.id AND t1.status = 'done')
                                      LEFT JOIN tests t2 ON (t2.study = s.id)
                                      GROUP BY s.id`);
-    let tests = await db.fetchAll('SELECT id, key, title, mtime FROM tests WHERE study IS NULL ORDER BY id');
+
+    let tests = await db.fetchAll(`SELECT id, key, title, ctime, mtime, date
+                                   FROM tests
+                                   WHERE study IS NULL
+                                   ORDER BY id`);
 
     let now = (new Date).valueOf();
     let age = computeAge(identity.birthdate, now);
@@ -584,16 +590,17 @@ async function openStudy(project) {
     runDashboard();
 }
 
-async function createTest(type) {
+async function createTest(key) {
     let now = (new Date).valueOf();
 
     let test = {
         id: null,
-        type: type,
+        key: key,
         title: '',
-        timestamp: null,
+        date: now,
         ctime: now,
-        mtime: now
+        mtime: now,
+        timestamp: null
     };
 
     await changeTest(test);
@@ -641,18 +648,20 @@ async function changeTest(test) {
                 throw new Error('La date ne peut pas être vide');
 
             let title = elements.title.value.trim();
-            let mtime = (mod.historical ? elements.date.valueAsDate : new Date).valueOf();
+            let date = mod.historical ? elements.date.valueAsDate.valueOf() : test.mtime;
 
-            let ret = await db.fetch1(`INSERT INTO tests (id, type, title, timestamp, mtime)
-                                       VALUES (?, ?, ?, ?, ?)
+            let ret = await db.fetch1(`INSERT INTO tests (id, key, visible, status, title, ctime, mtime, date, timestamp)
+                                       VALUES (?, ?, 1, 'empty', ?, ?, ?, ?, ?)
                                        ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                                 mtime = excluded.mtime
-                                       RETURNING id, timestamp, mtime`,
-                                      test.id, test.key, title, performance.now(), mtime);
+                                                                 mtime = excluded.mtime,
+                                                                 date = excluded.date
+                                       RETURNING id, timestamp, mtime, date`,
+                                      test.id, test.key, title, test.mtime, test.mtime, date, performance.now());
 
             test.id = ret.id;
-            test.timestamp = ret.timestamp;
             test.mtime = ret.mtime;
+            test.date = ret.date;
+            test.timestamp = ret.timestamp;
         }
     });
 }
