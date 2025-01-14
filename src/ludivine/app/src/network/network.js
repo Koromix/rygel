@@ -493,10 +493,11 @@ function NetworkModule(db, test, root_el) {
         save_timer = setTimeout(() => {
             save_timer = null;
 
+            let mtime = (new Date).valueOf();
             let data = serialize();
             let json = JSON.stringify(data);
 
-            db.exec('UPDATE tests SET payload = ? WHERE id = ?', json, test.id);
+            db.exec('UPDATE tests SET mtime = ?, payload = ? WHERE id = ?', mtime, json, test.id);
         }, 1000);
     }
 
