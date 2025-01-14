@@ -21,7 +21,7 @@
 <div class="columns">
     <div style="flex: 2;">
         <p>L'étude Sociotrauma observe les <b>liens sociaux des personnes</b> et a pour objectif vise à comprendre comment les relations sociales, qu'il s'agisse de soutien ou de réactions négatives, influence l'évolution psychologique des personnes ayant été exposé à un événement potentiellement traumatique, afin d'étudier l'impact de l'environnement social sur ces dernières.
-        <p>Elle vise à comprendre <b>comment le soutien ou, au contraire, l'absence de soutien de l'entourage</b> peut influencer le développement de symptômes post(traumatiques.
+        <p>Elle vise à comprendre <b>comment le soutien ou, au contraire, l'absence de soutien de l'entourage</b> peut influencer le développement de symptômes post-traumatiques.
         <p>Il s'agit d'une étude longitudinale qui propose des questionnaires similaires à <b>plusieurs temporalités différentes après exposition</b> qui suit les participants sur une longue période, avec plusieurs séries de questionnaires à différents moments après l'évènement, afin d'observer comment leurs relations sociales et leur bien-être évoluent au fil du temps.
     </div>
     <img src="{{ ASSET static/illustrations/sociotrauma.webp }}" style="flex: 1;" alt="" />
