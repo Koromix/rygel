@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2024-01-08: Metal: Fixed memory leaks when using metal-cpp (#8276, #8166) or when using multiple contexts (#7419).
 //  2022-08-23: Metal: Update deprecated property 'sampleCount'->'rasterSampleCount'.
 //  2022-07-05: Metal: Add dispatch synchronization.
 //  2022-06-30: Metal: Use __bridge for ARC based systems.
@@ -142,6 +143,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 void ImGui_ImplMetal_Shutdown()
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
+    IM_UNUSED(bd);
     IM_ASSERT(bd != nullptr && "No renderer backend to shutdown, or already shutdown?");
     ImGui_ImplMetal_DestroyDeviceObjects();
     ImGui_ImplMetal_DestroyBackendData();
@@ -156,8 +158,11 @@ void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor* renderPassDescriptor)
 {
     ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
     IM_ASSERT(bd != nil && "Context or backend not initialized! Did you call ImGui_ImplMetal_Init()?");
+#ifdef IMGUI_IMPL_METAL_CPP
+    bd->SharedMetalContext.framebufferDescriptor = [[[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor]autorelease];
+#else
     bd->SharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
-
+#endif
     if (bd->SharedMetalContext.depthStencilState == nil)
         ImGui_ImplMetal_CreateDeviceObjects(bd->SharedMetalContext.device);
 }
@@ -306,17 +311,14 @@ void ImGui_ImplMetal_RenderDrawData(ImDrawData* drawData, id<MTLCommandBuffer> c
         indexBufferOffset += (size_t)draw_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
 
+    __block MetalContext* sharedMetalContext = bd->SharedMetalContext;
     [commandBuffer addCompletedHandler:^(id<MTLCommandBuffer>)
     {
         dispatch_async(dispatch_get_main_queue(), ^{
-            ImGui_ImplMetal_Data* bd = ImGui_ImplMetal_GetBackendData();
-            if (bd != nullptr)
+            @synchronized(bd->SharedMetalContext.bufferCache)
             {
-                @synchronized(bd->SharedMetalContext.bufferCache)
-                {
-                    [bd->SharedMetalContext.bufferCache addObject:vertexBuffer];
-                    [bd->SharedMetalContext.bufferCache addObject:indexBuffer];
-                }
+                [sharedMetalContext.bufferCache addObject:vertexBuffer];
+                [sharedMetalContext.bufferCache addObject:indexBuffer];
             }
         });
     }];
@@ -367,8 +369,10 @@ bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
     depthStencilDescriptor.depthWriteEnabled = NO;
     depthStencilDescriptor.depthCompareFunction = MTLCompareFunctionAlways;
     bd->SharedMetalContext.depthStencilState = [device newDepthStencilStateWithDescriptor:depthStencilDescriptor];
+#ifdef IMGUI_IMPL_METAL_CPP
+    [depthStencilDescriptor release];
+#endif
     ImGui_ImplMetal_CreateFontsTexture(device);
-
     return true;
 }
 
