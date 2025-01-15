@@ -358,6 +358,7 @@ button.small:not(.insist) > img { filter: none; }
     display: flex;
     gap: 20px;
     justify-content: center;
+    align-items: start;
     flex-wrap: wrap;
 }
 .actions > a {
