@@ -393,10 +393,12 @@ dialog {
     justify-content: center;
     background: #ffffffcc;
     border: none;
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
 }
 dialog ~ dialog {
     padding-top: 66px;
+    -webkit-backdrop-filter: none;
     backdrop-filter: none;
 }
 dialog > * {
