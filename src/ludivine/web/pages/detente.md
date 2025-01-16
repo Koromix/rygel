@@ -13,7 +13,7 @@
 
 <div class="tab">
     <div class="tileset">
-        <div class="tile" style="flex: 6;">
+        <div class="tile" style="flex: 5;">
             <img src="{{ ASSET static/illustrations/respiration.webp }}" alt="" />
             <div>
                 <p class="reference">Cohérence cardiaque</p>
@@ -23,17 +23,17 @@
                 </div>
             </div>
         </div>
-        <div class="tile" style="flex: 5;">
+        <div class="tile" style="flex: 6;">
             <img src="{{ ASSET static/illustrations/staks.webp }}" alt="" />
             <div>
                 <p class="reference">Jouez à un jeu</p>
-                <p>Lancez une partie de <b>STAKS</b> pour vous changer les idées.</p>
+                <p>Lancez une partie de <b>STAKS</b> pour vous changer les idées. Ce jeu a <a href="https://www.nature.com/articles/mp201723" target="_blank">prouvé son efficacité</a> pour gérer certains symptômes de TSPT.</p>
                 <div class="actions">
                     <a href="/staks">Jouer</a>
                 </div>
             </div>
         </div>
-        <div class="tile" style="flex: 5;">
+        <div class="tile" style="flex: 6;">
             <img src="{{ ASSET static/illustrations/etirements.webp }}" alt="" />
             <div>
                 <p class="reference">Étirements doux</p>
@@ -43,7 +43,7 @@
                 </div>
             </div>
         </div>
-        <div class="tile" style="flex: 6;">
+        <div class="tile" style="flex: 5;">
             <img src="{{ ASSET static/illustrations/ecriture.webp }}" alt="" />
             <div>
                 <p class="reference">Écrivez dans votre journal</p>
