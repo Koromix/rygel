@@ -13,9 +13,9 @@
         <img src="{{ ASSET static/illustrations/staks.webp }}" alt="" />
         <div>
             <p class="reference">Jouez à un jeu</p>
-            <p>Lancez une partie de <b>blocs qui tombent</b> pour vous changer les idées.</p>
+            <p>Lancez une partie de <b>STAKS</b> pour vous changer les idées.</p>
             <div class="actions">
-                <a href="/blocs">Jouer</a>
+                <a href="/staks">Jouer</a>
             </div>
         </div>
     </div>
