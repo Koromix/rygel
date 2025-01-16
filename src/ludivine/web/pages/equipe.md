@@ -1,8 +1,8 @@
 <div class="banner">
     <div class="title">Qui sommes-nous ?</div>
     <div class="intro">
-        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-        <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto
+        <p>Le programme Lignes de Vie est porté par une <b>équipe pluridisciplinaire</b> avec des compétences en neurosciences, en savoir expérientiel, en informatique et développement, en éthique, en communication, en gestion de projets et en journalisme scientifique.
+        <p>Retrouvez les membres ci-dessous !
     </div>
 </div>
 
@@ -14,10 +14,9 @@
         <div class="mission">Directeur du programme</div>
     </div>
     <div>
-        <div class="name">Garance POUSSIN</div>
+        <div class="name">Léa NESSLANY</div>
         <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
-        <div class="mission">Chargée de projet</div>
-        <div class="mission">Coordinatrice du programme</div>
+        <div class="mission">Responsable de communication</div>
     </div>
     <div>
         <div class="name">Niels MARTIGNENE</div>
@@ -35,11 +34,6 @@
 
 <div class="team">
     <div>
-        <div class="name">Léa NESSLANY</div>
-        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
-        <div class="mission">Responsable de communication</div>
-    </div>
-    <div>
         <div class="name">Wivine BLEKIC</div>
         <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
         <div class="mission">Chercheuse en neurosciences</div>
@@ -52,6 +46,12 @@
         <div class="mission">Chargée de projets scientifiques</div>
     </div>
     <div>
+        <div class="name">Garance POUSSIN</div>
+        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <div class="mission">Chargée de projet</div>
+        <div class="mission">Coordinatrice du programme</div>
+    </div>
+    <div>
         <div class="name">Nicolas MAHAUT</div>
         <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
         <div class="mission">Journaliste scientifique</div>
@@ -61,16 +61,6 @@
 
 <div class="team">
     <div>
-        <div class="name">Jennier BORSELLINO</div>
-        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
-        <div class="mission">Patiente partenaire</div>
-    </div>
-    <div>
-        <div class="name">Isabelle FOUCHET</div>
-        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
-        <div class="mission">Patiente partenaire</div>
-    </div>
-    <div>
         <div class="name">Guillaume VAIVA</div>
         <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
         <div class="mission">Représentation institutionnelle</div>
@@ -79,5 +69,15 @@
         <div class="name">Thierry BAUBET</div>
         <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
         <div class="mission">Représentation institutionnelle</div>
+    </div>
+    <div>
+        <div class="name">Jennier BORSELLINO</div>
+        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <div class="mission">Patiente partenaire</div>
+    </div>
+    <div>
+        <div class="name">Isabelle FOUCHET</div>
+        <img src="{{ ASSET static/equipe/avatar.png }}" alt="" />
+        <div class="mission">Patiente partenaire</div>
     </div>
 </div>
