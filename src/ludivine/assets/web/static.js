@@ -211,6 +211,7 @@ function detectSwipe(el, func) {
     let identifier = null;
     let start = null;
     let scroll = null;
+    let swiped = null;
 
     el.addEventListener('touchstart', e => {
         if (e.changedTouches.length != 1)
@@ -220,26 +221,40 @@ function detectSwipe(el, func) {
 
         identifier = touch.identifier;
         start = touch.screenX;
-        scroll = touch.pageY;
-    });
+        scroll = window.scrollY;
+        swiped = null;
+    }, { passive: false });
 
-    el.addEventListener('touchend', e => {
+    el.addEventListener('touchmove', e => {
+        let now = performance.now();
+
+        if (Math.abs(window.scrollY - scroll) >= 1)
+            start = null;
+        if (start == null)
+            return;
+
+        if (swiped != null) {
+            e.preventDefault();
+
+            if (now - swiped < 200)
+                return;
+        }
+
         for (let touch of e.changedTouches) {
             if (touch.identifier !== identifier)
                 continue;
 
             let dx = touch.screenX - start;
-            let dy = Math.abs(touch.pageY - scroll);
 
-            if (dy < 20) {
-                if (dx <= -10) {
-                    func(1);
-                } else if (dx >= 10) {
-                    func(-1);
-                }
+            if (Math.abs(dx) >= 20) {
+                let direction = (dx < 0) ? 1 : -1;
+                func(direction);
+
+                start = touch.screenX;
+                swiped = now;
             }
         }
-    });
+    }, { passive: false });
 }
 
 function isTouchDevice() {
