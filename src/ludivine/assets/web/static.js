@@ -157,12 +157,10 @@ function randomCard(cards) {
 
 function sos(e) {
     dialog(e, 'sos', html`
+        <img src=${assets['3114']} width="183" height="86" alt="">
         <div>
-            <img src=${assets['3114']} width="183" height="86" alt="">
-            <div>
-                <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le site pour plus d'informations sur la prévention du suicide.
-                <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le 3114.
-            </div>
+            <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations sur la prévention du suicide.
+            <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
         </div>
     `);
 
@@ -179,7 +177,7 @@ function dialog(e, id, content) {
         dlg.id = id ?? '';
     }
 
-    render(content, dlg);
+    render(html`<div @click=${stop}>${content}</div>`, dlg);
 
     if (!dlg.open) {
         let parent = e.currentTarget;
