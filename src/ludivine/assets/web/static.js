@@ -145,13 +145,17 @@ function randomCard(cards) {
         cards = Array.from(cards);
     }
 
-    let active = cards.find(card => card.classList.contains('active'));
-    let rnd = (parseInt(active.dataset.rnd, 10) + 1) % cards.length;
-
-    if (!rnd)
-        shuffleCards(cards);
-
+    let active = cards.findIndex(card => card.classList.contains('active'));
+    let rnd = (parseInt(cards[active].dataset.rnd, 10) + 1) % cards.length;
     let next = cards.findIndex(card => card.dataset.rnd == rnd);
+
+    if (!rnd) {
+        do {
+            shuffleCards(cards);
+            next = cards.findIndex(card => card.dataset.rnd == rnd);
+        } while (next == active);
+    }
+
     activateCard(cards, next);
 }
 
