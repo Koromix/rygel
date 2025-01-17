@@ -428,7 +428,7 @@ async function runDashboard() {
             <img src=${assets.app.footer} alt="" width="79" height="64">
             <div style="font-size: 0.8em;">
                 Cn2r, 103 Bld de la liberté, 59000 LILLE<br>
-                <a href="mailto:ldv@cn2r.fr" style="font-weight: bold; color: inherit;">ldv@cn2r.fr</a>
+                <a href="mailto:contact@ldv-recherche.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
             </div>
         </footer>
     `, root_el);
