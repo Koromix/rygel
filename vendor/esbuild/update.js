@@ -38,7 +38,7 @@ async function run() {
     let args = process.argv.slice(2);
 
     if (args.includes('--help')) {
-        console.log('Usage: build.js version');
+        console.log('Usage: update.js version');
         return 0;
     } else {
         let opt = args.find(arg => arg.startsWith('-'));
