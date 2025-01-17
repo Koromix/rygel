@@ -16,12 +16,12 @@
 import { render, html, svg, ref } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, LocalDate } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
-import { PictureCropper } from '../../../web/widgets/picture.js';
 import * as sqlite3 from '../../../web/core/sqlite3.js';
 import { SmallCalendar } from '../../../web/widgets/smallcalendar.js';
 import { GENDERS } from './lib/constants.js';
 import { computeAge, dateToString } from './lib/util.js';
 import { assets, loadAssets } from './lib/assets.js';
+import { PictureCropper } from './lib/picture.js';
 import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
 
