@@ -763,7 +763,7 @@ Options:
     %!..+-p, --port port%!0                Change web server port
                                    %!D..(default: %3)%!0
 
-        %!..+--enable_sab%!0               Set headers for SharedArrayBuffer support
+        %!..+--sab%!0                      Set headers for SharedArrayBuffer support
 
     %!..+-v, --verbose%!0                  Log served requests)",
                 FelixTarget, config_filename, config.http.port);
@@ -820,7 +820,7 @@ Options:
             } else if (opt.Test("-p", "--port", OptionType::Value)) {
                 if (!config.http.SetPortOrPath(opt.current_value))
                     return 1;
-            } else if (opt.Test("--enable_sab")) {
+            } else if (opt.Test("--sab")) {
                 Size j = 0;
                 for (Size i = 0; i < config.headers.len; i++) {
                     const http_KeyValue &header = config.headers[i];
