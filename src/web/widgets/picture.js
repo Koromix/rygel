@@ -103,7 +103,8 @@ function PictureCropper(title, size) {
                         </label>
                         <label>
                             <span>${T.upload_image}</span> 
-                            <input type="file" name="file" style="display: none;" accept="image/*"
+                            <input type="file" name="file" style="display: none;"
+                                   accept="image/png, image/jpeg, image/gif, image/webp"
                                    @change=${UI.wrap(e => load(e.target.files[0]))} />
                             <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_image}</button>
                         </label>
