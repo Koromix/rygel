@@ -23,11 +23,11 @@ if (typeof T == 'undefined')
     T = {};
 
 Object.assign(T, {
-    apply: 'Apply',
     browse_for_image: 'Browse for image',
     cancel: 'Cancel',
     clear_picture: 'Clear picture',
     drag_paste_or_browse_image: 'Drop an image, paste it or use the \'Browse\' button below',
+    edit: 'Edit',
     upload_image: 'Upload image',
     zoom: 'Zoom'
 });
@@ -117,7 +117,7 @@ function PictureCropper(title, size) {
 
                     <div class="footer">
                         <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
-                        <button type="submit">${T.apply}</button>
+                        <button type="submit">${T.edit}</button>
                     </div>
                 `;
             },

@@ -73,6 +73,16 @@ const MODULES = [
     }
 ];
 
+Object.assign(T, {
+    browse_for_image: 'Parcourir',
+    cancel: 'Annuler',
+    clear_picture: 'Effacer l\'image',
+    edit: 'Modifier',
+    drag_paste_or_browse_image: 'Déposez une image, copier-collez la ou utilisez le bouton « Parcourir » ci-dessous',
+    upload_image: 'Choisir une image',
+    zoom: 'Zoom'
+});
+
 let db = null;
 
 let identity = {
@@ -435,7 +445,7 @@ async function runDashboard() {
 }
 
 async function changePicture() {
-    let cropper = new PictureCropper('Avatar', 256);
+    let cropper = new PictureCropper('Modifier mon avatar', 256);
 
     cropper.defaultURL = assets.main.user;
     cropper.imageFormat = 'image/webp';
