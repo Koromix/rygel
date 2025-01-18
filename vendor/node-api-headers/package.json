@@ -54,6 +54,6 @@
     "write-win32-def": "node --no-warnings scripts/write-win32-def.js",
     "test": "node test/parse-utils.js "
   },
-  "version": "1.4.0",
+  "version": "1.5.0",
   "support": true
 }

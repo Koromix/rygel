@@ -228,6 +228,21 @@ const v9 = {
     ]
 }
 
+const v10 = {
+    js_native_api_symbols: [
+        ...v9.js_native_api_symbols,
+        'node_api_create_external_string_latin1',
+        'node_api_create_external_string_utf16',
+        'node_api_create_property_key_latin1',
+        'node_api_create_property_key_utf16',
+        'node_api_create_property_key_utf8'
+    ],
+    node_api_symbols: [
+        ...v9.node_api_symbols,
+        'node_api_create_buffer_from_arraybuffer'
+    ]
+}
+
 module.exports = {
     v1,
     v2,
@@ -237,5 +252,6 @@ module.exports = {
     v6,
     v7,
     v8,
-    v9
+    v9,
+    v10
 }
