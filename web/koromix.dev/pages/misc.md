@@ -3,7 +3,7 @@
 Staks is a simple staker game playable in a browser.
 
 <div class="actions">
-    <a href="https://staks.koromix.dev/">Play Staks</a>
+    <a href="https://games.koromix.dev/staks">Play Staks</a>
 </div>
 
 Explore the source code in the [code repository](https://github.com/Koromix/rygel/tree/master/src/staks).
