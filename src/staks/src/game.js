@@ -137,7 +137,7 @@ async function start(root) {
         <div class="stk_game">
             <div class="stk_attributions">
                 Musiques par <a href="https://freemusicarchive.org/music/audiocoffee/" target="_blank">AudioCoffee</a><br>
-                Fonds d'écran par <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>, <a href="https://fr.m.wikipedia.org/wiki/Fichier:Fomalhaut_planet.jpg" target=_"blank">NASA et ESA</a>
+                Fonds d'écran par <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>
             </div>
             <canvas class="stk_canvas"></canvas>
         </div>
