@@ -69,6 +69,37 @@ function dateToString(date) {
     return str;
 }
 
+function loadImage(url) {
+    if (typeof url == 'string') {
+        return new Promise((resolve, reject) => {
+            let img = new Image();
+
+            img.addEventListener('load', () => resolve(img));
+            img.addEventListener('error', e => { console.error(e); reject(new Error('Failed to load image')); });
+
+            img.src = url;
+        });
+    } else if (url instanceof Blob) {
+        return new Promise((resolve, reject) => {
+            let reader = new FileReader();
+
+            reader.onload = async () => {
+                try {
+                    let img = await loadImage(reader.result);
+                    resolve(img);
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = () => reject(new Error('Failed to load image'));
+
+            reader.readAsDataURL(url);
+        });
+    } else {
+        throw new Error('Cannot load image from value of type ' + typeof url);
+    }
+}
+
 async function loadTexture(url) {
     let response = await Net.fetch(url);
 
@@ -82,5 +113,6 @@ export {
     computeAge,
     computeAgeMonths,
     dateToString,
+    loadImage,
     loadTexture
 }

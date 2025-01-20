@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg, ref } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, LocalDate } from '../../../web/core/base.js';
+import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
 import * as sqlite3 from '../../../web/core/sqlite3.js';
 import { SmallCalendar } from '../../../web/widgets/smallcalendar.js';
@@ -28,7 +28,7 @@ import { TrackModule } from './track/track.js';
 import '../../assets/app/app.css';
 
 const DATABASE_FILENAME = 'LDV.db';
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 4;
 
 const STUDIES = [
     {
@@ -80,7 +80,17 @@ Object.assign(T, {
     edit: 'Modifier',
     drag_paste_or_browse_image: 'Déposez une image, copier-collez la ou utilisez le bouton « Parcourir » ci-dessous',
     upload_image: 'Choisir une image',
-    zoom: 'Zoom'
+    zoom: 'Zoom',
+
+    face: 'Visage',
+    hair: 'Cheveux',
+    eyes: 'Yeux',
+    eyebrows: 'Sourcils',
+    glasses: 'Lunettes',
+    nose: 'Nez',
+    mouth: 'Bouche',
+    beard: 'Barbe',
+    accessories: 'Accessoires'
 });
 
 let db = null;
@@ -201,6 +211,12 @@ async function openDatabase(filename, flags) {
                         study TEXT NOT NULL
                     );
                     CREATE UNIQUE INDEX stakes_s ON stakes (study);
+                `);
+            } // fallthrough
+
+            case 3: {
+                await db.exec(`
+                    ALTER TABLE meta ADD COLUMN avatar TEXT;
                 `);
             } // fallthrough
         }
@@ -445,18 +461,28 @@ async function runDashboard() {
 }
 
 async function changePicture() {
+    let meta = await db.fetch1('SELECT picture, avatar FROM meta');
+    let settings = (meta.avatar != null) ? JSON.parse(meta.avatar) : meta.picture;
+
     let cropper = new PictureCropper('Modifier mon avatar', 256);
 
+    let { default: url } = await import('../../../../vendor/notion/notion.json');
+    let notion = await Net.get('static/' + url);
+
     cropper.defaultURL = assets.main.user;
+    cropper.notionAssets = notion;
     cropper.imageFormat = 'image/webp';
 
-    await cropper.run(identity.picture, async blob => {
-        if (blob == identity.picture)
+    await cropper.run(settings, async (blob, settings) => {
+        if (blob == meta.picture)
             return;
 
         let url = await blobToDataURL(blob);
 
-        await db.exec('UPDATE meta SET picture = ?', url);
+        if (settings != null)
+            settings = JSON.stringify(settings);
+        await db.exec('UPDATE meta SET picture = ?, avatar = ?', url, settings);
+
         identity.picture = url;
     });
 }

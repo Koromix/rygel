@@ -437,7 +437,7 @@ form label {
     height: 2em;
 }
 form label > span:first-child { width: 180px; }
-form label > input:not([type=checkbox]):not([type=radio]),
+form label > input:not([type=checkbox]):not([type=radio]):not([type=color]),
     form label > select { flex: 1; }
 form button {
     padding: 3px 12px 4px 12px;

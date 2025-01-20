@@ -19,14 +19,22 @@
    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
    OTHER DEALINGS IN THE SOFTWARE. */
 
-.pic_cropper {
+.pic_dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 0.71em;
+}
+
+.pic_preview {
+    width: var(--size);
+    height: var(--size);
+    min-height: var(--size);
     margin: 0 auto 0.5em auto;
     position: relative;
     border: 1px solid #ededf0;
     overflow: hidden;
-    cursor: grab;
 }
-.pic_cropper.default { cursor: inherit !important; }
+.pic_preview.interactive { cursor: grab; }
 
 .pic_legend {
     text-align: center;
@@ -34,3 +42,61 @@
     font-style: italic;
     filter: opacity(0.75);
 }
+
+.not_dialog {
+    display: flex;
+    flex-direction: row;
+}
+
+.not_column {
+    display: flex;
+    width: 130px;
+    margin-right: 1em;
+    flex-direction: column;
+    gap: 0.5em;
+}
+
+.not_tabbar {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 2px;
+}
+.not_tabbar > a {
+    padding: 0.2em 0.8em 0.25em 0.8em;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: right;
+    background: #f5d0bf;
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 8px;
+    color: white;
+}
+.not_tabbar > a.active {
+    background: #e9a07f;
+    cursor: default;
+}
+
+.not_parts {
+    display: flex;
+    margin: 0 auto;
+    width: 500px;
+    min-height: 280px;
+    max-height: 350px;
+    padding: 12px;
+    background: #faefe9;
+    border-bottom-right-radius: 16px;
+    flex-direction: column;
+    flex-wrap: wrap;
+    overflow-x: scroll;
+    gap: 12px;
+}
+.not_parts > svg {
+    box-sizing: border-box;
+    width: 80px;
+    height: 80px;
+    cursor: pointer;
+    background: white;
+    border: 1px solid #eee;
+}
+.not_parts > svg.active { background: #eee; }

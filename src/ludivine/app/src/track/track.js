@@ -17,7 +17,7 @@ import { render, html } from '../../../../../vendor/lit-html/lit-html.bundle.js'
 import * as UI from '../../../../web/flat/ui.js';
 import { DrawAPI, InputAPI } from './api.js';
 import { calibrate } from './trackers/mouse.js';
-import experiments from './experiments/experiments.json';
+import { experiments } from './experiments/experiments.js';
 
 import './track.css';
 

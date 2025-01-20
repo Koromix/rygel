@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const esbuild = require('../../../vendor/esbuild/native');
 const Mustache = require('../../../vendor/mustache');
-const experiments = require('./src/track/experiments/experiments.json');
+const { experiments } = require('./src/track/experiments/experiments.js');
 
 let watch = false;
 
@@ -81,7 +81,8 @@ async function run() {
             '.png': 'file',
             '.webp': 'file',
             '.wasm': 'copy',
-            '.woff2': 'file'
+            '.woff2': 'file',
+            '.json': 'file'
         },
         outdir: 'dist/static/',
         plugins: [
