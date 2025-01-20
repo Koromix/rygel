@@ -32,6 +32,7 @@ dialog { font-size: 15px; }
 #top .picture {
     width: 51px;
     height: 51px;
+    background: #fef2f2;
     border-radius: 50%;
     border: 3px solid #e9a07f;
 }
@@ -78,6 +79,7 @@ dialog { font-size: 15px; }
     width: 133px;
     height: 133px;
     margin: 0 auto;
+    background: #fef2f2;
     border-radius: 50%;
     border: 5px solid #e9a07f;
 }
@@ -102,5 +104,15 @@ dialog { font-size: 15px; }
     & .stake {
         flex: 0;
         text-align: center;
+    }
+}
+
+@media screen and (max-width: 960px) {
+    #top .picture {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        width: 39px;
+        height: 39px;
     }
 }
