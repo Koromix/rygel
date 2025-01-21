@@ -16,40 +16,36 @@
         <div class="tile" style="flex: 5;">
             <img src="{{ ASSET static/illustrations/respiration.webp }}" alt="" />
             <div>
-                <p class="reference">Cohérence cardiaque</p>
-                <p>Pratiquez cette <b>technique de respiration</b> simple pour contrôler votre <b>rythme cardiaque</b> et apaiser votre esprit.</p>
+                <p>Pratiquez la <b>cohérence cardiaque</b> en respirant profondément et apaisez votre esprit.</p>
                 <div class="actions">
-                    <a href="/coherence">Commencer</a>
+                    <a href="/coherence">Cohérence cardiaque</a>
                 </div>
             </div>
         </div>
         <div class="tile" style="flex: 6;">
             <img src="{{ ASSET static/illustrations/staks.webp }}" alt="" />
             <div>
-                <p class="reference">Jouez à un jeu</p>
-                <p>Lancez une partie de <b>STAKS</b> pour vous changer les idées. Ce jeu a <a href="https://www.nature.com/articles/mp201723" target="_blank">prouvé son efficacité</a> pour gérer certains symptômes de TSPT.</p>
+                <p>Lancez une <b>partie de STAKS</b> pour vous changer les idées. Ce jeu a <a href="https://www.nature.com/articles/mp201723" target="_blank">prouvé son efficacité</a> pour gérer certains symptômes de TSPT.</p>
                 <div class="actions">
-                    <a href="/staks">Jouer</a>
+                    <a href="/staks">Jeu de blocs</a>
                 </div>
             </div>
         </div>
         <div class="tile" style="flex: 6;">
             <img src="{{ ASSET static/illustrations/etirements.webp }}" alt="" />
             <div>
-                <p class="reference">Étirements doux</p>
-                <p>Réalisez quelques <b>exercices simples</b> en toute autonomie, pour une <b>sensation de légèreté</b> et de bien-être.</p>
+                <p>Réalisez quelques <b>étirements doux</b> en toute autonomie, pour une sensation de légèreté et de bien-être.</p>
                 <div class="actions">
-                    <a class="disabled">Non disponible</a>
+                    <a class="disabled">Étirements doux</a>
                 </div>
             </div>
         </div>
         <div class="tile" style="flex: 5;">
             <img src="{{ ASSET static/illustrations/ecriture.webp }}" alt="" />
             <div>
-                <p class="reference">Écrivez dans votre journal</p>
                 <p>Écrivez <b>librements vos pensées</b>, émotions, ou ressentis, sans vous soucier de la structure ou de la forme.</p>
                 <div class="actions">
-                    <a class="disabled">Connectez-vous</a>
+                    <a class="disabled">Écrire dans mon journal</a>
                 </div>
             </div>
         </div>

@@ -50,7 +50,10 @@ button { border-radius: 20px; }
     justify-content: space-evenly;
     gap: 20px;
 }
-.actions > a { border-radius: 30px; }
+.actions > a {
+    width: auto;
+    border-radius: 30px;
+}
 
 #top menu {
     gap: 2em;
@@ -231,7 +234,7 @@ p + .columns { margin-top: 2em; }
 }
 .tile > div {
     width: 100%;
-    margin-top: 150px;
+    margin-top: 300px;
     padding: 1em 1em 0.5em 1em;
     z-index: 2;
     background: #ffffff88;
