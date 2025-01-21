@@ -23,28 +23,28 @@ const { experiments } = require('./src/track/experiments/experiments.js');
 
 let watch = false;
 
-for (let i = 2; i < process.argv.length; i++) {
-    let arg = process.argv[i];
-
-    switch (arg) {
-        case '--watch': { watch = true; } break;
-        case '--help': {
-            print_usage();
-            process.exit(0);
-        } break;
-
-        default: {
-            if (arg.startsWith('-')) {
-                console.error(`Invalid option '${arg}'`);
-                process.exit(1);
-            }
-        } break;
-    }
-}
-
 main();
 
 async function main() {
+    for (let i = 2; i < process.argv.length; i++) {
+        let arg = process.argv[i];
+
+        switch (arg) {
+            case '--watch': { watch = true; } break;
+            case '--help': {
+                printUsage();
+                process.exit(0);
+            } break;
+
+            default: {
+                if (arg.startsWith('-')) {
+                    console.error(`Invalid option '${arg}'`);
+                    process.exit(1);
+                }
+            } break;
+        }
+    }
+
     try {
         await run();
         process.exit(0);
@@ -54,54 +54,119 @@ async function main() {
     }
 }
 
+function printUsage() {
+    let basename = path.basename(__filename);
+    console.log(`${basename} [--watch]`);
+}
+
 async function run() {
     process.chdir(__dirname);
 
+    let meta = await build();
+
+    if (watch) {
+        for (;;) {
+            let inputs = Object.keys(meta.inputs);
+
+            await Promise.any(inputs.map(input => {
+                let p = new Promise((resolve, reject) => fs.watch(input, {}, resolve));
+                return p;
+            }));
+
+            meta = await build();
+        }
+    }
+}
+
+async function build() {
     let src_filenames = [
-        './src/index.html',
         './src/app.js',
 
         '../../../vendor/sqlite3mc/wasm/jswasm/sqlite3.wasm',
         '../../../vendor/sqlite3mc/wasm/jswasm/sqlite3-opfs-async-proxy.js',
         '../../../vendor/sqlite3mc/wasm/jswasm/sqlite3-worker1-bundler-friendly.mjs',
+        '../../../vendor/notion/notion.json',
 
         ...experiments.map(exp => `./src/track/experiments/${exp.key}/${exp.key}.js`)
     ];
 
-    let ctx = await esbuild.context({
+    // Work around hard-coded URLs by moving these files to a common subdirectory
+    // with a changing prefix
+    let fixed_names = [
+        'sqlite3.wasm',
+        'sqlite3-opfs-async-proxy.js',
+        'sqlite3-worker1-bundler-friendly.mjs'
+    ];
+    let fixed_prefix = createRandomStr(8);
+
+    let result = await esbuild.build({
         entryPoints: src_filenames,
-        entryNames: '[name]',
+        assetNames: '[name]-[hash]',
+        entryNames: '[name]-[hash]',
         logLevel: 'info',
         bundle: true,
         minify: !watch,
         sourcemap: watch ? 'inline' : false,
         format: 'esm',
         target: 'es2020',
+        metafile: true,
         loader: {
             '.png': 'file',
             '.webp': 'file',
-            '.wasm': 'copy',
             '.woff2': 'file',
-            '.json': 'file'
+
+            '.wasm': 'copy',
+            '.json': 'copy'
         },
         outdir: 'dist/static/',
         plugins: [
             {
                 name: 'html',
                 setup: build => {
-                    build.onLoad({ filter: /\.html$/ }, args => {
-                        let template = fs.readFileSync(args.path, { encoding: 'UTF-8' });
-                        let html = Mustache.render(template, { buster: (new Date).valueOf() });
-
-                        return {
-                            contents: html,
-                            loader: 'copy'
-                        };
+                    build.onStart(() => {
+                        fs.rmSync('dist/static/', { recursive: true });
                     });
 
                     build.onEnd(result => {
-                        if (fs.existsSync('./dist/static/index.html'))
-                            fs.renameSync('./dist/static/index.html', './dist/index.html');
+                        let bundles = {};
+                        let script = null;
+                        let style = null;
+
+                        for (let dest in result.metafile.outputs) {
+                            let obj = result.metafile.outputs[dest];
+
+                            if (!dest.startsWith('dist/'))
+                                continue;
+
+                            if (obj.entryPoint == 'src/app.js') {
+                                script = dest.substr(5);
+                                style = obj.cssBundle.substr(5);
+                            } else if (obj.entryPoint != null) {
+                                let basename = path.basename(obj.entryPoint);
+
+                                if (fixed_names.includes(basename)) {
+                                    let dirname = 'dist/static/' + fixed_prefix;
+                                    let alternative = dirname + '/' + basename;
+
+                                    fs.mkdirSync(dirname, { recursive: true });
+                                    fs.renameSync(dest, alternative);
+
+                                    bundles[basename] = alternative.substr(5);
+                                } else {
+                                    bundles[basename] = dest.substr(5);
+                                }
+                            }
+                        }
+
+                        let template = fs.readFileSync('./src/index.html', { encoding: 'UTF-8' });
+
+                        let html = Mustache.render(template, {
+                            bundles: JSON.stringify(bundles),
+                            script: script,
+                            style: style
+                        });
+
+                        fs.writeFileSync('./dist/index.html', html);
                         fs.copyFileSync('../assets/ldv.webp', './dist/favicon.webp');
                     });
                 }
@@ -109,15 +174,17 @@ async function run() {
         ]
     });
 
-    await ctx.rebuild();
-
-    if (watch) {
-        await ctx.watch();
-        await new Promise(() => {});
-    }
+    return result.metafile;
 }
 
-function print_usage() {
-    let basename = path.basename(__filename);
-    console.log(`${basename} [--watch]`);
+function createRandomStr(len) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+    let str = '';
+    for (let i = 0; i < len; i++) { 
+        let rnd = Math.floor(Math.random() * chars.length);
+        str += chars.charAt(rnd);
+    }
+
+    return str;
 }

@@ -72,10 +72,11 @@
         </style>
 
         <script>
+            BUNDLES = {{{ bundles }}};
             T = {};
         </script>
 
-        <link rel="stylesheet" href="static/app.css?buster={{ buster }}" async/>
+        <link rel="stylesheet" href="{{{ style }}}" async/>
     </head>
 
     <body>
@@ -108,7 +109,7 @@
         <script type="module">
             document.body.classList.add('loading');
 
-            import { start } from './static/app.js?buster={{ buster }}';
+            import { start } from './{{{ script }}}';
 
             run();
 

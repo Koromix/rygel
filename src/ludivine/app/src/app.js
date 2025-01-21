@@ -65,7 +65,7 @@ const MODULES = [
         editable: false,
 
         prepare: async (db, test, el) => {
-            let url = './arnaud.js';
+            let url = BUNDLES['arnaud.js'];
             let experiment = await import(url);
 
             return new TrackModule(db, test, el, experiment);
@@ -150,7 +150,7 @@ function adaptToViewport() {
 }
 
 async function initSQLite() {
-    let url = './static/sqlite3-worker1-bundler-friendly.js';
+    let url = BUNDLES['sqlite3-worker1-bundler-friendly.mjs'];
     await sqlite3.init(url);
 }
 
@@ -466,8 +466,8 @@ async function changePicture() {
 
     let cropper = new PictureCropper('Modifier mon avatar', 256);
 
-    let { default: url } = await import('../../../../vendor/notion/notion.json');
-    let notion = await Net.get('static/' + url);
+    let url = BUNDLES['notion.json'];
+    let notion = await Net.get(url);
 
     cropper.defaultURL = assets.main.user;
     cropper.notionAssets = notion;
