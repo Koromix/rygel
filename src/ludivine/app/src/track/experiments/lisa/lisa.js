@@ -16,6 +16,7 @@
 import { render, html } from '../../../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Net } from '../../../../../../web/core/base.js';
 import { loadTexture } from '../../../lib/util.js';
+import { assets } from './images.js';
 
 const BACKGROUND = '#7f7f7f';
 const WAIT_MIN = 500;
@@ -456,16 +457,14 @@ async function loadImages(progress) {
         neutrals: []
     };
 
-    let prefix = `src/track/experiments/lisa/images/`;
-
     let loaded = 0;
     let total = 0;
     let failed = false;
 
     for (let i = 0; i < IMAGES.length; i++) {
         let img = IMAGES[i];
+        let url = findImage(img, 'n');
 
-        let url = `${prefix}${img.directory}/${img.directory}_m_${img.genre}_n_${img.subject}.jpg`;
         loadTexture(url)
             .then(img => {
                 images.neutrals[i * 4] = img;
@@ -479,7 +478,8 @@ async function loadImages(progress) {
 
         for (let j = 0; j < 4; j++) {
             let emotion = 'adfs'[j];
-            let url = `${prefix}${img.directory}/emotion/${img.directory}_m_${img.genre}_${emotion}_${img.subject}.jpg`;
+            let url = findImage(img, emotion);
+
             loadTexture(url)
                 .then(img => { images.negatives[i * 4 + j] = img; loaded++; })
                 .catch(err => { failed = true });
@@ -495,6 +495,13 @@ async function loadImages(progress) {
     }
 
     return images;
+}
+
+function findImage(img, emotion) {
+    let prefix = 'static/';
+    let key = `${img.directory}/${img.directory}_m_${img.genre}_${emotion}_${img.subject}.jpg`;
+
+    return prefix + assets[key];
 }
 
 function inside(p, rect, factor) {

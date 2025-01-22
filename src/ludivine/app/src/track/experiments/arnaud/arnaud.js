@@ -16,6 +16,7 @@
 import { render, html } from '../../../../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Net } from '../../../../../../web/core/base.js';
 import { loadTexture } from '../../../lib/util.js';
+import { assets } from './images.js';
 
 const BACKGROUND = '#7f7f7f';
 const IMAGES = 24;
@@ -449,8 +450,6 @@ async function loadImages(genre, progress) {
         neutrals: 'neutres'
     };
 
-    let prefix = `src/track/experiments/arnaud/images/${genre == 'H' ? 'hommes' : 'femmes'}/`;
-
     let loaded = 0;
     let total = 0;
     let failed = false;
@@ -459,12 +458,11 @@ async function loadImages(genre, progress) {
         let array = [];
 
         for (let i = 0; i < IMAGES; i++) {
-            let url = prefix + `${images[key]}/${i + 1}.jpg`;
+            let url = findImage(genre, images[key], i);
 
             loadTexture(url)
                 .then(img => { array[i] = img; loaded++; })
                 .catch(err => { failed = true });
-
             total++;
         }
 
@@ -479,6 +477,13 @@ async function loadImages(genre, progress) {
     }
 
     return images;
+}
+
+function findImage(genre, type, idx) {
+    let prefix = 'static/';
+    let key = `${genre == 'H' ? 'hommes' : 'femmes'}/${type}/${idx + 1}.jpg`;
+
+    return prefix + assets[key];
 }
 
 function inside(p, rect, factor) {

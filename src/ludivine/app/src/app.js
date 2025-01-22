@@ -421,6 +421,10 @@ async function runDashboard() {
                             <tbody>
                                 ${tests.map(test => {
                                     let mod = MODULES.find(mod => mod.key == test.type);
+
+                                    if (mod == null)
+                                        return '';
+
                                     let img = assets.main[mod.icon];
 
                                     return html`

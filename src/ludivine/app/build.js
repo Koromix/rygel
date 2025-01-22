@@ -111,6 +111,7 @@ async function build() {
         target: 'es2020',
         metafile: true,
         loader: {
+            '.jpg': 'file',
             '.png': 'file',
             '.webp': 'file',
             '.woff2': 'file',
