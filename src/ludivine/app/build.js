@@ -19,7 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const esbuild = require('../../../vendor/esbuild/native');
 const Mustache = require('../../../vendor/mustache');
-const { experiments } = require('./src/track/experiments/experiments.js');
+const experiments = require('./src/track/experiments/experiments.json');
 
 let watch = false;
 
@@ -114,9 +114,7 @@ async function build() {
             '.png': 'file',
             '.webp': 'file',
             '.woff2': 'file',
-
-            '.wasm': 'copy',
-            '.json': 'copy'
+            '.wasm': 'copy'
         },
         outdir: 'dist/static/',
         plugins: [
@@ -124,7 +122,7 @@ async function build() {
                 name: 'html',
                 setup: build => {
                     build.onStart(() => {
-                        fs.rmSync('dist/static/', { recursive: true });
+                        fs.rmSync('dist/static/', { recursive: true, force: true });
                     });
 
                     build.onEnd(result => {
@@ -151,9 +149,9 @@ async function build() {
                                     fs.mkdirSync(dirname, { recursive: true });
                                     fs.renameSync(dest, alternative);
 
-                                    bundles[basename] = alternative.substr(5);
+                                    bundles[basename] = alternative.substr(4);
                                 } else {
-                                    bundles[basename] = dest.substr(5);
+                                    bundles[basename] = dest.substr(4);
                                 }
                             }
                         }

@@ -467,7 +467,7 @@ async function changePicture() {
     let cropper = new PictureCropper('Modifier mon avatar', 256);
 
     let url = BUNDLES['notion.json'];
-    let notion = await Net.get(url);
+    let notion = await import(url);
 
     cropper.defaultURL = assets.main.user;
     cropper.notionAssets = notion;
