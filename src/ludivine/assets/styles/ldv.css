@@ -65,12 +65,12 @@ button { border-radius: 20px; }
 }
 #top.border { border-bottom-color: var(--top_background); }
 
-footer {
-    position: sticky;
-    bottom: 0;
-    box-sizing: border-box;
-    width: 100%;
-    z-index: 99;
+@media screen and (max-width: 960px) {
+    footer {
+        padding-left: 1em;
+        align-items: start;
+        text-align: left;
+    }
 }
 
 .banner {
@@ -303,10 +303,12 @@ p + .columns { margin-top: 2em; }
 }
 
 #sos {
-    position: absolute;
+    position: fixed;
     right: 16px;
+    bottom: 16px;
     width: 52px;
     height: 52px;
+    padding: 0;
     background: var(--button_color);
     border-radius: 50%;
     color: white;
@@ -314,6 +316,7 @@ p + .columns { margin-top: 2em; }
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 999;
 }
 #sos:hover {
     background: color-mix(in srgb, var(--button_color) 90%, black);
