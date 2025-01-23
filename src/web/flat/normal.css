@@ -300,7 +300,7 @@ hr {
 }
 
 button {
-    padding: 0.21em 0.71em 0.28em 0.71em;
+    padding: 0.35em 2em 0.45em 2em;
     background: var(--button_color);
     border: none;
     border-radius: 10px;
@@ -330,22 +330,22 @@ button > img:only-child {
     transform: translateY(4px);
 }
 button.secondary {
-    background: #ddd;
-    color: black;
+    --button_color: #ddd;
+    color: black !important;
 }
 button.secondary:not(.insist) > img { filter: none; }
 button.danger {
-    background: #d33410 !important;
+    --button_color: #d33410 !important;
     --color: white;
     color: var(--color);
 }
 button.insist {
-    background: #d33410 !important;
+    --button_color: #d33410 !important;
     --color: white;
     color: var(--color) !important;
     transition: --color 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
-button.danger.insist { background: #951a0b !important; }
+button.danger.insist { --button_color: #951a0b !important; }
 button.small { font-size: 0.7em; }
 button.small > img {
     width: 12px;

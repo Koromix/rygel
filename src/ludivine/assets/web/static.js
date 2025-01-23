@@ -160,20 +160,20 @@ function randomCard(cards) {
 }
 
 function sos(e) {
-    dialog(e, 'sos', html`
+    dialog(e, 'help', close => html`
         <img src=${assets['3114']} width="183" height="86" alt="">
         <div>
             <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations sur la prévention du suicide.
             <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
         </div>
+        <button type="button" class="secondary" @click=${close}>Fermer</button>
     `);
 
     if (e.target == e.currentTarget)
         e.preventDefault();
 }
 
-function dialog(e, id, content) {
-    let parent = e.currentTarget;
+function dialog(e, id, func) {
     let dlg = document.getElementById(id);
 
     if (dlg == null) {
@@ -181,30 +181,23 @@ function dialog(e, id, content) {
         dlg.id = id ?? '';
     }
 
+    let content = func(close);
     render(html`<div @click=${stop}>${content}</div>`, dlg);
 
     if (!dlg.open) {
-        let parent = e.currentTarget;
-
-        if (parent.tagName == 'A') {
-            let rect = parent.getBoundingClientRect();
-            let right = (rect.left + rect.width >= window.innerWidth / 2);
-
-            dlg.classList.add(right ? 'right' : 'left');
-
-            parent.appendChild(dlg);
-        } else {
-            document.body.appendChild(dlg);
-        }
-
+        document.body.appendChild(dlg);
         dlg.show();
     } else {
+        close();
+    }
+
+    function close() {
         dlg.close();
         dlg.parentNode.removeChild(dlg);
     }
 
     function stop(e) {
-        if (e.target != parent && e.target.tagName == 'A')
+        if (e.target != e.currentTarget && e.target.tagName == 'A')
             e.stopPropagation();
     }
 }

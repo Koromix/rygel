@@ -27,9 +27,9 @@ html {
     --footer_background: #fdfbf8;
 }
 
-main a { text-decoration: underline; }
-main a:hover { color: #26346c; }
-main a:has(> img) { text-decoration: none !important; }
+:is(main, dialog) a { text-decoration: underline; }
+:is(main, dialog) a:hover { color: #26346c; }
+:is(main, dialog) a:has(> img) { text-decoration: none !important; }
 
 h1 {
     color: #364b9b;
@@ -64,6 +64,8 @@ button { border-radius: 20px; }
     text-transform: none;
 }
 #top.border { border-bottom-color: var(--top_background); }
+
+footer { position: relative; }
 
 .banner {
     display: flex;
@@ -295,31 +297,35 @@ p + .columns { margin-top: 2em; }
 }
 
 #sos {
+    position: absolute;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    background: #e22e22;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, #e22e22 80%, black);
+    color: white;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#sos:hover {
+    background: color-mix(in srgb, #e22e22 90%, black);
+    text-decoration: none;
+}
+
+#help {
     padding: 1em;
     align-items: center;
 }
-#sos > div {
+#help > div {
     display: flex;
+    max-width: 500px;
+    flex-direction: column;
     gap: 2em;
-    padding: 1.5em;
+    padding: 1.5em 1.5em 1em 1.5em;
     background: white;
     border: 4px solid #e22e22;
     align-items: center;
-}
-
-@media screen and (min-width: 961px) {
-    #sos {
-        position: absolute;
-        left: auto;
-        top: auto;
-        right: 0;
-        width: 600px;
-        height: auto;
-        padding: 0;
-        z-index: 999;
-    }
-}
-
-@media screen and (max-width: 960px) {
-    #sos > div { flex-direction: column; }
 }
