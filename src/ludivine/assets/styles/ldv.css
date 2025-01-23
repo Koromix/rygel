@@ -65,7 +65,13 @@ button { border-radius: 20px; }
 }
 #top.border { border-bottom-color: var(--top_background); }
 
-footer { position: relative; }
+footer {
+    position: sticky;
+    bottom: 0;
+    box-sizing: border-box;
+    width: 100%;
+    z-index: 99;
+}
 
 .banner {
     display: flex;
