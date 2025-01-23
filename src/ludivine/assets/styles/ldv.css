@@ -305,11 +305,10 @@ p + .columns { margin-top: 2em; }
 #sos {
     position: absolute;
     right: 16px;
-    width: 48px;
-    height: 48px;
-    background: #e22e22;
+    width: 52px;
+    height: 52px;
+    background: var(--button_color);
     border-radius: 50%;
-    border: 2px solid color-mix(in srgb, #e22e22 80%, black);
     color: white;
     font-weight: bold;
     display: flex;
@@ -317,7 +316,7 @@ p + .columns { margin-top: 2em; }
     justify-content: center;
 }
 #sos:hover {
-    background: color-mix(in srgb, #e22e22 90%, black);
+    background: color-mix(in srgb, var(--button_color) 90%, black);
     text-decoration: none;
 }
 
