@@ -1,6 +1,8 @@
 <div id="exercise"></div>
 
 <script>
+    const { render, html } = app;
+
     let root = document.querySelector('#exercise');
 
     function menu() {

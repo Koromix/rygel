@@ -34,6 +34,15 @@ const HEADER = `// Copyright (C) 2024  Niels Martignène <niels.martignene@proto
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 `;
 
+const EXTENSIONS = [
+    '.png',
+    '.webp',
+    '.jpg',
+    '.webm',
+    '.ogg',
+    '.mp3'
+]
+
 main();
 
 async function main() {
@@ -64,32 +73,37 @@ async function run() {
 
     process.chdir(root);
 
-    let prefix = path.basename(process.cwd());
     let entries = fs.readdirSync('.', { recursive: true, withFileTypes: true });
 
-    let files = entries.filter(entry => entry.isFile()).map(entry => {
-        let key = path.join(entry.path, entry.name);
-        let src = path.join(prefix, key);
-
-        return {
-            key: key,
-            src: src
-        };
+    let files = entries.filter(filterEntry).map(entry => {
+        let filename = path.join(entry.path, entry.name);
+        return filename;
     });
 
     process.stdout.write(HEADER + '\n');
     for (let i = 0; i < files.length; i++) {
-        let file = files[i];
-        process.stdout.write(`import asset${i} from './${file.src}';\n`);
+        let filename = files[i];
+        process.stdout.write(`import asset${i} from './${filename}';\n`);
     }
     process.stdout.write('\n');
 
     process.stdout.write('const assets = {\n');
     for (let i = 0; i < files.length; i++) {
-        let file = files[i];
-        process.stdout.write(`    '${file.key}': asset${i},\n`);
+        let filename = files[i];
+        process.stdout.write(`    '${filename}': asset${i},\n`);
     }
     process.stdout.write('};\n\n');
 
     process.stdout.write('export { assets };\n');
+}
+
+function filterEntry(entry) {
+    let ext = path.extname(entry.name);
+
+    if (!entry.isFile())
+        return false;
+    if (!EXTENSIONS.includes(ext))
+        return false;
+
+    return true;
 }

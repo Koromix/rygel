@@ -34,12 +34,19 @@ static const char *const UrlFormatNames[] = {
     "Ugly"
 };
 
+struct BundleObject {
+    const char *dest_filename;
+    const char *src_filename;
+    bool unique;
+};
+
 struct FileHash {
     const char *name;
     const char *filename;
-    uint8_t sha256[32];
+    const char *url;
 
-    RG_HASHTABLE_HANDLER(FileHash, name);
+    bool unique;
+    uint8_t sha256[32];
 };
 
 struct AssetCopy {
@@ -58,7 +65,7 @@ struct AssetBundle {
 
 struct AssetSet {
     BucketArray<FileHash> hashes;
-    HashTable<const char *, const FileHash *> map;
+    HashMap<const char *, const FileHash *> map;
 };
 
 struct PageSection {
@@ -261,17 +268,19 @@ missing:
     return nullptr;
 }
 
-static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<const char *> *out_filenames)
+static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<BundleObject> *out_objects)
 {
     RG_ASSERT(alloc);
 
-    Size prev_len = out_filenames->len;
-    RG_DEFER_N(err_guard) { out_filenames->RemoveFrom(prev_len); };
+    BlockAllocator temp_alloc;
+
+    Size prev_len = out_objects->len;
+    RG_DEFER_N(err_guard) { out_objects->RemoveFrom(prev_len); };
 
     StreamReader reader(filename);
     if (!reader.IsValid())
         return false;
-    json_Parser parser(&reader, alloc);
+    json_Parser parser(&reader, &temp_alloc);
 
     parser.ParseObject();
     while (parser.InObject()) {
@@ -282,12 +291,60 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<c
             parser.ParseObject();
             while (parser.InObject()) {
                 Span<const char> output = {};
+                HeapArray<const char *> inputs;
+                const char *js = nullptr;
+                const char *css = nullptr;
+
                 parser.ParseKey(&output);
 
-                const char *dest_filename = NormalizePath(output, alloc).ptr;
-                out_filenames->Append(dest_filename);
+                parser.ParseObject();
+                while (parser.InObject()) {
+                    Span<const char> key = {};
+                    parser.ParseKey(&key);
 
-                parser.Skip();
+                    if (key == "entryPoint") {
+                        parser.ParseString(&js);
+                    } else if (key == "cssBundle") {
+                        parser.ParseString(&css);
+                    } else if (key == "inputs") {
+                        parser.ParseObject();
+                        while (parser.InObject()) {
+                            const char *input = nullptr;
+                            parser.ParseKey(&input);
+
+                            inputs.Append(input);
+
+                            parser.Skip();
+                        }
+                    } else {
+                        parser.Skip();
+                    }
+                }
+
+                if (js) {
+                    out_objects->Append({
+                        .dest_filename = NormalizePath(output, alloc).ptr,
+                        .src_filename = DuplicateString(js, alloc).ptr,
+                        .unique = false
+                    });
+
+                    if (css) {
+                        Span<const char> prefix;
+                        SplitStrReverse(js, '.', &prefix);
+
+                        out_objects->Append({
+                            .dest_filename = NormalizePath(css, alloc).ptr,
+                            .src_filename = Fmt(alloc, "%1.css", prefix).ptr,
+                            .unique = false
+                        });
+                    }
+                } else if (inputs.len == 1) {
+                    out_objects->Append({
+                        .dest_filename = NormalizePath(output, alloc).ptr,
+                        .src_filename = DuplicateString(inputs[0], alloc).ptr,
+                        .unique = true
+                    });
+                }
             }
         } else {
             parser.Skip();
@@ -333,25 +390,26 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
     }
 
     // List output files
-    HeapArray<const char *> dest_filenames;
-    if (!ParseEsbuildMeta(meta_filename, alloc, &dest_filenames))
+    HeapArray<BundleObject> bundle_objects;
+    if (!ParseEsbuildMeta(meta_filename, alloc, &bundle_objects))
         return false;
 
     // Handle output files
-    for (const char *dest_filename: dest_filenames) {
-        FileHash hash = {};
+    for (const BundleObject &obj: bundle_objects) {
+        FileHash *hash = out_hashes->AppendDefault();
 
-        Span<const char> basename = SplitStrReverseAny(dest_filename, RG_PATH_SEPARATORS);
-        const char *name = Fmt(alloc, "%1%2", prefix, basename).ptr;
-        const char *gzip_filename = Fmt(alloc, "%1.gz", dest_filename).ptr;
+        Span<const char> basename = SplitStrReverseAny(obj.dest_filename, RG_PATH_SEPARATORS);
+        const char *gzip_filename = Fmt(alloc, "%1.gz", obj.dest_filename).ptr;
 
-        hash.name = name;
-        hash.filename = dest_filename;
+        hash->name = obj.src_filename;
+        hash->filename = obj.dest_filename;
+        hash->url = Fmt(alloc, "%1%2", prefix, basename).ptr;
+        hash->unique = obj.unique;
 
-        StreamReader reader(dest_filename);
+        StreamReader reader(obj.dest_filename);
 
         // Compute destination hash
-        {
+        if (!obj.unique) {
             crypto_hash_sha256_state state;
             crypto_hash_sha256_init(&state);
 
@@ -364,13 +422,12 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
                 crypto_hash_sha256_update(&state, buf.data, buf.len);
             } while (!reader.IsEOF());
 
-            crypto_hash_sha256_final(&state, hash.sha256);
+            crypto_hash_sha256_final(&state, hash->sha256);
         }
 
         // Precompress file
         if (gzip) {
             reader.Rewind();
-
             StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
 
             if (!SpliceStream(&reader, -1, &writer))
@@ -380,8 +437,6 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
         } else {
             UnlinkFile(gzip_filename);
         }
-
-        out_hashes->Append(hash);
     }
 
     return true;
@@ -390,8 +445,12 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
 static void RenderAsset(Span<const char> path, const FileHash *hash, StreamWriter *writer)
 {
     if (hash) {
-        FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
-        Print(writer, "/%1?%2", path, suffix);
+        if (hash->unique) {
+            Print(writer, "/%1", hash->url);
+        } else {
+            FmtArg suffix = FmtSpan(MakeSpan(hash->sha256, 8), FmtType::BigHex, "").Pad0(-2);
+            Print(writer, "/%1?%2", hash->url, suffix);
+        }
     } else {
         LogWarning("Unknown asset '%1'", path);
         Print(writer, "/%1", path);
@@ -1016,8 +1075,9 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
 
             FileHash *hash = assets.hashes.AppendDefault();
 
-            hash->name = url.ptr;
+            hash->name = src_filename;
             hash->filename = dest_filename;
+            hash->url = url.ptr;
 
             async.Run([=]() {
                 if (!EnsureDirectoryExists(dest_filename))
@@ -1053,7 +1113,8 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 return true;
             });
 
-            assets.map.Set(hash);
+            assets.map.Set(hash->name, hash);
+            assets.map.Set(hash->url, hash);
         }
 
         if (!async.Sync())
@@ -1080,9 +1141,12 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
 
                     copy->name = DuplicateString(hash.name, &temp_alloc).ptr;
                     copy->filename = DuplicateString(hash.filename, &temp_alloc).ptr;
+                    copy->url = DuplicateString(hash.url, &temp_alloc).ptr;
+                    copy->unique = hash.unique;
                     MemCpy(copy->sha256, hash.sha256, RG_SIZE(hash.sha256));
 
-                    assets.map.Set(copy);
+                    assets.map.Set(copy->name, copy);
+                    assets.map.Set(copy->url, copy);
                 }
 
                 return true;

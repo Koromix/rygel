@@ -16,8 +16,7 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util } from '../../../web/core/base.js';
 import '../../../web/flat/static.js';
-
-import '../styles/ldv.css';
+import { assets } from '../assets.js';
 
 window.addEventListener('load', e => {
     initCards();
@@ -31,9 +30,9 @@ function initCards() {
 
         let arrows = document.createElement('div');
         render(html`
-            <img style="left: 16px;" src=${assets.left} alt="" @click=${e => toggleCard(cards, -1)} />
+            <img style="left: 16px;" src=${assets['web/misc/left.webp']} alt="" @click=${e => toggleCard(cards, -1)} />
             <div style="flex: 1;"></div>
-            <img style="right: 16px;" src=${assets.right} alt="" @click=${e => toggleCard(cards, 1)} />
+            <img style="right: 16px;" src=${assets['web/misc/right.webp']} alt="" @click=${e => toggleCard(cards, 1)} />
         `, arrows);
         arrows.classList.add('arrows');
         cardset.appendChild(arrows);
@@ -161,7 +160,7 @@ function randomCard(cards) {
 
 function sos(e) {
     dialog(e, 'help', close => html`
-        <img src=${assets['3114']} width="183" height="86" alt="">
+        <img src=${assets['web/misc/3114.webp']} width="183" height="86" alt="">
         <div>
             <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations sur la prévention du suicide.
             <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.

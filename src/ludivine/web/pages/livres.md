@@ -14,7 +14,7 @@
 <div class="tab">
     <div class="cardset">
         <div class="card">
-            <img src="{{ ASSET static/livres/traiter_la_depression.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/web/livres/traiter_la_depression.jpg }}" alt="" />
             <div>
                 <p class="reference">Traiter la dépression et les troubles de l'humeur</p>
                 <div class="actions">
@@ -23,7 +23,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET static/livres/les_troubles_bipolaires.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/web/livres/les_troubles_bipolaires.jpg }}" alt="" />
             <div>
                 <p class="reference">Les troubles bipolaires : de la cyclothymie au syndrome maniaco-dépressif</p>
                 <div class="actions">
@@ -32,7 +32,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET static/livres/apprendre_a_soigner_les_depressions.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/web/livres/apprendre_a_soigner_les_depressions.jpg }}" alt="" />
             <div>
                 <p class="reference">Apprendre à soigner les dépressions</p>
                 <div class="actions">
@@ -41,7 +41,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET static/livres/humeur_normale_a_la_depression.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/web/livres/humeur_normale_a_la_depression.jpg }}" alt="" />
             <div>
                 <p class="reference">De l'humeur normale à la dépression</p>
                 <div class="actions">
@@ -50,7 +50,7 @@
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET static/livres/psychoeducation_dans_depression.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/web/livres/psychoeducation_dans_depression.jpg }}" alt="" />
             <div>
                 <p class="reference">Mettre en oeuvre un programme de psychoéducation pour la dépression</p>
                 <div class="actions">
@@ -59,7 +59,7 @@
             </div>
         </div>
     </div>
-    <button id="randomize" style="display: none;" onclick="app.randomCard('.cardset')"><img src="{{ ASSET static/misc/dice.webp }}" alt="Choix aléatoire" /></button>
+    <button id="randomize" style="display: none;" onclick="app.randomCard('.cardset')"><img src="{{ ASSET ../assets/web/misc/dice.webp }}" alt="Choix aléatoire" /></button>
 </div>
 
 <script>

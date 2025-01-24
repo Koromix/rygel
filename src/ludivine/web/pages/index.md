@@ -6,14 +6,14 @@
             <p>Vous êtes <b>majeur, vous avez été récemment exposé à un événement particulièrement difficile</b> et vous souhaitez vous investir afin de faire avancer la recherche dans le domaine des psychotraumatismes ?
             <p>Merci de votre présence ! Quelques minutes par mois suffisent pour répondre aux études et permettre d'améliorer la compréhension du psychotraumatisme.
         </div>
-        <img src="{{ ASSET static/illustrations/dispositif.webp }}" style="flex: 1;" alt="" />
+        <img src="{{ ASSET ../assets/web/illustrations/dispositif.webp }}" style="flex: 1;" alt="" />
     </div>
 </div>
 
 # Comment participer ?
 
 <div class="columns">
-    <img src="{{ ASSET static/illustrations/participer.webp }}" style="flex: 1;" alt="" />
+    <img src="{{ ASSET ../assets/web/illustrations/participer.webp }}" style="flex: 1;" alt="" />
     <div style="flex: 3;">
         <p>Pour participer au programme de recherche Lignes de Vie vous devez :
         <ul>
@@ -36,13 +36,13 @@
         <p>La plateforme repose sur une application dévelopée spécialement pour ce projet, sous <b>licence libre et gratuite</b>.
         <p>Le programme Lignes de Vie incarne donc une démarche engagée et innovante, mêlant plusieurs disciplines : recherche participative, technologie numérique et éthique. Il ne s’agit pas seulement de produire des données ou des résultats scientifiques, mais de <b>redéfinir la manière dont la recherche peut être menée avec et pour les personnes concernées</b>, en leur accordant une place centrale et en respectant leur humanité, même à distance.
     </div>
-    <img src="{{ ASSET static/illustrations/donnees.webp }}" style="flex: 3;" alt="" />
+    <img src="{{ ASSET ../assets/web/illustrations/donnees.webp }}" style="flex: 3;" alt="" />
 </div>
 
 # Le Centre National de Ressources et de Résilience
 
 <div class="columns">
-    <img src="{{ ASSET static/illustrations/cn2r.webp }}" style="flex: 1;" alt="" />
+    <img src="{{ ASSET ../assets/web/illustrations/cn2r.webp }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
         <p>Le <a href="https://cn2r.fr" target="_blank">Centre National de Ressources et de Résilience</a> (Cn2r) est une structure créée en France pour répondre aux besoins des personnes ayant subi des traumatismes psychologiques.
         <p>La vocation du Cn2r est <b>d’améliorer et de diffuser les connaissances sur les psychotraumatismes et la résilience</b> pour le grand public, les professionnels et les chercheurs grâce au partage des savoirs scientifiques et expérientiels.
