@@ -309,9 +309,8 @@ p + .columns { margin-top: 2em; }
     width: 52px;
     height: 52px;
     padding: 0;
-    background: var(--button_color);
+    --button_color: #888;
     border-radius: 50%;
-    color: white;
     font-weight: bold;
     display: flex;
     align-items: center;
@@ -319,7 +318,7 @@ p + .columns { margin-top: 2em; }
     z-index: 999;
 }
 #sos:hover {
-    background: color-mix(in srgb, var(--button_color) 90%, black);
+    background: #e22e22;
     text-decoration: none;
 }
 
