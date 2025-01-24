@@ -24,6 +24,7 @@ import { assets, loadAssets } from './lib/assets.js';
 import { PictureCropper } from './lib/picture.js';
 import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
+import { sos } from '../../assets/shared/ldv.js';
 
 import '../../assets/app/app.css';
 
@@ -461,6 +462,8 @@ async function runDashboard() {
                 <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">lignesdevie@cn2r.fr</a>
             </div>
         </footer>
+
+        <a id="sos" @click=${UI.wrap(e => sos(event))}>SOS</a>
     `, root_el);
 }
 
