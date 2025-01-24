@@ -308,8 +308,8 @@ p + .columns { margin-top: 2em; }
     bottom: 16px;
     width: 52px;
     height: 52px;
-    padding: 0;
-    --button_color: #888;
+    background: #888;
+    color: white;
     border-radius: 50%;
     font-weight: bold;
     display: flex;
