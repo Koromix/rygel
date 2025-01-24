@@ -2,7 +2,7 @@
     <div class="title">Activités de détente</div>
     <div class="intro">
         <p>Vous avez besoin d'une pause pendant le passage d'une étude ou la consultation des ressources ? Vous trouverez sur cette page <b>quatre activités gratuites</b>.
-        <p>En cas d'urgence, vous trouverez tous les numéros <b>dans l'onglet SOS</b> et d'autres numéros utiles sur la page de ressources. Si besoin, rapprochez-vous d'une personne de confiance et/ou d'un professionnel compétent.
+        <p>En cas d'urgence, utilisez le <b>bouton SOS</b> ou rapprochez-vous d'une personne de confiance et/ou d'un professionnel compétent.
     </div>
 </div>
 

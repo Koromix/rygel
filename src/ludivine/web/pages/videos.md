@@ -2,7 +2,7 @@
     <div class="title">Ressources</div>
     <div class="intro">
         <p>Vous souhaitez vous informer sur le psychotraumatisme et les thématiques associés ? Vous trouverez sur cette page cinq onglets : <b>livres, articles, films et musique et des numéros utiles (onglet SOS)</b>.
-        <p>En cas d'urgence, rapprochez-vous d'une personne de confiance et/ou d'un professionnel compétent.
+        <p>En cas d'urgence, utilisez le <b>bouton SOS</b> ou rapprochez-vous d'une personne de confiance et/ou d'un professionnel compétent.
     </div>
 </div>
 
