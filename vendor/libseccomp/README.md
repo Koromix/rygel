@@ -3,9 +3,9 @@
 https://github.com/seccomp/libseccomp
 
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/608/badge)](https://bestpractices.coreinfrastructure.org/projects/608)
-[![Build Status](https://github.com/seccomp/libseccomp/workflows/Continuous%20Integration/badge.svg?branch=main)](https://github.com/seccomp/libseccomp/actions)
-[![Coverage Status](https://img.shields.io/coveralls/github/seccomp/libseccomp/main.svg)](https://coveralls.io/github/seccomp/libseccomp?branch=main)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/seccomp/libseccomp.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/seccomp/libseccomp/context:cpp)
+[![Build Status](https://github.com/seccomp/libseccomp/actions/workflows/continuous-integration.yml/badge.svg?branch=release-2.6)](https://github.com/seccomp/libseccomp/actions)
+[![CodeQL Analysis](https://github.com/seccomp/libseccomp/actions/workflows/codeql-analysis.yml/badge.svg?branch=release-2.6)](https://github.com/seccomp/libseccomp/actions)
+[![Coverage Status](https://img.shields.io/coveralls/github/seccomp/libseccomp/release-2.6.svg)](https://coveralls.io/github/seccomp/libseccomp?branch=release-2.6)
 
 The libseccomp library provides an easy to use, platform independent, interface
 to the Linux Kernel's syscall filtering mechanism.  The libseccomp API is
@@ -33,6 +33,8 @@ The libseccomp library currently supports the architectures listed below:
 * 64-bit x86 x32 ABI (x32)
 * 32-bit ARM EABI (arm)
 * 64-bit ARM (aarch64)
+* 64-bit LoongArch (loongarch64)
+* 32-bit Motorola 68000 (m68k)
 * 32-bit MIPS (mips)
 * 32-bit MIPS little endian (mipsel)
 * 64-bit MIPS (mips64)
@@ -47,6 +49,8 @@ The libseccomp library currently supports the architectures listed below:
 * 32-bit s390 (s390)
 * 64-bit s390x (s390x)
 * 64-bit RISC-V (riscv64)
+* 32-bit SuperH big endian (sheb)
+* 32-bit SuperH (sh)
 
 ## Documentation
 
@@ -55,7 +59,7 @@ mostly in the form of manpages.  The top level directory also contains a README
 file (this file) as well as the LICENSE, CREDITS, CONTRIBUTING, and
 CHANGELOG files.
 
-Those who are interested in contributing to the the project are encouraged to
+Those who are interested in contributing to the project are encouraged to
 read the CONTRIBUTING in the top level directory.
 
 ## Verifying Release Tarballs
@@ -114,6 +118,20 @@ The generated seccomp-bpf filters can be tested on a live system using the
 
 These tests will fail if the running Linux Kernel does not provide the
 necessary support.
+
+## Release Process
+
+GitHub milestones are used to track development and manage new releases.  We do
+not currently follow a regular, calendar based release schedule; the libseccomp
+releases are determined by the number of outstanding issues and pull-requests
+assigned to the related GitHub milestone, when all of the outstanding items in
+the milestone have been closed, we create a new release.
+
+If you believe a particular issue or pull-request should be part of a release
+milestone, or excluded from one, please leave a comment in the issue or
+pull-request.  Creating new issues solely for the purpose of asking about the
+next release is strongly discouraged, and will likely be closed with a
+reference to this section in the project's README.
 
 ## Developer Tools
 

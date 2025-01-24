@@ -59,6 +59,9 @@ int main(int argc, char *argv[])
 	rc = seccomp_arch_add(ctx, seccomp_arch_resolve_name("aarch64"));
 	if (rc != 0)
 		goto out;
+	rc = seccomp_arch_add(ctx, seccomp_arch_resolve_name("loongarch64"));
+	if (rc != 0)
+		goto out;
 	rc = seccomp_arch_add(ctx, seccomp_arch_resolve_name("mipsel"));
 	if (rc != 0)
 		goto out;
@@ -72,6 +75,9 @@ int main(int argc, char *argv[])
 	if (rc != 0)
 		goto out;
 	rc = seccomp_arch_add(ctx, seccomp_arch_resolve_name("riscv64"));
+	if (rc != 0)
+		goto out;
+	rc = seccomp_arch_add(ctx, seccomp_arch_resolve_name("sh"));
 	if (rc != 0)
 		goto out;
 

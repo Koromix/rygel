@@ -205,11 +205,11 @@ static struct bpf_blk *_hsh_remove(struct bpf_state *state, uint64_t h_val);
 static struct bpf_blk *_hsh_find(const struct bpf_state *state, uint64_t h_val);
 
 /**
- * Convert a 16-bit host integer into the target's endianess
+ * Convert a 16-bit host integer into the target's endianness
  * @param arch the architecture definition
  * @param val the 16-bit integer
  *
- * Convert the endianess of the supplied value and return it to the caller.
+ * Convert the endianness of the supplied value and return it to the caller.
  *
  */
 static uint16_t _htot16(const struct arch_def *arch, uint16_t val)
@@ -221,11 +221,11 @@ static uint16_t _htot16(const struct arch_def *arch, uint16_t val)
 }
 
 /**
- * Convert a 32-bit host integer into the target's endianess
+ * Convert a 32-bit host integer into the target's endianness
  * @param arch the architecture definition
  * @param val the 32-bit integer
  *
- * Convert the endianess of the supplied value and return it to the caller.
+ * Convert the endianness of the supplied value and return it to the caller.
  *
  */
 static uint32_t _htot32(const struct arch_def *arch, uint32_t val)
@@ -351,6 +351,7 @@ static struct bpf_blk *_blk_resize(struct bpf_state *state,
 {
 	unsigned int size_adj = (AINC_BLK > size_add ? AINC_BLK : size_add);
 	struct bpf_instr *new;
+	size_t old_size, new_size;
 
 	if (blk == NULL)
 		return NULL;
@@ -358,8 +359,10 @@ static struct bpf_blk *_blk_resize(struct bpf_state *state,
 	if ((blk->blk_cnt + size_adj) <= blk->blk_alloc)
 		return blk;
 
+	old_size = blk->blk_alloc * sizeof(*new);
 	blk->blk_alloc += size_adj;
-	new = realloc(blk->blks, blk->blk_alloc * sizeof(*(blk->blks)));
+	new_size = blk->blk_alloc * sizeof(*new);
+	new = zrealloc(blk->blks, old_size, new_size);
 	if (new == NULL) {
 		_blk_free(state, blk);
 		return NULL;
@@ -443,10 +446,13 @@ static int _bpf_append_blk(struct bpf_program *prg, const struct bpf_blk *blk)
 	bpf_instr_raw *i_iter;
 	unsigned int old_cnt = prg->blk_cnt;
 	unsigned int iter;
+	size_t old_size, new_size;
 
 	/* (re)allocate the program memory */
+	old_size = BPF_PGM_SIZE(prg);
 	prg->blk_cnt += blk->blk_cnt;
-	i_new = realloc(prg->blks, BPF_PGM_SIZE(prg));
+	new_size = BPF_PGM_SIZE(prg);
+	i_new = zrealloc(prg->blks, old_size, new_size);
 	if (i_new == NULL) {
 		rc = -ENOMEM;
 		goto bpf_append_blk_failure;
@@ -1303,7 +1309,7 @@ static inline bool _skip_syscall(struct bpf_state *state,
 	if (!syscall->valid)
 		return true;
 
-	/* psuedo-syscalls should not be added to the filter unless explicity
+	/* pseudo-syscalls should not be added to the filter unless explicitly
 	 * requested via SCMP_FLTATR_API_TSKIP
 	 */
 	if (((int)syscall->num < 0) &&
@@ -1665,7 +1671,7 @@ out:
  * @param db_secondary the secondary DB
  *
  * Generate the BPF instruction block for the given filter DB(s)/architecture(s)
- * and return a pointer to the block on succes, NULL on failure.  The resulting
+ * and return a pointer to the block on success, NULL on failure.  The resulting
  * block assumes that the architecture token has already been loaded into the
  * BPF accumulator.
  *
@@ -2084,15 +2090,19 @@ static int _gen_bpf_build_bpf(struct bpf_state *state,
 			if (i_iter->jt.type == TGT_NXT) {
 				b_jmp = _gen_bpf_find_nxt(b_iter,
 							  i_iter->jt.tgt.nxt);
-				if (b_jmp == NULL)
-					return -EFAULT;
+				if (b_jmp == NULL) {
+					rc = -EFAULT;
+					goto state_reset;
+				}
 				i_iter->jt = _BPF_JMP_HSH(b_jmp->hash);
 			}
 			if (i_iter->jf.type == TGT_NXT) {
 				b_jmp = _gen_bpf_find_nxt(b_iter,
 							  i_iter->jf.tgt.nxt);
-				if (b_jmp == NULL)
-					return -EFAULT;
+				if (b_jmp == NULL) {
+					rc = -EFAULT;
+					goto state_reset;
+				}
 				i_iter->jf = _BPF_JMP_HSH(b_jmp->hash);
 			}
 			/* we shouldn't need to worry about a TGT_NXT in k */
@@ -2134,8 +2144,10 @@ static int _gen_bpf_build_bpf(struct bpf_state *state,
 						b_jmp = _blk_prepend(state,
 								     b_jmp,
 								     &instr);
-						if (b_jmp == NULL)
-							return -EFAULT;
+						if (b_jmp == NULL) {
+							rc = -EFAULT;
+							goto state_reset;
+						}
 					}
 					_BPF_INSTR(instr,
 						   _BPF_OP(state->arch,
@@ -2145,8 +2157,10 @@ static int _gen_bpf_build_bpf(struct bpf_state *state,
 							  b_jmp->acc_start.offset));
 					b_jmp = _blk_prepend(state,
 							     b_jmp, &instr);
-					if (b_jmp == NULL)
-						return -EFAULT;
+					if (b_jmp == NULL) {
+						rc = -EFAULT;
+						goto state_reset;
+					}
 					/* not reliant on the accumulator */
 					b_jmp->acc_start = _ACC_STATE_UNDEF;
 				}
@@ -2282,6 +2296,7 @@ static int _gen_bpf_build_bpf(struct bpf_state *state,
 		_blk_free(state, b_iter);
 	} while (b_head != NULL);
 
+	state->arch = NULL;
 	return 0;
 
 build_bpf_free_blks:
@@ -2292,6 +2307,8 @@ build_bpf_free_blks:
 		__blk_free(state, b_iter);
 		b_iter = b_jmp;
 	}
+state_reset:
+	state->arch = NULL;
 	return rc;
 }
 

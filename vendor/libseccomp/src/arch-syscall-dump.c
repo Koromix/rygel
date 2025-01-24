@@ -34,6 +34,8 @@
 #include "arch-x86_64.h"
 #include "arch-x32.h"
 #include "arch-arm.h"
+#include "arch-loongarch64.h"
+#include "arch-m68k.h"
 #include "arch-mips.h"
 #include "arch-mips64.h"
 #include "arch-mips64n32.h"
@@ -45,6 +47,7 @@
 #include "arch-riscv64.h"
 #include "arch-s390.h"
 #include "arch-s390x.h"
+#include "arch-sh.h"
 
 /**
  * Print the usage information to stderr and exit
@@ -106,6 +109,12 @@ int main(int argc, char *argv[])
 		case SCMP_ARCH_AARCH64:
 			sys = aarch64_syscall_iterate(iter);
 			break;
+		case SCMP_ARCH_LOONGARCH64:
+			sys = loongarch64_syscall_iterate(iter);
+			break;
+		case SCMP_ARCH_M68K:
+			sys = m68k_syscall_iterate(iter);
+			break;
 		case SCMP_ARCH_MIPS:
 		case SCMP_ARCH_MIPSEL:
 			sys = mips_syscall_iterate(iter);
@@ -139,6 +148,10 @@ int main(int argc, char *argv[])
 			break;
 		case SCMP_ARCH_S390X:
 			sys = s390x_syscall_iterate(iter);
+			break;
+		case SCMP_ARCH_SH:
+		case SCMP_ARCH_SHEB:
+			sys = sh_syscall_iterate(iter);
 			break;
 		default:
 			/* invalid arch */

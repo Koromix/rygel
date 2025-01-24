@@ -25,6 +25,7 @@
 
 #include <elf.h>
 #include <inttypes.h>
+#include <stdlib.h>
 #include <asm/unistd.h>
 #include <linux/audit.h>
 #include <linux/types.h>
@@ -77,6 +78,7 @@ enum scmp_filter_attr {
 					 *     number
 					 */
 	SCMP_FLTATR_API_SYSRAWRC = 9,	/**< return the system return codes */
+	SCMP_FLTATR_CTL_WAITKILL = 10,	/**< request wait killable semantics */
 	_SCMP_FLTATR_MAX,
 };
 
@@ -151,6 +153,23 @@ struct scmp_arg_cmp {
 #define SCMP_ARCH_AARCH64	AUDIT_ARCH_AARCH64
 
 /**
+ * The LoongArch architecture tokens
+ */
+/* 64-bit LoongArch audit support is upstream as of 5.19-rc1 */
+#ifndef AUDIT_ARCH_LOONGARCH64
+#ifndef EM_LOONGARCH
+#define EM_LOONGARCH		258
+#endif /* EM_LOONGARCH */
+#define AUDIT_ARCH_LOONGARCH64	(EM_LOONGARCH|__AUDIT_ARCH_64BIT|__AUDIT_ARCH_LE)
+#endif /* AUDIT_ARCH_LOONGARCH64 */
+#define SCMP_ARCH_LOONGARCH64	AUDIT_ARCH_LOONGARCH64
+
+/**
+ * The Motorola 68000 architecture tokens
+ */
+#define SCMP_ARCH_M68K		AUDIT_ARCH_M68K
+
+/**
  * The MIPS architecture tokens
  */
 #ifndef __AUDIT_ARCH_CONVENTION_MIPS64_N32
@@ -217,13 +236,19 @@ struct scmp_arg_cmp {
 #define SCMP_ARCH_RISCV64	AUDIT_ARCH_RISCV64
 
 /**
+ * The SuperH architecture tokens
+ */
+#define SCMP_ARCH_SHEB		AUDIT_ARCH_SH
+#define SCMP_ARCH_SH		AUDIT_ARCH_SHEL /* Little-endian SH is more common than big */
+
+/**
  * Convert a syscall name into the associated syscall number
  * @param x the syscall name
  */
 #define SCMP_SYS(x)		(__SNR_##x)
 
 /* Helpers for the argument comparison macros, DO NOT USE directly */
-#define _SCMP_VA_NUM_ARGS(...)	_SCMP_VA_NUM_ARGS_IMPL(__VA_ARGS__,2,1)
+#define _SCMP_VA_NUM_ARGS(...)	_SCMP_VA_NUM_ARGS_IMPL(__VA_ARGS__,2,1,0)
 #define _SCMP_VA_NUM_ARGS_IMPL(_1,_2,N,...)	N
 #define _SCMP_MACRO_DISPATCHER(func, ...) \
 	_SCMP_MACRO_DISPATCHER_IMPL1(func, _SCMP_VA_NUM_ARGS(__VA_ARGS__))
@@ -414,9 +439,10 @@ const struct scmp_version *seccomp_version(void);
  *  3 : support for the SCMP_FLTATR_CTL_LOG filter attribute
  *      support for the SCMP_ACT_LOG action
  *      support for the SCMP_ACT_KILL_PROCESS action
- *  4 : support for the SCMP_FLTATR_CTL_SSB filter attrbute
+ *  4 : support for the SCMP_FLTATR_CTL_SSB filter attribute
  *  5 : support for the SCMP_ACT_NOTIFY action and notify APIs
  *  6 : support the simultaneous use of SCMP_FLTATR_CTL_TSYNC and notify APIs
+ *  7 : support for the SCMP_FLTATR_CTL_WAITKILL filter attribute
  *
  */
 unsigned int seccomp_api_get(void);
@@ -800,15 +826,68 @@ int seccomp_notify_fd(const scmp_filter_ctx ctx);
 int seccomp_export_pfc(const scmp_filter_ctx ctx, int fd);
 
 /**
- * Generate seccomp Berkley Packet Filter (BPF) code and export it to a file
+ * Generate seccomp Berkeley Packet Filter (BPF) code and export it to a file
  * @param ctx the filter context
  * @param fd the destination fd
  *
- * This function generates seccomp Berkley Packer Filter (BPF) code and writes
+ * This function generates seccomp Berkeley Packer Filter (BPF) code and writes
  * it to the given fd.  Returns zero on success, negative values on failure.
  *
  */
 int seccomp_export_bpf(const scmp_filter_ctx ctx, int fd);
+
+/**
+ * Generate seccomp Berkeley Packet Filter (BPF) code and export it to a buffer
+ * @param ctx the filter context
+ * @param buf the destination buffer
+ * @param len on input the length of the buffer, on output the number of bytes
+ * in the program
+ *
+ * This function generates seccomp Berkeley Packer Filter (BPF) code and writes
+ * it to the given buffer.  Returns zero on success, negative values on failure.
+ *
+ */
+int seccomp_export_bpf_mem(const scmp_filter_ctx ctx, void *buf, size_t *len);
+
+/**
+ * Start a filter transaction
+ * @param ctx the filter context
+ *
+ * This function starts a filter transaction for modifying the seccomp filter.
+ * Returns zero on success, negative values on failure.
+ *
+ */
+int seccomp_transaction_start(const scmp_filter_ctx ctx);
+
+/**
+ * Reject the current filter transaction
+ * @param ctx the filter context
+ *
+ * This function rejects the current seccomp filter transaction.
+ *
+ */
+void seccomp_transaction_reject(const scmp_filter_ctx ctx);
+
+/**
+ * Commit the current filter transaction
+ * @param ctx the filter context
+ *
+ * This function commits the current seccomp filter transaction.  Returns zero
+ * on success, negative values on failure.
+ *
+ */
+int seccomp_transaction_commit(const scmp_filter_ctx ctx);
+
+/**
+ * Precompute the seccomp filter for future use
+ * @param ctx the filter context
+ *
+ * This function precomputes the seccomp filter and stores it internally for
+ * future use, speeding up seccomp_load() and other functions which require
+ * the generated filter.
+ *
+ */
+int seccomp_precompute(const scmp_filter_ctx ctx);
 
 /*
  * pseudo syscall definitions

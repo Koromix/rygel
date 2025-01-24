@@ -36,6 +36,7 @@ def test(args):
     f.add_arch(Arch("x32"))
     f.add_arch(Arch("ppc64le"))
     f.add_arch(Arch("mipsel"))
+    f.add_arch(Arch("sh"))
     f.add_rule(ALLOW, "semop")
     f.add_rule(ALLOW, "semtimedop")
     f.add_rule(ALLOW, "semget")

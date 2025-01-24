@@ -2,6 +2,7 @@
  * Enhanced Seccomp Filter DB
  *
  * Copyright (c) 2012,2016 Red Hat <pmoore@redhat.com>
+ * Copyright (c) 2022 Microsoft Corporation <paulmoore@microsoft.com>
  * Author: Paul Moore <paul@paul-moore.com>
  */
 
@@ -28,6 +29,7 @@
 #include <seccomp.h>
 
 #include "arch.h"
+#include "gen_bpf.h"
 
 /* XXX - need to provide doxygen comments for the types here */
 
@@ -122,6 +124,8 @@ struct db_filter_attr {
 	uint32_t optimize;
 	/* return the raw system return codes */
 	uint32_t api_sysrawrc;
+	/* request SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV */
+	uint32_t wait_killable_recv;
 };
 
 struct db_filter {
@@ -141,6 +145,7 @@ struct db_filter_snap {
 	struct db_filter **filters;
 	unsigned int filter_cnt;
 	bool shadow;
+	bool user;
 
 	struct db_filter_snap *next;
 };
@@ -162,6 +167,9 @@ struct db_filter_col {
 
 	/* userspace notification */
 	bool notify_used;
+
+	/* precomputed programs */
+	struct bpf_program *prgm_bpf;
 };
 
 /**
@@ -208,9 +216,12 @@ int db_col_rule_add(struct db_filter_col *col,
 int db_col_syscall_priority(struct db_filter_col *col,
 			    int syscall, uint8_t priority);
 
-int db_col_transaction_start(struct db_filter_col *col);
-void db_col_transaction_abort(struct db_filter_col *col);
-void db_col_transaction_commit(struct db_filter_col *col);
+int db_col_transaction_start(struct db_filter_col *col, bool user);
+void db_col_transaction_abort(struct db_filter_col *col, bool user);
+void db_col_transaction_commit(struct db_filter_col *col, bool user);
+
+int db_col_precompute(struct db_filter_col *col);
+void db_col_precompute_reset(struct db_filter_col *col);
 
 int db_rule_add(struct db_filter *db, const struct db_api_rule_list *rule);
 

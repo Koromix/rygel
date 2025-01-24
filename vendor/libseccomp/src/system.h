@@ -35,6 +35,14 @@
 
 struct db_filter_col;
 
+/* NOTE: temporary location, move to include/seccomp.h.in when complete */
+enum scmp_kver {
+	__SCMP_KV_NULL = 0,
+	SCMP_KV_UNDEF = 1,
+	/* TODO: add SCMP_KV_X_YY values as the syscall table is populated */
+	__SCMP_KV_MAX,
+};
+
 #ifdef HAVE_LINUX_SECCOMP_H
 
 /* system header file */
@@ -91,7 +99,7 @@ struct seccomp_data {
 /* rename some of the socket filter types to make more sense */
 typedef struct sock_filter bpf_instr_raw;
 
-/* no new privs defintions */
+/* no new privs definitions */
 #ifndef PR_SET_NO_NEW_PRIVS
 #define PR_SET_NO_NEW_PRIVS		38
 #endif
@@ -129,6 +137,9 @@ typedef struct sock_filter bpf_instr_raw;
 #endif
 #ifndef SECCOMP_FILTER_FLAG_TSYNC_ESRCH
 #define SECCOMP_FILTER_FLAG_TSYNC_ESRCH		(1UL << 4)
+#endif
+#ifndef SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV
+#define SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV	(1UL << 5)
 #endif
 
 #ifndef SECCOMP_RET_LOG

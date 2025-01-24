@@ -2,6 +2,7 @@
  * Seccomp Library API
  *
  * Copyright (c) 2012,2013 Red Hat <pmoore@redhat.com>
+ * Copyright (c) 2022 Microsoft Corporation <paulmoore@microsoft.com>
  * Author: Paul Moore <paul@paul-moore.com>
  */
 
@@ -83,6 +84,8 @@ static int _rc_filter(int err)
 	 *       requested operation */
 	case -EOPNOTSUPP:
 	/* NOTE: operation is not supported */
+	case -ERANGE:
+	/* NOTE: provided buffer is too small */
 	case -ESRCH:
 		/* NOTE: operation failed due to multi-threading */
 		return err;
@@ -188,6 +191,10 @@ static unsigned int _seccomp_api_update(void)
 	    sys_chk_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC_ESRCH) == 1)
 		level = 6;
 
+	if (level == 6 &&
+	    sys_chk_seccomp_flag(SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV) == 1)
+		level = 7;
+
 	/* update the stored api level and return */
 	seccomp_api_level = level;
 	return seccomp_api_level;
@@ -220,6 +227,8 @@ API int seccomp_api_set(unsigned int level)
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_NEW_LISTENER, false);
 		sys_set_seccomp_action(SCMP_ACT_NOTIFY, false);
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC_ESRCH, false);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV,
+				     false);
 		break;
 	case 2:
 		sys_set_seccomp_syscall(true);
@@ -231,6 +240,8 @@ API int seccomp_api_set(unsigned int level)
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_NEW_LISTENER, false);
 		sys_set_seccomp_action(SCMP_ACT_NOTIFY, false);
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC_ESRCH, false);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV,
+				     false);
 		break;
 	case 3:
 		sys_set_seccomp_syscall(true);
@@ -242,6 +253,8 @@ API int seccomp_api_set(unsigned int level)
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_NEW_LISTENER, false);
 		sys_set_seccomp_action(SCMP_ACT_NOTIFY, false);
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC_ESRCH, false);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV,
+				     false);
 		break;
 	case 4:
 		sys_set_seccomp_syscall(true);
@@ -253,6 +266,8 @@ API int seccomp_api_set(unsigned int level)
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_NEW_LISTENER, false);
 		sys_set_seccomp_action(SCMP_ACT_NOTIFY, false);
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC_ESRCH, false);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV,
+				     false);
 		break;
 	case 5:
 		sys_set_seccomp_syscall(true);
@@ -264,6 +279,8 @@ API int seccomp_api_set(unsigned int level)
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_NEW_LISTENER, true);
 		sys_set_seccomp_action(SCMP_ACT_NOTIFY, true);
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC_ESRCH, false);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV,
+				     false);
 		break;
 	case 6:
 		sys_set_seccomp_syscall(true);
@@ -275,6 +292,21 @@ API int seccomp_api_set(unsigned int level)
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_NEW_LISTENER, true);
 		sys_set_seccomp_action(SCMP_ACT_NOTIFY, true);
 		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC_ESRCH, true);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV,
+				     false);
+		break;
+	case 7:
+		sys_set_seccomp_syscall(true);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC, true);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_LOG, true);
+		sys_set_seccomp_action(SCMP_ACT_LOG, true);
+		sys_set_seccomp_action(SCMP_ACT_KILL_PROCESS, true);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_SPEC_ALLOW, true);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_NEW_LISTENER, true);
+		sys_set_seccomp_action(SCMP_ACT_NOTIFY, true);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_TSYNC_ESRCH, true);
+		sys_set_seccomp_flag(SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV,
+				     true);
 		break;
 	default:
 		return _rc_filter(-EINVAL);
@@ -721,13 +753,93 @@ API int seccomp_export_bpf(const scmp_filter_ctx ctx, int fd)
 		return _rc_filter(-EINVAL);
 	col = (struct db_filter_col *)ctx;
 
-	rc = gen_bpf_generate(col, &program);
+	rc = db_col_precompute(col);
 	if (rc < 0)
 		return _rc_filter(rc);
+	program = col->prgm_bpf;
 	rc = write(fd, program->blks, BPF_PGM_SIZE(program));
-	gen_bpf_release(program);
 	if (rc < 0)
 		return _rc_filter_sys(col, -errno);
 
 	return 0;
+}
+
+/* NOTE - function header comment in include/seccomp.h */
+API int seccomp_export_bpf_mem(const scmp_filter_ctx ctx, void *buf,
+			       size_t *len)
+{
+	int rc;
+	struct db_filter_col *col;
+	struct bpf_program *program;
+
+	if (_ctx_valid(ctx) || !len)
+		return _rc_filter(-EINVAL);
+	col = (struct db_filter_col *)ctx;
+
+	rc = db_col_precompute(col);
+	if (rc < 0)
+		return _rc_filter(rc);
+	program = col->prgm_bpf;
+
+	if (buf) {
+		/* If we have a big enough buffer, write the program. */
+		if (BPF_PGM_SIZE(program) > *len)
+			rc = _rc_filter(-ERANGE);
+		else
+			memcpy(buf, program->blks, *len);
+	}
+	*len = BPF_PGM_SIZE(program);
+
+	return rc;
+}
+
+/* NOTE - function header comment in include/seccomp.h */
+API int seccomp_transaction_start(const scmp_filter_ctx ctx)
+{
+	int rc;
+	struct db_filter_col *col;
+
+	if (_ctx_valid(ctx))
+		return _rc_filter(-EINVAL);
+	col = (struct db_filter_col *)ctx;
+
+	rc = db_col_transaction_start(col, true);
+	return _rc_filter(rc);
+}
+
+/* NOTE - function header comment in include/seccomp.h */
+API void seccomp_transaction_reject(const scmp_filter_ctx ctx)
+{
+	struct db_filter_col *col;
+
+	if (_ctx_valid(ctx))
+		return;
+	col = (struct db_filter_col *)ctx;
+
+	db_col_transaction_abort(col, true);
+}
+
+/* NOTE - function header comment in include/seccomp.h */
+API int seccomp_transaction_commit(const scmp_filter_ctx ctx)
+{
+	struct db_filter_col *col;
+
+	if (_ctx_valid(ctx))
+		return _rc_filter(-EINVAL);
+	col = (struct db_filter_col *)ctx;
+
+	db_col_transaction_commit(col, true);
+	return _rc_filter(0);
+}
+
+/* NOTE - function header comment in include/seccomp.h */
+API int seccomp_precompute(const scmp_filter_ctx ctx)
+{
+	struct db_filter_col *col;
+
+	if (_ctx_valid(ctx))
+		return _rc_filter(-EINVAL);
+	col = (struct db_filter_col *)ctx;
+
+	return _rc_filter(db_col_precompute(col));
 }

@@ -22,7 +22,12 @@ Link with \fI\-lseccomp\fP.
 Loads the seccomp filter provided by
 .I ctx
 into the kernel; if the function
-succeeds the new seccomp filter will be active when the function returns.
+succeeds the new seccomp filter will be active when the function returns.  If
+.BR seccomp_precompute (3)
+was called prior to attempting to load the seccomp filter, and no changes have
+been made to the filter,
+.BR seccomp_load ()
+can be considered to be async-signal-safe.
 .P
 As it is possible to have multiple stacked seccomp filters for a given task
 (defined as either a process or a thread), it is important to remember that
@@ -108,5 +113,5 @@ Paul Moore <paul@paul-moore.com>
 .BR seccomp_release (3),
 .BR seccomp_rule_add (3),
 .BR seccomp_rule_add_exact (3)
-
-
+.BR seccomp_precompute (3)
+.BR signal-safety (7)

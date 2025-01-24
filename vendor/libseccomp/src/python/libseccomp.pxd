@@ -38,6 +38,8 @@ cdef extern from "seccomp.h":
         SCMP_ARCH_X32
         SCMP_ARCH_ARM
         SCMP_ARCH_AARCH64
+        SCMP_ARCH_LOONGARCH64
+        SCMP_ARCH_M68K
         SCMP_ARCH_MIPS
         SCMP_ARCH_MIPS64
         SCMP_ARCH_MIPS64N32
@@ -63,6 +65,7 @@ cdef extern from "seccomp.h":
         SCMP_FLTATR_CTL_SSB
         SCMP_FLTATR_CTL_OPTIMIZE
         SCMP_FLTATR_API_SYSRAWRC
+        SCMP_FLTATR_CTL_WAITKILL
 
     cdef enum scmp_compare:
         SCMP_CMP_NE
@@ -167,6 +170,14 @@ cdef extern from "seccomp.h":
 
     int seccomp_export_pfc(scmp_filter_ctx ctx, int fd)
     int seccomp_export_bpf(scmp_filter_ctx ctx, int fd)
+    int seccomp_export_bpf_mem(const scmp_filter_ctx ctx, void *buf,
+                               size_t *len)
+
+    int seccomp_transaction_start(const scmp_filter_ctx ctx)
+    void seccomp_transaction_reject(const scmp_filter_ctx ctx)
+    int seccomp_transaction_commit(const scmp_filter_ctx ctx)
+
+    int seccomp_precompute(const scmp_filter_ctx ctx)
 
 # kate: syntax python;
 # kate: indent-mode python; space-indent on; indent-width 4; mixedindent off;

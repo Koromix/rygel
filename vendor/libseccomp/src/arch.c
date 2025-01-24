@@ -35,6 +35,8 @@
 #include "arch-x32.h"
 #include "arch-arm.h"
 #include "arch-aarch64.h"
+#include "arch-loongarch64.h"
+#include "arch-m68k.h"
 #include "arch-mips.h"
 #include "arch-mips64.h"
 #include "arch-mips64n32.h"
@@ -45,6 +47,7 @@
 #include "arch-riscv64.h"
 #include "arch-s390.h"
 #include "arch-s390x.h"
+#include "arch-sh.h"
 #include "db.h"
 #include "system.h"
 
@@ -62,6 +65,10 @@ const struct arch_def *arch_def_native = &arch_def_x86_64;
 const struct arch_def *arch_def_native = &arch_def_arm;
 #elif __aarch64__
 const struct arch_def *arch_def_native = &arch_def_aarch64;
+#elif __loongarch_lp64
+const struct arch_def *arch_def_native = &arch_def_loongarch64;
+#elif __m68k__
+const struct arch_def *arch_def_native = &arch_def_m68k;
 #elif __mips__ && _MIPS_SIM == _MIPS_SIM_ABI32
 #if __MIPSEB__
 const struct arch_def *arch_def_native = &arch_def_mips;
@@ -98,6 +105,12 @@ const struct arch_def *arch_def_native = &arch_def_s390x;
 const struct arch_def *arch_def_native = &arch_def_s390;
 #elif __riscv && __riscv_xlen == 64
 const struct arch_def *arch_def_native = &arch_def_riscv64;
+#elif __sh__
+#ifdef __BIG_ENDIAN__
+const struct arch_def *arch_def_native = &arch_def_sheb;
+#else
+const struct arch_def *arch_def_native = &arch_def_sh;
+#endif
 #else
 #error the arch code needs to know about your machine type
 #endif /* machine type guess */
@@ -116,7 +129,7 @@ int arch_valid(uint32_t arch)
 
 /**
  * Lookup the architecture definition
- * @param token the architecure token
+ * @param token the architecture token
  *
  * Return the matching architecture definition, returns NULL on failure.
  *
@@ -134,6 +147,10 @@ const struct arch_def *arch_def_lookup(uint32_t token)
 		return &arch_def_arm;
 	case SCMP_ARCH_AARCH64:
 		return &arch_def_aarch64;
+	case SCMP_ARCH_LOONGARCH64:
+		return &arch_def_loongarch64;
+	case SCMP_ARCH_M68K:
+		return &arch_def_m68k;
 	case SCMP_ARCH_MIPS:
 		return &arch_def_mips;
 	case SCMP_ARCH_MIPSEL:
@@ -162,6 +179,10 @@ const struct arch_def *arch_def_lookup(uint32_t token)
 		return &arch_def_s390x;
 	case SCMP_ARCH_RISCV64:
 		return &arch_def_riscv64;
+	case SCMP_ARCH_SHEB:
+		return &arch_def_sheb;
+	case SCMP_ARCH_SH:
+		return &arch_def_sh;
 	}
 
 	return NULL;
@@ -169,7 +190,7 @@ const struct arch_def *arch_def_lookup(uint32_t token)
 
 /**
  * Lookup the architecture definition by name
- * @param arch_name the architecure name
+ * @param arch_name the architecture name
  *
  * Return the matching architecture definition, returns NULL on failure.
  *
@@ -186,6 +207,10 @@ const struct arch_def *arch_def_lookup_name(const char *arch_name)
 		return &arch_def_arm;
 	else if (strcmp(arch_name, "aarch64") == 0)
 		return &arch_def_aarch64;
+	else if (strcmp(arch_name, "loongarch64") == 0)
+		return &arch_def_loongarch64;
+	else if (strcmp(arch_name, "m68k") == 0)
+		return &arch_def_m68k;
 	else if (strcmp(arch_name, "mips") == 0)
 		return &arch_def_mips;
 	else if (strcmp(arch_name, "mipsel") == 0)
@@ -214,6 +239,10 @@ const struct arch_def *arch_def_lookup_name(const char *arch_name)
 		return &arch_def_s390x;
 	else if (strcmp(arch_name, "riscv64") == 0)
 		return &arch_def_riscv64;
+	else if (strcmp(arch_name, "sheb") == 0)
+		return &arch_def_sheb;
+	else if (strcmp(arch_name, "sh") == 0)
+		return &arch_def_sh;
 
 	return NULL;
 }
@@ -332,8 +361,8 @@ const char *arch_syscall_resolve_num(const struct arch_def *arch, int num)
  * @param arch the architecture definition
  * @param syscall the syscall number
  *
- * Translate the syscall number, in the context of the native architecure, to
- * the provided architecure.  Returns zero on success, negative values on
+ * Translate the syscall number, in the context of the native architecture, to
+ * the provided architecture.  Returns zero on success, negative values on
  * failure.
  *
  */

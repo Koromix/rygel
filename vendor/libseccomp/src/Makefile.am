@@ -32,6 +32,8 @@ SOURCES_ALL = \
 	arch-x32.h arch-x32.c \
 	arch-arm.h arch-arm.c \
 	arch-aarch64.h arch-aarch64.c \
+	arch-loongarch64.h arch-loongarch64.c \
+	arch-m68k.h arch-m68k.c \
 	arch-mips.h arch-mips.c \
 	arch-mips64.h arch-mips64.c \
 	arch-mips64n32.h arch-mips64n32.c \
@@ -42,6 +44,7 @@ SOURCES_ALL = \
 	arch-riscv64.h arch-riscv64.c \
 	arch-s390.h arch-s390.c \
 	arch-s390x.h arch-s390x.c \
+	arch-sh.h arch-sh.c \
 	syscalls.h syscalls.c syscalls.perf.c
 
 EXTRA_DIST = \

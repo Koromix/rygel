@@ -19,7 +19,7 @@ dnl #
 dnl ####
 dnl libseccomp defines
 dnl ####
-AC_INIT([libseccomp], [2.5.5])
+AC_INIT([libseccomp], [2.6.0])
 
 dnl ####
 dnl autoconf configuration
@@ -95,9 +95,11 @@ dnl cython checks
 dnl ####
 AC_CHECK_PROGS(cython, cython3 cython, "no")
 AS_IF([test "$cython" != no], [
-	AS_ECHO("checking cython version... $($cython -V 2>&1 | cut -d' ' -f 3)")
-	CYTHON_VER_MAJ=$($cython -V 2>&1 | cut -d' ' -f 3 | cut -d'.' -f 1);
-	CYTHON_VER_MIN=$($cython -V 2>&1 | cut -d' ' -f 3 | cut -d'.' -f 2);
+	AC_MSG_CHECKING([cython version])
+	CYTHON_VER_FULL=$(cython -V 2>&1 | cut -d' ' -f 3);
+	CYTHON_VER_MAJ=$(echo $CYTHON_VER_FULL | cut -d'.' -f 1);
+	CYTHON_VER_MIN=$(echo $CYTHON_VER_FULL | cut -d'.' -f 2);
+	AC_MSG_RESULT([$CYTHON_VER_FULL])
 ],[
 	CYTHON_VER_MAJ=0
 	CYTHON_VER_MIN=0
@@ -118,7 +120,7 @@ AS_IF([test "$enable_python" = yes], [
 ])
 AM_CONDITIONAL([ENABLE_PYTHON], [test "$enable_python" = yes])
 AC_DEFINE_UNQUOTED([ENABLE_PYTHON],
-	[$(test "$enable_python" = yes && echo 1 || echo 0)],
+	[$(test "$enable_python" = "yes" && echo 1 || echo 0)],
 	[Python bindings build flag.])
 
 AC_CHECK_TOOL(GPERF, gperf)

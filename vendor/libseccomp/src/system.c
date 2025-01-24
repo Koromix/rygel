@@ -58,6 +58,7 @@ struct task_state {
 	int sup_flag_new_listener;
 	int sup_user_notif;
 	int sup_flag_tsync_esrch;
+	int sup_flag_wait_kill;
 };
 static struct task_state state = {
 	.nr_seccomp = -1,
@@ -73,6 +74,7 @@ static struct task_state state = {
 	.sup_flag_new_listener = -1,
 	.sup_user_notif = -1,
 	.sup_flag_tsync_esrch = -1,
+	.sup_flag_wait_kill = -1,
 };
 
 /**
@@ -126,6 +128,7 @@ int sys_chk_seccomp_syscall(void)
 	case SCMP_ARCH_X86_64:
 	case SCMP_ARCH_ARM:
 	case SCMP_ARCH_AARCH64:
+	case SCMP_ARCH_LOONGARCH64:
 	case SCMP_ARCH_PPC64:
 	case SCMP_ARCH_PPC64LE:
 	case SCMP_ARCH_S390:
@@ -307,6 +310,18 @@ int sys_chk_seccomp_flag(int flag)
 		if (state.sup_flag_tsync_esrch < 0)
 			state.sup_flag_tsync_esrch = _sys_chk_flag_kernel(flag);
 		return state.sup_flag_tsync_esrch;
+	case SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV:
+		if (state.sup_flag_wait_kill < 0) {
+			/* kernel requires NEW_LISTENER with WAIT_KILLABLE_RECV */
+			flag |= SECCOMP_FILTER_FLAG_NEW_LISTENER;
+			sys_chk_seccomp_flag(SECCOMP_FILTER_FLAG_NEW_LISTENER);
+			if (state.sup_flag_new_listener) {
+				state.sup_flag_wait_kill = _sys_chk_flag_kernel(flag);
+			} else {
+				state.sup_flag_wait_kill = 0;
+			}
+		}
+		return state.sup_flag_wait_kill;
 	}
 
 	return -EOPNOTSUPP;
@@ -339,6 +354,9 @@ void sys_set_seccomp_flag(int flag, bool enable)
 	case SECCOMP_FILTER_FLAG_TSYNC_ESRCH:
 		state.sup_flag_tsync_esrch = (enable ? 1 : 0);
 		break;
+	case SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV:
+		state.sup_flag_wait_kill = (enable ? 1 : 0);
+		break;
 	}
 }
 
@@ -360,9 +378,10 @@ int sys_filter_load(struct db_filter_col *col, bool rawrc)
 	bool listener_req;
 	struct bpf_program *prgm = NULL;
 
-	rc = gen_bpf_generate(col, &prgm);
+	rc = db_col_precompute(col);
 	if (rc < 0)
 		return rc;
+	prgm = col->prgm_bpf;
 
 	/* attempt to set NO_NEW_PRIVS */
 	if (col->attr.nnp_enable) {
@@ -393,6 +412,9 @@ int sys_filter_load(struct db_filter_col *col, bool rawrc)
 			flgs |= SECCOMP_FILTER_FLAG_TSYNC;
 		} else if (listener_req)
 			flgs |= SECCOMP_FILTER_FLAG_NEW_LISTENER;
+		if ((flgs & SECCOMP_FILTER_FLAG_NEW_LISTENER) &&
+		    col->attr.wait_killable_recv)
+			flgs |= SECCOMP_FILTER_FLAG_WAIT_KILLABLE_RECV;
 		if (col->attr.log_enable)
 			flgs |= SECCOMP_FILTER_FLAG_LOG;
 		if (col->attr.spec_allow)
@@ -417,7 +439,6 @@ int sys_filter_load(struct db_filter_col *col, bool rawrc)
 
 filter_load_out:
 	/* cleanup and return */
-	gen_bpf_release(prgm);
 	if (rc == -ESRCH)
 		return -ESRCH;
 	if (rc < 0)

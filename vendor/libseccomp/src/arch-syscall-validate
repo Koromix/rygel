@@ -5,6 +5,7 @@
 #
 # Copyright (c) 2014 Red Hat <pmoore@redhat.com>
 # Copyright (c) 2020 Cisco Systems, Inc. <pmoore2@cisco.com>
+# Copyright (c) 2022 Microsoft Corporation. <paulmoore@microsoft.com>
 #
 # Author: Paul Moore <paul@paul-moore.com>
 #
@@ -59,7 +60,7 @@ function verify_deps() {
 #
 function usage() {
 cat << EOF
-usage: arch-syscall-validate [-h] [-c] [-a <arch>] <kernel_directory>
+usage: arch-syscall-validate [-h] [-c <file>] [-a <arch>] <kernel_directory>
 
 libseccomp syscall validation script
 optional arguments:
@@ -67,7 +68,7 @@ optional arguments:
   -a             architecture
   -l             output the library's syscall definitions
   -s             output the kernel's syscall definitions
-  -c             generate a CSV of the kernel's syscall definitions
+  -c <file>      generate a CSV of the kernel's syscall definitions
 EOF
 }
 
@@ -162,6 +163,31 @@ function mangle_lib_syscall() {
 }
 
 #
+# Dump syscalls matching specified tags from the given syscall.tbl file
+#
+# Arguments:
+#     1        path to the syscall.tbl file to dump
+#     (rest)   tags to match (except "common" which is always included)
+#
+#  Dump the matched syscall table entries to stdout.
+#
+function dump_from_syscall_tbl() {
+	local file="$1"
+	shift
+
+	local tag
+	local tag_regexp='^(common'
+	for tag in "$@"; do
+		tag_regexp="${tag_regexp}|${tag}"
+	done
+	tag_regexp="${tag_regexp}) "
+
+	cat "$file" | grep -v '^#\|^$' | awk '{ print $2,$3,$1 }' | \
+		grep -E "$tag_regexp" | awk '{ print $2","$3 }' | sort | \
+		grep -Ev '^(reserved|unused)[0-9]+,'
+}
+
+#
 # Dump the x86 system syscall table
 #
 # Arguments:
@@ -170,9 +196,7 @@ function mangle_lib_syscall() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_x86() {
-	cat $1/arch/x86/entry/syscalls/syscall_32.tbl | \
-		grep -v "^#" | awk '{ print $3","$1 }' | \
-		sort
+	dump_from_syscall_tbl "$1/arch/x86/entry/syscalls/syscall_32.tbl" i386
 }
 
 #
@@ -193,9 +217,7 @@ function dump_lib_x86() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_x86_64() {
-	cat $1/arch/x86/entry/syscalls/syscall_64.tbl | \
-		grep -v "^#" | sed '/^$/d' | awk '{ print $2,$3,$1 }' | \
-		sed '/^x32/d' | awk '{ print $2","$3 }' | sort
+	dump_from_syscall_tbl "$1/arch/x86/entry/syscalls/syscall_64.tbl" 64
 }
 
 #
@@ -216,9 +238,7 @@ function dump_lib_x86_64() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_x32() {
-	cat $1/arch/x86/entry/syscalls/syscall_64.tbl | \
-		grep -v "^#" | sed '/^$/d' | awk '{ print $2,$3,$1 }' | \
-		sed '/^64/d' | awk '{ print $2","$3 }' | sort
+	dump_from_syscall_tbl "$1/arch/x86/entry/syscalls/syscall_64.tbl" x32
 }
 
 #
@@ -239,14 +259,12 @@ function dump_lib_x32() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_arm() {
-	cat $1/arch/arm/tools/syscall.tbl | grep -v "^#" | \
-		sed -n "/[0-9]\+[ \t]\+\(common\|eabi\)/p" | \
-		awk '{ print $3","$1 }' | sort | (cat -; \
-			(cat $1/arch/arm/include/uapi/asm/unistd.h | \
-			grep "^#define __ARM_NR_" | \
-			grep -v "^#define __ARM_NR_BASE" | \
-			sed 's/#define __ARM_NR_\([a-z0-9_]*\)[ \t]\+(__ARM_NR_BASE+\(.*\))/\1 983040 + \2/' | \
-			awk '{ print $1","$2+$4 }')) | sort
+	dump_from_syscall_tbl "$1/arch/arm/tools/syscall.tbl" eabi | (cat -; \
+		(cat $1/arch/arm/include/uapi/asm/unistd.h | \
+		grep "^#define __ARM_NR_" | \
+		grep -v "^#define __ARM_NR_BASE" | \
+		sed 's/#define __ARM_NR_\([a-z0-9_]*\)[ \t]\+(__ARM_NR_BASE+\(.*\))/\1 983040 + \2/' | \
+		awk '{ print $1","$2+$4 }')) | sort
 }
 
 #
@@ -269,6 +287,13 @@ function dump_lib_arm() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_aarch64() {
+	local syscall_tbl_file="$1/arch/arm64/tools/syscall_64.tbl"
+	if [[ -e $syscall_tbl_file ]]; then
+		dump_from_syscall_tbl "$syscall_tbl_file" \
+			64 renameat rlimit memfd_secret
+		return
+	fi
+
 	local sed_filter=""
 
 	sed_filter+='s/__NR3264_statfs/43/;'
@@ -306,6 +331,73 @@ function dump_lib_aarch64() {
 }
 
 #
+# Dump the loongarch64 syscall table
+#
+# Arguments:
+#     1    path to the kernel source
+#
+#  Dump the architecture's syscall table to stdout.
+#
+function dump_sys_loongarch64() {
+	if [[ -e $1/arch/loongarch/kernel/Makefile.syscalls ]]; then
+		dump_from_syscall_tbl "$1/scripts/syscall.tbl" 64
+		return
+	fi
+
+	local sed_filter=""
+
+	sed_filter+='s/__NR3264_fadvise64/223/;'
+	sed_filter+='s/__NR3264_fcntl/25/;'
+	sed_filter+='s/__NR3264_fstatfs/44/;'
+	sed_filter+='s/__NR3264_ftruncate/46/;'
+	sed_filter+='s/__NR3264_lseek/62/;'
+	sed_filter+='s/__NR3264_mmap/222/;'
+	sed_filter+='s/__NR3264_sendfile/71/;'
+	sed_filter+='s/__NR3264_statfs/43/;'
+	sed_filter+='s/__NR3264_truncate/45/;'
+
+	gcc -E -dM -I$1/include/uapi \
+		-D__BITS_PER_LONG=64 \
+		-D__ARCH_WANT_SYS_CLONE \
+		-D__ARCH_WANT_SYS_CLONE3 \
+		$1/arch/loongarch/include/uapi/asm/unistd.h | \
+		grep "^#define __NR_" | \
+		sed '/__NR_syscalls/d' | \
+		sed '/__NR_arch_specific_syscall/d' | \
+		sed 's/#define[ \t]\+__NR_\([^ \t]\+\)[ \t]\+\(.*\)/\1,\2/' | \
+		sed $sed_filter | sort
+}
+
+#
+# Dump the loongarch64 library syscall table
+#
+#  Dump the library's syscall table to stdout.
+#
+function dump_lib_loongarch64() {
+	dump_lib_arch loongarch64 | mangle_lib_syscall loongarch64
+}
+
+# Dump the m68k system syscall table
+#
+# Arguments:
+#     1    path to the kernel source
+#
+#  Dump the architecture's syscall table to stdout.
+#
+function dump_sys_m68k() {
+	dump_from_syscall_tbl "$1/arch/m68k/kernel/syscalls/syscall.tbl"
+}
+
+#
+# Dump the m68k library syscall table
+#
+#  Dump the library's syscall table to stdout.
+#
+function dump_lib_m68k() {
+	dump_lib_arch m68k | mangle_lib_syscall m68k
+}
+
+#
 # Dump the mips system syscall table
 #
 # Arguments:
@@ -314,11 +406,7 @@ function dump_lib_aarch64() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_mips() {
-	cat $1/arch/mips/kernel/syscalls/syscall_o32.tbl | \
-		grep -v "^#" | \
-		sed -e '/[ \t]\+reserved[0-9]\+[ \t]\+/d;' | \
-		sed -e '/[ \t]\+unused[0-9]\+[ \t]\+/d;' | \
-		awk '{ print $3","$1 }' | sort
+	dump_from_syscall_tbl "$1/arch/mips/kernel/syscalls/syscall_o32.tbl" o32
 }
 
 #
@@ -339,11 +427,7 @@ function dump_lib_mips() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_mips64() {
-	cat $1/arch/mips/kernel/syscalls/syscall_n64.tbl | \
-		grep -v "^#" | \
-		sed -e '/[ \t]\+reserved[0-9]\+[ \t]\+/d;' | \
-		sed -e '/[ \t]\+unused[0-9]\+[ \t]\+/d;' | \
-		awk '{ print $3","$1 }' | sort
+	dump_from_syscall_tbl "$1/arch/mips/kernel/syscalls/syscall_n64.tbl" n64
 }
 
 #
@@ -364,11 +448,7 @@ function dump_lib_mips64() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_mips64n32() {
-	cat $1/arch/mips/kernel/syscalls/syscall_n32.tbl | \
-		grep -v "^#" | \
-		sed -e '/[ \t]\+reserved[0-9]\+[ \t]\+/d;' | \
-		sed -e '/[ \t]\+unused[0-9]\+[ \t]\+/d;' | \
-		awk '{ print $3","$1 }' | sort
+	dump_from_syscall_tbl "$1/arch/mips/kernel/syscalls/syscall_n32.tbl" n32
 }
 
 #
@@ -389,11 +469,7 @@ function dump_lib_mips64n32() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_parisc() {
-	cat $1/arch/parisc/kernel/syscalls/syscall.tbl | \
-		grep -v "^#" | \
-		sed -n "/[0-9]\+[ \t]\+\(common\|32\)/p" | \
-		awk '{ print $3","$1 }' | \
-		sort
+	dump_from_syscall_tbl "$1/arch/parisc/kernel/syscalls/syscall.tbl" 32
 }
 
 #
@@ -414,11 +490,7 @@ function dump_lib_parisc() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_parisc64() {
-	cat $1/arch/parisc/kernel/syscalls/syscall.tbl | \
-		grep -v "^#" | \
-		sed -n "/[0-9]\+[ \t]\+\(common\|64\)/p" | \
-		awk '{ print $3","$1 }' | \
-		sort
+	dump_from_syscall_tbl "$1/arch/parisc/kernel/syscalls/syscall.tbl" 64
 }
 
 #
@@ -439,9 +511,8 @@ function dump_lib_parisc64() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_ppc() {
-	cat $1/arch/powerpc/kernel/syscalls/syscall.tbl | grep -v "^#" | \
-		sed -ne "/[0-9]\+[ \t]\+\(common\|nospu\|32\)/p" | \
-		awk '{ print $3","$1 }' | sort
+	dump_from_syscall_tbl "$1/arch/powerpc/kernel/syscalls/syscall.tbl" \
+		nospu 32
 }
 
 #
@@ -462,9 +533,8 @@ function dump_lib_ppc() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_ppc64() {
-	cat $1/arch/powerpc/kernel/syscalls/syscall.tbl | grep -v "^#" | \
-		sed -ne "/[0-9]\+[ \t]\+\(common\|nospu\|64\)/p" | \
-		awk '{ print $3","$1 }' | sort
+	dump_from_syscall_tbl "$1/arch/powerpc/kernel/syscalls/syscall.tbl" \
+		nospu 64
 }
 
 #
@@ -485,6 +555,12 @@ function dump_lib_ppc64() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_riscv64() {
+	if [[ -e $1/arch/riscv/kernel/Makefile.syscalls ]]; then
+		dump_from_syscall_tbl "$1/scripts/syscall.tbl" \
+			64 riscv rlimit memfd_secret
+		return
+	fi
+
 	local sed_filter=""
 
 	sed_filter+='s/__NR3264_fadvise64/223/;'
@@ -528,10 +604,7 @@ function dump_lib_riscv64() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_s390() {
-	cat $1/arch/s390/kernel/syscalls/syscall.tbl | grep -v "^#" | \
-		sed -ne "/[0-9]\+[ \t]\+\(common\|32\)/p" | \
-		awk '{ print $3","$1 }' | \
-		sort
+	dump_from_syscall_tbl "$1/arch/s390/kernel/syscalls/syscall.tbl" 32
 }
 
 #
@@ -552,10 +625,7 @@ function dump_lib_s390() {
 #  Dump the architecture's syscall table to stdout.
 #
 function dump_sys_s390x() {
-	cat $1/arch/s390/kernel/syscalls/syscall.tbl | grep -v "^#" | \
-		sed -ne "/[0-9]\+[ \t]\+\(common\|64\)/p" | \
-		awk '{ print $3","$1 }' | \
-		sort
+	dump_from_syscall_tbl "$1/arch/s390/kernel/syscalls/syscall.tbl" 64
 }
 
 #
@@ -565,6 +635,27 @@ function dump_sys_s390x() {
 #
 function dump_lib_s390x() {
 	dump_lib_arch s390x | mangle_lib_syscall s390x
+}
+
+#
+# Dump the sh system syscall table
+#
+# Arguments:
+#     1    path to the kernel source
+#
+#  Dump the architecture's syscall table to stdout.
+#
+function dump_sys_sh() {
+	dump_from_syscall_tbl "$1/arch/sh/kernel/syscalls/syscall.tbl"
+}
+
+#
+# Dump the sh library syscall table
+#
+#  Dump the library's syscall table to stdout.
+#
+function dump_lib_sh() {
+	dump_lib_arch sh | mangle_lib_syscall sh
 }
 
 #
@@ -592,6 +683,12 @@ function dump_sys() {
 		;;
 	aarch64)
 		dump_sys_aarch64 "$2"
+		;;
+	loongarch64)
+		dump_sys_loongarch64 "$2"
+		;;
+	m68k)
+		dump_sys_m68k "$2"
 		;;
 	mips)
 		dump_sys_mips "$2"
@@ -622,6 +719,9 @@ function dump_sys() {
 		;;
 	s390x)
 		dump_sys_s390x "$2"
+		;;
+	sh)
+		dump_sys_sh "$2"
 		;;
 	*)
 		echo ""
@@ -657,6 +757,12 @@ function dump_lib() {
 	aarch64)
 		dump_lib_aarch64
 		;;
+	loongarch64)
+		dump_lib_loongarch64
+		;;
+	m68k)
+		dump_lib_m68k
+		;;
 	mips)
 		dump_lib_mips
 		;;
@@ -687,6 +793,9 @@ function dump_lib() {
 	s390x)
 		dump_lib_s390x
 		;;
+	sh)
+		dump_lib_sh
+		;;
 	*)
 		echo ""
 		return 1
@@ -702,8 +811,9 @@ function dump_lib() {
 # Arguments:
 #     1    path to the kernel source
 #     2    "sys" or "lib" depending on the syscall list to use
+#     3    csv file to use as input for saved fields
 #
-#   Generare a syscall csv file from the given kernel sources.
+#   Generate a syscall csv file from the given kernel sources.
 #
 function gen_csv() {
 
@@ -717,41 +827,69 @@ function gen_csv() {
 	abi_list=""
 	abi_list+=" x86 x86_64 x32"
 	abi_list+=" arm aarch64"
+	abi_list+=" loongarch64"
+	abi_list+=" m68k"
 	abi_list+=" mips mips64 mips64n32"
 	abi_list+=" parisc parisc64"
 	abi_list+=" ppc ppc64"
 	abi_list+=" riscv64"
 	abi_list+=" s390 s390x"
+	abi_list+=" sh"
+
+	# read the csv to get the existing data
+	local -A csv
+	local csv_has_kver=0
+	local csv_input="$3"
+	[[ ! -e "$3" ]] && csv_input=/dev/null
+	grep -q "KV_" "$csv_input" && csv_has_kver=1
+	while read line; do
+		sc=$(echo $line | cut -d, -f 1)
+		local field=2
+		for abi in $abi_list; do
+			csv[$sc,$abi]=$(echo $line | cut -d, -f $field)
+			((field++))
+			if [[ $csv_has_kver -eq 1 ]]; then
+				csv[$sc,${abi}_KVER]=$(echo $line | \
+						       cut -d, -f $field)
+				((field++))
+			fi
+		done
+	done < <(sed 's/#.*//;/^[ \t]*$/d' "$csv_input")
 
 	# get the full syscall list
 	for abi in $abi_list; do
 		eval output_$abi=$(mktemp -t syscall_validate_XXXXXX)
 		dump_$2_$abi "$1" > $(eval echo $`eval echo output_$abi`)
 	done
-	sc_list=$((for abi in $abi_list; do
+	sc_list=$( (for abi in $abi_list; do
 			cat $(eval echo $`eval echo output_$abi`);
-		   done) | awk -F "," '{ print $1 }' | sort -u)
+		    done) | awk -F "," '{ print $1 }' | sort -u)
 
-	# output a simple header
-	printf "#syscall (v%s %s)" \
-		"$(kernel_version "$1")" "$(TZ=UTC date "+%Y-%m-%d")"
-	for abi in $abi_list; do
-		printf ",%s" $abi
-	done
-	printf "\n"
-
-	# output the syscall csv details
-	for sc in $sc_list; do
-		printf "%s" $sc
+	# redirect the subshell to the csv file
+	(
+		# output a simple header
+		printf "#syscall (v%s %s)" \
+			"$(kernel_version "$1")" "$(TZ=UTC date "+%Y-%m-%d")"
 		for abi in $abi_list; do
-			num=$(grep "^$sc," \
-				$(eval echo $`eval echo output_$abi`) | \
-			      awk -F "," '{ print $2 }' )
-			[[ -z $num ]] && num="PNR"
-			printf ",%s" $num
+			printf ",%s,%s_kver" $abi $abi
 		done
 		printf "\n"
-	done
+
+		# output the syscall csv details
+		for sc in $sc_list; do
+			printf "%s" $sc
+			for abi in $abi_list; do
+				num=$(grep "^$sc," \
+				      $(eval echo $`eval echo output_$abi`) | \
+				awk -F "," '{ print $2 }' )
+				kver=${csv[$sc,${abi}_KVER]}
+				[[ -z $num ]] && num="PNR"
+				[[ -z $kver ]] && kver="KV_UNDEF"
+				printf ",%s,%s" $num $kver
+			done
+			printf "\n"
+		done
+	) > "$3"
 
 	# cleanup
 	for abi in $abi_list; do
@@ -767,23 +905,19 @@ verify_deps gcc
 verify_deps grep
 verify_deps mktemp
 verify_deps sed
-if [[ ! -x $LIB_SYS_DUMP ]]; then
-	echo "error: \"$LIB_SYS_DUMP\" is not in the current working directory"
-	exit 1
-fi
 
 opt_arches=""
-opt_csv=0
+opt_csv=""
 opt_sys=0
 opt_lib=0
 
-while getopts "a:cslh" opt; do
+while getopts "a:c:slh" opt; do
 	case $opt in
 	a)
 		opt_arches+="$OPTARG "
 		;;
 	c)
-		opt_csv=1
+		opt_csv="$OPTARG"
 		;;
 	s)
 		opt_sys=1
@@ -806,10 +940,13 @@ if [[ $opt_arches == "" ]]; then
 	opt_arches=" \
 		x86 x86_64 x32 \
 		arm aarch64 \
+		loongarch64 \
+		m68k \
 		mips mips64 mips64n32 \
 		parisc parisc64 \
 		ppc ppc64 \
-		s390 s390x"
+		s390 s390x \
+		sh"
 fi
 
 # sanity checks
@@ -823,16 +960,21 @@ if [[ ! -d $kernel_dir ]]; then
 	exit 1
 fi
 
+if [[ ! -x "$LIB_SYS_DUMP" ]]; then
+	echo "error: \"$LIB_SYS_DUMP\" is not present"
+	exit 1
+fi
+
 # generate some temp files
 tmp_lib=$(mktemp -t syscall_validate_XXXXXX)
 tmp_sys=$(mktemp -t syscall_validate_XXXXXX)
 
-if [[ $opt_csv -eq 1 ]]; then
+if [[ -n $opt_csv ]]; then
 	# generate the syscall csv file
 	if [[ $opt_lib -eq 1 ]]; then
-		gen_csv $kernel_dir "lib"
+		gen_csv $kernel_dir "lib" $opt_csv
 	else
-		gen_csv $kernel_dir "sys"
+		gen_csv $kernel_dir "sys" $opt_csv
 	fi
 else
 	# loop through the architectures and compare

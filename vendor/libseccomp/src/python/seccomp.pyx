@@ -80,10 +80,12 @@ Example:
 __author__ =  'Paul Moore <paul@paul-moore.com>'
 __date__ = "3 February 2017"
 
+from cpython cimport array
 from cpython.version cimport PY_MAJOR_VERSION
 from libc.stdint cimport int8_t, int16_t, int32_t, int64_t
 from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdlib cimport free
+import array
 import errno
 
 cimport libseccomp
@@ -204,6 +206,8 @@ cdef class Arch:
     X32 - 64-bit x86 using the x32 ABI
     ARM - ARM
     AARCH64 - 64-bit ARM
+    LOONGARCH64 - 64-bit LoongArch
+    M68K - 32-bit Motorola 68000
     MIPS - MIPS O32 ABI
     MIPS64 - MIPS 64-bit ABI
     MIPS64N32 - MIPS N32 ABI
@@ -225,6 +229,8 @@ cdef class Arch:
     X32 = libseccomp.SCMP_ARCH_X32
     ARM = libseccomp.SCMP_ARCH_ARM
     AARCH64 = libseccomp.SCMP_ARCH_AARCH64
+    LOONGARCH64 = libseccomp.SCMP_ARCH_LOONGARCH64
+    M68K = libseccomp.SCMP_ARCH_M68K
     MIPS = libseccomp.SCMP_ARCH_MIPS
     MIPS64 = libseccomp.SCMP_ARCH_MIPS64
     MIPS64N32 = libseccomp.SCMP_ARCH_MIPS64N32
@@ -262,6 +268,10 @@ cdef class Arch:
                 self._token = libseccomp.SCMP_ARCH_ARM
             elif arch == libseccomp.SCMP_ARCH_AARCH64:
                 self._token = libseccomp.SCMP_ARCH_AARCH64
+            elif arch == libseccomp.SCMP_ARCH_LOONGARCH64:
+                self._token = libseccomp.SCMP_ARCH_LOONGARCH64
+            elif arch == libseccomp.SCMP_ARCH_M68K:
+                self._token = libseccomp.SCMP_ARCH_M68K
             elif arch == libseccomp.SCMP_ARCH_MIPS:
                 self._token = libseccomp.SCMP_ARCH_MIPS
             elif arch == libseccomp.SCMP_ARCH_MIPS64:
@@ -323,6 +333,7 @@ cdef class Attr:
                    1: rules weighted by priority and complexity (DEFAULT)
                    2: binary tree sorted by syscall number
     API_SYSRAWRC - return the raw syscall codes
+    CTL_WAITKILL - request wait killable semantics
     """
     ACT_DEFAULT = libseccomp.SCMP_FLTATR_ACT_DEFAULT
     ACT_BADARCH = libseccomp.SCMP_FLTATR_ACT_BADARCH
@@ -333,6 +344,7 @@ cdef class Attr:
     CTL_SSB = libseccomp.SCMP_FLTATR_CTL_SSB
     CTL_OPTIMIZE = libseccomp.SCMP_FLTATR_CTL_OPTIMIZE
     API_SYSRAWRC = libseccomp.SCMP_FLTATR_API_SYSRAWRC
+    CTL_WAITKILL = libseccomp.SCMP_FLTATR_CTL_WAITKILL
 
 cdef class Arg:
     """ Python object representing a SyscallFilter syscall argument.
@@ -621,7 +633,7 @@ cdef class SyscallFilter:
         Resets the seccomp filter state to an initial default state, if a
         default filter action is not specified in the reset call the
         original action will be reused.  This function does not affect any
-        seccomp filters alread loaded into the kernel.
+        seccomp filters already loaded into the kernel.
         """
         if defaction == -1:
             defaction = self._defaction
@@ -798,7 +810,7 @@ cdef class SyscallFilter:
 
         In the case where the specific rule is not valid on a specific
         architecture, e.g. socket() on 32-bit x86, this method rewrites
-        the rule to the best possible match.  If you don't want this fule
+        the rule to the best possible match.  If you don't want this rule
         rewriting to take place use add_rule_exactly().
         """
         cdef libseccomp.scmp_arg_cmp c_arg[6]
@@ -1041,6 +1053,69 @@ cdef class SyscallFilter:
         Linux Kernel.
         """
         rc = libseccomp.seccomp_export_bpf(self._ctx, file.fileno())
+        if rc != 0:
+            raise RuntimeError(str.format("Library error (errno = {0})", rc))
+
+    def export_bpf_mem(self):
+        """ Export the filter in BPF format.
+
+        Description:
+        Return the filter in Berkeley Packet Filter (BPF) as bytes.
+        The output is identical to what is loaded into the Linux Kernel.
+        """
+        cdef size_t len = 0
+
+        # Figure out how big the program is.
+        rc = libseccomp.seccomp_export_bpf_mem(self._ctx, NULL, <size_t *>&len)
+        if rc != 0:
+            raise RuntimeError(str.format("Library error (errno = {0})", rc))
+
+        # Get the program.
+        cdef array.array data = array.array('B', bytes(len))
+        cdef unsigned char[:] program = data
+        rc = libseccomp.seccomp_export_bpf_mem(self._ctx, <void *>&program[0],
+                                               <size_t *>&len)
+        if rc != 0:
+            raise RuntimeError(str.format("Library error (errno = {0})", rc))
+        return program
+
+    def start_transaction(self):
+        """ Start a transaction.
+
+        Description:
+        Start a transaction for modifying the seccomp filter.
+        """
+        rc = libseccomp.seccomp_transaction_start(self._ctx)
+        if rc != 0:
+            raise RuntimeError(str.format("Library error (errno = {0})", rc))
+
+    def reject_transaction(self):
+        """ Reject a transaction.
+
+        Description:
+        Reject the current seccomp filter transaction.
+        """
+        libseccomp.seccomp_transaction_reject(self._ctx)
+
+    def commit_transaction(self):
+        """ Commit a transaction.
+
+        Description:
+        Commit the current seccomp filter transaction.
+        """
+        rc = libseccomp.seccomp_transaction_commit(self._ctx)
+        if rc != 0:
+            raise RuntimeError(str.format("Library error (errno = {0})", rc))
+
+    def precompute(self):
+        """ Precompute the seccomp filter.
+
+        Description:
+        Precompute the seccomp filter and store it internally for future use,
+        speeding up filter loads and other functions which require the
+        generated filter.
+        """
+        rc = libseccomp.seccomp_precompute(self._ctx)
         if rc != 0:
             raise RuntimeError(str.format("Library error (errno = {0})", rc))
 

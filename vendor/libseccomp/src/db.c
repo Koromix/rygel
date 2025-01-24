@@ -3,6 +3,7 @@
  *
  * Copyright (c) 2012,2016,2018 Red Hat <pmoore@redhat.com>
  * Copyright (c) 2019 Cisco Systems, Inc. <pmoore2@cisco.com>
+ * Copyright (c) 2022 Microsoft Corporation <paulmoore@microsoft.com>
  * Author: Paul Moore <paul@paul-moore.com>
  */
 
@@ -654,7 +655,7 @@ prune_next_node:
 		x_iter = x_iter_next;
 	} while (x_iter);
 
-	// if we are falling through, we clearly didn't match on anything
+	/* if we are falling through, we clearly didn't match on anything */
 	state_new.flags &= ~_DB_IST_MATCH;
 
 prune_return:
@@ -858,7 +859,7 @@ static void _db_reset(struct db_filter *db)
 }
 
 /**
- * Intitalize a seccomp filter DB
+ * Initialize a seccomp filter DB
  * @param arch the architecture definition
  *
  * This function initializes a seccomp filter DB and readies it for use.
@@ -1058,7 +1059,7 @@ int db_col_reset(struct db_filter_col *col, uint32_t def_action)
 		free(col->filters);
 	col->filters = NULL;
 
-	/* set the endianess to undefined */
+	/* set the endianness to undefined */
 	col->endian = 0;
 
 	/* set the default attribute values */
@@ -1071,6 +1072,7 @@ int db_col_reset(struct db_filter_col *col, uint32_t def_action)
 	col->attr.spec_allow = 0;
 	col->attr.optimize = 1;
 	col->attr.api_sysrawrc = 0;
+	col->attr.wait_killable_recv = 0;
 
 	/* set the state */
 	col->state = _DB_STA_VALID;
@@ -1098,11 +1100,14 @@ int db_col_reset(struct db_filter_col *col, uint32_t def_action)
 		free(snap);
 	}
 
+	/* reset the precomputed programs */
+	db_col_precompute_reset(col);
+
 	return 0;
 }
 
 /**
- * Intitalize a seccomp filter collection
+ * Initialize a seccomp filter collection
  * @param def_action the default filter action
  *
  * This function initializes a seccomp filter collection and readies it for
@@ -1118,14 +1123,12 @@ struct db_filter_col *db_col_init(uint32_t def_action)
 		return NULL;
 
 	/* reset the DB to a known state */
-	if (db_col_reset(col, def_action) < 0)
-		goto init_failure;
+	if (db_col_reset(col, def_action) < 0) {
+		db_col_release(col);
+		return NULL;
+	}
 
 	return col;
-
-init_failure:
-	db_col_release(col);
-	return NULL;
 }
 
 /**
@@ -1161,6 +1164,9 @@ void db_col_release(struct db_filter_col *col)
 	if (col->filters)
 		free(col->filters);
 	col->filters = NULL;
+
+	/* free any precompute */
+	db_col_precompute_reset(col);
 
 	/* free the collection */
 	free(col);
@@ -1222,7 +1228,7 @@ int db_col_merge(struct db_filter_col *col_dst, struct db_filter_col *col_src)
 	unsigned int iter_a, iter_b;
 	struct db_filter **dbs;
 
-	/* verify that the endianess is a match */
+	/* verify that the endianness is a match */
 	if (col_dst->endian != col_src->endian)
 		return -EDOM;
 
@@ -1249,6 +1255,9 @@ int db_col_merge(struct db_filter_col *col_dst, struct db_filter_col *col_src)
 		col_dst->filters[iter_a] = col_src->filters[iter_b];
 		col_dst->filter_cnt++;
 	}
+
+	/* reset the precompute */
+	db_col_precompute_reset(col_dst);
 
 	/* free the source */
 	col_src->filter_cnt = 0;
@@ -1321,6 +1330,9 @@ int db_col_attr_get(const struct db_filter_col *col,
 	case SCMP_FLTATR_API_SYSRAWRC:
 		*value = col->attr.api_sysrawrc;
 		break;
+	case SCMP_FLTATR_CTL_WAITKILL:
+		*value = col->attr.wait_killable_recv;
+		break;
 	default:
 		rc = -EINVAL;
 		break;
@@ -1373,6 +1385,7 @@ int db_col_attr_set(struct db_filter_col *col,
 			col->attr.act_badarch = value;
 		else
 			return -EINVAL;
+		db_col_precompute_reset(col);
 		break;
 	case SCMP_FLTATR_CTL_NNP:
 		col->attr.nnp_enable = (value ? 1 : 0);
@@ -1394,6 +1407,7 @@ int db_col_attr_set(struct db_filter_col *col,
 		break;
 	case SCMP_FLTATR_API_TSKIP:
 		col->attr.api_tskip = (value ? 1 : 0);
+		db_col_precompute_reset(col);
 		break;
 	case SCMP_FLTATR_CTL_LOG:
 		rc = sys_chk_seccomp_flag(SECCOMP_FILTER_FLAG_LOG);
@@ -1427,9 +1441,13 @@ int db_col_attr_set(struct db_filter_col *col,
 			rc = -EOPNOTSUPP;
 			break;
 		}
+		db_col_precompute_reset(col);
 		break;
 	case SCMP_FLTATR_API_SYSRAWRC:
 		col->attr.api_sysrawrc = (value ? 1 : 0);
+		break;
+	case SCMP_FLTATR_CTL_WAITKILL:
+		col->attr.wait_killable_recv = (value ? 1 : 0);
 		break;
 	default:
 		rc = -EINVAL;
@@ -1460,6 +1478,8 @@ int db_col_db_new(struct db_filter_col *col, const struct arch_def *arch)
 	rc = db_col_db_add(col, db);
 	if (rc < 0)
 		_db_release(db);
+	else
+		db_col_precompute_reset(col);
 
 	return rc;
 }
@@ -1539,6 +1559,8 @@ int db_col_db_remove(struct db_filter_col *col, uint32_t arch_token)
 		col->filters = NULL;
 		col->endian = 0;
 	}
+
+	db_col_precompute_reset(col);
 
 	return 0;
 }
@@ -2233,6 +2255,9 @@ priority_failure:
 			rc = rc_tmp;
 	}
 
+	if (rc == 0)
+		db_col_precompute_reset(col);
+
 	return rc;
 }
 
@@ -2344,7 +2369,7 @@ int db_col_rule_add(struct db_filter_col *col,
 	}
 
 	/* create a checkpoint */
-	rc = db_col_transaction_start(col);
+	rc = db_col_transaction_start(col, false);
 	if (rc != 0)
 		goto add_return;
 
@@ -2371,14 +2396,17 @@ add_arch_fail:
 
 	/* commit the transaction or abort */
 	if (rc == 0)
-		db_col_transaction_commit(col);
+		db_col_transaction_commit(col, false);
 	else
-		db_col_transaction_abort(col);
+		db_col_transaction_abort(col, false);
 
 add_return:
 	/* update the misc state */
-	if (rc == 0 && action == SCMP_ACT_NOTIFY)
-		col->notify_used = true;
+	if (rc == 0) {
+		if (action == SCMP_ACT_NOTIFY)
+			col->notify_used = true;
+		db_col_precompute_reset(col);
+	}
 	if (chain != NULL)
 		free(chain);
 	return rc;
@@ -2387,12 +2415,13 @@ add_return:
 /**
  * Start a new seccomp filter transaction
  * @param col the filter collection
+ * @param user true if initiated by a user
  *
  * This function starts a new seccomp filter transaction for the given filter
  * collection.  Returns zero on success, negative values on failure.
  *
  */
-int db_col_transaction_start(struct db_filter_col *col)
+int db_col_transaction_start(struct db_filter_col *col, bool user)
 {
 	int rc;
 	unsigned int iter;
@@ -2411,6 +2440,7 @@ int db_col_transaction_start(struct db_filter_col *col)
 		 *       transaction is current/correct */
 
 		col->snapshots->shadow = false;
+		col->snapshots->user = user;
 		return 0;
 	}
 
@@ -2458,6 +2488,8 @@ int db_col_transaction_start(struct db_filter_col *col)
 		} while (rule_o != filter_o->rules);
 	}
 
+	snap->user = user;
+
 	/* add the snapshot to the list */
 	snap->next = col->snapshots;
 	col->snapshots = snap;
@@ -2474,23 +2506,35 @@ trans_start_failure:
 /**
  * Abort the top most seccomp filter transaction
  * @param col the filter collection
+ * @param user true if initiated by a user
  *
  * This function aborts the most recent seccomp filter transaction.
  *
  */
-void db_col_transaction_abort(struct db_filter_col *col)
+void db_col_transaction_abort(struct db_filter_col *col, bool user)
 {
 	int iter;
 	unsigned int filter_cnt;
 	struct db_filter **filters;
 	struct db_filter_snap *snap;
 
-	if (col->snapshots == NULL)
+	snap = col->snapshots;
+	if (snap == NULL)
 		return;
 
-	/* replace the current filter with the last snapshot */
-	snap = col->snapshots;
+	/* replace the current filter with the last snapshot, skipping shadow
+	 * snapshots are they are duplicates of the current snapshot */
+	if (snap->shadow) {
+		struct db_filter_snap *tmp = snap;
+		snap = snap->next;
+		_db_snap_release(tmp);
+	}
+
+	if (snap->user != user)
+		return;
+
 	col->snapshots = snap->next;
+
 	filter_cnt = col->filter_cnt;
 	filters = col->filters;
 	col->filter_cnt = snap->filter_cnt;
@@ -2501,18 +2545,22 @@ void db_col_transaction_abort(struct db_filter_col *col)
 	for (iter = 0; iter < filter_cnt; iter++)
 		_db_release(filters[iter]);
 	free(filters);
+
+	/* free any precompute */
+	db_col_precompute_reset(col);
 }
 
 /**
  * Commit the top most seccomp filter transaction
  * @param col the filter collection
+ * @param user true if initiated by a user
  *
  * This function commits the most recent seccomp filter transaction and
  * attempts to create a shadow transaction that is a duplicate of the current
  * filter to speed up future transactions.
  *
  */
-void db_col_transaction_commit(struct db_filter_col *col)
+void db_col_transaction_commit(struct db_filter_col *col, bool user)
 {
 	int rc;
 	unsigned int iter;
@@ -2528,11 +2576,15 @@ void db_col_transaction_commit(struct db_filter_col *col)
 	if (snap->shadow) {
 		/* leave the shadow intact, but drop the next snapshot */
 		if (snap->next) {
-			snap->next = snap->next->next;
-			_db_snap_release(snap->next);
+			struct db_filter_snap *tmp = snap->next;
+			snap->next = tmp->next;
+			_db_snap_release(tmp);
 		}
 		return;
 	}
+
+	if (snap->user != user)
+		return;
 
 	/* adjust the number of filters if needed */
 	if (col->filter_cnt > snap->filter_cnt) {
@@ -2562,8 +2614,8 @@ void db_col_transaction_commit(struct db_filter_col *col)
 		 *       at the cost of a not reaping all the memory possible */
 
 		do {
-			_db_release(snap->filters[snap->filter_cnt--]);
-		} while (snap->filter_cnt > col->filter_cnt);
+			_db_release(snap->filters[--snap->filter_cnt]);
+		} while (col->filter_cnt < snap->filter_cnt);
 	}
 
 	/* loop through each filter and update the rules on the snapshot */
@@ -2617,4 +2669,34 @@ shadow_err:
 	col->snapshots = snap->next;
 	_db_snap_release(snap);
 	return;
+}
+
+/**
+ * Precompute the seccomp filters
+ * @param col the filter collection
+ *
+ * This function precomputes the seccomp filters before they are needed,
+ * returns zero on success, negative values on error.
+ *
+ */
+int db_col_precompute(struct db_filter_col *col)
+{
+	if (!col->prgm_bpf)
+		return gen_bpf_generate(col, &col->prgm_bpf);
+	return 0;
+}
+
+/**
+ * Free any precomputed filter programs
+ * @param col the filter collection
+ *
+ * This function releases any precomputed filter programs.
+ */
+void db_col_precompute_reset(struct db_filter_col *col)
+{
+	if (!col->prgm_bpf)
+		return;
+
+	gen_bpf_release(col->prgm_bpf);
+	col->prgm_bpf = NULL;
 }

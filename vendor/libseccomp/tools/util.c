@@ -44,6 +44,10 @@
 #define ARCH_NATIVE		AUDIT_ARCH_ARM
 #elif __aarch64__
 #define ARCH_NATIVE		AUDIT_ARCH_AARCH64
+#elif __loongarch_lp64
+#define ARCH_NATIVE		AUDIT_ARCH_LOONGARCH64
+#elif __m68k__
+#define ARCH_NATIVE		AUDIT_ARCH_M68K
 #elif __mips__ && _MIPS_SIM == _MIPS_SIM_ABI32
 #if __MIPSEB__
 #define ARCH_NATIVE		AUDIT_ARCH_MIPS
@@ -80,6 +84,12 @@
 #define ARCH_NATIVE		AUDIT_ARCH_S390
 #elif __riscv && __riscv_xlen == 64
 #define ARCH_NATIVE		AUDIT_ARCH_RISCV64
+#elif __sh__
+#ifdef __BIG_ENDIAN__
+#define ARCH_NATIVE		AUDIT_ARCH_SH
+#else
+#define ARCH_NATIVE		AUDIT_ARCH_SHEL
+#endif
 #else
 #error the simulator code needs to know about your machine type
 #endif
@@ -88,11 +98,11 @@
 uint32_t arch = ARCH_NATIVE;
 
 /**
- * Convert a 16-bit target integer into the host's endianess
+ * Convert a 16-bit target integer into the host's endianness
  * @param arch_token the architecture token
  * @param val the 16-bit integer
  *
- * Convert the endianess of the supplied value and return it to the caller.
+ * Convert the endianness of the supplied value and return it to the caller.
  *
  */
 uint16_t ttoh16(uint32_t arch_token, uint16_t val)
@@ -104,11 +114,11 @@ uint16_t ttoh16(uint32_t arch_token, uint16_t val)
 }
 
 /**
- * Convert a 32-bit target integer into the host's endianess
+ * Convert a 32-bit target integer into the host's endianness
  * @param arch_token the architecture token
  * @param val the 32-bit integer
  *
- * Convert the endianess of the supplied value and return it to the caller.
+ * Convert the endianness of the supplied value and return it to the caller.
  *
  */
 uint32_t ttoh32(uint32_t arch_token, uint32_t val)
@@ -120,11 +130,11 @@ uint32_t ttoh32(uint32_t arch_token, uint32_t val)
 }
 
 /**
- * Convert a 32-bit host integer into the target's endianess
+ * Convert a 32-bit host integer into the target's endianness
  * @param arch_token the architecture token
  * @param val the 32-bit integer
  *
- * Convert the endianess of the supplied value and return it to the caller.
+ * Convert the endianness of the supplied value and return it to the caller.
  *
  */
 uint32_t htot32(uint32_t arch_token, uint32_t val)
@@ -136,11 +146,11 @@ uint32_t htot32(uint32_t arch_token, uint32_t val)
 }
 
 /**
- * Convert a 64-bit host integer into the target's endianess
+ * Convert a 64-bit host integer into the target's endianness
  * @param arch_token the architecture token
  * @param val the 64-bit integer
  *
- * Convert the endianess of the supplied value and return it to the caller.
+ * Convert the endianness of the supplied value and return it to the caller.
  *
  */
 uint64_t htot64(uint32_t arch_token, uint64_t val)

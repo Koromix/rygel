@@ -28,10 +28,12 @@ dist_man3_MANS = \
 	man/man3/seccomp_attr_get.3 \
 	man/man3/seccomp_attr_set.3 \
 	man/man3/seccomp_export_bpf.3 \
+	man/man3/seccomp_export_bpf_mem.3 \
 	man/man3/seccomp_export_pfc.3 \
 	man/man3/seccomp_init.3 \
 	man/man3/seccomp_load.3 \
 	man/man3/seccomp_merge.3 \
+	man/man3/seccomp_precompute.3 \
 	man/man3/seccomp_release.3 \
 	man/man3/seccomp_reset.3 \
 	man/man3/seccomp_rule_add.3 \

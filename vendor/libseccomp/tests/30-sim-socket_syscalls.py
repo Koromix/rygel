@@ -36,6 +36,7 @@ def test(args):
     f.add_arch(Arch("x32"))
     f.add_arch(Arch("ppc64le"))
     f.add_arch(Arch("mipsel"))
+    f.add_arch(Arch("sh"))
     f.add_rule(ALLOW, "socket")
     f.add_rule(ALLOW, "bind")
     f.add_rule(ALLOW, "connect")

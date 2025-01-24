@@ -94,7 +94,10 @@ check_PROGRAMS = \
 	56-basic-iterate_syscalls \
 	57-basic-rawsysrc \
 	58-live-tsync_notify \
-	59-basic-empty_binary_tree
+	59-basic-empty_binary_tree \
+	60-sim-precompute \
+	61-sim-transactions \
+	62-sim-arch_transactions
 
 EXTRA_DIST_TESTPYTHON = \
 	util.py \
@@ -154,7 +157,10 @@ EXTRA_DIST_TESTPYTHON = \
 	56-basic-iterate_syscalls.py \
 	57-basic-rawsysrc.py \
 	58-live-tsync_notify.py \
-	59-basic-empty_binary_tree.py
+	59-basic-empty_binary_tree.py \
+	60-sim-precompute.py \
+	61-sim-transactions.py \
+	62-sim-arch_transactions.py
 
 EXTRA_DIST_TESTCFGS = \
 	01-sim-allow.tests \
@@ -215,7 +221,10 @@ EXTRA_DIST_TESTCFGS = \
 	56-basic-iterate_syscalls.tests \
 	57-basic-rawsysrc.tests \
 	58-live-tsync_notify.tests \
-	59-basic-empty_binary_tree.tests
+	59-basic-empty_binary_tree.tests \
+	60-sim-precompute.tests \
+	61-sim-transactions.tests \
+	62-sim-arch_transactions.tests
 
 EXTRA_DIST_TESTSCRIPTS = \
 	38-basic-pfc_coverage.sh 38-basic-pfc_coverage.pfc \
@@ -239,4 +248,4 @@ check-build:
 	${MAKE} ${AM_MAKEFLAGS} ${check_PROGRAMS}
 
 clean-local:
-	${RM} -f 00-test *.pyc
+	${RM} -f 00-test *.pyc *.log *.stats
