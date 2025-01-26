@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../../../vendor/lit-html/lit-html.bundle.js';
-import * as UI from '../../../../web/flat/ui.js';
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import * as UI from '../../../web/flat/ui.js';
 import { DrawAPI, InputAPI } from './api.js';
 import { calibrate } from './trackers/mouse.js';
 import experiments from './experiments/experiments.json';

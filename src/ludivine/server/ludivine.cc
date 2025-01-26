@@ -60,7 +60,7 @@ static void InitAssets()
     const char *css = nullptr;
 
     for (const AssetInfo &asset: GetEmbedAssets()) {
-        if (TestStr(asset.name, "src/ludivine/app/src/index.html")) {
+        if (TestStr(asset.name, "src/ludivine/client/index.html")) {
             assets_index = asset;
             assets_map.Set("/", &assets_index);
         } else if (TestStr(asset.name, "src/ludivine/assets/ldv.webp")) {

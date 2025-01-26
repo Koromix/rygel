@@ -13,10 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../../web/core/base.js';
-import * as UI from '../../../../web/flat/ui.js';
-import { AppRunner } from '../../../../web/core/runner.js';
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log } from '../../../web/core/base.js';
+import * as UI from '../../../web/flat/ui.js';
+import { AppRunner } from '../../../web/core/runner.js';
 import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
 import { assets } from '../lib/assets.js';
 import * as app from '../app.js';
@@ -493,10 +493,11 @@ function NetworkModule(db, test, root_el) {
         save_timer = setTimeout(() => {
             save_timer = null;
 
+            let mtime = (new Date).valueOf();
             let data = serialize();
             let json = JSON.stringify(data);
 
-            db.exec('UPDATE tests SET payload = ? WHERE id = ?', json, test.id);
+            db.exec('UPDATE tests SET mtime = ?, payload = ? WHERE id = ?', mtime, json, test.id);
         }, 1000);
     }
 

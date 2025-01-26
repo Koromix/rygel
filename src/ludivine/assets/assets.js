@@ -72,11 +72,12 @@ import asset55 from './web/misc/3114.webp';
 import asset56 from './web/misc/dice.webp';
 import asset57 from './web/misc/left.webp';
 import asset58 from './web/misc/right.webp';
-import asset59 from './web/videos/blessures_invisibles.webp';
-import asset60 from './web/videos/bloque_bloquee.webp';
-import asset61 from './web/videos/trauma_vicariant.webp';
-import asset62 from './web/videos/trop_trop_peur.webp';
-import asset63 from './web/videos/violences_sexuelles_enfance.webp';
+import asset59 from './web/misc/verres_std.jpg';
+import asset60 from './web/videos/blessures_invisibles.webp';
+import asset61 from './web/videos/bloque_bloquee.webp';
+import asset62 from './web/videos/trauma_vicariant.webp';
+import asset63 from './web/videos/trop_trop_peur.webp';
+import asset64 from './web/videos/violences_sexuelles_enfance.webp';
 
 const assets = {
     'footer.webp': asset0,
@@ -138,11 +139,12 @@ const assets = {
     'web/misc/dice.webp': asset56,
     'web/misc/left.webp': asset57,
     'web/misc/right.webp': asset58,
-    'web/videos/blessures_invisibles.webp': asset59,
-    'web/videos/bloque_bloquee.webp': asset60,
-    'web/videos/trauma_vicariant.webp': asset61,
-    'web/videos/trop_trop_peur.webp': asset62,
-    'web/videos/violences_sexuelles_enfance.webp': asset63,
+    'web/misc/verres_std.jpg': asset59,
+    'web/videos/blessures_invisibles.webp': asset60,
+    'web/videos/bloque_bloquee.webp': asset61,
+    'web/videos/trauma_vicariant.webp': asset62,
+    'web/videos/trop_trop_peur.webp': asset63,
+    'web/videos/violences_sexuelles_enfance.webp': asset64,
 };
 
 export { assets };

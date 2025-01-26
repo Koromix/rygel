@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Net } from '../../../../../../web/core/base.js';
+import { render, html } from '../../../../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Net } from '../../../../../web/core/base.js';
 import { loadTexture } from '../../../lib/util.js';
 import { assets } from './images.js';
 

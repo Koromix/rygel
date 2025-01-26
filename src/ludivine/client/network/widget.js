@@ -13,9 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../../web/core/base.js';
-import * as UI from '../../../../web/flat/ui.js';
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log } from '../../../web/core/base.js';
+import * as UI from '../../../web/flat/ui.js';
 import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from '../lib/constants.js';
 import { computeAge, dateToString } from '../lib/util.js';
 import { assets, textures } from '../lib/assets.js';

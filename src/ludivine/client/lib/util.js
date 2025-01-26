@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util, Log, Net } from '../../../../web/core/base.js';
+import { render, html, svg } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net } from '../../../web/core/base.js';
 
 function computeAge(from, to = null) {
     if (!(from instanceof Date))
@@ -109,10 +110,32 @@ async function loadTexture(url) {
     return texture;
 }
 
+function renderProgress(value, total) {
+    if (!total) {
+        value = 0;
+        total = 100;
+    }
+
+    let ratio = (value / total);
+    let progress = Math.round(ratio * 100);
+
+    let array = 314.1;
+    let offset = array - ratio * array;
+
+    return svg`
+        <svg width="100" height="100" viewBox="-12.5 -12.5 125 125" style="transform: rotate(-90deg)">
+            <circle r="50" cx="50" cy="50" fill="transparent" stroke="#dddddd" stroke-width="10" stroke-dasharray=${array + 'px'} stroke-dashoffset="0"></circle>
+            <circle r="50" cx="50" cy="50" stroke="#383838" stroke-width="10" stroke-linecap="butt" stroke-dasharray=${array + 'px'} stroke-dashoffset=${offset + 'px'} fill="transparent"></circle>
+            <text x="50px" y="53px" fill="#383838" font-size="19px" font-weight="bold" text-anchor="middle" style="transform: rotate(90deg) translate(0px, -96px)">${progress}%</text>
+        </svg>
+    `;
+}
+
 export {
     computeAge,
     computeAgeMonths,
     dateToString,
     loadImage,
-    loadTexture
+    loadTexture,
+    renderProgress
 }

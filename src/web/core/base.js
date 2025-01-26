@@ -1470,6 +1470,14 @@ LocalDate.today = function() {
     return new LocalDate(year, month, day);
 };
 
+LocalDate.fromJSDate = function(value) {
+    if (typeof value == 'number')
+        value = new Date(value);
+
+    let date = new LocalDate(value.getYear(), value.getMonth() + 1, value.getDate());
+    return date;
+};
+
 function LocalTime(hour = 0, minute = 0, second = 0) {
     this.hour = hour;
     this.minute = minute;
