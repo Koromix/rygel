@@ -23,10 +23,12 @@ window.addEventListener('load', e => {
 function initDeploy() {
     let deploy = document.querySelector('#deploy');
 
-    deploy.addEventListener('click', e => {
-        let top = document.querySelector('nav#top');
-        top.classList.toggle('active');
-    });
+    if (deploy != null) {
+        deploy.addEventListener('click', e => {
+            let top = document.querySelector('nav#top');
+            top.classList.toggle('active');
+        });
+    }
 }
 
 function initMenu() {
