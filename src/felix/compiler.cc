@@ -2962,7 +2962,7 @@ bool DetermineSourceType(const char *filename, SourceType *out_type)
     } else if (extension == ".o" || extension == ".obj") {
         type = SourceType::Object;
         found = true;
-    } else if (extension == ".js" || extension == ".css") {
+    } else if (extension == ".js" || extension == ".mjs" || extension == ".json" || extension == ".css") {
         type = SourceType::Esbuild;
         found = true;
     } else if (extension == ".ui") {
