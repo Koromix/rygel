@@ -108,14 +108,14 @@ let active_mod = null;
 
 let calendar = new SmallCalendar;
 
-async function start(root, prefix) {
+async function start(root) {
     Log.pushHandler(UI.notifyHandler);
 
     // Adapt to viewport
     window.addEventListener('resize', adaptToViewport);
     adaptToViewport();
 
-    await loadAssets(prefix);
+    await loadAssets();
 
     await initSQLite();
     db = await openDatabase(DATABASE_FILENAME, 'c');
@@ -474,7 +474,7 @@ async function changePicture() {
     let cropper = new PictureCropper('Modifier mon avatar', 256);
 
     let url = BUNDLES['notion.json'];
-    let notion = await import(url);
+    let notion = await Net.get(url);
 
     cropper.defaultURL = assets.main.user;
     cropper.notionAssets = notion;

@@ -57,8 +57,6 @@ let assets = {};
 let textures = {};
 
 async function loadAssets(prefix) {
-    prefix = prefix.replace(/\/+$/g, '') + '/';
-
     assets.app = {
         logo: app_logo,
         footer: app_footer
@@ -112,7 +110,7 @@ async function loadAssets(prefix) {
         textures[category] = {};
 
         await Promise.all(keys.map(async key => {
-            let url = prefix + assets[category][key];
+            let url = assets[category][key];
 
             textures[category][key] = await loadTexture(url);
             assets[category][key] = url;

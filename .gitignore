@@ -37,7 +37,6 @@ package-lock.json
 /src/napka/tmp/*.js
 /src/napka/tmp/*.css
 
-/src/ludivine/app/dist/*
 /src/ludivine/web/dist/*
 
 /deploy/docker/goupile/goupile

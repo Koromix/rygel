@@ -72,11 +72,11 @@
         </style>
 
         <script>
-            BUNDLES = {{{ bundles }}};
+            BUNDLES = {{ BUNDLES }};
             T = {};
         </script>
 
-        <link rel="stylesheet" href="{{{ style }}}" async/>
+        <link rel="stylesheet" href="{{ CSS }}" async/>
     </head>
 
     <body>
@@ -109,14 +109,14 @@
         <script type="module">
             document.body.classList.add('loading');
 
-            import { start } from './{{{ script }}}';
+            import { start } from '{{ JS }}';
 
             run();
 
             async function run() {
                 try {
                     let root = document.querySelector('#root');
-                    await start(root, 'static');
+                    await start(root);
                 } catch (err) {
                     console.error(err);
 
