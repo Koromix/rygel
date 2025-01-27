@@ -30,8 +30,8 @@ static const smtp_MailContent ExistingUser = {
 };
 static const smtp_MailContent NewUser = {
     "Connexion à {{ TITLE }}",
-    R"(Connexion à {{ TITLE }} :\n\n{{ URL }}/#uuid={{ UUID }}&mk={{ KEY }})",
-    R"(Connexion à {{ TITLE }} :<br><br><a href="{{ URL }}/#uuid={{ UUID }}&mk={{ KEY }}">Lien de connexion</a>)"
+    R"(Connexion à {{ TITLE }} :\n\n{{ APP_URL }}/#uuid={{ UUID }}&mk={{ KEY }})",
+    R"(Connexion à {{ TITLE }} :<br><br><a href="{{ APP_URL }}/#uuid={{ UUID }}&mk={{ KEY }}">Lien de connexion</a>)"
 };
 
 bool InitSMTP(const smtp_Config &config)
@@ -65,8 +65,8 @@ static Span<const char> PatchText(Span<const char> text, const char *uuid, const
 
         if (key == "TITLE") {
             writer->Write(config.title);
-        } else if (key == "URL") {
-            writer->Write(config.url);
+        } else if (key == "APP_URL") {
+            writer->Write(config.app_url);
         } else if (key == "EMAIL") {
             writer->Write(email);
         } else if (key == "UUID") {

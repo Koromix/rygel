@@ -505,7 +505,7 @@ function renderBody(main) {
     render(html`
         <nav id="top">
             <menu>
-                <a id="logo" href="https://ldv-recherche.fr/"><img src=${ASSETS['logo']} alt="Logo Lignes de Vie" /></a>
+                <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['logo']} alt="Logo Lignes de Vie" /></a>
                 <div style="flex: 1;"></div>
                 <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt="" />
             </menu>

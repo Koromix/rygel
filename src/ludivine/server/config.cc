@@ -26,8 +26,12 @@ bool Config::Validate() const
         LogError("Missing main title");
         valid = false;
     }
-    if (!url || !url[0]) {
-        LogError("Missing public URL");
+    if (!app_url || !app_url[0]) {
+        LogError("Missing app URL");
+        valid = false;
+    }
+    if (!static_url || !static_url[0]) {
+        LogError("Missing static URL");
         valid = false;
     }
 
@@ -55,9 +59,12 @@ bool LoadConfig(StreamReader *st, Config *out_config)
             if (prop.section == "General") {
                 if (prop.key == "Title") {
                     config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
-                } else if (prop.key == "PublicURL") {
+                } else if (prop.key == "AppURL") {
                     Span<const char> url = TrimStrRight(prop.value, '/');
-                    config.url = DuplicateString(url, &config.str_alloc).ptr;
+                    config.app_url = DuplicateString(url, &config.str_alloc).ptr;
+                } else if (prop.key == "StaticURL") {
+                    Span<const char> url = TrimStrRight(prop.value, '/');
+                    config.static_url = DuplicateString(url, &config.str_alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;

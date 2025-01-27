@@ -23,7 +23,9 @@ namespace RG {
 
 struct Config {
     const char *title = nullptr;
-    const char *url = nullptr;
+
+    const char *app_url = nullptr;
+    const char *static_url = nullptr;
 
     const char *database_filename = nullptr;
     const char *vault_directory = nullptr;
