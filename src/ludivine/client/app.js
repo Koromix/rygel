@@ -13,25 +13,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html, svg, ref } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
-import * as UI from '../../../web/flat/ui.js';
-import * as sqlite3 from '../../../web/core/sqlite3.js';
-import { SmallCalendar } from '../../../web/widgets/smallcalendar.js';
+import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, LocalDate } from '../../web/core/base.js';
+import * as UI from '../../web/flat/ui.js';
+import * as sqlite3 from '../../web/core/sqlite3.js';
+import { SmallCalendar } from '../../web/widgets/smallcalendar.js';
 import { GENDERS } from './lib/constants.js';
-import { computeAge, dateToString } from './lib/util.js';
-import { assets, loadAssets } from './lib/assets.js';
+import { computeAge, dateToString, renderProgress } from './lib/util.js';
 import { PictureCropper } from './lib/picture.js';
 import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
-import { sos } from '../../assets/shared/ldv.js';
+import { ASSETS } from '../assets/assets.js';
+import { sos } from '../assets/shared/ldv.js';
 
-import '../../assets/app/app.css';
+import '../assets/app/app.css';
 
-const DATABASE_FILENAME = 'LDV.db';
-const DATABASE_VERSION = 4;
+const DATABASE_FILENAME = 'LDV4.db';
+const DATABASE_VERSION = 1;
 
-const STUDIES = [
+const PROJECTS = [
     {
         index: 1,
         key: 'sociotrauma',
@@ -51,7 +51,7 @@ const MODULES = [
     {
         key: 'network',
         title: 'Sociogramme',
-        icon: 'network',
+        icon: 'app/main/network',
         historical: true,
         editable: true,
 
@@ -61,7 +61,7 @@ const MODULES = [
     {
         key: 'arnaud',
         title: 'EyeTrack',
-        icon: 'track',
+        icon: 'app/main/track',
         historical: false,
         editable: false,
 
@@ -114,8 +114,6 @@ async function start(root) {
     // Adapt to viewport
     window.addEventListener('resize', adaptToViewport);
     adaptToViewport();
-
-    await loadAssets();
 
     await initSQLite();
     db = await openDatabase(DATABASE_FILENAME, 'c');
@@ -171,17 +169,30 @@ async function openDatabase(filename, flags) {
                     CREATE TABLE meta (
                         name TEXT NOT NULL,
                         gender TEXT NOT NULL,
-                        birthdate INTEGER NOT NULL
+                        birthdate INTEGER NOT NULL,
+                        picture TEXT,
+                        avatar TEXT
                     );
+
+                    CREATE TABLE studies (
+                        id INTEGER PRIMARY KEY,
+                        key TEXT NOT NULL,
+                        start INTEGER NOT NULL
+                    );
+                    CREATE UNIQUE INDEX studies_k ON studies (key);
 
                     CREATE TABLE tests (
                         id INTEGER PRIMARY KEY,
-                        type TEXT NOT NULL,
+                        study INTEGER REFERENCES studies (id) ON DELETE CASCADE,
+                        key TEXT NOT NULL,
                         title TEXT NOT NULL,
-                        date INTEGER NOT NULL,
-                        timestamp INTEGER NOT NULL,
+                        visible INTEGER CHECK (visible IN (0, 1)) NOT NULL,
+                        status TEXT CHECK (status IN ('empty', 'draft', 'done')) NOT NULL,
+                        schedule TEXT,
+                        mtime INTEGER,
                         payload BLOB
                     );
+                    CREATE UNIQUE INDEX tests_sk ON tests (study, key);
 
                     CREATE TABLE events (
                         test INTEGER NOT NULL REFERENCES tests (id) ON DELETE CASCADE,
@@ -196,28 +207,6 @@ async function openDatabase(filename, flags) {
                         timestamp NOT NULL,
                         image BLOB NOT NULL
                     );
-                `);
-            } // fallthrough
-
-            case 1: {
-                await db.exec(`
-                    ALTER TABLE meta ADD COLUMN picture TEXT;
-                `);
-            } // fallthrough
-
-            case 2: {
-                await db.exec(`
-                    CREATE TABLE stakes (
-                        id INTEGER PRIMARY KEY,
-                        study TEXT NOT NULL
-                    );
-                    CREATE UNIQUE INDEX stakes_s ON stakes (study);
-                `);
-            } // fallthrough
-
-            case 3: {
-                await db.exec(`
-                    ALTER TABLE meta ADD COLUMN avatar TEXT;
                 `);
             } // fallthrough
         }
@@ -319,8 +308,13 @@ async function changeIdentity() {
 async function runDashboard() {
     stopTest();
 
-    let tests = await db.fetchAll('SELECT id, type, title, date FROM tests ORDER BY id');
-    let stakes = await db.fetchAll('SELECT id, study FROM stakes');
+    let studies = await db.fetchAll(`SELECT s.id, s.key, s.start,
+                                            COUNT(t1.id) AS progress, COUNT(t2.id) AS total
+                                     FROM studies s
+                                     LEFT JOIN tests t1 ON (t1.study = s.id AND t1.visible = 1 AND t1.status = 'done')
+                                     LEFT JOIN tests t2 ON (t2.study = s.id AND t2.visible = 1)
+                                     GROUP BY s.id`);
+    let tests = await db.fetchAll('SELECT id, key, title, mtime FROM tests WHERE study IS NULL ORDER BY id');
 
     let now = (new Date).valueOf();
     let age = computeAge(identity.birthdate, now);
@@ -328,9 +322,9 @@ async function runDashboard() {
     render(html`
         <nav id="top">
             <menu>
-                <a id="logo" href="https://ldv-recherche.fr/"><img src=${assets.app.logo} alt="Logo Lignes de Vie" /></a>
+                <a id="logo" href="https://ldv-recherche.fr/"><img src=${ASSETS['logo']} alt="Logo Lignes de Vie" /></a>
                 <div style="flex: 1;"></div>
-                <img class="picture" src=${identity.picture ?? assets.main.user} alt="" />
+                <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt="" />
             </menu>
         </nav>
 
@@ -344,7 +338,7 @@ async function runDashboard() {
                 <div class="column">
                     <div class="box profile">
                         <div class="title">${identity.name} (${age} ${age > 1 ? 'ans' : 'an'})</div>
-                        <img class="picture" src=${identity.picture ?? assets.main.user} alt=""/>
+                        <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt=""/>
                         <button type="button"
                                 @click=${UI.wrap(e => changeIdentity().then(runDashboard))}>Modifier mon identité</button>
                         <button type="button"
@@ -363,24 +357,25 @@ async function runDashboard() {
                     <div class="box">
                         <div class="title">Études</div>
                         <div class="studies">
-                            ${STUDIES.map(study => {
-                                let stake = stakes.find(stake => stake.study == study.key);
+                            ${PROJECTS.map(project => {
+                                let study = studies.find(study => study.key == project.key);
 
                                 return html`
                                     <div class="study">
                                         <div class="info">
-                                            <b>Étude n°${study.index}</b><br>
-                                            ${study.title}
+                                            <b>Étude n°${project.index}</b><br>
+                                            ${project.title}
                                         </div>
-                                        <div class=${study.online ? 'stake' : 'stake disabled'}>
-                                            ${renderProgress(stake != null ? 20 : 0, 100)}
-                                            ${stake != null ?
+                                        <div class=${project.online ? 'status' : 'status disabled'}>
+                                            ${study != null ? renderProgress(study.progress, study.total) : ''}
+                                            ${study == null ? renderProgress(0, 0) : ''}
+                                            ${study != null ?
                                                 html`<button type="button" class="secondary small"
-                                                             @click=${UI.wrap(e => openStudy(study))}>Reprendre</button>` : ''}
-                                            ${stake == null && study.online ?
+                                                             @click=${UI.wrap(e => openStudy(project))}>Reprendre</button>` : ''}
+                                            ${study == null && project.online ?
                                                 html`<button type="button" class="secondary small"
-                                                             @click=${UI.insist(e => openStudy(study))}>Participer</button>` : ''}
-                                            ${stake == null && !study.online ?
+                                                             @click=${UI.insist(e => openStudy(project))}>Participer</button>` : ''}
+                                            ${study == null && !project.online ?
                                                 html`<button type="button" class="secondary small" disabled>Prochainement</button>` : ''}
                                         </div>
                                     </div>
@@ -421,20 +416,20 @@ async function runDashboard() {
 
                             <tbody>
                                 ${tests.map(test => {
-                                    let mod = MODULES.find(mod => mod.key == test.type);
+                                    let mod = MODULES.find(mod => mod.key == test.key);
 
                                     if (mod == null)
                                         return '';
 
-                                    let img = assets.main[mod.icon];
+                                    let img = ASSETS[mod.icon];
 
                                     return html`
                                         <tr>
                                             <td class="picture" title=${mod.title}><img src=${img} alt=${mod.title}></td>
                                             ${mod.editable ? html`<td><a @click=${UI.wrap(e => openTest(test))}>${test.title}</a></td>` : ''}
                                             ${!mod.editable ? html`<td>${test.title}</td>` : ''}
-                                            ${mod.historical ? html`<td>${(new Date(test.date)).toLocaleDateString()}</td>` : ''}
-                                            ${!mod.historical ? html`<td>${(new Date(test.date)).toLocaleString()}</td>` : ''}
+                                            ${mod.historical ? html`<td>${(new Date(test.ctime)).toLocaleDateString()}</td>` : ''}
+                                            ${!mod.historical ? html`<td>${(new Date(test.ctime)).toLocaleString()}</td>` : ''}
                                             <td class="right">
                                                 <button type="button" class="secondary small" @click=${UI.wrap(e => changeTest(test).then(runDashboard))}>Configurer</button>
                                                 <button type="button" class="danger small" @click=${UI.confirm(`Suppression de ${test.title}`, e => deleteTest(test.id).then(runDashboard))}>Supprimer</button>
@@ -456,7 +451,7 @@ async function runDashboard() {
 
         <footer>
             <div>Lignes de Vie © 2024</div>
-            <img src=${assets.app.footer} alt="" width="79" height="64">
+            <img src=${ASSETS['footer']} alt="" width="79" height="64">
             <div style="font-size: 0.8em;">
                 Cn2r, 103 Bld de la liberté, 59000 LILLE<br>
                 <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">lignesdevie@cn2r.fr</a>
@@ -476,7 +471,7 @@ async function changePicture() {
     let url = BUNDLES['notion.json'];
     let notion = await Net.get(url);
 
-    cropper.defaultURL = assets.main.user;
+    cropper.defaultURL = ASSETS['app/main/user'];
     cropper.notionAssets = notion;
     cropper.imageFormat = 'image/webp';
 
@@ -592,41 +587,26 @@ async function deleteDatabase() {
     window.location.href = window.location.href;
 }
 
-function renderProgress(value, total) {
-    let ratio = (value / total);
-    let progress = Math.round(ratio * 100);
+async function openStudy(project) {
+    let start = (new Date).valueOf();
 
-    let array = 314.1;
-    let offset = array - ratio * array;
-
-    return svg`
-        <svg width="100" height="100" viewBox="-12.5 -12.5 125 125" style="transform: rotate(-90deg)">
-            <circle r="50" cx="50" cy="50" fill="transparent" stroke="#dddddd" stroke-width="10" stroke-dasharray=${array + 'px'} stroke-dashoffset="0"></circle>
-            <circle r="50" cx="50" cy="50" stroke="#383838" stroke-width="10" stroke-linecap="butt" stroke-dasharray=${array + 'px'} stroke-dashoffset=${offset + 'px'} fill="transparent"></circle>
-            <text x="50px" y="53px" fill="#383838" font-size="19px" font-weight="bold" text-anchor="middle" style="transform: rotate(90deg) translate(0px, -96px)">${progress}%</text>
-        </svg>
-    `;
-}
-
-async function openStudy(study) {
-    await db.exec(`INSERT INTO stakes (study)
-                   VALUES (?)
+    await db.exec(`INSERT INTO studies (key, start)
+                   VALUES (?, ?)
                    ON CONFLICT DO NOTHING`,
-                  study.key);
+                  project.key, start);
 
     Log.info('Bientôt !');
     runDashboard();
 }
 
-async function createTest(type) {
+async function createTest(key) {
     let now = (new Date).valueOf();
 
     let test = {
         id: null,
-        type: type,
+        key: key,
         title: '',
-        date: now,
-        timestamp: null
+        mtime: now
     };
 
     await changeTest(test);
@@ -635,7 +615,7 @@ async function createTest(type) {
 
 async function changeTest(test) {
     let init = (test.id == null);
-    let mod = MODULES.find(mod => mod.key == test.type);
+    let mod = MODULES.find(mod => mod.key == test.key);
 
     await UI.dialog({
         run: (render, close) => {
@@ -674,17 +654,17 @@ async function changeTest(test) {
                 throw new Error('La date ne peut pas être vide');
 
             let title = elements.title.value.trim();
-            let date = (mod.historical ? elements.date.valueAsDate : new Date).valueOf();
+            let mtime = (mod.historical ? elements.date.valueAsDate : new Date).valueOf();
 
-            let ret = await db.fetch1(`INSERT INTO tests (id, type, title, date, timestamp)
-                                       VALUES (?, ?, ?, ?, ?)
+            let ret = await db.fetch1(`INSERT INTO tests (id, key, title, visible, status, mtime)
+                                       VALUES (?, ?, ?, 1, 'draft', ?)
                                        ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                                 date = excluded.date
-                                       RETURNING id, timestamp`,
-                                      test.id, test.type, title, date, performance.now());
+                                                                 mtime = excluded.mtime
+                                       RETURNING id, mtime`,
+                                      test.id, test.key, title, mtime);
 
             test.id = ret.id;
-            test.timestamp = ret.timestamp;
+            test.mtime = ret.mtime;
         }
     });
 }
@@ -696,7 +676,7 @@ async function deleteTest(id) {
 async function openTest(test) {
     stopTest();
 
-    let mod = MODULES.find(mod => mod.key == test.type);
+    let mod = MODULES.find(mod => mod.key == test.key);
 
     active_mod = await mod.prepare(db, test, root_el);
     await active_mod.start();

@@ -13,12 +13,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../../../../web/core/base.js';
-import * as UI from '../../../../web/flat/ui.js';
-import { AppRunner } from '../../../../web/core/runner.js';
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log } from '../../../web/core/base.js';
+import * as UI from '../../../web/flat/ui.js';
+import { AppRunner } from '../../../web/core/runner.js';
 import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
-import { assets } from '../lib/assets.js';
+import { ASSETS } from '../../assets/assets.js';
 import * as app from '../app.js';
 import { NetworkWidget } from './widget.js';
 
@@ -104,7 +104,7 @@ function NetworkModule(db, test, root_el) {
             if (payload != null) {
                 try {
                     let json = JSON.parse(payload);
-                    load(json);
+                    await load(json);
                 } catch (err) {
                     Log.error(err);
                     world = null;
@@ -155,7 +155,7 @@ function NetworkModule(db, test, root_el) {
             proximity: 0
         };
 
-        load({
+        await load({
             subjects: [],
             persons: [person0],
             links: [],
@@ -168,7 +168,7 @@ function NetworkModule(db, test, root_el) {
         });
     }
 
-    function load(data) {
+    async function load(data) {
         if (data.world == null) {
             data = {
                 version: DATA_VERSION,
@@ -190,6 +190,7 @@ function NetworkModule(db, test, root_el) {
         redo_actions = data.redo;
 
         widget = new NetworkWidget(self, world);
+        await widget.init();
 
         autoSave();
     }
@@ -225,7 +226,7 @@ function NetworkModule(db, test, root_el) {
         render(html`
             <button type="button" title="Retourner au tableau de bord"
                     @click=${UI.wrap(app.runDashboard)}>
-                <img src=${assets.main.dashboard} alt="" />
+                <img src=${ASSETS['app/main/dashboard']} alt="" />
                 <span>Tableau de bord</span>
             </button>
 
@@ -233,13 +234,13 @@ function NetworkModule(db, test, root_el) {
             <button type="button" title="Annuler la dernière modification"
                     ?disabled=${!undo_actions.length}
                     @click=${UI.wrap(e => rewind(undo_actions, redo_actions))}>
-                <img src=${assets.ui.undo} alt="" />
+                <img src=${ASSETS['app/ui/undo']} alt="" />
                 <span>Annuler</span>
             </button>
             <button type="button" title="Rétablir la dernière action annulée"
                     ?disabled=${!redo_actions.length}
                     @click=${UI.wrap(e => rewind(redo_actions, undo_actions))}>
-                <img src=${assets.ui.redo} alt="" />
+                <img src=${ASSETS['app/ui/redo']} alt="" />
                 <span>Rétablir</span>
             </button>
         `, menu_el);
@@ -276,7 +277,7 @@ function NetworkModule(db, test, root_el) {
 
         let data = JSON.parse(json);
 
-        load(data);
+        await load(data);
     }
 
     this.registerPush = function(array, ref, auto = false) {
@@ -493,10 +494,11 @@ function NetworkModule(db, test, root_el) {
         save_timer = setTimeout(() => {
             save_timer = null;
 
+            let mtime = (new Date).valueOf();
             let data = serialize();
             let json = JSON.stringify(data);
 
-            db.exec('UPDATE tests SET payload = ? WHERE id = ?', json, test.id);
+            db.exec('UPDATE tests SET mtime = ?, payload = ? WHERE id = ?', mtime, json, test.id);
         }, 1000);
     }
 

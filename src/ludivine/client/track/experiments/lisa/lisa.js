@@ -13,22 +13,40 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Net } from '../../../../../../web/core/base.js';
+import { render, html } from '../../../../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Net } from '../../../../../web/core/base.js';
 import { loadTexture } from '../../../lib/util.js';
-import { assets } from './images.js';
+import { ASSETS } from './images/images.js';
 
 const BACKGROUND = '#7f7f7f';
-const IMAGES = 24;
 const WAIT_MIN = 500;
 const WAIT_MAX = 1500;
 const IMAGE_DELAY = 2000;
 const RECALIBRATION_DELAY = 20000;
 
+const IMAGES = [
+    { directory: '111', genre: 'f', subject: 'a' },
+    { directory: '113', genre: 'f', subject: 'b' },
+    { directory: '116', genre: 'm', subject: 'b' },
+    { directory: '117', genre: 'f', subject: 'b' },
+    { directory: '122', genre: 'f', subject: 'b' },
+    { directory: '126', genre: 'm', subject: 'b' },
+    { directory: '149', genre: 'm', subject: 'b' },
+    { directory: '155', genre: 'm', subject: 'b' },
+    { directory: '156', genre: 'f', subject: 'a' },
+    { directory: '159', genre: 'm', subject: 'b' },
+    { directory: 'a29', genre: 'f', subject: 'b' },
+    { directory: 'a43', genre: 'f', subject: 'b' },
+    { directory: 'a45', genre: 'm', subject: 'b' },
+    { directory: 'a70', genre: 'm', subject: 'b' },
+    { directory: 'a73', genre: 'f', subject: 'a' },
+    { directory: 'a87', genre: 'm', subject: 'b' }
+];
+
 async function run(meta, draw, tracker) {
     draw.event('preload');
 
-    let images = await loadImages(meta.gender, (loaded, total) => draw.frame(ctx => {
+    let images = await loadImages((loaded, total) => draw.frame(ctx => {
         ctx.font = '32px sans-serif';
         ctx.fillStyle = '#000000';
 
@@ -56,7 +74,7 @@ async function run(meta, draw, tracker) {
         }
     });
 
-    let tests = makeTests(IMAGES);
+    let tests = makeTests(IMAGES.length * 4);
 
     draw.event('start', tests);
     await draw.repeat(2000, ctx => drawBackground(draw, ctx));
@@ -199,8 +217,9 @@ function makeTests(n) {
 
     // Select image pairs
     {
-        let neutrals = shuffle(sequence(n));
-        let negatives = shuffle(sequence(n));
+        let seq = shuffle(sequence(n));
+        let neutrals = seq.slice();
+        let negatives = seq.slice();
 
         for (let i = 0; i < n; i++) {
             let test = {
@@ -294,25 +313,13 @@ async function interpret(meta, events) {
     let rect1 = null;
     let rect2 = null;
 
-    let images = await loadImages(meta.gender, (loaded, total) => Util.waitFor(0));
-
     for (let evt of events) {
         switch (evt.type) {
             case 'resize': { size = evt.data; } break;
 
             case 'gaze': {
-                if (looking_at != null) {
+                if (looking_at != null && rect1 != null) {
                     let gaze = evt.data;
-
-                    if (rect1 == null) {
-                        let negative = images.negatives[test.negative];
-                        let neutral = images.neutrals[test.neutral];
-                        let left = test.neutral_first ? neutral : negative;
-                        let right = test.neutral_first ? negative : neutral;
-
-                        rect1 = computeLeftRect(size, left);
-                        rect2 = computeRightRect(size, right);
-                    }
 
                     let now_at = inside(gaze, rect1, 1.2) ? 'left' :
                                  inside(gaze, rect2, 1.2) ? 'right' : 'outside';
@@ -444,29 +451,40 @@ async function interpret(meta, events) {
     return results;
 }
 
-async function loadImages(genre, progress) {
+async function loadImages(progress) {
     let images = {
-        negatives: 'emotions',
-        neutrals: 'neutres'
+        negatives: [],
+        neutrals: []
     };
 
     let loaded = 0;
     let total = 0;
     let failed = false;
 
-    for (let key in images) {
-        let array = [];
+    for (let i = 0; i < IMAGES.length; i++) {
+        let img = IMAGES[i];
+        let url = findImage(img, 'n');
 
-        for (let i = 0; i < IMAGES; i++) {
-            let url = findImage(genre, images[key], i);
+        loadTexture(url)
+            .then(img => {
+                images.neutrals[i * 4] = img;
+                images.neutrals[i * 4 + 1] = img;
+                images.neutrals[i * 4 + 2] = img;
+                images.neutrals[i * 4 + 3] = img;
+                loaded += 4;
+            })
+            .catch(err => { failed = true });
+        total += 4;
+
+        for (let j = 0; j < 4; j++) {
+            let emotion = 'adfs'[j];
+            let url = findImage(img, emotion);
 
             loadTexture(url)
-                .then(img => { array[i] = img; loaded++; })
+                .then(img => { images.negatives[i * 4 + j] = img; loaded++; })
                 .catch(err => { failed = true });
             total++;
         }
-
-        images[key] = array;
     }
 
     while (loaded < total) {
@@ -479,11 +497,9 @@ async function loadImages(genre, progress) {
     return images;
 }
 
-function findImage(genre, type, idx) {
-    let prefix = 'static/';
-    let key = `${genre == 'H' ? 'hommes' : 'femmes'}/${type}/${idx + 1}.jpg`;
-
-    return prefix + assets[key];
+function findImage(img, emotion) {
+    let key = `${img.directory}/${img.directory}_m_${img.genre}_${emotion}_${img.subject}`;
+    return ASSETS[key];
 }
 
 function inside(p, rect, factor) {
