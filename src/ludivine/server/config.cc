@@ -98,7 +98,7 @@ bool LoadConfig(StreamReader *st, Config *out_config)
 
     // Default values
     if (!config.database_filename) {
-        config.database_filename = NormalizePath("goupile.db", root_directory, &config.str_alloc).ptr;
+        config.database_filename = NormalizePath("ludivine.db", root_directory, &config.str_alloc).ptr;
     }
     if (!config.vault_directory) {
         config.vault_directory = NormalizePath("vaults", root_directory, &config.str_alloc).ptr;
