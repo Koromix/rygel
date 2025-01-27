@@ -8487,6 +8487,13 @@ Span<const uint8_t> PatchFile(const AssetInfo &asset, Allocator *alloc,
     return buf.Leak();
 }
 
+Span<const char> PatchFile(Span<const char> data, Allocator *alloc,
+                           FunctionRef<void(Span<const char> key, StreamWriter *)> func)
+{
+    Span<const uint8_t> ret = PatchFile(data.As<const uint8_t>(), alloc, func);
+    return ret.As<const char>();
+}
+
 // ------------------------------------------------------------------------
 // Option parser
 // ------------------------------------------------------------------------

@@ -16,28 +16,12 @@
 #pragma once
 
 #include "src/core/base/base.hh"
-#include "src/core/http/http.hh"
-#include "src/core/request/smtp.hh"
+#include "config.hh"
+#include "src/core/sqlite/sqlite.hh"
 
 namespace RG {
 
-struct Config {
-    const char *url = nullptr;
-
-    const char *database_filename = nullptr;
-    const char *vault_directory = nullptr;
-
-    http_Config http { 8890 };
-    const char *require_host = nullptr;
-
-    smtp_Config smtp;
-
-    BlockAllocator str_alloc;
-
-    bool Validate() const;
-};
-
-bool LoadConfig(StreamReader *st, Config *out_config);
-bool LoadConfig(const char *filename, Config *out_config);
+extern Config config;
+extern sq_Database db;
 
 }

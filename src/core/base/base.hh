@@ -5227,6 +5227,8 @@ Span<const uint8_t> PatchFile(Span<const uint8_t> data, Allocator *alloc,
                               FunctionRef<void(Span<const char> key, StreamWriter *)> func);
 Span<const uint8_t> PatchFile(const AssetInfo &asset, Allocator *alloc,
                               FunctionRef<void(Span<const char> key, StreamWriter *)> func);
+Span<const char> PatchFile(Span<const char> data, Allocator *alloc,
+                           FunctionRef<void(Span<const char> key, StreamWriter *)> func);
 
 // ------------------------------------------------------------------------
 // Options

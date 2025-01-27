@@ -22,7 +22,12 @@ bool Config::Validate() const
 {
     bool valid = true;
 
+    if (!url || !url[0]) {
+        LogError("Missing public URL");
+        valid = false;
+    }
     valid &= http.Validate();
+    valid &= smtp.Validate();
 
     return valid;
 }
@@ -42,12 +47,43 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     {
         IniProperty prop;
         while (ini.Next(&prop)) {
-            if (prop.section == "HTTP") {
+            if (prop.section == "General") {
+                if (prop.key == "PublicURL") {
+                    config.url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } else if (prop.section == "Data") {
+                if (prop.key == "DatabaseFile") {
+                    config.database_filename = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                } else if (prop.key == "VaultDirectory") {
+                    config.vault_directory = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
+                } else {
+                    LogError("Unknown attribute '%1'", prop.key);
+                    valid = false;
+                }
+            } else if (prop.section == "HTTP") {
                 do {
                     if (prop.key == "RequireHost") {
                         config.require_host = DuplicateString(prop.value, &config.str_alloc).ptr;
                     } else {
                         valid &= config.http.SetProperty(prop.key.ptr, prop.value.ptr, root_directory);
+                    }
+                } while (ini.NextInSection(&prop));
+            } else if (prop.section == "SMTP") {
+                do {
+                    if (prop.key == "URL") {
+                        config.smtp.url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "Username") {
+                        config.smtp.username = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "Password") {
+                        config.smtp.password = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else if (prop.key == "From") {
+                        config.smtp.from = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    } else {
+                        LogError("Unknown attribute '%1'", prop.key);
+                        valid = false;
                     }
                 } while (ini.NextInSection(&prop));
             } else {
@@ -60,6 +96,13 @@ bool LoadConfig(StreamReader *st, Config *out_config)
     if (!ini.IsValid() || !valid)
         return false;
 
+    // Default values
+    if (!config.database_filename) {
+        config.database_filename = NormalizePath("goupile.db", root_directory, &config.str_alloc).ptr;
+    }
+    if (!config.vault_directory) {
+        config.vault_directory = NormalizePath("vaults", root_directory, &config.str_alloc).ptr;
+    }
     if (!config.Validate())
         return false;
 

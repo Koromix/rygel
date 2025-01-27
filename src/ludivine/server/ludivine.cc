@@ -15,11 +15,15 @@
 
 #include "src/core/base/base.hh"
 #include "config.hh"
+#include "database.hh"
+#include "ludivine.hh"
+#include "user.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 
 namespace RG {
 
-static Config config;
+Config config;
+sq_Database db;
 
 static HashMap<const char *, const AssetInfo *> assets_map;
 static AssetInfo assets_index;
@@ -167,13 +171,21 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
-    const AssetInfo *asset = assets_map.FindValue(request.path, nullptr);
+    // Static asset?
+    {
+        const AssetInfo *asset = assets_map.FindValue(request.path, nullptr);
 
-    if (asset) {
-        int64_t max_age = StartsWith(request.path, "/static/") ? (365ll * 86400000) : 0;
-        AttachStatic(io, *asset, max_age, shared_etag);
+        if (asset) {
+            int64_t max_age = StartsWith(request.path, "/static/") ? (365ll * 86400000) : 0;
+            AttachStatic(io, *asset, max_age, shared_etag);
 
-        return;
+            return;
+        }
+    }
+
+    // API endpoint?
+    if (TestStr(request.path, "/api/user/register")) {
+        HandleUserRegister(io);
     } else {
         io->SendError(404);
     }
@@ -256,6 +268,18 @@ Options:
         if (!config.Validate())
             return 1;
     }
+
+    LogInfo("Init data");
+    if (!db.Open(config.database_filename, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE))
+        return 1;
+    if (!MigrateDatabase(&db))
+        return 1;
+    if (!MakeDirectory(config.vault_directory, false))
+        return 1;
+
+    LogInfo("Init messaging");
+    if (!InitSMTP(config.smtp))
+        return 1;
 
     LogInfo("Init assets");
     InitAssets();
