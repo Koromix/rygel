@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { renderProgress } from '../lib/util.js';
+import { progressCircle } from '../lib/util.js';
 
 function StudyModule(db, test, root_el, study) {
     let tests = null;
@@ -67,7 +67,7 @@ function StudyModule(db, test, root_el, study) {
                     <img src=${study.picture} alt="" />
                     <p class="reference">${study.title}</p>
                     ${study.summary}
-                    ${renderProgress(progress, total)}
+                    ${progressCircle(progress, total)}
                 </div>
 
                 ${route.page == null ? renderModule(route.mod) : null}
@@ -99,7 +99,7 @@ function StudyModule(db, test, root_el, study) {
                         } else if (!progress) {
                             return html`<div class="empty">${child.title} A compléter</div>`;
                         } else {
-                            return html`<div class="partial">${child.title} ${renderProgress(progress, total)}</div>`;
+                            return html`<div class="partial">${child.title} ${progressCircle(progress, total)}</div>`;
                         }
                     })}
                     ${mod.pages.map(page => {

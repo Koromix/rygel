@@ -46,11 +46,8 @@ button { border-radius: 20px; }
     color: #364b9b;
 }
 
-.actions {
-    justify-content: space-evenly;
-    gap: 20px;
-}
-.actions > a {
+.actions { gap: 20px; }
+.actions > :is(a, button) {
     width: auto;
     border-radius: 30px;
 }
@@ -146,7 +143,10 @@ p + .columns { margin-top: 2em; }
     cursor: default;
 }
 .tab {
+    display: flex;
     padding: 1em;
+    flex-direction: column;
+    gap: 1em;
     background: #fdfbf8;
     border-bottom-left-radius: 16px;
     border-bottom-right-radius: 16px;

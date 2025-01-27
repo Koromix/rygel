@@ -354,14 +354,15 @@ button.small > img {
 button.small:not(.insist) > img { filter: none; }
 
 .actions {
-    margin: 1em 0;
     display: flex;
+    margin-top: 2em;
     gap: 20px;
     justify-content: center;
     align-items: start;
     flex-wrap: wrap;
 }
-.actions > a {
+.actions + * { margin-top: 1em; }
+.actions > :is(a, button) {
     display: block;
     width: 30%;
     min-width: 10em;
@@ -371,11 +372,11 @@ button.small:not(.insist) > img { filter: none; }
     text-decoration: none;
     text-align: center;
 }
-.actions > a:hover {
+.actions > :is(a, button):hover {
     background: color-mix(in srgb, var(--button_color) 90%, black);
     color: white;
 }
-.actions > a.disabled {
+.actions > :is(a, button).disabled {
     pointer-events: none;
     filter: saturate(10%);
 }

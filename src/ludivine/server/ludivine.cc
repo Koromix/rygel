@@ -100,6 +100,7 @@ static void InitAssets()
             json_Writer json(writer);
 
             json.StartObject();
+            json.Key("title"); json.String(config.title);
             json.Key("urls"); json.StartObject();
                 json.Key("app"); json.String(config.app_url);
                 json.Key("static"); json.String(config.static_url);

@@ -18,7 +18,7 @@ import { Util, Log, Net, LocalDate } from '../../web/core/base.js';
 import * as UI from '../../web/flat/ui.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { SmallCalendar } from '../../web/widgets/smallcalendar.js';
-import { computeAge, dateToString, renderProgress } from './lib/util.js';
+import { computeAge, dateToString, progressCircle } from './lib/util.js';
 import { PictureCropper } from './lib/picture.js';
 import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
@@ -234,123 +234,75 @@ async function runDashboard() {
                                      LEFT JOIN tests t1 ON (t1.study = s.id AND t1.visible = 1 AND t1.status = 'done')
                                      LEFT JOIN tests t2 ON (t2.study = s.id AND t2.visible = 1)
                                      GROUP BY s.id`);
-    let tests = await db.fetchAll('SELECT id, key, title, mtime FROM tests WHERE study IS NULL ORDER BY id');
-
-    let now = (new Date).valueOf();
-    let age = computeAge(identity.birthdate, now);
 
     renderBody(html`
         <div class="tabbar">
-            <a class="active">Profil</a>
-            <a>Tableau de bord</a>
+            <a class="active">Tableau de bord</a>
         </div>
 
-        <div class="tab dashboard">
-            <div class="column">
-                <div class="box profile">
-                    <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt=""/>
-                    <button type="button"
-                            @click=${UI.wrap(e => changePicture().then(runDashboard))}>Modifier mon avatar</button>
-                </div>
+        <div class="tab ">
+            <div class="box profile">
+                <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt=""/>
+                <div>
+                    <p>Bienvenue sur <b>${ENV.title}</b> !
 
-                <div class="box">
-                    <button type="button"
-                            @click=${UI.insist(exportDatabase)}>Exporter mes données</button>
-                    <button type="button" class="danger"
-                            @click=${UI.confirm('Suppression définitive de toutes les données', deleteDatabase)}>Supprimer mon profil</button>
+                    <p>Vous pouvez modifier les informations de votre profil saisies précédemment à l’aide du bouton ci-dessous.
+                    Par ailleurs, n’oubliez pas que vous pouvez <b>retirer votre consentement</b> à tout moment en vous rendant dans votre profil.
+                    <p>N’hésitez pas à <b>faire des pauses</b> et à visiter la page <b>Se Détendre</b>. Vous pourrez reprendre à tout moment.</p>
+
+                    <div class="actions">
+                        <button type="button" @click=${UI.wrap(changePicture)}>Modifier mon profil</button>
+                    </div>
                 </div>
             </div>
 
-            <div class="column">
-                <div class="box">
-                    <div class="title">Études</div>
-                    <div class="studies">
-                        ${PROJECTS.map(project => {
-                            let study = studies.find(study => study.key == project.key);
+            <div class="row">
+                <div class="studies">
+                    ${PROJECTS.map(project => {
+                        let study = studies.find(study => study.key == project.key);
 
-                            return html`
-                                <div class="study">
-                                    <div class="info">
-                                        <b>Étude n°${project.index}</b><br>
-                                        ${project.title}
-                                    </div>
-                                    <div class=${project.online ? 'status' : 'status disabled'}>
-                                        ${study != null ? renderProgress(study.progress, study.total) : ''}
-                                        ${study == null ? renderProgress(0, 0) : ''}
-                                        ${study != null ?
-                                            html`<button type="button" class="secondary small"
-                                                         @click=${UI.wrap(e => openStudy(project))}>Reprendre</button>` : ''}
-                                        ${study == null && project.online ?
-                                            html`<button type="button" class="secondary small"
-                                                         @click=${UI.insist(e => openStudy(project))}>Participer</button>` : ''}
-                                        ${study == null && !project.online ?
-                                            html`<button type="button" class="secondary small" disabled>Prochainement</button>` : ''}
-                                    </div>
+                        let cls = 'study';
+                        if (study != null) {
+                            if (study.progress == study.total) {
+                                cls += ' complete';
+                            } else if (study.progress) {
+                                cls += ' partial';
+                            }
+                        }
+
+                        return html`
+                            <div class=${cls}>
+                                <img src=${project.picture} alt="" />
+                                <div class="info">
+                                    <b>Étude n°${project.index}</b><br>
+                                    ${project.title}
                                 </div>
-                            `;
-                        })}
-                    </div>
+                                <div class=${project.online ? 'status' : 'status disabled'}>
+                                    ${study == null ? progressCircle(0, 0) : ''}
+                                    ${study != null ? progressCircle(4, 10) : ''}
+                                    ${study == null && project.online ?
+                                        html`<button type="button" class="small"
+                                                     @click=${UI.insist(e => openStudy(project))}>Participer</button>` : ''}
+                                    ${study != null && study.progress < study.total ?
+                                        html`<button type="button" class="small"
+                                                     @click=${UI.wrap(e => openStudy(project))}>Reprendre</button>` : ''}
+                                    ${study != null && study.progress == study.total ?
+                                        html`<button type="button" class="small" disabled>Résultats</button>` : ''}
+                                    ${study == null && !project.online ?
+                                        html`<button type="button" class="small" disabled>Prochainement</button>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    })}
                 </div>
 
-                <div class="row">
+                <div class="column">
                     <div class="box">
                         <div class="title">Calendrier</div>
                         ${calendar.render()}
                     </div>
                     <div class="box" style="flex: 1;">
-                        <div class="title">Évènements à venir</div>
                         <p style="text-align: center;">Aucun évènement à venir</p>
-                    </div>
-                </div>
-
-                <div class="box">
-                    <div class="title">Tests libres</div>
-                    <table style="table-layout: fixed;">
-                        <colgroup>
-                            <col class="check"/>
-                            <col/>
-                            <col style="width: 200px;"/>
-                            <col style="width: 160px;"/>
-                        </colgroup>
-
-                        <thead>
-                            <tr>
-                                <th></th>
-                                <th>Titre</th>
-                                <th>Date</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            ${tests.map(test => {
-                                let mod = MODULES.find(mod => mod.key == test.key);
-
-                                if (mod == null)
-                                    return '';
-
-                                let img = ASSETS[mod.icon];
-
-                                return html`
-                                    <tr>
-                                        <td class="picture" title=${mod.title}><img src=${img} alt=${mod.title}></td>
-                                        ${mod.editable ? html`<td><a @click=${UI.wrap(e => openTest(test))}>${test.title}</a></td>` : ''}
-                                        ${!mod.editable ? html`<td>${test.title}</td>` : ''}
-                                        ${mod.historical ? html`<td>${(new Date(test.ctime)).toLocaleDateString()}</td>` : ''}
-                                        ${!mod.historical ? html`<td>${(new Date(test.ctime)).toLocaleString()}</td>` : ''}
-                                        <td class="right">
-                                            <button type="button" class="secondary small" @click=${UI.wrap(e => changeTest(test).then(runDashboard))}>Configurer</button>
-                                            <button type="button" class="danger small" @click=${UI.confirm(`Suppression de ${test.title}`, e => deleteTest(test.id).then(runDashboard))}>Supprimer</button>
-                                        </td>
-                                    </tr>
-                                `;
-                            })}
-                            ${!tests.length ? html`<tr><td colspan="4" class="center">Aucun test libre</td></tr>` : ''}
-                        </tbody>
-                    </table>
-                    <div class="actions">
-                        ${MODULES.map(mod =>
-                            html`<button type="button" @click=${UI.wrap(e => createTest(mod.key))}>Nouveau ${mod.title}</button>`)}
                     </div>
                 </div>
             </div>
@@ -373,7 +325,7 @@ async function runRegister() {
                     <button type="submit">Enregistrer mon compte</button>
                 </form>
 
-                <div class="info">
+                <div class="help">
                     <img src=${ASSETS['web/illustrations/participer']} alt="" />
                     <div>
                         <p><b>Créer un compte pour participer</b> à nos études est essentiel pour :
@@ -453,6 +405,8 @@ async function changePicture() {
 
         identity.picture = url;
     });
+
+    runDashboard();
 }
 
 async function blobToDataURL(blob) {

@@ -32,7 +32,7 @@ dialog { font-size: 15px; }
 #top .picture {
     width: 51px;
     height: 51px;
-    background: #fef2f2;
+    background: white;
     border-radius: 50%;
     border: 3px solid #e9a07f;
 }
@@ -47,6 +47,23 @@ dialog { font-size: 15px; }
     }
 }
 
+.progress {
+    --fill: #383838;
+
+    & circle:nth-child(1) { stroke: color-mix(in srgb, var(--fill), white 80%); }
+    & circle:nth-child(2) { stroke: var(--fill); }
+}
+
+.row {
+    display: flex;
+    gap: 1em;
+    align-items: start;
+}
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
 .box {
     display: flex;
     flex-direction: column;
@@ -63,7 +80,7 @@ dialog { font-size: 15px; }
     text-align: center;
     color: #364b9b;
 }
-.info {
+.help {
     display: flex;
     width: 80%;
     max-width: 600px;
@@ -73,64 +90,69 @@ dialog { font-size: 15px; }
     background: white;
     border-radius: 16px;
 }
-.info > img {
+.help > img {
     width: 200px;
     aspect-ratio: auto;
 }
 
-.dashboard {
-    display: flex;
-    height: calc(100% - 4em);
-    padding: 2em;
-    align-items: start;
-    justify-content: center;
-    gap: 1em;
-}
-.dashboard .column {
-    display: flex;
-    flex-direction: column;
-    gap: 1em;
-}
-.dashboard .row {
-    display: flex;
-    gap: 1em;
-}
-.dashboard .actions {
-    display: flex;
-    gap: 1em;
-    justify-content: center;
+@media screen and (max-width: 960px) {
+    .row {
+        flex-direction: column;
+        align-items: stretch;
+    }
 }
 
-.profile .picture {
+.profile {
+    flex-direction: row;
+    gap: 2em;
+}
+.profile > .picture {
     width: 133px;
     height: 133px;
     margin: 0 auto;
-    background: #fef2f2;
+    background: white;
     border-radius: 50%;
     border: 5px solid #e9a07f;
 }
 
+@media screen and (max-width: 960px) {
+    .profile { flex-direction: column; }
+    .profile > .picture { display: none; }
+}
+
 .studies {
     display: flex;
-    gap: 2em;
+    flex: 1;
     flex-wrap: wrap;
-    justify-content: center;
+    gap: 1em;
 }
 .study {
+    --color: #d0cccc;
+
     display: flex;
-    width: 40%;
-    background: white;
-    border-radius: 10px;
+    width: calc(50% - 0.5em);
+    box-sizing: border-box;
+    background: color-mix(in srgb, var(--color), transparent 60%);
+    border-radius: 16px;
     padding: 0.5em 1em;
     align-items: center;
 }
-.study.active { background: #eca17f; }
+.study.partial { --color: #d9bf69; }
+.study.complete { --color: #eca17f; }
 .study {
     & .info { flex: 1; }
-    & .stake {
+    & .status {
         flex: 0;
         text-align: center;
     }
+
+    & button { background: var(--color); }
+    & .progress { --fill: var(--color); }
+}
+
+@media screen and (max-width: 960px) {
+    .studies { flex-direction: column; }
+    .study { width: 100%; }
 }
 
 form {
