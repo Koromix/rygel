@@ -38,7 +38,7 @@
         <div class="tile" style="flex: 5;">
             <img src="{{ ASSET ../assets/web/illustrations/ecriture.webp }}" alt="" />
             <div>
-                <p>Écrivez <b>librements vos pensées</b>, émotions, ou ressentis, sans vous soucier de la structure ou de la forme.</p>
+                <p>Écrivez <b>librement vos pensées</b>, émotions, ou ressentis, sans vous soucier de la structure ou de la forme.</p>
                 <div class="actions">
                     <a class="disabled">Écrire dans mon journal</a>
                 </div>
