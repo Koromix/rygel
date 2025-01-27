@@ -198,7 +198,7 @@ int Main(int argc, char **argv)
     BlockAllocator temp_alloc;
 
     // Options
-    const char *config_filename = nullptr;
+    const char *config_filename = "ludivine.ini";
 
     const auto print_usage = [=](StreamWriter *st) {
         PrintLn(st,
@@ -207,10 +207,11 @@ R"(Usage: %!..+%1 [option...]%!0
 Options:
 
     %!..+-C, --config_file filename%!0     Set configuration file
+                                   %!D..(default: %2)%!0
 
     %!..+-p, --port port%!0                Change web server port
-                                   %!D..(default: %2)%!0)",
-                FelixTarget, config.http.port);
+                                   %!D..(default: %3)%!0)",
+                FelixTarget, config_filename, config.http.port);
     };
 
     if (sodium_init() < 0) {
@@ -235,7 +236,7 @@ Options:
                 return 0;
             } else if (opt.Test("-C", "--config_file", OptionType::Value)) {
                 if (IsDirectory(opt.current_value)) {
-                    config_filename = Fmt(&temp_alloc, "%1%/thop.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
+                    config_filename = Fmt(&temp_alloc, "%1%/ludivine.ini", TrimStrRight(opt.current_value, RG_PATH_SEPARATORS)).ptr;
                 } else {
                     config_filename = opt.current_value;
                 }
@@ -246,7 +247,7 @@ Options:
     }
 
     // Load config file
-    if (config_filename && !LoadConfig(config_filename, &config))
+    if (!LoadConfig(config_filename, &config))
         return 1;
 
     // Parse arguments
