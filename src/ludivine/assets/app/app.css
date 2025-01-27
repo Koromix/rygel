@@ -37,6 +37,47 @@ dialog { font-size: 15px; }
     border: 3px solid #e9a07f;
 }
 
+@media screen and (max-width: 960px) {
+    #top .picture {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        width: 39px;
+        height: 39px;
+    }
+}
+
+.box {
+    display: flex;
+    flex-direction: column;
+    padding: 1em;
+    gap: 1em;
+    background: #faefe9;
+    border-radius: 16px;
+}
+.box > .title {
+    margin-bottom: 1em;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+    color: #364b9b;
+}
+.info {
+    display: flex;
+    width: 80%;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 1em;
+    gap: 1em;
+    background: white;
+    border-radius: 16px;
+}
+.info > img {
+    width: 200px;
+    aspect-ratio: auto;
+}
+
 .dashboard {
     display: flex;
     height: calc(100% - 4em);
@@ -54,27 +95,12 @@ dialog { font-size: 15px; }
     display: flex;
     gap: 1em;
 }
-.dashboard .box {
-    display: flex;
-    flex-direction: column;
-    padding: 1em;
-    gap: 1em;
-    background: #faefe9;
-    border-radius: 16px;
-}
-.dashboard .title {
-    font-size: 1.2em;
-    font-weight: bold;
-    text-align: center;
-    color: #364b9b;
-}
 .dashboard .actions {
     display: flex;
     gap: 1em;
     justify-content: center;
 }
 
-.profile { background: #ebedf5; }
 .profile .picture {
     width: 133px;
     height: 133px;
@@ -107,12 +133,20 @@ dialog { font-size: 15px; }
     }
 }
 
-@media screen and (max-width: 960px) {
-    #top .picture {
-        position: fixed;
-        top: 14px;
-        right: 14px;
-        width: 39px;
-        height: 39px;
+form {
+    display: flex;
+    margin-bottom: 1em;
+    flex-direction: column;
+    gap: 1em;
+}
+form {
+    & input {
+        padding: 0.4em 0.6em;
+        border: none;
+        background: #f6d3c3;
+        border-radius: 8px;
+        font: inherit;
+        font-size: 0.9em;
     }
+    & input:focus { background: white; }
 }

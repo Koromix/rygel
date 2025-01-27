@@ -24,14 +24,14 @@ namespace RG {
 static smtp_Sender smtp;
 
 static const smtp_MailContent ExistingUser = {
-    "Tentative de connexion",
-    "Un utilisateur a tenté de se connecter sur votre compte {{ EMAIL }}",
-    "Un utilisateur a tenté de se connecter sur votre compte {{ EMAIL }}"
+    "Tentative de connexion à {{ TITLE }}",
+    R"(Un utilisateur a tenté de se connecter sur votre compte :\n\n{{ EMAIL }})",
+    R"(Un utilisateur a tenté de se connecter sur votre compte :<br><br><b>{{ EMAIL }}</b>)"
 };
 static const smtp_MailContent NewUser = {
-    "Connexion à Lignes de Vie",
-    "Connexion à LDV : {{ URL }}/#uuid={{ UUID }}&key={{ KEY }}",
-    "Connexion à LDV : {{ URL }}/#uuid={{ UUID }}&key={{ KEY }}"
+    "Connexion à {{ TITLE }}",
+    R"(Connexion à {{ TITLE }} :\n\n{{ URL }}/#uuid={{ UUID }}&mk={{ KEY }})",
+    R"(Connexion à {{ TITLE }} :<br><br><a href="{{ URL }}/#uuid={{ UUID }}&mk={{ KEY }}">Lien de connexion</a>)"
 };
 
 bool InitSMTP(const smtp_Config &config)
@@ -63,7 +63,9 @@ static Span<const char> PatchText(Span<const char> text, const char *uuid, const
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
 
-        if (key == "URL") {
+        if (key == "TITLE") {
+            writer->Write(config.title);
+        } else if (key == "URL") {
             writer->Write(config.url);
         } else if (key == "EMAIL") {
             writer->Write(email);
@@ -153,22 +155,21 @@ void HandleUserRegister(http_IO *io)
         if (!db.Prepare(R"(INSERT INTO users (id, email, valid)
                            VALUES (?1, ?2, 1)
                            ON CONFLICT DO NOTHING
-                           RETURNING id, uuid_str(id))", &stmt, (Span<const uint8_t>)unique, email, 1))
-            return;
-        if (!stmt.Step())
+                           RETURNING uuid_str(id))", &stmt, (Span<const uint8_t>)unique, email, 1))
             return;
 
-        Span<const uint8_t> id = MakeSpan((const uint8_t *)sqlite3_column_blob(stmt, 0),
-                                          sqlite3_column_bytes(stmt, 0));
-        uuid = (const char *)sqlite3_column_text(stmt, 1);
+        if (!stmt.Step()) {
+            if (stmt.IsValid()) {
+                if (!SendMail(email, ExistingUser, uuid, mkey, io->Allocator()))
+                    return;
 
-        if (id.len != RG_SIZE(uuid) || memcmp(id.ptr, uuid, id.len)) {
-            if (!SendMail(email, ExistingUser, uuid, mkey, io->Allocator()))
-                return;
+                io->SendText(200, "{}", "application/json");
+            }
 
-            io->SendText(200, "{}", "application/json");
             return;
         }
+
+        uuid = (const char *)sqlite3_column_text(stmt, 0);
     }
 
     if (!SendMail(email, NewUser, uuid, mkey, io->Allocator()))

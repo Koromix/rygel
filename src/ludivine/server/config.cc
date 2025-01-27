@@ -22,10 +22,15 @@ bool Config::Validate() const
 {
     bool valid = true;
 
+    if (!title || !title[0]) {
+        LogError("Missing main title");
+        valid = false;
+    }
     if (!url || !url[0]) {
         LogError("Missing public URL");
         valid = false;
     }
+
     valid &= http.Validate();
     valid &= smtp.Validate();
 
@@ -48,8 +53,11 @@ bool LoadConfig(StreamReader *st, Config *out_config)
         IniProperty prop;
         while (ini.Next(&prop)) {
             if (prop.section == "General") {
-                if (prop.key == "PublicURL") {
-                    config.url = DuplicateString(prop.value, &config.str_alloc).ptr;
+                if (prop.key == "Title") {
+                    config.title = DuplicateString(prop.value, &config.str_alloc).ptr;
+                } else if (prop.key == "PublicURL") {
+                    Span<const char> url = TrimStrRight(prop.value, '/');
+                    config.url = DuplicateString(url, &config.str_alloc).ptr;
                 } else {
                     LogError("Unknown attribute '%1'", prop.key);
                     valid = false;
