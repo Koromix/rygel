@@ -70,6 +70,14 @@ button { border-radius: 20px; }
 }
 
 @media screen and (max-width: 960px) {
+    #top .picture {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        width: 39px;
+        height: 39px;
+    }
+    
     footer {
         padding-left: 1em;
         align-items: start;

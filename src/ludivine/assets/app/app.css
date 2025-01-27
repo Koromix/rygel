@@ -29,16 +29,6 @@ main {
 }
 dialog { font-size: 15px; }
 
-@media screen and (max-width: 960px) {
-    #top .picture {
-        position: fixed;
-        top: 14px;
-        right: 14px;
-        width: 39px;
-        height: 39px;
-    }
-}
-
 .progress {
     --fill: #383838;
 
