@@ -117,17 +117,41 @@ async function start(root) {
     };
 
     // Open database
-    if (window.location.hash) {
-        let hash = window.location.hash.substr(1);
-        let query = new URLSearchParams(hash);
+    {
+        let session = null;
 
-        let uuid = query.get('uuid');
-        let mkey = query.get('mk');
+        try {
+            let json = sessionStorage.getItem('session');
+            session = JSON.parse(json);
+        } catch (err) {
+            console.error(err);
+        }
 
-        if (uuid && mkey) {
+        if (window.location.hash) {
+            let hash = window.location.hash.substr(1);
+            let query = new URLSearchParams(hash);
+
+            let uuid = query.get('uuid');
+            let mkey = query.get('mk');
+
+            if (uuid && mkey) {
+                session = {
+                    uuid: uuid,
+                    mkey: mkey
+                };
+
+                let json = JSON.stringify(session);
+                sessionStorage.setItem('session', json);
+            }
+
+            let url = window.location.pathname + window.location.search;
+            history.replaceState('', document.title, url);
+        }
+
+        if (session?.uuid != null && session?.mkey != null) {
             await initSQLite();
 
-            let db_filename = 'ludivine/' + uuid + '.db';
+            let db_filename = 'ludivine/' + session.uuid + '.db';
             db = await openDatabase(db_filename, 'c');
         }
     }
