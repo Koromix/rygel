@@ -19,6 +19,12 @@
 
 namespace RG {
 
+enum class EmbedMode {
+    Arrays,
+    Literals,
+    Embed
+};
+
 static bool SplitPrefixSuffix(const char *binary, const char *needle,
                               Span<const char> *out_prefix, Span<const char> *out_suffix,
                               Span<const char> *out_version)
@@ -41,7 +47,7 @@ static bool SplitPrefixSuffix(const char *binary, const char *needle,
     return true;
 }
 
-static void MakeEmbedCommand(Span<const char *const> embed_filenames, bool use_arrays,
+static void MakeEmbedCommand(Span<const char *const> embed_filenames, EmbedMode mode,
                              const char *embed_options, const char *dest_filename,
                              Allocator *alloc, Command *out_cmd)
 {
@@ -51,7 +57,11 @@ static void MakeEmbedCommand(Span<const char *const> embed_filenames, bool use_a
 
     Fmt(&buf, "\"%1\" embed -O \"%2\"", GetApplicationExecutable(), dest_filename);
 
-    Fmt(&buf, use_arrays ? "" : " -fUseLiterals");
+    switch (mode) {
+        case EmbedMode::Arrays: {} break;
+        case EmbedMode::Literals: { Fmt(&buf, " -fUseLiterals"); } break;
+        case EmbedMode::Embed: { Fmt(&buf, " -fUseEmbed"); } break;
+    }
     if (embed_options) {
         Fmt(&buf, " %1", embed_options);
     }
@@ -453,7 +463,9 @@ public:
                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakeEmbedCommand(embed_filenames, false, embed_options, dest_filename, alloc, out_cmd);
+
+        EmbedMode mode = (clang_ver >= 190000) ? EmbedMode::Embed : EmbedMode::Literals;
+        RG::MakeEmbedCommand(embed_filenames, mode, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -553,6 +565,11 @@ public:
                 Fmt(&buf, " -Wzero-as-null-pointer-constant");
             }
             Fmt(&buf, " -Wreturn-type -Werror=return-type");
+
+            // Accept #embed without reserve
+            if (clang_ver >= 190000) {
+                Fmt(&buf, " -Wno-c23-extensions");
+            }
         } else {
             Fmt(&buf, " -Wno-everything");
         }
@@ -1142,7 +1159,7 @@ public:
                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakeEmbedCommand(embed_filenames, false, embed_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *pch_filename, SourceType src_type,
@@ -1724,8 +1741,7 @@ public:
         RG_ASSERT(alloc);
 
         // Strings literals were limited in length before MSVC 2022
-        bool use_arrays = (cl_ver < 193000);
-
+        EmbedMode mode = (cl_ver >= 193000) ? EmbedMode::Literals : EmbedMode::Arrays;
         RG::MakeEmbedCommand(embed_filenames, use_arrays, embed_options, dest_filename, alloc, out_cmd);
     }
 
@@ -2136,7 +2152,7 @@ public:
                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-        RG::MakeEmbedCommand(embed_filenames, false, embed_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
@@ -2464,9 +2480,7 @@ public:
                           Allocator *alloc, Command *out_cmd) const override
     {
         RG_ASSERT(alloc);
-
-        // Strings literals are limited in length in MSVC, even with concatenation (64kiB)
-        RG::MakeEmbedCommand(embed_filenames, true, embed_options, dest_filename, alloc, out_cmd);
+        RG::MakeEmbedCommand(embed_filenames, EmbedMode::Literals, embed_options, dest_filename, alloc, out_cmd);
     }
 
     void MakePchCommand(const char *, SourceType, Span<const char *const>, Span<const char *const>,
