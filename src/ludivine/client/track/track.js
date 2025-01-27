@@ -25,14 +25,18 @@ const VIDEO_WIDTH = 800;
 const VIDEO_HEIGHT = 600;
 const COMMIT_INTERVAL = 10000;
 
-function TrackModule(db, test, root_el, experiment) {
+function TrackModule(db, test, experiment) {
     let self = this;
 
-    this.start = async function() {
+    let target_el = null;
+
+    this.start = async function(el) {
+        target_el = el;
+
         let meta = await db.fetch1('SELECT gender FROM meta');
 
-        render(html`<canvas class="trk_canvas"></canvas>`, root_el);
-        let canvas = root_el.querySelector('canvas');
+        render(html`<canvas class="trk_canvas"></canvas>`, target_el);
+        let canvas = target_el.querySelector('canvas');
 
         let input = new InputAPI(canvas);
         let draw = new DrawAPI(canvas, db, test);
@@ -107,7 +111,7 @@ function TrackModule(db, test, root_el, experiment) {
                 console.error(err);
             }
             document.documentElement.style.cursor = 'auto';
-            render('', root_el);
+            render('', target_el);
         }
     };
 

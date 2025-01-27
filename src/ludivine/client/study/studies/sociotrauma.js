@@ -13,49 +13,64 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-function SocioTrauma(study, start) {
-    study.module('recueil', 'Recueil', mod => {
-        mod.level = 'Temporalité';
+import { html } from '../../../../../vendor/lit-html/lit-html.bundle.js';
+import { ASSETS } from '../../../assets/assets.js';
 
-        study.module('initial', 'Bilan initial', mod => {
+function init(build, start) {
+    build.module('recueil', 'Recueil', mod => {
+        mod.level = 'Temporalité';
+        mod.help = html`
+            <img src=${ASSETS['web/illustrations/help']} alt="" />
+            <div>
+                <p>Sélectionnez la <b>prochaine étape de l’étude</b> pour commencer à remplir le questionnaire !
+            </div>
+        `;
+
+        build.module('initial', 'Bilan initial', mod => {
             mod.level = 'Module';
+            mod.help = html`
+                <img src=${ASSETS['web/illustrations/help']} alt="" />
+                <div>
+                    <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
+                </div>
+            `;
 
             let options = { schedule: start };
 
-            study.module('entourage', 'Entourage', () => {
-                study.test('ssq6', 'Soutien social', options)
-                study.test('sps10', 'Provisions sociales', options)
-                study.test('sni', 'Réseau proche', options)
+            build.module('entourage', 'Entourage', () => {
+                build.test('ssq6', 'Soutien social', options)
+                build.test('sps10', 'Provisions sociales', options)
+                build.test('sni', 'Réseau proche', options)
             });
 
-            study.module('evenement', 'Évènement', () => {
-                study.test('lec5', 'Situations stressantes', options)
-                study.test('isrc', 'Pensées et ressenti', options)
-                study.test('pcl5', 'Problèmes liés à l\'évènement', options)
-                study.test('pdeq', 'Réactions pendant l\'évènement', options)
-                study.test('adnm20', 'Évènements de vie', options)
-                study.test('ctqsf', 'Enfance', options)
-                study.test('ptci', 'Pensées suite à l\'évènement', options)
+            build.module('evenement', 'Évènement', () => {
+                build.test('lec5', 'Situations stressantes', options)
+                build.test('isrc', 'Pensées et ressenti', options)
+                build.test('pcl5', 'Problèmes liés à l\'évènement', options)
+                build.test('pdeq', 'Réactions pendant l\'évènement', options)
+                build.test('adnm20', 'Évènements de vie', options)
+                build.test('ctqsf', 'Enfance', options)
+                build.test('ptci', 'Pensées suite à l\'évènement', options)
             });
 
-            study.module('sante', 'Santé mentale', () => {
-                study.test('phq9', 'Manifestations dépressives', options)
-                study.test('gad7', 'Difficultés anxieuses', options)
-                study.test('ssi', 'Idées suicidaires', options)
-                study.test('substances', 'Consommations', options)
-                study.test('isi', 'Qualité du sommeil', options)
+            build.module('sante', 'Santé mentale', () => {
+                build.test('phq9', 'Manifestations dépressives', options)
+                build.test('gad7', 'Difficultés anxieuses', options)
+                build.test('ssi', 'Idées suicidaires', options)
+                build.test('substances', 'Consommations', options)
+                build.test('isi', 'Qualité du sommeil', options)
             });
 
-            study.module('qualite', 'Entourage', () => {
-                study.test('mhqol', 'Qualité de vie', options)
+            build.module('qualite', 'Entourage', () => {
+                build.test('mhqol', 'Qualité de vie', options)
             });
 
-            study.module('divulgation', 'Entourage', () => {
-                study.test('cses', 'Communication à l\'entourage', options)
-                study.test('rds', 'Réactions des proches', options)
+            build.module('divulgation', 'Entourage', () => {
+                build.test('cses', 'Communication à l\'entourage', options)
+                build.test('rds', 'Réactions des proches', options)
             });
         });
-    })
+    });
 }
 
-export { SocioTrauma }
+export { init }

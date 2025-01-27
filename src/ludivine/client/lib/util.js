@@ -135,7 +135,9 @@ export {
     computeAge,
     computeAgeMonths,
     dateToString,
+
     loadImage,
     loadTexture,
+
     progressCircle
 }

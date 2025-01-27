@@ -13,28 +13,51 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
+import * as UI from '../../../web/flat/ui.js';
+import { ProjectInfo, ProjectBuilder } from './api.js';
 import { progressCircle } from '../lib/util.js';
+import { ASSETS } from '../../assets/assets.js';
 
-function StudyModule(db, test, root_el, study) {
+function StudyModule(db, project, init, study) {
     let tests = null;
 
     let route = {
-        mod: study.root,
+        mod: null,
         page: null,
         section: null
     };
 
-    this.start = async function() {
+    let target_el = null;
+
+    this.start = async function(el) {
+        target_el = el;
+
+        // Init study schema
+        {
+            project = new ProjectInfo(project);
+
+            let builder = new ProjectBuilder(project);
+            let start = LocalDate.fromJSDate(study.start);
+
+            init(builder, start);
+        }
+
+        route.mod = project.root;
+
         await db.transaction(async () => {
             await db.exec('UPDATE tests SET visible = 0 WHERE study = ?', study.id);
 
-            for (let page of study.pages) {
+            for (let page of project.pages) {
+                let schedule = page.schedule?.toString?.();
+
                 await db.exec(`INSERT INTO tests (study, key, title, visible, status, schedule)
                                VALUES (?, ?, ?, 1, 'empty', ?)
                                ON CONFLICT DO UPDATE SET title = excluded.title,
                                                          visible = excluded.visible,
                                                          schedule = excluded.schedule`,
-                              study.id);
+                              study.id, page.key, page.title, schedule);
             }
         });
 
@@ -53,9 +76,9 @@ function StudyModule(db, test, root_el, study) {
         tests = await db.fetchAll(`SELECT t.key, t.status, t.payload
                                    FROM tests t
                                    INNER JOIN studies s ON (s.id = t.study)
-                                   WHERE s.key = ?`, study.key);
+                                   WHERE s.id = ?`, study.id);
 
-        let [progress, total] = computeProgress(null);
+        let [progress, total] = computeProgress(project.root);
 
         render(html`
             <div class="tabbar">
@@ -64,53 +87,55 @@ function StudyModule(db, test, root_el, study) {
 
             <div class="tab">
                 <div>
-                    <img src=${study.picture} alt="" />
-                    <p class="reference">${study.title}</p>
-                    ${study.summary}
+                    <img src=${project.picture} alt="" />
+                    <p class="reference">${project.title}</p>
+                    ${project.summary}
                     ${progressCircle(progress, total)}
                 </div>
 
                 ${route.page == null ? renderModule(route.mod) : null}
-                ${route.page != null ? renderPage(route.page, route.section) : null}
+                ${route.page != null && route.section == null ? renderStart(route.mod, route.page) : null}
+                ${route.page != null && route.section != null ? renderForm(route.mod, route.page, route.section) : null}
             </div>
-        `)
+        `, target_el);
     }
 
     function renderModule(mod) {
         return html`
             ${Util.mapRange(0, mod.chain.length - 1, idx => {
                 let parent = mod.chain[idx];
-                let next = 
 
-                return html`<div class="stu_step">${parent.title} - ${</div>`;
+                return html`
+                    <div class="stu_step" @click=${UI.wrap(e => navigate(parent))}>
+                        ${parent.level ?? ''}${parent.level ? ' - ' : ''}
+                        ${parent.title}
+                    </div>
+                `;
             })}
-            ${mod.chain.length > 1 ? html`
-                <div class="stu_step">
-                    ${Util.mapRange(0, mod.chain.length - 1, idx => mod.chain[idx].title).join(' - ')}
-                </div>
-            ` : ''}
             <div class="stu_summary">
                 <div class="stu_module">
                     ${mod.modules.map(child => {
                         let [progress, total] = computeProgress(child);
 
                         if (progress == total) {
-                            return html`<div class="done">${child.title} Complet</div>`;
+                            return html`<div class="done" @click=${UI.wrap(e => navigate(child))}>${child.title} Terminé</div>`;
                         } else if (!progress) {
-                            return html`<div class="empty">${child.title} A compléter</div>`;
+                            return html`<div class="empty" @click=${UI.wrap(e => navigate(child))}>${child.title} À compléter</div>`;
                         } else {
-                            return html`<div class="partial">${child.title} ${progressCircle(progress, total)}</div>`;
+                            return html`<div class="partial" @click=${UI.wrap(e => navigate(child))}>${child.title} ${progressCircle(progress, total)}</div>`;
                         }
                     })}
-                    ${mod.pages.map(page => {
+                    ${!mod.modules.length ? mod.pages.map(page => {
                         let test = tests.find(test => test.key == page.key);
 
                         switch (test.status) {
-                            case 'empty': return html`<div class="empty">${page.title} A compléter</div>`;
-                            case 'draft': return html`<div class="partial">${page.title} A compléter</div>`;
-                            case 'done': return html`<div class="done">${page.title} Complet</div>`;
+                            case 'empty': return html`<div class="empty" @click=${UI.wrap(e => navigate(mod, page))}>${page.title} A compléter</div>`;
+                            case 'draft': return html`<div class="partial" @click=${UI.wrap(e => navigate(mod, page))}>${page.title} A compléter</div>`;
+                            case 'done': return html`<div class="done" @click=${UI.wrap(e => navigate(mod, page))}>${page.title} Complet</div>`;
                         }
-                    })}
+                    }) : ''}
+
+                    ${mod.help != null ? html`<div class="help">${mod.help}</div>` : ''}
                 </div>
             </div>
         `;
@@ -118,13 +143,45 @@ function StudyModule(db, test, root_el, study) {
 
     function renderStart(mod, page) {
         return html`
+            ${Util.mapRange(0, mod.chain.length - 1, idx => {
+                let parent = mod.chain[idx];
+
+                return html`
+                    <div class="stu_step" @click=${UI.wrap(e => navigate(parent))}>
+                        ${parent.level ?? ''}${parent.level ? ' - ' : ''}
+                        ${parent.title}
+                    </div>
+                `;
+            })}
+            <div class="stu_step" @click=${UI.wrap(e => navigate(mod, page))}>
+                Questionnaire - ${page.title}
+            </div>
+            <div class="stu_start">
+                <div class="help">
+                    <img src=${ASSETS['web/illustrations/help']} alt="" />
+                    <div>
+                        <p>Tout est prêt pour <b>commencer le questionnaire</b> !
+                        <p>Pensez à <b>faire des pauses</b> si vous en ressentez le besoin, ou à faire un tour sur la page Se Détendre.
+                        <p>Si vous êtes prêt, <b>on peut y aller</b> !
+                    </div>
+                </div>
+                <button type="button" @click=${UI.wrap(e => navigate(mod, page, 0))}>Commencer</button>
+            </div>
         `;
     }
 
-    function renderForm(page, section) {
+    function renderForm(mod, page, section) {
         return html`
             <div class="stu_progress"></div>
         `;
+    }
+
+    async function navigate(mod, page = null, section = null) {
+        route.mod = mod;
+        route.page = page;
+        route.section = (page != null) ? section : null;
+
+        await run();
     }
 
     function computeProgress(mod) {
@@ -137,3 +194,5 @@ function StudyModule(db, test, root_el, study) {
         return [progress, total];
     }
 }
+
+export { StudyModule }

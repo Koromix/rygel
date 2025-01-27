@@ -68,7 +68,7 @@ dialog { font-size: 15px; }
     max-width: 600px;
     margin: 0 auto;
     padding: 1em;
-    gap: 1em;
+    gap: 2em;
     background: white;
     border-radius: 16px;
 }
@@ -117,18 +117,20 @@ dialog { font-size: 15px; }
     background: color-mix(in srgb, var(--color), transparent 60%);
     border-radius: 16px;
     padding: 0.5em 1em;
+    gap: 2em;
     align-items: center;
 }
 .study.partial { --color: #d9bf69; }
 .study.complete { --color: #eca17f; }
 .study {
+    & > img { width: 100px; }
     & .info { flex: 1; }
     & .status {
         flex: 0;
         text-align: center;
     }
 
-    & button { background: var(--color); }
+    --button_color: var(--color);
     & .progress { --fill: var(--color); }
 }
 

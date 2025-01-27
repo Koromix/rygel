@@ -28,10 +28,11 @@ const DATA_VERSION = 1;
 const UNDO_HISTORY = 50;
 const EVENT_SIZE = 32;
 
-function NetworkModule(db, test, root_el) {
+function NetworkModule(db, test) {
     let self = this;
 
     // DOM nodes
+    let target_el = null;
     let menu_el = null;
     let toolbox_el = null;
     let canvas = null;
@@ -68,17 +69,19 @@ function NetworkModule(db, test, root_el) {
         anonymous: { get: () => anonymous, set: value => { anonymous = value; }, enumerable: true }
     });
 
-    this.start = async function() {
+    this.start = async function(el) {
+        target_el = el;
+
         Log.pushHandler(UI.notifyHandler);
 
         render(html`
             <div class="net_menu"></div>
             <div class="net_toolbox"></div>
             <canvas class="net_canvas"></canvas>
-        `, root_el);
-        menu_el = root_el.querySelector('.net_menu');
-        toolbox_el = root_el.querySelector('.net_toolbox');
-        canvas = root_el.querySelector('.net_canvas');
+        `, target_el);
+        menu_el = target_el.querySelector('.net_menu');
+        toolbox_el = target_el.querySelector('.net_toolbox');
+        canvas = target_el.querySelector('.net_canvas');
 
         runner = new AppRunner(canvas);
 
@@ -122,7 +125,7 @@ function NetworkModule(db, test, root_el) {
         window.removeEventListener('resize', runner.busy);
         runner.stop();
 
-        render('', root_el);
+        render('', target_el);
     };
 
     this.hasUnsavedData = function() {

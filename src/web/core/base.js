@@ -1474,7 +1474,7 @@ LocalDate.fromJSDate = function(value) {
     if (typeof value == 'number')
         value = new Date(value);
 
-    let date = new LocalDate(value.getYear(), value.getMonth() + 1, value.getDate());
+    let date = new LocalDate(value.getFullYear(), value.getMonth() + 1, value.getDate());
     return date;
 };
 

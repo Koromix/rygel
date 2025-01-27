@@ -59,24 +59,25 @@ import asset42 from './web/illustrations/dispositif.webp';
 import asset43 from './web/illustrations/donnees.webp';
 import asset44 from './web/illustrations/ecriture.webp';
 import asset45 from './web/illustrations/etirements.webp';
-import asset46 from './web/illustrations/participer.webp';
-import asset47 from './web/illustrations/respiration.webp';
-import asset48 from './web/illustrations/sociotrauma.webp';
-import asset49 from './web/illustrations/staks.webp';
-import asset50 from './web/livres/apprendre_a_soigner_les_depressions.jpg';
-import asset51 from './web/livres/humeur_normale_a_la_depression.jpg';
-import asset52 from './web/livres/les_troubles_bipolaires.jpg';
-import asset53 from './web/livres/psychoeducation_dans_depression.jpg';
-import asset54 from './web/livres/traiter_la_depression.jpg';
-import asset55 from './web/misc/3114.webp';
-import asset56 from './web/misc/dice.webp';
-import asset57 from './web/misc/left.webp';
-import asset58 from './web/misc/right.webp';
-import asset59 from './web/videos/blessures_invisibles.webp';
-import asset60 from './web/videos/bloque_bloquee.webp';
-import asset61 from './web/videos/trauma_vicariant.webp';
-import asset62 from './web/videos/trop_trop_peur.webp';
-import asset63 from './web/videos/violences_sexuelles_enfance.webp';
+import asset46 from './web/illustrations/help.webp';
+import asset47 from './web/illustrations/participer.webp';
+import asset48 from './web/illustrations/respiration.webp';
+import asset49 from './web/illustrations/sociotrauma.webp';
+import asset50 from './web/illustrations/staks.webp';
+import asset51 from './web/livres/apprendre_a_soigner_les_depressions.jpg';
+import asset52 from './web/livres/humeur_normale_a_la_depression.jpg';
+import asset53 from './web/livres/les_troubles_bipolaires.jpg';
+import asset54 from './web/livres/psychoeducation_dans_depression.jpg';
+import asset55 from './web/livres/traiter_la_depression.jpg';
+import asset56 from './web/misc/3114.webp';
+import asset57 from './web/misc/dice.webp';
+import asset58 from './web/misc/left.webp';
+import asset59 from './web/misc/right.webp';
+import asset60 from './web/videos/blessures_invisibles.webp';
+import asset61 from './web/videos/bloque_bloquee.webp';
+import asset62 from './web/videos/trauma_vicariant.webp';
+import asset63 from './web/videos/trop_trop_peur.webp';
+import asset64 from './web/videos/violences_sexuelles_enfance.webp';
 
 const ASSETS = {
     'footer': asset0,
@@ -125,24 +126,25 @@ const ASSETS = {
     'web/illustrations/donnees': asset43,
     'web/illustrations/ecriture': asset44,
     'web/illustrations/etirements': asset45,
-    'web/illustrations/participer': asset46,
-    'web/illustrations/respiration': asset47,
-    'web/illustrations/sociotrauma': asset48,
-    'web/illustrations/staks': asset49,
-    'web/livres/apprendre_a_soigner_les_depressions': asset50,
-    'web/livres/humeur_normale_a_la_depression': asset51,
-    'web/livres/les_troubles_bipolaires': asset52,
-    'web/livres/psychoeducation_dans_depression': asset53,
-    'web/livres/traiter_la_depression': asset54,
-    'web/misc/3114': asset55,
-    'web/misc/dice': asset56,
-    'web/misc/left': asset57,
-    'web/misc/right': asset58,
-    'web/videos/blessures_invisibles': asset59,
-    'web/videos/bloque_bloquee': asset60,
-    'web/videos/trauma_vicariant': asset61,
-    'web/videos/trop_trop_peur': asset62,
-    'web/videos/violences_sexuelles_enfance': asset63,
+    'web/illustrations/help': asset46,
+    'web/illustrations/participer': asset47,
+    'web/illustrations/respiration': asset48,
+    'web/illustrations/sociotrauma': asset49,
+    'web/illustrations/staks': asset50,
+    'web/livres/apprendre_a_soigner_les_depressions': asset51,
+    'web/livres/humeur_normale_a_la_depression': asset52,
+    'web/livres/les_troubles_bipolaires': asset53,
+    'web/livres/psychoeducation_dans_depression': asset54,
+    'web/livres/traiter_la_depression': asset55,
+    'web/misc/3114': asset56,
+    'web/misc/dice': asset57,
+    'web/misc/left': asset58,
+    'web/misc/right': asset59,
+    'web/videos/blessures_invisibles': asset60,
+    'web/videos/bloque_bloquee': asset61,
+    'web/videos/trauma_vicariant': asset62,
+    'web/videos/trop_trop_peur': asset63,
+    'web/videos/violences_sexuelles_enfance': asset64,
 };
 
 export { ASSETS }

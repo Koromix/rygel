@@ -20,6 +20,7 @@ import * as sqlite3 from '../../web/core/sqlite3.js';
 import { SmallCalendar } from '../../web/widgets/smallcalendar.js';
 import { computeAge, dateToString, progressCircle } from './lib/util.js';
 import { PictureCropper } from './lib/picture.js';
+import { StudyModule } from './study/study.js';
 import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
 import { ASSETS } from '../assets/assets.js';
@@ -34,41 +35,23 @@ const PROJECTS = [
         index: 1,
         key: 'sociotrauma',
         title: 'SocioTrauma',
-        online: true
+        picture: ASSETS['web/illustrations/sociotrauma'],
+
+        prepare: async (db, project, study) => {
+            let url = BUNDLES['sociotrauma.js'];
+            let { init } = await import(url);
+
+            return new StudyModule(db, project, init, study);
+        }
     },
 
     {
         index: 2,
         key: 'calypsoT',
         title: 'CALYPSO',
-        online: false
-    }
-];
+        picture: ASSETS['web/illustrations/calypso'],
 
-const MODULES = [
-    {
-        key: 'network',
-        title: 'Sociogramme',
-        icon: 'app/main/network',
-        historical: true,
-        editable: true,
-
-        prepare: (db, test, el) => new NetworkModule(db, test, el)
-    },
-
-    {
-        key: 'arnaud',
-        title: 'EyeTrack',
-        icon: 'app/main/track',
-        historical: false,
-        editable: false,
-
-        prepare: async (db, test, el) => {
-            let url = BUNDLES['arnaud.js'];
-            let experiment = await import(url);
-
-            return new TrackModule(db, test, el, experiment);
-        },
+        prepare: null
     }
 ];
 
@@ -99,6 +82,8 @@ let identity = {
 };
 
 let root_el = null;
+let main_el = null;
+
 let active_mod = null;
 
 let calendar = new SmallCalendar;
@@ -157,6 +142,9 @@ async function start(root) {
     }
 
     root_el = root;
+    main_el = document.createElement('main');
+
+    renderFull();
     document.body.classList.remove('loading');
 
     if (db == null) {
@@ -172,6 +160,39 @@ async function start(root) {
 
         await runDashboard();
     }
+}
+
+function renderFull() {
+    render(html`
+        <div id="deploy" @click=${deploy}></div>
+
+        <nav id="top">
+            <menu>
+                <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['logo']} alt="Logo Lignes de Vie" /></a>
+                <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
+                <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
+                <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
+                <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
+                <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
+                <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
+                <div style="flex: 1;"></div>
+                <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt="" />
+            </menu>
+        </nav>
+
+        ${main_el}
+
+        <footer>
+            <div>Lignes de Vie © 2024</div>
+            <img src=${ASSETS['footer']} alt="" width="79" height="64">
+            <div style="font-size: 0.8em;">
+                Cn2r, 103 Bld de la liberté, 59000 LILLE<br>
+                <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">lignesdevie@cn2r.fr</a>
+            </div>
+        </footer>
+
+        <a id="sos" @click=${UI.wrap(e => sos(event))}>SOS</a>
+    `, root_el);
 }
 
 function adaptToViewport() {
@@ -250,8 +271,6 @@ async function openDatabase(filename, flags) {
 }
 
 async function runDashboard() {
-    stopTest();
-
     let studies = await db.fetchAll(`SELECT s.id, s.key, s.start,
                                             COUNT(t1.id) AS progress, COUNT(t2.id) AS total
                                      FROM studies s
@@ -259,12 +278,12 @@ async function runDashboard() {
                                      LEFT JOIN tests t2 ON (t2.study = s.id AND t2.visible = 1)
                                      GROUP BY s.id`);
 
-    renderBody(html`
+    render(html`
         <div class="tabbar">
             <a class="active">Tableau de bord</a>
         </div>
 
-        <div class="tab ">
+        <div class="tab">
             <div class="box profile">
                 <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt=""/>
                 <div>
@@ -289,10 +308,12 @@ async function runDashboard() {
                         if (study != null) {
                             if (study.progress == study.total) {
                                 cls += ' complete';
-                            } else if (study.progress) {
+                            } else {
                                 cls += ' partial';
                             }
                         }
+
+                        let online = (project.prepare != null);
 
                         return html`
                             <div class=${cls}>
@@ -301,13 +322,13 @@ async function runDashboard() {
                                     <b>Étude n°${project.index}</b><br>
                                     ${project.title}
                                 </div>
-                                <div class=${project.online ? 'status' : 'status disabled'}>
+                                <div class=${online ? 'status' : 'status disabled'}>
                                     ${study == null ? progressCircle(0, 0) : ''}
-                                    ${study != null ? progressCircle(4, 10) : ''}
+                                    ${study != null ? progressCircle(study.progress, study.total) : ''}
                                     ${study == null && project.online ?
                                         html`<button type="button" class="small"
                                                      @click=${UI.insist(e => openStudy(project))}>Participer</button>` : ''}
-                                    ${study != null && study.progress < study.total ?
+                                    ${study != null ?
                                         html`<button type="button" class="small"
                                                      @click=${UI.wrap(e => openStudy(project))}>Reprendre</button>` : ''}
                                     ${study != null && study.progress == study.total ?
@@ -331,11 +352,11 @@ async function runDashboard() {
                 </div>
             </div>
         </div>
-    `);
+    `, main_el);
 }
 
 async function runRegister() {
-    renderBody(html`
+    render(html`
         <div class="tabbar">
             <a class="active">Enregistrez-vous</a>
         </div>
@@ -363,7 +384,7 @@ async function runRegister() {
                 </div>
             </div>
         </div>
-    `);
+    `, main_el);
 }
 
 async function register(e) {
@@ -377,39 +398,6 @@ async function register(e) {
 
     form.innerHTML = '';
     render(html`<p>Consultez l'email qui <b>vous a été envoyé</b> pour continuer !</p>`, form);
-}
-
-function renderBody(main) {
-    render(html`
-        <div id="deploy" @click=${deploy}></div>
-
-        <nav id="top">
-            <menu>
-                <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['logo']} alt="Logo Lignes de Vie" /></a>
-                <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
-                <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
-                <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
-                <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
-                <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
-                <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
-                <div style="flex: 1;"></div>
-                <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt="" />
-            </menu>
-        </nav>
-
-        <main>${main}</main>
-
-        <footer>
-            <div>Lignes de Vie © 2024</div>
-            <img src=${ASSETS['footer']} alt="" width="79" height="64">
-            <div style="font-size: 0.8em;">
-                Cn2r, 103 Bld de la liberté, 59000 LILLE<br>
-                <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">lignesdevie@cn2r.fr</a>
-            </div>
-        </footer>
-
-        <a id="sos" @click=${UI.wrap(e => sos(event))}>SOS</a>
-    `, root_el);
 }
 
 async function changePicture() {
@@ -438,6 +426,7 @@ async function changePicture() {
         identity.picture = url;
     });
 
+    renderFull();
     runDashboard();
 }
 
@@ -544,104 +533,14 @@ async function deleteDatabase() {
 async function openStudy(project) {
     let start = (new Date).valueOf();
 
-    await db.exec(`INSERT INTO studies (key, start)
-                   VALUES (?, ?)
-                   ON CONFLICT DO NOTHING`,
-                  project.key, start);
+    let study = await db.fetch1(`INSERT INTO studies (key, start)
+                                 VALUES (?, ?)
+                                 ON CONFLICT DO UPDATE SET start = start
+                                 RETURNING id, start`,
+                                project.key, start);
+    let mod = await project.prepare(db, project, study);
 
-    Log.info('Bientôt !');
-    runDashboard();
-}
-
-async function createTest(key) {
-    let now = (new Date).valueOf();
-
-    let test = {
-        id: null,
-        key: key,
-        title: '',
-        mtime: now
-    };
-
-    await changeTest(test);
-    await openTest(test);
-}
-
-async function changeTest(test) {
-    let init = (test.id == null);
-    let mod = MODULES.find(mod => mod.key == test.key);
-
-    await UI.dialog({
-        run: (render, close) => {
-            return html`
-                <div class="title">
-                    ${init ? 'Nouveau' : 'Modification de'} ${mod.title}
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-                </div>
-
-                <div class="main">
-                    <label>
-                        <span>Titre</span>
-                        <input name="title" value=${test.title} />
-                    </label>
-                    ${mod.historical ? html`
-                        <label>
-                            <span>Date de l'évènement</span>
-                            <input name="date" type="date" value=${dateToString(test.date)} />
-                        </label>
-                    ` : ''}
-                </div>
-
-                <div class="footer">
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                    <button type="submit">${init ? 'Créer' : 'Modifier'}</button>
-                </div>
-            `;
-        },
-
-        submit: async (elements) => {
-            if (!elements.title.value.trim())
-                throw new Error('Le titre ne peut pas être vide');
-            if (mod.historical && !elements.date.value)
-                throw new Error('La date ne peut pas être vide');
-
-            let title = elements.title.value.trim();
-            let mtime = (mod.historical ? elements.date.valueAsDate : new Date).valueOf();
-
-            let ret = await db.fetch1(`INSERT INTO tests (id, key, title, visible, status, mtime)
-                                       VALUES (?, ?, ?, 1, 'draft', ?)
-                                       ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                                 mtime = excluded.mtime
-                                       RETURNING id, mtime`,
-                                      test.id, test.key, title, mtime);
-
-            test.id = ret.id;
-            test.mtime = ret.mtime;
-        }
-    });
-}
-
-async function deleteTest(id) {
-    await db.exec('DELETE FROM tests WHERE id = ?', id);
-}
-
-async function openTest(test) {
-    stopTest();
-
-    let mod = MODULES.find(mod => mod.key == test.key);
-
-    active_mod = await mod.prepare(db, test, root_el);
-    await active_mod.start();
-}
-
-function stopTest() {
-    if (active_mod == null)
-        return;
-
-    active_mod.stop();
-    active_mod = null;
+    await mod.start(main_el);
 }
 
 export {
