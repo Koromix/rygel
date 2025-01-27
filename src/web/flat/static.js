@@ -138,7 +138,9 @@ function initScroll() {
 
     function adjust_top() {
         let top = document.querySelector('nav#top');
-        top.classList.toggle('border', window.pageYOffset >= 20);
+
+        if (top != null)
+            top.classList.toggle('border', window.pageYOffset >= 20);
     }
 }
 
