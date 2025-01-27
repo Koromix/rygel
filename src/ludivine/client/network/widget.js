@@ -451,11 +451,8 @@ function NetworkWidget(mod, world) {
                     mod.tooltip(tooltip);
 
                 if (mouse_state.left == -1) {
-                    if (idx > 0) {
+                    if (idx > 0)
                         changePerson(target);
-                    } else {
-                        app.changeIdentity();
-                    }
                 } else if (idx > 0 && mouse_state.right == -1) {
                     deletePersons(target);
                 }
@@ -939,10 +936,7 @@ function NetworkWidget(mod, world) {
             return '';
 
         if (p == world.persons[0]) {
-            let age = computeAge(app.identity.birthdate);
-
-            let text = app.identity.name + (details ? ` (${age} ${age > 1 ? 'ans' : 'an'})` : '');
-            return text;
+            return 'vous';
         } else {
             let subject = world.subjects.find(subject => subject.id == p.subject);
             let kind = PERSON_KINDS[p.kind];

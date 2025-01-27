@@ -96,7 +96,16 @@ static void InitAssets()
     assets_index.data = PatchFile(assets_index, &assets_alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
 
-        if (key == "JS") {
+        if (key == "ENV") {
+            json_Writer json(writer);
+
+            json.StartObject();
+            json.Key("urls"); json.StartObject();
+                json.Key("app"); json.String(config.app_url);
+                json.Key("static"); json.String(config.static_url);
+            json.EndObject();
+            json.EndObject();
+        } else if (key == "JS") {
             writer->Write(js);
         } else if (key == "CSS") {
             writer->Write(css);

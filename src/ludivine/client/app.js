@@ -18,7 +18,6 @@ import { Util, Log, Net, LocalDate } from '../../web/core/base.js';
 import * as UI from '../../web/flat/ui.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { SmallCalendar } from '../../web/widgets/smallcalendar.js';
-import { GENDERS } from './lib/constants.js';
 import { computeAge, dateToString, renderProgress } from './lib/util.js';
 import { PictureCropper } from './lib/picture.js';
 import { NetworkModule } from './network/network.js';
@@ -28,7 +27,6 @@ import { sos } from '../assets/shared/ldv.js';
 
 import '../assets/app/app.css';
 
-const DATABASE_FILENAME = 'LDV4.db';
 const DATABASE_VERSION = 1;
 
 const PROJECTS = [
@@ -97,9 +95,6 @@ Object.assign(T, {
 let db = null;
 
 let identity = {
-    name: '',
-    birthdate: null,
-    gender: null,
     picture: null
 };
 
@@ -132,7 +127,7 @@ async function start(root) {
         if (uuid && mkey) {
             await initSQLite();
 
-            let db_filename = 'LDV/' + uuid + '.db';
+            let db_filename = 'ludivine/' + uuid + '.db';
             db = await openDatabase(db_filename, 'c');
         }
     }
@@ -143,12 +138,12 @@ async function start(root) {
     if (db == null) {
         await runRegister();
     } else {
-        let row = await db.fetch1('SELECT name, birthdate, gender, picture FROM meta');
+        let row = await db.fetch1('SELECT picture FROM meta');
 
         if (row != null) {
             Object.assign(identity, row);
         } else {
-            await changeIdentity();
+            await db.exec('INSERT INTO meta (gender) VALUES (NULL)');
         }
 
         await runDashboard();
@@ -182,9 +177,7 @@ async function openDatabase(filename, flags) {
             case 0: {
                 await db.exec(`
                     CREATE TABLE meta (
-                        name TEXT NOT NULL,
-                        gender TEXT NOT NULL,
-                        birthdate INTEGER NOT NULL,
+                        gender TEXT,
                         picture TEXT,
                         avatar TEXT
                     );
@@ -232,94 +225,6 @@ async function openDatabase(filename, flags) {
     return db;
 }
 
-async function changeIdentity() {
-    let init = !identity.name;
-
-    let time = identity.birthdate;
-    let age = null;
-
-    await UI.dialog({
-        can_be_closed: !init,
-
-        run: (render, close) => {
-            let now = (new Date).valueOf();
-            let new_age = (time != null) ? computeAge(time, now) : null;
-
-            if (age == null || new_age >= 0)
-                age = new_age;
-
-            return html`
-                <div class="title">
-                    ${init ? 'Créer mon compte' : 'Modifier mon identité'}
-                    ${!init ? html`
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-                    ` : ''}
-                </div>
-
-                <div class="main">
-                    <label>
-                        <span>Identité</span>
-                        <input name="name" value=${identity.name} />
-                    </label>
-                    <label>
-                        <span>Genre</span>
-                        ${Object.keys(GENDERS).map(gender => {
-                            let info = GENDERS[gender];
-                            return html`<label><input name="gender" type="radio" value=${gender} ?checked=${gender == identity.gender}>${info.text}</label>`;
-                        })}
-                    </label>
-
-                    <label>
-                        <span>Date de naissance</span>
-                        <input name="birthdate" type="date" value=${dateToString(identity.birthdate)}
-                               @input=${e => { time = e.target.valueAsDate.valueOf(); render(); }} />
-                    </label>
-                    <label>
-                        <span>Âge</span>
-                        <input readonly value=${(age != null) ? (age + (age > 1 ? ' ans' : ' an')) : ''} />
-                    </label>
-                </div>
-
-                <div class="footer">
-                    ${init ? html`
-                        <div style="flex: 1;"></div>
-                        <button type="submit">Créer</button>
-                        <div style="flex: 1;"></div>
-                    ` : ''}
-                    ${!init ? html`
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                        <button type="submit">Modifier</button>
-                    ` : ''}
-                </div>
-            `;
-        },
-
-        submit: async (elements) => {
-            if (!elements.name.value.trim())
-                throw new Error('Le nom ne peut pas être vide');
-            if (!elements.birthdate.value)
-                throw new Error('La date de naissance ne peut pas être vide');
-
-            let changes = {
-                name: elements.name.value.trim(),
-                gender: elements.gender.value,
-                birthdate: elements.birthdate.valueAsDate.valueOf()
-            };
-
-            await db.transaction(async () => {
-                await db.exec('DELETE FROM meta');
-
-                await db.exec('INSERT INTO meta (name, gender, birthdate) VALUES (?, ?, ?)',
-                              changes.name, changes.gender, changes.birthdate);
-            });
-
-            Object.assign(identity, changes);
-        }
-    });
-}
-
 async function runDashboard() {
     stopTest();
 
@@ -343,17 +248,14 @@ async function runDashboard() {
         <div class="tab dashboard">
             <div class="column">
                 <div class="box profile">
-                    <div class="title">${identity.name} (${age} ${age > 1 ? 'ans' : 'an'})</div>
                     <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt=""/>
-                    <button type="button"
-                            @click=${UI.wrap(e => changeIdentity().then(runDashboard))}>Modifier mon identité</button>
                     <button type="button"
                             @click=${UI.wrap(e => changePicture().then(runDashboard))}>Modifier mon avatar</button>
                 </div>
 
                 <div class="box">
                     <button type="button"
-                            @click=${UI.insist(e => exportDatabase(identity.name))}>Exporter mes données</button>
+                            @click=${UI.insist(exportDatabase)}>Exporter mes données</button>
                     <button type="button" class="danger"
                             @click=${UI.confirm('Suppression définitive de toutes les données', deleteDatabase)}>Supprimer mon profil</button>
                 </div>
@@ -566,7 +468,9 @@ async function blobToDataURL(blob) {
     return url;
 }
 
-async function exportDatabase(name) {
+async function exportDatabase() {
+    let name = (new Date).toLocaleDateString();
+
     let root = await navigator.storage.getDirectory();
     let handle = await root.getFileHandle(DATABASE_FILENAME);
     let src = await handle.getFile();
@@ -755,10 +659,6 @@ function stopTest() {
 }
 
 export {
-    identity,
-
     start,
-    runDashboard,
-
-    changeIdentity
+    runDashboard
 }
