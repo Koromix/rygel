@@ -23,7 +23,7 @@ import { PictureCropper } from './lib/picture.js';
 import { NetworkModule } from './network/network.js';
 import { TrackModule } from './track/track.js';
 import { ASSETS } from '../assets/assets.js';
-import { sos } from '../assets/shared/ldv.js';
+import { deploy, sos } from '../assets/shared/ldv.js';
 
 import '../assets/app/app.css';
 
@@ -381,9 +381,17 @@ async function register(e) {
 
 function renderBody(main) {
     render(html`
+        <div id="deploy" @click=${deploy}></div>
+
         <nav id="top">
             <menu>
                 <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['logo']} alt="Logo Lignes de Vie" /></a>
+                <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
+                <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
+                <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
+                <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
+                <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
+                <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
                 <div style="flex: 1;"></div>
                 <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt="" />
             </menu>

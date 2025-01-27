@@ -77,14 +77,13 @@ struct PageSection {
 struct PageData {
     const char *name;
 
+    const char *url;
     const char *src_filename;
     const char *template_filename;
     const char *title;
     const char *menu;
     const char *description;
     bool toc;
-
-    const char *url;
 
     HeapArray<PageSection> sections;
     std::shared_ptr<const char> html_buf;
@@ -461,7 +460,7 @@ static void RenderAsset(Span<const char> path, const FileHash *hash, StreamWrite
 static bool RenderMarkdown(PageData *page, const AssetSet &assets, Allocator *alloc)
 {
     HeapArray<char> content;
-    if (ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
+    if (page->src_filename && ReadFile(page->src_filename, Mebibytes(8), &content) < 0)
         return false;
     Span<const char> remain = TrimStr(content.As());
 
@@ -870,13 +869,15 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             PageData page = {};
 
             page.name = SectionToPageName(prop.section, &temp_alloc);
-            page.title = page.name;
             page.src_filename = NormalizePath(prop.section, source_dir, &temp_alloc).ptr;
+            page.title = page.name;
             page.description = "";
             page.toc = true;
 
             do {
-                if (prop.key == "SourceFile") {
+                if (prop.key == "URL") {
+                    page.url = DuplicateString(prop.value, &temp_alloc).ptr;
+                } else if (prop.key == "SourceFile") {
                     page.src_filename = NormalizePath(prop.value, source_dir, &temp_alloc).ptr;
                 } else if (prop.key == "Title") {
                     page.title = DuplicateString(prop.value, &temp_alloc).ptr;
@@ -894,13 +895,17 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 }
             } while (ini.NextInSection(&prop));
 
-            if (TestStr(page.name, "index")) {
-                page.url = "/";
+            if (page.url) {
+                page.src_filename = nullptr;
             } else {
-                switch (urls) {
-                    case UrlFormat::Pretty:
-                    case UrlFormat::PrettySub: { page.url = Fmt(&temp_alloc, "/%1", page.name).ptr; } break;
-                    case UrlFormat::Ugly: { page.url = Fmt(&temp_alloc, "/%1.html", page.name).ptr; } break;
+                if (TestStr(page.name, "index")) {
+                    page.url = "/";
+                } else {
+                    switch (urls) {
+                        case UrlFormat::Pretty:
+                        case UrlFormat::PrettySub: { page.url = Fmt(&temp_alloc, "/%1", page.name).ptr; } break;
+                        case UrlFormat::Ugly: { page.url = Fmt(&temp_alloc, "/%1.html", page.name).ptr; } break;
+                    }
                 }
             }
 
@@ -1159,6 +1164,9 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
 
     // Render pages
     for (PageData &page: pages) {
+        if (!page.src_filename)
+            continue;
+
         Span<const char> ext = GetPathExtension(page.src_filename);
 
         if (ext == ".html") {

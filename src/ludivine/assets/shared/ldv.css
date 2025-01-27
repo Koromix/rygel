@@ -61,6 +61,13 @@ button { border-radius: 20px; }
     text-transform: none;
 }
 #top.border { border-bottom-color: var(--top_background); }
+#top .picture {
+    width: 51px;
+    height: 51px;
+    background: white;
+    border-radius: 50%;
+    border: 3px solid #e9a07f;
+}
 
 @media screen and (max-width: 960px) {
     footer {

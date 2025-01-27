@@ -23,12 +23,13 @@ window.addEventListener('load', e => {
 function initDeploy() {
     let deploy = document.querySelector('#deploy');
 
-    if (deploy != null) {
-        deploy.addEventListener('click', e => {
-            let top = document.querySelector('nav#top');
-            top.classList.toggle('active');
-        });
-    }
+    if (deploy != null)
+        deploy.addEventListener('click', deploy);
+}
+
+function deploy() {
+    let top = document.querySelector('nav#top');
+    top.classList.toggle('active');
 }
 
 function initMenu() {
@@ -153,3 +154,5 @@ function findParent(el, func) {
 
 document.documentElement.classList.remove('nojs');
 document.documentElement.classList.add('js');
+
+export { deploy }
