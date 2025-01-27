@@ -275,7 +275,7 @@ async function runDashboard() {
                     <p>N’hésitez pas à <b>faire des pauses</b> et à visiter la page <b>Se Détendre</b>. Vous pourrez reprendre à tout moment.</p>
 
                     <div class="actions">
-                        <button type="button" @click=${UI.wrap(changePicture)}>Modifier mon profil</button>
+                        <button type="button" @click=${UI.wrap(changePicture)}>Modifier mon avatar</button>
                     </div>
                 </div>
             </div>
