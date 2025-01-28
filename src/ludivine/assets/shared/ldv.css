@@ -158,10 +158,7 @@ p + .columns { margin-top: 2em; }
     cursor: default;
 }
 .tab {
-    display: flex;
     padding: 1em;
-    flex-direction: column;
-    gap: 1em;
     background: #fdfbf8;
     border-bottom-left-radius: 16px;
     border-bottom-right-radius: 16px;

@@ -29,6 +29,12 @@ main {
 }
 dialog { font-size: 15px; }
 
+.tab {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
 .progress {
     --fill: #383838;
 

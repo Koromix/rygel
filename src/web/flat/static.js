@@ -21,10 +21,10 @@ window.addEventListener('load', e => {
 });
 
 function initDeploy() {
-    let deploy = document.querySelector('#deploy');
+    let el = document.querySelector('#deploy');
 
-    if (deploy != null)
-        deploy.addEventListener('click', deploy);
+    if (el != null)
+        el.addEventListener('click', deploy);
 }
 
 function deploy() {
