@@ -300,7 +300,7 @@ hr {
 }
 
 button {
-    padding: 0.35em 2em 0.45em 2em;
+    padding: 0.35em 1em 0.45em 1em;
     background: var(--button_color);
     border: none;
     border-radius: 10px;

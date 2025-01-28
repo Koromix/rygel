@@ -110,7 +110,10 @@ let main_el = null;
 
 let active_mod = null;
 
-let calendar = new SmallCalendar;
+let studies = [];
+let events = [];
+
+let calendar = null;
 
 async function start(root) {
     Log.pushHandler(UI.notifyHandler);
@@ -295,12 +298,27 @@ async function openDatabase(filename, flags) {
 }
 
 async function runDashboard() {
-    let studies = await db.fetchAll(`SELECT s.id, s.key, s.start,
-                                            COUNT(t1.id) AS progress, COUNT(t2.id) AS total
-                                     FROM studies s
-                                     LEFT JOIN tests t1 ON (t1.study = s.id AND t1.visible = 1 AND t1.status = 'done')
-                                     LEFT JOIN tests t2 ON (t2.study = s.id AND t2.visible = 1)
-                                     GROUP BY s.id`);
+    // List active studies
+    studies = await db.fetchAll(`SELECT s.id, s.key, s.start,
+                                        COUNT(t1.id) AS progress, COUNT(t2.id) AS total
+                                 FROM studies s
+                                 LEFT JOIN tests t1 ON (t1.study = s.id AND t1.visible = 1 AND t1.status = 'done')
+                                 LEFT JOIN tests t2 ON (t2.study = s.id AND t2.visible = 1)
+                                 GROUP BY s.id`);
+
+    // List future events
+    {
+        let start = LocalDate.today().minusMonths(1);
+
+        events = await db.fetchAll(`SELECT schedule, COUNT(id) AS count
+                                    FROM tests
+                                    WHERE schedule >= ? AND status <> 'done'
+                                    GROUP BY study
+                                    ORDER BY schedule, id`, start.toString());
+
+        for (let evt of events)
+            evt.schedule = LocalDate.parse(evt.schedule);
+    }
 
     render(html`
         <div class="tabbar">
@@ -349,16 +367,16 @@ async function runDashboard() {
                                 <div class=${online ? 'status' : 'status disabled'}>
                                     ${study == null ? progressCircle(0, 0) : ''}
                                     ${study != null ? progressCircle(study.progress, study.total) : ''}
-                                    ${study == null && project.online ?
+                                    ${study == null && online ?
                                         html`<button type="button" class="small"
                                                      @click=${UI.insist(e => openStudy(project))}>Participer</button>` : ''}
+                                    ${study == null && !online ?
+                                        html`<button type="button" class="small" disabled>Prochainement</button>` : ''}
                                     ${study != null ?
                                         html`<button type="button" class="small"
                                                      @click=${UI.wrap(e => openStudy(project))}>Reprendre</button>` : ''}
                                     ${study != null && study.progress == study.total ?
                                         html`<button type="button" class="small" disabled>Résultats</button>` : ''}
-                                    ${study == null && !project.online ?
-                                        html`<button type="button" class="small" disabled>Prochainement</button>` : ''}
                                 </div>
                             </div>
                         `;
@@ -368,15 +386,47 @@ async function runDashboard() {
                 <div class="column">
                     <div class="box">
                         <div class="title">Calendrier</div>
-                        ${calendar.render()}
+                        ${renderCalendar()}
                     </div>
                     <div class="box" style="flex: 1;">
-                        <p style="text-align: center;">Aucun évènement à venir</p>
+                        ${events.map(evt => {
+                            let date = evt.schedule.day + ' ' + T.months[evt.schedule.month].substr(0, 3);
+
+                            return html`
+                                <div class="event">
+                                    <div class="date">${date}</div>
+                                    <div class="title">${evt.count} ${evt.count > 1 ? 'questionnaires' : 'questionnaire'}</div>
+                                    <button type="button"><img src=${ASSETS['app/main/calendar']} alt="Agenda" /></button>
+                                </div>
+                            `;
+                        })}
+                        ${!events.length ? html`<p style="text-align: center;">Aucun évènement à venir</p>` : ''}
                     </div>
                 </div>
             </div>
         </div>
     `, main_el);
+}
+
+function renderCalendar() {
+    if (calendar == null) {
+        calendar = new SmallCalendar;
+
+        calendar.eventFunc = (start, end) => {
+            let period = events.filter(evt => evt.schedule >= start && evt.schedule < end);
+
+            let obj = period.reduce((obj, evt) => {
+                let text = evt.count + (evt.count > 1 ? ' questionnaires' : ' questionnaire');
+                obj[evt.schedule] = [text];
+
+                return obj;
+            }, {});
+
+            return obj;
+        };
+    }
+
+    return calendar.render();
 }
 
 async function runRegister() {

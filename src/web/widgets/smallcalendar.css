@@ -20,10 +20,24 @@
    OTHER DEALINGS IN THE SOFTWARE. */
 
 .scal_period {
+    display: flex;
     margin-bottom: 1em;
     font-size: 1.1em;
     text-align: center;
 }
+.scal_button {
+    display: flex;
+    width: 1.1em;
+    height: 1.1em;
+    padding: 6px;
+    background: white;
+    border-radius: 50%;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+}
+.scal_month { flex: 1; }
 
 .scal_days {
     display: flex;
@@ -36,10 +50,16 @@
     display: flex;
     width: 30px;
     height: 30px;
+    box-sizing: border-box;
+    padding: 2px;
     border-radius: 50%;
     align-items: center;
     justify-content: center;
 }
+.scal_days > div.events {
+    background: #364b9b;
+    color: white;
+}
+.scal_days > div.outside { opacity: 0.3; }
 
 .scal_head { font-weight: bold; }
-.scal_day { cursor: pointer; }
