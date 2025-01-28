@@ -365,7 +365,6 @@ async function runDashboard() {
                                     ${project.title}
                                 </div>
                                 <div class=${online ? 'status' : 'status disabled'}>
-                                    ${study == null ? progressCircle(0, 0) : ''}
                                     ${study != null ? progressCircle(study.progress, study.total) : ''}
                                     ${study == null && online ?
                                         html`<button type="button" class="small"
