@@ -368,7 +368,7 @@ async function runDashboard() {
                                     ${study != null ? progressCircle(study.progress, study.total) : ''}
                                     ${study == null && online ?
                                         html`<button type="button" class="small"
-                                                     @click=${UI.insist(e => openStudy(project))}>Participer</button>` : ''}
+                                                     @click=${UI.wrap(e => openStudy(project))}>Participer</button>` : ''}
                                     ${study == null && !online ?
                                         html`<button type="button" class="small" disabled>Prochainement</button>` : ''}
                                     ${study != null ?
