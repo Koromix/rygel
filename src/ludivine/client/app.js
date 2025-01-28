@@ -171,9 +171,6 @@ async function start(root) {
     root_el = root;
     main_el = document.createElement('main');
 
-    renderFull();
-    document.body.classList.remove('loading');
-
     if (db == null) {
         await runRegister();
     } else {
@@ -187,6 +184,9 @@ async function start(root) {
 
         await runDashboard();
     }
+
+    renderFull();
+    document.body.classList.remove('loading');
 }
 
 function renderFull() {
