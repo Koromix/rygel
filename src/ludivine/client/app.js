@@ -491,18 +491,23 @@ async function changePicture() {
     cropper.notionAssets = notion;
     cropper.imageFormat = 'image/webp';
 
-    await cropper.run(settings, async (blob, settings) => {
-        if (blob == meta.picture)
-            return;
+    try {
+        await cropper.change(main_el, settings, async (blob, settings) => {
+            if (blob == meta.picture)
+                return;
 
-        let url = await blobToDataURL(blob);
+            let url = await blobToDataURL(blob);
 
-        if (settings != null)
-            settings = JSON.stringify(settings);
-        await db.exec('UPDATE meta SET picture = ?, avatar = ?', url, settings);
+            if (settings != null)
+                settings = JSON.stringify(settings);
+            await db.exec('UPDATE meta SET picture = ?, avatar = ?', url, settings);
 
-        identity.picture = url;
-    });
+            identity.picture = url;
+        });
+    } catch (err) {
+        if (err != null)
+            Log.error(err);
+    }
 
     renderFull();
     runDashboard();

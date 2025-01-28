@@ -21,8 +21,10 @@
 
 .pic_dialog {
     display: flex;
-    flex-direction: column;
-    gap: 0.71em;
+    flex-direction: row;
+    gap: 1em;
+    align-items: start;
+    justify-content: center;
 }
 
 .pic_preview {
@@ -31,6 +33,7 @@
     min-height: var(--size);
     margin: 0 auto 0.5em auto;
     position: relative;
+    background: white;
     border: 1px solid #ededf0;
     overflow: hidden;
 }
@@ -46,6 +49,7 @@
 .not_dialog {
     display: flex;
     flex-direction: row;
+    justify-content: center;
 }
 
 .not_column {
@@ -68,27 +72,30 @@
     text-decoration: none;
     text-align: right;
     background: #f5d0bf;
-    border-top-left-radius: 8px;
-    border-bottom-left-radius: 8px;
-    color: white;
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 8px;
+    color: black !important;
+    text-decoration: none !important;
 }
 .not_tabbar > a.active {
     background: #e9a07f;
+    color: white !important;
     cursor: default;
 }
 
 .not_parts {
     display: flex;
-    margin: 0 auto;
     width: 500px;
     min-height: 280px;
     max-height: 350px;
     padding: 12px;
     background: #faefe9;
-    border-bottom-right-radius: 16px;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
     flex-direction: column;
     flex-wrap: wrap;
-    overflow-x: scroll;
+    justify-content: start;
+    overflow-x: auto;
     gap: 12px;
 }
 .not_parts > svg {

@@ -65,8 +65,14 @@ const NOTION_DEFAULTS = {
 function PictureCropper(title, size) {
     let self = this;
 
-    let refresh_func = null;
+    let target_el = null;
     let preview = makeCanvas(size, size);
+
+    preview.addEventListener('pointerdown', handleCustomEvent);
+    preview.addEventListener('wheel', handleCustomEvent);
+    preview.addEventListener('dragenter', e => e.preventDefault());
+    preview.addEventListener('dragover', dropImage);
+    preview.addEventListener('drop', UI.wrap(dropImage));
 
     let image_format = 'image/png';
     let default_url = null;
@@ -83,7 +89,6 @@ function PictureCropper(title, size) {
 
     let custom_img;
     let init_url;
-    let apply_func;
     let is_default;
     let zoom;
     let offset;
@@ -93,67 +98,58 @@ function PictureCropper(title, size) {
     let notion = Util.assignDeep({}, NOTION_DEFAULTS);
     let notion_cat = 'face';
 
-    this.run = async function(prev = null, func = null) {
+    let apply_func;
+    let resolve_func;
+    let reject_func;
+
+    this.change = async function(el, prev = null, func = null) {
+        target_el = el;
+
         await load(prev);
 
         init_url = prev;
-        apply_func = func;
         is_default = true;
 
-        let sha256 = await UI.dialog({
-            open: () => {
-                preview.addEventListener('pointerdown', handleCustomEvent);
-                preview.addEventListener('wheel', handleCustomEvent);
-                preview.addEventListener('dragenter', e => e.preventDefault());
-                preview.addEventListener('dragover', dropImage);
-                preview.addEventListener('drop', UI.wrap(dropImage));
+        try {
+            window.addEventListener('paste', dropImage);
 
-                window.addEventListener('paste', dropImage);
-            },
+            let ret = await new Promise((resolve, reject) => {
+                apply_func = func;
+                resolve_func = resolve;
+                reject_func = reject;
 
-            close: () => {
-                window.removeEventListener('paste', dropImage);
-            },
+                run();
+            });
 
-            run: (render, close) => {
-                refresh_func = render;
-
-                return html`
-                    <div class="title">
-                        ${title}
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-                    </div>
-
-                    <div class="main">
-                        <div class="tabbar">
-                            ${notion_assets != null ?
-                                html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}
-                            <a class=${current_mode == 'custom' ? 'active' : ''} @click=${UI.wrap(e => switchMode('custom'))}>Image personnalisée</a>
-                        </div>
-
-                        <div class="tab">
-                            ${current_mode == 'notion' ? renderNotion() : ''}
-                            ${current_mode == 'custom' ? renderCustom() : ''}
-                        </div>
-                    </div>
-
-                    <div class="footer">
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
-                        <button type="submit">${T.edit}</button>
-                    </div>
-                `;
-            },
-
-            submit: apply
-        });
-
-        return sha256;
+            return ret;
+        } finally {
+            window.removeEventListener('paste', dropImage);
+        }
     };
+
+    function run() {
+        render(html`
+            <div class="tabbar">
+                ${notion_assets != null ?
+                    html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}
+                <a class=${current_mode == 'custom' ? 'active' : ''} @click=${UI.wrap(e => switchMode('custom'))}>Image personnalisée</a>
+            </div>
+
+            <div class="tab">
+                ${current_mode == 'notion' ? renderNotion() : ''}
+                ${current_mode == 'custom' ? renderCustom() : ''}
+
+                <div class="actions">
+                    <button type="button" class="secondary" @click=${UI.insist(e => reject_func(null))}>${T.cancel}</button>
+                    <button type="button" @click=${UI.wrap(apply)}>${T.edit}</button>
+                </div>
+            </div>
+        `, target_el);
+    }
 
     function switchMode(mode) {
         current_mode = mode;
-        refresh_func();
+        run();
     }
 
     function renderNotion() {
@@ -161,7 +157,8 @@ function PictureCropper(title, size) {
 
         return html`
             <div class="not_dialog">
-                <div class="not_column">
+                <div class="box not_column">
+                    <div class="title">Avatar</div>
                     <div class="pic_preview" style="--size: 128px;">${preview}</div>
 
                     ${Object.keys(notion.colors).map(cat => {
@@ -177,11 +174,7 @@ function PictureCropper(title, size) {
                         `;
                     })}
                 </div>
-                <div class="not_tabbar">
-                    ${Object.keys(notion.parts).map(cat =>
-                        html`<a class=${notion_cat == cat ? 'active' : ''}
-                                @click=${UI.wrap(e => switchCategory(cat))}>${T[cat]}</a>`)}
-                </div>
+
                 <div class="not_parts">
                     ${notion_assets[notion_cat].map((xml, idx) => {
                         let active = (idx == notion.parts[notion_cat]);
@@ -195,23 +188,28 @@ function PictureCropper(title, size) {
                         `;
                     })}
                 </div>
+                <div class="not_tabbar">
+                    ${Object.keys(notion.parts).map(cat =>
+                        html`<a class=${notion_cat == cat ? 'active' : ''}
+                                @click=${UI.wrap(e => switchCategory(cat))}>${T[cat]}</a>`)}
+                </div>
             </div>
         `;
     }
 
     function switchCategory(cat) {
         notion_cat = cat;
-        refresh_func();
+        run();
     }
 
     function switchPart(cat, idx) {
         notion.parts[cat] = idx;
-        refresh_func();
+        run();
     }
 
     function switchColor(cat, color) {
         notion.colors[cat] = color;
-        refresh_func();
+        run();
     }
 
     function renderCustom() {
@@ -219,28 +217,34 @@ function PictureCropper(title, size) {
 
         return html`
             <div class="pic_dialog">
-                <div class=${is_default ? 'pic_preview' : 'pic_preview interactive'}
-                     style=${`--size: ${size}px`}>${preview}</div>
-                <div class="pic_legend">${T.drag_paste_or_browse_image}</div>
-                <label>
-                    <span>${T.zoom}</span>
-                    <input type="range" min="-32" max="32"
-                           .value=${live(zoom)} ?disabled=${is_default}
-                           @input=${UI.wrap(e => changeZoom(parseInt(e.target.value, 10) - zoom))} />
-                </label>
-                <label>
-                    <span>${T.upload_image}</span> 
-                    <input type="file" name="file" style="display: none;"
-                           accept="image/png, image/jpeg, image/gif, image/webp"
-                           @change=${UI.wrap(e => load(e.target.files[0]))} />
-                    <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_image}</button>
-                </label>
-                <label>
-                    <span></span>
-                    <button type="button" class="secondary"
-                            ?disabled=${is_default && init_url == null}
-                            @click=${UI.insist(e => load(null))}>${T.clear_picture}</button>
-                </label>
+                <div class="box">
+                    <div class="title">Avatar</div>
+                    <div class=${is_default ? 'pic_preview' : 'pic_preview interactive'}
+                         style=${`--size: ${size}px`}>${preview}</div>
+                </div>
+
+                <div class="box">
+                    <div class="pic_legend">${T.drag_paste_or_browse_image}</div>
+                    <label>
+                        <span>${T.zoom}</span>
+                        <input type="range" min="-32" max="32"
+                               .value=${live(zoom)} ?disabled=${is_default}
+                               @input=${UI.wrap(e => changeZoom(parseInt(e.target.value, 10) - zoom))} />
+                    </label>
+                    <label>
+                        <span>${T.upload_image}</span> 
+                        <input type="file" name="file" style="display: none;"
+                               accept="image/png, image/jpeg, image/gif, image/webp"
+                               @change=${UI.wrap(e => load(e.target.files[0]))} />
+                        <button type="button" @click=${e => { e.target.parentNode.click(); e.preventDefault(); }}>${T.browse_for_image}</button>
+                    </label>
+                    <label>
+                        <span></span>
+                        <button type="button" class="secondary"
+                                ?disabled=${is_default && init_url == null}
+                                @click=${UI.insist(e => load(null))}>${T.clear_picture}</button>
+                    </label>
+                </div>
             </div>
         `;
     }
@@ -282,8 +286,7 @@ function PictureCropper(title, size) {
         zoom = 0;
         offset = { x: 0, y: 0 };
 
-        if (refresh_func != null)
-            refresh_func();
+        run();
     }
 
     function handleCustomEvent(e) {
@@ -310,12 +313,12 @@ function PictureCropper(title, size) {
             let rect = computeRect(custom_img, zoom, offset);
             offset = fixEmptyArea(offset, rect);
 
-            refresh_func();
+            run();
         } else if (e.type == 'pointerup') {
             release(e);
         } else if (e.type == 'keydown') {
             offset = prev_offset;
-            refresh_func();
+            run();
 
             release(e);
         } else if (e.type == 'wheel') {
@@ -409,7 +412,7 @@ function PictureCropper(title, size) {
         let rect = computeRect(custom_img, zoom, offset);
         offset = fixEmptyArea(offset, rect);
 
-        refresh_func();
+        run();
     }
 
     function computeRect(custom_img, zoom, offset) {
@@ -514,7 +517,7 @@ function PictureCropper(title, size) {
             }
         }
 
-        return blob;
+        await resolve_func(blob);
     }
 
     function drawNotion() {
