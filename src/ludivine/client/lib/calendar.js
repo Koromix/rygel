@@ -74,7 +74,7 @@ function SmallCalendar() {
 
         if (events == null) {
             let first = new LocalDate(date.year, date.month, 1);
-            let start = date.minus(first.getWeekDay() - 1);
+            let start = first.minus(first.getWeekDay() - 1);
             let end = first.plusMonths(1).plus(7);
 
             let ret = event_func(start, end);

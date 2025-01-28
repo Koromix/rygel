@@ -313,7 +313,7 @@ async function runDashboard() {
         events = await db.fetchAll(`SELECT schedule, COUNT(id) AS count
                                     FROM tests
                                     WHERE schedule >= ? AND status <> 'done'
-                                    GROUP BY study
+                                    GROUP BY schedule, study
                                     ORDER BY schedule, id`, start.toString());
 
         for (let evt of events)
@@ -351,7 +351,7 @@ async function runDashboard() {
                             if (study.progress == study.total) {
                                 cls += ' complete';
                             } else {
-                                cls += ' partial';
+                                cls += ' draft';
                             }
                         }
 
@@ -385,22 +385,27 @@ async function runDashboard() {
 
                 <div class="column">
                     <div class="box">
-                        <div class="title">Calendrier</div>
-                        ${renderCalendar()}
-                    </div>
-                    <div class="box" style="flex: 1;">
+                        <div class="title">À venir</div>
                         ${events.map(evt => {
-                            let date = evt.schedule.day + ' ' + T.months[evt.schedule.month].substr(0, 3);
+                            let date = html`
+                                ${evt.schedule.day}<br>
+                                ${T.months[evt.schedule.month].substr(0, 3)}
+                            `;
 
                             return html`
                                 <div class="event">
                                     <div class="date">${date}</div>
-                                    <div class="title">${evt.count} ${evt.count > 1 ? 'questionnaires' : 'questionnaire'}</div>
+                                    <div class="text">${evt.count} ${evt.count > 1 ? 'questionnaires' : 'questionnaire'}</div>
                                     <button type="button"><img src=${ASSETS['app/main/calendar']} alt="Agenda" /></button>
                                 </div>
                             `;
                         })}
                         ${!events.length ? html`<p style="text-align: center;">Aucun évènement à venir</p>` : ''}
+                    </div>
+
+                    <div class="box">
+                        <div class="title">Calendrier</div>
+                        ${renderCalendar()}
                     </div>
                 </div>
             </div>

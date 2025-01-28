@@ -35,7 +35,27 @@ dialog { font-size: 15px; }
     gap: 1em;
 }
 
-.progress {
+.bar {
+    --fill: #383838;
+
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    & div {
+        flex: 1;
+        height: 8px;
+        background: linear-gradient(to right, #383838 0 calc(1% * var(--progress)), white calc(1% * var(--progress)));
+        border-radius: 1px;
+    }
+
+    & span {
+        font-size: 0.8em;
+        text-align: left;
+    }
+}
+.circle {
     --fill: #383838;
 
     & circle:nth-child(1) { stroke: color-mix(in srgb, var(--fill), white 80%); }
@@ -61,7 +81,6 @@ dialog { font-size: 15px; }
     border-radius: 16px;
 }
 .box > .title {
-    margin-bottom: 1em;
     font-size: 1.2em;
     font-weight: bold;
     text-transform: uppercase;
@@ -72,7 +91,6 @@ dialog { font-size: 15px; }
     display: flex;
     width: 80%;
     max-width: 600px;
-    margin: 0 auto;
     padding: 1em;
     gap: 2em;
     background: white;
@@ -81,6 +99,9 @@ dialog { font-size: 15px; }
 .help > img {
     width: 200px;
     aspect-ratio: auto;
+}
+.box > .help {
+    margin: 1em auto;
 }
 
 @media screen and (max-width: 960px) {
@@ -126,8 +147,13 @@ dialog { font-size: 15px; }
     gap: 2em;
     align-items: center;
 }
-.study.partial { --color: #d9bf69; }
-.study.complete { --color: #eca17f; }
+.study.draft {
+    --color: #d9bf69;
+    --button_color: #d9bf69;
+}
+.study.complete {
+    --color: #eca17f;
+    --button_color: #eca17f;}
 .study {
     & > img { width: 100px; }
     & .info { flex: 1; }
@@ -136,8 +162,39 @@ dialog { font-size: 15px; }
         text-align: center;
     }
 
-    --button_color: var(--color);
-    & .progress { --fill: var(--color); }
+    & .circle { --fill: var(--color); }
+}
+
+.event {
+    display: flex;
+    background: #f6d4c3;
+    border-radius: 10px;
+    padding: 0.5em;
+    gap: 0.8em;
+    align-items: center;
+}
+.event > .date {
+    width: 3em;
+    height: 3em;
+    padding: 0.3em;
+    background: #eca17f;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: white;
+    text-align: center;
+}
+.event > .text {
+    flex: 1;
+    font-weight: bold;
+    text-align: center;
+}
+.event > button {
+    --button_color: #d9bf69;
+    width: 3em;
+    height: 3em;
+    padding: 0.3em;
+    border-radius: 6px;
 }
 
 @media screen and (max-width: 960px) {

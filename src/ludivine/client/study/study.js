@@ -17,8 +17,10 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
 import { ProjectInfo, ProjectBuilder } from './api.js';
-import { progressCircle } from '../lib/util.js';
+import { progressBar, progressCircle } from '../lib/util.js';
 import { ASSETS } from '../../assets/assets.js';
+
+import './study.css';
 
 function StudyModule(db, project, init, study) {
     let tests = null;
@@ -86,10 +88,12 @@ function StudyModule(db, project, init, study) {
             </div>
 
             <div class="tab">
-                <div>
+                <div class="stu_intro">
                     <img src=${project.picture} alt="" />
-                    <p class="reference">${project.title}</p>
-                    ${project.summary}
+                    <div>
+                        <div class="title">Étude ${project.index} - ${project.title}</div>
+                        ${project.summary}
+                    </div>
                     ${progressCircle(progress, total)}
                 </div>
 
@@ -104,39 +108,58 @@ function StudyModule(db, project, init, study) {
         return html`
             ${Util.mapRange(0, mod.chain.length - 1, idx => {
                 let parent = mod.chain[idx];
+                let next = mod.chain[idx + 1];
 
                 return html`
-                    <div class="stu_step" @click=${UI.wrap(e => navigate(parent))}>
+                    <div class="box stu_step" @click=${UI.wrap(e => navigate(parent))}>
                         ${parent.level ?? ''}${parent.level ? ' - ' : ''}
-                        ${parent.title}
+                        ${next.title}
                     </div>
                 `;
             })}
-            <div class="stu_summary">
-                <div class="stu_module">
+            <div class="box">
+                <div class="title">${mod.level}</div>
+                <div class="stu_items">
                     ${mod.modules.map(child => {
                         let [progress, total] = computeProgress(child);
 
+                        let cls = 'stu_item';
+                        let status = '';
+
                         if (progress == total) {
-                            return html`<div class="done" @click=${UI.wrap(e => navigate(child))}>${child.title} Terminé</div>`;
-                        } else if (!progress) {
-                            return html`<div class="empty" @click=${UI.wrap(e => navigate(child))}>${child.title} À compléter</div>`;
+                            cls += ' done';
+                            status = 'Terminé';
+                        } else if (progress) {
+                            cls += ' draft';
+                            status = progressBar(progress, total);
                         } else {
-                            return html`<div class="partial" @click=${UI.wrap(e => navigate(child))}>${child.title} ${progressCircle(progress, total)}</div>`;
+                            cls += ' empty';
+                            status = 'À compléter';
                         }
+
+                        return html`
+                            <div class=${cls} @click=${UI.wrap(e => navigate(child))}>
+                                <div class="title">${child.title}</div>
+                                <div class="status">${status}</div>
+                            </div>
+                        `;
                     })}
                     ${!mod.modules.length ? mod.pages.map(page => {
                         let test = tests.find(test => test.key == page.key);
 
-                        switch (test.status) {
-                            case 'empty': return html`<div class="empty" @click=${UI.wrap(e => navigate(mod, page))}>${page.title} A compléter</div>`;
-                            case 'draft': return html`<div class="partial" @click=${UI.wrap(e => navigate(mod, page))}>${page.title} A compléter</div>`;
-                            case 'done': return html`<div class="done" @click=${UI.wrap(e => navigate(mod, page))}>${page.title} Complet</div>`;
-                        }
-                    }) : ''}
+                        let cls = 'stu_item ' + test.status;
+                        let status = (test.status == 'done') ? 'Terminé' : 'À compléter';
 
-                    ${mod.help != null ? html`<div class="help">${mod.help}</div>` : ''}
+                        return html`
+                            <div class=${cls} @click=${UI.wrap(e => navigate(mod, page))}>
+                                <div class="title">${page.title}</div>
+                                <div class="status">${status}</div>
+                            </div>
+                        `;
+                    }) : ''}
                 </div>
+
+                ${mod.help != null ? html`<div class="help">${mod.help}</div>` : ''}
             </div>
         `;
     }
@@ -145,15 +168,16 @@ function StudyModule(db, project, init, study) {
         return html`
             ${Util.mapRange(0, mod.chain.length - 1, idx => {
                 let parent = mod.chain[idx];
+                let next = mod.chain[idx + 1];
 
                 return html`
-                    <div class="stu_step" @click=${UI.wrap(e => navigate(parent))}>
+                    <div class="box stu_step" @click=${UI.wrap(e => navigate(parent))}>
                         ${parent.level ?? ''}${parent.level ? ' - ' : ''}
-                        ${parent.title}
+                        ${next.title}
                     </div>
                 `;
             })}
-            <div class="stu_step" @click=${UI.wrap(e => navigate(mod, page))}>
+            <div class="box stu_step" @click=${UI.wrap(e => navigate(mod, page))}>
                 Questionnaire - ${page.title}
             </div>
             <div class="stu_start">
@@ -165,7 +189,7 @@ function StudyModule(db, project, init, study) {
                         <p>Si vous êtes prêt, <b>on peut y aller</b> !
                     </div>
                 </div>
-                <button type="button" @click=${UI.wrap(e => navigate(mod, page, 0))}>Commencer</button>
+                <button type="button" @click=${UI.wrap(e => navigate(mod, page, 0))}>Commencer le questionnaire</button>
             </div>
         `;
     }

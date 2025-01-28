@@ -17,8 +17,9 @@ function ProjectInfo(project) {
     Object.assign(this, project);
     delete this.prepare;
 
-    this.root = null;
+    this.summary = null;
 
+    this.root = null;
     this.modules = [];
     this.pages = [];
 }
@@ -27,6 +28,10 @@ function ProjectBuilder(project) {
     let self = this;
 
     let current_mod = null;
+
+    Object.defineProperties(this, {
+        summary: { get: () => project.summary, set: summary => { project.summary = summary; }, enumerable: true }
+    });
 
     this.module = function(key, title, func, options = {}) {
         if (current_mod != null && current_mod.pages.length)
