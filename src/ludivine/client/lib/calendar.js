@@ -13,11 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { Util, Log , LocalDate} from '../core/base.js';
-import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
-import * as UI from '../flat/ui.js';
+import { Util, Log , LocalDate} from '../../../web/core/base.js';
+import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
+import * as UI from '../../../web/flat/ui.js';
 
-import './smallcalendar.css';
+import './calendar.css';
 
 if (typeof window.T == 'undefined')
     window.T = {};

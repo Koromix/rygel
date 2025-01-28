@@ -57,7 +57,7 @@
     justify-content: center;
 }
 .scal_days > div.events {
-    background: #364b9b;
+    background: var(--button_color);
     color: white;
 }
 .scal_days > div.outside { opacity: 0.3; }
