@@ -54,7 +54,6 @@
 
 .not_column {
     display: flex;
-    width: 130px;
     margin-right: 1em;
     flex-direction: column;
     gap: 0.5em;

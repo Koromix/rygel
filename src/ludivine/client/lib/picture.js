@@ -153,13 +153,13 @@ function PictureCropper(title, size) {
     }
 
     function renderNotion() {
-        drawPreview(128);
+        drawPreview(size);
 
         return html`
             <div class="not_dialog">
                 <div class="box not_column">
                     <div class="title">Avatar</div>
-                    <div class="pic_preview" style="--size: 128px;">${preview}</div>
+                    <div class="pic_preview" style=${`--size: ${size}px`}>${preview}</div>
 
                     ${Object.keys(notion.colors).map(cat => {
                         if (cat != 'face' && !notion.parts[cat])
