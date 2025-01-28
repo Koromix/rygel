@@ -17,7 +17,7 @@ import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LocalDate } from '../../web/core/base.js';
 import * as UI from '../../web/flat/ui.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
-import { computeAge, dateToString, progressCircle } from './lib/util.js';
+import { computeAge, dateToString, niceDate, progressCircle } from './lib/util.js';
 import { SmallCalendar } from './lib/calendar.js';
 import { PictureCropper } from './lib/picture.js';
 import { StudyModule } from './study/study.js';
@@ -386,14 +386,9 @@ async function runDashboard() {
                     <div class="box">
                         <div class="title">À venir</div>
                         ${events.map(evt => {
-                            let date = html`
-                                ${evt.schedule.day}<br>
-                                ${T.months[evt.schedule.month].substr(0, 3)}
-                            `;
-
                             return html`
                                 <div class="event">
-                                    <div class="date">${date}</div>
+                                    <div class="date">${niceDate(evt.schedule, false)}</div>
                                     <div class="text">${evt.count} ${evt.count > 1 ? 'questionnaires' : 'questionnaire'}</div>
                                     <button type="button"><img src=${ASSETS['app/main/calendar']} alt="Agenda" /></button>
                                 </div>

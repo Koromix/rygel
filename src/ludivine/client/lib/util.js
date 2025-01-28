@@ -14,7 +14,7 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, svg } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log, Net } from '../../../web/core/base.js';
+import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
 
 function computeAge(from, to = null) {
     if (!(from instanceof Date))
@@ -68,6 +68,20 @@ function dateToString(date) {
 
     let str = `${year.padStart(2, '0')}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     return str;
+}
+
+function niceDate(date, full = true) {
+    if (date == null)
+        return '';
+
+    if (full) {
+        let today = LocalDate.today();
+        let str = `${date.day} ${T.months[date.month]}${date.year != today.year ? ' ' + date.year : ''}`;
+        return str;
+    } else {
+        let str = `${date.day} ${T.months[date.month].substr(0, 3)}`;
+        return str;
+    }
 }
 
 function loadImage(url) {
@@ -150,6 +164,7 @@ export {
     computeAge,
     computeAgeMonths,
     dateToString,
+    niceDate,
 
     loadImage,
     loadTexture,

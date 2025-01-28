@@ -17,7 +17,7 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
 import { ProjectInfo, ProjectBuilder } from './api.js';
-import { progressBar, progressCircle } from '../lib/util.js';
+import { niceDate, progressBar, progressCircle } from '../lib/util.js';
 import { ASSETS } from '../../assets/assets.js';
 
 import './study.css';
@@ -155,6 +155,8 @@ function StudyModule(db, project, code, study) {
     }
 
     function renderModule(mod) {
+        let today = LocalDate.today();
+
         return html`
             ${Util.mapRange(0, mod.chain.length - 1, idx => {
                 let parent = mod.chain[idx];
@@ -174,7 +176,7 @@ function StudyModule(db, project, code, study) {
                         let [progress, total] = computeProgress(child);
 
                         let cls = 'stu_item';
-                        let status = '';
+                        let status = null;
 
                         if (progress == total) {
                             cls += ' done';
@@ -185,6 +187,23 @@ function StudyModule(db, project, code, study) {
                         } else {
                             cls += ' empty';
                             status = 'À compléter';
+
+                            let earliest = null;
+
+                            for (let page of child.pages) {
+                                if (page.status == 'done' || page.schedule == null)
+                                    continue;
+
+                                if (earliest == null || page.schedule < earliest)
+                                    earliest = page.schedule;
+                            }
+
+                            if (earliest != null) {
+                                status = niceDate(earliest, true);
+
+                                if (earliest <= today)
+                                    cls += ' draft';
+                            }
                         }
 
                         return html`
@@ -198,7 +217,18 @@ function StudyModule(db, project, code, study) {
                         let test = tests.find(test => test.key == page.key);
 
                         let cls = 'stu_item ' + test.status;
-                        let status = (test.status == 'done') ? 'Terminé' : 'À compléter';
+                        let status = null;
+
+                        if (test.status == 'done') {
+                            status = 'Terminé';
+                        } else if (page.schedule != null) {
+                            status = niceDate(page.schedule, true);
+
+                            if (page.schedule <= today)
+                                cls += ' draft';
+                        } else {
+                            status = 'À compléter';
+                        }
 
                         return html`
                             <div class=${cls} @click=${UI.wrap(e => navigate(mod, page))}>

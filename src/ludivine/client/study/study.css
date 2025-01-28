@@ -75,6 +75,7 @@
         text-align: center;
     }
 }
+.stu_item.draft > .status { font-weight: bold; }
 
 .stu_step {
     font-size: 1.1em;
