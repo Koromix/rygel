@@ -490,7 +490,7 @@ function PictureCropper(title, size) {
             if (apply_func != null)
                 await apply_func(init_url, null);
 
-            return init_url;
+            resolve_func(null);
         }
 
         let blob = await new Promise(async (resolve, reject) => {
@@ -517,7 +517,7 @@ function PictureCropper(title, size) {
             }
         }
 
-        await resolve_func(blob);
+        resolve_func(blob);
     }
 
     function drawNotion() {
