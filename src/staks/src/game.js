@@ -16,9 +16,9 @@
 import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LruMap } from '../../web/core/base.js';
 import { AppRunner } from '../../web/core/runner.js';
-import { loadAssets } from './assets.js';
 import * as rules from './rules/modern.js';
 import { TouchInterface } from './touch.js';
+import { ASSETS } from '../assets/assets.js';
 
 import '../../../vendor/opensans/OpenSans.css';
 import './game.css';
@@ -103,6 +103,9 @@ let layout = {
 // ------------------------------------------------------------------------
 
 async function load(prefix, progress = null) {
+    if (window.createImageBitmap == null)
+        throw new Error('ImageBitmap support is not available (old browser?)');
+
     assets = await loadAssets(prefix, progress);
 
     loadSettings();
@@ -132,38 +135,96 @@ async function load(prefix, progress = null) {
     }
 }
 
-async function start(root) {
-    render(html`
-        <div class="stk_game">
-            <div class="stk_attributions">
-                Musiques par <a href="https://freemusicarchive.org/music/audiocoffee/" target="_blank">AudioCoffee</a><br>
-                Fonds d'écran par <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>
-            </div>
-            <canvas class="stk_canvas"></canvas>
-        </div>
-    `, root);
-    main = root.querySelector('.stk_game');
-    canvas = root.querySelector('.stk_canvas');
-    attributions = root.querySelector('.stk_attributions');
+async function loadAssets(prefix, progress) {
+    prefix = prefix.replace(/\/+$/g, '') + '/';
 
-    runner = new AppRunner(canvas);
-    ctx = runner.ctx;
-    mouse_state = runner.mouseState;
-    pressed_keys = runner.pressedKeys;
+    if (progress == null)
+        progress = (value, total) => {};
 
-    sfx = runner.createTrack(32);
-    music = runner.createTrack(1);
+    let mp3 = detectOpusSupport();
 
-    touch = new TouchInterface(runner, assets);
+    let assets = {
+        backgrounds: filterAssets('backgrounds'),
+        musics: filterAssets('musics/' + (mp3 ? 'mp3' : 'opus')),
+        sounds: filterAssets('sounds/' + (mp3 ? 'mp3' : 'opus')),
+        ui: filterAssets('ui')
+    };
 
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    // Shuffle musics
+    assets.musics = Util.shuffle(Object.keys(assets.musics)).reduce((obj, key) => { obj[key] = assets.musics[key]; return obj; }, {});
 
-    runner.updateFrequency = rules.UPDATE_FREQUENCY;
-    runner.idleTimeout = 5000;
-    runner.onUpdate = update;
-    runner.onDraw = draw;
-    runner.start();
+    let categories = Object.keys(assets);
+    let resources = categories.flatMap(category => {
+        let obj = assets[category];
+        return Object.keys(obj).map(key => ({ category, obj, key }));
+    });
+    let downloaded = 0;
+
+    resources = Util.shuffle(resources);
+
+    await Promise.all(Util.mapRange(0, 3, async start => {
+        for (let i = start; i < resources.length; i += 3) {
+            let res = resources[i];
+            let url = prefix + res.obj[res.key];
+
+            if (res.category == 'musics') {
+                // Lazy load musics
+                res.obj[res.key] = url;
+            } else if (url.endsWith('.png') || url.endsWith('.webp')) {
+                res.obj[res.key] = await loadTexture(url);
+            } else if (url.endsWith('.webm') || url.endsWith('.mp3')) {
+                res.obj[res.key] = await loadSound(url);
+            } else {
+                throw new Error(`Unknown resource type for '${url}'`);
+            }
+
+            downloaded++;
+            progress(downloaded, resources.length);
+        }
+    }));
+
+    return assets;
+}
+
+function filterAssets(path) {
+    let prefix = path + '/';
+
+    let obj = {};
+
+    for (let key in ASSETS) {
+        let url = ASSETS[key];
+
+        if (!key.startsWith(prefix))
+            continue;
+        key = key.substr(prefix.length);
+
+        obj[key] = url;
+    }
+
+    return obj;
+}
+
+function detectOpusSupport() {
+    let audio = document.createElement('audio');
+    let support = audio.canPlayType?.('audio/webm;codecs=opus');
+
+    return (support == 'probably');
+}
+
+async function loadTexture(url) {
+    let response = await self.fetch(url);
+
+    let blob = await response.blob();
+    let texture = await createImageBitmap(blob);
+
+    return texture;
+}
+
+async function loadSound(url) {
+    let response = await fetch(url);
+    let buf = await response.arrayBuffer();
+
+    return buf;
 }
 
 function loadSettings() {
@@ -199,6 +260,40 @@ function loadSettings() {
 function saveSettings() {
     let json = JSON.stringify(settings);
     localStorage.setItem('staks', json);
+}
+
+async function start(root) {
+    render(html`
+        <div class="stk_game">
+            <div class="stk_attributions">
+                Musiques par <a href="https://freemusicarchive.org/music/audiocoffee/" target="_blank">AudioCoffee</a><br>
+                Fonds d'écran par <a href="https://www.deviantart.com/psiipilehto/" target="_blank">psiipilehto</a>
+            </div>
+            <canvas class="stk_canvas"></canvas>
+        </div>
+    `, root);
+    main = root.querySelector('.stk_game');
+    canvas = root.querySelector('.stk_canvas');
+    attributions = root.querySelector('.stk_attributions');
+
+    runner = new AppRunner(canvas);
+    ctx = runner.ctx;
+    mouse_state = runner.mouseState;
+    pressed_keys = runner.pressedKeys;
+
+    sfx = runner.createTrack(32);
+    music = runner.createTrack(1);
+
+    touch = new TouchInterface(runner, assets);
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    runner.updateFrequency = rules.UPDATE_FREQUENCY;
+    runner.idleTimeout = 5000;
+    runner.onUpdate = update;
+    runner.onDraw = draw;
+    runner.start();
 }
 
 // ------------------------------------------------------------------------
