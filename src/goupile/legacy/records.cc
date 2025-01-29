@@ -732,10 +732,8 @@ bool RecordExporter::Export(const char *filename)
         for (Size i = 0; i < table.rows.count; i++) {
             stmt.Reset();
 
-            Span<const char> ulid = SplitStr(table.rows[i].ulid, '.');
-
             sqlite3_bind_text(stmt, 1, table.rows[i].root_ulid, -1, SQLITE_STATIC);
-            sqlite3_bind_text(stmt, 2, ulid.ptr, (int)ulid.len, SQLITE_STATIC);
+            sqlite3_bind_text(stmt, 2, table.rows[i].ulid, -1, SQLITE_STATIC);
             if (table.root) {
                 sqlite3_bind_text(stmt, 3, table.rows[i].hid, -1, SQLITE_STATIC);
             }
