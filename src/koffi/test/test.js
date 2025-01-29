@@ -25,7 +25,7 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const tty = require('tty');
-const { style_ansi } = require('../../../deploy/qemu/qemu.js');
+const { style_ansi } = require('../../../tools/qemu/qemu.js');
 
 main();
 

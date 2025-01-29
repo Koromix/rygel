@@ -75,4 +75,4 @@ exit 0' > ${DEBIAN_DIR}/postrm
 }
 
 cd "$(dirname $0)/../../../.."
-. deploy/package/debian/package.sh
+. tools/package/build/debian/package.sh

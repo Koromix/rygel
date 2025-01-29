@@ -21,4 +21,4 @@ build() {
 }
 
 cd "$(dirname $0)/../../../.."
-. deploy/package/debian/package.sh
+. tools/package/build/debian/package.sh

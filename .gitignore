@@ -39,8 +39,8 @@ package-lock.json
 
 /src/ludivine/web/dist/*
 
-/deploy/docker/goupile/goupile
-/deploy/qemu/machines/**
+/tools/docker/goupile/goupile
+/tools/qemu/machines/**
 
 /vendor/spidermonkey/spidermonkey/
 !/vendor/esbuild/native/node_modules/

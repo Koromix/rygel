@@ -30,7 +30,7 @@ const { spawnSync } = require('child_process');
 const esbuild = require('../../../vendor/esbuild/native');
 const { DefaultCommands, parse_arguments, QemuRunner,
         copy_recursive, unlink_recursive, make_path_filter,
-        make_wildcard_pattern, style_ansi, wait_delay } = require('../../../deploy/qemu/qemu.js');
+        make_wildcard_pattern, style_ansi, wait_delay } = require('../../../tools/qemu/qemu.js');
 
 const ValidCommands = {
     ...DefaultCommands,

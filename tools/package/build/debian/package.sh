@@ -14,9 +14,9 @@ if [ "$1" = "" -o "$1" = "package" ]; then
     mkdir -p ${DEBIAN_DIR} ${ROOT_DIR}
     mkdir -p ${CLIENT_DIR}/upper ${CLIENT_DIR}/work
 
-    install -D -m0755 deploy/package/debian/rules ${DEBIAN_DIR}/rules
-    install -D -m0644 deploy/package/debian/compat ${DEBIAN_DIR}/compat
-    install -D -m0644 deploy/package/debian/format ${DEBIAN_DIR}/source/format
+    install -D -m0755 tools/package/build/debian/rules ${DEBIAN_DIR}/rules
+    install -D -m0644 tools/package/build/debian/compat ${DEBIAN_DIR}/compat
+    install -D -m0644 tools/package/build/debian/format ${DEBIAN_DIR}/source/format
 
     echo "\
 Source: ${PKG_NAME}
@@ -43,7 +43,7 @@ ${PKG_NAME} ($VERSION) unstable; urgency=low
     echo "\
 License: ${PKG_LICENSE}" > ${DEBIAN_DIR}/copyright
 
-    docker build -t rygel/${DOCKER_IMAGE} deploy/docker/${DOCKER_IMAGE}
+    docker build -t rygel/${DOCKER_IMAGE} tools/docker/${DOCKER_IMAGE}
     if echo "${PKG_ARCHITECTURES}" | grep -q -w amd64; then
         docker run --privileged -t -i --rm -v $(pwd):/io/host -v $(pwd)/${CLIENT_DIR}:/io/client rygel/${DOCKER_IMAGE} /io/host/${SCRIPT_PATH} build x86_64-linux-gnu amd64
     fi

@@ -41,6 +41,5 @@ if __name__ == '__main__':
         move_packages(src, debian_dir + '/pool', '.deb')
         move_packages(src, rpm_dir, '.rpm')
 
-    subprocess.run([script_dir + '/debian/update.sh', args.name, args.user], check = True, cwd = debian_dir)
-    subprocess.run([script_dir + '/rpm/update.sh', args.name, args.user], check = True, cwd = rpm_dir)
-
+    subprocess.run([script_dir + '/../package/repo/debian/update.sh', args.name, args.user], check = True, cwd = debian_dir)
+    subprocess.run([script_dir + '/../package/repo/rpm/update.sh', args.name, args.user], check = True, cwd = rpm_dir)
