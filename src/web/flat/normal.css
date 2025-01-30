@@ -355,7 +355,7 @@ button.small:not(.insist) > img { filter: none; }
 
 .actions {
     display: flex;
-    margin-top: 2em;
+    margin-top: 1em;
     gap: 20px;
     justify-content: center;
     align-items: start;
