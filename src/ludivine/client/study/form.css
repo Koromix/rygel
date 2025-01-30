@@ -1,0 +1,475 @@
+/* Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
+/* -------------------- Containers -------------------- */
+
+.fm_wrap + .fm_container,
+    .fm_container + .fm_container,
+    .fm_container + .fm_wrap,
+    .fm_wrap + .fm_wrap { margin-top: 1.2em; }
+
+.fm_section {
+    position: relative;
+    min-height: 24px;
+    margin: 0;
+    padding: 14px;
+    background: rgba(136, 136, 136, 0.06);
+    border: 0;
+    border-radius: var(--block_rounding);
+}
+.fm_legend {
+    box-sizing: border-box;
+    width: calc(100% + 28px);
+    margin: -14px 0 10px -14px;
+    padding: 0.2em 0.5em;
+    background: linear-gradient(var(--page_color_n1), var(--page_color));
+    border-radius: var(--block_rounding) var(--block_rounding) 0 0;
+    font-size: 1.1em;
+    color: white;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+.fm_legend::before {
+    padding-right: 0.5em;
+    content: '#';
+}
+.fm_legend > span {
+    color: inherit;
+    text-decoration: none;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+    cursor: pointer;
+}
+.fm_section .fm_section .fm_legend {
+    background: rgba(136, 136, 136, 0.12);
+    color: inherit;
+}
+.fm_deploy {
+    width: 100%;
+    display: block;
+    text-align: center;
+    font-size: 0.9em;
+    text-decoration: none;
+}
+
+.fm_section.error { background: #ffeeee; }
+.fm_section.error > .fm_legend {
+    background: #db0a0a;
+    color: white;
+}
+.fm_section.error > .fm_legend::before { display: none; }
+.fm_section.error ul {
+    margin: 0 1em;
+    padding: 0;
+}
+
+html:not(.mobile) .fm_columns { display: flex; }
+html:not(.mobile) .fm_columns > div + div { padding-left: 12px; }
+html.mobile .fm_columns > div + div { padding-top: 8px; }
+html.mobile .fm_section {
+    margin-left: -12px;
+    margin-right: -12px;
+}
+
+/* -------------------- Widgets -------------------- */
+
+.fm_widget { position: relative; }
+.fm_widget.error {
+    background: #ffe9e9;
+    outline: 3px solid #ffe9e9;
+    color: red;
+}
+.fm_label {
+    display: flex;
+    margin-bottom: 6px;
+    padding-top: 4px;
+    font-weight: bold;
+    column-gap: 16px;
+    flex-wrap: wrap;
+}
+.fm_label > label:empty::before { content: '\200b'; }
+.fm_widget.mandatory > .fm_label > label:not(:empty)::after {
+    content: ' *';
+    color: red;
+}
+.fm_widget.error::before {
+    position: absolute;
+    left: -22px;
+    top: calc(50% - 11px);
+    z-index: 999;
+    color: red;
+    content: "⚠\FE0E";
+    font-size: 1.4em;
+}
+.fm_error {
+    padding: 4px 0 3px 0;
+    font-style: italic;
+}
+.fm_help {
+    display: flex;
+    font-size: 0.9em;
+    font-style: italic;
+    margin-top: 0.4em;
+}
+.fm_help::before {
+    content: '☞\FE0E';
+    padding-right: 5px;
+}
+.fm_prefix, .fm_suffix {
+    padding-top: 5px;
+    font-size: 0.85em;
+}
+.fm_prefix { margin-right: 3px; }
+.fm_suffix { margin-left: 3px; }
+.fm_annotate { text-decoration: none; }
+
+@media screen and (max-width: 960px) {
+    .fm_widget.compact {
+        flex: 1;
+        display: flex;
+        align-items: start;
+    }
+    .fm_widget.compact > .fm_label {
+        width: 270px;
+        min-width: 270px;
+        margin-bottom: 0;
+        padding-right: 4px;
+    }
+    .fm_widget.compact .fm_error {
+        flex: 1;
+        text-align: right;
+    }
+    .fm_widget.compact > .fm_calc { padding-top: 4px; }
+}
+
+/* -------------------- Simple widgets -------------------- */
+
+.fm_input {
+    width: 17em;
+    max-width: 100%;
+    padding: 3px calc(4px + var(--widget_rounding) / 4);
+    background: white;
+    border: 1px solid #dfdfdf;
+    border-width: 0.5px;
+    border-radius: var(--widget_rounding);
+}
+.fm_select {
+    /* This width: 100% is combined with an outer div set to max-width: 100% so that
+       long options don't wreak havoc. Setting max-width: 100% here does not work correctly. */
+    width: 100%;
+    padding: 3px 22px 3px 4px;
+    border: 1px solid #dfdfdf;
+    border-width: 0.5px;
+    border-radius: var(--widget_rounding);
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: white;
+    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAAA+UlEQVQokdXQsUeFYRTH8XOjSMMlEUlLWi6RqKGhqaGppX/o93vOeV7P4309Q0O8RFNDLw1NDW3pn4iGiERFbtT4Nj1cSbrdu/TlLGf4OI7IvyzGuAjghuR1jHEh79u2nfgyHRGRsixnAJwCePLer/2IhxCWSN6SvPLez3+Dd0REUkrTAE4AvDjnNn51uaouk7wDcFlV1dwAPogek3w1s61hviKqugLgHsBFSmk275ummSJ5RLJvZttDobmiKHokHwCchxC6dV1PkjwE8KaqO39Cc865VZKPAM5IHpB8V9XdkdCc936d5DOAD1XdGwuaM7NNkvtjRUfpEypChFloulwwAAAAAElFTkSuQmCC");
+    background-repeat: no-repeat;
+    background-position: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fm_enum {
+    display: inline-block;
+    margin-top: -2px;
+    padding-left: 1px;
+}
+.fm_enum > button {
+    position: relative;
+    margin: 2px 0 0 2px;
+    padding: 0.25em 8px;
+    background: white;
+    border: 1px solid #dfdfdf;
+    border-width: 0.5px;
+    border-radius: var(--widget_rounding);
+    color: black;
+}
+.fm_enum > button::before, .fm_enum > button::after {
+    display: inline-block;
+    width: 8px;
+    font-size: 0.9em;
+    content: '';
+}
+.fm_enum > button.active {
+    background: var(--page_color_n1);
+    border-color: var(--page_color_n1);
+    color: white;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+.fm_enum > button.active::before {
+    width: 16px;
+    content: '✓\FE0E';
+    font-size: 0.8em;
+}
+.fm_enum > button.active::after { display: none; }
+.fm_enum > button.active:hover {
+    background: var(--page_color);
+    border-color: var(--page_color);
+    filter: none !important;
+}
+
+.fm_enum.readonly, .fm_radio.readonly, .fm_check.readonly, .fm_slider.readonly {
+    pointer-events: none;
+    cursor: inherit;
+}
+
+/* -------------------- Nice radio and checkboxes -------------------- */
+
+.fm_radio { display: inline-block; }
+.fm_radio + .fm_radio { padding-top: 3px; }
+.fm_radio > input {
+    position: absolute;
+    opacity: 0;
+}
+.fm_radio > input + label {
+    display: inline-block;
+    position: relative;
+    padding-left: calc(1.18em + 10px);
+    line-height: 20px;
+    cursor: pointer;
+}
+.fm_radio > input + label::before {
+    display: inline-block;
+    position: absolute;
+    left: 2px;
+    top: 1px;
+    height: 1.18em;
+    width: 1.18em;
+    box-sizing: border-box;
+    background: white;
+    border: 1px solid #dfdfdf;
+    border-width: 0.5px;
+    border-radius: 50%;
+    z-index: 1;
+    content: ' ';
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+.fm_radio > input + label::after {
+    display: inline-block;
+    position: absolute;
+    left: 2px;
+    top: 1px;
+    height: 1.18em;
+    width: 1.18em;
+    box-sizing: border-box;
+    background-color: black;
+    border: 0.3em solid white;
+    border-radius: 50%;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+.fm_radio > input:checked + label::before { background: none; }
+.fm_radio > input:checked + label::after { content: ''; }
+.fm_radio > input:hover + label::before { border-color: #999; }
+.fm_radio > input:hover + label::after { background-color: #999; }
+
+.fm_check { display: inline-block; }
+.fm_check + .fm_check { padding-top: 3px; }
+.fm_check > input {
+    position: absolute;
+    opacity: 0;
+}
+.fm_check > input + label {
+    display: inline-block;
+    position: relative;
+    padding-left: calc(1.18em + 10px);
+    line-height: 20px;
+    cursor: pointer;
+}
+.fm_check > input + label::before {
+    display: inline-block;
+    position: absolute;
+    left: 2px;
+    top: 0.2em;
+    width: 1.18em;
+    height: 1.18em;
+    box-sizing: border-box;
+    border: 1px solid #dfdfdf;
+    border-width: 0.5px;
+    background: white;
+    content: ' ';
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+.fm_check > input + label::after {
+    display: inline-block;
+    position: absolute;
+    left: 0.4em;
+    top: 0.35em;
+    width: 0.6em;
+    height: 0.4em;
+    border-left: 1px solid black;
+    border-bottom: 1px solid black;
+    transform: rotate(-45deg);
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+.fm_check > input:checked + label::after { content: ''; }
+.fm_check > input:hover + label::before,
+    .fm_check > input:hover + label::after { border-color: #999; }
+
+@media (pointer: coarse) {
+    .fm_radio > input + label {
+        padding-left: 32px;
+        line-height: 28px;
+    }
+    .fm_radio > input + label::before {
+        top: 0;
+        width: 22px;
+        height: 22px;
+    }
+    .fm_radio > input + label::after {
+        top: 0;
+        width: 22px;
+        height: 22px;
+        border: 5px solid white;
+    }
+
+    .fm_check > input + label {
+        padding-left: 32px;
+        line-height: 28px;
+    }
+    .fm_check > input + label::before {
+        top: 0;
+        width: 22px;
+        height: 22px;
+    }
+    .fm_check > input + label::after {
+        left: 7px;
+        top: 4px;
+        width: 12px;
+        height: 7px;
+    }
+}
+
+/* -------------------- Slider -------------------- */
+
+.fm_slider {
+    position: relative;
+    display: flex;
+    width: 21em;
+    height: 3em;
+    align-items: start;
+}
+.fm_slider > div {
+    position: relative;
+    flex: 1;
+}
+.fm_slider input {
+    flex: 1;
+    width: 100%;
+    margin-top: 4px;
+    -webkit-appearance: none;
+    background: none;
+}
+.fm_slider input::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 8px;
+    background: white;
+    background-image: linear-gradient(90deg, #555 var(--progress),
+                                             white var(--progress));
+    border: 1px solid #dfdfdf;
+    border-width: 0.5px;
+    border-radius: 4px;
+}
+.fm_slider input::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    margin-top: -3px;
+    background: white;
+    background-image: linear-gradient(90deg, #555 var(--progress),
+                                             white var(--progress));
+    border: 1px solid #dfdfdf;
+    border-width: 0.5px;
+    border-radius: 4px;
+}
+.fm_slider input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 1.6em;
+    height: 1.6em;
+    margin-top: -0.6em;
+    background: #555;
+    border: none;
+    border-radius: 50%;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+.fm_slider input::-moz-range-thumb {
+    -webkit-appearance: none;
+    width: 1.6em;
+    height: 1.6em;
+    margin-top: -0.6em;
+    background: #555;
+    border: none;
+    border-radius: 50%;
+    color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+}
+
+.fm_slider .fm_prefix {
+    margin-right: 10px;
+    padding-top: 3px;
+}
+.fm_slider .fm_suffix {
+    margin-left: 10px;
+    padding-top: 3px;
+}
+.fm_slider .legend {
+    position: absolute;
+    left: calc(0.8em + 1px);
+    right: calc(0.8em - 1px);
+    top: 0px;
+    user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+.fm_slider .tick {
+    position: absolute;
+    top: 11px;
+    height: 14px;
+    border-left: 2px solid #dfdfdf;
+    z-index: -1;
+}
+.fm_slider .label {
+    position: absolute;
+    top: 2.1em;
+    font-size: 0.85em;
+    text-align: center;
+}
+
+.fm_slider.missing input::-webkit-slider-thumb { visibility: hidden; }
+.fm_slider.missing input::-moz-range-thumb { visibility: hidden; }
+.fm_slider.missing > div::after {
+    content: ' ';
+    position: absolute;
+    display: block;
+    left: calc(50% - 0.8em + 2px);
+    top: 1px;
+    width: 1.6em;
+    height: 1.6em;
+    background: #dfdfdf;
+    border: none;
+    border-radius: 50%;
+    color-adjust: exact !important;
+    pointer-events: none;
+    z-index: 200;
+}

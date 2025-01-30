@@ -124,22 +124,24 @@ async function loadTexture(url) {
     return texture;
 }
 
-function progressBar(value, total) {
+function progressBar(value, total, cls = null) {
     if (!total)
         return '';
 
     let ratio = (value / total);
     let progress = Math.round(ratio * 100);
 
+    cls = 'bar' + (cls ? ' ' + cls : '');
+
     return html`
-        <div class="bar" style=${'--progress: ' + progress}>
+        <div class=${cls} style=${'--progress: ' + progress}>
             <div></div>
             <span>${value}/${total}</span>
         </div>
     `;
 }
 
-function progressCircle(value, total) {
+function progressCircle(value, total, cls = null) {
     if (!total) {
         value = 0;
         total = 100;
@@ -151,8 +153,10 @@ function progressCircle(value, total) {
     let array = 314.1;
     let offset = array - ratio * array;
 
+    cls = 'circle' + (cls ? ' ' + cls : '');
+
     return svg`
-        <svg class="circle" width="100" height="100" viewBox="-12.5 -12.5 125 125" style="transform: rotate(-90deg)">
+        <svg class=${cls} width="100" height="100" viewBox="-12.5 -12.5 125 125" style="transform: rotate(-90deg)">
             <circle r="50" cx="50" cy="50" fill="transparent" stroke-width="16" stroke-dasharray=${array + 'px'} stroke-dashoffset="0"></circle>
             <circle r="50" cx="50" cy="50" stroke-width="16" stroke-linecap="butt" stroke-dasharray=${array + 'px'} stroke-dashoffset=${offset + 'px'} fill="transparent"></circle>
             <text x="50px" y="53px" font-size="19px" fill="black" font-weight="bold" text-anchor="middle" style="transform: rotate(90deg) translate(0px, -96px)">${progress}%</text>
