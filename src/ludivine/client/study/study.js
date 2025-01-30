@@ -161,7 +161,7 @@ function StudyModule(db, project, code, study) {
                 let next = mod.chain[idx + 1];
 
                 return html`
-                    <div class="box step" @click=${UI.wrap(e => navigate(parent))}>
+                    <div class="box level" @click=${UI.wrap(e => navigate(parent))}>
                         ${parent.level ?? ''}${parent.level ? ' - ' : ''}
                         ${next.title}
                     </div>
@@ -249,13 +249,13 @@ function StudyModule(db, project, code, study) {
                 let next = mod.chain[idx + 1];
 
                 return html`
-                    <div class="box step" @click=${UI.wrap(e => navigate(parent))}>
+                    <div class="box level" @click=${UI.wrap(e => navigate(parent))}>
                         ${parent.level ?? ''}${parent.level ? ' - ' : ''}
                         ${next.title}
                     </div>
                 `;
             })}
-            <div class="box step" @click=${UI.wrap(e => navigate(mod, page))}>
+            <div class="box level" @click=${UI.wrap(e => navigate(mod, page))}>
                 Questionnaire - ${page.title}
             </div>
             <div class="start">

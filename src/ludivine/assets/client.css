@@ -151,9 +151,10 @@ dialog { font-size: 15px; }
     --color: #d9bf69;
     --button_color: #d9bf69;
 }
-.study.complete {
+.study.done {
     --color: #eca17f;
-    --button_color: #eca17f;}
+    --button_color: #eca17f;
+}
 .study {
     & > img { width: 100px; }
     & .info { flex: 1; }
@@ -261,7 +262,7 @@ dialog { font-size: 15px; }
 }
 .module.draft > .status { font-weight: bold; }
 
-.step {
+.level {
     font-size: 1.1em;
     font-weight: bold;
     text-transform: uppercase;

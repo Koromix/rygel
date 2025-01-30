@@ -273,10 +273,9 @@ async function openDatabase(filename, flags) {
 async function runDashboard() {
     // List active studies
     studies = await db.fetchAll(`SELECT s.id, s.key, s.start,
-                                        COUNT(t1.id) AS progress, COUNT(t2.id) AS total
+                                        SUM(IIF(t.status = 'done', 1, 0)) AS progress, COUNT(t.id) AS total
                                  FROM studies s
-                                 LEFT JOIN tests t1 ON (t1.study = s.id AND t1.visible = 1 AND t1.status = 'done')
-                                 LEFT JOIN tests t2 ON (t2.study = s.id AND t2.visible = 1)
+                                 LEFT JOIN tests t ON (t.study = s.id AND t.visible = 1)
                                  GROUP BY s.id`);
 
     // List future events
@@ -322,7 +321,7 @@ async function runDashboard() {
                         let cls = 'study';
                         if (study != null) {
                             if (study.progress == study.total) {
-                                cls += ' complete';
+                                cls += ' done';
                             } else {
                                 cls += ' draft';
                             }
@@ -344,9 +343,9 @@ async function runDashboard() {
                                                      @click=${UI.wrap(e => openStudy(project))}>Participer</button>` : ''}
                                     ${study == null && !online ?
                                         html`<button type="button" class="small" disabled>Prochainement</button>` : ''}
-                                    ${study != null ?
+                                    ${study != null && study.progress < study.total ?
                                         html`<button type="button" class="small"
-                                                     @click=${UI.wrap(e => openStudy(project))}>Reprendre</button>` : ''}
+                                                     @click=${UI.wrap(e => openStudy(project))}>Continuer</button>` : ''}
                                     ${study != null && study.progress == study.total ?
                                         html`<button type="button" class="small" disabled>Résultats</button>` : ''}
                                 </div>
