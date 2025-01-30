@@ -18,6 +18,7 @@ import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
 import { niceDate, progressBar, progressCircle } from '../lib/util.js';
 import { ProjectInfo, ProjectBuilder } from './api.js';
+import { FormState, FormModel, FormBuilder } from './form.js';
 import { ASSETS } from '../../assets/assets.js';
 
 function StudyModule(db, project, code, study) {
@@ -28,6 +29,7 @@ function StudyModule(db, project, code, study) {
         page: null,
         section: null
     };
+    let state = null;
 
     let target_el = null;
 
@@ -108,6 +110,11 @@ function StudyModule(db, project, code, study) {
                                    FROM tests t
                                    INNER JOIN studies s ON (s.id = t.study)
                                    WHERE s.id = ?`, study.id);
+
+        for (let test of tests) {
+            if (test.payload != null)
+                test.payload = JSON.parse(test.payload);
+        }
 
         let [progress, total] = computeProgress(project.root);
 
@@ -273,15 +280,80 @@ function StudyModule(db, project, code, study) {
     }
 
     function renderForm(mod, page, section) {
-        return html``;
+        let model = new FormModel;
+        let builder = new FormBuilder(state, model);
+
+        page.form.run(builder, state.values);
+
+        let widgets = model.widgets0; 
+        let widget = widgets[section];
+
+        if (widget == null)
+            return '';
+
+        let end = widgets.length - 1;
+
+        return html`
+            <div class="box">${page.form.intro}</div>
+
+            ${progressBar(section, end, 'sections')}
+            <div class="box">${widget?.render?.()}</div>
+
+            <div class="actions">
+                ${section < end ? html`<button @click=${UI.wrap(e => navigate(mod, page, section + 1))}>Continuer</button>`: ''}
+                ${section == end ? html`<button @click=${UI.wrap(e => save(mod, page, state.values))}>Valider</button>`: ''}
+            </div>
+        `;
     }
 
     async function navigate(mod, page = null, section = null) {
         route.mod = mod;
-        route.page = page;
+
+        while (mod.modules.length == 1)
+            mod = mod.modules[0];
+        while (page == null && mod.pages.length == 1)
+            page = mod.pages[0];
+
+        if (page != route.page) {
+            route.page = page;
+
+            if (page != null) {
+                let test = tests.find(test => test.key == page.key);
+                let data = test?.payload ?? {};
+
+                state = new FormState(data);
+                state.changeHandler = run;
+            } else {
+                state = null;
+            }
+        }
         route.section = (page != null) ? section : null;
 
         await run();
+    }
+
+    async function save(mod, page, data) {
+        let mtime = (new Date).valueOf();
+        let json = JSON.stringify(data);
+
+        await db.exec(`UPDATE tests SET status = 'done', mtime = ?, payload = ?
+                       WHERE study = ? AND key = ?`, mtime, json, study.id, page.key);
+
+        while (mod != project.root && isComplete(mod, [page]))
+            mod = mod.chain[mod.chain.length - 2];
+
+        await navigate(mod);
+    }
+
+    function isComplete(mod, saved = []) {
+        for (let page of mod.pages) {
+            let test = tests.find(test => test.key == page.key);
+
+            if (test.status != 'done' && !saved.includes(page))
+                return false;
+        }
+
+        return true;
     }
 
     function computeProgress(mod) {

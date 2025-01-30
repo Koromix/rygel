@@ -92,7 +92,7 @@ function ProjectBuilder(project) {
         }
     };
 
-    this.test = function(key, title, options = {}) {
+    this.test = function(key, title, form, options = {}) {
         if (current_mod == null)
             throw new Error('Cannot create test outside module');
         if (current_mod.modules.length)
@@ -106,6 +106,7 @@ function ProjectBuilder(project) {
         let page = {
             key: current_mod.key + '/' + key,
             title: title,
+            form: form,
 
             schedule: options.schedule ?? null
         };
