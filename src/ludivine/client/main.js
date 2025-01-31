@@ -191,7 +191,7 @@ function renderFull() {
             </div>
         </footer>
 
-        <a id="sos" @click=${UI.wrap(e => sos(event))}>SOS</a>
+        <a id="sos" @click=${UI.wrap(e => sos(event))}></a>
     `, root_el);
 }
 

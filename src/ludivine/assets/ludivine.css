@@ -169,18 +169,38 @@ p + .columns { margin-top: 2em; }
     bottom: 16px;
     width: 52px;
     height: 52px;
-    background: #888;
-    color: white;
     border-radius: 50%;
     font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 999;
 }
-#sos:hover {
+#sos::before {
+    content: ' ';
+    position: absolute;
+    left: -2px;
+    top: -2px;
+    width: calc(100% + 4px);
+    height: calc(100% + 4px);
+    background: linear-gradient(#b22b22, #f33f33);
+    border-radius: 50%;
+}
+#sos::after {
+    content: 'SOS';
+    display: flex;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
     background: #e22e22;
+    border-radius: 50%;
+    color: white;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+#sos:hover {
     text-decoration: none;
+    transform: scale(1.1);
 }
 
 #help {
