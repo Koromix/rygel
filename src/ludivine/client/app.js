@@ -39,9 +39,9 @@ const PROJECTS = [
 
         prepare: async (db, project, study) => {
             let url = BUNDLES['sociotrauma.js'];
-            let { init } = await import(url);
+            let code = await import(url);
 
-            return new StudyModule(db, project, init, study);
+            return new StudyModule(db, project, code, study);
         }
     },
 
@@ -609,15 +609,16 @@ async function deleteDatabase() {
 }
 
 async function openStudy(project) {
-    let start = (new Date).valueOf();
+    let study = await db.fetch1('SELECT id, start FROM studies WHERE key = ?', project.key);
 
-    let study = await db.fetch1(`INSERT INTO studies (key, start)
-                                 VALUES (?, ?)
-                                 ON CONFLICT DO UPDATE SET start = start
-                                 RETURNING id, start`,
-                                project.key, start);
+    if (study == null) {
+        study = {
+            id: null,
+            start: null
+        };
+    }
+
     let mod = await project.prepare(db, project, study);
-
     await mod.start(main_el);
 }
 

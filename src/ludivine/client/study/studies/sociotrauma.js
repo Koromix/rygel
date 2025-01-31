@@ -16,6 +16,14 @@
 import { html } from '../../../../../vendor/lit-html/lit-html.bundle.js';
 import { ASSETS } from '../../../assets/assets.js';
 
+const consent = html`
+    <p>Dans le cadre de cette étude nous allons vous questionner sur votre situation actuelle, vos relations avec vos proches et la société et votre bien-être psychologique.  Il vous sera également demandé quelques informations sur l’évènement difficile que vous avez vécu. Nous vous inviterons à construire votre sociogramme qui est une représentation visuelle des liens sociaux que vous entretenez avec autrui. Il s’agit d’un dessin graphique qui représente la structure de vos relations interpersonnelles.
+    <p>Vous serez soutenus dans la réalisation de chacune de ces tâches : toutes les consignes de participation seront présentées à chaque étape.
+    <p>Cette étude se déroule en 6 étapes. Nous vous proposerons de réaliser plusieurs fois les mêmes exercices, à quelques exceptions près. Vous recevrez, pour ce faire, des rappels par mail et/ou notification via l’application. Un calendrier est disponible sur votre tableau de bord. 
+    <p>Cette étude se déroule entièrement en ligne. Vous n’aurez pas de contact direct avec les autres participants et avec les responsables de l’étude. Vous pouvez néanmoins, de votre initiative, entrer en contact par mail avec la responsable de cette étude pour toute question: Wivine Blekic, sociotrauma@ldv-recherche.fr.
+    <p>Nous vous invitons à prendre connaissance de la lettre d’information de l’étude SocioTrauma. Celle-ci a pour objectif de répondre aux questions que vous pourriez vous poser avant de prendre la décision de participer à la recherche. En bas de page, nous vous demanderons d’indiquer que vous avez pris connaissance de la lettre d’information.
+`;
+
 function init(build, start) {
     build.summary = html`
         <p>Retrouvez des <a href=${ENV.urls.static + '/etudes#etude-1-sociotrauma'}>informations sur cette étude</a> sur le site officiel de Ligne de Vie.
@@ -229,4 +237,7 @@ function init(build, start) {
     });
 }
 
-export { init }
+export {
+    consent,
+    init
+}

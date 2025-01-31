@@ -22,7 +22,7 @@ import { ASSETS } from '../../assets/assets.js';
 
 import './study.css';
 
-function StudyModule(db, project, init, study) {
+function StudyModule(db, project, code, study) {
     let tests = null;
 
     let route = {
@@ -36,6 +36,21 @@ function StudyModule(db, project, init, study) {
     this.start = async function(el) {
         target_el = el;
 
+        if (study.start != null)
+            await setup();
+
+        await run();
+    };
+
+    this.stop = function() {
+        // STOP
+    };
+
+    this.hasUnsavedData = function() {
+        return true;
+    };
+
+    async function setup() {
         // Init study schema
         {
             project = new ProjectInfo(project);
@@ -43,7 +58,7 @@ function StudyModule(db, project, init, study) {
             let builder = new ProjectBuilder(project);
             let start = LocalDate.fromJSDate(study.start);
 
-            init(builder, start);
+            code.init(builder, start);
         }
 
         route.mod = project.root;
@@ -62,19 +77,35 @@ function StudyModule(db, project, init, study) {
                               study.id, page.key, page.title, schedule);
             }
         });
-
-        await run();
-    };
-
-    this.stop = function() {
-        // STOP
-    };
-
-    this.hasUnsavedData = function() {
-        return true;
-    };
+    }
 
     async function run() {
+        if (route.mod == null) {
+            render(html`
+                <div class="tabbar">
+                    <a class="active">Participer</a>
+                </div>
+
+                <div class="tab">
+                    <div class="box">
+                        <div class="title">Consentement</div>
+                        ${code.consent}
+                    </div>
+                    <div class="box" style="align-items: center;">
+                        <form @submit=${UI.wrap(consent)}>
+                            <label>
+                                <input name="consent" type="checkbox" />
+                                <span>J’ai lu et je ne m’oppose pas à participer à l’étude ${project.title}</span>
+                            </label>
+                            <button type="submit">Valider</button>
+                        </form>
+                    </div>
+                </div>
+            `, target_el);
+
+            return;
+        }
+
         tests = await db.fetchAll(`SELECT t.key, t.status, t.payload
                                    FROM tests t
                                    INNER JOIN studies s ON (s.id = t.study)
@@ -102,6 +133,25 @@ function StudyModule(db, project, init, study) {
                 ${route.page != null && route.section != null ? renderForm(route.mod, route.page, route.section) : null}
             </div>
         `, target_el);
+    }
+
+    async function consent(e) {
+        let start = (new Date).valueOf();
+
+        let form = e.currentTarget;
+        let elements = form.elements;
+
+        if (!elements.consent.checked)
+            throw new Error('Vous devez confirmé avoir lu et accepté la participation à ' + project.title);
+
+        study = await db.fetch1(`INSERT INTO studies (key, start)
+                                 VALUES (?, ?)
+                                 ON CONFLICT DO UPDATE SET start = excluded.start
+                                 RETURNING id, start`,
+                                project.key, start);
+
+        await setup();
+        await run();
     }
 
     function renderModule(mod) {
