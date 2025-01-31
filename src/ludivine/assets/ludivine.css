@@ -214,6 +214,6 @@ p + .columns { margin-top: 2em; }
     gap: 2em;
     padding: 1.5em 1.5em 1em 1.5em;
     background: white;
-    border: 4px solid #e22e22;
+    border: 4px solid #bbb;
     align-items: center;
 }

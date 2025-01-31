@@ -160,7 +160,7 @@ function randomCard(cards) {
 
 function sos(e) {
     dialog(e, 'help', close => html`
-        <img src=${ASSETS['ui/3114']} width="183" height="86" alt="">
+        <img src=${ASSETS['ui/3114']} width="348" height="86" alt="">
         <div>
             <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations sur la prévention du suicide.
             <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.
