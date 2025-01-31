@@ -19,15 +19,14 @@ import * as UI from '../../../web/flat/ui.js';
 import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from '../lib/constants.js';
 import { computeAge, dateToString, loadTexture } from '../lib/util.js';
 import { ASSETS } from '../../assets/assets.js';
-import * as app from '../app.js';
 
 const TOOLS = {
-    move: { title: 'Déplacer', icon: 'app/network/move' },
-    rotate: { title: 'Pivoter', icon: 'app/network/rotate' },
+    move: { title: 'Déplacer', icon: 'ui/move' },
+    rotate: { title: 'Pivoter', icon: 'ui/rotate' },
 
     link: {
         title: 'Relier',
-        icon: 'app/network/link',
+        icon: 'ui/link',
 
         modes: LINK_KINDS.reduce((acc, kind, idx) => {
             if (kind.width)
@@ -118,11 +117,11 @@ function NetworkWidget(mod, world) {
 
         render(html`
             <button @click=${UI.wrap(createPersons)}>
-                <img src=${ASSETS['app/network/create']} alt="" />
+                <img src=${ASSETS['ui/create']} alt="" />
                 <span>Insérer</span>
             </button>
             ${insert ? html`<button @click=${UI.wrap(insertPersons)}>
-                <img src=${ASSETS['app/network/insert']} alt="" />
+                <img src=${ASSETS['ui/insert']} alt="" />
                 <span>Réutiliser</span>
             </button>` : ''}
 
@@ -144,7 +143,7 @@ function NetworkWidget(mod, world) {
             <button class=${select_mode && !select_persons.length ? 'active' : ''}
                     title=${select_persons.length >= 2 ? '' : 'Outil de sélection multiple au lasso'}
                     @click=${UI.wrap(toggleSelection)}>
-                <img src=${select_persons.length < 2 ? ASSETS['app/network/select'] : ASSETS['app/network/unselect']} alt="" />
+                <img src=${select_persons.length < 2 ? ASSETS['ui/select'] : ASSETS['ui/unselect']} alt="" />
                 <span>${select_persons.length < 2 ? 'Sélectionner' : 'Déselectionner'}</span>
             </button>
 
@@ -152,7 +151,7 @@ function NetworkWidget(mod, world) {
             <button class=${mod.anonymous ? 'active' : ''}
                     @click=${mod.anonymous ? UI.confirm('Voulez-vous quitter le mode anonyme ?', e => { mod.anonymous = false; })
                                            : UI.wrap(e => { mod.anonymous = true; })}>
-                <img src=${ASSETS['app/network/anonymous']} alt="" />
+                <img src=${ASSETS['ui/anonymous']} alt="" />
                 <span>Mode anonyme</span>
             </button>
         `, mod.toolbox);
@@ -561,7 +560,7 @@ function NetworkWidget(mod, world) {
                                         <td><input type="date" .value=${dateToString(subject.birthdate)}
                                                    @change=${UI.wrap(e => { subject.birthdate = e.target.value ? e.target.valueAsDate.valueOf() : null; render() })} /></td>
                                         <td><button type="button" class="secondary small"
-                                                    @click=${UI.insist(e => { new_subjects = new_subjects.filter(it => it !== subject); render(); })}><img src=${ASSETS['app/ui/delete']} alt="Supprimer" /></button></td>
+                                                    @click=${UI.insist(e => { new_subjects = new_subjects.filter(it => it !== subject); render(); })}><img src=${ASSETS['ui/delete']} alt="Supprimer" /></button></td>
                                     </tr>
                                 `)}
                                 ${!new_subjects.length ? html`<td colspan="5" class="center">Cliquez sur le bouton d'ajout ci-dessus.</td>` : ''}

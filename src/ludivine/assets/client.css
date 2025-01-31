@@ -13,7 +13,7 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-@import url('../shared/ldv.css');
+@import url('./ludivine.css');
 
 #root {
     display: flex;
@@ -195,6 +195,86 @@ dialog { font-size: 15px; }
     height: 3em;
     padding: 0.3em;
     border-radius: 6px;
+}
+
+.summary {
+    display: flex;
+    height: 140px;
+    background: #faefe9;
+    border-radius: 16px;
+    gap: 1.5em;
+}
+.summary > img {
+    width: 200px;
+    height: 100%;
+    object-fit: cover;
+    object-position: left top;
+    background: #ecdbc3;
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+}
+.summary > div {
+    flex: 1;
+    padding: 1em 0;
+}
+.summary > div > .title {
+    margin-bottom: 1em;
+    font-size: 1.2em;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #364b9b;
+}
+.summary > .circle { margin: 20px 20px; }
+
+.modules {
+    display: flex;
+    justify-content: space-evenly;
+}
+.module {
+    --color: white;
+
+    display: flex;
+    width: 120px;
+    height: 120px;
+    padding: 0.5em;
+    flex-direction: column;
+    gap: 0.15em;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--color), transparent 60%);
+    border-radius: 10px;
+    cursor: pointer;
+}
+.module.draft { --color: #d9bf69; }
+.module.complete { --color: #eca17f; }
+.module {
+    & .title {
+        font-weight: bold;
+        color: #364b9b;
+        text-align: center;
+    }
+    & .status {
+        min-width: 70%;
+        font-size: 0.9em;
+        text-align: center;
+    }
+}
+.module.draft > .status { font-weight: bold; }
+
+.step {
+    font-size: 1.1em;
+    font-weight: bold;
+    text-transform: uppercase;
+    text-align: center;
+    color: #364b9b;
+    cursor: pointer;
+}
+
+.start {
+    display: flex;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 1em;
 }
 
 @media screen and (max-width: 960px) {

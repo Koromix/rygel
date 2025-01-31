@@ -13,140 +13,120 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import asset0 from './footer.webp';
-import asset1 from './ldv.webp';
-import asset2 from './logo.webp';
-import asset3 from './app/main/calendar.png';
-import asset4 from './app/main/configure.png';
-import asset5 from './app/main/copy.png';
-import asset6 from './app/main/dashboard.png';
-import asset7 from './app/main/network.png';
-import asset8 from './app/main/new.png';
-import asset9 from './app/main/track.png';
-import asset10 from './app/main/user.png';
-import asset11 from './app/network/anonymous.png';
-import asset12 from './app/network/child.png';
-import asset13 from './app/network/couple.png';
-import asset14 from './app/network/create.png';
-import asset15 from './app/network/family.png';
-import asset16 from './app/network/friend.png';
-import asset17 from './app/network/healthcare.png';
-import asset18 from './app/network/insert.png';
-import asset19 from './app/network/link.png';
-import asset20 from './app/network/move.png';
-import asset21 from './app/network/rotate.png';
-import asset22 from './app/network/select.png';
-import asset23 from './app/network/unselect.png';
-import asset24 from './app/network/work.png';
-import asset25 from './app/ui/busy.png';
-import asset26 from './app/ui/crosshair.png';
-import asset27 from './app/ui/delete.png';
-import asset28 from './app/ui/edit.png';
-import asset29 from './app/ui/left.png';
-import asset30 from './app/ui/locked.png';
-import asset31 from './app/ui/mouse.png';
-import asset32 from './app/ui/move.png';
-import asset33 from './app/ui/open.png';
-import asset34 from './app/ui/redo.png';
-import asset35 from './app/ui/right.png';
-import asset36 from './app/ui/save.png';
-import asset37 from './app/ui/undo.png';
-import asset38 from './web/equipe/female.webp';
-import asset39 from './web/equipe/male.webp';
-import asset40 from './web/equipe/niels_martignene.jpg';
-import asset41 from './web/illustrations/calypso.webp';
-import asset42 from './web/illustrations/cn2r.webp';
-import asset43 from './web/illustrations/dispositif.webp';
-import asset44 from './web/illustrations/donnees.webp';
-import asset45 from './web/illustrations/ecriture.webp';
-import asset46 from './web/illustrations/etirements.webp';
-import asset47 from './web/illustrations/help.webp';
-import asset48 from './web/illustrations/participer.webp';
-import asset49 from './web/illustrations/respiration.webp';
-import asset50 from './web/illustrations/sociotrauma.webp';
-import asset51 from './web/illustrations/staks.webp';
-import asset52 from './web/livres/apprendre_a_soigner_les_depressions.jpg';
-import asset53 from './web/livres/humeur_normale_a_la_depression.jpg';
-import asset54 from './web/livres/les_troubles_bipolaires.jpg';
-import asset55 from './web/livres/psychoeducation_dans_depression.jpg';
-import asset56 from './web/livres/traiter_la_depression.jpg';
-import asset57 from './web/misc/3114.webp';
-import asset58 from './web/misc/dice.webp';
-import asset59 from './web/misc/left.webp';
-import asset60 from './web/misc/right.webp';
-import asset61 from './web/videos/blessures_invisibles.webp';
-import asset62 from './web/videos/bloque_bloquee.webp';
-import asset63 from './web/videos/trauma_vicariant.webp';
-import asset64 from './web/videos/trop_trop_peur.webp';
-import asset65 from './web/videos/violences_sexuelles_enfance.webp';
+import asset0 from './main/footer.webp';
+import asset1 from './main/ldv.webp';
+import asset2 from './main/logo.webp';
+import asset3 from './pictures/calypso.webp';
+import asset4 from './pictures/cn2r.webp';
+import asset5 from './pictures/dispositif.webp';
+import asset6 from './pictures/donnees.webp';
+import asset7 from './pictures/ecriture.webp';
+import asset8 from './pictures/etirements.webp';
+import asset9 from './pictures/help.webp';
+import asset10 from './pictures/participer.webp';
+import asset11 from './pictures/respiration.webp';
+import asset12 from './pictures/sociotrauma.webp';
+import asset13 from './pictures/staks.webp';
+import asset14 from './resources/apprendre_a_soigner_les_depressions.jpg';
+import asset15 from './resources/blessures_invisibles.webp';
+import asset16 from './resources/bloque_bloquee.webp';
+import asset17 from './resources/humeur_normale_a_la_depression.jpg';
+import asset18 from './resources/les_troubles_bipolaires.jpg';
+import asset19 from './resources/psychoeducation_dans_depression.jpg';
+import asset20 from './resources/traiter_la_depression.jpg';
+import asset21 from './resources/trauma_vicariant.webp';
+import asset22 from './resources/trop_trop_peur.webp';
+import asset23 from './resources/violences_sexuelles_enfance.webp';
+import asset24 from './team/female.webp';
+import asset25 from './team/male.webp';
+import asset26 from './team/niels_martignene.jpg';
+import asset27 from './ui/3114.webp';
+import asset28 from './ui/anonymous.png';
+import asset29 from './ui/calendar.png';
+import asset30 from './ui/child.png';
+import asset31 from './ui/configure.png';
+import asset32 from './ui/copy.png';
+import asset33 from './ui/couple.png';
+import asset34 from './ui/create.png';
+import asset35 from './ui/dashboard.png';
+import asset36 from './ui/delete.png';
+import asset37 from './ui/dice.webp';
+import asset38 from './ui/family.png';
+import asset39 from './ui/friend.png';
+import asset40 from './ui/healthcare.png';
+import asset41 from './ui/insert.png';
+import asset42 from './ui/left.webp';
+import asset43 from './ui/link.png';
+import asset44 from './ui/move.png';
+import asset45 from './ui/network.png';
+import asset46 from './ui/new.png';
+import asset47 from './ui/redo.png';
+import asset48 from './ui/right.webp';
+import asset49 from './ui/rotate.png';
+import asset50 from './ui/select.png';
+import asset51 from './ui/track.png';
+import asset52 from './ui/undo.png';
+import asset53 from './ui/unselect.png';
+import asset54 from './ui/user.png';
+import asset55 from './ui/work.png';
 
 const ASSETS = {
-    'footer': asset0,
-    'ldv': asset1,
-    'logo': asset2,
-    'app/main/calendar': asset3,
-    'app/main/configure': asset4,
-    'app/main/copy': asset5,
-    'app/main/dashboard': asset6,
-    'app/main/network': asset7,
-    'app/main/new': asset8,
-    'app/main/track': asset9,
-    'app/main/user': asset10,
-    'app/network/anonymous': asset11,
-    'app/network/child': asset12,
-    'app/network/couple': asset13,
-    'app/network/create': asset14,
-    'app/network/family': asset15,
-    'app/network/friend': asset16,
-    'app/network/healthcare': asset17,
-    'app/network/insert': asset18,
-    'app/network/link': asset19,
-    'app/network/move': asset20,
-    'app/network/rotate': asset21,
-    'app/network/select': asset22,
-    'app/network/unselect': asset23,
-    'app/network/work': asset24,
-    'app/ui/busy': asset25,
-    'app/ui/crosshair': asset26,
-    'app/ui/delete': asset27,
-    'app/ui/edit': asset28,
-    'app/ui/left': asset29,
-    'app/ui/locked': asset30,
-    'app/ui/mouse': asset31,
-    'app/ui/move': asset32,
-    'app/ui/open': asset33,
-    'app/ui/redo': asset34,
-    'app/ui/right': asset35,
-    'app/ui/save': asset36,
-    'app/ui/undo': asset37,
-    'web/equipe/female': asset38,
-    'web/equipe/male': asset39,
-    'web/equipe/niels_martignene': asset40,
-    'web/illustrations/calypso': asset41,
-    'web/illustrations/cn2r': asset42,
-    'web/illustrations/dispositif': asset43,
-    'web/illustrations/donnees': asset44,
-    'web/illustrations/ecriture': asset45,
-    'web/illustrations/etirements': asset46,
-    'web/illustrations/help': asset47,
-    'web/illustrations/participer': asset48,
-    'web/illustrations/respiration': asset49,
-    'web/illustrations/sociotrauma': asset50,
-    'web/illustrations/staks': asset51,
-    'web/livres/apprendre_a_soigner_les_depressions': asset52,
-    'web/livres/humeur_normale_a_la_depression': asset53,
-    'web/livres/les_troubles_bipolaires': asset54,
-    'web/livres/psychoeducation_dans_depression': asset55,
-    'web/livres/traiter_la_depression': asset56,
-    'web/misc/3114': asset57,
-    'web/misc/dice': asset58,
-    'web/misc/left': asset59,
-    'web/misc/right': asset60,
-    'web/videos/blessures_invisibles': asset61,
-    'web/videos/bloque_bloquee': asset62,
-    'web/videos/trauma_vicariant': asset63,
-    'web/videos/trop_trop_peur': asset64,
-    'web/videos/violences_sexuelles_enfance': asset65,
+    'main/footer': asset0,
+    'main/ldv': asset1,
+    'main/logo': asset2,
+    'pictures/calypso': asset3,
+    'pictures/cn2r': asset4,
+    'pictures/dispositif': asset5,
+    'pictures/donnees': asset6,
+    'pictures/ecriture': asset7,
+    'pictures/etirements': asset8,
+    'pictures/help': asset9,
+    'pictures/participer': asset10,
+    'pictures/respiration': asset11,
+    'pictures/sociotrauma': asset12,
+    'pictures/staks': asset13,
+    'resources/apprendre_a_soigner_les_depressions': asset14,
+    'resources/blessures_invisibles': asset15,
+    'resources/bloque_bloquee': asset16,
+    'resources/humeur_normale_a_la_depression': asset17,
+    'resources/les_troubles_bipolaires': asset18,
+    'resources/psychoeducation_dans_depression': asset19,
+    'resources/traiter_la_depression': asset20,
+    'resources/trauma_vicariant': asset21,
+    'resources/trop_trop_peur': asset22,
+    'resources/violences_sexuelles_enfance': asset23,
+    'team/female': asset24,
+    'team/male': asset25,
+    'team/niels_martignene': asset26,
+    'ui/3114': asset27,
+    'ui/anonymous': asset28,
+    'ui/calendar': asset29,
+    'ui/child': asset30,
+    'ui/configure': asset31,
+    'ui/copy': asset32,
+    'ui/couple': asset33,
+    'ui/create': asset34,
+    'ui/dashboard': asset35,
+    'ui/delete': asset36,
+    'ui/dice': asset37,
+    'ui/family': asset38,
+    'ui/friend': asset39,
+    'ui/healthcare': asset40,
+    'ui/insert': asset41,
+    'ui/left': asset42,
+    'ui/link': asset43,
+    'ui/move': asset44,
+    'ui/network': asset45,
+    'ui/new': asset46,
+    'ui/redo': asset47,
+    'ui/right': asset48,
+    'ui/rotate': asset49,
+    'ui/select': asset50,
+    'ui/track': asset51,
+    'ui/undo': asset52,
+    'ui/unselect': asset53,
+    'ui/user': asset54,
+    'ui/work': asset55,
 };
 
 export { ASSETS }

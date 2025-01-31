@@ -1,0 +1,162 @@
+/* Copyright (C) 2024  Niels Martignène <niels.martignene@protonmail.com>
+
+   This program is free software: you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation, either version 3 of the License, or
+   (at your option) any later version.
+
+   This program is distributed in the hope that it will be useful,
+   but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
+
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <https://www.gnu.org/licenses/>. */
+
+@import url('./ludivine.css');
+
+.cardset {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: center;
+    align-items: center;
+    padding: 2em 0;
+}
+.cardset > .arrows {
+    display: flex;
+    position: absolute;
+    left: 0;
+    width: 100%;
+}
+.cardset > .arrows > img { cursor: pointer; }
+.card {
+    display: flex;
+    position: relative;
+    width: 400px;
+    height: 400px;
+    align-items: end;
+    overflow: hidden;
+    border-radius: 16px;
+    user-select: none;
+}
+.card > img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+}
+.card > div {
+    width: 100%;
+    margin-top: 150px;
+    padding: 1em;
+    z-index: 2;
+    background: #ffffff88;
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+}
+
+.js .cardset { height: 400px; }
+.js .card {
+    --index: calc(max(-1 * var(--position), var(--position)));
+
+    position: absolute;
+    max-width: 60%;
+    margin-left: calc(var(--position) * 12%);
+    filter: blur(calc(var(--index) * 2px));
+    transform: scaleY(calc(1 - 0.05 * var(--index)));
+    z-index: calc(6 - var(--index));
+    transition: all 0.2s ease-in;
+
+    cursor: pointer;
+}
+.js .card.active { cursor: default; }
+
+@media screen and (max-width: 960px) {
+    .js .cardset { font-size: 0.8em; }
+    .cardset > .arrows { display: none; }
+}
+
+.tileset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1em;
+}
+.tile {
+    display: flex;
+    position: relative;
+    min-width: 40%;
+    align-items: end;
+    overflow: hidden;
+    border-radius: 16px;
+}
+.tile > img {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top;
+}
+.tile > div {
+    width: 100%;
+    margin-top: 300px;
+    padding: 1em 1em 0.5em 1em;
+    z-index: 2;
+    background: #ffffff88;
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-radius: 0 0 16px 16px;
+}
+
+@media screen and (max-width: 960px) {
+    .tileset { flex-direction: column; }
+}
+
+.team {
+    display: flex;
+    justify-content: space-evenly;
+    gap: 12px;
+    font-size: 0.9em;
+    flex-wrap: wrap;
+}
+.team + .team { margin-top: 48px; }
+.team > div {
+    background: #fdfbf8;
+    padding: 1em 0.5em;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 210px;
+    align-items: center;
+    border-radius: 30px;
+}
+.team .name {
+    font-weight: bold;
+    text-align: center;
+}
+.team img {
+    width: 133px;
+    height: 133px;
+    background: #fef2f2;
+    border-radius: 50%;
+    border: 4px solid #e9a07f;
+}
+.team .mission {
+    font-style: italic;
+    text-align: center;
+    font-size: 0.8em;
+}
+.team .mission + .mission { margin-top: -14px; }
+
+@media screen and (max-width: 960px) {
+    .team {
+        flex-direction: column;
+        align-items: center;
+    }
+}

@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { html } from '../../../../../vendor/lit-html/lit-html.bundle.js';
-import { ASSETS } from '../../../assets/assets.js';
+import { html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { ASSETS } from '../assets/assets.js';
 
 const consent = html`
     <p>Dans le cadre de cette étude nous allons vous questionner sur votre situation actuelle, vos relations avec vos proches et la société et votre bien-être psychologique.  Il vous sera également demandé quelques informations sur l’évènement difficile que vous avez vécu. Nous vous inviterons à construire votre sociogramme qui est une représentation visuelle des liens sociaux que vous entretenez avec autrui. Il s’agit d’un dessin graphique qui représente la structure de vos relations interpersonnelles.
@@ -33,7 +33,7 @@ function init(build, start) {
     build.module('recueil', 'Recueil', mod => {
         mod.level = 'Temporalité';
         mod.help = html`
-            <img src=${ASSETS['web/illustrations/help']} alt="" />
+            <img src=${ASSETS['pictures/help']} alt="" />
             <div>
                 <p>Sélectionnez la <b>prochaine étape de l’étude</b> pour commencer à remplir le questionnaire !
             </div>
@@ -42,7 +42,7 @@ function init(build, start) {
         build.module('initial', 'Bilan initial', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['web/illustrations/help']} alt="" />
+                <img src=${ASSETS['pictures/help']} alt="" />
                 <div>
                     <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
                 </div>
@@ -76,7 +76,7 @@ function init(build, start) {
         build.module('s6', '6 semaines', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['web/illustrations/help']} alt="" />
+                <img src=${ASSETS['pictures/help']} alt="" />
                 <div>
                     <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
                 </div>
@@ -118,7 +118,7 @@ function init(build, start) {
         build.module('m3', '3 mois', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['web/illustrations/help']} alt="" />
+                <img src=${ASSETS['pictures/help']} alt="" />
                 <div>
                     <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
                 </div>
@@ -158,7 +158,7 @@ function init(build, start) {
         build.module('m6', '6 mois', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['web/illustrations/help']} alt="" />
+                <img src=${ASSETS['pictures/help']} alt="" />
                 <div>
                     <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
                 </div>
@@ -198,7 +198,7 @@ function init(build, start) {
         build.module('m12', '1 an', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['web/illustrations/help']} alt="" />
+                <img src=${ASSETS['pictures/help']} alt="" />
                 <div>
                     <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
                 </div>

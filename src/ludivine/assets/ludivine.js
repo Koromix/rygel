@@ -13,10 +13,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
-import { Util } from '../../../web/core/base.js';
-import { deploy } from '../../../web/flat/static.js';
-import { ASSETS } from '../assets.js';
+import { render, html } from '../../../vendor/lit-html/lit-html.bundle.js';
+import { Util } from '../../web/core/base.js';
+import { deploy } from '../../web/flat/static.js';
+import { ASSETS } from './assets.js';
 
 window.addEventListener('load', e => {
     initCards();
@@ -30,9 +30,9 @@ function initCards() {
 
         let arrows = document.createElement('div');
         render(html`
-            <img style="left: 16px;" src=${ASSETS['web/misc/left']} alt="" @click=${e => toggleCard(cards, -1)} />
+            <img style="left: 16px;" src=${ASSETS['ui/left']} alt="" @click=${e => toggleCard(cards, -1)} />
             <div style="flex: 1;"></div>
-            <img style="right: 16px;" src=${ASSETS['web/misc/right']} alt="" @click=${e => toggleCard(cards, 1)} />
+            <img style="right: 16px;" src=${ASSETS['ui/right']} alt="" @click=${e => toggleCard(cards, 1)} />
         `, arrows);
         arrows.classList.add('arrows');
         cardset.appendChild(arrows);
@@ -160,7 +160,7 @@ function randomCard(cards) {
 
 function sos(e) {
     dialog(e, 'help', close => html`
-        <img src=${ASSETS['web/misc/3114']} width="183" height="86" alt="">
+        <img src=${ASSETS['ui/3114']} width="183" height="86" alt="">
         <div>
             <p>Le <b>3114</b> est le numéro national de prévention de suicide. Consultez le <a href="https://3114.fr/" target="_blank">site du 3114</a> pour plus d'informations sur la prévention du suicide.
             <p>Si vous êtes en <b>détresse et/ou avez des pensées suicidaires</b>, ou si vous voulez aider une personne en souffrance, vous pouvez contacter le numéro national de prévention du suicide, le <a href="tel:3114">3114</a>.

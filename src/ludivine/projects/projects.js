@@ -13,5 +13,32 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-export * from '../shared/ldv.js';
-import '../shared/ldv.css';
+import { StudyModule } from '../client/study/study.js';
+import { ASSETS } from '../assets/assets.js';
+
+const PROJECTS = [
+    {
+        index: 1,
+        key: 'sociotrauma',
+        title: 'SocioTrauma',
+        picture: ASSETS['pictures/sociotrauma'],
+
+        prepare: async (db, project, study) => {
+            let url = BUNDLES['sociotrauma.js'];
+            let code = await import(url);
+
+            return new StudyModule(db, project, code, study);
+        }
+    },
+
+    {
+        index: 2,
+        key: 'calypsoT',
+        title: 'CALYPSO',
+        picture: ASSETS['pictures/calypso'],
+
+        prepare: null
+    }
+];
+
+export { PROJECTS }

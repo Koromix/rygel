@@ -16,11 +16,9 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log, Net, LocalDate } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
-import { ProjectInfo, ProjectBuilder } from './api.js';
 import { niceDate, progressBar, progressCircle } from '../lib/util.js';
+import { ProjectInfo, ProjectBuilder } from './api.js';
 import { ASSETS } from '../../assets/assets.js';
-
-import './study.css';
 
 function StudyModule(db, project, code, study) {
     let tests = null;
@@ -119,7 +117,7 @@ function StudyModule(db, project, code, study) {
             </div>
 
             <div class="tab">
-                <div class="stu_intro">
+                <div class="summary">
                     <img src=${project.picture} alt="" />
                     <div>
                         <div class="title">Étude ${project.index} - ${project.title}</div>
@@ -163,7 +161,7 @@ function StudyModule(db, project, code, study) {
                 let next = mod.chain[idx + 1];
 
                 return html`
-                    <div class="box stu_step" @click=${UI.wrap(e => navigate(parent))}>
+                    <div class="box step" @click=${UI.wrap(e => navigate(parent))}>
                         ${parent.level ?? ''}${parent.level ? ' - ' : ''}
                         ${next.title}
                     </div>
@@ -171,11 +169,11 @@ function StudyModule(db, project, code, study) {
             })}
             <div class="box">
                 <div class="title">${mod.level}</div>
-                <div class="stu_items">
+                <div class="modules">
                     ${mod.modules.map(child => {
                         let [progress, total] = computeProgress(child);
 
-                        let cls = 'stu_item';
+                        let cls = 'module';
                         let status = null;
 
                         if (progress == total) {
@@ -216,7 +214,7 @@ function StudyModule(db, project, code, study) {
                     ${!mod.modules.length ? mod.pages.map(page => {
                         let test = tests.find(test => test.key == page.key);
 
-                        let cls = 'stu_item ' + test.status;
+                        let cls = 'module ' + test.status;
                         let status = null;
 
                         if (test.status == 'done') {
@@ -251,18 +249,18 @@ function StudyModule(db, project, code, study) {
                 let next = mod.chain[idx + 1];
 
                 return html`
-                    <div class="box stu_step" @click=${UI.wrap(e => navigate(parent))}>
+                    <div class="box step" @click=${UI.wrap(e => navigate(parent))}>
                         ${parent.level ?? ''}${parent.level ? ' - ' : ''}
                         ${next.title}
                     </div>
                 `;
             })}
-            <div class="box stu_step" @click=${UI.wrap(e => navigate(mod, page))}>
+            <div class="box step" @click=${UI.wrap(e => navigate(mod, page))}>
                 Questionnaire - ${page.title}
             </div>
-            <div class="stu_start">
+            <div class="start">
                 <div class="help">
-                    <img src=${ASSETS['web/illustrations/help']} alt="" />
+                    <img src=${ASSETS['pictures/help']} alt="" />
                     <div>
                         <p>Tout est prêt pour <b>commencer le questionnaire</b> !
                         <p>Pensez à <b>faire des pauses</b> si vous en ressentez le besoin, ou à faire un tour sur la page Se Détendre.
@@ -275,9 +273,7 @@ function StudyModule(db, project, code, study) {
     }
 
     function renderForm(mod, page, section) {
-        return html`
-            <div class="stu_progress"></div>
-        `;
+        return html``;
     }
 
     async function navigate(mod, page = null, section = null) {

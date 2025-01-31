@@ -67,7 +67,7 @@ static void InitAssets()
         if (TestStr(asset.name, "src/ludivine/client/index.html")) {
             assets_index = asset;
             assets_map.Set("/", &assets_index);
-        } else if (TestStr(asset.name, "src/ludivine/assets/ldv.webp")) {
+        } else if (TestStr(asset.name, "src/ludivine/assets/main/ldv.webp")) {
             assets_map.Set("/favicon.webp", &asset);
         } else {
             Span<const char> name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS);
@@ -79,9 +79,9 @@ static void InitAssets()
                 const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
                 assets_map.Set(url, &asset);
 
-                if (name == "app.js") {
+                if (name == "main.js") {
                     js = url;
-                } else if (name == "app.css") {
+                } else if (name == "main.css") {
                     css = url;
                 } else {
                     bundles.Append(url);

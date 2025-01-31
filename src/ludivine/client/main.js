@@ -20,40 +20,13 @@ import * as sqlite3 from '../../web/core/sqlite3.js';
 import { computeAge, dateToString, niceDate, progressCircle } from './lib/util.js';
 import { SmallCalendar } from './lib/calendar.js';
 import { PictureCropper } from './lib/picture.js';
-import { StudyModule } from './study/study.js';
-import { NetworkModule } from './network/network.js';
-import { TrackModule } from './track/track.js';
+import { PROJECTS } from '../projects/projects.js';
 import { ASSETS } from '../assets/assets.js';
-import { deploy, sos } from '../assets/shared/ldv.js';
+import { deploy, sos } from '../assets/ludivine.js';
 
-import '../assets/app/app.css';
+import '../assets/client.css';
 
 const DATABASE_VERSION = 1;
-
-const PROJECTS = [
-    {
-        index: 1,
-        key: 'sociotrauma',
-        title: 'SocioTrauma',
-        picture: ASSETS['web/illustrations/sociotrauma'],
-
-        prepare: async (db, project, study) => {
-            let url = BUNDLES['sociotrauma.js'];
-            let code = await import(url);
-
-            return new StudyModule(db, project, code, study);
-        }
-    },
-
-    {
-        index: 2,
-        key: 'calypsoT',
-        title: 'CALYPSO',
-        picture: ASSETS['web/illustrations/calypso'],
-
-        prepare: null
-    }
-];
 
 Object.assign(T, {
     browse_for_image: 'Parcourir',
@@ -195,7 +168,7 @@ function renderFull() {
 
         <nav id="top">
             <menu>
-                <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['logo']} alt="Logo Lignes de Vie" /></a>
+                <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
                 <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
                 <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
                 <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
@@ -203,7 +176,7 @@ function renderFull() {
                 <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
                 <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
                 <div style="flex: 1;"></div>
-                <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt="" />
+                <img class="picture" src=${identity.picture ?? ASSETS['ui/user']} alt="" />
             </menu>
         </nav>
 
@@ -211,7 +184,7 @@ function renderFull() {
 
         <footer>
             <div>Lignes de Vie © 2024</div>
-            <img src=${ASSETS['footer']} alt="" width="79" height="64">
+            <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
             <div style="font-size: 0.8em;">
                 Cn2r, 103 Bld de la liberté, 59000 LILLE<br>
                 <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">lignesdevie@cn2r.fr</a>
@@ -327,7 +300,7 @@ async function runDashboard() {
 
         <div class="tab">
             <div class="box profile">
-                <img class="picture" src=${identity.picture ?? ASSETS['app/main/user']} alt=""/>
+                <img class="picture" src=${identity.picture ?? ASSETS['ui/user']} alt=""/>
                 <div>
                     <p>Bienvenue sur <b>${ENV.title}</b> !
 
@@ -390,7 +363,7 @@ async function runDashboard() {
                                 <div class="event">
                                     <div class="date">${niceDate(evt.schedule, false)}</div>
                                     <div class="text">${evt.count} ${evt.count > 1 ? 'questionnaires' : 'questionnaire'}</div>
-                                    <button type="button"><img src=${ASSETS['app/main/calendar']} alt="Agenda" /></button>
+                                    <button type="button"><img src=${ASSETS['ui/calendar']} alt="Agenda" /></button>
                                 </div>
                             `;
                         })}
@@ -444,7 +417,7 @@ async function runRegister() {
                 </form>
 
                 <div class="help">
-                    <img src=${ASSETS['web/illustrations/participer']} alt="" />
+                    <img src=${ASSETS['pictures/participer']} alt="" />
                     <div>
                         <p><b>Créer un compte pour participer</b> à nos études est essentiel pour :
                         <ul>
@@ -482,7 +455,7 @@ async function changePicture() {
     let url = BUNDLES['notion.json'];
     let notion = await Net.get(url);
 
-    cropper.defaultURL = ASSETS['app/main/user'];
+    cropper.defaultURL = ASSETS['ui/user'];
     cropper.notionAssets = notion;
     cropper.imageFormat = 'image/webp';
 

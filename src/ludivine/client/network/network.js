@@ -19,7 +19,7 @@ import * as UI from '../../../web/flat/ui.js';
 import { AppRunner } from '../../../web/core/runner.js';
 import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
 import { ASSETS } from '../../assets/assets.js';
-import * as app from '../app.js';
+import * as app from '../main.js';
 import { NetworkWidget } from './widget.js';
 
 import './network.css';
@@ -229,7 +229,7 @@ function NetworkModule(db, test) {
         render(html`
             <button type="button" title="Retourner au tableau de bord"
                     @click=${UI.wrap(app.runDashboard)}>
-                <img src=${ASSETS['app/main/dashboard']} alt="" />
+                <img src=${ASSETS['ui/dashboard']} alt="" />
                 <span>Tableau de bord</span>
             </button>
 
@@ -237,13 +237,13 @@ function NetworkModule(db, test) {
             <button type="button" title="Annuler la dernière modification"
                     ?disabled=${!undo_actions.length}
                     @click=${UI.wrap(e => rewind(undo_actions, redo_actions))}>
-                <img src=${ASSETS['app/ui/undo']} alt="" />
+                <img src=${ASSETS['ui/undo']} alt="" />
                 <span>Annuler</span>
             </button>
             <button type="button" title="Rétablir la dernière action annulée"
                     ?disabled=${!redo_actions.length}
                     @click=${UI.wrap(e => rewind(redo_actions, undo_actions))}>
-                <img src=${ASSETS['app/ui/redo']} alt="" />
+                <img src=${ASSETS['ui/redo']} alt="" />
                 <span>Rétablir</span>
             </button>
         `, menu_el);
