@@ -173,7 +173,7 @@ function renderFull() {
                 <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
                 <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
                 <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
-                <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Se détendre</a></li>
+                <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
                 <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
                 <div style="flex: 1;"></div>
                 <img class="picture" src=${identity.picture ?? ASSETS['ui/user']} alt="" />
