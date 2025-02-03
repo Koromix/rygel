@@ -43,7 +43,7 @@ async function init(worker) {
     });
 }
 
-async function open(filename) {
+async function open(filename, vfs = 'opfs') {
     if (promiser == null)
         throw new Error('Call init() first');
 
@@ -53,7 +53,7 @@ async function open(filename) {
         if (!hasPersistence())
             throw new Error('This browser does not support persistent SQLite3 databases');
 
-        filename = `file:${filename}?vfs=opfs`;
+        filename = `file:${filename}?vfs=${vfs}`;
     }
 
     try {

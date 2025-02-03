@@ -196,6 +196,8 @@ static void HandleRequest(http_IO *io)
     // API endpoint?
     if (TestStr(request.path, "/api/register")) {
         HandleUserRegister(io);
+    } else if (TestStr(request.path, "/api/login")) {
+        HandleUserLogin(io);
     } else {
         io->SendError(404);
     }

@@ -30,8 +30,8 @@ static const smtp_MailContent ExistingUser = {
 };
 static const smtp_MailContent NewUser = {
     "Connexion à {{ TITLE }}",
-    R"(Connexion à {{ TITLE }} :\n\n{{ APP_URL }}/#uuid={{ UUID }}&mk={{ KEY }})",
-    R"(Connexion à {{ TITLE }} :<br><br><a href="{{ APP_URL }}/#uuid={{ UUID }}&mk={{ KEY }}">Lien de connexion</a>)"
+    R"(Connexion à {{ TITLE }} :\n\n{{ APP_URL }}/#uid={{ UID }}&tkey={{ TKEY }})",
+    R"(Connexion à {{ TITLE }} :<br><br><a href="{{ APP_URL }}/#uid={{ UID }}&tkey={{ TKEY }}">Lien de connexion</a>)"
 };
 
 bool InitSMTP(const smtp_Config &config)
@@ -56,10 +56,8 @@ static bool IsEmailValid(const char *email)
     return true;
 }
 
-static Span<const char> PatchText(Span<const char> text, const char *uuid, const char *email, Span<const uint8_t> mkey, Allocator *alloc)
+static Span<const char> PatchText(Span<const char> text, const char *email, const char *uid, const char *tkey, Allocator *alloc)
 {
-    RG_ASSERT(mkey.len == crypto_secretbox_KEYBYTES);
-
     Span<const char> ret = PatchFile(text, alloc, [&](Span<const char> expr, StreamWriter *writer) {
         Span<const char> key = TrimStr(expr);
 
@@ -69,15 +67,10 @@ static Span<const char> PatchText(Span<const char> text, const char *uuid, const
             writer->Write(config.app_url);
         } else if (key == "EMAIL") {
             writer->Write(email);
-        } else if (key == "UUID") {
-            writer->Write(uuid);
-        } else if (key == "KEY") {
-            const Size needed = sodium_base64_ENCODED_LEN(crypto_secretbox_KEYBYTES, sodium_base64_VARIANT_ORIGINAL_NO_PADDING);
-
-            char base64[needed] = {};
-            sodium_bin2base64(base64, RG_SIZE(base64), mkey.ptr, mkey.len, sodium_base64_VARIANT_URLSAFE_NO_PADDING);
-
-            writer->Write(base64);
+        } else if (key == "UID") {
+            writer->Write(uid);
+        } else if (key == "TKEY") {
+            writer->Write(tkey);
         } else {
             Print(writer, "{{%1}}", expr);
         }
@@ -86,13 +79,13 @@ static Span<const char> PatchText(Span<const char> text, const char *uuid, const
     return ret;
 }
 
-static bool SendMail(const char *to, const smtp_MailContent &model, const char *uuid, Span<const uint8_t> mkey, Allocator *alloc)
+static bool SendMail(const char *to, const smtp_MailContent &model, const char *uid, const char *tkey, Allocator *alloc)
 {
     smtp_MailContent content;
 
-    content.subject = PatchText(model.subject, uuid, to, mkey, alloc).ptr;
-    content.html = PatchText(model.html, uuid, to, mkey, alloc).ptr;
-    content.text = PatchText(model.text, uuid, to, mkey, alloc).ptr;
+    content.subject = PatchText(model.subject, to, uid, tkey, alloc).ptr;
+    content.html = PatchText(model.html, to, uid, tkey, alloc).ptr;
+    content.text = PatchText(model.text, to, uid, tkey, alloc).ptr;
 
     return smtp.Send(to, content);
 }
@@ -103,7 +96,7 @@ void HandleUserRegister(http_IO *io)
     const char *email = nullptr;
     {
         StreamReader st;
-        if (!io->OpenForRead(Kibibytes(4), &st))
+        if (!io->OpenForRead(Kibibytes(1), &st))
             return;
         json_Parser parser(&st, io->Allocator());
 
@@ -141,41 +134,140 @@ void HandleUserRegister(http_IO *io)
         }
     }
 
-    // Generate UUID and key
-    uint8_t unique[16];
-    uint8_t mkey[32];
-    FillRandomSafe(unique);
-    FillRandomSafe(mkey);
-    static_assert(RG_SIZE(mkey) == crypto_secretbox_KEYBYTES);
-
     // Try to create user
-    const char *uuid;
+    {
+        uint8_t uid[16];
+        uint8_t tkey[32];
+        FillRandomSafe(uid);
+        FillRandomSafe(tkey);
+        static_assert(RG_SIZE(tkey) == crypto_secretbox_KEYBYTES);
+
+        sq_Statement stmt;
+        if (!db.Run(R"(INSERT INTO users (uid, email, tkey)
+                       VALUES (?1, ?2, ?3)
+                       ON CONFLICT DO NOTHING)",
+                    (Span<const uint8_t>)uid, email, (Span<const uint8_t>)tkey))
+            return;
+    }
+
+    // Retrieve user information
+    const char *uid = nullptr;
+    const char *tkey = nullptr;
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO users (id, email, valid)
-                           VALUES (?1, ?2, 1)
-                           ON CONFLICT DO NOTHING
-                           RETURNING uuid_str(id))", &stmt, (Span<const uint8_t>)unique, email, 1))
+
+        if (!db.Prepare(R"(SELECT IIF(tkey IS NULL, 0, 1), uuid_str(uid), hex(tkey)
+                           FROM users
+                           WHERE email = ?1)",
+                        &stmt, email))
+            return;
+
+        if (!stmt.Step()) {
+            if (!stmt.IsValid()) [[unlikely]] {
+                LogError("Unexpected missing user (parallel delete?)");
+            }
+            return;
+        }
+
+        bool valid = sqlite3_column_int(stmt, 0);
+
+        uid = (const char *)sqlite3_column_text(stmt, 1);
+        tkey = (const char *)sqlite3_column_text(stmt, 2);
+
+        if (!valid) {
+            if (!SendMail(email, ExistingUser, uid, nullptr, io->Allocator()))
+                return;
+
+            io->SendText(200, "{}", "application/json");
+            return;
+        }
+
+        uid = DuplicateString(uid, io->Allocator()).ptr;
+        tkey = DuplicateString(tkey, io->Allocator()).ptr;
+    }
+
+    if (!SendMail(email, NewUser, uid, tkey, io->Allocator()))
+        return;
+
+    io->SendText(200, "{}", "application/json");
+}
+
+void HandleUserLogin(http_IO *io)
+{
+    // Parse input data
+    const char *uid = nullptr;
+    const char *token = nullptr;
+    {
+        StreamReader st;
+        if (!io->OpenForRead(Kibibytes(1), &st))
+            return;
+        json_Parser parser(&st, io->Allocator());
+
+        parser.ParseObject();
+        while (parser.InObject()) {
+            Span<const char> key = {};
+            parser.ParseKey(&key);
+
+            if (key == "uid") {
+                parser.ParseString(&uid);
+            } else if (key == "token") {
+                parser.PassThrough(&token);
+            } else if (parser.IsValid()) {
+                LogError("Unexpected key '%1'", key);
+                io->SendError(422);
+                return;
+            }
+        }
+        if (!parser.IsValid()) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Check missing or invalid values
+    {
+        bool valid = true;
+
+        if (!uid) {
+            LogError("Missing or invalid UID");
+            valid = false;
+        }
+
+        if (!valid) {
+            io->SendError(422);
+            return;
+        }
+    }
+
+    // Retrieve user token
+    {
+        sq_Statement stmt;
+
+        if (!db.Prepare("SELECT id, token FROM users WHERE uid = uuid_blob(?1)",
+                        &stmt, uid))
             return;
 
         if (!stmt.Step()) {
             if (stmt.IsValid()) {
-                if (!SendMail(email, ExistingUser, uuid, mkey, io->Allocator()))
-                    return;
-
-                io->SendText(200, "{}", "application/json");
+                LogError("Unknown user UID");
+                io->SendError(404);
             }
-
             return;
         }
 
-        uuid = (const char *)sqlite3_column_text(stmt, 0);
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        bool exists = (sqlite3_column_type(stmt, 1) != SQLITE_NULL);
+
+        if (exists) {
+            token = (const char *)sqlite3_column_text(stmt, 1);
+            token = DuplicateString(token, io->Allocator()).ptr;
+        } else {
+            if (!db.Run("UPDATE users SET tkey = NULL, token = ?2 WHERE id = ?1", id, token))
+                return;
+        }
     }
 
-    if (!SendMail(email, NewUser, uuid, mkey, io->Allocator()))
-        return;
-
-    io->SendText(200, "{}", "application/json");
+    io->SendText(200, token, "application/json");
 }
 
 }

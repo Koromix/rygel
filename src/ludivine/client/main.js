@@ -14,7 +14,9 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
+import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 import { Util, Log, Net, LocalDate } from '../../web/core/base.js';
+import { Hex, Base64 } from '../../web/core/mixer.js';
 import * as UI from '../../web/flat/ui.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { computeAge, dateToString, niceDate, progressCircle } from './lib/util.js';
@@ -101,49 +103,46 @@ async function start(root) {
             return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
     };
 
+    // Perform mail login
+    if (window.location.hash) {
+        let hash = window.location.hash.substr(1);
+        let query = new URLSearchParams(hash);
+
+        let uid = query.get('uid');
+        let tkey = query.get('tkey');
+
+        if (uid && tkey) {
+            tkey = Hex.toBytes(tkey);
+            await login(uid, tkey);
+        }
+
+        let url = window.location.pathname + window.location.search;
+        history.replaceState('', document.title, url);
+    }
+
+    // Open existing session (if any)
+    let session;
+    try {
+        let json = sessionStorage.getItem('session');
+        session = JSON.parse(json);
+    } catch (err) {
+        console.error(err);
+    }
+
     // Open database
-    {
-        let session = null;
+    if (session?.vid != null && session?.vkey != null) {
+        await initSQLite();
 
-        try {
-            let json = sessionStorage.getItem('session');
-            session = JSON.parse(json);
-        } catch (err) {
-            console.error(err);
-        }
+        let filename = 'ludivine/' + session.vid + '.db';
+        let vkey = Hex.toBytes(session.vkey);
 
-        if (window.location.hash) {
-            let hash = window.location.hash.substr(1);
-            let query = new URLSearchParams(hash);
-
-            let uuid = query.get('uuid');
-            let mkey = query.get('mk');
-
-            if (uuid && mkey) {
-                session = {
-                    uuid: uuid,
-                    mkey: mkey
-                };
-
-                let json = JSON.stringify(session);
-                sessionStorage.setItem('session', json);
-            }
-
-            let url = window.location.pathname + window.location.search;
-            history.replaceState('', document.title, url);
-        }
-
-        if (session?.uuid != null && session?.mkey != null) {
-            await initSQLite();
-
-            let db_filename = 'ludivine/' + session.uuid + '.db';
-            db = await openDatabase(db_filename, 'c');
-        }
+        db = await openDatabase(filename, vkey);
     }
 
     root_el = root;
     main_el = document.createElement('main');
 
+    // Run and render page
     if (db == null) {
         await runRegister();
     } else {
@@ -158,8 +157,63 @@ async function start(root) {
         await runDashboard();
     }
 
+    // Ready!
     renderFull();
     document.body.classList.remove('loading');
+}
+
+async function login(uid, tkey) {
+    let vkey = new Uint8Array(32);
+    crypto.getRandomValues(vkey);
+
+    let session = {
+        vid: crypto.randomUUID(),
+        vkey: Hex.toHex(vkey),
+        rid: crypto.randomUUID()
+    };
+    let token = encrypt(session, tkey);
+
+    // Retrieve existing token (or create it if none is set) and session
+    token = await Net.post('/api/login', {
+        uid: uid,
+        token: token
+    });
+    session = decrypt(token, tkey);
+
+    let json = JSON.stringify(session);
+    sessionStorage.setItem('session', json);
+
+    return session;
+}
+
+function encrypt(obj, key) {
+    let nonce = new Uint8Array(24);
+    crypto.getRandomValues(nonce);
+
+    let json = JSON.stringify(obj, (k, v) => v != null ? v : null);
+    let message = (new TextEncoder()).encode(json);
+    let box = nacl.secretbox(message, nonce, key);
+
+    let enc = {
+        nonce: Base64.toBase64(nonce),
+        box: Base64.toBase64(box)
+    };
+
+    return enc;
+}
+
+function decrypt(enc, key) {
+    let nonce = Base64.toBytes(enc.nonce);
+    let box = Base64.toBytes(enc.box);
+
+    let message = nacl.secretbox.open(box, nonce, key);
+    if (message == null)
+        throw new Error('Failed to decrypt message: wrong key?');
+
+    let json = (new TextDecoder()).decode(message);
+    let obj = JSON.parse(json);
+
+    return obj;
 }
 
 function renderFull() {
@@ -207,8 +261,14 @@ async function initSQLite() {
     await sqlite3.init(url);
 }
 
-async function openDatabase(filename, flags) {
-    let db = await sqlite3.open(filename, flags);
+async function openDatabase(filename, key) {
+    let db = await sqlite3.open(filename, 'multipleciphers-opfs');
+
+    await db.exec(`
+        PRAGMA cipher = 'sqlcipher';
+        PRAGMA key = 'raw:${Hex.toHex(key)}'
+    `);
+
     let version = await db.pluck('PRAGMA user_version');
 
     if (version == DATABASE_VERSION)

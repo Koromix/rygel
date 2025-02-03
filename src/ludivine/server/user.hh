@@ -26,5 +26,6 @@ struct smtp_MailContent;
 bool InitSMTP(const smtp_Config &config);
 
 void HandleUserRegister(http_IO *io);
+void HandleUserLogin(http_IO *io);
 
 }
