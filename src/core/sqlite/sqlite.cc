@@ -22,14 +22,12 @@
 #include "src/core/base/base.hh"
 #include "sqlite.hh"
 
-extern "C" int sqlite3_base_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
 extern "C" int sqlite3_uuid_init(sqlite3 *db, char **pzErrMsg, const sqlite3_api_routines *pApi);
 
 namespace RG {
 
 RG_INIT(SqliteExtensions)
 {
-    sqlite3_auto_extension((void(*)())sqlite3_base_init);
     sqlite3_auto_extension((void(*)())sqlite3_uuid_init);
 }
 
