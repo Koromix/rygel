@@ -75,6 +75,54 @@ const CRC32 = new function() {
 };
 
 // ------------------------------------------------------------------------
+// Hexadecimal
+// ------------------------------------------------------------------------
+
+const Hex = new function() {
+    if (Uint8Array.prototype.toHex != null) {
+        this.toHex = function(bytes) {
+            if (bytes instanceof ArrayBuffer)
+                bytes = new Uint8Array(bytes);
+
+            return bytes.toHex();
+        };
+    } else {
+        this.toHex = function(bytes) {
+            if (bytes instanceof ArrayBuffer)
+                bytes = new Uint8Array(bytes);
+
+            return bytesToHex(bytes);
+        };
+    }
+
+    function bytesToHex(bytes) {
+        let hex = [];
+        for (let i = 0; i < bytes.length; i++) {
+            let current = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
+
+            hex.push((current >>> 4).toString(16));
+            hex.push((current & 0xF).toString(16));
+        }
+        return hex.join('');
+    }
+
+    if (Uint8Array.fromHex != null) {
+        this.toBytes = function(str) { return Uint8Array.fromHex(str); };
+    } else {
+        this.toBytes = function(str) { return hexToBytes(str); };
+    }
+
+    function hexToBytes(hex) {
+        let bytes = new Uint8Array(hex.length / 2);
+        for (let i = 0; i < hex.length; i += 2) {
+            let c = parseInt(hex.substr(i, 2), 16);
+            bytes[i] = c;
+        }
+        return bytes;
+    }
+};
+
+// ------------------------------------------------------------------------
 // Base 64
 // ------------------------------------------------------------------------
 
@@ -448,6 +496,7 @@ Sha256.async = async function(blob) {
 
 export {
     CRC32,
+    Hex,
     Base64,
     Sha256
 }
