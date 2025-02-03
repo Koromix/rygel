@@ -2843,8 +2843,8 @@ void HandleArchiveRestore(http_IO *io)
                     const char *phone = (const char *)sqlite3_column_text(stmt, 6);
 
                     if (!gp_domain.db.Run(R"(INSERT INTO dom_users (userid, username, password_hash,
-                                                                    root, local_key, email, phone)
-                                             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7))",
+                                                                    change_password, root, local_key, email, phone)
+                                             VALUES (?1, ?2, ?3, 0, ?4, ?5, ?6, ?7))",
                                           userid, username, password_hash, root, local_key, email, phone))
                         return false;
                 }
