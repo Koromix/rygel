@@ -1892,7 +1892,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         userid INTEGER NOT NULL,
                         username TEXT NOT NULL,
                         mtime INTEGER NOT NULL,
-                        fs INTEGER NOT NULL REFERENCES fs_versions (version),
+                        fs INTEGER NOT NULL,
                         data BLOB,
                         page TEXT
                     );
@@ -1946,6 +1946,8 @@ bool MigrateInstance(sq_Database *db, int target)
                 if (!stmt.IsValid())
                     return false;
 
+                if (!db->Run("DELETE FROM rec_fragments WHERE eid IN (SELECT eid FROM rec_entries WHERE ctime < 0)"))
+                    return false;
                 if (!db->Run("DELETE FROM rec_entries WHERE ctime < 0"))
                     return false;
             } [[fallthrough]];
@@ -1965,7 +1967,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         userid INTEGER NOT NULL,
                         username TEXT NOT NULL,
                         mtime INTEGER NOT NULL,
-                        fs INTEGER NOT NULL REFERENCES fs_versions (version),
+                        fs INTEGER NOT NULL,
                         data BLOB,
                         page TEXT
                     );
@@ -2043,7 +2045,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         userid INTEGER NOT NULL,
                         username TEXT NOT NULL,
                         mtime INTEGER NOT NULL,
-                        fs INTEGER NOT NULL REFERENCES fs_versions (version),
+                        fs INTEGER NOT NULL,
                         data BLOB,
                         page TEXT
                     );
@@ -2216,7 +2218,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         userid INTEGER NOT NULL,
                         username TEXT NOT NULL,
                         mtime INTEGER NOT NULL,
-                        fs INTEGER REFERENCES fs_versions (version),
+                        fs INTEGER,
                         data TEXT,
                         meta TEXT,
                         tags TEXT,
@@ -2309,7 +2311,7 @@ bool MigrateInstance(sq_Database *db, int target)
                         userid INTEGER NOT NULL,
                         username TEXT NOT NULL,
                         mtime INTEGER NOT NULL,
-                        fs INTEGER REFERENCES fs_versions (version),
+                        fs INTEGER,
                         summary TEXT,
                         data TEXT,
                         meta TEXT,
