@@ -110,10 +110,13 @@ async function start(root) {
 
         let uid = query.get('uid');
         let tkey = query.get('tkey');
+        let registration = query.get('r');
 
-        if (uid && tkey) {
+        if (uid && tkey && registration) {
             tkey = Hex.toBytes(tkey);
-            await login(uid, tkey);
+            registration = parseInt(registration, 10);
+
+            await login(uid, tkey, registration);
         }
 
         let url = window.location.pathname + window.location.search;
@@ -162,7 +165,7 @@ async function start(root) {
     document.body.classList.remove('loading');
 }
 
-async function login(uid, tkey) {
+async function login(uid, tkey, registration) {
     let vkey = new Uint8Array(32);
     crypto.getRandomValues(vkey);
 
@@ -176,7 +179,8 @@ async function login(uid, tkey) {
     // Retrieve existing token (or create it if none is set) and session
     token = await Net.post('/api/login', {
         uid: uid,
-        token: token
+        token: token,
+        registration: registration
     });
     session = decrypt(token, tkey);
 

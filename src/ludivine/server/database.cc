@@ -19,7 +19,7 @@
 
 namespace RG {
 
-const int DatabaseVersion = 2;
+const int DatabaseVersion = 3;
 
 bool MigrateDatabase(sq_Database *db)
 {
@@ -76,9 +76,35 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 2: {
+                bool success = db->RunMany(R"(
+                    DROP INDEX users_u;
+                    DROP INDEX users_e;
+
+                    ALTER TABLE users RENAME TO users_BAK;
+
+                    CREATE TABLE users (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        uid BLOB NOT NULL,
+                        email TEXT NOT NULL,
+                        registration INTEGER NOT NULL,
+                        token TEXT
+                    );
+                    CREATE UNIQUE INDEX users_u ON users (uid);
+                    CREATE UNIQUE INDEX users_e ON users (email);
+
+                    INSERT INTO users (id, uid, email, registration, token)
+                        SELECT id, uid, email, 1, token FROM users_BAK;
+
+                    DROP TABLE users_BAK;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 2);
+            static_assert(DatabaseVersion == 3);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",
