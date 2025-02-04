@@ -245,7 +245,7 @@ function StudyModule(db, project, code, study) {
                     }) : ''}
                 </div>
 
-                ${mod.help != null ? html`<div class="help">${mod.help}</div>` : ''}
+                ${mod.help ?? ''}
             </div>
         `;
     }
@@ -271,7 +271,7 @@ function StudyModule(db, project, code, study) {
             </div>
             <div class="start">
                 <div class="help">
-                    <img src=${ASSETS['pictures/help']} alt="" />
+                    <img src=${ASSETS['pictures/help1']} alt="" />
                     <div>
                         <p>Tout est prêt pour <b>commencer le questionnaire</b> !
                         <p>Pensez à <b>faire des pauses</b> si vous en ressentez le besoin, ou à faire un tour sur la page Se Détendre.

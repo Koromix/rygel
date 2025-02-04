@@ -53,9 +53,11 @@ function init(build, start) {
     build.module('recueil', 'Recueil', mod => {
         mod.level = 'Temporalité';
         mod.help = html`
-            <img src=${ASSETS['pictures/help']} alt="" />
-            <div>
-                <p>Sélectionnez la <b>prochaine étape de l’étude</b> pour commencer à remplir le questionnaire !
+            <div class="help">
+                <img src=${ASSETS['pictures/help1']} alt="" />
+                <div>
+                    <p>Sélectionnez la <b>prochaine étape de l’étude</b> pour commencer à remplir le questionnaire !
+                </div>
             </div>
         `;
 
@@ -66,9 +68,12 @@ function init(build, start) {
         build.module('initial', 'Bilan initial', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['pictures/help']} alt="" />
-                <div>
-                    <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
+                <div class="help right">
+                    <div>
+                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
+                        <p>Commencez votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                    </div>
+                    <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
             `;
 
@@ -100,9 +105,12 @@ function init(build, start) {
         build.module('s6', '6 semaines', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['pictures/help']} alt="" />
-                <div>
-                    <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
+                <div class="help right">
+                    <div>
+                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
+                        <p>Commencez votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                    </div>
+                    <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
             `;
 
@@ -142,9 +150,12 @@ function init(build, start) {
         build.module('m3', '3 mois', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['pictures/help']} alt="" />
-                <div>
-                    <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
+                <div class="help right">
+                    <div>
+                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
+                        <p>Commencez votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                    </div>
+                    <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
             `;
 
@@ -182,9 +193,12 @@ function init(build, start) {
         build.module('m6', '6 mois', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['pictures/help']} alt="" />
-                <div>
-                    <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
+                <div class="help right">
+                    <div>
+                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
+                        <p>Commencez votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                    </div>
+                    <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
             `;
 
@@ -222,9 +236,11 @@ function init(build, start) {
         build.module('m12', '1 an', mod => {
             mod.level = 'Module';
             mod.help = html`
-                <img src=${ASSETS['pictures/help']} alt="" />
-                <div>
-                    <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
+                <div class="help right">
+                    <div>
+                        <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus, en commençant par votre <b>entourage</b> puis en abordant le module sur les <b>évènements</b>.
+                    </div>
+                    <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
             `;
 

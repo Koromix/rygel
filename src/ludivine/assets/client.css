@@ -93,18 +93,30 @@ dialog { font-size: 15px; }
     display: flex;
     width: 80%;
     max-width: 600px;
-    padding: 1em;
-    gap: 2em;
-    background: white;
-    border-radius: 16px;
+    gap: 1em;
+    align-items: start;
 }
 .help > img {
     width: 200px;
     aspect-ratio: auto;
+    z-index: 1;
+    transform: translateX(-100px);
 }
-.box > .help {
-    margin: 1em auto;
+.help > div {
+    min-height: 100px;
+    margin: 75px 0 0 -250px;
+    padding: 1em 1em 1em 150px;
+    background: white;
+    border-radius: 16px;
 }
+.help.right > div {
+    margin: 75px -250px 0 0;
+    padding: 1em 150px 1em 1em;
+}
+.help.right > img {
+    transform: translateX(100px);
+}
+.box > .help { margin: 1em auto; }
 
 @media screen and (max-width: 960px) {
     .row {
