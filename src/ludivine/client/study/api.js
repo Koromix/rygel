@@ -92,7 +92,15 @@ function ProjectBuilder(project) {
         }
     };
 
-    this.test = function(key, title, form, options = {}) {
+    this.form = function(key, title, form, options = {}) {
+        page(key, title, 'form', { form: form }, options);
+    };
+
+    this.network = function(key, title, options = {}) {
+        page(key, title, 'network', {}, options);
+    };
+
+    function page(key, title, type, obj, options) {
         if (current_mod == null)
             throw new Error('Cannot create test outside module');
         if (current_mod.modules.length)
@@ -106,15 +114,15 @@ function ProjectBuilder(project) {
         let page = {
             key: current_mod.key + '/' + key,
             title: title,
-            form: form,
+            schedule: options.schedule ?? null,
 
-            schedule: options.schedule ?? null
+            type: type,
+            ...obj
         };
 
         current_mod.pages.push(page);
-
         project.pages.push(page);
-    };
+    }
 }
 
 export {

@@ -60,7 +60,7 @@ function init(build, start) {
         `;
 
         build.module('profil', 'Profil', mod => {
-            build.test('profil', 'Profil', profil);
+            build.form('profil', 'Profil', profil);
         });
 
         build.module('initial', 'Bilan initial', mod => {
@@ -75,25 +75,25 @@ function init(build, start) {
             let options = { schedule: start };
 
             build.module('entourage', 'Entourage', () => {
-                build.test('ssq6', 'Soutien social', ssq6, options)
-                build.test('sps10', 'Provisions sociales', sps10, options)
-                build.test('sni', 'Réseau proche', sni, options)
+                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('sps10', 'Provisions sociales', sps10, options)
+                build.form('sni', 'Réseau proche', sni, options)
             });
 
             build.module('evenement', 'Évènement', () => {
-                build.test('lec5', 'Situations stressantes', lec5, options)
-                build.test('isrc', 'Pensées et ressenti', isrc, options)
-                build.test('pdeq', 'Réactions pendant l\'évènement', pdeq, options)
-                build.test('adnm20', 'Évènements de vie', adnm20, options)
+                build.form('lec5', 'Situations stressantes', lec5, options)
+                build.form('isrc', 'Pensées et ressenti', isrc, options)
+                build.form('pdeq', 'Réactions pendant l\'évènement', pdeq, options)
+                build.form('adnm20', 'Évènements de vie', adnm20, options)
             });
 
             build.module('qualite', 'Qualité de vie', () => {
-                build.test('mhqol', 'Qualité de vie', mhqol, options)
+                build.form('mhqol', 'Qualité de vie', mhqol, options)
             });
 
             build.module('divulgation', 'Divulgation', () => {
-                build.test('cses', 'Communication à l\'entourage', cses, options)
-                build.test('rds', 'Réactions des proches', rds, options)
+                build.form('cses', 'Communication à l\'entourage', cses, options)
+                build.form('rds', 'Réactions des proches', rds, options)
             });
         });
 
@@ -109,33 +109,33 @@ function init(build, start) {
             let options = { schedule: start.plus(6 * 7) };
 
             build.module('entourage', 'Entourage', () => {
-                build.test('ssq6', 'Soutien social', ssq6, options)
-                build.test('sps10', 'Provisions sociales', sps10, options)
-                build.test('sni', 'Réseau proche', sni, options)
+                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('sps10', 'Provisions sociales', sps10, options)
+                build.form('sni', 'Réseau proche', sni, options)
             });
 
             build.module('evenement', 'Évènement', () => {
-                build.test('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
-                build.test('adnm20', 'Évènements de vie', adnm20, options)
-                build.test('ctqsf', 'Enfance', ctqsf, options)
-                build.test('ptci', 'Pensées suite à l\'évènement', ptci, options)
+                build.form('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
+                build.form('adnm20', 'Évènements de vie', adnm20, options)
+                build.form('ctqsf', 'Enfance', ctqsf, options)
+                build.form('ptci', 'Pensées suite à l\'évènement', ptci, options)
             });
 
             build.module('sante', 'Santé mentale', () => {
-                build.test('phq9', 'Manifestations dépressives', phq9, options)
-                build.test('gad7', 'Difficultés anxieuses', gad7, options)
-                build.test('ssi', 'Idées suicidaires', ssi, options)
-                build.test('substances', 'Consommations', substances, options)
-                build.test('isi', 'Qualité du sommeil', isi, options)
+                build.form('phq9', 'Manifestations dépressives', phq9, options)
+                build.form('gad7', 'Difficultés anxieuses', gad7, options)
+                build.form('ssi', 'Idées suicidaires', ssi, options)
+                build.form('substances', 'Consommations', substances, options)
+                build.form('isi', 'Qualité du sommeil', isi, options)
             });
 
             build.module('qualite', 'Qualité de vie', () => {
-                build.test('mhqol', 'Qualité de vie', mhqol, options)
+                build.form('mhqol', 'Qualité de vie', mhqol, options)
             });
 
             build.module('divulgation', 'Divulgation', () => {
-                build.test('cses', 'Communication à l\'entourage', cses, options)
-                build.test('rds', 'Réactions des proches', rds, options)
+                build.form('cses', 'Communication à l\'entourage', cses, options)
+                build.form('rds', 'Réactions des proches', rds, options)
             });
         });
 
@@ -151,31 +151,31 @@ function init(build, start) {
             let options = { schedule: start.plusMonths(3) };
 
             build.module('entourage', 'Entourage', () => {
-                build.test('ssq6', 'Soutien social', ssq6, options)
-                build.test('sps10', 'Provisions sociales', sps10, options)
-                build.test('sni', 'Réseau proche', sni, options)
+                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('sps10', 'Provisions sociales', sps10, options)
+                build.form('sni', 'Réseau proche', sni, options)
             });
 
             build.module('evenement', 'Évènement', () => {
-                build.test('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
-                build.test('adnm20', 'Évènements de vie', adnm20, options)
+                build.form('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
+                build.form('adnm20', 'Évènements de vie', adnm20, options)
             });
 
             build.module('sante', 'Santé mentale', () => {
-                build.test('phq9', 'Manifestations dépressives', phq9, options)
-                build.test('gad7', 'Difficultés anxieuses', gad7, options)
-                build.test('ssi', 'Idées suicidaires', ssi, options)
-                build.test('substances', 'Consommations', substances, options)
-                build.test('isi', 'Qualité du sommeil', isi, options)
+                build.form('phq9', 'Manifestations dépressives', phq9, options)
+                build.form('gad7', 'Difficultés anxieuses', gad7, options)
+                build.form('ssi', 'Idées suicidaires', ssi, options)
+                build.form('substances', 'Consommations', substances, options)
+                build.form('isi', 'Qualité du sommeil', isi, options)
             });
 
             build.module('qualite', 'Qualité de vie', () => {
-                build.test('mhqol', 'Qualité de vie', mhqol, options)
+                build.form('mhqol', 'Qualité de vie', mhqol, options)
             });
 
             build.module('divulgation', 'Divulgation', () => {
-                build.test('cses', 'Communication à l\'entourage', mhqol, options)
-                build.test('rds', 'Réactions des proches', rds, options)
+                build.form('cses', 'Communication à l\'entourage', mhqol, options)
+                build.form('rds', 'Réactions des proches', rds, options)
             });
         });
 
@@ -191,31 +191,31 @@ function init(build, start) {
             let options = { schedule: start.plusMonths(6) };
 
             build.module('entourage', 'Entourage', () => {
-                build.test('ssq6', 'Soutien social', ssq6, options)
-                build.test('sps10', 'Provisions sociales', sps10, options)
-                build.test('sni', 'Réseau proche', sni, options)
+                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('sps10', 'Provisions sociales', sps10, options)
+                build.form('sni', 'Réseau proche', sni, options)
             });
 
             build.module('evenement', 'Évènement', () => {
-                build.test('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
-                build.test('adnm20', 'Évènements de vie', adnm20, options)
+                build.form('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
+                build.form('adnm20', 'Évènements de vie', adnm20, options)
             });
 
             build.module('sante', 'Santé mentale', () => {
-                build.test('phq9', 'Manifestations dépressives', phq9, options)
-                build.test('gad7', 'Difficultés anxieuses', gad7, options)
-                build.test('ssi', 'Idées suicidaires', ssi, options)
-                build.test('substances', 'Consommations', substances, options)
-                build.test('isi', 'Qualité du sommeil', isi, options)
+                build.form('phq9', 'Manifestations dépressives', phq9, options)
+                build.form('gad7', 'Difficultés anxieuses', gad7, options)
+                build.form('ssi', 'Idées suicidaires', ssi, options)
+                build.form('substances', 'Consommations', substances, options)
+                build.form('isi', 'Qualité du sommeil', isi, options)
             });
 
             build.module('qualite', 'Qualité de vie', () => {
-                build.test('mhqol', 'Qualité de vie', mhqol, options)
+                build.form('mhqol', 'Qualité de vie', mhqol, options)
             });
 
             build.module('divulgation', 'Divulgation', () => {
-                build.test('cses', 'Communication à l\'entourage', cses, options)
-                build.test('rds', 'Réactions des proches', rds, options)
+                build.form('cses', 'Communication à l\'entourage', cses, options)
+                build.form('rds', 'Réactions des proches', rds, options)
             });
         });
 
@@ -231,31 +231,31 @@ function init(build, start) {
             let options = { schedule: start.plusMonths(12) };
 
             build.module('entourage', 'Entourage', () => {
-                build.test('ssq6', 'Soutien social', ssq6, options)
-                build.test('sps10', 'Provisions sociales', sps10, options)
-                build.test('sni', 'Réseau proche', sni, options)
+                build.form('ssq6', 'Soutien social', ssq6, options)
+                build.form('sps10', 'Provisions sociales', sps10, options)
+                build.form('sni', 'Réseau proche', sni, options)
             });
 
             build.module('evenement', 'Évènement', () => {
-                build.test('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
-                build.test('adnm20', 'Évènements de vie', adnm20, options)
+                build.form('pcl5', 'Problèmes liés à l\'évènement', pcl5, options)
+                build.form('adnm20', 'Évènements de vie', adnm20, options)
             });
 
             build.module('sante', 'Santé mentale', () => {
-                build.test('phq9', 'Manifestations dépressives', phq9, options)
-                build.test('gad7', 'Difficultés anxieuses', gad7, options)
-                build.test('ssi', 'Idées suicidaires', ssi, options)
-                build.test('substances', 'Consommations', substances, options)
-                build.test('isi', 'Qualité du sommeil', isi, options)
+                build.form('phq9', 'Manifestations dépressives', phq9, options)
+                build.form('gad7', 'Difficultés anxieuses', gad7, options)
+                build.form('ssi', 'Idées suicidaires', ssi, options)
+                build.form('substances', 'Consommations', substances, options)
+                build.form('isi', 'Qualité du sommeil', isi, options)
             });
 
             build.module('qualite', 'Qualité de vie', () => {
-                build.test('mhqol', 'Qualité de vie', mhqol, options)
+                build.form('mhqol', 'Qualité de vie', mhqol, options)
             });
 
             build.module('divulgation', 'Divulgation', () => {
-                build.test('cses', 'Communication à l\'entourage', cses, options)
-                build.test('rds', 'Réactions des proches', rds, options)
+                build.form('cses', 'Communication à l\'entourage', cses, options)
+                build.form('rds', 'Réactions des proches', rds, options)
             });
         });
     });

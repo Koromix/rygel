@@ -133,9 +133,9 @@ function StudyModule(db, project, code, study) {
                     ${progressCircle(progress, total)}
                 </div>
 
-                ${route.page == null ? renderModule(route.mod) : null}
-                ${route.page != null && route.section == null ? renderStart(route.mod, route.page) : null}
-                ${route.page != null && route.section != null ? renderForm(route.mod, route.page, route.section) : null}
+                ${route.page == null ? renderModule() : null}
+                ${route.page != null && route.section == null ? renderStart() : null}
+                ${route.page != null && route.section != null ? renderPage() : null}
             </div>
         `, target_el);
     }
@@ -159,11 +159,12 @@ function StudyModule(db, project, code, study) {
         await run();
     }
 
-    function renderModule(mod) {
+    function renderModule() {
         let today = LocalDate.today();
+        let mod = route.mod;
 
         return html`
-            ${Util.mapRange(0, mod.chain.length - 1, idx => {
+            ${Util.mapRange(0, route.mod.chain.length - 1, idx => {
                 let parent = mod.chain[idx];
                 let next = mod.chain[idx + 1];
 
@@ -249,7 +250,10 @@ function StudyModule(db, project, code, study) {
         `;
     }
 
-    function renderStart(mod, page) {
+    function renderStart() {
+        let mod = route.mod;
+        let page = route.page;
+
         return html`
             ${Util.mapRange(0, mod.chain.length - 1, idx => {
                 let parent = mod.chain[idx];
@@ -279,7 +283,20 @@ function StudyModule(db, project, code, study) {
         `;
     }
 
-    function renderForm(mod, page, section) {
+    function renderPage() {
+        let page = route.page;
+
+        switch (page.type) {
+            case 'form': return renderForm();
+            case 'network': return '';
+        }
+    }
+
+    function renderForm() {
+        let mod = route.mod;
+        let page = route.page;
+        let section = route.section;
+
         let model = new FormModel;
         let builder = new FormBuilder(state, model);
 
