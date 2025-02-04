@@ -838,6 +838,7 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
                             Column *col = GetColumn(table, prefix, key.ptr, "null");
                             col->type = (Type)std::max((int)col->type, (int)Type::Integer);
                             col->values[row->idx] = "1";
+                            col->valued = true;
                         } break;
                         case json_TokenType::Bool: {
                             bool value = false;
