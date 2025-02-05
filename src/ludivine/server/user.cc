@@ -82,7 +82,7 @@ static bool SendMail(const char *to, const smtp_MailContent &model,
 
     // Format magic link
     FmtArg fmt = FmtSpan(tkey, FmtType::BigHex, "").Pad0(-2);
-    const char *url = Fmt(alloc, "%1/#uid=%2&tkey=%3&r=%4", config.app_url, uid, fmt, registration).ptr;
+    const char *url = Fmt(alloc, "%1/#uid=%2&tk=%3&r=%4", config.app_url, uid, fmt, registration).ptr;
 
     content.subject = PatchText(model.subject, to, url, alloc).ptr;
     content.html = PatchText(model.html, to, url, alloc).ptr;

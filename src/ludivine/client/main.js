@@ -109,7 +109,7 @@ async function start(root) {
         let query = new URLSearchParams(hash);
 
         let uid = query.get('uid');
-        let tkey = query.get('tkey');
+        let tkey = query.get('tk');
         let registration = query.get('r');
 
         if (uid && tkey && registration) {
