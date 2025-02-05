@@ -38,7 +38,10 @@ h1:not(:first-of-type) { margin-top: 2em; }
 
 span[title] { border-bottom: 1px dotted #383838; }
 
-button { border-radius: 20px; }
+button {
+    border-radius: 20px;
+    font-weight: bold;
+}
 
 .reference {
     font-weight: bold;
@@ -49,6 +52,7 @@ button { border-radius: 20px; }
 .actions > :is(a, button) {
     width: auto;
     border-radius: 30px;
+    font-weight: bold;
 }
 
 #top menu {
