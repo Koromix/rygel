@@ -552,7 +552,6 @@ class RecordExporter {
         BucketArray<Column> columns;
         HashTable<const char *, Column *> columns_map;
         HeapArray<const Column *> ordered_columns;
-        HashSet<const char *> masked_columns;
 
         Column *first_column;
         Column *last_column;
@@ -651,7 +650,7 @@ bool RecordExporter::Export(const char *filename)
         const Column *it = table.first_column;
 
         while (it) {
-            if (it->valued && !table.masked_columns.Find(it->name)) {
+            if (it->valued) {
                 table.ordered_columns.Append(it);
             }
             it = it->next;
@@ -827,8 +826,6 @@ bool RecordExporter::ParseObject(const char *root_ulid, const char *form, const 
             } break;
 
             case json_TokenType::StartArray: {
-                table->masked_columns.Set(key.ptr);
-
                 parser->ParseArray();
                 while (parser->InArray()) {
                     switch (parser->PeekToken()) {
