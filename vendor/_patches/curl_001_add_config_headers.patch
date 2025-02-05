@@ -1,6 +1,6 @@
 diff --git a/vendor/curl/lib/config-emscripten.h b/vendor/curl/lib/config-emscripten.h
 new file mode 100644
-index 000000000..9818942f1
+index 0000000000..9818942f1a
 --- /dev/null
 +++ b/vendor/curl/lib/config-emscripten.h
 @@ -0,0 +1,996 @@
@@ -1002,7 +1002,7 @@ index 000000000..9818942f1
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/config-freebsd.h b/vendor/curl/lib/config-freebsd.h
 new file mode 100644
-index 000000000..e0996cb46
+index 0000000000..e0996cb46e
 --- /dev/null
 +++ b/vendor/curl/lib/config-freebsd.h
 @@ -0,0 +1,1074 @@
@@ -2082,7 +2082,7 @@ index 000000000..e0996cb46
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/config-linux.h b/vendor/curl/lib/config-linux.h
 new file mode 100644
-index 000000000..b7876ce6d
+index 0000000000..b7876ce6d4
 --- /dev/null
 +++ b/vendor/curl/lib/config-linux.h
 @@ -0,0 +1,1038 @@
@@ -3126,7 +3126,7 @@ index 000000000..b7876ce6d
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/config-macos.h b/vendor/curl/lib/config-macos.h
 new file mode 100644
-index 000000000..6aba01a73
+index 0000000000..6aba01a730
 --- /dev/null
 +++ b/vendor/curl/lib/config-macos.h
 @@ -0,0 +1,1038 @@
@@ -4170,7 +4170,7 @@ index 000000000..6aba01a73
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/config-openbsd.h b/vendor/curl/lib/config-openbsd.h
 new file mode 100644
-index 000000000..2ae6f3977
+index 0000000000..2ae6f39770
 --- /dev/null
 +++ b/vendor/curl/lib/config-openbsd.h
 @@ -0,0 +1,1080 @@
@@ -5255,11 +5255,11 @@ index 000000000..2ae6f3977
 +/* the signed version of size_t */
 +/* #undef ssize_t */
 diff --git a/vendor/curl/lib/curl_setup.h b/vendor/curl/lib/curl_setup.h
-index 50b4479f2..43050cb56 100644
+index f4e5400119..7de7a44b82 100644
 --- a/vendor/curl/lib/curl_setup.h
 +++ b/vendor/curl/lib/curl_setup.h
-@@ -141,6 +141,26 @@
- #  endif
+@@ -134,6 +134,26 @@
+ #  include "config-win32.h"
  #endif
  
 +#ifdef __linux__
