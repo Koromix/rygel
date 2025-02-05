@@ -19,7 +19,7 @@ import { ASSETS } from '../../assets/assets.js';
 let intro = html``;
 
 function run(form, values) {
-    form.section(() => {
+    form.block(() => {
         form.enum("tabagisme", "Fumez-vous du tabac ?", [
             ["actif", "Tabagisme actif"],
             ["sevre", "Tabagisme sevré"],
@@ -41,7 +41,7 @@ function run(form, values) {
         }
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*audit1", "A quelle fréquence vous arrive-t-il de consommer des boissons contenant de l'alcool ?", [
             [0, "Jamais"],
             [1, "Au moins une fois par mois"],
@@ -51,7 +51,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.output(html`
             <div style="text-align: center;">
                 <img src=${ASSETS['web/misc/verres_std']} width="600" height="270"/>
@@ -67,7 +67,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*audit3", "Au cours d'une méme occasion, c4 avec moi (ok pas CRP)ombien de fois vous arrive-t-il de boire six verres standards ou plus", [
             [0, "Jamais"],
             [1, "Moins une fois par mois"],
@@ -85,7 +85,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*audit5", "Dans les 12 derniers mois, combien de fois le fait d'avoir bu de l'alcool, vous-a-t-il empêché de faire ce qu'on attendait normalement de vous ?", [
             [0, "Jamais"],
             [1, "Moins d'une fois par mois"],
@@ -103,7 +103,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*audit7", "Dans les 12 derniers mois, combien de fois avez-vou eu un sentiment de culpabilité ou de regret après avoir bu ?", [
             [0, "Jamais"],
             [1, "Moins d'une fois par mois"],
@@ -121,7 +121,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("*audit9", "Vous êtes-vous blessé ou avez-vous blessé quelqu'un parce que vous aviez bu ?", [
             [0, "Non"],
             [2, "Oui mais pas dans l'année passée"],
@@ -135,12 +135,12 @@ function run(form, values) {
         ])
     })
 
-    form.section("Autres substances", () => {
+    form.block("Autres substances", () => {
         form.binary("drogues", "Consommez-vous des drogues ?")
     })
 
     if (values.drogues !== 0) {
-        form.section(() => {
+        form.block(() => {
             form.textArea("drogues_noms", "Quelles drogues consommez-vous ?", { wide: true })
             form.enumRadio("drogues_likert", "A quelle fréquence ?", [
                 [0, "Jamais"],

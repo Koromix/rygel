@@ -18,70 +18,11 @@
 .fm_wrap + .fm_container,
     .fm_container + .fm_container,
     .fm_container + .fm_wrap,
-    .fm_wrap + .fm_wrap { margin-top: 1.2em; }
-
-.fm_section {
-    position: relative;
-    min-height: 24px;
-    margin: 0;
-    padding: 14px;
-    background: rgba(136, 136, 136, 0.06);
-    border: 0;
-    border-radius: var(--block_rounding);
-}
-.fm_legend {
-    box-sizing: border-box;
-    width: calc(100% + 28px);
-    margin: -14px 0 10px -14px;
-    padding: 0.2em 0.5em;
-    background: linear-gradient(var(--page_color_n1), var(--page_color));
-    border-radius: var(--block_rounding) var(--block_rounding) 0 0;
-    font-size: 1.1em;
-    color: white;
-    color-adjust: exact !important;
-    -webkit-print-color-adjust: exact !important;
-}
-.fm_legend::before {
-    padding-right: 0.5em;
-    content: '#';
-}
-.fm_legend > span {
-    color: inherit;
-    text-decoration: none;
-    color-adjust: exact !important;
-    -webkit-print-color-adjust: exact !important;
-    cursor: pointer;
-}
-.fm_section .fm_section .fm_legend {
-    background: rgba(136, 136, 136, 0.12);
-    color: inherit;
-}
-.fm_deploy {
-    width: 100%;
-    display: block;
-    text-align: center;
-    font-size: 0.9em;
-    text-decoration: none;
-}
-
-.fm_section.error { background: #ffeeee; }
-.fm_section.error > .fm_legend {
-    background: #db0a0a;
-    color: white;
-}
-.fm_section.error > .fm_legend::before { display: none; }
-.fm_section.error ul {
-    margin: 0 1em;
-    padding: 0;
-}
+    .fm_wrap + .fm_wrap { margin-top: 8px; }
 
 html:not(.mobile) .fm_columns { display: flex; }
 html:not(.mobile) .fm_columns > div + div { padding-left: 12px; }
 html.mobile .fm_columns > div + div { padding-top: 8px; }
-html.mobile .fm_section {
-    margin-left: -12px;
-    margin-right: -12px;
-}
 
 /* -------------------- Widgets -------------------- */
 
@@ -93,17 +34,13 @@ html.mobile .fm_section {
 }
 .fm_label {
     display: flex;
-    margin-bottom: 6px;
+    margin-bottom: 14px;
     padding-top: 4px;
-    font-weight: bold;
+    font-size: 1.1em;
     column-gap: 16px;
     flex-wrap: wrap;
 }
 .fm_label > label:empty::before { content: '\200b'; }
-.fm_widget.mandatory > .fm_label > label:not(:empty)::after {
-    content: ' *';
-    color: red;
-}
 .fm_widget.error::before {
     position: absolute;
     left: -22px;
@@ -135,55 +72,7 @@ html.mobile .fm_section {
 .fm_suffix { margin-left: 3px; }
 .fm_annotate { text-decoration: none; }
 
-@media screen and (max-width: 960px) {
-    .fm_widget.compact {
-        flex: 1;
-        display: flex;
-        align-items: start;
-    }
-    .fm_widget.compact > .fm_label {
-        width: 270px;
-        min-width: 270px;
-        margin-bottom: 0;
-        padding-right: 4px;
-    }
-    .fm_widget.compact .fm_error {
-        flex: 1;
-        text-align: right;
-    }
-    .fm_widget.compact > .fm_calc { padding-top: 4px; }
-}
-
-/* -------------------- Simple widgets -------------------- */
-
-.fm_input {
-    width: 17em;
-    max-width: 100%;
-    padding: 3px calc(4px + var(--widget_rounding) / 4);
-    background: white;
-    border: 1px solid #dfdfdf;
-    border-width: 0.5px;
-    border-radius: var(--widget_rounding);
-}
-.fm_select {
-    /* This width: 100% is combined with an outer div set to max-width: 100% so that
-       long options don't wreak havoc. Setting max-width: 100% here does not work correctly. */
-    width: 100%;
-    padding: 3px 22px 3px 4px;
-    border: 1px solid #dfdfdf;
-    border-width: 0.5px;
-    border-radius: var(--widget_rounding);
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    background-color: white;
-    background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAAA+UlEQVQokdXQsUeFYRTH8XOjSMMlEUlLWi6RqKGhqaGppX/o93vOeV7P4309Q0O8RFNDLw1NDW3pn4iGiERFbtT4Nj1cSbrdu/TlLGf4OI7IvyzGuAjghuR1jHEh79u2nfgyHRGRsixnAJwCePLer/2IhxCWSN6SvPLez3+Dd0REUkrTAE4AvDjnNn51uaouk7wDcFlV1dwAPogek3w1s61hviKqugLgHsBFSmk275ummSJ5RLJvZttDobmiKHokHwCchxC6dV1PkjwE8KaqO39Cc865VZKPAM5IHpB8V9XdkdCc936d5DOAD1XdGwuaM7NNkvtjRUfpEypChFloulwwAAAAAElFTkSuQmCC");
-    background-repeat: no-repeat;
-    background-position: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
+/* -------------------- Enum buttons -------------------- */
 
 .fm_enum {
     display: inline-block;
@@ -192,13 +81,13 @@ html.mobile .fm_section {
 }
 .fm_enum > button {
     position: relative;
-    margin: 2px 0 0 2px;
-    padding: 0.25em 8px;
+    margin: 2px 0 0 10px;
     background: white;
-    border: 1px solid #dfdfdf;
+    border: 1px solid white;
     border-width: 0.5px;
-    border-radius: var(--widget_rounding);
-    color: black;
+    color: var(--top_color);
+    font-weight: bold;
+    padding: 0.25em 8px;
 }
 .fm_enum > button::before, .fm_enum > button::after {
     display: inline-block;
@@ -207,8 +96,8 @@ html.mobile .fm_section {
     content: '';
 }
 .fm_enum > button.active {
-    background: var(--page_color_n1);
-    border-color: var(--page_color_n1);
+    background: var(--button_color);
+    border-color: var(--button_color);
     color: white;
     color-adjust: exact !important;
     -webkit-print-color-adjust: exact !important;
@@ -219,11 +108,6 @@ html.mobile .fm_section {
     font-size: 0.8em;
 }
 .fm_enum > button.active::after { display: none; }
-.fm_enum > button.active:hover {
-    background: var(--page_color);
-    border-color: var(--page_color);
-    filter: none !important;
-}
 
 .fm_enum.readonly, .fm_radio.readonly, .fm_check.readonly, .fm_slider.readonly {
     pointer-events: none;

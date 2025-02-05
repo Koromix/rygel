@@ -583,7 +583,7 @@ let intro = html`
 `;
 
 function run(form, values) {
-    form.section(() => {
+    form.block(() => {
         form.enum("*genre", "Quel est votre genre ?", [
             ["F", "Femme"],
             ["H", "Homme"],
@@ -606,7 +606,7 @@ function run(form, values) {
         form.sameLine(true); form.enumDrop("*pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "e") + " ?", PAYS)
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumDrop("*pays", "Dans quel pays habitez-vous actuellement ?", PAYS, { value: values.pays_naissance })
         if (values.pays == "FR") {
             form.sameLine(true); form.enumDrop("departement", "Dans quel département ?", DEPARTEMENTS)
@@ -638,14 +638,13 @@ function run(form, values) {
                     [5, "Doctorat"],
                     [99, "Autre"]
                 ])
-                if (values.diplome_max == 99) form.section(() => {
+                if (values.diplome_max == 99)
                     form.text("diplome_prec", "Précisez :")
-                })
             })
         }
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumDrop("*langue1", "Quelle est votre langue maternelle ?", LANGUAGES, {
             help: "Vous pouvez en indiquer plusieurs, choisissez-en une et un champ supplémentaire s'affichera"
         })
@@ -663,7 +662,7 @@ function run(form, values) {
         })
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumDrop("*parents1", "Quelle est la principale langue parlée par vos parents ?", LANGUAGES, {
             help: "Vous pouvez en indiquer plusieurs, choisissez-en une et un champ supplémentaire s'affichera"
         })
@@ -681,7 +680,7 @@ function run(form, values) {
         })
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("connaissance", "Comment avez-vous pris connaissance de l'étude ?", [
             ["reseaux", "Réseaux sociaux"],
             ["parle", "Bouche-à-oreille"],
@@ -692,9 +691,8 @@ function run(form, values) {
             ["recherche", "Moteur de recherche"],
             ["autre", "Autre"]
         ])
-        if (values.connaissance == "autre") form.section(() => {
+        if (values.connaissance == "autre")
             form.text("connaissance_prec", "Précisez :")
-        })
     })
 
     function adapt(label, suffix) {

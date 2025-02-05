@@ -49,6 +49,7 @@ function run(form, values) {
         17: "Blessure grave, dommage ou mort causé par vous à quelqu’un",
         18: "Toute autre évènement ou expérience très stressant"
     }
+    let indices = Object.keys(catastrophes)
 
     let choices = [
         [1, "Ça m'est arrivé"],
@@ -61,31 +62,24 @@ function run(form, values) {
 
     let evts = 0
 
-    for (let idx in catastrophes) {
-        form.section(() => {
-            let label = catastrophes[idx]
-            let intf = form.multi("*evt" + idx, idx + ". " + label, choices)
+    for (let start = 0; start < indices.length; start += 2) {
+        let end = Math.min(start + 2, indices.length)
 
-            if (intf.value && intf.value.length) {
-                /*form.section("", () => {
-                    if (idx == 99)
-                        form.textArea("evt" + idx + "_prec", "Veuillez précisez le traumatisme vécu :")
+        form.block(() => {
+            for (let i = start; i < end; i++) {
+                let idx = indices[i];
 
-                    form.number("evt" + idx + "_age", "Vers quel âge avez-vous vécu cet évènement traumatique ?", {
-                        suffix: value => value > 1 ? "ans" : "an",
-                        min: 0, max: 120
-                    })
-                })*/
+                let label = catastrophes[idx]
+                let intf = form.multi("*evt" + idx, idx + ". " + label, choices)
 
-                evts++
+                if (intf.value && intf.value.length)
+                    evts++
             }
         })
     }
 
     if (evts) {
-        console.log(values);
-    
-        form.section(() => {
+        form.block(() => {
             form.enumRadio("*evt_index", "Cochez l'évènement qui fût le plus difficile pour vous :", Object.keys(catastrophes).map(idx => {
                 let value = values["evt" + idx]
 

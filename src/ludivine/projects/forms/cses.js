@@ -22,22 +22,22 @@ let intro = html`
 `;
 
 function run(form, values) {
-    form.section(() => {
+    form.block(() => {
         q(1, "Je lui ai parlé de mon expérience")
         q(2, "Il y a des aspects de mon expérience que je lui ai volontairement cachés")
     })
 
-    form.section(() => {
+    form.block(() => {
         q(3, "Il y a des aspects de mon expérience que je ne lui dirai pas")
         q(4, "J'ai l'intention de lui cacher tout ou partie de mon expérience")
     })
 
-    form.section(() => {
+    form.block(() => {
         q(5, "Je lui ai parlé des images, des sons et/ou des odeurs liés à mon expérience")
         q(6, "Je lui ai parlé des détails graphiques de mon expérience")
     })
 
-    form.section(() => {
+    form.block(() => {
         q(7, "Je lui ai parlé de mes pensées et de mes sentiments à propos de mon expérience")
         q(8, "Je lui ai parlé des effets de mon expérience sur ma façon de penser et de me sentir")
     })

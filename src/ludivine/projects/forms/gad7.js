@@ -21,25 +21,25 @@ let intro = html`
 `;
 
 function run(form, values) {
-    form.section(() => {
+    form.block(() => {
         form.output(html`<p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?`)
         q(1, "Un sentiment de nervosité, d’anxiété ou de tension ?")
         q(2, "Une incapacité à arrêter de s’inquiéter ou à contrôler ses inquiétudes ?")
     })
 
-    form.section(() => {
+    form.block(() => {
         form.output(html`<p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?`)
         q(3, "Une inquiétude excessive à propos de différentes choses ?")
         q(4, "Des difficultés à se détendre ?")
     })
 
-    form.section(() => {
+    form.block(() => {
         form.output(html`<p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?`)
         q(5, "Une agitation telle qu’il est difficile à tenir en place ?")
         q(6, "Une tendance à être facilement contrarié(e) ou irritable ?")
     })
 
-    form.section(() => {
+    form.block(() => {
         form.output(html`<p>Au cours des <u>deux dernières semaines</u>, à quelle fréquence avez-vous été dérangé(e) par les problèmes suivants ?`)
         q(7, "Un sentiment de peur comme si quelque chose de terrible risquait de se produire ?")
     })

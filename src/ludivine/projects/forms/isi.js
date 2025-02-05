@@ -21,7 +21,7 @@ let intro = html`
 `;
 
 function run(form, values) {
-    form.section("Qualité du sommeil", () => {
+    form.block(() => {
         form.output(html`
             <p>Veuillez estimer la <u>sévérité actuelle (derniers mois)</u> de vos difficultés de sommeil :
         `)
@@ -31,7 +31,7 @@ function run(form, values) {
         q("diff3", "Problèmes de réveil trop tôt le matin :")
     })
 
-    form.section("Satisfaction du sommeil", () => {
+    form.block(() => {
         form.output(html`
             <p>Veuillez estimer la <u>satisfaction actuelle (derniers mois)</u> que vous retirez de votre sommeil :
         `)

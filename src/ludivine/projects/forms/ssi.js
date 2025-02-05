@@ -20,7 +20,7 @@ let intro = html`
 `;
 
 function run(form, values) {
-    form.section(() => {
+    form.block(() => {
         form.enum("*q1", "Comment évaluez-vous votre désir de vivre ?", [
             [0, "Moyen à fort"],
             [1, "Faible désir"],
@@ -33,7 +33,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("*q3", "Comment situez-vous la balance entre raisons de vivre et raisons mourir", [
             [0, "Raisons de vivre plus fortes que celles de mourir"],
             [1, "Elles sont égales"],
@@ -46,7 +46,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("q5", "Désir de l'idéation/désir suicidaire", [
             [0, "Prendrait les précautions nécéssaires pour vous garder en vie"],
             [1, "Laisserait le hasard décider de sa vie ou de sa mort"],
@@ -55,10 +55,11 @@ function run(form, values) {
     })
 
     let five = values.q1 + values.q2 + values.q3 + values.q4 + values.q5
+
     if (five === 0)
         return
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("q6", "Comment de temps durent vos désirs ou idéations suicidaires ?", [
             [0, "Bref rapide comme un éclair"],
             [1, "Pendant de plus longues périodes"],
@@ -71,7 +72,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("q8", "Attitude face à l'idéation/désir suicidaire", [
             [0, "Rejet de l'idéation"],
             [1, "Ambivalence/indifférence"],
@@ -84,7 +85,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("q10", "Motifs particuliers qui retiennent de poser un geste (famille, religion, irréversibilité du geste) ?", [
             [0, "Il y a au moins un motif qui vous empêche de vous suicider"],
             [1, "Certaines inquiétudes font que vous n'êtes pas certain(e)"],
@@ -98,7 +99,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("q12", "Méthode : Planifier les mesures prises, le moyen planifié du geste suicidaire", [
             [0, "Vous n'y avez pas pensé"],
             [1, "Oui, mais quelques détails restent à régler"],
@@ -113,7 +114,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("q14", "Sentiment de culpabilité de poser un geste suicidaire", [
             [0, "Vous avez peur de poser un geste pour vous suicider"],
             [1, "Vous n'êtes pas certain(e) d'être capable de poser un geste pour vous suicider"],
@@ -126,7 +127,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("q16", "Avez-vous fait des préparations en vue d'un passage à l'acte ?", [
             [0, "Non"],
             [1, "Partiellement"],
@@ -139,7 +140,7 @@ function run(form, values) {
         ])
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enumRadio("q18", "Avez-vous fait des préparations finales en prévision de la mort (assurance, testament) ?", [
             [0, "Non"],
             [1, "Vous y avez pensé, il est commencé mais pas terminé"],

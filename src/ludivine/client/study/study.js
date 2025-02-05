@@ -29,7 +29,7 @@ function StudyModule(db, project, code, study) {
         page: null,
         section: null
     };
-    let state = null;
+    let ctx = null;
 
     let target_el = null;
 
@@ -297,12 +297,13 @@ function StudyModule(db, project, code, study) {
         let page = route.page;
         let section = route.section;
 
-        let model = new FormModel;
-        let builder = new FormBuilder(state, model);
+        // Reset rendered form each time
+        ctx.model = new FormModel;
+        ctx.builder = new FormBuilder(ctx.state, ctx.model);
 
-        page.form.run(builder, state.values);
+        page.form.run(ctx.builder, ctx.state.values);
 
-        let widgets = model.widgets0; 
+        let widgets = ctx.model.widgets0; 
         let widget = widgets[section];
 
         if (widget == null)
@@ -317,10 +318,17 @@ function StudyModule(db, project, code, study) {
             <div class="box">${widget?.render?.()}</div>
 
             <div class="actions">
-                ${section < end ? html`<button @click=${UI.wrap(e => navigate(mod, page, section + 1))}>Continuer</button>`: ''}
-                ${section == end ? html`<button @click=${UI.wrap(e => save(mod, page, state.values))}>Valider</button>`: ''}
+                ${section < end ?
+                    html`<button @click=${UI.wrap(continueForm)}>Continuer</button>`: ''}
+                ${section == end ?
+                    html`<button @click=${UI.wrap(e => save(ctx.state.values))}>Finaliser</button>`: ''}
             </div>
         `;
+    }
+
+    function continueForm() {
+        ctx.builder.triggerErrors();
+        navigate(route.mod, route.page, route.section + 1);
     }
 
     async function navigate(mod, page = null, section = null) {
@@ -338,18 +346,32 @@ function StudyModule(db, project, code, study) {
                 let test = tests.find(test => test.key == page.key);
                 let data = test?.payload ?? {};
 
-                state = new FormState(data);
-                state.changeHandler = run;
+                switch (page.type) {
+                    case 'form': {
+                        ctx = {
+                            state: new FormState(data),
+                            model: null,
+                            builder: null
+                        };
+                        ctx.state.changeHandler = run;
+                    } break;
+
+                    case 'network': { ctx = null; } break;
+                }
             } else {
-                state = null;
+                ctx = null;
             }
         }
+
         route.section = (page != null) ? section : null;
 
         await run();
     }
 
-    async function save(mod, page, data) {
+    async function save(data) {
+        let mod = route.mod;
+        let page = route.page;
+
         let mtime = (new Date).valueOf();
         let json = JSON.stringify(data);
 

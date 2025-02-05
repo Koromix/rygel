@@ -27,31 +27,31 @@ function run(form, values) {
         [3, "Presque tous les jours"]
     ]
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*q1", "Peu d’intérêt ou de plaisir à faire les choses", choices)
         form.enum("*q2", "Être triste, déprimé(e) ou désespéré(e)", choices)
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*q3", "Difficultés à s’endormir ou à rester endormi(e), ou dormir trop", choices)
         form.enum("*q4", "Se sentir fatigué(e) ou manquer d’énergie", choices)
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*q5", "Avoir peu d’appétit ou manger trop", choices)
         form.enum("*q6", "Avoir une mauvaise opinion de soi-même, ou avoir le sentiment d’être nul(le), ou d’avoir déçu sa famille ou s’être déçu(e) soi-même", choices)
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*q7", "Avoir du mal à se concentrer, par exemple, pour lire le journal ou regarder la télévision", choices)
         form.enum("*q8", "Bouger ou parler si lentement que les autres auraient pu le remarquer. Ou au contraire, être si agité(e) que vous avez eu du mal à tenir en place par rapport à d’habitude", choices)
     })
 
-    form.section(() => {
+    form.block(() => {
         form.enum("*q9", "Penser qu’il vaudrait mieux mourir ou envisager de vous faire du mal d’une manière ou d’une autre", choices)
     })
 
-    form.section(() => {
+    form.block(() => {
         let any = Array.from(Array(9).keys()).reduce((acc, idx) => {
             if (acc)
                 return true

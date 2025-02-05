@@ -21,32 +21,32 @@ let intro = html`
 `;
 
 function run(form, values) {
-    form.section(() => {
+    form.block(() => {
         q(1, "Il ou elle semblait comprendre ce que j'ai vécu")
         q(2, "Il ou elle a ressenti de la sympathie envers moi pour ce qui s'est passé")
     })
 
-    form.section(() => {
+    form.block(() => {
         q(3, "Il ou elle ne pouvait pas comprendre, n'ayant pas vécu mon expérience")
         q(4, "Il ou elle n'a pas compris à quel point il est difficile de poursuivre une vie quotidienne « normale » après ce qui s'est passé")
     })
 
-    form.section(() => {
+    form.block(() => {
         q(5, "Ses réactions m'ont été utiles")
         q(6, "Il ou elle a trouvé que ma réaction à ces expériences était excessive")
     })
 
-    form.section(() => {
+    form.block(() => {
         q(7, "Il ou elle que ma réaction à ces expériences étaient excessives")
         q(8, "Il ou elle semblait me blâmer, douter, me juger ou me questionnaire sur cette expérience")
     })
 
-    form.section(() => {
+    form.block(() => {
         q(9, "Il ou elle s'est montré(e) très compréhensif(ve) et m'a soutenu(e) lorsque nous en avons parlé")
         q(10, "Je pensais que lui en parler se passerait bien mais ça n'a pas été le cas")
     })
 
-    //form.section(() => {
+    //form.block(() => {
         // q(11, "Je pensais que parler avec il ou elle serait terrible, mais en fait cela s'est très bien passé")
     //})
 
