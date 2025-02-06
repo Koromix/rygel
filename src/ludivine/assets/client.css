@@ -79,7 +79,7 @@ dialog { font-size: 15px; }
     flex-direction: column;
     padding: 1em;
     gap: 1em;
-    background: #faefe9;
+    background: var(--box_color);
     border-radius: 16px;
 }
 .box > .title {
@@ -215,7 +215,7 @@ dialog { font-size: 15px; }
 .summary {
     display: flex;
     height: 140px;
-    background: #faefe9;
+    background: var(--box_color);
     border-radius: 16px;
     gap: 1.5em;
 }

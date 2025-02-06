@@ -17,13 +17,17 @@
 
 html {
     --top_color: #364b9b;
-    --button_color: #e9a07f;
+    --button_color: #d9bf69;
     --anchor_color: #000552;
 
+    --bar_color: #e9a07f;;
+    --tab_color: #fdfbf8;
+    --box_color: #faefe9;
+
     --top_height: 80px;
-    --top_background: #fdfbf8;
+    --top_background: var(--tab_color);
     --small_height: 70px;
-    --footer_background: #fdfbf8;
+    --footer_background: var(--tab_color);
 }
 
 :is(main, dialog) a { text-decoration: underline; }
@@ -148,21 +152,21 @@ p + .columns { margin-top: 2em; }
 .tabbar > a {
     position: relative;
     padding: 0.4em 1em 0.5em 1em;
-    background: #f5d0bf;
+    background: color-mix(in srgb, var(--bar_color), white 50%);
     cursor: pointer;
     text-decoration: none;
-    color: white;
+    color: black;
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
 }
-.tabbar > a:hover { color: white; }
-.tabbar > a.active {
-    background: #e9a07f;
-    cursor: default;
+.tabbar > :is(a.active, a:hover) {
+    background: var(--bar_color);
+    color: white;
 }
+.tabbar > a.active { font-weight: bold; }
 .tab {
     padding: 1em;
-    background: #fdfbf8;
+    background: var(--tab_color);
     border-bottom-left-radius: 16px;
     border-bottom-right-radius: 16px;
 }
