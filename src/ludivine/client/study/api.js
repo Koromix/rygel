@@ -15,7 +15,6 @@
 
 function ProjectInfo(project) {
     Object.assign(this, project);
-    delete this.prepare;
 
     this.summary = null;
 

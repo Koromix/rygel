@@ -16,6 +16,7 @@
 import { render, html, svg, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
+import * as app from '../app.js';
 import { loadImage } from './util.js';
 
 import './picture.css';
@@ -102,9 +103,7 @@ function PictureCropper(title, size) {
     let resolve_func;
     let reject_func;
 
-    this.change = async function(el, prev = null, func = null) {
-        target_el = el;
-
+    this.change = async function(prev = null, func = null) {
         await load(prev);
 
         init_url = prev;
@@ -128,7 +127,7 @@ function PictureCropper(title, size) {
     };
 
     function run() {
-        render(html`
+        app.renderMain(html`
             <div class="tabbar">
                 ${notion_assets != null ?
                     html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}

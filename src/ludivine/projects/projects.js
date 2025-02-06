@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import { StudyModule } from '../client/study/study.js';
 import { ASSETS } from '../assets/assets.js';
 
 const PROJECTS = [
@@ -22,13 +21,7 @@ const PROJECTS = [
         key: 'sociotrauma',
         title: 'SocioTrauma',
         picture: ASSETS['pictures/sociotrauma'],
-
-        prepare: async (db, project, study) => {
-            let url = BUNDLES['sociotrauma.js'];
-            let code = await import(url);
-
-            return new StudyModule(db, project, code, study);
-        }
+        bundle: BUNDLES['sociotrauma.js']
     },
 
     {
@@ -36,8 +29,7 @@ const PROJECTS = [
         key: 'calypsoT',
         title: 'CALYPSO',
         picture: ASSETS['pictures/calypso'],
-
-        prepare: null
+        bundle: null
     }
 ];
 
