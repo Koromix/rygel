@@ -54,6 +54,7 @@ button {
     color: #364b9b;
 }
 
+p + .actions { margin-top: 2em; }
 .actions { gap: 20px; }
 .actions > :is(a, button) {
     width: auto;

@@ -106,7 +106,7 @@
 .tile > div {
     width: 100%;
     margin-top: 300px;
-    padding: 1em 1em 0.5em 1em;
+    padding: 1em;
     z-index: 2;
     background: #ffffff88;
     -webkit-backdrop-filter: blur(16px);
