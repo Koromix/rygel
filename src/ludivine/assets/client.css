@@ -319,4 +319,6 @@ form {
         font-size: 0.9em;
     }
     & input:focus { background: white; }
+
+    & label:has(input:is([type=checkbox], [type=radio]):not(:disabled)) { cursor: pointer; }
 }
