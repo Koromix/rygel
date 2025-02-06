@@ -71,7 +71,7 @@ function init(build, start) {
                 <div class="help right">
                     <div>
                         <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                        <p>Commencez votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                        <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
                     </div>
                     <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
@@ -108,7 +108,7 @@ function init(build, start) {
                 <div class="help right">
                     <div>
                         <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                        <p>Commencez votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                        <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
                     </div>
                     <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
@@ -153,7 +153,7 @@ function init(build, start) {
                 <div class="help right">
                     <div>
                         <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                        <p>Commencez votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                        <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
                     </div>
                     <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
@@ -196,7 +196,7 @@ function init(build, start) {
                 <div class="help right">
                     <div>
                         <p>Nous vous conseillons de répondre aux différents questionnaires <b>dans l’ordre</b> ci-dessus.
-                        <p>Commencez votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
+                        <p>Commencez par votre <b>entourage</b> puis abordez le module sur les <b>évènements</b>.
                     </div>
                     <img src=${ASSETS['pictures/help2']} alt="" />
                 </div>
