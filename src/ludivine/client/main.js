@@ -479,9 +479,9 @@ async function runRegister() {
                 </form>
 
                 <div class="help">
-                    <img src=${ASSETS['pictures/participer']} alt="" />
+                    <img src=${ASSETS['pictures/help1']} alt="" />
                     <div>
-                        <p><b>Créer un compte pour participer</b> à nos études est essentiel pour :
+                        <p><b>Créer un compte</b> pour participer à nos études permet de :
                         <ul>
                             <li>Garantir la <b>protection de vos données</b>
                             <li>Faciliter le <b>suivi de votre progression</b>
