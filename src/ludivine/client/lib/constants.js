@@ -20,12 +20,12 @@ const GENDERS = {
 };
 
 const PERSON_KINDS = {
-    family: { text: 'Famille', plural: 'Famille', icon: 'family' },
-    friend: { text: 'Ami', plural: 'Amis', icon: 'friend' },
-    couple: { text: 'Couple', plural: 'Couple', icon: 'couple' },
-    child: { text: 'Enfant', plural: 'Enfants', icon: 'child' },
-    work: { text: 'Collègue', plural: 'Collègues', icon: 'work' },
-    healthcare: { text: 'Soignant', plural: 'Soignants', icon: 'healthcare' }
+    family: { text: 'Famille', plural: 'Famille', icon: 'ui/family' },
+    friend: { text: 'Ami', plural: 'Amis', icon: 'ui/friend' },
+    couple: { text: 'Couple', plural: 'Couple', icon: 'ui/couple' },
+    child: { text: 'Enfant', plural: 'Enfants', icon: 'ui/child' },
+    work: { text: 'Collègue', plural: 'Collègues', icon: 'ui/work' },
+    healthcare: { text: 'Soignant', plural: 'Soignants', icon: 'ui/healthcare' }
 };
 
 const PROXIMITY_LEVELS = [

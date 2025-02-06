@@ -32,9 +32,8 @@ function NetworkModule(db, test) {
     let self = this;
 
     // DOM nodes
-    let target_el = null;
-    let menu_el = null;
-    let toolbox_el = null;
+    let toolbox = null;
+    let history = null;
     let canvas = null;
 
     // Platform
@@ -64,24 +63,18 @@ function NetworkModule(db, test) {
 
     Object.defineProperties(this, {
         runner: { get: () => runner, enumerable: true },
-        toolbox: { get: () => toolbox_el, enumerable: true },
+        toolbox: { get: () => toolbox, enumerable: true },
 
         anonymous: { get: () => anonymous, set: value => { anonymous = value; }, enumerable: true }
     });
 
-    this.start = async function(el) {
-        target_el = el;
-
-        Log.pushHandler(UI.notifyHandler);
-
-        render(html`
-            <div class="net_menu"></div>
-            <div class="net_toolbox"></div>
-            <canvas class="net_canvas"></canvas>
-        `, target_el);
-        menu_el = target_el.querySelector('.net_menu');
-        toolbox_el = target_el.querySelector('.net_toolbox');
-        canvas = target_el.querySelector('.net_canvas');
+    this.start = async function() {
+        toolbox = document.createElement('div');
+        toolbox.className = 'net_toolbox';
+        canvas = document.createElement('canvas');
+        canvas.className = 'net_canvas';
+        history = document.createElement('div');
+        history.className = 'net_history';
 
         runner = new AppRunner(canvas);
 
@@ -122,10 +115,17 @@ function NetworkModule(db, test) {
     };
 
     this.stop = function() {
-        window.removeEventListener('resize', runner.busy);
         runner.stop();
+    };
 
-        render('', target_el);
+    this.render = function() {
+        return html`
+            <div class="net_wrapper">
+                ${toolbox}
+                ${canvas}
+                ${history}
+            </div>
+        `;
     };
 
     this.hasUnsavedData = function() {
@@ -225,28 +225,22 @@ function NetworkModule(db, test) {
         if (pressed_keys.ctrl > 0 && pressed_keys.y == -1)
             rewind(redo_actions, undo_actions);
 
-        // Main menu
         render(html`
-            <button type="button" title="Retourner au tableau de bord"
-                    @click=${UI.wrap(app.runDashboard)}>
-                <img src=${ASSETS['ui/dashboard']} alt="" />
-                <span>Tableau de bord</span>
-            </button>
-
-            <div style="flex: 1;"></div>
-            <button type="button" title="Annuler la dernière modification"
+            <button type="button" class="small"
+                    title="Annuler la dernière modification"
                     ?disabled=${!undo_actions.length}
                     @click=${UI.wrap(e => rewind(undo_actions, redo_actions))}>
                 <img src=${ASSETS['ui/undo']} alt="" />
                 <span>Annuler</span>
             </button>
-            <button type="button" title="Rétablir la dernière action annulée"
+            <button type="button" class="small"
+                    title="Rétablir la dernière action annulée"
                     ?disabled=${!redo_actions.length}
                     @click=${UI.wrap(e => rewind(redo_actions, undo_actions))}>
                 <img src=${ASSETS['ui/redo']} alt="" />
                 <span>Rétablir</span>
             </button>
-        `, menu_el);
+        `, history);
 
         // Run widget code
         widget.update();
@@ -501,7 +495,8 @@ function NetworkModule(db, test) {
             let data = serialize();
             let json = JSON.stringify(data);
 
-            db.exec('UPDATE tests SET mtime = ?, payload = ? WHERE id = ?', mtime, json, test.id);
+            db.exec(`UPDATE tests SET status = 'draft', mtime = ?, payload = ?
+                     WHERE id = ?`, mtime, json, test.id);
         }, 1000);
     }
 
@@ -537,24 +532,10 @@ function NetworkModule(db, test) {
         if (world == null)
             return;
 
-        ctx.fillStyle = '#f8f8f8';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Draw module in predefined region
-        {
-            ctx.save();
-
-            ctx.fillStyle = '#efefef';
-
-            ctx.beginPath();
-            ctx.rect(0, 0, canvas.width, canvas.height);
-            ctx.fill();
-            ctx.clip();
-
-            widget.draw();
-
-            ctx.restore();
-        }
+        // Draw widget
+        widget.draw();
 
         if (debug)
             drawDebug();

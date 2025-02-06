@@ -13,63 +13,26 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>. */
 
-.net_menu {
-    position: absolute;
+.net_wrapper {
+    position: relative;
     display: flex;
-    gap: 6px;
-    z-index: 1;
+    gap: 12px;
+}
 
-    left: 240px;
-    top: 12px;
-    width: calc(100% - 252px);
-    height: 36px;
-}
-.net_menu > button {
-    padding-left: 20px;
-    padding-right: 20px;
-}
 .net_toolbox {
-    position: absolute;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    z-index: 1;
-
-    left: 12px;
-    top: 60px;
     width: 216px;
-    height: calc(100% - 72px);
 }
-.net_toolbox > button { height: 36px; }
 .net_canvas {
-    position: absolute;
-    z-index: 0;
-
-    left: 240px;
-    top: 60px;
-    width: calc(100% - 252px);
-    height: calc(100% - 72px);
+    flex: 1;
+    background: var(--box_color);
+    border-radius: 16px;
 }
-
-@media screen and (max-width: 1300px) {
-    .net_menu {
-        left: 12px;
-        top: 12px;
-        width: calc(100% - 24px);
-        height: 36px;
-    }
-    .net_toolbox {
-        flex-direction: row;
-
-        left: 12px;
-        top: calc(100% - 48px);
-        width: calc(100% - 24px);
-        height: 36px;
-    }
-    .net_canvas {
-        left: 12px;
-        top: 60px;
-        width: calc(100% - 24px);
-        height: calc(100% - 120px);
-    }
+.net_history {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
 }

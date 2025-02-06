@@ -60,7 +60,7 @@ function NetworkWidget(mod, world) {
     let cursor = { x: null, y: null };
 
     // UI state
-    let textures = null;
+    let textures = {};
     let state = {
         pos: { x: 0, y: 0 },
         zoom: 0
@@ -84,10 +84,16 @@ function NetworkWidget(mod, world) {
     };
 
     this.init = async function() {
-        await Promise.all(Object.keys(TOOLS).map(async tool => {
-            let info = TOOLS[tool];
-            textures[tool.icon] = await loadTexture(ASSETS[tool.icon]);
-        }));
+        await Promise.all([
+            ...Object.keys(TOOLS).map(async tool => {
+                let info = TOOLS[tool];
+                textures[info.icon] = await loadTexture(ASSETS[info.icon]);
+            }),
+            ...Object.keys(PERSON_KINDS).map(async kind => {
+                let info = PERSON_KINDS[kind];
+                textures[info.icon] = await loadTexture(ASSETS[info.icon]);
+            })
+        ]);
     };
 
     this.update = function() {
@@ -1202,7 +1208,7 @@ function NetworkWidget(mod, world) {
             if (i && p.proximity) {
                 let info = PERSON_KINDS[p.kind];
 
-                let icon = textures['info.icon'];
+                let icon = textures[info.icon];
                 let size = radius + 0.03;
 
                 ctx.drawImage(icon, p.x - size / 2, p.y - size / 2, size, size);

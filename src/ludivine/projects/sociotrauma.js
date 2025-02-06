@@ -83,6 +83,7 @@ function init(build, start) {
                 build.form('ssq6', 'Soutien social', ssq6, options)
                 build.form('sps10', 'Provisions sociales', sps10, options)
                 build.form('sni', 'Réseau proche', sni, options)
+                build.network('network', 'Sociogramme', options)
             });
 
             build.module('evenement', 'Évènement', () => {
@@ -120,6 +121,7 @@ function init(build, start) {
                 build.form('ssq6', 'Soutien social', ssq6, options)
                 build.form('sps10', 'Provisions sociales', sps10, options)
                 build.form('sni', 'Réseau proche', sni, options)
+                build.network('network', 'Sociogramme', options)
             });
 
             build.module('evenement', 'Évènement', () => {
@@ -165,6 +167,7 @@ function init(build, start) {
                 build.form('ssq6', 'Soutien social', ssq6, options)
                 build.form('sps10', 'Provisions sociales', sps10, options)
                 build.form('sni', 'Réseau proche', sni, options)
+                build.network('network', 'Sociogramme', options)
             });
 
             build.module('evenement', 'Évènement', () => {
@@ -208,6 +211,7 @@ function init(build, start) {
                 build.form('ssq6', 'Soutien social', ssq6, options)
                 build.form('sps10', 'Provisions sociales', sps10, options)
                 build.form('sni', 'Réseau proche', sni, options)
+                build.network('network', 'Sociogramme', options)
             });
 
             build.module('evenement', 'Évènement', () => {
@@ -250,6 +254,7 @@ function init(build, start) {
                 build.form('ssq6', 'Soutien social', ssq6, options)
                 build.form('sps10', 'Provisions sociales', sps10, options)
                 build.form('sni', 'Réseau proche', sni, options)
+                build.network('network', 'Sociogramme', options)
             });
 
             build.module('evenement', 'Évènement', () => {

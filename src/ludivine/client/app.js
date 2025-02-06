@@ -26,6 +26,7 @@ import { PictureCropper } from './lib/picture.js';
 import { PROJECTS } from '../projects/projects.js';
 import { ProjectInfo, ProjectBuilder } from './study/api.js';
 import { FormState, FormModel, FormBuilder } from './study/form.js';
+import { NetworkModule } from './network/network.js';
 import { ASSETS } from '../assets/assets.js';
 import { deploy, sos } from '../assets/ludivine.js';
 
@@ -558,7 +559,7 @@ async function runProject() {
     if (cache.mod == null)
         cache.mod = cache.project.root;
 
-    cache.tests = await db.fetchAll(`SELECT t.key, t.status, t.payload
+    cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.status, t.payload
                                      FROM tests t
                                      INNER JOIN studies s ON (s.id = t.study)
                                      WHERE s.id = ?`, cache.study.id);
@@ -761,7 +762,7 @@ function renderStart() {
                     <p>Si vous êtes prêt, <b>on peut y aller</b> !
                 </div>
             </div>
-            <button type="button" @click=${UI.wrap(e => navigateStudy(mod, page, 0))}>Commencer le questionnaire</button>
+            <button type="button" @click=${UI.wrap(e => navigateStudy(mod, page, 0))}>Commencer !</button>
         </div>
     `;
 }
@@ -771,7 +772,7 @@ function renderPage() {
 
     switch (page.type) {
         case 'form': return renderForm();
-        case 'network': return '';
+        case 'network': { return ctx.render(); } break;
     }
 }
 
@@ -839,7 +840,10 @@ async function navigateStudy(mod, page = null, section = null) {
                     ctx.state.changeHandler = run;
                 } break;
 
-                case 'network': { ctx = null; } break;
+                case 'network': {
+                    ctx = new NetworkModule(db, test);
+                    await ctx.start();
+                } break;
             }
         } else {
             ctx = null;

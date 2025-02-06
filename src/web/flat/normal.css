@@ -51,10 +51,6 @@ body {
     flex-direction: column;
 }
 
-*:focus {
-    border-color: var(--focus_color);
-    z-index: 99999;
-}
 canvas:focus {
     border: none;
     outline: none;
