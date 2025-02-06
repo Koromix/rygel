@@ -38,6 +38,8 @@ Object.assign(T, {
     browse_for_image: 'Parcourir',
     cancel: 'Annuler',
     clear_picture: 'Effacer l\'image',
+    confirm: 'Confirmer',
+    confirm_not_reversible: 'Attention, cette action n\'est pas réversible !',
     edit: 'Modifier',
     drag_paste_or_browse_image: 'Déposez une image, copier-collez la ou utilisez le bouton « Parcourir » ci-dessous',
     upload_image: 'Choisir une image',
