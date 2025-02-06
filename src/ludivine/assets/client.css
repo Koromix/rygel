@@ -24,10 +24,7 @@ main {
     position: relative;
     width: 100%;
     flex: 1;
-
-    font-size: 15px;
 }
-dialog { font-size: 15px; }
 
 .tab {
     display: flex;
