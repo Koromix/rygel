@@ -191,7 +191,6 @@ function StudyModule(db, project, code, study) {
                             cls += ' draft';
                             status = progressBar(progress, total);
                         } else {
-                            cls += ' empty';
                             status = 'À compléter';
 
                             let earliest = null;
@@ -208,7 +207,9 @@ function StudyModule(db, project, code, study) {
                                 status = niceDate(earliest, true);
 
                                 if (earliest <= today)
-                                    cls += ' draft';
+                                    cls += (earliest <= today) ? ' draft' : ' empty';
+                            } else {
+                                cls += ' draft';
                             }
                         }
 
