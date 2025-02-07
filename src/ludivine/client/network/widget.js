@@ -16,8 +16,8 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
-import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from '../lib/constants.js';
 import { computeAge, dateToString, loadTexture } from '../lib/util.js';
+import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 
 const TOOLS = {
@@ -79,8 +79,8 @@ function NetworkWidget(mod, world) {
 
     // Misc
     let last_link = {
-        a2b: 3,
-        b2a: 3
+        a2b: 2,
+        b2a: 2
     };
 
     this.init = async function() {
@@ -527,12 +527,15 @@ function NetworkWidget(mod, world) {
                     </div>
 
                     <div class="main">
-                        <div class="section">
-                            ${Object.keys(PERSON_KINDS).map(kind => {
-                                let info = PERSON_KINDS[kind];
-                                return html`<button type="button" class=${'secondary small' + (kind == new_kind ? ' active' : '')}
-                                                    @click=${UI.wrap(e => { new_kind = kind; render(); })}>${info.plural}</button>`;
-                            })}
+                        <div class="header">
+                            <select @change=${UI.wrap(e => { new_kind = e.target.value; render(); })}>
+                                ${Object.keys(PERSON_KINDS).map(kind => {
+                                    let info = PERSON_KINDS[kind];
+                                    let active = (kind == new_kind);
+
+                                    return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
+                                })}
+                            </select>
                             <div style="flex: 1;"></div>
                             <button type="button" class="secondary small" @click=${UI.wrap(add_subject)}>Ajouter</button>
                         </div>
@@ -646,7 +649,7 @@ function NetworkWidget(mod, world) {
                     </div>
 
                     <div class="main">
-                        <div class="section">Sujets existants</div>
+                        <div class="header">Sujets existants</div>
                         <table style="table-layout: fixed;">
                             <colgroup>
                                 <col class="check"/>
@@ -824,10 +827,14 @@ function NetworkWidget(mod, world) {
 
                     <label>
                         <span>Catégorie</span>
-                        ${Object.keys(PERSON_KINDS).map(kind => {
-                            let info = PERSON_KINDS[kind];
-                            return html`<label><input name="kind" type="radio" value=${kind} ?checked=${kind == p.kind} /> ${info.text}</label>`;
-                        })}
+                        <select name="kind">
+                            ${Object.keys(PERSON_KINDS).map(kind => {
+                                let info = PERSON_KINDS[kind];
+                                let active = (kind == p.kind);
+
+                                return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
+                            })}
+                        </select>
                     </label>
                 </div>
 

@@ -16,16 +16,18 @@
 const GENDERS = {
     H: { text: 'Homme', color: '#5687bb' },
     F: { text: 'Femme', color: '#c960dc' },
-    NB: { text: 'Non-binaire', color: '#6b7580' }
+    NB: { text: 'Autre', color: '#6b7580' }
 };
 
 const PERSON_KINDS = {
-    family: { text: 'Famille', plural: 'Famille', icon: 'ui/family' },
-    friend: { text: 'Ami', plural: 'Amis', icon: 'ui/friend' },
-    couple: { text: 'Couple', plural: 'Couple', icon: 'ui/couple' },
-    child: { text: 'Enfant', plural: 'Enfants', icon: 'ui/child' },
-    work: { text: 'Collègue', plural: 'Collègues', icon: 'ui/work' },
-    healthcare: { text: 'Soignant', plural: 'Soignants', icon: 'ui/healthcare' }
+    love: { text: 'Relation amoureuse', icon: 'network/love' },
+    family: { text: 'Famille', icon: 'network/family' },
+    friend: { text: 'Amitié', icon: 'network/friend' },
+    work: { text: 'Collègues / milieu professionnel', icon: 'network/work' },
+    healthcare: { text: 'Professionnel de santé ', icon: 'network/healthcare' },
+    online: { text: 'Membre d’une communauté (en ligne)', icon: 'network/online' },
+    community: { text: 'Membre d’une communauté (hors ligne)', icon: 'network/community' },
+    other: { text: 'Autre', icon: 'network/other' }
 };
 
 const PROXIMITY_LEVELS = [
@@ -54,14 +56,9 @@ const PROXIMITY_LEVELS = [
 
 const LINK_KINDS = [
     {
-        text: 'Très négatif',
+        text: 'Négatif',
         color: '#b13737',
         width: 0.01
-    },
-    {
-        text: 'Plutôt négatif',
-        color: '#b95b5b',
-        width: 0.005
     },
     {
         text: 'Inexistant',
@@ -69,12 +66,7 @@ const LINK_KINDS = [
         width: 0
     },
     {
-        text: 'Plutôt positif',
-        color: '#50a776',
-        width: 0.005
-    },
-    {
-        text: 'Très positif',
+        text: 'Positif',
         color: '#3fa26b',
         width: 0.01
     }
