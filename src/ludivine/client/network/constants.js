@@ -48,19 +48,29 @@ const PROXIMITY_LEVELS = [
     }
 ];
 
-const LINK_KINDS = [
+const INFLUENCE_LEVELS = [
     {
-        text: 'Négatif',
+        text: 'Très négatif',
         color: '#b13737',
         width: 0.01
     },
     {
-        text: 'Inexistant',
-        color: null,
-        width: 0
+        text: 'Plutôt négatif',
+        color: '#b95b5b',
+        width: 0.005
     },
     {
-        text: 'Positif',
+        text: 'Neutre',
+        color: '#efbe48',
+        width: 0.005
+    },
+    {
+        text: 'Plutôt positif',
+        color: '#50a776',
+        width: 0.005
+    },
+    {
+        text: 'Très positif',
         color: '#3fa26b',
         width: 0.01
     }
@@ -69,5 +79,5 @@ const LINK_KINDS = [
 export {
     PROXIMITY_LEVELS,
     PERSON_KINDS,
-    LINK_KINDS
+    INFLUENCE_LEVELS
 }

@@ -17,7 +17,7 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
 import { computeAge, dateToString, loadTexture } from '../lib/util.js';
-import { PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from './constants.js';
+import { PROXIMITY_LEVELS, INFLUENCE_LEVELS, PERSON_KINDS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 
 const TOOLS = {
@@ -29,6 +29,7 @@ const TOOLS = {
 const PERSON_RADIUS = 0.05;
 const LINK_RADIUS = 0.03;
 const CIRCLE_MARGIN = 1.8 * PERSON_RADIUS;
+const DEFAULT_INFLUENCE = 3;
 
 const ORIGIN = { x: 0, y: 0 };
 
@@ -69,8 +70,8 @@ function NetworkWidget(mod, world) {
 
     // Misc
     let last_link = {
-        a2b: 2,
-        b2a: 2
+        a2b: DEFAULT_INFLUENCE,
+        b2a: DEFAULT_INFLUENCE
     };
 
     this.init = async function() {
@@ -544,7 +545,7 @@ function NetworkWidget(mod, world) {
             submit: (elements) => {
                 for (let i = 0; i < names.length; i++) {
                     let name = names[i];
-                    let subject = createSubject(name, new_kind);
+                    let subject = createSubject(name, new_kind, DEFAULT_INFLUENCE);
 
                     world.subjects.push(subject);
                     mod.registerPush(world.subjects, subject, i > 0);
@@ -555,12 +556,13 @@ function NetworkWidget(mod, world) {
         });
     }
 
-    function createSubject(name, kind) {
+    function createSubject(name, kind, influence) {
         let subject = {
             id: Util.makeULID(),
 
             name: name,
-            last_kind: kind
+            last_kind: kind,
+            last_influence: influence
         };
 
         return subject;
@@ -677,6 +679,7 @@ function NetworkWidget(mod, world) {
 
             subject: subject.id,
             kind: subject.last_kind,
+            influence: subject.last_influence,
 
             x: null,
             y: null,
@@ -765,6 +768,15 @@ function NetworkWidget(mod, world) {
                             })}
                         </select>
                     </label>
+                    <label>
+                        <span>Influence</span>
+                        <select name="influence">
+                            ${INFLUENCE_LEVELS.map((level, influence) => {
+                                let active = (influence == p.influence);
+                                return html`<option value=${influence} ?selected=${active}>${level.text}</option>`;
+                            })}
+                        </select>
+                    </label>
                 </div>
 
                 <div class="footer">
@@ -779,9 +791,11 @@ function NetworkWidget(mod, world) {
                 mod.registerChange([p, subject]);
 
                 p.kind = elements.kind.value;
+                p.influence = parseInt(elements.influence.value, 10);
 
                 subject.name = elements.name.value.trim();
                 subject.last_kind = p.kind;
+                subject.last_influence = p.influence;
             }
         });
     }
@@ -826,14 +840,14 @@ function NetworkWidget(mod, world) {
                     <label>
                         <span>${namePerson(a, false)} à ${namePerson(b, false)}</span>
                         <select name="a2b">
-                            ${LINK_KINDS.map((kind, idx) => html`<option value=${idx} ?selected=${link.a2b == idx}>${kind.text}</option>`)}
+                            ${INFLUENCE_LEVELS.map((level, idx) => html`<option value=${idx} ?selected=${link.a2b == idx}>${level.text}</option>`)}
                         </select>
                     </label>
 
                     <label>
                         <span>${namePerson(b, false)} à ${namePerson(a, false)}</span>
                         <select name="b2a">
-                            ${LINK_KINDS.map((kind, idx) => html`<option value=${idx} ?selected=${link.b2a == idx}>${kind.text}</option>`)}
+                            ${INFLUENCE_LEVELS.map((level, idx) => html`<option value=${idx} ?selected=${link.b2a == idx}>${level.text}</option>`)}
                         </select>
                     </label>
                 </div>
@@ -850,16 +864,12 @@ function NetworkWidget(mod, world) {
                 let a2b = parseInt(elements.a2b.value, 10);
                 let b2a = parseInt(elements.b2a.value, 10);
 
-                if (LINK_KINDS[a2b].width || LINK_KINDS[b2a].width) {
-                    mod.registerChange(link);
+                mod.registerChange(link);
 
-                    link.a2b = a2b;
-                    link.b2a = b2a;
+                link.a2b = a2b;
+                link.b2a = b2a;
 
-                    Object.assign(last_link, link);
-                } else {
-                    deleteLink(link);
-                }
+                Object.assign(last_link, link);
             }
         });
     }
@@ -1082,19 +1092,22 @@ function NetworkWidget(mod, world) {
             for (let link of links) {
                 let a = persons.find(p => p.id == link.a);
                 let b = persons.find(p => p.id == link.b);
-                let a2b = LINK_KINDS[link.a2b];
-                let b2a = LINK_KINDS[link.b2a];
+                let a2b = INFLUENCE_LEVELS[link.a2b];
+                let b2a = INFLUENCE_LEVELS[link.b2a];
 
                 let offset = (b2a.width - a2b.width) / 2;
 
-                if (a2b.width) {
+                // Draw first half
+                {
                     ctx.lineWidth = a2b.width;
                     ctx.fillStyle = a2b.color;
                     ctx.strokeStyle = a2b.color + 'dd';
 
                     drawHalfLink(a, b, a2b.width / 1.6 + offset);
                 }
-                if (b2a.width) {
+
+                // Draw second half
+                {
                     ctx.lineWidth = b2a.width;
                     ctx.fillStyle = b2a.color;
                     ctx.strokeStyle = b2a.color + 'dd';
@@ -1197,10 +1210,10 @@ function NetworkWidget(mod, world) {
         if (active_edit != null && active_edit.type == 'link') {
             ctx.save();
 
-            let kind = LINK_KINDS[active_edit.a2b];
+            let level = INFLUENCE_LEVELS[active_edit.a2b];
 
-            ctx.strokeStyle = kind.color + '88';
-            ctx.lineWidth = kind.width;
+            ctx.strokeStyle = level.color + '88';
+            ctx.lineWidth = level.width;
             ctx.setLineDash([0.01, 0.01]);
 
             for (let p of select_persons) {
@@ -1326,8 +1339,11 @@ function NetworkWidget(mod, world) {
     }
 
     function computeColor(p) {
-        let self = (p == persons[0]);
-        return self ? '#ffffff' : '#5687bb';
+        if (p == persons[0])
+            return '#ffffff';
+
+        let level = INFLUENCE_LEVELS[p.influence ?? DEFAULT_INFLUENCE];
+        return level.color;
     }
 
     function computeDistance(p1, p2) {
