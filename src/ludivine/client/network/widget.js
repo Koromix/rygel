@@ -23,17 +23,7 @@ import { ASSETS } from '../../assets/assets.js';
 const TOOLS = {
     move: { title: 'Déplacer', icon: 'ui/move' },
     rotate: { title: 'Pivoter', icon: 'ui/rotate' },
-
-    link: {
-        title: 'Relier',
-        icon: 'ui/link',
-
-        modes: LINK_KINDS.reduce((acc, kind, idx) => {
-            if (kind.width)
-                acc[kind.text] = idx;
-            return acc;
-        }, {})
-    },
+    link: { title: 'Relier', icon: 'ui/link' }
 };
 
 const PERSON_RADIUS = 0.05;
