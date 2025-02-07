@@ -17,7 +17,7 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
 import { computeAge, dateToString, loadTexture } from '../lib/util.js';
-import { GENDERS, PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from './constants.js';
+import { PROXIMITY_LEVELS, LINK_KINDS, PERSON_KINDS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 
 const TOOLS = {
@@ -512,8 +512,7 @@ function NetworkWidget(mod, world) {
     }
 
     async function createPersons() {
-        let new_gender = 'H';
-        let new_subjects = [createSubject(new_gender, new_kind)];
+        let new_subjects = [createSubject(new_kind)];
 
         await UI.dialog({
             run: (render, close) => {
@@ -542,13 +541,11 @@ function NetworkWidget(mod, world) {
                         <table style="table-layout: fixed;">
                             <colgroup>
                                 <col/>
-                                <col/>
                                 <col class="check"/>
                             </colgroup>
 
                             <thead>
                                 <th>Identité</th>
-                                <th>Genre</th>
                                 <th></th>
                             <thead>
 
@@ -556,14 +553,6 @@ function NetworkWidget(mod, world) {
                                 ${new_subjects.map(subject => html`
                                     <tr>
                                         <td><input type="text" .value=${subject.name} @change=${UI.wrap(e => { subject.name = e.target.value.trim(); render() })} /></td>
-                                        <td>
-                                            <select @change=${UI.wrap(e => { new_gender = e.target.value; subject.gender = new_gender; render(); })}>
-                                                ${Object.keys(GENDERS).map(gender => {
-                                                    let info = GENDERS[gender];
-                                                    return html`<option value=${gender} .selected=${gender == subject.gender}>${info.text}</option>`;
-                                                })}
-                                            </select>
-                                        </td>
                                         <td><button type="button" class="secondary small"
                                                     @click=${UI.insist(e => { new_subjects = new_subjects.filter(it => it !== subject); render(); })}><img src=${ASSETS['ui/delete']} alt="Supprimer" /></button></td>
                                     </tr>
@@ -581,7 +570,7 @@ function NetworkWidget(mod, world) {
                 `;
 
                 function add_subject() {
-                    let subject = createSubject(new_gender, null);
+                    let subject = createSubject(null);
                     new_subjects.push(subject);
                     render();
                 }
@@ -607,13 +596,11 @@ function NetworkWidget(mod, world) {
         });
     }
 
-    function createSubject(gender, kind) {
+    function createSubject(kind) {
         let subject = {
             id: Util.makeULID(),
 
             name: '',
-            gender: gender,
-
             last_kind: kind
         };
 
@@ -813,14 +800,6 @@ function NetworkWidget(mod, world) {
                         <input name="name" value=${subject.name} />
                     </label>
                     <label>
-                        <span>Genre</span>
-                        ${Object.keys(GENDERS).map(gender => {
-                            let info = GENDERS[gender];
-                            return html`<label><input name="gender" type="radio" value=${gender} ?checked=${gender == subject.gender}>${info.text}</label>`;
-                        })}
-                    </label>
-
-                    <label>
                         <span>Catégorie</span>
                         <select name="kind">
                             ${Object.keys(PERSON_KINDS).map(kind => {
@@ -847,7 +826,6 @@ function NetworkWidget(mod, world) {
                 p.kind = elements.kind.value;
 
                 subject.name = elements.name.value.trim();
-                subject.gender = elements.gender.value;
                 subject.last_kind = p.kind;
             }
         });
@@ -1377,14 +1355,8 @@ function NetworkWidget(mod, world) {
     }
 
     function computeColor(p) {
-        if (p == persons[0]) {
-            return '#ffffff';
-        } else {
-            let subject = world.subjects.find(subject => subject.id == p.subject);
-            let color = GENDERS[subject.gender].color;
-
-            return color;
-        }
+        let self = (p == persons[0]);
+        return self ? '#ffffff' : '#5687bb';
     }
 
     function computeDistance(p1, p2) {
