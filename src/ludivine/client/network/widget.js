@@ -1068,6 +1068,26 @@ function NetworkWidget(mod, world) {
             ctx.restore();
         }
 
+        // Draw web
+        {
+            ctx.save();
+
+            ctx.strokeStyle = '#00000033';
+            ctx.lineWidth = 0.002;
+            ctx.setLineDash([0.01, 0.01]);
+
+            for (let i = 1; i < persons.length; i++) {
+                let [from, to] = computeLinkCoordinates(persons[0], persons[i], 0);
+
+                ctx.beginPath();
+                ctx.moveTo(from.x, from.y);
+                ctx.lineTo(to.x, to.y);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
         // Draw links
         {
             ctx.save();
