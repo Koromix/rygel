@@ -885,18 +885,14 @@ function NetworkWidget(mod, world) {
     }
 
     function namePerson(p, details) {
-        if (mod.anonymous)
+        if (mod.anonymous || p == persons[0])
             return '';
 
-        if (p == persons[0]) {
-            return 'vous';
-        } else {
-            let subject = world.subjects.find(subject => subject.id == p.subject);
-            let kind = PERSON_KINDS[p.kind];
+        let subject = world.subjects.find(subject => subject.id == p.subject);
+        let kind = PERSON_KINDS[p.kind];
 
-            let text = subject.name + (details ? ` [${kind.text}]` : '');
-            return text;
-        }
+        let text = subject.name + (details ? ` [${kind.text}]` : '');
+        return text;
     }
 
     // Ray-casting algorithm
