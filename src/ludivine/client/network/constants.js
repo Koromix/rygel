@@ -13,12 +13,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-const GENDERS = {
-    H: { text: 'Homme', color: '#5687bb' },
-    F: { text: 'Femme', color: '#c960dc' },
-    NB: { text: 'Autre', color: '#6b7580' }
-};
-
 const PERSON_KINDS = {
     love: { text: 'Relation amoureuse', icon: 'network/love' },
     family: { text: 'Famille', icon: 'network/family' },
@@ -73,7 +67,6 @@ const LINK_KINDS = [
 ];
 
 export {
-    GENDERS,
     PROXIMITY_LEVELS,
     PERSON_KINDS,
     LINK_KINDS
