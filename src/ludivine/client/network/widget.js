@@ -108,7 +108,7 @@ function NetworkWidget(mod, world) {
         // Global shortcuts
         if (pressed_keys.ctrl > 0 && pressed_keys.a == -1) {
             select_persons.length = 0;
-            select_persons.push(...persons);
+            select_persons.push(...persons.slice(1));
         }
         if (pressed_keys.delete == -1)
             deletePersons(select_persons);
@@ -209,9 +209,6 @@ function NetworkWidget(mod, world) {
 
                     if (active_edit.type == 'move') {
                         for (let p of select_persons) {
-                            if (p == persons[0])
-                                continue;
-
                             p.x += cursor.x - active_edit.x;
                             p.y += cursor.y - active_edit.y;
                         }
@@ -223,9 +220,6 @@ function NetworkWidget(mod, world) {
                             expand = computeDistance(ORIGIN, cursor) / computeDistance(ORIGIN, active_edit);
 
                         for (let p of select_persons) {
-                            if (p == persons[0])
-                                continue;
-
                             let angle = Math.atan2(-p.y, p.x);
                             let distance = computeDistance(ORIGIN, p);
 
@@ -246,12 +240,8 @@ function NetworkWidget(mod, world) {
                 if (active_edit.moved) {
                     mod.registerChange(select_persons, false, true);
 
-                    for (let p of select_persons) {
-                        if (p == persons[0])
-                            continue;
-
+                    for (let p of select_persons)
                         snapPerson(p);
-                    }
                 }
 
                 active_edit = null;
@@ -310,7 +300,7 @@ function NetworkWidget(mod, world) {
             } else {
                 let [target, idx] = findPerson(cursor);
 
-                if (idx >= 0) {
+                if (idx > 0) {
                     let auto = false;
 
                     for (let p of select_persons) {
@@ -409,7 +399,7 @@ function NetworkWidget(mod, world) {
         if (active_edit == null && active_tool == 'link') {
             let [target, idx] = findPerson(cursor);
 
-            if (idx >= 0) {
+            if (idx > 0) {
                 if (mouse_state.left > 0) {
                     if (!select_persons.includes(target)) {
                         select_persons.length = 0;
@@ -463,7 +453,7 @@ function NetworkWidget(mod, world) {
                 }
             }
 
-            if (target != null)
+            if (target != null && target != persons[0])
                 runner.cursor = 'pointer';
         }
 
@@ -505,7 +495,9 @@ function NetworkWidget(mod, world) {
     function selectInPolygon(points) {
         select_persons.length = 0;
 
-        for (let p of persons) {
+        for (let i = 1; i < persons.length; i++) {
+            let p = persons[i];
+
             if (isInsidePolygon(p, points))
                 select_persons.push(p);
         }
