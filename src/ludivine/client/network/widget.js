@@ -512,11 +512,11 @@ function NetworkWidget(mod, world) {
     }
 
     async function createPersons() {
-        let new_subjects = [createSubject(new_kind)];
+        let names = [];
 
         await UI.dialog({
             run: (render, close) => {
-                let disabled = !new_subjects.length;
+                let disabled = !names.length;
 
                 return html`
                     <div class="title">
@@ -526,7 +526,8 @@ function NetworkWidget(mod, world) {
                     </div>
 
                     <div class="main">
-                        <div class="header">
+                        <label>
+                            <span>Catégorie</span>
                             <select @change=${UI.wrap(e => { new_kind = e.target.value; render(); })}>
                                 ${Object.keys(PERSON_KINDS).map(kind => {
                                     let info = PERSON_KINDS[kind];
@@ -535,31 +536,12 @@ function NetworkWidget(mod, world) {
                                     return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
                                 })}
                             </select>
-                            <div style="flex: 1;"></div>
-                            <button type="button" class="secondary small" @click=${UI.wrap(add_subject)}>Ajouter</button>
-                        </div>
-                        <table style="table-layout: fixed;">
-                            <colgroup>
-                                <col/>
-                                <col class="check"/>
-                            </colgroup>
+                        </label>
 
-                            <thead>
-                                <th>Identité</th>
-                                <th></th>
-                            <thead>
-
-                            <tbody>
-                                ${new_subjects.map(subject => html`
-                                    <tr>
-                                        <td><input type="text" .value=${subject.name} @change=${UI.wrap(e => { subject.name = e.target.value.trim(); render() })} /></td>
-                                        <td><button type="button" class="secondary small"
-                                                    @click=${UI.insist(e => { new_subjects = new_subjects.filter(it => it !== subject); render(); })}><img src=${ASSETS['ui/delete']} alt="Supprimer" /></button></td>
-                                    </tr>
-                                `)}
-                                ${!new_subjects.length ? html`<td colspan="5" class="center">Cliquez sur le bouton d'ajout ci-dessus.</td>` : ''}
-                            </tbody>
-                        </table>
+                        <label>
+                            <span>Identités</span>
+                            <textarea rows="6" @input=${UI.wrap(e => split_names(e.target.value))}></textarea>
+                        </label>
                     </div>
 
                     <div class="footer">
@@ -569,38 +551,33 @@ function NetworkWidget(mod, world) {
                     </div>
                 `;
 
-                function add_subject() {
-                    let subject = createSubject(null);
-                    new_subjects.push(subject);
+                function split_names(text) {
+                    text = text.trim().replace(/ *-+ */g, '-');
+                    names = text.split(/[, \n]/);
+
                     render();
                 }
             },
 
             submit: (elements) => {
-                let auto = false;
-
-                if (new_subjects.some(subject => !subject.name))
-                    throw new Error('Identités manquantes');
-
-                for (let subject of new_subjects) {
-                    subject.last_kind = new_kind;
+                for (let i = 0; i < names.length; i++) {
+                    let name = names[i];
+                    let subject = createSubject(name, new_kind);
 
                     world.subjects.push(subject);
+                    mod.registerPush(world.subjects, subject, i > 0);
 
-                    mod.registerPush(world.subjects, subject);
-                    auto = true;
-
-                    createPerson(subject, auto);
+                    createPerson(subject, true);
                 }
             }
         });
     }
 
-    function createSubject(kind) {
+    function createSubject(name, kind) {
         let subject = {
             id: Util.makeULID(),
 
-            name: '',
+            name: name,
             last_kind: kind
         };
 
@@ -631,7 +608,6 @@ function NetworkWidget(mod, world) {
                     </div>
 
                     <div class="main">
-                        <div class="header">Sujets existants</div>
                         <table style="table-layout: fixed;">
                             <colgroup>
                                 <col class="check"/>

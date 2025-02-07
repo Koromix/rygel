@@ -309,6 +309,8 @@ form {
     flex-direction: column;
     gap: 1em;
 
+    & label:has(input:is([type=checkbox], [type=radio]):not(:disabled)) { cursor: pointer; }
+
     & input {
         padding: 0.4em 0.6em;
         border: none;
@@ -318,6 +320,14 @@ form {
         font-size: 0.9em;
     }
     & input:focus { background: white; }
+    & textarea {
+        padding: 0.4em 0.6em;
+        border: none;
+        background: #f6d3c3;
+        border-radius: 8px;
+        font: inherit;
+        font-size: 0.9em;
+    }
     & select {
         padding: 0.4em calc(20px + 0.6em) 0.4em 0.6em;
         border: none;
@@ -341,9 +351,7 @@ form {
         background-position: right;
         color: white;
     }
-    & select:disabled { background-color: #eee; }
-
-    & label:has(input:is([type=checkbox], [type=radio]):not(:disabled)) { cursor: pointer; }
+    & :is(input, textarea, select):focus { background: white; }
 
     & .header {
         display: flex;
@@ -409,4 +417,13 @@ dialog > form {
         justify-content: right;
         gap: 0.71em;
     }
+
+    & label {
+        display: flex;
+        gap: 0.43em;
+        align-items: center;
+    }
+    & label > span:first-child { width: 180px; }
+    & label > input:not([type=checkbox]):not([type=radio]),
+        & label > :is(select, textarea) { flex: 1; }
 }
