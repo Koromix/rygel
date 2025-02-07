@@ -543,14 +543,12 @@ function NetworkWidget(mod, world) {
                             <colgroup>
                                 <col/>
                                 <col/>
-                                <col/>
                                 <col class="check"/>
                             </colgroup>
 
                             <thead>
                                 <th>Identité</th>
                                 <th>Genre</th>
-                                <th>Date de naissance</th>
                                 <th></th>
                             <thead>
 
@@ -566,8 +564,6 @@ function NetworkWidget(mod, world) {
                                                 })}
                                             </select>
                                         </td>
-                                        <td><input type="date" .value=${dateToString(subject.birthdate)}
-                                                   @change=${UI.wrap(e => { subject.birthdate = e.target.value ? e.target.valueAsDate.valueOf() : null; render() })} /></td>
                                         <td><button type="button" class="secondary small"
                                                     @click=${UI.insist(e => { new_subjects = new_subjects.filter(it => it !== subject); render(); })}><img src=${ASSETS['ui/delete']} alt="Supprimer" /></button></td>
                                     </tr>
@@ -617,7 +613,6 @@ function NetworkWidget(mod, world) {
 
             name: '',
             gender: gender,
-            birthdate: null,
 
             last_kind: kind
         };
@@ -947,7 +942,7 @@ function NetworkWidget(mod, world) {
         if (mod.anonymous)
             return '';
 
-        if (p == world.persons[0]) {
+        if (p == persons[0]) {
             return 'vous';
         } else {
             let subject = world.subjects.find(subject => subject.id == p.subject);
