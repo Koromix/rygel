@@ -33,7 +33,7 @@ function NetworkModule(db, test) {
 
     // DOM nodes
     let toolbox = null;
-    let history = null;
+    let shortcuts = null;
     let canvas = null;
 
     // Platform
@@ -73,8 +73,8 @@ function NetworkModule(db, test) {
         toolbox.className = 'net_toolbox';
         canvas = document.createElement('canvas');
         canvas.className = 'net_canvas';
-        history = document.createElement('div');
-        history.className = 'net_history';
+        shortcuts = document.createElement('div');
+        shortcuts.className = 'net_shortcuts';
 
         runner = new AppRunner(canvas);
 
@@ -123,7 +123,7 @@ function NetworkModule(db, test) {
             <div class="net_wrapper">
                 ${toolbox}
                 ${canvas}
-                ${history}
+                ${shortcuts}
             </div>
         `;
     };
@@ -226,6 +226,11 @@ function NetworkModule(db, test) {
             rewind(redo_actions, undo_actions);
 
         render(html`
+            <button type="button" class="small" title="Mode plein écran"
+                    @click=${UI.wrap(toggleFullScreen)}>
+                <img src=${ASSETS['ui/fullscreen']} alt="" />
+            </button>
+            <div style="flex: 1;"></div>
             <button type="button" class="small"
                     title="Annuler la dernière modification"
                     ?disabled=${!undo_actions.length}
@@ -240,7 +245,7 @@ function NetworkModule(db, test) {
                 <img src=${ASSETS['ui/redo']} alt="" />
                 <span>Rétablir</span>
             </button>
-        `, history);
+        `, shortcuts);
 
         // Run widget code
         widget.update();
@@ -256,6 +261,21 @@ function NetworkModule(db, test) {
             }
             if (tooltip.opacity < 0)
                 tooltip = null;
+        }
+    }
+
+    function toggleFullScreen() {
+        let wrapper = canvas.parentNode;
+        let fullscreen = (document.fullscreenElement == wrapper);
+
+        if (!fullscreen) {
+            try {
+                wrapper.requestFullscreen();
+            } catch (err) {
+                console.error(err);
+            }
+        } else {
+            document.exitFullscreen();
         }
     }
 

@@ -59,20 +59,21 @@ import asset42 from './ui/create.png';
 import asset43 from './ui/dashboard.png';
 import asset44 from './ui/delete.png';
 import asset45 from './ui/dice.webp';
-import asset46 from './ui/insert.png';
-import asset47 from './ui/left.webp';
-import asset48 from './ui/link.png';
-import asset49 from './ui/move.png';
-import asset50 from './ui/network.png';
-import asset51 from './ui/new.png';
-import asset52 from './ui/redo.png';
-import asset53 from './ui/right.webp';
-import asset54 from './ui/rotate.png';
-import asset55 from './ui/select.png';
-import asset56 from './ui/track.png';
-import asset57 from './ui/undo.png';
-import asset58 from './ui/unselect.png';
-import asset59 from './ui/user.png';
+import asset46 from './ui/fullscreen.png';
+import asset47 from './ui/insert.png';
+import asset48 from './ui/left.webp';
+import asset49 from './ui/link.png';
+import asset50 from './ui/move.png';
+import asset51 from './ui/network.png';
+import asset52 from './ui/new.png';
+import asset53 from './ui/redo.png';
+import asset54 from './ui/right.webp';
+import asset55 from './ui/rotate.png';
+import asset56 from './ui/select.png';
+import asset57 from './ui/track.png';
+import asset58 from './ui/undo.png';
+import asset59 from './ui/unselect.png';
+import asset60 from './ui/user.png';
 
 const ASSETS = {
     'main/footer': asset0,
@@ -121,20 +122,21 @@ const ASSETS = {
     'ui/dashboard': asset43,
     'ui/delete': asset44,
     'ui/dice': asset45,
-    'ui/insert': asset46,
-    'ui/left': asset47,
-    'ui/link': asset48,
-    'ui/move': asset49,
-    'ui/network': asset50,
-    'ui/new': asset51,
-    'ui/redo': asset52,
-    'ui/right': asset53,
-    'ui/rotate': asset54,
-    'ui/select': asset55,
-    'ui/track': asset56,
-    'ui/undo': asset57,
-    'ui/unselect': asset58,
-    'ui/user': asset59,
+    'ui/fullscreen': asset46,
+    'ui/insert': asset47,
+    'ui/left': asset48,
+    'ui/link': asset49,
+    'ui/move': asset50,
+    'ui/network': asset51,
+    'ui/new': asset52,
+    'ui/redo': asset53,
+    'ui/right': asset54,
+    'ui/rotate': asset55,
+    'ui/select': asset56,
+    'ui/track': asset57,
+    'ui/undo': asset58,
+    'ui/unselect': asset59,
+    'ui/user': asset60,
 };
 
 export { ASSETS }

@@ -17,6 +17,7 @@
     position: relative;
     display: flex;
     gap: 12px;
+    background: var(--tab_color);
 }
 
 .net_toolbox {
@@ -30,9 +31,12 @@
     background: var(--box_color);
     border-radius: 16px;
 }
-.net_history {
+.net_shortcuts {
+    display: flex;
     position: absolute;
     top: 8px;
     right: 8px;
+    width: calc(100% - 244px);
+    gap: 6px;
     z-index: 1;
 }
