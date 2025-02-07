@@ -519,7 +519,7 @@ function NetworkWidget(mod, world) {
 
                     <div class="main">
                         <label>
-                            <span>Catégorie</span>
+                            <span>Relation</span>
                             <select @change=${UI.wrap(e => { new_kind = e.target.value; render(); })}>
                                 ${Object.keys(PERSON_KINDS).map(kind => {
                                     let info = PERSON_KINDS[kind];
@@ -612,7 +612,7 @@ function NetworkWidget(mod, world) {
                                 <tr>
                                     <th></th>
                                     <th>Identité</th>
-                                    <th>Type</th>
+                                    <th>Relation</th>
                                 </tr>
                             </thead>
 
@@ -765,7 +765,7 @@ function NetworkWidget(mod, world) {
                         <input name="name" value=${subject.name} />
                     </label>
                     <label>
-                        <span>Catégorie</span>
+                        <span>Relation</span>
                         <select name="kind">
                             ${Object.keys(PERSON_KINDS).map(kind => {
                                 let info = PERSON_KINDS[kind];
