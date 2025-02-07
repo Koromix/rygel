@@ -1040,7 +1040,7 @@ function NetworkWidget(mod, world) {
         {
             ctx.save();
 
-            ctx.fillStyle = '#0000001a';
+            ctx.fillStyle = '#0000000b';
             ctx.strokeStyle = '#00000033';
             ctx.lineWidth = 0.01;
             ctx.setLineDash([0.02, 0.02]);
