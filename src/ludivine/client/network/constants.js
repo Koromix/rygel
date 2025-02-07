@@ -52,7 +52,7 @@ const INFLUENCE_LEVELS = [
     {
         text: 'Très négatif',
         color: '#b13737',
-        width: 0.01
+        width: 0.008
     },
     {
         text: 'Plutôt négatif',
@@ -62,7 +62,7 @@ const INFLUENCE_LEVELS = [
     {
         text: 'Neutre',
         color: '#efbe48',
-        width: 0.005
+        width: 0.004
     },
     {
         text: 'Plutôt positif',
@@ -72,7 +72,7 @@ const INFLUENCE_LEVELS = [
     {
         text: 'Très positif',
         color: '#3fa26b',
-        width: 0.01
+        width: 0.008
     }
 ];
 

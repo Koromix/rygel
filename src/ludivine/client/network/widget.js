@@ -69,10 +69,7 @@ function NetworkWidget(mod, world) {
     let select_persons = [];
 
     // Misc
-    let last_link = {
-        a2b: DEFAULT_INFLUENCE,
-        b2a: DEFAULT_INFLUENCE
-    };
+    let last_link = { influence: DEFAULT_INFLUENCE };
 
     this.init = async function() {
         await Promise.all([
@@ -303,8 +300,7 @@ function NetworkWidget(mod, world) {
 
                             a: p.id,
                             b: target.id,
-                            a2b: active_edit.a2b,
-                            b2a: active_edit.b2a
+                            influence: active_edit.influence
                         };
 
                         if (link.a > link.b)
@@ -314,9 +310,7 @@ function NetworkWidget(mod, world) {
 
                         if (prev_link != null) {
                             mod.registerChange(prev_link, auto);
-
-                            prev_link.a2b = link.a2b;
-                            prev_link.b2a = link.b2a;
+                            prev_link.influence = link.influence;
                         } else {
                             links.push(link);
                             mod.registerPush(links, link, auto);
@@ -401,8 +395,7 @@ function NetworkWidget(mod, world) {
                         type: 'link',
                         x: cursor.x,
                         y: cursor.y,
-                        a2b: last_link.a2b,
-                        b2a: last_link.b2a
+                        influence: last_link.influence
                     };
                 }
 
@@ -838,16 +831,12 @@ function NetworkWidget(mod, world) {
 
                 <div class="main">
                     <label>
-                        <span>${namePerson(a, false)} à ${namePerson(b, false)}</span>
-                        <select name="a2b">
-                            ${INFLUENCE_LEVELS.map((level, idx) => html`<option value=${idx} ?selected=${link.a2b == idx}>${level.text}</option>`)}
-                        </select>
-                    </label>
-
-                    <label>
-                        <span>${namePerson(b, false)} à ${namePerson(a, false)}</span>
-                        <select name="b2a">
-                            ${INFLUENCE_LEVELS.map((level, idx) => html`<option value=${idx} ?selected=${link.b2a == idx}>${level.text}</option>`)}
+                        <span>Influence</span>
+                        <select name="influence">
+                            ${INFLUENCE_LEVELS.map((level, idx) => {
+                                let active = (link.influence == idx);
+                                return html`<option value=${idx} ?selected=${active}>${level.text}</option>`;
+                            })}
                         </select>
                     </label>
                 </div>
@@ -861,13 +850,9 @@ function NetworkWidget(mod, world) {
             `,
 
             submit: (elements) => {
-                let a2b = parseInt(elements.a2b.value, 10);
-                let b2a = parseInt(elements.b2a.value, 10);
-
                 mod.registerChange(link);
 
-                link.a2b = a2b;
-                link.b2a = b2a;
+                link.influence = parseInt(elements.influence.value, 10);
 
                 Object.assign(last_link, link);
             }
@@ -962,7 +947,7 @@ function NetworkWidget(mod, world) {
             let a = persons.find(it => it.id == link.a);
             let b = persons.find(it => it.id == link.b);
 
-            let [from, to] = computeLinkCoordinates(a, b, 0);
+            let [from, to] = computeLinkCoordinates(a, b);
             let p = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
             let distance = computeDistance(at, p);
 
@@ -1074,7 +1059,7 @@ function NetworkWidget(mod, world) {
             ctx.setLineDash([0.01, 0.01]);
 
             for (let i = 1; i < persons.length; i++) {
-                let [from, to] = computeLinkCoordinates(persons[0], persons[i], 0);
+                let [from, to] = computeLinkCoordinates(persons[0], persons[i]);
 
                 ctx.beginPath();
                 ctx.moveTo(from.x, from.y);
@@ -1092,50 +1077,38 @@ function NetworkWidget(mod, world) {
             for (let link of links) {
                 let a = persons.find(p => p.id == link.a);
                 let b = persons.find(p => p.id == link.b);
-                let a2b = INFLUENCE_LEVELS[link.a2b];
-                let b2a = INFLUENCE_LEVELS[link.b2a];
+                let level = INFLUENCE_LEVELS[link.influence];
 
-                let offset = (b2a.width - a2b.width) / 2;
+                let [from, to] = computeLinkCoordinates(a, b, 0.02);
+                let angle = Math.atan2(from.y - to.y, to.x - from.x);
 
-                // Draw first half
+                // Draw arrows
                 {
-                    ctx.lineWidth = a2b.width;
-                    ctx.fillStyle = a2b.color;
-                    ctx.strokeStyle = a2b.color + 'dd';
+                    ctx.lineWidth = level.width;
+                    ctx.fillStyle = level.color;
+                    ctx.strokeStyle = level.color + 'dd';
 
-                    drawHalfLink(a, b, a2b.width / 1.6 + offset);
-                }
+                    ctx.beginPath();
+                    ctx.moveTo(from.x, from.y);
+                    ctx.lineTo(to.x, to.y);
+                    ctx.stroke();
 
-                // Draw second half
-                {
-                    ctx.lineWidth = b2a.width;
-                    ctx.fillStyle = b2a.color;
-                    ctx.strokeStyle = b2a.color + 'dd';
-
-                    drawHalfLink(b, a, b2a.width / 1.6 - offset);
+                    drawTip(from, angle + Math.PI);
+                    drawTip(to, angle);
                 }
 
                 // Draw center
                 {
-                    let [from, to] = computeLinkCoordinates(a, b, 0);
+                    let [from, to] = computeLinkCoordinates(a, b);
                     let angle = Math.atan2(from.y - to.y, to.x - from.x);
 
                     let p = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
-                    let split = (b2a.width && b2a != a2b);
 
-                    ctx.fillStyle = a2b.color;
+                    ctx.fillStyle = level.color;
 
                     ctx.beginPath();
-                    ctx.arc(p.x, p.y, LINK_RADIUS, Math.PI - angle, Math.PI - angle + (split ? Math.PI : Math.PI * 2), false);
+                    ctx.arc(p.x, p.y, LINK_RADIUS, 0, Math.PI * 2, false);
                     ctx.fill();
-
-                    if (split) {
-                        ctx.fillStyle = b2a.color;
-
-                        ctx.beginPath();
-                        ctx.arc(p.x, p.y, LINK_RADIUS, -angle, -angle + Math.PI, false);
-                        ctx.fill();
-                    }
                 }
             }
 
@@ -1210,7 +1183,7 @@ function NetworkWidget(mod, world) {
         if (active_edit != null && active_edit.type == 'link') {
             ctx.save();
 
-            let level = INFLUENCE_LEVELS[active_edit.a2b];
+            let level = INFLUENCE_LEVELS[active_edit.influence];
 
             ctx.strokeStyle = level.color + '88';
             ctx.lineWidth = level.width;
@@ -1249,41 +1222,38 @@ function NetworkWidget(mod, world) {
         ctx.restore();
     };
 
-    function drawHalfLink(a, b, offset, arrow = true) {
-        let correct = 1.1 * ctx.lineWidth;
-        let [from, to] = computeLinkCoordinates(a, b, offset, 0.02, 0.02 + correct);
+    function drawTip(tip, angle) {
+        let p1 = {
+            x: tip.x + 0.04 * Math.cos(angle + 3.3 * Math.PI / 4),
+            y: tip.y - 0.04 * Math.sin(angle + 3.3 * Math.PI / 4)
+        };
+        let p2 = {
+            x: tip.x + 0.04 * Math.cos(angle - 3.3 * Math.PI / 4),
+            y: tip.y - 0.04 * Math.sin(angle - 3.3 * Math.PI / 4)
+        };
 
         ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
-        ctx.lineTo(to.x, to.y);
-        if (arrow) {
-            let angle = Math.atan2(a.y - b.y, b.x - a.x);
+        ctx.moveTo(tip.x, tip.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.closePath();
 
-            let x = to.x + 0.05 * Math.cos(angle + 3 * Math.PI / 4);
-            let y = to.y - 0.05 * Math.sin(angle + 3 * Math.PI / 4);
-
-            ctx.lineTo(x, y);
-        }
-        ctx.stroke();
+        ctx.fill();
     }
 
-    function computeLinkCoordinates(a, b, offset, delta1 = 0, delta2 = 0) {
+    function computeLinkCoordinates(a, b, delta = 0) {
         let angle = Math.atan2(a.y - b.y, b.x - a.x);
 
-        let radius1 = computeRadius(a) + delta1;
-        let radius2 = computeRadius(b) + delta2;
+        let radius1 = computeRadius(a) + delta;
+        let radius2 = computeRadius(b) + delta;
 
-        let adjust = {
-            x: offset * -Math.sin(angle),
-            y: offset * -Math.cos(angle)
-        };
         let from = {
-            x: a.x + adjust.x + radius1 * Math.cos(angle),
-            y: a.y + adjust.y - radius1 * Math.sin(angle)
+            x: a.x + radius1 * Math.cos(angle),
+            y: a.y - radius1 * Math.sin(angle)
         };
         let to = {
-            x: b.x + adjust.x - radius2 * Math.cos(angle),
-            y: b.y + adjust.y + radius2 * Math.sin(angle),
+            x: b.x - radius2 * Math.cos(angle),
+            y: b.y + radius2 * Math.sin(angle),
         };
 
         return [from, to];
@@ -1342,7 +1312,7 @@ function NetworkWidget(mod, world) {
         if (p == persons[0])
             return '#ffffff';
 
-        let level = INFLUENCE_LEVELS[p.influence ?? DEFAULT_INFLUENCE];
+        let level = INFLUENCE_LEVELS[p.influence];
         return level.color;
     }
 
