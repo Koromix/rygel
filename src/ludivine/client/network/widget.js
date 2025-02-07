@@ -606,7 +606,6 @@ function NetworkWidget(mod, world) {
                                 <col/>
                                 <col/>
                                 <col/>
-                                <col/>
                             </colgroup>
 
                             <thead>
@@ -614,7 +613,6 @@ function NetworkWidget(mod, world) {
                                     <th></th>
                                     <th>Identité</th>
                                     <th>Type</th>
-                                    <th>Âge</th>
                                 </tr>
                             </thead>
 
@@ -645,7 +643,6 @@ function NetworkWidget(mod, world) {
                                                     })}
                                                 </select>
                                             </td>
-                                            <td class="missing">Inconnu</td>
                                         </tr>
                                     `;
                                 })}
