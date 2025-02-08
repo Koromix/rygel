@@ -15,6 +15,7 @@ sqlite3mc.def            | Exported Symbols for Windows DLL builds
 sqlite3.c                | C source, original SQLite amalgamation
 sqlite3.h                | C header, original SQLite amalgamation
 sqlite3ext.h             | C header for extensions, original SQLite
+shell.c                  | C source of the SQLite shell
 
 ## Support
 
