@@ -228,6 +228,7 @@ var mustBeBoolean = (value) => typeof value === "boolean" ? null : "a boolean";
 var mustBeString = (value) => typeof value === "string" ? null : "a string";
 var mustBeRegExp = (value) => value instanceof RegExp ? null : "a RegExp object";
 var mustBeInteger = (value) => typeof value === "number" && value === (value | 0) ? null : "an integer";
+var mustBeValidPortNumber = (value) => typeof value === "number" && value === (value | 0) && value >= 0 && value <= 65535 ? null : "a valid port number";
 var mustBeFunction = (value) => typeof value === "function" ? null : "a function";
 var mustBeArray = (value) => Array.isArray(value) ? null : "an array";
 var mustBeObject = (value) => typeof value === "object" && value !== null && !Array.isArray(value) ? null : "an object";
@@ -662,8 +663,8 @@ function createChannel(streamIn) {
     if (isFirstPacket) {
       isFirstPacket = false;
       let binaryVersion = String.fromCharCode(...bytes);
-      if (binaryVersion !== "0.24.2") {
-        throw new Error(`Cannot start service: Host version "${"0.24.2"}" does not match binary version ${quote(binaryVersion)}`);
+      if (binaryVersion !== "0.25.0") {
+        throw new Error(`Cannot start service: Host version "${"0.25.0"}" does not match binary version ${quote(binaryVersion)}`);
       }
       return;
     }
@@ -1018,7 +1019,7 @@ function buildOrContextImpl(callName, buildKey, sendRequest, sendResponse, refs,
         serve: (options2 = {}) => new Promise((resolve, reject) => {
           if (!streamIn.hasFS) throw new Error(`Cannot use the "serve" API in this environment`);
           const keys = {};
-          const port = getFlag(options2, keys, "port", mustBeInteger);
+          const port = getFlag(options2, keys, "port", mustBeValidPortNumber);
           const host = getFlag(options2, keys, "host", mustBeString);
           const servedir = getFlag(options2, keys, "servedir", mustBeString);
           const keyfile = getFlag(options2, keys, "keyfile", mustBeString);
@@ -1773,7 +1774,7 @@ for your current platform.`);
         "node_modules",
         ".cache",
         "esbuild",
-        `pnpapi-${pkg.replace("/", "-")}-${"0.24.2"}-${path.basename(subpath)}`
+        `pnpapi-${pkg.replace("/", "-")}-${"0.25.0"}-${path.basename(subpath)}`
       );
       if (!fs.existsSync(binTargetPath)) {
         fs.mkdirSync(path.dirname(binTargetPath), { recursive: true });
@@ -1808,7 +1809,7 @@ if (process.env.ESBUILD_WORKER_THREADS !== "0") {
   }
 }
 var _a;
-var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.24.2";
+var isInternalWorkerThread = ((_a = worker_threads == null ? void 0 : worker_threads.workerData) == null ? void 0 : _a.esbuildVersion) === "0.25.0";
 var esbuildCommandAndArgs = () => {
   if ((!ESBUILD_BINARY_PATH || false) && (path2.basename(__filename) !== "main.js" || path2.basename(__dirname) !== "lib")) {
     throw new Error(
@@ -1875,7 +1876,7 @@ var fsAsync = {
     }
   }
 };
-var version = "0.24.2";
+var version = "0.25.0";
 var build = (options) => ensureServiceIsRunning().build(options);
 var context = (buildOptions) => ensureServiceIsRunning().context(buildOptions);
 var transform = (input, options) => ensureServiceIsRunning().transform(input, options);
@@ -1978,7 +1979,7 @@ var stopService;
 var ensureServiceIsRunning = () => {
   if (longLivedService) return longLivedService;
   let [command, args] = esbuildCommandAndArgs();
-  let child = child_process.spawn(command, args.concat(`--service=${"0.24.2"}`, "--ping"), {
+  let child = child_process.spawn(command, args.concat(`--service=${"0.25.0"}`, "--ping"), {
     windowsHide: true,
     stdio: ["pipe", "pipe", "inherit"],
     cwd: defaultWD
@@ -2082,7 +2083,7 @@ var runServiceSync = (callback) => {
     esbuild: node_exports
   });
   callback(service);
-  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.24.2"}`), {
+  let stdout = child_process.execFileSync(command, args.concat(`--service=${"0.25.0"}`), {
     cwd: defaultWD,
     windowsHide: true,
     input: stdin,
@@ -2102,7 +2103,7 @@ var workerThreadService = null;
 var startWorkerThreadService = (worker_threads2) => {
   let { port1: mainPort, port2: workerPort } = new worker_threads2.MessageChannel();
   let worker = new worker_threads2.Worker(__filename, {
-    workerData: { workerPort, defaultWD, esbuildVersion: "0.24.2" },
+    workerData: { workerPort, defaultWD, esbuildVersion: "0.25.0" },
     transferList: [workerPort],
     // From node's documentation: https://nodejs.org/api/worker_threads.html
     //

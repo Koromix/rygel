@@ -1150,6 +1150,86 @@ tests.push(
   }),
 )
 
+// Check big integer lowering
+for (const minify of [[], '--minify']) {
+  for (const target of [[], ['--target=es6']]) {
+    tests.push(test(['in.js', '--outfile=node.js', '--bundle', '--log-override:bigint=silent'].concat(target).concat(minify), {
+      'in.js': `
+        var BigInt = function() {
+          throw 'fail: BigInt'
+        };
+
+        function check(a, b, c) {
+          if (b[a] !== true) throw 'fail 1: ' + a
+          if (c(b) !== true) throw 'fail 2: ' + a
+        }
+
+        check(0n, { 0n: true }, ({ 0n: x }) => x)
+        check(0b100101n, { 0b100101n: true }, ({ 0b100101n: x }) => x)
+        check(0B100101n, { 0B100101n: true }, ({ 0B100101n: x }) => x)
+        check(0o76543210n, { 0o76543210n: true }, ({ 0o76543210n: x }) => x)
+        check(0O76543210n, { 0O76543210n: true }, ({ 0O76543210n: x }) => x)
+        check(0xFEDCBA9876543210n, { 0xFEDCBA9876543210n: true }, ({ 0xFEDCBA9876543210n: x }) => x)
+        check(0XFEDCBA9876543210n, { 0XFEDCBA9876543210n: true }, ({ 0XFEDCBA9876543210n: x }) => x)
+        check(0xb0ba_cafe_f00dn, { 0xb0ba_cafe_f00dn: true }, ({ 0xb0ba_cafe_f00dn: x }) => x)
+        check(0xB0BA_CAFE_F00Dn, { 0xB0BA_CAFE_F00Dn: true }, ({ 0xB0BA_CAFE_F00Dn: x }) => x)
+        check(102030405060708090807060504030201n, { 102030405060708090807060504030201n: true }, ({ 102030405060708090807060504030201n: x }) => x)
+      `,
+    }))
+  }
+
+  tests.push(
+    test(['in.js', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        // Must not be minified to "if (!(a | b)) throw 'fail'"
+        function foo(a, b) { if ((a | b) === 0) throw 'fail' }
+        foo(0n, 0n)
+        foo(1n, 1n)
+      `,
+    }),
+    test(['in.js', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        // Must not be minified to "if (!(a & b)) throw 'fail'"
+        function foo(a, b) { if ((a & b) === 0) throw 'fail' }
+        foo(0n, 0n)
+        foo(1n, 1n)
+      `,
+    }),
+    test(['in.js', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        // Must not be minified to "if (!(a ^ b)) throw 'fail'"
+        function foo(a, b) { if ((a ^ b) === 0) throw 'fail' }
+        foo(0n, 0n)
+        foo(0n, 1n)
+      `,
+    }),
+    test(['in.js', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        // Must not be minified to "if (!(a << b)) throw 'fail'"
+        function foo(a, b) { if ((a << b) === 0) throw 'fail' }
+        foo(0n, 0n)
+        foo(1n, 1n)
+      `,
+    }),
+    test(['in.js', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        // Must not be minified to "if (!(a >> b)) throw 'fail'"
+        function foo(a, b) { if ((a >> b) === 0) throw 'fail' }
+        foo(1n, 0n)
+        foo(1n, 1n)
+      `,
+    }),
+    test(['in.js', '--outfile=node.js'].concat(minify), {
+      'in.js': `
+        // Must not be minified to "if (!~a) throw 'fail'"
+        function foo(a) { if (~a === 0) throw 'fail' }
+        foo(-1n)
+        foo(1n)
+      `,
+    }),
+  )
+}
+
 // Check template literal lowering
 for (const target of ['--target=es5', '--target=es6', '--target=es2020']) {
   tests.push(

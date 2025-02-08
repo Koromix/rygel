@@ -20,7 +20,7 @@ test-all:
 	@$(MAKE) --no-print-directory -j6 test-common test-deno ts-type-tests test-wasm-node test-wasm-browser lib-typecheck test-yarnpnp
 
 check-go-version:
-	@go version | grep ' go1\.23\.1 ' || (echo 'Please install Go version 1.23.1' && false)
+	@go version | grep ' go1\.23\.5 ' || (echo 'Please install Go version 1.23.5' && false)
 
 # Note: Don't add "-race" here by default. The Go race detector is currently
 # only supported on the following configurations:
@@ -363,7 +363,7 @@ platform-freebsd-arm64:
 	@$(MAKE) --no-print-directory GOOS=freebsd GOARCH=arm64 NPMDIR=npm/@esbuild/freebsd-arm64 platform-unixlike
 
 platform-netbsd-arm64:
-	@$(MAKE) --no-print-directory GOOS=netbsd GOARCH=amd64 NPMDIR=npm/@esbuild/netbsd-arm64 platform-unixlike
+	@$(MAKE) --no-print-directory GOOS=netbsd GOARCH=arm64 NPMDIR=npm/@esbuild/netbsd-arm64 platform-unixlike
 
 platform-netbsd-x64:
 	@$(MAKE) --no-print-directory GOOS=netbsd GOARCH=amd64 NPMDIR=npm/@esbuild/netbsd-x64 platform-unixlike

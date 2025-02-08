@@ -372,7 +372,13 @@ func (service *serviceType) handleIncomingPacket(bytes []byte) {
 						options.Host = value.(string)
 					}
 					if value, ok := request["port"]; ok {
-						options.Port = uint16(value.(int))
+						if value == 0 {
+							// 0 is the default value in Go, which we interpret as "try to
+							// pick port 8000". So Go uses -1 as the sentinel value instead.
+							options.Port = -1
+						} else {
+							options.Port = value.(int)
+						}
 					}
 					if value, ok := request["servedir"]; ok {
 						options.Servedir = value.(string)
@@ -418,11 +424,15 @@ func (service *serviceType) handleIncomingPacket(bytes []byte) {
 					if result, err := ctx.Serve(options); err != nil {
 						service.sendPacket(encodeErrorPacket(p.id, err))
 					} else {
+						hosts := make([]interface{}, len(result.Hosts))
+						for i, host := range result.Hosts {
+							hosts[i] = host
+						}
 						service.sendPacket(encodePacket(packet{
 							id: p.id,
 							value: map[string]interface{}{
-								"port": int(result.Port),
-								"host": result.Host,
+								"port":  int(result.Port),
+								"hosts": hosts,
 							},
 						}))
 					}
