@@ -16,6 +16,7 @@
 .net_wrapper {
     position: relative;
     display: flex;
+    flex: 1;
     gap: 12px;
     background: var(--tab_color);
 }
@@ -26,10 +27,15 @@
     gap: 6px;
     width: 216px;
 }
-.net_canvas {
+.net_render {
+    display: flex;
     flex: 1;
     background: var(--box_color);
     border-radius: 16px;
+}
+.net_render > canvas {
+    width: 100%;
+    height: 100%;
 }
 .net_shortcuts {
     display: flex;

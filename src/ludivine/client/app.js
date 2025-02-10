@@ -91,6 +91,9 @@ let db = null;
 let identity = null;
 
 let root_el = null;
+let main_el = null;
+let fullscreen = false;
+
 let calendar = null;
 
 let cache = {
@@ -119,6 +122,14 @@ async function start(root) {
         UI.closeDialog();
         go(window.location.href, false);
     });
+
+    // Detect fullscreen exit
+    document.body.addEventListener('fullscreenchange', () => {
+        if (fullscreen && document.fullscreenElement != document.body) {
+            fullscreen = false;
+            run();
+        }
+    })
 
     // Perform mail login
     if (window.location.hash) {
@@ -160,6 +171,7 @@ async function start(root) {
     }
 
     root_el = root;
+    main_el = document.createElement('main');
 
     await go(window.location.href, false);
     document.body.classList.remove('loading');
@@ -611,36 +623,45 @@ async function openStudy(project) {
     run();
 }
 
-function renderMain(content) {
-    render(html`
-        <div id="deploy" @click=${deploy}></div>
+function renderMain(content = null) {
+    if (fullscreen) {
+        render(main_el, root_el);
+    } else {
+        render(html`
+            <div id="deploy" @click=${deploy}></div>
 
-        <nav id="top">
-            <menu>
-                <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
-                <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
-                <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
-                <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
-                <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
-                <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
-                <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
-                <div style="flex: 1;"></div>
-                <img class="picture" src=${identity?.picture ?? ASSETS['ui/user']} alt="" />
-            </menu>
-        </nav>
+            <nav id="top">
+                <menu>
+                    <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
+                    <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
+                    <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
+                    <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
+                    <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
+                    <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
+                    <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
+                    <div style="flex: 1;"></div>
+                    <img class="picture" src=${identity?.picture ?? ASSETS['ui/user']} alt="" />
+                </menu>
+            </nav>
 
-        <main>${content}</main>
+            ${main_el}
 
-        <footer>
-            <div>Lignes de Vie © 2024</div>
-            <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
-            <div style="font-size: 0.8em;">
-                <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
-            </div>
-        </footer>
+            <footer>
+                <div>Lignes de Vie © 2024</div>
+                <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
+                <div style="font-size: 0.8em;">
+                    <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
+                </div>
+            </footer>
 
-        ${db != null ? html`<a id="sos" @click=${UI.wrap(e => sos(event))}></a>` : ''}
-    `, root_el);
+            ${db != null ? html`<a id="sos" @click=${UI.wrap(e => sos(event))}></a>` : ''}
+        `, root_el);
+    }
+
+    main_el.classList.toggle('fullscreen', fullscreen);
+
+    if (content != null)
+        render(content, main_el);
 }
 
 function renderCalendar(events) {
@@ -662,6 +683,23 @@ function renderCalendar(events) {
     }
 
     return calendar.render();
+}
+
+async function toggleFullScreen() {
+    fullscreen = !fullscreen;
+
+    try {
+        if (fullscreen) {
+            document.body.requestFullscreen();
+        } else {
+            render('', root_el);
+            document.exitFullscreen();
+        }
+    } catch (err) {
+        console.error(err);
+    }
+
+    return run();
 }
 
 // ------------------------------------------------------------------------
@@ -766,7 +804,7 @@ async function runProject() {
             <a class="active">Participer</a>
         </div>
 
-        <div class="tab">
+        <div class="tab" style="flex: 1;">
             <div class="summary">
                 <img src=${cache.project.picture} alt="" />
                 <div>
@@ -1175,5 +1213,8 @@ export {
     run,
     changePicture,
 
-    renderMain
+    renderMain,
+
+    fullscreen as isFullScreen,
+    toggleFullScreen
 }

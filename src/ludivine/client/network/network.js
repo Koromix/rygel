@@ -32,8 +32,8 @@ function NetworkModule(db, test) {
     let self = this;
 
     // DOM nodes
-    let toolbox = null;
-    let shortcuts = null;
+    let toolbox_el = null;
+    let shortcuts_el = null;
     let canvas = null;
 
     // Platform
@@ -63,18 +63,19 @@ function NetworkModule(db, test) {
 
     Object.defineProperties(this, {
         runner: { get: () => runner, enumerable: true },
-        toolbox: { get: () => toolbox, enumerable: true },
+        toolbox: { get: () => toolbox_el, enumerable: true },
 
         anonymous: { get: () => anonymous, set: value => { anonymous = value; }, enumerable: true }
     });
 
     this.start = async function() {
-        toolbox = document.createElement('div');
-        toolbox.className = 'net_toolbox';
         canvas = document.createElement('canvas');
         canvas.className = 'net_canvas';
-        shortcuts = document.createElement('div');
-        shortcuts.className = 'net_shortcuts';
+
+        toolbox_el = document.createElement('div');
+        toolbox_el.className = 'net_toolbox';
+        shortcuts_el = document.createElement('div');
+        shortcuts_el.className = 'net_shortcuts';
 
         runner = new AppRunner(canvas);
 
@@ -121,9 +122,9 @@ function NetworkModule(db, test) {
     this.render = function() {
         return html`
             <div class="net_wrapper">
-                ${toolbox}
-                ${canvas}
-                ${shortcuts}
+                ${toolbox_el}
+                ${shortcuts_el}
+                <div class="net_render">${canvas}</div>
             </div>
         `;
     };
@@ -217,7 +218,7 @@ function NetworkModule(db, test) {
 
         now = (new Date).valueOf();
 
-        // Global shortcuts
+        // Global shortcuts_el
         if (pressed_keys.debug == -1)
             debug = !debug;
         if (pressed_keys.ctrl > 0 && pressed_keys.z == -1)
@@ -227,7 +228,7 @@ function NetworkModule(db, test) {
 
         render(html`
             <button type="button" class="small" title="Mode plein écran"
-                    @click=${UI.wrap(toggleFullScreen)}>
+                    @click=${UI.wrap(app.toggleFullScreen)}>
                 <img src=${ASSETS['ui/fullscreen']} alt="" />
             </button>
             <div style="flex: 1;"></div>
@@ -245,7 +246,7 @@ function NetworkModule(db, test) {
                 <img src=${ASSETS['ui/redo']} alt="" />
                 <span>Rétablir</span>
             </button>
-        `, shortcuts);
+        `, shortcuts_el);
 
         // Run widget code
         widget.update();
@@ -261,21 +262,6 @@ function NetworkModule(db, test) {
             }
             if (tooltip.opacity < 0)
                 tooltip = null;
-        }
-    }
-
-    function toggleFullScreen() {
-        let wrapper = canvas.parentNode;
-        let fullscreen = (document.fullscreenElement == wrapper);
-
-        if (!fullscreen) {
-            try {
-                wrapper.requestFullscreen();
-            } catch (err) {
-                console.error(err);
-            }
-        } else {
-            document.exitFullscreen();
         }
     }
 

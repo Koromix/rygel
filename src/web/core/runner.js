@@ -478,6 +478,10 @@ function AppRunner(canvas) {
             prev_canvas_width = rect.width;
         }
         if (rect.height != prev_canvas_height) {
+            // Force transient empty height to downsize to minimal CSS layout height
+            if (prev_canvas_height != 0)
+                rect.height = 0;
+
             canvas.height = rect.height * window.devicePixelRatio;
             prev_canvas_height = rect.height;
         }

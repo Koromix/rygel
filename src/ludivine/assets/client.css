@@ -21,15 +21,30 @@
     flex-direction: column;
 }
 main {
+    display: flex;
     position: relative;
     width: 100%;
     flex: 1;
+    flex-direction: column;
 }
 
 .tab {
     display: flex;
     flex-direction: column;
     gap: 1em;
+}
+
+/* Fullscreen */
+main.fullscreen {
+    max-width: none;
+    padding: 0;
+
+    & > .tabbar { display: none; }
+    & > .tab {
+        box-sizing: border-box;
+        height: calc(100vh - 2em);
+    }
+    & > .tab > .summary { display: none; }
 }
 
 .bar {
