@@ -93,8 +93,6 @@ let identity = null;
 let root_el = null;
 let calendar = null;
 
-let active_mod = null;
-
 let cache = {
     studies: null,
     events: null,
@@ -121,12 +119,6 @@ async function start(root) {
         UI.closeDialog();
         go(window.location.href, false);
     });
-
-    // Prevent unsaved data loss
-    window.onbeforeunload = () => {
-        if (active_mod != null && active_mod.hasUnsavedData())
-            return 'Si vous confirmez vouloir quitter la page, les modifications en cours seront perdues !';
-    };
 
     // Perform mail login
     if (window.location.hash) {
