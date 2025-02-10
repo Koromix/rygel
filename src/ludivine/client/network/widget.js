@@ -27,7 +27,7 @@ const TOOLS = {
 };
 
 const PERSON_RADIUS = 0.05;
-const LINK_RADIUS = 0.03;
+const LINK_RADIUS = 0.025;
 const CIRCLE_MARGIN = 1.8 * PERSON_RADIUS;
 const DEFAULT_INFLUENCE = 3;
 
@@ -1104,14 +1104,16 @@ function NetworkWidget(mod, world) {
                 // Draw center
                 {
                     let [from, to] = computeLinkCoordinates(a, b);
+                    let distance = computeDistance(from, to);
                     let angle = Math.atan2(from.y - to.y, to.x - from.x);
 
                     let p = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+                    let radius = Math.min(distance / 10, LINK_RADIUS);
 
                     ctx.fillStyle = level.color;
 
                     ctx.beginPath();
-                    ctx.arc(p.x, p.y, LINK_RADIUS, 0, Math.PI * 2, false);
+                    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2, false);
                     ctx.fill();
                 }
             }
@@ -1228,18 +1230,22 @@ function NetworkWidget(mod, world) {
 
     function drawTip(tip, angle) {
         let p1 = {
-            x: tip.x + 0.04 * Math.cos(angle + 3.3 * Math.PI / 4),
-            y: tip.y - 0.04 * Math.sin(angle + 3.3 * Math.PI / 4)
+            x: tip.x + 0.01 * Math.cos(angle),
+            y: tip.y - 0.01 * Math.sin(angle)
         };
         let p2 = {
-            x: tip.x + 0.04 * Math.cos(angle - 3.3 * Math.PI / 4),
-            y: tip.y - 0.04 * Math.sin(angle - 3.3 * Math.PI / 4)
+            x: tip.x + 0.03 * Math.cos(angle + 3.3 * Math.PI / 4),
+            y: tip.y - 0.03 * Math.sin(angle + 3.3 * Math.PI / 4)
+        };
+        let p3 = {
+            x: tip.x + 0.03 * Math.cos(angle - 3.3 * Math.PI / 4),
+            y: tip.y - 0.03 * Math.sin(angle - 3.3 * Math.PI / 4)
         };
 
         ctx.beginPath();
-        ctx.moveTo(tip.x, tip.y);
-        ctx.lineTo(p1.x, p1.y);
+        ctx.moveTo(p1.x, p1.y);
         ctx.lineTo(p2.x, p2.y);
+        ctx.lineTo(p3.x, p3.y);
         ctx.closePath();
 
         ctx.fill();
