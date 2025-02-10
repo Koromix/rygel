@@ -47,8 +47,8 @@ function initCards() {
             });
         }
 
-        shuffleCards(cards);
-        activateCard(cards, 0);
+        let shuffle = shuffleCards(cards);
+        activateCard(cards, shuffle[0]);
 
         if (cardset == cardsets[0]) {
             let key_timer = null;
@@ -105,6 +105,8 @@ function shuffleCards(cards) {
         let card = cards[i];
         card.dataset.rnd = shuffle[i];
     }
+
+    return shuffle;
 }
 
 function toggleCard(cards, delta) {
