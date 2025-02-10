@@ -46,3 +46,8 @@
     gap: 6px;
     z-index: 1;
 }
+
+@media screen and (max-width: 960px) {
+    .net_toolbox { width: 48px; }
+    .net_shortcuts { width: calc(100% - 76px); }
+}
