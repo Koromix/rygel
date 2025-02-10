@@ -514,8 +514,8 @@ async function runDashboard() {
                 <div class="studies">
                     ${PROJECTS.map(project => {
                         let study = cache.studies.find(study => study.key == project.key);
-
                         let cls = 'study';
+
                         if (study != null) {
                             if (study.progress == study.total) {
                                 cls += ' done';
@@ -796,29 +796,32 @@ async function runProject() {
         ctx = null;
     }
 
-    // Global progress
-    let [progress, total] = computeProgress(cache.project.root);
+    // Render tab
+    {
+        let [progress, total] = computeProgress(cache.project.root);
+        let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
-    renderMain(html`
-        <div class="tabbar">
-            <a class="active">Participer</a>
-        </div>
-
-        <div class="tab" style="flex: 1;">
-            <div class="summary">
-                <img src=${cache.project.picture} alt="" />
-                <div>
-                    <div class="title">Étude ${cache.project.index} - ${cache.project.title}</div>
-                    ${cache.project.summary}
-                </div>
-                ${progressCircle(progress, total)}
+        renderMain(html`
+            <div class="tabbar">
+                <a class="active">Participer</a>
             </div>
 
-            ${cache.page == null ? renderModule() : null}
-            ${cache.page != null && cache.section == null ? renderStart() : null}
-            ${cache.page != null && cache.section != null ? renderPage() : null}
-        </div>
-    `);
+            <div class="tab" style="flex: 1;">
+                <div class=${cls}>
+                    <img src=${cache.project.picture} alt="" />
+                    <div>
+                        <div class="title">Étude ${cache.project.index} - ${cache.project.title}</div>
+                        ${cache.project.summary}
+                    </div>
+                    ${progressCircle(progress, total)}
+                </div>
+
+                ${cache.page == null ? renderModule() : null}
+                ${cache.page != null && cache.section == null ? renderStart() : null}
+                ${cache.page != null && cache.section != null ? renderPage() : null}
+            </div>
+        `);
+    }
 }
 
 function renderModule() {

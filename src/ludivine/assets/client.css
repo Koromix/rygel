@@ -15,6 +15,12 @@
 
 @import url('./ludivine.css');
 
+html {
+    --empty_color: #d0cccc;
+    --draft_color: #d9bf69;
+    --done_color: #eca17f;
+}
+
 #root {
     display: flex;
     flex: 1;
@@ -162,7 +168,7 @@ main.fullscreen {
     gap: 1em;
 }
 .study {
-    --color: #d0cccc;
+    --color: var(--empty_color);
 
     display: flex;
     width: calc(50% - 0.5em);
@@ -174,12 +180,12 @@ main.fullscreen {
     align-items: center;
 }
 .study.draft {
-    --color: #d9bf69;
-    --button_color: #d9bf69;
+    --color: var(--draft_color);
+    --button_color: var(--draft_color);
 }
 .study.done {
-    --color: #eca17f;
-    --button_color: #eca17f;
+    --color: var(--done_color);
+    --button_color: var(--done_color);
 }
 .study {
     & > img { width: 100px; }
@@ -231,27 +237,31 @@ main.fullscreen {
     border-radius: 16px;
     gap: 1.5em;
 }
-.summary > img {
-    width: 200px;
-    height: 100%;
-    object-fit: cover;
-    object-position: left top;
-    background: #ecdbc3;
-    border-top-left-radius: 16px;
-    border-bottom-left-radius: 16px;
+.summary.draft > .circle { --fill: var(--draft_color); }
+.summary.done > .circle { --fill: var(--done_color); }
+.summary {
+    & > img {
+        width: 200px;
+        height: 100%;
+        object-fit: cover;
+        object-position: left top;
+        background: #ecdbc3;
+        border-top-left-radius: 16px;
+        border-bottom-left-radius: 16px;
+    }
+    & > div {
+        flex: 1;
+        padding: 1em 0;
+    }
+    & > div > .title {
+        margin-bottom: 1em;
+        font-size: 1.2em;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: #364b9b;
+    }
+    & > .circle { margin: 20px 20px; }
 }
-.summary > div {
-    flex: 1;
-    padding: 1em 0;
-}
-.summary > div > .title {
-    margin-bottom: 1em;
-    font-size: 1.2em;
-    font-weight: bold;
-    text-transform: uppercase;
-    color: #364b9b;
-}
-.summary > .circle { margin: 20px 20px; }
 
 .modules {
     display: flex;
