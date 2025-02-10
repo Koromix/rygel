@@ -433,7 +433,11 @@ function NetworkWidget(mod, world) {
                     if (idx > 0)
                         changePerson(target);
                 } else if (idx > 0 && mouse_state.right == -1) {
-                    deletePersons(target);
+                    if (select_persons.includes(target)) {
+                        deletePersons(select_persons);
+                    } else {
+                        deletePersons(target);
+                    }
                 }
             }
 
