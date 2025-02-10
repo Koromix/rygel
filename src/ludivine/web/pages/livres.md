@@ -1,52 +1,64 @@
 <div class="tabbar">
-    <a class="active">Livres</a>
     <a href="/videos">Vidéos</a>
+    <a href="/livres" class="active">Livres</a>
+    <a href="/films">Films</a>
+    <a href="/musiques">Musiques</a>
+    <a href="/pros">Recos des pros</a>
 </div>
 
 <div class="tab">
     <div class="cardset">
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/traiter_la_depression.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/resources/livre_jamoulle.jpg }}" alt="" />
             <div>
-                <p class="reference">Traiter la dépression et les troubles de l'humeur</p>
+                <p class="reference">Je n'existais plus – Pascale Jamoulle</p>
                 <div class="actions">
-                    <a href="https://www.dunod.com/sciences-humaines-et-sociales/traiter-depression-et-troubles-humeur-10-cas-pratiques-en-tcc" target="_blank">En savoir plus</a>
+                    <a href="https://www.editionsladecouverte.fr/je_n_existais_plus-9782348065101" target="_blank">En savoir plus</a>
                 </div>
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/les_troubles_bipolaires.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/resources/livre_lambda.jpg }}" alt="" />
             <div>
-                <p class="reference">Les troubles bipolaires : de la cyclothymie au syndrome maniaco-dépressif</p>
+                <p class="reference">Tant pis pour l'amour – Sophie Lambda</p>
                 <div class="actions">
-                    <a href="https://www.dunod.com/sciences-humaines-et-sociales/troubles-bipolaires-cyclothymie-au-syndrome-maniaco-depressif" target="_blank">En savoir plus</a>
+                    <a href="https://www.editions-delcourt.fr/bd/series/serie-tant-pis-pour-l-amour-ou-comment-j-ai-survecu-un-manipulateur/album-tant-pis-pour-l-amour-ou-comment-j-ai-survecu-un-manipulateur" target="_blank">En savoir plus</a>
                 </div>
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/apprendre_a_soigner_les_depressions.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/resources/livre_delacourt.jpg }}" alt="" />
             <div>
-                <p class="reference">Apprendre à soigner les dépressions</p>
+                <p class="reference">L'enfant réparé – Grégoire Delacourt</p>
                 <div class="actions">
-                    <a href="https://www.dunod.com/sciences-humaines-et-sociales/apprendre-soigner-depressions-avec-therapies-comportementales-et-0" target="_blank">En savoir plus</a>
+                    <a href="https://www.grasset.fr/livre/lenfant-repare-9782246828846/" target="_blank">En savoir plus</a>
                 </div>
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/humeur_normale_a_la_depression.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/resources/livre_vantran.jpg }}" alt="" />
             <div>
-                <p class="reference">De l'humeur normale à la dépression</p>
+                <p class="reference">La thérapie de la dernière chance – Sophie Tran Van</p>
                 <div class="actions">
-                    <a href="https://www.deboecksuperieur.com/ouvrage/9782353273546-de-l-humeur-normale-la-depression-en-psychologie-cognitive-neurosciences-et" target="_blank">En savoir plus</a>
+                    <a href="https://www.odilejacob.fr/catalogue/psychologie/psychotherapie/therapie-de-la-derniere-chance_9782738149213.php" target="_blank">En savoir plus</a>
                 </div>
             </div>
         </div>
         <div class="card">
-            <img src="{{ ASSET ../assets/resources/psychoeducation_dans_depression.jpg }}" alt="" />
+            <img src="{{ ASSET ../assets/resources/livre_cabrel.jpg }}" alt="" />
             <div>
-                <p class="reference">Mettre en oeuvre un programme de psychoéducation pour la dépression</p>
+                <p class="reference">Boza – Ulrich Cabrel et Etienne Longueville</p>
                 <div class="actions">
-                    <a href="https://www.dunod.com/sciences-humaines-et-sociales/mettre-en-oeuvre-un-programme-psychoeducation-pour-depression" target="_blank">En savoir plus</a>
+                    <a href="https://www.jailu.com/boza/9782290239322" target="_blank">En savoir plus</a>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <img src="{{ ASSET ../assets/resources/livre_alloinguillon.jpg }}" alt="" />
+            <div>
+                <p class="reference">Dans la secte – Louis Alloing et Patrice Guillon</p>
+                <div class="actions">
+                    <a href="https://www.la-boite-a-bulles.com/serie/11" target="_blank">En savoir plus</a>
                 </div>
             </div>
         </div>
