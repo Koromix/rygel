@@ -72,10 +72,10 @@ static void InitAssets()
         } else {
             Span<const char> name = SplitStrReverseAny(asset.name, RG_PATH_SEPARATORS);
 
-            if (NameContainsHash(name)) {
-                const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
-                assets_map.Set(url, &asset);
-            } else {
+            const char *url = Fmt(&assets_alloc, "/static/%1", name).ptr;
+            assets_map.Set(url, &asset);
+
+            if (!NameContainsHash(name)) {
                 const char *url = Fmt(&assets_alloc, "/static/%1/%2", shared_etag, name).ptr;
                 assets_map.Set(url, &asset);
 
