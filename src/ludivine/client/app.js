@@ -82,8 +82,7 @@ Object.assign(T, {
 
 let route = {
     project: null,
-    mod: null,
-    page: null,
+    path: null,
     section: null
 };
 let route_url = null;
@@ -238,12 +237,30 @@ async function go(url = null, push = true) {
         if (!(url instanceof URL))
             url = new URL(url, window.location.href);
 
-        route.project = url.searchParams.get('project') ?? null;
-        route.mod = url.searchParams.get('mod') ?? null;
-        route.page = url.searchParams.get('page') ?? null;
-        if (url.searchParams.has('section')) {
-            route.section = parseInt(url.searchParams.get('section'), 10);
+        let parts = url.pathname.slice(1).split('/');
+        let project = PROJECTS.find(project => project.key == parts[0]);
+
+        if (project != null) {
+            route.project = parts.shift();
+
+            if (parts.length > 0) {
+                let last = parts.pop();
+
+                route.path = '/' + parts.join('/');
+
+                if (last.startsWith('-')) {
+                    route.section = last.substr(1);
+
+                    if (route.section == 'edit')
+                        route.section = 0;
+                } else {
+                    route.path += '/' + last;
+                    route.section = null;
+                }
+            }
         } else {
+            route.project = null;
+            route.path = null;
             route.section = null;
         }
     }
@@ -320,8 +337,15 @@ async function run(push = true) {
             }
 
             if (cache.study != null) {
-                cache.mod = cache.project.modules.find(mod => mod.key == route.mod) ?? cache.project.root;
-                cache.page = cache.project.pages.find(page => page.key == route.page);
+                cache.page = cache.project.pages.find(page => page.key == route.path);
+
+                if (cache.page != null) {
+                    let prefix = route.path.substr(0, route.path.lastIndexOf('/'));
+                    cache.mod = cache.project.modules.find(mod => mod.key == prefix);
+                } else {
+                    cache.mod = cache.project.modules.find(mod => mod.key == route.path) ?? cache.project.root;
+                }
+
                 cache.section = route.section;
             } else {
                 cache.mod = null;
@@ -345,8 +369,7 @@ async function run(push = true) {
 
     // Update route values
     route.project = cache.project?.key;
-    route.mod = cache.mod?.key;
-    route.page = cache.page?.key;
+    route.path = cache.page?.key ?? cache.mod?.key;
     route.section = cache.section;
 
     // Update URL
@@ -366,25 +389,22 @@ async function run(push = true) {
 }
 
 function makeURL(values = {}) {
-    let pathname = (new URL(window.location.href)).pathname;
-    let query = new URLSearchParams;
+    let path = '/';
 
-    for (let key in route) {
-        let value = values.hasOwnProperty(key) ? values[key] : route[key];
+    values = Object.assign({}, route, values);
 
-        switch (typeof value) {
-            case 'number': { query.set(key, value); } break;
-            case 'boolean': { query.set(key, 0 + value); } break;
-            case 'string': { query.set(key, value); } break;
+    if (route.project != null) {
+        path += route.project;
+        if (route.path != null)
+            path += route.path;
+        if (route.section === 0) {
+            path += '/-edit';
+        } else if (route.section != null) {
+            path += '/-' + route.section;
         }
     }
 
-    query = `?${query}`;
-    if (query == '?')
-        query = '';
-
-    let url = pathname + query;
-    return url;
+    return path;
 }
 
 async function initProject(project, study) {
@@ -746,6 +766,7 @@ async function runProject() {
         ctx = null;
     }
 
+    // Global progress
     let [progress, total] = computeProgress(cache.project.root);
 
     renderMain(html`
@@ -949,8 +970,7 @@ async function navigateStudy(mod, page = null, section = null) {
     while (page == null && mod.pages.length == 1)
         page = mod.pages[0];
 
-    route.mod = mod.key;
-    route.page = page?.key;
+    route.path = page?.key ?? mod.key;
     route.section = (page != null) ? section : null;
 
     await run();

@@ -181,9 +181,29 @@ static void HandleRequest(http_IO *io)
     io->AddHeader("X-Robots-Tag", "noindex");
     io->AddHeader("Permissions-Policy", "interest-cohort=()");
 
+    // API endpoint?
+    if (StartsWith(request.path, "/api/")) {
+        if (TestStr(request.path, "/api/register")) {
+            HandleUserRegister(io);
+        } else if (TestStr(request.path, "/api/login")) {
+            HandleUserLogin(io);
+        } else {
+            io->SendError(404);
+        }
+
+        return;
+    }
+
     // Static asset?
-    {
-        const AssetInfo *asset = assets_map.FindValue(request.path, nullptr);
+    if (!StartsWith(request.path, "/api/")) {
+        const char *path = request.path;
+        const char *ext = GetPathExtension(path).ptr;
+
+        if (!ext[0]) {
+            path = "/";
+        }
+
+        const AssetInfo *asset = assets_map.FindValue(path, nullptr);
 
         if (asset) {
             int64_t max_age = StartsWith(request.path, "/static/") ? (365ll * 86400000) : 0;
@@ -193,14 +213,7 @@ static void HandleRequest(http_IO *io)
         }
     }
 
-    // API endpoint?
-    if (TestStr(request.path, "/api/register")) {
-        HandleUserRegister(io);
-    } else if (TestStr(request.path, "/api/login")) {
-        HandleUserLogin(io);
-    } else {
-        io->SendError(404);
-    }
+    io->SendError(404);
 }
 
 int Main(int argc, char **argv)
