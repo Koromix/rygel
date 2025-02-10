@@ -595,14 +595,11 @@ function run(form, values) {
             ["I", "Intersexe"]
         ])
 
-        form.number("*annee", "En quelle année êtes-vous né(e) ?", {
-            min: 1920, max: LocalDate.today().year
-        })
-        /*form.number("*age", "Quel est votre âge ?", {
-            min: 0, max: 120,
+        form.number("*age", "Quel âge avez-vous ?", {
+            min: 18, max: 120,
             suffix: value => value > 1 ? "ans" : "an",
             help: "Indiquez votre âge au moment de votre inscription initiale dans l'application"
-        })*/
+        })
         form.sameLine(true); form.enumDrop("*pays_naissance", "Dans quel pays êtes-vous " + adapt("né", "e") + " ?", PAYS)
     })
 
