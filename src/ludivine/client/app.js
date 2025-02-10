@@ -81,11 +81,12 @@ Object.assign(T, {
 });
 
 let route = {
-    study: null,
+    project: null,
     mod: null,
     page: null,
     section: null
 };
+let route_url = null;
 
 let db = null;
 let identity = null;
@@ -101,11 +102,11 @@ let cache = {
 
     project: null,
     study: null,
-    tests: null,
-
     mod: null,
     page: null,
-    section: null
+    section: null,
+
+    tests: null
 };
 let ctx = null;
 
@@ -115,6 +116,12 @@ let ctx = null;
 
 async function start(root) {
     Log.pushHandler(UI.notifyHandler);
+
+    // Handle back navigation
+    window.addEventListener('popstate', e => {
+        UI.closeDialog();
+        go(window.location.href, false);
+    });
 
     // Prevent unsaved data loss
     window.onbeforeunload = () => {
@@ -163,9 +170,7 @@ async function start(root) {
 
     root_el = root;
 
-    await run();
-
-    // Ready!
+    await go(window.location.href, false);
     document.body.classList.remove('loading');
 }
 
@@ -228,7 +233,32 @@ function decrypt(enc, key) {
 // Run
 // ------------------------------------------------------------------------
 
-async function run() {
+async function go(url = null, push = true) {
+    if (url != null) {
+        if (!(url instanceof URL))
+            url = new URL(url, window.location.href);
+
+        route.project = url.searchParams.get('project') ?? null;
+        route.mod = url.searchParams.get('mod') ?? null;
+        route.page = url.searchParams.get('page') ?? null;
+        if (url.searchParams.has('section')) {
+            route.section = parseInt(url.searchParams.get('section'), 10);
+        } else {
+            route.section = null;
+        }
+    }
+
+    await run(push);
+}
+
+async function run(push = true) {
+    // Don't run stateful code while dialog is running to avoid concurrency issues
+    if (UI.isDialogOpen()) {
+        UI.runDialog();
+        return;
+    }
+
+    // Nothing to see
     if (db == null) {
         await runRegister();
         return;
@@ -268,11 +298,125 @@ async function run() {
             evt.schedule = LocalDate.parse(evt.schedule);
     }
 
+    // Sync state with expected route
+    {
+        let project = PROJECTS.find(project => project.key == route.project);
+
+        if (project != null) {
+            if (project.key != cache.project?.key || project == cache.project) {
+                if (typeof project.bundle == 'string')
+                    project.bundle = await import(project.bundle);
+
+                if (cache.study == null) {
+                    let study = cache.studies.find(study => study.key == project.key);
+
+                    if (study != null)
+                        project = await initProject(project, study);
+
+                    cache.study = study;
+                }
+
+                cache.project = project;
+            }
+
+            if (cache.study != null) {
+                cache.mod = cache.project.modules.find(mod => mod.key == route.mod) ?? cache.project.root;
+                cache.page = cache.project.pages.find(page => page.key == route.page);
+                cache.section = route.section;
+            } else {
+                cache.mod = null;
+                cache.page = null;
+                cache.section = null;
+            }
+        } else {
+            cache.study = null;
+            cache.mod = null;
+            cache.page = null;
+            cache.section = null;
+        }
+    }
+
+    // Run module
     if (cache.project != null) {
         await runProject();
     } else {
         await runDashboard();
     }
+
+    // Update route values
+    route.project = cache.project?.key;
+    route.mod = cache.mod?.key;
+    route.page = cache.page?.key;
+    route.section = cache.section;
+
+    // Update URL
+    {
+        let url = makeURL();
+
+        if (url != route_url) {
+            if (push) {
+                window.history.pushState(null, null, url);
+            } else if (url != route_url) {
+                window.history.replaceState(null, null, url);
+            }
+
+            route_url = url;
+        }
+    }
+}
+
+function makeURL(values = {}) {
+    let pathname = (new URL(window.location.href)).pathname;
+    let query = new URLSearchParams;
+
+    for (let key in route) {
+        let value = values.hasOwnProperty(key) ? values[key] : route[key];
+
+        switch (typeof value) {
+            case 'number': { query.set(key, value); } break;
+            case 'boolean': { query.set(key, 0 + value); } break;
+            case 'string': { query.set(key, value); } break;
+        }
+    }
+
+    query = `?${query}`;
+    if (query == '?')
+        query = '';
+
+    let url = pathname + query;
+    return url;
+}
+
+async function initProject(project, study) {
+    let bundle = project.bundle;
+
+    // Init study schema
+    {
+        project = new ProjectInfo(project);
+
+        let builder = new ProjectBuilder(project);
+        let start = LocalDate.fromJSDate(study.start);
+
+        bundle.init(builder, start);
+    }
+
+    // Update study tests
+    await db.transaction(async () => {
+        await db.exec('UPDATE tests SET visible = 0 WHERE study = ?', study.id);
+
+        for (let page of project.pages) {
+            let schedule = page.schedule?.toString?.();
+
+            await db.exec(`INSERT INTO tests (study, key, title, visible, status, schedule)
+                           VALUES (?, ?, ?, 1, 'empty', ?)
+                           ON CONFLICT DO UPDATE SET title = excluded.title,
+                                                     visible = excluded.visible,
+                                                     schedule = excluded.schedule`,
+                          study.id, page.key, page.title, schedule);
+        }
+    });
+
+    return project;
 }
 
 async function runRegister() {
@@ -451,13 +595,7 @@ async function changePicture() {
 }
 
 async function openStudy(project) {
-    cache.project = project;
-    cache.study = null;
-
-    cache.mod = null;
-    cache.page = null;
-    cache.section = null;
-
+    route.project = project.key;
     run();
 }
 
@@ -518,57 +656,94 @@ function renderCalendar(events) {
 // Study
 // ------------------------------------------------------------------------
 
+async function runConsent() {
+    let project = cache.project;
+    let bundle = project.bundle;
+
+    renderMain(html`
+        <div class="tabbar">
+            <a class="active">Participer</a>
+        </div>
+
+        <div class="tab">
+            <div class="box">
+                <div class="title">Consentement</div>
+                ${bundle.consent}
+            </div>
+            <div class="box" style="align-items: center;">
+                <form @submit=${UI.wrap(e => consent(e, cache.project))}>
+                    <label>
+                        <input name="consent" type="checkbox" />
+                        <span>J’ai lu et je ne m’oppose pas à participer à l’étude ${project.title}</span>
+                    </label>
+                    <button type="submit">Valider</button>
+                </form>
+            </div>
+        </div>
+    `);
+}
+
+async function consent(e, project) {
+    let start = (new Date).valueOf();
+
+    let form = e.currentTarget;
+    let elements = form.elements;
+
+    if (!elements.consent.checked)
+        throw new Error('Vous devez confirmé avoir lu et accepté la participation à ' + project.title);
+
+    await db.fetch1(`INSERT INTO studies (key, start)
+                     VALUES (?, ?)
+                     ON CONFLICT DO UPDATE SET start = excluded.start
+                     RETURNING id, start`, project.key, start);
+
+    run();
+}
+
 async function runProject() {
-    if (typeof cache.project.bundle == 'string')
-        cache.project.bundle = await import(cache.project.bundle);
+    // Sync tests
+    {
+        cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.status, t.payload
+                                         FROM tests t
+                                         INNER JOIN studies s ON (s.id = t.study)
+                                         WHERE s.id = ?`, cache.study.id);
 
-    if (cache.study == null) {
-        cache.study = cache.studies.find(study => study.key == cache.project.key);
-
-        if (cache.study != null)
-            cache.project = await initProject(cache.project, cache.study);
+        for (let test of cache.tests) {
+            if (test.payload != null)
+                test.payload = JSON.parse(test.payload);
+        }
     }
 
-    if (cache.study == null) {
-        let project = cache.project;
-        let bundle = project.bundle;
+    // Prepare page data context
+    if (cache.page != null) {
+        let page = cache.page;
 
-        renderMain(html`
-            <div class="tabbar">
-                <a class="active">Participer</a>
-            </div>
+        if (ctx?.page != page) {
+            let test = cache.tests.find(test => test.key == page.key);
+            let data = test?.payload ?? {};
 
-            <div class="tab">
-                <div class="box">
-                    <div class="title">Consentement</div>
-                    ${bundle.consent}
-                </div>
-                <div class="box" style="align-items: center;">
-                    <form @submit=${UI.wrap(e => consent(e, cache.project))}>
-                        <label>
-                            <input name="consent" type="checkbox" />
-                            <span>J’ai lu et je ne m’oppose pas à participer à l’étude ${project.title}</span>
-                        </label>
-                        <button type="submit">Valider</button>
-                    </form>
-                </div>
-            </div>
-        `);
+            switch (page.type) {
+                case 'form': {
+                    ctx = {
+                        page: page,
+                        state: new FormState(data),
+                        model: null,
+                        builder: null
+                    };
+                    ctx.state.changeHandler = run;
+                } break;
 
-        return;
-    }
-
-    if (cache.mod == null)
-        cache.mod = cache.project.root;
-
-    cache.tests = await db.fetchAll(`SELECT t.id, t.key, t.status, t.payload
-                                     FROM tests t
-                                     INNER JOIN studies s ON (s.id = t.study)
-                                     WHERE s.id = ?`, cache.study.id);
-
-    for (let test of cache.tests) {
-        if (test.payload != null)
-            test.payload = JSON.parse(test.payload);
+                case 'network': {
+                    ctx = {
+                        page: page,
+                        mod: new NetworkModule(db, test)
+                    };
+                    await ctx.mod.start();
+                } break;
+            }
+        }
+    } else {
+        ctx = null;
     }
 
     let [progress, total] = computeProgress(cache.project.root);
@@ -593,55 +768,6 @@ async function runProject() {
             ${cache.page != null && cache.section != null ? renderPage() : null}
         </div>
     `);
-}
-
-async function consent(e, project) {
-    let start = (new Date).valueOf();
-
-    let form = e.currentTarget;
-    let elements = form.elements;
-
-    if (!elements.consent.checked)
-        throw new Error('Vous devez confirmé avoir lu et accepté la participation à ' + project.title);
-
-    await db.fetch1(`INSERT INTO studies (key, start)
-                     VALUES (?, ?)
-                     ON CONFLICT DO UPDATE SET start = excluded.start
-                     RETURNING id, start`, project.key, start);
-
-    run();
-}
-
-async function initProject(project, study) {
-    let bundle = project.bundle;
-
-    // Init study schema
-    {
-        project = new ProjectInfo(project);
-
-        let builder = new ProjectBuilder(project);
-        let start = LocalDate.fromJSDate(study.start);
-
-        bundle.init(builder, start);
-    }
-
-    // Update study tests
-    await db.transaction(async () => {
-        await db.exec('UPDATE tests SET visible = 0 WHERE study = ?', study.id);
-
-        for (let page of project.pages) {
-            let schedule = page.schedule?.toString?.();
-
-            await db.exec(`INSERT INTO tests (study, key, title, visible, status, schedule)
-                           VALUES (?, ?, ?, 1, 'empty', ?)
-                           ON CONFLICT DO UPDATE SET title = excluded.title,
-                                                     visible = excluded.visible,
-                                                     schedule = excluded.schedule`,
-                          study.id, page.key, page.title, schedule);
-        }
-    });
-
-    return project;
 }
 
 function renderModule() {
@@ -774,7 +900,7 @@ function renderPage() {
 
     switch (page.type) {
         case 'form': return renderForm();
-        case 'network': { return ctx.render(); } break;
+        case 'network': { return ctx.mod.render(); } break;
     }
 }
 
@@ -818,41 +944,14 @@ function continueForm() {
 }
 
 async function navigateStudy(mod, page = null, section = null) {
-    cache.mod = mod;
-
     while (mod.modules.length == 1)
         mod = mod.modules[0];
     while (page == null && mod.pages.length == 1)
         page = mod.pages[0];
 
-    if (page != cache.page) {
-        cache.page = page;
-
-        if (page != null) {
-            let test = cache.tests.find(test => test.key == page.key);
-            let data = test?.payload ?? {};
-
-            switch (page.type) {
-                case 'form': {
-                    ctx = {
-                        state: new FormState(data),
-                        model: null,
-                        builder: null
-                    };
-                    ctx.state.changeHandler = run;
-                } break;
-
-                case 'network': {
-                    ctx = new NetworkModule(db, test);
-                    await ctx.start();
-                } break;
-            }
-        } else {
-            ctx = null;
-        }
-    }
-
-    cache.section = (page != null) ? section : null;
+    route.mod = mod.key;
+    route.page = page?.key;
+    route.section = (page != null) ? section : null;
 
     await run();
 }
