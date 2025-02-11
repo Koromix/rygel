@@ -777,7 +777,8 @@ function NetworkWidget(mod, world) {
                 </div>
 
                 <div class="footer">
-                    <button type="button" class="danger" @click=${UI.insist(e => { deletePersons(p); close(); })}>Supprimer</button>
+                    <button type="button" class="secondary"
+                            @click=${UI.confirm('Supprimer cette personne', e => { deletePersons(p); close(); })}>Supprimer</button>
                     <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                     <button type="submit">Appliquer</button>
