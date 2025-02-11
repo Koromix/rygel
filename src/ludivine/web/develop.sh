@@ -10,6 +10,6 @@ trap 'kill $(jobs -p) 2>/dev/null' SIGINT
 
 mkdir -p dist
 ../../../bin/Fast/nestor dist/ &
-../../../bin/Fast/hodler . -O dist --loop &
+../../../bin/Fast/hodler . -O dist --loop --sourcemap &
 
 wait $(jobs -p)

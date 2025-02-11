@@ -193,7 +193,7 @@ const char *Builder::AddEsbuildSource(const SourceFileInfo &src)
                 Fmt(&buf, " --minify");
             }
             if (features & (int)CompileFeature::DebugInfo) {
-                Fmt(&buf, " --sourcemap=linked");
+                Fmt(&buf, " --sourcemap=inline");
             }
             if (src.target->bundle_options) {
                 Fmt(&buf, " %1", src.target->bundle_options);

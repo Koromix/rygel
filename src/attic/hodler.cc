@@ -34,6 +34,12 @@ static const char *const UrlFormatNames[] = {
     "Ugly"
 };
 
+struct BuildSettings {
+    UrlFormat urls = UrlFormat::Pretty;
+    bool gzip = false;
+    bool sourcemap = false;
+};
+
 struct BundleObject {
     const char *dest_filename;
     const char *src_filename;
@@ -357,8 +363,8 @@ static bool ParseEsbuildMeta(const char *filename, Allocator *alloc, HeapArray<B
     return true;
 }
 
-static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, bool gzip,
-                         Allocator *alloc, HeapArray<FileHash> *out_hashes)
+static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary,
+                         bool sourcemap, bool gzip, Allocator *alloc, HeapArray<FileHash> *out_hashes)
 {
     Span<const char> basename = SplitStrReverseAny(bundle.name, RG_PATH_SEPARATORS);
     Span<const char> prefix = MakeSpan(bundle.name, basename.ptr - bundle.name);
@@ -367,10 +373,23 @@ static bool BundleScript(const AssetBundle &bundle, const char *esbuild_binary, 
     RG_DEFER { UnlinkFile(meta_filename); };
 
     // Prepare command
-    const char *options = bundle.options ? bundle.options : "";
-    const char *cmd = Fmt(alloc, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
-                                 "  --minify --platform=browser --target=es6 --sourcemap=linked --metafile=\"%4\" %5",
-                          esbuild_binary, bundle.src_filename, bundle.dest_filename, meta_filename, options).ptr;
+    const char *cmd;
+    {
+        HeapArray<char> buf(alloc);
+
+        Fmt(&buf, "\"%1\" \"%2\" --bundle --log-level=warning --allow-overwrite --outfile=\"%3\""
+                  "  --minify --platform=browser --target=es6 --metafile=\"%4\"",
+                  esbuild_binary, bundle.src_filename, bundle.dest_filename, meta_filename);
+
+        if (sourcemap) {
+            Fmt(&buf, " --sourcemap=inline");
+        }
+        if (bundle.options) {
+            Fmt(&buf, " %1", bundle.options);
+        }
+
+        cmd = buf.TrimAndLeak(1).ptr;
+    }
 
     // Run esbuild
     {
@@ -835,7 +854,7 @@ static bool ShouldCompressFile(const char *filename)
     return false;
 }
 
-static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *output_dir, bool gzip)
+static bool BuildAll(Span<const char> source_dir, const BuildSettings &build, const char *output_dir)
 {
     BlockAllocator temp_alloc;
 
@@ -901,7 +920,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 if (TestStr(page.name, "index")) {
                     page.url = "/";
                 } else {
-                    switch (urls) {
+                    switch (build.urls) {
                         case UrlFormat::Pretty:
                         case UrlFormat::PrettySub: { page.url = Fmt(&temp_alloc, "/%1", page.name).ptr; } break;
                         case UrlFormat::Ugly: { page.url = Fmt(&temp_alloc, "/%1.html", page.name).ptr; } break;
@@ -1102,7 +1121,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 }
 
                 // Create gzipped version
-                if (gzip && ShouldCompressFile(dest_filename)) {
+                if (build.gzip && ShouldCompressFile(dest_filename)) {
                     reader.Rewind();
 
                     StreamWriter writer(gzip_filename, (int)StreamWriterFlag::Atomic, CompressionType::Gzip);
@@ -1136,7 +1155,8 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 BlockAllocator thread_alloc;
 
                 HeapArray<FileHash> hashes;
-                if (!BundleScript(bundle, esbuild_path, gzip, &thread_alloc, &hashes))
+                if (!BundleScript(bundle, esbuild_path, build.sourcemap, build.gzip,
+                                  &thread_alloc, &hashes))
                     return false;
 
                 std::lock_guard<std::mutex> lock(mutex);
@@ -1189,7 +1209,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
             Span<const char> ext = template_filename ? GetPathExtension(pages[i].template_filename) : ".html";
 
             const char *dest_filename;
-            if (urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
+            if (build.urls == UrlFormat::PrettySub && !TestStr(pages[i].name, "index")) {
                 dest_filename = Fmt(&temp_alloc, "%1%/%2%/index%3", output_dir, pages[i].name, ext).ptr;
                 if (!EnsureDirectoryExists(dest_filename))
                     return false;
@@ -1197,7 +1217,7 @@ static bool BuildAll(Span<const char> source_dir, UrlFormat urls, const char *ou
                 dest_filename = Fmt(&temp_alloc, "%1%/%2%3", output_dir, pages[i].name, ext).ptr;
             }
 
-            bool gzip_file = gzip && TestStr(ext, ".html");
+            bool gzip_file = build.gzip && TestStr(ext, ".html");
             const char *gzip_filename = Fmt(&temp_alloc, "%1.gz", dest_filename).ptr;
 
             async.Run([=, &pages, &assets]() {
@@ -1234,8 +1254,7 @@ int Main(int argc, char **argv)
     // Options
     const char *source_dir = ".";
     const char *output_dir = nullptr;
-    bool gzip = false;
-    UrlFormat urls = UrlFormat::Pretty;
+    BuildSettings build;
     bool loop = false;
 
     const auto print_usage = [=](StreamWriter *st) {
@@ -1252,10 +1271,11 @@ Options:
                                    %!D..(default: %3)%!0
         %!..+--gzip%!0                     Create static gzip files
 
+        %!..+--sourcemap%!0                Add inline sourcemaps to bundles
     %!..+-l, --loop%!0                     Build repeatedly until interrupted
 
 Available URL formats: %!..+%4%!0)",
-                FelixTarget, source_dir, UrlFormatNames[(int)urls], FmtSpan(UrlFormatNames));
+                FelixTarget, source_dir, UrlFormatNames[(int)build.urls], FmtSpan(UrlFormatNames));
     };
 
     // Handle version
@@ -1278,12 +1298,14 @@ Available URL formats: %!..+%4%!0)",
             } else if (opt.Test("-O", "--output_dir", OptionType::Value)) {
                 output_dir = opt.current_value;
             } else if (opt.Test("-u", "--urls", OptionType::Value)) {
-                if (!OptionToEnumI(UrlFormatNames, opt.current_value, &urls)) {
+                if (!OptionToEnumI(UrlFormatNames, opt.current_value, &build.urls)) {
                     LogError("Unknown URL format '%1'", opt.current_value);
                     return true;
                 }
             } else if (opt.Test("--gzip")) {
-                gzip = true;
+                build.gzip = true;
+            } else if (opt.Test("--sourcemap")) {
+                build.sourcemap = true;
             } else if (opt.Test("-l", "--loop")) {
                 loop = true;
             } else {
@@ -1303,14 +1325,14 @@ Available URL formats: %!..+%4%!0)",
 
     if (loop) {
         do {
-            if (BuildAll(source_dir, urls, output_dir, gzip)) {
+            if (BuildAll(source_dir, build, output_dir)) {
                 LogInfo("Build successful");
             } else {
                 LogError("Build failed");
             }
         } while (WaitForInterrupt(1000) != WaitForResult::Interrupt);
     } else {
-        if (!BuildAll(source_dir, urls, output_dir, gzip))
+        if (!BuildAll(source_dir, build, output_dir))
             return 1;
     }
 
