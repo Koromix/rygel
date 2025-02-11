@@ -20,12 +20,6 @@ import { computeAge, dateToString, loadTexture } from '../lib/util.js';
 import { PROXIMITY_LEVELS, INFLUENCE_LEVELS, PERSON_KINDS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 
-const TOOLS = {
-    move: { title: 'Déplacer', icon: 'ui/move' },
-    rotate: { title: 'Pivoter', icon: 'ui/rotate' },
-    link: { title: 'Relier', icon: 'ui/link' }
-};
-
 const PERSON_RADIUS = 0.05;
 const LINK_RADIUS = 0.025;
 const CIRCLE_MARGIN = 1.8 * PERSON_RADIUS;
@@ -72,16 +66,11 @@ function NetworkWidget(mod, world) {
     let last_link = { influence: DEFAULT_INFLUENCE };
 
     this.init = async function() {
-        await Promise.all([
-            ...Object.keys(TOOLS).map(async tool => {
-                let info = TOOLS[tool];
-                textures[info.icon] = await loadTexture(ASSETS[info.icon]);
-            }),
-            ...Object.keys(PERSON_KINDS).map(async kind => {
-                let info = PERSON_KINDS[kind];
-                textures[info.icon] = await loadTexture(ASSETS[info.icon]);
-            })
-        ]);
+        let promises = Object.keys(PERSON_KINDS).map(async kind => {
+            let info = PERSON_KINDS[kind];
+            textures[info.icon] = await loadTexture(ASSETS[info.icon]);
+        });
+        await Promise.all(promises);
     };
 
     this.update = function() {
@@ -101,54 +90,34 @@ function NetworkWidget(mod, world) {
         if (pressed_keys.delete == -1)
             deletePersons(select_persons);
 
-        let insert = false;
-        for (let i = 1; i < world.subjects.length; i++) {
-            if (!world.persons.find(p => p.subject.id == world.subjects[i].id)) {
-                insert = true;
-                break;
-            }
-        }
-
-        render(html`
-            <button @click=${UI.wrap(createPersons)}>
-                <img src=${ASSETS['ui/create']} alt="" />
-                <span>Insérer</span>
+        mod.actions(7, html`
+            <button class=${(active_tool == 'move' && !select_mode) ? 'active' : ''}
+                     title="Ajouter et déplacer vos relations"
+                    @click=${UI.wrap(e => switchTool('move'))}>
+                <img src=${ASSETS['ui/people']} alt="" />
+                <span>Relations</span>
             </button>
-            ${insert ? html`<button @click=${UI.wrap(insertPersons)}>
-                <img src=${ASSETS['ui/insert']} alt="" />
-                <span>Réutiliser</span>
-            </button>` : ''}
+            <button class=${(active_tool == 'link' && !select_mode) ? 'active' : ''}
+                     title="Créer des liens entre les relations"
+                    @click=${UI.wrap(e => switchTool('link'))}>
+                <img src=${ASSETS['ui/link']} alt="" />
+                <span>Liens</span>
+            </button>
+        `);
 
+        mod.actions(1, html`
             <div style="flex: 1;"></div>
-            ${Object.keys(TOOLS).map(tool => {
-                let info = TOOLS[tool];
-                let active = (active_tool == tool && !select_mode);
-
-                return html`
-                    <button class=${active ? 'active' : ''}
-                            @click=${UI.wrap(e => switchTool(tool))}>
-                        <img src=${ASSETS[info.icon]} alt="" />
-                        <span>${info.title}</span>
-                    </button>
-                `;
-            })}
-
-            <div style="height: 30px;"></div>
+            <button title="Ajouter de nouvelles relations" @click=${UI.wrap(createPersons)}>
+                <img src=${ASSETS['ui/create']} alt="" />
+                <span>Ajouter des relations</span>
+            </button>
             <button class=${select_mode && !select_persons.length ? 'active' : ''}
                     title=${select_persons.length >= 2 ? '' : 'Outil de sélection multiple au lasso'}
                     @click=${UI.wrap(toggleSelection)}>
                 <img src=${select_persons.length < 2 ? ASSETS['ui/select'] : ASSETS['ui/unselect']} alt="" />
-                <span>${select_persons.length < 2 ? 'Sélectionner' : 'Déselectionner'}</span>
+                <span>${select_persons.length < 2 ? 'Sélection multiple' : 'Déselectionner'}</span>
             </button>
-
-            <div style="flex: 1;"></div>
-            <button class=${mod.anonymous ? 'active' : ''}
-                    @click=${mod.anonymous ? UI.confirm('Voulez-vous quitter le mode anonyme ?', e => { mod.anonymous = false; })
-                                           : UI.wrap(e => { mod.anonymous = true; })}>
-                <img src=${ASSETS['ui/anonymous']} alt="" />
-                <span>Mode anonyme</span>
-            </button>
-        `, mod.toolbox);
+        `);
 
         // User is moving around
         if (active_grab != null) {
@@ -563,111 +532,6 @@ function NetworkWidget(mod, world) {
         };
 
         return subject;
-    }
-
-    async function insertPersons() {
-        let reuse_subjects = world.subjects.filter(subject => {
-            if (!subject.name)
-                return false;
-            if (persons.some(p => p.subject == subject.id))
-                return false;
-
-            return true;
-        });
-        let reuse_map = new Map;
-        let reuse_changes = new WeakMap;
-
-        await UI.dialog({
-            run: (render, close) => {
-                let disabled = !reuse_subjects.length;
-
-                return html`
-                    <div class="title">
-                        Ajout de personnes au sociogramme
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
-                    </div>
-
-                    <div class="main">
-                        <table style="table-layout: fixed;">
-                            <colgroup>
-                                <col class="check"/>
-                                <col/>
-                                <col/>
-                                <col/>
-                            </colgroup>
-
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>Identité</th>
-                                    <th>Relation</th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                ${reuse_subjects.map(subject => {
-                                    let changes = reuse_changes.get(subject);
-
-                                    if (changes == null) {
-                                        changes = {};
-                                        reuse_changes.set(subject, changes);
-                                    }
-
-                                    let values = {
-                                        kind: (changes.kind != null) ? changes.kind : subject.last_kind
-                                    };
-
-                                    return html`
-                                        <tr class="item" @click=${UI.wrap(e => toggle_subject(subject))}>
-                                            <td><input type="checkbox" style="pointer-events: none;"
-                                                       ?checked=${reuse_map.has(subject.id)} /></td>
-                                            <td>${subject.name}</td>
-                                            <td>
-                                                <select @change=${UI.wrap(e => { changes.kind = e.target.value; render(); })}
-                                                        @click=${e => e.stopPropagation()}>
-                                                    ${Object.keys(PERSON_KINDS).map(kind => {
-                                                        let info = PERSON_KINDS[kind];
-                                                        return html`<option value=${kind} .selected=${kind == values.kind}>${info.text}</option>`;
-                                                    })}
-                                                </select>
-                                            </td>
-                                        </tr>
-                                    `;
-                                })}
-                                ${!reuse_subjects.length ? html`<td colspan="5" class="center">Les personnes connues et nommées auparavant sont déjà dans ce sociogramme.</td>` : ''}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="footer">
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                        <button type="submit" ?disabled=${disabled}>Ajouter</button>
-                    </div>
-                `;
-
-                function toggle_subject(subject) {
-                    if (!reuse_map.delete(subject.id))
-                        reuse_map.set(subject.id, subject);
-
-                    render();
-                }
-            },
-
-            submit: (elements) => {
-                let auto = false;
-
-                for (let subject of reuse_map.values()) {
-                    let changes = reuse_changes.get(subject);
-
-                    let p = createPerson(subject, auto);
-                    Object.assign(p, changes);
-
-                    auto = true;
-                }
-            }
-        });
     }
 
     function createPerson(subject, auto = false) {

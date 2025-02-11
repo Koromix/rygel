@@ -32,8 +32,7 @@ function NetworkModule(db, test) {
     let self = this;
 
     // DOM nodes
-    let toolbox_el = null;
-    let shortcuts_el = null;
+    let action_elements = {};
     let canvas = null;
 
     // Platform
@@ -63,7 +62,6 @@ function NetworkModule(db, test) {
 
     Object.defineProperties(this, {
         runner: { get: () => runner, enumerable: true },
-        toolbox: { get: () => toolbox_el, enumerable: true },
 
         anonymous: { get: () => anonymous, set: value => { anonymous = value; }, enumerable: true }
     });
@@ -71,11 +69,6 @@ function NetworkModule(db, test) {
     this.start = async function() {
         canvas = document.createElement('canvas');
         canvas.className = 'net_canvas';
-
-        toolbox_el = document.createElement('div');
-        toolbox_el.className = 'net_toolbox';
-        shortcuts_el = document.createElement('div');
-        shortcuts_el.className = 'net_shortcuts';
 
         runner = new AppRunner(canvas);
 
@@ -122,9 +115,12 @@ function NetworkModule(db, test) {
     this.render = function() {
         return html`
             <div class="net_wrapper">
-                ${toolbox_el}
-                ${shortcuts_el}
-                <div class="net_render">${canvas}</div>
+                ${self.actions(1)}
+                ${self.actions(3)}
+                ${self.actions(9)}
+                ${self.actions(7)}
+
+                ${canvas}
             </div>
         `;
     };
@@ -218,7 +214,7 @@ function NetworkModule(db, test) {
 
         now = (new Date).valueOf();
 
-        // Global shortcuts_el
+        // Global shortcuts
         if (pressed_keys.debug == -1)
             debug = !debug;
         if (pressed_keys.ctrl > 0 && pressed_keys.z == -1)
@@ -226,27 +222,28 @@ function NetworkModule(db, test) {
         if (pressed_keys.ctrl > 0 && pressed_keys.y == -1)
             rewind(redo_actions, undo_actions);
 
-        render(html`
-            <button type="button" class="small" title="Mode plein écran"
-                    @click=${UI.wrap(app.toggleFullScreen)}>
-                <img src=${ASSETS['ui/fullscreen']} alt="" />
-            </button>
-            <div style="flex: 1;"></div>
-            <button type="button" class="small"
-                    title="Annuler la dernière modification"
+        self.actions(9, html`
+            <button type="button" title="Annuler la dernière modification"
                     ?disabled=${!undo_actions.length}
                     @click=${UI.wrap(e => rewind(undo_actions, redo_actions))}>
                 <img src=${ASSETS['ui/undo']} alt="" />
                 <span>Annuler</span>
             </button>
-            <button type="button" class="small"
-                    title="Rétablir la dernière action annulée"
+            <button type="button" title="Rétablir la dernière action annulée"
                     ?disabled=${!redo_actions.length}
                     @click=${UI.wrap(e => rewind(redo_actions, undo_actions))}>
                 <img src=${ASSETS['ui/redo']} alt="" />
                 <span>Rétablir</span>
             </button>
-        `, shortcuts_el);
+        `);
+
+        self.actions(3, html`
+            <button type="button" title="Mode plein écran"
+                    @click=${UI.wrap(app.toggleFullScreen)}>
+                <img src=${ASSETS['ui/fullscreen']} alt="" />
+                <span>${app.isFullScreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
+            </button>
+        `);
 
         // Run widget code
         widget.update();
@@ -504,6 +501,22 @@ function NetworkModule(db, test) {
             db.exec(`UPDATE tests SET status = 'draft', mtime = ?, payload = ?
                      WHERE id = ?`, mtime, json, test.id);
         }, 1000);
+    }
+
+    this.actions = function(align, content = null) {
+        let el = action_elements[align];
+
+        if (el == null) {
+            el = document.createElement('div');
+            el.className = 'net_actions align' + align;
+
+            action_elements[align] = el;
+        }
+
+        if (content != null)
+            render(content, el);
+
+        return el;
     }
 
     this.tooltip = function(text, options = {}) {

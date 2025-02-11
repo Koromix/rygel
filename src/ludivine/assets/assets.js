@@ -82,14 +82,15 @@ import asset65 from './ui/link.png';
 import asset66 from './ui/move.png';
 import asset67 from './ui/network.png';
 import asset68 from './ui/new.png';
-import asset69 from './ui/redo.png';
-import asset70 from './ui/right.webp';
-import asset71 from './ui/rotate.png';
-import asset72 from './ui/select.png';
-import asset73 from './ui/track.png';
-import asset74 from './ui/undo.png';
-import asset75 from './ui/unselect.png';
-import asset76 from './ui/user.png';
+import asset69 from './ui/people.png';
+import asset70 from './ui/redo.png';
+import asset71 from './ui/right.webp';
+import asset72 from './ui/rotate.png';
+import asset73 from './ui/select.png';
+import asset74 from './ui/track.png';
+import asset75 from './ui/undo.png';
+import asset76 from './ui/unselect.png';
+import asset77 from './ui/user.png';
 
 const ASSETS = {
     'main/footer': asset0,
@@ -161,14 +162,15 @@ const ASSETS = {
     'ui/move': asset66,
     'ui/network': asset67,
     'ui/new': asset68,
-    'ui/redo': asset69,
-    'ui/right': asset70,
-    'ui/rotate': asset71,
-    'ui/select': asset72,
-    'ui/track': asset73,
-    'ui/undo': asset74,
-    'ui/unselect': asset75,
-    'ui/user': asset76,
+    'ui/people': asset69,
+    'ui/redo': asset70,
+    'ui/right': asset71,
+    'ui/rotate': asset72,
+    'ui/select': asset73,
+    'ui/track': asset74,
+    'ui/undo': asset75,
+    'ui/unselect': asset76,
+    'ui/user': asset77,
 };
 
 export { ASSETS }
