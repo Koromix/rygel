@@ -366,7 +366,11 @@ async function run(push = true) {
 
     // Run module
     if (cache.project != null) {
-        await runProject();
+        if (cache.study != null) {
+            await runProject();
+        } else {
+            await runConsent();
+        }
     } else {
         await runDashboard();
     }
@@ -620,7 +624,7 @@ async function changePicture() {
 
 async function openStudy(project) {
     route.project = project.key;
-    run();
+    await run();
 }
 
 function renderMain(content = null) {
@@ -699,7 +703,7 @@ async function toggleFullScreen() {
         console.error(err);
     }
 
-    return run();
+    await run();
 }
 
 // ------------------------------------------------------------------------
@@ -747,7 +751,7 @@ async function consent(e, project) {
                      ON CONFLICT DO UPDATE SET start = excluded.start
                      RETURNING id, start`, project.key, start);
 
-    run();
+    await run();
 }
 
 async function runProject() {
