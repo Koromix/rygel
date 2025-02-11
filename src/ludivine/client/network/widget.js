@@ -512,6 +512,10 @@ function NetworkWidget(mod, world) {
 
                     <div class="main">
                         <label>
+                            <span>Identités</span>
+                            <textarea rows="6" @input=${UI.wrap(e => split_names(e.target.value))}></textarea>
+                        </label>
+                        <label>
                             <span>Relation</span>
                             <select @change=${UI.wrap(e => { new_kind = e.target.value; render(); })}>
                                 ${Object.keys(PERSON_KINDS).map(kind => {
@@ -521,11 +525,6 @@ function NetworkWidget(mod, world) {
                                     return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
                                 })}
                             </select>
-                        </label>
-
-                        <label>
-                            <span>Identités</span>
-                            <textarea rows="6" @input=${UI.wrap(e => split_names(e.target.value))}></textarea>
                         </label>
                     </div>
 
