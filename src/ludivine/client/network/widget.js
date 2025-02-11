@@ -23,7 +23,9 @@ import { ASSETS } from '../../assets/assets.js';
 const PERSON_RADIUS = 0.05;
 const LINK_RADIUS = 0.025;
 const CIRCLE_MARGIN = 1.8 * PERSON_RADIUS;
+
 const DEFAULT_INFLUENCE = 3;
+const DEFAULT_LINK = 2;
 
 const ORIGIN = { x: 0, y: 0 };
 
@@ -63,7 +65,7 @@ function NetworkWidget(mod, world) {
     let select_persons = [];
 
     // Misc
-    let last_link = { influence: DEFAULT_INFLUENCE };
+    let last_link = { influence: DEFAULT_LINK };
 
     this.init = async function() {
         let promises = Object.keys(PERSON_KINDS).map(async kind => {
