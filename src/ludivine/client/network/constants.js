@@ -33,7 +33,7 @@ const PROXIMITY_LEVELS = [
 
     {
         text: 'Contacts rares',
-        description: null,
+        description: 'Vous rencontrez ou vous êtes rarement en contact avec ces personnes',
         size: 0.8
     },
     {
