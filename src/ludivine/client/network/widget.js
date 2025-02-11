@@ -60,7 +60,8 @@ function NetworkWidget(mod, world) {
     let active_edit = null;
 
     // Selection
-    let select_mode = false;
+    let select_lasso = false;
+    let select_many = false;
     let select_points = [];
     let select_persons = [];
 
@@ -88,6 +89,11 @@ function NetworkWidget(mod, world) {
         if (pressed_keys.ctrl > 0 && pressed_keys.a == -1) {
             select_persons.length = 0;
             select_persons.push(...persons.slice(1));
+        }
+        if (pressed_keys.ctrl > 0) {
+            select_many = true;
+        } else if (pressed_keys.ctrl == -1) {
+            select_many = false;
         }
         if (pressed_keys.delete == -1)
             deletePersons(select_persons);
@@ -120,14 +126,14 @@ function NetworkWidget(mod, world) {
         `);
 
         mod.actions(2, html`
-            <button class=${'small secondary' + (select_mode && !select_persons.length ? ' active' : '')}
-                    title=${select_persons.length >= 2 ? '' : 'Outil de sélection multiple au lasso'}
-                    @click=${UI.wrap(toggleSelection)}>
-                <img src=${select_persons.length < 2 ? ASSETS['ui/select'] : ASSETS['ui/unselect']} alt="" />
-                <span>${select_persons.length < 2 ? 'Sélection multiple' : 'Déselectionner'}</span>
+            <button class=${'small secondary' + (select_lasso && !select_persons.length ? ' active' : '')}
+                    title=${!select_persons.length ? 'Outil de sélection multiple au lasso' : ''}
+                    @click=${UI.wrap(toggleLasso)}>
+                <img src=${!select_persons.length ? ASSETS['ui/select'] : ASSETS['ui/unselect']} alt="" />
+                <span>${!select_persons.length ? 'Sélection au lasso' : 'Déselectionner'}</span>
             </button>
             ${insert ? html`
-                <button class=${'small secondary' + ((active_tool == 'rotate' && !select_mode) ? ' active' : '')}
+                <button class=${'small secondary' + (active_tool == 'rotate' ? ' active' : '')}
                         title="Déplacer en pivot plutôt que librement"
                         @click=${UI.wrap(e => switchTool(active_tool == 'move' ? 'rotate' : 'move'))}>
                     <img src=${ASSETS['ui/rotate']} alt="" />
@@ -154,23 +160,22 @@ function NetworkWidget(mod, world) {
         }
 
         // Handle selection tool
-        if (select_mode && active_edit == null) {
+        if (select_lasso && active_edit == null) {
             if (mouse_state.left > 0) {
                 let p = { x: cursor.x, y: cursor.y };
                 let prev = select_points[select_points.length - 1];
 
                 if (prev == null || computeDistance(prev, p) >= 0.01)
                     select_points.push(p);
-
-                if (mouse_state.moving)
-                    mouse_state.left = 0;
             } else {
                 if (select_points.length > 4) {
-                    select_mode = false;
+                    select_lasso = false;
                     selectInPolygon(select_points);
                 }
                 select_points.length = 0;
             }
+
+            mouse_state.left = 0;
 
             runner.cursor = 'default';
         }
@@ -314,7 +319,7 @@ function NetworkWidget(mod, world) {
         }
 
         // Start move or rotation interaction
-        if (active_edit == null && (active_tool == 'move' || active_tool == 'rotate')) {
+        if (active_edit == null && (active_tool == 'move' || active_tool == 'rotate') && !select_many) {
             let [target, idx] = findPerson(cursor);
 
             if (idx > 0) {
@@ -330,9 +335,9 @@ function NetworkWidget(mod, world) {
                         y: cursor.y,
                         moved: false
                     };
-                }
 
-                runner.cursor = 'grab';
+                    mouse_state.left = 0;
+                }
             }
         }
 
@@ -370,7 +375,7 @@ function NetworkWidget(mod, world) {
         }
 
         // Start link interaction
-        if (active_edit == null && active_tool == 'link') {
+        if (active_edit == null && active_tool == 'link' && !select_many) {
             let [target, idx] = findPerson(cursor);
 
             if (idx > 0) {
@@ -386,14 +391,13 @@ function NetworkWidget(mod, world) {
                         y: cursor.y,
                         influence: last_link.influence
                     };
-                }
 
-                if (mouse_state.moving)
                     mouse_state.left = 0;
+                }
             }
         }
 
-        // Click on stuff to edit
+        // Click on stuff to edit or select
         {
             let target = null;
             let idx = null;
@@ -407,10 +411,12 @@ function NetworkWidget(mod, world) {
                     mod.tooltip(tooltip);
                 }
 
-                if (mouse_state.left == -1) {
-                    changeLink(target);
-                } else if (mouse_state.right == -1) {
-                    deleteLink(target);
+                if (!select_many) {
+                    if (mouse_state.left == -1) {
+                        changeLink(target);
+                    } else if (mouse_state.right == -1) {
+                        deleteLink(target);
+                    }
                 }
             } else if ([target, idx] = findPerson(cursor), idx >= 0) {
                 let tooltip = namePerson(target, true);
@@ -418,14 +424,23 @@ function NetworkWidget(mod, world) {
                 if (tooltip)
                     mod.tooltip(tooltip);
 
-                if (mouse_state.left == -1) {
-                    if (idx > 0)
-                        changePerson(target);
-                } else if (idx > 0 && mouse_state.right == -1) {
-                    if (select_persons.includes(target)) {
-                        deletePersons(select_persons);
-                    } else {
-                        deletePersons(target);
+                if (select_many) {
+                    if (mouse_state.left == -1) {
+                        if (idx > 0 && !select_persons.includes(target))
+                            select_persons.push(target);
+
+                        mouse_state.left = 0;
+                    }
+                } else {
+                    if (mouse_state.left == -1) {
+                        if (idx > 0)
+                            changePerson(target);
+                    } else if (idx > 0 && mouse_state.right == -1) {
+                        if (select_persons.includes(target)) {
+                            deletePersons(select_persons);
+                        } else {
+                            deletePersons(target);
+                        }
                     }
                 }
             }
@@ -457,13 +472,14 @@ function NetworkWidget(mod, world) {
     function switchTool(tool) {
         active_tool = tool;
         active_edit = null;
-
-        select_mode = false;
     }
 
-    function toggleSelection() {
-        if (select_persons.length < 2)
-            select_mode = !select_mode;
+    function toggleLasso() {
+        if (select_persons.length) {
+            select_lasso = false;
+        } else {
+            select_lasso = !select_lasso;
+        }
 
         select_points.length = 0;
         select_persons.length = 0;
