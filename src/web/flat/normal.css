@@ -310,10 +310,11 @@ button:not(:disabled):not(.active):hover {
     color: white;
 }
 button:disabled {
-    filter: saturate(10%);
+    filter: saturate(10%) brightness(80%);
     cursor: not-allowed;
     pointer-events: none;
 }
+button:disabled > * { opacity: 0.3; }
 button.active { background: color-mix(in srgb, var(--button_color) 50%, black); }
 button > img {
     width: 16px;
@@ -329,7 +330,7 @@ button.secondary {
     --button_color: #ddd;
     color: black !important;
 }
-button.secondary:not(.insist) > img { filter: none; }
+button.secondary.active { color: white !important; }
 button.danger {
     --button_color: #d33410 !important;
     --color: white;
@@ -347,7 +348,6 @@ button.small > img {
     width: 12px;
     height: 12px;
 }
-button.small:not(.insist) > img { filter: none; }
 
 .actions {
     display: flex;
@@ -374,7 +374,7 @@ button.small:not(.insist) > img { filter: none; }
 }
 .actions > :is(a, button).disabled {
     pointer-events: none;
-    filter: saturate(10%);
+    filter: saturate(10%) brightness(50%);
 }
 
 dialog {

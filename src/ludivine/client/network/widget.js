@@ -92,15 +92,17 @@ function NetworkWidget(mod, world) {
         if (pressed_keys.delete == -1)
             deletePersons(select_persons);
 
+        let insert = (active_tool == 'move' || active_tool == 'rotate');
+
         mod.actions(7, html`
-            <button class=${(active_tool == 'move' && !select_mode) ? 'active' : ''}
-                     title="Ajouter et déplacer vos relations"
+            <button class=${insert ? 'active' : ''}
+                    title="Ajouter et déplacer vos relations"
                     @click=${UI.wrap(e => switchTool('move'))}>
                 <img src=${ASSETS['ui/people']} alt="" />
                 <span>Relations</span>
             </button>
-            <button class=${(active_tool == 'link' && !select_mode) ? 'active' : ''}
-                     title="Créer des liens entre les relations"
+            <button class=${active_tool == 'link' ? 'active' : ''}
+                    title="Créer des liens entre les relations"
                     @click=${UI.wrap(e => switchTool('link'))}>
                 <img src=${ASSETS['ui/link']} alt="" />
                 <span>Liens</span>
@@ -108,17 +110,30 @@ function NetworkWidget(mod, world) {
         `);
 
         mod.actions(1, html`
-            <div style="flex: 1;"></div>
-            <button title="Ajouter de nouvelles relations" @click=${UI.wrap(createPersons)}>
-                <img src=${ASSETS['ui/create']} alt="" />
-                <span>Ajouter des relations</span>
-            </button>
-            <button class=${select_mode && !select_persons.length ? 'active' : ''}
+            ${insert ? html`
+                <button title="Ajouter de nouvelles relations"
+                        @click=${UI.wrap(createPersons)}>
+                    <img src=${ASSETS['ui/create']} alt="" />
+                    <span>Ajouter des personnes</span>
+                </button>
+            ` : ''}
+        `);
+
+        mod.actions(2, html`
+            <button class=${'small secondary' + (select_mode && !select_persons.length ? ' active' : '')}
                     title=${select_persons.length >= 2 ? '' : 'Outil de sélection multiple au lasso'}
                     @click=${UI.wrap(toggleSelection)}>
                 <img src=${select_persons.length < 2 ? ASSETS['ui/select'] : ASSETS['ui/unselect']} alt="" />
                 <span>${select_persons.length < 2 ? 'Sélection multiple' : 'Déselectionner'}</span>
             </button>
+            ${insert ? html`
+                <button class=${'small secondary' + ((active_tool == 'rotate' && !select_mode) ? ' active' : '')}
+                        title="Déplacer en pivot plutôt que librement"
+                        @click=${UI.wrap(e => switchTool(active_tool == 'move' ? 'rotate' : 'move'))}>
+                    <img src=${ASSETS['ui/rotate']} alt="" />
+                    <span>Pivoter les éléments</span>
+                </button>
+            ` : ''}
         `);
 
         // User is moving around

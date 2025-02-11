@@ -48,6 +48,8 @@ button {
     border-radius: 20px;
     font-weight: bold;
 }
+button:is(.secondary, .small) { font-weight: normal; }
+button.secondary:not(.active) > img { filter: invert(100%); }
 
 .reference {
     font-weight: bold;

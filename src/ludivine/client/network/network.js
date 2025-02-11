@@ -115,11 +115,7 @@ function NetworkModule(db, test) {
     this.render = function() {
         return html`
             <div class="net_wrapper">
-                ${self.actions(1)}
-                ${self.actions(3)}
-                ${self.actions(9)}
-                ${self.actions(7)}
-
+                ${Util.mapRange(1, 10, idx => self.actions(idx))}
                 ${canvas}
             </div>
         `;

@@ -29,22 +29,57 @@
 .net_actions {
     display: flex;
     position: absolute;
-    flex-direction: column;
     gap: 6px;
 }
 .net_actions.align1 {
+    flex-direction: column;
     left: 12px;
     bottom: 12px;
+}
+.net_actions.align2 {
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
 }
 .net_actions.align3 {
+    flex-direction: column;
     right: 12px;
     bottom: 12px;
 }
+.net_actions.align4 {
+    flex-direction: column;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+.net_actions.align5 {
+    flex-direction: column;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+.net_actions.align6 {
+    flex-direction: column;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
 .net_actions.align7 {
+    flex-direction: column;
     left: 12px;
     top: 12px;
 }
+.net_actions.align8 {
+    left: 50%;
+    top: 12px;
+    transform: translateX(-50%);
+}
 .net_actions.align9 {
+    flex-direction: column;
     right: 12px;
     top: 12px;
+}
+
+@media screen and (max-width: 960px) {
+    .net_actions > button.small { display: none; }
 }
