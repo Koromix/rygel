@@ -102,7 +102,6 @@ let cache = {
 
     project: null,
     study: null,
-    mod: null,
     page: null,
     section: null,
 
@@ -341,24 +340,14 @@ async function run(push = true) {
             }
 
             if (cache.study != null) {
-                cache.page = cache.project.pages.find(page => page.key == route.path);
-
-                if (cache.page != null) {
-                    let prefix = route.path.substr(0, route.path.lastIndexOf('/'));
-                    cache.mod = cache.project.modules.find(mod => mod.key == prefix);
-                } else {
-                    cache.mod = cache.project.modules.find(mod => mod.key == route.path) ?? cache.project.root;
-                }
-
-                cache.section = route.section;
+                cache.page = cache.project.pages.find(page => page.key == route.path) ?? cache.project.root;
+                cache.section = (cache.page != null) ? route.section : null;
             } else {
-                cache.mod = null;
                 cache.page = null;
                 cache.section = null;
             }
         } else {
             cache.study = null;
-            cache.mod = null;
             cache.page = null;
             cache.section = null;
         }
@@ -377,7 +366,7 @@ async function run(push = true) {
 
     // Update route values
     route.project = cache.project?.key;
-    route.path = cache.page?.key ?? cache.mod?.key;
+    route.path = cache.page?.key;
     route.section = cache.section;
 
     // Update URL
@@ -820,22 +809,33 @@ async function runProject() {
                     ${progressCircle(progress, total)}
                 </div>
 
-                ${cache.page == null ? renderModule() : null}
-                ${cache.page != null && cache.section == null ? renderStart() : null}
-                ${cache.page != null && cache.section != null ? renderPage() : null}
+                ${renderPage()}
             </div>
         `);
     }
 }
 
-function renderModule() {
+function renderPage() {
+    if (cache.page.type == 'category') {
+        return renderCategory();
+    } else if (cache.section == null) {
+        return renderStart();
+    } else {
+        switch (cache.page.type) {
+            case 'form': return renderForm();
+            case 'network': { return ctx.mod.render(); } break;
+        }
+    }
+}
+
+function renderCategory() {
     let today = LocalDate.today();
-    let mod = cache.mod;
+    let page = cache.page;
 
     return html`
-        ${Util.mapRange(0, cache.mod.chain.length - 1, idx => {
-            let parent = mod.chain[idx];
-            let next = mod.chain[idx + 1];
+        ${Util.mapRange(0, page.chain.length - 1, idx => {
+            let parent = page.chain[idx];
+            let next = page.chain[idx + 1];
 
             return html`
                 <div class="box level" @click=${UI.wrap(e => navigateStudy(parent))}>
@@ -845,12 +845,12 @@ function renderModule() {
             `;
         })}
         <div class="box">
-            <div class="title">${mod.level}</div>
-            <div class="modules">
-                ${mod.modules.map(child => {
-                    let [progress, total] = computeProgress(child);
+            <div class="title">${page.level}</div>
+            <div class="items">
+                ${page.categories.map(cat => {
+                    let [progress, total] = computeProgress(cat);
 
-                    let cls = 'module';
+                    let cls = 'item';
                     let status = null;
 
                     if (progress == total) {
@@ -864,7 +864,7 @@ function renderModule() {
 
                         let earliest = null;
 
-                        for (let page of child.pages) {
+                        for (let page of cat.pages) {
                             if (page.status == 'done' || page.schedule == null)
                                 continue;
 
@@ -883,16 +883,16 @@ function renderModule() {
                     }
 
                     return html`
-                        <div class=${cls} @click=${UI.wrap(e => navigateStudy(child))}>
-                            <div class="title">${child.title}</div>
+                        <div class=${cls} @click=${UI.wrap(e => navigateStudy(cat))}>
+                            <div class="title">${cat.title}</div>
                             <div class="status">${status}</div>
                         </div>
                     `;
                 })}
-                ${!mod.modules.length ? mod.pages.map(page => {
+                ${!page.pages.length ? mod.pages.map(page => {
                     let test = cache.tests.find(test => test.key == page.key);
 
-                    let cls = 'module ' + test.status;
+                    let cls = 'item ' + test.status;
                     let status = null;
 
                     if (test.status == 'done') {
@@ -921,13 +921,12 @@ function renderModule() {
 }
 
 function renderStart() {
-    let mod = cache.mod;
     let page = cache.page;
 
     return html`
-        ${Util.mapRange(0, mod.chain.length - 1, idx => {
-            let parent = mod.chain[idx];
-            let next = mod.chain[idx + 1];
+        ${Util.mapRange(0, page.chain.length - 1, idx => {
+            let parent = page.chain[idx];
+            let next = page.chain[idx + 1];
 
             return html`
                 <div class="box level" @click=${UI.wrap(e => navigateStudy(parent))}>
@@ -951,15 +950,6 @@ function renderStart() {
             <button type="button" @click=${UI.wrap(e => navigateStudy(mod, page, 0))}>Commencer !</button>
         </div>
     `;
-}
-
-function renderPage() {
-    let page = cache.page;
-
-    switch (page.type) {
-        case 'form': return renderForm();
-        case 'network': { return ctx.mod.render(); } break;
-    }
 }
 
 function renderForm() {
