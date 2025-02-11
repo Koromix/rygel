@@ -16,6 +16,8 @@
 @import url('./ludivine.css');
 
 html {
+    --input_color: #f6d3c3;
+
     --empty_color: #d0cccc;
     --draft_color: #d9bf69;
     --done_color: #eca17f;
@@ -338,17 +340,16 @@ form {
 
     & input {
         padding: 0.4em 0.6em;
+        background: var(--input_color);
         border: none;
-        background: #f6d3c3;
         border-radius: 8px;
         font: inherit;
         font-size: 0.9em;
     }
-    & input:focus { background: white; }
     & textarea {
         padding: 0.4em 0.6em;
         border: none;
-        background: #f6d3c3;
+        background: var(--input_color);
         border-radius: 8px;
         font: inherit;
         font-size: 0.9em;
@@ -360,8 +361,8 @@ form {
         -webkit-appearance: none;
         -moz-appearance: none;
         appearance: none;
-        background-color: #f6d3c3;
-        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAAA+UlEQVQokdXQsUeFYRTH8XOjSMMlEUlLWi6RqKGhqaGppX/o93vOeV7P4309Q0O8RFNDLw1NDW3pn4iGiERFbtT4Nj1cSbrdu/TlLGf4OI7IvyzGuAjghuR1jHEh79u2nfgyHRGRsixnAJwCePLer/2IhxCWSN6SvPLez3+Dd0REUkrTAE4AvDjnNn51uaouk7wDcFlV1dwAPogek3w1s61hviKqugLgHsBFSmk275ummSJ5RLJvZttDobmiKHokHwCchxC6dV1PkjwE8KaqO39Cc865VZKPAM5IHpB8V9XdkdCc936d5DOAD1XdGwuaM7NNkvtjRUfpEypChFloulwwAAAAAElFTkSuQmCC");
+        background-color: var(--input_color);
+        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAABUElEQVQoU2NkoBFgpJG5DGCDy8rKZB49erSXmZn5taCgYNiUKVOegcT////PhGbxf0ZGxv8lJSXcT58+nQeUcwKqd502bdoFdAfCXZyWlib35cuXfUCNzzg5OUPnzJnzEs1wsKGrVq3iXLdu3RygnAcvL6/H7NmzT2PzNUpQxMfHK//582fvv3//bktJSUX29va+gRoONBNu6DQmJqZAbm5uL6Chx3AFJUYYp6enq3769GkfUMMVdXX16IaGhncgzUCXsm3YsGEa0IIwDg4On7lz5x7CFz9YIw9ouBYwWPYAXX4a6N04Y2PjbwcPHpwI5MeysbEFLlq0aA+hSMeZKqKjo3WBkbcbaNhRoCufAnEKMAiClixZsoOQoSB5vMkNGKFGX79+3QU0nBsYoeHz5s3bRIyhBA0GKYiLizP7/fu37PLly9cSayhRBpNiGLJaAHQsiAz/sFdjAAAAAElFTkSuQmCC");
         background-repeat: no-repeat;
         background-position: right;
         overflow: hidden;
@@ -370,13 +371,7 @@ form {
         font-family: inherit;
         font-size: 0.9em;
     }
-    & select:not(:disabled):hover {
-        background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABYAAAALCAYAAAB7/H1+AAABOUlEQVQoU2NkoBFgpJG5DGCDnzx5IsPIyLgXiF//+fMnTE5O7hnUQiY0i/8D+f9fvHjB/ffv33lA9U7//v1zlZGRuYDuQLiLnz17JgeU3AfEz5iZmUPFxcVfohkONvTx48ecQPk5////92BiYvKQlJQ8jc3XKEHx8uVLZaBL9gI13Qa6JlJKSuoNVBNIHdhQoGHTgHKBQDVe0tLSx3AFJUYYv3r1SvX379/7gJqvAC2JlpWVfQfSfPXqVTZBQcFpQGYYEPsALT2EL36wRt7z58+1gC7aA8SnOTk544AGfgOKTQQaFAsUCwS6dA+hSMeZKoARpAuMmN1AA44CXf8UyE4B0kFAl+4gZChIHm9yA0aoEdCFu4DquIE4HOjSTcQYStBgkAJgEJgBDZcFunQtsYYSZTAphiGrBQBoCXwMooaZrwAAAABJRU5ErkJggg==");
-        background-repeat: no-repeat;
-        background-position: right;
-        color: white;
-    }
-    & :is(input, textarea, select):focus { background: white; }
+    & :is(input, textarea, select):focus { background-color: color-mix(in srgb, var(--input_color), white 50%); }
 
     & .header {
         display: flex;
