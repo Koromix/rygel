@@ -238,7 +238,7 @@ function NetworkModule(db, test) {
         `);
 
         self.actions(3, html`
-            <button type="button" title="Mode plein écran"
+            <button type="button" class=${app.isFullScreen ? 'active' : ''} title="Mode plein écran"
                     @click=${UI.wrap(app.toggleFullScreen)}>
                 <img src=${ASSETS['ui/fullscreen']} alt="" />
                 <span>${app.isFullScreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
