@@ -17,7 +17,6 @@ import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
 import { AppRunner } from '../../../web/core/runner.js';
-import { computeAge, computeAgeMonths, dateToString } from '../lib/util.js';
 import { ASSETS } from '../../assets/assets.js';
 import * as app from '../app.js';
 import { NetworkWidget } from './widget.js';

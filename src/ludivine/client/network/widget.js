@@ -16,7 +16,7 @@
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
 import * as UI from '../../../web/flat/ui.js';
-import { computeAge, dateToString, loadTexture } from '../lib/util.js';
+import { loadTexture } from '../lib/util.js';
 import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_LEVELS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
 import * as app from '../app.js';
