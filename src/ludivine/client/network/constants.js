@@ -21,6 +21,7 @@ const PERSON_KINDS = {
     healthcare: { text: 'Professionnel de santé ', icon: 'network/healthcare' },
     online: { text: 'Membre d’une communauté (en ligne)', icon: 'network/online' },
     community: { text: 'Membre d’une communauté (hors ligne)', icon: 'network/community' },
+    animal: { text: 'Animal', icon: 'network/animal' },
     other: { text: 'Autre', icon: 'network/other' }
 };
 
