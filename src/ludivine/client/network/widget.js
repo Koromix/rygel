@@ -342,11 +342,11 @@ function NetworkWidget(mod, world) {
         }
 
         // Start proximity resize interaction
-        {
+        if (active_edit == null) {
             let [target, idx] = findLevel(cursor);
 
             if (idx > 0) {
-                if (active_edit == null && mouse_state.left > 0) {
+                if (mouse_state.left > 0) {
                     active_edit = {
                         type: 'proximity',
                         proximity: idx,
@@ -368,9 +368,6 @@ function NetworkWidget(mod, world) {
                     case 3:
                     case 7: { runner.cursor = 'nwse-resize'; } break;
                 }
-
-                let tooltip = PROXIMITY_LEVELS[idx].description;
-                mod.tooltip(tooltip);
             }
         }
 
@@ -941,14 +938,18 @@ function NetworkWidget(mod, world) {
                 ctx.stroke();
             }
 
-            ctx.font = '13px Open Sans';
-            ctx.fillStyle = '#777777';
+            ctx.font = `bold ${22 + state.zoom}px Open Sans`;
+            ctx.fillStyle = '#77777755';
 
             for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
                 let level = PROXIMITY_LEVELS[i];
-                let radius = world.levels[i].radius;
+                let next = (i + 1) % PROXIMITY_LEVELS.length;
 
-                runner.text(0, radius - 0.034, level.text, { align: 2 });
+                let radius0 = world.levels[i].radius;
+                let radius1 = world.levels[next].radius;
+                let radius = (radius0 + 1.2 * radius1) / 2.2;
+
+                runner.text(0, radius, level.text, { align: 2 });
             }
 
             ctx.restore();
