@@ -20,7 +20,7 @@ import asset3 from './network/animal.png';
 import asset4 from './network/community.png';
 import asset5 from './network/family.png';
 import asset6 from './network/friend.png';
-import asset7 from './network/healthcare.png';
+import asset7 from './network/help.png';
 import asset8 from './network/love.png';
 import asset9 from './network/online.png';
 import asset10 from './network/other.png';
@@ -101,7 +101,7 @@ const ASSETS = {
     'network/community': asset4,
     'network/family': asset5,
     'network/friend': asset6,
-    'network/healthcare': asset7,
+    'network/help': asset7,
     'network/love': asset8,
     'network/online': asset9,
     'network/other': asset10,

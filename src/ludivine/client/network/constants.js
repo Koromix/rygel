@@ -18,7 +18,7 @@ const PERSON_KINDS = {
     family: { text: 'Famille', icon: 'network/family' },
     friend: { text: 'Amitié', icon: 'network/friend' },
     work: { text: 'Collègues / milieu professionnel', icon: 'network/work' },
-    healthcare: { text: 'Professionnel de santé ', icon: 'network/healthcare' },
+    help: { text: 'Professionnel (santé, juridique, social, ...) ', icon: 'network/help' },
     online: { text: 'Membre d’une communauté (en ligne)', icon: 'network/online' },
     community: { text: 'Membre d’une communauté (hors ligne)', icon: 'network/community' },
     animal: { text: 'Animal', icon: 'network/animal' },
