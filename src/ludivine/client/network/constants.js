@@ -49,7 +49,7 @@ const PROXIMITY_LEVELS = [
     }
 ];
 
-const INFLUENCE_LEVELS = [
+const QUALITY_LEVELS = [
     {
         text: 'Très négatif',
         color: '#b13737',
@@ -80,5 +80,5 @@ const INFLUENCE_LEVELS = [
 export {
     PROXIMITY_LEVELS,
     PERSON_KINDS,
-    INFLUENCE_LEVELS
+    QUALITY_LEVELS
 }
