@@ -710,7 +710,7 @@ public:
         // Sources and definitions
         Fmt(&buf, " -DFELIX -c \"%1\"", src_filename);
         if (pch_filename) {
-            Fmt(&buf, " -include \"%1\" -include-pch \"%1.pch\"", pch_filename);
+            Fmt(&buf, " -include-pch \"%1.pch\"", pch_filename);
         }
         for (const char *definition: definitions) {
             Fmt(&buf, " \"-%1%2\"", definition[0] != '-' ? 'D' : 'U', definition);
