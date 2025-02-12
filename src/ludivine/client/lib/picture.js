@@ -182,7 +182,7 @@ function PictureCropper(title, size) {
                         return svg`
                             <svg viewBox="0 0 1180 1180" class=${active ? 'active' : ''} fill="none"
                                  @click=${UI.wrap(e => switchPart(notion_cat, idx))}>
-                                ${renderPart(notion_cat, xml, true)}
+                                ${renderPart(notion_cat, xml)}
                             </svg>
                         `;
                     })}
@@ -533,7 +533,7 @@ function PictureCropper(title, size) {
                     let idx = notion.parts[cat];
                     let xml = notion_assets[cat][idx];
 
-                    return renderPart(cat, xml, false);
+                    return renderPart(cat, xml);
                 })}
             </g>
         `, el);
@@ -574,7 +574,7 @@ function PictureCropper(title, size) {
         return el;
     }
 
-    function renderPart(cat, xml, border) {
+    function renderPart(cat, xml) {
         let parser = new DOMParser;
 
         let svg = parser.parseFromString(xml, 'image/svg+xml');
@@ -583,19 +583,23 @@ function PictureCropper(title, size) {
         switch (cat) {
             case 'face': {
                 let path = g.querySelector('path');
+
                 path.setAttribute('fill', notion.colors.face);
-                if (!border)
-                    path.setAttribute('stroke', notion.colors.face);
+                path.setAttribute('stroke-width', 18);
             } break;
 
-            case 'hair':
+            case 'hair': {
+                let paths = g.querySelectorAll('path');
+
+                for (let path of paths)
+                    path.setAttribute('fill', notion.colors.hair);
+            } break;
+
             case 'beard': {
                 let paths = g.querySelectorAll('path');
 
-                for (let path of paths) {
-                    path.setAttribute('fill', notion.colors[cat]);
-                    path.setAttribute('stroke', notion.colors[cat]);
-                }
+                for (let path of paths)
+                    path.setAttribute('fill', notion.colors.beard);
             } break;
         }
 
