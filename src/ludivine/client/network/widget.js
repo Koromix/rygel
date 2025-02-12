@@ -19,6 +19,7 @@ import * as UI from '../../../web/flat/ui.js';
 import { computeAge, dateToString, loadTexture } from '../lib/util.js';
 import { PROXIMITY_LEVELS, PERSON_KINDS, QUALITY_LEVELS } from './constants.js';
 import { ASSETS } from '../../assets/assets.js';
+import * as app from '../app.js';
 
 const PERSON_RADIUS = 0.05;
 const LINK_RADIUS = 0.025;
@@ -69,6 +70,8 @@ function NetworkWidget(mod, world) {
     let last_link = { quality: DEFAULT_LINK };
 
     this.init = async function() {
+        textures.self = await loadTexture(app.pictureURL());
+
         let promises = Object.keys(PERSON_KINDS).map(async kind => {
             let info = PERSON_KINDS[kind];
             textures[info.icon] = await loadTexture(ASSETS[info.icon]);
@@ -955,6 +958,24 @@ function NetworkWidget(mod, world) {
             ctx.restore();
         }
 
+        // Draw self
+        {
+            ctx.save();
+
+            ctx.fillStyle = '#ffffff';
+
+            let radius = world.levels[0].radius;
+
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2, false);
+            ctx.fill();
+
+            ctx.clip();
+            ctx.drawImage(textures.self, 0 - radius, 0 - radius, radius * 2, radius * 2);
+
+            ctx.restore();
+        }
+
         // Draw web
         {
             ctx.save();
@@ -1028,7 +1049,7 @@ function NetworkWidget(mod, world) {
         }
 
         // Draw persons
-        for (let i = persons.length - 1; i >= 0; i--) {
+        for (let i = persons.length - 1; i >= 1; i--) {
             let p = persons[i];
 
             let radius = computeRadius(p);
@@ -1216,18 +1237,14 @@ function NetworkWidget(mod, world) {
     }
 
     function computeRadius(p) {
-        if (p == persons[0]) {
+        if (p == persons[0])
             return world.levels[0].radius;
-        } else {
-            let level = PROXIMITY_LEVELS[p.proximity];
-            return PERSON_RADIUS * level.size;
-        }
+
+        let level = PROXIMITY_LEVELS[p.proximity];
+        return PERSON_RADIUS * level.size;
     }
 
     function computeColor(p) {
-        if (p == persons[0])
-            return '#ffffff';
-
         let level = QUALITY_LEVELS[p.quality];
         return level.color;
     }

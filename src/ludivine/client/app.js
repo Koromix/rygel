@@ -500,7 +500,7 @@ async function runDashboard() {
 
         <div class="tab">
             <div class="box profile">
-                <img class="picture" src=${identity.picture ?? ASSETS['ui/user']} alt=""/>
+                <img class="picture" src=${pictureURL()} alt=""/>
                 <div>
                     <p>Bienvenue sur <b>${ENV.title}</b> !
 
@@ -622,6 +622,11 @@ async function changePicture() {
     run();
 }
 
+function pictureURL() {
+    let url = identity?.picture ?? ASSETS['ui/user'];
+    return url;
+}
+
 async function openStudy(project) {
     route.project = project.key;
     await run();
@@ -644,7 +649,7 @@ function renderMain(content = null) {
                     <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
                     <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
                     <div style="flex: 1;"></div>
-                    <img class="picture" src=${identity?.picture ?? ASSETS['ui/user']} alt="" />
+                    <img class="picture" src=${pictureURL()} alt="" />
                 </menu>
             </nav>
 
@@ -1218,7 +1223,9 @@ export {
     start,
 
     run,
+
     changePicture,
+    pictureURL,
 
     renderMain,
 
