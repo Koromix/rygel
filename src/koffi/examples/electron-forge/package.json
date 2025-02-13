@@ -10,28 +10,30 @@
     "publish": "electron-forge publish",
     "lint": "echo \"No linting configured\""
   },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.6.1",
+    "@electron-forge/maker-deb": "^7.6.1",
+    "@electron-forge/maker-rpm": "^7.6.1",
+    "@electron-forge/maker-squirrel": "^7.6.1",
+    "@electron-forge/maker-zip": "^7.6.1",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.6.1",
+    "@electron-forge/plugin-fuses": "^7.6.1",
+    "@electron-forge/plugin-webpack": "^7.6.1",
+    "@electron/fuses": "^1.8.0",
+    "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "css-loader": "^6.11.0",
+    "electron": "34.2.0",
+    "node-loader": "^2.1.0",
+    "style-loader": "^3.3.4"
+  },
   "keywords": [],
   "author": {
     "name": "Niels Martignène",
     "email": "niels.martignene@protonmail.com"
   },
   "license": "MIT",
-  "devDependencies": {
-    "@electron-forge/cli": "^6.2.1",
-    "@electron-forge/maker-deb": "^6.2.1",
-    "@electron-forge/maker-rpm": "^6.2.1",
-    "@electron-forge/maker-squirrel": "^6.2.1",
-    "@electron-forge/maker-zip": "^6.2.1",
-    "@electron-forge/plugin-auto-unpack-natives": "^6.2.1",
-    "@electron-forge/plugin-webpack": "^6.2.1",
-    "@vercel/webpack-asset-relocator-loader": "^1.7.3",
-    "css-loader": "^6.8.1",
-    "electron": "25.3.2",
-    "node-loader": "^2.0.0",
-    "style-loader": "^3.3.3"
-  },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.0",
-    "koffi": "^2.5.18"
+    "electron-squirrel-startup": "^1.0.1",
+    "koffi": "^2.10.1"
   }
 }
