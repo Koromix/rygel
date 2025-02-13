@@ -255,8 +255,8 @@ th, td {
 th {
     background: #f8f8f8;
     font-size: 0.9em;
+    font-variant: small-caps;
     text-align: left;
-    text-transform: uppercase;
     user-select: none;
     -webkit-user-select: none;
 }
