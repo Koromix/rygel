@@ -242,6 +242,7 @@ table {
     border-collapse: collapse;
     empty-cells: show;
 }
+* + table { margin-top: 1em; }
 tr {
     border-bottom: 1px solid #ededf0;
     vertical-align: middle;
@@ -252,9 +253,10 @@ th, td {
     vertical-align: middle;
 }
 th {
+    background: #f8f8f8;
+    font-size: 0.9em;
     text-align: left;
     text-transform: uppercase;
-    background: #f8f8f8;
     user-select: none;
     -webkit-user-select: none;
 }
@@ -262,6 +264,7 @@ td {
     background: white;
     border: 1px solid #ebebeb;
 }
+thead > tr { border: 1px solid #ededf0; }
 thead th { text-align: center; }
 tbody th {
     text-align: left;
@@ -283,7 +286,7 @@ table :is(td, th).picture > img {
     height: 24px;
 }
 table + div.legend {
-    margin-top: calc(-1em + 2px);
+    margin-top: 2px;
     text-align: center;
     font-size: 0.8em;
 }

@@ -37,7 +37,7 @@ Find out more on the [page dedicated to Rekkord](rekkord).
 
 ## TyTools
 
-TyTools is a collection of independent tools to manage, flash and communicate with **[Teensy](https://www.pjrc.com/teensy/) microcontrollers**.
+TyTools is a collection of independent tools to manage, flash and communicate with [Teensy microcontrollers](https://www.pjrc.com/teensy/).
 
 Tool        | Type                      | Description
 ----------- | ------------------------- | ----------------------------------------------------
