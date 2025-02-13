@@ -57,7 +57,7 @@ canvas:focus {
 }
 
 a {
-    color: var(--color, --anchor_color);
+    color: var(--color, var(--anchor_color));
     cursor: pointer;
     text-decoration: none;
 }
