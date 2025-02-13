@@ -941,7 +941,7 @@ function NetworkWidget(mod, world) {
                 ctx.stroke();
             }
 
-            ctx.font = `bold ${22 + state.zoom}px Open Sans`;
+            ctx.font = `bold ${20 + state.zoom}px Open Sans`;
             ctx.fillStyle = '#77777755';
 
             for (let i = 1; i < PROXIMITY_LEVELS.length; i++) {
