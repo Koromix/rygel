@@ -20,15 +20,9 @@ html {
     --top_height: 70px;
     --small_height: 70px;
 
-    --top_color: #383838;
-}
-
-main a { text-decoration: underline; }
-main a:has(> img) { text-decoration: none !important; }
-main a:not(:has(> img)):hover {
-    background: #383838;
-    color: white;
-    text-decoration: none;
+    --top_color: #0659a6;
+    --anchor_color: #0659a6;
+    --button_color: #0659a6;
 }
 
 #me {
