@@ -526,6 +526,9 @@
 /* Define to 1 if you have the <quiche.h> header file. */
 #undef HAVE_QUICHE_H
 
+/* Define to 1 if you have the `realpath' function. */
+#undef HAVE_REALPATH
+
 /* Define to 1 if you have the recv function. */
 #undef HAVE_RECV
 

@@ -29222,9 +29222,9 @@ printf "%s\n" "found" >&6; }
   CPPFLAGS="$CPPFLAGS $CPP_SSH2"
   LIBS="$LIB_SSH2 $LIBS"
 
-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libssh2_session_block_directions in -lssh2" >&5
-printf %s "checking for libssh2_session_block_directions in -lssh2... " >&6; }
-if test ${ac_cv_lib_ssh2_libssh2_session_block_directions+y}
+    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for libssh2_free in -lssh2" >&5
+printf %s "checking for libssh2_free in -lssh2... " >&6; }
+if test ${ac_cv_lib_ssh2_libssh2_free+y}
 then :
   printf %s "(cached) " >&6
 else $as_nop
@@ -29237,27 +29237,27 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char libssh2_session_block_directions ();
+char libssh2_free ();
 int main(void)
 {
-return libssh2_session_block_directions ();
+return libssh2_free ();
  ;
  return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-  ac_cv_lib_ssh2_libssh2_session_block_directions=yes
+  ac_cv_lib_ssh2_libssh2_free=yes
 else $as_nop
-  ac_cv_lib_ssh2_libssh2_session_block_directions=no
+  ac_cv_lib_ssh2_libssh2_free=no
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ssh2_libssh2_session_block_directions" >&5
-printf "%s\n" "$ac_cv_lib_ssh2_libssh2_session_block_directions" >&6; }
-if test "x$ac_cv_lib_ssh2_libssh2_session_block_directions" = xyes
+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ssh2_libssh2_free" >&5
+printf "%s\n" "$ac_cv_lib_ssh2_libssh2_free" >&6; }
+if test "x$ac_cv_lib_ssh2_libssh2_free" = xyes
 then :
   printf "%s\n" "#define HAVE_LIBSSH2 1" >>confdefs.h
 
@@ -42875,12 +42875,6 @@ then :
   printf "%s\n" "#define HAVE_GETTIMEOFDAY 1" >>confdefs.h
 
 fi
-ac_fn_c_check_func "$LINENO" "if_nametoindex" "ac_cv_func_if_nametoindex"
-if test "x$ac_cv_func_if_nametoindex" = xyes
-then :
-  printf "%s\n" "#define HAVE_IF_NAMETOINDEX 1" >>confdefs.h
-
-fi
 ac_fn_c_check_func "$LINENO" "mach_absolute_time" "ac_cv_func_mach_absolute_time"
 if test "x$ac_cv_func_mach_absolute_time" = xyes
 then :
@@ -42950,7 +42944,19 @@ fi
 
 
 if test "$curl_cv_native_windows" != 'yes'; then
-  ac_fn_c_check_func "$LINENO" "sched_yield" "ac_cv_func_sched_yield"
+  ac_fn_c_check_func "$LINENO" "if_nametoindex" "ac_cv_func_if_nametoindex"
+if test "x$ac_cv_func_if_nametoindex" = xyes
+then :
+  printf "%s\n" "#define HAVE_IF_NAMETOINDEX 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "realpath" "ac_cv_func_realpath"
+if test "x$ac_cv_func_realpath" = xyes
+then :
+  printf "%s\n" "#define HAVE_REALPATH 1" >>confdefs.h
+
+fi
+ac_fn_c_check_func "$LINENO" "sched_yield" "ac_cv_func_sched_yield"
 if test "x$ac_cv_func_sched_yield" = xyes
 then :
   printf "%s\n" "#define HAVE_SCHED_YIELD 1" >>confdefs.h
@@ -45314,7 +45320,7 @@ if test "x$USE_ARES" = "x1" -o "x$USE_THREADS_POSIX" = "x1" \
                             -o "x$USE_THREADS_WIN32" = "x1"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES AsynchDNS"
 fi
-if test "x$USE_ARES" = "x1" -a "$want_threaded_resolver" = "yes"; then
+if test "x$USE_ARES" = "x1" -a "$want_threaded_resolver" = "yes" -a "x$want_httpsrr" != "xno"; then
   SUPPORT_FEATURES="$SUPPORT_FEATURES asyn-rr"
 fi
 if test "x$IDN_ENABLED" = "x1"; then
