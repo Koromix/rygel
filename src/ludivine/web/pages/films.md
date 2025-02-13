@@ -1,9 +1,16 @@
+<div class="banner">
+    <div class="title">Ressources</div>
+    <div class="intro">
+        <p>Vous souhaitez vous informer sur le psychotraumatisme et les thématiques associés ? Vous trouverez sur cette page cinq onglets : <b>vidéos, livres, films, musiques, et des recommandations de professionnels</b>.
+    </div>
+</div>
+
 <div class="tabbar">
-    <a href="/videos">Vidéos</a>
-    <a href="/livres">Livres</a>
-    <a href="/films" class="active">Films</a>
-    <a href="/musiques">Musiques</a>
-    <a href="/pros">Recos des pros</a>
+    <a href="/videos"><img src="{{ ASSET ../assets/ui/video.png }}" alt="Vidéos" /></a>
+    <a href="/livres"><img src="{{ ASSET ../assets/ui/book.png }}" alt="Livres" /></a>
+    <a href="/films" class="active"><img src="{{ ASSET ../assets/ui/movie.png }}" alt="Films" /></a>
+    <a href="/musiques"><img src="{{ ASSET ../assets/ui/music.png }}" alt="Musiques" /></a>
+    <a href="/pros"><img src="{{ ASSET ../assets/ui/paper.png }}" alt="Recos des pros" /></a>
 </div>
 
 <div class="tab">

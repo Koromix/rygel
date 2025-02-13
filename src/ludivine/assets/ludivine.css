@@ -169,6 +169,12 @@ p + .columns { margin-top: 2em; }
     color: black;
     border-top-left-radius: 16px;
     border-top-right-radius: 16px;
+
+    & > img {
+        width: 32px;
+        height: 32px;
+        transform: translateY(3px);
+    }
 }
 .tabbar > :is(a.active, a:hover) {
     background: var(--bar_color);
