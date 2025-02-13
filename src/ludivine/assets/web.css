@@ -119,9 +119,10 @@
 }
 
 .team {
+    margin: 0 auto;
     display: flex;
-    justify-content: space-evenly;
-    gap: 12px;
+    justify-content: center;
+    gap: 16px;
     font-size: 0.9em;
     flex-wrap: wrap;
 }
@@ -136,6 +137,7 @@
     align-items: center;
     border-radius: 30px;
 }
+.team > div:empty { visibility: hidden }
 .team .name {
     font-weight: bold;
     text-align: center;

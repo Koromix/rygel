@@ -1,20 +1,29 @@
 <div class="banner">
-    <div class="title">Dispositif Lignes de Vie</div>
+    <div class="title">Bienvenue sur Lignes de Vie</div>
     <div class="intro columns">
         <div style="flex: 3;">
-            <p>Bienvenue sur la plateforme <b>Lignes de Vie</b>, une initiative du <a href="https://cn2r.fr/" target="_blank">Centre national de ressources et de résilience</a> (Cn2r).
-            <p>Vous êtes <b>majeur, vous avez été récemment exposé à un événement particulièrement difficile</b> et vous souhaitez vous investir afin de faire avancer la recherche dans le domaine des psychotraumatismes ?
-            <p>Merci de votre présence ! Quelques minutes par mois suffisent pour répondre aux études et permettre d'améliorer la compréhension du psychotraumatisme.
+            <p>Vous <b>êtes majeur, vous avez récemment vécu un événement particulièrement difficile</b> et souhaitez contribuer à faire avancer la recherche sur les psychotraumatismes ? Votre engagement est précieux, et nous vous sommes reconnaissants du <b>temps que vous consacrerez à participer</b> aux études.
+            <p>Une fois votre inscription finalisée, vous accéderez à un <b>tableau de bord</b>. Celui-ci vous permettra de répondre à plusieurs questions pour préciser votre situation personnelle et choisir l’une des études actuellement proposées dans Lignes de Vie.
         </div>
         <img src="{{ ASSET ../assets/pictures/dispositif.webp }}" style="flex: 1;" alt="" />
+    </div>
+</div>
+
+# Lignes de Vie kezako ?
+
+<div class="columns">
+    <img src="{{ ASSET ../assets/pictures/kezako.webp }}" style="flex: 1;" alt="" />
+    <div style="flex: 3;">
+        <p>Lignes de Vie est un <b>programme de recherche participatif</b> en ligne initié par le <a href="https://cn2r.fr/" target="_blank">Centre national de ressources et de résilience</a> (Cn2r). Il permet de mettre en lien des personnes confrontées à des événements potentiellement traumatiques et des chercheurs dans le cadre d’études scientifiques.
+        <p>Ces recherches visent à approfondir notre <b>compréhension des psychotraumatismes</b>, à renforcer les solutions existantes, et à développer de nouvelles approches pour mieux répondre aux besoins des personnes concernées.
+        <p>Les études qui sont menées dans le cadre de Ligne de Vie résultent d’une collaboration <b>entre le Cn2r et des équipes de recherche partenaires</b>. Elles ont pour objectif commun de récolter des données à différents moments, dans les semaines, mois et années suivant un événement potentiellement traumatique, afin de <b>mieux comprendre l’évolution de la vie, du bien-être et de la santé</b> des personnes concernées.
     </div>
 </div>
 
 # Comment participer ?
 
 <div class="columns">
-    <img src="{{ ASSET ../assets/pictures/participer.webp }}" style="flex: 1;" alt="" />
-    <div style="flex: 3;">
+    <div style="flex: 5;">
         <p>Pour participer au programme de recherche Lignes de Vie vous devez :
         <ul>
             <li>Être <b>majeur(e)</b> et en capacité de donner un consentement libre et éclairé
@@ -23,20 +32,10 @@
         <p>Si vous remplissez ces critères et que vous souhaitez participer, vous pouvez créer votre compte en cliquant sur le bouton ci-dessous et choisir l'étude à laquelle vous souhaitez répondre (actuellement, seule l'étude « Sociotrauma » est disponible).
         <div class="actions">
             <a href="/etudes">Découvrir nos études</a>
-            <a class="disabled">Participer</a>
+            <a href="http://localhost:8890/">Participer</a>
         </div>
     </div>
-</div>
-
-# Philosophie et protection des données
-
-<div class="columns">
-    <div style="flex: 5;">
-        <p>Lignes de Vie permet d'ouvrir la recherche au-delà des structures de soin pour sortir des limites actuelles des études. La web-application permet aussi de poser un regard bienveillant sur le participant et de lui dire <b>« Je te vois »</b> en valorisant son expérience.
-        <p>La plateforme repose sur une application dévelopée spécialement pour ce projet, sous <b>licence libre et gratuite</b>.
-        <p>Le programme Lignes de Vie incarne donc une démarche engagée et innovante, mêlant plusieurs disciplines : recherche participative, technologie numérique et éthique. Il ne s’agit pas seulement de produire des données ou des résultats scientifiques, mais de <b>redéfinir la manière dont la recherche peut être menée avec et pour les personnes concernées</b>, en leur accordant une place centrale et en respectant leur humanité, même à distance.
-    </div>
-    <img src="{{ ASSET ../assets/pictures/donnees.webp }}" style="flex: 3;" alt="" />
+    <img src="{{ ASSET ../assets/pictures/participer.webp }}" style="flex: 2;" alt="" />
 </div>
 
 # Le Centre National de Ressources et de Résilience
@@ -44,12 +43,23 @@
 <div class="columns">
     <img src="{{ ASSET ../assets/pictures/cn2r.webp }}" style="flex: 1;" alt="" />
     <div style="flex: 2;">
-        <p>Le <a href="https://cn2r.fr" target="_blank">Centre National de Ressources et de Résilience</a> (Cn2r) est une structure créée en France pour répondre aux besoins des personnes ayant subi des traumatismes psychologiques.
-        <p>La vocation du Cn2r est <b>d’améliorer et de diffuser les connaissances sur les psychotraumatismes et la résilience</b> pour le grand public, les professionnels et les chercheurs grâce au partage des savoirs scientifiques et expérientiels.
+        <p>Le <a href="https://cn2r.fr" target="_blank">Centre national de ressources et de résilience</a> (Cn2r) a <b>pour mission d’améliorer et de diffuser les connaissances sur les psychotraumatismes et la résilience</b>. Il s’adresse au grand public, aux chercheurs et aux professionnels impliqués dans l’accompagnement des personnes confrontées à des événements potentiellement traumatiques.
+        <p>Le Cn2r valorise à la fois les savoirs scientifiques et les connaissances issues du vécu des personnes concernées.
         <div class="actions">
             <a href="https://cn2r.fr" target="_blank">Plus d'informations sur cn2r.fr</a>
         </div>
     </div>
+</div>
+
+# Philosophie de Lignes de Vie
+
+<div class="columns">
+    <div style="flex: 2;">
+        <p>La philosophie de Lignes de Vie repose sur une approche humaniste et éthique de la science. Elle s’appuie sur une conviction simple mais audacieuse : replacer l’humain au cœur de l’investigation scientifique. Cette démarche valorise une éthique de participation mutuelle, créant un <b>espace de collaboration où chercheurs et patients partenaires</b> unissent leurs savoirs scientifiques et expérientiels pour mettre en œuvre des travaux visant à approfondir la compréhension des psychotraumatismes.
+        <p>Dans la lignée de la <b>déclaration d’Helsinki de 2024</b>, nous avons pour ambition de dépasser une vision instrumentalisée des participants pour les considérer comme des partenaires à part entière de la recherche. 
+        <p>En adoptant une démarche transversale d’<b>ethics by design et privacy by using</b>, les questions éthiques sont prises en compte dès la conception du programme, plutôt que traitées a posteriori. Nous encourageons une recherche alignée sur les besoins des personnes concernées, transformant les défis éthiques en véritables opportunités d’innovation.
+    </div>
+    <img src="{{ ASSET ../assets/pictures/philosophie.webp }}" style="flex: 1;" alt="" />
 </div>
 
 # Soumettre une étude

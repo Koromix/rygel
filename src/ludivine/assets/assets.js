@@ -25,15 +25,15 @@ import asset8 from './network/love.png';
 import asset9 from './network/online.png';
 import asset10 from './network/other.png';
 import asset11 from './network/work.png';
-import asset12 from './pictures/calypso.webp';
-import asset13 from './pictures/cn2r.webp';
-import asset14 from './pictures/dispositif.webp';
-import asset15 from './pictures/donnees.webp';
-import asset16 from './pictures/ecriture.webp';
-import asset17 from './pictures/etirements.webp';
-import asset18 from './pictures/help1.webp';
-import asset19 from './pictures/help2.webp';
-import asset20 from './pictures/participer.webp';
+import asset12 from './pictures/cn2r.webp';
+import asset13 from './pictures/dispositif.webp';
+import asset14 from './pictures/ecriture.webp';
+import asset15 from './pictures/etirements.webp';
+import asset16 from './pictures/help1.webp';
+import asset17 from './pictures/help2.webp';
+import asset18 from './pictures/kezako.webp';
+import asset19 from './pictures/participer.webp';
+import asset20 from './pictures/philosophie.webp';
 import asset21 from './pictures/respiration.webp';
 import asset22 from './pictures/sociotrauma.webp';
 import asset23 from './pictures/staks.webp';
@@ -106,15 +106,15 @@ const ASSETS = {
     'network/online': asset9,
     'network/other': asset10,
     'network/work': asset11,
-    'pictures/calypso': asset12,
-    'pictures/cn2r': asset13,
-    'pictures/dispositif': asset14,
-    'pictures/donnees': asset15,
-    'pictures/ecriture': asset16,
-    'pictures/etirements': asset17,
-    'pictures/help1': asset18,
-    'pictures/help2': asset19,
-    'pictures/participer': asset20,
+    'pictures/cn2r': asset12,
+    'pictures/dispositif': asset13,
+    'pictures/ecriture': asset14,
+    'pictures/etirements': asset15,
+    'pictures/help1': asset16,
+    'pictures/help2': asset17,
+    'pictures/kezako': asset18,
+    'pictures/participer': asset19,
+    'pictures/philosophie': asset20,
     'pictures/respiration': asset21,
     'pictures/sociotrauma': asset22,
     'pictures/staks': asset23,

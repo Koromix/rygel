@@ -37,11 +37,11 @@ import * as ssq6 from './forms/ssq6.js';
 import * as substances from './forms/substances.js';
 
 const consent = html`
-    <p>Dans le cadre de cette étude nous allons vous questionner sur votre situation actuelle, vos relations avec vos proches et la société et votre bien-être psychologique.  Il vous sera également demandé quelques informations sur l’évènement difficile que vous avez vécu. Nous vous inviterons à construire votre sociogramme qui est une représentation visuelle des liens sociaux que vous entretenez avec autrui. Il s’agit d’un dessin graphique qui représente la structure de vos relations interpersonnelles.
-    <p>Vous serez soutenus dans la réalisation de chacune de ces tâches : toutes les consignes de participation seront présentées à chaque étape.
-    <p>Cette étude se déroule en 6 étapes. Nous vous proposerons de réaliser plusieurs fois les mêmes exercices, à quelques exceptions près. Vous recevrez, pour ce faire, des rappels par mail et/ou notification via l’application. Un calendrier est disponible sur votre tableau de bord. 
-    <p>Cette étude se déroule entièrement en ligne. Vous n’aurez pas de contact direct avec les autres participants et avec les responsables de l’étude. Vous pouvez néanmoins, de votre initiative, entrer en contact par mail avec la responsable de cette étude pour toute question: Wivine Blekic, sociotrauma@ldv-recherche.fr.
-    <p>Nous vous invitons à prendre connaissance de la lettre d’information de l’étude SocioTrauma. Celle-ci a pour objectif de répondre aux questions que vous pourriez vous poser avant de prendre la décision de participer à la recherche. En bas de page, nous vous demanderons d’indiquer que vous avez pris connaissance de la lettre d’information.
+    <p>Dans cette étude, des questions vous seront posées sur votre <b>situation actuelle, vos relations avec vos proches</b> et la société, ainsi que sur votre bien-être psychologique. Il sera également demandé de fournir quelques informations sur l’évènement difficile que vous avez vécu.
+    <p>Une étape clé de cette étude consiste à construire un sociogramme, une <b>représentation visuelle des liens sociaux</b> que vous entretenez avec les personnes qui vous entourent. Ce graphique met en lumière la structure de vos relations interpersonnelles.
+    <p>Des consignes détaillées guideront chacune des <b>6 étapes de l’étude</b>, avec des exercices à réaliser à plusieurs reprises. Des rappels par e-mail et/ou notifications via l’application vous aideront à respecter les échéances. Un calendrier est également disponible depuis votre tableau de bord.
+    <p>L’étude se déroule <b>entièrement en ligne</b>, sans contact direct avec les autres participants ou les responsables de l’étude. Toutefois, l’investigatrice principale peut être contactée par e-mail pour toute question: Wivine Blekic, <a href="mailto:sociotrauma@ldv-recherche.fr">sociotrauma@ldv-recherche.fr</a>.
+    <p>Nous vous invitons à <b>prendre connaissance de la lettre d’information</b> de l’étude SocioTrauma en cliquant sur le lien ci-dessous. Celle-ci répond aux exigences de la recherche sur la personne humaine et a pour objectif de répondre aux questions que vous pourriez vous poser avant de prendre la décision de participer à la recherche.
 `;
 
 function init(build, start) {
