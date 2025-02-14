@@ -440,7 +440,7 @@ async function initProject(project, study) {
 }
 
 async function runRegister() {
-    UI.main(html`
+    UI.body(html`
         <div class="tabbar">
             <a class="active">Enregistrez-vous</a>
         </div>
@@ -449,9 +449,11 @@ async function runRegister() {
             <div class="box" style="align-items: center;">
                 <div class="title">Enregistrez-vous pour continuer</div>
 
-                <form @submit=${UI.wrap(register)}>
-                    <input type="text" name="email" placeholder="adresse email" />
-                    <button type="submit">Enregistrer mon compte</button>
+                <form @submit=${UI.wrap(register)} style="text-align: center;">
+                    <input type="text" name="email" style="width: 20em;" placeholder="adresse email" />
+                    <div class="actions">
+                        <button type="submit">Enregistrer mon compte</button>
+                    </div>
                 </form>
 
                 <div class="help">
@@ -485,7 +487,7 @@ async function register(e) {
 }
 
 async function runDashboard() {
-    UI.main(html`
+    UI.body(html`
         <div class="tabbar">
             <a class="active">Tableau de bord</a>
         </div>
@@ -658,7 +660,7 @@ async function runConsent() {
     let project = cache.project;
     let bundle = project.bundle;
 
-    UI.main(html`
+    UI.body(html`
         <div class="tabbar">
             <a class="active">Participer</a>
         </div>
@@ -749,7 +751,7 @@ async function runProject() {
         let [progress, total] = computeProgress(cache.project.root);
         let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
-        UI.main(html`
+        UI.body(html`
             <div class="tabbar">
                 <a class="active">Participer</a>
             </div>
@@ -1110,19 +1112,19 @@ async function copyWithProgress(title, src, dest) {
     let dialog = UI.dialog({
         run: (render, close) => {
             return html`
-                <div class="title">
-                    ${title}
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                <div class="tabbar">
+                    <a class="active">${title}</a>
                 </div>
 
-                <div class="main">
-                    <progress style="width: 300px;" max=${src.size} value="0"
-                              ${ref(el => { progress = el ?? progress; })} />
-                </div>
+                <div class="tab">
+                    <div class="box">
+                        <progress style="width: 100%;" max=${src.size} value="0"
+                                  ${ref(el => { progress = el ?? progress; })} />
+                    </div>
 
-                <div class="footer"></span>
-                    <button type="button" class="secondary" @click=${UI.insist(e => { controller.abort(`L'utilisateur a annulé`); close(); })}>${T.cancel}</button>
+                    <div class="actions">
+                        <button type="button" class="secondary" @click=${UI.insist(e => { controller.abort(`L'utilisateur a annulé`); close(); })}>${T.cancel}</button>
+                    </div>
                 </div>
             `;
         }

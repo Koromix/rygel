@@ -35,7 +35,7 @@ let run_func = () => {};
 let log_entries = [];
 
 let root_el = null;
-let main_el = null;
+let body_el = null;
 let fullscreen = false;
 
 let init_dialogs = false;
@@ -195,17 +195,20 @@ function confirm(action, func = null) {
     }
 }
 
-function main(content = null) {
+function body(content = null) {
     if (root_el == null) {
         root_el = document.createElement('div');
         root_el.id = 'root';
-        main_el = document.createElement('main');
+        body_el = document.createElement('main');
+        body_el.className = 'primary';
 
         document.body.appendChild(root_el);
     }
 
+    let el = dialogs.length ? dialogs[dialogs.length - 1].el : body_el;
+
     if (fullscreen) {
-        render(main_el, root_el);
+        render(el, root_el);
     } else {
         render(html`
             <div id="deploy" @click=${deploy}></div>
@@ -224,7 +227,7 @@ function main(content = null) {
                 </menu>
             </nav>
 
-            ${main_el}
+            ${el}
 
             <footer>
                 <div>Lignes de Vie © 2024</div>
@@ -238,10 +241,10 @@ function main(content = null) {
         `, root_el);
     }
 
-    main_el.classList.toggle('fullscreen', fullscreen);
+    body_el.classList.toggle('fullscreen', fullscreen);
 
     if (content != null)
-        render(content, main_el);
+        render(content, body_el);
 }
 
 async function toggleFullscreen() {
@@ -270,6 +273,8 @@ function dialog(options = {}) {
         options.can_be_closed = true;
 
     let dlg = {
+        el: null,
+
         update: null,
         resolve: null,
         reject: null,
@@ -294,7 +299,8 @@ function dialog(options = {}) {
         init_dialogs = true;
     }
 
-    let dlg_el = document.createElement('dialog');
+    dlg.el = document.createElement('main');
+    dlg.el.className = 'dialog';
 
     let p = new Promise((resolve, reject) => {
         dlg.update = () => {
@@ -308,17 +314,17 @@ function dialog(options = {}) {
                       @submit=${wrap(e => handleSubmit(e, dlg))}>
                     ${options.run(dlg.update, () => reject())}
                 </form>
-            `, dlg_el);
+            `, dlg.el);
         };
 
         dlg.resolve = resolve;
         dlg.reject = reject;
 
         window.requestAnimationFrame(() => {
-            let widget0 = dlg_el.querySelector('.main > label > *[autofocus]') ||
-                          dlg_el.querySelector(`.main > label > input:not(:disabled),
-                                                .main > label > select:not(:disabled),
-                                                .main > label > textarea:not(:disabled)`);
+            let widget0 = dlg.el.querySelector('label > *[autofocus]') ||
+                          dlg.el.querySelector(`label > input:not(:disabled),
+                                                label > select:not(:disabled),
+                                                label > textarea:not(:disabled)`);
 
             if (widget0 != null) {
                 if (typeof widget0.select == 'function') {
@@ -334,8 +340,6 @@ function dialog(options = {}) {
         if (options.close != null)
             options.close();
 
-        document.body.removeChild(dlg_el);
-
         dialogs = dialogs.filter(it => it != dlg);
 
         if (dialogs.length) {
@@ -344,20 +348,22 @@ function dialog(options = {}) {
         }
 
         setTimeout(run_func, 0);
+
+        body();
     });
 
     dialogs.push(dlg);
     dlg.update();
 
-    document.body.appendChild(dlg_el);
-
     if (options.open != null)
-        options.open(dlg_el.children[0]);
+        options.open(dlg.el.children[0]);
     if (options.can_be_closed)
         p.close = () => dlg.reject();
 
-    if (dlg_el.show != null)
-        dlg_el.show();
+    body();
+
+    if (dlg.el.show != null)
+        dlg.el.show();
 
     return p;
 }
@@ -674,7 +680,7 @@ export {
     insist,
     confirm,
 
-    main,
+    body,
     fullscreen as isFullscreen,
     toggleFullscreen,
 

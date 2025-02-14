@@ -27,6 +27,7 @@ html {
     display: flex;
     flex: 1;
     flex-direction: column;
+    background: inherit;
 }
 main {
     display: flex;
@@ -34,6 +35,10 @@ main {
     width: 100%;
     flex: 1;
     flex-direction: column;
+}
+main.dialog {
+    max-width: 800px;
+    justify-content: center;
 }
 
 .tab {
@@ -48,11 +53,11 @@ main.fullscreen {
     padding: 0;
 
     & > .tabbar { display: none; }
-    & > .tab {
+    & .tab {
         box-sizing: border-box;
         height: calc(100vh - 2em);
     }
-    & > .tab > .summary { display: none; }
+    & .tab > .summary { display: none; }
 }
 
 .bar {
@@ -331,11 +336,14 @@ main.fullscreen {
 .sections > span { display: none; }
 
 form {
-    display: flex;
-    margin-bottom: 1em;
-    flex-direction: column;
-    gap: 1em;
-
+    & label {
+        display: flex;
+        gap: 0.43em;
+        align-items: center;
+    }
+    & label > span:first-child { width: 180px; }
+    & label > input:not([type=checkbox]):not([type=radio]) { flex: 1; }
+    & label > :is(select, textarea) { flex: 1; }
     & label:has(input:is([type=checkbox], [type=radio]):not(:disabled)) { cursor: pointer; }
 
     & input {
@@ -384,66 +392,4 @@ form {
         align-items: end;
     }
     & * + .header { margin-top: 12px; }
-}
-
-dialog > form {
-    display: flex;
-    padding: 0;
-    flex-direction: column;
-    gap: 0;
-    background: white;
-    border-radius: 16px;
-    box-shadow: #15172526 0px 15px 25px 0px,
-                #15172520 0px 2px 8px 0px;
-
-    & > .title {
-        display: flex;
-        position: sticky;
-        top: 0;
-        z-index: 9999;
-        font-weight: bold;
-        border-bottom: 1px solid #ededf0;
-        border-radius: 6px 6px 0 0;
-        background: #eee;
-        padding: 10px;
-        align-items: center;
-        justify-content: center;
-        gap: 0.71em;
-    }
-    & > .title > span {
-        padding-left: 5px;
-        flex: 1;
-    }
-    & > .title > span + button { margin-left: 50px; }
-    & > .main {
-        display: flex;
-        box-sizing: border-box;
-        max-width: 100%;
-        flex-direction: column;
-        gap: 0.71em;
-        overflow-y: auto;
-        padding: 16px;
-    }
-    & > .footer {
-        display: flex;
-        position: sticky;
-        bottom: 0;
-        z-index: 9999;
-        border-bottom: 1px solid #ededf0;
-        border-radius: 0 0 6px 6px;
-        background: #eee;
-        padding: 10px;
-        align-items: center;
-        justify-content: right;
-        gap: 0.71em;
-    }
-
-    & label {
-        display: flex;
-        gap: 0.43em;
-        align-items: center;
-    }
-    & label > span:first-child { width: 180px; }
-    & label > input:not([type=checkbox]):not([type=radio]),
-        & label > :is(select, textarea) { flex: 1; }
 }

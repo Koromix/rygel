@@ -504,34 +504,33 @@ function NetworkWidget(mod, world) {
                 let disabled = !names.length;
 
                 return html`
-                    <div class="title">
-                        Ajout de personnes au sociogramme
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                    <div class="tabbar">
+                        <a class="active">Ajouter des relations</a>
                     </div>
 
-                    <div class="main">
-                        <label>
-                            <span>Identités</span>
-                            <textarea rows="6" @input=${UI.wrap(e => split_names(e.target.value))}></textarea>
-                        </label>
-                        <label>
-                            <span>Relation</span>
-                            <select @change=${UI.wrap(e => { new_kind = e.target.value; render(); })}>
-                                ${Object.keys(PERSON_KINDS).map(kind => {
-                                    let info = PERSON_KINDS[kind];
-                                    let active = (kind == new_kind);
+                    <div class="tab">
+                        <div class="box">
+                            <label>
+                                <span>Identités</span>
+                                <textarea rows="6" @input=${UI.wrap(e => split_names(e.target.value))}></textarea>
+                            </label>
+                            <label>
+                                <span>Relation</span>
+                                <select @change=${UI.wrap(e => { new_kind = e.target.value; render(); })}>
+                                    ${Object.keys(PERSON_KINDS).map(kind => {
+                                        let info = PERSON_KINDS[kind];
+                                        let active = (kind == new_kind);
 
-                                    return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
-                                })}
-                            </select>
-                        </label>
-                    </div>
+                                        return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
+                                    })}
+                                </select>
+                            </label>
+                        </div>
 
-                    <div class="footer">
-                        <div style="flex: 1;"></div>
-                        <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                        <button type="submit" ?disabled=${disabled}>Ajouter</button>
+                        <div class="actions">
+                            <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                            <button type="submit" ?disabled=${disabled}>Ajouter</button>
+                        </div>
                     </div>
                 `;
 
@@ -642,43 +641,43 @@ function NetworkWidget(mod, world) {
 
         await UI.dialog({
             run: (render, close) => html`
-                <div class="title">
-                    Modifier la personne ${namePerson(p, false)}
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                <div class="tabbar">
+                    <a class="active">Modifier la personne ${namePerson(p, false)}</a>
                 </div>
 
-                <div class="main">
-                    <label>
-                        <span>Identité</span>
-                        <input name="name" value=${subject.name} />
-                    </label>
-                    <label>
-                        <span>Relation</span>
-                        <select name="kind">
-                            ${Object.keys(PERSON_KINDS).map(kind => {
-                                let info = PERSON_KINDS[kind];
-                                let active = (kind == p.kind);
+                <div class="tab">
+                    <div class="box">
+                        <label>
+                            <span>Identité</span>
+                            <input name="name" value=${subject.name} />
+                        </label>
+                        <label>
+                            <span>Relation</span>
+                            <select name="kind">
+                                ${Object.keys(PERSON_KINDS).map(kind => {
+                                    let info = PERSON_KINDS[kind];
+                                    let active = (kind == p.kind);
 
-                                return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
-                            })}
-                        </select>
-                    </label>
-                    <label>
-                        <span>Qualité</span>
-                        <select name="quality">
-                            ${QUALITY_LEVELS.map((level, quality) => {
-                                let active = (quality == p.quality);
-                                return html`<option value=${quality} ?selected=${active}>${level.text}</option>`;
-                            })}
-                        </select>
-                    </label>
+                                    return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
+                                })}
+                            </select>
+                        </label>
+                        <label>
+                            <span>Qualité</span>
+                            <select name="quality">
+                                ${QUALITY_LEVELS.map((level, quality) => {
+                                    let active = (quality == p.quality);
+                                    return html`<option value=${quality} ?selected=${active}>${level.text}</option>`;
+                                })}
+                            </select>
+                        </label>
+                    </div>
                 </div>
 
-                <div class="footer">
+                <div class="actions">
                     <button type="button" class="secondary"
                             @click=${UI.confirm('Supprimer cette personne', e => { deletePersons(p); close(); })}>Supprimer</button>
-                    <div style="flex: 1;"></div>
+                    <div style="width: 40px;"></div>
                     <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                     <button type="submit">Appliquer</button>
                 </div>
@@ -727,29 +726,30 @@ function NetworkWidget(mod, world) {
 
         await UI.dialog({
             run: (render, close) => html`
-                <div class="title">
-                    Modifier le lien entre ${namePerson(a, false)} et ${namePerson(b, false)}
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.wrap(close)}>✖\uFE0E</button>
+                <div class="tabbar">
+                    <a class="active">Modifier le lien entre ${namePerson(a, false)} et ${namePerson(b, false)}</a>
                 </div>
 
-                <div class="main">
-                    <label>
-                        <span>Qualité</span>
-                        <select name="quality">
-                            ${QUALITY_LEVELS.map((level, quality) => {
-                                let active = (link.quality == quality);
-                                return html`<option value=${quality} ?selected=${active}>${level.text}</option>`;
-                            })}
-                        </select>
-                    </label>
-                </div>
+                <div class="tab">
+                    <div class="box">
+                        <label>
+                            <span>Qualité</span>
+                            <select name="quality">
+                                ${QUALITY_LEVELS.map((level, quality) => {
+                                    let active = (link.quality == quality);
+                                    return html`<option value=${quality} ?selected=${active}>${level.text}</option>`;
+                                })}
+                            </select>
+                        </label>
+                    </div>
 
-                <div class="footer">
-                    <button type="button" class="danger" @click=${UI.insist(e => { deleteLink(link); close(); })}>Supprimer</button>
-                    <div style="flex: 1;"></div>
-                    <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
-                    <button type="submit">Appliquer</button>
+                    <div class="actions">
+                        <button type="button" class="secondary"
+                                @click=${UI.insist(e => { deleteLink(link); close(); })}>Supprimer</button>
+                        <div style="width: 40px;"></div>
+                        <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
+                        <button type="submit">Appliquer</button>
+                    </div>
                 </div>
             `,
 

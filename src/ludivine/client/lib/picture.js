@@ -125,7 +125,7 @@ function PictureCropper(title, size) {
     };
 
     function run() {
-        UI.main(html`
+        UI.body(html`
             <div class="tabbar">
                 ${notion_assets != null ?
                     html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}
