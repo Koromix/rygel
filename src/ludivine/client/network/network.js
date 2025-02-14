@@ -110,6 +110,8 @@ function NetworkModule(db, test) {
     };
 
     this.render = function() {
+        runner.busy();
+
         return html`
             <div class="net_wrapper">
                 ${Util.mapRange(1, 10, idx => self.actions(idx))}
