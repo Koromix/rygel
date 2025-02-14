@@ -49,8 +49,17 @@ let table_orders = {};
 let table_filters = {};
 
 function init(run) {
-    run_func = run;
     Log.pushHandler(notifyHandler);
+
+    // Detect fullscreen exit
+    document.body.addEventListener('fullscreenchange', () => {
+        if (fullscreen && document.fullscreenElement != document.body) {
+            fullscreen = false;
+            run();
+        }
+    });
+
+    run_func = run;
 }
 
 function notifyHandler(action, entry) {

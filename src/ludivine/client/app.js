@@ -118,14 +118,6 @@ async function start() {
         go(window.location.href, false);
     });
 
-    // Detect fullscreen exit
-    document.body.addEventListener('fullscreenchange', () => {
-        if (fullscreen && document.fullscreenElement != document.body) {
-            fullscreen = false;
-            run();
-        }
-    })
-
     // Perform mail login
     if (window.location.hash) {
         let hash = window.location.hash.substr(1);
