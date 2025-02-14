@@ -511,19 +511,25 @@ function NetworkWidget(mod, world) {
                     <div class="tab">
                         <div class="box">
                             <label>
-                                <span>Identités</span>
+                                <span>Quels les noms des personnes que vous souhaitez ajouter ?</span>
                                 <textarea rows="6" @input=${UI.wrap(e => split_names(e.target.value))}></textarea>
                             </label>
                             <label>
-                                <span>Relation</span>
-                                <select @change=${UI.wrap(e => { new_kind = e.target.value; render(); })}>
+                                <span>Quel type de relation avez-vous avec ${names.length > 1 ? 'ces personnes' : 'cette personne'} ?</span>
+                                <div>
                                     ${Object.keys(PERSON_KINDS).map(kind => {
                                         let info = PERSON_KINDS[kind];
                                         let active = (kind == new_kind);
 
-                                        return html`<option value=${kind} ?selected=${active}>${info.text}</option>`;
+                                        return html`
+                                            <label>
+                                                <input name="quality" type="radio" value=${kind} ?checked=${active}
+                                                       @click=${UI.wrap(e => { new_kind = e.target.value; render(); })} />
+                                                ${info.text}
+                                            </label>
+                                        `;
                                     })}
-                                </select>
+                                </div>
                             </label>
                         </div>
 
@@ -648,11 +654,11 @@ function NetworkWidget(mod, world) {
                 <div class="tab">
                     <div class="box">
                         <label>
-                            <span>Identité</span>
+                            <span>Nom ou libellé de la personne</span>
                             <input name="name" value=${subject.name} />
                         </label>
                         <label>
-                            <span>Relation</span>
+                            <span>Quel type de relation avez-vous avec cette personne ?</span>
                             <select name="kind">
                                 ${Object.keys(PERSON_KINDS).map(kind => {
                                     let info = PERSON_KINDS[kind];
@@ -663,7 +669,7 @@ function NetworkWidget(mod, world) {
                             </select>
                         </label>
                         <label>
-                            <span>Qualité</span>
+                            <span>Comment évaluez-vous cette relation ?</span>
                             <select name="quality">
                                 ${QUALITY_LEVELS.map((level, quality) => {
                                     let active = (quality == p.quality);
@@ -733,7 +739,7 @@ function NetworkWidget(mod, world) {
                 <div class="tab">
                     <div class="box">
                         <label>
-                            <span>Qualité</span>
+                            <span>Comment évaluez-vous cette relation ?</span>
                             <select name="quality">
                                 ${QUALITY_LEVELS.map((level, quality) => {
                                     let active = (link.quality == quality);

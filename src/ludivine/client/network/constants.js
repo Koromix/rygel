@@ -51,12 +51,12 @@ const PROXIMITY_LEVELS = [
 
 const QUALITY_LEVELS = [
     {
-        text: 'Très négatif',
+        text: 'Très négative',
         color: '#b13737',
         width: 0.008
     },
     {
-        text: 'Plutôt négatif',
+        text: 'Plutôt négative',
         color: '#b95b5b',
         width: 0.005
     },
@@ -66,12 +66,12 @@ const QUALITY_LEVELS = [
         width: 0.004
     },
     {
-        text: 'Plutôt positif',
+        text: 'Plutôt positive',
         color: '#50a776',
         width: 0.005
     },
     {
-        text: 'Très positif',
+        text: 'Très positive',
         color: '#3fa26b',
         width: 0.008
     }

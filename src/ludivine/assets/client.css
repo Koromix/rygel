@@ -339,13 +339,27 @@ main.fullscreen {
 form {
     & label {
         display: flex;
-        gap: 0.43em;
-        align-items: center;
+        flex-direction: column;
+        gap: 0.6em;
     }
-    & label > span:first-child { width: 180px; }
-    & label > input:not([type=checkbox]):not([type=radio]) { flex: 1; }
-    & label > :is(select, textarea) { flex: 1; }
-    & label:has(input:is([type=checkbox], [type=radio]):not(:disabled)) { cursor: pointer; }
+    & label + label { margin-top: 0.7em; }
+    & label > :is(input, textarea, select, div) { margin: 0 1em; }
+    & label > :is(input[type=checkbox], input[type=radio], select) { align-self: start; }
+    & label > div {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3em;
+    }
+    & label:has(> input:is([type=checkbox], [type=radio])) {
+        margin-top: 0 !important;
+        flex-direction: row;
+        gap: 0.2em;
+        cursor: pointer;
+    }
+    & input[type=checkbox], input[type=radio] {
+        cursor: pointer;
+        margin: 5px 8px 0 0;
+    }
 
     & input {
         padding: 0.4em 0.6em;
@@ -380,7 +394,7 @@ form {
         font-family: inherit;
         font-size: 0.9em;
     }
-    & :is(input, textarea, select):focus { background-color: color-mix(in srgb, var(--input_color), white 50%); }
+    & :is(input, textarea, select):focus { background-color: white; }
 
     & .header {
         display: flex;
