@@ -106,8 +106,6 @@
                 '</div></div>';
         </script>
 
-        <div id="root"></div>
-
         <script type="module">
             document.body.classList.add('loading');
 
@@ -117,8 +115,7 @@
 
             async function run() {
                 try {
-                    let root = document.querySelector('#root');
-                    await start(root);
+                    await start();
                 } catch (err) {
                     console.error(err);
 

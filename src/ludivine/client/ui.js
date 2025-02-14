@@ -14,7 +14,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import { render, html, noChange, directive, Directive } from '../../../vendor/lit-html/lit-html.bundle.js';
-import { Util, Log } from '../core/base.js';
+import { Util, Log } from '../../web/core/base.js';
+import { deploy, sos } from '../assets/ludivine.js';
+import { ASSETS } from '../assets/assets.js';
+import * as app from './app.js';
 
 if (typeof T == 'undefined')
     T = {};
@@ -31,6 +34,10 @@ let run_func = () => {};
 
 let log_entries = [];
 
+let root_el = null;
+let main_el = null;
+let fullscreen = false;
+
 let init_dialogs = false;
 let dialogs = [];
 
@@ -41,8 +48,9 @@ let drag_restore = null;
 let table_orders = {};
 let table_filters = {};
 
-function setRunFunction(func) {
-    run_func = func;
+function init(run) {
+    run_func = run;
+    Log.pushHandler(notifyHandler);
 }
 
 function notifyHandler(action, entry) {
@@ -185,6 +193,72 @@ function confirm(action, func = null) {
             submit: () => func()
         });
     }
+}
+
+function main(content = null) {
+    if (root_el == null) {
+        root_el = document.createElement('div');
+        root_el.id = 'root';
+        main_el = document.createElement('main');
+
+        document.body.appendChild(root_el);
+    }
+
+    if (fullscreen) {
+        render(main_el, root_el);
+    } else {
+        render(html`
+            <div id="deploy" @click=${deploy}></div>
+
+            <nav id="top">
+                <menu>
+                    <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
+                    <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
+                    <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
+                    <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
+                    <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
+                    <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
+                    <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
+                    <div style="flex: 1;"></div>
+                    <img class="picture" src=${app.pictureURL()} alt="" />
+                </menu>
+            </nav>
+
+            ${main_el}
+
+            <footer>
+                <div>Lignes de Vie © 2024</div>
+                <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
+                <div style="font-size: 0.8em;">
+                    <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
+                </div>
+            </footer>
+
+            ${app.isLogged() ? html`<a id="sos" @click=${wrap(e => sos(event))}></a>` : ''}
+        `, root_el);
+    }
+
+    main_el.classList.toggle('fullscreen', fullscreen);
+
+    if (content != null)
+        render(content, main_el);
+}
+
+async function toggleFullScreen() {
+    fullscreen = !fullscreen;
+
+    try {
+        if (fullscreen) {
+            document.body.requestFullscreen();
+        } else {
+            render('', root_el);
+            document.exitFullscreen();
+        }
+    } catch (err) {
+        console.error(err);
+    }
+
+    await run_func();
 }
 
 function dialog(options = {}) {
@@ -594,14 +668,15 @@ function makeComparator(order) {
 }
 
 export {
-    run_func as runFunction,
-    setRunFunction,
-
-    notifyHandler,
+    init,
 
     wrap,
     insist,
     confirm,
+
+    main,
+    fullscreen as isFullScreen,
+    toggleFullScreen,
 
     dialog,
     runDialog,
@@ -613,5 +688,5 @@ export {
 
     tableHeader,
     tableFilter,
-    tableValues
+    tableValues,
 }

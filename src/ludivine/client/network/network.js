@@ -15,10 +15,9 @@
 
 import { render, html } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
-import * as UI from '../../../web/flat/ui.js';
 import { AppRunner } from '../../../web/core/runner.js';
+import * as UI from '../ui.js';
 import { ASSETS } from '../../assets/assets.js';
-import * as app from '../app.js';
 import { NetworkWidget } from './widget.js';
 
 import './network.css';
@@ -81,7 +80,6 @@ function NetworkModule(db, test) {
         runner.onUpdate = update;
         runner.onDraw = draw;
         runner.onContextMenu = () => {};
-        UI.setRunFunction(runner.busy);
 
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
@@ -233,10 +231,10 @@ function NetworkModule(db, test) {
         `);
 
         self.actions(3, html`
-            <button type="button" class=${app.isFullScreen ? 'active' : ''} title="Mode plein écran"
-                    @click=${UI.wrap(app.toggleFullScreen)}>
+            <button type="button" class=${UI.isFullScreen ? 'active' : ''} title="Mode plein écran"
+                    @click=${UI.wrap(UI.toggleFullScreen)}>
                 <img src=${ASSETS['ui/fullscreen']} alt="" />
-                <span>${app.isFullScreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
+                <span>${UI.isFullScreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
             </button>
         `);
 

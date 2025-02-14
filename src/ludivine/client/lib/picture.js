@@ -15,8 +15,7 @@
 
 import { render, html, svg, live } from '../../../../vendor/lit-html/lit-html.bundle.js';
 import { Util, Log } from '../../../web/core/base.js';
-import * as UI from '../../../web/flat/ui.js';
-import * as app from '../app.js';
+import * as UI from '../ui.js';
 import { loadImage } from './util.js';
 
 import './picture.css';
@@ -66,7 +65,6 @@ const NOTION_DEFAULTS = {
 function PictureCropper(title, size) {
     let self = this;
 
-    let target_el = null;
     let preview = makeCanvas(size, size);
 
     preview.addEventListener('pointerdown', handleCustomEvent);
@@ -127,7 +125,7 @@ function PictureCropper(title, size) {
     };
 
     function run() {
-        app.renderMain(html`
+        UI.main(html`
             <div class="tabbar">
                 ${notion_assets != null ?
                     html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}
@@ -143,7 +141,7 @@ function PictureCropper(title, size) {
                     <button type="button" @click=${UI.wrap(apply)}>${T.edit}</button>
                 </div>
             </div>
-        `, target_el);
+        `);
     }
 
     function switchMode(mode) {

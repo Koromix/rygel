@@ -17,10 +17,10 @@ import { render, html, ref } from '../../../vendor/lit-html/lit-html.bundle.js';
 import * as nacl from '../../../vendor/tweetnacl-js/nacl-fast.js';
 import { Util, Log, Net, LocalDate } from '../../web/core/base.js';
 import { Hex, Base64 } from '../../web/core/mixer.js';
-import * as UI from '../../web/flat/ui.js';
 import * as sqlite3 from '../../web/core/sqlite3.js';
 import { computeAge, dateToString, niceDate,
          progressBar, progressCircle } from './lib/util.js';
+import * as UI from './ui.js';
 import { SmallCalendar } from './lib/calendar.js';
 import { PictureCropper } from './lib/picture.js';
 import { PROJECTS } from '../projects/projects.js';
@@ -28,7 +28,6 @@ import { ProjectInfo, ProjectBuilder } from './study/api.js';
 import { FormState, FormModel, FormBuilder } from './study/form.js';
 import { NetworkModule } from './network/network.js';
 import { ASSETS } from '../assets/assets.js';
-import { deploy, sos } from '../assets/ludivine.js';
 
 import '../assets/client.css';
 
@@ -90,10 +89,6 @@ let route_url = null;
 let db = null;
 let identity = null;
 
-let root_el = null;
-let main_el = null;
-let fullscreen = false;
-
 let calendar = null;
 
 let cache = {
@@ -114,8 +109,8 @@ let ctx = null;
 // Init
 // ------------------------------------------------------------------------
 
-async function start(root) {
-    Log.pushHandler(UI.notifyHandler);
+async function start() {
+    UI.init(run);
 
     // Handle back navigation
     window.addEventListener('popstate', e => {
@@ -169,9 +164,6 @@ async function start(root) {
 
         db = await openDatabase(filename, vkey);
     }
-
-    root_el = root;
-    main_el = document.createElement('main');
 
     await go(window.location.href, false);
     document.body.classList.remove('loading');
@@ -448,7 +440,7 @@ async function initProject(project, study) {
 }
 
 async function runRegister() {
-    renderMain(html`
+    UI.main(html`
         <div class="tabbar">
             <a class="active">Enregistrez-vous</a>
         </div>
@@ -493,7 +485,7 @@ async function register(e) {
 }
 
 async function runDashboard() {
-    renderMain(html`
+    UI.main(html`
         <div class="tabbar">
             <a class="active">Tableau de bord</a>
         </div>
@@ -580,6 +572,11 @@ async function runDashboard() {
     `);
 }
 
+function isLogged() {
+    let logged = (db != null);
+    return logged;
+}
+
 async function changePicture() {
     let meta = await db.fetch1('SELECT picture, avatar FROM meta');
     let settings = (meta.avatar != null) ? JSON.parse(meta.avatar) : meta.picture;
@@ -632,47 +629,6 @@ async function openStudy(project) {
     await run();
 }
 
-function renderMain(content = null) {
-    if (fullscreen) {
-        render(main_el, root_el);
-    } else {
-        render(html`
-            <div id="deploy" @click=${deploy}></div>
-
-            <nav id="top">
-                <menu>
-                    <a id="logo" href=${ENV.urls.static}><img src=${ASSETS['main/logo']} alt="Logo Lignes de Vie" /></a>
-                    <li><a href=${ENV.urls.static} style="margin-left: 0em;">Accueil</a></li>
-                    <li><a href=${ENV.urls.app} class="active" style="margin-left: 0em;">Participer</a></li>
-                    <li><a href=${ENV.urls.static + '/etudes'} style="margin-left: 0em;">Études</a></li>
-                    <li><a href=${ENV.urls.static + '/livres'} style="margin-left: 0em;">Ressources</a></li>
-                    <li><a href=${ENV.urls.static + '/detente'} style="margin-left: 0em;">Détente</a></li>
-                    <li><a href=${ENV.urls.static + '/equipe'} style="margin-left: 0em;">Qui sommes-nous ?</a></li>
-                    <div style="flex: 1;"></div>
-                    <img class="picture" src=${pictureURL()} alt="" />
-                </menu>
-            </nav>
-
-            ${main_el}
-
-            <footer>
-                <div>Lignes de Vie © 2024</div>
-                <img src=${ASSETS['main/footer']} alt="" width="79" height="64">
-                <div style="font-size: 0.8em;">
-                    <a href="mailto:lignesdevie@cn2r.fr" style="font-weight: bold; color: inherit;">contact@ldv-recherche.fr</a>
-                </div>
-            </footer>
-
-            ${db != null ? html`<a id="sos" @click=${UI.wrap(e => sos(event))}></a>` : ''}
-        `, root_el);
-    }
-
-    main_el.classList.toggle('fullscreen', fullscreen);
-
-    if (content != null)
-        render(content, main_el);
-}
-
 function renderCalendar(events) {
     if (calendar == null) {
         calendar = new SmallCalendar;
@@ -694,23 +650,6 @@ function renderCalendar(events) {
     return calendar.render();
 }
 
-async function toggleFullScreen() {
-    fullscreen = !fullscreen;
-
-    try {
-        if (fullscreen) {
-            document.body.requestFullscreen();
-        } else {
-            render('', root_el);
-            document.exitFullscreen();
-        }
-    } catch (err) {
-        console.error(err);
-    }
-
-    await run();
-}
-
 // ------------------------------------------------------------------------
 // Study
 // ------------------------------------------------------------------------
@@ -719,7 +658,7 @@ async function runConsent() {
     let project = cache.project;
     let bundle = project.bundle;
 
-    renderMain(html`
+    UI.main(html`
         <div class="tabbar">
             <a class="active">Participer</a>
         </div>
@@ -810,7 +749,7 @@ async function runProject() {
         let [progress, total] = computeProgress(cache.project.root);
         let cls = 'summary ' + (progress == total ? 'done' : 'draft');
 
-        renderMain(html`
+        UI.main(html`
             <div class="tabbar">
                 <a class="active">Participer</a>
             </div>
@@ -1224,11 +1163,7 @@ export {
 
     run,
 
+    isLogged,
     changePicture,
-    pictureURL,
-
-    renderMain,
-
-    fullscreen as isFullScreen,
-    toggleFullScreen
+    pictureURL
 }
