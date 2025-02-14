@@ -50,6 +50,7 @@ main.dialog {
 /* Fullscreen */
 main.fullscreen {
     max-width: none;
+    margin: 0;
     padding: 0;
 
     & > .tabbar { display: none; }
