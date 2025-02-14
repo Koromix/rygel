@@ -443,7 +443,7 @@ function update() {
 
         if (main.requestFullscreen != null) {
             if (touch.button('fullscreen', x, y, size).clicked)
-                toggleFullScreen();
+                toggleFullscreen();
             x += dx; y += dy;
         }
 
@@ -507,7 +507,7 @@ function update() {
         saveSettings();
     }
     if (pressed_keys.f == 1)
-        toggleFullScreen();
+        toggleFullscreen();
     if (pressed_keys.j == 1)
         toggleMusic();
     if (pressed_keys.tab == 1)
@@ -560,7 +560,7 @@ function update() {
     canvas.focus();
 }
 
-function toggleFullScreen() {
+function toggleFullscreen() {
     let fullscreen = (document.fullscreenElement == main);
 
     if (!fullscreen) {

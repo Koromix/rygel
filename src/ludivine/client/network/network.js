@@ -231,10 +231,10 @@ function NetworkModule(db, test) {
         `);
 
         self.actions(3, html`
-            <button type="button" class=${UI.isFullScreen ? 'active' : ''} title="Mode plein écran"
-                    @click=${UI.wrap(UI.toggleFullScreen)}>
+            <button type="button" class=${UI.isFullscreen ? 'active' : ''} title="Mode plein écran"
+                    @click=${UI.wrap(UI.toggleFullscreen)}>
                 <img src=${ASSETS['ui/fullscreen']} alt="" />
-                <span>${UI.isFullScreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
+                <span>${UI.isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}</span>
             </button>
         `);
 

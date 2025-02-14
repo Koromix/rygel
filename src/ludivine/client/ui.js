@@ -244,7 +244,7 @@ function main(content = null) {
         render(content, main_el);
 }
 
-async function toggleFullScreen() {
+async function toggleFullscreen() {
     fullscreen = !fullscreen;
 
     try {
@@ -675,8 +675,8 @@ export {
     confirm,
 
     main,
-    fullscreen as isFullScreen,
-    toggleFullScreen,
+    fullscreen as isFullscreen,
+    toggleFullscreen,
 
     dialog,
     runDialog,
