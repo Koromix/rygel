@@ -441,7 +441,7 @@ async function runRegister() {
             <div class="box" style="align-items: center;">
                 <div class="title">Enregistrez-vous pour continuer</div>
 
-                <form @submit=${UI.wrap(register)} style="text-align: center;">
+                <form style="text-align: center;" @submit=${UI.wrap(register)}>
                     <input type="text" name="email" style="width: 20em;" placeholder="adresse email" />
                     <div class="actions">
                         <button type="submit">Enregistrer mon compte</button>
@@ -668,7 +668,9 @@ async function runConsent() {
                         <input name="consent" type="checkbox" />
                         <span>J’ai lu et je ne m’oppose pas à participer à l’étude ${project.title}</span>
                     </label>
-                    <button type="submit">Valider</button>
+                    <div class="actions">
+                        <button type="submit">Participer</button>
+                    </div>
                 </form>
             </div>
         </div>
