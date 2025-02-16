@@ -29,7 +29,7 @@ const PROXIMITY_LEVELS = [
     {
         text: null,
         description: null,
-        size: 0.3
+        size: 0.6
     },
 
     {
