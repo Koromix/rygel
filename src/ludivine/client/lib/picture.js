@@ -165,7 +165,7 @@ function PictureCropper(title, size) {
                         return html`
                             <label>
                                 <input type="color" value=${notion.colors[cat]}
-                                       @change=${UI.wrap(e => switchColor(cat, e.target.value))}>
+                                       @change=${UI.wrap(e => switchColor(cat, e.target.value))} />
                                 <span>${T[cat]}</span>
                             </label>
                         `;

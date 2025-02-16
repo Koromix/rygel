@@ -291,7 +291,7 @@ function FormBuilder(state, model) {
                    step=${1 / Math.pow(10, options.decimals || 0)} .value=${value}
                    placeholder=${options.placeholder || ''}
                    ?disabled=${options.disabled} ?readonly=${options.readonly}
-                   @input=${e => handleNumberChange(e, key)}/>
+                   @input=${e => handleNumberChange(e, key)} />
             ${makePrefixOrSuffix('fm_suffix', options.suffix, value)}
         `);
 
@@ -406,7 +406,7 @@ function FormBuilder(state, model) {
                            placeholder=${options.placeholder || ''}
                            ?disabled=${options.disabled} title=${value?.toFixed?.(options.decimals) ?? ''}
                            @click=${e => { e.target.value = fix_value; handleSliderChange(e, key); }}
-                           @input=${e => handleSliderChange(e, key)}/>
+                           @input=${e => handleSliderChange(e, key)} />
                     ${ticks.length ? html`
                         <div class="legend">
                             ${ticks.map(tick => {
