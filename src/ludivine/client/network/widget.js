@@ -54,6 +54,7 @@ function NetworkWidget(mod, world) {
         zoom: 0
     };
     let new_kind = 'family';
+    let new_persons = new Map;
 
     // Interactions
     let active_grab = null;
@@ -608,6 +609,7 @@ function NetworkWidget(mod, world) {
         }
 
         persons.push(p);
+        new_persons.set(p, runner.drawCounter);
 
         mod.registerPush(persons, p, auto);
 
@@ -1058,6 +1060,7 @@ function NetworkWidget(mod, world) {
         // Draw persons
         for (let i = persons.length - 1; i >= 1; i--) {
             let p = persons[i];
+            let info = PERSON_KINDS[p.kind];
 
             let radius = computeRadius(p);
             let color = computeColor(p);
@@ -1077,19 +1080,31 @@ function NetworkWidget(mod, world) {
                 ctx.setLineDash([]);
             }
 
+            let start = new_persons.get(p);
+            let pos = { x: p.x, y: p.y };
+
+            if (start != null) {
+                let delay = (runner.drawCounter - start) / 10;
+
+                if (delay < 1) {
+                    let animate = Math.sin((delay * Math.PI) / 2);
+
+                    pos.x *= animate;
+                    pos.y *= animate;
+                } else {
+                    new_persons.delete(p);
+                }
+            }
+
             ctx.beginPath();
-            ctx.arc(p.x, p.y, radius + 0.005, 0, Math.PI * 2, false);
+            ctx.arc(pos.x, pos.y, radius + 0.005, 0, Math.PI * 2, false);
             ctx.stroke();
             ctx.fill();
 
-            if (i && p.proximity) {
-                let info = PERSON_KINDS[p.kind];
+            let icon = textures[info.icon];
+            let size = radius + 0.03;
 
-                let icon = textures[info.icon];
-                let size = radius + 0.03;
-
-                ctx.drawImage(icon, p.x - size / 2, p.y - size / 2, size, size);
-            }
+            ctx.drawImage(icon, pos.x - size / 2, pos.y - size / 2, size, size);
         }
 
         // Name persons
@@ -1102,6 +1117,8 @@ function NetworkWidget(mod, world) {
                 let name = namePerson(p, false);
 
                 if (!name)
+                    continue;
+                if (new_persons.has(p))
                     continue;
 
                 if (i) {
