@@ -65,13 +65,8 @@ const NOTION_DEFAULTS = {
 function PictureCropper(title, size) {
     let self = this;
 
+    let refresh_func = null;
     let preview = makeCanvas(size, size);
-
-    preview.addEventListener('pointerdown', handleCustomEvent);
-    preview.addEventListener('wheel', handleCustomEvent);
-    preview.addEventListener('dragenter', e => e.preventDefault());
-    preview.addEventListener('dragover', dropImage);
-    preview.addEventListener('drop', UI.wrap(dropImage));
 
     let image_format = 'image/png';
     let default_url = null;
@@ -98,55 +93,60 @@ function PictureCropper(title, size) {
     let notion_cat = 'face';
 
     let apply_func;
-    let resolve_func;
-    let reject_func;
 
     this.change = async function(prev = null, func = null) {
         await load(prev);
 
         init_url = prev;
+        apply_func = func;
         is_default = true;
 
-        try {
-            window.addEventListener('paste', dropImage);
+        let blob = await UI.dialog({
+            open: () => {
+                preview.addEventListener('pointerdown', handleCustomEvent);
+                preview.addEventListener('wheel', handleCustomEvent);
+                preview.addEventListener('dragenter', e => e.preventDefault());
+                preview.addEventListener('dragover', dropImage);
+                preview.addEventListener('drop', UI.wrap(dropImage));
 
-            let ret = await new Promise((resolve, reject) => {
-                apply_func = func;
-                resolve_func = resolve;
-                reject_func = reject;
+                window.addEventListener('paste', dropImage);
+            },
 
-                run();
-            });
+            close: () => {
+                window.removeEventListener('paste', dropImage);
+            },
 
-            return ret;
-        } finally {
-            window.removeEventListener('paste', dropImage);
-        }
-    };
+            run: (render, close) => {
+                refresh_func = render;
 
-    function run() {
-        UI.body(html`
-            <div class="tabbar">
-                ${notion_assets != null ?
-                    html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}
-                <a class=${current_mode == 'custom' ? 'active' : ''} @click=${UI.wrap(e => switchMode('custom'))}>Image personnalisée</a>
-            </div>
+                return html`
+                    <div class="tabbar">
+                        ${notion_assets != null ?
+                            html`<a class=${current_mode == 'notion' ? 'active' : ''} @click=${UI.wrap(e => switchMode('notion'))}>Avatar virtuel</a>` : ''}
+                        <a class=${current_mode == 'custom' ? 'active' : ''} @click=${UI.wrap(e => switchMode('custom'))}>Image personnalisée</a>
+                    </div>
 
-            <div class="tab">
-                ${current_mode == 'notion' ? renderNotion() : ''}
-                ${current_mode == 'custom' ? renderCustom() : ''}
+                    <div class="tab">
+                        ${current_mode == 'notion' ? renderNotion() : ''}
+                        ${current_mode == 'custom' ? renderCustom() : ''}
 
-                <div class="actions">
-                    <button type="button" class="secondary" @click=${UI.insist(e => reject_func(null))}>${T.cancel}</button>
-                    <button type="button" @click=${UI.wrap(apply)}>${T.edit}</button>
-                </div>
-            </div>
-        `);
+                        <div class="actions">
+                            <button type="button" class="secondary" @click=${UI.insist(close)}>${T.cancel}</button>
+                            <button type="submit">${T.edit}</button>
+                        </div>
+                    </div>
+                `;
+            },
+
+            submit: apply
+        });
+
+        return blob;
     }
 
     function switchMode(mode) {
         current_mode = mode;
-        run();
+        refresh_func();
     }
 
     function renderNotion() {
@@ -196,17 +196,17 @@ function PictureCropper(title, size) {
 
     function switchCategory(cat) {
         notion_cat = cat;
-        run();
+        refresh_func();
     }
 
     function switchPart(cat, idx) {
         notion.parts[cat] = idx;
-        run();
+        refresh_func();
     }
 
     function switchColor(cat, color) {
         notion.colors[cat] = color;
-        run();
+        refresh_func();
     }
 
     function renderCustom() {
@@ -283,7 +283,8 @@ function PictureCropper(title, size) {
         zoom = 0;
         offset = { x: 0, y: 0 };
 
-        run();
+        if (refresh_func != null)
+            refresh_func();
     }
 
     function handleCustomEvent(e) {
@@ -310,12 +311,12 @@ function PictureCropper(title, size) {
             let rect = computeRect(custom_img, zoom, offset);
             offset = fixEmptyArea(offset, rect);
 
-            run();
+            refresh_func();
         } else if (e.type == 'pointerup') {
             release(e);
         } else if (e.type == 'keydown') {
             offset = prev_offset;
-            run();
+            refresh_func();
 
             release(e);
         } else if (e.type == 'wheel') {
@@ -409,7 +410,7 @@ function PictureCropper(title, size) {
         let rect = computeRect(custom_img, zoom, offset);
         offset = fixEmptyArea(offset, rect);
 
-        run();
+        refresh_func();
     }
 
     function computeRect(custom_img, zoom, offset) {
@@ -487,7 +488,7 @@ function PictureCropper(title, size) {
             if (apply_func != null)
                 await apply_func(init_url, null);
 
-            resolve_func(null);
+            return;
         }
 
         let blob = await new Promise(async (resolve, reject) => {
@@ -514,7 +515,7 @@ function PictureCropper(title, size) {
             }
         }
 
-        resolve_func(blob);
+        return blob;
     }
 
     function drawNotion() {

@@ -644,11 +644,12 @@ function NetworkWidget(mod, world) {
 
     async function changePerson(p) {
         let subject = world.subjects.find(subject => subject.id == p.subject);
+        let name = namePerson(p, false);
 
         await UI.dialog({
             run: (render, close) => html`
                 <div class="tabbar">
-                    <a class="active">Modifier la personne ${namePerson(p, false)}</a>
+                    <a class="active">Modifier la relation ${name}</a>
                 </div>
 
                 <div class="tab">
@@ -682,8 +683,8 @@ function NetworkWidget(mod, world) {
 
                 <div class="actions">
                     <button type="button" class="secondary"
-                            @click=${UI.confirm('Supprimer cette personne', e => { deletePersons(p); close(); })}>Supprimer</button>
-                    <div style="width: 40px;"></div>
+                            @click=${UI.confirm(`Supprimer la relation ${name}`, e => { deletePersons(p); close(); })}>Supprimer</button>
+                    <div style="flex: 1;"></div>
                     <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                     <button type="submit">Appliquer</button>
                 </div>
@@ -752,7 +753,7 @@ function NetworkWidget(mod, world) {
                     <div class="actions">
                         <button type="button" class="secondary"
                                 @click=${UI.insist(e => { deleteLink(link); close(); })}>Supprimer</button>
-                        <div style="width: 40px;"></div>
+                        <div style="flex: 1;"></div>
                         <button type="button" class="secondary" @click=${UI.insist(close)}>Annuler</button>
                         <button type="submit">Appliquer</button>
                     </div>
