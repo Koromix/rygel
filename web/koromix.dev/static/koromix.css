@@ -31,8 +31,8 @@ html {
     align-items: center;
 }
 #me > img {
-    width: 150px;
-    height: 200px;
+    width: 210px;
+    height: 300px;
 }
 #me > div { flex: 1; }
 
