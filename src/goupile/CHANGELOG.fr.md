@@ -2,6 +2,17 @@
 
 ## Goupile 3.8
 
+### Goupile 3.8.3 (17/02/2025)
+
+- Correction de l'erreur « page is undefined » lors de la navigation sur certaines pages
+- Suppression de l'heuristique de masquage des colonnes dans l'ancien exportateur
+- Inclusion des colonnes null de valeurs multiples dans les exportations existantes
+- Conserver le suffixe ULID dans les tables d'exportation virtuelles
+- Correction des erreurs FKEY de migration avec les sous-projets et les enregistrements supprimés
+- Correction d'une erreur SQL lors de la restauration d'une archive
+- Ajout d'une API pour super-utilisateurs pour quitter le processus goupile
+- Envoi des détails des erreur serveur internes aux utilisateurs root
+
 ### Goupile 3.8.2 (29/12/2024)
 
 - Correction d'une possible boucle infinie après l'échec d'une requête HTTP

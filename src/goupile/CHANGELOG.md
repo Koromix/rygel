@@ -2,6 +2,17 @@
 
 ## Goupile 3.8
 
+### Goupile 3.8.3 (2025-02-17)
+
+- Fix "page is undefined" error when navigating some pages
+- Remove column masking heuristic from legacy exporter
+- Include multi-valued null columns in legacy exports
+- Keep ULID suffix in virtual export tables
+- Fix migration FKEY errors with split projects and deleted records
+- Fix SQL error when restoring archive
+- Add root endpoints to exit goupile process
+- Send internal server error details to root users
+
 ### Goupile 3.8.2 (2024-12-29)
 
 - Fix possible infinite loop after failed HTTP request
