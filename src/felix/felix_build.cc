@@ -776,7 +776,7 @@ For help about those commands, type: %!..+%1 command --help%!0)", FelixTarget);
         LogInfo("  Output directory: %!..+%1%!0", build.output_directory);
         LogInfo("  Host: %!..+%1 (%2)%!0", HostPlatformNames[(int)compiler->platform],
                                            HostArchitectureNames[(int)compiler->architecture]);
-        LogInfo("  Compiler: %!..+%1%!0", build.compiler->name);
+        LogInfo("  Compiler: %!..+%1%!0", build.compiler->title);
         LogInfo("  Features: %!..+%1%!0", FmtFlags(build.features, CompileFeatureOptions));
     }
     if (!build.fake && !MakeDirectoryRec(build.output_directory))
