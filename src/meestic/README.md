@@ -82,10 +82,10 @@ Restart MeesticTray to apply changes made to the file.
 Follow the [install instructions](#install) to configure the system daemon (which is necessary to manage access to the HID device) and the GUI application. Both should start automatically but you may need to restart your session to see the system tray icon.
 
 > [!IMPORTANT]
-> On **RPM-based distributions** (such as Fedora or openSUSE), the system daemon (which is needed for the GUI to work) is not started by default. Use the following commands to start it now and and after each boot:
+> On **RPM-based distributions** (such as Fedora or openSUSE), the system daemon (which is needed for the GUI to work) is not started by default. Use the following commands to start it now and after each boot:
 >
 > ```sh
-> # Should not be needed (but is harmless) on Debian-based distributions
+> # Should not be needed on Debian-based distributions (but it is harmless to run)
 > sudo systemctl enable --now meestic
 > ```
 

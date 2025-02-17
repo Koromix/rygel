@@ -747,7 +747,7 @@ Options:
                 return 1;
             }
 
-            // Wait and and try to reconnect to server when it restarts
+            // Wait and try to reconnect to server when it restarts
             if (pfds[0].revents & (POLLERR | POLLHUP)) {
                 LogError("Lost connection to server");
 
