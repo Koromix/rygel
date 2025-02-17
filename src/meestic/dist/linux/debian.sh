@@ -17,7 +17,7 @@ build() {
     apt install -y libudev-dev libudev-dev:$1
 
     ./bootstrap.sh
-    ./felix -pFast --host=$1 meestic MeesticTray
+    ./felix -pFast --host=$1:clang-18:lld-18 meestic MeesticTray
 
     install -D -m0755 bin/Fast/meestic ${ROOT_DIR}/usr/bin/meestic
     install -D -m0755 bin/Fast/MeesticTray ${ROOT_DIR}/usr/bin/MeesticTray
