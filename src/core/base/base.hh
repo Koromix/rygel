@@ -4481,6 +4481,7 @@ void WaitDelay(int64_t delay);
 #if !defined(__wasi__)
 
 enum class WaitForResult {
+    Exit,
     Interrupt,
     Message,
     Timeout

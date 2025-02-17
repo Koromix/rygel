@@ -4812,8 +4812,8 @@ bool ExecuteCommandLine(const char *cmd_line, const ExecuteInfo &info,
 #if defined(__OpenBSD__) || defined(__FreeBSD__)
 static const pthread_t main_thread = pthread_self();
 #endif
-static std::atomic_bool flag_interrupt { false };
-static std::atomic_bool explicit_interrupt { false };
+static std::atomic_bool flag_signal { false };
+static std::atomic_int explicit_signal { 0 };
 static int interrupt_pfd[2] = {-1, -1};
 
 void SetSignalHandler(int signal, void (*func)(int), struct sigaction *prev)
@@ -4844,8 +4844,8 @@ static void DefaultSignalHandler(int signal)
         RG_IGNORE write(interrupt_pfd[1], &dummy, 1);
     }
 
-    if (flag_interrupt) {
-        explicit_interrupt = true;
+    if (flag_signal) {
+        explicit_signal = signal;
     } else {
         int code = (signal == SIGINT) ? 130 : 1;
         exit(code);
@@ -5301,7 +5301,7 @@ WaitForResult WaitForInterrupt(int64_t timeout)
 {
     static std::atomic_bool message { false };
 
-    flag_interrupt = true;
+    flag_signal = true;
     SetSignalHandler(SIGUSR1, [](int) { message = true; });
 
     if (timeout >= 0) {
@@ -5310,17 +5310,19 @@ WaitForResult WaitForInterrupt(int64_t timeout)
         ts.tv_nsec = (int)((timeout % 1000) * 1000000);
 
         struct timespec rem;
-        while (!explicit_interrupt && !message && nanosleep(&ts, &rem) < 0) {
+        while (!explicit_signal && !message && nanosleep(&ts, &rem) < 0) {
             RG_ASSERT(errno == EINTR);
             ts = rem;
         }
     } else {
-        while (!explicit_interrupt && !message) {
+        while (!explicit_signal && !message) {
             pause();
         }
     }
 
-    if (explicit_interrupt) {
+    if (explicit_signal == SIGTERM) {
+        return WaitForResult::Exit;
+    } else if (explicit_signal) {
         return WaitForResult::Interrupt;
     } else if (message) {
         message = false;

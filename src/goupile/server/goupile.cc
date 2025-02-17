@@ -28,6 +28,7 @@
 #include "src/core/sandbox/sandbox.hh"
 #include "vendor/libsodium/src/libsodium/include/sodium.h"
 #if !defined(_WIN32)
+    #include <signal.h>
     #include <sys/time.h>
     #include <sys/types.h>
     #include <sys/socket.h>
@@ -371,6 +372,27 @@ static void PruneRenders()
     render_map.Trim();
 }
 
+static void HandleProcessSignal(http_IO *io, int signal)
+{
+    RetainPtr<const SessionInfo> session = GetAdminSession(io, nullptr);
+
+    if (!session) {
+        LogError("User is not logged in");
+        io->SendError(401);
+        return;
+    }
+    if (!session->IsRoot()) {
+        LogError("Non-root users are not allowed to signal process");
+        io->SendError(403);
+        return;
+    }
+
+    pid_t pid = getpid();
+    kill(pid, signal);
+
+    io->SendText(200, "{}", "application/json");
+}
+
 static void HandleAdminRequest(http_IO *io)
 {
     const http_RequestInfo &request = io->Request();
@@ -518,6 +540,12 @@ static void HandleAdminRequest(http_IO *io)
         HandleSendMail(io, nullptr);
     } else if (TestStr(admin_url, "/api/send/sms") && request.method == http_RequestMethod::Post) {
         HandleSendSMS(io, nullptr);
+#if !defined(_WIN32)
+    } else if (TestStr(admin_url, "/api/process/exit") && request.method == http_RequestMethod::Post) {
+        HandleProcessSignal(io, SIGTERM);
+    } else if (TestStr(admin_url, "/api/process/interrupt") && request.method == http_RequestMethod::Post) {
+        HandleProcessSignal(io, SIGINT);
+#endif
     } else {
         io->SendError(404);
     }
@@ -1049,6 +1077,7 @@ For help about those commands, type: %!..+%1 command --help%!0)",
         return 1;
 
     // Run periodic tasks until exit
+    int status = 0;
     {
         bool run = true;
         bool first = true;
@@ -1106,8 +1135,12 @@ For help about those commands, type: %!..+%1 command --help%!0)",
 
             WaitForResult ret = WaitForInterrupt(timeout);
 
-            if (ret == WaitForResult::Interrupt) {
+            if (ret == WaitForResult::Exit) {
                 LogInfo("Exit requested");
+                run = false;
+            } else if (ret == WaitForResult::Interrupt) {
+                LogInfo("Process interrupted");
+                status = 1;
                 run = false;
             } else if (ret == WaitForResult::Message) {
                 LogDebug("Syncing instances");
@@ -1127,7 +1160,7 @@ For help about those commands, type: %!..+%1 command --help%!0)",
     LogDebug("Stop HTTP server");
     daemon.Stop();
 
-    return 0;
+    return status;
 }
 
 int Main(int argc, char **argv)
